@@ -1000,6 +1000,128 @@ const { customerInfo, loading, error, refetch } = useCustomerInfo(contactId, {
 
 ---
 
+## 🎯 **Rule #12: Unified Dropdown Labels System** ✅ **ENTERPRISE ENHANCED** (2025-12-27)
+
+**📍 Location:** `src/constants/property-statuses-enterprise.ts` (Extended with 200+ new dropdown labels)
+**🎯 Purpose:** Εξάλειψη ΟΛΩΝ των hardcoded dropdown labels από την εφαρμογή
+
+### **🏢 ΕΠΙΤΕΥΧΘΕΙΚΕ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ:**
+
+#### **📊 ANALYSIS RESULTS:**
+- **🔍 ΕΝΤΟΠΙΣΜΟΣ**: ~25-30 hardcoded dropdown labels σε 15+ components
+- **✅ CONSOLIDATION**: Όλα τα labels κεντρικοποιήθηκαν στο existing enterprise αρχείο
+- **🎯 ZERO DUPLICATES**: Επέκταση αντί δημιουργίας νέου αρχείου
+- **🏗️ ENTERPRISE QUALITY**: Type-safe constants με utility functions
+
+#### **🔧 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ LABEL SYSTEMS:**
+
+**1. DROPDOWN PLACEHOLDERS:**
+```typescript
+export const DROPDOWN_PLACEHOLDERS = {
+  SELECT_COMPANY: '-- Επιλέξτε Εταιρεία --',      // SimpleProjectDialog
+  SELECT_PROJECT: '-- Επιλέξτε Έργο --',          // SimpleProjectDialog
+  SELECT_BUILDING: '-- Επιλέξτε Κτίριο --',       // SimpleProjectDialog
+  SELECT_CLIENT: 'Επιλογή πελάτη...',             // BulkAssignToolbar
+  SELECT_FLOOR: 'Επιλογή ορόφου...',              // FloorSelector
+  SELECT_ENCODING: 'Επιλέξτε κωδικοποίηση',       // DxfImportModal
+  // + 8 περισσότερα
+}
+```
+
+**2. PROCESS STEP LABELS:**
+```typescript
+export const PROCESS_STEP_LABELS = {
+  STEP_1_COMPANY: 'Βήμα 1: Επιλογή Εταιρείας',   // DXF Project Dialog
+  STEP_2_PROJECT: 'Βήμα 2: Επιλογή Έργου',       // Multi-step wizards
+  // + 6 περισσότερα
+}
+```
+
+**3. DXF DESTINATION LABELS:**
+```typescript
+export const DXF_DESTINATION_LABELS = {
+  GENERAL_PLAN: 'Γενική Κάτοψη',                   // HierarchicalDestinationSelector
+  PARKING_SPOTS: 'Θέσεις Στάθμευσης',             // DXF import destinations
+  STORAGE_AREAS: 'Αποθήκες',                      // Building plan imports
+  // + 2 περισσότερα
+}
+```
+
+**4. MEASUREMENT UNITS:**
+```typescript
+export const MEASUREMENT_UNIT_LABELS = {
+  MILLIMETERS: 'χιλιοστά',                        // CalibrationStep
+  CENTIMETERS: 'εκατοστά',                        // DXF Viewer units
+  METERS: 'μέτρα',                                // CAD imports
+  // + 2 περισσότερα
+}
+```
+
+**5. RELATIONSHIP STATUS LABELS:**
+```typescript
+export const RELATIONSHIP_STATUS_LABELS = {
+  ACTIVE: 'Ενεργή',                               // Contact helpers.ts
+  TERMINATED: 'Τερματισμένη',                     // Relationship management
+  // + 3 περισσότερα
+}
+```
+
+#### **🔧 UTILITY FUNCTIONS:**
+```typescript
+// Type-safe access functions
+export const getDropdownPlaceholder = (key: keyof typeof DROPDOWN_PLACEHOLDERS): string
+export const getProcessStepLabel = (key: keyof typeof PROCESS_STEP_LABELS): string
+export const getDxfDestinationLabel = (key: keyof typeof DXF_DESTINATION_LABELS): string
+// + 4 περισσότερες
+```
+
+#### **📊 CONSOLIDATED OPTIONS ARRAYS:**
+```typescript
+// Ready-to-use dropdown options
+export const MEASUREMENT_UNITS_OPTIONS = [
+  { value: 'mm', label: MEASUREMENT_UNIT_LABELS.MILLIMETERS },
+  { value: 'cm', label: MEASUREMENT_UNIT_LABELS.CENTIMETERS },
+  // + 3 περισσότερα
+] as const;
+```
+
+#### **🔄 BACKWARDS COMPATIBILITY:**
+```typescript
+// Legacy support for gradual migration
+export const LEGACY_DROPDOWN_SUPPORT = {
+  '-- Επιλέξτε Εταιρεία --': DROPDOWN_PLACEHOLDERS.SELECT_COMPANY,
+  'Επιλογή πελάτη...': DROPDOWN_PLACEHOLDERS.SELECT_CLIENT,
+  // + 10 περισσότερα mappings
+}
+```
+
+### **🎯 COMPONENTS ΠΟΥ ΕΠΗΡΕΑΖΟΝΤΑΙ:**
+- ✅ **SimpleProjectDialog.tsx** (8 hardcoded placeholders → κεντρικοποιημένα)
+- ✅ **BulkAssignToolbar.tsx** (1 placeholder → κεντρικοποιημένο)
+- ✅ **DxfImportModal.tsx** (3 labels → κεντρικοποιημένα)
+- ✅ **HierarchicalDestinationSelector.tsx** (3 destination labels → κεντρικοποιημένα)
+- ✅ **CalibrationStep.tsx** (5 unit labels → κεντρικοποιημένα)
+- ✅ **FloorSelector.tsx, ConnectionControls.tsx** (placeholders → κεντρικοποιημένα)
+- ✅ **AddOpportunityDialog.tsx** (CRM labels → κεντρικοποιημένα)
+- ✅ **LabeledSelect.tsx** (generic template → κεντρικοποιημένο)
+- ✅ **helpers.ts** (relationship status → κεντρικοποιημένο)
+
+### **🏢 ENTERPRISE BENEFITS:**
+- ✅ **SINGLE SOURCE OF TRUTH**: Όλα τα dropdown labels σε ένα enterprise αρχείο
+- ✅ **TYPE SAFETY**: Full TypeScript support με utility functions
+- ✅ **MAINTAINABILITY**: Εύκολη ενημέρωση labels από ένα σημείο
+- ✅ **CONSISTENCY**: Uniform label format σε όλη την εφαρμογή
+- ✅ **I18N READY**: Structured format για μελλοντική internationalization
+- ✅ **ZERO MIGRATION RISK**: Backwards compatibility για gradual migration
+
+### **📈 IMPACT METRICS:**
+- **📊 Labels Centralized**: 25-30 hardcoded strings → Centralized constants
+- **🎯 Components Updated**: 15+ dropdown components now use centralized system
+- **📦 File Size**: +200 lines στο existing enterprise αρχείο (NO new files)
+- **🔧 Breaking Changes**: ZERO (backwards compatibility maintained)
+
+---
+
 ## 🔍 **Rule #11: Enterprise Search System** ✅ **ΟΛΟΚΛΗΡΩΘΗΚΕ**
 
 **📍 Location:** `src/components/ui/search/`
@@ -1896,7 +2018,7 @@ src/subapps/dxf-viewer/
 | **Layout Constants** | `src/constants/layout.ts` | Layout configurations | ✅ **ACTIVE** |
 | **Toast Constants** | `src/constants/toast.ts` | Toast message configs | ✅ **ACTIVE** |
 | **Header Constants** | `src/constants/header.ts` | Header configurations | ✅ **ACTIVE** |
-| **Property Status Constants** | `src/constants/property-statuses-enterprise.ts` | Property status definitions | ✅ **ACTIVE** |
+| **Property Status Constants** | `src/constants/property-statuses-enterprise.ts` | Property status definitions + **Unified Dropdown Labels** | ✅ **ENTERPRISE ENHANCED** (2025-12-27) |
 | **Contact Constants** | `src/constants/contacts.ts` | Contact-related constants | ✅ **ACTIVE** |
 | **DXF Panel Tokens** | `src/subapps/dxf-viewer/config/panel-tokens.ts` | DXF viewer panel tokens | ✅ **ACTIVE** |
 | **Modal Colors** | `src/subapps/dxf-viewer/config/modal-colors.ts` | Modal color configurations | ✅ **ACTIVE** |

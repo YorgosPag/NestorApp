@@ -6,6 +6,7 @@ import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS, INTERACTIVE_PATTERNS, GROUP_
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 
 export function PropertyCard({ property, onViewFloorPlan }: { property: any; onViewFloorPlan: (id: string) => void; }) {
   const iconSizes = useIconSizes();
@@ -23,7 +24,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: any; onV
         <aside className="absolute top-3 left-3" role="status" aria-label="Κατάσταση Ακινήτου">
           <PropertyBadge
             status="available"
-            customLabel="Διαθέσιμο"
+            customLabel={UNIFIED_STATUS_FILTER_LABELS.AVAILABLE}
           />
         </aside>
         <button className={`absolute top-3 right-3 p-2 ${colors.bg.primary}/90 backdrop-blur ${radius.full} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>

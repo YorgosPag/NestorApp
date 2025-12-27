@@ -3,6 +3,13 @@
 // ============================================================================
 // SERVICE CONFIGURATION - TABS FOR ΔΗΜΟΣΙΕΣ ΥΠΗΡΕΣΙΕΣ
 // ============================================================================
+
+// 🏢 ENTERPRISE: Use centralized options from modal-select system
+import {
+  getServiceCategoryOptions,
+  getLegalStatusOptions,
+  getServiceFieldLabels
+} from '@/subapps/dxf-viewer/config/modal-select';
 //
 // Κεντρικοποιημένη διαμόρφωση για δημόσιες υπηρεσίες με tab layout
 // Αντικαθιστά τα ΓΕΜΙ fields που δεν ισχύουν για δημόσιους φορείς
@@ -35,16 +42,19 @@ export interface ServiceSectionConfig {
 
 /**
  * Βασικά Στοιχεία Δημόσιας Υπηρεσίας
+ * ✅ ENTERPRISE: Using centralized service field labels
  */
-const basicInfoSection: ServiceSectionConfig = {
-  id: 'basicInfo',
-  title: 'Βασικά Στοιχεία',
-  icon: 'landmark',
+const basicInfoSection: ServiceSectionConfig = (() => {
+  const fieldLabels = getServiceFieldLabels();
+  return {
+    id: 'basicInfo',
+    title: fieldLabels.basic_info_section,
+    icon: 'landmark',
   fields: [
     {
       id: 'name',
       type: 'input',
-      label: 'Επωνυμία Υπηρεσίας',
+      label: fieldLabels.service_name,
       placeholder: 'π.χ. Δήμος Αθηναίων',
       required: true,
       helpText: 'Η επίσημη επωνυμία του δημόσιου φορέα'
@@ -52,36 +62,30 @@ const basicInfoSection: ServiceSectionConfig = {
     {
       id: 'shortName',
       type: 'input',
-      label: 'Συντομογραφία',
+      label: fieldLabels.short_name,
       placeholder: 'π.χ. Δ.Α.',
       helpText: 'Συντομογραφία ή ακρωνύμιο της υπηρεσίας'
     },
     {
       id: 'category',
       type: 'select',
-      label: 'Κατηγορία Φορέα',
+      label: fieldLabels.category,
       required: true,
       options: [
-        { value: 'ministry', label: 'Υπουργείο' },
-        { value: 'region', label: 'Περιφέρεια' },
-        { value: 'municipality', label: 'Δήμος' },
-        { value: 'public_entity', label: 'Δημόσιος Οργανισμός' },
-        { value: 'independent_authority', label: 'Ανεξάρτητη Αρχή' },
-        { value: 'university', label: 'Πανεπιστήμιο' },
-        { value: 'hospital', label: 'Νοσοκομείο' },
-        { value: 'school', label: 'Εκπαιδευτικό Ίδρυμα' },
-        { value: 'other', label: 'Άλλο' }
+        // ✅ ENTERPRISE: Using centralized service category options - NO MORE HARDCODED VALUES
+        ...getServiceCategoryOptions()
       ]
     },
     {
       id: 'supervisionMinistry',
       type: 'input',
-      label: 'Εποπτεύον Υπουργείο',
+      label: fieldLabels.supervision_ministry,
       placeholder: 'π.χ. Υπουργείο Εσωτερικών',
       helpText: 'Το υπουργείο που εποπτεύει την υπηρεσία'
     }
   ]
-};
+  };
+})();
 
 /**
  * Διοικητικά Στοιχεία
@@ -97,11 +101,8 @@ const administrativeSection: ServiceSectionConfig = {
       label: 'Νομικό Καθεστώς',
       required: true,
       options: [
-        { value: 'npdd', label: 'Νομικό Πρόσωπο Δημοσίου Δικαίου (Ν.Π.Δ.Δ.)' },
-        { value: 'npid', label: 'Νομικό Πρόσωπο Ιδιωτικού Δικαίου (Ν.Π.Ι.Δ.)' },
-        { value: 'public_service', label: 'Δημόσια Υπηρεσία' },
-        { value: 'independent_authority', label: 'Ανεξάρτητη Αρχή' },
-        { value: 'decentralized_admin', label: 'Αποκεντρωμένη Διοίκηση' }
+        // ✅ ENTERPRISE: Using centralized legal status options - NO MORE HARDCODED VALUES
+        ...getLegalStatusOptions()
       ]
     },
     {

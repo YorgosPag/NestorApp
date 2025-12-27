@@ -12,6 +12,9 @@
 
 import { LucideIcon } from 'lucide-react';
 
+// 🏢 ENTERPRISE: Import centralized tab labels
+import { getStorageTabLabels } from '@/subapps/dxf-viewer/config/modal-select';
+
 // ============================================================================
 // INTERFACES & TYPES
 // ============================================================================
@@ -66,11 +69,14 @@ export interface StorageTabConfig {
  *
  * ΣΗΜΑΝΤΙΚΟ: Αυτή είναι η ΜΟΝΑΔΙΚΗ πηγή αλήθειας για τις καρτέλες αποθηκών!
  * Οποιαδήποτε αλλαγή στις καρτέλες πρέπει να γίνεται ΕΔΩ και μόνο εδώ.
+ * ✅ ENTERPRISE: Uses centralized labels από modal-select.ts
  */
-export const STORAGE_TABS: StorageTabConfig[] = [
+export const STORAGE_TABS: StorageTabConfig[] = (() => {
+  const tabLabels = getStorageTabLabels();
+  return [
   {
     id: 'general',
-    label: 'Γενικά',
+    label: tabLabels.general,
     value: 'general',
     icon: 'info',
     description: 'Βασικές πληροφορίες και στοιχεία αποθήκης',
@@ -80,7 +86,7 @@ export const STORAGE_TABS: StorageTabConfig[] = [
   },
   {
     id: 'statistics',
-    label: 'Στατιστικά',
+    label: tabLabels.statistics,
     value: 'statistics',
     icon: 'bar-chart-3',
     description: 'Στατιστικά χρήσης και αποδοτικότητας αποθήκης',
@@ -90,7 +96,7 @@ export const STORAGE_TABS: StorageTabConfig[] = [
   },
   {
     id: 'floorplans',
-    label: 'Κατόψεις',
+    label: tabLabels.floorplans,
     value: 'floorplans',
     icon: 'layout-grid',
     description: 'Κατόψεις και διάταξη αποθήκης',
@@ -98,13 +104,13 @@ export const STORAGE_TABS: StorageTabConfig[] = [
     enabled: true,
     component: 'FloorplanViewerTab',
     componentProps: {
-      title: 'Κατόψεις Αποθήκης',
+      title: 'Κατόψεις Αποθήκης', // Keep this as contextual description
       floorplanType: 'storage'
     }
   },
   {
     id: 'documents',
-    label: 'Έγγραφα',
+    label: tabLabels.documents,
     value: 'documents',
     icon: 'file-text',
     description: 'Διαχείριση εγγράφων και συμβολαίων αποθήκης',
@@ -114,7 +120,7 @@ export const STORAGE_TABS: StorageTabConfig[] = [
   },
   {
     id: 'photos',
-    label: 'Φωτογραφίες',
+    label: tabLabels.photos,
     value: 'photos',
     icon: 'image',
     description: 'Φωτογραφίες και εικόνες της αποθήκης',
@@ -124,7 +130,7 @@ export const STORAGE_TABS: StorageTabConfig[] = [
   },
   {
     id: 'activity',
-    label: 'Ιστορικό',
+    label: tabLabels.activity,
     value: 'activity',
     icon: 'clock',
     description: 'Ιστορικό μισθώσεων και χρήσης αποθήκης',
@@ -133,6 +139,7 @@ export const STORAGE_TABS: StorageTabConfig[] = [
     component: 'StorageHistoryTab',
   }
 ];
+})();
 
 // ============================================================================
 // UTILITY FUNCTIONS

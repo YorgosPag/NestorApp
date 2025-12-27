@@ -154,7 +154,7 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
         <div className="flex items-center space-x-2 flex-1 text-left">
           {selectedConfig ? (
             <>
-              <selectedConfig.icon className={`${iconSizes.sm} text-gray-600`} />
+              <selectedConfig.icon className={`${iconSizes.sm} ${colors.text.muted}`} />
               <span className="text-foreground">{selectedConfig.label}</span>
             </>
           ) : (

@@ -13,6 +13,7 @@ import { formatCurrency } from '@/lib/intl-utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 
 interface ParkingStatsSummaryProps {
     stats: ParkingStats;
@@ -53,7 +54,7 @@ export function ParkingStatsSummary({ stats }: ParkingStatsSummaryProps) {
             <div className={`${iconSizes.xs} rounded-full ${colors.bg.muted}`} />
             <div>
               <div className="text-sm font-medium">{stats.availableSpots}</div>
-              <div className="text-xs text-muted-foreground">Διαθέσιμες</div>
+              <div className="text-xs text-muted-foreground">{UNIFIED_STATUS_FILTER_LABELS.AVAILABLE}</div>
             </div>
           </div>
           

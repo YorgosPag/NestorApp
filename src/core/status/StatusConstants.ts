@@ -20,55 +20,85 @@ import type {
 import { brandClasses } from '@/styles/design-tokens';
 import type { UseSemanticColorsReturn } from '@/hooks/useSemanticColors';
 
+// 🏢 ENTERPRISE: Import centralized status labels - NO MORE HARDCODED VALUES
+import {
+  getProjectStatusLabels,
+  getUnitStatusLabels,
+  getContactStatusLabels,
+  getContactTypeLabels,
+  getPropertyMarketStatusLabels,
+  getRentalTypeLabels,
+  getPropertySpecialStatusLabels,
+  getStorageStatusLabels,
+  getPriorityLabels,
+  getRecordStateLabels,
+  getEntityTypeLabels,
+  getDocumentStatusLabels
+} from '@/subapps/dxf-viewer/config/modal-select';
+
 // ============================================================================
 // PROJECT STATUS DEFINITIONS
 // ============================================================================
 
+// ✅ ENTERPRISE: Get centralized labels
+const projectStatusLabels = getProjectStatusLabels();
+const unitStatusLabels = getUnitStatusLabels();
+const contactStatusLabels = getContactStatusLabels();
+const contactTypeLabels = getContactTypeLabels();
+const propertyMarketStatusLabels = getPropertyMarketStatusLabels();
+const rentalTypeLabels = getRentalTypeLabels();
+const propertySpecialStatusLabels = getPropertySpecialStatusLabels();
+const storageStatusLabels = getStorageStatusLabels();
+const priorityLabels = getPriorityLabels();
+const recordStateLabels = getRecordStateLabels();
+const entityTypeLabels = getEntityTypeLabels();
+const documentStatusLabels = getDocumentStatusLabels();
+
 export const PROJECT_STATUSES: Record<ProjectStatus, BadgeDefinition> = {
   planning: {
-    label: 'Σχεδιασμός',
+    label: projectStatusLabels.planning,
     variant: 'outline',
     color: '#6B7280',
     backgroundColor: '#F9FAFB',
     icon: 'planning'
   },
   in_progress: {
-    label: 'Σε Εξέλιξη',
+    label: projectStatusLabels.in_progress,
     variant: 'info',
     color: '#3B82F6',
     backgroundColor: '#EFF6FF',
     icon: 'play'
   },
   completed: {
-    label: 'Ολοκληρωμένο',
+    label: projectStatusLabels.completed,
     variant: 'success',
     color: '#059669',
     backgroundColor: '#ECFDF5',
     icon: 'check'
   },
   on_hold: {
-    label: 'Σε Αναμονή',
+    label: projectStatusLabels.on_hold,
     variant: 'warning',
     color: '#D97706',
     backgroundColor: '#FFFBEB',
     icon: 'pause'
   },
   cancelled: {
-    label: 'Ακυρωμένο',
+    label: projectStatusLabels.cancelled,
     variant: 'destructive',
     color: '#DC2626',
     backgroundColor: '#FEF2F2',
     icon: 'x'
   },
   review: {
-    label: 'Υπό Έλεγχο',
+    label: projectStatusLabels.review,
     variant: 'purple',
     color: '#7C3AED',
     backgroundColor: '#F3E8FF',
     icon: 'review'
   },
   approved: {
-    label: 'Εγκεκριμένο',
+    label: projectStatusLabels.approved,
     variant: 'success',
     color: '#059669',
     backgroundColor: '#ECFDF5',
@@ -82,63 +112,63 @@ export const PROJECT_STATUSES: Record<ProjectStatus, BadgeDefinition> = {
 
 export const BUILDING_STATUSES: Record<BuildingStatus, BadgeDefinition> = {
   available: {
-    label: 'Διαθέσιμο',
+    label: unitStatusLabels.available,
     variant: 'success',
     color: '#059669',
     backgroundColor: '#ECFDF5',
     icon: 'home'
   },
   occupied: {
-    label: 'Κατειλημμένο',
+    label: unitStatusLabels.occupied,
     variant: 'info',
     color: '#3B82F6',
     backgroundColor: '#EFF6FF',
     icon: 'users'
   },
   maintenance: {
-    label: 'Συντήρηση',
+    label: unitStatusLabels.maintenance,
     variant: 'warning',
     color: '#D97706',
     backgroundColor: '#FFFBEB',
     icon: 'wrench'
   },
   for_sale: {
-    label: 'Προς Πώληση',
+    label: unitStatusLabels.for_sale,
     variant: 'outline',
     color: '#6B7280',
     backgroundColor: '#F9FAFB',
     icon: 'tag'
   },
   for_rent: {
-    label: 'Προς Ενοικίαση',
+    label: unitStatusLabels.for_rent,
     variant: 'secondary',
     color: '#4B5563',
     backgroundColor: '#F3F4F6',
     icon: 'key'
   },
   sold: {
-    label: 'Πωλήθηκε',
+    label: unitStatusLabels.sold,
     variant: 'destructive',
     color: '#DC2626',
     backgroundColor: '#FEF2F2',
     icon: 'dollarSign'
   },
   rented: {
-    label: 'Ενοικιάστηκε',
+    label: unitStatusLabels.rented,
     variant: 'purple',
     color: '#7C3AED',
     backgroundColor: '#F3E8FF',
     icon: 'handshake'
   },
   construction: {
-    label: 'Υπό Κατασκευή',
+    label: unitStatusLabels.under_construction,
     variant: 'warning',
     color: '#D97706',
     backgroundColor: '#FFFBEB',
     icon: 'hammer'
   },
   planned: {
-    label: 'Σχεδιασμένο',
+    label: unitStatusLabels.planned,
     variant: 'outline',
     color: '#6B7280',
     backgroundColor: '#F9FAFB',
@@ -152,35 +182,35 @@ export const BUILDING_STATUSES: Record<BuildingStatus, BadgeDefinition> = {
 
 export const CONTACT_STATUSES: Record<ContactStatus, BadgeDefinition> = {
   active: {
-    label: 'Ενεργή',
+    label: contactStatusLabels.active,
     variant: 'success',
     color: '#059669',
     backgroundColor: '#ECFDF5',
     icon: 'userCheck'
   },
   inactive: {
-    label: 'Ανενεργή',
+    label: contactStatusLabels.inactive,
     variant: 'secondary',
     color: '#6B7280',
     backgroundColor: '#F9FAFB',
     icon: 'userX'
   },
   pending: {
-    label: 'Σε Αναμονή',
+    label: contactStatusLabels.pending,
     variant: 'warning',
     color: '#D97706',
     backgroundColor: '#FFFBEB',
     icon: 'clock'
   },
   blocked: {
-    label: 'Αποκλεισμένη',
+    label: contactStatusLabels.blocked,
     variant: 'destructive',
     color: '#DC2626',
     backgroundColor: '#FEF2F2',
     icon: 'shield'
   },
   archived: {
-    label: 'Αρχειοθετημένη',
+    label: contactStatusLabels.archived,
     variant: 'outline',
     color: '#6B7280',
     backgroundColor: '#F9FAFB',
@@ -188,21 +218,21 @@ export const CONTACT_STATUSES: Record<ContactStatus, BadgeDefinition> = {
   },
   // Contact Types (added for centralization)
   individual: {
-    label: 'Φυσικό Πρόσωπο',
+    label: contactTypeLabels.individual,
     variant: 'outline',
     color: '#6B7280',
     backgroundColor: '#F9FAFB',
     icon: 'user'
   },
   company: {
-    label: 'Νομικό Πρόσωπο',
+    label: contactTypeLabels.company,
     variant: 'outline',
     color: '#6B7280',
     backgroundColor: '#F9FAFB',
     icon: 'building'
   },
   service: {
-    label: 'Δημόσια Υπηρεσία',
+    label: contactTypeLabels.service,
     variant: 'outline',
     color: '#6B7280',
     backgroundColor: '#F9FAFB',
@@ -217,42 +247,42 @@ export const CONTACT_STATUSES: Record<ContactStatus, BadgeDefinition> = {
 export const PROPERTY_STATUSES: Record<PropertyStatus, BadgeDefinition> = {
   // Βασικές καταστάσεις (legacy - διατηρούμε για backward compatibility)
   available: {
-    label: 'Διαθέσιμο',
+    label: propertyMarketStatusLabels.available,
     variant: 'success',
     color: '#059669',
     backgroundColor: '#ECFDF5',
     icon: 'home'
   },
   reserved: {
-    label: 'Κρατημένο',
+    label: propertyMarketStatusLabels.reserved,
     variant: 'warning',
     color: '#D97706',
     backgroundColor: '#FFFBEB',
     icon: 'bookmark'
   },
   sold: {
-    label: 'Πωλήθηκε',
+    label: propertyMarketStatusLabels.sold,
     variant: 'destructive',
     color: '#DC2626',
     backgroundColor: '#FEF2F2',
     icon: 'dollarSign'
   },
   pending: {
-    label: 'Εκκρεμεί',
+    label: propertyMarketStatusLabels.pending,
     variant: 'info',
     color: '#3B82F6',
     backgroundColor: '#EFF6FF',
     icon: 'clock'
   },
   withdrawn: {
-    label: 'Αποσύρθηκε',
+    label: propertyMarketStatusLabels.withdrawn,
     variant: 'secondary',
     color: '#6B7280',
     backgroundColor: '#F9FAFB',
     icon: 'arrowLeft'
   },
   expired: {
-    label: 'Έληξε',
+    label: propertyMarketStatusLabels.expired,
     variant: 'outline',
     color: '#6B7280',
     backgroundColor: '#F9FAFB',
@@ -261,21 +291,21 @@ export const PROPERTY_STATUSES: Record<PropertyStatus, BadgeDefinition> = {
 
   // 🏨 Advanced Rental Statuses
   'rental-only': {
-    label: 'Μόνο Ενοικίαση',
+    label: rentalTypeLabels.rent_only,
     variant: 'info',
     color: '#0369A1',
     backgroundColor: '#E0F2FE',
     icon: 'key'
   },
   'long-term-rental': {
-    label: 'Μακροχρόνια Μίσθωση',
+    label: rentalTypeLabels.long_term,
     variant: 'info',
     color: '#0284C7',
     backgroundColor: '#F0F9FF',
     icon: 'calendar'
   },
   'short-term-rental': {
-    label: 'Βραχυχρόνια Μίσθωση',
+    label: rentalTypeLabels.short_term,
     variant: 'info',
     color: '#0EA5E9',
     backgroundColor: '#F0FAFF',
@@ -284,21 +314,21 @@ export const PROPERTY_STATUSES: Record<PropertyStatus, BadgeDefinition> = {
 
   // 🔒 Advanced Reservation Statuses
   'reserved-pending': {
-    label: 'Δεσμευμένο Εκκρεμές',
+    label: propertySpecialStatusLabels.reserved_pending,
     variant: 'warning',
     color: '#EA580C',
     backgroundColor: '#FFF7ED',
     icon: 'pause'
   },
   'contract-signed': {
-    label: 'Συμβόλαιο Υπογεγραμμένο',
+    label: propertySpecialStatusLabels.contract_signed,
     variant: 'warning',
     color: '#C2410C',
     backgroundColor: '#FEF2F2',
     icon: 'fileSignature'
   },
   'deposit-paid': {
-    label: 'Προκαταβολή Δεδομένη',
+    label: propertySpecialStatusLabels.deposit_paid,
     variant: 'warning',
     color: '#D97706',
     backgroundColor: '#FFFBEB',
@@ -307,21 +337,21 @@ export const PROPERTY_STATUSES: Record<PropertyStatus, BadgeDefinition> = {
 
   // 👑 Ownership Statuses
   'company-owned': {
-    label: 'Εταιρικό',
+    label: propertySpecialStatusLabels.corporate,
     variant: 'purple',
     color: '#6B21A8',
     backgroundColor: '#FAF5FF',
     icon: 'building'
   },
   'not-for-sale': {
-    label: 'Δεν Πωλείται',
+    label: propertySpecialStatusLabels.not_for_sale,
     variant: 'purple',
     color: '#7C3AED',
     backgroundColor: '#F3E8FF',
     icon: 'shield'
   },
   'family-reserved': {
-    label: 'Οικογενειακό',
+    label: propertySpecialStatusLabels.family,
     variant: 'purple',
     color: '#8B5CF6',
     backgroundColor: '#F5F3FF',
@@ -330,28 +360,28 @@ export const PROPERTY_STATUSES: Record<PropertyStatus, BadgeDefinition> = {
 
   // ⚡ Market Dynamics
   'pre-launch': {
-    label: 'Προ-εκκίνηση',
+    label: propertySpecialStatusLabels.pre_launch,
     variant: 'success',
     color: '#16A34A',
     backgroundColor: '#F0FDF4',
     icon: 'rocket'
   },
   'exclusive-listing': {
-    label: 'Αποκλειστική Διάθεση',
+    label: propertySpecialStatusLabels.exclusive,
     variant: 'success',
     color: '#15803D',
     backgroundColor: '#ECFDF5',
     icon: 'crown'
   },
   'price-reduced': {
-    label: 'Μειωμένη Τιμή',
+    label: propertySpecialStatusLabels.reduced_price,
     variant: 'error',
     color: '#F59E0B',
     backgroundColor: '#FEF3C7',
     icon: 'trendingDown'
   },
   'urgent-sale': {
-    label: 'Επείγουσα Πώληση',
+    label: propertySpecialStatusLabels.urgent_sale,
     variant: 'destructive',
     color: '#DC2626',
     backgroundColor: '#FEF2F2',
@@ -360,28 +390,28 @@ export const PROPERTY_STATUSES: Record<PropertyStatus, BadgeDefinition> = {
 
   // 🔧 Operational Statuses
   'under-renovation': {
-    label: 'Υπό Ανακαίνιση',
+    label: propertySpecialStatusLabels.under_renovation,
     variant: 'secondary',
     color: '#6B7280',
     backgroundColor: '#F9FAFB',
     icon: 'wrench'
   },
   'legal-issues': {
-    label: 'Νομικά Προβλήματα',
+    label: propertySpecialStatusLabels.legal_issues,
     variant: 'destructive',
     color: '#B91C1C',
     backgroundColor: '#FEE2E2',
     icon: 'gavel'
   },
   'inspection-required': {
-    label: 'Απαιτείται Επιθεώρηση',
+    label: propertySpecialStatusLabels.inspection_required,
     variant: 'outline',
     color: '#6B7280',
     backgroundColor: '#F9FAFB',
     icon: 'search'
   },
   'documentation-pending': {
-    label: 'Εκκρεμή Έγγραφα',
+    label: propertySpecialStatusLabels.pending_documents,
     variant: 'outline',
     color: '#9CA3AF',
     backgroundColor: '#F9FAFB',
@@ -390,56 +420,56 @@ export const PROPERTY_STATUSES: Record<PropertyStatus, BadgeDefinition> = {
 
   // Βασικά από το παλιό σύστημα για πλήρη συμβατότητα
   'for-sale': {
-    label: 'Προς Πώληση',
+    label: propertySpecialStatusLabels.for_sale,
     variant: 'success',
     color: '#059669',
     backgroundColor: '#ECFDF5',
     icon: 'tag'
   },
   'for-rent': {
-    label: 'Προς Ενοικίαση',
+    label: propertySpecialStatusLabels.for_rent,
     variant: 'info',
     color: '#3B82F6',
     backgroundColor: '#EFF6FF',
     icon: 'key'
   },
   rented: {
-    label: 'Ενοικιασμένο',
+    label: propertySpecialStatusLabels.rented,
     variant: 'purple',
     color: '#7C3AED',
     backgroundColor: '#F3E8FF',
     icon: 'handshake'
   },
   'under-negotiation': {
-    label: 'Υπό Διαπραγμάτευση',
+    label: propertySpecialStatusLabels.under_negotiation,
     variant: 'warning',
     color: '#D97706',
     backgroundColor: '#FFFBEB',
     icon: 'messageCircle'
   },
   'coming-soon': {
-    label: 'Σύντομα Διαθέσιμο',
+    label: propertySpecialStatusLabels.available_soon,
     variant: 'outline',
     color: '#6B7280',
     backgroundColor: '#F9FAFB',
     icon: 'calendar'
   },
   landowner: {
-    label: 'Ιδιοκτήτης Γης',
+    label: propertySpecialStatusLabels.landowner,
     variant: 'secondary',
     color: '#4B5563',
     backgroundColor: '#F3F4F6',
     icon: 'map'
   },
   'off-market': {
-    label: 'Εκτός Αγοράς',
+    label: propertySpecialStatusLabels.off_market,
     variant: 'outline',
     color: '#6B7280',
     backgroundColor: '#F9FAFB',
     icon: 'eyeOff'
   },
   unavailable: {
-    label: 'Μη Διαθέσιμο',
+    label: propertySpecialStatusLabels.unavailable,
     variant: 'secondary',
     color: '#6B7280',
     backgroundColor: '#F9FAFB',
@@ -453,35 +483,35 @@ export const PROPERTY_STATUSES: Record<PropertyStatus, BadgeDefinition> = {
 
 export const UNIT_STATUSES: Record<UnitStatus, BadgeDefinition> = {
   available: {
-    label: 'Διαθέσιμη',
+    label: storageStatusLabels.available,
     variant: 'success',
     color: '#059669',
     backgroundColor: '#ECFDF5',
     icon: 'home'
   },
   occupied: {
-    label: 'Κατειλημμένη',
+    label: storageStatusLabels.occupied,
     variant: 'info',
     color: '#3B82F6',
     backgroundColor: '#EFF6FF',
     icon: 'users'
   },
   sold: {
-    label: 'Πωλήθηκε',
+    label: propertyMarketStatusLabels.sold,
     variant: 'destructive',
     color: '#DC2626',
     backgroundColor: '#FEF2F2',
     icon: 'dollarSign'
   },
   maintenance: {
-    label: 'Συντήρηση',
+    label: storageStatusLabels.maintenance,
     variant: 'warning',
     color: '#D97706',
     backgroundColor: '#FFFBEB',
     icon: 'wrench'
   },
   reserved: {
-    label: 'Κρατημένη',
+    label: storageStatusLabels.reserved,
     variant: 'purple',
     color: '#7C3AED',
     backgroundColor: '#F3E8FF',
@@ -511,42 +541,42 @@ export const UNIT_SALE_STATUS_LABELS = {
 
 export const NAVIGATION_STATUSES: Record<NavigationStatus, BadgeDefinition> = {
   no_projects: {
-    label: 'Χωρίς έργα',
+    label: priorityLabels.none,
     variant: 'warning',
     color: '#D97706',
     backgroundColor: '#FFFBEB',
     icon: 'alertTriangle'
   },
   empty: {
-    label: 'Κενό',
+    label: priorityLabels.empty,
     variant: 'outline',
     color: '#6B7280',
     backgroundColor: '#F9FAFB',
     icon: 'circle'
   },
   warning: {
-    label: 'Προειδοποίηση',
+    label: priorityLabels.warning,
     variant: 'warning',
     color: '#D97706',
     backgroundColor: '#FFFBEB',
     icon: 'alertTriangle'
   },
   alert: {
-    label: 'Προσοχή',
+    label: priorityLabels.attention,
     variant: 'destructive',
     color: '#DC2626',
     backgroundColor: '#FEF2F2',
     icon: 'alert'
   },
   success: {
-    label: 'Επιτυχία',
+    label: priorityLabels.success,
     variant: 'success',
     color: '#059669',
     backgroundColor: '#ECFDF5',
     icon: 'check'
   },
   info: {
-    label: 'Πληροφορία',
+    label: priorityLabels.info,
     variant: 'info',
     color: '#3B82F6',
     backgroundColor: '#EFF6FF',
@@ -560,42 +590,42 @@ export const NAVIGATION_STATUSES: Record<NavigationStatus, BadgeDefinition> = {
 
 export const COMMON_STATUSES: Record<string, BadgeDefinition> = {
   new: {
-    label: 'Νέο',
+    label: recordStateLabels.new,
     variant: 'info',
     color: '#3B82F6',
     backgroundColor: '#EFF6FF',
     icon: 'plus'
   },
   updated: {
-    label: 'Ενημερωμένο',
+    label: recordStateLabels.updated,
     variant: 'warning',
     color: '#D97706',
     backgroundColor: '#FFFBEB',
     icon: 'refresh'
   },
   deleted: {
-    label: 'Διαγραμμένο',
+    label: recordStateLabels.deleted,
     variant: 'destructive',
     color: '#DC2626',
     backgroundColor: '#FEF2F2',
     icon: 'trash'
   },
   company: {
-    label: 'Εταιρεία',
+    label: entityTypeLabels.company,
     variant: 'secondary',
     color: '#6B7280',
     backgroundColor: '#F3F4F6',
     icon: 'building'
   },
   primary: {
-    label: 'Κύριο',
+    label: entityTypeLabels.main,
     variant: 'default',
     color: '#374151',
     backgroundColor: '#F3F4F6',
     icon: 'star'
   },
   secondary: {
-    label: 'Δευτερεύον',
+    label: entityTypeLabels.secondary,
     variant: 'outline',
     color: '#6B7280',
     backgroundColor: '#F9FAFB',
@@ -609,21 +639,21 @@ export const COMMON_STATUSES: Record<string, BadgeDefinition> = {
 
 export const OBLIGATION_STATUSES: Record<ObligationStatus, BadgeDefinition> = {
   draft: {
-    label: 'Προσχέδιο',
+    label: documentStatusLabels.draft,
     variant: 'warning',
     color: '#D97706',
     backgroundColor: '#FFFBEB',
     icon: 'edit'
   },
   completed: {
-    label: 'Ολοκληρωμένο',
+    label: documentStatusLabels.completed,
     variant: 'success',
     color: '#059669',
     backgroundColor: '#ECFDF5',
     icon: 'check'
   },
   approved: {
-    label: 'Εγκεκριμένο',
+    label: documentStatusLabels.approved,
     variant: 'info',
     color: '#3B82F6',
     backgroundColor: '#EFF6FF',

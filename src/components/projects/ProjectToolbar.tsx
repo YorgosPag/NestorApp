@@ -17,6 +17,7 @@ import {
   ToolsTabContent,
   SearchFiltersTabContent
 } from './ProjectsTabContent';
+import { UNIFIED_STATUS_FILTER_LABELS, COMMON_FILTER_LABELS, PROJECT_TYPE_LABELS } from '@/constants/property-statuses-enterprise';
 
 interface ProjectToolbarProps {
   selectedItems?: number[];
@@ -78,19 +79,19 @@ export function ProjectToolbar({
 
   // Status tabs configuration
   const statusTabs = [
-    { value: 'all', label: 'Όλες' },
-    { value: 'in_progress', label: 'Σε εξέλιξη' },
-    { value: 'planning', label: 'Σχεδιασμένα' },
-    { value: 'completed', label: 'Ολοκληρωμένα' },
-    { value: 'on_hold', label: 'Σε αναμονή' },
+    { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
+    { value: 'in_progress', label: UNIFIED_STATUS_FILTER_LABELS.IN_PROGRESS },
+    { value: 'planning', label: UNIFIED_STATUS_FILTER_LABELS.PLANNING },
+    { value: 'completed', label: UNIFIED_STATUS_FILTER_LABELS.COMPLETED },
+    { value: 'on_hold', label: UNIFIED_STATUS_FILTER_LABELS.ON_HOLD },
   ];
 
   // Type tabs configuration
   const typeTabs = [
-    { value: 'all', label: 'Όλα' },
-    { value: 'residential', label: 'Οικιστικό' },
-    { value: 'commercial', label: 'Επαγγελματικό' },
-    { value: 'infrastructure', label: 'Υποδομές' },
+    { value: 'all', label: COMMON_FILTER_LABELS.ALL_TYPES },
+    { value: 'residential', label: PROJECT_TYPE_LABELS.residential },
+    { value: 'commercial', label: PROJECT_TYPE_LABELS.commercial },
+    { value: 'infrastructure', label: PROJECT_TYPE_LABELS.infrastructure },
   ];
 
   // Define tabs configuration - similar to ContactsToolbar

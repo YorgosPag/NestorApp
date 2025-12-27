@@ -32,6 +32,7 @@ import {
   QuerySnapshot,
   DocumentData
 } from 'firebase/firestore';
+import { PROPERTY_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -468,7 +469,7 @@ export class EnterprisePropertyTypesService {
     }));
 
     if (includeAll) {
-      options.unshift({ value: 'all', label: 'Όλοι οι τύποι' });
+      options.unshift({ value: 'all', label: PROPERTY_FILTER_LABELS.ALL_TYPES });
     }
 
     return options;

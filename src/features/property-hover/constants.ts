@@ -1,4 +1,6 @@
 import type { UseSemanticColorsReturn } from '@/hooks/useSemanticColors';
+// 🏢 ENTERPRISE: Import centralized property status labels - NO MORE HARDCODED VALUES
+import { getPropertySpecialStatusLabels } from '@/subapps/dxf-viewer/config/modal-select';
 
 /**
  * ✅ ENTERPRISE PATTERN: Dependency Injection
@@ -6,34 +8,37 @@ import type { UseSemanticColorsReturn } from '@/hooks/useSemanticColors';
  * περνώ τα colors ως παράμετρο από το component που καλεί τη function.
  */
 export const getPropertyStatusConfig = (colors: UseSemanticColorsReturn) => {
+  // 🏢 ENTERPRISE: Get centralized property status labels
+  const statusLabels = getPropertySpecialStatusLabels();
+
   return {
     'for-sale': {
-      label: 'Προς Πώληση',
+      label: statusLabels.for_sale,
       color: `${colors.status.success.bg} ${colors.status.success.text} ${colors.status.success.border}`,
       priceLabel: 'Τιμή Πώλησης'
     },
     'for-rent': {
-      label: 'Προς Ενοικίαση',
+      label: statusLabels.for_rent,
       color: `${colors.status.info.bg} ${colors.status.info.text} ${colors.status.info.border}`,
       priceLabel: 'Μηνιαίο Μίσθωμα'
     },
     'sold': {
-      label: 'Πουλημένο',
+      label: statusLabels.sold,
       color: `${colors.status.error.bg} ${colors.status.error.text} ${colors.status.error.border}`,
       priceLabel: 'Τιμή Πώλησης'
     },
     'rented': {
-      label: 'Ενοικιασμένο',
+      label: statusLabels.rented,
       color: `${colors.status.warning.bg} ${colors.status.warning.text} ${colors.status.warning.border}`,
       priceLabel: 'Μηνιαίο Μίσθωμα'
     },
     'reserved': {
-      label: 'Δεσμευμένο',
+      label: statusLabels.reserved,
       color: `${colors.status.warning.bg} ${colors.status.warning.text} ${colors.status.warning.border}`,
       priceLabel: 'Τιμή Πώλησης'
     },
     'Άγνωστο': {
-      label: 'Άγνωστο',
+      label: statusLabels.unknown,
       color: `${colors.status.muted.bg} ${colors.status.muted.text} ${colors.status.muted.border}`,
       priceLabel: 'Τιμή'
     },

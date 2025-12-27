@@ -5,6 +5,7 @@ import { format, isToday, isTomorrow, isPast } from 'date-fns';
 import { el } from 'date-fns/locale';
 import { formatDateTime } from '@/lib/intl-utils';
 import type { FirestoreishTimestamp } from '@/types/crm';
+import { hardcodedColorValues } from '@/design-system/tokens/colors';
 
 // ✅ ENTERPRISE MIGRATION COMPLETE: formatDate now uses centralized intl-utils
 export const formatDate = (timestamp?: FirestoreishTimestamp) => {
@@ -23,16 +24,16 @@ export const formatDate = (timestamp?: FirestoreishTimestamp) => {
 
 export const getTaskDateColor = (dueDate?: FirestoreishTimestamp | null, status?: string) => {
     if (status === 'completed') return 'text-green-600';
-    if (!dueDate) return 'text-gray-600 dark:text-gray-400';
+    if (!dueDate) return hardcodedColorValues.text.muted; // ✅ ENTERPRISE: Uses centralized semantic system
     try {
         const date = dueDate instanceof Date ? dueDate : new Date(dueDate as string);
-        if (isNaN(date.getTime())) return 'text-gray-600 dark:text-gray-400';
+        if (isNaN(date.getTime())) return hardcodedColorValues.text.muted; // ✅ ENTERPRISE: Uses centralized semantic system
         if (isPast(date) && !isToday(date)) return 'text-red-600';
         if (isToday(date)) return 'text-blue-600';
         if (isTomorrow(date)) return 'text-purple-600';
-        return 'text-gray-600 dark:text-gray-400';
+        return hardcodedColorValues.text.muted; // ✅ ENTERPRISE: Uses centralized semantic system
     } catch {
-        return 'text-gray-600 dark:text-gray-400';
+        return hardcodedColorValues.text.muted; // ✅ ENTERPRISE: Uses centralized semantic system
     }
 };
 

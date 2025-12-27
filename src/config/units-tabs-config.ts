@@ -11,6 +11,9 @@
 
 import { LucideIcon } from 'lucide-react';
 
+// 🏢 ENTERPRISE: Import centralized tab labels
+import { getUnitsTabLabels } from '@/subapps/dxf-viewer/config/modal-select';
+
 // ============================================================================
 // INTERFACES & TYPES
 // ============================================================================
@@ -65,11 +68,14 @@ export interface UnitsTabConfig {
  *
  * ΣΗΜΑΝΤΙΚΟ: Αυτή είναι η ΜΟΝΑΔΙΚΗ πηγή αλήθειας για τις καρτέλες μονάδων!
  * Οποιαδήποτε αλλαγή στις καρτέλες πρέπει να γίνεται ΕΔΩ και μόνο εδώ.
+ * ✅ ENTERPRISE: Uses centralized labels από modal-select.ts
  */
-export const UNITS_TABS: UnitsTabConfig[] = [
+export const UNITS_TABS: UnitsTabConfig[] = (() => {
+  const tabLabels = getUnitsTabLabels();
+  return [
   {
     id: 'info',
-    label: 'Βασικές Πληροφορίες',
+    label: tabLabels.info,
     value: 'info',
     icon: 'home',
     description: 'Βασικές πληροφορίες και στοιχεία της μονάδας',
@@ -79,7 +85,7 @@ export const UNITS_TABS: UnitsTabConfig[] = [
   },
   {
     id: 'customer',
-    label: 'Πελάτης',
+    label: tabLabels.customer,
     value: 'customer',
     icon: 'user',
     description: 'Πληροφορίες και διαχείριση πελάτη της μονάδας',
@@ -89,7 +95,7 @@ export const UNITS_TABS: UnitsTabConfig[] = [
   },
   {
     id: 'floor-plan',
-    label: 'Κάτοψη',
+    label: tabLabels.floor_plan,
     value: 'floor-plan',
     icon: 'map',
     description: 'Κάτοψη και διάταξη της μονάδας',
@@ -99,7 +105,7 @@ export const UNITS_TABS: UnitsTabConfig[] = [
   },
   {
     id: 'documents',
-    label: 'Έγγραφα',
+    label: tabLabels.documents,
     value: 'documents',
     icon: 'file-text',
     description: 'Έγγραφα και πιστοποιητικά της μονάδας',
@@ -107,13 +113,13 @@ export const UNITS_TABS: UnitsTabConfig[] = [
     enabled: true,
     component: 'DocumentsPlaceholder',
     componentProps: {
-      title: 'Έγγραφα',
+      title: tabLabels.documents,
       subtitle: 'Εδώ θα εμφανίζονται τα έγγραφα της μονάδας'
     }
   },
   {
     id: 'photos',
-    label: 'Φωτογραφίες',
+    label: tabLabels.photos,
     value: 'photos',
     icon: 'camera',
     description: 'Φωτογραφίες της μονάδας',
@@ -123,7 +129,7 @@ export const UNITS_TABS: UnitsTabConfig[] = [
   },
   {
     id: 'videos',
-    label: 'Videos',
+    label: tabLabels.videos,
     value: 'videos',
     icon: 'video',
     description: 'Videos της μονάδας',
@@ -132,6 +138,7 @@ export const UNITS_TABS: UnitsTabConfig[] = [
     component: 'VideosTabContent',
   }
 ];
+})();
 
 // ============================================================================
 // UTILITY FUNCTIONS

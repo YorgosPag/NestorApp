@@ -10,25 +10,14 @@
  */
 
 import { propertyTypesService } from '@/services/property/EnterprisePropertyTypesService';
+import { PROPERTY_TYPE_LABELS, PROPERTY_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
+// 🏢 ENTERPRISE: Use centralized property type options - NO MORE HARDCODED VALUES
+import { getPropertyTypeOptions } from '@/subapps/dxf-viewer/config/modal-select';
 
-/**
- * @deprecated Hardcoded property types - Use EnterprisePropertyTypesService instead
- *
- * MIGRATION PATH:
- * Before: TYPE_OPTIONS
- * After: await propertyTypesService.getPropertyTypesForSelect(tenantId, locale, environment)
- *
- * This fallback will be removed in v3.0.0
- */
-export const TYPE_OPTIONS = [
-  { value: 'all', label: 'Όλοι οι τύποι' },
-  { value: 'studio', label: 'Στούντιο' },
-  { value: 'garsoniera', label: 'Γκαρσονιέρα' },
-  { value: 'apartment', label: 'Διαμέρισμα' },
-  { value: 'maisonette', label: 'Μεζονέτα' },
-  { value: 'warehouse', label: 'Αποθήκη' },
-  { value: 'parking', label: 'Parking' },
-] as const;
+// 🗑️ REMOVED: TYPE_OPTIONS - Use EnterprisePropertyTypesService
+//
+// Migration completed to enterprise service.
+// Use: await propertyTypesService.getPropertyTypesForSelect(tenantId, locale, environment)
 
 /**
  * Enterprise property types loader function
@@ -55,11 +44,11 @@ export async function loadPropertyTypes(
   } catch (error) {
     console.warn('🏠 Failed to load property types from service, using fallback:', error);
 
-    // Fallback to hardcoded values
-    return TYPE_OPTIONS.map(option => ({
-      value: option.value,
-      label: option.label
-    }));
+    // Fallback to centralized labels
+    return [
+      { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_TYPES },
+      ...Object.entries(PROPERTY_TYPE_LABELS).map(([value, label]) => ({ value, label }))
+    ];
   }
 }
 
@@ -101,7 +90,7 @@ export async function getEnterprisePropertyTypes(options: {
       }));
 
       if (includeAll) {
-        result.unshift({ value: 'all', label: 'Όλοι οι τύποι' });
+        result.unshift({ value: 'all', label: PROPERTY_FILTER_LABELS.ALL_TYPES });
       }
 
       return result;
@@ -117,38 +106,24 @@ export async function getEnterprisePropertyTypes(options: {
   } catch (error) {
     console.warn('🏠 Failed to load enterprise property types, using fallback:', error);
 
-    // Enhanced fallback with categories
-    const fallbackTypes = [
-      { value: 'studio', label: 'Στούντιο', category: 'residential' },
-      { value: 'garsoniera', label: 'Γκαρσονιέρα', category: 'residential' },
-      { value: 'apartment', label: 'Διαμέρισμα', category: 'residential' },
-      { value: 'maisonette', label: 'Μεζονέτα', category: 'residential' },
-      { value: 'warehouse', label: 'Αποθήκη', category: 'commercial' },
-      { value: 'parking', label: 'Parking', category: 'commercial' },
-    ];
+    // ✅ ENTERPRISE: Enhanced fallback using centralized property types - NO MORE HARDCODED VALUES
+    const fallbackTypes = getPropertyTypeOptions();
 
     let filteredTypes = category
       ? fallbackTypes.filter(type => type.category === category)
       : fallbackTypes;
 
     if (includeAll) {
-      filteredTypes = [{ value: 'all', label: 'Όλοι οι τύποι' }, ...filteredTypes];
+      filteredTypes = [{ value: 'all', label: PROPERTY_FILTER_LABELS.ALL_TYPES }, ...filteredTypes];
     }
 
     return filteredTypes;
   }
 }
 
-/**
- * Legacy type options getter with deprecation warning
- * @deprecated Use getEnterprisePropertyTypes() instead
- */
-export function getLegacyTypeOptions() {
-  console.warn(
-    '⚠️ TYPE_OPTIONS is deprecated. Use getEnterprisePropertyTypes() for database-driven property types.'
-  );
-  return TYPE_OPTIONS;
-}
+// 🗑️ REMOVED: getLegacyTypeOptions - Use getEnterprisePropertyTypes
+//
+// Migration completed to enterprise service.
 
 /**
  * Migration helper to convert old type values to new format
@@ -168,9 +143,7 @@ export function migratePropertyTypeValue(oldValue: string): string {
 
 // Default export
 export default {
-  TYPE_OPTIONS, // @deprecated
   loadPropertyTypes,
   getEnterprisePropertyTypes,
-  getLegacyTypeOptions,
   migratePropertyTypeValue
 };

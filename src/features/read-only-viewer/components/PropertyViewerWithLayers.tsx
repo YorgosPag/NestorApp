@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Import components
 import { ReadOnlyLayerViewer } from '@/components/property-viewer/ReadOnlyLayerViewer';
@@ -65,6 +66,7 @@ export function PropertyViewerWithLayers({
 }: PropertyViewerWithLayersProps) {
   const iconSizes = useIconSizes();
   const { getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const [zoomLevel, setZoomLevel] = useState(100);
   const [showLayers, setShowLayers] = useState(showLayerPanel);
   const [isLayersCollapsed, setIsLayersCollapsed] = useState(false);
@@ -269,43 +271,21 @@ export function PropertyViewerWithLayers({
 
         {/* FloorPlan Viewer */}
         <section className="flex-1 flex flex-col h-full overflow-hidden" aria-label="Floor plan viewer">
-          <div 
-            className="flex-1 overflow-auto"
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              padding: '20px'
-            }}
-          >
+          <div className="flex-1 overflow-auto flex justify-center items-center p-5">
             <div
+              className="w-full h-full min-w-[600px] min-h-[400px] relative transition-transform duration-200 ease-in-out origin-center"
+              data-zoom-level={zoomLevel}
               style={{
-                transform: `scale(${zoomLevel / 100})`,
-                transformOrigin: 'center center',
-                transition: 'transform 0.2s ease-in-out',
-                width: '100%',
-                height: '100%',
-                minWidth: '600px',
-                minHeight: '400px',
-                position: 'relative'
+                transform: `scale(${zoomLevel / 100})`
               }}
             >
               {/* PDF Background Layer */}
               {pdfBackgroundUrl && (
-                <div 
+                <div
+                  className="absolute inset-0 w-full h-full bg-contain bg-no-repeat bg-center opacity-70 -z-10 pointer-events-none"
+                  data-pdf-background
                   style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    backgroundImage: `url(${pdfBackgroundUrl})`,
-                    backgroundSize: 'contain',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'center',
-                    opacity: 0.7,
-                    zIndex: -1,
-                    pointerEvents: 'none'
+                    backgroundImage: `url(${pdfBackgroundUrl})`
                   }}
                 />
               )}
@@ -348,7 +328,7 @@ export function PropertyViewerWithLayers({
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
-              <div className={`${iconSizes.xs} bg-green-500 rounded-full`} />
+              <div className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} />
               <span>Ενημερώσεις σε πραγματικό χρόνο</span>
             </div>
           </div>

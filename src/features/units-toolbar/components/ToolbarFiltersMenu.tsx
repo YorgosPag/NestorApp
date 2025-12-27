@@ -16,6 +16,8 @@ import { Filter, X } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { SortToggleButton } from './SortToggleButton';
 import { RefreshButton } from './RefreshButton';
+// 🏢 ENTERPRISE: Import centralized unit filter options - NO MORE HARDCODED VALUES
+import { getUnitFilterOptions } from '@/subapps/dxf-viewer/config/modal-select';
 
 // --- UnitFiltersMenu Logic ---
 function UnitFiltersMenu({ activeFilters, onActiveFiltersChange }: {
@@ -44,11 +46,7 @@ function UnitFiltersMenu({ activeFilters, onActiveFiltersChange }: {
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>Φίλτρα Μονάδων</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {[
-          { value: 'for-sale', label: 'Προς Πώληση' },
-          { value: 'sold', label: 'Πουλημένα' },
-          { value: 'reserved', label: 'Κρατημένα' },
-        ].map(({ value, label }) => (
+        {getUnitFilterOptions().map(({ value, label }) => (
           <DropdownMenuCheckboxItem
             key={value}
             checked={activeFilters.includes(value)}

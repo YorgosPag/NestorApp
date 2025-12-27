@@ -17,6 +17,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
+import { COMMON_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 
 interface TabContentProps {
   selectedItems?: string[];
@@ -211,7 +212,7 @@ export function SearchFiltersTabContent({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="relative">
-            Κατάσταση: {statusTabs.find(tab => tab.value === getCurrentStatusFilter?.())?.label || 'Όλες'}
+            Κατάσταση: {statusTabs.find(tab => tab.value === getCurrentStatusFilter?.())?.label || COMMON_FILTER_LABELS.ALL_STATUSES}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
@@ -233,7 +234,7 @@ export function SearchFiltersTabContent({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="relative">
-            Τύπος: {typeTabs.find(tab => tab.value === getCurrentTypeFilter?.())?.label || 'Όλα'}
+            Τύπος: {typeTabs.find(tab => tab.value === getCurrentTypeFilter?.())?.label || COMMON_FILTER_LABELS.ALL_TYPES}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">

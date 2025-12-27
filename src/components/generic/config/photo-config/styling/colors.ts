@@ -71,7 +71,7 @@ export const PHOTO_BORDERS = {
  */
 export const PHOTO_TEXT_COLORS = {
   /** Muted text για empty states */
-  MUTED: 'text-gray-400',
+  MUTED: 'text-muted-foreground',
 
   /** White text για overlays */
   OVERLAY: 'text-white',
@@ -80,16 +80,16 @@ export const PHOTO_TEXT_COLORS = {
   FOREGROUND_MUTED: 'text-muted-foreground',
 
   /** Light gray text για secondary content */
-  LIGHT_MUTED: 'text-gray-500',
+  LIGHT_MUTED: 'text-muted-foreground',
 
   /** Medium gray text για upload states */
-  MEDIUM: 'text-gray-600',
+  MEDIUM: 'text-foreground/80',
 
   /** Light icon colors για inactive states */
-  ICON_LIGHT: 'text-gray-300',
+  ICON_LIGHT: 'text-muted-foreground/60',
 
   /** Gray text για form labels */
-  LABEL: 'text-gray-700'
+  LABEL: 'text-foreground'
 } as const;
 
 /**

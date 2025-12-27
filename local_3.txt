@@ -1,0 +1,44 @@
+Unhandled Runtime Error
+TypeError: filterCategories.buildings is not iterable
+
+Call Stack
+eval
+webpack-internal:/(app-pages-browser)/src/components/core/CompactToolbar/configs.ts
+(app-pages-browser)/./src/components/core/CompactToolbar/configs.ts
+file:///C:/Nestor_Pagonis/.next/static/chunks/_app-pages-browser_src_components_contacts_ContactsPageContent_tsx.js (2256:1)
+options.factory
+file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (715:31)
+__webpack_require__
+file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (37:33)
+fn
+file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (371:21)
+eval
+webpack-internal:/(app-pages-browser)/src/components/core/CompactToolbar/index.ts
+(app-pages-browser)/./src/components/core/CompactToolbar/index.ts
+file:///C:/Nestor_Pagonis/.next/static/chunks/_app-pages-browser_src_components_contacts_ContactsPageContent_tsx.js (2278:1)
+options.factory
+file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (715:31)
+__webpack_require__
+file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (37:33)
+fn
+file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (371:21)
+eval
+webpack-internal:/(app-pages-browser)/src/components/contacts/list/ContactsList.tsx
+(app-pages-browser)/./src/components/contacts/list/ContactsList.tsx
+file:///C:/Nestor_Pagonis/.next/static/chunks/_app-pages-browser_src_components_contacts_ContactsPageContent_tsx.js (1860:1)
+options.factory
+file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (715:31)
+__webpack_require__
+file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (37:33)
+fn
+file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (371:21)
+eval
+webpack-internal:/(app-pages-browser)/src/components/contacts/ContactsPageContent.tsx
+(app-pages-browser)/./src/components/contacts/ContactsPageContent.tsx
+file:///C:/Nestor_Pagonis/.next/static/chunks/_app-pages-browser_src_components_contacts_ContactsPageContent_tsx.js (1585:1)
+options.factory
+file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (715:31)
+__webpack_require__
+file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (37:33)
+fn
+file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (371:21)

@@ -73,6 +73,12 @@
     --sidebar-accent-foreground: 222.2 47.4% 11.2%;
     --sidebar-border: 212 85% 89%;     /* ✅ ENTERPRISE: Harmonious border blue (no grey) */
     --sidebar-ring: 222.2 47.4% 11.2%;
+
+    /* ✅ ENTERPRISE: Dropdown positioning variables (NO MORE INLINE STYLES) */
+    --dropdown-top: 0px;
+    --dropdown-left: 0px;
+    --dropdown-width: 0px;
+    --dropdown-z-index: 75;
   }
 
   .dark {
@@ -134,6 +140,12 @@
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 25%;
     --sidebar-ring: 210 40% 98%;
+
+    /* ✅ ENTERPRISE: Dropdown positioning variables - Dark Mode (same values) */
+    --dropdown-top: 0px;
+    --dropdown-left: 0px;
+    --dropdown-width: 0px;
+    --dropdown-z-index: 75;
   }
 }
 
@@ -287,6 +299,26 @@
 }
 
 /* =============================================================
+   MOBILE CONTACTS SEARCH FOCUS FEATURE
+   ============================================================= */
+
+/* Mobile Search Focus Feature for Contacts Header */
+@media (max-width: 767px) {
+  .contacts-header-mobile-container:has(input:focus) > div > div > div:first-child {
+    display: none !important;
+  }
+
+  .contacts-header-mobile-container:has(input:focus) > div > div > div:last-child {
+    display: none !important;
+  }
+
+  .contacts-header-mobile-container:has(input:focus) > div > div > div:nth-child(2) {
+    flex: 1 !important;
+    max-width: 100% !important;
+  }
+}
+
+/* =============================================================
    FINAL NUCLEAR SOLUTION - HIDE ALL ARROW INDICATORS
    ============================================================= */
 
@@ -359,4 +391,486 @@
 .lucide-arrow-up {
   display: none !important;
   visibility: hidden !important;
+}
+
+/* =============================================================
+   DEBUG PANEL KILLER - FORCE HIDE ALL DEBUG PANELS
+   ============================================================= */
+
+/**
+ * 🚫 DEBUG PANEL KILLER - Force Hide All Debug Panels
+ *
+ * This CSS section contains aggressive rules to hide any debug panels
+ * that might be appearing due to browser cache or other issues.
+ */
+
+/* Hide any element containing "OVERLAY" and "TOOLS" */
+[data-debug*="overlay" i] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Hide any element containing "DEBUG" */
+[data-debug*="debug" i] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Hide elements with green borders that might be debug panels */
+div[style*="border-color: green" i],
+div[style*="border: 2px solid green" i],
+div[style*="border: 1px solid green" i] {
+  display: none !important;
+}
+
+/* Hide any div containing "OVERLAY TOOLS" text */
+div:has-text("OVERLAY TOOLS") {
+  display: none !important;
+}
+
+/* CSS4 selector fallback - hide divs containing debug-related text */
+div[class*="debug" i],
+div[id*="debug" i],
+div[class*="overlay-debug" i],
+div[id*="overlay-debug" i] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Hide DraggableOverlayToolbar completely */
+div[data-component="DraggableOverlayToolbar"],
+div[class*="DraggableOverlayToolbar" i] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Nuclear option - hide any fixed positioned div with green styling */
+div[style*="position: fixed" i][style*="green" i] {
+  display: none !important;
+}
+
+/* Hide any div with z-index 99999 that might be a debug overlay */
+div[style*="z-index: 99999" i] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* =============================================================
+   DROPDOWN Z-INDEX OVERRIDES & ENTERPRISE STYLING
+   ============================================================= */
+
+@layer base {
+  /* Κρατάει μόνιμα χώρο για scrollbar - αποτρέπει shift εξ' αρχής */
+  html {
+    scrollbar-gutter: stable;
+  }
+
+  /* Override scroll lock χωρίς side effects */
+  body[data-scroll-locked] {
+    --removed-body-scroll-bar-size: 0px !important;  /* Μηδενίζει το compensation width */
+    margin-right: 0 !important;                      /* Ακυρώνει extra margin */
+    padding-right: 0 !important;                     /* Extra για padding conflicts */
+  }
+}
+
+/* ✅ ENTERPRISE: Force high z-index for Radix Select Content using centralized system */
+[data-radix-select-content] {
+  z-index: var(--dropdown-z-index, 75) !important;
+  min-width: 320px !important;
+  width: 320px !important;
+  max-width: 400px !important;
+}
+
+/* ✅ ENTERPRISE: Extra high z-index for obligations page dropdowns using centralized system */
+/* Ensure project dropdown appears above labels in obligations/new page */
+[data-radix-select-content],
+.radix-select-content,
+[data-state="open"][data-radix-select-content] {
+  z-index: var(--dropdown-z-index, 75) !important;
+  position: fixed !important;
+}
+
+/* ✅ ENTERPRISE: Extra protection for Select Portal containers */
+[data-radix-portal] {
+  z-index: var(--dropdown-z-index, 75) !important;
+}
+
+/* ✅ ENTERPRISE: Force high z-index for Radix Popper wrapper */
+[data-radix-popper-content-wrapper] {
+  z-index: var(--dropdown-z-index, 75) !important;
+}
+
+/* Force width for Radix Select Viewport */
+[data-radix-select-viewport] {
+  min-width: 320px !important;
+  width: 320px !important;
+}
+
+/* Better styling for Select Items */
+[data-radix-select-item] {
+  padding: 12px 16px !important;
+  min-height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-width: 300px !important;
+}
+
+/* Select item content wrapper */
+[data-radix-select-item] > div {
+  width: 100% !important;
+  min-width: 280px !important;
+}
+
+/* Select item text should not wrap */
+[data-radix-select-item] span {
+  white-space: nowrap !important;
+  flex: 1 !important;
+}
+
+/* ✅ ENTERPRISE: Contact item styling using CSS variables (NO HARDCODED VALUES) */
+[data-dropdown-contact-item="true"] {
+  background-color: hsl(var(--bg-secondary)) !important;
+}
+
+[data-dropdown-contact-item="true"]:hover {
+  background-color: hsl(var(--bg-hover)) !important;
+}
+
+[data-dropdown-contact-item="true"].bg-blue-100 {
+  background-color: hsl(var(--bg-selected)) !important;
+}
+
+/* ✅ ENTERPRISE: Use centralized modal z-index (NO HARDCODED VALUES) */
+[data-custom-relationship-select="true"] {
+  z-index: var(--dropdown-z-index, 75) !important;
+  position: fixed !important;
+}
+
+/* ✅ ENTERPRISE: Ensure no parent containers interfere with portal dropdowns */
+[data-custom-dropdown-portal="true"] {
+  z-index: var(--dropdown-z-index, 75) !important;
+  position: fixed !important;
+  isolation: isolate !important;
+  transform: none !important;
+  will-change: auto !important;
+}
+
+/* Prevent any parent container stacking context from interfering */
+body {
+  isolation: auto !important;
+}
+
+/* ✅ ENTERPRISE: Force portal dropdowns to always be on top using centralized system */
+[data-custom-relationship-select="true"],
+[data-custom-dropdown-portal="true"] {
+  z-index: var(--dropdown-z-index, 75) !important; /* Centralized z-index variable */
+}
+
+/* =============================================================
+   HIDE CHEVRON ICONS FROM SELECT COMPONENTS
+
+   Hides all ChevronDown arrows from Radix UI Select components
+   ============================================================= */
+
+/* Hide ChevronDown icon in SelectTrigger */
+[data-radix-select-trigger] > [data-radix-select-icon] {
+  display: none !important;
+}
+
+/* Alternative selector for Radix UI Select icon */
+[data-radix-select-trigger] svg[class*="chevron"] {
+  display: none !important;
+}
+
+/* Hide any lucide-react ChevronDown icons in Select components */
+[data-radix-select-trigger] .lucide-chevron-down {
+  display: none !important;
+}
+
+/* Generic rule to hide all chevron icons in select triggers */
+[data-radix-select-trigger] [data-icon-chevron="true"] {
+  display: none !important;
+}
+
+/* Hide ChevronDown icons specifically from SelectTrigger elements */
+button[role="combobox"] svg.lucide-chevron-down {
+  display: none !important;
+}
+
+/* Alternative approach - hide the icon container */
+button[role="combobox"] > span:last-child {
+  display: none !important;
+}
+
+/* =============================================================
+   ADDITIONAL CHEVRON HIDING RULES - BROADER TARGETING
+   ============================================================= */
+
+/* Hide all chevron icons in any select-related elements */
+[class*="select"] svg[class*="chevron"],
+[class*="Select"] svg[class*="chevron"],
+[data-select] svg[class*="chevron"] {
+  display: none !important;
+}
+
+/* Hide chevrons in any button that might be a dropdown trigger */
+button svg.lucide-chevron-down,
+button .lucide-chevron-down {
+  display: none !important;
+}
+
+/* Target any element with chevron in classname */
+*[class*="chevron-down"] {
+  display: none !important;
+}
+
+/* Hide SVG icons with specific chevron paths */
+svg[data-testid*="chevron"],
+svg[aria-label*="chevron"],
+svg[title*="chevron"] {
+  display: none !important;
+}
+
+/* =============================================================
+   RADICAL APPROACH - HIDE ALL POSSIBLE ARROWS/CHEVRONS
+   ============================================================= */
+
+/* Hide all SVG icons that look like arrows or chevrons */
+svg[class*="arrow"],
+svg[class*="chevron"],
+*[class*="arrow-right"],
+*[class*="arrow-down"],
+*[class*="chevron-right"],
+*[class*="chevron-down"] {
+  display: none !important;
+}
+
+/* Hide CSS pseudo-element arrows in specific contexts */
+*[aria-expanded]::after,
+*[role="button"]::after,
+*[class*="select"]::after,
+*[class*="dropdown"]::after {
+  content: none !important;
+}
+
+/* Target any element inside Σχέσεις Επαφής containers */
+*:contains("Σχέσεις Επαφής") + * svg,
+*:contains("Σχέσεις Επαφής") svg {
+  display: none !important;
+}
+
+/* Hide all lucide icons that could be arrows */
+.lucide-arrow-right,
+.lucide-arrow-down,
+.lucide-arrow-up-right,
+.lucide-chevron-right,
+.lucide-chevron-left,
+.lucide-chevron-up,
+.lucide-triangle-right,
+.lucide-play,
+.lucide-caret-right {
+  display: none !important;
+}
+
+/* Keep all necessary icons visible */
+.lucide-users,
+.lucide-plus,
+.lucide-refresh-cw,
+.lucide-settings {
+  display: block !important;
+}
+
+/* =============================================================
+   FIX TEXT WRAPPING ISSUE - NO MORE "ARROWS" FROM BROKEN WORDS
+   ============================================================= */
+
+/* Prevent text wrapping in relationship headers */
+*:contains("Σχέσεις Επαφής"),
+[class*="card"] h1,
+[class*="card"] h2,
+[class*="card"] h3,
+[class*="CardTitle"],
+[class*="card-title"] {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  hyphens: none !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+/* Specific fix for relationship card titles */
+.card .card-title,
+[data-radix-collection-item] *,
+*[role="heading"] {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  hyphens: none !important;
+}
+
+/* Ensure container has enough space */
+.card-header,
+.card .header,
+*[class*="CardHeader"] {
+  min-width: max-content !important;
+  overflow: visible !important;
+}
+
+/* =============================================================
+   ENTERPRISE CONTACT DROPDOWN SCROLLING - EXCEPTION RULES
+
+   Allow scrolling specifically for the enterprise contact dropdown
+   These rules OVERRIDE the nuclear scrollbar hiding above
+   ============================================================= */
+
+/* Show scrollbar for enterprise contact dropdown */
+[data-enterprise-contact-dropdown="true"] {
+  scrollbar-width: thin !important; /* Firefox */
+  scrollbar-color: #cbd5e1 transparent !important; /* Firefox */
+  -ms-overflow-style: auto !important; /* Internet Explorer 10+ */
+}
+
+/* Show webkit scrollbar for enterprise dropdown - FORCE OVERRIDE */
+[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar,
+.overflow-y-scroll::-webkit-scrollbar,
+div[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar {
+  display: block !important;
+  width: 8px !important;
+  height: 8px !important;
+  background: rgba(0,0,0,0.1) !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-track,
+.overflow-y-scroll::-webkit-scrollbar-track,
+div[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-track {
+  display: block !important;
+  background: rgba(0,0,0,0.05) !important;
+  border-radius: 4px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb,
+.overflow-y-scroll::-webkit-scrollbar-thumb,
+div[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb {
+  display: block !important;
+  background: #94a3b8 !important;
+  border-radius: 4px !important;
+  transition: background-color 0.2s ease !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8 !important;
+}
+
+[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-corner {
+  display: none !important;
+}
+
+/* Ensure the dropdown container allows overflow */
+[data-enterprise-contact-dropdown="true"] {
+  overflow-y: auto !important;
+  max-height: 300px !important;
+}
+
+/* =============================================================
+   RADICAL SCROLLBAR OVERRIDE - FORCE SCROLLBAR FOR DROPDOWN
+
+   This completely overrides the nuclear option above for our specific dropdown
+   ============================================================= */
+
+/* Force show scrollbar with MAXIMUM specificity */
+body [data-enterprise-contact-dropdown="true"],
+body div[data-enterprise-contact-dropdown="true"],
+div[data-enterprise-contact-dropdown="true"].overflow-y-scroll {
+  scrollbar-width: thin !important;
+  scrollbar-color: #94a3b8 rgba(0,0,0,0.1) !important;
+  -ms-overflow-style: auto !important;
+  overflow-y: scroll !important;
+}
+
+/* FORCE webkit scrollbar with maximum specificity */
+body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar,
+body div[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar,
+html body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar {
+  display: block !important;
+  width: 10px !important;
+  height: 10px !important;
+  background: rgba(0,0,0,0.1) !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-track,
+html body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-track {
+  display: block !important;
+  background: rgba(0,0,0,0.05) !important;
+  border-radius: 5px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb,
+html body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb {
+  display: block !important;
+  background: #64748b !important;
+  border-radius: 5px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb:hover,
+html body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb:hover {
+  background: #475569 !important;
+}
+
+/* =============================================================
+   CANVAS Z-INDEX STACKING SYSTEM - DXF VIEWER
+   ============================================================= */
+
+/**
+ * 🎯 CANVAS Z-INDEX FIX - Following ChatGPT5 recommendation
+ *
+ * Professional canvas layering for DXF viewer with proper z-index management
+ */
+
+/* Canvas stack container */
+.canvas-stack {
+  position: relative;
+}
+
+/* All canvas elements in stack */
+.canvas-stack > canvas,
+.canvas-stack > [data-canvas-type] {
+  position: absolute;
+  inset: 0;
+}
+
+/* Force z-index order with !important */
+[data-canvas-type="dxf"] {
+  z-index: 0 !important;
+}
+
+[data-canvas-type="layer"] {
+  z-index: 10 !important; /* overlay πάνω */
 }

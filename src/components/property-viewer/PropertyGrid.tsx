@@ -15,6 +15,9 @@ import type { Property } from '@/types/property-viewer';
 import { formatFloorLabel, formatCurrency } from '@/lib/intl-utils';
 import { brandClasses } from '@/styles/design-tokens';
 
+// 🏢 ENTERPRISE: Import centralized status labels - ZERO HARDCODED VALUES
+import { PROPERTY_STATUS_LABELS } from '@/constants/property-statuses-enterprise';
+
 // 🚀 ENTERPRISE: PropertyGridView features integration (conditional imports)
 import { PageHeader } from '@/core/headers';
 import { usePublicPropertyViewer } from '@/hooks/usePublicPropertyViewer';
@@ -40,29 +43,30 @@ function PropertyCard({ property, onSelect, isSelected }: { property: Property, 
   const colors = useSemanticColors();
 
   // 🎨 ENTERPRISE BORDER TOKENS - Centralized status configuration
+  // ✅ CENTRALIZED: Using PROPERTY_STATUS_LABELS from central system - ZERO HARDCODED VALUES
   const statusConfig = {
     'for-sale': {
-      label: 'Προς Πώληση',
+      label: PROPERTY_STATUS_LABELS['for-sale'],
       color: `${getStatusBorder('success')} ${colors.bg.success}`,
       textColor: colors.text.success
     },
     'for-rent': {
-      label: 'Προς Ενοικίαση',
+      label: PROPERTY_STATUS_LABELS['for-rent'],
       color: `${brandClasses.primary.border} ${brandClasses.primary.bg}`,
       textColor: brandClasses.primary.text
     },
     'sold': {
-      label: 'Πουλημένο',
+      label: PROPERTY_STATUS_LABELS.sold,
       color: `${getStatusBorder('error')} ${colors.bg.error}`,
       textColor: colors.text.error
     },
     'rented': {
-      label: 'Ενοικιασμένο',
+      label: PROPERTY_STATUS_LABELS.rented,
       color: `${getStatusBorder('warning')} ${colors.bg.warning}`,
       textColor: colors.text.warning
     },
     'reserved': {
-      label: 'Δεσμευμένο',
+      label: PROPERTY_STATUS_LABELS.reserved,
       color: `${getStatusBorder('warning')} ${colors.bg.warning}`,
       textColor: colors.text.warning
     },

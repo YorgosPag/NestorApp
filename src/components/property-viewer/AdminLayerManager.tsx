@@ -12,6 +12,7 @@ import { CommonBadge } from '@/core/badges';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { DXF_LAYER_CATEGORY_LABELS } from '@/constants/property-statuses-enterprise';
 import { 
   Layers, 
   Eye, 
@@ -689,7 +690,7 @@ export function AdminLayerManager({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Όλες οι κατηγορίες</SelectItem>
+                <SelectItem value="all">{DXF_LAYER_CATEGORY_LABELS.all}</SelectItem>
                 {categories.map(category => (
                   <SelectItem key={category} value={category}>
                     <div className="flex items-center gap-2">

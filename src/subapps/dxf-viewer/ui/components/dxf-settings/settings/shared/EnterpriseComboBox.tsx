@@ -556,20 +556,20 @@ export function EnterpriseComboBox<T>({
           option.disabled
             ? 'opacity-50 cursor-not-allowed'
             : isHighlighted
-            ? 'bg-blue-600 text-white'
-            : `text-white ${HOVER_BACKGROUND_EFFECTS.DARKER}`
+            ? `${colors.bg.info} ${colors.text.inverted}`
+            : `${colors.text.primary} ${HOVER_BACKGROUND_EFFECTS.DARKER}`
         }`}
       >
         <div className="flex-1">
           <div className="font-medium">{option.label}</div>
           {option.description && (
-            <div className={`text-xs ${isHighlighted ? 'text-blue-200' : colors.text.muted}`}>
+            <div className={`text-xs ${isHighlighted ? colors.text.mutedInverted : colors.text.muted}`}>
               {option.description}
             </div>
           )}
         </div>
         {showCheckmark && isSelected && !option.disabled && (
-          <CheckmarkIcon className={`${iconSizes.md} text-green-400 flex-shrink-0 ml-2`} />
+          <CheckmarkIcon className={`${iconSizes.md} ${colors.text.success} flex-shrink-0 ml-2`} />
         )}
       </div>
     );
@@ -591,11 +591,9 @@ export function EnterpriseComboBox<T>({
         aria-labelledby={ariaLabelledBy || (label ? labelId : undefined)}
         aria-label={ariaLabel}
         tabIndex={-1}
-        className="rounded-md shadow-2xl overflow-y-auto"
+        className={`rounded-md shadow-2xl overflow-y-auto ${colors.bg.secondary} ${getStatusBorder('default')}`}
         style={{
           ...floatingStyles, // 🏢 FLOATING UI: Auto-positioning
-          backgroundColor: '#374151',
-          border: '1px solid #4B5563',
           maxHeight,
           zIndex: dropdownZIndex, // 🏢 ENTERPRISE: Configurable z-index
           // 🔧 ENTERPRISE FALLBACK: Ensure minimum positioning values
@@ -713,8 +711,8 @@ export function EnterpriseComboBox<T>({
             }
           }}
           onKeyDown={handleKeyDown}
-          className={`w-full px-3 py-2 pr-8 ${colors.bg.hover} ${getStatusBorder('default')} rounded-md text-white text-left ${HOVER_BACKGROUND_EFFECTS.DARKER} focus:ring-2 focus:ring-blue-500 ${getFocusBorder('input')} ${
-            disabled ? 'opacity-50 cursor-not-allowed' : ''
+          className={`w-full px-3 py-2 pr-8 ${colors.bg.hover} ${getStatusBorder('default')} rounded-md ${colors.text.primary} text-left ${HOVER_BACKGROUND_EFFECTS.DARKER} focus:ring-2 ${colors.border.focus} ${getFocusBorder('input')} ${
+            disabled ? 'opacity-disabled cursor-not-allowed' : ''
           } ${buttonClassName}`}
         >
           {displayValue}

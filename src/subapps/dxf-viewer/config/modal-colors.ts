@@ -10,6 +10,7 @@
 // Import existing color systems from centralized design tokens
 import { colors } from '@/styles/design-tokens';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { hardcodedColorValues } from '@/design-system/tokens/colors';
 
 // 🏢 ENTERPRISE: Import centralized panel tokens instead of duplicates
 import { PANEL_COLORS } from './panel-tokens';
@@ -52,10 +53,10 @@ export const MODAL_COLOR_SCHEMES = {
     },
     text: {
       primary: 'text-white',
-      secondary: 'text-gray-300', // Static text secondary
+      secondary: hardcodedColorValues.text.secondary, // ✅ ENTERPRISE: Uses centralized semantic system
       accent: 'text-accent', // ✅ ENTERPRISE: text-orange-500 → semantic accent
-      label: 'text-gray-300', // Static text secondary
-      description: 'text-gray-400', // Static text muted
+      label: hardcodedColorValues.text.secondary, // ✅ ENTERPRISE: Uses centralized semantic system
+      description: hardcodedColorValues.text.muted, // ✅ ENTERPRISE: Uses centralized semantic system
     },
     border: {
       primary: `border ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
@@ -150,7 +151,7 @@ export const MODAL_COLOR_SCHEMES = {
  * Ensures visual hierarchy and accessibility
  */
 export const MODAL_ICON_COLORS = {
-  default: 'text-gray-500', // Static text disabled
+  default: hardcodedColorValues.text.muted, // ✅ ENTERPRISE: Uses centralized semantic system
   info: 'text-primary', // ✅ ENTERPRISE: text-blue-500 → semantic primary
   success: 'text-success', // ✅ ENTERPRISE: text-green-500 → semantic success
   warning: 'text-warning', // ✅ ENTERPRISE: text-orange-500 → semantic warning
@@ -210,8 +211,8 @@ export const MODAL_FORM_COLORS = {
   // DXF Technical interface forms
   DXF_TECHNICAL: {
     input: `bg-input border ${PANEL_COLORS.BORDER_PRIMARY} text-foreground focus:border-accent focus:ring-accent/20`, // ✅ ENTERPRISE: All hardcoded → semantic // ✅ ENTERPRISE: Using centralized PANEL_COLORS
-    label: 'text-gray-300', // Static text secondary
-    description: 'text-gray-400', // Static text muted
+    label: hardcodedColorValues.text.secondary, // ✅ ENTERPRISE: Uses centralized semantic system
+    description: hardcodedColorValues.text.muted, // ✅ ENTERPRISE: Uses centralized semantic system
     error: 'text-destructive', // ✅ ENTERPRISE: text-red-400 → semantic destructive
   },
 

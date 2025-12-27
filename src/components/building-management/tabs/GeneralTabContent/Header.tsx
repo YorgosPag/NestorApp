@@ -56,7 +56,7 @@ export function Header({ building, isEditing, autoSaving, lastSaved, setIsEditin
               <>
                 <CheckCircle className={`${iconSizes.xs} text-green-600`} />
                 <span className="text-green-600">
-                  Αποθηκεύτηκε {formatDateTime(lastSaved, { timeStyle: 'medium' }).split(' ')[1]}
+                  Αποθηκεύτηκε {lastSaved ? formatDateTime(lastSaved, { timeStyle: 'medium' }).split(' ')[1] : '--'}
                 </span>
               </>
             ) : null}

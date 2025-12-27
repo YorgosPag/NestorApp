@@ -26,11 +26,14 @@ const iconMap = {
   info: Info
 };
 
-const colorMap = {
-  success: 'text-green-500',
-  error: 'text-red-500',
-  warning: 'text-yellow-500',
-  info: 'text-blue-500'
+const getColorClass = (colors: any, type: keyof typeof iconMap) => {
+  switch (type) {
+    case 'success': return colors.text.success;
+    case 'error': return colors.text.error;
+    case 'warning': return colors.text.warning;
+    case 'info': return colors.text.info;
+    default: return colors.text.muted;
+  }
 };
 
 export function NotificationDrawer() {
@@ -119,7 +122,7 @@ export function NotificationDrawer() {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 z-[9998]"
+        className={`fixed inset-0 bg-black/50 ${colors.bg.overlay} z-overlay`}
         onClick={close}
       />
 
@@ -129,7 +132,7 @@ export function NotificationDrawer() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="notif-title"
-        className={`fixed right-0 top-0 h-screen w-[420px] ${colors.bg.primary} shadow-xl flex flex-col z-[9999] border-l`}
+        className={`fixed right-0 top-0 h-screen w-[420px] ${colors.bg.primary} shadow-xl flex flex-col z-modal border-l`}
       >
         {/* ✅ ENTERPRISE: Live region for screen readers */}
         <div aria-live="polite" aria-atomic="true" className="sr-only">
@@ -185,7 +188,7 @@ export function NotificationDrawer() {
           ) : (
             items.map(n => {
               const Icon = iconMap[n.kind];
-              const colorClass = colorMap[n.kind];
+              const colorClass = getColorClass(colors, n.kind);
 
               return (
                 <article

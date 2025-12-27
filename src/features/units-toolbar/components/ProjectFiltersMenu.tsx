@@ -12,6 +12,8 @@ import {
 import { Filter, X } from 'lucide-react';
 import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: Import centralized unit filter options - NO MORE HARDCODED VALUES
+import { getUnitFilterOptions } from '@/subapps/dxf-viewer/config/modal-select';
 
 interface Props {
   activeFilters: string[];
@@ -41,11 +43,7 @@ export function ProjectFiltersMenu({ activeFilters, onActiveFiltersChange }: Pro
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>Φίλτρα Μονάδων</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {[
-          { value: 'for-sale', label: 'Προς Πώληση' },
-          { value: 'sold', label: 'Πουλημένα' },
-          { value: 'reserved', label: 'Κρατημένα' },
-        ].map(({ value, label }) => (
+        {getUnitFilterOptions().map(({ value, label }) => (
           <DropdownMenuCheckboxItem
             key={value}
             checked={activeFilters.includes(value)}

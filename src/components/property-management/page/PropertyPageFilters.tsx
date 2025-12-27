@@ -5,6 +5,14 @@ import { LabeledSelect } from './LabeledSelect';
 import { LabeledInput } from './LabeledInput';
 import { Home, MapPin, Activity, Building2, Search } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import {
+  PROPERTY_TYPE_LABELS,
+  PROPERTY_STATUS_LABELS,
+  PROPERTY_FILTER_LABELS,
+  PROPERTY_STANDARD_FLOORS,
+  LEGACY_STATUS_MAPPING,
+  STORAGE_LABELS
+} from '@/constants/property-statuses-enterprise';
 
 interface PropertyPageFiltersProps {
   searchTerm: string;
@@ -20,40 +28,29 @@ interface PropertyPageFiltersProps {
 }
 
 const typeOptions = [
-  { value: 'all', label: 'Όλοι οι τύποι' },
-  { value: 'apartment', label: 'Διαμέρισμα' },
-  { value: 'studio', label: 'Στούντιο' },
-  { value: 'maisonette', label: 'Μεζονέτα' },
-  { value: 'shop', label: 'Κατάστημα' },
-  { value: 'office', label: 'Γραφείο' },
-  { value: 'storage', label: 'Αποθήκη' },
+  { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_TYPES },
+  ...Object.entries(PROPERTY_TYPE_LABELS).map(([value, label]) => ({ value, label }))
 ];
 
 const statusOptions = [
-  { value: 'all', label: 'Όλες οι καταστάσεις' },
-  { value: 'available', label: 'Διαθέσιμο' },
-  { value: 'sold', label: 'Πουλημένο' },
-  { value: 'reserved', label: 'Κρατημένο' },
-  { value: 'owner', label: 'Οικοπεδούχου' },
+  { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_STATUSES },
+  ...Object.entries(LEGACY_STATUS_MAPPING).map(([legacyValue, modernValue]) => ({
+    value: legacyValue,
+    label: PROPERTY_STATUS_LABELS[modernValue]
+  }))
 ];
 
 const floorOptions = [
-  { value: 'all', label: 'Όλοι οι όροφοι' },
-  { value: 'Υπόγειο', label: 'Υπόγειο' },
-  { value: 'Ισόγειο', label: 'Ισόγειο' },
-  { value: '1ος Όροφος', label: '1ος Όροφος' },
-  { value: '2ος Όροφος', label: '2ος Όροφος' },
-  { value: '3ος Όροφος', label: '3ος Όροφος' },
-  { value: '4ος Όροφος', label: '4ος Όροφος' },
-  { value: '5ος Όροφος', label: '5ος Όροφος' },
+  { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_FLOORS },
+  ...PROPERTY_STANDARD_FLOORS.map(floor => ({ value: floor, label: floor }))
 ];
 
 const buildingOptions = [
-  { value: 'all', label: 'Όλα τα κτίρια' },
-  { value: 'A', label: 'Κτίριο A' },
-  { value: 'B', label: 'Κτίριο B' },
-  { value: 'C', label: 'Κτίριο C' },
-  { value: 'D', label: 'Κτίριο D' },
+  { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_BUILDINGS },
+  { value: 'A', label: STORAGE_LABELS.BUILDING_A },
+  { value: 'B', label: STORAGE_LABELS.BUILDING_B },
+  { value: 'C', label: STORAGE_LABELS.BUILDING_C },
+  { value: 'D', label: STORAGE_LABELS.BUILDING_D },
 ];
 
 export function PropertyPageFilters({

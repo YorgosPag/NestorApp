@@ -159,11 +159,11 @@ export const ENTERPRISE_COLOR_MAPPING: Record<SemanticColorName, ColorTokenBridg
   },
   secondary: {
     token: semanticColors.status.warning, // Using warning as secondary
-    tailwind: 'text-gray-600',
+    tailwind: hardcodedColorValues.text.secondary,
     cssVar: 'hsl(var(--status-warning))',
     rawValue: '#6b7280',
     variants: {
-      text: 'text-gray-600',
+      text: hardcodedColorValues.text.secondary,
       bg: hardcodedColorValues.background.gray[100],
       border: 'border-gray-300',
       ring: 'ring-gray-300',
@@ -185,11 +185,11 @@ export const ENTERPRISE_COLOR_MAPPING: Record<SemanticColorName, ColorTokenBridg
   },
   muted: {
     token: semanticColors.status.info, // Using info as muted fallback
-    tailwind: 'text-gray-400',
+    tailwind: hardcodedColorValues.text.muted,
     cssVar: 'hsl(var(--status-info))',
     rawValue: '#9ca3af',
     variants: {
-      text: 'text-gray-400',
+      text: hardcodedColorValues.text.muted,
       bg: hardcodedColorValues.background.gray[50],
       border: 'border-gray-200',
       ring: 'ring-gray-200',

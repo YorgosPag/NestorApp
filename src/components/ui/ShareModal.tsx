@@ -14,6 +14,7 @@ import React from 'react';
 import { Share2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { designSystem } from '@/lib/design-system';
 import { getSocialShareUrls, getPhotoSocialShareUrls, trackShareEvent } from '@/lib/share-utils';
 
@@ -55,6 +56,7 @@ export function ShareModal({
   // ============================================================================
 
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const [showEmailForm, setShowEmailForm] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
 
@@ -224,8 +226,8 @@ export function ShareModal({
           <figure className={designSystem.cn(
             `mx-auto ${iconSizes['2xl']} rounded-full flex items-center justify-center`,
             designSystem.getStatusColor('info', 'bg')
-          )} role="img" aria-label="Εικονίδιο Κοινοποίησης">
-            <Share2 className={`${iconSizes.lg} text-white`} />
+          )} role="img" aria-label="Share Icon">
+            <Share2 className={`${iconSizes.lg} ${colors.text.inverse}`} />
           </figure>
 
           <DialogTitle className={designSystem.cn(

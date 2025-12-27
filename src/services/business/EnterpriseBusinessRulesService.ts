@@ -35,6 +35,58 @@ import {
   DocumentData
 } from 'firebase/firestore';
 
+// 🏢 ENTERPRISE: Import centralized legal forms - NO MORE DUPLICATES
+import { getLegalFormOptions, getGemiStatusOptions } from '@/subapps/dxf-viewer/config/modal-select';
+
+// ============================================================================
+// UTILITY FUNCTIONS FOR CENTRALIZED DATA
+// ============================================================================
+
+/**
+ * ✅ ENTERPRISE: Convert centralized legal forms to service format
+ * Eliminates hardcoded duplicates and uses centralized source
+ */
+function getCentralizedLegalForms(): LegalFormOption[] {
+  const centralizedForms = getLegalFormOptions();
+
+  return centralizedForms.map(form => ({
+    value: form.value.toUpperCase(),
+    label: form.label,
+    fullName: form.label.match(/\((.*?)\)/)?.[1] || form.label,
+    description: `Εταιρεία τύπου ${form.value.toUpperCase()}`,
+    jurisdiction: 'GR',
+    minCapital: { amount: 0, currency: 'EUR' },
+    minShareholders: form.value === 'ae' ? 1 : 2,
+    maxShareholders: form.value === 'ae' ? undefined : 50,
+    liabilityType: form.value === 'ae' ? 'limited' : 'unlimited',
+    isActive: true,
+    created: new Date(),
+    updated: new Date()
+  } as LegalFormOption));
+}
+
+/**
+ * ✅ ENTERPRISE: Convert centralized GEMI statuses to service format
+ * Eliminates hardcoded duplicates and uses centralized source
+ */
+function getCentralizedCompanyStatuses(): CompanyStatusOption[] {
+  const centralizedStatuses = getGemiStatusOptions();
+
+  return centralizedStatuses.map(status => ({
+    value: status.value,
+    label: status.label,
+    description: `Κατάσταση εταιρείας: ${status.label}`,
+    isActive: status.value === 'active',
+    workflow: {
+      canTransitionTo: status.value === 'active' ? ['inactive', 'dissolved'] : [],
+      requiresApproval: status.value === 'dissolved',
+      autoReasons: []
+    },
+    created: new Date(),
+    updated: new Date()
+  } as CompanyStatusOption));
+}
+
 // ============================================================================
 // TYPES & INTERFACES
 // ============================================================================
@@ -682,7 +734,17 @@ export class EnterpriseBusinessRulesService {
     jurisdiction: string,
     environment: string
   ): BusinessRulesConfiguration {
-    const defaultLegalForms: LegalFormOption[] = [
+    // ✅ ENTERPRISE: Using centralized legal forms - NO MORE HARDCODED DUPLICATES
+    const defaultLegalForms: LegalFormOption[] = getCentralizedLegalForms();
+
+    // NOTE: Previous hardcoded array replaced with centralized source above
+    // Maintaining backward compatibility through getCentralizedLegalForms()
+
+    const defaultCompanyStatuses: CompanyStatusOption[] = getCentralizedCompanyStatuses();
+
+    // NOTE: Previous hardcoded array - now using centralized source
+    /*
+    const hardcodedCompanyStatuses = [
       {
         value: 'OE',
         label: 'Ο.Ε. (Ομόρρυθμη Εταιρεία)',
@@ -766,8 +828,11 @@ export class EnterpriseBusinessRulesService {
         effectiveDate: new Date('2012-01-01')
       }
     ];
+    */
 
-    const defaultCompanyStatuses: CompanyStatusOption[] = [
+    // NOTE: Previous hardcoded company statuses replaced with centralized source
+    /*
+    const oldHardcodedCompanyStatuses: CompanyStatusOption[] = [
       {
         value: 'active',
         label: 'Ενεργή',
@@ -832,6 +897,7 @@ export class EnterpriseBusinessRulesService {
         isActive: true
       }
     ];
+    */
 
     return {
       configId: `business-rules-${tenantId}-${jurisdiction}-${environment}`,

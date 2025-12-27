@@ -1,5 +1,11 @@
 import type { FilterPanelConfig } from '../types';
 import { GEOGRAPHIC_CONFIG } from '@/config/geo-constants';
+import {
+  UNIFIED_STATUS_FILTER_LABELS,
+  COMMON_FILTER_LABELS,
+  PROPERTY_FILTER_LABELS,
+  STORAGE_LABELS
+} from '@/constants/property-statuses-enterprise';
 
 // Storage Filter State Type
 export interface StorageFilterState {
@@ -55,11 +61,11 @@ export const storageFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'Φίλτρο κατάστασης αποθήκης',
           width: 1,
           options: [
-            { value: 'all', label: 'Όλες' },
-            { value: 'available', label: 'Διαθέσιμες' },
-            { value: 'occupied', label: 'Κατειλημμένες' },
-            { value: 'maintenance', label: 'Συντήρηση' },
-            { value: 'reserved', label: 'Κρατημένες' }
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
+            { value: 'available', label: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE },
+            { value: 'occupied', label: UNIFIED_STATUS_FILTER_LABELS.OCCUPIED },
+            { value: 'maintenance', label: UNIFIED_STATUS_FILTER_LABELS.MAINTENANCE },
+            { value: 'reserved', label: UNIFIED_STATUS_FILTER_LABELS.RESERVED }
           ]
         },
         {
@@ -70,12 +76,12 @@ export const storageFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'Φίλτρο τύπου αποθήκης',
           width: 1,
           options: [
-            { value: 'all', label: 'Όλες' },
-            { value: 'large', label: 'Μεγάλες' },
-            { value: 'small', label: 'Μικρές' },
-            { value: 'basement', label: 'Υπόγειες' },
-            { value: 'ground', label: 'Ισόγειες' },
-            { value: 'special', label: 'Ειδικές' }
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
+            { value: 'large', label: STORAGE_LABELS.LARGE },
+            { value: 'small', label: STORAGE_LABELS.SMALL },
+            { value: 'basement', label: STORAGE_LABELS.BASEMENT_STORAGE },
+            { value: 'ground', label: STORAGE_LABELS.GROUND_STORAGE },
+            { value: 'special', label: STORAGE_LABELS.SPECIAL_STORAGE }
           ]
         }
       ]
@@ -91,12 +97,12 @@ export const storageFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'Φίλτρο κτιρίου',
           width: 1,
           options: [
-            { value: 'all', label: 'Όλα' },
-            { value: 'building-a', label: 'Κτίριο Α' },
-            { value: 'building-b', label: 'Κτίριο Β' },
-            { value: 'building-c', label: 'Κτίριο Γ' },
-            { value: 'building-d', label: 'Κτίριο Δ' },
-            { value: 'building-e', label: 'Κτίριο Ε' }
+            { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_BUILDINGS },
+            { value: 'building-a', label: STORAGE_LABELS.BUILDING_A },
+            { value: 'building-b', label: STORAGE_LABELS.BUILDING_B },
+            { value: 'building-c', label: STORAGE_LABELS.BUILDING_C },
+            { value: 'building-d', label: STORAGE_LABELS.BUILDING_D },
+            { value: 'building-e', label: STORAGE_LABELS.BUILDING_E }
           ]
         },
         {
@@ -107,13 +113,13 @@ export const storageFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'Φίλτρο ορόφου',
           width: 1,
           options: [
-            { value: 'all', label: 'Όλοι' },
-            { value: 'basement-2', label: 'Υπόγειο -2' },
-            { value: 'basement-1', label: 'Υπόγειο -1' },
-            { value: 'ground', label: 'Ισόγειο' },
-            { value: 'first', label: '1ος Όροφος' },
-            { value: 'second', label: '2ος Όροφος' },
-            { value: 'other', label: 'Λοιπά' }
+            { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_FLOORS },
+            { value: 'basement-2', label: STORAGE_LABELS.BASEMENT_MINUS_2 },
+            { value: 'basement-1', label: STORAGE_LABELS.BASEMENT_MINUS_1 },
+            { value: 'ground', label: STORAGE_LABELS.GROUND_FLOOR },
+            { value: 'first', label: STORAGE_LABELS.FIRST_FLOOR },
+            { value: 'second', label: STORAGE_LABELS.SECOND_FLOOR },
+            { value: 'other', label: STORAGE_LABELS.OTHER_FLOORS }
           ]
         },
         {
@@ -124,7 +130,7 @@ export const storageFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'Φίλτρο έργου',
           width: 1,
           options: [
-            { value: 'all', label: 'Όλα' },
+            { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_PROJECTS },
             { value: 'project1', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_1_NAME || 'Έργο Α' },
             { value: 'project2', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_2_NAME || 'Έργο Β' },
             { value: 'project3', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_3_NAME || 'Έργο Γ' }

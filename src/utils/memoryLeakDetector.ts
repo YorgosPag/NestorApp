@@ -287,9 +287,9 @@ export function withMemoryTracking<T extends {}>(
 // Hook for event listener cleanup
 export function useEventListenerCleanup() {
   const detector = memoryLeakDetector;
-  const listenersRef = React.useRef<Array<{ element: any; event: string; handler: any }>>([]);
+  const listenersRef = React.useRef<Array<{ element: EventTarget; event: string; handler: EventListener }>>([]);
 
-  const addListener = React.useCallback((element: any, event: string, handler: any, options?: any) => {
+  const addListener = React.useCallback((element: EventTarget, event: string, handler: EventListener, options?: AddEventListenerOptions) => {
     element.addEventListener(event, handler, options);
     listenersRef.current.push({ element, event, handler });
     detector.registerListener(event);

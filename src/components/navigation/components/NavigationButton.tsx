@@ -74,7 +74,7 @@ export function NavigationButton({
     } else {
       // Lucide icon component
       const IconComponent = icon;
-      return <IconComponent className={`${iconSize} text-gray-600 dark:text-gray-400`} />;
+      return <IconComponent className={`${iconSize} text-muted-foreground`} />;
     }
   };
 
@@ -107,7 +107,7 @@ export function NavigationButton({
             </div>
           )}
           {extraInfo && (
-            <div className={`text-sm truncate ${effectiveBadgeStatus ? 'text-orange-500 dark:text-orange-400' : 'text-gray-400 dark:text-muted-foreground'}`}>
+            <div className={`text-sm truncate ${effectiveBadgeStatus ? 'text-orange-500 dark:text-orange-400' : 'text-muted-foreground'}`}>
               {extraInfo}
             </div>
           )}

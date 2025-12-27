@@ -232,7 +232,7 @@ export function ContactListItem({
                                         `${iconSizes.sm} transition-colors`,
                                         isFavorite
                                         ? "text-yellow-500 fill-yellow-500"
-                                        : `text-gray-400 ${HOVER_TEXT_EFFECTS.YELLOW}`
+                                        : `text-muted-foreground ${HOVER_TEXT_EFFECTS.YELLOW}`
                                     )}
                                 />
                             )}

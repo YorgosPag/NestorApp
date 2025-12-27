@@ -72,7 +72,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
             <AlertDialogCancel>Ακύρωση</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className={`bg-red-600 ${HOVER_BACKGROUND_EFFECTS.MUTED}`}
+              className={`${colors.bg.error} ${HOVER_BACKGROUND_EFFECTS.MUTED}`}
             >
               Διαγραφή
             </AlertDialogAction>

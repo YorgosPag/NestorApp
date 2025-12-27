@@ -21,13 +21,14 @@ import { UnitsSidebar } from '@/components/units/UnitsSidebar';
 import { PropertyGridViewCompatible as PropertyGridView } from '@/components/property-viewer/PropertyGrid';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 
-// Helper functions for labels (from original PropertyDashboard)
+// ✅ ENTERPRISE: Helper function using centralized status labels
 const getStatusLabel = (status: string) => {
   switch (status) {
     case 'sold': return 'Πουλημένες';
-    case 'available': return 'Διαθέσιμες';
-    case 'reserved': return 'Κρατημένες';
+    case 'available': return UNIFIED_STATUS_FILTER_LABELS.AVAILABLE;
+    case 'reserved': return UNIFIED_STATUS_FILTER_LABELS.RESERVED;
     case 'owner': return 'Οικοπεδούχου';
     case 'for-sale': return 'Προς πώληση';
     case 'for-rent': return 'Προς ενοικίαση';
@@ -139,7 +140,7 @@ function UnitsPageContent() {
       color: "blue"
     },
     {
-      title: "Διαθέσιμες",
+      title: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE,
       value: dashboardStats.availableProperties,
       icon: TrendingUp,
       color: "green"
@@ -188,7 +189,7 @@ function UnitsPageContent() {
           // Show all units - reset filters
           handleFiltersChange({ ...filters, status: [] });
           break;
-        case 'Διαθέσιμες':
+        case UNIFIED_STATUS_FILTER_LABELS.AVAILABLE:
           // Filter only available units
           handleFiltersChange({ ...filters, status: ['available'] });
           break;
@@ -289,7 +290,7 @@ function UnitsPageContent() {
                   icon={Package}
                   data={{
                     'Σύνολο': dashboardStats.totalStorageUnits,
-                    'Διαθέσιμες': dashboardStats.availableStorageUnits,
+                    [UNIFIED_STATUS_FILTER_LABELS.AVAILABLE]: dashboardStats.availableStorageUnits,
                     'Πουλημένες': dashboardStats.soldStorageUnits,
                   }}
                   isThreeColumnGrid={true}

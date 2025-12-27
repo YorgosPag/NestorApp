@@ -36,7 +36,7 @@ export interface PhotoValidationResult {
   isPending: boolean;
   isFailed: boolean;
   errorMessage?: string;
-  debugInfo?: any;
+  debugInfo?: Record<string, unknown>;
 }
 
 export interface UploadValidationSummary {

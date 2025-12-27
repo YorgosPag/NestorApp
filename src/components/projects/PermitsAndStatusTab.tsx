@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ProjectBadge } from "@/core/badges";
 import { FileText, Settings } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 
@@ -73,28 +72,13 @@ export function PermitsAndStatusTab({ data, setData, isEditing }: PermitsAndStat
                     <div className="space-y-2">
                         <Label className="text-sm font-medium">Κατάσταση Έργου</Label>
                         <Select value={data.status} onValueChange={handleSelectChange} disabled={!isEditing}>
-                            <SelectTrigger className="h-10">
+                            <SelectTrigger>
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="constructed">
-                                    <ProjectBadge
-                                        status="completed"
-                                        customLabel="Κατασκευασμένα"
-                                    />
-                                </SelectItem>
-                                 <SelectItem value="planning">
-                                    <ProjectBadge
-                                        status="planning"
-                                        customLabel="Σχεδιασμός"
-                                    />
-                                </SelectItem>
-                                 <SelectItem value="in_progress">
-                                    <ProjectBadge
-                                        status="in-progress"
-                                        customLabel="Σε εξέλιξη"
-                                    />
-                                </SelectItem>
+                                <SelectItem value="constructed" className="text-popover-foreground">Κατασκευασμένα</SelectItem>
+                                <SelectItem value="planning" className="text-popover-foreground">Σχεδιασμός</SelectItem>
+                                <SelectItem value="in_progress" className="text-popover-foreground">Σε εξέλιξη</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

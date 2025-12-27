@@ -14,10 +14,10 @@ const GeoCanvasApp = dynamic(
   {
     loading: () => {
       return (
-      <div className={`w-full h-full flex items-center justify-center ${colors.bg.primary}`}>
+      <div className="w-full h-full flex items-center justify-center bg-background">
         <div className="text-center">
           <AnimatedSpinner size="large" className="mx-auto mb-4" />
-          <p className={colors.text.primary}>Loading Geo-Canvas...</p>
+          <p className="text-foreground">Loading Geo-Canvas...</p>
         </div>
       </div>
       );
@@ -84,12 +84,12 @@ export default function GeoCanvasPage() {
       <div className="w-full h-full">
         <Suspense fallback={(() => {
           return (
-          <div className={`w-full h-full flex items-center justify-center ${colors.bg.primary}`}>
+          <div className="w-full h-full flex items-center justify-center bg-background">
             <div className="text-center">
               <div className="text-6xl mb-4">🌍</div>
               <AnimatedSpinner size="large" className="mx-auto mb-4" />
-              <p className={`${colors.text.primary} text-lg`}>Αρχικοποίηση Geo-Canvas...</p>
-              <p className={`${colors.text.secondary} text-sm mt-2`}>Enterprise Geo-Alert Platform</p>
+              <p className="text-foreground text-lg">Αρχικοποίηση Geo-Canvas...</p>
+              <p className="text-muted-foreground text-sm mt-2">Enterprise Geo-Alert Platform</p>
             </div>
           </div>
           );

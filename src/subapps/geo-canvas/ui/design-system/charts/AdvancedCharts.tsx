@@ -8,6 +8,7 @@
 
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { useTheme } from '../theme/ThemeProvider';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { chartComponents } from '@/styles/design-tokens';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
@@ -20,7 +21,7 @@ export interface ChartDataPoint {
   label: string;
   value: number;
   color?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface TimeSeriesPoint {
@@ -85,27 +86,27 @@ export interface AreaChartProps extends ChartProps {
 // UTILITY FUNCTIONS
 // ============================================================================
 
-const getChartColors = (isDark: boolean) => ({
-  primary: isDark ? '#60A5FA' : '#3B82F6',
-  secondary: isDark ? '#34D399' : '#10B981',
-  accent: isDark ? '#FBBF24' : '#F59E0B',
-  danger: isDark ? '#F87171' : '#EF4444',
-  text: isDark ? '#F8FAFC' : '#1F2937',
-  textSecondary: isDark ? '#CBD5E1' : '#6B7280',
-  grid: isDark ? '#374151' : '#E5E7EB',
-  background: isDark ? '#1F2937' : '#FFFFFF'
+const getChartColors = (semanticColors: ReturnType<typeof useSemanticColors>) => ({
+  primary: 'rgb(var(--primary))',
+  secondary: 'rgb(var(--secondary))',
+  accent: 'rgb(var(--accent))',
+  danger: 'rgb(var(--destructive))',
+  text: 'rgb(var(--foreground))',
+  textSecondary: 'rgb(var(--muted-foreground))',
+  grid: 'rgb(var(--border))',
+  background: 'rgb(var(--background))'
 });
 
-const generateColorPalette = (count: number, isDark: boolean): string[] => {
+const generateColorPalette = (count: number, semanticColors: ReturnType<typeof useSemanticColors>): string[] => {
   const baseColors = [
-    isDark ? '#60A5FA' : '#3B82F6', // Blue
-    isDark ? '#34D399' : '#10B981', // Green
-    isDark ? '#FBBF24' : '#F59E0B', // Yellow
-    isDark ? '#F87171' : '#EF4444', // Red
-    isDark ? '#A78BFA' : '#8B5CF6', // Purple
-    isDark ? '#38BDF8' : '#0EA5E9', // Sky
-    isDark ? '#FB7185' : '#EC4899', // Pink
-    isDark ? '#4ADE80' : '#22C55E', // Lime
+    'rgb(var(--primary))', // Primary
+    'rgb(var(--secondary))', // Secondary
+    'rgb(var(--accent))', // Accent
+    'rgb(var(--destructive))', // Destructive
+    'rgb(var(--muted))', // Muted
+    'rgb(var(--border))', // Border
+    'rgb(var(--ring))', // Ring
+    'rgb(var(--chart-1))', // Chart 1
   ];
 
   const colors: string[] = [];
@@ -147,29 +148,17 @@ const ChartTooltip: React.FC<TooltipProps> = ({
   content,
   className = ''
 }) => {
-  const { isDark } = useTheme();
+  const semanticColors = useSemanticColors();
 
   if (!visible) return null;
 
-  const tooltipStyle: React.CSSProperties = {
-    position: 'absolute',
-    left: x + 10,
-    top: y - 10,
-    backgroundColor: isDark ? '#374151' : '#FFFFFF',
-    border: `1px solid ${isDark ? '#4B5563' : '#D1D5DB'}`,
-    borderRadius: '6px',
-    padding: '8px 12px',
-    fontSize: '12px',
-    color: isDark ? '#F9FAFB' : '#111827',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-    zIndex: 1000,
-    pointerEvents: 'none',
-    maxWidth: '200px',
-    whiteSpace: 'nowrap'
-  };
-
   return (
-    <div className={`chart-tooltip ${className}`} style={tooltipStyle}>
+    <div
+      className={`absolute z-[1000] rounded-md px-3 py-2 text-xs shadow-md pointer-events-none max-w-[200px] whitespace-nowrap ${semanticColors.bg.popover} ${semanticColors.text.primary} ${semanticColors.border.default} border ${className}`}
+      data-chart-tooltip="true"
+      data-x={x + 10}
+      data-y={y - 10}
+    >
       {content}
     </div>
   );
@@ -203,7 +192,8 @@ export const LineChart: React.FC<LineChartProps> = ({
   const [hoveredPoint, setHoveredPoint] = useState<{ point: TimeSeriesPoint; index: number; x: number; y: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const colors = getChartColors(isDark);
+  const semanticColors = useSemanticColors();
+  const colors = getChartColors(semanticColors);
   const padding = 40;
   const chartWidth = width - 2 * padding;
   const chartHeight = height - 2 * padding;
@@ -507,7 +497,8 @@ export const BarChart: React.FC<BarChartProps> = ({
   const [hoveredBar, setHoveredBar] = useState<{ point: ChartDataPoint; index: number; x: number; y: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const colors = getChartColors(isDark);
+  const semanticColors = useSemanticColors();
+  const colors = getChartColors(semanticColors);
   const chartColors = generateColorPalette(data.length, isDark);
   const padding = 40;
 
@@ -716,7 +707,8 @@ export const PieChart: React.FC<PieChartProps> = ({
   const [hoveredSlice, setHoveredSlice] = useState<{ point: ChartDataPoint; index: number; x: number; y: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const colors = getChartColors(isDark);
+  const semanticColors = useSemanticColors();
+  const colors = getChartColors(semanticColors);
   const chartColors = generateColorPalette(data.length, isDark);
 
   const centerX = width / 2;

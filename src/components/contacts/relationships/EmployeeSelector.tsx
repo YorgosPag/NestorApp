@@ -381,11 +381,15 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   const updateDropdownPosition = () => {
     if (searchInputRef.current) {
       const rect = searchInputRef.current.getBoundingClientRect();
-      setDropdownPosition({
+      const position = {
         top: rect.bottom + window.scrollY,
         left: rect.left + window.scrollX,
         width: rect.width
-      });
+      };
+
+      // ✅ ENTERPRISE: Use centralized dropdown positioning (NO inline styles)
+      layoutUtilities.dropdown.setCSSPositioning(position, 75);
+      setDropdownPosition(position);
     }
   };
 
@@ -512,22 +516,22 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
     const Icon = getContactIcon(selectedContact.type);
 
     return (
-      <div className={`flex items-center justify-between p-3 bg-blue-50 ${quick.selected}`}>
+      <div className={`flex items-center justify-between p-3 ${colors.bg.info} ${quick.selected}`}>
         <div className="flex items-center space-x-3 flex-1 min-w-0">
-          <Icon className={`${iconSizes.md} text-blue-600 flex-shrink-0`} />
+          <Icon className={`${iconSizes.md} ${colors.text.info} flex-shrink-0`} />
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-2">
-              <h4 className="text-sm font-medium text-blue-900 truncate">
+              <h4 className="text-sm font-medium text-foreground truncate">
                 {selectedContact.name}
               </h4>
-              <Badge className={`bg-blue-100 text-blue-800 ${quick.info} text-xs`}>
+              <Badge className={`bg-accent text-accent-foreground ${quick.info} text-xs`}>
                 {getContactTypeLabel(selectedContact.type)}
               </Badge>
             </div>
 
             {(selectedContact.company || selectedContact.department) && (
-              <div className="text-xs text-blue-700 mt-1 truncate">
+              <div className="text-xs text-muted-foreground mt-1 truncate">
                 {selectedContact.company}
                 {selectedContact.company && selectedContact.department && ' • '}
                 {selectedContact.department}
@@ -593,7 +597,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
         <>
           {/* Search Input */}
           <div className="relative">
-            <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 ${iconSizes.sm}`} />
+            <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${colors.text.muted} ${iconSizes.sm}`} />
             <Input
               ref={searchInputRef}
               value={searchQuery}
@@ -604,7 +608,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
               disabled={readonly}
             />
             {isSearching && (
-              <Loader2 className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 ${iconSizes.sm} animate-spin`} />
+              <Loader2 className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${colors.text.muted} ${iconSizes.sm} animate-spin`} />
             )}
             {searchQuery && !isSearching && (
               <Button
@@ -622,8 +626,11 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
           {showDropdown && dropdownPosition && typeof document !== 'undefined' && createPortal(
             <Card
               ref={dropdownRef}
-              className={`shadow-xl ${colors.bg.primary} ${quick.card}`}
-              style={layoutUtilities.dropdown.portal(dropdownPosition)}
+              className={cn(
+                `shadow-xl ${colors.bg.primary} ${quick.card}`,
+                // ✅ ENTERPRISE: Use centralized dropdown classes (NO inline styles)
+                layoutUtilities.dropdown.getDropdownClasses('default')
+              )}
             >
               <CardContent className={getEmployeeSelectorCardStyle()}>
                 {isSearching ? (
@@ -657,7 +664,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
 
       {/* Help Text */}
       {!readonly && !error && (
-        <p className="text-xs text-gray-500">
+        <p className={`text-xs ${colors.text.muted}`}>
           Χρησιμοποιήστε τα βελάκια ↑↓ για πλοήγηση και Enter για επιλογή
         </p>
       )}

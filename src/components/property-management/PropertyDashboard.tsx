@@ -6,6 +6,7 @@ import type { PropertyStats } from '@/types/property';
 import { StatsCard } from './dashboard/StatsCard';
 import { StatusCard } from './dashboard/StatusCard';
 import { DetailsCard } from './dashboard/DetailsCard';
+import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 
 const formatCurrency = (amount: number) => {
     if (amount >= 1000000) {
@@ -40,10 +41,10 @@ const getTypeLabel = (type: string) => {
 
 const statsCardsData = (stats: PropertyStats) => [
     { title: "Συνολικές Μονάδες", value: stats.totalProperties, icon: Home, color: "blue" },
-    { title: "Διαθέσιμες", value: stats.availableProperties, icon: TrendingUp, color: "gray" },
+    { title: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE, value: stats.availableProperties, icon: TrendingUp, color: "gray" },
     { title: "Συνολική Αξία", value: formatCurrency(stats.totalValue), icon: Euro, color: "green" },
     { title: "Συνολικό Εμβαδόν", value: `${Math.round(stats.totalArea)} m²`, icon: Ruler, color: "purple" },
-    { title: "Πουλημένες", value: stats.soldProperties, icon: CheckCircle, color: "red" },
+    { title: UNIFIED_STATUS_FILTER_LABELS.SOLD, value: stats.soldProperties, icon: CheckCircle, color: "red" },
     { title: "Μέση Τιμή", value: formatCurrency(stats.averagePrice), icon: Euro, color: "orange" },
 ];
 

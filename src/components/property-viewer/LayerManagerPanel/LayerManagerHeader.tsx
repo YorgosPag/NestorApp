@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Eye, EyeOff } from "lucide-react";
 import { PROPERTY_STATUS_CONFIG } from "@/lib/property-utils";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { PROPERTY_FILTER_LABELS, COMMON_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 
 interface LayerManagerHeaderProps {
   propertyCount: number;
@@ -61,7 +62,7 @@ export function LayerManagerHeader({
             <SelectValue placeholder="Τύπος" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Όλοι οι τύποι</SelectItem>
+            <SelectItem value="all">{PROPERTY_FILTER_LABELS.ALL_TYPES}</SelectItem>
             {uniqueTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
           </SelectContent>
         </Select>
@@ -70,7 +71,7 @@ export function LayerManagerHeader({
             <SelectValue placeholder="Κατάσταση" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Όλες</SelectItem>
+            <SelectItem value="all">{COMMON_FILTER_LABELS.ALL_STATUSES}</SelectItem>
             {uniqueStatuses.map(status => (
               <SelectItem key={status} value={status}>{PROPERTY_STATUS_CONFIG[status]?.label || status}</SelectItem>
             ))}

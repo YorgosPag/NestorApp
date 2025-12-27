@@ -38,7 +38,7 @@ class PerformanceMonitor {
         entries.forEach((entry) => {
           this.recordMetric({
             name: entry.name,
-            value: entry.duration || (entry as any).loadEventEnd || 0,
+            value: entry.duration || (entry as PerformanceNavigationTiming).loadEventEnd || 0,
             timestamp: entry.startTime,
             url: entry.name.includes('http') ? entry.name : undefined
           });

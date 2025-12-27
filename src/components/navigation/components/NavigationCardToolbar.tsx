@@ -11,16 +11,28 @@ import { CompactToolbar } from '@/components/core/CompactToolbar/CompactToolbar'
 import type { CompactToolbarConfig } from '@/components/core/CompactToolbar/types';
 import { Building, Home, Construction, Users, Factory } from 'lucide-react';
 
+// 🏢 ENTERPRISE: Import centralized navigation labels
+import {
+  getNavigationLevelTitles,
+  getNavigationBaseLabels,
+  getNavigationSearchPlaceholders,
+  getNavigationTooltips,
+  getNavigationFilterCategories,
+  getNavigationSortOptions
+} from '@/subapps/dxf-viewer/config/modal-select';
+
 type NavigationLevel = 'companies' | 'projects' | 'buildings' | 'floors' | 'units';
 
 // Helper functions για header display
+// ✅ ENTERPRISE: Using centralized navigation level titles
 const getLevelTitle = (level: NavigationLevel): string => {
+  const levelTitles = getNavigationLevelTitles();
   switch (level) {
-    case 'companies': return 'Εταιρείες';
-    case 'projects': return 'Έργα';
-    case 'buildings': return 'Κτίρια';
-    case 'floors': return 'Όροφοι';
-    case 'units': return 'Μονάδες';
+    case 'companies': return levelTitles.companies;
+    case 'projects': return levelTitles.projects;
+    case 'buildings': return levelTitles.buildings;
+    case 'floors': return levelTitles.floors;
+    case 'units': return levelTitles.units;
     default: return '';
   }
 };
@@ -59,83 +71,90 @@ interface NavigationCardToolbarProps {
 }
 
 // Configuration per navigation level
+// ✅ ENTERPRISE: Using centralized navigation labels throughout
 const getToolbarConfig = (level: NavigationLevel): CompactToolbarConfig => {
+  const baseLabels = getNavigationBaseLabels();
+  const searchPlaceholders = getNavigationSearchPlaceholders();
+  const tooltips = getNavigationTooltips();
+  const filterCategories = getNavigationFilterCategories();
+  const sortOptions = getNavigationSortOptions();
+
   const baseConfig = {
     labels: {
-      newItem: level === 'companies' ? 'Προσθήκη' : 'Σύνδεση',
-      editItem: 'Επεξεργασία',
-      deleteItems: level === 'companies' ? 'Αφαίρεση' : 'Αποσύνδεση',
-      filters: 'Φίλτρα',
-      favorites: 'Αγαπημένα',
-      archive: 'Αρχείο',
-      export: 'Εξαγωγή',
-      import: 'Εισαγωγή',
-      refresh: 'Ανανέωση',
-      preview: 'Προεπισκόπηση',
-      copy: 'Αντιγραφή',
-      share: 'Διαμοιρασμός',
-      reports: 'Αναφορές',
-      settings: 'Ρυθμίσεις',
-      favoritesManagement: 'Διαχείριση Αγαπημένων',
-      help: 'Βοήθεια',
-      sorting: 'Ταξινόμηση'
+      newItem: level === 'companies' ? baseLabels.add : baseLabels.connect,
+      editItem: baseLabels.edit,
+      deleteItems: level === 'companies' ? baseLabels.remove : baseLabels.disconnect,
+      filters: baseLabels.filters,
+      favorites: baseLabels.favorites,
+      archive: baseLabels.archive,
+      export: baseLabels.export,
+      import: baseLabels.import,
+      refresh: baseLabels.refresh,
+      preview: baseLabels.preview,
+      copy: baseLabels.copy,
+      share: baseLabels.share,
+      reports: baseLabels.reports,
+      settings: baseLabels.settings,
+      favoritesManagement: baseLabels.favorites_management,
+      help: baseLabels.help,
+      sorting: baseLabels.sorting
     },
     tooltips: {
       newItem: '',
       editItem: '',
       deleteItems: '',
-      filters: 'Φιλτράρισμα',
-      favorites: 'Αγαπημένα',
-      archive: 'Αρχειοθέτηση',
-      export: 'Εξαγωγή δεδομένων',
-      import: 'Εισαγωγή δεδομένων',
-      refresh: 'Ανανέωση δεδομένων',
-      preview: 'Προεπισκόπηση',
-      copy: 'Αντιγραφή',
-      share: 'Διαμοιρασμός',
-      reports: 'Αναφορές',
-      settings: 'Ρυθμίσεις',
-      favoritesManagement: 'Διαχείριση Αγαπημένων',
-      help: 'Βοήθεια',
-      sorting: 'Ταξινόμηση'
+      filters: baseLabels.filtering,
+      favorites: baseLabels.favorites,
+      archive: baseLabels.archiving,
+      export: baseLabels.export_data,
+      import: baseLabels.import_data,
+      refresh: baseLabels.refresh_data,
+      preview: baseLabels.preview,
+      copy: baseLabels.copy,
+      share: baseLabels.share,
+      reports: baseLabels.reports,
+      settings: baseLabels.settings,
+      favoritesManagement: baseLabels.favorites_management,
+      help: baseLabels.help,
+      sorting: baseLabels.sorting
     }
   };
 
   switch (level) {
     case 'companies':
       return {
-        searchPlaceholder: 'Αναζήτηση εταιρείας...',
+        searchPlaceholder: searchPlaceholders.companies,
         ...baseConfig,
         tooltips: {
           ...baseConfig.tooltips,
-          newItem: 'Προσθήκη νέας εταιρείας',
-          editItem: 'Επεξεργασία εταιρείας',
-          deleteItems: 'Αφαίρεση εταιρείας'
+          newItem: tooltips.add_company,
+          editItem: tooltips.edit_company,
+          deleteItems: tooltips.remove_company
         },
         filterCategories: [
           {
             id: 'type',
-            label: 'Τύπος Εταιρείας',
+            label: filterCategories.company_type_label,
             options: [
-              { value: 'construction', label: 'Κατασκευαστική' },
-              { value: 'development', label: 'Αναπτυξιακή' },
-              { value: 'investment', label: 'Επενδυτική' },
-              { value: 'management', label: 'Διαχειριστική' }
+              { value: 'construction', label: filterCategories.company_construction },
+              { value: 'development', label: filterCategories.company_development },
+              { value: 'investment', label: filterCategories.company_investment },
+              { value: 'management', label: filterCategories.company_management }
             ]
           },
           {
             id: 'status',
-            label: 'Κατάσταση',
+            label: filterCategories.company_status_label,
             options: [
-              { value: 'active', label: 'Ενεργές' },
-              { value: 'with_projects', label: 'Με έργα' },
-              { value: 'without_projects', label: 'Χωρίς έργα' }
+              { value: 'active', label: filterCategories.company_active },
+              { value: 'with_projects', label: filterCategories.company_with_projects },
+              { value: 'without_projects', label: filterCategories.company_without_projects }
             ]
           }
         ],
         sortOptions: [
-          { field: 'name', ascLabel: 'Όνομα (Α-Ω)', descLabel: 'Όνομα (Ω-Α)' },
-          { field: 'date', ascLabel: 'Παλαιότερες πρώτα', descLabel: 'Νεότερες πρώτα' }
+          { field: 'name', ascLabel: sortOptions.name_asc, descLabel: sortOptions.name_desc },
+          { field: 'date', ascLabel: sortOptions.companies_date_asc, descLabel: sortOptions.companies_date_desc }
         ],
         availableActions: {
           newItem: true,
@@ -154,13 +173,13 @@ const getToolbarConfig = (level: NavigationLevel): CompactToolbarConfig => {
 
     case 'projects':
       return {
-        searchPlaceholder: 'Αναζήτηση έργου...',
+        searchPlaceholder: searchPlaceholders.projects,
         ...baseConfig,
         tooltips: {
           ...baseConfig.tooltips,
-          newItem: 'Σύνδεση έργου με επιλεγμένη εταιρεία',
-          editItem: 'Επεξεργασία έργου',
-          deleteItems: 'Αποσύνδεση έργου'
+          newItem: tooltips.connect_project,
+          editItem: tooltips.edit_project,
+          deleteItems: tooltips.disconnect_project
         },
         filterCategories: [
           {

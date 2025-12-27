@@ -1,7 +1,5 @@
 'use client';
 import React, { useRef, useState } from 'react';
-// 🎯 CANVAS Z-INDEX FIX - CSS with !important
-import './canvas-stacking.css';
 // === CANVAS V2 IMPORTS ===
 import { DxfCanvas, LayerCanvas, type ColorLayer, type SnapSettings, type GridSettings, type RulerSettings, type SelectionSettings, type DxfScene, type DxfEntityUnion } from '../../canvas-v2';
 import { createCombinedBounds } from '../../systems/zoom/utils/bounds';

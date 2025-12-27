@@ -30,7 +30,7 @@ import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, HOV
 
 // 🏢 ENTERPRISE: Import enterprise semantic colors (SINGLE SOURCE OF TRUTH)
 import { tailwindColorMappings } from '../../../ui-adapters/tailwind/colors.adapter';
-import { hardcodedColorValues } from '../../../design-system/tokens/colors';
+import { COLOR_BRIDGE } from '../../../design-system/color-bridge';
 import type { UseSemanticColorsReturn } from '../../../ui-adapters/react/useSemanticColors';
 
 // ============================================================================
@@ -240,17 +240,17 @@ export const PANEL_LAYOUT = {
  */
 export const PANEL_COLORS = {
   // ✅ ENTERPRISE: Background colors από centralized semantic system
-  BG_PRIMARY: hardcodedColorValues.background.gray[800],                    // Static primary background
-  BG_SECONDARY: hardcodedColorValues.background.gray[700],                  // Static secondary background
-  BG_TERTIARY: hardcodedColorValues.background.gray[600],                   // Static tertiary background
+  BG_PRIMARY: COLOR_BRIDGE.bg.primary,                    // ✅ ENTERPRISE: Centralized primary background
+  BG_SECONDARY: COLOR_BRIDGE.bg.secondary,                  // ✅ ENTERPRISE: Centralized secondary background
+  BG_TERTIARY: COLOR_BRIDGE.bg.card,                   // ✅ ENTERPRISE: Centralized card background
   BG_HOVER: 'hover:bg-gray-600',                // Static hover state
 
   // ✅ ENTERPRISE: Text colors από centralized semantic system
   TEXT_PRIMARY: 'text-white',                   // Static primary text
   TEXT_SECONDARY: 'text-gray-300',              // Static secondary text
-  TEXT_MUTED: 'text-gray-400',                  // Static muted text
-  TEXT_DISABLED: 'text-gray-500',               // Static disabled text
-  TEXT_TERTIARY: 'text-gray-400',               // Static tertiary text
+  TEXT_MUTED: COLOR_BRIDGE.text.muted,                  // ✅ ENTERPRISE: Centralized muted text
+  TEXT_DISABLED: COLOR_BRIDGE.text.muted,               // ✅ ENTERPRISE: Centralized muted text
+  TEXT_TERTIARY: COLOR_BRIDGE.text.secondary,               // ✅ ENTERPRISE: Centralized secondary text
 
   // ✅ ENTERPRISE: Border colors από centralized semantic system
   BORDER_PRIMARY: 'gray-600',                   // Static primary borders
@@ -496,7 +496,7 @@ export const GENERAL_SETTINGS_TOKENS = {
 
   TAB_NAVIGATION: {
     CONTAINER: `border-b mb-4`, // Enterprise: Use borderTokens.getStatusBorder() in components
-    BORDER_CLASS: `border-${hardcodedColorValues.background.gray[600].replace('bg-', '')}`, // Static fallback - use semantic colors hook in components
+    BORDER_CLASS: COLOR_BRIDGE.border.default, // ✅ ENTERPRISE: Centralized border from COLOR_BRIDGE
   },
 
   LOADING_STATE: {

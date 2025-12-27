@@ -12,6 +12,7 @@ import { FilterSelect } from '../FilterSelect';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { PROPERTY_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 
 interface SearchAndFiltersProps {
   searchTerm: string;
@@ -81,7 +82,7 @@ export function SearchAndFilters({
               value="all"
               className={`text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`}
             >
-              Όλες οι καταστάσεις
+              {PROPERTY_FILTER_LABELS.ALL_STATUSES}
             </TabsTrigger>
             {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => (
               <TabsTrigger

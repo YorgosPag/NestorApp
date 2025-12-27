@@ -245,20 +245,20 @@ export function ComboBox<T>({
         onClick={() => handleSelect(option.value)}
         className={`w-full px-3 py-2 text-left text-sm ${getDirectionalBorder('muted', 'bottom')} last:border-none transition-colors flex items-start justify-between ${
           isHighlighted
-            ? 'bg-blue-600 text-white'
-            : `text-white ${HOVER_BACKGROUND_EFFECTS.GRAY}`
+            ? `${colors.bg.info} ${colors.text.inverted}`
+            : `${colors.text.primary} ${HOVER_BACKGROUND_EFFECTS.GRAY}`
         }`}
       >
         <div className="flex-1">
           <div className="font-medium">{option.label}</div>
           {option.description && (
-            <div className={`text-xs ${isHighlighted ? 'text-blue-200' : colors.text.muted}`}>
+            <div className={`text-xs ${isHighlighted ? colors.text.mutedInverted : colors.text.muted}`}>
               {option.description}
             </div>
           )}
         </div>
         {showCheckmark && isSelected && (
-          <CheckmarkIcon className={`${iconSizes.md} text-green-400 flex-shrink-0 ml-2`} />
+          <CheckmarkIcon className={`${iconSizes.md} ${colors.text.success} flex-shrink-0 ml-2`} />
         )}
       </button>
     );
@@ -284,8 +284,8 @@ export function ComboBox<T>({
           }}
           onKeyDown={handleKeyDown}
           disabled={disabled}
-          className={`w-full px-3 py-2 pr-8 ${colors.bg.hover} ${getStatusBorder('default')} rounded-md text-white text-left ${HOVER_BACKGROUND_EFFECTS.GRAY} focus:ring-2 focus:ring-blue-500 ${getFocusBorder('input')} ${
-            disabled ? 'opacity-50 cursor-not-allowed' : ''
+          className={`w-full px-3 py-2 pr-8 ${colors.bg.hover} ${getStatusBorder('default')} rounded-md ${colors.text.primary} text-left ${HOVER_BACKGROUND_EFFECTS.GRAY} focus:ring-2 ${colors.border.focus} ${getFocusBorder('input')} ${
+            disabled ? 'opacity-disabled cursor-not-allowed' : ''
           } ${buttonClassName}`}
         >
           {displayValue}
@@ -300,11 +300,7 @@ export function ComboBox<T>({
         {isOpen && (
           <div
             data-dropdown-content
-            className="absolute top-full left-0 right-0 mt-1 rounded-md shadow-2xl overflow-y-auto"
-            style={{
-              ...layoutUtilities.dxf.dropdown.content,
-              maxHeight
-            }}
+            className={`absolute top-full left-0 right-0 mt-1 ${colors.bg.elevated} rounded-md shadow-2xl overflow-y-auto border ${colors.border.muted} ${layoutUtilities.zIndex.dropdown} max-h-dropdown`}
           >
             {/* Simple Options */}
             {options && options.map((option, index) => renderOption(option, index))}

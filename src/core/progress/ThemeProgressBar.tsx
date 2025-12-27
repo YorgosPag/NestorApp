@@ -36,12 +36,12 @@ export function ThemeProgressBar({
     return 'text-destructive';                        // Keep destructive (framework)
   };
 
-  // Theme-aware progress bar background colors
-  const getProgressBarColor = (value: number) => {
-    if (value >= 80) return '#22c55e';    // Green for 80%+
-    if (value >= 60) return '#3b82f6';    // Blue for 60-79%
-    if (value >= 40) return '#f97316';    // Orange for 40-59%
-    return '#ef4444';                     // Red for <40%
+  // ✅ ENTERPRISE: Theme-aware progress bar background colors using semantic system
+  const getProgressBarColorClass = (value: number) => {
+    if (value >= 80) return colors.bg.success;    // ✅ SEMANTIC: Green for 80%+
+    if (value >= 60) return colors.bg.info;       // ✅ SEMANTIC: Blue for 60-79%
+    if (value >= 40) return colors.bg.warning;    // ✅ SEMANTIC: Orange for 40-59%
+    return colors.bg.destructive;                 // ✅ SEMANTIC: Red for <40%
   };
 
   // Size variations
@@ -77,7 +77,7 @@ export function ThemeProgressBar({
         <div
           className={cn(
             "h-full transition-all duration-300 ease-in-out rounded-full",
-            getDynamicBackgroundClass(getProgressBarColor(progress))
+            getProgressBarColorClass(progress)
           )}
           style={{
             width: layoutUtilities.percentage(Math.min(100, Math.max(0, progress)))

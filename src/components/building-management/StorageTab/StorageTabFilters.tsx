@@ -8,6 +8,7 @@ import { Search, BarChart3 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { StorageType, StorageStatus } from '@/types/storage';
+import { STORAGE_FILTER_LABELS, STORAGE_STATUS_LABELS, STORAGE_TYPE_LABELS } from '@/constants/property-statuses-enterprise';
 
 interface StorageTabFiltersProps {
     searchTerm: string;
@@ -47,9 +48,9 @@ export function StorageTabFilters({
                         onChange={(e) => onFilterTypeChange(e.target.value as StorageType | 'all')}
                         className={`h-10 px-3 rounded-md border border-input ${colors.bg.primary} text-sm`}
                     >
-                        <option value="all">Όλοι οι τύποι</option>
-                        <option value="storage">Αποθήκες</option>
-                        <option value="parking">Θέσεις Στάθμευσης</option>
+                        <option value="all">{STORAGE_FILTER_LABELS.ALL_TYPES}</option>
+                        <option value="storage">{STORAGE_TYPE_LABELS.storage}</option>
+                        <option value="parking">{STORAGE_TYPE_LABELS.parking}</option>
                     </select>
 
                     <select
@@ -57,11 +58,11 @@ export function StorageTabFilters({
                         onChange={(e) => onFilterStatusChange(e.target.value as StorageStatus | 'all')}
                         className={`h-10 px-3 rounded-md border border-input ${colors.bg.primary} text-sm`}
                     >
-                        <option value="all">Όλες οι καταστάσεις</option>
-                        <option value="available">Διαθέσιμες</option>
-                        <option value="sold">Πωλημένες</option>
-                        <option value="reserved">Κρατημένες</option>
-                        <option value="maintenance">Συντήρηση</option>
+                        <option value="all">{STORAGE_FILTER_LABELS.ALL_STATUSES}</option>
+                        <option value="available">{STORAGE_STATUS_LABELS.available}</option>
+                        <option value="sold">{STORAGE_STATUS_LABELS.sold}</option>
+                        <option value="reserved">{STORAGE_STATUS_LABELS.reserved}</option>
+                        <option value="maintenance">{STORAGE_STATUS_LABELS.maintenance}</option>
                     </select>
 
                     <Button variant="outline" className="flex items-center gap-2">

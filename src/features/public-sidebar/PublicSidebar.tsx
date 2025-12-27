@@ -65,7 +65,7 @@ export function PublicSidebar({ isAuthenticated = false, userEmail }: PublicSide
       <div className={`${getDirectionalBorder('muted', 'top')} p-4`}>
         {isAuthenticated ? (
           <div className="flex items-center gap-3">
-            <div className={`flex ${iconSizes.xl} items-center justify-center rounded-full bg-blue-100`}>
+            <div className={`flex ${iconSizes.xl} items-center justify-center rounded-full ${colors.bg.info}`}>
               <User className={`${iconSizes.sm} ${colors.text.info}`} />
             </div>
             <div className="flex-1 min-w-0">

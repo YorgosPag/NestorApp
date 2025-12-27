@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Ruler, ZoomIn, ZoomOut } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { PROPERTY_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 
 interface MapControlsProps {
     showNearbyProjects: boolean;
@@ -43,7 +44,7 @@ export function MapControls({
                             <SelectValue placeholder="Επιλογή φίλτρου" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Όλα τα έργα</SelectItem>
+                            <SelectItem value="all">{PROPERTY_FILTER_LABELS.ALL_PROJECTS}</SelectItem>
                             <SelectItem value="active">Ενεργά μόνο</SelectItem>
                             <SelectItem value="completed">Ολοκληρωμένα μόνο</SelectItem>
                         </SelectContent>

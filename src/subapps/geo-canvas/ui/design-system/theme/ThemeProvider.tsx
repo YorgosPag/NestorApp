@@ -7,7 +7,48 @@
  */
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { colors, typography, spacing, shadows, borderRadius, animations } from '../tokens/design-tokens';
+import { colorTokens } from '@/design-system/tokens/colors';
+
+// For now, keep the hardcoded values until we fully migrate to the centralized design system
+// TODO: Replace with centralized tokens from @/design-system/tokens/*
+const colors = {
+  background: {
+    primary: 'hsl(var(--background))',
+    secondary: 'hsl(var(--muted))',
+    tertiary: 'hsl(var(--card))',
+    inverse: 'hsl(var(--foreground))',
+    overlay: 'rgba(0, 0, 0, 0.8)',
+    disabled: 'hsl(var(--muted))'
+  },
+  text: {
+    primary: 'hsl(var(--foreground))',
+    secondary: 'hsl(var(--muted-foreground))',
+    tertiary: 'hsl(var(--muted-foreground))',
+    inverse: 'hsl(var(--background))',
+    disabled: 'hsl(var(--muted-foreground))',
+    link: 'hsl(var(--primary))',
+    linkHover: 'hsl(var(--primary))'
+  },
+  border: {
+    primary: 'hsl(var(--border))',
+    secondary: 'hsl(var(--border))',
+    tertiary: 'hsl(var(--border))',
+    focus: 'hsl(var(--ring))',
+    error: 'hsl(var(--destructive))',
+    success: 'hsl(var(--primary))',
+    warning: 'hsl(var(--secondary))'
+  }
+};
+
+// Temporary placeholders until we fully migrate to centralized tokens
+const typography = {
+  fontFamily: { body: 'system-ui', heading: 'system-ui' },
+  fontSize: { sm: '14px', base: '16px', lg: '18px' }
+};
+const spacing = { xs: '4px', sm: '8px', md: '16px', lg: '24px' };
+const shadows = { sm: '0 1px 2px rgba(0,0,0,0.1)', md: '0 4px 6px rgba(0,0,0,0.1)' };
+const borderRadius = { sm: '4px', md: '8px', lg: '12px' };
+const animations = { duration: { fast: '150ms', normal: '300ms' } };
 
 // ============================================================================
 // THEME TYPES
@@ -51,66 +92,66 @@ export interface ThemeContextValue {
 const darkColors = {
   ...colors,
 
-  // Override specific colors για dark mode
+  // Override specific colors για dark mode - using CSS variables
   background: {
-    primary: '#0F172A',      // slate-900
-    secondary: '#1E293B',    // slate-800
-    tertiary: '#334155',     // slate-700
-    inverse: '#FFFFFF',
+    primary: 'hsl(var(--background))',
+    secondary: 'hsl(var(--muted))',
+    tertiary: 'hsl(var(--card))',
+    inverse: 'hsl(var(--foreground))',
     overlay: 'rgba(0, 0, 0, 0.8)',
-    disabled: '#334155'
+    disabled: 'hsl(var(--muted))'
   },
 
   text: {
-    primary: '#F8FAFC',      // slate-50
-    secondary: '#CBD5E1',    // slate-300
-    tertiary: '#94A3B8',     // slate-400
-    inverse: '#0F172A',
-    disabled: '#64748B',     // slate-500
-    link: '#60A5FA',         // blue-400
-    linkHover: '#3B82F6'     // blue-500
+    primary: 'hsl(var(--foreground))',
+    secondary: 'hsl(var(--muted-foreground))',
+    tertiary: 'hsl(var(--muted-foreground))',
+    inverse: 'hsl(var(--background))',
+    disabled: 'hsl(var(--muted-foreground))',
+    link: 'hsl(var(--primary))',
+    linkHover: 'hsl(var(--primary))'
   },
 
   border: {
-    primary: '#475569',      // slate-600
-    secondary: '#64748B',    // slate-500
-    tertiary: '#94A3B8',     // slate-400
-    focus: '#60A5FA',        // blue-400
-    error: '#F87171',        // red-400
-    success: '#4ADE80',      // green-400
-    warning: '#FBBF24'       // amber-400
+    primary: 'hsl(var(--border))',
+    secondary: 'hsl(var(--border))',
+    tertiary: 'hsl(var(--border))',
+    focus: 'hsl(var(--ring))',
+    error: 'hsl(var(--destructive))',
+    success: 'hsl(var(--primary))',
+    warning: 'hsl(var(--secondary))'
   },
 
   severity: {
     critical: {
-      background: '#7F1D1D',  // red-900
-      border: '#DC2626',      // red-600
-      text: '#FCA5A5',        // red-300
-      icon: '#F87171'         // red-400
+      background: 'hsl(var(--destructive))',
+      border: 'hsl(var(--destructive))',
+      text: 'hsl(var(--destructive-foreground))',
+      icon: 'hsl(var(--destructive))'
     },
     high: {
-      background: '#78350F',  // amber-900
-      border: '#D97706',      // amber-600
-      text: '#FCD34D',        // amber-300
-      icon: '#FBBF24'         // amber-400
+      background: 'hsl(var(--secondary))',
+      border: 'hsl(var(--secondary))',
+      text: 'hsl(var(--secondary-foreground))',
+      icon: 'hsl(var(--secondary))'
     },
     medium: {
-      background: '#1E3A8A',  // blue-900
-      border: '#2563EB',      // blue-600
-      text: '#93C5FD',        // blue-300
-      icon: '#60A5FA'         // blue-400
+      background: 'hsl(var(--primary))',
+      border: 'hsl(var(--primary))',
+      text: 'hsl(var(--primary-foreground))',
+      icon: 'hsl(var(--primary))'
     },
     low: {
-      background: '#14532D',  // green-900
-      border: '#16A34A',      // green-600
-      text: '#86EFAC',        // green-300
-      icon: '#4ADE80'         // green-400
+      background: 'hsl(var(--primary))',
+      border: 'hsl(var(--primary))',
+      text: 'hsl(var(--primary-foreground))',
+      icon: 'hsl(var(--primary))'
     },
     info: {
-      background: '#0C4A6E',  // sky-900
-      border: '#0284C7',      // sky-600
-      text: '#7DD3FC',        // sky-300
-      icon: '#38BDF8'         // sky-400
+      background: 'hsl(var(--primary))',
+      border: 'hsl(var(--primary))',
+      text: 'hsl(var(--primary-foreground))',
+      icon: 'hsl(var(--primary))'
     }
   }
 } as const;
@@ -123,32 +164,32 @@ const highContrastColors = {
   ...colors,
 
   background: {
-    primary: '#FFFFFF',
-    secondary: '#FFFFFF',
-    tertiary: '#F5F5F5',
-    inverse: '#000000',
+    primary: 'hsl(var(--background))',
+    secondary: 'hsl(var(--background))',
+    tertiary: 'hsl(var(--muted))',
+    inverse: 'hsl(var(--foreground))',
     overlay: 'rgba(0, 0, 0, 0.9)',
-    disabled: '#F5F5F5'
+    disabled: 'hsl(var(--muted))'
   },
 
   text: {
-    primary: '#000000',
-    secondary: '#000000',
-    tertiary: '#333333',
-    inverse: '#FFFFFF',
-    disabled: '#666666',
-    link: '#0000EE',
-    linkHover: '#0000CC'
+    primary: 'hsl(var(--foreground))',
+    secondary: 'hsl(var(--foreground))',
+    tertiary: 'hsl(var(--muted-foreground))',
+    inverse: 'hsl(var(--background))',
+    disabled: 'hsl(var(--muted-foreground))',
+    link: 'hsl(var(--primary))',
+    linkHover: 'hsl(var(--primary))'
   },
 
   border: {
-    primary: '#000000',
-    secondary: '#333333',
-    tertiary: '#666666',
-    focus: '#FF6600',
-    error: '#CC0000',
-    success: '#008800',
-    warning: '#FF8800'
+    primary: 'hsl(var(--border))',
+    secondary: 'hsl(var(--border))',
+    tertiary: 'hsl(var(--border))',
+    focus: 'hsl(var(--ring))',
+    error: 'hsl(var(--destructive))',
+    success: 'hsl(var(--primary))',
+    warning: 'hsl(var(--secondary))'
   }
 } as const;
 

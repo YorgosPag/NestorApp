@@ -75,7 +75,7 @@ export function BuildingCard({
             variant: 'ghost',
             className: cn(
               `${iconSizes.lg} p-0`,
-              isFavorite ? 'text-yellow-500 fill-current' : 'text-gray-400'
+              isFavorite ? 'text-yellow-500 fill-current' : 'text-muted-foreground'
             )
           }
         ]}

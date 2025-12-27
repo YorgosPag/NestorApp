@@ -20,7 +20,7 @@ import type { Contact, AddressInfo, WebsiteInfo, PhoneInfo, EmailInfo, SocialMed
 
 export interface EnterpriseContactData {
   // Base contact data (unchanged)
-  [key: string]: any;
+  [key: string]: unknown;
 
   // Enterprise arrays
   addresses?: AddressInfo[];

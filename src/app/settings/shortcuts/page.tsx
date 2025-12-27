@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { COMMON_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 
 const shortcutsList = {
     file: [
@@ -37,7 +38,7 @@ const shortcutsList = {
 };
 
 const categories = {
-    all: 'Όλα',
+    all: COMMON_FILTER_LABELS.ALL_TYPES,
     file: 'Αρχείο',
     edit: 'Επεξεργασία',
     view: 'Προβολή',

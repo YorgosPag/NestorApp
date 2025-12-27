@@ -7,9 +7,15 @@
  * - ContactDetails.tsx (Display tabs)
  * - Future generic form/display components
  *
- * @version 1.0.0
- * @created 2025-11-28
+ * @version 2.0.0 - CENTRALIZED LABELS
+ * @updated 2025-12-27 - ✅ ENTERPRISE: Using centralized label system
  */
+
+// ✅ ENTERPRISE: Import centralized company labels
+import { getCompanyFieldLabels, MODAL_SELECT_GEMI_STATUSES } from '@/subapps/dxf-viewer/config/modal-select';
+
+// ✅ ENTERPRISE: Get centralized labels
+const companyLabels = getCompanyFieldLabels();
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -77,14 +83,29 @@ export interface SectionConfig {
 import { businessRulesService } from '@/services/business/EnterpriseBusinessRulesService';
 
 /** @deprecated Use EnterpriseBusinessRulesService.getLegalFormsForSelect() instead */
-const getDefaultLegalForms = (): SelectOption[] => [
-  { value: 'OE', label: 'Ο.Ε. (Ομόρρυθμη Εταιρεία)' },
-  { value: 'EE', label: 'Ε.Ε. (Ετερόρρυθμη Εταιρεία)' },
-  { value: 'EPE', label: 'Ε.Π.Ε. (Εταιρεία Περιορισμένης Ευθύνης)' },
-  { value: 'AE', label: 'Α.Ε. (Ανώνυμη Εταιρεία)' },
-  { value: 'IKE', label: 'Ι.Κ.Ε. (Ιδιωτική Κεφαλαιουχική Εταιρεία)' },
-  { value: 'MONO', label: 'Μονοπρόσωπη Ι.Κ.Ε.' },
-];
+// 🏢 ENTERPRISE: Use centralized legal forms from modal-select system
+import {
+  getLegalFormOptions,
+  getGemiStatusOptions,
+  getCurrencyOptions,
+  getActivityTypeOptions,
+  getAddressTypeOptions,
+  getShareholderTypeOptions,
+  getDocumentTypeOptions,
+  getBoardTypeOptions,
+  getRepresentativePositionOptions
+} from '@/subapps/dxf-viewer/config/modal-select';
+
+const getDefaultLegalForms = (): SelectOption[] => {
+  // ✅ ENTERPRISE: Using centralized legal forms - NO MORE HARDCODED VALUES
+  const centralizedForms = getLegalFormOptions();
+
+  // Convert to match local interface (value case conversion if needed)
+  return centralizedForms.map(form => ({
+    value: form.value.toUpperCase(), // Convert to uppercase for compatibility
+    label: form.label
+  }));
+};
 
 /**
  * @deprecated Hardcoded legal forms - Use EnterpriseBusinessRulesService instead
@@ -117,12 +138,12 @@ export const LEGAL_FORM_OPTIONS: SelectOption[] = (() => {
  *
  * This fallback will be removed in v3.0.0
  */
-export const GEMI_STATUS_OPTIONS: SelectOption[] = [
-  { value: 'active', label: 'Ενεργή' },
-  { value: 'inactive', label: 'Ανενεργή' },
-  { value: 'dissolved', label: 'Λυθείσα' },
-  { value: 'bankruptcy', label: 'Σε Πτώχευση' },
-];
+export const GEMI_STATUS_OPTIONS: SelectOption[] =
+  // ✅ ENTERPRISE: Using centralized GEMI status options - NO MORE HARDCODED VALUES
+  getGemiStatusOptions().map(status => ({
+    value: status.value,
+    label: status.label
+  }));
 
 /**
  * Enterprise legal forms loader function
@@ -298,16 +319,17 @@ export async function getEnterpriseCompanyStatuses(options: {
 
 /** Τύπος δραστηριότητας */
 export const ACTIVITY_TYPE_OPTIONS: SelectOption[] = [
-  { value: 'main', label: 'Κύρια' },
-  { value: 'secondary', label: 'Δευτερεύουσα' },
+  // ✅ ENTERPRISE: Using centralized activity type options - NO MORE HARDCODED VALUES
+  ...getActivityTypeOptions(),
 ];
 
 /** 🌍 ENTERPRISE: Configurable currencies for different regions */
-const getDefaultCurrencies = (): SelectOption[] => [
-  { value: 'EUR', label: 'EUR (Ευρώ)' },
-  { value: 'USD', label: 'USD (Δολάρια ΗΠΑ)' },
-  { value: 'GBP', label: 'GBP (Λίρες Στερλίνες)' },
-];
+const getDefaultCurrencies = (): SelectOption[] =>
+  // ✅ ENTERPRISE: Using centralized currency options - NO MORE HARDCODED VALUES
+  getCurrencyOptions().map(currency => ({
+    value: currency.value,
+    label: currency.label
+  }));
 
 /** Νόμισμα με environment configuration */
 export const CURRENCY_OPTIONS: SelectOption[] = (() => {
@@ -350,20 +372,20 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
     fields: [
       {
         id: 'companyName',
-        label: 'Επωνυμία Εταιρείας',
+        label: companyLabels.company_name,
         type: 'input',
         required: true,
         helpText: 'Πλήρης επωνυμία όπως είναι καταχωρημένη στο ΓΕΜΗ',
       },
       {
         id: 'tradeName',
-        label: 'Διακριτικός Τίτλος',
+        label: companyLabels.trade_name,
         type: 'input',
         helpText: 'Εμπορική επωνυμία (αν διαφέρει από την επίσημη)',
       },
       {
         id: 'vatNumber', // 🔧 FIX: Changed from 'companyVatNumber' to 'vatNumber' to match Contact interface
-        label: 'ΑΦΜ',
+        label: companyLabels.vat_number,
         type: 'input',
         required: true,
         maxLength: 9,
@@ -372,20 +394,20 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
       },
       {
         id: 'gemiNumber',
-        label: 'Αριθμός ΓΕΜΗ',
+        label: companyLabels.gemi_number,
         type: 'input',
         helpText: 'Μοναδικός αριθμός εγγραφής στο ΓΕΜΗ',
       },
       {
         id: 'legalForm',
-        label: 'Νομική Μορφή',
+        label: companyLabels.legal_form,
         type: 'select',
         options: LEGAL_FORM_OPTIONS,
         helpText: 'Νομική μορφή εταιρείας',
       },
       {
         id: 'gemiStatus',
-        label: 'Κατάσταση ΓΕΜΗ',
+        label: companyLabels.gemi_status,
         type: 'select',
         options: GEMI_STATUS_OPTIONS,
         defaultValue: 'active',
@@ -406,20 +428,20 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
     fields: [
       {
         id: 'activityCodeKAD',
-        label: 'Κωδικός ΚΑΔ',
+        label: companyLabels.activity_code,
         type: 'input',
         placeholder: 'π.χ. 47.11.10',
         helpText: 'Κωδικός Αριθμός Δραστηριότητας',
       },
       {
         id: 'activityDescription',
-        label: 'Περιγραφή Δραστηριότητας',
+        label: companyLabels.activity_description,
         type: 'input',
         helpText: 'Αναλυτική περιγραφή της επιχειρηματικής δραστηριότητας',
       },
       {
         id: 'activityType',
-        label: 'Τύπος Δραστηριότητας',
+        label: companyLabels.activity_type,
         type: 'select',
         options: ACTIVITY_TYPE_OPTIONS,
         defaultValue: 'main',
@@ -427,7 +449,7 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
       },
       {
         id: 'chamber',
-        label: 'Επιμελητήριο',
+        label: companyLabels.chamber,
         type: 'input',
         helpText: 'Επιμελητήριο ή τοπική υπηρεσία ΓΕΜΗ',
       },
@@ -446,14 +468,14 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
     fields: [
       {
         id: 'capitalAmount',
-        label: 'Κεφάλαιο',
+        label: companyLabels.capital_amount,
         type: 'number',
         placeholder: 'π.χ. 50000',
         helpText: 'Εταιρικό κεφάλαιο σε αριθμητική μορφή',
       },
       {
         id: 'currency',
-        label: 'Νόμισμα',
+        label: companyLabels.currency,
         type: 'select',
         options: CURRENCY_OPTIONS,
         defaultValue: 'EUR',
@@ -461,7 +483,7 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
       },
       {
         id: 'extraordinaryCapital',
-        label: 'Εξωλογιστικά Κεφάλαια',
+        label: companyLabels.extraordinary_capital,
         type: 'number',
         helpText: 'Εγγυητικά ή εξωλογιστικά κεφάλαια',
       },
@@ -480,31 +502,31 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
     fields: [
       {
         id: 'registrationDate',
-        label: 'Ημερομηνία Εγγραφής',
+        label: companyLabels.registration_date,
         type: 'date',
         helpText: 'Ημερομηνία πρώτης εγγραφής στο ΓΕΜΗ',
       },
       {
         id: 'gemiStatusDate',
-        label: 'Ημερομηνία Κατάστασης',
+        label: companyLabels.status_date,
         type: 'date',
         helpText: 'Ημερομηνία τελευταίας αλλαγής κατάστασης',
       },
       {
         id: 'prefecture',
-        label: 'Νομός',
+        label: companyLabels.prefecture,
         type: 'input',
         helpText: 'Νομός έδρας εταιρείας',
       },
       {
         id: 'municipality',
-        label: 'Δήμος',
+        label: companyLabels.municipality,
         type: 'input',
         helpText: 'Δήμος έδρας εταιρείας',
       },
       {
         id: 'gemiDepartment',
-        label: 'Τοπική Υπηρεσία ΓΕΜΗ',
+        label: companyLabels.gemi_department,
         type: 'input',
         helpText: 'Αρμόδια τοπική υπηρεσία ΓΕΜΗ',
       },
@@ -523,42 +545,42 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
     fields: [
       {
         id: 'addressType',
-        label: 'Τύπος Διεύθυνσης',
+        label: companyLabels.address_type,
         type: 'select',
         options: [
-          { value: 'headquarters', label: 'Έδρα' },
-          { value: 'branch', label: 'Υποκατάστημα' }
+          // ✅ ENTERPRISE: Using centralized address type options - NO MORE HARDCODED VALUES
+          ...getAddressTypeOptions()
         ],
         helpText: 'Είδος διεύθυνσης (έδρα ή υποκατάστημα)',
       },
       {
         id: 'street',
-        label: 'Οδός',
+        label: companyLabels.street,
         type: 'input',
         helpText: 'Όνομα οδού',
       },
       {
         id: 'streetNumber',
-        label: 'Αριθμός',
+        label: companyLabels.street_number,
         type: 'input',
         helpText: 'Αριθμός οδού',
       },
       {
         id: 'postalCode',
-        label: 'Ταχυδρομικός Κώδικας',
+        label: companyLabels.postal_code,
         type: 'input',
         maxLength: 5,
         helpText: 'Πενταψήφιος ταχυδρομικός κώδικας',
       },
       {
         id: 'city',
-        label: 'Πόλη',
+        label: companyLabels.city,
         type: 'input',
         helpText: 'Πόλη διεύθυνσης',
       },
       {
         id: 'region',
-        label: 'Περιφέρεια',
+        label: companyLabels.region,
         type: 'input',
         helpText: 'Περιφέρεια Ελλάδας',
       },
@@ -583,35 +605,35 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
       },
       {
         id: 'shareholderType',
-        label: 'Τύπος Μετόχου',
+        label: companyLabels.shareholder_type,
         type: 'select',
         options: [
-          { value: 'individual', label: 'Φυσικό Πρόσωπο' },
-          { value: 'legal', label: 'Νομικό Πρόσωπο' }
+          // ✅ ENTERPRISE: Using centralized shareholder type options - NO MORE HARDCODED VALUES
+          ...getShareholderTypeOptions()
         ],
         helpText: 'Τύπος μετόχου (φυσικό ή νομικό πρόσωπο)',
       },
       {
         id: 'shareholderIdNumber',
-        label: 'ΑΦΜ/ΑΔΤ Μετόχου',
+        label: companyLabels.shareholder_id,
         type: 'input',
         helpText: 'Αριθμός ταυτότητας ή ΑΦΜ μετόχου',
       },
       {
         id: 'shareType',
-        label: 'Είδος Μετοχών',
+        label: companyLabels.share_type,
         type: 'input',
         helpText: 'Κατηγορία μετοχών (κοινές, προνομιούχες κλπ)',
       },
       {
         id: 'sharePercentage',
-        label: 'Ποσοστό Συμμετοχής (%)',
+        label: companyLabels.share_percentage,
         type: 'number',
         helpText: 'Ποσοστό συμμετοχής στο κεφάλαιο',
       },
       {
         id: 'nominalValue',
-        label: 'Ονομαστική Αξία',
+        label: companyLabels.nominal_value,
         type: 'number',
         helpText: 'Ονομαστική αξία μετοχών',
       },
@@ -630,25 +652,23 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
     fields: [
       {
         id: 'documentType',
-        label: 'Τύπος Εγγράφου',
+        label: companyLabels.document_type,
         type: 'select',
         options: [
-          { value: 'certificate', label: 'Πιστοποιητικό' },
-          { value: 'announcement', label: 'Ανακοίνωση' },
-          { value: 'registration', label: 'Έγγραφο Σύστασης' },
-          { value: 'amendment', label: 'Τροποποίηση Καταστατικού' }
+          // ✅ ENTERPRISE: Using centralized document type options - NO MORE HARDCODED VALUES
+          ...getDocumentTypeOptions()
         ],
         helpText: 'Κατηγορία εγγράφου ΓΕΜΗ',
       },
       {
         id: 'documentDate',
-        label: 'Ημερομηνία Εγγράφου',
+        label: companyLabels.document_date,
         type: 'date',
         helpText: 'Ημερομηνία έκδοσης εγγράφου',
       },
       {
         id: 'documentSubject',
-        label: 'Θέμα Εγγράφου',
+        label: companyLabels.document_subject,
         type: 'input',
         helpText: 'Περιγραφή θέματος εγγράφου',
       },
@@ -673,7 +693,7 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
     fields: [
       {
         id: 'decisionDate',
-        label: 'Ημερομηνία Απόφασης',
+        label: companyLabels.decision_date,
         type: 'date',
         helpText: 'Ημερομηνία λήψης απόφασης',
       },
@@ -682,27 +702,26 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
         label: 'Όργανο',
         type: 'select',
         options: [
-          { value: 'general_assembly', label: 'Γενική Συνέλευση' },
-          { value: 'board_directors', label: 'Διοικητικό Συμβούλιο' },
-          { value: 'supervisory_board', label: 'Εποπτικό Συμβούλιο' }
+          // ✅ ENTERPRISE: Using centralized board type options - NO MORE HARDCODED VALUES
+          ...getBoardTypeOptions()
         ],
         helpText: 'Όργανο που έλαβε την απόφαση',
       },
       {
         id: 'decisionSubject',
-        label: 'Θέμα Απόφασης',
+        label: companyLabels.decision_subject,
         type: 'input',
         helpText: 'Περιγραφή θέματος απόφασης',
       },
       {
         id: 'protocolNumber',
-        label: 'Αριθμός Πρωτοκόλλου',
+        label: companyLabels.protocol_number,
         type: 'input',
         helpText: 'Αριθμός πρωτοκόλλου απόφασης',
       },
       {
         id: 'decisionSummary',
-        label: 'Περίληψη',
+        label: companyLabels.decision_summary,
         type: 'textarea',
         helpText: 'Σύντομη περίληψη απόφασης',
       },
@@ -721,25 +740,25 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
     fields: [
       {
         id: 'versionDate',
-        label: 'Ημερομηνία Μεταβολής',
+        label: companyLabels.version_date,
         type: 'date',
         helpText: 'Ημερομηνία καταχώρησης μεταβολής',
       },
       {
         id: 'changeDescription',
-        label: 'Περιγραφή Μεταβολής',
+        label: companyLabels.change_description,
         type: 'input',
         helpText: 'Περιγραφή της μεταβολής (π.χ. αλλαγή επωνυμίας)',
       },
       {
         id: 'previousValue',
-        label: 'Προηγούμενη Τιμή',
+        label: companyLabels.previous_value,
         type: 'input',
         helpText: 'Προηγούμενη τιμή πεδίου (αν εφαρμόζεται)',
       },
       {
         id: 'newValue',
-        label: 'Νέα Τιμή',
+        label: companyLabels.new_value,
         type: 'input',
         helpText: 'Νέα τιμή μετά τη μεταβολή',
       },
@@ -758,33 +777,30 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
     fields: [
       {
         id: 'representativeFullName',
-        label: 'Πλήρες Όνομα',
+        label: companyLabels.representative_name,
         type: 'input',
         helpText: 'Ονοματεπώνυμο εκπροσώπου',
       },
       {
         id: 'representativeRole',
-        label: 'Ιδιότητα/Θέση',
+        label: companyLabels.representative_role,
         type: 'select',
         options: [
-          { value: 'ceo', label: 'Διευθύνων Σύμβουλος' },
-          { value: 'president', label: 'Πρόεδρος Δ.Σ.' },
-          { value: 'manager', label: 'Διαχειριστής' },
-          { value: 'legal_rep', label: 'Νόμιμος Εκπρόσωπος' },
-          { value: 'secretary', label: 'Γραμματέας' }
+          // ✅ ENTERPRISE: Using centralized representative position options - NO MORE HARDCODED VALUES
+          ...getRepresentativePositionOptions()
         ],
         helpText: 'Θέση ή ιδιότητα στην εταιρεία',
       },
       {
         id: 'representativeTaxNumber',
-        label: 'ΑΦΜ Εκπροσώπου',
+        label: companyLabels.representative_tax,
         type: 'input',
         maxLength: 9,
         helpText: 'Αριθμός Φορολογικού Μητρώου εκπροσώπου',
       },
       {
         id: 'representativeTaxOffice',
-        label: 'ΔΟΥ',
+        label: companyLabels.representative_doy,
         type: 'input',
         helpText: 'Δημόσια Οικονομική Υπηρεσία',
       },
@@ -796,7 +812,7 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
       },
       {
         id: 'representativePhone',
-        label: 'Τηλέφωνο',
+        label: companyLabels.representative_phone,
         type: 'tel',
         helpText: 'Τηλέφωνο επικοινωνίας εκπροσώπου',
       },
@@ -815,31 +831,31 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
     fields: [
       {
         id: 'announcementDate',
-        label: 'Ημερομηνία Ανακοίνωσης',
+        label: companyLabels.announcement_date,
         type: 'date',
         helpText: 'Ημερομηνία δημοσίευσης ανακοίνωσης',
       },
       {
         id: 'issuePaper',
-        label: 'Φύλλο Δημοσίευσης',
+        label: companyLabels.issue_paper,
         type: 'input',
         helpText: 'Όνομα επίσημου φύλλου (π.χ. ΦΕΚ)',
       },
       {
         id: 'announcementSubject',
-        label: 'Θέμα Ανακοίνωσης',
+        label: companyLabels.announcement_subject,
         type: 'input',
         helpText: 'Περιγραφή θέματος ανακοίνωσης',
       },
       {
         id: 'announcementSummary',
-        label: 'Περίληψη',
+        label: companyLabels.announcement_summary,
         type: 'textarea',
         helpText: 'Σύντομη περίληψη ανακοίνωσης',
       },
       {
         id: 'announcementFile',
-        label: 'Αρχείο Ανακοίνωσης',
+        label: companyLabels.announcement_file,
         type: 'input',
         helpText: 'Link ή path αρχείου ανακοίνωσης',
       },
@@ -858,32 +874,28 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
     fields: [
       {
         id: 'currentStatus',
-        label: 'Τρέχουσα Κατάσταση',
+        label: companyLabels.current_status,
         type: 'select',
-        options: [
-          { value: 'active', label: 'Ενεργή' },
-          { value: 'inactive', label: 'Ανενεργή' },
-          { value: 'dissolved', label: 'Διαγραφείσα' },
-          { value: 'bankruptcy', label: 'Σε Πτώχευση' },
-          { value: 'liquidation', label: 'Υπό Εκκαθάριση' }
-        ],
+        options: MODAL_SELECT_GEMI_STATUSES.filter(status =>
+          ['active', 'inactive', 'dissolved', 'bankruptcy', 'liquidation'].includes(status.value)
+        ),
         helpText: 'Τρέχουσα κατάσταση εταιρείας',
       },
       {
         id: 'statusChangeDate',
-        label: 'Ημερομηνία Αλλαγής',
+        label: companyLabels.status_change_date,
         type: 'date',
         helpText: 'Ημερομηνία τελευταίας αλλαγής κατάστασης',
       },
       {
         id: 'statusReason',
-        label: 'Λόγος Αλλαγής',
+        label: companyLabels.status_reason,
         type: 'input',
         helpText: 'Αιτιολογία αλλαγής κατάστασης',
       },
       {
         id: 'previousStatus',
-        label: 'Προηγούμενη Κατάσταση',
+        label: companyLabels.previous_status,
         type: 'input',
         helpText: 'Κατάσταση πριν την τελευταία αλλαγή',
       },
@@ -919,7 +931,7 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
       // Full management happens in modal via ContactRelationshipManager
       {
         id: 'relationshipsSummary',
-        label: 'Περίληψη Σχέσεων',
+        label: companyLabels.relationships_summary,
         type: 'input', // Dummy field - actual rendering handled by custom renderer
         helpText: 'Στατιστικά και περίληψη σχέσεων εταιρείας'
       }

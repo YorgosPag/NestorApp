@@ -316,8 +316,8 @@ export const formatZodErrors = (error: z.ZodError) => {
 };
 
 // Form validation hook for React Hook Form integration
-export const createValidationResolver = (schema: z.ZodSchema) => {
-  return (values: any) => {
+export const createValidationResolver = <T>(schema: z.ZodSchema<T>) => {
+  return (values: unknown) => {
     try {
       schema.parse(values);
       return { values, errors: {} };

@@ -32,9 +32,15 @@ export const formatDate = (date: Date | string | number, options?: Intl.DateTime
  * Format date and time according to current locale
  */
 export const formatDateTime = (date: Date | string | number, options?: Intl.DateTimeFormatOptions): string => {
+  if (!date) return '-';
+
   const dateObj = date instanceof Date ? date : new Date(date);
+
+  // Έλεγχος αν η ημερομηνία είναι έγκυρη
+  if (isNaN(dateObj.getTime())) return '-';
+
   const locale = getCurrentLocale();
-  
+
   const defaultOptions: Intl.DateTimeFormatOptions = {
     year: 'numeric',
     month: '2-digit',
@@ -43,7 +49,12 @@ export const formatDateTime = (date: Date | string | number, options?: Intl.Date
     minute: '2-digit'
   };
 
-  return new Intl.DateTimeFormat(locale, { ...defaultOptions, ...options }).format(dateObj);
+  try {
+    return new Intl.DateTimeFormat(locale, { ...defaultOptions, ...options }).format(dateObj);
+  } catch (error) {
+    console.warn('formatDateTime error:', error);
+    return '-';
+  }
 };
 
 /**

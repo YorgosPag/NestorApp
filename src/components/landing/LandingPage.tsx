@@ -10,6 +10,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { generatePriceRanges } from '@/constants/property-statuses-enterprise';
 
 export function LandingPage() {
   const iconSizes = useIconSizes();
@@ -34,13 +35,7 @@ export function LandingPage() {
     }
 
     const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '€';
-    return [
-      { value: "", label: "Όλες οι τιμές" },
-      { value: "0-50000", label: `${currency}0 - ${currency}50.000` },
-      { value: "50000-100000", label: `${currency}50.000 - ${currency}100.000` },
-      { value: "100000-200000", label: `${currency}100.000 - ${currency}200.000` },
-      { value: "200000+", label: `${currency}200.000+` }
-    ];
+    return generatePriceRanges(currency);
   };
 
   const handleSearch = () => {

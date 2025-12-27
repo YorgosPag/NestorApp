@@ -9,16 +9,12 @@ import {
 } from '@/components/ui/select';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PROPERTY_TYPE_LABELS, PROPERTY_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 
-// 🏢 ENTERPRISE: Property type options for PropertyGrid
+// 🏢 ENTERPRISE: Centralized property type options
 const TYPE_OPTIONS = [
-  { value: 'all', label: 'Όλοι οι τύποι' },
-  { value: 'studio', label: 'Στούντιο' },
-  { value: 'garsoniera', label: 'Γκαρσονιέρα' },
-  { value: 'apartment', label: 'Διαμέρισμα' },
-  { value: 'maisonette', label: 'Μεζονέτα' },
-  { value: 'warehouse', label: 'Αποθήκη' },
-  { value: 'parking', label: 'Parking' },
+  { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_TYPES },
+  ...Object.entries(PROPERTY_TYPE_LABELS).map(([value, label]) => ({ value, label }))
 ] as const;
 
 // ============================================================================

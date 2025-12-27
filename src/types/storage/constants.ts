@@ -67,3 +67,8 @@ export const standardFloors: string[] = [
   '8ος Όροφος',
   '9ος Όροφος'
 ];
+
+// 🗑️ REMOVED: STORAGE_FILTER_LABELS - Use @/constants/property-statuses-enterprise
+//
+// Migration completed to centralized system.
+// All imports should use: import { STORAGE_FILTER_LABELS } from '@/constants/property-statuses-enterprise';

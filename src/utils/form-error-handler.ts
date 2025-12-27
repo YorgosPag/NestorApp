@@ -20,7 +20,7 @@ export interface ErrorDisplayOptions {
 export interface FormErrorContext {
   formName?: string;
   fieldLabel?: string;
-  fieldValue?: any;
+  fieldValue?: unknown;
   timestamp?: Date;
 }
 
@@ -177,7 +177,7 @@ export function useFormErrorHandler() {
 
   // Handle server/API errors
   const handleServerError = useCallback((
-    error: any,
+    error: unknown,
     fallbackMessage?: string,
     context?: FormErrorContext,
     options?: ErrorDisplayOptions

@@ -26,7 +26,7 @@ import {
 import { useTypography } from '@/hooks/useTypography';
 import { getModalColorScheme, getModalIconColor } from '../config/modal-colors';
 import { MODAL_FLEX_PATTERNS, getIconSize } from '../config/modal-layout';
-import { getSelectStyles } from '../config/modal-select';
+import { getSelectStyles, getEncodingOptions } from '../config/modal-select';
 
 interface DxfImportModalProps {
     isOpen: boolean;
@@ -129,18 +129,11 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({ isOpen, onClose, onImpo
                                     <SelectValue placeholder="Επιλέξτε κωδικοποίηση" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="windows-1253">
-                                        <span>Windows-1253 (Greek)</span>
-                                    </SelectItem>
-                                    <SelectItem value="UTF-8">
-                                        <span>UTF-8 (Προεπιλογή)</span>
-                                    </SelectItem>
-                                    <SelectItem value="windows-1252">
-                                        <span>Windows-1252 (Western)</span>
-                                    </SelectItem>
-                                    <SelectItem value="ISO-8859-7">
-                                        <span>ISO-8859-7 (Greek)</span>
-                                    </SelectItem>
+                                    {getEncodingOptions().map((option) => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                            <span>{option.label}</span>
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </ModalField>

@@ -6,7 +6,7 @@
 // Helper function για έλεγχο αν το override είναι ενεργοποιημένο
 export const isOverrideOn = (): boolean => {
   // Έλεγχος για προσωρινό global flag
-  if ((window as any).__FORCE_OVERRIDE__ === true) {
+  if ((window as Window & { __FORCE_OVERRIDE__?: boolean }).__FORCE_OVERRIDE__ === true) {
     return true;
   }
 
@@ -40,12 +40,12 @@ export function guardWithCanary<T>(tag: string, normalValue: T, canaryValue: T):
 
 // Helper για ενεργοποίηση του προσωρινού override flag (για testing)
 export function enableForceOverride(): void {
-  (window as any).__FORCE_OVERRIDE__ = true;
+  (window as Window & { __FORCE_OVERRIDE__?: boolean }).__FORCE_OVERRIDE__ = true;
   // Force Override enabled
 }
 
 // Helper για απενεργοποίηση του προσωρινού override flag
 export function disableForceOverride(): void {
-  (window as any).__FORCE_OVERRIDE__ = false;
+  (window as Window & { __FORCE_OVERRIDE__?: boolean }).__FORCE_OVERRIDE__ = false;
   // Force Override disabled
 }

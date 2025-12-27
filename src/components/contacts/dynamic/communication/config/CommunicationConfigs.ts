@@ -10,6 +10,16 @@
 
 import { Phone, Mail, Globe, User, Briefcase, MapPin } from 'lucide-react';
 import type { CommunicationType, CommunicationConfig, CommunicationConfigRecord } from '../types/CommunicationTypes';
+import {
+  PHONE_TYPE_LABELS,
+  EMAIL_TYPE_LABELS,
+  WEBSITE_TYPE_LABELS,
+  SOCIAL_MEDIA_TYPE_LABELS,
+  SOCIAL_PLATFORM_LABELS,
+  IDENTITY_TYPE_LABELS,
+  PROFESSIONAL_TYPE_LABELS,
+  ADDRESS_TYPE_LABELS
+} from '@/constants/property-statuses-enterprise';
 
 // ============================================================================
 // MAIN COMMUNICATION CONFIGURATIONS
@@ -36,11 +46,11 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
     icon: Phone,
     fields: { primary: 'number', secondary: 'countryCode' },
     types: [
-      { value: 'mobile', label: 'Κινητό' },
-      { value: 'home', label: 'Σπίτι' },
-      { value: 'work', label: 'Εργασία' },
-      { value: 'fax', label: 'Φαξ' },
-      { value: 'other', label: 'Άλλο' }
+      { value: 'mobile', label: PHONE_TYPE_LABELS.mobile },
+      { value: 'home', label: PHONE_TYPE_LABELS.home },
+      { value: 'work', label: PHONE_TYPE_LABELS.work },
+      { value: 'fax', label: PHONE_TYPE_LABELS.fax },
+      { value: 'other', label: PHONE_TYPE_LABELS.other }
     ],
     defaultType: 'mobile',
     placeholder: 'π.χ. 2310 123456',
@@ -57,9 +67,9 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
     icon: Mail,
     fields: { primary: 'email' },
     types: [
-      { value: 'personal', label: 'Προσωπικό' },
-      { value: 'work', label: 'Εργασία' },
-      { value: 'other', label: 'Άλλο' }
+      { value: 'personal', label: EMAIL_TYPE_LABELS.personal },
+      { value: 'work', label: EMAIL_TYPE_LABELS.work },
+      { value: 'other', label: EMAIL_TYPE_LABELS.other }
     ],
     defaultType: 'personal',
     placeholder: 'π.χ. john@example.com',
@@ -76,11 +86,11 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
     icon: Globe,
     fields: { primary: 'url' },
     types: [
-      { value: 'personal', label: 'Προσωπική' },
-      { value: 'company', label: 'Εταιρική' },
-      { value: 'portfolio', label: 'Χαρτοφυλάκιο' },
-      { value: 'blog', label: 'Blog' },
-      { value: 'other', label: 'Άλλη' }
+      { value: 'personal', label: WEBSITE_TYPE_LABELS.personal },
+      { value: 'company', label: WEBSITE_TYPE_LABELS.company },
+      { value: 'portfolio', label: WEBSITE_TYPE_LABELS.portfolio },
+      { value: 'blog', label: WEBSITE_TYPE_LABELS.blog },
+      { value: 'other', label: WEBSITE_TYPE_LABELS.other }
     ],
     defaultType: 'personal',
     placeholder: 'π.χ. https://example.com',
@@ -98,23 +108,23 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
     fields: { primary: 'username', secondary: 'platform' },
     // 🎯 ΤΥΠΟΙ ΧΡΗΣΗΣ για το "Τύπος" dropdown
     types: [
-      { value: 'personal', label: 'Προσωπικό' },
-      { value: 'professional', label: 'Επαγγελματικό' },
-      { value: 'business', label: 'Επιχειρησιακό' },
-      { value: 'other', label: 'Άλλο' }
+      { value: 'personal', label: SOCIAL_MEDIA_TYPE_LABELS.personal },
+      { value: 'professional', label: SOCIAL_MEDIA_TYPE_LABELS.professional },
+      { value: 'business', label: SOCIAL_MEDIA_TYPE_LABELS.business },
+      { value: 'other', label: SOCIAL_MEDIA_TYPE_LABELS.other }
     ],
     // 🎯 ΠΛΑΤΦΟΡΜΕΣ για το "Πλατφόρμα" dropdown
     platformTypes: [
-      { value: 'linkedin', label: 'LinkedIn' },
-      { value: 'facebook', label: 'Facebook' },
-      { value: 'instagram', label: 'Instagram' },
-      { value: 'twitter', label: 'Twitter/X' },
-      { value: 'youtube', label: 'YouTube' },
-      { value: 'github', label: 'GitHub' },
-      { value: 'tiktok', label: 'TikTok' },
-      { value: 'whatsapp', label: 'WhatsApp' },
-      { value: 'telegram', label: 'Telegram' },
-      { value: 'other', label: 'Άλλη Πλατφόρμα' }
+      { value: 'linkedin', label: SOCIAL_PLATFORM_LABELS.linkedin },
+      { value: 'facebook', label: SOCIAL_PLATFORM_LABELS.facebook },
+      { value: 'instagram', label: SOCIAL_PLATFORM_LABELS.instagram },
+      { value: 'twitter', label: SOCIAL_PLATFORM_LABELS.twitter },
+      { value: 'youtube', label: SOCIAL_PLATFORM_LABELS.youtube },
+      { value: 'github', label: SOCIAL_PLATFORM_LABELS.github },
+      { value: 'tiktok', label: SOCIAL_PLATFORM_LABELS.tiktok },
+      { value: 'whatsapp', label: SOCIAL_PLATFORM_LABELS.whatsapp },
+      { value: 'telegram', label: SOCIAL_PLATFORM_LABELS.telegram },
+      { value: 'other', label: SOCIAL_PLATFORM_LABELS.other }
     ],
     defaultType: 'personal',
     placeholder: 'π.χ. john-doe',
@@ -131,12 +141,12 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
     icon: User,
     fields: { primary: 'number', secondary: 'type' },
     types: [
-      { value: 'id_card', label: 'Δελτίο Ταυτότητας' },
-      { value: 'passport', label: 'Διαβατήριο' },
-      { value: 'afm', label: 'ΑΦΜ' },
-      { value: 'amka', label: 'ΑΜΚΑ' },
-      { value: 'license', label: 'Άδεια Οδήγησης' },
-      { value: 'other', label: 'Άλλο' }
+      { value: 'id_card', label: IDENTITY_TYPE_LABELS.id_card },
+      { value: 'passport', label: IDENTITY_TYPE_LABELS.passport },
+      { value: 'afm', label: IDENTITY_TYPE_LABELS.afm },
+      { value: 'amka', label: IDENTITY_TYPE_LABELS.amka },
+      { value: 'license', label: IDENTITY_TYPE_LABELS.license },
+      { value: 'other', label: IDENTITY_TYPE_LABELS.other }
     ],
     defaultType: 'id_card',
     placeholder: 'Αριθμός εγγράφου',
@@ -153,13 +163,13 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
     icon: Briefcase,
     fields: { primary: 'value', secondary: 'type' },
     types: [
-      { value: 'company_phone', label: 'Τηλέφωνο Εταιρείας' },
-      { value: 'company_email', label: 'Email Εταιρείας' },
-      { value: 'company_website', label: 'Website Εταιρείας' },
-      { value: 'linkedin', label: 'LinkedIn' },
-      { value: 'position', label: 'Θέση Εργασίας' },
-      { value: 'department', label: 'Τμήμα' },
-      { value: 'other', label: 'Άλλο' }
+      { value: 'company_phone', label: PROFESSIONAL_TYPE_LABELS.company_phone },
+      { value: 'company_email', label: PROFESSIONAL_TYPE_LABELS.company_email },
+      { value: 'company_website', label: PROFESSIONAL_TYPE_LABELS.company_website },
+      { value: 'linkedin', label: PROFESSIONAL_TYPE_LABELS.linkedin },
+      { value: 'position', label: PROFESSIONAL_TYPE_LABELS.position },
+      { value: 'department', label: PROFESSIONAL_TYPE_LABELS.department },
+      { value: 'other', label: PROFESSIONAL_TYPE_LABELS.other }
     ],
     defaultType: 'company_phone',
     placeholder: 'Τιμή',
@@ -176,11 +186,11 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
     icon: MapPin,
     fields: { primary: 'address', secondary: 'type' },
     types: [
-      { value: 'home', label: 'Κατοικία' },
-      { value: 'work', label: 'Εργασία' },
-      { value: 'mailing', label: 'Αλληλογραφία' },
-      { value: 'billing', label: 'Χρέωση' },
-      { value: 'other', label: 'Άλλο' }
+      { value: 'home', label: ADDRESS_TYPE_LABELS.home },
+      { value: 'work', label: ADDRESS_TYPE_LABELS.work },
+      { value: 'mailing', label: ADDRESS_TYPE_LABELS.mailing },
+      { value: 'billing', label: ADDRESS_TYPE_LABELS.billing },
+      { value: 'other', label: ADDRESS_TYPE_LABELS.other }
     ],
     defaultType: 'home',
     placeholder: 'Οδός, αριθμός, περιοχή',

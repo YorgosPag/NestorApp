@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { UNIT_SALE_STATUS } from '@/core/status/StatusConstants';
+import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { BUILDING_IDS } from '@/config/building-ids-config';
 import { CONTACT_INFO, ContactUtils } from '@/config/contact-info-config';
 

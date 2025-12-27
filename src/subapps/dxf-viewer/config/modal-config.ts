@@ -129,6 +129,9 @@ export const MODAL_Z_INDEX = {
   // Critical system modals (errors, confirmations)
   SYSTEM: 70,
 
+  // Dropdown/Select/ComboBox portals (should be above modals)
+  DROPDOWN: 75,
+
   // Toast notifications (should appear above all modals)
   NOTIFICATIONS: 80,
 

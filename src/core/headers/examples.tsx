@@ -10,6 +10,7 @@
 import { Users, Building2, Home, FileText } from 'lucide-react';
 import { PageHeader, ViewMode } from './UnifiedHeaderSystem';
 import { CommonBadge } from '@/core/badges';
+import { COMMON_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 
 // ===== EXAMPLE 1: CONTACTS HEADER (Full Featured) =====
 
@@ -38,7 +39,7 @@ export const ContactsHeaderExample = () => {
             value: 'all',
             onChange: (value) => console.log('Type filter:', value),
             options: [
-              { value: 'all', label: 'Όλοι οι τύποι' },
+              { value: 'all', label: COMMON_FILTER_LABELS.ALL_TYPES },
               { value: 'individual', label: 'Φυσικά Πρόσωπα' },
               { value: 'company', label: 'Νομικά Πρόσωπα' },
               { value: 'service', label: 'Υπηρεσίες' }
@@ -161,7 +162,7 @@ export const ObligationsHeaderExample = () => {
             value: 'all',
             onChange: (value) => console.log('Status filter:', value),
             options: [
-              { value: 'all', label: 'Όλες' },
+              { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
               { value: 'draft', label: 'Προσχέδια' },
               { value: 'completed', label: 'Ολοκληρωμένες' },
               { value: 'approved', label: 'Εγκεκριμένες' }

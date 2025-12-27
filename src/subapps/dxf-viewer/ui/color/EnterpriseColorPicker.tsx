@@ -218,7 +218,9 @@ function EyedropperButton({ onChange, onChangeEnd, disabled }: EyedropperButtonP
 
     try {
       setIsActive(true);
-      // @ts-ignore - EyeDropper API not in TS types yet
+      // EyeDropper API - using proper type declaration
+      const EyeDropper = (window as Window & { EyeDropper?: new () => { open: () => Promise<{ sRGBHex: string }> } }).EyeDropper;
+      if (!EyeDropper) throw new Error('EyeDropper not supported');
       const eyeDropper = new EyeDropper();
       const result = await eyeDropper.open();
 

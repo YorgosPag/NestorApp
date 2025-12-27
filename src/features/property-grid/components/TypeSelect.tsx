@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { TYPE_OPTIONS } from '../constants';
+import { PROPERTY_TYPE_LABELS, PROPERTY_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 
@@ -42,7 +42,10 @@ export function TypeSelect({
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        {TYPE_OPTIONS.map((opt) => (
+        {[
+          { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_TYPES },
+          ...Object.entries(PROPERTY_TYPE_LABELS).map(([value, label]) => ({ value, label }))
+        ].map((opt) => (
           <SelectItem key={opt.value} value={opt.value}>
             {opt.label}
           </SelectItem>

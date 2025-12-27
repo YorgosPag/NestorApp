@@ -5,7 +5,7 @@ import { Building, FileText, Hash, MapPin, Users } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ObligationDocument } from '@/types/obligations';
 import { formatDate } from '@/lib/intl-utils'; // ✅ Using centralized function
-import { getObligationStatusLabel } from "@/core/status/StatusConstants";
+import { getObligationStatusLabel } from "@/constants/property-statuses-enterprise";
 
 interface DocumentHeaderProps {
     doc: Partial<ObligationDocument>;

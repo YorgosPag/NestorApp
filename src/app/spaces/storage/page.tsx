@@ -18,6 +18,7 @@ import {
   Edit,
   Trash2
 } from 'lucide-react';
+import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { useStoragesPageState } from '@/hooks/useStoragesPageState';
 import { useStorageStats } from '@/hooks/useStorageStats';
@@ -65,13 +66,13 @@ function StoragePageContent() {
       color: "blue"
     },
     {
-      title: "Διαθέσιμες",
+      title: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE,
       value: stats.availableStorages,
       icon: TrendingUp,
       color: "green"
     },
     {
-      title: "Κατειλημμένες",
+      title: UNIFIED_STATUS_FILTER_LABELS.OCCUPIED,
       value: stats.occupiedStorages,
       icon: Home,
       color: "purple"

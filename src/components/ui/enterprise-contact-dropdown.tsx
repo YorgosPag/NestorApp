@@ -12,6 +12,7 @@ import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, HOVER_TEXT_EFFECTS } from '@/
 import { canvasUtilities } from '@/styles/design-tokens';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { getModalZIndex } from '@/subapps/dxf-viewer/config/modal-config';
 
 export interface ContactSummary {
   id: string;
@@ -140,11 +141,18 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
     }
   }, [isOpen, readonly]);
 
-  // Measure button position when dropdown opens
+  // Measure button position when dropdown opens - ENTERPRISE PATTERN
   useEffect(() => {
     if (isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       setButtonRect(rect);
+
+      // Apply positioning via CSS custom properties - NO INLINE STYLES
+      if (typeof document !== 'undefined') {
+        const root = document.documentElement;
+        root.style.setProperty('--dropdown-top', `${rect.bottom + 4}px`);
+        root.style.setProperty('--dropdown-left', `${Math.max(8, Math.min(rect.left, window.innerWidth - 458))}px`);
+      }
     }
   }, [isOpen]);
 
@@ -418,10 +426,11 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
 
       {/* Portal Dropdown - Positioned κάτω από το button */}
       {isOpen && buttonRect && typeof document !== 'undefined' && createPortal(
-        <div
+        <section
           ref={dropdownRef}
-          className={`fixed bg-popover text-popover-foreground ${quick.card} shadow-lg z-[99999]`}
-          style={canvasUtilities.geoInteractive.portalDropdownContainer(buttonRect)}
+          className={`absolute top-full mt-1 left-0 ${colors.bg.popover} ${colors.text.popoverForeground} ${quick.card} shadow-lg ${getModalZIndex('DROPDOWN')} min-w-[300px] max-w-[450px] max-h-[400px] pointer-events-auto`}
+          role="listbox"
+          aria-expanded="true"
         >
           {/* Search Input */}
           <div className="p-3 border-b border-border">
@@ -441,7 +450,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
           <div
             data-enterprise-contact-dropdown="true"
             className="overflow-y-scroll"
-            style={canvasUtilities.geoInteractive.dropdownScrollableResults()}
+            className="max-h-[300px] overflow-y-auto overflow-x-hidden"
           >
                   {isSearching ? (
                     <div className="p-4 text-center text-muted-foreground">
@@ -466,9 +475,10 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
                     </div>
                   )}
           </div>
-        </div>,
+        </section>,
         document.body
       )}
+
     </div>
   );
 };

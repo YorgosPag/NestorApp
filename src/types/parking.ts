@@ -63,6 +63,11 @@ export interface ParkingSpot {
     available: 'Διαθέσιμο',
     reserved: 'Κρατημένο'
   };
+
+  // 🗑️ REMOVED: PARKING_FILTER_LABELS - Use @/constants/property-statuses-enterprise
+  //
+  // Migration completed to centralized system.
+  // All imports should use: import { PARKING_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
   
   /**
    * ✅ ENTERPRISE: DEPRECATED - Use useSemanticColors().getParkingStatusClass() instead

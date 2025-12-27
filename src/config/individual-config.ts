@@ -68,36 +68,36 @@ export interface IndividualSectionConfig {
 // SELECT OPTIONS CONSTANTS
 // ============================================================================
 
+// 🏢 ENTERPRISE: Use centralized options from modal-select system
+import {
+  getGenderOptions,
+  getIdentityTypeOptions,
+  getCountryOptions
+} from '@/subapps/dxf-viewer/config/modal-select';
+
 /** Φύλο */
-export const GENDER_OPTIONS: SelectOption[] = [
-  { value: 'male', label: 'Άντρας' },
-  { value: 'female', label: 'Γυναίκα' },
-  { value: 'other', label: 'Άλλο' },
-  { value: 'prefer_not_to_say', label: 'Προτιμώ να μη το δηλώσω' }
-];
+export const GENDER_OPTIONS: SelectOption[] =
+  // ✅ ENTERPRISE: Using centralized gender options - NO MORE HARDCODED VALUES
+  getGenderOptions().map(option => ({
+    value: option.value,
+    label: option.label
+  }));
 
 /** Τύπος εγγράφου ταυτότητας */
-export const DOCUMENT_TYPE_OPTIONS: SelectOption[] = [
-  { value: 'identity_card', label: 'Δελτίο Ταυτότητας' },
-  { value: 'passport', label: 'Διαβατήριο' },
-  { value: 'drivers_license', label: 'Άδεια Οδήγησης' },
-  { value: 'other', label: 'Άλλο' },
-];
+export const DOCUMENT_TYPE_OPTIONS: SelectOption[] =
+  // ✅ ENTERPRISE: Using centralized identity document type options - NO MORE HARDCODED VALUES
+  getIdentityTypeOptions().map(option => ({
+    value: option.value,
+    label: option.label
+  }));
 
 /** Τόπος γέννησης (κύριες χώρες) */
-export const BIRTH_COUNTRY_OPTIONS: SelectOption[] = [
-  { value: 'GR', label: 'Ελλάδα' },
-  { value: 'CY', label: 'Κύπρος' },
-  { value: 'US', label: 'ΗΠΑ' },
-  { value: 'DE', label: 'Γερμανία' },
-  { value: 'FR', label: 'Γαλλία' },
-  { value: 'IT', label: 'Ιταλία' },
-  { value: 'ES', label: 'Ισπανία' },
-  { value: 'UK', label: 'Ηνωμένο Βασίλειο' },
-  { value: 'AU', label: 'Αυστραλία' },
-  { value: 'CA', label: 'Καναδάς' },
-  { value: 'OTHER', label: 'Άλλη χώρα' },
-];
+export const BIRTH_COUNTRY_OPTIONS: SelectOption[] =
+  // ✅ ENTERPRISE: Using centralized country options - NO MORE HARDCODED VALUES
+  getCountryOptions().map(option => ({
+    value: option.value,
+    label: option.label
+  }));
 
 // ============================================================================
 // INDIVIDUAL SECTIONS CONFIGURATION

@@ -173,7 +173,7 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
   // 📍 ENTERPRISE POSITIONING - Centralized Floating System
   const tokens = performanceComponents.performanceMonitor;
   const draggableClasses = FloatingStyleUtils?.getPerformanceDashboardClasses?.(isDragging) ??
-    `fixed z-[9999] max-w-[${tokens.dimensions.maxWidth}] min-w-[${tokens.dimensions.minWidth}] bg-card ${getStatusBorder('default')} ${radius.md} shadow-lg ${isDragging ? 'cursor-grabbing select-none' : 'cursor-auto'}`;
+    `fixed z-modal max-w-[${tokens.dimensions.maxWidth}] min-w-[${tokens.dimensions.minWidth}] bg-card ${getStatusBorder('default')} ${radius.md} shadow-lg ${isDragging ? 'cursor-grabbing select-none' : 'cursor-auto'}`;
 
   const draggableStyles = mounted ? {
     transform: `translate(${dragPosition.x}px, ${dragPosition.y}px)`,
@@ -193,7 +193,7 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
       <button
         onClick={() => setIsVisible(true)}
         className={FloatingStyleUtils?.getCornerButtonClasses?.('top-right') ??
-          `fixed top-4 right-4 z-[9999] p-2 ${colors.bg.primary} ${getStatusBorder('default')} ${radius.md} shadow-lg hover:bg-accent transition-colors`}
+          `fixed top-4 right-4 z-modal p-2 ${colors.bg.primary} ${getStatusBorder('default')} ${radius.md} shadow-lg hover:bg-accent transition-colors`}
         title="Show Performance Dashboard"
       >
         <Activity className={iconSizes.sm} />

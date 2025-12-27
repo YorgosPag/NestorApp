@@ -28,6 +28,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toLocalDateInputValue, combineLocalDateTime } from '@/lib/date-local';
+
+// 🏢 ENTERPRISE: Import centralized priority labels - ZERO HARDCODED VALUES
+import { PRIORITY_LABELS } from '@/constants/property-statuses-enterprise';
 import { HOVER_BORDER_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 interface CreateTaskModalProps {
@@ -58,11 +61,12 @@ const taskTypes: { id: CrmTaskType, name: string, icon: React.ElementType, descr
     { id: 'other', name: 'Άλλο', icon: Clock, description: 'Άλλη εργασία', defaultTitle: 'Νέα εργασία' }
 ];
 
+// ✅ CENTRALIZED: Using PRIORITY_LABELS from central system - ZERO HARDCODED VALUES
 const priorityOptions: { value: CrmTaskPriority, label: string }[] = [
-    { value: 'low', label: 'Χαμηλή' },
-    { value: 'medium', label: 'Μεσαία' },
-    { value: 'high', label: 'Υψηλή' },
-    { value: 'urgent', label: 'Επείγουσα' }
+    { value: 'low', label: PRIORITY_LABELS.low },
+    { value: 'medium', label: PRIORITY_LABELS.medium },
+    { value: 'high', label: PRIORITY_LABELS.high },
+    { value: 'urgent', label: PRIORITY_LABELS.urgent }
 ];
 
 const initialFormData: FormState = {

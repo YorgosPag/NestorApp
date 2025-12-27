@@ -150,7 +150,7 @@ export async function getPrioritizedRoutes(userRole?: UserRole, tenantId?: strin
 /**
  * ⚙️ Update route configuration (admin only)
  */
-export async function updateRouteConfig(configId: string, updates: any) {
+export async function updateRouteConfig(configId: string, updates: Record<string, unknown>) {
   return routeConfigService.updateRouteConfig(configId, updates);
 }
 

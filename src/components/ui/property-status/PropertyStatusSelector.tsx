@@ -91,6 +91,12 @@ export interface PropertyStatusSelectorProps {
   /** Custom className */
   className?: string;
 
+  /** Custom placeholders for internationalization */
+  placeholders?: {
+    selectNewStatus?: string;
+    reasonPlaceholder?: string;
+  };
+
   /** Change handler */
   onStatusChange: (
     newStatus: EnhancedPropertyStatus,
@@ -335,7 +341,7 @@ export function PropertyStatusSelector({
             size === 'sm' && 'h-8 text-sm',
             size === 'lg' && 'h-12 text-base'
           )}>
-            <SelectValue placeholder="Επιλέξτε νέα κατάσταση..." />
+            <SelectValue placeholder={placeholders?.selectNewStatus || "Επιλέξτε νέα κατάσταση..."} />
           </SelectTrigger>
 
           <SelectContent className="max-h-80">

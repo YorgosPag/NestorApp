@@ -16,8 +16,14 @@ import {
   getSearchResultHoverHandlers,
   getDynamicSuggestionStyle,
   getDynamicInputStyle,
-  getDynamicResultItemStyle
+  getDynamicResultItemStyle,
+  // ✅ ENTERPRISE: Import className builders (NO MORE INLINE STYLES)
+  searchSystemClasses,
+  getSearchInputClassName,
+  getSuggestionItemClassName,
+  getResultItemClassName
 } from './SearchSystem.styles';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // SEARCH TYPES και INTERFACES
@@ -381,7 +387,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
   // Using centralized styling από SearchSystem.styles.ts
 
   return (
-    <div style={searchSystemStyles.searchInput.container} className={`search-input ${className}`}>
+    <div className={cn(searchSystemClasses.searchInput.container, 'search-input', className)}>
       <input
         ref={inputRef}
         type="text"
@@ -391,17 +397,17 @@ const SearchInput: React.FC<SearchInputProps> = ({
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        style={getDynamicInputStyle(focused)}
+        className={getSearchInputClassName(focused)}
       />
 
       {/* Search Icon */}
-      <div style={searchSystemStyles.searchInput.icon}>
+      <div className={searchSystemClasses.searchInput.icon}>
         {loading ? '⏳' : '🔍'}
       </div>
 
       {/* Suggestions */}
       {focused && showSuggestions && suggestions.length > 0 && (
-        <div style={searchSystemStyles.searchInput.suggestionsContainer}>
+        <div className={searchSystemClasses.searchInput.suggestionsContainer}>
           {suggestions.map((suggestion, index) => (
             <div
               key={index}
@@ -410,7 +416,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
                 setSelectedSuggestion(-1);
                 inputRef.current?.blur();
               }}
-              style={getDynamicSuggestionStyle(selectedSuggestion === index)}
+              className={getSuggestionItemClassName(selectedSuggestion === index)}
               onMouseEnter={() => setSelectedSuggestion(index)}
             >
               {suggestion}
@@ -448,7 +454,7 @@ const Filter: React.FC<FilterProps> = ({
           <select
             value={value || ''}
             onChange={(e) => onChange(e.target.value || null)}
-            style={searchSystemStyles.filters.select}
+            className={searchSystemClasses.filter.select}
           >
             <option value="">All {config.label}</option>
             {config.options?.map(option => (
@@ -461,15 +467,15 @@ const Filter: React.FC<FilterProps> = ({
 
       case 'multiselect':
         return (
-          <div style={searchSystemStyles.filters.container}>
+          <div className={searchSystemClasses.filter.container}>
             {config.options?.map(option => (
               <label
                 key={option.value}
-                style={searchSystemStyles.filters.multiselectLabel}
+                className={searchSystemClasses.filter.multiselectLabel}
               >
                 <input
                   type="checkbox"
-                  style={searchSystemStyles.filters.checkbox}
+                  className={searchSystemClasses.filter.checkbox}
                   checked={Array.isArray(value) ? value.includes(option.value) : false}
                   onChange={(e) => {
                     const currentValue = Array.isArray(value) ? value : [];
@@ -488,7 +494,7 @@ const Filter: React.FC<FilterProps> = ({
 
       case 'range':
         return (
-          <div style={searchSystemStyles.filters.rangeContainer}>
+          <div className={searchSystemClasses.filter.rangeContainer}>
             <input
               type="number"
               min={config.min}
@@ -499,9 +505,9 @@ const Filter: React.FC<FilterProps> = ({
                 ...value,
                 min: Number(e.target.value)
               })}
-              style={searchSystemStyles.filters.rangeInput}
+              className={searchSystemClasses.filter.rangeInput}
             />
-            <span style={searchSystemStyles.filters.rangeLabel}>to</span>
+            <span className={searchSystemClasses.filter.rangeLabel}>to</span>
             <input
               type="number"
               min={config.min}
@@ -512,7 +518,7 @@ const Filter: React.FC<FilterProps> = ({
                 ...value,
                 max: Number(e.target.value)
               })}
-              style={searchSystemStyles.filters.rangeInput}
+              className={searchSystemClasses.filter.rangeInput}
             />
           </div>
         );
@@ -523,16 +529,16 @@ const Filter: React.FC<FilterProps> = ({
             type="date"
             value={value || ''}
             onChange={(e) => onChange(e.target.value || null)}
-            style={searchSystemStyles.filters.input}
+            className={searchSystemClasses.filter.input}
           />
         );
 
       case 'boolean':
         return (
-          <label style={searchSystemStyles.filters.label}>
+          <label className={searchSystemClasses.filter.label}>
             <input
               type="checkbox"
-              style={searchSystemStyles.filters.checkbox}
+              className={searchSystemClasses.filter.checkbox}
               checked={Boolean(value)}
               onChange={(e) => onChange(e.target.checked)}
             />
@@ -547,7 +553,7 @@ const Filter: React.FC<FilterProps> = ({
             value={value || ''}
             onChange={(e) => onChange(e.target.value || null)}
             placeholder={config.placeholder}
-            style={searchSystemStyles.filters.input}
+            className={searchSystemClasses.filter.input}
           />
         );
 
@@ -557,9 +563,9 @@ const Filter: React.FC<FilterProps> = ({
   };
 
   return (
-    <div className={`filter ${className}`} style={searchSystemStyles.filters.container}>
+    <div className={cn(searchSystemClasses.filter.container, 'filter', className)}>
       {config.type !== 'boolean' && (
-        <label style={searchSystemStyles.filters.label}>
+        <label className={searchSystemClasses.filter.label}>
           {config.label}
         </label>
       )}
@@ -592,40 +598,39 @@ const SearchResultItem: React.FC<SearchResultItemProps> = ({
   return (
     <div
       onClick={handleClick}
-      className={`search-result-item ${className}`}
-      style={getDynamicResultItemStyle(!!onClick)}
+      className={cn(getResultItemClassName(!!onClick), 'search-result-item', className)}
       {...(onClick ? getSearchResultHoverHandlers() : {})}
     >
       <div
-        style={searchSystemStyles.results.itemTitle}
+        className={searchSystemClasses.results.itemTitle}
         dangerouslySetInnerHTML={{ __html: result.highlightedTitle }}
       />
 
       {result.item.subtitle && (
-        <div style={searchSystemStyles.results.itemDescription}>
+        <div className={searchSystemClasses.results.itemDescription}>
           {result.item.subtitle}
         </div>
       )}
 
       {result.highlightedDescription && (
         <div
-          style={searchSystemStyles.results.itemDescription}
+          className={searchSystemClasses.results.itemDescription}
           dangerouslySetInnerHTML={{ __html: result.highlightedDescription }}
         />
       )}
 
       {result.item.category && (
-        <div style={searchSystemStyles.results.itemCategory}>
+        <div className={searchSystemClasses.results.itemCategory}>
           {result.item.category}
         </div>
       )}
 
       {result.item.tags && result.item.tags.length > 0 && (
-        <div style={searchSystemStyles.results.itemTags}>
+        <div className={searchSystemClasses.results.itemTags}>
           {result.item.tags.map(tag => (
             <span
               key={tag}
-              style={searchSystemStyles.results.tag}
+              className={searchSystemClasses.results.tag}
             >
               {tag}
             </span>
@@ -777,9 +782,9 @@ export const SearchSystem: React.FC<SearchSystemProps> = ({
   };
 
   return (
-    <div className={`search-system ${className}`} style={searchSystemStyles.layout.main}>
+    <div className={cn(searchSystemClasses.layout.main, 'search-system', className)}>
       {/* Search Input */}
-      <div style={searchSystemStyles.layout.searchInputSection}>
+      <div className={searchSystemClasses.layout.searchInputSection}>
         <SearchInput
           value={query}
           onChange={setQuery}
@@ -792,22 +797,22 @@ export const SearchSystem: React.FC<SearchSystemProps> = ({
 
       {/* Filters */}
       {searchConfig.showFilters && filters.length > 0 && (
-        <div style={searchSystemStyles.layout.filtersSection}>
-          <div style={searchSystemStyles.filters.header}>
-            <h4 style={searchSystemStyles.filters.headerTitle}>
+        <div className={searchSystemClasses.layout.filtersSection}>
+          <div className={searchSystemClasses.filter.header}>
+            <h4 className={searchSystemClasses.filter.headerTitle}>
               Filters
             </h4>
             {activeFilters.length > 0 && (
               <button
                 onClick={clearFilters}
-                style={searchSystemStyles.filters.clearButton}
+                className={searchSystemClasses.filter.clearButton}
               >
                 Clear All
               </button>
             )}
           </div>
 
-          <div style={searchSystemStyles.filters.filtersGrid}>
+          <div className={searchSystemClasses.filter.filtersGrid}>
             {filters.map(filter => (
               <Filter
                 key={filter.id}
@@ -822,16 +827,16 @@ export const SearchSystem: React.FC<SearchSystemProps> = ({
 
       {/* Active Filters */}
       {activeFilters.length > 0 && (
-        <div style={searchSystemStyles.layout.activeFiltersContainer}>
+        <div className={searchSystemClasses.layout.activeFiltersContainer}>
           {activeFilters.map(filter => (
             <span
               key={filter.id}
-              style={searchSystemStyles.layout.activeFilterBadge}
+              className={searchSystemClasses.layout.activeFilterBadge}
             >
               {filter.label}
               <button
                 onClick={() => handleFilterChange(filter.id, null)}
-                style={searchSystemStyles.layout.activeFilterCloseButton}
+                className={searchSystemClasses.layout.activeFilterCloseButton}
               >
                 ×
               </button>
@@ -842,7 +847,7 @@ export const SearchSystem: React.FC<SearchSystemProps> = ({
 
       {/* Result Count */}
       {searchConfig.showResultCount && (query || activeFilters.length > 0) && (
-        <div style={searchSystemStyles.layout.resultCount}>
+        <div className={searchSystemClasses.layout.resultCount}>
           {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
         </div>
       )}
@@ -862,10 +867,10 @@ export const SearchSystem: React.FC<SearchSystemProps> = ({
         ))}
 
         {query && searchResults.length === 0 && (
-          <div style={searchSystemStyles.layout.emptyState}>
-            <div style={layoutUtilities.cssVars.emptyState.icon}>🔍</div>
-            <div style={layoutUtilities.cssVars.emptyState.title}>No results found</div>
-            <div style={layoutUtilities.cssVars.emptyState.subtitle}>Try adjusting your search or filters</div>
+          <div className={searchSystemClasses.layout.emptyState}>
+            <div className={searchSystemClasses.layout.emptyStateIcon}>🔍</div>
+            <div className={searchSystemClasses.layout.emptyStateTitle}>No results found</div>
+            <div className={searchSystemClasses.layout.emptyStateSubtitle}>Try adjusting your search or filters</div>
           </div>
         )}
       </div>

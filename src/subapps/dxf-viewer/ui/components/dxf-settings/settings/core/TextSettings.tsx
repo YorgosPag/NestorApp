@@ -155,10 +155,9 @@ function TextStyleButtons({ settings, onToggle }: TextStyleButtonsProps) {
           title={style.title}
           className={`${iconSizes.xl} text-sm font-bold ${quick.button} transition-colors ${
             settings[style.key]
-              ? `${colors.bg.success} ${getStatusBorder('success')} text-white`
+              ? `${colors.bg.success} ${getStatusBorder('success')} ${colors.text.inverted}`
               : `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${quick.button} ${colors.text.muted}`
           }`}
-          style={layoutUtilities.cssVars.textStyle.forButton(style.key)}
         >
           {style.label}
         </button>

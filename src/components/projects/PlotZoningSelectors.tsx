@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FormField } from './FormField';
 import type { PlotData } from './GeneralPlotDataTab';
+import { getBooleanOptions } from '@/subapps/dxf-viewer/config/modal-select';
 
 interface PlotZoningSelectorsProps {
     plotData: PlotData;
@@ -31,8 +32,11 @@ export function PlotZoningSelectors({ plotData, onPlotDataChange, isEditing, onE
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="yes">Ναι</SelectItem>
-                        <SelectItem value="no">Όχι</SelectItem>
+                        {getBooleanOptions().map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                            </SelectItem>
+                        ))}
                     </SelectContent>
                 </Select>
                 <Label className="text-sm font-medium text-muted-foreground text-left pl-2">Εντός Ορίων</Label>
@@ -43,8 +47,11 @@ export function PlotZoningSelectors({ plotData, onPlotDataChange, isEditing, onE
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="yes">Ναι</SelectItem>
-                        <SelectItem value="no">Όχι</SelectItem>
+                        {getBooleanOptions().map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                            </SelectItem>
+                        ))}
                     </SelectContent>
                 </Select>
                 <Label className="text-sm font-medium text-muted-foreground text-left pl-2">Εντός Ζώνης</Label>
@@ -55,8 +62,11 @@ export function PlotZoningSelectors({ plotData, onPlotDataChange, isEditing, onE
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="yes">Ναι</SelectItem>
-                        <SelectItem value="no">Όχι</SelectItem>
+                        {getBooleanOptions().map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                            </SelectItem>
+                        ))}
                     </SelectContent>
                 </Select>
                 <Label className="text-sm font-medium text-muted-foreground text-left pl-2">Πυλωτή</Label>
@@ -67,8 +77,11 @@ export function PlotZoningSelectors({ plotData, onPlotDataChange, isEditing, onE
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="yes">Ναι</SelectItem>
-                        <SelectItem value="no">Όχι</SelectItem>
+                        {getBooleanOptions().map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                            </SelectItem>
+                        ))}
                     </SelectContent>
                 </Select>
                 <Label className="text-sm font-medium text-muted-foreground text-left pl-2">Στέγη</Label>

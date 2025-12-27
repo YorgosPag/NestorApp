@@ -1,5 +1,7 @@
 'use client';
 
+import { COMPANY_LEGAL_FORM_LABELS } from '@/constants/property-statuses-enterprise';
+
 // ============================================================================
 // COMPANY CONFIGURATION - TABS FOR ΕΤΑΙΡΕΙΕΣ
 // ============================================================================
@@ -62,13 +64,13 @@ const basicInfoSection: CompanySectionConfig = {
       label: 'Νομική Μορφή',
       required: true,
       options: [
-        { value: 'ae', label: 'Α.Ε. (Ανώνυμη Εταιρεία)' },
-        { value: 'epe', label: 'Ε.Π.Ε. (Εταιρεία Περιορισμένης Ευθύνης)' },
-        { value: 'ee', label: 'Ε.Ε. (Ετερόρρυθμη Εταιρεία)' },
-        { value: 'oe', label: 'Ο.Ε. (Ομόρρυθμη Εταιρεία)' },
-        { value: 'ikepe', label: 'Ι.Κ.Ε. (Ιδιωτική Κεφαλαιουχική Εταιρεία)' },
-        { value: 'smpc', label: 'Α.Ε.Β.Ε. (Ανώνυμη Εταιρεία Βιομηχανικής Ερευνας)' },
-        { value: 'other', label: 'Άλλο' }
+        { value: 'ae', label: COMPANY_LEGAL_FORM_LABELS.ae },
+        { value: 'epe', label: COMPANY_LEGAL_FORM_LABELS.epe },
+        { value: 'ee', label: COMPANY_LEGAL_FORM_LABELS.ee },
+        { value: 'oe', label: COMPANY_LEGAL_FORM_LABELS.oe },
+        { value: 'ikepe', label: COMPANY_LEGAL_FORM_LABELS.ikepe },
+        { value: 'smpc', label: COMPANY_LEGAL_FORM_LABELS.smpc },
+        { value: 'other', label: COMPANY_LEGAL_FORM_LABELS.other }
       ]
     },
     {

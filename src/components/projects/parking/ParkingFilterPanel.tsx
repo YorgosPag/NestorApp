@@ -9,6 +9,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { ParkingFilters } from '@/types/parking';
 import { PARKING_TYPE_LABELS, PARKING_STATUS_LABELS } from '@/types/parking';
+import { PARKING_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 
 interface ParkingFilterPanelProps {
     filters: ParkingFilters;
@@ -41,10 +42,10 @@ export function ParkingFilterPanel({ filters, onFiltersChange }: ParkingFilterPa
             </Label>
             <Select value={filters.type} onValueChange={(value) => onFiltersChange({ type: value })}>
               <SelectTrigger id="type-filter" className="h-9">
-                <SelectValue placeholder="Όλοι οι τύποι" />
+                <SelectValue placeholder={PARKING_FILTER_LABELS.ALL_TYPES} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Όλοι οι τύποι</SelectItem>
+                <SelectItem value="all">{PARKING_FILTER_LABELS.ALL_TYPES}</SelectItem>
                 {Object.entries(PARKING_TYPE_LABELS).map(([key, label]) => (
                   <SelectItem key={key} value={key}>{label}</SelectItem>
                 ))}
@@ -56,10 +57,10 @@ export function ParkingFilterPanel({ filters, onFiltersChange }: ParkingFilterPa
             <Label htmlFor="status-filter" className="text-xs font-medium">Κατάσταση</Label>
             <Select value={filters.status} onValueChange={(value) => onFiltersChange({ status: value })}>
               <SelectTrigger id="status-filter" className="h-9">
-                <SelectValue placeholder="Όλες οι καταστάσεις" />
+                <SelectValue placeholder={PARKING_FILTER_LABELS.ALL_STATUSES} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Όλες οι καταστάσεις</SelectItem>
+                <SelectItem value="all">{PARKING_FILTER_LABELS.ALL_STATUSES}</SelectItem>
                 {Object.entries(PARKING_STATUS_LABELS).map(([key, label]) => (
                   <SelectItem key={key} value={key}>{label}</SelectItem>
                 ))}
@@ -71,10 +72,10 @@ export function ParkingFilterPanel({ filters, onFiltersChange }: ParkingFilterPa
             <Label htmlFor="level-filter" className="text-xs font-medium">Επίπεδο</Label>
             <Select value={filters.level} onValueChange={(value) => onFiltersChange({ level: value })}>
               <SelectTrigger id="level-filter" className="h-9">
-                <SelectValue placeholder="Όλα τα επίπεδα" />
+                <SelectValue placeholder={PARKING_FILTER_LABELS.ALL_LEVELS} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Όλα τα επίπεδα</SelectItem>
+                <SelectItem value="all">{PARKING_FILTER_LABELS.ALL_LEVELS}</SelectItem>
                 <SelectItem value="basement">Υπόγειο</SelectItem>
                 <SelectItem value="ground">Ισόγειο</SelectItem>
                 <SelectItem value="first">1ος Όροφος</SelectItem>

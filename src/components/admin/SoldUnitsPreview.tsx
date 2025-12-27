@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Eye, EyeOff, RefreshCw, Home } from 'lucide-react';
 import { ContactsService } from '@/services/contacts.service';
-import { UNIT_SALE_STATUS_LABELS, UNIT_SALE_STATUS } from '@/core/status/StatusConstants';
+import { UNIT_SALE_STATUS_LABELS, UNIT_SALE_STATUS, COMMON_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 
@@ -206,7 +206,7 @@ export function SoldUnitsPreview() {
                 onClick={() => setShowAll(!showAll)}
               >
                 {showAll ? <EyeOff className={`${iconSizes.sm} mr-2`} /> : <Eye className={`${iconSizes.sm} mr-2`} />}
-                {showAll ? `Μόνο ${process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project'}` : 'Όλα τα Units'}
+                {showAll ? `Μόνο ${process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project'}` : COMMON_FILTER_LABELS.ALL_UNITS}
               </Button>
               <Button
                 variant="outline"

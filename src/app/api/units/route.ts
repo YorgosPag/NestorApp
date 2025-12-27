@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { db as adminDb } from '@/lib/firebase-admin';
-import { UNIT_SALE_STATUS } from '@/core/status/StatusConstants';
+import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function GET(request: NextRequest) {

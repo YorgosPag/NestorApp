@@ -9,6 +9,7 @@ import { ContactsList } from './ContactsList';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { COMMON_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 
 export function ContactsTab() {
   const iconSizes = useIconSizes();
@@ -30,7 +31,7 @@ export function ContactsTab() {
                     value={type}
                     className={`text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white ${INTERACTIVE_PATTERNS.WARNING_HOVER}`}
                   >
-                    {type === 'all' ? 'Όλες' :
+                    {type === 'all' ? COMMON_FILTER_LABELS.ALL_STATUSES :
                      type === 'customers' ? 'Πελάτες' :
                      type === 'suppliers' ? 'Προμηθευτές' : 'Μεσίτες'}
                   </TabsTrigger>

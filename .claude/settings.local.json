@@ -35,7 +35,11 @@
       "Bash(start chrome \"http://localhost:3003/crm/leads/1\")",
       "Bash(npm run build:*)",
       "Bash(start \"C:\\Nestor_Pagonis\\debug-dark-mode.html\")",
-      "Bash(start chrome \"http://localhost:3001/crm/leads/1\")"
+      "Bash(start chrome \"http://localhost:3001/crm/leads/1\")",
+      "Bash(powershell:*)",
+      "Bash(rd:*)",
+      "Read(//c/**)",
+      "Bash(del \"src\\components\\property-filters\\public\\constants.ts\")"
     ],
     "deny": [],
     "ask": []

@@ -357,21 +357,41 @@ export const layoutUtilities = {
     bottomRight: { bottom: '0', right: '0' },
   },
 
-  // Dynamic dropdown positioning για portals & overlays
+  // ✅ ENTERPRISE: Centralized dropdown positioning system (NO MORE INLINE STYLES)
   dropdown: {
-    fixed: (top: number, left: number, width: number, zIndex: number = 9999) => ({
-      position: 'fixed' as const,
-      top: `${top}px`,
-      left: `${left}px`,
-      width: `${width}px`,
-      zIndex,
-    }),
-    portal: (position: { top: number; left: number; width: number }, zIndex: number = 9999) => ({
+    // CSS Variables-based positioning (NO inline styles)
+    setCSSPositioning: (position: { top: number; left: number; width: number }, zIndex: number = 75) => {
+      if (typeof document !== 'undefined') {
+        const root = document.documentElement;
+        root.style.setProperty('--dropdown-top', `${position.top}px`);
+        root.style.setProperty('--dropdown-left', `${position.left}px`);
+        root.style.setProperty('--dropdown-width', `${position.width}px`);
+        root.style.setProperty('--dropdown-z-index', `${zIndex}`);
+      }
+    },
+
+    // CSS Classes που χρησιμοποιούν τα CSS variables
+    getDropdownClasses: (theme: 'default' | 'dark' | 'modal' = 'default') => {
+      const baseClasses = 'fixed pointer-events-auto';
+      const positionClasses = '[top:var(--dropdown-top)] [left:var(--dropdown-left)] [width:var(--dropdown-width)] [z-index:var(--dropdown-z-index)]';
+
+      const themeClasses = {
+        default: 'bg-popover text-popover-foreground border border-border',
+        dark: 'bg-background text-foreground border border-border',
+        modal: 'bg-popover text-popover-foreground border border-border shadow-lg'
+      };
+
+      return `${baseClasses} ${positionClasses} ${themeClasses[theme]}`;
+    },
+
+    // Legacy support - ΘΑ ΔΙΑΓΡΑΦΕΙ σε επόμενη φάση
+    portal: (position: { top: number; left: number; width: number }, zIndex: number = 75) => ({
       position: 'fixed' as const,
       top: `${position.top}px`,
       left: `${position.left}px`,
       width: `${position.width}px`,
       zIndex,
+      // ⚠️ DEPRECATED: Χρησιμοποίησε setCSSPositioning + getDropdownClasses
     }),
   },
 

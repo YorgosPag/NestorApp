@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { DXF_LAYER_CATEGORY_LABELS } from '@/constants/property-statuses-enterprise';
 import type { Layer, Category, LayerManagerState, LayerManagerActions } from './types';
 
 export interface LayerManagerStateHook {
@@ -22,10 +23,10 @@ export function useLayerManagerState(): LayerManagerStateHook {
   ]);
 
   const categories: Category[] = [
-    { value: 'all', label: 'Όλες οι κατηγορίες' },
-    { value: 'electrical', label: 'Ηλεκτρολογικά' },
-    { value: 'plumbing', label: 'Υδραυλικά' },
-    { value: 'hvac', label: 'HVAC' }
+    { value: 'all', label: DXF_LAYER_CATEGORY_LABELS.all },
+    { value: 'electrical', label: DXF_LAYER_CATEGORY_LABELS.electrical },
+    { value: 'plumbing', label: DXF_LAYER_CATEGORY_LABELS.plumbing },
+    { value: 'hvac', label: DXF_LAYER_CATEGORY_LABELS.hvac }
   ];
 
   const toggleLayerVisibility = useCallback((layerId: string) => {

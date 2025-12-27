@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { FilterSelect } from './FilterSelect';
+import { PROPERTY_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 
 interface SearchAndFiltersProps {
   searchTerm: string;
@@ -72,7 +73,7 @@ export function SearchAndFilters({
           value={filterProject}
           onChange={setFilterProject}
           options={projects}
-          placeholder="Όλα τα έργα"
+          placeholder={PROPERTY_FILTER_LABELS.ALL_PROJECTS}
         />
         <FilterSelect
           value={filterStatus}
@@ -83,7 +84,7 @@ export function SearchAndFilters({
             { id: 'planned', name: 'planned' },
             { id: 'completed', name: 'completed' }
           ]}
-          placeholder="Όλες οι καταστάσεις"
+          placeholder={PROPERTY_FILTER_LABELS.ALL_STATUSES}
         />
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">

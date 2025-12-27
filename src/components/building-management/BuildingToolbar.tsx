@@ -5,13 +5,13 @@ import React, { useState } from 'react';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { BaseToolbar } from '@/components/core/BaseToolbar/BaseToolbar';
 import type { ToolbarAction, ToolbarFilter, ToolbarSearch } from '@/components/core/BaseToolbar/BaseToolbar';
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Filter, 
-  ArrowUpDown, 
-  Download, 
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Filter,
+  ArrowUpDown,
+  Download,
   Upload,
   RefreshCw,
   Building,
@@ -27,6 +27,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { UNIFIED_STATUS_FILTER_LABELS, PROPERTY_BUILDING_TYPE_LABELS } from '@/constants/property-statuses-enterprise';
 
 interface BuildingToolbarProps {
   selectedItems?: number[];
@@ -180,9 +181,9 @@ export function BuildingToolbar({
           <DropdownMenuLabel>Κατάσταση κτιρίου</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {[
-            { value: 'active', label: 'Ενεργά' },
-            { value: 'inactive', label: 'Ανενεργά' },
-            { value: 'maintenance', label: 'Συντήρηση' },
+            { value: 'active', label: UNIFIED_STATUS_FILTER_LABELS.ACTIVE },
+            { value: 'inactive', label: UNIFIED_STATUS_FILTER_LABELS.INACTIVE },
+            { value: 'maintenance', label: UNIFIED_STATUS_FILTER_LABELS.MAINTENANCE },
           ].map(({ value, label }) => (
             <DropdownMenuCheckboxItem
               key={value}
@@ -206,9 +207,9 @@ export function BuildingToolbar({
           <DropdownMenuLabel>Τύπος κτιρίου</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {[
-            { value: 'residential', label: 'Οικιστικό' },
-            { value: 'commercial', label: 'Επαγγελματικό' },
-            { value: 'mixed', label: 'Μεικτό' },
+            { value: 'residential', label: PROPERTY_BUILDING_TYPE_LABELS.residential },
+            { value: 'commercial', label: PROPERTY_BUILDING_TYPE_LABELS.commercial },
+            { value: 'mixed', label: PROPERTY_BUILDING_TYPE_LABELS.mixed },
           ].map(({ value, label }) => (
             <DropdownMenuCheckboxItem
               key={value}

@@ -186,8 +186,8 @@ export class DxfPerformanceTestRunner {
     const startTime = performance.now();
 
     try {
-      // @ts-ignore - Memory API may not be available
-      const memory = (performance as any).memory;
+      // Performance Memory API - using proper type declaration
+      const memory = (performance as Performance & { memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number } }).memory;
 
       if (!memory) {
         throw new Error('Performance memory API not available');
