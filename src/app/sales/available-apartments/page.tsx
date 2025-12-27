@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Placeholder stats for Available Apartments
 const availableStats: DashboardStat[] = [
@@ -55,6 +56,7 @@ const availableStats: DashboardStat[] = [
 export default function AvailableApartmentsPage() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   return (
     <TooltipProvider>
       <div className="flex h-screen bg-background">
@@ -64,10 +66,10 @@ export default function AvailableApartmentsPage() {
           <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex h-14 items-center px-4">
               <div className="flex items-center gap-2">
-                <Home className={`${iconSizes.md} text-muted-foreground`} />
+                <Home className={`${iconSizes.md} ${colors.text.muted}`} />
                 <h1 className="text-lg font-semibold">Διαθέσιμα Διαμερίσματα</h1>
               </div>
-              <div className="ml-auto text-sm text-muted-foreground">
+              <div className={`ml-auto text-sm ${colors.text.muted}`}>
                 Διαμερίσματα προς πώληση - Ενεργές καταχωρήσεις
               </div>
             </div>
@@ -86,27 +88,27 @@ export default function AvailableApartmentsPage() {
               {/* Γκαρσονιέρες */}
               <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <Home className={`${iconSizes.md} text-blue-500`} />
+                  <div className={`p-2 ${colors.bg.info}/10 rounded-lg`}>
+                    <Home className={`${iconSizes.md} ${colors.text.info}`} />
                   </div>
                   <h3 className="font-semibold">Γκαρσονιέρες</h3>
                 </div>
-                <p className="text-sm text-muted-foreground mb-2">
+                <p className={`text-sm ${colors.text.muted} mb-2`}>
                   Διαμερίσματα ενός δωματίου
                 </p>
                 <div className="text-2xl font-bold">34</div>
                 <div className="space-y-2 mt-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Μέση τιμή</span>
-                    <span className="text-green-600 font-medium">€185K</span>
+                    <span className={colors.text.muted}>Μέση τιμή</span>
+                    <span className={`${colors.text.success} font-medium`}>€185K</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Εύρος τ.μ.</span>
+                    <span className={colors.text.muted}>Εύρος τ.μ.</span>
                     <span>25-45 τ.μ.</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Ενεργές προβολές</span>
-                    <span className="text-orange-600 font-medium">12</span>
+                    <span className={colors.text.muted}>Ενεργές προβολές</span>
+                    <span className={`${colors.text.warning} font-medium`}>12</span>
                   </div>
                 </div>
               </div>
@@ -114,27 +116,27 @@ export default function AvailableApartmentsPage() {
               {/* Δυάρια */}
               <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-green-500/10 rounded-lg">
-                    <Home className={`${iconSizes.md} text-green-500`} />
+                  <div className={`p-2 ${colors.bg.success}/10 rounded-lg`}>
+                    <Home className={`${iconSizes.md} ${colors.text.success}`} />
                   </div>
                   <h3 className="font-semibold">Δυάρια</h3>
                 </div>
-                <p className="text-sm text-muted-foreground mb-2">
+                <p className={`text-sm ${colors.text.muted} mb-2`}>
                   Διαμερίσματα δύο δωματίων
                 </p>
                 <div className="text-2xl font-bold">67</div>
                 <div className="space-y-2 mt-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Μέση τιμή</span>
-                    <span className="text-green-600 font-medium">€295K</span>
+                    <span className={colors.text.muted}>Μέση τιμή</span>
+                    <span className={`${colors.text.success} font-medium`}>€295K</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Εύρος τ.μ.</span>
+                    <span className={colors.text.muted}>Εύρος τ.μ.</span>
                     <span>55-85 τ.μ.</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Ενεργές προβολές</span>
-                    <span className="text-orange-600 font-medium">31</span>
+                    <span className={colors.text.muted}>Ενεργές προβολές</span>
+                    <span className={`${colors.text.warning} font-medium`}>31</span>
                   </div>
                 </div>
               </div>
@@ -142,27 +144,27 @@ export default function AvailableApartmentsPage() {
               {/* Τριάρια+ */}
               <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-purple-500/10 rounded-lg">
-                    <Home className={`${iconSizes.md} text-purple-500`} />
+                  <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
+                    <Home className={`${iconSizes.md} ${colors.text.warning}`} />
                   </div>
                   <h3 className="font-semibold">Τριάρια+</h3>
                 </div>
-                <p className="text-sm text-muted-foreground mb-2">
+                <p className={`text-sm ${colors.text.muted} mb-2`}>
                   Διαμερίσματα τριών+ δωματίων
                 </p>
                 <div className="text-2xl font-bold">41</div>
                 <div className="space-y-2 mt-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Μέση τιμή</span>
-                    <span className="text-green-600 font-medium">€485K</span>
+                    <span className={colors.text.muted}>Μέση τιμή</span>
+                    <span className={`${colors.text.success} font-medium`}>€485K</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Εύρος τ.μ.</span>
+                    <span className={colors.text.muted}>Εύρος τ.μ.</span>
                     <span>90-150 τ.μ.</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Ενεργές προβολές</span>
-                    <span className="text-orange-600 font-medium">24</span>
+                    <span className={colors.text.muted}>Ενεργές προβολές</span>
+                    <span className={`${colors.text.warning} font-medium`}>24</span>
                   </div>
                 </div>
               </div>
@@ -181,7 +183,7 @@ export default function AvailableApartmentsPage() {
                   <div className={`p-4 bg-card ${quick.card}`}>
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-medium">€100K - €250K</span>
-                      <span className="bg-green-500/20 text-green-500 px-2 py-1 rounded text-sm font-medium">
+                      <span className={`${colors.bg.success}/20 ${colors.text.success} px-2 py-1 rounded text-sm font-medium`}>
                         42 διαθέσιμα
                       </span>
                     </div>
@@ -193,7 +195,7 @@ export default function AvailableApartmentsPage() {
                   <div className={`p-4 bg-card ${quick.card}`}>
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-medium">€250K - €400K</span>
-                      <span className="bg-blue-500/20 text-blue-500 px-2 py-1 rounded text-sm font-medium">
+                      <span className={`${colors.bg.info}/20 ${colors.text.info} px-2 py-1 rounded text-sm font-medium`}>
                         67 διαθέσιμα
                       </span>
                     </div>
@@ -205,7 +207,7 @@ export default function AvailableApartmentsPage() {
                   <div className={`p-4 bg-card ${quick.card}`}>
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-medium">€400K+</span>
-                      <span className="bg-purple-500/20 text-purple-500 px-2 py-1 rounded text-sm font-medium">
+                      <span className={`${colors.bg.warning}/20 ${colors.text.warning} px-2 py-1 rounded text-sm font-medium`}>
                         33 διαθέσιμα
                       </span>
                     </div>
@@ -230,21 +232,21 @@ export default function AvailableApartmentsPage() {
                         <Users className={iconSizes.sm} />
                         Ενεργές επισκέψεις
                       </span>
-                      <span className="font-medium text-green-600">127 αιτήματα</span>
+                      <span className={`font-medium ${colors.text.success}`}>127 αιτήματα</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground flex items-center gap-2">
                         <Calendar className={iconSizes.sm} />
                         Προγραμματισμένες επισκέψεις
                       </span>
-                      <span className="font-medium text-blue-600">34 ραντεβού</span>
+                      <span className={`font-medium ${colors.text.info}`}>34 ραντεβού</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground flex items-center gap-2">
                         <DollarSign className={iconSizes.sm} />
                         Προσφορές υπό εξέταση
                       </span>
-                      <span className="font-medium text-orange-600">18 προσφορές</span>
+                      <span className={`font-medium ${colors.text.warning}`}>18 προσφορές</span>
                     </div>
                     <div className="border-t pt-3 mt-3">
                       <div className="flex justify-between items-center">
@@ -252,7 +254,7 @@ export default function AvailableApartmentsPage() {
                           <TrendingUp className={iconSizes.sm} />
                           Hot Properties ({'>'}5 προβολές/εβδομάδα)
                         </span>
-                        <span className="font-semibold text-red-600">23 ακίνητα</span>
+                        <span className={`font-semibold ${colors.text.error}`}>23 ακίνητα</span>
                       </div>
                     </div>
                   </div>

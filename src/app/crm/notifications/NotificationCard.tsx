@@ -1,10 +1,13 @@
 import { CommonBadge } from '@/core/badges';
 import { cn } from '@/lib/utils';
-import { getTypeStyles, getTypeLabel } from './notification-utils';
+import { useNotificationUtils } from './notification-utils';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export const NotificationCard = ({ notification }: { notification: any }) => {
   const { quick } = useBorderTokens();
+  const { getTypeStyles, getTypeLabel } = useNotificationUtils();
+  const colors = useSemanticColors();
 
   return (
     <div className={cn(
@@ -13,7 +16,7 @@ export const NotificationCard = ({ notification }: { notification: any }) => {
     )}>
       <div className={cn(
         "w-2 h-2 rounded-full mt-1.5 shrink-0",
-        notification.read ? 'bg-gray-300' : 'bg-blue-500 animate-pulse'
+        notification.read ? colors.bg.muted : `${colors.bg.info} animate-pulse`
       )}></div>
       <div className="flex-1">
         <div className="flex items-center justify-between">

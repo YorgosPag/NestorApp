@@ -3,6 +3,7 @@
 import { useUserRole } from '@/contexts/UserRoleContext';
 import dynamic from 'next/dynamic';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Suspense } from 'react';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
@@ -13,10 +14,10 @@ const GeoCanvasApp = dynamic(
   {
     loading: () => {
       return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-900">
+      <div className="w-full h-full flex items-center justify-center bg-slate-900 dark:bg-slate-950">
         <div className="text-center">
           <AnimatedSpinner size="large" className="mx-auto mb-4" />
-          <p className="text-white">Loading Geo-Canvas...</p>
+          <p className="text-slate-100 dark:text-slate-200">Loading Geo-Canvas...</p>
         </div>
       </div>
       );
@@ -37,10 +38,10 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-900">
+      <div className="w-full h-full flex items-center justify-center bg-slate-900 dark:bg-slate-950">
         <div className="text-center">
           <AnimatedSpinner size="medium" className="mx-auto mb-4" />
-          <p className="text-white">Έλεγχος δικαιωμάτων...</p>
+          <p className="text-slate-100 dark:text-slate-200">Έλεγχος δικαιωμάτων...</p>
         </div>
       </div>
     );
@@ -48,16 +49,16 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
 
   if (!isAdmin) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-900">
+      <div className="w-full h-full flex items-center justify-center bg-slate-900 dark:bg-slate-950">
         <div className="text-center max-w-md p-6">
           <div className="text-red-500 text-6xl mb-4">🔒</div>
-          <h1 className="text-2xl font-bold text-white mb-2">
+          <h1 className="text-2xl font-bold text-slate-100 dark:text-slate-200 mb-2">
             Πρόσβαση Μόνο για Διαχειριστές
           </h1>
-          <p className="text-gray-400 mb-4">
+          <p className="text-slate-300 dark:text-slate-400 mb-4">
             Δεν έχετε τα απαραίτητα δικαιώματα για πρόσβαση στο Geo-Canvas System.
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-400 dark:text-slate-500">
             Παρακαλώ συνδεθείτε με λογαριασμό διαχειριστή.
           </p>
         </div>
@@ -82,12 +83,12 @@ export default function GeoCanvasPage() {
       <div className="w-full h-full">
         <Suspense fallback={(() => {
           return (
-          <div className="w-full h-full flex items-center justify-center bg-gray-900">
+          <div className="w-full h-full flex items-center justify-center bg-slate-900 dark:bg-slate-950">
             <div className="text-center">
               <div className="text-6xl mb-4">🌍</div>
               <AnimatedSpinner size="large" className="mx-auto mb-4" />
-              <p className="text-white text-lg">Αρχικοποίηση Geo-Canvas...</p>
-              <p className="text-gray-400 text-sm mt-2">Enterprise Geo-Alert Platform</p>
+              <p className="text-slate-100 dark:text-slate-200 text-lg">Αρχικοποίηση Geo-Canvas...</p>
+              <p className="text-slate-300 dark:text-slate-400 text-sm mt-2">Enterprise Geo-Alert Platform</p>
             </div>
           </div>
           );

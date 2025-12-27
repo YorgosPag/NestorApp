@@ -6,6 +6,7 @@ import { LinePreview } from '../dxf-settings/settings/shared/LinePreview';
 import { CurrentSettingsDisplay } from '../dxf-settings/settings/shared/CurrentSettingsDisplay';
 import { OverrideToggle } from './OverrideToggle';
 import { INTERACTIVE_PATTERNS } from '../../../ui/effects';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export type SubTabType = 'draft' | 'completion' | 'hover' | 'selection';
 export type SubTabContent = 'line' | 'text' | 'grips';
@@ -76,6 +77,7 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
   customPreview,
   showPreview = true
 }) {
+  const colors = useSemanticColors();
   if (activeTab !== config.type) {
     return null;
   }
@@ -117,7 +119,7 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
   }, [onSubTabChange, activeSubTab]);
 
   return (
-    <div className="p-3 bg-gray-700 rounded-lg space-y-4">
+    <div className="p-3 ${colors.bg.secondary} rounded-lg space-y-4">
       {/* Preview Section */}
       {showPreview && (
         <>
@@ -149,7 +151,7 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
             className={`py-2 px-3 text-sm font-medium rounded-md transition-colors ${
               activeSubTab === subTab.id
                 ? `bg-blue-600 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                : `bg-gray-600 text-white ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+                : `${colors.bg.muted} text-white ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
             }`}
           >
             {subTab.label}
@@ -172,7 +174,7 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
             />
           )}
 
-          <div className="p-3 bg-gray-800 rounded space-y-3">
+          <div className="p-3 ${colors.bg.primary} rounded space-y-3">
             {overrideSettings?.line ? null : (
               <div className="flex items-center justify-between">
                 <div className="text-sm text-white font-medium">
@@ -201,7 +203,7 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
             />
           )}
 
-          <div className="p-3 bg-gray-800 rounded space-y-3">
+          <div className="p-3 ${colors.bg.primary} rounded space-y-3">
             <div className="text-sm text-white font-medium">
               Ρυθμίσεις Κειμένου {config.label}
             </div>

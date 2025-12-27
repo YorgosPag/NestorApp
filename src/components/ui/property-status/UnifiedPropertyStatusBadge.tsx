@@ -16,6 +16,7 @@ import React from 'react';
 import { PropertyBadge } from '@/core/badges/UnifiedBadgeSystem';
 import { cn } from '@/lib/utils';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import {
   EnhancedPropertyStatus,
@@ -221,6 +222,7 @@ export function InteractiveStatusBadge({
   onStatusChange?: (newStatus: EnhancedPropertyStatus) => void;
 }) {
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   const [showTransitions, setShowTransitions] = React.useState(false);
 
   return (
@@ -234,7 +236,7 @@ export function InteractiveStatusBadge({
 
       {/* Transition Menu */}
       {showTransitions && allowedTransitions.length > 0 && (
-        <div className={`absolute top-full left-0 mt-2 bg-white ${quick.card} shadow-lg p-3 z-20 min-w-48`}>
+        <div className={`absolute top-full left-0 mt-2 ${colors.bg.primary} ${quick.card} shadow-lg p-3 z-20 min-w-48`}>
           <div className="text-xs font-medium text-muted-foreground mb-2">
             Αλλαγή κατάστασης:
           </div>

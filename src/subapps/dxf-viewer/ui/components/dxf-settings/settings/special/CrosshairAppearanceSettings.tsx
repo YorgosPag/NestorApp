@@ -50,6 +50,7 @@ import type { CursorColors } from '../../../palettes/CursorColorPalette';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { layoutUtilities } from '@/styles/design-tokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export interface CrosshairAppearanceSettingsProps {
   className?: string;
@@ -79,6 +80,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
 }) => {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, radius } = useBorderTokens();
+  const colors = useSemanticColors();
   // ============================================================================
   // HOOKS
   // ============================================================================
@@ -105,9 +107,9 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Crosshair Color */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
-        <label className="block text-sm font-medium text-gray-200">Χρώμα Σταυρονήματος</label>
-        <div className="text-xs text-gray-400 mb-2">Χρώμα γραμμών σταυρώνυματος</div>
+      <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
+        <label className="block text-sm font-medium ${colors.text.secondary}">Χρώμα Σταυρονήματος</label>
+        <div className="text-xs ${colors.text.muted} mb-2">Χρώμα γραμμών σταυρώνυματος</div>
         <ColorDialogTrigger
           value={cursorColors.crosshairColor}
           onChange={(color) => onCursorColorsChange({ ...cursorColors, crosshairColor: color })}
@@ -122,10 +124,10 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
       </div>
 
       {/* Line Style */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
+      <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
         <div className="text-sm text-white">
           <div className="font-medium">Τύπος Γραμμής</div>
-          <div className="font-normal text-gray-400">Στυλ απόδοσης γραμμών</div>
+          <div className="font-normal ${colors.text.muted}">Στυλ απόδοσης γραμμών</div>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <button
@@ -134,8 +136,8 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             }}
             className={`p-2 ${quick.button} text-xs transition-colors ${
               (settings.crosshair.line_style || 'solid') === 'solid'
-                ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
+                ? `${colors.bg.primary} ${getStatusBorder('info')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
             }`}
           >
             <div
@@ -148,8 +150,8 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_style: 'dashed' } })}
             className={`p-2 ${quick.button} text-xs transition-colors ${
               (settings.crosshair.line_style || 'solid') === 'dashed'
-                ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
+                ? `${colors.bg.primary} ${getStatusBorder('info')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
             }`}
           >
             <div
@@ -162,8 +164,8 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_style: 'dotted' } })}
             className={`p-2 ${quick.button} text-xs transition-colors ${
               (settings.crosshair.line_style || 'solid') === 'dotted'
-                ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
+                ? `${colors.bg.primary} ${getStatusBorder('info')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
             }`}
           >
             <div
@@ -176,8 +178,8 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_style: 'dash-dot' } })}
             className={`p-2 ${quick.button} text-xs transition-colors ${
               (settings.crosshair.line_style || 'solid') === 'dash-dot'
-                ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
+                ? `${colors.bg.primary} ${getStatusBorder('info')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
             }`}
           >
             <div
@@ -190,10 +192,10 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
       </div>
 
       {/* Line Width */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
+      <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
         <div className="text-sm text-white">
           <div className="font-medium">Πάχος Γραμμής</div>
-          <div className="font-normal text-gray-400">Πάχος σε pixels</div>
+          <div className="font-normal ${colors.text.muted}">Πάχος σε pixels</div>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -205,7 +207,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             onChange={(e) => updateSettings({ crosshair: { ...settings.crosshair, line_width: parseFloat(e.target.value) } })}
             className="flex-1"
           />
-          <div className="w-12 text-xs bg-gray-600 text-white rounded px-2 py-1 text-center">{settings.crosshair.line_width}px</div>
+          <div className="w-12 text-xs ${colors.bg.muted} text-white rounded px-2 py-1 text-center">{settings.crosshair.line_width}px</div>
         </div>
         <div className="flex gap-1">
           {[1, 1.5, 2, 3, 4, 5].map(width => (
@@ -214,8 +216,8 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_width: width } })}
               className={`flex-1 p-1 rounded text-xs transition-colors ${
                 settings.crosshair.line_width === width
-                  ? `bg-blue-600 border ${getStatusBorder('info')}`
-                  : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border ${getStatusBorder('default')}`
+                  ? `${colors.bg.primary} border ${getStatusBorder('info')}`
+                  : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border ${getStatusBorder('default')}`
               }`}
             >
               <div
@@ -229,10 +231,10 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
       </div>
 
       {/* Size/Type */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
+      <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
         <div className="text-sm text-white">
           <div className="font-medium">Μέγεθος Σταυρονήματος</div>
-          <div className="font-normal text-gray-400">Επέκταση από το κέντρο</div>
+          <div className="font-normal ${colors.text.muted}">Επέκταση από το κέντρο</div>
         </div>
         <div className="grid grid-cols-5 gap-1">
           <button
@@ -241,8 +243,8 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             }}
             className={`p-2 ${quick.button} text-xs transition-colors relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 0
-                ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
+                ? `${colors.bg.primary} ${getStatusBorder('info')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
             }`}
           >
             <div className={`${iconSizes.lg} flex items-center justify-center`}>
@@ -257,8 +259,8 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, size_percent: 5 } })}
             className={`p-2 ${quick.button} text-xs transition-colors relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 5
-                ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
+                ? `${colors.bg.primary} ${getStatusBorder('info')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
             }`}
           >
             <div className={`${iconSizes.lg} flex items-center justify-center relative`}>
@@ -285,8 +287,8 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, size_percent: 8 } })}
             className={`p-2 ${quick.button} text-xs transition-colors relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 8
-                ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
+                ? `${colors.bg.primary} ${getStatusBorder('info')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
             }`}
           >
             <div className={`${iconSizes.lg} flex items-center justify-center relative`}>
@@ -313,8 +315,8 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, size_percent: 15 } })}
             className={`p-2 ${quick.button} text-xs transition-colors relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 15
-                ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
+                ? `${colors.bg.primary} ${getStatusBorder('info')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
             }`}
           >
             <div className={`${iconSizes.lg} flex items-center justify-center relative`}>
@@ -341,8 +343,8 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, size_percent: 100 } })}
             className={`p-2 ${quick.button} text-xs transition-colors relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 100
-                ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
+                ? `${colors.bg.primary} ${getStatusBorder('info')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
             }`}
           >
             <div className={`${iconSizes.lg} flex items-center justify-center relative`}>

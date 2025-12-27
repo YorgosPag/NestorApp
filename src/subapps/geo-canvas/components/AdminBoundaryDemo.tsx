@@ -14,7 +14,7 @@ import { useAdministrativeBoundaries } from '../hooks/useAdministrativeBoundarie
 import type { AdminSearchResult } from '../types/administrative-types';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export function AdminBoundaryDemo() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -83,13 +83,13 @@ export function AdminBoundaryDemo() {
           <button
             onClick={handleSearch}
             disabled={isLoading || !searchQuery.trim()}
-            className={`px-6 py-2 bg-blue-500 text-white ${radius.lg} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} disabled:opacity-50 disabled:cursor-not-allowed`}
+            className={`px-6 py-2 ${colors.bg.info} text-white ${radius.lg} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {isLoading ? '🔍 Αναζήτηση...' : 'Αναζήτηση'}
           </button>
           <button
             onClick={clearResults}
-            className={`px-4 py-2 bg-gray-500 text-white ${radius.lg} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+            className={`px-4 py-2 ${colors.bg.secondary} text-white ${radius.lg} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
           >
             Καθαρισμός
           </button>
@@ -109,7 +109,7 @@ export function AdminBoundaryDemo() {
             <button
               key={query}
               onClick={() => handleQuickSearch(query)}
-              className={`px-3 py-1 text-sm bg-gray-100 ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${radius.full} transition-colors`}
+              className={`px-3 py-1 text-sm ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${radius.full} transition-colors`}
               disabled={isLoading}
             >
               {query}
@@ -124,9 +124,9 @@ export function AdminBoundaryDemo() {
           <div>
             <strong>Status:</strong>{' '}
             <span className={`ml-2 px-2 py-1 rounded ${
-              isLoading ? 'bg-yellow-100 text-yellow-800' :
-              error ? 'bg-red-100 text-red-800' :
-              'bg-green-100 text-green-800'
+              isLoading ? `${colors.bg.warning} text-yellow-800` :
+              error ? `${colors.bg.error} text-red-800` :
+              `${colors.bg.success} text-green-800`
             }`}>
               {isLoading ? 'Loading...' : error ? 'Error' : 'Ready'}
             </span>
@@ -165,7 +165,7 @@ export function AdminBoundaryDemo() {
                   <button
                     key={index}
                     onClick={() => handleQuickSearch(suggestion)}
-                    className={`px-2 py-1 text-xs bg-blue-100 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} rounded text-blue-700 transition-colors`}
+                    className={`px-2 py-1 text-xs ${colors.bg.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} rounded text-blue-700 transition-colors`}
                   >
                     {suggestion}
                   </button>
@@ -207,9 +207,9 @@ export function AdminBoundaryDemo() {
                       </div>
                     </div>
                     <div className={`px-2 py-1 text-xs rounded ${
-                      result.adminLevel === 4 ? 'bg-purple-100 text-purple-800' :
-                      result.adminLevel === 8 ? 'bg-blue-100 text-blue-800' :
-                      'bg-gray-100 text-gray-800'
+                      result.adminLevel === 4 ? `${colors.bg.accent} text-purple-800` :
+                      result.adminLevel === 8 ? `${colors.bg.info} text-blue-800` :
+                      `${colors.bg.muted} text-gray-800`
                     }`}>
                       {result.adminLevel === 4 ? 'Περιφέρεια' :
                        result.adminLevel === 8 ? 'Δήμος' :

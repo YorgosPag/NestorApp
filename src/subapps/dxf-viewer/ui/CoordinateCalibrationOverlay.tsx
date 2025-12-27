@@ -105,7 +105,7 @@ export default function CoordinateCalibrationOverlay({
       <div style={getCalibrationDebugPanelStyles()}>
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-lg font-bold text-cyan-400">🔧 Καλιμπράρισμα Συντεταγμένων</h3>
-          <button onClick={() => onToggle?.(false)} className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HOVER} text-xl`} title="Κλείσιμο">×</button>
+          <button onClick={() => onToggle?.(false)} className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} text-xl`} title="Κλείσιμο">×</button>
         </div>
         <div className="space-y-3">
           {/* ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση CoordinateTransforms */}
@@ -119,10 +119,10 @@ export default function CoordinateCalibrationOverlay({
             <div className="text-cyan-300 font-semibold mb-2">📊 Κατάσταση Σκηνής:</div>
             <div className="flex justify-between items-center">
               <div>
-                <span className={`inline-block ${iconSizes.xs} ${quick.button} mr-2 ${entitiesCount > 0 ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                <span className="text-white">Οντότητες: {entitiesCount}</span>
+                <span className={`inline-block ${iconSizes.xs} ${quick.button} mr-2 ${entitiesCount > 0 ? `${colors.bg.success}` : `${colors.bg.error}`}`}></span>
+                <span className={`${colors.text.primary}`}>Οντότητες: {entitiesCount}</span>
               </div>
-              <div><span className="text-gray-400">Επίπεδα: {layersCount}</span></div>
+              <div><span className={`${colors.text.muted}`}>Επίπεδα: {layersCount}</span></div>
             </div>
             {entitiesCount === 0 && <div className="text-red-300 text-xs mt-1">⚠️ Δεν υπάρχουν οντότητες</div>}
           </div>
@@ -145,7 +145,7 @@ export default function CoordinateCalibrationOverlay({
                       🔄 Σφάλμα round-trip: {currentRoundTripError.toFixed(2)}px {currentRoundTripError < 0.5 ? '✅' : '⚠️'}
                     </div>
                   )}
-                  <div className="text-gray-400 text-xs mt-1">dPR: {dpr.toFixed(2)} | Ζουμ: {(100/dpr).toFixed(0)}%</div>
+                  <div className={`${colors.text.muted} text-xs mt-1`}>dPR: {dpr.toFixed(2)} | Ζουμ: {(100/dpr).toFixed(0)}%</div>
                 </>
               ) : <div className="text-gray-500">Μετακινήστε το ποντίκι πάνω από τον καμβά...</div>}
             </div>
@@ -164,7 +164,7 @@ export default function CoordinateCalibrationOverlay({
                 ) : (
                   clickTests.slice(-2).map(test => (
                     <div key={test.id} className={`text-xs ${getElementBorder('card', 'active')} ${quick.card} pl-2`}>
-                      <div className="text-white">#{test.id} @ {test.timestamp}</div>
+                      <div className={`${colors.text.primary}`}>#{test.id} @ {test.timestamp}</div>
                       <div className="text-green-300">CSS: ({test.cssPoint.x.toFixed(1)}, {test.cssPoint.y.toFixed(1)})</div>
                       <div className="text-yellow-300">Κόσμος: ({test.worldPoint.x.toFixed(2)}, {test.worldPoint.y.toFixed(2)})</div>
                       <div className={`text-xs ${test.roundTripError < 0.5 ? 'text-green-400' : 'text-orange-400'}`}>

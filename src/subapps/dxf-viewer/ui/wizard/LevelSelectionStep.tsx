@@ -6,6 +6,7 @@ import { useLevels } from '../../systems/levels';
 import { HOVER_BORDER_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface LevelSelectionStepProps {
     onNext: () => void;
@@ -15,6 +16,7 @@ interface LevelSelectionStepProps {
 export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const {
     levels,
     importWizard,
@@ -45,22 +47,22 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-medium text-white mb-2">
+        <h3 className="text-lg font-medium ${colors.text.primary} mb-2">
           Επιλέξτε Επίπεδο για Εισαγωγή DXF
         </h3>
-        <p className="text-sm text-gray-400 mb-6">
+        <p className={`text-sm ${colors.text.muted} mb-6`}>
           Επιλέξτε ένα υπάρχον επίπεδο ή δημιουργήστε ένα νέο. Κάθε επίπεδο μπορεί να περιέχει πολλές κατόψεις.
         </p>
       </div>
 
       <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
-        <h4 className="text-sm font-medium text-gray-300">Υπάρχοντα Επίπεδα</h4>
+        <h4 className="text-sm font-medium ${colors.text.tertiary}">Υπάρχοντα Επίπεδα</h4>
         {levels.map((level) => (
           <label
             key={level.id}
             className={`flex items-center p-3 cursor-pointer transition-colors ${
               importWizard.selectedLevelId === level.id
-                ? `${getStatusBorder('active')} bg-blue-500 bg-opacity-10`
+                ? `${getStatusBorder('active')} ${colors.bg.selection}`
                 : `${quick.card} ${HOVER_BORDER_EFFECTS.MUTED}`
             }`}
           >
@@ -73,11 +75,11 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
               className="mr-3"
             />
             <div className="flex items-center flex-1">
-              <Building2 className={`${iconSizes.sm} text-gray-400 mr-2`} />
+              <Building2 className={`${iconSizes.sm} ${colors.text.muted} mr-2`} />
               <div>
-                <div className="text-white font-medium">{level.name}</div>
+                <div className="${colors.text.primary} font-medium">{level.name}</div>
                 {level.isDefault && (
-                  <div className="text-xs text-blue-400">Προεπιλεγμένο Επίπεδο</div>
+                  <div className={`text-xs ${colors.text.info}`}>Προεπιλεγμένο Επίπεδο</div>
                 )}
               </div>
             </div>
@@ -86,19 +88,19 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
       </div>
 
       <div className="space-y-3">
-        <h4 className="text-sm font-medium text-gray-300">Ή Δημιουργήστε Νέο Επίπεδο</h4>
+        <h4 className="text-sm font-medium ${colors.text.tertiary}">Ή Δημιουργήστε Νέο Επίπεδο</h4>
         
         {!showNewLevelForm ? (
           <button
             onClick={handleCreateNewLevel}
             className={`flex items-center p-3 w-full text-left transition-colors ${
               !importWizard.selectedLevelId && importWizard.newLevelName
-                ? `${getStatusBorder('active')} bg-blue-500 bg-opacity-10`
+                ? `${getStatusBorder('active')} ${colors.bg.selection}`
                 : `${quick.dashed} ${HOVER_BORDER_EFFECTS.MUTED}`
             }`}
           >
-            <Plus className={`${iconSizes.sm} text-gray-400 mr-2`} />
-            <span className="text-gray-300">Δημιουργία Νέου Επιπέδου</span>
+            <Plus className={`${iconSizes.sm} ${colors.text.muted} mr-2`} />
+            <span className="${colors.text.tertiary}">Δημιουργία Νέου Επιπέδου</span>
           </button>
         ) : (
           <div className={`${quick.card} p-3`}>
@@ -116,7 +118,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
                   placeholder="Εισάγετε όνομα επιπέδου (π.χ. Υπόγειο, 2ος Όροφος)"
                   value={newLevelName}
                   onChange={(e) => handleNewLevelNameChange(e.target.value)}
-                  className={`w-full bg-gray-700 px-3 py-2 text-white placeholder-gray-400 focus:outline-none ${quick.input}`}
+                  className={`w-full ${colors.bg.secondary} px-3 py-2 ${colors.text.primary} placeholder-gray-400 focus:outline-none ${quick.input}`}
                   autoFocus
                 />
               </div>
@@ -127,7 +129,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
                 setSelectedLevel(levels[0]?.id || undefined, undefined);
                 setNewLevelName('');
               }}
-              className={`mt-2 text-sm text-gray-400 ${HOVER_TEXT_EFFECTS.WHITE} transition-colors`}
+              className={`mt-2 text-sm ${colors.text.muted} ${HOVER_TEXT_EFFECTS.WHITE} transition-colors`}
             >
               Ακύρωση
             </button>

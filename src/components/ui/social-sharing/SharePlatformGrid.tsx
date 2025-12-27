@@ -13,6 +13,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { designSystem } from '@/lib/design-system';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 
 // 🏢 ENTERPRISE: Import centralized social platforms configuration
@@ -78,6 +79,8 @@ export const SharePlatformGrid: React.FC<SharePlatformGridProps> = ({
   className,
   analytics = {}
 }) => {
+  const colors = useSemanticColors();
+
   // ============================================================================
   // CONFIGURATION με DEFAULTS
   // ============================================================================
@@ -281,7 +284,7 @@ export const SharePlatformGrid: React.FC<SharePlatformGridProps> = ({
 
       {/* Loading Overlay */}
       {loading && (
-        <aside className="absolute inset-0 bg-white/50 dark:bg-gray-900/50 flex items-center justify-center rounded-lg" role="status" aria-live="polite" aria-label="Φόρτωση Πλατφορμών">
+        <aside className={`absolute inset-0 ${colors.bg.overlay} flex items-center justify-center rounded-lg`} role="status" aria-live="polite" aria-label="Φόρτωση Πλατφορμών">
           <p className={designSystem.cn(
             designSystem.getTypographyClass('sm', 'medium'),
             designSystem.colorScheme.responsive.muted.split(' ')[1] // text-muted-foreground

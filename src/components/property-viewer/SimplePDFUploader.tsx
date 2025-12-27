@@ -15,6 +15,7 @@ import { getAuth, signInAnonymously } from 'firebase/auth';
 import { HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface SimplePDFUploaderProps {
   currentFloor: { id: string; name: string; buildingId: string } | null;
@@ -25,6 +26,7 @@ interface SimplePDFUploaderProps {
 export function SimplePDFUploader({ currentFloor, onPDFUpdate, className }: SimplePDFUploaderProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -254,7 +256,7 @@ export function SimplePDFUploader({ currentFloor, onPDFUpdate, className }: Simp
 
           {/* Success Alert */}
           {success && (
-            <Alert className={`${getStatusBorder('success')} bg-green-50`}>
+            <Alert className={`${getStatusBorder('success')} ${colors.bg.success}`}>
               <Check className={`${iconSizes.sm} text-green-600`} />
               <AlertDescription className="text-green-700">
                 Η κάτοψη ανέβηκε επιτυχώς!

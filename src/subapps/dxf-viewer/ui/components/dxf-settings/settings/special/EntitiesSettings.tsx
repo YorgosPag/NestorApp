@@ -3,6 +3,7 @@ import { Minus, Square, Pen, Hexagon, Ruler, Triangle } from 'lucide-react';
 import { CircleRadiusIcon } from '../../../../toolbar/icons/CircleIcon';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // ✅ ΝΕΑ UNIFIED HOOKS - ΑΝΤΙΚΑΤΑΣΤΑΣΗ ΤΩΝ ΠΑΛΙΩΝ SPECIFIC CONTEXTS
 import {
   useUnifiedLineCompletion,
@@ -77,6 +78,7 @@ interface EntitiesSettingsProps {
 export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   // ✅ Replaced multiple useState hooks with unified reducer for better performance
   const { state: tabState, actions: tabActions, computed } = useEntitiesSettingsReducer();
 
@@ -320,8 +322,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                     ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
                     flex items-center justify-center
                     ${isSelected
-                      ? `bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white ${getStatusBorder('info')}`
-                      : `bg-gray-700 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-200 ${getStatusBorder('default')}`
+                      ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white ${getStatusBorder('info')}`
+                      : `${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.text.secondary} ${getStatusBorder('default')}`
                     }
                   `}
                 >
@@ -339,8 +341,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                     h-8 w-7 p-0 ${quick.button} border-r-0 transition-colors duration-150
                     flex items-center justify-center
                     ${isSelected
-                      ? `bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white ${getStatusBorder('info')}`
-                      : `bg-gray-700 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-200 ${getStatusBorder('default')}`
+                      ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white ${getStatusBorder('info')}`
+                      : `${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.text.secondary} ${getStatusBorder('default')}`
                     }
                   `}
                 >
@@ -351,8 +353,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                     h-8 w-4 p-0 ${quick.button} transition-colors duration-150
                     flex items-center justify-center
                     ${isSelected
-                      ? `bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white ${getStatusBorder('info')}`
-                      : `bg-gray-700 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-200 ${getStatusBorder('default')}`
+                      ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white ${getStatusBorder('info')}`
+                      : `${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.text.secondary} ${getStatusBorder('default')}`
                     }
                   `}
                   title="Περισσότερες επιλογές"
@@ -375,7 +377,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
     // Ειδική λογική για το line tool (πλήρης από dxf-viewer-kalo)
     if (selectedTool === 'line') {
       return (
-        <div className={`mb-6 p-4 bg-gray-800 ${quick.card}`}>
+        <div className={`mb-6 p-4 ${colors.bg.tertiary} ${quick.card}`}>
           {/* Καρτέλες για Line Tool σε δύο σειρές */}
           <div className="grid grid-cols-2 gap-2 mb-4">
             {[
@@ -389,8 +391,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                 onClick={() => setActiveLineTab(activeLineTab === tab.id ? null : tab.id)}
                 className={`py-2 px-3 text-sm font-medium ${quick.button} transition-colors ${
                   activeLineTab === tab.id
-                    ? `bg-blue-600 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                    : `bg-gray-600 text-white ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+                    ? `${colors.bg.primary} text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                    : `${colors.bg.muted} text-white ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
                 }`}
               >
                 {tab.label}
@@ -404,7 +406,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
               type: 'draft',
               label: 'Προσχεδίαση',
               color: 'blue-500',
-              badgeColor: 'bg-blue-600'
+              badgeColor: '${colors.bg.primary}'
             }}
             activeTab={activeLineTab}
             activeSubTab={activeDraftSubTab}
@@ -444,7 +446,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
               type: 'hover',
               label: 'Hover',
               color: 'yellow-500',
-              badgeColor: 'bg-yellow-600'
+              badgeColor: `${colors.bg.warning}`
             }}
             activeTab={activeLineTab}
             activeSubTab={activeHoverSubTab}
@@ -477,7 +479,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
               type: 'selection',
               label: 'Επιλογή',
               color: 'red-500',
-              badgeColor: 'bg-red-600'
+              badgeColor: `${colors.bg.error}`
             }}
             activeTab={activeLineTab}
             activeSubTab={activeSelectionSubTab}
@@ -510,7 +512,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
               type: 'completion',
               label: 'Ολοκλήρωση',
               color: 'green-500',
-              badgeColor: 'bg-green-600'
+              badgeColor: `${colors.bg.success}`
             }}
             activeTab={activeLineTab}
             activeSubTab={activeCompletionSubTab}
@@ -543,14 +545,14 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
 
     // Για όλα τα άλλα εργαλεία - κενό container
     return (
-      <div className={`mb-6 p-4 bg-gray-800 ${quick.card}`}>
+      <div className={`mb-6 p-4 ${colors.bg.tertiary} ${quick.card}`}>
         <h3 className="text-lg font-semibold text-white mb-4">
           Ρυθμίσεις {selectedTool}
         </h3>
-        <div className="text-center py-8 text-gray-500">
+        <div className={`text-center py-8 ${colors.text.muted}`}>
           <div className="text-4xl mb-4">🔧</div>
           <h3 className="text-lg font-medium mb-2">Ρυθμίσεις Εργαλείου</h3>
-          <p className="text-sm text-gray-400">
+          <p className={`text-sm ${colors.text.muted}`}>
             Οι ρυθμίσεις για αυτό το εργαλείο θα προστεθούν σύντομα
           </p>
         </div>
@@ -567,7 +569,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
       {/* Entity-Specific Settings - Tools and specialized functions */}
       <div>
           {/* Tabs για Ειδικές Ρυθμίσεις */}
-          <div className={`flex space-x-1 bg-gray-700 ${quick.card} p-1 mb-4`}>
+          <div className={`flex space-x-1 ${colors.bg.secondary} ${quick.card} p-1 mb-4`}>
             {[
               { id: 'drawing', label: 'Σχεδίαση' },
               { id: 'measurements', label: 'Μετρήσεις' }
@@ -580,8 +582,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                 }}
                 className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
                   activeSpecificTab === subTab.id
-                    ? `bg-blue-600 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                    : `bg-gray-600 text-white ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+                    ? `${colors.bg.primary} text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                    : `${colors.bg.muted} text-white ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
                 }`}
               >
                 {subTab.label}
@@ -599,10 +601,10 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
           <div className="min-h-[50px]">
             {/* Κενό χώρο - οι ρυθμίσεις θα εμφανίζονται μόνο όταν επιλέγεται εργαλείο */}
             {!selectedTool && (
-              <div className="text-center py-8 text-gray-500">
+              <div className={`text-center py-8 ${colors.text.muted}`}>
                 <div className="text-4xl mb-4">🎨</div>
                 <h3 className="text-lg font-medium mb-2">Επιλέξτε Εργαλείο</h3>
-                <p className="text-sm text-gray-400">
+                <p className={`text-sm ${colors.text.muted}`}>
                   Κάντε κλικ σε ένα εργαλείο για να δείτε τις ρυθμίσεις του
                 </p>
               </div>

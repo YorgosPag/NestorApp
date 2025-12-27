@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import CommunicationsHistory from "@/components/CommunicationsHistory";
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export default function CrmCommunicationsPage() {
   const [contactId, setContactId] = useState<string | null>(null);
+  const colors = useSemanticColors();
 
   // In a real app, you would have a way to select a contact
   // For now, we can show all communications for a default/mock contact
@@ -17,7 +19,7 @@ export default function CrmCommunicationsPage() {
 
   return (
     <div className="p-6">
-       <div className="bg-white dark:bg-card rounded-lg shadow p-6">
+       <div className={`${colors.bg.primary} rounded-lg shadow p-6`}>
         <h1 className="text-2xl font-bold mb-2">Ιστορικό Επικοινωνιών</h1>
         <p className="text-muted-foreground mb-4">
           Προβολή όλων των καταγεγραμμένων επικοινωνιών. Επιλέξτε μια επαφή για να δείτε το ιστορικό της.

@@ -16,6 +16,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { EnterpriseColorPicker } from './EnterpriseColorPicker';
 import { EnterpriseColorDialog, ColorDialogTrigger } from './EnterpriseColorDialog';
 import { EnterpriseColorField } from './EnterpriseColorField';
@@ -104,6 +105,7 @@ function InlineColorPicker({
 }: UnifiedColorPickerProps) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   const handleColorChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
@@ -157,7 +159,7 @@ function InlineColorPicker({
         value={value}
         onChange={handleColorChange}
         disabled={disabled}
-        className={`${colorInputSizeClasses} bg-gray-700 ${quick.muted} rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
+        className={`${colorInputSizeClasses} ${colors.bg.hover} ${quick.muted} rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
       />
 
       {/* Text Input */}
@@ -168,7 +170,7 @@ function InlineColorPicker({
           onChange={handleTextChange}
           disabled={disabled}
           placeholder="#ffffff"
-          className={`px-2 py-1 bg-gray-700 ${quick.muted} rounded text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
+          className={`px-2 py-1 ${colors.bg.hover} ${quick.muted} rounded text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
           style={{ width: '6rem' }}
         />
       )}
@@ -178,7 +180,7 @@ function InlineColorPicker({
   if (label) {
     return (
       <div className={`space-y-2 ${className}`}>
-        <label className="block text-sm font-medium text-gray-200">
+        <label className={`block text-sm font-medium ${colors.text.secondary}`}>
           {label}
         </label>
         {content}
@@ -226,7 +228,7 @@ function ModalColorPicker({
         style={layoutUtilities.dxf.colors.backgroundColor(value)}
       />
       {triggerText && (
-        <span className="text-sm text-gray-200">{triggerText}</span>
+        <span className={`text-sm ${colors.text.secondary}`}>{triggerText}</span>
       )}
     </ColorDialogTrigger>
   );

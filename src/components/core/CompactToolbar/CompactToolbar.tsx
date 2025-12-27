@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SearchInput } from '@/components/ui/search'; // 🏢 ENTERPRISE centralized search
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 import {
   Plus,
   Edit,
@@ -68,6 +69,7 @@ export function CompactToolbar({
   onHelp
 }: CompactToolbarProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   const handleFilterChange = (filter: string, checked: boolean) => {
     if (checked) {
@@ -107,7 +109,7 @@ export function CompactToolbar({
             disabled={!hasSelectedContact}
             title={config.tooltips.editItem}
           >
-            <Edit className={`${iconSizes.sm} ${!hasSelectedContact ? 'text-gray-400' : getIconColor('editItem')}`} />
+            <Edit className={`${iconSizes.sm} ${!hasSelectedContact ? colors.text.muted : getIconColor('editItem')}`} />
           </Button>
         )}
 
@@ -121,7 +123,7 @@ export function CompactToolbar({
             disabled={hasSelectedContact !== undefined ? !hasSelectedContact : selectedItems.length === 0}
             title={config.tooltips.deleteItems}
           >
-            <Trash2 className={`${iconSizes.sm} ${hasSelectedContact !== undefined ? (!hasSelectedContact ? 'text-gray-400' : getIconColor('deleteItems')) : (selectedItems.length === 0 ? 'text-gray-400' : getIconColor('deleteItems'))}`} />
+            <Trash2 className={`${iconSizes.sm} ${hasSelectedContact !== undefined ? (!hasSelectedContact ? colors.text.muted : getIconColor('deleteItems')) : (selectedItems.length === 0 ? colors.text.muted : getIconColor('deleteItems'))}`} />
           </Button>
         )}
 
@@ -137,7 +139,7 @@ export function CompactToolbar({
               >
                 <Filter className={`${iconSizes.sm} ${getIconColor('filters')}`} />
                 {activeFilters.length > 0 && (
-                  <span className={`absolute -top-1 -right-1 ${iconSizes.sm} bg-red-500 text-white text-xs font-medium rounded-full flex items-center justify-center`}>
+                  <span className={`absolute -top-1 -right-1 ${iconSizes.sm} ${colors.bg.error} ${colors.text.onError} text-xs font-medium rounded-full flex items-center justify-center`}>
                     {activeFilters.length}
                   </span>
                 )}
@@ -190,7 +192,7 @@ export function CompactToolbar({
             disabled={selectedItems.length === 0}
             title={config.tooltips.favorites}
           >
-            <Star className={`${iconSizes.sm} ${selectedItems.length === 0 ? 'text-gray-400' : getIconColor('favorites')}`} />
+            <Star className={`${iconSizes.sm} ${selectedItems.length === 0 ? colors.text.muted : getIconColor('favorites')}`} />
           </Button>
         )}
 
@@ -204,7 +206,7 @@ export function CompactToolbar({
             disabled={selectedItems.length === 0}
             title={config.tooltips.archive}
           >
-            <Archive className={`${iconSizes.sm} ${selectedItems.length === 0 ? 'text-gray-400' : getIconColor('archive')}`} />
+            <Archive className={`${iconSizes.sm} ${selectedItems.length === 0 ? colors.text.muted : getIconColor('archive')}`} />
           </Button>
         )}
 
@@ -307,7 +309,7 @@ export function CompactToolbar({
             disabled={selectedItems.length === 0}
             title={config.tooltips.copy}
           >
-            <Copy className={`${iconSizes.sm} ${selectedItems.length === 0 ? 'text-gray-400' : getIconColor('copy')}`} />
+            <Copy className={`${iconSizes.sm} ${selectedItems.length === 0 ? colors.text.muted : getIconColor('copy')}`} />
           </Button>
         )}
 
@@ -393,7 +395,7 @@ export function CompactToolbar({
         {(headerTitle || headerCount !== undefined || HeaderIcon) && (
           <div className="flex items-center gap-2 flex-shrink-0">
             {HeaderIcon && (
-              <HeaderIcon className={`${iconSizes.sm} text-blue-600`} />
+              <HeaderIcon className={`${iconSizes.sm} ${colors.text.info}`} />
             )}
             {headerTitle && (
               <span className="font-medium text-sm whitespace-nowrap">

@@ -9,6 +9,8 @@
 
 // 🏢 ENTERPRISE: Import centralized panel tokens instead of local duplicates
 import { PANEL_COLORS } from './panel-tokens';
+// 🏢 ENTERPRISE: Import semantic colors for proper centralization
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ====================================================================
 // ENTERPRISE MODAL SIZING STANDARDS
@@ -77,7 +79,7 @@ export const MODAL_THEMES = {
 
   // Dark theme for DXF viewer and technical interfaces
   DARK_TECHNICAL: {
-    content: `bg-gray-800 text-white border ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
+    content: `bg-background-secondary text-foreground border ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: bg-gray-800 → semantic background // ✅ ENTERPRISE: Using centralized PANEL_COLORS
     overlay: 'bg-black/75 backdrop-blur-sm',
     header: `border-b ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
     footer: `border-t ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
@@ -85,7 +87,7 @@ export const MODAL_THEMES = {
 
   // Light theme for admin and business interfaces
   LIGHT_BUSINESS: {
-    content: `bg-white text-gray-900 border ${PANEL_COLORS.BORDER_SECONDARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
+    content: `bg-background text-foreground border ${PANEL_COLORS.BORDER_SECONDARY}`, // ✅ ENTERPRISE: bg-white/text-black → semantic colors // ✅ ENTERPRISE: Using centralized PANEL_COLORS - black for light theme
     overlay: 'bg-black/50',
     header: `border-b ${PANEL_COLORS.BORDER_SECONDARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
     footer: `border-t ${PANEL_COLORS.BORDER_SECONDARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
@@ -93,7 +95,7 @@ export const MODAL_THEMES = {
 
   // Success theme for confirmations
   SUCCESS: {
-    content: `bg-green-50 text-green-900 border ${PANEL_COLORS.BORDER_SUCCESS_SECONDARY}`, // ✅ ENTERPRISE: Centralized success border
+    content: `bg-success/10 text-success-foreground border ${PANEL_COLORS.BORDER_SUCCESS_SECONDARY}`, // ✅ ENTERPRISE: bg-green-50/text-green-900 → semantic success // ✅ ENTERPRISE: Centralized success border
     overlay: 'bg-black/60',
     header: `border-b ${PANEL_COLORS.BORDER_SUCCESS_SECONDARY}`, // ✅ ENTERPRISE: Centralized success border
     footer: `border-t ${PANEL_COLORS.BORDER_SUCCESS_SECONDARY}`, // ✅ ENTERPRISE: Centralized success border
@@ -101,7 +103,7 @@ export const MODAL_THEMES = {
 
   // Warning theme for destructive actions
   WARNING: {
-    content: `bg-red-50 text-red-900 border ${PANEL_COLORS.BORDER_ERROR_PRIMARY}`, // ✅ ENTERPRISE: Centralized error border
+    content: `bg-destructive/10 text-destructive-foreground border ${PANEL_COLORS.BORDER_ERROR_PRIMARY}`, // ✅ ENTERPRISE: bg-red-50/text-red-900 → semantic destructive // ✅ ENTERPRISE: Centralized error border
     overlay: 'bg-black/70',
     header: `border-b ${PANEL_COLORS.BORDER_ERROR_PRIMARY}`, // ✅ ENTERPRISE: Centralized error border
     footer: `border-t ${PANEL_COLORS.BORDER_ERROR_PRIMARY}`, // ✅ ENTERPRISE: Centralized error border

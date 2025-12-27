@@ -12,6 +12,7 @@ import { HOVER_BACKGROUND_EFFECTS, createHoverBorderEffects } from '@/components
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface LineColorControlProps {
   value: string;
@@ -44,6 +45,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
   const iconSizes = useIconSizes();
   const borderTokens = useBorderTokens();
   const { getStatusBorder } = borderTokens;
+  const colors = useSemanticColors();
   const hoverBorderEffects = createHoverBorderEffects(borderTokens);
   const [isOpen, setIsOpen] = useState(false);
   const [tempColor, setTempColor] = useState(value);
@@ -70,7 +72,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-gray-300">
+      <label className="text-sm font-medium ${colors.text.muted}">
         {label}
       </label>
 
@@ -81,23 +83,23 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
             <Button
               variant="outline"
               disabled={disabled}
-              className={`w-full justify-start gap-2 bg-gray-900 ${getStatusBorder('muted')} ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK}`}
+              className={`w-full justify-start gap-2 ${colors.bg.primary} ${getStatusBorder('muted')} ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK}`}
             >
               <div
                 className={`${iconSizes.md} rounded ${getStatusBorder('muted')} ${valueBgClass}`}
               />
-              <span className="text-gray-100 flex-1 text-left">
+              <span className="${colors.text.secondary} flex-1 text-left">
                 {showHex ? value.toUpperCase() : 'Select Color'}
               </span>
-              <Palette className={`${iconSizes.sm} text-gray-400`} />
+              <Palette className={`${iconSizes.sm} ${colors.text.muted}`} />
             </Button>
           </PopoverTrigger>
 
-          <PopoverContent className={`w-64 bg-gray-900 ${getStatusBorder('muted')} p-3`}>
+          <PopoverContent className={`w-64 ${colors.bg.primary} ${getStatusBorder('muted')} p-3`}>
             <div className="space-y-3">
               {/* Preset colors grid */}
               <div>
-                <p className="text-xs text-gray-400 mb-2">AutoCAD Colors</p>
+                <p className="text-xs ${colors.text.muted} mb-2">AutoCAD Colors</p>
                 <div className="grid grid-cols-5 gap-1">
                   {presetColorClasses.map(({ color, bgClass }) => (
                     <button
@@ -119,13 +121,13 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
 
               {/* Custom color input */}
               <div>
-                <p className="text-xs text-gray-400 mb-2">Custom Color</p>
+                <p className="text-xs ${colors.text.muted} mb-2">Custom Color</p>
                 <div className="flex gap-2">
                   <Input
                     type="color"
                     value={tempColor}
                     onChange={(e) => handleColorChange(e.target.value)}
-                    className={`w-16 h-9 p-1 bg-gray-800 ${getStatusBorder('muted').replace('border ', '')}`}
+                    className={`w-16 h-9 p-1 ${colors.bg.secondary} ${getStatusBorder('muted').replace('border ', '')}`}
                   />
                   <Input
                     type="text"
@@ -140,7 +142,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
                       }
                     }}
                     placeholder="#FFFFFF"
-                    className={`flex-1 bg-gray-800 ${getStatusBorder('muted').replace('border ', '')} text-gray-100 font-mono text-sm`}
+                    className={`flex-1 ${colors.bg.secondary} ${getStatusBorder('muted').replace('border ', '')} ${colors.text.secondary} font-mono text-sm`}
                   />
                 </div>
               </div>

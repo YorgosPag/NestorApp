@@ -10,8 +10,9 @@
 import React from 'react';
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Button } from '@/components/ui/button';
-import { DXF_MODAL_TYPOGRAPHY } from '../../config/modal-typography';
+import { useTypography } from '@/hooks/useTypography';
 import { getModalIconColor } from '../../config/modal-colors';
 import { MODAL_FLEX_PATTERNS, MODAL_DIMENSIONS, getLoadingSpinner } from '../../config/modal-layout';
 import { ProjectModalContainer, ErrorModalContainer, SuccessModalContainer } from './ModalContainer';
@@ -50,7 +51,7 @@ export const AnimatedSpinner: React.FC<LoadingSpinnerProps> = ({
   const sizeClass = MODAL_DIMENSIONS.ICONS[size];
 
   return (
-    <Loader2 className={`${sizeClass} animate-spin text-blue-600 ${className}`} />
+    <Loader2 className={`${sizeClass} animate-spin ${getModalIconColor('primary')} ${className}`} />
   );
 };
 
@@ -75,13 +76,15 @@ export const InlineLoading: React.FC<LoadingContainerProps> = ({
   className = ''
 }) => {
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
+  const typography = useTypography();
 
   if (type === 'card') {
     return (
-      <ProjectModalContainer title="" className={`bg-gray-700 ${getStatusBorder('muted')} ${className}`}>
+      <ProjectModalContainer title="" className={`${colors.bg.muted} ${getStatusBorder('muted')} ${className}`}>
         <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
           <LoadingSpinner size={size} />
-          <span className={DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}>{message}</span>
+          <span className={typography.body.sm}>{message}</span>
         </div>
       </ProjectModalContainer>
     );
@@ -94,7 +97,7 @@ export const InlineLoading: React.FC<LoadingContainerProps> = ({
   return (
     <div className={`${containerClass} ${className}`}>
       <LoadingSpinner size={size} />
-      <span className={DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}>{message}</span>
+      <span className={typography.body.sm}>{message}</span>
     </div>
   );
 };
@@ -120,12 +123,13 @@ export const ModalErrorState: React.FC<ErrorStateProps> = ({
   retryText = 'Δοκιμή ξανά',
   className = ''
 }) => {
+  const typography = useTypography();
   return (
     <ErrorModalContainer title="" className={className}>
       <div className={MODAL_FLEX_PATTERNS.COLUMN.stretchWithGap}>
         <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
           <AlertCircle className={`${MODAL_DIMENSIONS.ICONS.medium} ${getModalIconColor('error')}`} />
-          <p className={DXF_MODAL_TYPOGRAPHY.DESCRIPTION.error}>{message}</p>
+          <p className={`${typography.body.sm} text-destructive`}>{message}</p>
         </div>
 
         {onRetry && (
@@ -159,11 +163,12 @@ export const ModalSuccessState: React.FC<SuccessStateProps> = ({
   message,
   className = ''
 }) => {
+  const typography = useTypography();
   return (
     <SuccessModalContainer title="" className={className}>
       <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
         <CheckCircle2 className={`${MODAL_DIMENSIONS.ICONS.medium} ${getModalIconColor('success')}`} />
-        <p className={DXF_MODAL_TYPOGRAPHY.DESCRIPTION.success}>{message}</p>
+        <p className={`${typography.body.sm} ${colors.text.success}`}>{message}</p>
       </div>
     </SuccessModalContainer>
   );
@@ -190,18 +195,20 @@ export const ModalEmptyState: React.FC<EmptyStateProps> = ({
   className = ''
 }) => {
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
+  const typography = useTypography();
 
   return (
-    <ProjectModalContainer title="" className={`bg-gray-800 ${getStatusBorder('muted')} ${className}`}>
+    <ProjectModalContainer title="" className={`${colors.bg.secondary} ${getStatusBorder('muted')} ${className}`}>
       <div className={MODAL_FLEX_PATTERNS.COLUMN.centerWithGap}>
         {icon && (
-          <div className={`${MODAL_DIMENSIONS.ICONS.large} text-gray-500`}>
+          <div className={`${MODAL_DIMENSIONS.ICONS.large} ${colors.text.muted}`}>
             {icon}
           </div>
         )}
-        <p className={DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}>{message}</p>
+        <p className={typography.body.sm}>{message}</p>
         {description && (
-          <p className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default} opacity-75`}>
+          <p className={`${typography.body.xs} opacity-75`}>
             {description}
           </p>
         )}
@@ -228,13 +235,16 @@ export const ModalLoadingOverlay: React.FC<LoadingOverlayProps> = ({
   message = 'Φόρτωση...',
   className = ''
 }) => {
+  const colors = useSemanticColors();
+  const typography = useTypography();
+
   if (!isVisible) return null;
 
   return (
     <div className={`absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-lg z-50 ${className}`}>
       <div className={MODAL_FLEX_PATTERNS.COLUMN.centerWithGap}>
         <AnimatedSpinner size="large" />
-        <span className={`${DXF_MODAL_TYPOGRAPHY.LABEL.default} text-white`}>
+        <span className={`${typography.label.sm} ${colors.text.inverted}`}>
           {message}
         </span>
       </div>

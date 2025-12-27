@@ -8,6 +8,7 @@ import { Package, MapPin, Ruler, Thermometer, Shield, Edit, Trash2 } from 'lucid
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { badgeVariants } from '@/components/ui/badge';
 import { formatPriceWithUnit } from '@/lib/intl-utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 
 interface StorageCardProps {
@@ -55,15 +56,15 @@ const defaultGetTypeIcon = (type: StorageType) => {
   return typeIcons[type] || Package;
 };
 
-const getStatusBadgeClass = (status: StorageStatus) => {
+const getStatusBadgeClass = (status: StorageStatus, colors: ReturnType<typeof useSemanticColors>) => {
   const statusClasses: Record<StorageStatus, string> = {
-    'available': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-    'occupied': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-    'reserved': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-    'maintenance': 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
-    'unavailable': 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
+    'available': `${colors.bg.success} ${colors.text.success}`,
+    'occupied': `${colors.bg.error} ${colors.text.error}`,
+    'reserved': `${colors.bg.warning} ${colors.text.warning}`,
+    'maintenance': `${colors.bg.muted} ${colors.text.muted}`,
+    'unavailable': `${colors.bg.muted} ${colors.text.muted}`
   };
-  return statusClasses[status] || 'bg-gray-100 text-gray-800';
+  return statusClasses[status] || `${colors.bg.muted} ${colors.text.muted}`;
 };
 
 export function StorageCard({
@@ -78,6 +79,7 @@ export function StorageCard({
   getTypeLabel = defaultGetTypeLabel
 }: StorageCardProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const [isFavorite, setIsFavorite] = useState(false);
 
   const TypeIcon = getTypeIcon(unit.type);
@@ -100,8 +102,8 @@ export function StorageCard({
       
       // Header configuration
       headerConfig={{
-        backgroundGradient: "from-amber-100 via-orange-50 to-yellow-100 dark:from-amber-950 dark:via-orange-950 dark:to-yellow-900",
-        logo: <TypeIcon className={`${iconSizes.xl} text-amber-600 dark:text-amber-400`} />,
+        backgroundGradient: `from-amber-100 via-orange-50 to-yellow-100 dark:from-amber-950 dark:via-orange-950 dark:to-yellow-900`,
+        logo: <TypeIcon className={`${iconSizes.xl} ${colors.text.accent}`} />,
         showImageOverlay: false
       }}
       
@@ -117,7 +119,7 @@ export function StorageCard({
       statusBadges={[
         {
           label: getStatusLabel(unit.status),
-          className: getStatusBadgeClass(unit.status)
+          className: getStatusBadgeClass(unit.status, colors)
         },
         {
           label: getTypeLabel(unit.type),
@@ -217,7 +219,7 @@ export function StorageCard({
         unit.price && {
           title: 'Τιμή',
           content: (
-            <div className="text-lg font-semibold text-green-600 dark:text-green-400">
+            <div className={`text-lg font-semibold ${colors.text.success}`}>
               {formatPrice(unit.price)}
             </div>
           )

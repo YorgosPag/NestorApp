@@ -10,6 +10,7 @@ import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import { useNavigation } from '../core/NavigationContext';
 import { NavigationButton } from './NavigationButton';
@@ -23,6 +24,7 @@ interface NavigationTreeProps {
 export function NavigationTree({ className, onNavigateToPage }: NavigationTreeProps) {
   const iconSizes = useIconSizes();
   const { quick, radius } = useBorderTokens();
+  const colors = useSemanticColors();
   const {
     companies,
     selectedCompany,
@@ -73,7 +75,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
     return (
       <div className={`text-center py-8 ${className || ''}`}>
         <AnimatedSpinner size="large" className="mx-auto mb-4" />
-        <p className="text-gray-500 dark:text-muted-foreground">Φόρτωση δεδομένων...</p>
+        <p className={colors.text.muted}>Φόρτωση δεδομένων...</p>
       </div>
     );
   }
@@ -81,7 +83,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
   if (error) {
     return (
       <div className={`text-center py-8 ${className || ''}`}>
-        <p className="text-red-500 dark:text-red-400 mb-4">Σφάλμα: {error}</p>
+        <p className={`${colors.text.danger} mb-4`}>Σφάλμα: {error}</p>
         <button
           onClick={loadCompanies}
           className={cn(
@@ -98,10 +100,10 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
   return (
     <div className={className || ''}>
       {/* Title */}
-      <h3 className="text-lg font-medium text-gray-900 dark:text-foreground mb-2">
+      <h3 className={`text-lg font-medium ${colors.text.primary} mb-2`}>
         {getStepTitle()}
       </h3>
-      <p className="text-gray-500 dark:text-muted-foreground mb-4 text-sm">
+      <p className={`${colors.text.muted} mb-4 text-sm`}>
         {getStepDescription()}
       </p>
 
@@ -115,7 +117,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
         {currentLevel === 'companies' && (
           <>
             {companies.length === 0 ? (
-              <div className="text-gray-500 dark:text-muted-foreground text-center py-8">
+              <div className={`${colors.text.muted} text-center py-8`}>
                 Δεν βρέθηκαν εταιρείες στο σύστημα.
               </div>
             ) : (
@@ -138,7 +140,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
         {currentLevel === 'projects' && selectedCompany && (
           <>
             {projects.length === 0 ? (
-              <div className="text-gray-500 dark:text-muted-foreground text-center py-8">
+              <div className={`${colors.text.muted} text-center py-8`}>
                 Δεν βρέθηκαν έργα για την επιλεγμένη εταιρεία.
               </div>
             ) : (
@@ -160,7 +162,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
         {currentLevel === 'buildings' && selectedProject && (
           <>
             {selectedProject.buildings.length === 0 ? (
-              <div className="text-gray-500 dark:text-muted-foreground text-center py-8">
+              <div className={`${colors.text.muted} text-center py-8`}>
                 Δεν βρέθηκαν κτίρια για το επιλεγμένο έργο.
               </div>
             ) : (
@@ -182,7 +184,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
         {currentLevel === 'floors' && selectedBuilding && (
           <>
             {selectedBuilding.floors.length === 0 ? (
-              <div className="text-gray-500 dark:text-muted-foreground text-center py-8">
+              <div className={`${colors.text.muted} text-center py-8`}>
                 Δεν βρέθηκαν όροφοι για το επιλεγμένο κτίριο.
               </div>
             ) : (
@@ -203,7 +205,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
         {/* Final Destinations */}
         {currentLevel === 'units' && selectedFloor && (
           <div className="space-y-3">
-            <div className="text-sm font-medium text-gray-900 dark:text-foreground mb-3">
+            <div className={`text-sm font-medium ${colors.text.primary} mb-3`}>
               Μετάβαση σε:
             </div>
 

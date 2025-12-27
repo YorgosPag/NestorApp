@@ -16,6 +16,27 @@ import { BUTTON_STATUS_COLORS } from '../config/color-mapping';
 import { PANEL_COLORS } from '../config/panel-tokens'; // 🏢 ENTERPRISE: Centralized border colors
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 
+// 🏢 ENTERPRISE: CSS Custom Properties για κεντρικοποιημένα χρώματα
+const CSS_VARS = {
+  // Background Colors
+  BG_PRIMARY: 'hsl(var(--background))',           // bg-gray-900 replacement
+  BG_SECONDARY: 'hsl(var(--muted))',              // bg-gray-800 replacement
+  BG_TERTIARY: 'hsl(var(--muted)/0.5)',          // bg-gray-700 replacement
+  BG_LIGHT: 'hsl(var(--background)/0.1)',        // bg-gray-100 replacement
+  BG_SURFACE: 'hsl(var(--card))',                 // bg-gray-200 replacement
+  BG_INFO: 'hsl(var(--primary))',                 // bg-blue-600 replacement
+
+  // Text Colors
+  TEXT_PRIMARY: 'hsl(var(--foreground))',         // text-white replacement
+  TEXT_SECONDARY: 'hsl(var(--muted-foreground))', // text-gray-200 replacement
+  TEXT_MUTED: 'hsl(var(--muted-foreground)/0.7)', // text-gray-400/500 replacement
+  TEXT_ERROR: 'hsl(var(--destructive))',          // text-red-400 replacement
+
+  // Shadow Colors
+  SHADOW_RING_OFFSET: 'hsl(var(--muted))',        // rgb(31 41 55) - ring-offset-gray-800
+  SHADOW_RING_FOCUS: 'hsl(var(--primary))',       // rgb(59 130 246) - ring-blue-500
+} as const;
+
 // 🎯 ENTERPRISE BORDER TOKENS INTEGRATION
 const getBorderTokens = () => {
   const tokens = useBorderTokens();
@@ -91,7 +112,7 @@ export const getTestResultsModalBackdropStyles = () => ({
  */
 export const getTestResultsModalContentStyles = () => ({
   position: 'relative' as const,
-  backgroundColor: 'rgb(17 24 39)', // bg-gray-900
+  backgroundColor: CSS_VARS.BG_PRIMARY, // ✅ ENTERPRISE: bg-gray-900 → semantic background
   borderRadius: 'calc(var(--radius) + 2px)', // Enterprise lg border radius
   boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', // shadow-2xl
   border: `1px solid ${PANEL_COLORS.BORDER_HEX_PRIMARY}`, // ✅ ENTERPRISE: Centralized border color
@@ -149,7 +170,7 @@ export const getSafePDFLoaderContainerStyles = (width: number, height: number) =
   position: 'relative' as const,
   overflow: 'hidden' as const,
   borderRadius: 'var(--radius)', // Enterprise border radius
-  backgroundColor: 'rgb(243 244 246)' // bg-gray-100
+  backgroundColor: CSS_VARS.BG_LIGHT, // ✅ ENTERPRISE: bg-gray-100 → semantic background
 });
 
 /**
@@ -160,12 +181,12 @@ export const getSafePDFLoaderPlaceholderStyles = (width: number, height: number)
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  backgroundColor: 'rgb(243 244 246)', // bg-gray-100
+  backgroundColor: CSS_VARS.BG_LIGHT, // ✅ ENTERPRISE: bg-gray-100 → semantic background
   border: `2px dashed ${PANEL_COLORS.BORDER_HEX_LIGHT}`, // ✅ ENTERPRISE: Centralized border color
   borderRadius: '0.375rem',
   width: `${width}px`,
   height: `${height}px`,
-  color: 'rgb(107 114 128)' // text-gray-500
+  color: CSS_VARS.TEXT_MUTED, // ✅ ENTERPRISE: text-gray-500 → semantic text
 });
 
 // ============================================================================
@@ -236,7 +257,7 @@ export const getEnterpriseContactScrollAreaStyles = () => ({
 export const getProgressBarWidthStyles = (value: number) => ({
   width: `${Math.max(0, Math.min(100, value))}%`, // Constrain to 0-100%
   transition: 'width 0.3s ease-in-out',
-  backgroundColor: 'rgb(37 99 235)', // bg-blue-600
+  backgroundColor: CSS_VARS.BG_INFO, // ✅ ENTERPRISE: bg-blue-600 → semantic background
   height: '100%',
   borderRadius: 'inherit' // Inherit from parent container
 });
@@ -266,7 +287,7 @@ export const getProgressBarTransformStyles = (value: number) => {
  */
 export const getPhotoUploadProgressContainerStyles = () => ({
   width: '8rem', // w-32
-  backgroundColor: 'rgb(229 231 235)', // bg-gray-200
+  backgroundColor: CSS_VARS.BG_SURFACE, // ✅ ENTERPRISE: bg-gray-200 → semantic background
   borderRadius: '9999px', // rounded-full - keep as is
   height: '0.5rem', // h-2
   marginTop: '0.5rem', // mt-2
@@ -305,18 +326,18 @@ export const getToolbarButtonStyles = (
 
   const variantStyles = {
     default: {
-      backgroundColor: 'rgb(55 65 81)', // bg-gray-700
-      color: 'rgb(229 231 235)', // text-gray-200
+      backgroundColor: CSS_VARS.BG_TERTIARY, // ✅ ENTERPRISE: bg-gray-700 → semantic background
+      color: CSS_VARS.TEXT_SECONDARY, // ✅ ENTERPRISE: text-gray-200 → semantic text
       borderColor: PANEL_COLORS.BORDER_HEX_SECONDARY // ✅ ENTERPRISE: Centralized border color
     },
     primary: {
-      backgroundColor: 'rgb(37 99 235)', // bg-blue-600
+      backgroundColor: CSS_VARS.BG_INFO, // ✅ ENTERPRISE: bg-blue-600 → semantic background
       color: 'white',
       borderColor: PANEL_COLORS.BORDER_HEX_ACCENT // ✅ ENTERPRISE: Centralized border color
     },
     danger: {
-      backgroundColor: 'rgb(55 65 81)', // bg-gray-700
-      color: 'rgb(248 113 113)', // text-red-400
+      backgroundColor: CSS_VARS.BG_TERTIARY, // ✅ ENTERPRISE: bg-gray-700 → semantic background
+      color: CSS_VARS.TEXT_ERROR, // ✅ ENTERPRISE: text-red-400 → semantic text
       borderColor: PANEL_COLORS.BORDER_HEX_SECONDARY // ✅ ENTERPRISE: Centralized border color
     }
   };
@@ -352,12 +373,12 @@ export const getModeButtonStyles = (isActive: boolean = false) => ({
   justifyContent: 'center',
   gap: '0.25rem',
   ...(isActive ? {
-    backgroundColor: 'rgb(37 99 235)', // bg-blue-600
+    backgroundColor: CSS_VARS.BG_INFO, // ✅ ENTERPRISE: bg-blue-600 → semantic background
     color: 'white',
     borderColor: PANEL_COLORS.BORDER_HEX_ACCENT // ✅ ENTERPRISE: Centralized border color
   } : {
-    backgroundColor: 'rgb(55 65 81)', // bg-gray-700
-    color: 'rgb(229 231 235)', // text-gray-200
+    backgroundColor: CSS_VARS.BG_TERTIARY, // ✅ ENTERPRISE: bg-gray-700 → semantic background
+    color: CSS_VARS.TEXT_SECONDARY, // ✅ ENTERPRISE: text-gray-200 → semantic text
     borderColor: PANEL_COLORS.BORDER_HEX_SECONDARY // ✅ ENTERPRISE: Centralized border color
   })
 });
@@ -380,12 +401,12 @@ export const getKindButtonStyles = (isActive: boolean = false) => ({
   alignItems: 'center',
   justifyContent: 'center',
   ...(isActive ? {
-    backgroundColor: 'rgb(37 99 235)', // bg-blue-600
+    backgroundColor: CSS_VARS.BG_INFO, // ✅ ENTERPRISE: bg-blue-600 → semantic background
     color: 'white',
     borderColor: PANEL_COLORS.BORDER_HEX_ACCENT // ✅ ENTERPRISE: Centralized border color
   } : {
-    backgroundColor: 'rgb(55 65 81)', // bg-gray-700
-    color: 'rgb(229 231 235)', // text-gray-200
+    backgroundColor: CSS_VARS.BG_TERTIARY, // ✅ ENTERPRISE: bg-gray-700 → semantic background
+    color: CSS_VARS.TEXT_SECONDARY, // ✅ ENTERPRISE: text-gray-200 → semantic text
     borderColor: PANEL_COLORS.BORDER_HEX_SECONDARY // ✅ ENTERPRISE: Centralized border color
   })
 });
@@ -402,7 +423,7 @@ export const getOverlayToolbarStyles = () => ({
   alignItems: 'center',
   gap: '0.5rem',
   padding: '0.5rem',
-  backgroundColor: 'rgb(31 41 55)', // bg-gray-800
+  backgroundColor: CSS_VARS.BG_SECONDARY, // ✅ ENTERPRISE: bg-gray-800 → semantic background
   border: `1px solid ${PANEL_COLORS.BORDER_HEX_SECONDARY}`, // ✅ ENTERPRISE: Centralized border color
   borderRadius: 'calc(var(--radius) + 2px)', // Enterprise lg border radius
   flexWrap: 'wrap' as const
@@ -413,7 +434,7 @@ export const getOverlayToolbarStyles = () => ({
  */
 export const getToolbarSeparatorStyles = () => ({
   height: '1.5rem', // h-6
-  backgroundColor: 'rgb(107 114 128)' // bg-gray-500
+  backgroundColor: CSS_VARS.TEXT_MUTED, // ✅ ENTERPRISE: bg-gray-500 → semantic background
 });
 
 /**
@@ -440,7 +461,7 @@ export const getToolbarSectionWithLabelStyles = () => ({
 export const getToolbarLabelStyles = () => ({
   fontSize: '0.75rem', // text-xs
   fontWeight: 500, // font-medium
-  color: 'rgb(156 163 175)' // text-gray-400
+  color: CSS_VARS.TEXT_MUTED, // ✅ ENTERPRISE: text-gray-400 → semantic text
 });
 
 // ============================================================================
@@ -472,7 +493,7 @@ export const getStatusColorButtonStyles = (
   backgroundColor: BUTTON_STATUS_COLORS[status],
   ...(isActive ? {
     borderColor: 'white',
-    boxShadow: '0 0 0 2px rgb(31 41 55), 0 0 0 4px rgb(59 130 246)' // ring-2 ring-offset-2 ring-offset-gray-800 ring-blue-500
+    boxShadow: `0 0 0 2px ${CSS_VARS.SHADOW_RING_OFFSET}, 0 0 0 4px ${CSS_VARS.SHADOW_RING_FOCUS}` // ✅ ENTERPRISE: ring-2 ring-offset-2 → semantic shadows
   } : {
     borderColor: 'transparent'
   })
@@ -533,13 +554,13 @@ export const getCursorShapeButtonStyles = (
   border: '1px solid',
   transition: 'colors 0.15s ease-in-out',
   ...(isActive ? {
-    backgroundColor: 'rgb(37 99 235)', // bg-blue-600
+    backgroundColor: CSS_VARS.BG_INFO, // ✅ ENTERPRISE: bg-blue-600 → semantic background
     borderColor: PANEL_COLORS.BORDER_HEX_ACCENT, // ✅ ENTERPRISE: Centralized border color
     color: 'white'
   } : {
-    backgroundColor: 'rgb(55 65 81)', // bg-gray-600
+    backgroundColor: CSS_VARS.BG_TERTIARY, // ✅ ENTERPRISE: bg-gray-600 → semantic background
     borderColor: PANEL_COLORS.BORDER_HEX_SECONDARY, // ✅ ENTERPRISE: Centralized border color
-    color: 'rgb(229 231 235)' // text-gray-200
+    color: CSS_VARS.TEXT_SECONDARY, // ✅ ENTERPRISE: text-gray-200 → semantic text
   })
 });
 
@@ -685,7 +706,7 @@ export const getCalibrationDebugPanelStyles = () => ({
   position: 'absolute' as const,
   top: '1rem', // top-4
   left: '1rem', // left-4
-  backgroundColor: 'rgb(17 24 39)', // bg-gray-900
+  backgroundColor: CSS_VARS.BG_PRIMARY, // ✅ ENTERPRISE: bg-gray-900 → semantic background
   color: 'white',
   padding: '1rem', // p-4
   borderRadius: 'calc(var(--radius) + 2px)', // Enterprise lg border radius
@@ -738,7 +759,7 @@ export const getCalibrationTooltipStyles = () => ({
  */
 export const getCursorSettingsPanelStyles = () => ({
   padding: '0.5rem',
-  backgroundColor: 'rgb(55 65 81)', // bg-gray-700
+  backgroundColor: CSS_VARS.BG_TERTIARY, // ✅ ENTERPRISE: bg-gray-700 → semantic background
   borderRadius: 'var(--radius)', // Enterprise border radius-md
   display: 'flex',
   flexDirection: 'column' as const,

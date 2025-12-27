@@ -58,10 +58,10 @@ import { useOverlayStore } from '../overlays/overlay-store';
 import { useLevelManager } from '../systems/levels/useLevels';
 import { useGripContext } from '../providers/GripProvider';
 import { globalRulerStore } from '../settings-provider';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ⚡ LCP OPTIMIZATION: Critical UI Components (Load immediately for paint)
 import { FloatingPanelContainer, type FloatingPanelHandle } from '../ui/FloatingPanelContainer';
-import { DXF_VIEWER_BACKGROUNDS } from '../config/panel-tokens';
 import { EnhancedDXFToolbar } from '../ui/toolbar';
 
 // 🚀 LAZY LOADED: Non-Critical UI Components (Load after initial paint to reduce LCP)
@@ -125,6 +125,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const state = useDxfViewerState();
   const notifications = useNotifications();
   const eventBus = useEventBus(); // 🔧 PHASE 3: Centralized event coordination
+  const colors = useSemanticColors();
 
   // 🧪 UNIFIED TEST RUNNER - State για modal
   const [testModalOpen, setTestModalOpen] = React.useState(false);
@@ -902,11 +903,9 @@ Check console for detailed metrics`;
         onTransformReady={handleTransformReady}
       >
       <div
-        className={`flex h-full p-2 gap-2 ${DXF_VIEWER_BACKGROUNDS.MAIN_CONTAINER_CLASS}`}
-        style={{
-          // 🔥 ΔΙΟΡΘΩΣΗ: Disable pointer events όταν layering tool είναι ενεργό
-          pointerEvents: activeTool === 'layering' ? 'none' : 'auto'
-        }}
+        className={`flex h-full p-2 gap-2 ${colors.bg.primary} ${
+          activeTool === 'layering' ? 'pointer-events-none' : 'pointer-events-auto'
+        }`}
       >
       {/* ✅ PHASE 5: Sidebar Section */}
       <SidebarSection
@@ -919,7 +918,7 @@ Check console for detailed metrics`;
       />
 
       {/* 🚀 LCP OPTIMIZATION: Lazy-loaded Main Content Section */}
-      <React.Suspense fallback={<div className="flex-1 bg-gray-50 animate-pulse" />}>
+      <React.Suspense fallback={<div className={`flex-1 ${colors.bg.skeleton} animate-pulse`} />}>
         <MainContentSection
         state={wrappedState}
         currentScene={currentScene}
@@ -955,7 +954,7 @@ Check console for detailed metrics`;
       </React.Suspense>
 
       {/* 🚀 LCP OPTIMIZATION: Lazy-loaded Floating Panels Section */}
-      <React.Suspense fallback={<div className="w-80 bg-gray-50 animate-pulse" />}>
+      <React.Suspense fallback={<div className={`w-80 ${colors.bg.skeleton} animate-pulse`} />}>
         <FloatingPanelsSection
         colorMenu={colorMenu}
         currentScene={currentScene}

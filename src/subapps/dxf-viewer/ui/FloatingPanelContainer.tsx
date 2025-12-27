@@ -6,6 +6,7 @@ const DEBUG_FLOATING_PANEL_CONTAINER = false;
 import React, { useImperativeHandle, forwardRef } from 'react';
 import { useTranslationLazy } from '../../../i18n/hooks/useTranslationLazy';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PanelTabs } from './components/PanelTabs';
 // REMOVED: PropertiesPanel - καρτέλα πλέον αφαιρέθηκε εντελώς
 import { useOverlayManager } from '../state/overlay-manager';
@@ -42,6 +43,7 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   currentTool
 }, ref) {
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // Debug logging removed for performance - was causing excessive console output on every render
   const { t, ready, isLoading } = useTranslationLazy('dxf-viewer');
@@ -101,8 +103,8 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   // Don't render panels until translations are ready
   if (isLoading) {
     return (
-      <div className={`fixed right-4 top-4 bg-gray-900/90 backdrop-blur-sm ${quick.card} ${getStatusBorder('default')} shadow-xl w-80`}>
-        <div className="p-4 text-center text-gray-400">
+      <div className={`fixed right-4 top-4 ${colors.bg.overlay} backdrop-blur-sm ${quick.card} ${getStatusBorder('default')} shadow-xl w-80`}>
+        <div className={`p-4 text-center ${colors.text.muted}`}>
           Loading translations...
         </div>
       </div>
@@ -120,8 +122,8 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   }
 
   return (
-    <div className={`w-96 h-full overflow-hidden bg-gray-800 ${quick.card} relative`}>
-      <div className={`bg-gray-800 ${quick.card} ${getStatusBorder('default')}`}>
+    <div className={`w-96 h-full overflow-hidden ${colors.bg.primary} ${quick.card} relative`}>
+      <div className={`${colors.bg.primary} ${quick.card} ${getStatusBorder('default')}`}>
         <PanelTabs
           activePanel={activePanel}
           onTabClick={panelNavigation.handleTabClick}
@@ -130,7 +132,7 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
         />
       </div>
 
-      <div className="w-96 overflow-hidden overflow-y-auto bg-gray-800 text-gray-100 py-4 px-2" style={{ maxHeight: 'calc(100vh - 240px)' }}>
+      <div className={`w-96 overflow-hidden overflow-y-auto ${colors.bg.primary} ${colors.text.primary} py-4 px-2`} style={{ maxHeight: 'calc(100vh - 240px)' }}>
         <div className="w-[368px] overflow-hidden">
           {renderPanelContent()}
         </div>

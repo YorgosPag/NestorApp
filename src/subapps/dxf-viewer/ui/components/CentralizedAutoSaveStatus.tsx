@@ -14,6 +14,7 @@
 import React, { useEffect, useState } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '../../components/modal/ModalLoadingStates';
 // 🔄 MIGRATED (2025-10-09): Phase 3.2 - Direct Enterprise (no adapter)
 import { useDxfSettings } from '../../settings-provider';
@@ -49,6 +50,7 @@ function useDxfSettingsSafe() {
 export function CentralizedAutoSaveStatus() {
   const iconSizes = useIconSizes();
   const { radius, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const dxfSettings = useDxfSettingsSafe();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -91,7 +93,7 @@ export function CentralizedAutoSaveStatus() {
 
     if (settings.saveStatus === 'saved') {
       return (
-        <svg className={`${iconSizes.xs} text-green-500`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className={`${iconSizes.xs} ${colors.text.success}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
         </svg>
       );
@@ -99,14 +101,14 @@ export function CentralizedAutoSaveStatus() {
 
     if (settings.saveStatus === 'error') {
       return (
-        <svg className={`${iconSizes.xs} text-red-500`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className={`${iconSizes.xs} ${colors.text.error}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
         </svg>
       );
     }
 
     return (
-      <svg className={`${iconSizes.xs} text-gray-400`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className={`${iconSizes.xs} ${colors.text.muted}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
       </svg>
     );
@@ -132,18 +134,18 @@ export function CentralizedAutoSaveStatus() {
 
   const getStatusColor = () => {
     if (isAutoSaving) {
-      return `text-blue-400 ${useBorderTokens().getStatusBorder('info')}`;
+      return `${colors.text.info} ${useBorderTokens().getStatusBorder('info')}`;
     }
 
     if (settings.saveStatus === 'saved') {
-      return `text-green-400 ${useBorderTokens().getStatusBorder('success')}`;
+      return `${colors.text.success} ${useBorderTokens().getStatusBorder('success')}`;
     }
 
     if (settings.saveStatus === 'error') {
-      return `text-red-400 ${useBorderTokens().getStatusBorder('error')}`;
+      return `${colors.text.error} ${useBorderTokens().getStatusBorder('error')}`;
     }
 
-    return `text-gray-400 ${getStatusBorder('muted')}`;
+    return `${colors.text.muted} ${getStatusBorder('muted')}`;
   };
 
   // Dynamic z-index: Lower when modal is open, high when no modal
@@ -155,7 +157,7 @@ export function CentralizedAutoSaveStatus() {
     <section
       className={`
         flex items-center gap-2 px-3 py-2
-        bg-gray-800/50 rounded-md border
+        ${colors.bg.tertiary}/50 rounded-md border
         transition-all duration-200 relative
         ${getStatusColor()} ${getZIndexClass()}
       `}
@@ -174,7 +176,7 @@ export function CentralizedAutoSaveStatus() {
         </h3>
 
         {settings.lastSaved && settings.saveStatus === 'saved' && (
-          <time className="text-xs text-gray-500 mt-1" style={centralizedAutoSaveStatusStyles.statusMessage.secondary}>
+          <time className="text-xs ${colors.text.muted} mt-1" style={centralizedAutoSaveStatusStyles.statusMessage.secondary}>
             Τελευταία: {formatLastSaveTime(settings.lastSaved)}
           </time>
         )}
@@ -216,6 +218,7 @@ export function CentralizedAutoSaveStatus() {
  */
 export function CentralizedAutoSaveStatusCompact() {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const dxfSettings = useDxfSettingsSafe();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -253,10 +256,10 @@ export function CentralizedAutoSaveStatusCompact() {
     }
 
     if (settings.saveStatus === 'error') {
-      return <div className={`${iconSizes.xxs} ${radius.full} bg-red-500`}></div>;
+      return <div className={`${iconSizes.xxs} ${radius.full} ${colors.bg.error}`}></div>;
     }
 
-    return <div className={`${iconSizes.xxs} ${radius.full} bg-green-500`}></div>;
+    return <div className={`${iconSizes.xxs} ${radius.full} ${colors.bg.success}`}></div>;
   };
 
   const getTooltip = () => {

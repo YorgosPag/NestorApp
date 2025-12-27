@@ -1,9 +1,18 @@
 /**
- * Reusable Slider Input Component
+ * 🏢 ENTERPRISE SLIDER INPUT COMPONENT
+ * Reusable Slider Input Component με centralized styling
  * Eliminates duplicate slider patterns across UI components
+ *
+ * ✅ ENTERPRISE FEATURES:
+ * - Centralized colors με PANEL_COLORS
+ * - Quick styling patterns
+ * - Type-safe semantic colors support
  */
 
 import React from 'react';
+import { PANEL_COLORS } from '../../config/panel-tokens';
+import { quick } from '../../styles/quick-styles';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface SliderInputProps {
   label: string;
@@ -24,10 +33,11 @@ export function SliderInput({
   tooltip,
   className = ''
 }: SliderInputProps) {
+  const colors = useSemanticColors();
   return (
     <div className={className}>
-      <label 
-        className="block text-xs text-gray-300 mb-1"
+      <label
+        className={`block text-xs ${colors.text.muted} mb-1`}
         title={tooltip}
       >
         {label}
@@ -38,7 +48,7 @@ export function SliderInput({
         max={max}
         value={value}
         onChange={(e) => onChange(parseInt(e.target.value))}
-        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+        className={`w-full h-2 rounded-lg appearance-none cursor-pointer slider ${quick.input} ${colors.bg.secondary}`}
       />
     </div>
   );

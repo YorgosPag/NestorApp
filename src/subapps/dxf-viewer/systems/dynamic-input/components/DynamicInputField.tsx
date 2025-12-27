@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface DynamicInputFieldProps {
   label: string;
@@ -30,6 +31,7 @@ export function DynamicInputField({
   fieldType = 'coordinate'
 }: DynamicInputFieldProps) {
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
@@ -77,7 +79,7 @@ export function DynamicInputField({
     <div className="flex items-center gap-2">
       <label
         className={`text-xs w-8 ${
-          isActive ? 'text-cyan-400 font-semibold' : 'text-gray-300'
+          isActive ? `${colors.text.info} font-semibold` : colors.text.secondary
         }`}
       >
         {label}:
@@ -92,8 +94,8 @@ export function DynamicInputField({
         disabled={disabled}
         placeholder={placeholder}
         className={`flex-1 text-white px-2 py-1 text-sm rounded border ${quick.focus} focus:outline-none
-          ${isAnchored ? `bg-yellow-600 font-bold ${quick.warning}` : `bg-gray-700 ${quick.none}`}
-          ${disabled ? `bg-gray-600 opacity-50 cursor-not-allowed ${quick.muted}` : ''}
+          ${isAnchored ? `${colors.bg.warning} font-bold ${quick.warning}` : `${colors.bg.hover} ${quick.none}`}
+          ${disabled ? `${colors.bg.accent} opacity-50 cursor-not-allowed ${quick.muted}` : ''}
           ${isActive ? quick.focus : ''}`}
       />
     </div>

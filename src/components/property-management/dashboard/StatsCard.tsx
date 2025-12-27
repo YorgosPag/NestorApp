@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface StatsCardProps {
     title: string;
@@ -17,43 +18,47 @@ interface StatsCardProps {
 export function StatsCard({ title, value, icon: Icon, color, onClick }: StatsCardProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
+    // Enterprise semantic color mapping
     const colorClasses = {
-        blue: `${getStatusBorder('info')} bg-blue-50/50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400`,
-        gray: `${getStatusBorder('muted')} bg-gray-50/50 dark:bg-gray-950/20 text-gray-600 dark:text-gray-400`,
-        green: `${getStatusBorder('success')} bg-green-50/50 dark:bg-green-950/20 text-green-600 dark:text-green-400`,
-        purple: `${getStatusBorder('subtle')} bg-purple-50/50 dark:bg-purple-950/20 text-purple-600 dark:text-purple-400`,
-        red: `${getStatusBorder('error')} bg-red-50/50 dark:bg-red-950/20 text-red-600 dark:text-red-400`,
-        orange: `${getStatusBorder('warning')} bg-orange-50/50 dark:bg-orange-950/20 text-orange-600 dark:text-orange-400`,
-        cyan: `${getStatusBorder('info')} bg-cyan-50/50 dark:bg-cyan-950/20 text-cyan-600 dark:text-cyan-400`,
-        pink: `${getStatusBorder('subtle')} bg-pink-50/50 dark:bg-pink-950/20 text-pink-600 dark:text-pink-400`,
-        yellow: `${getStatusBorder('warning')} bg-yellow-50/50 dark:bg-yellow-950/20 text-yellow-600 dark:text-yellow-400`,
-        indigo: `${getStatusBorder('info')} bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400`
+        blue: `${getStatusBorder('info')} ${colors.bg.infoSubtle} ${colors.text.info}`,
+        gray: `${getStatusBorder('muted')} ${colors.bg.muted} ${colors.text.muted}`,
+        green: `${getStatusBorder('success')} ${colors.bg.successSubtle} ${colors.text.success}`,
+        purple: `${getStatusBorder('subtle')} ${colors.bg.subtle} ${colors.text.subtle}`,
+        red: `${getStatusBorder('error')} ${colors.bg.dangerSubtle} ${colors.text.danger}`,
+        orange: `${getStatusBorder('warning')} ${colors.bg.warningSubtle} ${colors.text.warning}`,
+        cyan: `${getStatusBorder('info')} ${colors.bg.infoSubtle} ${colors.text.info}`,
+        pink: `${getStatusBorder('subtle')} ${colors.bg.subtle} ${colors.text.subtle}`,
+        yellow: `${getStatusBorder('warning')} ${colors.bg.warningSubtle} ${colors.text.warning}`,
+        indigo: `${getStatusBorder('info')} ${colors.bg.infoSubtle} ${colors.text.info}`
     };
 
+    // Enterprise semantic value color mapping
     const valueColorClasses = {
-        blue: 'text-blue-700 dark:text-blue-300',
-        gray: 'text-gray-700 dark:text-gray-300',
-        green: 'text-green-700 dark:text-green-300',
-        purple: 'text-purple-700 dark:text-purple-300',
-        red: 'text-red-700 dark:text-red-300',
-        orange: 'text-orange-700 dark:text-orange-300',
-        cyan: 'text-cyan-700 dark:text-cyan-300',
-        pink: 'text-pink-700 dark:text-pink-300',
-        yellow: 'text-yellow-700 dark:text-yellow-300',
-        indigo: 'text-indigo-700 dark:text-indigo-300'
+        blue: colors.text.info,
+        gray: colors.text.primary,
+        green: colors.text.success,
+        purple: colors.text.subtle,
+        red: colors.text.danger,
+        orange: colors.text.warning,
+        cyan: colors.text.info,
+        pink: colors.text.subtle,
+        yellow: colors.text.warning,
+        indigo: colors.text.info
     };
 
+    // Enterprise semantic icon color mapping
     const iconColorClasses = {
-        blue: 'text-blue-500',
-        gray: 'text-gray-500',
-        green: 'text-green-500',
-        purple: 'text-purple-500',
-        red: 'text-red-500',
-        orange: 'text-orange-500',
-        cyan: 'text-cyan-500',
-        pink: 'text-pink-500',
-        yellow: 'text-yellow-500',
-        indigo: 'text-indigo-500'
+        blue: colors.text.info,
+        gray: colors.text.muted,
+        green: colors.text.success,
+        purple: colors.text.subtle,
+        red: colors.text.danger,
+        orange: colors.text.warning,
+        cyan: colors.text.info,
+        pink: colors.text.subtle,
+        yellow: colors.text.warning,
+        indigo: colors.text.info
     };
 
     const colorKey = color as keyof typeof colorClasses;

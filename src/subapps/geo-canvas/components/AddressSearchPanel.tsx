@@ -5,7 +5,7 @@ import { Search, MapPin, Navigation, X, Clock, CheckCircle, AlertCircle, Loader2
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ✅ Enterprise Address Resolver Integration
 import { useAddressResolver, type GreekAddress, type GeocodingResult } from '@/services/real-estate-monitor/AddressResolver';
@@ -283,26 +283,26 @@ export function AddressSearchPanel({
       onClick={() => handleLocationSelect(result)}
       className={`flex items-center gap-3 p-3 ${quick.card} cursor-pointer ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
     >
-      <MapPin className={`${iconSizes.md} text-blue-600 flex-shrink-0`} />
+      <MapPin className={`${iconSizes.md} ${colors.text.info} flex-shrink-0`} />
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-gray-900 truncate">
+        <div className={`text-sm font-medium ${colors.text.foreground} truncate`}>
           {result.address.fullAddress || `${result.address.street} ${result.address.number || ''}`}
         </div>
         {result.address.area && (
-          <div className="text-xs text-gray-500">
+          <div className={`text-xs ${colors.text.muted}`}>
             {result.address.area}{result.address.postalCode ? `, ${result.address.postalCode}` : ''}
           </div>
         )}
         <div className="flex items-center gap-2 mt-1">
           <span className={`text-xs px-2 py-0.5 rounded-full ${
-            result.accuracy === 'exact' ? 'bg-green-100 text-green-700' :
-            result.accuracy === 'interpolated' ? 'bg-yellow-100 text-yellow-700' :
-            'bg-gray-100 text-gray-600'
+            result.accuracy === 'exact' ? '${colors.bg.success} ${colors.text.success}' :
+            result.accuracy === 'interpolated' ? '${colors.bg.warning} ${colors.text.warning}' :
+            '${colors.bg.secondary} ${colors.text.muted}'
           }`}>
             {result.accuracy === 'exact' ? 'Ακριβής' :
              result.accuracy === 'interpolated' ? 'Προσεγγιστική' : 'Περιοχή'}
           </span>
-          <span className="text-xs text-gray-400">
+          <span className={`text-xs ${colors.text.muted}`}>
             {Math.round(result.confidence * 100)}% εμπιστοσύνη
           </span>
         </div>
@@ -314,15 +314,15 @@ export function AddressSearchPanel({
     <div
       key={`recent-${index}`}
       onClick={() => handleLocationSelect(result)}
-      className="flex items-center gap-3 p-2 rounded-lg cursor-pointer ${HOVER_BACKGROUND_EFFECTS.LIGHT}"
+      className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
     >
-      <Clock className={`${iconSizes.sm} text-gray-400 flex-shrink-0`} />
+      <Clock className={`${iconSizes.sm} ${colors.text.muted} flex-shrink-0`} />
       <div className="flex-1 min-w-0">
-        <div className="text-sm text-gray-700 truncate">
+        <div className={`text-sm ${colors.text.foreground} truncate`}>
           {result.address.fullAddress || `${result.address.street} ${result.address.number || ''}`}
         </div>
         {result.address.area && (
-          <div className="text-xs text-gray-500 truncate">
+          <div className={`text-xs ${colors.text.muted} truncate`}>
             {result.address.area}
           </div>
         )}
@@ -337,36 +337,36 @@ export function AddressSearchPanel({
       className={`flex items-center gap-3 p-3 ${quick.card} cursor-pointer ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${HOVER_BORDER_EFFECTS.BLUE} transition-all`}
     >
       <div className={`w-5 h-5 rounded flex-shrink-0 flex items-center justify-center text-xs font-medium ${
-        result.adminLevel === 4 ? 'bg-purple-100 text-purple-600' :
-        result.adminLevel === 8 ? 'bg-blue-100 text-blue-600' :
-        'bg-gray-100 text-gray-600'
+        result.adminLevel === 4 ? `${colors.bg.warning} ${colors.text.warning}` :
+        result.adminLevel === 8 ? `${colors.bg.info} ${colors.text.info}` :
+        `${colors.bg.secondary} ${colors.text.muted}`
       }`}>
         {result.adminLevel === 4 ? 'Π' : result.adminLevel === 8 ? 'Δ' : result.adminLevel}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-gray-900 truncate">
+        <div className={`text-sm font-medium ${colors.text.foreground} truncate`}>
           {result.name}
         </div>
         {result.nameEn && (
-          <div className="text-xs text-gray-500 truncate">
+          <div className={`text-xs ${colors.text.muted} truncate`}>
             {result.nameEn}
           </div>
         )}
         <div className="flex items-center gap-2 mt-1">
           <span className={`text-xs px-2 py-0.5 rounded-full ${
-            result.adminLevel === 4 ? 'bg-purple-100 text-purple-700' :
-            result.adminLevel === 8 ? 'bg-blue-100 text-blue-700' :
-            'bg-gray-100 text-gray-600'
+            result.adminLevel === 4 ? `${colors.bg.warning} ${colors.text.warning}` :
+            result.adminLevel === 8 ? `${colors.bg.info} ${colors.text.info}` :
+            `${colors.bg.secondary} ${colors.text.muted}`
           }`}>
             {result.adminLevel === 4 ? 'Περιφέρεια' :
              result.adminLevel === 8 ? 'Δήμος' :
              `Level ${result.adminLevel}`}
           </span>
-          <span className="text-xs text-gray-400">
+          <span className={`text-xs ${colors.text.muted}`}>
             {Math.round(result.confidence * 100)}% εμπιστοσύνη
           </span>
           {result.hierarchy.region && (
-            <span className="text-xs text-gray-500">
+            <span className={`text-xs ${colors.text.muted}`}>
               • {result.hierarchy.region}
             </span>
           )}
@@ -383,14 +383,14 @@ export function AddressSearchPanel({
     <div className={`${colors.bg.primary} rounded-lg shadow-lg ${quick.card} p-4 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-          <Search className={`${iconSizes.md} text-blue-600`} />
+        <h3 className={`text-lg font-semibold ${colors.text.foreground} flex items-center gap-2`}>
+          <Search className={`${iconSizes.md} ${colors.text.info}`} />
           Αναζήτηση Θέσης
         </h3>
         {onClose && (
           <button
             onClick={onClose}
-            className="text-gray-400 ${HOVER_TEXT_EFFECTS.DARKER} transition-colors"
+            className={`${colors.text.muted} ${HOVER_TEXT_EFFECTS.DARKER} transition-colors`}
           >
             <X className={iconSizes.md} />
           </button>
@@ -403,8 +403,8 @@ export function AddressSearchPanel({
           onClick={() => setActiveTab('address')}
           className={`flex-1 py-2 px-1 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'address'
-              ? `${getStatusBorder('info')} text-blue-600`
-              : 'border-transparent text-gray-500 ${HOVER_TEXT_EFFECTS.DARKER}'
+              ? `${getStatusBorder('info')} ${colors.text.info}`
+              : 'border-transparent ${colors.text.muted} ${HOVER_TEXT_EFFECTS.DARKER}'
           }`}
         >
           📍 Διευθύνσεις
@@ -413,8 +413,8 @@ export function AddressSearchPanel({
           onClick={() => setActiveTab('boundaries')}
           className={`flex-1 py-2 px-1 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'boundaries'
-              ? `${getStatusBorder('info')} text-blue-600`
-              : 'border-transparent text-gray-500 ${HOVER_TEXT_EFFECTS.DARKER}'
+              ? `${getStatusBorder('info')} ${colors.text.info}`
+              : 'border-transparent ${colors.text.muted} ${HOVER_TEXT_EFFECTS.DARKER}'
           }`}
         >
           🏛️ Διοικητικά Όρια
@@ -435,24 +435,24 @@ export function AddressSearchPanel({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={handleKeyPress}
-              className={`w-full px-3 py-2 ${quick.input} text-sm focus:ring-2 focus:ring-blue-500 ${getFocusBorder('input')}`}
+              className={`w-full px-3 py-2 ${quick.input} text-sm focus:ring-2 focus:ring-${colors.text.info} ${getFocusBorder('input')}`}
               disabled={isSearching || isLoadingBoundaries}
             />
             {(isSearching || isLoadingBoundaries) && (
-              <Loader2 className={`absolute right-3 top-2.5 ${iconSizes.sm} text-gray-400 animate-spin`} />
+              <Loader2 className={`absolute right-3 top-2.5 ${iconSizes.sm} ${colors.text.muted} animate-spin`} />
             )}
           </div>
           <button
             onClick={handleSearch}
             disabled={isSearching || isLoadingBoundaries || !searchQuery.trim()}
-            className={`px-4 py-2 bg-blue-600 text-white rounded-lg ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors`}
+            className={`px-4 py-2 ${colors.bg.info} text-white rounded-lg ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} disabled:${colors.bg.muted} disabled:cursor-not-allowed transition-colors`}
           >
             <Search className={iconSizes.sm} />
           </button>
         </div>
 
         {/* Search Helper Text */}
-        <div className="mt-2 text-xs text-gray-500">
+        <div className={`mt-2 text-xs ${colors.text.muted}`}>
           {activeTab === 'address'
             ? 'Μπορείτε να αναζητήσετε με: οδός + αριθμός, περιοχή, ταχυδρομικός κώδικας'
             : 'Μπορείτε να αναζητήσετε: δήμους, περιφέρειες, διοικητικές ενότητες'
@@ -465,7 +465,7 @@ export function AddressSearchPanel({
         <button
           onClick={handleGetGpsLocation}
           disabled={isGettingLocation}
-          className={`w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors`}
+          className={`w-full flex items-center justify-center gap-2 px-4 py-3 ${colors.bg.success} text-white rounded-lg ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} disabled:${colors.bg.muted} disabled:cursor-not-allowed transition-colors`}
         >
           {isGettingLocation ? (
             <Loader2 className={`${iconSizes.md} animate-spin`} />
@@ -480,7 +480,7 @@ export function AddressSearchPanel({
         {/* GPS Status */}
         {lastGpsLocation && (
           <div className={`mt-2 p-2 ${colors.bg.success} ${quick.card} ${getStatusBorder('success')}`}>
-            <div className="flex items-center gap-2 text-sm text-green-700">
+            <div className={`flex items-center gap-2 text-sm ${colors.text.success}`}>
               <CheckCircle className={iconSizes.sm} />
               <span>
                 Τελευταία θέση: Ακρίβεια ±{Math.round(lastGpsLocation.accuracy)}m
@@ -493,7 +493,7 @@ export function AddressSearchPanel({
       {/* Errors */}
       {(searchError || gpsError || boundariesError) && (
         <div className={`mb-4 p-3 ${colors.bg.error} ${quick.card} ${getStatusBorder('error')}`}>
-          <div className="flex items-center gap-2 text-sm text-red-700">
+          <div className={`flex items-center gap-2 text-sm ${colors.text.error}`}>
             <AlertCircle className={`${iconSizes.sm} flex-shrink-0`} />
             <span>{searchError || gpsError || boundariesError}</span>
           </div>
@@ -503,7 +503,7 @@ export function AddressSearchPanel({
       {/* Address Search Results */}
       {activeTab === 'address' && searchResults.length > 0 && (
         <div className="mb-4">
-          <h4 className="text-sm font-medium text-gray-900 mb-2">Αποτελέσματα Αναζήτησης</h4>
+          <h4 className={`text-sm font-medium ${colors.text.foreground} mb-2`}>Αποτελέσματα Αναζήτησης</h4>
           <div className="space-y-2">
             {searchResults.map(renderSearchResult)}
           </div>
@@ -514,9 +514,9 @@ export function AddressSearchPanel({
       {activeTab === 'boundaries' && boundaryResults.length > 0 && (
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
-            <h4 className="text-sm font-medium text-gray-900">Διοικητικά Όρια</h4>
+            <h4 className={`text-sm font-medium ${colors.text.foreground}`}>Διοικητικά Όρια</h4>
             {detectedType && (
-              <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+              <span className={`text-xs px-2 py-1 ${colors.bg.info} ${colors.text.info} rounded-full`}>
                 {detectedType === 'municipality' ? 'Δήμοι' :
                  detectedType === 'region' ? 'Περιφέρειες' : 'Γενικά'}
               </span>
@@ -529,7 +529,7 @@ export function AddressSearchPanel({
           {/* Suggestions */}
           {suggestions.length > 0 && (
             <div className={`mt-3 pt-3 ${quick.separatorH}`}>
-              <h5 className="text-xs font-medium text-gray-600 mb-2">Προτάσεις:</h5>
+              <h5 className={`text-xs font-medium ${colors.text.muted} mb-2`}>Προτάσεις:</h5>
               <div className="flex gap-1 flex-wrap">
                 {suggestions.map((suggestion, index) => (
                   <button
@@ -538,7 +538,7 @@ export function AddressSearchPanel({
                       setSearchQuery(suggestion);
                       handleSearch();
                     }}
-                    className={`px-2 py-1 text-xs bg-gray-100 ${HOVER_BACKGROUND_EFFECTS.LIGHT} rounded text-gray-700 transition-colors`}
+                    className={`px-2 py-1 text-xs ${colors.bg.secondary} ${HOVER_BACKGROUND_EFFECTS.LIGHT} rounded ${colors.text.foreground} transition-colors`}
                   >
                     {suggestion}
                   </button>
@@ -552,7 +552,7 @@ export function AddressSearchPanel({
       {/* Recent Searches (Address tab only) */}
       {activeTab === 'address' && recentSearches.length > 0 && searchResults.length === 0 && (
         <div className="mb-4">
-          <h4 className="text-sm font-medium text-gray-900 mb-2">Πρόσφατες Αναζητήσεις</h4>
+          <h4 className={`text-sm font-medium ${colors.text.foreground} mb-2`}>Πρόσφατες Αναζητήσεις</h4>
           <div className="space-y-1">
             {recentSearches.map(renderRecentSearch)}
           </div>
@@ -562,7 +562,7 @@ export function AddressSearchPanel({
       {/* Cache Stats (Development Info) */}
       {process.env.NODE_ENV === 'development' && (
         <div className={`mt-4 p-2 ${colors.bg.secondary} rounded-lg`}>
-          <div className="text-xs text-gray-500">
+          <div className={`text-xs ${colors.text.muted}`}>
             {activeTab === 'address' ? (
               <>Cache: {getCacheStats().size} διευθύνσεις | Recent: {recentSearches.length} αναζητήσεις</>
             ) : (

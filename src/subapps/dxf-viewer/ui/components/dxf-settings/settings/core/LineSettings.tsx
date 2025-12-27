@@ -83,6 +83,7 @@ import type { TemplateCategory } from '../../../../../contexts/LineSettingsConte
 import { AccordionSection, useAccordion } from '../shared/AccordionSection';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Simple SVG icons
 const SettingsIcon = ({ className }: { className?: string }) => (
@@ -119,6 +120,7 @@ const SwatchIcon = ({ className }: { className?: string }) => (
 export function LineSettings({ contextType }: { contextType?: 'preview' | 'completion' }) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   // 🔺 ΔΙΟΡΘΩΣΗ: Χρήση unified hooks όπως σε TextSettings και GripSettings
   const generalLineSettings = useLineSettingsFromProvider();
   const notifications = useNotifications();
@@ -350,11 +352,11 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
     <div className="space-y-4 p-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium text-white">Ρυθμίσεις Γραμμών</h3>
+        <h3 className={`text-lg font-medium ${colors.text.primary}`}>Ρυθμίσεις Γραμμών</h3>
         <div className="flex gap-2">
           <button
             onClick={resetToDefaults}
-            className={`px-3 py-1 text-xs bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHTER} text-white rounded transition-colors`}
+            className={`px-3 py-1 text-xs ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHTER} ${colors.text.inverted} rounded transition-colors`}
             title="Επαναφορά στις προεπιλεγμένες ρυθμίσεις"
           >
             Επαναφορά
@@ -362,7 +364,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           {resetToFactory && !contextType && (
             <button
               onClick={handleFactoryResetClick}
-              className={`px-3 py-1 text-xs bg-red-700 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-white rounded transition-colors font-semibold`}
+              className={`px-3 py-1 text-xs bg-red-700 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded transition-colors font-semibold`}
               title="Επαναφορά στις εργοστασιακές ρυθμίσεις (ISO 128 & AutoCAD 2024)"
             >
               🏭 Εργοστασιακές
@@ -373,17 +375,17 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
       {/* Enable/Disable Line Display - ΠΆΝΤΑ ΕΜΦΑΝΈΣ για όλα τα contexts */}
       <div className="space-y-2">
-        <div className={`flex items-center gap-3 p-3 bg-gray-800 rounded-md ${getStatusBorder('success')}`}>
+        <div className={`flex items-center gap-3 p-3 ${colors.bg.secondary} rounded-md ${getStatusBorder('success')}`}>
           <input
             type="checkbox"
             id="line-enabled"
             checked={settings.enabled}
             onChange={settingsUpdater.createCheckboxHandler('enabled')}
-            className={`${iconSizes.sm} text-green-600 bg-gray-700 ${quick.input} focus:ring-green-500 focus:ring-2`}
+            className={`${iconSizes.sm} text-green-600 ${colors.bg.hover} ${quick.input} focus:ring-green-500 focus:ring-2`}
           />
           <label
             htmlFor="line-enabled"
-            className={`text-sm font-medium ${settings.enabled ? 'text-white' : 'text-gray-400'}`}
+            className={`text-sm font-medium ${settings.enabled ? colors.text.primary : colors.text.muted}`}
           >
             Εμφάνιση γραμμής
           </label>
@@ -440,7 +442,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Line Width */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-200">
+          <label className="block text-sm font-medium ${colors.text.secondary}">
             Πάχος Γραμμής: {settings.lineWidth}px
           </label>
           <div className="flex items-center space-x-3">
@@ -451,7 +453,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.lineWidth}
               onChange={settingsUpdater.createNumberInputHandler('lineWidth', { parseType: 'float' })}
-              className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+              className={`flex-1 h-2 ${colors.bg.muted} rounded-lg appearance-none cursor-pointer`}
             />
             <input
               type="number"
@@ -460,14 +462,14 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.lineWidth}
               onChange={settingsUpdater.createNumberInputHandler('lineWidth', { parseType: 'float' })}
-              className={`w-16 px-2 py-1 bg-gray-700 ${quick.input} text-white text-sm`}
+              className={`w-16 px-2 py-1 ${colors.bg.hover} ${quick.input} ${colors.text.primary} text-sm`}
             />
           </div>
         </div>
 
         {/* Color - 🏢 ENTERPRISE Color System */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-200">Χρώμα</label>
+          <label className="block text-sm font-medium ${colors.text.secondary}">Χρώμα</label>
           <ColorDialogTrigger
             value={settings.color}
             onChange={settingsUpdater.createColorHandler('color')}
@@ -483,7 +485,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Opacity */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-200">
+          <label className="block text-sm font-medium ${colors.text.secondary}">
             Διαφάνεια: {Math.round(settings.opacity * 100)}%
           </label>
           <div className="flex items-center space-x-3">
@@ -494,7 +496,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.opacity}
               onChange={settingsUpdater.createNumberInputHandler('opacity', { parseType: 'float' })}
-              className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+              className={`flex-1 h-2 ${colors.bg.muted} rounded-lg appearance-none cursor-pointer`}
             />
             <input
               type="number"
@@ -503,7 +505,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.opacity}
               onChange={settingsUpdater.createNumberInputHandler('opacity', { parseType: 'float' })}
-              className={`w-16 px-2 py-1 bg-gray-700 ${quick.input} text-white text-sm`}
+              className={`w-16 px-2 py-1 ${colors.bg.hover} ${quick.input} ${colors.text.primary} text-sm`}
             />
           </div>
         </div>
@@ -517,9 +519,9 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               onChange={settingsUpdater.createCheckboxHandler('breakAtCenter')}
               className={`${quick.input} text-blue-600 focus:ring-blue-500 focus:ring-2`}
             />
-            <span className="text-sm text-gray-200">Σπάσιμο γραμμής για κείμενο</span>
+            <span className="text-sm ${colors.text.secondary}">Σπάσιμο γραμμής για κείμενο</span>
           </label>
-          <p className="text-xs text-gray-400 pl-6">
+          <p className="text-xs ${colors.text.muted} pl-6">
             Η γραμμή θα σπάσει στη μέση για να χωράει το κείμενο
           </p>
         </div>
@@ -539,7 +541,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Hover Color - 🏢 ENTERPRISE Color System */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-200">Χρώμα Hover</label>
+          <label className="block text-sm font-medium ${colors.text.secondary}">Χρώμα Hover</label>
           <ColorDialogTrigger
             value={settings.hoverColor}
             onChange={settingsUpdater.createColorHandler('hoverColor')}
@@ -555,7 +557,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Hover Width */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-200">
+          <label className="block text-sm font-medium ${colors.text.secondary}">
             Πάχος Hover: {settings.hoverWidth}px
           </label>
           <div className="flex items-center space-x-3">
@@ -566,7 +568,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.hoverWidth}
               onChange={settingsUpdater.createNumberInputHandler('hoverWidth', { parseType: 'float' })}
-              className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+              className={`flex-1 h-2 ${colors.bg.muted} rounded-lg appearance-none cursor-pointer`}
             />
             <input
               type="number"
@@ -575,14 +577,14 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.hoverWidth}
               onChange={settingsUpdater.createNumberInputHandler('hoverWidth', { parseType: 'float' })}
-              className={`w-16 px-2 py-1 bg-gray-700 ${quick.input} text-white text-sm`}
+              className={`w-16 px-2 py-1 ${colors.bg.hover} ${quick.input} ${colors.text.primary} text-sm`}
             />
           </div>
         </div>
 
         {/* Hover Opacity */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-200">
+          <label className="block text-sm font-medium ${colors.text.secondary}">
             Διαφάνεια Hover: {Math.round(settings.hoverOpacity * 100)}%
           </label>
           <div className="flex items-center space-x-3">
@@ -593,7 +595,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.hoverOpacity}
               onChange={settingsUpdater.createNumberInputHandler('hoverOpacity', { parseType: 'float' })}
-              className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+              className={`flex-1 h-2 ${colors.bg.muted} rounded-lg appearance-none cursor-pointer`}
             />
             <input
               type="number"
@@ -602,7 +604,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.hoverOpacity}
               onChange={settingsUpdater.createNumberInputHandler('hoverOpacity', { parseType: 'float' })}
-              className={`w-16 px-2 py-1 bg-gray-700 ${quick.input} text-white text-sm`}
+              className={`w-16 px-2 py-1 ${colors.bg.hover} ${quick.input} ${colors.text.primary} text-sm`}
             />
           </div>
         </div>
@@ -622,7 +624,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Final Color - 🏢 ENTERPRISE Color System */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-200">Τελικό Χρώμα</label>
+          <label className="block text-sm font-medium ${colors.text.secondary}">Τελικό Χρώμα</label>
           <ColorDialogTrigger
             value={settings.finalColor}
             onChange={settingsUpdater.createColorHandler('finalColor')}
@@ -638,7 +640,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Final Width */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-200">
+          <label className="block text-sm font-medium ${colors.text.secondary}">
             Τελικό Πάχος: {settings.finalWidth}px
           </label>
           <div className="flex items-center space-x-3">
@@ -649,7 +651,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.finalWidth}
               onChange={settingsUpdater.createNumberInputHandler('finalWidth', { parseType: 'float' })}
-              className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+              className={`flex-1 h-2 ${colors.bg.muted} rounded-lg appearance-none cursor-pointer`}
             />
             <input
               type="number"
@@ -658,14 +660,14 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.finalWidth}
               onChange={settingsUpdater.createNumberInputHandler('finalWidth', { parseType: 'float' })}
-              className={`w-16 px-2 py-1 bg-gray-700 ${quick.input} text-white text-sm`}
+              className={`w-16 px-2 py-1 ${colors.bg.hover} ${quick.input} ${colors.text.primary} text-sm`}
             />
           </div>
         </div>
 
         {/* Final Opacity */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-200">
+          <label className="block text-sm font-medium ${colors.text.secondary}">
             Τελική Διαφάνεια: {Math.round(settings.finalOpacity * 100)}%
           </label>
           <div className="flex items-center space-x-3">
@@ -676,7 +678,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.finalOpacity}
               onChange={settingsUpdater.createNumberInputHandler('finalOpacity', { parseType: 'float' })}
-              className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+              className={`flex-1 h-2 ${colors.bg.muted} rounded-lg appearance-none cursor-pointer`}
             />
             <input
               type="number"
@@ -685,7 +687,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.finalOpacity}
               onChange={settingsUpdater.createNumberInputHandler('finalOpacity', { parseType: 'float' })}
-              className={`w-16 px-2 py-1 bg-gray-700 ${quick.input} text-white text-sm`}
+              className={`w-16 px-2 py-1 ${colors.bg.hover} ${quick.input} ${colors.text.primary} text-sm`}
             />
           </div>
         </div>
@@ -704,7 +706,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           {/* Dash Scale (only for non-solid lines) */}
           {settings.lineType !== 'solid' && (
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-200">
+              <label className="block text-sm font-medium ${colors.text.secondary}">
                 Κλίμακα Διακοπών: {settings.dashScale}
               </label>
               <div className="flex items-center space-x-3">
@@ -715,7 +717,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step={DASH_SCALE_RANGE.step}
                   value={settings.dashScale}
                   onChange={settingsUpdater.createNumberInputHandler('dashScale', { parseType: 'float' })}
-                  className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                  className={`flex-1 h-2 ${colors.bg.muted} rounded-lg appearance-none cursor-pointer`}
                 />
                 <input
                   type="number"
@@ -724,7 +726,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step={DASH_SCALE_RANGE.step}
                   value={settings.dashScale}
                   onChange={settingsUpdater.createNumberInputHandler('dashScale', { parseType: 'float' })}
-                  className={`w-16 px-2 py-1 bg-gray-700 ${quick.input} text-white text-sm`}
+                  className={`w-16 px-2 py-1 ${colors.bg.hover} ${quick.input} ${colors.text.primary} text-sm`}
                 />
               </div>
             </div>
@@ -749,7 +751,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           {/* Dash Offset (only for non-solid lines) */}
           {settings.lineType !== 'solid' && (
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-200">
+              <label className="block text-sm font-medium ${colors.text.secondary}">
                 Μετατόπιση Διακοπών: {settings.dashOffset}px
               </label>
               <div className="flex items-center space-x-3">
@@ -760,7 +762,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step={DASH_OFFSET_RANGE.step}
                   value={settings.dashOffset}
                   onChange={settingsUpdater.createNumberInputHandler('dashOffset', { parseType: 'float' })}
-                  className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                  className={`flex-1 h-2 ${colors.bg.muted} rounded-lg appearance-none cursor-pointer`}
                 />
                 <input
                   type="number"
@@ -769,7 +771,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step={DASH_OFFSET_RANGE.step}
                   value={settings.dashOffset}
                   onChange={settingsUpdater.createNumberInputHandler('dashOffset', { parseType: 'float' })}
-                  className={`w-16 px-2 py-1 bg-gray-700 ${quick.input} text-white text-sm`}
+                  className={`w-16 px-2 py-1 ${colors.bg.hover} ${quick.input} ${colors.text.primary} text-sm`}
                 />
               </div>
             </div>
@@ -798,8 +800,8 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
           {/* Loss List */}
           <div className="space-y-2">
-            <p className="text-gray-300 font-medium">Θα χάσετε:</p>
-            <ul className="list-disc list-inside space-y-1 text-gray-400 text-sm">
+            <p className="${colors.text.muted} font-medium">Θα χάσετε:</p>
+            <ul className="list-disc list-inside space-y-1 ${colors.text.muted} text-sm">
               <li>Όλες τις προσαρμοσμένες ρυθμίσεις γραμμών</li>
               <li>Όλα τα templates που έχετε επιλέξει</li>
               <li>Όλες τις αλλαγές που έχετε κάνει</li>
@@ -822,7 +824,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           <div className={`flex gap-3 justify-end pt-4 ${quick.separator}`}>
             <button
               onClick={handleFactoryResetCancel}
-              className={`px-4 py-2 text-sm bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHTER} text-white rounded transition-colors`}
+              className={`px-4 py-2 text-sm ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHTER} text-white rounded transition-colors`}
             >
               Ακύρωση
             </button>

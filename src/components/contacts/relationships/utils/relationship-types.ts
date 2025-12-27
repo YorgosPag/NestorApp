@@ -15,6 +15,7 @@ import {
   Users,
   UserCheck
 } from 'lucide-react';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 /**
  * 🏗️ Relationship Type Configuration Interface
@@ -28,97 +29,148 @@ export interface RelationshipTypeConfig {
 }
 
 /**
+ * 🎨 Enterprise Color Mapping Function
+ * Centralized color mapping for relationship types
+ */
+const getRelationshipColors = (colors?: ReturnType<typeof useSemanticColors>) => {
+  if (!colors) {
+    // Enterprise fallback for non-React contexts
+    return {
+      employee: 'bg-blue-100 text-blue-800',
+      manager: 'bg-purple-100 text-purple-800',
+      shareholder: 'bg-green-100 text-green-800',
+      board_member: 'bg-orange-100 text-orange-800',
+      civil_servant: 'bg-indigo-100 text-indigo-800',
+      department_head: 'bg-red-100 text-red-800',
+      consultant: 'bg-teal-100 text-teal-800',
+      colleague: 'bg-yellow-100 text-yellow-800',
+      friend: 'bg-pink-100 text-pink-800',
+      family: 'bg-violet-100 text-violet-800',
+      business_contact: 'bg-slate-100 text-slate-800',
+      default: 'bg-slate-100 text-slate-800'
+    };
+  }
+
+  // Enterprise semantic color mapping
+  return {
+    employee: `${colors.bg.infoSubtle} ${colors.text.info}`,
+    manager: `${colors.bg.accentSubtle} ${colors.text.accent}`,
+    shareholder: `${colors.bg.successSubtle} ${colors.text.success}`,
+    board_member: `${colors.bg.warningSubtle} ${colors.text.warning}`,
+    civil_servant: `${colors.bg.accentSubtle} ${colors.text.accent}`,
+    department_head: `${colors.bg.errorSubtle} ${colors.text.error}`,
+    consultant: `${colors.bg.infoSubtle} ${colors.text.info}`,
+    colleague: `${colors.bg.warningSubtle} ${colors.text.warning}`,
+    friend: `${colors.bg.accentSubtle} ${colors.text.accent}`,
+    family: `${colors.bg.accentSubtle} ${colors.text.accent}`,
+    business_contact: `${colors.bg.muted} ${colors.text.muted}`,
+    default: `${colors.bg.muted} ${colors.text.muted}`
+  };
+};
+
+/**
  * 🎯 Relationship Types Configuration
  * Complete configuration for all supported relationship types
  */
-export const RELATIONSHIP_TYPES_CONFIG = {
+export const getRelationshipTypesConfig = (colors?: ReturnType<typeof useSemanticColors>) => {
+  const colorMap = getRelationshipColors(colors);
+
+  return {
   employee: {
     icon: User,
     label: 'Εργαζόμενος',
-    color: 'bg-blue-100 text-blue-800',
+    color: colorMap.employee,
     allowedFor: ['company', 'service'] as ContactType[]
   },
   manager: {
     icon: Crown,
     label: 'Διευθυντής',
-    color: 'bg-purple-100 text-purple-800',
+    color: colorMap.manager,
     allowedFor: ['company', 'service'] as ContactType[]
   },
   shareholder: {
     icon: Briefcase,
     label: 'Μέτοχος',
-    color: 'bg-green-100 text-green-800',
+    color: colorMap.shareholder,
     allowedFor: ['company'] as ContactType[]
   },
   board_member: {
     icon: Users,
     label: 'Μέλος Διοικητικού Συμβουλίου',
-    color: 'bg-orange-100 text-orange-800',
+    color: colorMap.board_member,
     allowedFor: ['company'] as ContactType[]
   },
   civil_servant: {
     icon: UserCheck,
     label: 'Δημόσιος Υπάλληλος',
-    color: 'bg-indigo-100 text-indigo-800',
+    color: colorMap.civil_servant,
     allowedFor: ['service'] as ContactType[]
   },
   department_head: {
     icon: Crown,
     label: 'Προϊστάμενος Τμήματος',
-    color: 'bg-red-100 text-red-800',
+    color: colorMap.department_head,
     allowedFor: ['service'] as ContactType[]
   },
   consultant: {
     icon: User,
     label: 'Σύμβουλος',
-    color: 'bg-teal-100 text-teal-800',
+    color: colorMap.consultant,
     allowedFor: ['company', 'service'] as ContactType[]
   },
   colleague: {
     icon: Users,
     label: 'Συνάδελφος',
-    color: 'bg-yellow-100 text-yellow-800',
+    color: colorMap.colleague,
     allowedFor: ['individual'] as ContactType[]
   },
   friend: {
     icon: User,
     label: 'Φίλος',
-    color: 'bg-pink-100 text-pink-800',
+    color: colorMap.friend,
     allowedFor: ['individual'] as ContactType[]
   },
   family: {
     icon: Users,
     label: 'Οικογένεια',
-    color: 'bg-violet-100 text-violet-800',
+    color: colorMap.family,
     allowedFor: ['individual'] as ContactType[]
   },
   business_contact: {
     icon: Briefcase,
     label: 'Επαγγελματική Επαφή',
-    color: 'bg-slate-100 text-slate-800',
+    color: colorMap.business_contact,
     allowedFor: ['individual'] as ContactType[]
   }
-} as const;
+  } as const;
+};
+
+// Legacy export for backward compatibility
+export const RELATIONSHIP_TYPES_CONFIG = getRelationshipTypesConfig();
 
 /**
  * 🔍 Helper function to get relationship type configuration
  *
  * @param type - The relationship type
+ * @param colors - Optional semantic colors for dynamic theming
  * @returns Configuration object or undefined
  */
-export const getRelationshipTypeConfig = (type: string): RelationshipTypeConfig | undefined => {
-  return RELATIONSHIP_TYPES_CONFIG[type as keyof typeof RELATIONSHIP_TYPES_CONFIG];
+export const getRelationshipTypeConfig = (type: string, colors?: ReturnType<typeof useSemanticColors>): RelationshipTypeConfig | undefined => {
+  const config = getRelationshipTypesConfig(colors);
+  return config[type as keyof typeof config];
 };
 
 /**
  * 📋 Get available relationship types for contact type
  *
  * @param contactType - The contact type to filter for
+ * @param colors - Optional semantic colors for dynamic theming
  * @returns Array of allowed relationship type keys
  */
-export const getAvailableRelationshipTypes = (contactType: ContactType): string[] => {
-  return Object.entries(RELATIONSHIP_TYPES_CONFIG)
-    .filter(([_, config]) => config.allowedFor.includes(contactType))
+export const getAvailableRelationshipTypes = (contactType: ContactType, colors?: ReturnType<typeof useSemanticColors>): string[] => {
+  const config = getRelationshipTypesConfig(colors);
+  return Object.entries(config)
+    .filter(([_, configItem]) => configItem.allowedFor.includes(contactType))
     .map(([key, _]) => key);
 };
 
@@ -126,15 +178,17 @@ export const getAvailableRelationshipTypes = (contactType: ContactType): string[
  * 🎨 Get relationship type display properties
  *
  * @param type - The relationship type
+ * @param colors - Optional semantic colors for dynamic theming
  * @returns Display properties (icon, label, color)
  */
-export const getRelationshipDisplayProps = (type: string) => {
-  const config = getRelationshipTypeConfig(type);
+export const getRelationshipDisplayProps = (type: string, colors?: ReturnType<typeof useSemanticColors>) => {
+  const config = getRelationshipTypeConfig(type, colors);
   if (!config) {
+    const colorMap = getRelationshipColors(colors);
     return {
       icon: User,
       label: 'Άλλο',
-      color: 'bg-gray-100 text-gray-800'
+      color: colorMap.default
     };
   }
 
@@ -146,12 +200,14 @@ export const getRelationshipDisplayProps = (type: string) => {
  *
  * @param relationshipType - The relationship type to validate
  * @param contactType - The contact type to validate against
+ * @param colors - Optional semantic colors for dynamic theming
  * @returns True if allowed, false otherwise
  */
 export const isRelationshipTypeAllowed = (
   relationshipType: string,
-  contactType: ContactType
+  contactType: ContactType,
+  colors?: ReturnType<typeof useSemanticColors>
 ): boolean => {
-  const config = getRelationshipTypeConfig(relationshipType);
+  const config = getRelationshipTypeConfig(relationshipType, colors);
   return config ? config.allowedFor.includes(contactType) : false;
 };

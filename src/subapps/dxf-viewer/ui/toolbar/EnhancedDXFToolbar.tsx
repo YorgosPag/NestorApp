@@ -232,14 +232,14 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
       <div className="flex flex-wrap gap-1 p-2">
         <div className="flex gap-1 flex-1">
           <UploadDxfButton 
-            className={`${iconSizes.xl} p-0 ${radius.md} border transition-colors duration-150 flex items-center justify-center ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} text-gray-200 ${getStatusBorder('default')}`}  // ✅ ENTERPRISE: bg-gray-700 → CSS variable
+            className={`${iconSizes.xl} p-0 ${radius.md} border transition-colors duration-150 flex items-center justify-center ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${colors.text.secondary} ${getStatusBorder('default')}`}  // ✅ ENTERPRISE: bg-gray-700 → CSS variable
             title="Upload DXF File (Legacy)"
             onFileSelect={onSceneImported}
           />
 
           <button
             onClick={() => setShowSimpleDialog(true)}
-            className={`${iconSizes.xl} p-0 ${radius.md} border transition-colors duration-150 flex items-center justify-center ${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.PRIMARY} text-white ${getStatusBorder('info')}`}  // ✅ ENTERPRISE: bg-blue-700 → CSS variable
+            className={`${iconSizes.xl} p-0 ${radius.md} border transition-colors duration-150 flex items-center justify-center ${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.PRIMARY} ${colors.text.inverted} ${getStatusBorder('info')}`}  // ✅ ENTERPRISE: bg-blue-700 → CSS variable
             title="Enhanced DXF Import with Project Management"
           >
             🔺

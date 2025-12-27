@@ -12,6 +12,7 @@ import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS, cre
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface ColorGroupItemProps extends Pick<ColorGroupCommonProps, 
   'setExpandedColorGroups' | 'setColorPickerColorGroup' | 'setEditingColorGroup' | 
@@ -55,6 +56,7 @@ export function ColorGroupItem({
   const borderTokens = useBorderTokens();
   const { getStatusBorder } = borderTokens;
   const hoverBorderEffects = createHoverBorderEffects(borderTokens);
+  const colors = useSemanticColors();
 
   const representativeColor = scene.layers[layerNames[0]]?.color || DEFAULT_LAYER_COLOR;
 
@@ -134,7 +136,7 @@ export function ColorGroupItem({
     <div className="space-y-1">
       {/* Color Group Header */}
       <div 
-        className={`flex items-center justify-between p-2 bg-purple-900 bg-opacity-20 ${getStatusBorder('focus')} rounded cursor-pointer ${INTERACTIVE_PATTERNS.PURPLE_HOVER} transition-colors ${
+        className={`flex items-center justify-between p-2 ${colors.bg.secondary} ${getStatusBorder('focus')} rounded cursor-pointer ${INTERACTIVE_PATTERNS.PURPLE_HOVER} transition-colors ${
           selectedColorGroupsForMerge.has(colorName) ? 'ring-2 ring-blue-400 bg-blue-900 bg-opacity-30' : ''
         }`}
         onClick={handleGroupClick}
@@ -171,7 +173,7 @@ export function ColorGroupItem({
               onChange={(e) => setEditingColorGroupName(e.target.value)}
               onKeyDown={handleNameKeyDown}
               onBlur={handleNameBlur}
-              className="bg-gray-700 text-purple-200 text-sm font-medium px-1 rounded ${getStatusBorder('focus')} focus:outline-none focus:ring-1 focus:ring-purple-400 min-w-0 flex-1"
+              className={`${colors.bg.hover} text-purple-200 text-sm font-medium px-1 rounded ${getStatusBorder('focus')} focus:outline-none focus:ring-1 focus:ring-purple-400 min-w-0 flex-1`}
               autoFocus
             />
           ) : (
@@ -189,7 +191,7 @@ export function ColorGroupItem({
           {/* Visibility Toggle */}
           <button
             onClick={handleVisibilityToggle}
-            className={`p-1 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
+            className={`p-1 ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
             title={allVisible ? "Απόκρυψη Color Group" : "Εμφάνιση Color Group"}
           >
             {allVisible ? (
@@ -204,7 +206,7 @@ export function ColorGroupItem({
           {/* Edit Button */}
           <button
             onClick={handleEditClick}
-            className={`p-1 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
+            className={`p-1 ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
             title="Μετονομασία Color Group"
           >
             <Edit2 className={iconSizes.sm} />

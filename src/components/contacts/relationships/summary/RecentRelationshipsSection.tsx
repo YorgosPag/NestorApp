@@ -16,6 +16,8 @@ import { Badge } from '@/components/ui/badge';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { ContactRelationship } from '@/types/contacts/relationships';
 import { getRelationshipDisplayProps } from '../utils/relationship-types';
 import type { ContactNamesMap } from '../utils/summary/contact-navigation';
@@ -62,6 +64,7 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
 }) => {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   // ============================================================================
   // STATE
   // ============================================================================
@@ -146,24 +149,24 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
         className={`flex items-center justify-between p-3 ${quick.card} cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
       >
         <div className="flex items-center space-x-3">
-          <Icon className={`${iconSizes.md} text-gray-600`} />
+          <Icon className={`${iconSizes.md} ${colors.text.muted}`} />
           <div>
             <div className="flex items-center gap-2">
               {contactName ? (
                 <>
-                  <span className="text-sm font-medium text-gray-900">
+                  <span className={`text-sm font-medium ${colors.text.primary}`}>
                     {contactName}
                   </span>
                   <Badge className={displayProps.color} variant="outline">
                     {displayProps.label}
                   </Badge>
                   {relationship.position && (
-                    <span className="text-xs text-gray-600">• {relationship.position}</span>
+                    <span className={`text-xs ${colors.text.muted}`}>• {relationship.position}</span>
                   )}
                 </>
               ) : (
                 <>
-                  <div className="animate-pulse bg-gray-200 h-4 w-24 rounded"></div>
+                  <div className={`animate-pulse ${colors.bg.muted} h-4 w-24 rounded`}></div>
                   <Badge className={displayProps.color} variant="outline">
                     {displayProps.label}
                   </Badge>
@@ -172,7 +175,7 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
             </div>
           </div>
         </div>
-        <div className="text-xs text-gray-400">
+        <div className={`text-xs ${colors.text.muted}`}>
           {formatCreatedDate(relationship.createdAt)}
         </div>
       </div>

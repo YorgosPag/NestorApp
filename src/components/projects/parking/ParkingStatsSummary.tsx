@@ -12,6 +12,7 @@ import type { ParkingStats } from '@/types/parking';
 import { formatCurrency } from '@/lib/intl-utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface ParkingStatsSummaryProps {
     stats: ParkingStats;
@@ -20,11 +21,12 @@ interface ParkingStatsSummaryProps {
 export function ParkingStatsSummary({ stats }: ParkingStatsSummaryProps) {
     const iconSizes = useIconSizes();
     const { quick } = useBorderTokens();
+    const colors = useSemanticColors();
 
     return (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
           <div className="flex items-center gap-2 p-3 bg-card ${quick.card}">
-            <Car className={`${iconSizes.sm} text-blue-600`} />
+            <Car className={`${iconSizes.sm} ${colors.text.info}`} />
             <div>
               <div className="text-sm font-medium">{stats.totalSpots}</div>
               <div className="text-xs text-muted-foreground">Σύνολο</div>
@@ -32,7 +34,7 @@ export function ParkingStatsSummary({ stats }: ParkingStatsSummaryProps) {
           </div>
           
           <div className="flex items-center gap-2 p-3 bg-card ${quick.card}">
-            <div className={`${iconSizes.xs} rounded-full bg-green-500`} />
+            <div className={`${iconSizes.xs} rounded-full ${colors.bg.success}`} />
             <div>
               <div className="text-sm font-medium">{stats.soldSpots}</div>
               <div className="text-xs text-muted-foreground">Πουλημένες</div>
@@ -40,7 +42,7 @@ export function ParkingStatsSummary({ stats }: ParkingStatsSummaryProps) {
           </div>
           
           <div className="flex items-center gap-2 p-3 bg-card ${quick.card}">
-            <div className={`${iconSizes.xs} rounded-full bg-blue-500`} />
+            <div className={`${iconSizes.xs} rounded-full ${colors.bg.info}`} />
             <div>
               <div className="text-sm font-medium">{stats.ownerSpots}</div>
               <div className="text-xs text-muted-foreground">Οικοπεδούχου</div>
@@ -48,7 +50,7 @@ export function ParkingStatsSummary({ stats }: ParkingStatsSummaryProps) {
           </div>
           
           <div className="flex items-center gap-2 p-3 bg-card ${quick.card}">
-            <div className={`${iconSizes.xs} rounded-full bg-gray-500`} />
+            <div className={`${iconSizes.xs} rounded-full ${colors.bg.muted}`} />
             <div>
               <div className="text-sm font-medium">{stats.availableSpots}</div>
               <div className="text-xs text-muted-foreground">Διαθέσιμες</div>
@@ -56,7 +58,7 @@ export function ParkingStatsSummary({ stats }: ParkingStatsSummaryProps) {
           </div>
           
           <div className="flex items-center gap-2 p-3 bg-card ${quick.card}">
-            <BarChart3 className={`${iconSizes.sm} text-green-600`} />
+            <BarChart3 className={`${iconSizes.sm} ${colors.text.success}`} />
             <div>
               <div className="text-sm font-medium">{formatCurrency(stats.totalValue)}</div>
               <div className="text-xs text-muted-foreground">Συν. Αξία</div>
@@ -64,7 +66,7 @@ export function ParkingStatsSummary({ stats }: ParkingStatsSummaryProps) {
           </div>
           
           <div className="flex items-center gap-2 p-3 bg-card ${quick.card}">
-            <Ruler className={`${iconSizes.sm} text-purple-600`} />
+            <Ruler className={`${iconSizes.sm} ${colors.text.accent}`} />
             <div>
               <div className="text-sm font-medium">{stats.totalArea.toFixed(1)} m²</div>
               <div className="text-xs text-muted-foreground">Εμβαδόν</div>

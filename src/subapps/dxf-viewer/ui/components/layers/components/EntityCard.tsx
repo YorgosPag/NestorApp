@@ -7,6 +7,7 @@ import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effect
 import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface EntityCardProps {
   entity: AnySceneEntity;
@@ -55,6 +56,7 @@ export const EntityCard = ({
 }: EntityCardProps) => {
   const iconSizes = useIconSizes();
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   return (
     <div 
       key={entity.id}
@@ -121,7 +123,7 @@ export const EntityCard = ({
               onSetEditingEntity(null);
               onSetEditingEntityName('');
             }}
-            className={`bg-gray-700 text-white rounded ${getStatusBorder('info')} focus:outline-none focus:ring-1 focus:ring-blue-400 ${
+            className={`${colors.bg.hover} text-white rounded ${getStatusBorder('info')} focus:outline-none focus:ring-1 focus:ring-blue-400 ${
               isSelected ? 'text-sm px-1' : 'text-xs px-0.5'
             }`}
             autoFocus
@@ -131,7 +133,7 @@ export const EntityCard = ({
             className={`truncate cursor-pointer ${
               isSelected 
                 ? 'text-sm text-yellow-200 font-medium' 
-                : 'text-xs text-gray-300'
+                : `text-xs ${colors.text.secondary}`
             }`}
             title={entity.name || `${entity.type} #${entity.id.substring(0, 8)}...`}
             onDoubleClick={() => {
@@ -151,7 +153,7 @@ export const EntityCard = ({
             e.stopPropagation();
             onEntityToggle?.(entity.id, entity.visible === false ? true : false);
           }}
-          className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${
+          className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${
             isSelected ? 'p-1' : 'p-0.5'
           }`}
           title={entity.visible === false ? "Εμφάνιση" : "Απόκρυψη"}
@@ -170,7 +172,7 @@ export const EntityCard = ({
             onSetEditingEntity(entity.id);
             onSetEditingEntityName(entity.name || `${entity.type}_${entity.id.substring(0, 8)}`);
           }}
-          className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${
+          className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${
             isSelected ? 'p-1' : 'p-0.5'
           }`}
           title="Μετονομασία entity"

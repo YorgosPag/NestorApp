@@ -7,6 +7,7 @@ import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
 import { PhotoItem } from '@/components/generic/utils/PhotoItem';
 import { Camera, Image, Upload, Calendar } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface StoragePhotosTabProps {
   storage: Storage;
@@ -14,6 +15,7 @@ interface StoragePhotosTabProps {
 
 export function StoragePhotosTab({ storage }: StoragePhotosTabProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   // Γεννάμε πραγματικές φωτογραφίες βάση των στοιχείων της αποθήκης
   const initialPhotos: Photo[] = [
     {
@@ -118,7 +120,7 @@ export function StoragePhotosTab({ storage }: StoragePhotosTabProps) {
       </section>
 
       {/* Upload Περιοχή */}
-      <div className="bg-white rounded-lg border p-6">
+      <div className={`${colors.bg.primary} rounded-lg border p-6`}>
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Upload className={iconSizes.md} />
           Φωτογραφίες Αποθήκης {storage.name}

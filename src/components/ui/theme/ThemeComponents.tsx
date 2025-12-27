@@ -5,7 +5,7 @@
 
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // 🏭 THEME SYSTEM FACTORY - Enterprise Dynamic Theming
 export function getThemeSystem() {

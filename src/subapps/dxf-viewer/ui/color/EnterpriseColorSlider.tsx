@@ -23,6 +23,7 @@ import { useColorSlider } from '@react-aria/color';
 import { useColorSliderState } from '@react-stately/color';
 import { parseColor as parseAriaColor } from '@react-stately/color';
 import { useFocusRing } from '@react-aria/focus';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { AriaColorSliderProps } from '@react-aria/color';
 
 type SliderChannel = 'hue' | 'saturation' | 'brightness' | 'lightness' | 'red' | 'green' | 'blue' | 'alpha';
@@ -72,6 +73,7 @@ export function EnterpriseColorSlider({
 }: EnterpriseColorSliderProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const colors = useSemanticColors();
 
   // ✅ FIX (ChatGPT-5): Guard against undefined/null value
   // Default to white (#FFFFFF) if value is missing
@@ -131,10 +133,10 @@ export function EnterpriseColorSlider({
       {/* Label */}
       {showLabel && (
         <div className="flex justify-between text-sm">
-          <label {...labelProps} className="text-gray-300">
+          <label {...labelProps} className={colors.text.secondary}>
             {label || getDefaultLabel(channel)}
           </label>
-          <output {...outputProps} className="text-gray-400 font-mono">
+          <output {...outputProps} className={`${colors.text.muted} font-mono`}>
             {formatValue(channel, state.value.getChannelValue(channel))}
           </output>
         </div>

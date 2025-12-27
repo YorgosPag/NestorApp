@@ -23,7 +23,7 @@ import {
   ModalField,
   ModalActions
 } from './modal/ModalContainer';
-import { DXF_MODAL_TYPOGRAPHY } from '../config/modal-typography';
+import { useTypography } from '@/hooks/useTypography';
 import { getModalColorScheme, getModalIconColor } from '../config/modal-colors';
 import { MODAL_FLEX_PATTERNS, getIconSize } from '../config/modal-layout';
 import { getSelectStyles } from '../config/modal-select';

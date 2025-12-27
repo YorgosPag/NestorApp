@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { CheckCircle2 } from 'lucide-react';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { TestButton } from './TestButton';
 import type { TestDefinition, TestState } from '../types/tests.types';
 import { HOVER_BACKGROUND_EFFECTS, GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
@@ -26,12 +27,13 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
   handleRunAllTests,
   handleRunTest
 }) => {
+  const colors = useSemanticColors();
   const iconSizes = useIconSizes();
 
   return (
     <>
       <div>
-        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">
+        <h3 className={`text-sm font-semibold ${colors.text.muted} uppercase tracking-wide mb-3`}>
           📋 Automated Test Suite
         </h3>
 
@@ -41,10 +43,10 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
           disabled={testState.runningTests.has('run-all-tests')}
           className={`w-full px-6 py-4 text-lg font-bold rounded-lg shadow-lg transition-all mb-3 ${
             testState.runningTests.has('run-all-tests')
-              ? 'bg-yellow-500 text-white cursor-wait animate-pulse'
+              ? 'bg-yellow-500 ${colors.text.inverted}cursor-wait animate-pulse'
               : testState.completedTests.has('run-all-tests')
-              ? `bg-green-600 text-white ${HOVER_BACKGROUND_EFFECTS.SUCCESS_BUTTON}`
-              : `bg-gradient-to-r from-purple-600 to-pink-600 text-white ${GRADIENT_HOVER_EFFECTS.PURPLE_PINK_BUTTON}`
+              ? `bg-green-600 ${colors.text.inverted}${HOVER_BACKGROUND_EFFECTS.SUCCESS_BUTTON}`
+              : `bg-gradient-to-r from-purple-600 to-pink-600 ${colors.text.inverted}${GRADIENT_HOVER_EFFECTS.PURPLE_PINK_BUTTON}`
           }`}
         >
           {testState.runningTests.has('run-all-tests') ? (
@@ -80,7 +82,7 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
 
       {/* Group 2: Individual Debug Tools */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">
+        <h3 className={`text-sm font-semibold ${colors.text.muted} uppercase tracking-wide mb-3`}>
           🛠️ Individual Debug Tools (Manual)
         </h3>
         <div className="grid grid-cols-2 gap-3">

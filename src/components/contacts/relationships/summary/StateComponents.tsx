@@ -16,6 +16,7 @@ import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoad
 import { Users, Plus } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // TYPES
@@ -44,18 +45,19 @@ interface EmptyStateProps extends StateComponentProps {
  */
 export const NewContactState: React.FC<StateComponentProps> = ({ className }) => {
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
 
   return (
   <Card className={className}>
     <CardContent className="pt-6">
-      <div className="text-center text-gray-500">
-        <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+      <div className={`text-center ${colors.text.muted}`}>
+        <Users className={`h-12 w-12 mx-auto mb-4 ${colors.text.disabled}`} />
         <h3 className="font-medium text-lg mb-2">Σχέσεις Επαφής</h3>
         <p className="text-sm mb-4">
           Οι σχέσεις θα είναι διαθέσιμες μετά την αποθήκευση της επαφής.
         </p>
-        <div className={`bg-blue-50 ${quick.card} p-3`}>
-          <p className="text-xs text-blue-600">
+        <div className={`${colors.bg.info} ${quick.card} p-3`}>
+          <p className={`text-xs ${colors.text.info}`}>
             💡 <strong>Συμβουλή:</strong> Αποθηκεύστε την επαφή για να προσθέσετε
             επαγγελματικές σχέσεις, εργαζόμενους και μετόχους.
           </p>
@@ -78,6 +80,7 @@ export const NewContactState: React.FC<StateComponentProps> = ({ className }) =>
 export const LoadingState: React.FC<StateComponentProps> = ({ className }) => {
   const iconSizes = useIconSizes();
   const { quick, radius } = useBorderTokens();
+  const colors = useSemanticColors();
 
   return (
   <Card className={className}>
@@ -90,7 +93,7 @@ export const LoadingState: React.FC<StateComponentProps> = ({ className }) => {
     <CardContent>
       <div className="text-center py-8">
         <AnimatedSpinner size="large" variant="info" className="mx-auto mb-4" />
-        <p className="text-gray-500">Φόρτωση σχέσεων...</p>
+        <p className={colors.text.muted}>Φόρτωση σχέσεων...</p>
       </div>
     </CardContent>
   </Card>
@@ -135,9 +138,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     </CardHeader>
     <CardContent>
       <div className="text-center py-8">
-        <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+        <Users className={`h-12 w-12 mx-auto mb-4 ${colors.text.disabled}`} />
         <h3 className="font-medium mb-2">Δεν υπάρχουν σχέσεις</h3>
-        <p className="text-gray-500 text-sm mb-4">
+        <p className={`${colors.text.muted} text-sm mb-4`}>
           Προσθέστε επαγγελματικές σχέσεις, εργαζόμενους και συνεργάτες.
         </p>
         {!readonly && onManageRelationships && (

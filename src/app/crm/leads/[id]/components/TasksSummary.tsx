@@ -4,7 +4,7 @@
 import React, { useMemo } from 'react';
 import { Clock, CheckCircle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import type { CrmTask } from '@/types/crm';
@@ -37,14 +37,14 @@ export function TasksSummary({ tasks, loading }: TasksSummaryProps) {
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-2">
-              <Clock className={`${iconSizes.sm} text-yellow-600`} />
+              <Clock className={`${iconSizes.sm} ${colors.text.warning}`} />
               Εκκρεμείς
             </span>
             <span className="font-medium">{pendingTasks.length}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-2">
-              <CheckCircle className={`${iconSizes.sm} text-green-600`} />
+              <CheckCircle className={`${iconSizes.sm} ${colors.text.success}`} />
               Ολοκληρωμένες
             </span>
             <span className="font-medium">{completedTasks.length}</span>

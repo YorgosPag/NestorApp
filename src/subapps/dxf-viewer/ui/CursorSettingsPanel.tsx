@@ -17,6 +17,7 @@ import { SimpleColorPicker } from "./color";
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Force cursor styles for the panel to override canvas cursor settings
 const panelStyles = `
@@ -71,8 +72,8 @@ function SliderRow({
   return (
     <div className="mb-3">
       <div className="flex justify-between items-center mb-1">
-        <label className="text-sm text-gray-300">{label}</label>
-        <span className="text-xs text-gray-400 font-mono">{value}</span>
+        <label className={`text-sm ${colors.text.tertiary}`}>{label}</label>
+        <span className={`text-xs ${colors.text.muted} font-mono`}>{value}</span>
       </div>
       <input
         type="range"
@@ -82,7 +83,7 @@ function SliderRow({
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         disabled={disabled}
-        className={`w-full h-2 bg-gray-700 ${quick.input} appearance-none cursor-pointer slider`}
+        className={`w-full h-2 ${colors.bg.hover} ${quick.input} appearance-none cursor-pointer slider`}
       />
     </div>
   );
@@ -109,7 +110,7 @@ function CheckboxRow({
           disabled={disabled}
           className="mr-2"
         />
-        <span className="text-sm text-gray-300">{label}</span>
+        <span className={`text-sm ${colors.text.tertiary}`}>{label}</span>
       </label>
     </div>
   );
@@ -123,6 +124,7 @@ interface CursorSettingsPanelProps {
 export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettingsPanelProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder, quick } = useBorderTokens();
+  const colors = useSemanticColors();
   const [settings, setSettings] = useState<CursorSettings>(getCursorSettings());
 
   // Get actual ruler settings from the system
@@ -343,7 +345,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
   const panelContent = (
     <div
       ref={panelRef}
-      className={`cursor-settings-panel fixed z-[2147483647] bg-gray-900 text-white ${quick.card} shadow-2xl ${getStatusBorder('default')} select-none pointer-events-auto`}
+      className={`cursor-settings-panel fixed z-[2147483647] ${colors.bg.primary} ${colors.text.primary}${quick.card} shadow-2xl ${getStatusBorder('default')} select-none pointer-events-auto`}
       style={{
         left: position.x,
         top: position.y,
@@ -363,7 +365,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
             <h3 className="text-lg font-bold text-cyan-400">🔧 Ρυθμίσεις Κέρσορα AutoCAD</h3>
             <button
               onClick={onClose}
-              className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HOVER} text-xl ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} rounded px-2 py-1`}
+              className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} text-xl ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} rounded px-2 py-1`}
               onMouseDown={(e) => e.stopPropagation()} // Prevent drag when clicking X
             >
               ×
@@ -373,7 +375,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
 
           {/* Crosshair Settings - Simplified */}
           <div className="mb-6">
-            <h4 className="text-md font-semibold text-gray-200 mb-3">Σταυρόνημα</h4>
+            <h4 className={`text-md font-semibold ${colors.text.secondary} mb-3`}>Σταυρόνημα</h4>
 
             <CheckboxRow
               label="Ενεργοποίηση Σταυρονήματος"
@@ -388,7 +390,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
 
           {/* Behavior Settings */}
           <div className="mb-6">
-            <h4 className="text-md font-semibold text-gray-200 mb-3">Συμπεριφορά AutoCAD</h4>
+            <h4 className={`text-md font-semibold ${colors.text.secondary} mb-3`}>Συμπεριφορά AutoCAD</h4>
             <div className={`mb-3 p-2 bg-yellow-900/30 ${getStatusBorder('warning')} rounded text-xs text-yellow-200`}>
               ⚠️ Σημείωση: Μερικές λειτουργίες είναι σε ανάπτυξη και μπορεί να μην είναι πλήρως ενεργές
             </div>
@@ -432,7 +434,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
 
           {/* Performance Settings */}
           <div className="mb-6">
-            <h4 className="text-md font-semibold text-gray-200 mb-3">Απόδοση</h4>
+            <h4 className={`text-md font-semibold ${colors.text.secondary} mb-3`}>Απόδοση</h4>
             
             <CheckboxRow
               label="✅ Χρήση RAF 60fps (Συνδεδεμένο)"
@@ -462,13 +464,13 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
           {/* Action Buttons */}
           <div className="flex gap-2">
             <button
-              className={`flex-1 px-3 py-2 rounded bg-orange-600 ${INTERACTIVE_PATTERNS.WARNING_HOVER} text-xs`}
+              className={`flex-1 px-3 py-2 rounded ${colors.bg.warning} ${INTERACTIVE_PATTERNS.WARNING_HOVER} text-xs`}
               onClick={resetSettings}
             >
               Επαναφορά Προκαθορισμένων
             </button>
             <button
-              className={`px-3 py-1 rounded bg-slate-700 ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-xs`}
+              className={`px-3 py-1 rounded ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-xs`}
               onClick={clearAndReload}
             >
               Καθαρισμός & Επαναφόρτωση

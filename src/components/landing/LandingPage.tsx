@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Search, MapPin, Home, Filter, TrendingUp, Building, ArrowRight, ChevronDown, Star, Users, Shield } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -206,7 +206,7 @@ export function LandingPage() {
               <p className={colors.text.muted}>Εγγύηση Ποιότητας</p>
             </article>
             <article className="text-center" role="listitem">
-              <data value="24" className="text-3xl font-bold text-orange-600 mb-2">24/7</data>
+              <data value="24" className="text-3xl font-bold ${colors.text.warning} mb-2">24/7</data>
               <p className={colors.text.muted}>Υποστήριξη</p>
             </article>
           </div>
@@ -278,7 +278,7 @@ export function LandingPage() {
             <h2 className={`text-3xl font-bold ${colors.text.foreground} mb-4`}>
               Προτεινόμενα Ακίνητα
             </h2>
-            <p className="text-lg text-gray-600 dark:text-gray-300">
+            <p className={`text-lg ${colors.text.muted}`}>
               Δείτε μερικά από τα πιο δημοφιλή ακίνητά μας
             </p>
           </header>
@@ -286,26 +286,26 @@ export function LandingPage() {
           <ul className="grid md:grid-cols-3 gap-8 mb-12">
             {/* Property Card 1 */}
             <li>
-              <article className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}`} onClick={() => router.push('/properties')}>
+              <article className={`${colors.bg.primary} rounded-xl shadow-lg overflow-hidden cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}`} onClick={() => router.push('/properties')}>
               <figure className="h-48 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-                <Home className={`${iconSizes.huge} text-white`} aria-hidden="true" />
+                <Home className={`${iconSizes.huge} ${colors.text.foreground}`} aria-hidden="true" />
               </figure>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Στούντιο B1</h3>
-                  <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 text-xs font-semibold rounded-full">
+                  <h3 className={`text-lg font-bold ${colors.text.foreground}`}>Στούντιο B1</h3>
+                  <span className={`px-2 py-1 ${colors.bg.info} ${colors.text.info} text-xs font-semibold rounded-full`}>
                     Διαθέσιμο
                   </span>
                 </div>
-                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2">€65.000</p>
-                <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">35 m² • 1ος όροφος</p>
+                <p className={`text-2xl font-bold ${colors.text.info} mb-2`}>€65.000</p>
+                <p className={`${colors.text.muted} text-sm mb-4`}>35 m² • 1ος όροφος</p>
                 <div className="flex items-center gap-1">
-                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
-                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
-                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
-                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
-                  <Star className={`${iconSizes.sm} text-gray-300 dark:text-gray-600`} />
-                  <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">4.0</span>
+                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
+                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
+                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
+                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
+                  <Star className={`${iconSizes.sm} ${colors.text.muted}`} />
+                  <span className={`text-sm ${colors.text.muted} ml-2`}>4.0</span>
                 </div>
               </div>
               </article>
@@ -313,26 +313,26 @@ export function LandingPage() {
 
             {/* Property Card 2 */}
             <li>
-              <article className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}`} onClick={() => router.push('/properties')}>
+              <article className={`${colors.bg.primary} rounded-xl shadow-lg overflow-hidden cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}`} onClick={() => router.push('/properties')}>
                 <figure className="h-48 bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
-                  <Building className={`${iconSizes.huge} text-white`} aria-hidden="true" />
+                  <Building className={`${iconSizes.huge} ${colors.text.foreground}`} aria-hidden="true" />
                 </figure>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Διαμέρισμα 2Δ</h3>
-                  <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 text-xs font-semibold rounded-full">
+                  <h3 className={`text-lg font-bold ${colors.text.foreground}`}>Διαμέρισμα 2Δ</h3>
+                  <span className={`px-2 py-1 ${colors.bg.info} ${colors.text.info} text-xs font-semibold rounded-full`}>
                     Διαθέσιμο
                   </span>
                 </div>
-                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2">€145.000</p>
-                <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">75 m² • 2 υπνοδωμάτια</p>
+                <p className={`text-2xl font-bold ${colors.text.info} mb-2`}>€145.000</p>
+                <p className={`${colors.text.muted} text-sm mb-4`}>75 m² • 2 υπνοδωμάτια</p>
                 <div className="flex items-center gap-1">
-                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
-                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
-                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
-                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
-                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
-                  <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">5.0</span>
+                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
+                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
+                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
+                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
+                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
+                  <span className={`text-sm ${colors.text.muted} ml-2`}>5.0</span>
                 </div>
               </div>
               </article>
@@ -340,26 +340,26 @@ export function LandingPage() {
 
             {/* Property Card 3 */}
             <li>
-              <article className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}`} onClick={() => router.push('/properties')}>
+              <article className={`${colors.bg.primary} rounded-xl shadow-lg overflow-hidden cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}`} onClick={() => router.push('/properties')}>
                 <figure className="h-48 bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
-                  <TrendingUp className={`${iconSizes.huge} text-white`} aria-hidden="true" />
+                  <TrendingUp className={`${iconSizes.huge} ${colors.text.foreground}`} aria-hidden="true" />
                 </figure>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Μεζονέτα E1</h3>
-                  <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 text-xs font-semibold rounded-full">
+                  <h3 className={`text-lg font-bold ${colors.text.foreground}`}>Μεζονέτα E1</h3>
+                  <span className={`px-2 py-1 ${colors.bg.info} ${colors.text.info} text-xs font-semibold rounded-full`}>
                     Διαθέσιμο
                   </span>
                 </div>
-                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2">€280.000</p>
-                <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">145 m² • 3 υπνοδωμάτια</p>
+                <p className={`text-2xl font-bold ${colors.text.info} mb-2`}>€280.000</p>
+                <p className={`${colors.text.muted} text-sm mb-4`}>145 m² • 3 υπνοδωμάτια</p>
                 <div className="flex items-center gap-1">
-                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
-                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
-                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
-                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
-                  <Star className={`${iconSizes.sm} text-gray-300 dark:text-gray-600`} />
-                  <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">4.5</span>
+                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
+                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
+                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
+                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
+                  <Star className={`${iconSizes.sm} ${colors.text.muted}`} />
+                  <span className={`text-sm ${colors.text.muted} ml-2`}>4.5</span>
                 </div>
               </div>
               </article>
@@ -381,22 +381,22 @@ export function LandingPage() {
       {/* CTA Section */}
       <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600" role="region" aria-label="Κλήση προς Δράση">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-white mb-4">
+          <h2 className={`text-3xl font-bold ${colors.text.foreground} mb-4`}>
             Έτοιμοι να Βρείτε το Νέο σας Σπίτι;
           </h2>
-          <p className="text-xl text-white/90 mb-8">
+          <p className={`text-xl ${colors.text.foreground}/90 mb-8`}>
             Εξερευνήστε τη συλλογή μας με διαθέσιμα ακίνητα σε διαδραστική κάτοψη
           </p>
           <nav className="flex flex-col sm:flex-row gap-4 justify-center" role="navigation" aria-label="Κύριες Ενέργειες">
             <Link 
               href="/properties"
-              className={`px-8 py-3 bg-white text-blue-600 font-semibold rounded-lg ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY}`}
+              className={`px-8 py-3 ${colors.bg.primary} ${colors.text.info} font-semibold rounded-lg ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY}`}
             >
               Αναζήτηση Ακινήτων
             </Link>
             <Link 
               href="/properties?view=floorplan"
-              className={`px-8 py-3 bg-transparent ${getStatusBorder('secondary')} text-white font-semibold ${quick.card} flex items-center justify-center gap-2 ${INTERACTIVE_PATTERNS.BUTTON_OUTLINE}`}
+              className={`px-8 py-3 bg-transparent ${getStatusBorder('secondary')} ${colors.text.foreground} font-semibold ${quick.card} flex items-center justify-center gap-2 ${INTERACTIVE_PATTERNS.BUTTON_OUTLINE}`}
             >
               <MapPin className={iconSizes.md} />
               Προβολή σε Κάτοψη

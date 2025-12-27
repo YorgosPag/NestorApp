@@ -8,6 +8,7 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -47,6 +48,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
   // ============================================================================
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   const {
     state: { rulers: rulerSettings },
@@ -157,10 +159,10 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Background Visibility Toggle */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
+      <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
         <div className="text-sm text-white">
           <div className="font-medium">Εμφάνιση Φόντου</div>
-          <div className="font-normal text-gray-400">Εμφάνιση/απόκρυψη του φόντου των χαράκων</div>
+          <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη του φόντου των χαράκων</div>
         </div>
         <div className="flex gap-2">
           <button
@@ -168,7 +170,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
             className={`flex-1 p-2 rounded text-xs transition-colors ${
               backgroundVisible
                 ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
             }`}
           >
             Ενεργό
@@ -178,7 +180,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
             className={`flex-1 p-2 rounded text-xs transition-colors ${
               !backgroundVisible
                 ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
             }`}
           >
             Ανενεργό
@@ -187,10 +189,10 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
       </div>
 
       {/* Ruler Background Color */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
+      <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
         <div className="text-sm text-white">
           <div className="font-medium">Χρώμα Φόντου</div>
-          <div className="font-normal text-gray-400">Χρώμα φόντου του χάρακα</div>
+          <div className={`font-normal ${colors.text.muted}`}>Χρώμα φόντου του χάρακα</div>
         </div>
         <div className="flex items-center gap-2">
           <div
@@ -206,17 +208,17 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
             type="text"
             value={rulerBackgroundColor}
             onChange={(e) => handleRulerBackgroundColorChange(e.target.value)}
-            className={`w-20 px-2 py-1 text-xs bg-gray-600 text-white rounded ${quick.input}`}
+            className={`w-20 px-2 py-1 text-xs ${colors.bg.muted} text-white rounded ${quick.input}`}
             placeholder="#ffffff"
           />
         </div>
       </div>
 
       {/* Ruler Opacity */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
+      <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
         <div className="text-sm text-white">
           <div className="font-medium">Διαφάνεια</div>
-          <div className="font-normal text-gray-400">Επίπεδο διαφάνειας των χαράκων</div>
+          <div className={`font-normal ${colors.text.muted}`}>Επίπεδο διαφάνειας των χαράκων</div>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -235,7 +237,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
             onChange={(e) => handleRulerOpacityChange(parseFloat(e.target.value))}
             className="flex-1"
           />
-          <div className="w-12 text-xs bg-gray-600 text-white rounded px-2 py-1 text-center">
+          <div className={`w-12 text-xs ${colors.bg.muted} text-white rounded px-2 py-1 text-center`}>
             {Math.round(((() => {
               const bgColor = rulerSettings.horizontal.backgroundColor;
               if (bgColor.includes('rgba')) {
@@ -249,10 +251,10 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
       </div>
 
       {/* Ruler Width */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
+      <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
         <div className="text-sm text-white">
           <div className="font-medium">Πλάτος Χάρακα</div>
-          <div className="font-normal text-gray-400">Πλάτος του χάρακα σε pixels</div>
+          <div className={`font-normal ${colors.text.muted}`}>Πλάτος του χάρακα σε pixels</div>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -264,17 +266,17 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
             onChange={(e) => handleRulerWidthChange(parseInt(e.target.value))}
             className="flex-1"
           />
-          <div className="w-12 text-xs bg-gray-600 text-white rounded px-2 py-1 text-center">
+          <div className={`w-12 text-xs ${colors.bg.muted} text-white rounded px-2 py-1 text-center`}>
             {rulerSettings.horizontal.height}px
           </div>
         </div>
       </div>
 
       {/* Ruler Lines Visibility Toggle */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
+      <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
         <div className="text-sm text-white">
           <div className="font-medium">Εμφάνιση Γραμμών</div>
-          <div className="font-normal text-gray-400">Εμφάνιση/απόκρυψη γραμμών μέτρησης στους χάρακες</div>
+          <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη γραμμών μέτρησης στους χάρακες</div>
         </div>
         <div className="flex gap-2">
           <button
@@ -282,7 +284,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
             className={`flex-1 p-2 rounded text-xs transition-colors ${
               rulerSettings.horizontal.showMinorTicks
                 ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
             }`}
           >
             Ενεργό
@@ -292,7 +294,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
             className={`flex-1 p-2 rounded text-xs transition-colors ${
               !rulerSettings.horizontal.showMinorTicks
                 ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
             }`}
           >
             Ανενεργό

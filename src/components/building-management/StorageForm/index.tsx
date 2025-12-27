@@ -3,7 +3,7 @@
 
 import React from 'react';
 import type { StorageUnit, StorageType } from '@/types/storage';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useStorageForm } from './useStorageForm';
 

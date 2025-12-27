@@ -15,6 +15,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 
@@ -49,6 +50,7 @@ export function LayersPanel({
 }: LayersPanelProps) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
 
   const updateLayer = (layerId: string, updates: Partial<Layer>) => {
@@ -73,7 +75,7 @@ export function LayersPanel({
       <div
         className={cn(
           `flex items-center gap-2 p-2 ${quick.input} cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
-          selectedLayerId === layer.id && `bg-blue-50 border ${getStatusBorder('info')}`
+          selectedLayerId === layer.id && `${colors.bg.info}/50 border ${getStatusBorder('info')}`
         )}
         onClick={() => setSelectedLayerId(layer.id)}
       >
@@ -88,9 +90,9 @@ export function LayersPanel({
         }}
       >
         {layer.visible ? (
-          <Eye className={`${iconSizes.sm} text-green-600`} />
+          <Eye className={`${iconSizes.sm} ${colors.text.success}`} />
         ) : (
-          <EyeOff className={`${iconSizes.sm} text-gray-400`} />
+          <EyeOff className={`${iconSizes.sm} ${colors.text.muted}`} />
         )}
       </Button>
 
@@ -102,13 +104,13 @@ export function LayersPanel({
       {/* Layer Name */}
       <span className={cn(
         "flex-1 text-sm",
-        !layer.visible && "text-gray-400"
+        !layer.visible && colors.text.muted
       )}>
         {layer.name}
       </span>
 
       {/* Layer Type Icon */}
-      <span className="text-xs text-gray-500 uppercase">
+      <span className={`text-xs ${colors.text.muted} uppercase`}>
         {layer.type}
       </span>
     </div>
@@ -116,9 +118,9 @@ export function LayersPanel({
   };
 
   return (
-    <div className={cn(`bg-white ${quick.card} p-3`, className)}>
+    <div className={cn(`${colors.bg.primary} ${quick.card} p-3`, className)}>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium">Layers</h3>
+        <h3 className={`text-sm font-medium ${colors.text.foreground}`}>Layers</h3>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="sm" className={`${iconSizes.lg} p-0`}>
             <Plus className={iconSizes.sm} />
@@ -137,7 +139,7 @@ export function LayersPanel({
 
       {selectedLayerId && (
         <div className={`mt-3 pt-3 ${quick.borderT}`}>
-          <div className="text-xs text-gray-600 mb-2">Layer Controls</div>
+          <div className={`text-xs ${colors.text.muted} mb-2`}>Layer Controls</div>
           <div className="flex items-center gap-1">
             <Button variant="outline" size="sm" className={`${iconSizes.lg} text-xs`}>
               <Edit className={`${iconSizes.xs} mr-1`} />
@@ -151,7 +153,7 @@ export function LayersPanel({
               <Move className={`${iconSizes.xs} mr-1`} />
               Move
             </Button>
-            <Button variant="outline" size="sm" className="h-6 text-xs text-red-600">
+            <Button variant="outline" size="sm" className={`h-6 text-xs ${colors.text.error}`}>
               <Trash2 className={`${iconSizes.xs} mr-1`} />
               Delete
             </Button>

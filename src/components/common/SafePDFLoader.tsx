@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { BarChart3, Link, Paperclip, FileText, X, CheckCircle, Circle, Chrome, Check } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { layoutUtilities, canvasUtilities } from '@/styles/design-tokens';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
@@ -41,6 +42,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [renderMethod, setRenderMethod] = useState<'data' | 'blob' | 'canvas' | 'link'>('data');
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'idle'>('idle');
@@ -104,7 +106,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
       <button
         onClick={() => setRenderMethod('data')}
         className={`px-3 py-1 rounded text-sm ${
-          renderMethod === 'data' ? 'bg-green-600 text-white' : 'bg-gray-200'
+          renderMethod === 'data' ? `${colors.bg.success} ${colors.text.inverted}` : `${colors.bg.muted}`
         }`}
       >
         <BarChart3 className={`${iconSizes.sm} mr-1`} />
@@ -113,7 +115,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
       <button
         onClick={() => setRenderMethod('blob')}
         className={`px-3 py-1 rounded text-sm ${
-          renderMethod === 'blob' ? 'bg-blue-600 text-white' : 'bg-gray-200'
+          renderMethod === 'blob' ? `${colors.bg.info} ${colors.text.inverted}` : `${colors.bg.muted}`
         }`}
       >
         <Link className={`${iconSizes.sm} mr-1`} />
@@ -122,7 +124,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
       <button
         onClick={() => setRenderMethod('link')}
         className={`px-3 py-1 rounded text-sm ${
-          renderMethod === 'link' ? 'bg-purple-600 text-white' : 'bg-gray-200'
+          renderMethod === 'link' ? `${colors.bg.accent} ${colors.text.inverted}` : `${colors.bg.muted}`
         }`}
       >
         <Paperclip className={`${iconSizes.sm} mr-1`} />
@@ -135,10 +137,10 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
   if (!file) {
     return (
       <div
-        className={`flex items-center justify-center bg-gray-100 border border-dashed ${className}`}
+        className={`flex items-center justify-center ${colors.bg.muted} border border-dashed ${className}`}
         style={canvasUtilities.geoInteractive.pdfFallbackContainer(width, height)}
       >
-        <div className="text-center text-gray-500">
+        <div className={`text-center ${colors.text.muted}`}>
           <FileText className={`${iconSizes.lg} mx-auto mb-2`} />
           <div className="text-sm">No PDF file</div>
         </div>
@@ -152,19 +154,19 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
       <MethodSelector />
       
       {/* Debug info */}
-      <div className={`bg-blue-100 ${quick.info} p-2 mb-4 text-xs`}>
+      <div className={`${colors.bg.infoSubtle} ${quick.info} p-2 mb-4 text-xs`}>
         <div><strong>Status:</strong> {status}</div>
         <div><strong>Method:</strong> {renderMethod}</div>
         <div><strong>Debug:</strong> {debugInfo}</div>
         <div className="flex items-center gap-1">
           <strong>Browser:</strong>
           {navigator.userAgent.includes('Chrome') ? (
-            <span className="flex items-center gap-1 text-red-600">
+            <span className={`flex items-center gap-1 ${colors.text.danger}`}>
               <Circle className={`${iconSizes.xs} fill-current`} />
               Chrome (needs CSP fix)
             </span>
           ) : (
-            <span className="flex items-center gap-1 text-green-600">
+            <span className={`flex items-center gap-1 ${colors.text.success}`}>
               <CheckCircle className={iconSizes.xs} />
               Non-Chrome
             </span>
@@ -179,14 +181,14 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <AnimatedSpinner size="large" className="mx-auto mb-2" />
-              <p className="text-sm text-blue-600">Processing PDF...</p>
+              <p className={`text-sm ${colors.text.info}`}>Processing PDF...</p>
             </div>
           </div>
         )}
 
         {status === 'error' && (
-          <div className="flex items-center justify-center h-full bg-red-50">
-            <div className="text-center text-red-600">
+          <div className={`flex items-center justify-center h-full ${colors.bg.dangerSubtle}`}>
+            <div className={`text-center ${colors.text.danger}`}>
               <X className={`${iconSizes.lg} mx-auto mb-2`} />
               <p className="text-sm font-medium">PDF Error</p>
               <p className="text-xs">{debugInfo}</p>
@@ -223,13 +225,13 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
             {renderMethod === 'link' && (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
-                  <FileText className={`${iconSizes['2xl']} mx-auto mb-4 text-blue-600`} />
+                  <FileText className={`${iconSizes['2xl']} mx-auto mb-4 ${colors.text.info}`} />
                   <p className="text-lg font-medium mb-4">PDF Ready</p>
                   <a
                     href={pdfUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg transition-colors ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
+                    className={`inline-flex items-center px-6 py-3 ${colors.bg.info} ${colors.text.inverted} rounded-lg transition-colors ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
                   >
                     <FileText className={`${iconSizes.sm} mr-2`} />
                     Open PDF in New Tab
@@ -243,7 +245,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
 
       {/* Success indicator */}
       {status === 'success' && (
-        <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
+        <div className={`absolute top-2 right-2 ${colors.bg.success} ${colors.text.inverted} px-2 py-1 rounded text-xs flex items-center gap-1`}>
           <Check className={iconSizes.xs} />
           PDF Loaded ({renderMethod})
         </div>

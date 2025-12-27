@@ -10,7 +10,7 @@ import type { TestState, ApiTestHandlers } from '../types/tests.types';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface UnitTestsTabProps {
   testState: TestState;
@@ -20,7 +20,7 @@ interface UnitTestsTabProps {
 export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests }) => {
   const iconSizes = useIconSizes();
   const { getStatusBorder, quick, radius } = useBorderTokens();
-  const { bg } = useSemanticColors();
+  const colors = useSemanticColors();
 
   // Enterprise helper για test button states
   const getTestButtonBorder = (testId: string) => {
@@ -36,7 +36,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
   return (
     <>
       <div>
-        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">
+        <h3 className="text-sm font-semibold ${colors.text.muted} uppercase tracking-wide mb-3">
           🧪 Unit Tests (Vitest/Jest)
         </h3>
 
@@ -47,24 +47,24 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
             disabled={testState.runningTests.has('run-vitest')}
             className={`flex items-start gap-3 p-3.5 ${quick.card} transition-all text-left ${
               testState.runningTests.has('run-vitest')
-                ? `${bg.warning} dark:bg-yellow-500/10 ${getTestButtonBorder('run-vitest')} cursor-wait`
+                ? `${colors.bg.warning} ${colors.bg.warning} ${getTestButtonBorder('run-vitest')} cursor-wait`
                 : testState.completedTests.has('run-vitest')
-                ? `${bg.success} dark:bg-green-500/10 ${getTestButtonBorder('run-vitest')} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_SUBTLE}`
-                : `${bg.secondary} dark:bg-gray-700/50 ${getTestButtonBorder('run-vitest')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
+                ? `${colors.bg.success} ${colors.bg.success} ${getTestButtonBorder('run-vitest')} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_SUBTLE}`
+                : `${colors.bg.secondary} ${colors.bg.hover} ${getTestButtonBorder('run-vitest')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
             }`}
           >
             <div className="flex-shrink-0 mt-0.5">
               {testState.runningTests.has('run-vitest') ? (
                 <div className="animate-spin text-base">⏳</div>
               ) : testState.completedTests.has('run-vitest') ? (
-                <CheckCircle2 className={`${iconSizes.md} text-green-400`} />
+                <CheckCircle2 className={`${iconSizes.md} ${colors.text.success}`} />
               ) : (
-                <Play className={`${iconSizes.md} text-gray-400`} />
+                <Play className={`${iconSizes.md} ${colors.text.muted}`} />
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-white text-sm leading-tight">⚡ Run Vitest Tests</div>
-              <div className="text-xs text-gray-400 mt-1">Property-based + ServiceRegistry tests</div>
+              <div className="font-medium ${colors.text.primary} text-sm leading-tight">⚡ Run Vitest Tests</div>
+              <div className="text-xs ${colors.text.muted} mt-1">Property-based + ServiceRegistry tests</div>
             </div>
           </button>
 
@@ -74,31 +74,31 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
             disabled={testState.runningTests.has('run-jest')}
             className={`flex items-start gap-3 p-3.5 ${quick.card} transition-all text-left ${
               testState.runningTests.has('run-jest')
-                ? `${bg.warning} dark:bg-yellow-500/10 ${getTestButtonBorder('run-jest')} cursor-wait`
+                ? `${colors.bg.warning} ${colors.bg.warning} ${getTestButtonBorder('run-jest')} cursor-wait`
                 : testState.completedTests.has('run-jest')
-                ? `${bg.success} dark:bg-green-500/10 ${getTestButtonBorder('run-jest')} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_SUBTLE}`
-                : `${bg.secondary} dark:bg-gray-700/50 ${getTestButtonBorder('run-jest')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
+                ? `${colors.bg.success} ${colors.bg.success} ${getTestButtonBorder('run-jest')} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_SUBTLE}`
+                : `${colors.bg.secondary} ${colors.bg.hover} ${getTestButtonBorder('run-jest')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
             }`}
           >
             <div className="flex-shrink-0 mt-0.5">
               {testState.runningTests.has('run-jest') ? (
                 <div className="animate-spin text-base">⏳</div>
               ) : testState.completedTests.has('run-jest') ? (
-                <CheckCircle2 className={`${iconSizes.md} text-green-400`} />
+                <CheckCircle2 className={`${iconSizes.md} ${colors.text.success}`} />
               ) : (
-                <Play className={`${iconSizes.md} text-gray-400`} />
+                <Play className={`${iconSizes.md} ${colors.text.muted}`} />
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-white text-sm leading-tight">⚡ Run Jest Tests</div>
-              <div className="text-xs text-gray-400 mt-1">Visual regression + cursor alignment tests</div>
+              <div className="font-medium ${colors.text.primary} text-sm leading-tight">⚡ Run Jest Tests</div>
+              <div className="text-xs ${colors.text.muted} mt-1">Visual regression + cursor alignment tests</div>
             </div>
           </button>
         </div>
       </div>
 
       <div>
-        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">
+        <h3 className="text-sm font-semibold ${colors.text.muted} uppercase tracking-wide mb-3">
           🎭 E2E Tests (Playwright)
         </h3>
 
@@ -107,30 +107,30 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
           disabled={testState.runningTests.has('run-playwright')}
           className={`flex items-start gap-3 p-3.5 ${radius.lg} transition-all text-left w-full ${
             testState.runningTests.has('run-playwright')
-              ? `${bg.warning} dark:bg-yellow-500/10 ${getTestButtonBorder('run-playwright')} cursor-wait`
+              ? `${colors.bg.warning} ${colors.bg.warning} ${getTestButtonBorder('run-playwright')} cursor-wait`
               : testState.completedTests.has('run-playwright')
-              ? `${bg.success} dark:bg-green-500/10 ${getTestButtonBorder('run-playwright')} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_SUBTLE}`
-              : `${bg.secondary} dark:bg-gray-700/50 ${getTestButtonBorder('run-playwright')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
+              ? `${colors.bg.success} ${colors.bg.success} ${getTestButtonBorder('run-playwright')} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_SUBTLE}`
+              : `${colors.bg.secondary} ${colors.bg.hover} ${getTestButtonBorder('run-playwright')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
           }`}
         >
           <div className="flex-shrink-0 mt-0.5">
             {testState.runningTests.has('run-playwright') ? (
               <div className="animate-spin text-base">⏳</div>
             ) : testState.completedTests.has('run-playwright') ? (
-              <CheckCircle2 className={`${iconSizes.md} text-green-400`} />
+              <CheckCircle2 className={`${iconSizes.md} ${colors.text.success}`} />
             ) : (
-              <Play className={`${iconSizes.md} text-gray-400`} />
+              <Play className={`${iconSizes.md} ${colors.text.muted}`} />
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-medium text-white text-sm leading-tight">🎭 Run Playwright Cross-Browser Tests</div>
-            <div className="text-xs text-gray-400 mt-1">Visual regression across Chromium/Firefox/WebKit (2-3 min)</div>
+            <div className="font-medium ${colors.text.primary} text-sm leading-tight">🎭 Run Playwright Cross-Browser Tests</div>
+            <div className="text-xs ${colors.text.muted} mt-1">Visual regression across Chromium/Firefox/WebKit (2-3 min)</div>
           </div>
         </button>
       </div>
 
-      <div className={`${bg.info} ${quick.info} p-4 ${getStatusBorder('info')}`}>
-        <div className="text-xs text-blue-300">
+      <div className={`${colors.bg.info} ${quick.info} p-4 ${getStatusBorder('info')}`}>
+        <div className={`text-xs ${colors.text.info}`}>
           <strong>Note:</strong> Unit & E2E tests run server-side via API endpoints. Check server logs for detailed output.
         </div>
       </div>

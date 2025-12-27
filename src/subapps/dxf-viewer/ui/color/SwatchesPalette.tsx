@@ -20,6 +20,7 @@
 import React, { useCallback } from 'react';
 import { COMPLEX_HOVER_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { getPalettesByIds } from './BrandPalettes';
 import { useRecentColors } from './RecentColorsStore';
 import type { ColorSwatch } from './types';
@@ -61,6 +62,7 @@ export function SwatchesPalette({
   className = '',
 }: SwatchesPaletteProps) {
   const { colors: recentColors } = useRecentColors();
+  const colors = useSemanticColors();
 
   // Get palettes
   const palettes = getPalettesByIds(paletteIds);
@@ -70,7 +72,7 @@ export function SwatchesPalette({
       {/* Recent Colors */}
       {showRecent && recentColors.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-gray-300 mb-2">Recent</h4>
+          <h4 className={`text-sm font-medium ${colors.text.secondary} mb-2`}>Recent</h4>
           <SwatchGrid
             swatches={recentColors.map((color) => ({
               color,
@@ -87,7 +89,7 @@ export function SwatchesPalette({
       {/* Brand Palettes */}
       {palettes.map((palette) => (
         <div key={palette.id}>
-          <h4 className="text-sm font-medium text-gray-300 mb-2">
+          <h4 className={`text-sm font-medium ${colors.text.secondary} mb-2`}>
             {palette.name}
           </h4>
           <SwatchGrid

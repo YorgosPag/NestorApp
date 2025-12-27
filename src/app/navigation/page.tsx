@@ -9,7 +9,7 @@ import { AdaptiveMultiColumnNavigation, NavigationBreadcrumb } from '@/component
 import { MapPin } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export default function NavigationPage() {
   const iconSizes = useIconSizes();

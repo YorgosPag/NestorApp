@@ -5,6 +5,7 @@ import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { AlertTriangle, Trash2, GitMerge } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface ConfirmationToastProps {
   title: string;
@@ -29,18 +30,19 @@ export function ConfirmationToast({
 }: ConfirmationToastProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
 
   return (
-    <div className={`flex flex-col gap-3 p-4 max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-lg ${quick.card}`}>
+    <div className={`flex flex-col gap-3 p-4 max-w-md ${colors.bg.primary} rounded-lg shadow-lg ${quick.card}`}>
       <div className="flex items-start gap-3">
         {/* Icon */}
         <div className="flex-shrink-0 mt-1">
           {destructive ? (
-            <div className={`${iconSizes.xl} bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center`}>
+            <div className={`${iconSizes.xl} ${colors.bg.muted} rounded-full flex items-center justify-center`}>
               <Trash2 className={`${iconSizes.sm} text-red-600 dark:text-red-400`} />
             </div>
           ) : (
-            <div className={`${iconSizes.xl} bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center`}>
+            <div className={`${iconSizes.xl} ${colors.bg.secondary} rounded-full flex items-center justify-center`}>
               <GitMerge className={`${iconSizes.sm} text-blue-600 dark:text-blue-400`} />
             </div>
           )}
@@ -57,7 +59,7 @@ export function ConfirmationToast({
           
           {/* Irreversible Warning */}
           {irreversible && (
-            <div className={`flex items-center gap-2 mt-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded ${quick.warning}`}>
+            <div className={`flex items-center gap-2 mt-3 p-2 ${colors.bg.hover} rounded ${quick.warning}`}>
               <AlertTriangle className={`${iconSizes.sm} text-yellow-600 dark:text-yellow-400 flex-shrink-0`} />
               <span className="text-xs text-yellow-700 dark:text-yellow-300 font-medium">
                 ⚠️ Αυτή η ενέργεια δεν μπορεί να αναιρεθεί!
@@ -71,7 +73,7 @@ export function ConfirmationToast({
       <div className={`flex gap-2 justify-end pt-2 ${quick.separatorH}`}>
         <button
           onClick={onCancel}
-          className={`px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT} dark:${HOVER_BACKGROUND_EFFECTS.GRAY} rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500`}
+          className={`px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT} dark:${HOVER_BACKGROUND_EFFECTS.GRAY} rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500`}
         >
           {cancelText}
         </button>

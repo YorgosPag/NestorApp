@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { CommonBadge } from '@/core/badges';
 import { Heart, MoreVertical } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -101,12 +103,14 @@ const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(({
   ...props
 }, ref) => {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
+  const { quick } = useBorderTokens();
 
   // Styling variants
   const cardVariants = {
     default: 'border bg-card text-card-foreground shadow-sm',
     bordered: 'border bg-card text-card-foreground',
-    elevated: 'border-0 bg-card text-card-foreground shadow-md ring-1 ring-gray-200 dark:ring-gray-700',
+    elevated: `border-0 bg-card text-card-foreground shadow-md ring-1 ${colors.ring.muted}`,
     minimal: 'border-0 bg-transparent text-foreground shadow-none',
   };
 
@@ -177,14 +181,14 @@ const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(({
               variant="ghost"
               size="sm"
               className={cn(
-                "absolute top-2 right-2 bg-white/80",
+                `absolute top-2 right-2 ${colors.bg.primary} opacity-80`,
                 INTERACTIVE_PATTERNS.BUTTON_OVERLAY
               )}
               onClick={handleFavoriteClick}
             >
               <Heart className={cn(
                 iconSizes.sm,
-                isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-600'
+                isFavorite ? `fill-current ${colors.text.error}` : `${colors.text.muted}`
               )} />
             </Button>
           )}
@@ -231,7 +235,7 @@ const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(({
               >
                 <Heart className={cn(
                   iconSizes.sm,
-                  isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-600'
+                  isFavorite ? `fill-current ${colors.text.error}` : `${colors.text.muted}`
                 )} />
               </Button>
             )}
@@ -289,9 +293,9 @@ const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(({
       <CardContent className="pb-2">
         {loading ? (
           <div className="space-y-2">
-            <div className="h-4 bg-gray-200 rounded animate-pulse" />
-            <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
-            <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2" />
+            <div className={`h-4 ${colors.bg.muted} rounded animate-pulse`} />
+            <div className={`h-4 ${colors.bg.muted} rounded animate-pulse w-3/4`} />
+            <div className={`h-4 ${colors.bg.muted} rounded animate-pulse w-1/2`} />
           </div>
         ) : (
           children

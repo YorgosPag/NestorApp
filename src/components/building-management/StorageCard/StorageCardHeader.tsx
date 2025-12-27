@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 import { StorageCardBackground } from './StorageCardBackground';
 import { StorageCardActions } from './StorageCardActions';

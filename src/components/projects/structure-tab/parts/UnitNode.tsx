@@ -8,25 +8,27 @@ import { getStatusLabel } from '@/constants/property-statuses-enterprise';
 import { formatCurrency } from '@/lib/intl-utils';
 import { HOVER_SHADOWS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export const UnitNode = ({ unit }: { unit: UnitModel }) => {
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   const showCustomerInfo = unit.status === 'sold' || unit.status === 'reserved' || unit.status === 'rented';
 
   return (
     <div className={`border-l-2 ${quick.table} pl-4`}>
-      <div className={`p-4 bg-white dark:bg-gray-800/50 ${quick.card} ${HOVER_SHADOWS.MEDIUM} transition-all`}>
+      <div className={`p-4 ${colors.bg.primary} ${quick.card} ${HOVER_SHADOWS.MEDIUM} transition-all`}>
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
-            <Home size={18} className="text-gray-500 mt-1" />
+            <Home size={18} className={`${colors.text.muted} mt-1`} />
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="font-semibold text-gray-800 dark:text-gray-200">{unit.name}</span>
+                <span className={`font-semibold ${colors.text.foreground}`}>{unit.name}</span>
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(unit.status)}`}>
                   {getStatusLabel(unit.status)}
                 </span>
               </div>
-              <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+              <div className={`flex items-center gap-4 text-sm ${colors.text.muted}`}>
                 <span className="flex items-center gap-1">
                   <Home size={14} />
                   {unit.area} m²
@@ -45,27 +47,27 @@ export const UnitNode = ({ unit }: { unit: UnitModel }) => {
         {showCustomerInfo && (
           <div className={`mt-3 pt-3 border-t ${quick.table}`}>
             {unit.customerName ? (
-              <div className={`bg-green-50 dark:bg-green-900/10 p-3 ${quick.card}`}>
+              <div className={`${colors.bg.success} p-3 ${quick.card}`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <User size={16} className="text-green-600" />
-                  <span className="font-medium text-green-800 dark:text-green-400">Πελάτης</span>
+                  <User size={16} className={`${colors.text.success}`} />
+                  <span className={`font-medium ${colors.text.success}`}>Πελάτης</span>
                 </div>
                 <div className="ml-6">
-                  <div className="font-medium text-gray-800 dark:text-gray-200">
+                  <div className={`font-medium ${colors.text.foreground}`}>
                     {unit.customerName}
                   </div>
                   {unit.soldTo && (
-                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    <div className={`text-sm ${colors.text.muted} mt-1`}>
                       ID: {unit.soldTo}
                     </div>
                   )}
                 </div>
               </div>
             ) : (
-              <div className={`bg-orange-50 dark:bg-orange-900/10 p-3 ${quick.card}`}>
+              <div className={`${colors.bg.warning} p-3 ${quick.card}`}>
                 <div className="flex items-center gap-2">
-                  <User size={16} className="text-orange-600" />
-                  <span className="text-orange-800 dark:text-orange-400">
+                  <User size={16} className={`${colors.text.warning}`} />
+                  <span className={`${colors.text.warning}`}>
                     {unit.soldTo ? 
                       `Πελάτης (ID: ${unit.soldTo}) - Δεν βρέθηκαν στοιχεία` : 
                       'Δεν έχει καταχωρηθεί πελάτης'

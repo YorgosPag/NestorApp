@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface LoadingStep {
   id: string;
@@ -32,6 +33,7 @@ export function ProgressiveLoader({
   className,
   onStepChange
 }: ProgressiveLoaderProps) {
+  const colors = useSemanticColors();
   const [internalProgress, setInternalProgress] = useState(0);
   const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<number | null>(null);
   const [startTime] = useState(Date.now());
@@ -128,16 +130,16 @@ export function ProgressiveLoader({
                 key={step.id}
                 className={cn(
                   "flex items-center space-x-3 p-2 rounded-md text-sm",
-                  isCompleted && "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950/20",
-                  isCurrent && "text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/20",
+                  isCompleted && `${colors.text.success} ${colors.bg.success}`,
+                  isCurrent && `${colors.text.info} ${colors.bg.info}`,
                   isPending && "text-muted-foreground"
                 )}
               >
                 <div
                   className={cn(
                     "w-4 h-4 rounded-full flex items-center justify-center text-xs",
-                    isCompleted && "bg-green-600 text-white",
-                    isCurrent && "bg-blue-600 text-white animate-pulse",
+                    isCompleted && `${colors.bg.success} ${colors.text.onSuccess}`,
+                    isCurrent && `${colors.bg.info} ${colors.text.onInfo} animate-pulse`,
                     isPending && "bg-muted"
                   )}
                 >

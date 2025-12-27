@@ -9,6 +9,7 @@ import { Play, CheckCircle2 } from 'lucide-react';
 import { INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface TestButtonProps {
   test: {
@@ -30,6 +31,7 @@ export const TestButton: React.FC<TestButtonProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   return (
     <button
@@ -37,24 +39,24 @@ export const TestButton: React.FC<TestButtonProps> = ({
       disabled={isRunning}
       className={`flex items-start gap-3 p-3.5 rounded-lg border transition-all text-left w-full ${
         isRunning
-          ? `bg-yellow-500/10 ${useBorderTokens().getStatusBorder('warning')} cursor-wait`
+          ? `${colors.bg.warning} ${useBorderTokens().getStatusBorder('warning')} cursor-wait`
           : isCompleted
-          ? `bg-green-500/10 ${useBorderTokens().getStatusBorder('success')} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`
-          : `bg-gray-700/50 ${getStatusBorder('muted')} ${HOVER_BORDER_EFFECTS.GRAY} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+          ? `${colors.bg.success} ${useBorderTokens().getStatusBorder('success')} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`
+          : `${colors.bg.hover} ${getStatusBorder('muted')} ${HOVER_BORDER_EFFECTS.GRAY} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
       }`}
     >
       <div className="flex-shrink-0 mt-0.5">
         {isRunning ? (
           <div className="animate-spin text-base">⏳</div>
         ) : isCompleted ? (
-          <CheckCircle2 className={`${iconSizes.md} text-green-400`} />
+          <CheckCircle2 className={`${iconSizes.md} ${colors.text.success}`} />
         ) : (
-          <Play className={`${iconSizes.md} text-gray-400`} />
+          <Play className={`${iconSizes.md} ${colors.text.muted}`} />
         )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="font-medium text-white text-sm leading-tight">{test.name}</div>
-        <div className="text-xs text-gray-400 mt-1 line-clamp-2">{test.description}</div>
+        <div className={`text-xs ${colors.text.muted} mt-1 line-clamp-2`}>{test.description}</div>
       </div>
     </button>
   );

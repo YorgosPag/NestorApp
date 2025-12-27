@@ -7,7 +7,7 @@ import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { HOVER_BORDER_EFFECTS, HOVER_SHADOWS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface UserTypeSelectorProps {
   currentType?: UserType;
@@ -36,10 +36,10 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
     return (
       <div className={`${colors.bg.primary} rounded-lg shadow-sm ${quick.card} p-6`}>
         <div className="animate-pulse">
-          <div className={`${iconSizes.lg} bg-gray-200 rounded mb-4`}></div>
+          <div className={`${iconSizes.lg} ${colors.bg.hover} rounded mb-4`}></div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className={`${iconSizes.xl8} bg-gray-200 rounded-lg`}></div>
+              <div key={i} className={`${iconSizes.xl8} ${colors.bg.hover} rounded-lg`}></div>
             ))}
           </div>
         </div>
@@ -73,7 +73,7 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
       label: t('userTypeSelector.types.technical.title'),
       description: t('userTypeSelector.types.technical.description'),
       icon: <HardHat className={iconSizes.lg} />,
-      color: 'bg-purple-500'
+      color: colors.bg.accent
     }
   ];
 

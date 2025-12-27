@@ -6,6 +6,7 @@ import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
   getCursorPreviewBorderStyles,
   getCursorShapeButtonStyles,
@@ -21,6 +22,7 @@ type LineStyle = 'solid' | 'dashed' | 'dotted' | 'dash-dot';
 export function CursorSettings() {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, getDirectionalBorder, radius } = useBorderTokens();
+  const colors = useSemanticColors();
   // Αφαιρείται το tab state - όλες οι ρυθμίσεις θα εμφανίζονται μαζί
 
   // 🔺 REAL CURSOR SYSTEM INTEGRATION - Αντικατάσταση mock state
@@ -80,18 +82,18 @@ export function CursorSettings() {
         </div>
         <div className="space-y-4">
           {/* Cursor Shape */}
-          <div className="p-2 bg-gray-700 rounded space-y-2">
+          <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
             <div className="text-sm text-white">
               <div className="font-medium">Σχήμα Κέρσορα</div>
-              <div className="font-normal text-gray-400">Επιλογή μεταξύ κύκλου και τετραγώνου</div>
+              <div className="font-normal ${colors.text.muted}">Επιλογή μεταξύ κύκλου και τετραγώνου</div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => handleCursorShapeChange('circle')}
                 className={`p-2 ${quick.button} text-xs transition-colors ${
                   settings.cursor.shape === 'circle'
-                    ? `bg-blue-600 ${getStatusBorder('info')}`
-                    : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
+                    ? `${colors.bg.primary} ${getStatusBorder('info')}`
+                    : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
                 }`}
               >
                 <div
@@ -104,8 +106,8 @@ export function CursorSettings() {
                 onClick={() => handleCursorShapeChange('square')}
                 className={`p-2 ${quick.button} text-xs transition-colors ${
                   settings.cursor.shape === 'square'
-                    ? `bg-blue-600 ${getStatusBorder('info')}`
-                    : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
+                    ? `${colors.bg.primary} ${getStatusBorder('info')}`
+                    : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
                 }`}
               >
                 <div
@@ -118,9 +120,9 @@ export function CursorSettings() {
           </div>
 
           {/* Cursor Color */}
-          <div className="p-2 bg-gray-700 rounded space-y-2">
-            <label className="block text-sm font-medium text-gray-200">Χρώμα Κέρσορα</label>
-            <div className="text-xs text-gray-400 mb-2">Χρώμα περιγράμματος κέρσορα</div>
+          <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
+            <label className="block text-sm font-medium ${colors.text.secondary}">Χρώμα Κέρσορα</label>
+            <div className="text-xs ${colors.text.muted} mb-2">Χρώμα περιγράμματος κέρσορα</div>
             <ColorDialogTrigger
               value={settings.cursor.color}
               onChange={handleCursorColorChange}
@@ -135,18 +137,18 @@ export function CursorSettings() {
           </div>
 
           {/* Cursor Line Style */}
-          <div className="p-2 bg-gray-700 rounded space-y-2">
+          <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
             <div className="text-sm text-white">
               <div className="font-medium">Είδος Γραμμής</div>
-              <div className="font-normal text-gray-400">Στυλ περιγράμματος κέρσορα</div>
+              <div className="font-normal ${colors.text.muted}">Στυλ περιγράμματος κέρσορα</div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => handleCursorLineStyleChange('solid')}
                 className={`p-2 ${quick.button} text-xs transition-colors ${
                   settings.cursor.line_style === 'solid'
-                    ? `bg-blue-600 ${getStatusBorder('info')}`
-                    : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
+                    ? `${colors.bg.primary} ${getStatusBorder('info')}`
+                    : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
                 }`}
               >
                 <div
@@ -159,8 +161,8 @@ export function CursorSettings() {
                 onClick={() => handleCursorLineStyleChange('dashed')}
                 className={`p-2 ${quick.button} text-xs transition-colors ${
                   settings.cursor.line_style === 'dashed'
-                    ? `bg-blue-600 ${getStatusBorder('info')}`
-                    : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
+                    ? `${colors.bg.primary} ${getStatusBorder('info')}`
+                    : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
                 }`}
               >
                 <div
@@ -175,8 +177,8 @@ export function CursorSettings() {
                 onClick={() => handleCursorLineStyleChange('dotted')}
                 className={`p-2 ${quick.button} text-xs transition-colors ${
                   settings.cursor.line_style === 'dotted'
-                    ? `bg-blue-600 ${getStatusBorder('info')}`
-                    : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
+                    ? `${colors.bg.primary} ${getStatusBorder('info')}`
+                    : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
                 }`}
               >
                 <div
@@ -189,8 +191,8 @@ export function CursorSettings() {
                 onClick={() => handleCursorLineStyleChange('dash-dot')}
                 className={`p-2 ${quick.button} text-xs transition-colors ${
                   settings.cursor.line_style === 'dash-dot'
-                    ? `bg-blue-600 ${getStatusBorder('info')}`
-                    : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
+                    ? `${colors.bg.primary} ${getStatusBorder('info')}`
+                    : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
                 }`}
               >
                 <div
@@ -203,10 +205,10 @@ export function CursorSettings() {
           </div>
 
           {/* Cursor Line Width */}
-          <div className="p-2 bg-gray-700 rounded space-y-2">
+          <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
             <div className="text-sm text-white">
               <div className="font-medium">Πάχος Γραμμής Κέρσορα</div>
-              <div className="font-normal text-gray-400">Πάχος περιγράμματος σε pixels</div>
+              <div className="font-normal ${colors.text.muted}">Πάχος περιγράμματος σε pixels</div>
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -218,7 +220,7 @@ export function CursorSettings() {
                 onChange={(e) => handleCursorLineWidthChange(parseFloat(e.target.value))}
                 className="flex-1"
               />
-              <div className={`${iconSizes.xs} text-xs bg-gray-600 text-white rounded px-2 py-1 text-center`}>{settings.cursor.line_width || 1}px</div>
+              <div className={`${iconSizes.xs} text-xs ${colors.bg.muted} text-white rounded px-2 py-1 text-center`}>{settings.cursor.line_width || 1}px</div>
             </div>
             <div className="flex gap-1">
               {[1, 1.5, 2, 3, 4, 5].map(width => (
@@ -227,8 +229,8 @@ export function CursorSettings() {
                   onClick={() => handleCursorLineWidthChange(width)}
                   className={`flex-1 p-1 rounded text-xs transition-colors ${
                     (settings.cursor.line_width || 1) === width
-                      ? `bg-blue-600 ${getStatusBorder('info')}`
-                      : `bg-gray-600 ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
+                      ? `${colors.bg.primary} ${getStatusBorder('info')}`
+                      : `${colors.bg.muted} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
                   }`}
                 >
                   <div
@@ -242,10 +244,10 @@ export function CursorSettings() {
           </div>
 
           {/* Cursor Size */}
-          <div className="p-2 bg-gray-700 rounded space-y-2">
+          <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
             <div className="text-sm text-white">
               <div className="font-medium">Μέγεθος Κέρσορα</div>
-              <div className="font-normal text-gray-400">Διάμετρος/πλευρά σε pixels</div>
+              <div className="font-normal ${colors.text.muted}">Διάμετρος/πλευρά σε pixels</div>
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -257,7 +259,7 @@ export function CursorSettings() {
                 onChange={(e) => handleCursorSizeChange(parseInt(e.target.value))}
                 className="flex-1"
               />
-              <div className={`${iconSizes.xs} text-xs bg-gray-600 text-white rounded px-2 py-1 text-center`}>{settings.cursor.size}px</div>
+              <div className={`${iconSizes.xs} text-xs ${colors.bg.muted} text-white rounded px-2 py-1 text-center`}>{settings.cursor.size}px</div>
             </div>
             <div className="flex gap-1">
               {[5, 10, 15, 25, 50].map(size => (
@@ -266,8 +268,8 @@ export function CursorSettings() {
                   onClick={() => handleCursorSizeChange(size)}
                   className={`flex-1 p-2 ${quick.button} text-xs transition-colors ${
                     settings.cursor.size === size
-                      ? `${getStatusBorder('info')} bg-blue-600`
-                      : `${getStatusBorder('default')} bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
+                      ? `${getStatusBorder('info')} ${colors.bg.primary}`
+                      : `${getStatusBorder('default')} ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
                   }`}
                 >
                   <div
@@ -281,10 +283,10 @@ export function CursorSettings() {
           </div>
 
           {/* Cursor Opacity */}
-          <div className="p-2 bg-gray-700 rounded space-y-2">
+          <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
             <div className="text-sm text-white">
               <div className="font-medium">Διαφάνεια Κέρσορα</div>
-              <div className="font-normal text-gray-400">Επίπεδο διαφάνειας του κέρσορα</div>
+              <div className="font-normal ${colors.text.muted}">Επίπεδο διαφάνειας του κέρσορα</div>
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -296,23 +298,23 @@ export function CursorSettings() {
                 onChange={(e) => handleCursorOpacityChange(parseFloat(e.target.value))}
                 className="flex-1"
               />
-              <div className={`${iconSizes.xs} text-xs bg-gray-600 text-white rounded px-2 py-1 text-center`}>{Math.round(settings.cursor.opacity * 100)}%</div>
+              <div className={`${iconSizes.xs} text-xs ${colors.bg.muted} text-white rounded px-2 py-1 text-center`}>{Math.round(settings.cursor.opacity * 100)}%</div>
             </div>
           </div>
 
           {/* Show/Hide Cursor */}
-          <div className="p-2 bg-gray-700 rounded space-y-2">
+          <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
             <div className="text-sm text-white">
               <div className="font-medium">Εμφάνιση Κέρσορα</div>
-              <div className="font-normal text-gray-400">Εμφάνιση/απόκρυψη κύκλου κέρσορα</div>
+              <div className="font-normal ${colors.text.muted}">Εμφάνιση/απόκρυψη κύκλου κέρσορα</div>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => handleCursorEnabledChange(true)}
                 className={`flex-1 p-2 ${quick.button} text-xs transition-colors ${
                   settings.cursor.enabled
-                    ? `bg-blue-600 ${getStatusBorder('info')}`
-                    : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
+                    ? `${colors.bg.primary} ${getStatusBorder('info')}`
+                    : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
                 }`}
               >
                 Ενεργό
@@ -321,8 +323,8 @@ export function CursorSettings() {
                 onClick={() => handleCursorEnabledChange(false)}
                 className={`flex-1 p-2 ${quick.button} text-xs transition-colors ${
                   !settings.cursor.enabled
-                    ? `bg-blue-600 ${getStatusBorder('info')}`
-                    : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
+                    ? `${colors.bg.primary} ${getStatusBorder('info')}`
+                    : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
                 }`}
               >
                 Απενεργοποιημένο

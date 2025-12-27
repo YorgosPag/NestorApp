@@ -38,10 +38,10 @@ export function HierarchyDebugPanel() {
     return (
       <div className={`${colors.bg.secondary} p-4 rounded-lg ${getStatusBorder('muted')}`}>
         <h3 className="text-white text-lg font-semibold mb-2 flex items-center space-x-2">
-          <CraneIcon className={`${iconSizes.md} text-orange-500`} />
+          <CraneIcon className={`${iconSizes.md} ${colors.text.warning}`} />
           <span>{t('panels.hierarchy.projectHierarchy')}</span>
         </h3>
-        <p className="text-gray-400">{t('panels.hierarchy.loading')}</p>
+        <p className={`${colors.text.muted}`}>{t('panels.hierarchy.loading')}</p>
       </div>
     );
   }
@@ -50,7 +50,7 @@ export function HierarchyDebugPanel() {
     return (
       <div className={`${colors.bg.secondary} p-4 rounded-lg ${getStatusBorder('error')}`}>
         <h3 className="text-white text-lg font-semibold mb-2">{t('panels.hierarchy.error')}</h3>
-        <p className="text-red-400">{error}</p>
+        <p className={`${colors.text.error}`}>{error}</p>
         <button 
           onClick={loadCompanies}
           className={`mt-2 px-3 py-1 ${colors.bg.info} text-white rounded ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON}`}
@@ -64,15 +64,15 @@ export function HierarchyDebugPanel() {
   return (
     <div className={`${colors.bg.secondary} p-4 rounded-lg ${getStatusBorder('muted')}`}>
       <h3 className="text-white text-lg font-semibold mb-4 flex items-center space-x-2">
-        <CraneIcon className={`${iconSizes.md} text-orange-500`} />
+        <CraneIcon className={`${iconSizes.md} ${colors.text.warning}`} />
         <span>{t('panels.hierarchy.projectHierarchy')}</span>
       </h3>
       
       {/* Companies List */}
       <div className="mb-4">
-        <h4 className="text-gray-300 font-medium mb-2">{t('panels.hierarchy.companies')} ({companies.length})</h4>
+        <h4 className={`${colors.text.tertiary} font-medium mb-2`}>{t('panels.hierarchy.companies')} ({companies.length})</h4>
         {companies.length === 0 ? (
-          <p className="text-gray-500 text-sm">{t('panels.hierarchy.noCompanies')}</p>
+          <p className={`${colors.text.disabled} text-sm`}>{t('panels.hierarchy.noCompanies')}</p>
         ) : (
           <div className="space-y-1">
             {companies.map(company => (
@@ -82,7 +82,7 @@ export function HierarchyDebugPanel() {
                 className={`w-full text-left px-2 py-1 rounded text-sm ${
                   selectedCompany?.id === company.id
                     ? `${colors.bg.warning} text-white`
-                    : `${colors.bg.hover} text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
+                    : `${colors.bg.hover} ${colors.text.tertiary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
                 }`}
               >
                 <Building className={`${iconSizes.sm} inline mr-1`} />{company.companyName}
@@ -98,22 +98,22 @@ export function HierarchyDebugPanel() {
       {/* Selected Company Info */}
       {selectedCompany && (
         <div className={`mb-4 pl-4 ${getDirectionalBorder('warning', 'left')}`}>
-          <h4 className="text-orange-300 font-medium mb-2">
+          <h4 className="${colors.text.warning} font-medium mb-2">
             <div className="flex items-center space-x-2">
               <Building className={iconSizes.sm} />
               <span>{selectedCompany.companyName}</span>
             </div>
           </h4>
-          <div className="text-xs text-gray-400 mb-2">
+          <div className="text-xs ${colors.text.muted} mb-2">
             {selectedCompany.vatNumber && <div>ΑΦΜ: {selectedCompany.vatNumber}</div>}
             {selectedCompany.legalForm && <div>{selectedCompany.legalForm}</div>}
           </div>
           
           {/* Projects for Selected Company */}
           <div className="mb-3">
-            <h5 className="text-gray-300 text-sm font-medium mb-2">{t('panels.hierarchy.projects')} ({projects.length})</h5>
+            <h5 className="${colors.text.tertiary} text-sm font-medium mb-2">{t('panels.hierarchy.projects')} ({projects.length})</h5>
             {projects.length === 0 ? (
-              <p className="text-gray-500 text-xs">{t('panels.hierarchy.noProjects')}</p>
+              <p className="${colors.text.disabled} text-xs">{t('panels.hierarchy.noProjects')}</p>
             ) : (
               <div className="space-y-1">
                 {projects.map(project => (
@@ -123,7 +123,7 @@ export function HierarchyDebugPanel() {
                     className={`w-full text-left px-2 py-1 rounded text-sm ${
                       selectedProject?.id === project.id
                         ? `${colors.bg.info} text-white`
-                        : `${colors.bg.hover} text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
+                        : `${colors.bg.hover} ${colors.text.tertiary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
                     }`}
                   >
                     <FolderIcon className={`${iconSizes.sm} inline mr-1`} />{project.name}
@@ -141,7 +141,7 @@ export function HierarchyDebugPanel() {
       {/* Selected Project Info */}
       {selectedProject && (
         <div className={`mb-4 pl-4 ${getDirectionalBorder('info', 'left')}`}>
-          <h4 className="text-blue-300 font-medium mb-2">
+          <h4 className="${colors.text.info} font-medium mb-2">
             <div className="flex items-center space-x-2">
               <Building2 className={iconSizes.sm} />
               <span>{selectedProject.name}</span>
@@ -151,7 +151,7 @@ export function HierarchyDebugPanel() {
           {/* Buildings */}
           {selectedProject.buildings.length > 0 && (
             <div className="mb-3">
-              <h5 className="text-gray-300 text-sm font-medium mb-1">{t('panels.hierarchy.buildings')}</h5>
+              <h5 className="${colors.text.tertiary} text-sm font-medium mb-1">{t('panels.hierarchy.buildings')}</h5>
               <div className="space-y-1">
                 {selectedProject.buildings.map(building => (
                   <button
@@ -160,7 +160,7 @@ export function HierarchyDebugPanel() {
                     className={`w-full text-left px-2 py-1 rounded text-sm ${
                       selectedBuilding?.id === building.id
                         ? `${colors.bg.success} text-white`
-                        : `${colors.bg.hover} text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
+                        : `${colors.bg.hover} ${colors.text.tertiary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
                     }`}
                   >
                     <Building2 className={`${iconSizes.sm} inline mr-1`} />{building.name}
@@ -175,7 +175,7 @@ export function HierarchyDebugPanel() {
 
           {/* Parking */}
           {selectedProject.parkingSpots && selectedProject.parkingSpots.length > 0 && (
-            <div className="text-sm text-gray-400 flex items-center space-x-2">
+            <div className="text-sm ${colors.text.muted} flex items-center space-x-2">
               <ParkingCircle className={iconSizes.sm} />
               <span>{t('panels.hierarchy.parkingSpots', { count: selectedProject.parkingSpots.length })}</span>
             </div>
@@ -186,7 +186,7 @@ export function HierarchyDebugPanel() {
       {/* Selected Building Info */}
       {selectedBuilding && (
         <div className={`mb-4 pl-8 ${getDirectionalBorder('success', 'left')}`}>
-          <h4 className="text-green-300 font-medium mb-2">
+          <h4 className="${colors.text.success} font-medium mb-2">
             <div className="flex items-center space-x-2">
               <Building2 className={iconSizes.sm} />
               <span>{selectedBuilding.name}</span>
@@ -196,7 +196,7 @@ export function HierarchyDebugPanel() {
           {/* Floors */}
           {selectedBuilding.floors.length > 0 && (
             <div className="mb-3">
-              <h5 className="text-gray-300 text-sm font-medium mb-1">{t('panels.hierarchy.floors')}</h5>
+              <h5 className="${colors.text.tertiary} text-sm font-medium mb-1">{t('panels.hierarchy.floors')}</h5>
               <div className="space-y-1">
                 {selectedBuilding.floors.map(floor => (
                   <button
@@ -205,7 +205,7 @@ export function HierarchyDebugPanel() {
                     className={`w-full text-left px-2 py-1 rounded text-sm ${
                       selectedFloor?.id === floor.id
                         ? `${colors.bg.info} text-white`
-                        : `${colors.bg.hover} text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
+                        : `${colors.bg.hover} ${colors.text.tertiary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
                     }`}
                   >
                     <Home className={`${iconSizes.sm} inline mr-1`} />{floor.name}
@@ -220,7 +220,7 @@ export function HierarchyDebugPanel() {
 
           {/* Storage Areas */}
           {selectedBuilding.storageAreas && selectedBuilding.storageAreas.length > 0 && (
-            <div className="text-sm text-gray-400 flex items-center space-x-2">
+            <div className="text-sm ${colors.text.muted} flex items-center space-x-2">
               <Package className={iconSizes.sm} />
               <span>{t('panels.hierarchy.storageAreas', { count: selectedBuilding.storageAreas.length })}</span>
             </div>
@@ -231,7 +231,7 @@ export function HierarchyDebugPanel() {
       {/* Selected Floor Info */}
       {selectedFloor && (
         <div className={`mb-4 pl-12 ${getDirectionalBorder('info', 'left')}`}>
-          <h4 className="text-purple-300 font-medium mb-2">
+          <h4 className="${colors.text.accent} font-medium mb-2">
             <div className="flex items-center space-x-2">
               <Home className={iconSizes.sm} />
               <span>{selectedFloor.name}</span>
@@ -239,7 +239,7 @@ export function HierarchyDebugPanel() {
           </h4>
           <div className="text-sm space-y-1">
             {Array.isArray(selectedFloor.units) ? selectedFloor.units.map(unit => (
-              <div key={unit.id} className="text-gray-400 flex justify-between">
+              <div key={unit.id} className="${colors.text.muted} flex justify-between">
                 <span className="flex items-center space-x-1">
                   <Home className={iconSizes.xs} />
                   <span>{unit.name}</span>
@@ -255,7 +255,7 @@ export function HierarchyDebugPanel() {
                 </span>
               </div>
             )) : (
-              <div className="text-gray-500 text-xs">Δεν υπάρχουν διαθέσιμα units</div>
+              <div className="${colors.text.disabled} text-xs">Δεν υπάρχουν διαθέσιμα units</div>
             )}
           </div>
         </div>
@@ -263,13 +263,13 @@ export function HierarchyDebugPanel() {
 
       {/* Available Destinations */}
       <div className={`mt-6 pt-4 ${getDirectionalBorder('muted', 'top')}`}>
-        <h4 className="text-gray-300 font-medium mb-2 flex items-center space-x-2">
-          <Target className={`${iconSizes.sm} text-blue-400`} />
+        <h4 className="${colors.text.tertiary} font-medium mb-2 flex items-center space-x-2">
+          <Target className={`${iconSizes.sm} ${colors.text.info}`} />
           <span>{t('panels.hierarchy.availableDestinations')} ({destinations.length})</span>
         </h4>
         <div className="max-h-32 overflow-y-auto text-xs space-y-1">
           {destinations.map(dest => (
-            <div key={dest.id} className="text-gray-400 flex justify-between">
+            <div key={dest.id} className="${colors.text.muted} flex justify-between">
               <span>{dest.label}</span>
               <span className={`px-1 rounded ${
                 dest.type === 'project' ? colors.bg.info :

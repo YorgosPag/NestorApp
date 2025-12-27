@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { CommonBadge } from '@/core/badges';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatDateTime } from '@/lib/intl-utils';
 import { truncateText } from '@/lib/obligations-utils'; // ✅ Using centralized function
 import { Button } from '../ui/button';
@@ -31,15 +32,15 @@ import { MESSAGE_TYPES, MESSAGE_STATUSES, MESSAGE_DIRECTIONS } from '../../lib/c
 
 // Note: CHANNEL_ICONS will use iconSizes within component context
 
-const CHANNEL_COLORS = {
-  [MESSAGE_TYPES.EMAIL]: 'bg-blue-100 text-blue-800',
-  [MESSAGE_TYPES.TELEGRAM]: 'bg-cyan-100 text-cyan-800',
-  [MESSAGE_TYPES.WHATSAPP]: 'bg-green-100 text-green-800',
-  [MESSAGE_TYPES.MESSENGER]: 'bg-purple-100 text-purple-800',
-  [MESSAGE_TYPES.SMS]: 'bg-orange-100 text-orange-800',
-  [MESSAGE_TYPES.CALL]: 'bg-gray-100 text-gray-800',
-  default: 'bg-gray-100 text-gray-800',
-};
+const getChannelColors = (colors: ReturnType<typeof useSemanticColors>) => ({
+  [MESSAGE_TYPES.EMAIL]: `${colors.bg.infoSubtle} ${colors.text.info}`,
+  [MESSAGE_TYPES.TELEGRAM]: `${colors.bg.accentSubtle} ${colors.text.accent}`,
+  [MESSAGE_TYPES.WHATSAPP]: `${colors.bg.successSubtle} ${colors.text.success}`,
+  [MESSAGE_TYPES.MESSENGER]: `${colors.bg.accentSubtle} ${colors.text.accent}`,
+  [MESSAGE_TYPES.SMS]: `${colors.bg.warningSubtle} ${colors.text.warning}`,
+  [MESSAGE_TYPES.CALL]: `${colors.bg.muted} ${colors.text.muted}`,
+  default: `${colors.bg.muted} ${colors.text.muted}`,
+});
 
 // Note: STATUS_ICONS will use iconSizes within component context
 
@@ -47,6 +48,8 @@ const safeToLowerCase = (value) => (value || '').toLowerCase();
 
 const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) => {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
+  const channelColors = getChannelColors(colors);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -125,12 +128,12 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
 
   const getStatusIcon = (status) => {
     switch(status) {
-      case MESSAGE_STATUSES.SENT: return <CheckCircle className={`${iconSizes.sm} text-green-600`} />;
-      case MESSAGE_STATUSES.DELIVERED: return <CheckCircle className={`${iconSizes.sm} text-green-600`} />;
-      case MESSAGE_STATUSES.COMPLETED: return <CheckCircle className={`${iconSizes.sm} text-green-600`} />;
-      case MESSAGE_STATUSES.FAILED: return <AlertCircle className={`${iconSizes.sm} text-red-600`} />;
-      case MESSAGE_STATUSES.PENDING: return <Clock className={`${iconSizes.sm} text-orange-600`} />;
-      default: return <Clock className={`${iconSizes.sm} text-gray-600`} />;
+      case MESSAGE_STATUSES.SENT: return <CheckCircle className={`${iconSizes.sm} ${colors.text.success}`} />;
+      case MESSAGE_STATUSES.DELIVERED: return <CheckCircle className={`${iconSizes.sm} ${colors.text.success}`} />;
+      case MESSAGE_STATUSES.COMPLETED: return <CheckCircle className={`${iconSizes.sm} ${colors.text.success}`} />;
+      case MESSAGE_STATUSES.FAILED: return <AlertCircle className={`${iconSizes.sm} ${colors.text.error}`} />;
+      case MESSAGE_STATUSES.PENDING: return <Clock className={`${iconSizes.sm} ${colors.text.warning}`} />;
+      default: return <Clock className={`${iconSizes.sm} ${colors.text.muted}`} />;
     }
   };
 
@@ -196,7 +199,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
           <div className="flex flex-wrap gap-2 mt-4">
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
-                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} text-gray-400`} />
+                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} ${colors.text.muted}`} />
                 <Input
                   placeholder="Αναζήτηση μηνυμάτων..."
                   value={filters.searchTerm}
@@ -247,7 +250,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
       <CardContent>
         <div className={`space-y-2 overflow-y-auto`} style={createDynamicHeightConfig(height).containerStyle}>
           {filteredMessages.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className={`text-center py-8 ${colors.text.muted}`}>
               <MessageSquare className={`${iconSizes.xl} mx-auto mb-2 opacity-30`} />
               <p>Δεν βρέθηκαν μηνύματα</p>
             </div>
@@ -258,7 +261,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
               <Card key={message.id} className={`${HOVER_BACKGROUND_EFFECTS.LIGHT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
-                    <div className={`p-2 rounded-full ${CHANNEL_COLORS[message.channel] || CHANNEL_COLORS.default}`}>
+                    <div className={`p-2 rounded-full ${channelColors[message.channel] || channelColors.default}`}>
                       {getChannelIcon(message.channel)}
                     </div>
 
@@ -278,7 +281,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
                             className="text-xs"
                           />
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-500" title={fullTime}>
+                        <div className={`flex items-center gap-2 text-sm ${colors.text.muted}`} title={fullTime}>
                           {getStatusIcon(message.status)}
                           <span>{relativeTime}</span>
                         </div>
@@ -300,7 +303,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
                         </div>
                       )}
 
-                      <div className="text-gray-700">
+                      <div className={colors.text.primary}>
                         {truncateText(message.content, 120)}
                       </div>
 

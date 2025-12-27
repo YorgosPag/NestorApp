@@ -12,7 +12,7 @@ import {
 import { User, Check, X } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { getContactDisplayName } from '@/types/contacts';
 import { useBulkAssign } from './hooks/useBulkAssign';
@@ -45,8 +45,8 @@ export function BulkAssignToolbar({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <User className={`${iconSizes.sm} text-blue-700 dark:text-blue-300`} />
-            <Label className="text-sm font-medium text-blue-800 dark:text-blue-200">
+            <User className={`${iconSizes.sm} ${colors.text.info}`} />
+            <Label className="text-sm font-medium ${colors.text.info}">
               Μαζική Ανάθεση σε Πελάτη
             </Label>
           </div>

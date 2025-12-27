@@ -18,6 +18,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { GeoCoordinate, GeoControlPoint } from '../types';
 import type { PolygonType, UniversalPolygon } from '@geo-alert/core';
 
@@ -105,6 +106,12 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
   onPolygonDeleted,
   administrativeBoundaries = []
 }) => {
+  // ========================================================================
+  // 🎯 ENTERPRISE: CENTRALIZED DESIGN TOKENS
+  // ========================================================================
+
+  const colors = useSemanticColors();
+
   // ========================================================================
   // 🎯 ENTERPRISE: CENTRALIZED STATE MANAGEMENT
   // ========================================================================
@@ -231,7 +238,7 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
 
     // Enterprise notification
     const notification = document.createElement('div');
-    notification.className = `absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-green-500 text-white p-6 rounded-lg shadow-2xl z-[10000] animate-pulse ${getStatusBorder('success')}`;
+    notification.className = `absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 ${colors.bg.success} text-white p-6 rounded-lg shadow-2xl z-[10000] animate-pulse ${getStatusBorder('success')}`;
     notification.innerHTML = `
       <div class="flex items-center space-x-3">
         <span class="text-2xl">🎯</span>

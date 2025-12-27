@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Placeholder stats for Physical Spaces
 const spacesStats: DashboardStat[] = [
@@ -55,6 +56,7 @@ const spacesStats: DashboardStat[] = [
 export default function SpacesPage() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   return (
     <TooltipProvider>
       <div className="flex h-screen bg-background">
@@ -64,10 +66,10 @@ export default function SpacesPage() {
           <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex h-14 items-center px-4">
               <div className="flex items-center gap-2">
-                <Layout className={`${iconSizes.md} text-muted-foreground`} />
+                <Layout className={`${iconSizes.md} ${colors.text.muted}`} />
                 <h1 className="text-lg font-semibold">Χώροι</h1>
               </div>
-              <div className="ml-auto text-sm text-muted-foreground">
+              <div className={`ml-auto text-sm ${colors.text.muted}`}>
                 Φυσικοί χώροι - Τι υπάρχει και πού βρίσκεται
               </div>
             </div>
@@ -91,11 +93,11 @@ export default function SpacesPage() {
                   </div>
                   <h3 className="font-semibold">Διαμερίσματα</h3>
                 </div>
-                <p className="text-sm text-muted-foreground mb-2">
+                <p className={`text-sm ${colors.text.muted} mb-2`}>
                   Κατοικήσιμοι χώροι σε όλα τα κτίρια
                 </p>
                 <div className="text-2xl font-bold">486</div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className={`text-xs ${colors.text.muted} mt-1`}>
                   Διαμερίσματα, μεζονέτες, γκαρσονιέρες
                 </p>
               </div>
@@ -103,16 +105,16 @@ export default function SpacesPage() {
               {/* Αποθήκες Card */}
               <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-orange-500/10 rounded-lg">
-                    <Package className={`${iconSizes.md} text-orange-500`} />
+                  <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
+                    <Package className={`${iconSizes.md} ${colors.text.warning}`} />
                   </div>
                   <h3 className="font-semibold">Αποθήκες</h3>
                 </div>
-                <p className="text-sm text-muted-foreground mb-2">
+                <p className={`text-sm ${colors.text.muted} mb-2`}>
                   Χώροι αποθήκευσης και αποθηκών
                 </p>
                 <div className="text-2xl font-bold">324</div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className={`text-xs ${colors.text.muted} mt-1`}>
                   Πωλήσιμες και κοινόχρηστες
                 </p>
               </div>
@@ -120,16 +122,16 @@ export default function SpacesPage() {
               {/* Parking Card */}
               <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <Car className={`${iconSizes.md} text-blue-500`} />
+                  <div className={`p-2 ${colors.bg.info}/10 rounded-lg`}>
+                    <Car className={`${iconSizes.md} ${colors.text.info}`} />
                   </div>
                   <h3 className="font-semibold">Θέσεις Στάθμευσης</h3>
                 </div>
-                <p className="text-sm text-muted-foreground mb-2">
+                <p className={`text-sm ${colors.text.muted} mb-2`}>
                   Θέσεις parking εσωτερικές και εξωτερικές
                 </p>
                 <div className="text-2xl font-bold">437</div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className={`text-xs ${colors.text.muted} mt-1`}>
                   Υπόγεια, σκεπαστά, υπαίθρια
                 </p>
               </div>
@@ -137,16 +139,16 @@ export default function SpacesPage() {
               {/* Κοινόχρηστοι Card */}
               <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-green-500/10 rounded-lg">
-                    <Users className={`${iconSizes.md} text-green-500`} />
+                  <div className={`p-2 ${colors.bg.success}/10 rounded-lg`}>
+                    <Users className={`${iconSizes.md} ${colors.text.success}`} />
                   </div>
                   <h3 className="font-semibold">Κοινόχρηστοι Χώροι</h3>
                 </div>
-                <p className="text-sm text-muted-foreground mb-2">
+                <p className={`text-sm ${colors.text.muted} mb-2`}>
                   Κοινές εστίες, διάδρομοι, υπηρεσίες
                 </p>
                 <div className="text-2xl font-bold">42</div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className={`text-xs ${colors.text.muted} mt-1`}>
                   Κοινόχρηστοι και υπηρεσιών
                 </p>
               </div>
@@ -158,7 +160,7 @@ export default function SpacesPage() {
                 <Layout className={iconSizes.sm} />
                 <span className="font-medium">Φυσικοί Χώροι</span>
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className={`text-sm ${colors.text.muted} mt-1`}>
                 Εδώ βλέπετε όλους τους φυσικούς χώρους που υπάρχουν στα κτίρια.
                 Δεν περιλαμβάνονται στοιχεία πώλησης - μόνο η φυσική κατανομή και τοποθεσία.
               </p>

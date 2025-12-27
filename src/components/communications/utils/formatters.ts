@@ -11,7 +11,7 @@ export const getTypeColor = (type: string) => ({
   call: 'text-purple-600 bg-purple-100',
   whatsapp: 'text-green-600 bg-green-100',
   telegram: 'text-blue-600 bg-blue-100',
-}[type] || 'text-gray-600 bg-gray-100');
+}[type] || 'text-slate-600 bg-slate-100');
 
 export const getStatusIcon = (status: string) => ({
   sent: CheckCircle, delivered: CheckCircle, completed: CheckCircle, failed: XCircle, pending: Clock,

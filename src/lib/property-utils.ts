@@ -2,14 +2,18 @@
 import { Home, Building } from "lucide-react";
 import { PROPERTY_STATUS_LABELS } from '@/constants/property-statuses-enterprise';
 import { borderVariants } from '@/styles/design-tokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 /**
- * 🏢 ENTERPRISE PROPERTY STATUS CONFIGURATION
+ * 🏢 ENTERPRISE PROPERTY STATUS CONFIGURATION με SEMANTIC COLORS
  *
- * Κεντρικοποιημένη διαμόρφωση property status με semantic colors
- * Χρησιμοποιεί enterprise design tokens χωρίς React hooks
+ * Dynamic configuration function που χρησιμοποιεί semantic colors
+ * Enterprise-grade με fallback support
  */
-export const PROPERTY_STATUS_CONFIG = {
+export const getPropertyStatusConfig = (colors?: ReturnType<typeof useSemanticColors>) => {
+    if (!colors) {
+        // Enterprise fallback για non-React contexts
+        return {
     'for-sale': {
         label: PROPERTY_STATUS_LABELS['for-sale'],
         color: `bg-green-50 text-green-800 ${borderVariants.status.success.className}`,
@@ -32,9 +36,42 @@ export const PROPERTY_STATUS_CONFIG = {
     },
     default: {
         label: 'Άγνωστο',
-        color: `bg-gray-50 text-gray-600 ${borderVariants.card.className}`,
+        color: `bg-slate-50 text-slate-600 ${borderVariants.card.className}`,
     },
-} as const;
+        } as const;
+    }
+
+    // 🎨 Semantic colors implementation
+    return {
+        'for-sale': {
+            label: PROPERTY_STATUS_LABELS['for-sale'],
+            color: `${colors.bg.successSubtle} ${colors.text.success} ${borderVariants.status.success.className}`,
+        },
+        'sold': {
+            label: PROPERTY_STATUS_LABELS['sold'],
+            color: `${colors.bg.errorSubtle} ${colors.text.error} ${borderVariants.status.error.className}`,
+        },
+        'for-rent': {
+            label: PROPERTY_STATUS_LABELS['for-rent'],
+            color: `${colors.bg.infoSubtle} ${colors.text.info} ${borderVariants.status.info.className}`,
+        },
+        'rented': {
+            label: PROPERTY_STATUS_LABELS['rented'],
+            color: `${colors.bg.warningSubtle} ${colors.text.warning} ${borderVariants.status.warning.className}`,
+        },
+        'reserved': {
+            label: PROPERTY_STATUS_LABELS['reserved'],
+            color: `${colors.bg.warningSubtle} ${colors.text.warning} ${borderVariants.status.warning.className}`,
+        },
+        default: {
+            label: 'Άγνωστο',
+            color: `${colors.bg.muted} ${colors.text.muted} ${borderVariants.card.className}`,
+        },
+    } as const;
+};
+
+// Legacy export για backward compatibility
+export const PROPERTY_STATUS_CONFIG = getPropertyStatusConfig();
 
 export const PROPERTY_TYPE_ICONS: { [key: string]: React.ElementType } = {
   'Στούντιο': Home,

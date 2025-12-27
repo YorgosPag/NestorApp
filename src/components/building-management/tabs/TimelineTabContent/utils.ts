@@ -3,7 +3,7 @@
 
 import { cn } from '@/lib/utils';
 import { Rocket, Building2, Zap, Palette, Target, ClipboardList } from 'lucide-react';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export const milestones = [
     {

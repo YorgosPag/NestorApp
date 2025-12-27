@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, Mail, Phone, Calendar, FileText, Edit, Trash2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { CommonBadge } from '@/core/badges';
 import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS, INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import type { Opportunity, FirestoreishTimestamp } from '@/types/crm';
@@ -29,20 +30,22 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-// Constants for stage colors, defined outside the component for stable reference.
-const STAGE_COLORS: Record<NonNullable<Opportunity['stage']>, string> = {
+// 🏢 ENTERPRISE: Centralized stage colors function
+const getStageColors = (colors: ReturnType<typeof useSemanticColors>): Record<NonNullable<Opportunity['stage']>, string> => ({
     'initial_contact': brandClasses.primary.badge,
-    'qualification': 'bg-yellow-100 text-yellow-800',
-    'viewing': 'bg-purple-100 text-purple-800',
-    'proposal': 'bg-orange-100 text-orange-800',
-    'negotiation': 'bg-teal-100 text-teal-800',
-    'contract': 'bg-indigo-100 text-indigo-800',
-    'closed_won': 'bg-green-100 text-green-800',
-    'closed_lost': 'bg-red-100 text-red-800'
-};
+    'qualification': `${colors.bg.warningSubtle} ${colors.text.warning}`,
+    'viewing': `${colors.bg.accentSubtle} ${colors.text.accent}`,
+    'proposal': `${colors.bg.warningSubtle} ${colors.text.warning}`,
+    'negotiation': `${colors.bg.infoSubtle} ${colors.text.info}`,
+    'contract': `${colors.bg.accentSubtle} ${colors.text.accent}`,
+    'closed_won': `${colors.bg.successSubtle} ${colors.text.success}`,
+    'closed_lost': `${colors.bg.errorSubtle} ${colors.text.error}`
+});
 
-const getStatusColor = (status?: Opportunity['stage']) => {
-    return STAGE_COLORS[status!] ?? 'bg-gray-100 text-gray-800';
+const getStatusColor = (status?: Opportunity['stage'], colors?: ReturnType<typeof useSemanticColors>) => {
+    if (!colors) return 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300'; // Enterprise fallback
+    const stageColors = getStageColors(colors);
+    return stageColors[status!] ?? `${colors.bg.muted} ${colors.text.muted}`;
 };
 
 // ✅ ENTERPRISE MIGRATION: Using centralized formatDateTime for consistent date formatting
@@ -66,6 +69,7 @@ const formatDate = (timestamp: FirestoreishTimestamp): string => {
 
 export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity: Opportunity, onEdit: (opportunity: Opportunity) => void, onDelete: (opportunityId: string, opportunityName: string) => void }) {
     const iconSizes = useIconSizes();
+    const colors = useSemanticColors();
     const router = useRouter();
 
     const handleCardClick = () => {
@@ -89,7 +93,7 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
                   status="company"
                   customLabel={opportunity.stage || ''}
                   size="sm"
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(opportunity.stage)}`}
+                  className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(opportunity.stage, colors)}`}
                 />
             </div>
             
@@ -122,7 +126,7 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
             )}
 
             {opportunity.estimatedValue !== undefined && (
-                <p className="text-right text-sm font-bold text-green-600 mt-2" aria-live="polite">
+                <p className={`text-right text-sm font-bold ${colors.text.success} mt-2`} aria-live="polite">
                     {opportunity.estimatedValue.toLocaleString('el-GR')}€
                 </p>
             )}

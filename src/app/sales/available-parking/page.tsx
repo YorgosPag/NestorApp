@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Placeholder stats for Available Parking
 const parkingStats: DashboardStat[] = [
@@ -66,10 +66,10 @@ export default function AvailableParkingPage() {
           <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex h-14 items-center px-4">
               <div className="flex items-center gap-2">
-                <Car className={`${iconSizes.md} text-muted-foreground`} />
+                <Car className={`${iconSizes.md} ${colors.text.muted}`} />
                 <h1 className="text-lg font-semibold">Διαθέσιμα Parking</h1>
               </div>
-              <div className="ml-auto text-sm text-muted-foreground">
+              <div className={`ml-auto text-sm ${colors.text.muted}`}>
                 Θέσεις στάθμευσης προς πώληση - Ενεργές καταχωρήσεις
               </div>
             </div>
@@ -96,7 +96,7 @@ export default function AvailableParkingPage() {
                   <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className={`p-2 ${colors.bg.info}/10 rounded-lg`}>
-                        <Building2 className={`${iconSizes.sm} text-blue-500`} />
+                        <Building2 className={`${iconSizes.sm} ${colors.text.info}`} />
                       </div>
                       <h3 className="font-medium">Κλειστά Υπόγεια</h3>
                       <span className={`ml-auto ${colors.bg.info}/20 ${colors.text.info} px-2 py-1 rounded text-sm font-medium`}>
@@ -105,16 +105,16 @@ export default function AvailableParkingPage() {
                     </div>
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Μέση τιμή</span>
-                        <span className="text-green-600 font-medium">€28K</span>
+                        <span className={colors.text.muted}>Μέση τιμή</span>
+                        <span className={`${colors.text.success} font-medium`}>€28K</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Εύρος</span>
+                        <span className={colors.text.muted}>Εύρος</span>
                         <span>€18K - €42K</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Ζήτηση</span>
-                        <span className="text-orange-600 font-medium">Υψηλή</span>
+                        <span className={colors.text.muted}>Ζήτηση</span>
+                        <span className={`${colors.text.warning} font-medium`}>Υψηλή</span>
                       </div>
                     </div>
                   </div>
@@ -122,7 +122,7 @@ export default function AvailableParkingPage() {
                   <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
-                        <Square className={`${iconSizes.sm} text-purple-500`} />
+                        <Square className={`${iconSizes.sm} ${colors.text.accent}`} />
                       </div>
                       <h3 className="font-medium">Ημι-υπαίθρια</h3>
                       <span className={`ml-auto ${colors.bg.warning}/20 ${colors.text.warning} px-2 py-1 rounded text-sm font-medium`}>
@@ -131,16 +131,16 @@ export default function AvailableParkingPage() {
                     </div>
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Μέση τιμή</span>
-                        <span className="text-green-600 font-medium">€19K</span>
+                        <span className={colors.text.muted}>Μέση τιμή</span>
+                        <span className={`${colors.text.success} font-medium`}>€19K</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Εύρος</span>
+                        <span className={colors.text.muted}>Εύρος</span>
                         <span>€12K - €28K</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Ζήτηση</span>
-                        <span className="text-blue-600 font-medium">Μέτρια</span>
+                        <span className={colors.text.muted}>Ζήτηση</span>
+                        <span className={`${colors.text.info} font-medium`}>Μέτρια</span>
                       </div>
                     </div>
                   </div>
@@ -158,7 +158,7 @@ export default function AvailableParkingPage() {
                   <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className={`p-2 ${colors.bg.success}/10 rounded-lg`}>
-                        <Building2 className={`${iconSizes.sm} text-green-500`} />
+                        <Building2 className={`${iconSizes.sm} ${colors.text.success}`} />
                       </div>
                       <h3 className="font-medium">Σκεπαστά</h3>
                       <span className={`ml-auto ${colors.bg.success}/20 ${colors.text.success} px-2 py-1 rounded text-sm font-medium`}>
@@ -167,16 +167,16 @@ export default function AvailableParkingPage() {
                     </div>
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Μέση τιμή</span>
-                        <span className="text-green-600 font-medium">€16K</span>
+                        <span className={colors.text.muted}>Μέση τιμή</span>
+                        <span className={`${colors.text.success} font-medium`}>€16K</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Εύρος</span>
+                        <span className={colors.text.muted}>Εύρος</span>
                         <span>€10K - €25K</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Ζήτηση</span>
-                        <span className="text-green-600 font-medium">Καλή</span>
+                        <span className={colors.text.muted}>Ζήτηση</span>
+                        <span className={`${colors.text.success} font-medium`}>Καλή</span>
                       </div>
                     </div>
                   </div>
@@ -184,7 +184,7 @@ export default function AvailableParkingPage() {
                   <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
-                        <Square className={`${iconSizes.sm} text-orange-500`} />
+                        <Square className={`${iconSizes.sm} ${colors.text.warning}`} />
                       </div>
                       <h3 className="font-medium">Υπαίθρια</h3>
                       <span className={`ml-auto ${colors.bg.warning}/20 ${colors.text.warning} px-2 py-1 rounded text-sm font-medium`}>
@@ -193,16 +193,16 @@ export default function AvailableParkingPage() {
                     </div>
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Μέση τιμή</span>
-                        <span className="text-green-600 font-medium">€8K</span>
+                        <span className={colors.text.muted}>Μέση τιμή</span>
+                        <span className={`${colors.text.success} font-medium`}>€8K</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Εύρος</span>
+                        <span className={colors.text.muted}>Εύρος</span>
                         <span>€4K - €12K</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Ζήτηση</span>
-                        <span className="text-red-600 font-medium">Χαμηλή</span>
+                        <span className={colors.text.muted}>Ζήτηση</span>
+                        <span className={`${colors.text.error} font-medium`}>Χαμηλή</span>
                       </div>
                     </div>
                   </div>
@@ -216,22 +216,22 @@ export default function AvailableParkingPage() {
               <div className={`p-6 bg-card ${quick.card}`}>
                 <div className="flex items-center gap-3 mb-4">
                   <div className={`p-2 ${colors.bg.info}/10 rounded-lg`}>
-                    <DollarSign className={`${iconSizes.md} text-blue-500`} />
+                    <DollarSign className={`${iconSizes.md} ${colors.text.info}`} />
                   </div>
                   <h3 className="font-semibold">Τιμές ανά Τύπο</h3>
                 </div>
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Premium (κλειστά)</span>
-                    <span className="font-medium text-green-600">€25K - €42K</span>
+                    <span className={`font-medium ${colors.text.success}`}>€25K - €42K</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Standard (σκεπαστά)</span>
-                    <span className="font-medium text-blue-600">€12K - €25K</span>
+                    <span className={`font-medium ${colors.text.info}`}>€12K - €25K</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Economy (υπαίθρια)</span>
-                    <span className="font-medium text-orange-600">€4K - €12K</span>
+                    <span className={`font-medium ${colors.text.warning}`}>€4K - €12K</span>
                   </div>
                 </div>
               </div>
@@ -240,22 +240,22 @@ export default function AvailableParkingPage() {
               <div className={`p-6 bg-card ${quick.card}`}>
                 <div className="flex items-center gap-3 mb-4">
                   <div className={`p-2 ${colors.bg.success}/10 rounded-lg`}>
-                    <Eye className={`${iconSizes.md} text-green-500`} />
+                    <Eye className={`${iconSizes.md} ${colors.text.success}`} />
                   </div>
                   <h3 className="font-semibold">Δραστηριότητα</h3>
                 </div>
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Ενεργές προβολές</span>
-                    <span className="font-medium text-blue-600">31</span>
+                    <span className={`font-medium ${colors.text.info}`}>31</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Αιτήματα επίσκεψης</span>
-                    <span className="font-medium text-green-600">12</span>
+                    <span className={`font-medium ${colors.text.success}`}>12</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Υπό διαπραγμάτευση</span>
-                    <span className="font-medium text-orange-600">7</span>
+                    <span className={`font-medium ${colors.text.warning}`}>7</span>
                   </div>
                 </div>
               </div>
@@ -264,22 +264,22 @@ export default function AvailableParkingPage() {
               <div className={`p-6 bg-card ${quick.card}`}>
                 <div className="flex items-center gap-3 mb-4">
                   <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
-                    <TrendingUp className={`${iconSizes.md} text-purple-500`} />
+                    <TrendingUp className={`${iconSizes.md} ${colors.text.accent}`} />
                   </div>
                   <h3 className="font-semibold">Market Trends</h3>
                 </div>
                 <div className="space-y-3">
                   <div className="text-sm">
-                    <div className="text-muted-foreground">Πιο δημοφιλείς</div>
+                    <div className={colors.text.muted}>Πιο δημοφιλείς</div>
                     <div className="font-medium">Κλειστά υπόγεια</div>
                   </div>
                   <div className="text-sm">
-                    <div className="text-muted-foreground">Ταχύτερη πώληση</div>
+                    <div className={colors.text.muted}>Ταχύτερη πώληση</div>
                     <div className="font-medium">3.4 μήνες</div>
                   </div>
                   <div className="text-sm">
-                    <div className="text-muted-foreground">Απόδοση επένδυσης</div>
-                    <div className="font-medium text-green-600">+6% ετησίως</div>
+                    <div className={colors.text.muted}>Απόδοση επένδυσης</div>
+                    <div className={`font-medium ${colors.text.success}`}>+6% ετησίως</div>
                   </div>
                 </div>
               </div>
@@ -291,7 +291,7 @@ export default function AvailableParkingPage() {
                 <Car className={iconSizes.sm} />
                 <span className="font-medium">Διαθέσιμα Parking</span>
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className={`text-sm ${colors.text.muted} mt-1`}>
                 Εδώ βλέπετε όλες τις θέσεις στάθμευσης που είναι ενεργά προς πώληση.
                 Περιλαμβάνονται τιμές ανά κατηγορία, ενδιαφέρον αγοραστών και market analysis.
               </p>

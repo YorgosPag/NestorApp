@@ -18,6 +18,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useRulersGridContext } from '../../../../../../systems/rulers-grid/RulersGridSystem';
 import { UnifiedColorPicker } from '../../../../../color';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export interface RulerTextSettingsProps {
   className?: string;
@@ -45,6 +46,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
 
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, radius } = useBorderTokens();
+  const colors = useSemanticColors();
   const {
     state: { rulers: rulerSettings },
     updateRulerSettings
@@ -96,10 +98,10 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Ruler Text Color */}
-      <div className={`p-2 bg-gray-700 ${radius.md} space-y-2`}>
+      <div className={`p-2 ${colors.bg.hover} ${radius.md} space-y-2`}>
         <div className="text-sm text-white">
           <div className="font-medium">Χρώμα Κειμένων</div>
-          <div className="font-normal text-gray-400">Χρώμα αριθμών και κειμένων χαράκων</div>
+          <div className={`font-normal ${colors.text.muted}`}>Χρώμα αριθμών και κειμένων χαράκων</div>
         </div>
         <div className="flex items-center gap-2">
           <div
@@ -116,17 +118,17 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
             type="text"
             value={rulerSettings.horizontal.textColor}
             onChange={(e) => handleRulerTextColorChange(e.target.value)}
-            className={`px-2 py-1 text-xs bg-gray-600 text-white ${radius.md} ${getStatusBorder('default')} w-20`}
+            className={`px-2 py-1 text-xs ${colors.bg.muted} text-white ${radius.md} ${getStatusBorder('default')} w-20`}
             placeholder="#ffffff"
           />
         </div>
       </div>
 
       {/* Font Size */}
-      <div className={`p-2 bg-gray-700 ${radius.md} space-y-2`}>
+      <div className={`p-2 ${colors.bg.hover} ${radius.md} space-y-2`}>
         <div className="text-sm text-white">
           <div className="font-medium">Μέγεθος Κειμένου</div>
-          <div className="font-normal text-gray-400">Μέγεθος των αριθμών στους χάρακες</div>
+          <div className={`font-normal ${colors.text.muted}`}>Μέγεθος των αριθμών στους χάρακες</div>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -138,17 +140,17 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
             onChange={(e) => handleRulerFontSizeChange(parseInt(e.target.value))}
             className="flex-1"
           />
-          <div className={`text-xs bg-gray-600 text-white ${radius.md} px-2 py-1 text-center w-12`}>
+          <div className={`text-xs ${colors.bg.muted} text-white ${radius.md} px-2 py-1 text-center w-12`}>
             {rulerSettings.horizontal.fontSize}px
           </div>
         </div>
       </div>
 
       {/* Text Visibility Toggle */}
-      <div className={`p-2 bg-gray-700 ${radius.md} space-y-2`}>
+      <div className={`p-2 ${colors.bg.hover} ${radius.md} space-y-2`}>
         <div className="text-sm text-white">
           <div className="font-medium">Εμφάνιση Κειμένων</div>
-          <div className="font-normal text-gray-400">Εμφάνιση/απόκρυψη αριθμών και κειμένων στους χάρακες</div>
+          <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη αριθμών και κειμένων στους χάρακες</div>
         </div>
         <div className="flex gap-2">
           <button
@@ -156,7 +158,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
             className={`flex-1 p-2 ${radius.md} text-xs border transition-colors ${
               textVisible
                 ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
             }`}
           >
             Ενεργό
@@ -166,7 +168,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
             className={`flex-1 p-2 ${radius.md} text-xs border transition-colors ${
               !textVisible
                 ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
             }`}
           >
             Ανενεργό

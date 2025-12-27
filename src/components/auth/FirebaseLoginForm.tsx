@@ -19,6 +19,7 @@ import { useFirebaseAuth } from '@/contexts/FirebaseAuthContext';
 import { Loader2, Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // INTERFACES
@@ -46,6 +47,8 @@ export function FirebaseLoginForm({
   showSignUpOption = true
 }: FirebaseLoginFormProps) {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const { signIn, signUp, resetPassword, loading, error, clearError } = useFirebaseAuth();
 
   // Form state
@@ -214,7 +217,7 @@ export function FirebaseLoginForm({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Success Message */}
           {successMessage && (
-            <Alert className={`${useBorderTokens().getStatusBorder('success')} bg-green-50 text-green-700`}>
+            <Alert className={`${getStatusBorder('success')} ${colors.bg.success} ${colors.text.success}`}>
               <AlertDescription>{successMessage}</AlertDescription>
             </Alert>
           )}
@@ -230,7 +233,7 @@ export function FirebaseLoginForm({
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium">Email</label>
             <div className="relative">
-              <Mail className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} text-gray-400`} />
+              <Mail className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} ${colors.text.muted}`} />
               <Input
                 id="email"
                 type="email"
@@ -265,7 +268,7 @@ export function FirebaseLoginForm({
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium">Κωδικός Πρόσβασης</label>
               <div className="relative">
-                <Lock className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} text-gray-400`} />
+                <Lock className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} ${colors.text.muted}`} />
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
@@ -279,7 +282,7 @@ export function FirebaseLoginForm({
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${colors.text.muted} ${colors.hover.text}`}
                 >
                   {showPassword ? (
                     <EyeOff className={iconSizes.sm} />
@@ -296,7 +299,7 @@ export function FirebaseLoginForm({
             <div className="space-y-2">
               <label htmlFor="confirmPassword" className="text-sm font-medium">Επιβεβαίωση Κωδικού</label>
               <div className="relative">
-                <Lock className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} text-gray-400`} />
+                <Lock className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} ${colors.text.muted}`} />
                 <Input
                   id="confirmPassword"
                   type="password"
@@ -328,17 +331,17 @@ export function FirebaseLoginForm({
                 <button
                   type="button"
                   onClick={() => setMode('reset')}
-                  className="text-sm text-blue-600 hover:text-blue-800 underline"
+                  className={`text-sm ${colors.text.info} ${colors.hover.text} underline`}
                 >
                   Ξεχάσατε τον κωδικό σας;
                 </button>
                 {showSignUpOption && (
                   <div>
-                    <span className="text-sm text-gray-600">Δεν έχετε λογαριασμό; </span>
+                    <span className={`text-sm ${colors.text.muted}`}>Δεν έχετε λογαριασμό; </span>
                     <button
                       type="button"
                       onClick={() => setMode('signup')}
-                      className="text-sm text-blue-600 hover:text-blue-800 underline"
+                      className={`text-sm ${colors.text.info} ${colors.hover.text} underline`}
                     >
                       Εγγραφή
                     </button>
@@ -349,11 +352,11 @@ export function FirebaseLoginForm({
 
             {mode === 'signup' && (
               <div>
-                <span className="text-sm text-gray-600">Έχετε ήδη λογαριασμό; </span>
+                <span className={`text-sm ${colors.text.muted}`}>Έχετε ήδη λογαριασμό; </span>
                 <button
                   type="button"
                   onClick={() => setMode('signin')}
-                  className="text-sm text-blue-600 hover:text-blue-800 underline"
+                  className={`text-sm ${colors.text.info} ${colors.hover.text} underline`}
                 >
                   Σύνδεση
                 </button>

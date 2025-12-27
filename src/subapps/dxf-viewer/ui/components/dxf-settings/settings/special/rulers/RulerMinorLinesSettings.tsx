@@ -45,6 +45,7 @@ import { useRulersGridContext } from '../../../../../../systems/rulers-grid/Rule
 import { ColorDialogTrigger } from '../../../../../color/EnterpriseColorDialog';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export interface RulerMinorLinesSettingsProps {
   className?: string;
@@ -68,6 +69,7 @@ export interface RulerMinorLinesSettingsProps {
  */
 export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = ({ className = '' }) => {
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   // ============================================================================
   // HOOKS
   // ============================================================================
@@ -158,10 +160,10 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Minor Lines Visibility Toggle */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
+      <div className={`p-2 ${colors.bg.hover} rounded space-y-2`}>
         <div className="text-sm text-white">
           <div className="font-medium">Εμφάνιση Δευτερευουσών Γραμμών</div>
-          <div className="font-normal text-gray-400">Εμφάνιση/απόκρυψη των δευτερευουσών γραμμών χάρακα</div>
+          <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη των δευτερευουσών γραμμών χάρακα</div>
         </div>
         <div className="flex gap-2">
           <button
@@ -169,7 +171,7 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               rulerSettings.horizontal.showMinorTicks
                 ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
             }`}
           >
             Ενεργό
@@ -179,7 +181,7 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               !rulerSettings.horizontal.showMinorTicks
                 ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
             }`}
           >
             Ανενεργό
@@ -188,10 +190,10 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
       </div>
 
       {/* Minor Lines Opacity */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
+      <div className={`p-2 ${colors.bg.hover} rounded space-y-2`}>
         <div className="text-sm text-white">
           <div className="font-medium">Διαφάνεια Δευτερευουσών Γραμμών</div>
-          <div className="font-normal text-gray-400">Επίπεδο διαφάνειας των δευτερευουσών γραμμών χάρακα</div>
+          <div className={`font-normal ${colors.text.muted}`}>Επίπεδο διαφάνειας των δευτερευουσών γραμμών χάρακα</div>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -210,7 +212,7 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
             onChange={(e) => handleMinorTickOpacityChange(parseFloat(e.target.value))}
             className="flex-1"
           />
-          <div className="w-12 text-xs bg-gray-600 text-white rounded px-2 py-1 text-center">
+          <div className={`w-12 text-xs ${colors.bg.muted} text-white rounded px-2 py-1 text-center`}>
             {Math.round(((() => {
               const tickColor = rulerSettings.horizontal.minorTickColor;
               if (tickColor.includes('rgba')) {
@@ -224,9 +226,9 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
       </div>
 
       {/* Minor Lines Color */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
-        <label className="block text-sm font-medium text-gray-200">Χρώμα Δευτερευουσών Γραμμών</label>
-        <div className="text-xs text-gray-400 mb-2">Χρώμα δευτερευουσών γραμμών (ticks) χαράκων</div>
+      <div className={`p-2 ${colors.bg.hover} rounded space-y-2`}>
+        <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Δευτερευουσών Γραμμών</label>
+        <div className={`text-xs ${colors.text.muted} mb-2`}>Χρώμα δευτερευουσών γραμμών (ticks) χαράκων</div>
         <ColorDialogTrigger
           value={rulerSettings.horizontal.minorTickColor}
           onChange={handleMinorTickColorChange}
@@ -241,10 +243,10 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
       </div>
 
       {/* Minor Lines Thickness */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
+      <div className={`p-2 ${colors.bg.hover} rounded space-y-2`}>
         <div className="text-sm text-white">
           <div className="font-medium">Πάχος Δευτερευουσών Γραμμών</div>
-          <div className="font-normal text-gray-400">Πάχος των δευτερευουσών γραμμών του χάρακα</div>
+          <div className={`font-normal ${colors.text.muted}`}>Πάχος των δευτερευουσών γραμμών του χάρακα</div>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -256,7 +258,7 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
             onChange={(e) => handleMinorTickThicknessChange(parseFloat(e.target.value))}
             className="flex-1"
           />
-          <div className="w-12 text-xs bg-gray-600 text-white rounded px-2 py-1 text-center">
+          <div className={`w-12 text-xs ${colors.bg.muted} text-white rounded px-2 py-1 text-center`}>
             {rulerSettings.horizontal.minorTickLength / 10}px
           </div>
         </div>

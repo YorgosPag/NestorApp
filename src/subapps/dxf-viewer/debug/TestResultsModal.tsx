@@ -54,7 +54,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
   const getTabBorder = (tabName: string) => {
     return activeTab === tabName
       ? `${colors.bg.secondary} text-white ${getStatusBorder('active')} ${getMultiDirectionalBorder('active', ['top', 'left', 'right'])}`
-      : `${colors.bg.hover} text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${HOVER_BACKGROUND_EFFECTS.GRAY_750}`;
+      : `${colors.bg.hover} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${HOVER_BACKGROUND_EFFECTS.GRAY_750}`;
   };
 
   // ✅ ENTERPRISE: Status borders με CSS variables
@@ -160,14 +160,14 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
             <span className="text-2xl">🧪</span>
             <div>
               <h2 className="text-xl font-bold text-white">Ενιαίο Σύστημα Εκτέλεσης Τεστ - Αποτελέσματα</h2>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className={`text-xs ${colors.text.muted} mt-1`}>
                 {new Date(report.timestamp).toLocaleString()} • {report.totalDuration.toFixed(0)}ms σύνολο
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} text-2xl leading-none ${iconSizes.xl2} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.GRAY_BUTTON} transition-colors`}
+            className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} text-2xl leading-none ${iconSizes.xl2} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.GRAY_BUTTON} transition-colors`}
           >
             ✕
           </button>
@@ -177,20 +177,20 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
         <div className={`flex items-center justify-between px-6 py-3 ${colors.bg.secondary} ${getStatusBorder('default')} ${getDirectionalBorder('default', 'bottom')}`}>
           <div className="flex gap-6">
             <div className="flex items-center gap-2">
-              <span className="text-green-400 text-lg font-bold">{report.passed}</span>
-              <span className="text-xs text-gray-400">Επιτυχία</span>
+              <span className={`${colors.text.success} text-lg font-bold`}>{report.passed}</span>
+              <span className={`text-xs ${colors.text.muted}`}>Επιτυχία</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-red-400 text-lg font-bold">{report.failed}</span>
-              <span className="text-xs text-gray-400">Αποτυχία</span>
+              <span className={`${colors.text.danger} text-lg font-bold`}>{report.failed}</span>
+              <span className={`text-xs ${colors.text.muted}`}>Αποτυχία</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-yellow-400 text-lg font-bold">{report.warnings}</span>
-              <span className="text-xs text-gray-400">Προειδοποιήσεις</span>
+              <span className={`${colors.text.warning} text-lg font-bold`}>{report.warnings}</span>
+              <span className={`text-xs ${colors.text.muted}`}>Προειδοποιήσεις</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-blue-400 text-lg font-bold">{passRate}%</span>
-              <span className="text-xs text-gray-400">Ποσοστό Επιτυχίας</span>
+              <span className={`${colors.text.info} text-lg font-bold`}>{passRate}%</span>
+              <span className={`text-xs ${colors.text.muted}`}>Ποσοστό Επιτυχίας</span>
             </div>
           </div>
 
@@ -259,7 +259,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
 
         {/* FOOTER */}
         <div className={`flex items-center justify-between px-6 py-3 ${colors.bg.secondary} rounded-b-lg ${getStatusBorder('default')} ${getDirectionalBorder('default', 'top')}`}>
-          <div className="text-xs text-gray-500">
+          <div className={`text-xs ${colors.text.disabled}`}>
             🖥️ Viewport: {report.systemInfo.viewport.width}×{report.systemInfo.viewport.height}
           </div>
           <button
@@ -317,9 +317,9 @@ const SummaryTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
                   <span className="text-xl">{icon}</span>
                   <span className="font-medium text-white text-sm">{test.name}</span>
                 </div>
-                <span className="text-xs text-gray-400">{test.duration.toFixed(0)}ms</span>
+                <span className={`text-xs ${colors.text.muted}`}>{test.duration.toFixed(0)}ms</span>
               </div>
-              <p className="text-xs text-gray-300 leading-relaxed">{test.summary}</p>
+              <p className="text-xs ${colors.text.tertiary} leading-relaxed">{test.summary}</p>
             </div>
           );
         })}
@@ -354,12 +354,12 @@ const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
         const isExpanded = expandedTests.has(index);
         const statusColor =
           test.status === 'success'
-            ? 'text-green-400'
+            ? colors.text.success
             : test.status === 'error'
-            ? 'text-red-400'
+            ? colors.text.danger
             : test.status === 'warning'
-            ? 'text-yellow-400'
-            : 'text-blue-400';
+            ? colors.text.warning
+            : colors.text.info;
 
         const icon =
           test.status === 'success'
@@ -383,29 +383,29 @@ const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
               <div className="flex items-center gap-3">
                 <span className="text-lg">{icon}</span>
                 <span className={`font-medium ${statusColor}`}>{test.name}</span>
-                <span className="text-xs text-gray-500">({test.duration.toFixed(0)}ms)</span>
+                <span className={`text-xs ${colors.text.disabled}`}>({test.duration.toFixed(0)}ms)</span>
               </div>
-              <span className="text-gray-500">{isExpanded ? '▼' : '▶'}</span>
+              <span className={`${colors.text.disabled}`}>{isExpanded ? '▼' : '▶'}</span>
             </button>
 
             {isExpanded && (
               <div className={`px-4 pb-4 pt-2 ${getStatusBorder('default')} ${getDirectionalBorder('default', 'top')}`}>
                 <div className="space-y-2">
                   <div>
-                    <span className="text-xs text-gray-500">Περίληψη:</span>
-                    <p className="text-sm text-gray-300 mt-1">{test.summary}</p>
+                    <span className={`text-xs ${colors.text.disabled}`}>Περίληψη:</span>
+                    <p className={`text-sm ${colors.text.tertiary} mt-1`}>{test.summary}</p>
                   </div>
                   {test.details && (
                     <div>
-                      <span className="text-xs text-gray-500">Λεπτομέρειες:</span>
-                      <pre className={`text-xs text-gray-300 mt-1 p-3 ${colors.bg.secondary} rounded overflow-x-auto`}>
+                      <span className={`text-xs ${colors.text.disabled}`}>Λεπτομέρειες:</span>
+                      <pre className={`text-xs ${colors.text.tertiary} mt-1 p-3 ${colors.bg.secondary} rounded overflow-x-auto`}>
                         {JSON.stringify(test.details, null, 2)}
                       </pre>
                     </div>
                   )}
                   <div>
-                    <span className="text-xs text-gray-500">Χρονοσήμανση:</span>
-                    <p className="text-xs text-gray-400 mt-1">{new Date(test.timestamp).toLocaleString()}</p>
+                    <span className={`text-xs ${colors.text.disabled}`}>Χρονοσήμανση:</span>
+                    <p className={`text-xs ${colors.text.muted} mt-1`}>{new Date(test.timestamp).toLocaleString()}</p>
                   </div>
                 </div>
               </div>
@@ -426,7 +426,7 @@ const RawTab: React.FC<{ formattedReport: string }> = ({ formattedReport }) => {
 
   return (
     <div className="h-full">
-      <pre className={`text-xs text-gray-300 font-mono whitespace-pre-wrap break-words p-4 ${colors.bg.secondary} rounded h-full overflow-y-auto`}>
+      <pre className={`text-xs ${colors.text.tertiary} font-mono whitespace-pre-wrap break-words p-4 ${colors.bg.secondary} rounded h-full overflow-y-auto`}>
         {formattedReport}
       </pre>
     </div>

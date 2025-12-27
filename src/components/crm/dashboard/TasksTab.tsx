@@ -30,7 +30,7 @@ import CreateTaskModal from './dialogs/CreateTaskModal';
 import type { CrmTask, Opportunity, FirestoreishTimestamp } from '@/types/crm';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import type { CrmTaskType, CrmTaskPriority, CrmTaskStatus } from '@/types/crm-extra';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_SHADOWS } from '@/components/ui/effects';
@@ -60,28 +60,29 @@ const TASK_TYPE_ICONS: Record<CrmTaskType, React.ElementType> = {
   other: Clock,
 };
 
-const PRIORITY_COLORS: Record<CrmTaskPriority, string> = {
-  low: 'text-green-600 bg-green-100',
-  medium: 'text-yellow-600 bg-yellow-100',
-  high: 'text-orange-600 bg-orange-100',
-  urgent: 'text-red-600 bg-red-100',
-};
+const getPriorityColors = (colors: ReturnType<typeof useSemanticColors>): Record<CrmTaskPriority, string> => ({
+  low: `${colors.text.success} ${colors.bg.successSubtle}`,
+  medium: `${colors.text.warning} ${colors.bg.warningSubtle}`,
+  high: `${colors.text.accent} ${colors.bg.accentSubtle}`,
+  urgent: `${colors.text.error} ${colors.bg.errorSubtle}`,
+});
 
-const STATUS_COLORS: Record<CrmTaskStatus, string> = {
-  pending: 'text-blue-600 bg-blue-100',
-  in_progress: 'text-purple-600 bg-purple-100',
-  completed: 'text-green-600 bg-green-100',
-  cancelled: 'text-gray-600 bg-gray-100',
-};
+const getStatusColors = (colors: ReturnType<typeof useSemanticColors>): Record<CrmTaskStatus, string> => ({
+  pending: `${colors.text.info} ${colors.bg.infoSubtle}`,
+  in_progress: `${colors.text.accent} ${colors.bg.accentSubtle}`,
+  completed: `${colors.text.success} ${colors.bg.successSubtle}`,
+  cancelled: `${colors.text.muted} ${colors.bg.muted}`,
+});
 
-const getDateColor = (dueDate?: FirestoreishTimestamp, status?: CrmTaskStatus) => {
-    if (status === 'completed') return 'text-green-600';
-    if (!dueDate) return 'text-gray-600';
+const getDateColor = (dueDate?: FirestoreishTimestamp, status?: CrmTaskStatus, colors?: ReturnType<typeof useSemanticColors>) => {
+    if (!colors) return 'text-gray-600'; // Fallback
+    if (status === 'completed') return colors.text.success;
+    if (!dueDate) return colors.text.muted;
     const date = new Date(dueDate as string); // Assuming string | Date
-    if (isPast(date) && !isToday(date)) return 'text-red-600';
-    if (isToday(date)) return 'text-blue-600';
-    if (isTomorrow(date)) return 'text-purple-600';
-    return 'text-gray-600';
+    if (isPast(date) && !isToday(date)) return colors.text.error;
+    if (isToday(date)) return colors.text.info;
+    if (isTomorrow(date)) return colors.text.accent;
+    return colors.text.muted;
 };
 
 const createFormatDueDate = (t: (key: string) => string) => (dueDate?: FirestoreishTimestamp) => {
@@ -99,6 +100,8 @@ export function TasksTab() {
   const colors = useSemanticColors();
   const { t } = useTranslation('crm');
   const formatDueDate = useMemo(() => createFormatDueDate(t), [t]);
+  const priorityColors = getPriorityColors(colors);
+  const statusColors = getStatusColors(colors);
   const [tasks, setTasks] = useState<CrmTask[]>([]);
   const [leads, setLeads] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -225,7 +228,7 @@ export function TasksTab() {
   
   if (error) {
     return (
-        <div className="p-6 text-center text-red-500">{error}</div>
+        <div className={`p-6 text-center ${colors.text.error}`}>{error}</div>
     )
   }
 
@@ -301,7 +304,7 @@ export function TasksTab() {
               <SelectItem value="week">{t('tasks.timeframe.week')}</SelectItem>
             </SelectContent>
           </Select>
-          <button onClick={() => setFilters({ status: 'all', priority: 'all', type: 'all', timeframe: 'all', searchTerm: '' })} className={`px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}>
+          <button onClick={() => setFilters({ status: 'all', priority: 'all', type: 'all', timeframe: 'all', searchTerm: '' })} className={`px-3 py-2 ${colors.bg.muted} ${colors.text.primary} rounded-lg text-sm ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}>
             {t('tasks.clearFilters')}
           </button>
         </div>
@@ -320,26 +323,26 @@ export function TasksTab() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <div className={`${iconSizes.xl} rounded-full flex items-center justify-center ${task.status === 'completed' ? 'bg-green-100' : 'bg-blue-100'}`}>
-                          <TaskIcon className={`${iconSizes.sm} ${task.status === 'completed' ? 'text-green-600' : 'text-blue-600'}`} />
+                        <div className={`${iconSizes.xl} rounded-full flex items-center justify-center ${task.status === 'completed' ? colors.bg.successSubtle : colors.bg.infoSubtle}`}>
+                          <TaskIcon className={`${iconSizes.sm} ${task.status === 'completed' ? colors.text.success : colors.text.info}`} />
                         </div>
-                        <h4 className={`font-medium ${task.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'}`}>{task.title}</h4>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${PRIORITY_COLORS[task.priority]}`}>{task.priority}</span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[task.status]}`}>{task.status}</span>
+                        <h4 className={`font-medium ${task.status === 'completed' ? `line-through ${colors.text.muted}` : colors.text.primary}`}>{task.title}</h4>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${priorityColors[task.priority]}`}>{task.priority}</span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[task.status]}`}>{task.status}</span>
                       </div>
-                      <div className="space-y-1 text-sm text-gray-600">
+                      <div className={`space-y-1 text-sm ${colors.text.muted}`}>
                         <div className="flex items-center gap-4">
-                          <span className={`flex items-center gap-1 ${getDateColor(task.dueDate, task.status)}`}><Clock className={iconSizes.xs} />{formatDueDate(task.dueDate)}</span>
+                          <span className={`flex items-center gap-1 ${getDateColor(task.dueDate, task.status, colors)}`}><Clock className={iconSizes.xs} />{formatDueDate(task.dueDate)}</span>
                           {leadName && <span className="flex items-center gap-1"><User className={iconSizes.xs} />{leadName}</span>}
                           {meta.location && <span className="flex items-center gap-1"><MapPin className={iconSizes.xs} />{meta.location}</span>}
                         </div>
-                        {task.description && <p className="text-gray-700 mt-2">{task.description}</p>}
+                        {task.description && <p className={`${colors.text.primary} mt-2`}>{task.description}</p>}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-4">
-                      {task.status !== 'completed' && <Button size="sm" variant="ghost" className="text-green-600" onClick={() => handleCompleteTask(task.id, task.title)} aria-label={t('tasks.actions.complete')}><CheckCircle className={`${iconSizes.sm} mr-1`} />{t('tasks.actions.complete')}</Button>}
+                      {task.status !== 'completed' && <Button size="sm" variant="ghost" className={colors.text.success} onClick={() => handleCompleteTask(task.id, task.title)} aria-label={t('tasks.actions.complete')}><CheckCircle className={`${iconSizes.sm} mr-1`} />{t('tasks.actions.complete')}</Button>}
                       <Button size="sm" variant="ghost" aria-label={t('tasks.actions.edit')}><Edit3 className={`${iconSizes.sm} mr-1`} />{t('tasks.actions.edit')}</Button>
-                      <Button size="sm" variant="ghost" className="text-red-600" onClick={() => handleDeleteTask(task.id, task.title)} aria-label={t('tasks.actions.delete')}><Trash2 className={`${iconSizes.sm} mr-1`} />{t('tasks.actions.delete')}</Button>
+                      <Button size="sm" variant="ghost" className={colors.text.error} onClick={() => handleDeleteTask(task.id, task.title)} aria-label={t('tasks.actions.delete')}><Trash2 className={`${iconSizes.sm} mr-1`} />{t('tasks.actions.delete')}</Button>
                     </div>
                   </div>
                 </div>

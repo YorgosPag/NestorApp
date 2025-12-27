@@ -4,6 +4,7 @@ import type { ProjectStatus } from '@/types/project';
 import { ENHANCED_STATUS_LABELS as PROPERTY_STATUS_LABELS, ENHANCED_STATUS_COLORS as PROPERTY_STATUS_COLORS } from '@/constants/property-statuses-enterprise';
 import { getDaysUntilCompletion as getDaysUntilCompletionI18n } from '@/lib/intl-utils';
 import { brandClasses } from '@/styles/design-tokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ⚠️ DEPRECATED: Use formatCurrency from intl-utils.ts for enterprise currency formatting
 // 🔄 BACKWARD COMPATIBILITY: This function is maintained for legacy support
@@ -33,22 +34,43 @@ export const getDaysUntilCompletion = (completionDate?: string) => {
 // ✅ MIGRATED: Property statuses τώρα στο /constants/property-statuses-enterprise.ts
 // 🔄 BACKWARD COMPATIBILITY: Project statuses only (non-property)
 
-export const STATUS_COLORS: Record<string, string> = {
-    // Project-specific statuses (non-property)
-    'planning': 'bg-yellow-100 text-yellow-800',
-    'in_progress': brandClasses.primary.badge,
-    'completed': 'bg-green-100 text-green-800',
-    'on_hold': 'bg-gray-100 text-gray-800',
-    'cancelled': 'bg-red-100 text-red-800',
-    'default': 'bg-gray-100 text-gray-800',
+// 🏢 Enterprise Status Colors Function με Semantic Color System
+export const getProjectStatusColors = (colors?: ReturnType<typeof useSemanticColors>): Record<string, string> => {
+    if (!colors) {
+        // Enterprise fallback για non-React contexts
+        return {
+            'planning': 'bg-yellow-100 text-yellow-800',
+            'in_progress': brandClasses.primary.badge,
+            'completed': 'bg-green-100 text-green-800',
+            'on_hold': 'bg-slate-100 text-slate-800',
+            'cancelled': 'bg-red-100 text-red-800',
+            'default': 'bg-slate-100 text-slate-800',
+            'for-sale': 'bg-green-100 text-green-800',
+            'sold': 'bg-red-100 text-red-800',
+            'for-rent': brandClasses.primary.badge,
+            'rented': 'bg-orange-100 text-orange-800',
+        };
+    }
 
-    // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ: Property statuses από centralized constants
-    'for-sale': 'bg-green-100 text-green-800',     // Uses centralized logic
-    'sold': 'bg-red-100 text-red-800',             // Uses centralized logic
-    'for-rent': brandClasses.primary.badge,       // ✅ CENTRALIZED: brandClasses.primary.badge
-    'rented': 'bg-orange-100 text-orange-800',     // Uses centralized logic
-    'reserved': 'bg-yellow-100 text-yellow-800',   // Uses centralized logic
+    return {
+        // Project-specific statuses με semantic colors
+        'planning': `${colors.bg.warningSubtle} ${colors.text.warning}`,
+        'in_progress': brandClasses.primary.badge, // Keep brand consistency
+        'completed': `${colors.bg.successSubtle} ${colors.text.success}`,
+        'on_hold': `${colors.bg.muted} ${colors.text.muted}`,
+        'cancelled': `${colors.bg.errorSubtle} ${colors.text.error}`,
+        'default': `${colors.bg.muted} ${colors.text.muted}`,
+
+        // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ: Property statuses με semantic colors
+        'for-sale': `${colors.bg.successSubtle} ${colors.text.success}`,
+        'sold': `${colors.bg.errorSubtle} ${colors.text.error}`,
+        'for-rent': brandClasses.primary.badge, // Keep brand consistency
+        'rented': `${colors.bg.warningSubtle} ${colors.text.warning}`,
+    };
 };
+
+// Legacy export για backward compatibility
+export const STATUS_COLORS: Record<string, string> = getProjectStatusColors();
 
 export const STATUS_LABELS: Record<string, string> = {
     // Project-specific statuses (non-property)

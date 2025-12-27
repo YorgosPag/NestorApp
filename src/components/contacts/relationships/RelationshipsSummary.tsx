@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Users, Building2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // 🏢 ENTERPRISE: Import centralized components και hooks
 import type { ContactType } from '@/types/contacts';
@@ -79,6 +80,7 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
   // ============================================================================
 
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const router = useRouter();
 
   const {
@@ -199,7 +201,7 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
                 <Building2 className={`${iconSizes.md} text-blue-600`} />
                 <h4 className="text-sm font-medium text-gray-900">Οργανωτικό Διάγραμμα</h4>
               </div>
-              <div className="bg-gray-50 rounded-lg p-4 border">
+              <div className={`${colors.bg.secondary} rounded-lg p-4 border`}>
                 <OrganizationTree
                   tree={organizationTree}
                   loading={treeLoading}

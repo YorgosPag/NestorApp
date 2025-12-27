@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Users, Target, Calendar, Clock } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { RecentActivities } from './RecentActivities';
 import { QuickActions } from './QuickActions';
 import { TeamPerformance } from './TeamPerformance';
@@ -12,6 +13,7 @@ import type { Opportunity } from '@/types/crm';
 
 export function OverviewTab() {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { t } = useTranslation('crm');
   
   const initialStats = [
@@ -54,16 +56,16 @@ export function OverviewTab() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, idx) => (
-          <div key={idx} className="bg-white dark:bg-card rounded-lg shadow p-6">
+          <div key={idx} className={`${colors.bg.primary} rounded-lg shadow p-6`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-muted-foreground">{stat.label}</p>
+                <p className={`text-sm ${colors.text.muted}`}>{stat.label}</p>
                 {stat.loading ? (
-                  <div className="animate-pulse bg-gray-200 h-8 w-16 rounded-md mt-1"></div>
+                  <div className={`animate-pulse ${colors.bg.hover} h-8 w-16 rounded-md mt-1`}></div>
                 ) : (
                   <p className="text-2xl font-bold mt-1">{stat.value}</p>
                 )}
-                <p className={`text-xs mt-1 text-gray-500`}>
+                <p className={`text-xs mt-1 ${colors.text.muted}`}>
                   {/* Change info can be added here */}
                 </p>
               </div>

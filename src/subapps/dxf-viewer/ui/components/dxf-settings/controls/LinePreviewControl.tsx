@@ -8,6 +8,7 @@ import React, { useMemo } from 'react';
 import type { LineSettings } from '../../../../settings-core/types';
 import { getDashArray } from '../../../../settings-core/defaults';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface LinePreviewControlProps {
   settings: Partial<LineSettings>;
@@ -21,6 +22,7 @@ const LinePreviewControlComponent: React.FC<LinePreviewControlProps> = ({
   label = 'Preview',
 }) => {
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const getDashArrayForSvg = useMemo(() => (type?: string, scale: number = 1): string => {
     const result = getDashArray(type || 'solid', scale);
     return result.length > 0 ? result.join(',') : '';
@@ -41,13 +43,13 @@ const LinePreviewControlComponent: React.FC<LinePreviewControlProps> = ({
   return (
     <div className="space-y-2">
       {label && (
-        <label className="text-sm font-medium text-gray-300">
+        <label className="text-sm font-medium ${colors.text.secondary}">
           {label}
         </label>
       )}
 
       <div
-        className={`bg-gray-900 rounded ${getStatusBorder('muted')} p-4 flex items-center justify-center`}
+        className={`${colors.bg.backgroundSecondary} rounded ${getStatusBorder('muted')} p-4 flex items-center justify-center`}
         style={{ height }}
       >
         {settings.enabled !== false ? (
@@ -86,14 +88,14 @@ const LinePreviewControlComponent: React.FC<LinePreviewControlProps> = ({
             />
           </svg>
         ) : (
-          <div className="text-gray-500 text-sm italic">
+          <div className="${colors.text.muted} text-sm italic">
             Γραμμή απενεργοποιημένη
           </div>
         )}
       </div>
 
       {/* Info text */}
-      <div className="flex items-center justify-between text-xs text-gray-400">
+      <div className="flex items-center justify-between text-xs ${colors.text.muted}">
         <span>{settings.enabled !== false ? (settings.lineType || 'solid') : 'Απενεργοποιημένη'}</span>
         <span>{(settings.lineWidth || 0.25).toFixed(2)}mm</span>
         <span>{settings.color || '#FFFFFF'}</span>

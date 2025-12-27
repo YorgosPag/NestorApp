@@ -19,6 +19,7 @@
 import React from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { GeoControlPoint } from '../../types';
 
 // ============================================================================
@@ -73,6 +74,7 @@ export const GeoStatusBar: React.FC<GeoStatusBarProps> = ({
   className = ''
 }) => {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { t } = useTranslationLazy('geo-canvas');
 
   // ========================================================================
@@ -101,7 +103,7 @@ export const GeoStatusBar: React.FC<GeoStatusBarProps> = ({
       {/* Map Loading Status */}
       <div className="flex items-center space-x-2">
         <div
-          className={`${iconSizes.xs} rounded-full ${mapLoaded ? 'bg-green-400' : 'bg-yellow-400'}`}
+          className={`${iconSizes.xs} rounded-full ${mapLoaded ? colors.bg.success : colors.bg.warning}`}
           aria-label={mapLoaded ? t('map.status.mapLoaded') : t('map.status.mapLoading')}
         />
         <span>{mapLoaded ? t('map.status.mapLoaded') : t('map.status.mapLoading')}</span>
@@ -110,7 +112,7 @@ export const GeoStatusBar: React.FC<GeoStatusBarProps> = ({
       {/* Transformation Status */}
       {isCalibrated && (
         <div className="flex items-center space-x-2">
-          <div className={`${iconSizes.xs} rounded-full bg-blue-400`} aria-label={t('map.status.transformationActive')} />
+          <div className={`${iconSizes.xs} rounded-full ${colors.bg.info}`} aria-label={t('map.status.transformationActive')} />
           <span>{t('map.status.transformationActive')}</span>
         </div>
       )}
@@ -120,14 +122,14 @@ export const GeoStatusBar: React.FC<GeoStatusBarProps> = ({
         <>
           <div className="flex items-center space-x-2">
             <div
-              className={`${iconSizes.xs} rounded-full ${polygonStats.isDrawing ? 'bg-yellow-400' : 'bg-gray-400'}`}
+              className={`${iconSizes.xs} rounded-full ${polygonStats.isDrawing ? colors.bg.warning : colors.bg.muted}`}
               aria-label={t('map.status.polygons')}
             />
             <span>{t('map.status.polygons')}: {polygonStats.totalPolygons}</span>
           </div>
           {polygonStats.isDrawing && (
             <div className="flex items-center space-x-2">
-              <div className={`${iconSizes.xs} rounded-full bg-green-400 animate-pulse`} aria-label={t('map.status.drawingActive')} />
+              <div className={`${iconSizes.xs} rounded-full ${colors.bg.success} animate-pulse`} aria-label={t('map.status.drawingActive')} />
               <span>{t('map.status.drawingActive')}</span>
             </div>
           )}
@@ -165,7 +167,7 @@ export const GeoStatusBar: React.FC<GeoStatusBarProps> = ({
 
   return (
     <footer
-      className={`absolute bottom-4 right-4 bg-gray-900 bg-opacity-90 text-white p-3 rounded-lg shadow-lg ${className}`}
+      className={`absolute bottom-4 right-4 ${colors.bg.secondary} bg-opacity-90 text-white p-3 rounded-lg shadow-lg ${className}`}
       aria-label={t('map.status.statusBar')}
     >
       <div className="text-sm space-y-2">

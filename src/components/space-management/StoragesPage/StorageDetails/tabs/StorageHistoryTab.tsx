@@ -4,6 +4,7 @@ import React from 'react';
 import type { Storage } from '@/types/storage/contracts';
 import { formatDate, formatCurrency } from '@/lib/intl-utils';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
   Clock,
   User,
@@ -51,15 +52,15 @@ function getEventIcon(type: HistoryEvent['type']) {
   }
 }
 
-function getEventColor(type: HistoryEvent['type']) {
+function getEventColor(type: HistoryEvent['type'], colors: ReturnType<typeof useSemanticColors>) {
   switch (type) {
-    case 'lease': return 'text-blue-600 bg-blue-50';
-    case 'maintenance': return 'text-orange-600 bg-orange-50';
-    case 'inspection': return 'text-green-600 bg-green-50';
-    case 'status_change': return 'text-purple-600 bg-purple-50';
-    case 'price_change': return 'text-emerald-600 bg-emerald-50';
-    case 'tenant_change': return 'text-cyan-600 bg-cyan-50';
-    default: return 'text-gray-600 bg-gray-50';
+    case 'lease': return `${colors.text.info} ${colors.bg.infoSubtle}`;
+    case 'maintenance': return `${colors.text.warning} ${colors.bg.warningSubtle}`;
+    case 'inspection': return `${colors.text.success} ${colors.bg.successSubtle}`;
+    case 'status_change': return `${colors.text.accent} ${colors.bg.accentSubtle}`;
+    case 'price_change': return `${colors.text.success} ${colors.bg.successSubtle}`;
+    case 'tenant_change': return `${colors.text.info} ${colors.bg.infoSubtle}`;
+    default: return `${colors.text.muted} ${colors.bg.muted}`;
   }
 }
 
@@ -76,6 +77,7 @@ function getStatusIcon(status: HistoryEvent['status']) {
 export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   // Γεννάμε πραγματικό ιστορικό βάση των στοιχείων της αποθήκης
   const historyEvents: HistoryEvent[] = [
     {
@@ -183,23 +185,23 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className={`bg-card ${quick.card} p-4 text-center`}>
-            <div className="text-2xl font-bold text-gray-600">{eventsByType.total}</div>
+            <div className={`text-2xl font-bold ${colors.text.muted}`}>{eventsByType.total}</div>
             <div className="text-sm text-muted-foreground">Συνολικά Γεγονότα</div>
           </div>
           <div className={`bg-card ${quick.card} p-4 text-center`}>
-            <div className="text-2xl font-bold text-blue-600">{eventsByType.lease}</div>
+            <div className={`text-2xl font-bold ${colors.text.info}`}>{eventsByType.lease}</div>
             <div className="text-sm text-muted-foreground">Μισθώσεις</div>
           </div>
           <div className={`bg-card ${quick.card} p-4 text-center`}>
-            <div className="text-2xl font-bold text-orange-600">{eventsByType.maintenance}</div>
+            <div className={`text-2xl font-bold ${colors.text.warning}`}>{eventsByType.maintenance}</div>
             <div className="text-sm text-muted-foreground">Συντηρήσεις</div>
           </div>
           <div className={`bg-card ${quick.card} p-4 text-center`}>
-            <div className="text-2xl font-bold text-green-600">{eventsByType.inspection}</div>
+            <div className={`text-2xl font-bold ${colors.text.success}`}>{eventsByType.inspection}</div>
             <div className="text-sm text-muted-foreground">Επιθεωρήσεις</div>
           </div>
           <div className={`bg-card ${quick.card} p-4 text-center`}>
-            <div className="text-2xl font-bold text-purple-600">{eventsByType.changes}</div>
+            <div className={`text-2xl font-bold ${colors.text.accent}`}>{eventsByType.changes}</div>
             <div className="text-sm text-muted-foreground">Αλλαγές</div>
           </div>
         </div>
@@ -226,7 +228,7 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
 
                 <div className="flex gap-4">
                   {/* Icon */}
-                  <div className={`flex-shrink-0 ${iconSizes.xl2} rounded-full flex items-center justify-center ${getEventColor(event.type)}`}>
+                  <div className={`flex-shrink-0 ${iconSizes.xl2} rounded-full flex items-center justify-center ${getEventColor(event.type, colors)}`}>
                     <EventIcon className={iconSizes.md} />
                   </div>
 
@@ -264,12 +266,12 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
                         {event.metadata && (
                           <div className="flex gap-2">
                             {event.metadata.amount && (
-                              <span className="bg-green-50 text-green-700 px-2 py-1 rounded">
+                              <span className={`${colors.bg.successSubtle} ${colors.text.success} px-2 py-1 rounded`}>
                                 {formatCurrency(event.metadata.amount)}
                               </span>
                             )}
                             {event.metadata.oldValue && event.metadata.newValue && (
-                              <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs">
+                              <span className={`${colors.bg.infoSubtle} ${colors.text.info} px-2 py-1 rounded text-xs`}>
                                 {typeof event.metadata.oldValue === 'number' ?
                                   `${formatCurrency(event.metadata.oldValue)} → ${formatCurrency(event.metadata.newValue)}`
                                   : `${event.metadata.oldValue} → ${event.metadata.newValue}`

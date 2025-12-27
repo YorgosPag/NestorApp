@@ -1,3 +1,5 @@
+'use client';
+
 // ============================================================================
 // 🏢 SOCIAL SHARING PLATFORMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΗ ΔΙΑΧΕΙΡΙΣΗ
 // ============================================================================
@@ -13,6 +15,7 @@ import { Mail } from 'lucide-react';
 import { designSystem } from '@/lib/design-system';
 import { HOVER_SHADOWS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { borders } from '@/styles/design-tokens';
 
 // ============================================================================
@@ -105,9 +108,12 @@ export const TelegramIcon: React.FC<{ className?: string }> = ({ className }) =>
 // ============================================================================
 
 /**
- * 🏢 SOCIAL SHARING PLATFORMS - ENTERPRISE CONFIGURATION
+ * 🏢 SOCIAL SHARING PLATFORMS - ENTERPRISE FACTORY FUNCTION
  */
-export const SOCIAL_SHARING_PLATFORMS: SharePlatform[] = [
+export const getSocialSharingPlatforms = (): SharePlatform[] => {
+  // Access semantic colors hook here would not work in non-React context
+  // Using designSystem directly for consistency
+  return [
   {
     id: 'whatsapp',
     name: 'WhatsApp',
@@ -148,10 +154,10 @@ export const SOCIAL_SHARING_PLATFORMS: SharePlatform[] = [
     name: 'Twitter',
     icon: TwitterIcon,
     colors: {
-      primary: 'bg-gray-900', // Dark για Twitter/X
+      primary: designSystem.getStatusColor('secondary', 'bg'), // Dark για Twitter/X
       gradient: 'from-gray-700 via-gray-800 to-gray-900',
       hover: designSystem.cn(
-        'bg-gray-900',
+        designSystem.getStatusColor('secondary', 'bg'),
         HOVER_SHADOWS.COLORED.GRAY
       ),
       text: 'text-white'
@@ -165,10 +171,10 @@ export const SOCIAL_SHARING_PLATFORMS: SharePlatform[] = [
     name: 'LinkedIn',
     icon: LinkedInIcon,
     colors: {
-      primary: 'bg-blue-700', // LinkedIn blue
+      primary: designSystem.getStatusColor('info', 'bg'), // LinkedIn blue
       gradient: 'from-blue-600 via-blue-700 to-blue-800',
       hover: designSystem.cn(
-        'bg-blue-700',
+        designSystem.getStatusColor('info', 'bg'),
         HOVER_SHADOWS.COLORED.BLUE
       ),
       text: 'text-white'
@@ -182,10 +188,10 @@ export const SOCIAL_SHARING_PLATFORMS: SharePlatform[] = [
     name: 'Telegram',
     icon: TelegramIcon,
     colors: {
-      primary: 'bg-sky-500', // Telegram sky blue
+      primary: designSystem.getStatusColor('info', 'bg'), // Telegram sky blue
       gradient: 'from-sky-400 via-sky-500 to-sky-600',
       hover: designSystem.cn(
-        'bg-sky-500',
+        designSystem.getStatusColor('info', 'bg'),
         HOVER_SHADOWS.COLORED.BLUE
       ),
       text: 'text-white'
@@ -199,10 +205,10 @@ export const SOCIAL_SHARING_PLATFORMS: SharePlatform[] = [
     name: 'Email',
     icon: Mail,
     colors: {
-      primary: 'bg-gray-600', // Neutral για email
+      primary: designSystem.getStatusColor('muted', 'bg'), // Neutral για email
       gradient: 'from-gray-500 via-gray-600 to-gray-700',
       hover: designSystem.cn(
-        'bg-gray-600',
+        designSystem.getStatusColor('muted', 'bg'),
         HOVER_SHADOWS.COLORED.GRAY
       ),
       text: 'text-white'
@@ -212,7 +218,14 @@ export const SOCIAL_SHARING_PLATFORMS: SharePlatform[] = [
       supportsMedia: true
     }
   }
-];
+  ];
+};
+
+/**
+ * 🔄 BACKWARD COMPATIBILITY - Legacy array export
+ * @deprecated Use getSocialSharingPlatforms() instead
+ */
+export const SOCIAL_SHARING_PLATFORMS = getSocialSharingPlatforms();
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -222,28 +235,28 @@ export const SOCIAL_SHARING_PLATFORMS: SharePlatform[] = [
  * 🔍 Get Platform by ID
  */
 export const getPlatformById = (platformId: string): SharePlatform | undefined => {
-  return SOCIAL_SHARING_PLATFORMS.find(platform => platform.id === platformId);
+  return getSocialSharingPlatforms().find(platform => platform.id === platformId);
 };
 
 /**
  * 📱 Get Mobile-Optimized Platforms
  */
 export const getMobileOptimizedPlatforms = (): SharePlatform[] => {
-  return SOCIAL_SHARING_PLATFORMS.filter(platform => platform.config?.mobileOptimized);
+  return getSocialSharingPlatforms().filter(platform => platform.config?.mobileOptimized);
 };
 
 /**
  * 🖼️ Get Media-Supporting Platforms
  */
 export const getMediaSupportingPlatforms = (): SharePlatform[] => {
-  return SOCIAL_SHARING_PLATFORMS.filter(platform => platform.config?.supportsMedia);
+  return getSocialSharingPlatforms().filter(platform => platform.config?.supportsMedia);
 };
 
 /**
  * 📧 Get Email-Required Platforms
  */
 export const getEmailRequiredPlatforms = (): SharePlatform[] => {
-  return SOCIAL_SHARING_PLATFORMS.filter(platform => platform.config?.needsEmail);
+  return getSocialSharingPlatforms().filter(platform => platform.config?.needsEmail);
 };
 
 /**

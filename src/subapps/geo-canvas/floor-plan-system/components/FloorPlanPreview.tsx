@@ -3,6 +3,7 @@
 import React from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { ParserResult } from '../types';
 import { layoutUtilities } from '@/styles/design-tokens';
 
@@ -33,6 +34,7 @@ export interface FloorPlanPreviewProps {
 export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPreviewProps) {
   const { t } = useTranslationLazy('geo-canvas');
   const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // Format file size
   const formatFileSize = (bytes: number): string => {
@@ -45,11 +47,11 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
     <article className={`flex flex-col gap-4 ${className}`} aria-labelledby="floor-plan-preview-title">
       {/* Thumbnail Preview */}
       {result.thumbnail && (
-        <section className={`bg-gray-50 ${quick.card} p-4`} aria-labelledby="thumbnail-title">
+        <section className={`${colors.bg.hover} ${quick.card} p-4`} aria-labelledby="thumbnail-title">
           <h3 id="thumbnail-title" className="text-sm font-semibold text-gray-700 mb-3">
             {t('floorPlan.preview.thumbnailTitle')}
           </h3>
-          <figure className={`flex justify-center items-center bg-white ${quick.input}`}>
+          <figure className={`flex justify-center items-center ${colors.bg.primary} ${quick.input}`}>
             <img
               src={result.thumbnail}
               alt="Floor plan preview"
@@ -61,7 +63,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
       )}
 
       {/* File Information */}
-      <section className={`bg-blue-50 ${quick.card} p-4 ${getStatusBorder('info')}`} aria-labelledby="file-info-title">
+      <section className={`${colors.bg.info} ${quick.card} p-4 ${getStatusBorder('info')}`} aria-labelledby="file-info-title">
         <h3 id="file-info-title" className="text-sm font-semibold text-blue-700 mb-3">
           {t('floorPlan.preview.fileInfoTitle')}
         </h3>
@@ -81,7 +83,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
 
       {/* DXF-specific metadata */}
       {result.format === 'DXF' && result.geoJSON && result.bounds && (
-        <section className={`bg-green-50 ${quick.card} p-4 ${getStatusBorder('success')}`}>
+        <section className={`${colors.bg.success} ${quick.card} p-4 ${getStatusBorder('success')}`}>
           <h3 className="text-sm font-semibold text-green-700 mb-3">
             {t('floorPlan.preview.dxfDataTitle')}
           </h3>
@@ -111,7 +113,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
                 {result.layers.slice(0, 10).map((layer, index) => (
                   <span
                     key={index}
-                    className={`px-2 py-1 bg-green-100 text-green-800 text-xs ${quick.input}`}
+                    className={`px-2 py-1 ${colors.bg.success} text-green-800 text-xs ${quick.input}`}
                   >
                     {layer}
                   </span>
@@ -130,7 +132,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
       {/* Image-specific metadata */}
       {(result.format === 'PNG' || result.format === 'JPG' || result.format === 'TIFF') &&
        'metadata' in result && result.metadata && (
-        <section className={`bg-purple-50 ${quick.card} p-4 ${getStatusBorder('info')}`}>
+        <section className={`${colors.bg.accent} ${quick.card} p-4 ${getStatusBorder('info')}`}>
           <h3 className="text-sm font-semibold text-purple-700 mb-3">
             {t('floorPlan.preview.imageDataTitle')}
           </h3>
@@ -156,7 +158,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
       )}
 
       {/* Next steps hint */}
-      <section className={`bg-yellow-50 ${quick.card} p-4 ${getStatusBorder('warning')}`}>
+      <section className={`${colors.bg.warning} ${quick.card} p-4 ${getStatusBorder('warning')}`}>
         <div className="flex items-start gap-2">
           <span className="text-xl">💡</span>
           <div className="flex-1">

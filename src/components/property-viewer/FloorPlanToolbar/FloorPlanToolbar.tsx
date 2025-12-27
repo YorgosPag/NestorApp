@@ -36,6 +36,7 @@ import { cn } from '@/lib/utils';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 type ViewMode = 'view' | 'create' | 'measure' | 'edit';
 
@@ -76,6 +77,7 @@ export function FloorPlanToolbar({
 }: FloorPlanToolbarProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   const [isUploading, setIsUploading] = useState(false);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -118,7 +120,7 @@ export function FloorPlanToolbar({
           disabled={disabled}
           className={cn(
             "${iconSizes.xl} p-0",
-            active && `bg-blue-600 text-white ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON}`
+            active && `${colors.bg.info} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON}`
           )}
         >
           <Icon className={iconSizes.sm} />
@@ -133,7 +135,7 @@ export function FloorPlanToolbar({
   return (
     <TooltipProvider>
       <div className={cn(
-        `flex items-center gap-2 p-3 bg-white ${quick.separatorH} shadow-sm`,
+        `flex items-center gap-2 p-3 ${colors.bg.primary} ${quick.separatorH} shadow-sm`,
         className
       )}>
         
@@ -282,9 +284,9 @@ export function FloorPlanToolbar({
         </div>
 
         {/* STATUS INFO */}
-        <div className="ml-auto flex items-center gap-2 text-sm text-gray-600">
+        <div className={`ml-auto flex items-center gap-2 text-sm ${colors.text.muted}`}>
           <span className="capitalize">Λειτουργία: {viewMode}</span>
-          {showPDF && <span className="text-green-600">• PDF Active</span>}
+          {showPDF && <span className={`${colors.text.success}`}>• PDF Active</span>}
         </div>
       </div>
     </TooltipProvider>

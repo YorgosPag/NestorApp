@@ -3,6 +3,7 @@
 import React from 'react';
 import { CommonBadge } from '@/core/badges';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Button } from '@/components/ui/button';
 import { Edit, Save, X, CheckCircle } from 'lucide-react';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
@@ -17,6 +18,7 @@ interface GeneralProjectHeaderProps {
 
 export function GeneralProjectHeader({ isEditing, autoSaving, lastSaved, setIsEditing, handleSave }: GeneralProjectHeaderProps) {
     const iconSizes = useIconSizes();
+    const colors = useSemanticColors();
     const handleCancel = () => {
         // Here you might want to reset form data to its initial state
         setIsEditing(false);
@@ -30,7 +32,7 @@ export function GeneralProjectHeader({ isEditing, autoSaving, lastSaved, setIsEd
                   customLabel="ID: 3"
                   variant="secondary"
                   size="sm"
-                  className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                  className={`${colors.bg.infoSubtle} ${colors.text.info}`}
                 />
                 <CommonBadge
                   status="company"
@@ -44,12 +46,12 @@ export function GeneralProjectHeader({ isEditing, autoSaving, lastSaved, setIsEd
                     {autoSaving ? (
                     <>
                         <AnimatedSpinner size="small" />
-                        <span className="text-blue-600">Αποθήκευση...</span>
+                        <span className={colors.text.info}>Αποθήκευση...</span>
                     </>
                     ) : lastSaved ? (
                     <>
-                        <CheckCircle className={`${iconSizes.xs} text-green-600`} />
-                        <span className="text-green-600">
+                        <CheckCircle className={`${iconSizes.xs} ${colors.text.success}`} />
+                        <span className={colors.text.success}>
                         Αποθηκεύτηκε {lastSaved.toLocaleTimeString('el-GR')}
                         </span>
                     </>

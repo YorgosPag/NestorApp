@@ -3,6 +3,7 @@
 import { Home, Building2, Users } from 'lucide-react';
 import { formatFloorLabel as formatFloorLabelI18n, getCategoryLabel as getCategoryLabelI18n, getStatusLabel as getStatusLabelI18n, getPricePerSqmUnit, formatNumber, getDaysUntilCompletion as getDaysUntilCompletionI18n } from '@/lib/intl-utils';
 import { brandClasses } from '@/styles/design-tokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 
 
@@ -43,13 +44,24 @@ export const getDaysUntilCompletion = (completionDate?: string) => {
     return getDaysUntilCompletionI18n(completionDate);
 };
 
-export const getStatusColor = (status: string) => {
+export const getStatusColor = (status: string, colors?: ReturnType<typeof useSemanticColors>) => {
+    if (!colors) {
+        // Fallback for cases where colors hook is not available
+        switch (status) {
+            case 'active': return 'bg-green-500';
+            case 'construction': return brandClasses.primary.bgDark;
+            case 'planned': return 'bg-yellow-500';
+            case 'completed': return 'bg-slate-600';
+            default: return 'bg-slate-500';
+        }
+    }
+
     switch (status) {
-        case 'active': return 'bg-green-500';
+        case 'active': return colors.bg.success;
         case 'construction': return brandClasses.primary.bgDark;
-        case 'planned': return 'bg-yellow-500';
-        case 'completed': return 'bg-gray-500';
-        default: return 'bg-gray-400';
+        case 'planned': return colors.bg.warning;
+        case 'completed': return colors.bg.muted;
+        default: return colors.bg.mutedLight;
     }
 };
 

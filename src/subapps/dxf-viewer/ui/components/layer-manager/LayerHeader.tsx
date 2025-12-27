@@ -2,10 +2,12 @@ import React from 'react';
 import { Layers, Plus, Settings } from 'lucide-react';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { LayerHeaderProps } from './types';
 
 export function LayerHeader({ isConnected, onAddLayer, onSettings }: LayerHeaderProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   return (
     <div className="flex items-center justify-between">
@@ -23,7 +25,7 @@ export function LayerHeader({ isConnected, onAddLayer, onSettings }: LayerHeader
       <div className="flex items-center gap-1">
         <button
           onClick={onAddLayer}
-          className={`p-1 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} transition-colors`}
+          className={`p-1 ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} transition-colors`}
           title="Προσθήκη νέου layer"
         >
           <Plus className={iconSizes.xs} />
@@ -32,7 +34,7 @@ export function LayerHeader({ isConnected, onAddLayer, onSettings }: LayerHeader
         <div className="relative">
           <button
             onClick={onSettings}
-            className={`p-1 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} transition-colors`}
+            className={`p-1 ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} transition-colors`}
             title="Ρυθμίσεις"
           >
             <Settings className={iconSizes.xs} />

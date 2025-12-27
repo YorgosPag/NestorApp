@@ -5,6 +5,7 @@
 import React from 'react';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface SelectionButtonProps {
   onClick: () => void;
@@ -22,6 +23,7 @@ export function SelectionButton({
   extraInfo
 }: SelectionButtonProps) {
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   return (
     <button
       onClick={onClick}
@@ -30,12 +32,12 @@ export function SelectionButton({
       <div className="flex items-center space-x-3">
         <span className="text-2xl">{icon}</span>
         <div>
-          <div className="text-white font-medium">{title}</div>
+          <div className={`${colors.text.primary} font-medium`}>{title}</div>
           {subtitle && (
-            <div className="text-gray-400 text-sm">{subtitle}</div>
+            <div className={`${colors.text.muted} text-sm`}>{subtitle}</div>
           )}
           {extraInfo && (
-            <div className="text-gray-400 text-sm">{extraInfo}</div>
+            <div className={`${colors.text.muted} text-sm`}>{extraInfo}</div>
           )}
         </div>
       </div>

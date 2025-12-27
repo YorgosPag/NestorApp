@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface PhotoData {
   id: string;
@@ -17,6 +18,7 @@ const PhotoSharePage = () => {
   const searchParams = useSearchParams();
   const [photoData, setPhotoData] = useState<PhotoData | null>(null);
   const [loading, setLoading] = useState(true);
+  const colors = useSemanticColors();
 
   useEffect(() => {
     const dataParam = searchParams.get('data');
@@ -70,7 +72,7 @@ const PhotoSharePage = () => {
   const { url, title, description } = photoData;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 p-8">
+    <div className={`flex min-h-screen flex-col items-center justify-center ${colors.bg.secondary} p-8`}>
       <h1 className="mb-6 text-3xl font-bold text-center">{title}</h1>
       <div className="max-w-3xl overflow-hidden rounded-xl shadow-2xl">
         <Image

@@ -3,12 +3,12 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { 
-  MousePointer, 
-  Plus, 
-  Ruler, 
-  Move, 
-  Link, 
+import {
+  MousePointer,
+  Plus,
+  Ruler,
+  Move,
+  Link,
   Square,
   Circle,
   Triangle,
@@ -19,6 +19,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 type ViewMode = 'view' | 'create' | 'measure' | 'edit';
@@ -71,6 +72,7 @@ export function ViewerTools({
 }: ViewerToolsProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // Local state για active tool
   const [activeTool, setActiveTool] = useState<ToolId>('select');
@@ -147,7 +149,7 @@ export function ViewerTools({
       size="sm"
       className={cn(
         `${iconSizes.xl} p-0`,
-        activeTool === tool.id && cn("bg-blue-600 text-white", HOVER_BACKGROUND_EFFECTS.BLUE)
+        activeTool === tool.id && cn(`${colors.bg.info} text-white`, HOVER_BACKGROUND_EFFECTS.BLUE)
       )}
       onClick={() => handleToolChange(tool.id)}
       disabled={isReadOnly && tool.id !== 'select'}
@@ -160,7 +162,7 @@ export function ViewerTools({
 
   return (
     <div className={cn(
-      `flex items-center gap-2 p-2 bg-white ${quick.separatorH}`,
+      `flex items-center gap-2 p-2 ${colors.bg.primary} ${quick.separatorH}`,
       className
     )}>
       
@@ -218,12 +220,12 @@ export function ViewerTools({
       </div>
 
       {/* STATUS INFO */}
-      <div className="ml-auto flex items-center gap-4 text-xs text-gray-600">
+      <div className={`ml-auto flex items-center gap-4 text-xs ${colors.text.muted}`}>
         <span>Tool: {TOOLS.find(t => t.id === activeTool)?.label}</span>
         <span>Mode: {viewMode}</span>
-        {isConnecting && <span className="text-blue-600">• Connecting</span>}
-        {selectedPropertyId && <span className="text-green-600">• Selected: {selectedPropertyId}</span>}
-        {isReadOnly && <span className="text-amber-600">• Read-Only</span>}
+        {isConnecting && <span className={colors.text.info}>• Connecting</span>}
+        {selectedPropertyId && <span className={colors.text.success}>• Selected: {selectedPropertyId}</span>}
+        {isReadOnly && <span className={colors.text.warning}>• Read-Only</span>}
       </div>
     </div>
   );

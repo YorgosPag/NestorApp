@@ -4,7 +4,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import type { StorageType } from '@/types/storage';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 export function StorageCardBackground({ type }: { type: StorageType }) {

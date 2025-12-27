@@ -6,7 +6,7 @@ import type { AdminSearchResult } from '../types/administrative-types';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // TYPES
@@ -164,7 +164,7 @@ export function BoundaryLayerControlPanel({
             step="0.1"
             value={layer.opacity}
             onChange={(e) => handleOpacityChange(layer.id, parseFloat(e.target.value))}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none slider"
+            className={`w-full h-2 ${colors.bg.secondary} rounded-lg appearance-none slider`}
           />
         </div>
       )}

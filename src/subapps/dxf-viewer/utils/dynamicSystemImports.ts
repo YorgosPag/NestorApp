@@ -9,7 +9,7 @@ import React, { ComponentType } from 'react';
 export const DynamicToolbarsSystem = dynamic(
   () => import('../systems/toolbars/ToolbarsSystem'),
   { 
-    loading: () => React.createElement('div', { className: 'animate-pulse bg-gray-100 rounded' }, 'Loading toolbars...'),
+    loading: () => React.createElement('div', { className: 'animate-pulse bg-muted rounded' }, 'Loading toolbars...'),
     ssr: false 
   }
 );
@@ -17,7 +17,7 @@ export const DynamicToolbarsSystem = dynamic(
 export const DynamicRulersGridSystem = dynamic(
   () => import('../systems/rulers-grid/RulersGridSystem'),
   { 
-    loading: () => React.createElement('div', { className: 'animate-pulse bg-gray-100 rounded' }, 'Loading rulers/grid...'),
+    loading: () => React.createElement('div', { className: 'animate-pulse bg-muted rounded' }, 'Loading rulers/grid...'),
     ssr: false 
   }
 );
@@ -25,7 +25,7 @@ export const DynamicRulersGridSystem = dynamic(
 export const DynamicConstraintsSystem = dynamic(
   () => import('../systems/constraints/ConstraintsSystem'),
   { 
-    loading: () => React.createElement('div', { className: 'animate-pulse bg-gray-100 rounded' }, 'Loading constraints...'),
+    loading: () => React.createElement('div', { className: 'animate-pulse bg-muted rounded' }, 'Loading constraints...'),
     ssr: false 
   }
 );

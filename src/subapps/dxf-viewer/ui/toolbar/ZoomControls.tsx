@@ -7,6 +7,7 @@ import { ZOOM_FACTORS } from '../../config/transform-config';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface ZoomControlsProps {
   currentZoom: number;
@@ -23,6 +24,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const { getFocusBorder, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const [inputValue, setInputValue] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -133,10 +135,10 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
   }, [applyZoom]);
 
   return (
-    <div className="flex items-center gap-1 bg-gray-900 rounded px-2 py-1">
+    <div className="flex items-center gap-1 ${colors.bg.backgroundSecondary} rounded px-2 py-1">
       <button
         onClick={handleZoomOutClick}
-        className={`h-6 w-6 p-0 text-gray-300 ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
+        className={`h-6 w-6 p-0 ${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
         title={`Zoom Out (-${ZOOM_STEP_PERCENTAGE}%) - Πληκτρολόγιο: -`}
       >
         <Minus className={iconSizes.xs} />
@@ -150,16 +152,16 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
         onKeyPress={handleKeyPress}
         onFocus={handleInputFocus}
         onBlur={handleInputBlur}
-        className={`w-16 px-1 py-0 bg-gray-800 ${getStatusBorder('muted')} rounded text-white text-xs text-center ${getFocusBorder('input')} focus:outline-none transition-colors select-all`}
+        className={`w-16 px-1 py-0 ${colors.bg.secondary} ${getStatusBorder('muted')} rounded ${colors.text.inverted} text-xs text-center ${getFocusBorder('input')} focus:outline-none transition-colors select-all`}
         title="Zoom percentage (1-99999%, δεκαδικά με . ή ,) - Press Enter or click away to apply"
         placeholder="100"
       />
       
-      <span className="text-xs text-gray-400">%</span>
+      <span className="text-xs ${colors.text.muted}">%</span>
       
       <button
         onClick={handleZoomInClick}
-        className={`h-6 w-6 p-0 text-gray-300 ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
+        className={`h-6 w-6 p-0 ${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
         title={`Zoom In (+${ZOOM_STEP_PERCENTAGE}%) - Πληκτρολόγιο: +`}
       >
         <Plus className={iconSizes.xs} />

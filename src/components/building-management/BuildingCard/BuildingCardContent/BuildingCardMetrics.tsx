@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useTypography } from '@/hooks/useTypography';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
   Tooltip,
   TooltipContent,

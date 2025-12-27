@@ -3,6 +3,7 @@ import { User, Mail, Phone, Calendar, ExternalLink, Send, Edit3, Trash2 } from "
 import type { Opportunity } from '@/types/crm';
 import { INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 
 export function LeadCard({
@@ -23,16 +24,17 @@ export function LeadCard({
   getStatusColor: (status: string) => string;
 }) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   return (
-    <article className={`bg-white border rounded-lg p-4 ${INTERACTIVE_PATTERNS.CARD_STANDARD}`} itemScope itemType="https://schema.org/Person">
+    <article className={`${colors.bg.primary} border rounded-lg p-4 ${INTERACTIVE_PATTERNS.CARD_STANDARD}`} itemScope itemType="https://schema.org/Person">
       <header className="flex items-start justify-between">
         <section className="flex-1" aria-label="Lead Information">
           <div className="flex items-center gap-2 mb-2">
-            <User className={`${iconSizes.sm} text-gray-500`} />
+            <User className={`${iconSizes.sm} ${colors.text.muted}`} />
             <button
               onClick={() => onView(lead.id!)}
-              className={`font-medium text-gray-900 flex items-center gap-1 group ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
+              className={`font-medium ${colors.text.foreground} flex items-center gap-1 group ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
             >
               <span itemProp="name">{lead.fullName}</span>
               <ExternalLink className={`${iconSizes.xs} ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} ${INTERACTIVE_PATTERNS.FADE_IN_OUT}`} />
@@ -42,7 +44,7 @@ export function LeadCard({
             </span>
           </div>
 
-          <address className="space-y-1 text-sm text-gray-600 not-italic">
+          <address className={`space-y-1 text-sm ${colors.text.muted} not-italic`}>
             {lead.email && (
               <p className="flex items-center gap-2">
                 <Mail className={iconSizes.sm} />
@@ -62,7 +64,7 @@ export function LeadCard({
           </address>
 
           {lead.notes && (
-            <aside className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-700" role="note" aria-label="Σημειώσεις Lead">
+            <aside className={`mt-2 p-2 ${colors.bg.secondary} rounded text-sm ${colors.text.muted}`} role="note" aria-label="Σημειώσεις Lead">
               <strong>Σημειώσεις:</strong> {lead.notes}
             </aside>
           )}
@@ -74,7 +76,7 @@ export function LeadCard({
               onClick={() => onEmail(lead)}
               disabled={!lead.email}
               className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm ${
-                lead.email ? `text-green-600 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}` : "text-gray-400 cursor-not-allowed"
+                lead.email ? `${colors.text.success} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}` : `${colors.text.muted} cursor-not-allowed`
               }`}
               title={lead.email ? "Αποστολή Email" : "Δεν υπάρχει email"}
             >
@@ -84,7 +86,7 @@ export function LeadCard({
 
             <button
               onClick={() => onEdit(lead)}
-              className={`flex items-center gap-1 px-3 py-1.5 text-blue-600 rounded text-sm ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
+              className={`flex items-center gap-1 px-3 py-1.5 ${colors.text.info} rounded text-sm ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
             >
               <Edit3 className={iconSizes.sm} />
               Επεξεργασία
@@ -94,7 +96,7 @@ export function LeadCard({
           <section className="flex gap-2" aria-label="Δευτερεύουσες Ενέργειες">
             <button
               onClick={() => onView(lead.id!)}
-              className={`flex items-center gap-1 px-3 py-1.5 text-gray-600 rounded text-sm ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+              className={`flex items-center gap-1 px-3 py-1.5 ${colors.text.muted} rounded text-sm ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
             >
               <ExternalLink className={iconSizes.sm} />
               Προφίλ
@@ -102,7 +104,7 @@ export function LeadCard({
 
             <button
               onClick={() => onDelete(lead.id!, lead.fullName!)}
-              className={`flex items-center gap-1 px-3 py-1.5 text-red-600 rounded text-sm ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
+              className={`flex items-center gap-1 px-3 py-1.5 ${colors.text.error} rounded text-sm ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
             >
               <Trash2 className={iconSizes.sm} />
               Διαγραφή

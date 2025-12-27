@@ -9,6 +9,7 @@ import type { DXFViewerLayoutProps } from '../../integration/types';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { ToolbarSection } from './ToolbarSection';
 import { CanvasSection } from './CanvasSection';
 
@@ -18,15 +19,16 @@ import { CanvasSection } from './CanvasSection';
 export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
   const iconSizes = useIconSizes();
   const { quick, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   return (
-  <div className="fixed inset-0 z-50 bg-gray-900 flex flex-col">
+  <div className={`fixed inset-0 z-50 ${colors.bg.accent} flex flex-col`}>
     <ToolbarSection {...props} />
-    <div className={`flex justify-between items-center p-2 bg-gray-800 ${getDirectionalBorder('muted', 'bottom')}`}>
+    <div className={`flex justify-between items-center p-2 ${colors.bg.secondary} ${getDirectionalBorder('muted', 'bottom')}`}>
       <div className="flex gap-2 items-center">
         <Button
           variant="outline"
           size="sm"
-          className={`bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white ${quick.muted}`}
+          className={`${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} ${quick.muted}`}
           onClick={() => props.handleAction('setViewMode', 'normal')}
         >
           <Minimize className={`${iconSizes.sm} mr-2`} />
@@ -35,7 +37,7 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
         <Button 
           variant="outline" 
           size="sm" 
-          className={`bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white ${quick.muted}`}
+          className={`${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} ${quick.muted}`}
           onClick={() => props.handleAction('clear')}
         >
           <RotateCcw className={`${iconSizes.sm} mr-2`} />
@@ -49,7 +51,7 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
             status="company"
             customLabel={`✅ DXF Active (${props.currentScene.entities.length} entities)`}
             variant="secondary"
-            className="bg-green-600 text-white"
+            className={`${colors.bg.success} ${colors.text.inverted}`}
           />
         )}
         
@@ -58,7 +60,7 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
             status="company"
             customLabel={`🔺 Selected: ${props.selectedEntityIds.length}`}
             variant="secondary"
-            className="bg-blue-600 text-white"
+            className={`${colors.bg.info} ${colors.text.inverted}`}
           />
         )}
         

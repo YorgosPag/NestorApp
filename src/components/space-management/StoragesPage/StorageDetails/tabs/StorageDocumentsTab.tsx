@@ -5,6 +5,7 @@ import type { Storage } from '@/types/storage/contracts';
 import { formatDate, formatCurrency } from '@/lib/intl-utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
   FileText,
   Download,
@@ -59,13 +60,13 @@ function getDocumentTypeLabel(type: Document['type']) {
   }
 }
 
-function getStatusColor(status: Document['status']) {
+function getStatusColor(status: Document['status'], colors: ReturnType<typeof useSemanticColors>) {
   switch (status) {
-    case 'active': return 'text-green-600 bg-green-50';
-    case 'pending': return 'text-yellow-600 bg-yellow-50';
-    case 'expired': return 'text-red-600 bg-red-50';
-    case 'draft': return 'text-blue-600 bg-blue-50';
-    default: return 'text-gray-600 bg-gray-50';
+    case 'active': return `${colors.text.success} ${colors.bg.success}`;
+    case 'pending': return `${colors.text.warning} ${colors.bg.warning}`;
+    case 'expired': return `${colors.text.danger} ${colors.bg.error}`;
+    case 'draft': return `${colors.text.info} ${colors.bg.info}`;
+    default: return `${colors.text.muted} ${colors.bg.secondary}`;
   }
 }
 
@@ -82,6 +83,7 @@ function getStatusLabel(status: Document['status']) {
 export function StorageDocumentsTab({ storage }: StorageDocumentsTabProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // Γεννάμε πραγματικά έγγραφα βάση των στοιχείων της αποθήκης
   const [documents] = useState<Document[]>([
@@ -151,19 +153,19 @@ export function StorageDocumentsTab({ storage }: StorageDocumentsTabProps) {
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className={`bg-card ${quick.card} p-4 text-center`}>
-            <div className="text-2xl font-bold text-blue-600">{documents.length}</div>
+            <div className={`text-2xl font-bold ${colors.text.info}`}>{documents.length}</div>
             <div className="text-sm text-muted-foreground">Συνολικά Έγγραφα</div>
           </div>
           <div className={`bg-card ${quick.card} p-4 text-center`}>
-            <div className="text-2xl font-bold text-green-600">{activeDocuments.length}</div>
+            <div className={`text-2xl font-bold ${colors.text.success}`}>{activeDocuments.length}</div>
             <div className="text-sm text-muted-foreground">Ενεργά</div>
           </div>
           <div className={`bg-card ${quick.card} p-4 text-center`}>
-            <div className="text-2xl font-bold text-yellow-600">{pendingDocuments.length}</div>
+            <div className={`text-2xl font-bold ${colors.text.warning}`}>{pendingDocuments.length}</div>
             <div className="text-sm text-muted-foreground">Εκκρεμή</div>
           </div>
           <div className={`bg-card ${quick.card} p-4 text-center`}>
-            <div className="text-2xl font-bold text-red-600">{expiredDocuments.length}</div>
+            <div className={`text-2xl font-bold ${colors.text.danger}`}>{expiredDocuments.length}</div>
             <div className="text-sm text-muted-foreground">Ληγμένα</div>
           </div>
         </div>
@@ -202,7 +204,7 @@ export function StorageDocumentsTab({ storage }: StorageDocumentsTabProps) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="font-medium truncate">{doc.name}</h4>
-                        <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(doc.status)}`}>
+                        <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(doc.status, colors)}`}>
                           {getStatusLabel(doc.status)}
                         </span>
                       </div>

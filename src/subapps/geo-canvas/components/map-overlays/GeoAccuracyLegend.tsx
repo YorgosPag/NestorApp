@@ -19,6 +19,7 @@ import React from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { interactiveMapStyles } from '../InteractiveMap.styles';
@@ -78,6 +79,7 @@ export const GeoAccuracyLegend: React.FC<GeoAccuracyLegendProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   const { t } = useTranslationLazy('geo-canvas');
 
   // Early return if no control points
@@ -137,8 +139,8 @@ export const GeoAccuracyLegend: React.FC<GeoAccuracyLegendProps> = ({
           onClick={() => onVisualizationModeChange('circles')}
           className={`px-2 py-1 text-xs rounded transition-colors ${
             accuracyVisualizationMode === 'circles'
-              ? 'bg-blue-600 text-white'
-              : `bg-gray-700 text-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+              ? `${colors.bg.info} text-white`
+              : `${colors.bg.hover} text-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
           }`}
           aria-pressed={accuracyVisualizationMode === 'circles'}
         >
@@ -148,8 +150,8 @@ export const GeoAccuracyLegend: React.FC<GeoAccuracyLegendProps> = ({
           onClick={() => onVisualizationModeChange('zones')}
           className={`px-2 py-1 text-xs rounded transition-colors ${
             accuracyVisualizationMode === 'zones'
-              ? 'bg-blue-600 text-white'
-              : `bg-gray-700 text-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+              ? `${colors.bg.info} text-white`
+              : `${colors.bg.hover} text-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
           }`}
           aria-pressed={accuracyVisualizationMode === 'zones'}
         >
@@ -187,7 +189,7 @@ export const GeoAccuracyLegend: React.FC<GeoAccuracyLegendProps> = ({
 
   return (
     <aside
-      className={`absolute top-4 left-4 bg-gray-900 bg-opacity-90 text-white p-3 rounded-lg shadow-lg ${className}`}
+      className={`absolute top-4 left-4 ${colors.bg.secondary} bg-opacity-90 text-white p-3 rounded-lg shadow-lg ${className}`}
       aria-label={t('accuracy.legend')}
     >
       <div className="text-sm">
@@ -211,8 +213,8 @@ export const GeoAccuracyLegend: React.FC<GeoAccuracyLegendProps> = ({
             onClick={onToggleAccuracyCircles}
             className={`w-full px-2 py-1 text-xs rounded transition-colors ${
               showAccuracyCircles
-                ? `bg-green-600 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} text-white`
-                : `bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-gray-300`
+                ? `${colors.bg.success} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} text-white`
+                : `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-gray-300`
             }`}
             aria-pressed={showAccuracyCircles}
           >

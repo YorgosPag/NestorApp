@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface MultiLevelNavigationProps {
   property: Property;
@@ -17,11 +18,12 @@ interface MultiLevelNavigationProps {
 export function MultiLevelNavigation({ property, onSelectFloor, currentFloorId }: MultiLevelNavigationProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder, radius } = useBorderTokens();
+  const colors = useSemanticColors();
   if (!property.levels) return null;
 
   return (
-    <div className={`bg-blue-50 dark:bg-blue-950/30 ${getStatusBorder('info')} p-3 space-y-2`}>
-      <h4 className="text-xs font-semibold text-blue-800 dark:text-blue-200 flex items-center gap-2">
+    <div className={`${colors.bg.info} ${getStatusBorder('info')} p-3 space-y-2`}>
+      <h4 className={`text-xs font-semibold ${colors.text.info} flex items-center gap-2`}>
         <ChevronsUpDown className={iconSizes.sm} />
         Επίπεδα Ακινήτου
       </h4>
@@ -30,7 +32,7 @@ export function MultiLevelNavigation({ property, onSelectFloor, currentFloorId }
           key={level.floorId}
           className={cn(
             `p-2 ${radius.md} flex items-center justify-between transition-colors`,
-            currentFloorId === level.floorId ? "bg-blue-100 dark:bg-blue-900" : "bg-white/50 dark:bg-black/20"
+            currentFloorId === level.floorId ? `${colors.bg.info}` : `${colors.bg.secondary}`
           )}
         >
           <span className="text-sm font-medium">{level.name}</span>

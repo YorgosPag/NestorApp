@@ -6,9 +6,11 @@ import { storage } from '@/lib/firebase';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export default function TestUploadPage() {
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -97,7 +99,7 @@ export default function TestUploadPage() {
         </div>
 
         {file && (
-          <div className="p-4 bg-gray-50 rounded">
+          <div className={`p-4 ${colors.bg.hover} rounded`}>
             <p><strong>File:</strong> {file.name}</p>
             <p><strong>Size:</strong> {Math.round(file.size / 1024)} KB</p>
             <p><strong>Type:</strong> {file.type}</p>
@@ -107,7 +109,7 @@ export default function TestUploadPage() {
         <button
           onClick={testUpload}
           disabled={!file || uploading}
-          className="px-4 py-2 bg-blue-600 text-white rounded disabled:bg-gray-400 disabled:cursor-not-allowed"
+          className={`px-4 py-2 ${colors.bg.info} text-white rounded disabled:opacity-50 disabled:cursor-not-allowed`}>
         >
           {uploading ? `Uploading... ${progress}%` : 'Test Upload'}
         </button>
@@ -122,13 +124,13 @@ export default function TestUploadPage() {
         )}
 
         {error && (
-          <div className={`p-4 bg-red-50 ${getStatusBorder('error')} rounded text-red-700`}>
+          <div className={`p-4 ${colors.bg.error}/10 ${getStatusBorder('error')} rounded ${colors.text.error}`}>
             ❌ {error}
           </div>
         )}
 
         {result && (
-          <div className={`p-4 bg-green-50 ${getStatusBorder('success')} rounded text-green-700`}>
+          <div className={`p-4 ${colors.bg.success}/10 ${getStatusBorder('success')} rounded ${colors.text.success}`}>
             {result}
           </div>
         )}

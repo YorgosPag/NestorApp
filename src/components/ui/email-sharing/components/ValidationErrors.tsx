@@ -15,6 +15,7 @@ import { designSystem } from '@/lib/design-system';
 import { AlertCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Types
 import type { ValidationErrorsProps } from '../types';
@@ -42,6 +43,7 @@ export const ValidationErrors: React.FC<ValidationErrorsProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // Early return if hidden or no errors
   if (!show || (!error && !backendError)) return null;
@@ -50,18 +52,18 @@ export const ValidationErrors: React.FC<ValidationErrorsProps> = ({
     <section className="space-y-3" role="alert" aria-live="polite" aria-label="Σφάλματα Επικύρωσης">
       {/* Validation Error */}
       {error && (
-        <article className={`p-3 bg-yellow-50 dark:bg-yellow-900/20 ${quick.card} ${quick.input} ${getStatusBorder('warning')}`} role="alert" aria-label="Σφάλμα Επικύρωσης">
+        <article className={`p-3 ${colors.bg.warningSubtle} ${quick.card} ${quick.input} ${getStatusBorder('warning')}`} role="alert" aria-label="Σφάλμα Επικύρωσης">
           <header className={designSystem.cn(
             'flex items-start gap-3',
             designSystem.getTypographyClass('sm', 'medium'),
-            'text-yellow-800 dark:text-yellow-300'
+            `${colors.text.warning}`
           )} role="banner">
             <AlertTriangle className={`${iconSizes.md} mt-0.5 flex-shrink-0`} />
             <main>
               <h4 className="font-medium mb-1">Σφάλμα Επικύρωσης</h4>
               <p className={designSystem.cn(
                 designSystem.getTypographyClass('sm'),
-                'text-yellow-700 dark:text-yellow-200'
+                `${colors.text.warning}`
               )}>
                 {error}
               </p>
@@ -72,18 +74,18 @@ export const ValidationErrors: React.FC<ValidationErrorsProps> = ({
 
       {/* Backend Error */}
       {backendError && (
-        <article className={`p-3 bg-red-50 dark:bg-red-900/20 ${quick.card} ${quick.input} ${getStatusBorder('error')}`} role="alert" aria-label="Σφάλμα Συστήματος">
+        <article className={`p-3 ${colors.bg.errorSubtle} ${quick.card} ${quick.input} ${getStatusBorder('error')}`} role="alert" aria-label="Σφάλμα Συστήματος">
           <header className={designSystem.cn(
             'flex items-start gap-3',
             designSystem.getTypographyClass('sm', 'medium'),
-            'text-red-800 dark:text-red-300'
+            `${colors.text.danger}`
           )} role="banner">
             <XCircle className={`${iconSizes.md} mt-0.5 flex-shrink-0`} />
             <main>
               <h4 className="font-medium mb-1">Σφάλμα Συστήματος</h4>
               <p className={designSystem.cn(
                 designSystem.getTypographyClass('sm'),
-                'text-red-700 dark:text-red-200'
+                `${colors.text.danger}`
               )}>
                 {backendError}
               </p>
@@ -112,6 +114,7 @@ export const CompactValidationErrors: React.FC<ValidationErrorsProps & {
 }) => {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   if (!show || (!error && !backendError)) return null;
 
@@ -119,7 +122,7 @@ export const CompactValidationErrors: React.FC<ValidationErrorsProps & {
 
   if (variant === 'inline') {
     return (
-      <aside className="flex items-center gap-2 text-red-600 dark:text-red-400 text-xs" role="alert" aria-live="polite" aria-label="Ελλιπής Επικύρωση">
+      <aside className={`flex items-center gap-2 ${colors.text.danger} text-xs`} role="alert" aria-live="polite" aria-label="Ελλιπής Επικύρωση">
         <AlertCircle className={`${iconSizes.xs} flex-shrink-0`} />
         <span>{errorToShow}</span>
       </aside>
@@ -127,8 +130,8 @@ export const CompactValidationErrors: React.FC<ValidationErrorsProps & {
   }
 
   return (
-    <aside className={`p-2 bg-red-50 dark:bg-red-900/20 ${quick.card} ${quick.input} ${getStatusBorder('error')}`} role="alert" aria-label="Συμπαγής Επικύρωση">
-      <p className="flex items-center gap-2 text-red-700 dark:text-red-300 text-xs">
+    <aside className={`p-2 ${colors.bg.errorSubtle} ${quick.card} ${quick.input} ${getStatusBorder('error')}`} role="alert" aria-label="Συμπαγής Επικύρωση">
+      <p className={`flex items-center gap-2 ${colors.text.danger} text-xs`}>
         <AlertCircle className={`${iconSizes.xs} flex-shrink-0`} />
         <span>{errorToShow}</span>
       </p>
@@ -161,7 +164,7 @@ export const FieldValidationError: React.FC<{
       className={designSystem.cn(
         'flex items-center gap-1.5 mt-1',
         designSystem.getTypographyClass('xs'),
-        'text-red-600 dark:text-red-400'
+        `${colors.text.danger}`
       )}
       role="alert"
       aria-label="Σφάλμα Πεδίου"
@@ -186,6 +189,7 @@ export const SuccessMessage: React.FC<{
 }) => {
   const { quick, getStatusBorder } = useBorderTokens();
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const [isVisible, setIsVisible] = React.useState(show);
 
   React.useEffect(() => {
@@ -199,14 +203,14 @@ export const SuccessMessage: React.FC<{
   if (!isVisible || !message) return null;
 
   return (
-    <aside className={`p-3 bg-green-50 dark:bg-green-900/20 ${quick.card} ${quick.input} ${getStatusBorder('success')}`} role="status" aria-live="polite" aria-label="Μήνυμα Επιτυχίας">
+    <aside className={`p-3 ${colors.bg.successSubtle} ${quick.card} ${quick.input} ${getStatusBorder('success')}`} role="status" aria-live="polite" aria-label="Μήνυμα Επιτυχίας">
       <p className={designSystem.cn(
         'flex items-center gap-2',
         designSystem.getTypographyClass('sm', 'medium'),
-        'text-green-800 dark:text-green-300'
+        `${colors.text.success}`
       )}>
-        <figure className={`${iconSizes.md} rounded-full bg-green-500 flex items-center justify-center flex-shrink-0`} role="img" aria-label="Εικονίδιο Επιτυχίας">
-          <div className={`${iconSizes.xs} bg-white rounded-full`} />
+        <figure className={`${iconSizes.md} rounded-full ${colors.bg.success} flex items-center justify-center flex-shrink-0`} role="img" aria-label="Εικονίδιο Επιτυχίας">
+          <div className={`${iconSizes.xs} ${designSystem.getBackgroundColor('primary')} rounded-full`} />
         </figure>
         {message}
       </p>

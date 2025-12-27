@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import type { Opportunity } from '@/types/crm';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface QuickActionsProps {
@@ -41,12 +41,12 @@ export function QuickActions({ lead, onEdit, onNewTask, onSendEmail }: QuickActi
 
   return (
     <div className={`${colors.bg.primary} ${quick.card} shadow p-6`}>
-      <h4 className="font-medium mb-3">Γρήγορες Ενέργειες</h4>
+      <h4 className={`font-medium mb-3 ${colors.text.foreground}`}>Γρήγορες Ενέργειες</h4>
       <div className="space-y-2">
         <Button
           onClick={handleSendEmail}
           disabled={!lead.email}
-          className={`w-full flex items-center justify-start gap-3 px-4 py-3 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-200 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
+          className={`w-full flex items-center justify-start gap-3 px-4 py-3 ${colors.bg.info} ${colors.text.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
         >
           <Send className={iconSizes.md} />
           Αποστολή Email
@@ -54,21 +54,21 @@ export function QuickActions({ lead, onEdit, onNewTask, onSendEmail }: QuickActi
         <Button
           onClick={handleCall}
           disabled={!lead.phone}
-          className={`w-full flex items-center justify-start gap-3 px-4 py-3 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-200 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`}
+          className={`w-full flex items-center justify-start gap-3 px-4 py-3 ${colors.bg.success} ${colors.text.success} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`}
         >
           <PhoneCall className={iconSizes.md} />
           Κλήση
         </Button>
         <Button
           onClick={onNewTask}
-          className={`w-full flex items-center justify-start gap-3 px-4 py-3 bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-200 ${INTERACTIVE_PATTERNS.PURPLE_HOVER}`}
+          className={`w-full flex items-center justify-start gap-3 px-4 py-3 ${colors.bg.warning} ${colors.text.warning} ${INTERACTIVE_PATTERNS.PURPLE_HOVER}`}
         >
           <Plus className={iconSizes.md} />
           Νέα Εργασία
         </Button>
         <Button
           onClick={onEdit}
-          className={`w-full flex items-center justify-start gap-3 px-4 py-3 bg-gray-50 text-gray-700 dark:bg-gray-700/20 dark:text-gray-200 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+          className={`w-full flex items-center justify-start gap-3 px-4 py-3 ${colors.bg.secondary} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
         >
           <Edit3 className={iconSizes.md} />
           Επεξεργασία

@@ -10,7 +10,7 @@ import { useWizardNavigation } from '../hooks/useWizardNavigation';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 
 interface ImportWizardProps {
   isOpen: boolean;
@@ -39,11 +39,11 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
       default:
         return (
           <div className="p-6 text-center">
-            <h3 className="text-lg font-semibold text-white mb-4">Σφάλμα</h3>
-            <p className="text-gray-300 mb-6">Άγνωστο βήμα εισαγωγής</p>
+            <h3 className={`text-lg font-semibold ${colors.text.primary} mb-4`}>Σφάλμα</h3>
+            <p className={`${colors.text.muted} mb-6`}>Άγνωστο βήμα εισαγωγής</p>
             <button
               onClick={onClose}
-              className={`px-4 py-2 ${colors.bg.hover} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-white rounded`}
+              className={`px-4 py-2 ${colors.bg.hover} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.inverted}rounded`}
             >
               Κλείσιμο
             </button>
@@ -59,15 +59,15 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
         {/* Header */}
         <div className={`flex items-center justify-between p-4 ${getDirectionalBorder('muted', 'bottom')}`}>
           <div>
-            <h2 className="text-xl font-semibold text-white">Εισαγωγή DXF</h2>
-            <p className="text-sm text-gray-400">
+            <h2 className={`text-xl font-semibold ${colors.text.primary}`}>Εισαγωγή DXF</h2>
+            <p className={`text-sm ${colors.text.muted}`}>
               Βήμα {stepInfo.number} από {stepInfo.totalSteps}: {stepInfo.title}
               {importWizard.file && ` • ${importWizard.file.name}`}
             </p>
           </div>
           <button
             onClick={onClose}
-            className={`p-2 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} rounded`}
+            className={`p-2 ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} rounded`}
           >
             <X className={iconSizes.md} />
           </button>
@@ -88,14 +88,14 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
           <button
             onClick={navigation.handleBack}
             disabled={stepInfo.number === 1}
-            className={`px-4 py-2 ${colors.bg.hover} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-white rounded disabled:opacity-50`}
+            className={`px-4 py-2 ${colors.bg.hover} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.inverted}rounded disabled:opacity-50`}
           >
             Πίσω
           </button>
           <button
             onClick={navigation.handleNext}
             disabled={!navigation.canProceed()}
-            className={`px-6 py-2 ${colors.bg.info} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white rounded disabled:opacity-50`}
+            className={`px-6 py-2 ${colors.bg.info} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${colors.text.inverted}rounded disabled:opacity-50`}
           >
             {stepInfo.number === stepInfo.totalSteps ? 'Εισαγωγή' : 'Επόμενο'}
           </button>

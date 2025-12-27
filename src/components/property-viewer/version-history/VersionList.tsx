@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { formatSize } from './version-utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatDateTime as formatDate } from '@/lib/intl-utils';
 
 export function VersionList({
@@ -20,6 +21,7 @@ export function VersionList({
 }) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   return (
     <div className="p-4 space-y-2">
       {versions.map(version => (
@@ -43,7 +45,7 @@ export function VersionList({
                     status="company"
                     customLabel="Ορόσημο"
                     variant="outline"
-                    className={`${getStatusBorder('warning')} bg-yellow-50 text-yellow-700`}
+                    className={`${getStatusBorder('warning')} ${colors.bg.warning} text-yellow-700`}
                   />
                 )}
                 {version.type === 'auto' && (

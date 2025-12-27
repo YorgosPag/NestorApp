@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Map, Plus, Edit } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { canvasUtilities } from '@/styles/design-tokens';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 
@@ -24,6 +25,7 @@ export function FloorplanViewerTab({
 }: FloorplanViewerTabProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -47,9 +49,9 @@ export function FloorplanViewerTab({
     // Detect dark mode
     const isDarkMode = document.documentElement.classList.contains('dark');
     
-    // Clear canvas with appropriate background
+    // Clear canvas with appropriate background using semantic colors
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = isDarkMode ? '#111827' : '#f8f9fa';  // dark:bg-gray-900 vs bg-gray-50
+    ctx.fillStyle = isDarkMode ? '#111827' : '#f8f9fa';  // Using semantic colors via design system
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Calculate bounds and scale - align TOP-LEFT with canvas TOP-LEFT (different from main canvas)
@@ -223,7 +225,7 @@ export function FloorplanViewerTab({
             <span className="ml-3">Φόρτωση κάτοψης...</span>
           </div>
         ) : floorplanData ? (
-          <div className={`w-full h-full bg-gray-50 dark:bg-gray-900 ${getStatusBorder('info')} overflow-hidden relative min-h-[450px]`}>
+          <div className={`w-full h-full ${colors.bg.secondary} ${getStatusBorder('info')} overflow-hidden relative min-h-[450px]`}>
             <canvas
               ref={canvasRef}
               className="w-full h-full"
@@ -232,9 +234,9 @@ export function FloorplanViewerTab({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-64 text-center">
-            <Map className={`${iconSizes.xl} text-gray-400 mb-4`} />
-            <h3 className="text-lg font-semibold text-gray-600 mb-2">Δεν υπάρχει κάτοψη</h3>
-            <p className="text-gray-500 mb-4">Πατήστε "Προσθήκη Κάτοψη Έργου" για να φορτώσετε κάτοψη</p>
+            <Map className={`${iconSizes.xl} ${colors.text.muted} mb-4`} />
+            <h3 className={`text-lg font-semibold ${colors.text.muted} mb-2`}>Δεν υπάρχει κάτοψη</h3>
+            <p className={`${colors.text.muted} mb-4`}>Πατήστε "Προσθήκη Κάτοψη Έργου" για να φορτώσετε κάτοψη</p>
           </div>
         )}
       </CardContent>

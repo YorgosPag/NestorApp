@@ -13,9 +13,9 @@
 // ====================================================================
 
 // Import color systems for consistency
-import { DXF_MODAL_TYPOGRAPHY } from './modal-typography';
+// Typography handled by individual components using useTypography hook
 // Import centralized icon sizes - 🔥 NO MORE DUPLICATES!
-import { componentSizes } from '../../../styles/design-tokens';
+import { componentSizes, semanticColors } from '../../../styles/design-tokens';
 // 🏢 ENTERPRISE: Import centralized panel tokens
 import { PANEL_COLORS } from './panel-tokens';
 
@@ -30,10 +30,10 @@ import { PANEL_COLORS } from './panel-tokens';
 export const MODAL_SELECT_STYLES = {
   // DXF Technical Interface Select (Dark Theme)
   DXF_TECHNICAL: {
-    trigger: `w-full bg-gray-700 border ${PANEL_COLORS.BORDER_PRIMARY} text-white focus:border-orange-500 focus:ring-orange-500/20`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
-    content: `bg-gray-700 border ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
-    item: 'text-white hover:bg-gray-600 focus:bg-gray-600',
-    placeholder: 'text-gray-300',
+    trigger: `w-full ${PANEL_COLORS.BG_SECONDARY} border ${PANEL_COLORS.BORDER_PRIMARY} text-white focus:border-orange-500 focus:ring-orange-500/20`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
+    content: `${PANEL_COLORS.BG_SECONDARY} border ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
+    item: `text-white hover:${PANEL_COLORS.BG_TERTIARY} focus:${PANEL_COLORS.BG_TERTIARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
+    placeholder: '${semanticColors.text.tertiary}',
   },
 
   // Default Light Select
@@ -82,7 +82,7 @@ export const MODAL_SELECT_ITEM_PATTERNS = {
     container: 'flex items-center space-x-2',
     icon: componentSizes.icon.sm,          // h-4 w-4 - Centralized
     text: '',
-    description: 'text-gray-400 text-xs',
+    description: '${semanticColors.text.muted} text-xs',
   },
 
   // Text + Badge pattern
@@ -96,7 +96,7 @@ export const MODAL_SELECT_ITEM_PATTERNS = {
   MULTI_LINE: {
     container: 'flex flex-col space-y-1',
     title: 'font-medium',
-    subtitle: 'text-xs text-gray-400',
+    subtitle: 'text-xs ${semanticColors.text.muted}',
   },
 
   // Company/Organization pattern - 🏢 ENTERPRISE CENTRALIZED
@@ -104,7 +104,7 @@ export const MODAL_SELECT_ITEM_PATTERNS = {
     container: 'flex items-center space-x-2',
     icon: componentSizes.icon.sm,          // h-4 w-4 - Centralized
     name: 'font-medium',
-    industry: 'text-xs text-gray-400 ml-auto',
+    industry: 'text-xs ${semanticColors.text.muted} ml-auto',
   },
 
   // Project pattern - 🏢 ENTERPRISE CENTRALIZED
@@ -112,7 +112,7 @@ export const MODAL_SELECT_ITEM_PATTERNS = {
     container: 'flex items-center space-x-2',
     icon: componentSizes.icon.sm,          // h-4 w-4 - Centralized
     name: '',
-    count: 'text-xs text-gray-400 ml-auto',
+    count: 'text-xs ${semanticColors.text.muted} ml-auto',
   },
 
   // Building pattern - 🏢 ENTERPRISE CENTRALIZED
@@ -120,7 +120,7 @@ export const MODAL_SELECT_ITEM_PATTERNS = {
     container: 'flex items-center space-x-2',
     icon: componentSizes.icon.sm,          // h-4 w-4 - Centralized
     name: '',
-    floors: 'text-xs text-gray-400 ml-auto',
+    floors: 'text-xs ${semanticColors.text.muted} ml-auto',
   },
 
   // Unit pattern - 🏢 ENTERPRISE CENTRALIZED
@@ -128,8 +128,8 @@ export const MODAL_SELECT_ITEM_PATTERNS = {
     container: 'flex items-center space-x-2',
     icon: componentSizes.icon.sm,          // h-4 w-4 - Centralized
     name: '',
-    type: 'text-xs text-gray-400',
-    floor: 'text-xs text-gray-400',
+    type: 'text-xs ${semanticColors.text.muted}',
+    floor: 'text-xs ${semanticColors.text.muted}',
   },
 } as const;
 

@@ -2,11 +2,13 @@
 
 import React from 'react';
 import UnifiedInbox from '../UnifiedInbox';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 
 export function CommunicationsTab() {
+  const colors = useSemanticColors();
   return (
-    <div className="bg-white dark:bg-card rounded-lg shadow">
+    <div className={`${colors.bg.primary} rounded-lg shadow`}>
        <div className="p-6 border-b">
         <h2 className="text-lg font-semibold">Αρχείο Επικοινωνίας</h2>
       </div>

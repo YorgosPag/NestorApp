@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Placeholder stats for Common Spaces
 const commonStats: DashboardStat[] = [
@@ -55,6 +56,7 @@ const commonStats: DashboardStat[] = [
 export default function CommonSpacesPage() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   return (
     <TooltipProvider>
       <div className="flex h-screen bg-background">
@@ -86,8 +88,8 @@ export default function CommonSpacesPage() {
               {/* Εστίες & Λάντζες */}
               <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-green-500/10 rounded-lg">
-                    <Coffee className={`${iconSizes.md} text-green-500`} />
+                  <div className={`p-2 ${colors.bg.success}/10 rounded-lg`}>
+                    <Coffee className={`${iconSizes.md} ${colors.text.success}`} />
                   </div>
                   <h3 className="font-semibold">Εστίες & Λάντζες</h3>
                 </div>
@@ -103,8 +105,8 @@ export default function CommonSpacesPage() {
               {/* Γυμναστήρια & Spa */}
               <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <Dumbbell className={`${iconSizes.md} text-blue-500`} />
+                  <div className={`p-2 ${colors.bg.info}/10 rounded-lg`}>
+                    <Dumbbell className={`${iconSizes.md} ${colors.text.info}`} />
                   </div>
                   <h3 className="font-semibold">Γυμναστήρια & Spa</h3>
                 </div>
@@ -120,8 +122,8 @@ export default function CommonSpacesPage() {
               {/* Τεχνικοί Χώροι */}
               <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-orange-500/10 rounded-lg">
-                    <Shield className={`${iconSizes.md} text-orange-500`} />
+                  <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
+                    <Shield className={`${iconSizes.md} ${colors.text.warning}`} />
                   </div>
                   <h3 className="font-semibold">Τεχνικοί Χώροι</h3>
                 </div>
@@ -137,8 +139,8 @@ export default function CommonSpacesPage() {
               {/* Εξωτερικοί Χώροι */}
               <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-purple-500/10 rounded-lg">
-                    <Trees className={`${iconSizes.md} text-purple-500`} />
+                  <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
+                    <Trees className={`${iconSizes.md} ${colors.text.accent}`} />
                   </div>
                   <h3 className="font-semibold">Εξωτερικοί Χώροι</h3>
                 </div>

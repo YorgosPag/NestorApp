@@ -18,6 +18,7 @@ import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
 
@@ -66,6 +67,7 @@ export function FloorPlanUploadButton({
   const iconSizes = useIconSizes();
   const { quick, radius } = useBorderTokens();
   const { t } = useTranslationLazy('geo-canvas');
+  const colors = useSemanticColors();
 
   return (
     <button
@@ -73,7 +75,7 @@ export function FloorPlanUploadButton({
       disabled={disabled || loading}
       className={`
         px-4 py-2
-        bg-blue-600 text-white font-medium text-sm
+        ${colors.bg.info} text-white font-medium text-sm
         ${quick.card}
         transition-all duration-200
         transform active:scale-95

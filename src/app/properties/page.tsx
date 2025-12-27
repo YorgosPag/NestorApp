@@ -1,10 +1,10 @@
 'use client';
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { PropertyGridViewCompatible as PropertyGridView } from '@/components/property-viewer/PropertyGrid';
+import { PropertyGridView } from '@/features/property-grid/PropertyGridView';
 import { PropertyManagementPageContent } from '@/components/property-management/PropertyManagementPageContent';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 
 function PropertiesPageContent() {

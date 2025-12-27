@@ -66,6 +66,7 @@ import React, { useState, useRef, useEffect, useId, useMemo, useCallback } from 
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { createPortal } from 'react-dom';
 import { useFloating, autoUpdate, offset, flip, shift, size } from '@floating-ui/react';
 // 🏢 ENTERPRISE: Import FixedSizeList from react-window
@@ -259,6 +260,7 @@ export function EnterpriseComboBox<T>({
 }: EnterpriseComboBoxProps<T>) {
   const iconSizes = useIconSizes();
   const { getStatusBorder, getFocusBorder, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // ===== UNIQUE IDs (ARIA) =====
 
@@ -561,7 +563,7 @@ export function EnterpriseComboBox<T>({
         <div className="flex-1">
           <div className="font-medium">{option.label}</div>
           {option.description && (
-            <div className={`text-xs ${isHighlighted ? 'text-blue-200' : 'text-gray-400'}`}>
+            <div className={`text-xs ${isHighlighted ? 'text-blue-200' : colors.text.muted}`}>
               {option.description}
             </div>
           )}
@@ -640,7 +642,7 @@ export function EnterpriseComboBox<T>({
                     <div
                       role="group"
                       aria-label={group.categoryLabel || group.category}
-                      className="px-3 py-2 text-xs font-medium text-gray-400 bg-gray-800"
+                      className={`px-3 py-2 text-xs font-medium ${colors.text.muted} ${colors.bg.primary}`}
                     >
                       {group.categoryLabel || group.category}
                     </div>
@@ -653,7 +655,7 @@ export function EnterpriseComboBox<T>({
 
             {/* Empty State */}
             {renderedOptions.length === 0 && (
-              <div className="px-3 py-2 text-sm text-gray-400 text-center">
+              <div className={`px-3 py-2 text-sm ${colors.text.muted} text-center`}>
                 Δεν βρέθηκαν αποτελέσματα
               </div>
             )}
@@ -686,7 +688,7 @@ export function EnterpriseComboBox<T>({
 
       {/* Label */}
       {label && (
-        <label id={labelId} className="block text-sm font-medium text-gray-200">
+        <label id={labelId} className={`block text-sm font-medium ${colors.text.secondary}`}>
           {label}
         </label>
       )}
@@ -711,7 +713,7 @@ export function EnterpriseComboBox<T>({
             }
           }}
           onKeyDown={handleKeyDown}
-          className={`w-full px-3 py-2 pr-8 bg-gray-700 ${getStatusBorder('default')} rounded-md text-white text-left ${HOVER_BACKGROUND_EFFECTS.DARKER} focus:ring-2 focus:ring-blue-500 ${getFocusBorder('input')} ${
+          className={`w-full px-3 py-2 pr-8 ${colors.bg.hover} ${getStatusBorder('default')} rounded-md text-white text-left ${HOVER_BACKGROUND_EFFECTS.DARKER} focus:ring-2 focus:ring-blue-500 ${getFocusBorder('input')} ${
             disabled ? 'opacity-50 cursor-not-allowed' : ''
           } ${buttonClassName}`}
         >
@@ -720,7 +722,7 @@ export function EnterpriseComboBox<T>({
 
         {/* Chevron Icon */}
         <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-          <ChevronDownIcon className={`${iconSizes.sm} text-gray-400`} isOpen={isOpen} />
+          <ChevronDownIcon className={`${iconSizes.sm} ${colors.text.muted}`} isOpen={isOpen} />
         </div>
 
         {/* Listbox */}

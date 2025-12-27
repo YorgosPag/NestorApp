@@ -13,7 +13,7 @@ import {
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { AnimatedSpinner } from './modal/ModalLoadingStates';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { useProjectHierarchy } from '../contexts/ProjectHierarchyContext';
 import { useDxfPipeline } from '../pipeline/useDxfPipeline';
 import { HierarchicalDestinationSelector } from './HierarchicalDestinationSelector';
@@ -152,14 +152,14 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
         {/* Header */}
         <div className={`flex justify-between items-center p-6 ${getDirectionalBorder('default', 'bottom')}`}>
           <div>
-            <h2 className="text-xl font-semibold text-white">DXF Import Wizard</h2>
-            <p className="text-gray-400 text-sm mt-1">
+            <h2 className={`text-xl font-semibold ${colors.text.primary}`}>DXF Import Wizard</h2>
+            <p className={`${colors.text.muted} text-sm mt-1`}>
               {selectedFile?.name && `Processing: ${selectedFile.name}`}
             </p>
           </div>
           <button
             onClick={handleClose}
-            className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} p-1`}
+            className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} p-1`}
           >
             <X className={iconSizes.lg} />
           </button>
@@ -171,9 +171,9 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
             {['destination', 'options', 'processing', 'complete'].map((step, index) => (
               <div key={step} className="flex items-center">
                 <div className={`${iconSizes.xl} rounded-full flex items-center justify-center text-sm font-medium ${
-                  currentStep === step ? `${colors.bg.info} text-white` :
-                  ['destination', 'options', 'processing', 'complete'].indexOf(currentStep) > index ? `${colors.bg.success} text-white` :
-                  `${colors.bg.hover} text-gray-300`
+                  currentStep === step ? `${colors.bg.info} ${colors.text.inverted}` :
+                  ['destination', 'options', 'processing', 'complete'].indexOf(currentStep) > index ? `${colors.bg.success} ${colors.text.inverted}` :
+                  `${colors.bg.hover} ${colors.text.muted}`
                 }`}>
                   {index + 1}
                 </div>
@@ -201,17 +201,17 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
           {/* Step 2: Processing Options */}
           {currentStep === 'options' && selectedDestination && (
             <div>
-              <h3 className="text-lg font-medium text-white mb-4">
+              <h3 className={`text-lg font-medium ${colors.text.primary} mb-4`}>
                 Επιλογές επεξεργασίας
               </h3>
               <div className={`${colors.bg.hover} p-4 rounded-lg mb-6`}>
                 <div className="flex items-center space-x-3">
                   {React.createElement(getDestinationIcon(selectedDestination.type), {
-                    className: `${iconSizes.lg} text-blue-400`
+                    className: `${iconSizes.lg} ${colors.text.info}`
                   })}
                   <div>
-                    <div className="text-white font-medium">{selectedDestination.label}</div>
-                    <div className="text-gray-400 text-sm">Destination: {selectedDestination.type}</div>
+                    <div className={`${colors.text.primary} font-medium`}>{selectedDestination.label}</div>
+                    <div className={`${colors.text.muted} text-sm`}>Destination: {selectedDestination.type}</div>
                   </div>
                 </div>
               </div>
@@ -219,53 +219,53 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <label className="text-white font-medium">Process Layers</label>
-                    <p className="text-gray-400 text-sm">Create status layers for property management</p>
+                    <label className={`${colors.text.primary} font-medium`}>Process Layers</label>
+                    <p className={`${colors.text.muted} text-sm`}>Create status layers for property management</p>
                   </div>
                   <input
                     type="checkbox"
                     checked={processingOptions.processLayers}
                     onChange={(e) => setProcessingOptions(prev => ({ ...prev, processLayers: e.target.checked }))}
-                    className={`${iconSizes.md} text-blue-600 ${colors.bg.hover} ${quick.checkbox} focus:ring-hsl(var(--border-info))`}
+                    className={`${iconSizes.md} ${colors.text.info} ${colors.bg.hover} ${quick.checkbox} focus:ring-hsl(var(--border-info))`}
                   />
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <label className="text-white font-medium">Preserve Grid</label>
-                    <p className="text-gray-400 text-sm">Keep grid lines in the final view</p>
+                    <label className={`${colors.text.primary} font-medium`}>Preserve Grid</label>
+                    <p className={`${colors.text.muted} text-sm`}>Keep grid lines in the final view</p>
                   </div>
                   <input
                     type="checkbox"
                     checked={processingOptions.preserveGrid}
                     onChange={(e) => setProcessingOptions(prev => ({ ...prev, preserveGrid: e.target.checked }))}
-                    className={`${iconSizes.md} text-blue-600 ${colors.bg.hover} ${quick.checkbox} focus:ring-hsl(var(--border-info))`}
+                    className={`${iconSizes.md} ${colors.text.info} ${colors.bg.hover} ${quick.checkbox} focus:ring-hsl(var(--border-info))`}
                   />
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <label className="text-white font-medium">Preserve Rulers</label>
-                    <p className="text-gray-400 text-sm">Keep measurement rulers</p>
+                    <label className={`${colors.text.primary} font-medium`}>Preserve Rulers</label>
+                    <p className={`${colors.text.muted} text-sm`}>Keep measurement rulers</p>
                   </div>
                   <input
                     type="checkbox"
                     checked={processingOptions.preserveRulers}
                     onChange={(e) => setProcessingOptions(prev => ({ ...prev, preserveRulers: e.target.checked }))}
-                    className={`${iconSizes.md} text-blue-600 ${colors.bg.hover} ${quick.checkbox} focus:ring-hsl(var(--border-info))`}
+                    className={`${iconSizes.md} ${colors.text.info} ${colors.bg.hover} ${quick.checkbox} focus:ring-hsl(var(--border-info))`}
                   />
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <label className="text-white font-medium">Auto Scale</label>
-                    <p className="text-gray-400 text-sm">Automatically scale to fit destination</p>
+                    <label className={`${colors.text.primary} font-medium`}>Auto Scale</label>
+                    <p className={`${colors.text.muted} text-sm`}>Automatically scale to fit destination</p>
                   </div>
                   <input
                     type="checkbox"
                     checked={processingOptions.autoScale}
                     onChange={(e) => setProcessingOptions(prev => ({ ...prev, autoScale: e.target.checked }))}
-                    className={`${iconSizes.md} text-blue-600 ${colors.bg.hover} ${quick.checkbox} focus:ring-hsl(var(--border-info))`}
+                    className={`${iconSizes.md} ${colors.text.info} ${colors.bg.hover} ${quick.checkbox} focus:ring-hsl(var(--border-info))`}
                   />
                 </div>
               </div>
@@ -276,10 +276,10 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
           {currentStep === 'processing' && (
             <div className="text-center">
               <AnimatedSpinner size="x-large" className="mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-white mb-2">
+              <h3 className={`text-lg font-medium ${colors.text.primary} mb-2`}>
                 Επεξεργασία κάτοψης...
               </h3>
-              <p className="text-gray-400">
+              <p className={colors.text.muted}>
                 Η κάτοψη υποβάλλεται σε επεξεργασία και αποθηκεύεται στον επιλεγμένο προορισμό.
               </p>
             </div>
@@ -289,23 +289,23 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
           {currentStep === 'complete' && (
             <div className="text-center">
               <div className={`${iconSizes['2xl']} ${colors.bg.success} rounded-full flex items-center justify-center mx-auto mb-4`}>
-                <svg className={`${iconSizes.lg} text-white`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={`${iconSizes.lg} ${colors.text.primary}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-white mb-2">
+              <h3 className={`text-lg font-medium ${colors.text.primary} mb-2`}>
                 Επιτυχής ολοκλήρωση!
               </h3>
-              <p className="text-gray-400 mb-4">
+              <p className={`${colors.text.muted} mb-4`}>
                 Η κάτοψη αποθηκεύτηκε επιτυχώς στον επιλεγμένο προορισμό.
               </p>
               {selectedDestination && (
                 <div className={`${colors.bg.hover} p-3 rounded-lg inline-block`}>
                   <div className="flex items-center space-x-2">
                     {React.createElement(getDestinationIcon(selectedDestination.type), {
-                      className: `${iconSizes.md} text-green-400`
+                      className: `${iconSizes.md} ${colors.text.success}`
                     })}
-                    <span className="text-white">{selectedDestination.label}</span>
+                    <span className={`${colors.text.primary}`}>{selectedDestination.label}</span>
                   </div>
                 </div>
               )}
@@ -318,7 +318,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
           <button
             onClick={handlePrevStep}
             disabled={currentStep === 'destination' || currentStep === 'processing'}
-            className={`px-4 py-2 text-gray-300 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} disabled:opacity-50 disabled:cursor-not-allowed`}
+            className={`px-4 py-2 ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             ← Προηγούμενο
           </button>
@@ -327,7 +327,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
             {currentStep === 'complete' ? (
               <button
                 onClick={handleClose}
-                className={`px-6 py-2 ${colors.bg.success} ${HOVER_BACKGROUND_EFFECTS.GREEN_BUTTON} text-white rounded-lg font-medium`}
+                className={`px-6 py-2 ${colors.bg.success} ${HOVER_BACKGROUND_EFFECTS.GREEN_BUTTON} ${colors.text.inverted} rounded-lg font-medium`}
               >
                 Ολοκλήρωση
               </button>
@@ -339,7 +339,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                   currentStep === 'processing' ||
                   busy
                 }
-                className={`px-6 py-2 ${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON} disabled:${colors.bg.hover} disabled:cursor-not-allowed text-white rounded-lg font-medium`}
+                className={`px-6 py-2 ${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON} disabled:${colors.bg.hover} disabled:cursor-not-allowed ${colors.text.inverted} rounded-lg font-medium`}
               >
                 {currentStep === 'options' ? 'Ξεκίνημα επεξεργασίας' : 'Επόμενο →'}
               </button>

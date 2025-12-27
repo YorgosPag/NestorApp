@@ -8,6 +8,7 @@ import { Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { calculateBuildingRatio, calculateCostPerSqm } from './utils';
 import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 
@@ -27,6 +28,7 @@ interface TechnicalSpecsCardProps {
 export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }: TechnicalSpecsCardProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const costPerSqm = calculateCostPerSqm(formData.totalValue, formData.totalArea);
   const buildingRatio = calculateBuildingRatio(formData.builtArea, formData.totalArea);
 
@@ -49,7 +51,7 @@ export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }:
               disabled={!isEditing}
               className={cn(!isEditing && "bg-muted", errors.totalArea && getStatusBorder('error'))}
             />
-            {errors.totalArea && <p className="text-sm text-red-500">{errors.totalArea}</p>}
+            {errors.totalArea && <p className={`text-sm ${colors.text.error}`}>{errors.totalArea}</p>}
           </div>
           
           <div className="space-y-2">
@@ -61,7 +63,7 @@ export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }:
               disabled={!isEditing}
               className={cn(!isEditing && "bg-muted", errors.builtArea && getStatusBorder('error'))}
             />
-            {errors.builtArea && <p className="text-sm text-red-500">{errors.builtArea}</p>}
+            {errors.builtArea && <p className={`text-sm ${colors.text.error}`}>{errors.builtArea}</p>}
             {formData.totalArea > 0 && (
               <p className="text-xs text-muted-foreground">
                 Συντελεστής δόμησης: {buildingRatio.toFixed(1)}%
@@ -78,7 +80,7 @@ export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }:
               disabled={!isEditing}
               className={cn(!isEditing && "bg-muted", errors.floors && getStatusBorder('error'))}
             />
-            {errors.floors && <p className="text-sm text-red-500">{errors.floors}</p>}
+            {errors.floors && <p className={`text-sm ${colors.text.error}`}>{errors.floors}</p>}
           </div>
           
           <div className="space-y-2">
@@ -90,7 +92,7 @@ export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }:
               disabled={!isEditing}
               className={cn(!isEditing && "bg-muted", errors.units && getStatusBorder('error'))}
             />
-            {errors.units && <p className="text-sm text-red-500">{errors.units}</p>}
+            {errors.units && <p className={`text-sm ${colors.text.error}`}>{errors.units}</p>}
             {formData.floors > 0 && (
               <p className="text-xs text-muted-foreground">
                 ~{(formData.units / formData.floors).toFixed(1)} μονάδες/όροφο
@@ -100,13 +102,13 @@ export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }:
         </div>
 
         {costPerSqm > 0 && (
-          <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+          <div className={`mt-6 p-4 ${colors.bg.info} rounded-lg`}>
+            <h4 className={`font-medium ${colors.text.info} mb-2`}>
               💡 Αυτόματοι Υπολογισμοί
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
-                <span className="text-blue-700 dark:text-blue-300">Κόστος/m²:</span>
+                <span className={`${colors.text.info}`}>Κόστος/m²:</span>
                 <p className="font-semibold">{formatCurrency(costPerSqm, 'EUR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
               </div>
               <div>

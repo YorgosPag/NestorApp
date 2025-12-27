@@ -1,5 +1,6 @@
 import React from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { SearchInput } from '@/components/ui/search/SearchInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { LayerFiltersProps } from './types';
@@ -12,18 +13,19 @@ export function LayerFilters({
   onCategoryChange
 }: LayerFiltersProps) {
   const { getFocusBorder, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   return (
     <div className="space-y-2">
       <SearchInput
         value={searchQuery}
         onChange={onSearchChange}
         placeholder="Αναζήτηση layers..."
-        className={`h-8 bg-gray-700 ${getStatusBorder('muted')} text-white placeholder-gray-400`}
+        className={`h-8 ${colors.bg.hover} ${getStatusBorder('muted')} text-white ${colors.text.muted}`}
         debounceMs={300}
       />
       
       <Select value={selectedCategory} onValueChange={onCategoryChange}>
-        <SelectTrigger className={`h-8 bg-gray-700 ${getStatusBorder('muted')} text-white ${getFocusBorder('input')}`}>
+        <SelectTrigger className={`h-8 ${colors.bg.hover} ${getStatusBorder('muted')} text-white ${getFocusBorder('input')}`}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

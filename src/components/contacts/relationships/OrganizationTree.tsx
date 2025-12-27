@@ -40,7 +40,7 @@ const ContactBadge: React.FC<ContactBadgeProps> = ({ contactId, position, relati
 
   if (loading) {
     return (
-      <Badge variant="outline" className={`text-xs ${colors.bg.secondary} ${quick.table} text-gray-500`}>
+      <Badge variant="outline" className={`text-xs ${colors.bg.secondary} ${quick.table} ${colors.text.muted}`}>
         Φόρτωση...
       </Badge>
     );
@@ -54,7 +54,7 @@ const ContactBadge: React.FC<ContactBadgeProps> = ({ contactId, position, relati
   return (
     <Badge
       variant="outline"
-      className={`text-xs ${colors.bg.info} ${getStatusBorder('info')} text-blue-700`}
+      className={`text-xs ${colors.bg.info} ${getStatusBorder('info')} ${colors.text.info}`}
     >
       {displayText}
     </Badge>
@@ -108,7 +108,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
   const renderLoadingState = () => {
     const iconSizes = useIconSizes();
     return (
-      <div className="text-center text-gray-500 py-8">
+      <div className={`text-center ${colors.text.muted} py-8`}>
         <Building2 className={`${iconSizes.xl} mx-auto mb-2 animate-pulse`} />
         <p>Φόρτωση οργανωτικού διαγράμματος...</p>
       </div>
@@ -121,10 +121,10 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
   const renderErrorState = () => {
     const iconSizes = useIconSizes();
     return (
-      <div className="text-center text-red-600 py-8">
+      <div className={`text-center ${colors.text.danger} py-8`}>
         <Building2 className={`${iconSizes.xl} mx-auto mb-2`} />
         <p className="font-medium">Σφάλμα φόρτωσης</p>
-        <p className="text-sm text-gray-600 mt-1">{error}</p>
+        <p className={`text-sm ${colors.text.muted} mt-1`}>{error}</p>
       </div>
     );
   };
@@ -135,8 +135,8 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
   const renderEmptyState = () => {
     const iconSizes = useIconSizes();
     return (
-      <div className="text-center text-gray-500 py-8">
-        <Building2 className={`${iconSizes.xl} mx-auto mb-2 text-gray-300`} />
+      <div className={`text-center ${colors.text.muted} py-8`}>
+        <Building2 className={`${iconSizes.xl} mx-auto mb-2 ${colors.text.disabled}`} />
         <p className="font-medium">Κενό οργανωτικό διάγραμμα</p>
         <p className="text-sm mt-1">
           Δεν υπάρχουν σχέσεις εργαζομένων για αυτόν τον οργανισμό.
@@ -188,9 +188,9 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
     if (stats.length === 0) {
       return (
         <div className={`text-center p-6 ${colors.bg.secondary} ${quick.card} border border-dashed ${quick.table}`}>
-          <Building2 className={`${iconSizes.xl} mx-auto mb-3 text-gray-400`} />
-          <h3 className="font-medium text-gray-700 mb-1">Απλό Οργανωτικό Σχήμα</h3>
-          <p className="text-sm text-gray-500">
+          <Building2 className={`${iconSizes.xl} mx-auto mb-3 ${colors.text.muted}`} />
+          <h3 className={`font-medium ${colors.text.primary} mb-1`}>Απλό Οργανωτικό Σχήμα</h3>
+          <p className={`text-sm ${colors.text.muted}`}>
             Αυτή η εταιρεία έχει βασική οργανωσιακή δομή χωρίς πολύπλοκη ιεραρχία.
           </p>
         </div>
@@ -233,7 +233,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
 
     return (
       <div className="mb-6">
-        <h4 className="text-sm font-medium text-gray-700 mb-3">Τμήματα & Εργαζόμενοι</h4>
+        <h4 className={`text-sm font-medium ${colors.text.primary} mb-3`}>Τμήματα & Εργαζόμενοι</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {Object.entries(tree.departments).map(([department, employees]) => (
             <div
@@ -241,7 +241,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
               className={`p-3 ${quick.card} ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
             >
               <div className="flex items-center justify-between mb-2">
-                <p className="font-medium text-gray-800">
+                <p className={`font-medium ${colors.text.primary}`}>
                   {department || 'Γενικό Τμήμα'}
                 </p>
                 <Badge variant="secondary" className="text-xs">
@@ -252,12 +252,12 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
               {Array.isArray(employees) && employees.length > 0 && (
                 <div className="space-y-1">
                   {employees.slice(0, 3).map((employee, index) => (
-                    <p key={index} className="text-xs text-gray-600">
+                    <p key={index} className={`text-xs ${colors.text.muted}`}>
                       • {employee.position || 'Εργαζόμενος'}
                     </p>
                   ))}
                   {employees.length > 3 && (
-                    <p className="text-xs text-gray-500 italic">
+                    <p className={`text-xs ${colors.text.muted} italic`}>
                       +{employees.length - 3} επιπλέον...
                     </p>
                   )}
@@ -285,7 +285,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
     console.log('🌳 ORG TREE: About to render', tree.children.length, 'children');
     return (
       <div>
-        <h4 className="text-sm font-medium text-gray-700 mb-3">Πρόσφατες Προσθήκες</h4>
+        <h4 className={`text-sm font-medium ${colors.text.primary} mb-3`}>Πρόσφατες Προσθήκες</h4>
         <div className="flex flex-wrap gap-2">
           {tree.children.slice(0, 8).map((child, index) => (
             <ContactBadge
@@ -296,7 +296,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
             />
           ))}
           {tree.children.length > 8 && (
-            <Badge variant="outline" className="text-xs text-gray-500">
+            <Badge variant="outline" className={`text-xs ${colors.text.muted}`}>
               +{tree.children.length - 8} επιπλέον
             </Badge>
           )}
@@ -339,7 +339,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
       {tree.statistics && (
         <Card className={`${colors.bg.secondary} ${quick.table}`}>
           <CardContent className="pt-4">
-            <div className="text-xs text-gray-600 space-y-1">
+            <div className={`text-xs ${colors.text.muted} space-y-1`}>
               <p>
                 <strong>Τελευταία ενημέρωση:</strong>{' '}
                 {tree.updatedAt

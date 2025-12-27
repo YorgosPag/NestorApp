@@ -200,14 +200,14 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
         designSystem.getStatusColor('success', 'border'),
         designSystem.getStatusColor('success', 'bg'),
         designSystem.getStatusColor('success', 'text'),
-        'dark:bg-green-900/20 dark:text-green-400'
+        // Enterprise semantic success styling via design system
       ),
 
       hasError && designSystem.cn(
         designSystem.getStatusColor('error', 'border'),
         designSystem.getStatusColor('error', 'bg'),
         designSystem.getStatusColor('error', 'text'),
-        'dark:bg-red-900/20 dark:text-red-400'
+        // Enterprise semantic error styling via design system
       ),
 
       !isCopied && !hasError && designSystem.cn(
@@ -333,12 +333,12 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
         <aside className={designSystem.cn(
           "p-3 rounded-lg",
           designSystem.getStatusColor('error', 'bg'),
-          "dark:bg-red-900/20"
+          // Enterprise semantic error background
         )} role="alert" aria-label="Σφάλματα Αντιγραφής">
           <p className={designSystem.cn(
             designSystem.getTypographyClass('sm'),
             designSystem.getStatusColor('error', 'text'),
-            "dark:text-red-400"
+            // Enterprise semantic error text
           )}>
             {errors.url || errors.text}
           </p>

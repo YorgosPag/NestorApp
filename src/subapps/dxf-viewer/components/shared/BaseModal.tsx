@@ -12,6 +12,7 @@ import { BaseButton } from './BaseButton';
 import { portalComponents } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '../modal/ModalLoadingStates';
 
 interface BaseModalProps {
@@ -60,6 +61,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
   zIndex = 9998
 }) => {
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Handle escape key
@@ -138,7 +140,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
             className={`
               relative inline-block w-full 
               ${sizeClasses[size]}
-              bg-gray-900 
+              ${colors.bg.accent} 
               ${getStatusBorder('muted')} 
               rounded-lg 
               shadow-2xl 
@@ -159,7 +161,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
                 {title && (
                   <h3 
                     id="modal-title" 
-                    className="text-lg font-medium text-white"
+                    className={`text-lg font-medium ${colors.text.primary}`}
                   >
                     {title}
                   </h3>
@@ -184,7 +186,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 
             {/* Footer */}
             {footer && (
-              <div className={`px-4 py-3 ${getDirectionalBorder('muted', 'top')} bg-gray-800 rounded-b-lg`}>
+              <div className={`px-4 py-3 ${getDirectionalBorder('muted', 'top')} ${colors.bg.secondary} rounded-b-lg`}>
                 {footer}
               </div>
             )}
@@ -236,7 +238,7 @@ export const ConfirmModal: React.FC<{
         </div>
       }
     >
-      <p className="text-gray-200">{message}</p>
+      <p className={colors.text.secondary}>{message}</p>
     </BaseModal>
   );
 };
@@ -251,6 +253,7 @@ export const LoadingModal: React.FC<{
   message = 'Παρακαλώ περιμένετε...'
 }) => {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   return (
     <BaseModal
       isOpen={isOpen}
@@ -263,7 +266,7 @@ export const LoadingModal: React.FC<{
     >
       <div className="flex items-center space-x-3">
         <AnimatedSpinner size="medium" />
-        <span className="text-gray-200">{message}</span>
+        <span className={colors.text.secondary}>{message}</span>
       </div>
     </BaseModal>
   );

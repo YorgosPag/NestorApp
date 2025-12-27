@@ -2,6 +2,7 @@
 
 import React, { useEffect, useCallback } from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useCursor } from '../../cursor';
 import { CADFeedback } from '../../../utils/feedback-utils';
 import { DynamicInputField } from './DynamicInputField';
@@ -38,6 +39,7 @@ export default function DynamicInputOverlay({
   tempPoints = null
 }: DynamicInputOverlayProps) {
   const { settings } = useCursor();
+  const colors = useSemanticColors();
   
   // Centralized state management
   const {
@@ -499,7 +501,7 @@ export default function DynamicInputOverlay({
 
         {/* Multi-point information για polyline/polygon */}
         {multiPointInfo.shouldShowMultiPoint && (
-          <div className={`mt-2 pt-2 ${getDirectionalBorder('light', 'top')} text-xs text-gray-600`}>
+          <div className={`mt-2 pt-2 ${getDirectionalBorder('light', 'top')} text-xs ${colors.text.tertiary}`}>
             {multiPointInfo.lastPointDistance !== null && (
               <div>Distance: {multiPointInfo.lastPointDistance.toFixed(3)}</div>
             )}

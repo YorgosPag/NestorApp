@@ -3,6 +3,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { SidebarPanel } from '@/components/property-viewer/SidebarPanel';
 import { FloorPlanCanvas } from '@/components/property-viewer/FloorPlanCanvas';
 import { ViewerToolbar } from '@/components/property-viewer/ViewerToolbar';
@@ -15,6 +16,7 @@ import { asArray, ensureFloor, isNodeEditMode, safeGetProperty } from './utils/s
 
 export function FloorPlanViewer(props: FloorPlanViewerLayoutProps) {
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
 
   const {
     currentFloor,
@@ -189,8 +191,8 @@ export function FloorPlanViewer(props: FloorPlanViewerLayoutProps) {
         />
 
         {/* FLOOR PLAN CANVAS */}
-        <div 
-          className="flex-1 relative overflow-hidden bg-gray-50"
+        <div
+          className={`flex-1 relative overflow-hidden ${colors.bg.secondary}`}
           onWheel={safeHandleWheel}
           onMouseDown={safeHandlePanStart}
           onMouseMove={safeHandlePanMove}
@@ -227,7 +229,7 @@ export function FloorPlanViewer(props: FloorPlanViewerLayoutProps) {
         </div>
 
         {/* STATUS BAR */}
-        <div className={`flex items-center justify-between px-4 py-2 bg-white ${quick.separatorH} text-sm text-gray-600`}>
+        <div className={`flex items-center justify-between px-4 py-2 ${colors.bg.primary} ${quick.separatorH} text-sm ${colors.text.muted}`}>
           <div className="flex items-center gap-4">
             <span>Properties: {properties.length}</span>
             <span>Selected: {selectedPropertyId || 'None'}</span>
@@ -235,11 +237,11 @@ export function FloorPlanViewer(props: FloorPlanViewerLayoutProps) {
           </div>
           <div className="flex items-center gap-4">
             {pdfUrl && (
-              <span className="text-green-600">• PDF Loaded</span>
+              <span className={`${colors.text.success}`}>• PDF Loaded</span>
             )}
             <span>Zoom: {Math.round(scale * 100)}%</span>
             <span className="capitalize">Mode: {viewMode}</span>
-            {isConnecting && <span className="text-blue-600">• Connecting</span>}
+            {isConnecting && <span className={`${colors.text.info}`}>• Connecting</span>}
           </div>
         </div>
       </div>

@@ -13,6 +13,7 @@ import { ProfessionalDrawingInterface } from '../components/ProfessionalDrawingI
 import { TechnicalDrawingInterface } from '../components/TechnicalDrawingInterface';
 import { AlertManagementPanel } from '../components/AlertManagementPanel';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '../../dxf-viewer/components/modal/ModalLoadingStates';
 
 // ✅ NEW: Enterprise Centralized Polygon System Provider
@@ -45,6 +46,7 @@ import type { GeoCoordinate, DxfCoordinate } from '../types';
 export function GeoCanvasContent(props: GeoCanvasAppProps) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
   const { user, setUserType, isCitizen, isProfessional, isTechnical } = useOptimizedUserRole();
   const [activeView, setActiveView] = useState<'foundation' | 'georeferencing' | 'map'>('georeferencing');
@@ -561,7 +563,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
   // Show loading while translations are being loaded
   if (isLoading) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-900 text-white">
+      <div className={`w-full h-full flex items-center justify-center ${colors.bg.secondary} text-white`}>
         <div className="text-center">
           <AnimatedSpinner size="large" className="mx-auto mb-4" />
           <p className="text-white">{t('loadingStates.loadingTranslations')}</p>
@@ -571,9 +573,9 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
   }
   return (
     <PolygonSystemProvider initialRole="citizen">
-      <div className="w-full h-full flex flex-col bg-gray-900 text-white">
+      <div className={`w-full h-full flex flex-col ${colors.bg.secondary} text-white`}>
       {/* 📊 HEADER SECTION */}
-      <header className="bg-gray-800 ${quick.separatorH} p-4">
+      <header className={`${colors.bg.primary} ${quick.separatorH} p-4`}>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-blue-400">
@@ -590,8 +592,8 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
               onClick={() => setShowAlertDashboard(!showAlertDashboard)}
               className={`flex items-center space-x-2 px-3 py-2 rounded-md transition-colors ${
                 showAlertDashboard
-                  ? 'bg-orange-600 text-white'
-                  : `bg-gray-700 text-gray-300 ${HOVER_BACKGROUND_EFFECTS.MUTED}`
+                  ? `${colors.bg.warning} text-white`
+                  : `${colors.bg.hover} ${colors.text.muted} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
               }`}
             >
               <span className="text-sm">🚨</span>
@@ -603,10 +605,10 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
               <FloorPlanUploadButton onClick={handleFloorPlanUploadClick} />
             )}
 
-            <div className="px-3 py-1 bg-green-600 rounded-full text-xs">
+            <div className={`px-3 py-1 ${colors.bg.success} rounded-full text-xs`}>
               {t('phases.transformation')}
             </div>
-            <div className="px-3 py-1 bg-blue-600 rounded-full text-xs">
+            <div className={`px-3 py-1 ${colors.bg.info} rounded-full text-xs`}>
               {t('status.transformationReady')}
             </div>
           </div>
@@ -619,7 +621,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
         {/* 🎯 CENTER AREA - Map/Canvas */}
         <div className="flex-1 flex flex-col">
           {/* 🔧 TOP TOOLBAR */}
-          <nav className="bg-gray-800 ${quick.separatorH} p-3" role="toolbar">
+          <nav className={`${colors.bg.primary} ${quick.separatorH} p-3`} role="toolbar">
             <ul className="flex items-center space-x-4 list-none">
               <li className="flex items-center space-x-2">
                 <span className="text-gray-400">{t('toolbar.view')}</span>
@@ -632,7 +634,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                       setActiveView(value);
                     }
                   }}
-                  className={`bg-gray-700 ${quick.input} px-3 py-1 text-sm`}
+                  className={`${colors.bg.hover} ${quick.input} px-3 py-1 text-sm`}
                 >
                   <option value="georeferencing">{t('views.georeferencing')}</option>
                   <option value="foundation">{t('views.foundation')}</option>
@@ -643,7 +645,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
 
               <li className="flex items-center space-x-2">
                 <span className="text-gray-400">{t('toolbar.crs')}</span>
-                <select className={`bg-gray-700 ${quick.input} px-3 py-1 text-sm`}>
+                <select className={`${colors.bg.hover} ${quick.input} px-3 py-1 text-sm`}>
                   <option>{t('coordinateSystems.epsg4326')}</option>
                   <option>{t('coordinateSystems.epsg2100')}</option>
                   <option>UTM 34N (EPSG:32634)</option>
@@ -653,7 +655,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
           </nav>
 
           {/* 🖥️ MAIN CONTENT - Canvas/Map Area */}
-          <div className="flex-1 bg-gray-900 relative">
+          <div className={`flex-1 ${colors.bg.backgroundSecondary} relative`}>
             {activeView === 'foundation' && (
               /* Phase 1: Foundation Display */
               <div className="absolute inset-0 flex items-center justify-center">
@@ -683,7 +685,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                             // ✅ ENTERPRISE: Clear user type by setting to a valid empty state
                             window.location.reload(); // Reload to reset all user state
                           }}
-                          className={`px-4 py-2 bg-gray-500 text-white rounded-md text-sm ${HOVER_BACKGROUND_EFFECTS.MUTED} ${TRANSITION_PRESETS.FAST_COLORS}`}
+                          className={`px-4 py-2 ${colors.bg.muted} text-white rounded-md text-sm ${HOVER_BACKGROUND_EFFECTS.MUTED} ${TRANSITION_PRESETS.FAST_COLORS}`}
                         >
                           🔄 {t('userActions.changeUserType')}
                         </button>
@@ -692,7 +694,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                   </div>
 
                   <div className="grid grid-cols-2 gap-6 text-left">
-                    <div className="bg-gray-800 p-6 rounded-lg">
+                    <div className={`${colors.bg.primary} p-6 rounded-lg`}>
                       <h3 className="text-lg font-semibold mb-3 text-green-400">
                         ✅ Phase 1 Complete
                       </h3>
@@ -704,7 +706,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                       </ul>
                     </div>
 
-                    <div className="bg-gray-800 p-6 rounded-lg">
+                    <div className={`${colors.bg.primary} p-6 rounded-lg`}>
                       <h3 className="text-lg font-semibold mb-3 text-green-400">
                         ✅ Phase 2 Complete
                       </h3>
@@ -718,7 +720,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                   </div>
 
                   {/* Architecture Overview */}
-                  <div className="mt-8 p-6 bg-gray-800 rounded-lg">
+                  <div className={`mt-8 p-6 ${colors.bg.primary} rounded-lg`}>
                     <h3 className="text-lg font-semibold mb-4 text-blue-400 flex items-center gap-2">
                       <CraneIcon className={iconSizes.md} />
                       {isLoading ? 'Επισκόπηση Αρχιτεκτονικής' : t('phaseDetails.architectureOverview.title')}
@@ -887,7 +889,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
         </div>
 
         {/* 📊 RIGHT SIDEBAR - System Status */}
-        <aside className="w-80 bg-gray-800 ${quick.separatorV} p-4">
+        <aside className={`w-80 ${colors.bg.primary} ${quick.separatorV} p-4`}>
           <div className="space-y-6">
             {/* Phase Progress */}
             <section>
@@ -895,23 +897,23 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                 {t('sidebar.phaseProgress.title')}
               </h3>
               <div className="space-y-3">
-                <div className={`p-3 bg-green-900 ${quick.card} ${getStatusBorder('success')}`}>
+                <div className={`p-3 ${colors.bg.success}/20 ${quick.card} ${getStatusBorder('success')}`}>
                   <div className="text-sm font-medium text-green-300">{t('sidebar.phaseProgress.phase1Title')}</div>
                   <div className="text-xs text-green-400">{t('sidebar.phaseProgress.phase1Description')}</div>
                 </div>
-                <div className={`p-3 bg-green-900 ${quick.card} ${getStatusBorder('success')}`}>
+                <div className={`p-3 ${colors.bg.success}/20 ${quick.card} ${getStatusBorder('success')}`}>
                   <div className="text-sm font-medium text-green-300">{t('sidebar.phaseProgress.phase2Title')}</div>
                   <div className="text-xs text-green-400">{t('sidebar.phaseProgress.phase2Description')}</div>
                 </div>
-                <div className="p-3 bg-gray-700 rounded">
+                <div className={`p-3 ${colors.bg.hover} rounded`}>
                   <div className="text-sm font-medium text-yellow-400">{t('sidebar.phaseProgress.phase3Title')}</div>
                   <div className="text-xs text-gray-400">{t('sidebar.phaseProgress.phase3Description')}</div>
                 </div>
-                <div className="p-3 bg-gray-700 rounded">
+                <div className={`p-3 ${colors.bg.hover} rounded`}>
                   <div className="text-sm font-medium text-gray-400">{t('sidebar.phaseProgress.phase4Title')}</div>
                   <div className="text-xs text-gray-400">{t('sidebar.phaseProgress.phase4Description')}</div>
                 </div>
-                <div className="p-3 bg-gray-700 rounded">
+                <div className={`p-3 ${colors.bg.hover} rounded`}>
                   <div className="text-sm font-medium text-gray-400">{t('sidebar.phaseProgress.phase5Title')}</div>
                   <div className="text-xs text-gray-400">{t('sidebar.phaseProgress.phase5Description')}</div>
                 </div>
@@ -925,27 +927,27 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
               </h3>
               <ul className="space-y-2 text-sm list-none">
                 <li className="flex items-center space-x-2">
-                  <span className={`${iconSizes.xs} bg-green-400 rounded-full`} aria-hidden="true"></span>
+                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true"></span>
                   <span>{t('sidebar.availableFeatures.controlPointManagement')}</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <span className={`${iconSizes.xs} bg-green-400 rounded-full`} aria-hidden="true"></span>
+                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true"></span>
                   <span>{t('sidebar.availableFeatures.affineTransformation')}</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <span className={`${iconSizes.xs} bg-green-400 rounded-full`} aria-hidden="true"></span>
+                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true"></span>
                   <span>{t('sidebar.availableFeatures.accuracyValidation')}</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <span className={`${iconSizes.xs} bg-green-400 rounded-full`} aria-hidden="true"></span>
+                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true"></span>
                   <span>{t('sidebar.availableFeatures.spatialDistributionAnalysis')}</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <span className={`${iconSizes.xs} bg-green-400 rounded-full`} aria-hidden="true"></span>
+                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true"></span>
                   <span>{t('sidebar.availableFeatures.rmsErrorCalculation')}</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <span className={`${iconSizes.xs} bg-green-400 rounded-full`} aria-hidden="true"></span>
+                  <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} aria-hidden="true"></span>
                   <span>{t('sidebar.availableFeatures.coordinateTransformation')}</span>
                 </li>
               </ul>
@@ -998,7 +1000,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
       </main>
 
       {/* 📋 FOOTER STATUS */}
-      <footer className="bg-gray-800 ${quick.separatorH} p-3">
+      <footer className={`${colors.bg.primary} ${quick.separatorH} p-3`}>
         <nav className="flex items-center justify-between text-sm">
           <ul className="flex items-center space-x-4 list-none">
             <li className="text-green-400">● {t('footer.status.active')}</li>

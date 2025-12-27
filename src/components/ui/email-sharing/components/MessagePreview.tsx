@@ -15,7 +15,7 @@ import { designSystem } from '@/lib/design-system';
 import { MessageCircle, Eye } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Types
 import type { MessagePreviewProps } from '../types';
@@ -53,7 +53,7 @@ export const MessagePreview: React.FC<MessagePreviewProps> = ({
       <header className={designSystem.cn(
         'flex items-center gap-2',
         designSystem.getTypographyClass('xs', 'medium'),
-        'text-blue-800 dark:text-blue-300'
+        colors.text.info
       )} role="banner">
         <Eye className={iconSizes.sm} />
         Προεπισκόπηση μηνύματος
@@ -68,7 +68,7 @@ export const MessagePreview: React.FC<MessagePreviewProps> = ({
       <main className={`p-4 ${colors.bg.info} ${quick.card} ${quick.input} ${getStatusBorder('info')} dark:${getStatusBorder('info')}`} role="main">
         <blockquote className={designSystem.cn(
           designSystem.getTypographyClass('sm'),
-          'text-blue-700 dark:text-blue-200 italic leading-relaxed'
+          `${colors.text.info} italic leading-relaxed`
         )}>
           "{message}"
         </blockquote>
@@ -109,7 +109,7 @@ export const CompactMessagePreview: React.FC<MessagePreviewProps & {
         <span>Preview</span>
         {templateName && <span>• {templateName}</span>}
       </header>
-      <blockquote className="text-gray-700 dark:text-gray-300 italic">
+      <blockquote className={`${colors.text.secondary} italic`}>
         "{truncatedMessage}"
       </blockquote>
     </aside>

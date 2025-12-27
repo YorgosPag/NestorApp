@@ -3,11 +3,13 @@ import { useLevels } from '../../systems/levels/useLevels';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '../../components/modal/ModalLoadingStates';
 
 export function AutoSaveStatus() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   const levelsSystem = useLevels();
   
   const currentFileName = levelsSystem.getCurrentFileName?.() || null;
@@ -24,14 +26,14 @@ export function AutoSaveStatus() {
     switch (autoSaveStatus.saveStatus) {
       case 'saving':
         return (
-          <div className="flex items-center text-yellow-400">
+          <div className={`flex items-center ${colors.text.warning}`}>
             <AnimatedSpinner size="small" className="mr-1" />
             <span className="text-xs">Saving...</span>
           </div>
         );
       case 'success':
         return (
-          <div className="flex items-center text-green-400">
+          <div className={`flex items-center ${colors.text.success}`}>
             <svg className={`${iconSizes.xs} mr-1`} fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
@@ -40,7 +42,7 @@ export function AutoSaveStatus() {
         );
       case 'error':
         return (
-          <div className="flex items-center text-red-400">
+          <div className={`flex items-center ${colors.text.error}`}>
             <svg className={`${iconSizes.xs} mr-1`} fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
@@ -49,7 +51,7 @@ export function AutoSaveStatus() {
         );
       default:
         return (
-          <div className="flex items-center text-gray-400">
+          <div className={`flex items-center ${colors.text.muted}`}>
             <svg className={`${iconSizes.xs} mr-1`} fill="currentColor" viewBox="0 0 20 20">
               <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
               <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
@@ -72,14 +74,14 @@ export function AutoSaveStatus() {
   };
   
   return (
-    <div className={`flex items-center justify-between p-2 bg-gray-800 ${quick.card} text-xs`}>
+    <div className={`flex items-center justify-between p-2 ${colors.bg.primary} ${quick.card} text-xs`}>
       <div className="flex flex-col">
         <div className="flex items-center">
-          <span className="text-gray-300 mr-2">📁 {currentFileName}</span>
+          <span className={`${colors.text.secondary} mr-2`}>📁 {currentFileName}</span>
           {getStatusIcon()}
         </div>
         {autoSaveStatus.lastSaveTime && (
-          <div className="text-gray-500 text-[10px] mt-1">
+          <div className={`${colors.text.tertiary} text-[10px] mt-1`}>
             Last saved: {formatLastSaveTime(autoSaveStatus.lastSaveTime)}
           </div>
         )}
@@ -93,7 +95,7 @@ export function AutoSaveStatus() {
 
             }
           }}
-          className={`px-2 py-1 text-[10px] bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL} ${quick.button}`}
+          className={`px-2 py-1 text-[10px] ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL} ${quick.button}`}
           title="Trigger manual save"
         >
           💾 Save

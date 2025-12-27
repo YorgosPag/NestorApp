@@ -3,6 +3,7 @@
 import React from 'react';
 import { CheckCircle, X } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
   PHOTO_SIZES,
   PHOTO_TEXT_COLORS,
@@ -67,6 +68,7 @@ export function PhotoPreview({
   className = ''
 }: PhotoPreviewProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   // ========================================================================
   // COMPUTED VALUES
@@ -122,7 +124,7 @@ export function PhotoPreview({
           {showRemoveButton && (
             <button
               type="button"
-              className={`absolute top-2 right-2 bg-red-100 text-red-600 rounded-full p-1.5 ${PHOTO_HOVER_EFFECTS.REMOVE_BUTTON} z-10`}
+              className={`absolute top-2 right-2 ${colors.bg.error} ${colors.text.error} rounded-full p-1.5 ${PHOTO_HOVER_EFFECTS.REMOVE_BUTTON} z-10`}
               onClick={handleRemoveClick}
               title={`Αφαίρεση ${displayName}`}
             >
@@ -153,7 +155,7 @@ export function PhotoPreview({
         {showRemoveButton && (
           <button
             type="button"
-            className={`absolute top-1 right-1 bg-red-100 text-red-600 rounded-full p-1 transition-colors z-10 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
+            className={`absolute top-1 right-1 ${colors.bg.error} ${colors.text.error} rounded-full p-1 transition-colors z-10 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
             onClick={handleRemoveClick}
             title={`Αφαίρεση ${displayName}`}
           >
@@ -163,11 +165,11 @@ export function PhotoPreview({
       </div>
 
       <div className="text-left">
-        <p className="text-sm font-medium text-green-700 flex items-center gap-1">
+        <p className={`text-sm font-medium ${colors.text.success} flex items-center gap-1`}>
           <CheckCircle className={iconSizes.sm} />
           {purpose === 'logo' ? 'Λογότυπο' : 'Φωτογραφία'} φορτώθηκε
         </p>
-        <p className="text-xs text-green-600">{fileName}</p>
+        <p className={`text-xs ${colors.text.success}`}>{fileName}</p>
         {onPreviewClick && (
           <p className={`text-xs ${PHOTO_TEXT_COLORS.LIGHT_MUTED} mt-1`}>Κάντε κλικ για αλλαγή</p>
         )}

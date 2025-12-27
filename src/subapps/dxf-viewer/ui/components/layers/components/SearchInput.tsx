@@ -4,6 +4,7 @@ import React from 'react';
 import { SearchInput as UnifiedSearchInput } from '@/components/ui/search';
 import { cn } from '@/lib/utils';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface DxfSearchInputProps {
   searchTerm: string;
@@ -13,6 +14,7 @@ interface DxfSearchInputProps {
 
 export const SearchInput = ({ searchTerm, onSearchChange, className }: DxfSearchInputProps) => {
   const { getFocusBorder, quick } = useBorderTokens();
+  const colors = useSemanticColors();
   return (
     <UnifiedSearchInput
       value={searchTerm}
@@ -20,7 +22,7 @@ export const SearchInput = ({ searchTerm, onSearchChange, className }: DxfSearch
       placeholder="Αναζήτηση layers και entities..."
       debounceMs={200}
       className={cn(
-        `${quick.muted} bg-gray-800 text-gray-100 placeholder-gray-400`,
+        `${quick.muted} ${colors.bg.primary} ${colors.text.primary} placeholder-gray-400`,
         `focus:ring-2 focus:ring-blue-500 ${getFocusBorder('input')}`,
         "text-sm",
         className

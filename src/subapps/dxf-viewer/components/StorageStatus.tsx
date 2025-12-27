@@ -8,6 +8,7 @@ import { HardDrive, Trash2, AlertTriangle } from 'lucide-react';
 import { useNotifications } from '../../../providers/NotificationProvider';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { layoutUtilities } from '@/styles/design-tokens';
 
 interface StorageStatusProps {
@@ -18,6 +19,7 @@ interface StorageStatusProps {
 export function StorageStatus({ showDetails = false, className }: StorageStatusProps) {
   const iconSizes = useIconSizes();
   const { radius, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const { storageInfo, checkStorage } = useStorageMonitor();
   const notifications = useNotifications();
   const [isClearing, setIsClearing] = React.useState(false);
@@ -64,11 +66,11 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
       <CardContent className="p-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <HardDrive className={`${iconSizes.sm} ${isCritical ? 'text-red-500' : isWarning ? 'text-amber-500' : 'text-gray-500'}`} />
+            <HardDrive className={`${iconSizes.sm} ${isCritical ? colors.text.error : isWarning ? colors.text.warning : colors.text.muted}`} />
             <div className="text-sm">
               <div className="font-medium">Storage</div>
               {showDetails && (
-                <div className="text-xs text-gray-500">
+                <div className={`text-xs ${colors.text.muted}`}>
                   {StorageManager.formatBytes(storageInfo.usage)} / {StorageManager.formatBytes(storageInfo.quota)}
                 </div>
               )}
@@ -77,7 +79,7 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
           
           <div className="flex items-center gap-2">
             {(isWarning || isCritical) && (
-              <AlertTriangle className={`${iconSizes.sm} ${isCritical ? 'text-red-500' : 'text-amber-500'}`} />
+              <AlertTriangle className={`${iconSizes.sm} ${isCritical ? colors.text.error : colors.text.warning}`} />
             )}
             
             {showDetails && (
@@ -99,26 +101,26 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
           <>
             {/* Progress bar */}
             <div className="mt-2">
-              <div className={`w-full bg-gray-200 ${radius.full} h-2`}>
+              <div className={`w-full ${colors.bg.muted} ${radius.full} h-2`}>
                 <div
                   className={`h-2 ${radius.full} transition-all duration-300 ${
-                    isCritical ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-blue-500'
+                    isCritical ? `${colors.bg.error}` : isWarning ? `${colors.bg.warning}` : `${colors.bg.info}`
                   } w-[${Math.min(usagePercentage, 100)}%]`}
                 />
               </div>
-              <div className="text-xs text-gray-500 mt-1">
+              <div className={`text-xs ${colors.text.muted} mt-1`}>
                 {usagePercentage.toFixed(1)}% used • {StorageManager.formatBytes(storageInfo.available)} available
               </div>
             </div>
             
             {/* Warnings */}
             {isCritical && (
-              <div className={`mt-2 text-xs text-red-600 bg-red-50 p-2 ${radius.md}`}>
+              <div className={`mt-2 text-xs ${colors.text.error} ${colors.bg.errorLight} p-2 ${radius.md}`}>
                 ⚠️ Storage σχεδόν γεμάτο! Καθαρίστε το για να αποφύγετε errors.
               </div>
             )}
             {isWarning && !isCritical && (
-              <div className={`mt-2 text-xs text-amber-600 bg-amber-50 p-2 ${radius.md}`}>
+              <div className={`mt-2 text-xs ${colors.text.warning} ${colors.bg.warningLight} p-2 ${radius.md}`}>
                 ⚠️ Storage σε χαμηλά επίπεδα. Σκεφτείτε καθαρισμό.
               </div>
             )}
@@ -141,7 +143,7 @@ export function StorageStatusIndicator() {
   if (!isWarning) return null;
   
   return (
-    <div className="flex items-center gap-1 text-xs text-amber-600">
+    <div className={`flex items-center gap-1 text-xs ${colors.text.warning}`}>
       <HardDrive className={iconSizes.xs} />
       <span>{usagePercentage.toFixed(0)}%</span>
     </div>

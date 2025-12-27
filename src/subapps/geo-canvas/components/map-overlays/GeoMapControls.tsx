@@ -19,6 +19,7 @@
 import React from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 
@@ -83,21 +84,22 @@ export const GeoMapControls: React.FC<GeoMapControlsProps> = ({
   const { t } = useTranslationLazy('geo-canvas');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // ========================================================================
   // 🎨 RENDER COORDINATE PICKING CONTROLS
   // ========================================================================
 
   const renderCoordinatePickingControls = () => (
-    <div className="bg-gray-900 bg-opacity-90 rounded-lg p-2" role="group" aria-label={t('map.controls.coordinatePicking')}>
+    <div className={`${colors.bg.secondary} bg-opacity-90 rounded-lg p-2`} role="group" aria-label={t('map.controls.coordinatePicking')}>
       <div className="flex flex-col space-y-2">
         <button
           onClick={() => onStartCoordinatePicking('add_geo')}
           disabled={clickMode === 'add_geo'}
           className={`px-3 py-2 rounded text-sm transition-colors ${
             clickMode === 'add_geo'
-              ? 'bg-blue-600 text-white'
-              : `bg-gray-700 text-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+              ? `${colors.bg.info} text-white`
+              : `${colors.bg.hover} text-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
           }`}
           aria-pressed={clickMode === 'add_geo'}
         >
@@ -107,7 +109,7 @@ export const GeoMapControls: React.FC<GeoMapControlsProps> = ({
         <button
           onClick={onStopCoordinatePicking}
           disabled={clickMode === 'off'}
-          className={`px-3 py-2 bg-red-600 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded text-sm transition-colors`}
+          className={`px-3 py-2 ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} disabled:opacity-50 disabled:cursor-not-allowed text-white rounded text-sm transition-colors`}
           aria-pressed={clickMode !== 'off'}
         >
           ✕ {t('map.controls.cancelPicking')}
@@ -128,12 +130,12 @@ export const GeoMapControls: React.FC<GeoMapControlsProps> = ({
       : t('map.controls.openStreetMap');
 
     return (
-      <div className="bg-gray-900 bg-opacity-90 rounded-lg p-2" role="group" aria-label={t('map.controls.mapStyle')}>
+      <div className={`${colors.bg.secondary} bg-opacity-90 rounded-lg p-2`} role="group" aria-label={t('map.controls.mapStyle')}>
         {/* Header with Status Indicator */}
         <div className="flex items-center justify-between mb-2">
           <div className="text-xs text-gray-400">{t('map.controls.mapStyle')}</div>
           <div
-            className={`${iconSizes.xs} rounded-full ${mapLoaded ? 'bg-green-400' : 'bg-yellow-400'}`}
+            className={`${iconSizes.xs} rounded-full ${mapLoaded ? colors.bg.success : colors.bg.warning}`}
             title={mapLoaded ? t('map.status.mapLoaded') : t('map.status.mapLoading')}
             aria-label={mapLoaded ? t('map.status.mapLoaded') : t('map.status.mapLoading')}
           />
@@ -143,7 +145,7 @@ export const GeoMapControls: React.FC<GeoMapControlsProps> = ({
         <select
           value={currentMapStyle}
           onChange={(e) => onMapStyleChange(e.target.value as typeof currentMapStyle)}
-          className={`w-full bg-gray-700 ${quick.input} px-2 py-1 text-sm text-white`}
+          className={`w-full ${colors.bg.hover} ${quick.input} px-2 py-1 text-sm text-white`}
           disabled={!mapLoaded}
           aria-label={t('map.controls.selectMapStyle')}
         >

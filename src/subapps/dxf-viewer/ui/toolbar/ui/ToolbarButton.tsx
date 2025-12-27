@@ -22,6 +22,7 @@ import React from 'react';
 import { BaseButton, type ButtonVariant } from '../../components/shared/BaseButton';
 import { withIconProps } from '../../icons/iconRegistry';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Legacy → Enterprise variant mapping
 const VARIANT_MAP: Record<string, ButtonVariant> = {
@@ -58,6 +59,7 @@ export default function ToolbarButton({
   size = 'medium'
 }: ToolbarButtonProps) {
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // 🏢 ENTERPRISE: Map legacy props to BaseButton props
   const buttonVariant = VARIANT_MAP[variant];
@@ -65,9 +67,9 @@ export default function ToolbarButton({
 
   // 🎨 ENTERPRISE: Custom styling for success/danger variants
   const customVariantClass = variant === 'success'
-    ? `bg-green-700 ${getStatusBorder('success')} text-green-100 hover:bg-green-600`
+    ? `${colors.bg.success} ${getStatusBorder('success')} text-green-100 hover:${colors.bg.successHover}`
     : variant === 'danger'
-    ? `bg-red-700 ${getStatusBorder('error')} text-red-100 hover:bg-red-600`
+    ? `${colors.bg.danger} ${getStatusBorder('error')} text-red-100 hover:${colors.bg.dangerHover}`
     : '';
 
   return (

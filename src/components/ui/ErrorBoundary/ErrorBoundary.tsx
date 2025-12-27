@@ -8,7 +8,7 @@ import { errorTracker } from '@/services/ErrorTracker';
 import { notificationConfig } from '@/config/error-reporting';
 import { componentSizes } from '@/styles/design-tokens';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface CustomErrorInfo {
   componentStack: string;
@@ -40,6 +40,7 @@ interface ErrorBoundaryProps {
   showErrorDetails?: boolean;
   isolateError?: boolean; // Prevent error from bubbling up
   borderTokens?: ReturnType<typeof useBorderTokens>; // 🏢 ENTERPRISE: Border tokens injection
+  colors?: ReturnType<typeof useSemanticColors>; // 🏢 ENTERPRISE: Semantic colors injection
 }
 
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -377,14 +378,16 @@ ${errorDetails.stack || 'Stack trace not available'}
       emailSent,
       copySuccess
     } = this.state;
-    const { 
-      children, 
-      fallback, 
-      enableRetry = true, 
+    const {
+      children,
+      fallback,
+      enableRetry = true,
       maxRetries = 3,
       enableReporting = true,
       showErrorDetails = process.env.NODE_ENV === 'development',
-      componentName 
+      componentName,
+      borderTokens,
+      colors
     } = this.props;
 
     if (hasError && error) {
@@ -397,25 +400,25 @@ ${errorDetails.stack || 'Stack trace not available'}
       return (
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
           <div className="max-w-2xl w-full">
-            <div className={`bg-card ${borderTokens?.quick.error || borderTokens?.getStatusBorder?.('error') || 'border'} p-8 shadow-lg`}>
+            <div className={`bg-card ${borderTokens ? borderTokens.quick.error : 'border'} p-8 shadow-lg`}>
               {/* Error Header */}
               <div className="flex items-center space-x-3 mb-6">
-                <div className={`p-3 ${colors.bg.error} rounded-full`}>
-                  <AlertTriangle className={`${componentSizes.icon.xl} ${colors.text.error}`} />
+                <div className={`p-3 ${colors ? colors.bg.error : 'bg-red-50'} rounded-full`}>
+                  <AlertTriangle className={`${componentSizes.icon.xl} ${colors ? colors.text.error : 'text-red-600'}`} />
                 </div>
                 <div>
-                  <h1 className={`text-2xl font-bold ${colors.text.error}`}>
+                  <h1 className={`text-2xl font-bold ${colors ? colors.text.error : 'text-red-600'}`}>
                     Something went wrong
                   </h1>
-                  <p className={`${colors.text.error}`}>
+                  <p className={`${colors ? colors.text.error : 'text-red-600'}`}>
                     {componentName ? `Error in ${componentName}` : 'An unexpected error occurred'}
                   </p>
                 </div>
               </div>
 
               {/* Error Message */}
-              <div className={`mb-6 p-4 ${colors.bg.error} ${borderTokens?.quick.error || borderTokens?.getStatusBorder?.('error') || 'border'}`}>
-                <p className={`${colors.text.error} font-medium`}>
+              <div className={`mb-6 p-4 ${colors ? colors.bg.error : 'bg-red-50'} ${borderTokens ? borderTokens.quick.error : 'border'}`}>
+                <p className={`${colors ? colors.text.error : 'text-red-600'} font-medium`}>
                   {error.message}
                 </p>
               </div>
@@ -476,7 +479,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                       >
                         {copySuccess ? (
                           <>
-                            <Check className={`${componentSizes.icon.sm} ${colors.text.success}`} />
+                            <Check className={`${componentSizes.icon.sm} ${colors ? colors.text.success : 'text-green-600'}`} />
                             <span>Copied!</span>
                           </>
                         ) : (
@@ -500,7 +503,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                           </>
                         ) : emailSent ? (
                           <>
-                            <Check className={`${componentSizes.icon.sm} ${colors.text.success}`} />
+                            <Check className={`${componentSizes.icon.sm} ${colors ? colors.text.success : 'text-green-600'}`} />
                             <span>Sent to Admin</span>
                           </>
                         ) : (
@@ -537,7 +540,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                         </>
                       ) : reportSent ? (
                         <>
-                          <Check className={`${componentSizes.icon.sm} mr-2 ${colors.text.success}`} />
+                          <Check className={`${componentSizes.icon.sm} mr-2 ${colors ? colors.text.success : 'text-green-600'}`} />
                           Sent
                         </>
                       ) : (
@@ -565,7 +568,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                           disabled={copySuccess}
                         >
                           {copySuccess ? (
-                            <Check className={`${componentSizes.icon.sm} ${colors.text.success}`} />
+                            <Check className={`${componentSizes.icon.sm} ${colors ? colors.text.success : 'text-green-600'}`} />
                           ) : (
                             <Copy className={componentSizes.icon.sm} />
                           )}
@@ -679,16 +682,18 @@ export function useErrorReporting() {
 
 // OLD specialized error boundaries removed - replaced with Enterprise versions below
 
-// 🏢 ENTERPRISE: Wrapper component που inject τα border tokens
-export function EnterpriseErrorBoundary(props: Omit<ErrorBoundaryProps, 'borderTokens'>) {
+// 🏢 ENTERPRISE: Wrapper component που inject τα border tokens και colors
+export function EnterpriseErrorBoundary(props: Omit<ErrorBoundaryProps, 'borderTokens' | 'colors'>) {
   const borderTokens = useBorderTokens();
+  const colors = useSemanticColors();
 
-  return <ErrorBoundary {...props} borderTokens={borderTokens} />;
+  return <ErrorBoundary {...props} borderTokens={borderTokens} colors={colors} />;
 }
 
 // 🏢 ENTERPRISE: Enhanced specialized error boundaries
-export function PageErrorBoundary({ children, ...props }: Omit<ErrorBoundaryProps, 'componentName' | 'borderTokens'>) {
+export function PageErrorBoundary({ children, ...props }: Omit<ErrorBoundaryProps, 'componentName' | 'borderTokens' | 'colors'>) {
   const borderTokens = useBorderTokens();
+  const colors = useSemanticColors();
 
   return (
     <ErrorBoundary
@@ -697,6 +702,7 @@ export function PageErrorBoundary({ children, ...props }: Omit<ErrorBoundaryProp
       maxRetries={2}
       enableReporting={true}
       borderTokens={borderTokens}
+      colors={colors}
       {...props}
     >
       {children}
@@ -704,7 +710,7 @@ export function PageErrorBoundary({ children, ...props }: Omit<ErrorBoundaryProp
   );
 }
 
-export function ComponentErrorBoundary({ children, ...props }: Omit<ErrorBoundaryProps, 'isolateError' | 'borderTokens'>) {
+export function ComponentErrorBoundary({ children, ...props }: Omit<ErrorBoundaryProps, 'isolateError' | 'borderTokens' | 'colors'>) {
   const borderTokens = useBorderTokens();
   const colors = useSemanticColors();
 
@@ -715,6 +721,7 @@ export function ComponentErrorBoundary({ children, ...props }: Omit<ErrorBoundar
       maxRetries={1}
       showErrorDetails={false}
       borderTokens={borderTokens}
+      colors={colors}
       fallback={(error, _, retry) => (
         <div className={`p-4 ${borderTokens.quick.error} ${colors.bg.error}`}>
           <div className="flex items-center justify-between">

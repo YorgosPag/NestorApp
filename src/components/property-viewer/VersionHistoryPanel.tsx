@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { X } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { ScrollArea } from '../ui/scroll-area';
 import { Skeleton } from '../ui/skeleton';
 import { VersionList } from './version-history/VersionList';
@@ -52,6 +53,7 @@ const mockVersions = [
 
 export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingId: string; isOpen: boolean; onClose: () => void; }) {
     const iconSizes = useIconSizes();
+    const colors = useSemanticColors();
     const notifications = useNotifications();
     const [versions, setVersions] = useState<any[]>([]);
     const [selectedVersion, setSelectedVersion] = useState<any | null>(null);
@@ -88,7 +90,7 @@ export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingI
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl h-[80vh] flex flex-col">
+            <div className={`${colors.bg.primary} rounded-lg shadow-xl w-full max-w-5xl h-[80vh] flex flex-col`}>
                 <div className="p-6 border-b flex items-center justify-between shrink-0">
                     <h2 className="text-2xl font-bold">Ιστορικό Εκδόσεων</h2>
                     <div className="flex items-center gap-4">

@@ -48,7 +48,7 @@ export interface ActionDefinition {
   id: string;
   icon: React.ComponentType<React.ComponentProps<'svg'>> | string;
   label: string;
-  hotkey: string;
+  hotkey?: string;  // ✅ ENTERPRISE: Fix type inconsistency - hotkey can be undefined
   active?: boolean;
   disabled?: boolean;
   onClick?: () => void;

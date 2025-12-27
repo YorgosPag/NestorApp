@@ -7,13 +7,17 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { ContactsList } from './ContactsList';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 export function ContactsTab() {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
+  const { quick } = useBorderTokens();
   const [filterType, setFilterType] = useState('all');
   
   return (
-    <div className="bg-white dark:bg-card rounded-lg shadow">
+    <div className={`${colors.bg.primary} ${quick.card}`}>
       <div className="p-6 border-b">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -37,7 +41,7 @@ export function ContactsTab() {
           
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Search className={`${iconSizes.sm} absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400`} />
+              <Search className={`${iconSizes.sm} absolute left-3 top-1/2 transform -translate-y-1/2 ${colors.text.muted}`} />
               <input
                 type="text"
                 placeholder="Αναζήτηση επαφών..."

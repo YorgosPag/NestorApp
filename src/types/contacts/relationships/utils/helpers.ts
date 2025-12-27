@@ -103,12 +103,12 @@ export function getRelationshipBadgeColor(relationship: ContactRelationship): st
     'department_head': 'bg-red-100 text-red-800',
     'consultant': 'bg-teal-100 text-teal-800',
     'contractor': 'bg-yellow-100 text-yellow-800',
-    'vendor': 'bg-gray-100 text-gray-800',
+    'vendor': 'bg-slate-100 text-slate-800',
     'client': 'bg-emerald-100 text-emerald-800',
     'partner': 'bg-pink-100 text-pink-800'
   };
 
-  return colorMap[relationship.relationshipType] || 'bg-gray-100 text-gray-800';
+  return colorMap[relationship.relationshipType] || 'bg-slate-100 text-slate-800';
 }
 
 /**
@@ -138,7 +138,7 @@ export function getRelationshipStatusInfo(relationship: ContactRelationship) {
     'suspended': { label: 'Αναστολή', color: 'bg-orange-100 text-orange-800' }
   };
 
-  return statusMap[relationship.status] || { label: relationship.status, color: 'bg-gray-100 text-gray-800' };
+  return statusMap[relationship.status] || { label: relationship.status, color: 'bg-slate-100 text-slate-800' };
 }
 
 /**

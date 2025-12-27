@@ -45,6 +45,7 @@
 import React, { useState } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTextSettingsFromProvider } from '../../../../../settings-provider';
 import { AccordionSection, useAccordion } from '../shared/AccordionSection';
 import type { TextSettings } from '../../../../contexts/TextSettingsContext';
@@ -154,8 +155,8 @@ function TextStyleButtons({ settings, onToggle }: TextStyleButtonsProps) {
           title={style.title}
           className={`${iconSizes.xl} text-sm font-bold ${quick.button} transition-colors ${
             settings[style.key]
-              ? `bg-green-600 ${getStatusBorder('success')} text-white`
-              : `bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${quick.button} text-gray-300`
+              ? `${colors.bg.success} ${getStatusBorder('success')} text-white`
+              : `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${quick.button} ${colors.text.muted}`
           }`}
           style={layoutUtilities.cssVars.textStyle.forButton(style.key)}
         >
@@ -180,8 +181,8 @@ function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }
         onClick={onSuperscriptChange}
         className={`px-3 py-1 text-sm ${quick.button} transition-colors ${
           settings.isSuperscript
-            ? `bg-green-600 ${getStatusBorder('success')} text-white`
-            : `bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${getStatusBorder('muted')} text-gray-300`
+            ? `${colors.bg.success} ${getStatusBorder('success')} text-white`
+            : `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${getStatusBorder('muted')} ${colors.text.muted}`
         }`}
       >
         X<sup>2</sup>
@@ -190,8 +191,8 @@ function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }
         onClick={onSubscriptChange}
         className={`px-3 py-1 text-sm ${quick.button} transition-colors ${
           settings.isSubscript
-            ? `bg-green-600 ${getStatusBorder('success')} text-white`
-            : `bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${getStatusBorder('muted')} text-gray-300`
+            ? `${colors.bg.success} ${getStatusBorder('success')} text-white`
+            : `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${getStatusBorder('muted')} ${colors.text.muted}`
         }`}
       >
         X<sub>2</sub>
@@ -202,6 +203,7 @@ function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }
 
 export function TextSettings() {
   const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   // 🔥 FIX: Use Global Text Settings από provider, ΟΧΙ Preview-specific settings!
   // Το useUnifiedTextPreview() ενημερώνει localStorage 'dxf-text-preview-settings' (WRONG!)
   // Θέλουμε να ενημερώσουμε το 'dxf-text-general-settings' (CORRECT!)
@@ -311,11 +313,11 @@ export function TextSettings() {
     <div className="space-y-4 p-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium text-white">Ρυθμίσεις Κειμένου</h3>
+        <h3 className={`text-lg font-medium ${colors.text.primary}`}>Ρυθμίσεις Κειμένου</h3>
         <div className="flex gap-2">
           <button
             onClick={resetToDefaults}
-            className="px-3 py-1 text-xs bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white rounded transition-colors"
+            className={`px-3 py-1 text-xs ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} rounded transition-colors`}
             title="Επαναφορά στις προεπιλεγμένες ρυθμίσεις"
           >
             Επαναφορά
@@ -323,7 +325,7 @@ export function TextSettings() {
           {resetToFactory && (
             <button
               onClick={handleFactoryResetClick}
-              className="px-3 py-1 text-xs bg-red-700 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-white rounded transition-colors font-semibold"
+              className={`px-3 py-1 text-xs ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded transition-colors font-semibold`}
               title="Επαναφορά στις εργοστασιακές ρυθμίσεις (ISO 3098)"
             >
               🏭 Εργοστασιακές
@@ -334,23 +336,23 @@ export function TextSettings() {
 
       {/* Enable/Disable Text Display */}
       <div className="space-y-2">
-        <div className={`flex items-center gap-3 p-3 bg-gray-800 ${quick.card} ${getDirectionalBorder('info', 'left')}`}>
+        <div className={`flex items-center gap-3 p-3 ${colors.bg.secondary} ${quick.card} ${getDirectionalBorder('info', 'left')}`}>
           <input
             type="checkbox"
             id="text-enabled"
             checked={textSettings.enabled}
             onChange={(e) => updateTextSettings({ enabled: e.target.checked })}
-            className={`${iconSizes.sm} text-blue-600 bg-gray-700 ${quick.input} focus:ring-blue-500 focus:ring-2`}
+            className={`${iconSizes.sm} text-blue-600 ${colors.bg.hover} ${quick.input} focus:ring-blue-500 focus:ring-2`}
           />
           <label
             htmlFor="text-enabled"
-            className={`text-sm font-medium ${textSettings.enabled ? 'text-white' : 'text-gray-400'}`}
+            className={`text-sm font-medium ${textSettings.enabled ? colors.text.primary : colors.text.muted}`}
           >
             Εμφάνιση κειμένου απόστασης
           </label>
         </div>
         {!textSettings.enabled && (
-          <div className={`text-xs text-yellow-400 bg-yellow-900 bg-opacity-20 p-2 ${quick.card} ${getStatusBorder('warning')}`}>
+          <div className={`text-xs ${colors.text.warning} ${colors.bg.warning} bg-opacity-20 p-2 ${quick.card} ${getStatusBorder('warning')}`}>
             ⚠️ Το κείμενο απόστασης είναι απενεργοποιημένο και δεν θα εμφανίζεται στην προσχεδίαση
           </div>
         )}
@@ -402,7 +404,7 @@ export function TextSettings() {
                   {/* Increase Font Size - Big A with up arrow */}
                   <button
                     onClick={increaseFontSize}
-                    className={`w-10 h-9 bg-gray-700 ${quick.button} text-white ${HOVER_BACKGROUND_EFFECTS.DARKER} transition-colors flex items-center justify-center`}
+                    className={`w-10 h-9 ${colors.bg.hover} ${quick.button} ${colors.text.primary} ${HOVER_BACKGROUND_EFFECTS.DARKER} transition-colors flex items-center justify-center`}
                     title="Αύξηση μεγέθους γραμματοσειράς"
                   >
                     <div className="flex items-center">
@@ -416,7 +418,7 @@ export function TextSettings() {
                   {/* Decrease Font Size - Small A with down arrow */}
                   <button
                     onClick={decreaseFontSize}
-                    className={`w-10 h-9 bg-gray-700 ${quick.button} text-white ${HOVER_BACKGROUND_EFFECTS.DARKER} transition-colors flex items-center justify-center`}
+                    className={`w-10 h-9 ${colors.bg.hover} ${quick.button} ${colors.text.primary} ${HOVER_BACKGROUND_EFFECTS.DARKER} transition-colors flex items-center justify-center`}
                     title="Μείωση μεγέθους γραμματοσειράς"
                   >
                     <div className="flex items-center">
@@ -432,7 +434,7 @@ export function TextSettings() {
 
       {/* Text Color */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-200">Χρώμα Κειμένου</label>
+        <label className="block text-sm font-medium ${colors.text.secondary}">Χρώμα Κειμένου</label>
         <ColorDialogTrigger
           value={textSettings.color}
           onChange={handleColorChange}
@@ -460,7 +462,7 @@ export function TextSettings() {
           <div className="space-y-4">
             {/* Text Style Toggles */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-300">
+              <label className="block text-sm font-medium ${colors.text.muted}">
                 {TEXT_LABELS.TEXT_STYLE}
               </label>
               <TextStyleButtons
@@ -483,7 +485,7 @@ export function TextSettings() {
           <div className="space-y-4">
             {/* Script Toggles */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-300">{TEXT_LABELS.SCRIPT_STYLE}</label>
+              <label className="block text-sm font-medium ${colors.text.muted}">{TEXT_LABELS.SCRIPT_STYLE}</label>
               <ScriptStyleButtons
                 settings={textSettings}
                 onSuperscriptChange={() => handleScriptChange('superscript')}
@@ -504,7 +506,7 @@ export function TextSettings() {
           <div className="space-y-4">
             {/* Live Preview */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-300">
+              <label className="block text-sm font-medium ${colors.text.muted}">
                 {TEXT_LABELS.PREVIEW}
               </label>
               <div className={`p-4 bg-white ${quick.card}`}>
@@ -515,8 +517,8 @@ export function TextSettings() {
             </div>
 
             {/* Settings Summary */}
-            <div className={`p-2 bg-gray-700 ${quick.card} ${getDirectionalBorder('success', 'left')} mt-4`}>
-              <div className="text-xs text-gray-400 space-y-1">
+            <div className={`p-2 ${colors.bg.hover} ${quick.card} ${getDirectionalBorder('success', 'left')} mt-4`}>
+              <div className="text-xs ${colors.text.muted} space-y-1">
                 <div><strong>{FREE_FONTS.find(f => f.value === textSettings.fontFamily)?.label}</strong>, {textSettings.fontSize}pt</div>
                 <div>{[
                   textSettings.isBold && 'Έντονα',
@@ -544,7 +546,7 @@ export function TextSettings() {
       >
         <div className="space-y-4">
           {/* Warning Message */}
-          <div className={`bg-red-900 bg-opacity-20 ${getDirectionalBorder('error', 'left')} p-4 ${quick.card}`}>
+          <div className={`${colors.bg.error} bg-opacity-20 ${getDirectionalBorder('error', 'left')} p-4 ${quick.card}`}>
             <p className="text-red-200 font-semibold mb-2">
               ⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!
             </p>
@@ -552,8 +554,8 @@ export function TextSettings() {
 
           {/* Loss List */}
           <div className="space-y-2">
-            <p className="text-gray-300 font-medium">Θα χάσετε:</p>
-            <ul className="list-disc list-inside space-y-1 text-gray-400 text-sm">
+            <p className="${colors.text.muted} font-medium">Θα χάσετε:</p>
+            <ul className="list-disc list-inside space-y-1 ${colors.text.muted} text-sm">
               <li>Όλες τις προσαρμοσμένες ρυθμίσεις κειμένου</li>
               <li>Όλα τα templates που έχετε επιλέξει</li>
               <li>Όλες τις αλλαγές που έχετε κάνει</li>
@@ -561,7 +563,7 @@ export function TextSettings() {
           </div>
 
           {/* Reset Info */}
-          <div className={`bg-blue-900 bg-opacity-20 ${getDirectionalBorder('info', 'left')} p-4 ${quick.card}`}>
+          <div className={`${colors.bg.info} bg-opacity-20 ${getDirectionalBorder('info', 'left')} p-4 ${quick.card}`}>
             <p className="text-blue-200 text-sm">
               <strong>Επαναφορά:</strong> Οι ρυθμίσεις θα επανέλθουν στα πρότυπα ISO 3098
             </p>
@@ -576,13 +578,13 @@ export function TextSettings() {
           <div className={`flex gap-3 justify-end pt-4 ${quick.separator}`}>
             <button
               onClick={handleFactoryResetCancel}
-              className="px-4 py-2 text-sm bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white rounded transition-colors"
+              className="px-4 py-2 text-sm ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white rounded transition-colors"
             >
               Ακύρωση
             </button>
             <button
               onClick={handleFactoryResetConfirm}
-              className="px-4 py-2 text-sm bg-red-700 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-white rounded transition-colors font-semibold"
+              className="px-4 py-2 text-sm ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-white rounded transition-colors font-semibold"
             >
               🏭 Επαναφορά Εργοστασιακών
             </button>

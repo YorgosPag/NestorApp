@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // 🏢 ENTERPRISE: Import centralized utilities
 import { getRelationshipDisplayProps } from './utils/relationship-types';
@@ -61,6 +62,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
 
   const iconSizes = useIconSizes();
   const { quick, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // 🔧 ENTERPRISE FIX: Show the "other" contact in the relationship
   // Determine which contact to show based on which one is NOT the current contact
@@ -106,7 +108,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             </Button>
 
             {/* Relationship Icon */}
-            <Icon className={`${iconSizes.md} text-gray-600`} />
+            <Icon className={`${iconSizes.md} ${colors.text.muted}`} />
 
             {/* Relationship Info - Contact name and relationship type */}
             <div>
@@ -114,19 +116,19 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
               <div className="flex items-center gap-2">
                 {contactName ? (
                   <>
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className={`text-sm font-medium ${colors.text.primary}`}>
                       {contactName}
                     </span>
                     <Badge className={displayProps.color} variant="outline">
                       {displayProps.label}
                     </Badge>
                     {relationship.position && (
-                      <span className="text-xs text-gray-600">• {relationship.position}</span>
+                      <span className={`text-xs ${colors.text.muted}`}>• {relationship.position}</span>
                     )}
                   </>
                 ) : (
                   <>
-                    <div className={`animate-pulse bg-gray-200 h-4 w-24 ${quick.rounded}`}></div>
+                    <div className={`animate-pulse ${colors.bg.muted} h-4 w-24 ${quick.rounded}`}></div>
                     <Badge className={displayProps.color} variant="outline">
                       {displayProps.label}
                     </Badge>
@@ -182,7 +184,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             {/* Department */}
             {relationship.department && (
               <div className="flex items-center space-x-2">
-                <Building2 className={`${iconSizes.sm} text-gray-500`} />
+                <Building2 className={`${iconSizes.sm} ${colors.text.muted}`} />
                 <span className="text-sm">{relationship.department}</span>
               </div>
             )}
@@ -190,7 +192,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             {/* Start Date */}
             {relationship.startDate && (
               <div className="flex items-center space-x-2">
-                <Calendar className={`${iconSizes.sm} text-gray-500`} />
+                <Calendar className={`${iconSizes.sm} ${colors.text.muted}`} />
                 <span className="text-sm">
                   Από: {formatDate(relationship.startDate)}
                 </span>
@@ -200,10 +202,10 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             {/* Business Phone */}
             {relationship.contactInfo?.businessPhone && (
               <div className="flex items-center space-x-2">
-                <Phone className={`${iconSizes.sm} text-gray-500`} />
+                <Phone className={`${iconSizes.sm} ${colors.text.muted}`} />
                 <span className="text-sm">{relationship.contactInfo.businessPhone}</span>
                 {relationship.contactInfo.extensionNumber && (
-                  <span className="text-xs text-gray-400">
+                  <span className={`text-xs ${colors.text.light}`}>
                     ext. {relationship.contactInfo.extensionNumber}
                   </span>
                 )}
@@ -213,7 +215,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             {/* Business Email */}
             {relationship.contactInfo?.businessEmail && (
               <div className="flex items-center space-x-2">
-                <Mail className={`${iconSizes.sm} text-gray-500`} />
+                <Mail className={`${iconSizes.sm} ${colors.text.muted}`} />
                 <a
                   href={`mailto:${relationship.contactInfo.businessEmail}`}
                   className={`text-sm ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
@@ -227,7 +229,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             {/* Business Address */}
             {relationship.contactInfo?.businessAddress && (
               <div className="flex items-center space-x-2 md:col-span-2">
-                <MapPin className={`${iconSizes.sm} text-gray-500`} />
+                <MapPin className={`${iconSizes.sm} ${colors.text.muted}`} />
                 <span className="text-sm">{relationship.contactInfo.businessAddress}</span>
               </div>
             )}
@@ -235,8 +237,8 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             {/* End Date */}
             {relationship.endDate && (
               <div className="flex items-center space-x-2">
-                <Calendar className={`${iconSizes.sm} text-red-500`} />
-                <span className="text-sm text-red-600">
+                <Calendar className={`${iconSizes.sm} ${colors.text.error}`} />
+                <span className={`text-sm ${colors.text.error}`}>
                   Έως: {formatDate(relationship.endDate)}
                 </span>
               </div>
@@ -245,14 +247,14 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             {/* Notes */}
             {relationship.notes && (
               <div className="md:col-span-2">
-                <p className={`text-sm text-gray-600 bg-gray-50 p-3 ${quick.table}`}>
+                <p className={`text-sm ${colors.text.muted} ${colors.bg.secondary} p-3 ${quick.table}`}>
                   <strong>Σημειώσεις:</strong> {relationship.notes}
                 </p>
               </div>
             )}
 
             {/* Relationship Metadata */}
-            <div className={`md:col-span-2 text-xs text-gray-400 ${quick.borderT} pt-2`}>
+            <div className={`md:col-span-2 text-xs ${colors.text.light} ${quick.borderT} pt-2`}>
               <span>
                 Δημιουργήθηκε: {
                   relationship.createdAt

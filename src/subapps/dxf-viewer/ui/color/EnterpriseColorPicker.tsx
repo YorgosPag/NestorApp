@@ -22,6 +22,7 @@
 import React, { useState, useCallback } from 'react';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { EnterpriseColorArea } from './EnterpriseColorArea';
 import { HueSlider, AlphaSlider } from './EnterpriseColorSlider';
 import { EnterpriseColorField } from './EnterpriseColorField';
@@ -65,6 +66,7 @@ export function EnterpriseColorPicker({
   const [currentMode, setCurrentMode] = useState<ColorMode>(modes[0] || 'hex');
   const { addColor } = useRecentColors();
   const { quick, getStatusBorder, radius, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // Handle color change
   const handleChange = useCallback(
@@ -98,7 +100,7 @@ export function EnterpriseColorPicker({
 
   return (
     <div
-      className={`space-y-4 p-4 bg-gray-900 border ${getStatusBorder('muted')} ${quick.card} ${disabled ? 'opacity-50 pointer-events-none' : ''} ${className}`}
+      className={`space-y-4 p-4 ${colors.bg.primary} border ${getStatusBorder('muted')} ${quick.card} ${disabled ? 'opacity-50 pointer-events-none' : ''} ${className}`}
     >
       {/* === COLOR AREA + HUE SLIDER === */}
       <div className="space-y-3">
@@ -143,7 +145,7 @@ export function EnterpriseColorPicker({
                   px-3 py-1 text-xs font-medium transition-colors
                   ${currentMode === mode
                     ? `text-blue-400 ${getDirectionalBorder('info', 'bottom')}`
-                    : `text-gray-400 ${HOVER_TEXT_EFFECTS.GRAY_LIGHT}`
+                    : `${colors.text.muted} ${HOVER_TEXT_EFFECTS.GRAY_LIGHT}`
                   }
                 `}
               >
@@ -244,7 +246,7 @@ function EyedropperButton({ onChange, onChangeEnd, disabled }: EyedropperButtonP
         transition-colors
         ${isActive
           ? 'bg-blue-600 text-white'
-          : `bg-gray-800 text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`
+          : `${colors.bg.secondary} ${colors.text.muted} ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`
         }
         disabled:opacity-50 disabled:cursor-not-allowed
       `}
@@ -277,13 +279,15 @@ interface ContrastPanelPlaceholderProps {
 }
 
 function ContrastPanelPlaceholder({ foreground, background }: ContrastPanelPlaceholderProps) {
+  const colors = useSemanticColors();
+  const { radius, getStatusBorder } = useBorderTokens();
   return (
-    <div className="p-3 bg-gray-800 ${radius.md} border ${getStatusBorder('muted')}">
-      <h4 className="text-sm font-medium text-gray-300 mb-2">Contrast Checker</h4>
-      <div className="text-xs text-gray-400">
+    <div className={`p-3 ${colors.bg.secondary} ${radius.md} border ${getStatusBorder('muted')}`}>
+      <h4 className={`text-sm font-medium ${colors.text.muted} mb-2`}>Contrast Checker</h4>
+      <div className={`text-xs ${colors.text.muted}`}>
         <div>Foreground: {foreground}</div>
         <div>Background: {background}</div>
-        <div className="mt-2 text-gray-500">
+        <div className={`mt-2 ${colors.text.secondary}`}>
           Full WCAG contrast checker coming soon...
         </div>
       </div>

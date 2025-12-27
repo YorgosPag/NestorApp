@@ -8,7 +8,7 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // 🏢 ENTERPRISE: Property type options for PropertyGrid
 const TYPE_OPTIONS = [

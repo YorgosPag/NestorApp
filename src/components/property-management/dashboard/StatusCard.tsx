@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Activity } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface StatusCardProps {
     statsByStatus: Record<string, number>;
@@ -12,13 +13,14 @@ interface StatusCardProps {
 
 export function StatusCard({ statsByStatus, getStatusLabel }: StatusCardProps) {
     const iconSizes = useIconSizes();
+    const colors = useSemanticColors();
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'sold': return 'bg-green-500';
-            case 'available': return 'bg-gray-500';
-            case 'reserved': return 'bg-yellow-500';
-            case 'owner': return 'bg-blue-500';
-            default: return 'bg-gray-400';
+            case 'sold': return colors.bg.success;
+            case 'available': return colors.bg.muted;
+            case 'reserved': return colors.bg.warning;
+            case 'owner': return colors.bg.info;
+            default: return colors.bg.muted;
         }
     };
     

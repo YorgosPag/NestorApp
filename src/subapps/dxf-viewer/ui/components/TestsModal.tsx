@@ -14,6 +14,7 @@ import React from 'react';
 import { X, FlaskConical } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 // Custom hooks (extracted)
@@ -43,6 +44,7 @@ export const TestsModal: React.FC<TestsModalProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // ============================================================================
   // STATE MANAGEMENT (using custom hooks)
@@ -69,7 +71,7 @@ export const TestsModal: React.FC<TestsModalProps> = ({
     <div className="fixed inset-0 bg-black/30 z-50 p-4">
       <div
         ref={draggable.modalRef}
-        className="absolute bg-gray-800 rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col"
+        className={`absolute ${colors.bg.secondary} rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col`}
         style={{
           left: `${draggable.position.x}px`,
           top: `${draggable.position.y}px`,
@@ -83,14 +85,14 @@ export const TestsModal: React.FC<TestsModalProps> = ({
         >
           <div className="flex items-center gap-2">
             <FlaskConical className={`${iconSizes.lg} text-purple-400`} />
-            <h2 className="text-xl font-bold text-white">DXF Viewer Tests</h2>
-            <span className="text-xs text-gray-500 ml-2">↔️ Drag to move</span>
+            <h2 className={`text-xl font-bold ${colors.text.primary}`}>DXF Viewer Tests</h2>
+            <span className={`text-xs ${colors.text.tertiary} ml-2`}>↔️ Drag to move</span>
           </div>
           <button
             onClick={onClose}
             className={`p-1 rounded transition-colors ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
           >
-            <X className={`${iconSizes.lg} text-gray-400`} />
+            <X className={`${iconSizes.lg} ${colors.text.muted}`} />
           </button>
         </div>
 
@@ -131,8 +133,8 @@ export const TestsModal: React.FC<TestsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className={`p-4 ${getDirectionalBorder('muted', 'top')} bg-gray-800/50`}>
-          <div className="text-xs text-gray-400 text-center">
+        <div className={`p-4 ${getDirectionalBorder('muted', 'top')} ${colors.bg.muted}`}>
+          <div className={`text-xs ${colors.text.muted} text-center`}>
             💡 Tip: Τα tests εκτελούνται ασύγχρονα. Έλεγξε το console για λεπτομέρειες.
           </div>
         </div>

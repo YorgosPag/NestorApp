@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle, Users, Plus, RefreshCw } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // 🏢 ENTERPRISE: Import centralized types
 import type { ContactType } from '@/types/contacts';
@@ -69,6 +70,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
 
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // 📋 Relationship list management hook
   const {
@@ -202,11 +204,11 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   const renderHeader = () => (
     <div className="flex items-center justify-between mb-6">
       <div className="flex items-center space-x-3">
-        <Users className={`${iconSizes.lg} text-gray-600`} />
+        <Users className={`${iconSizes.lg} ${colors.text.muted}`} />
         <div>
           <h3 className="text-lg font-medium">Σχέσεις Επαφής</h3>
           {!isNewContact && (
-            <p className="text-sm text-gray-500">
+            <p className={`text-sm ${colors.text.muted}`}>
               Σύνολο: {relationships.length} σχέσεις
             </p>
           )}
@@ -285,9 +287,9 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
     if (!successMessage) return null;
 
     return (
-      <Alert className={`mb-6 ${getStatusBorder('success')} bg-green-50`}>
-        <AlertCircle className={`${iconSizes.sm} text-green-600`} />
-        <AlertDescription className="text-green-700">
+      <Alert className={`mb-6 ${getStatusBorder('success')} ${colors.bg.success}`}>
+        <AlertCircle className={`${iconSizes.sm} ${colors.text.success}`} />
+        <AlertDescription className={`${colors.text.success}`}>
           {successMessage}
         </AlertDescription>
       </Alert>
@@ -360,9 +362,9 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
 
       {/* Footer note for new contacts */}
       {isNewContact && (
-        <Card className={`${getStatusBorder('info')} bg-blue-50`}>
+        <Card className={`${getStatusBorder('info')} ${colors.bg.info}`}>
           <CardContent className="pt-6">
-            <div className="text-center text-blue-700">
+            <div className={`text-center ${colors.text.info}`}>
               <p className="font-medium">💡 Σημείωση</p>
               <p className="text-sm mt-2">
                 Για να δημιουργήσετε σχέσεις, αποθηκεύστε πρώτα την επαφή.

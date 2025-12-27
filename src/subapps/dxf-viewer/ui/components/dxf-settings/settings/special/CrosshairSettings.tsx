@@ -22,6 +22,7 @@ import { useTabNavigation } from '../../hooks/useTabNavigation';
 import { TabNavigation } from '../../shared/TabNavigation';
 import { CrosshairAppearanceSettings } from './CrosshairAppearanceSettings';
 import { CrosshairBehaviorSettings } from './CrosshairBehaviorSettings';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export interface CrosshairSettingsProps {
   className?: string;
@@ -76,6 +77,7 @@ export const CrosshairSettings: React.FC<CrosshairSettingsProps> = ({ className 
   }
 
   const { settings, updateSettings } = cursorHookResult;
+  const colors = useSemanticColors();
 
   // ============================================================================
   // STATE - Tab Navigation & Cursor Colors
@@ -199,7 +201,7 @@ export const CrosshairSettings: React.FC<CrosshairSettingsProps> = ({ className 
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Sub-tabs */}
-      <div className="flex gap-1 p-1 bg-gray-800 rounded">
+      <div className={`flex gap-1 p-1 ${colors.bg.primary} rounded`}>
         <TabNavigation tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
 

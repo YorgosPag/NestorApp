@@ -48,6 +48,7 @@ import type { CursorColors } from '../../../palettes/CursorColorPalette';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export interface CrosshairBehaviorSettingsProps {
   className?: string;
@@ -80,6 +81,7 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
   // ============================================================================
 
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   let cursorHookResult;
   try {
     cursorHookResult = useCursorSettings();
@@ -102,9 +104,9 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Crosshair Color */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
-        <label className="block text-sm font-medium text-gray-200">Χρώμα</label>
-        <div className="text-xs text-gray-400 mb-2">Χρώμα γραμμών σταυρώνυματος</div>
+      <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
+        <label className="block text-sm font-medium ${colors.text.secondary}">Χρώμα</label>
+        <div className="text-xs ${colors.text.muted} mb-2">Χρώμα γραμμών σταυρώνυματος</div>
         <ColorDialogTrigger
           value={cursorColors.crosshairColor}
           onChange={(color) => onCursorColorsChange({ ...cursorColors, crosshairColor: color })}
@@ -119,10 +121,10 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
       </div>
 
       {/* Crosshair Opacity */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
+      <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
         <div className="text-sm text-white">
           <div className="font-medium">Διαφάνεια Σταυρονήματος</div>
-          <div className="font-normal text-gray-400">Επίπεδο διαφάνειας του σταυρονήματος</div>
+          <div className="font-normal ${colors.text.muted}">Επίπεδο διαφάνειας του σταυρονήματος</div>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -134,17 +136,17 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
             onChange={(e) => updateSettings({ crosshair: { ...settings.crosshair, opacity: parseFloat(e.target.value) } })}
             className="flex-1"
           />
-          <div className="w-12 text-xs bg-gray-600 text-white rounded px-2 py-1 text-center">
+          <div className="w-12 text-xs ${colors.bg.muted} text-white rounded px-2 py-1 text-center">
             {Math.round((settings.crosshair.opacity || 0.9) * 100)}%
           </div>
         </div>
       </div>
 
       {/* Cursor Gap Toggle */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
+      <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
         <div className="text-sm text-white">
           <div className="font-medium">Cursor Gap</div>
-          <div className="font-normal text-gray-400">Οι γραμμές ξεκινάνε έξω από τον κέρσορα</div>
+          <div className="font-normal ${colors.text.muted}">Οι γραμμές ξεκινάνε έξω από τον κέρσορα</div>
         </div>
         <div className="flex gap-2">
           <button
@@ -152,7 +154,7 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               !settings.crosshair.use_cursor_gap
                 ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
             }`}
           >
             Ανενεργό
@@ -162,7 +164,7 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               settings.crosshair.use_cursor_gap
                 ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
             }`}
           >
             Ενεργό

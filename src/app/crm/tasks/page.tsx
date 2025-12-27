@@ -16,7 +16,7 @@ import { TasksTab } from '@/components/crm/dashboard/TasksTab'; // Reusing Tasks
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export default function CrmTasksPage() {
   const iconSizes = useIconSizes();
@@ -71,15 +71,15 @@ export default function CrmTasksPage() {
     <>
       <Toaster position="top-right" />
       
-      <main className="min-h-screen bg-gray-50 dark:bg-background">
-        <header className="bg-white dark:bg-card shadow-sm border-b">
+      <main className={`min-h-screen ${colors.bg.secondary}`}>
+        <header className={`${colors.bg.primary} shadow-sm border-b`}>
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Clock className={`${iconSizes.lg} ${colors.text.info}`} />
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">Εργασίες</h1>
-                  <p className="text-gray-600 dark:text-muted-foreground mt-1">Διαχείριση εργασιών και υπενθυμίσεων</p>
+                  <h1 className="text-2xl font-bold ${colors.text.foreground}">Εργασίες</h1>
+                  <p className="${colors.text.muted} mt-1">Διαχείριση εργασιών και υπενθυμίσεων</p>
                 </div>
               </div>
               
@@ -94,16 +94,16 @@ export default function CrmTasksPage() {
         <section className="container mx-auto px-6 py-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
             {statsCards.map((card, index) => (
-              <article key={index} className="bg-white dark:bg-card rounded-lg shadow p-6">
+              <article key={index} className={`${colors.bg.primary} rounded-lg shadow p-6`}>
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <p className="text-sm text-gray-600 dark:text-muted-foreground mb-1">{card.title}</p>
+                    <p className="text-sm ${colors.text.muted} mb-1">{card.title}</p>
                     {loadingStats ? (
                       <Skeleton className={`${iconSizes.xl} w-12 rounded-md`} />
                     ) : (
-                      <p className="text-2xl font-bold text-gray-900 dark:text-foreground">{card.value}</p>
+                      <p className="text-2xl font-bold ${colors.text.foreground}">{card.value}</p>
                     )}
-                    <p className="text-xs text-gray-500 dark:text-muted-foreground/80 mt-1">{card.description}</p>
+                    <p className={`text-xs ${colors.text.muted} mt-1`}>{card.description}</p>
                   </div>
                   <div className={`${iconSizes.xl2} rounded-full flex items-center justify-center ${getColorClasses(card.color)}`}>
                     <card.icon className={iconSizes.md} />

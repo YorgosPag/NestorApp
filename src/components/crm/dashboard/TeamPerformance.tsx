@@ -3,8 +3,12 @@
 
 import React from 'react';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 export function TeamPerformance() {
+    const colors = useSemanticColors();
+    const { quick } = useBorderTokens();
     // 🏢 ENTERPRISE: Configurable team performance data
     const getTeamData = () => {
         try {
@@ -27,7 +31,7 @@ export function TeamPerformance() {
 
     const team = getTeamData();
     return (
-        <div className="bg-white dark:bg-card rounded-lg shadow p-6">
+        <div className={`${colors.bg.primary} ${quick.card} p-6`}>
             <h2 className="text-lg font-semibold mb-4">Απόδοση Ομάδας</h2>
             <table className="w-full text-left">
                 <thead>
@@ -41,7 +45,7 @@ export function TeamPerformance() {
                     {team.map(member => (
                         <tr key={member.name} className={`border-b ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}>
                             <td className="p-2 font-medium">{member.name}</td>
-                            <td className="p-2 text-gray-600">{member.leads}</td>
+                            <td className={`p-2 ${colors.text.muted}`}>{member.leads}</td>
                             <td className="p-2 text-green-600">{member.value}</td>
                         </tr>
                     ))}

@@ -5,6 +5,7 @@
 
 import React, { useCallback, useState, useEffect } from 'react';
 import { Slider } from '../../../../../../components/ui/slider';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface LineWidthControlProps {
   value: number;
@@ -29,6 +30,7 @@ export const LineWidthControl: React.FC<LineWidthControlProps> = ({
   disabled = false,
   showValue = true,
 }) => {
+  const colors = useSemanticColors();
   const [localValue, setLocalValue] = useState(value);
 
   // Sync local value όταν αλλάζει το external value
@@ -52,11 +54,11 @@ export const LineWidthControl: React.FC<LineWidthControlProps> = ({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-gray-300">
+        <label className={`text-sm font-medium ${colors.text.secondary}`}>
           {label}
         </label>
         {showValue && (
-          <span className="text-xs text-gray-400 font-mono">
+          <span className={`text-xs ${colors.text.muted} font-mono`}>
             {localValue.toFixed(2)}mm
           </span>
         )}
@@ -73,7 +75,7 @@ export const LineWidthControl: React.FC<LineWidthControlProps> = ({
       />
 
       {/* Visual preview bar */}
-      <div className="h-2 bg-gray-800 rounded overflow-hidden">
+      <div className={`h-2 ${colors.bg.secondary} rounded overflow-hidden`}>
         <div
           className="h-full bg-blue-500 transition-all duration-150"
           style={{

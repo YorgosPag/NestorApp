@@ -24,6 +24,7 @@ import { useColorAreaState } from '@react-stately/color';
 import { parseColor as parseAriaColor } from '@react-stately/color';
 import { useFocusRing } from '@react-aria/focus';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { AriaColorAreaProps } from '@react-aria/color';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
@@ -169,10 +170,11 @@ export function EnterpriseColorAreaWithLabel({
   label?: string;
   description?: string;
 }) {
+  const colors = useSemanticColors();
   return (
     <div className="space-y-2">
       {label && (
-        <label className="block text-sm font-medium text-gray-300">
+        <label className={`block text-sm font-medium ${colors.text.secondary}`}>
           {label}
         </label>
       )}
@@ -180,7 +182,7 @@ export function EnterpriseColorAreaWithLabel({
       <EnterpriseColorArea {...props} />
 
       {description && (
-        <p className="text-xs text-gray-400">{description}</p>
+        <p className={`text-xs ${colors.text.muted}`}>{description}</p>
       )}
     </div>
   );

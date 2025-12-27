@@ -3,7 +3,7 @@
 import React from 'react';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import type { SceneModel } from '../types/scene';
 import type { ToolType } from '../ui/toolbar/types';
 import { runAllTests, formatReportForCopy, type UnifiedTestReport } from './unified-test-runner';
@@ -181,7 +181,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to run all tests', 'error');
           }
         }}
-        className={`px-3 py-1 text-xs font-bold ${quick.button} bg-gradient-to-r from-purple-600 to-pink-600 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.GRADIENT_PURPLE_PINK}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} bg-gradient-to-r from-purple-600 to-pink-600 ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.GRADIENT_PURPLE_PINK}`}
       >
         🧪 Run All Tests
       </button>
@@ -253,7 +253,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load workflow test module', 'error');
           });
         }}
-        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.success} text-white transition-all ${HOVER_BACKGROUND_EFFECTS.SUCCESS_BUTTON}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.success} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.SUCCESS_BUTTON}`}
       >
         🔄 Layering Test (Ctrl+F2)
       </button>
@@ -288,7 +288,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load DOM inspector', 'error');
           });
         }}
-        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.info} text-white transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
       >
         🔍 DOM Inspector
       </button>
@@ -320,7 +320,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load enterprise cursor-crosshair test module', 'error');
           });
         }}
-        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.info} text-white transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
       >
         🏢 Enterprise Test (F3)
       </button>
@@ -349,7 +349,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load origin markers debug module', 'error');
           });
         }}
-        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.warning} text-white transition-all ${HOVER_BACKGROUND_EFFECTS.WARNING_BUTTON}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.warning} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.WARNING_BUTTON}`}
       >
         🎯 Origin (0,0)
       </button>
@@ -378,7 +378,7 @@ Check console for detailed metrics`;
             console.log(diagnostics);
           });
         }}
-        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.info} text-white transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
       >
         📏 Rulers
       </button>
@@ -393,8 +393,8 @@ Check console for detailed metrics`;
         }}
         className={`px-3 py-1 text-xs font-bold ${quick.button} transition-all ${
           showCalibration
-            ? `${colors.bg.info} text-white ${HOVER_BACKGROUND_EFFECTS.CYAN}`
-            : `${colors.bg.hover} text-white ${HOVER_BACKGROUND_EFFECTS.MUTED}`
+            ? `${colors.bg.info} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.CYAN}`
+            : `${colors.bg.hover} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
         }`}
       >
         🎯 Calibration {showCalibration ? 'ON' : 'OFF'}
@@ -421,7 +421,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load alignment debug module', 'error');
           });
         }}
-        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.info} text-white transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
       >
         🎯 Alignment
       </button>
@@ -460,8 +460,8 @@ Check console for detailed metrics`;
         }}
         className={`px-3 py-1 text-xs font-bold ${quick.button} transition-all ${
           showGrid
-            ? `${colors.bg.success} text-white ${HOVER_BACKGROUND_EFFECTS.SUCCESS}`
-            : `${colors.bg.hover} text-white ${HOVER_BACKGROUND_EFFECTS.MUTED}`
+            ? `${colors.bg.success} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.SUCCESS}`
+            : `${colors.bg.hover} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
         }`}
       >
         {showGrid ? '📐 Grid TEST' : '📐 Grid TEST'}
@@ -475,7 +475,7 @@ Check console for detailed metrics`;
         }}
         className={`px-3 py-1 text-xs font-bold ${quick.button} transition-all ${
           dxfCanvasVisible
-            ? `${colors.bg.success} text-white ${HOVER_BACKGROUND_EFFECTS.SUCCESS}`
+            ? `${colors.bg.success} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.SUCCESS}`
             : `${colors.bg.error} text-white ${HOVER_BACKGROUND_EFFECTS.DESTRUCTIVE}`
         }`}
       >
@@ -489,7 +489,7 @@ Check console for detailed metrics`;
         }}
         className={`px-3 py-1 text-xs font-bold ${quick.button} transition-all ${
           layerCanvasVisible
-            ? `${colors.bg.info} text-white ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
+            ? `${colors.bg.info} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
             : `${colors.bg.error} text-white ${HOVER_BACKGROUND_EFFECTS.DESTRUCTIVE}`
         }`}
       >
@@ -499,7 +499,7 @@ Check console for detailed metrics`;
       {/* Pan to Origin (0,0) Button */}
       <button
         onClick={panToWorldOrigin}
-        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.info} text-white transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
       >
         🏠 Pan to (0,0)
       </button>

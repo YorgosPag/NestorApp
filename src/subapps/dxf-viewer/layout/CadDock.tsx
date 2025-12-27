@@ -8,7 +8,7 @@ import { ProSnapToolbar } from '../ui/components/ProSnapToolbar';
 import { useProSnapIntegration } from '../hooks/common/useProSnapIntegration';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 
 // 🔺 FIXED SNAPPING PANEL με ProSnapToolbar
 const SnappingView = memo(() => {
@@ -24,8 +24,8 @@ const SnappingView = memo(() => {
   return (
     <div className={`p-2 ${colors.bg.secondary}`}>
       <div className="mb-2">
-        <h3 className="text-sm font-semibold text-gray-300">Object Snap</h3>
-        <p className="text-xs text-gray-500">Click to toggle snap modes</p>
+        <h3 className={`text-sm font-semibold ${colors.text.muted}`}>Object Snap</h3>
+        <p className={`text-xs ${colors.text.muted}`}>Click to toggle snap modes</p>
       </div>
       <ProSnapToolbar
         enabledModes={enabledModes}
@@ -47,7 +47,7 @@ const LayersView = memo(() => {
 
   return (
   <div className={`p-3 ${colors.bg.secondary} text-white`}>
-    <h3 className="text-sm font-semibold mb-2 text-gray-300">Layers</h3>
+    <h3 className={`text-sm font-semibold mb-2 ${colors.text.muted}`}>Layers</h3>
     <div className="space-y-1">
       <div className="flex items-center gap-2 text-sm">
         <input type="checkbox" defaultChecked className={iconSizes.xs} />
@@ -77,17 +77,17 @@ const PropertiesView = memo(() => {
 
   return (
   <div className={`p-3 ${colors.bg.secondary} text-white`}>
-    <h3 className="text-sm font-semibold mb-2 text-gray-300">Properties</h3>
+    <h3 className={`text-sm font-semibold mb-2 ${colors.text.muted}`}>Properties</h3>
     <div className="space-y-2 text-sm">
       <div>
-        <label className="block text-gray-400">Layer:</label>
+        <label className={`block ${colors.text.muted}`}>Layer:</label>
         <select className={`w-full ${colors.bg.secondary} ${getStatusBorder('muted')} ${quick.input} px-2 py-1`}>
           <option>0 - Default</option>
           <option>Geometry</option>
         </select>
       </div>
       <div>
-        <label className="block text-gray-400">Color:</label>
+        <label className={`block ${colors.text.muted}`}>Color:</label>
         <input type="color" className={`w-full h-8 ${colors.bg.secondary} ${getStatusBorder('muted')} ${quick.input}`} />
       </div>
     </div>
@@ -102,12 +102,12 @@ const HistoryView = memo(() => {
 
   return (
     <div className={`p-3 ${colors.bg.secondary} text-white`}>
-    <h3 className="text-sm font-semibold mb-2 text-gray-300">Command History</h3>
+    <h3 className={`text-sm font-semibold mb-2 ${colors.text.muted}`}>Command History</h3>
     <div className="space-y-1 text-xs font-mono">
-      <div className="text-gray-400">Command: FIT</div>
-      <div className="text-gray-400">Command: ZOOM Window</div>
-      <div className="text-gray-400">Command: LINE</div>
-      <div className="text-green-400">Ready for command...</div>
+      <div className={colors.text.muted}>Command: FIT</div>
+      <div className={colors.text.muted}>Command: ZOOM Window</div>
+      <div className={colors.text.muted}>Command: LINE</div>
+      <div className={colors.text.success}>Ready for command...</div>
     </div>
     </div>
   );

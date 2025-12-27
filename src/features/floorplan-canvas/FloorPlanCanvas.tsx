@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { SafePDFLoader } from '@/components/common/SafePDFLoader';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
   floorPlanStyles,
   createPdfLayerStyle,
@@ -45,6 +46,7 @@ export function FloorPlanCanvas({
   validationErrors = []
 }: FloorPlanCanvasProps) {
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // PDF state
   const [numPages, setNumPages] = useState<number>(0);
@@ -85,7 +87,7 @@ export function FloorPlanCanvas({
       
       {/* DEBUG INFO - TOP LEFT */}
       <aside
-        className="absolute top-4 left-4 bg-yellow-400 text-black p-3 rounded font-mono text-sm z-50"
+        className={`absolute top-4 left-4 ${colors.bg.warning} text-black p-3 rounded font-mono text-sm z-50`}
         style={floorPlanStyles.debugInfo}
         {...floorPlanAccessibility.getDebugPanelProps()}
       >
@@ -145,7 +147,7 @@ export function FloorPlanCanvas({
           style={createPdfLayerStyle(testMode)}
           aria-label={`PDF display in ${testMode} mode`}
         >
-          <div className={`w-full h-full bg-white border-4 ${getStatusBorder('info')}`}>
+          <div className={`w-full h-full ${colors.bg.primary} border-4 ${getStatusBorder('info')}`}>
             {/* Enterprise Note: border-4 is legitimate thick frame για PDF background layer visual separation */}
             <SafePDFLoader
               file={pdfBackgroundUrl}
@@ -163,7 +165,7 @@ export function FloorPlanCanvas({
       {/* BIG WARNING IF NO PDF */}
       {!pdfBackgroundUrl && (
         <section
-          className="absolute inset-0 flex items-center justify-center bg-orange-500 text-white text-4xl font-bold z-50"
+          className={`absolute inset-0 flex items-center justify-center ${colors.bg.warning} text-white text-4xl font-bold z-50`}
           style={floorPlanStyles.warningOverlay}
           {...floorPlanAccessibility.getOverlayProps('warning')}
         >
@@ -174,7 +176,7 @@ export function FloorPlanCanvas({
       {/* PDF NOT READY WARNING */}
       {pdfBackgroundUrl && !isPdfReady && !pdfLoadError && (
         <section
-          className="absolute inset-0 flex items-center justify-center bg-blue-500 text-white text-2xl font-bold z-50"
+          className={`absolute inset-0 flex items-center justify-center ${colors.bg.info} text-white text-2xl font-bold z-50`}
           style={floorPlanStyles.loadingOverlay}
           {...floorPlanAccessibility.getOverlayProps('loading')}
         >
@@ -185,7 +187,7 @@ export function FloorPlanCanvas({
       {/* PDF ERROR WARNING */}
       {pdfLoadError && (
         <section
-          className="absolute inset-0 flex items-center justify-center bg-red-500 text-white text-xl font-bold z-50 p-4"
+          className={`absolute inset-0 flex items-center justify-center ${colors.bg.error} text-white text-xl font-bold z-50 p-4`}
           style={floorPlanStyles.errorOverlay}
           {...floorPlanAccessibility.getOverlayProps('error')}
         >
@@ -199,7 +201,7 @@ export function FloorPlanCanvas({
       {/* SUCCESS MESSAGE */}
       {isPdfReady && pdfBackgroundUrl && (
         <section
-          className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-lg font-bold text-lg z-50"
+          className={`absolute bottom-4 left-1/2 transform -translate-x-1/2 ${colors.bg.success} text-white px-6 py-3 rounded-lg font-bold text-lg z-50`}
           style={floorPlanStyles.successMessage}
           {...floorPlanAccessibility.getOverlayProps('success')}
         >
@@ -210,7 +212,7 @@ export function FloorPlanCanvas({
       {/* INSTRUCTIONS */}
       <aside
         id="floorplan-instructions"
-        className="absolute bottom-4 right-4 bg-black text-white p-3 rounded max-w-sm text-xs z-50"
+        className={`absolute bottom-4 right-4 ${colors.bg.elevated} text-white p-3 rounded max-w-sm text-xs z-50`}
         style={floorPlanStyles.instructions}
         role="complementary"
         aria-label="Test instructions"

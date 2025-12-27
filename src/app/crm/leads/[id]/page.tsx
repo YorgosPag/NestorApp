@@ -6,6 +6,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, User, Mail, Phone, Tag, Calendar, Edit3, Send, PhoneCall, Plus, Clock, CheckCircle } from 'lucide-react';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import { Toaster } from 'react-hot-toast';
 
@@ -24,6 +26,7 @@ import { useLeadTasks } from './hooks/useLeadTasks';
 export default function LeadProfilePage() {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
@@ -53,10 +56,10 @@ export default function LeadProfilePage() {
 
   if (loadingLead) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className={`min-h-screen ${colors.bg.secondary} flex items-center justify-center`}>
         <div className="text-center">
           <AnimatedSpinner size="large" variant="info" className="mx-auto mb-2" />
-          <p className="text-gray-600">Φόρτωση lead...</p>
+          <p className={`${colors.text.muted}`}>Φόρτωση lead...</p>
         </div>
       </div>
     );
@@ -64,14 +67,14 @@ export default function LeadProfilePage() {
 
   if (leadError || !lead) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className={`min-h-screen ${colors.bg.secondary}`}>
         <div className="container mx-auto px-6 py-8">
-          <div className={`bg-red-50 ${getStatusBorder('error')} rounded-lg p-8 text-center`}>
-            <h2 className="text-xl font-semibold text-red-800 mb-2">Σφάλμα</h2>
-            <p className="text-red-600 mb-4">{leadError || 'Το lead δεν βρέθηκε'}</p>
+          <div className={`${colors.bg.errorLight} ${getStatusBorder('error')} rounded-lg p-8 text-center`}>
+            <h2 className={`text-xl font-semibold ${colors.text.error} mb-2`}>Σφάλμα</h2>
+            <p className={`${colors.text.error} mb-4`}>{leadError || 'Το lead δεν βρέθηκε'}</p>
             <button
               onClick={() => router.push('/crm/leads')}
-              className={`px-4 py-2 bg-blue-600 text-white rounded-lg ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
+              className={`px-4 py-2 ${colors.bg.info} ${colors.text.onInfo} rounded-lg ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
             >
               Επιστροφή στα Leads
             </button>
@@ -84,8 +87,8 @@ export default function LeadProfilePage() {
   return (
     <>
       <Toaster position="top-right" />
-      <main className="min-h-screen bg-gray-50 dark:bg-background">
-        <header className="bg-white dark:bg-card shadow-sm border-b">
+      <main className={`min-h-screen ${colors.bg.secondary}`}>
+        <header className={`${colors.bg.primary} shadow-sm border-b`}>
           <div className="px-6 py-4">
             <nav className="flex items-center gap-4" aria-label="Πλοήγηση lead profile">
               <button
@@ -96,10 +99,10 @@ export default function LeadProfilePage() {
                 <ArrowLeft className={iconSizes.md} />
               </button>
               <div className="flex items-center gap-3">
-                <User className={`${iconSizes.lg} text-blue-600`} />
+                <User className={`${iconSizes.lg} ${colors.text.info}`} />
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">{lead.fullName}</h1>
-                  <p className="text-gray-600 dark:text-muted-foreground">Lead Profile</p>
+                  <h1 className={`text-2xl font-bold ${colors.text.primary}`}>{lead.fullName}</h1>
+                  <p className={`${colors.text.muted}`}>Lead Profile</p>
                 </div>
               </div>
             </nav>
@@ -111,9 +114,9 @@ export default function LeadProfilePage() {
             <aside className="lg:col-span-1 space-y-6" aria-label="Στοιχεία επαφής και γρήγορες ενέργειες">
               <ContactCard lead={lead} />
               {lead.notes && (
-                <article className="bg-white dark:bg-card rounded-lg shadow p-6">
+                <article className={`${colors.bg.primary} rounded-lg shadow p-6`}>
                   <h4 className="font-medium mb-2">Σημειώσεις</h4>
-                  <p className="text-sm text-gray-700 bg-gray-50 dark:bg-muted/50 rounded p-3">{lead.notes}</p>
+                  <p className={`text-sm ${colors.text.secondary} ${colors.bg.secondary} rounded p-3`}>{lead.notes}</p>
                 </article>
               )}
               <QuickActions lead={lead} onEdit={() => setShowEditModal(true)} onNewTask={() => setShowTaskModal(true)} onSendEmail={() => setShowEmailModal(true)} />
@@ -122,7 +125,7 @@ export default function LeadProfilePage() {
 
             <section className="lg:col-span-2 space-y-6" aria-label="Εργασίες και ιστορικό επικοινωνίας">
               <UpcomingTasks tasks={tasks} router={router} />
-              <article className="bg-white dark:bg-card rounded-lg shadow p-6">
+              <article className={`${colors.bg.primary} rounded-lg shadow p-6`}>
                 <CommunicationsHistory contactId={lead.id} />
               </article>
             </section>

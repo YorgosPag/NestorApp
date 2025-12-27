@@ -77,8 +77,8 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
           flex items-center justify-center
           ${
             isActive
-              ? `${colors.bg.info} text-white ${getStatusBorder('active')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-              : `${colors.bg.hover} text-gray-200 ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+              ? `${colors.bg.info} ${colors.text.inverse} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+              : `${colors.bg.hover} ${colors.text.secondary} ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
           }
           ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         `}
@@ -100,8 +100,8 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
             flex items-center justify-center
             ${
               isActive
-                ? `${colors.bg.info} text-white ${getStatusBorder('active')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                : `${colors.bg.hover} text-gray-200 ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+                ? `${colors.bg.info} ${colors.text.inverse} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                : `${colors.bg.hover} ${colors.text.secondary} ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
             }
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           `}
@@ -117,8 +117,8 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
             flex items-center justify-center
             ${
               isActive
-                ? `${colors.bg.info} text-white ${getStatusBorder('active')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                : `${colors.bg.hover} text-gray-200 ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+                ? `${colors.bg.info} ${colors.text.inverse} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                : `${colors.bg.hover} ${colors.text.secondary} ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
             }
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           `}
@@ -135,7 +135,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
               <button
                 key={option.id}
                 onClick={() => handleDropdownItemClick(option.id)}
-                className={`w-full px-3 py-2 text-left text-sm text-gray-200 flex items-center gap-2 first:rounded-t-md last:rounded-b-md ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+                className={`w-full px-3 py-2 text-left text-sm ${colors.text.secondary} flex items-center gap-2 first:rounded-t-md last:rounded-b-md ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               >
                 {OptionIcon && <OptionIcon className={iconSizes.sm} />}
                 {option.label}
@@ -155,22 +155,23 @@ interface ActionButtonProps {
 export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
   const iconSizes = useIconSizes();
   const { getStatusBorder, getElementBorder } = useBorderTokens();
+  const colors = useSemanticColors();  // ✅ ENTERPRISE: Centralized colors for ActionButton
   const IconComponent = action.icon;
   
   return (
     <button
       onClick={action.onClick}
-      title={`${action.label} (${action.hotkey})`}
-      disabled={action.disabled}
+      title={action.hotkey ? `${action.label} (${action.hotkey})` : action.label}
+      disabled={action.disabled ?? false}
       className={`
         ${iconSizes.xl} p-0 rounded-md transition-colors duration-150
         flex items-center justify-center
         ${
           action.active
-            ? `${colors.bg.info} text-white ${getStatusBorder('active')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+            ? `${colors.bg.info} ${colors.text.inverse} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
             : action.disabled
-            ? `${colors.bg.secondary} text-gray-500 ${getElementBorder('button', 'disabled')} cursor-not-allowed`
-            : `${colors.bg.hover} text-gray-200 ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+            ? `${colors.bg.secondary} ${colors.text.muted} ${getElementBorder('button', 'default')} cursor-not-allowed`
+            : `${colors.bg.hover} ${colors.text.secondary} ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
         }
       `}
     >

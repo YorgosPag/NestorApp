@@ -10,7 +10,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@/components/ui/effects';
 import type { RealEstatePolygon } from '@geo-alert/core';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface TechnicalDrawingInterfaceProps {
   mapRef: React.RefObject<any>;
@@ -274,7 +274,7 @@ export function TechnicalDrawingInterface({
         <div className="flex gap-2 mb-4">
           <button
             onClick={handleComplete}
-            className={`flex-1 flex items-center justify-center gap-2 bg-purple-500 text-white py-3 px-4 ${quick.card} transition-colors ${HOVER_BACKGROUND_EFFECTS.PURPLE_DARKER}`}
+            className={`flex-1 flex items-center justify-center gap-2 ${colors.bg.accent} text-white py-3 px-4 ${quick.card} transition-colors ${HOVER_BACKGROUND_EFFECTS.PURPLE_DARKER}`}
           >
             <Ruler className={iconSizes.md} />
             <span className="font-medium">{t('drawingInterfaces.technical.actions.complete')}</span>
@@ -282,7 +282,7 @@ export function TechnicalDrawingInterface({
 
           <button
             onClick={handleCancel}
-            className={`flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-3 px-4 ${quick.card} transition-colors ${HOVER_BACKGROUND_EFFECTS.RED_DARKER}`}
+            className={`flex-1 flex items-center justify-center gap-2 ${colors.bg.error} text-white py-3 px-4 ${quick.card} transition-colors ${HOVER_BACKGROUND_EFFECTS.RED_DARKER}`}
           >
             <span className="font-medium">{t('drawingInterfaces.technical.actions.cancel')}</span>
           </button>
@@ -484,7 +484,7 @@ export function TechnicalDrawingInterface({
                 }
               }}
               disabled={polygons.length === 0}
-              className={`flex items-center justify-center gap-2 bg-red-500 text-white py-2 px-4 rounded-lg transition-colors disabled:opacity-50 ${HOVER_BACKGROUND_EFFECTS.RED_DARKER}`}
+              className={`flex items-center justify-center gap-2 ${colors.bg.error} text-white py-2 px-4 rounded-lg transition-colors disabled:opacity-50 ${HOVER_BACKGROUND_EFFECTS.RED_DARKER}`}
             >
               <Zap className={iconSizes.sm} />
               <span className="text-sm font-medium">{t('hardcodedTexts.actions.automateAll')} ({polygons.length})</span>
@@ -495,7 +495,7 @@ export function TechnicalDrawingInterface({
                 startPeriodicCheck(alertConfiguration.monitoringInterval);
                 console.log('🚨 Technical: Automated monitoring started');
               }}
-              className={`flex items-center justify-center gap-2 bg-green-500 text-white py-2 px-4 rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.GREEN_DARKER}`}
+              className={`flex items-center justify-center gap-2 ${colors.bg.success} text-white py-2 px-4 rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.GREEN_DARKER}`}
             >
               <Monitor className={iconSizes.sm} />
               <span className="text-sm font-medium">{t('hardcodedTexts.actions.startMonitoring')}</span>
@@ -506,7 +506,7 @@ export function TechnicalDrawingInterface({
                 stopPeriodicCheck();
                 console.log('🚨 Technical: Automated monitoring stopped');
               }}
-              className={`flex items-center justify-center gap-2 bg-gray-500 text-white py-2 px-4 rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`}
+              className={`flex items-center justify-center gap-2 ${colors.bg.muted} text-white py-2 px-4 rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`}
             >
               <Settings className={iconSizes.sm} />
               <span className="text-sm font-medium">{t('hardcodedTexts.actions.stopAll')}</span>

@@ -4,7 +4,7 @@ import React from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { X, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -212,25 +212,25 @@ export const getHeaderVariantStyles = (variant: HeaderVariant, borderTokens: Ret
     default: {
       cardClass: `${borderTokens.quick.card} ${colors.bg.elevated} text-white`,
       headerClass: `${borderTokens.quick.card} hover:${colors.bg.hover}/50`,
-      iconClass: "text-blue-400",
+      iconClass: colors.text.info,
       titleClass: "text-white"
     },
     success: {
       cardClass: `${borderTokens.quick.success} ${colors.bg.success} text-white`,
       headerClass: `${borderTokens.quick.success} hover:${colors.bg.success}/80`,
-      iconClass: "text-green-400",
+      iconClass: colors.text.success,
       titleClass: "text-white"
     },
     warning: {
       cardClass: `${borderTokens.quick.warning} ${colors.bg.warning} text-white`,
       headerClass: `${borderTokens.quick.warning} hover:${colors.bg.warning}/80`,
-      iconClass: "text-orange-400",
+      iconClass: colors.text.warning,
       titleClass: "text-white"
     },
     error: {
       cardClass: `${borderTokens.quick.error} ${colors.bg.error} text-white`,
       headerClass: `${borderTokens.quick.error} hover:${colors.bg.error}/80`,
-      iconClass: "text-red-400",
+      iconClass: colors.text.danger,
       titleClass: "text-white"
     }
   };
@@ -245,7 +245,7 @@ export const createLegacyHeaderVariants = (borderTokens: ReturnType<typeof useBo
     default: {
       cardClass: `${borderTokens.quick.card} ${colors.bg.elevated} text-white`,
       headerClass: `${borderTokens.quick.card} hover:${colors.bg.hover}/50`,
-      iconClass: "text-blue-400",
+      iconClass: colors.text.info,
       titleClass: "text-white"
     }
   };

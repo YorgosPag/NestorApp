@@ -27,7 +27,11 @@
       "Bash(for file in \"config\\modal-colors.ts\" \"config\\modal-config.ts\" \"config\\modal-layout.ts\" \"config\\modal-select.ts\" \"config\\panel-tokens.ts\")",
       "Bash(do echo \"=== $file ===\")",
       "Bash(done)",
-      "Bash(for file in \"config/modal-colors.ts\" \"config/modal-layout.ts\" \"config/modal-select.ts\" \"config/panel-tokens.ts\" \"ui/effects/index.ts\")"
+      "Bash(for file in \"config/modal-colors.ts\" \"config/modal-layout.ts\" \"config/modal-select.ts\" \"config/panel-tokens.ts\" \"ui/effects/index.ts\")",
+      "Bash(grep:*)",
+      "Bash(cat:*)",
+      "Bash(git checkout:*)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []

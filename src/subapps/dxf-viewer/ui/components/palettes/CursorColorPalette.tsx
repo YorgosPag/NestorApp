@@ -3,6 +3,7 @@ import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export interface CursorColors {
   crosshairColor: string;
@@ -32,6 +33,7 @@ interface CursorColorPaletteProps {
 export function CursorColorPalette({ colors, onColorsChange }: CursorColorPaletteProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
+  const semanticColors = useSemanticColors();
 
   const handleColorChange = (key: keyof CursorColors, value: string) => {
     const newColors = { ...colors, [key]: value };
@@ -49,10 +51,10 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
     colorKey: keyof CursorColors; 
     opacityKey?: keyof CursorColors;
   }) => (
-    <div className="p-2 bg-gray-700 rounded space-y-2">
+    <div className={`p-2 ${semanticColors.bg.secondary} rounded space-y-2`}>
       <div className="text-sm text-white">
         <div className="font-medium">{label}</div>
-        <div className="font-normal text-gray-400">{description.charAt(0).toUpperCase() + description.slice(1)}</div>
+        <div className={`font-normal ${semanticColors.text.muted}`}>{description.charAt(0).toUpperCase() + description.slice(1)}</div>
       </div>
       <div className="flex items-center gap-2">
         <div 
@@ -73,7 +75,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
           type="text"
           value={colors[colorKey] as string}
           onChange={(e) => handleColorChange(colorKey, e.target.value)}
-          className={`px-2 py-1 text-xs bg-gray-600 text-white rounded ${getStatusBorder('secondary')}`}
+          className={`px-2 py-1 text-xs ${semanticColors.bg.muted} text-white rounded ${getStatusBorder('secondary')}`}
           style={{ width: '5rem' }}
           placeholder="#ffffff"
         />
@@ -89,7 +91,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
               className=""
               style={{ width: '4rem' }}
             />
-            <div className="text-xs text-gray-300 text-center" style={{ width: '2rem' }}>
+            <div className={`text-xs ${semanticColors.text.secondary} text-center`} style={{ width: '2rem' }}>
               {Math.round((colors[opacityKey] as number) * 100)}%
             </div>
           </>
@@ -109,10 +111,10 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
     styleKey: 'windowBorderStyle' | 'crossingBorderStyle'; 
     color: string;
   }) => (
-    <div className="p-2 bg-gray-700 rounded space-y-2">
+    <div className={`p-2 ${semanticColors.bg.secondary} rounded space-y-2`}>
       <div className="text-sm text-white">
         <div className="font-medium">{label}</div>
-        <div className="font-normal text-gray-400">{description}</div>
+        <div className={`font-normal ${semanticColors.text.muted}`}>{description}</div>
       </div>
       <div className="grid grid-cols-2 gap-2">
         {(['solid', 'dashed', 'dotted', 'dash-dot'] as const).map((style) => {
@@ -143,8 +145,8 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
               onClick={() => handleColorChange(styleKey, style)}
               className={`p-2 rounded text-xs border transition-colors ${
                 isSelected
-                  ? `bg-blue-600 ${getStatusBorder('info')}`
-                  : `bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT} ${getStatusBorder('secondary').replace('border ', '')}`
+                  ? `${semanticColors.bg.info} ${getStatusBorder('info')}`
+                  : `${semanticColors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT} ${getStatusBorder('secondary').replace('border ', '')}`
               }`}
             >
               <div 
@@ -163,7 +165,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
     <div className="space-y-4">
       {/* Window Selection */}
       <div>
-        <h4 className="text-xs font-medium text-gray-300 mb-2">🔵 Window Selection</h4>
+        <h4 className={`text-xs font-medium ${semanticColors.text.secondary} mb-2`}>🔵 Window Selection</h4>
         <div className="space-y-2">
           <ColorRow
             label="Γέμισμα"
@@ -188,7 +190,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
 
       {/* Crossing Selection */}
       <div className={`${getDirectionalBorder('muted', 'top')} pt-3`}>
-        <h4 className="text-xs font-medium text-gray-300 mb-2">🟢 Crossing Selection</h4>
+        <h4 className={`text-xs font-medium ${semanticColors.text.secondary} mb-2`}>🟢 Crossing Selection</h4>
         <div className="space-y-2">
           <ColorRow
             label="Γέμισμα"

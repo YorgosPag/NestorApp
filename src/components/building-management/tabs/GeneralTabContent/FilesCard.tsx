@@ -4,7 +4,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
@@ -79,7 +79,7 @@ export function FilesCard() {
 
           <article className={`flex items-center justify-between p-3 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`} aria-label="File: Συγγραφή Υποχρεώσεων.pdf">
             <div className="flex items-center space-x-3">
-              <div className={`flex-shrink-0 ${iconSizes.xl2} ${colors.bg.red['100']} dark:${colors.bg.red['950']} ${quick.card} flex items-center justify-center`}>
+              <div className={`flex-shrink-0 ${iconSizes.xl2} ${colors.bg.errorSubtle} dark:${colors.text.errorStrong} ${quick.card} flex items-center justify-center`}>
                 <FileText className={`${iconSizes.md} text-red-600`} />
               </div>
               <div className="min-w-0 flex-1">
@@ -96,7 +96,7 @@ export function FilesCard() {
 
           <article className={`flex items-center justify-between p-3 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`} aria-label="File: Πρόοδος Κατασκευής Φεβ 2025.jpg">
             <div className="flex items-center space-x-3">
-              <div className={`flex-shrink-0 ${iconSizes.xl2} ${colors.bg.green['100']} dark:${colors.bg.green['950']} ${quick.card} flex items-center justify-center`}>
+              <div className={`flex-shrink-0 ${iconSizes.xl2} ${colors.bg.successSubtle} dark:${colors.text.successStrong} ${quick.card} flex items-center justify-center`}>
                  <FileImage className={`${iconSizes.md} text-green-600`} />
               </div>
               <div className="min-w-0 flex-1">

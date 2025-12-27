@@ -3,6 +3,7 @@
 import { User } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import { EditOpportunityModal } from "@/components/crm/dashboard/EditOpportunityModal";
 import SendEmailModal from "@/components/email/SendEmailModal";
@@ -16,6 +17,7 @@ import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/ef
 export default function LeadsList({ refreshTrigger }: { refreshTrigger?: any }) {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const {
     leads, loading, error, fetchLeads,
     editingLead, showEditModal, emailingLead, showEmailModal,
@@ -28,7 +30,7 @@ export default function LeadsList({ refreshTrigger }: { refreshTrigger?: any }) 
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <AnimatedSpinner size="large" className="mx-auto mb-2" />
-          <p className="text-gray-600">Φόρτωση leads...</p>
+          <p className={`${colors.text.muted}`}>Φόρτωση leads...</p>
         </div>
       </div>
     );
@@ -36,9 +38,9 @@ export default function LeadsList({ refreshTrigger }: { refreshTrigger?: any }) 
 
   if (error) {
     return (
-      <div className={`bg-red-50 ${getStatusBorder('error')} rounded-lg p-4`}>
-        <p className="text-red-600">{error}</p>
-        <button onClick={fetchLeads} className={`mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm transition-colors ${HOVER_BACKGROUND_EFFECTS.RED_BUTTON}`}>
+      <div className={`${colors.bg.error} ${getStatusBorder('error')} rounded-lg p-4`}>
+        <p className={`${colors.text.error}`}>{error}</p>
+        <button onClick={fetchLeads} className={`mt-2 px-3 py-1 ${colors.bg.error} ${colors.text.inverted} rounded text-sm transition-colors ${HOVER_BACKGROUND_EFFECTS.RED_BUTTON}`}>
           Δοκιμή ξανά
         </button>
       </div>
@@ -48,9 +50,9 @@ export default function LeadsList({ refreshTrigger }: { refreshTrigger?: any }) 
   if (leads.length === 0) {
     return (
       <div className="text-center py-12">
-        <User className={`${iconSizes.xl3} text-gray-400 mx-auto mb-4`} />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Δεν υπάρχουν leads</h3>
-        <p className="text-gray-600">Προσθέστε το πρώτο σας lead για να ξεκινήσετε!</p>
+        <User className={`${iconSizes.xl3} ${colors.text.muted} mx-auto mb-4`} />
+        <h3 className={`text-lg font-medium ${colors.text.foreground} mb-2`}>Δεν υπάρχουν leads</h3>
+        <p className={`${colors.text.muted}`}>Προσθέστε το πρώτο σας lead για να ξεκινήσετε!</p>
       </div>
     );
   }

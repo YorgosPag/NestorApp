@@ -3,6 +3,7 @@
 import React from 'react';
 import { Image, Upload } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import {
@@ -108,6 +109,7 @@ export function MultiplePhotosFull({
   showPhotosWhenDisabled = false
 }: MultiplePhotosFullProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   // ========================================================================
   // COMPUTED VALUES
@@ -231,7 +233,7 @@ export function MultiplePhotosFull({
                 className="overflow-hidden flex-shrink-0 mx-auto opacity-50"
                 style={responsiveStyle}
               >
-                <div className="w-full h-full bg-gray-100 rounded-lg"></div>
+                <div className={`w-full h-full ${colors.bg.muted} rounded-lg`}></div>
               </div>
             );
           }

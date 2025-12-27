@@ -19,6 +19,7 @@ import { useTabNavigation } from '../../../hooks/useTabNavigation';
 import { TabNavigation } from '../../../shared/TabNavigation';
 import { RulerMajorLinesSettings } from './RulerMajorLinesSettings';
 import { RulerMinorLinesSettings } from './RulerMinorLinesSettings';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export interface RulerLinesSettingsProps {
   className?: string;
@@ -60,6 +61,7 @@ export const RulerLinesSettings: React.FC<RulerLinesSettingsProps> = ({ classNam
 
   type LinesTab = 'major' | 'minor';
   const { activeTab: activeLinesTab, setActiveTab: setActiveLinesTab } = useTabNavigation<LinesTab>('major');
+  const colors = useSemanticColors();
 
   // ============================================================================
   // TAB CONFIGURATION
@@ -92,7 +94,7 @@ export const RulerLinesSettings: React.FC<RulerLinesSettingsProps> = ({ classNam
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Lines Sub-tabs */}
-      <div className="flex gap-1 p-1 bg-gray-800 rounded">
+      <div className={`flex gap-1 p-1 ${colors.bg.primary} rounded`}>
         <TabNavigation
           tabs={linesTabs}
           activeTab={activeLinesTab}

@@ -4,6 +4,7 @@ import React from 'react';
 import { Building2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import { nearbyProjects } from './nearbyProjects';
@@ -31,6 +32,7 @@ interface MapCanvasProps {
 export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedLayer }: MapCanvasProps) {
     const iconSizes = useIconSizes();
     const { createBorder, quick, getStatusBorder } = useBorderTokens();
+    const colors = useSemanticColors();
 
     // Enterprise: Get centralized marker styles με semantic secondary border
     const markerStyles = getMainBuildingMarkerStyles('hsl(var(--border))'); // Secondary border semantic color
@@ -83,7 +85,7 @@ export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedL
                     </div>
 
                     {/* Scale indicator */}
-                    <div className={`absolute bottom-4 left-4 bg-white bg-opacity-90 px-3 py-2 ${quick.input} text-sm`}>
+                    <div className={`absolute bottom-4 left-4 ${colors.bg.primary} opacity-90 px-3 py-2 ${quick.input} text-sm`}>
                         <div className="flex items-center gap-2">
                             <div className={`${iconSizes.xl4} h-1 bg-black`}></div>
                             <span>100m</span>
@@ -91,7 +93,7 @@ export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedL
                     </div>
 
                     {/* Map type indicator */}
-                    <div className={`absolute top-4 right-4 bg-white bg-opacity-90 px-3 py-2 ${quick.input} text-sm font-medium`}>
+                    <div className={`absolute top-4 right-4 ${colors.bg.primary} opacity-90 px-3 py-2 ${quick.input} text-sm font-medium`}>
                         {mapView === 'street' ? 'Χάρτης δρόμων' :
                             mapView === 'satellite' ? 'Δορυφορική όψη' :
                                 'Υβριδική όψη'}

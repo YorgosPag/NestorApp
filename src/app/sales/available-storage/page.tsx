@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Placeholder stats for Available Storage
 const storageStats: DashboardStat[] = [
@@ -55,6 +56,7 @@ const storageStats: DashboardStat[] = [
 export default function AvailableStoragePage() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   return (
     <TooltipProvider>
       <div className="flex h-screen bg-background">
@@ -93,11 +95,11 @@ export default function AvailableStoragePage() {
                 <div className="space-y-3">
                   <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-orange-500/10 rounded-lg">
+                      <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
                         <Warehouse className={`${iconSizes.sm} text-orange-500`} />
                       </div>
                       <h3 className="font-medium">Υπόγειες Μεγάλες</h3>
-                      <span className="ml-auto bg-orange-500/20 text-orange-500 px-2 py-1 rounded text-sm font-medium">
+                      <span className={`ml-auto ${colors.bg.warning}/20 ${colors.text.warning} px-2 py-1 rounded text-sm font-medium`}>
                         23 διαθέσιμες
                       </span>
                     </div>
@@ -115,11 +117,11 @@ export default function AvailableStoragePage() {
 
                   <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-blue-500/10 rounded-lg">
+                      <div className={`p-2 ${colors.bg.info}/10 rounded-lg`}>
                         <Warehouse className={`${iconSizes.sm} text-blue-500`} />
                       </div>
                       <h3 className="font-medium">Ισόγειες Μεγάλες</h3>
-                      <span className="ml-auto bg-blue-500/20 text-blue-500 px-2 py-1 rounded text-sm font-medium">
+                      <span className={`ml-auto ${colors.bg.info}/20 ${colors.text.info} px-2 py-1 rounded text-sm font-medium`}>
                         18 διαθέσιμες
                       </span>
                     </div>
@@ -147,11 +149,11 @@ export default function AvailableStoragePage() {
                 <div className="space-y-3">
                   <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-purple-500/10 rounded-lg">
+                      <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
                         <Archive className={`${iconSizes.sm} text-purple-500`} />
                       </div>
                       <h3 className="font-medium">Υπόγειες Μικρές</h3>
-                      <span className="ml-auto bg-purple-500/20 text-purple-500 px-2 py-1 rounded text-sm font-medium">
+                      <span className={`ml-auto ${colors.bg.warning}/20 ${colors.text.warning} px-2 py-1 rounded text-sm font-medium`}>
                         31 διαθέσιμες
                       </span>
                     </div>
@@ -169,11 +171,11 @@ export default function AvailableStoragePage() {
 
                   <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-green-500/10 rounded-lg">
+                      <div className={`p-2 ${colors.bg.success}/10 rounded-lg`}>
                         <Archive className={`${iconSizes.sm} text-green-500`} />
                       </div>
                       <h3 className="font-medium">Ισόγειες Μικρές</h3>
-                      <span className="ml-auto bg-green-500/20 text-green-500 px-2 py-1 rounded text-sm font-medium">
+                      <span className={`ml-auto ${colors.bg.success}/20 ${colors.text.success} px-2 py-1 rounded text-sm font-medium`}>
                         17 διαθέσιμες
                       </span>
                     </div>

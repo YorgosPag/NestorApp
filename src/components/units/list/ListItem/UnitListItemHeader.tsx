@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface UnitListItemHeaderProps {
   unit: Property;
@@ -23,6 +24,7 @@ export function UnitListItemHeader({
 }: UnitListItemHeaderProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const CategoryIcon = getCategoryIcon(unit.type);
 
   // ENTERPRISE: Customer ownership indicator
@@ -48,7 +50,7 @@ export function UnitListItemHeader({
         {showCustomerIndicator && (
           <Badge
             variant="outline"
-            className={`flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-green-50 text-green-700 ${getStatusBorder('success')} dark:bg-green-950/20 dark:text-green-400 dark:${getStatusBorder('success')}`}
+            className={`flex items-center gap-1 px-2 py-0.5 text-xs font-medium ${colors.bg.success} ${colors.text.success} ${getStatusBorder('success')}`}
           >
             <User className={iconSizes.xs} />
             <span>Πελάτης</span>

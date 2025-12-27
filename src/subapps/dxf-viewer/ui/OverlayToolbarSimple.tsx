@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { Status, OverlayKind, OverlayEditorMode } from '../overlays/types';
 
 interface OverlayToolbarProps {
@@ -24,26 +25,27 @@ interface OverlayToolbarProps {
 
 export const OverlayToolbar: React.FC<OverlayToolbarProps> = (props) => {
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // Απλή έκδοση για debugging
   return (
-    <div className={`flex items-center gap-2 p-2 bg-gray-800 ${quick.card}`}>
-      <div className="text-white">Overlay Toolbar (Simple Version)</div>
+    <div className={`flex items-center gap-2 p-2 ${colors.bg.secondary} ${quick.card}`}>
+      <div className={`${colors.text.primary}`}>Overlay Toolbar (Simple Version)</div>
       <button
         onClick={() => props.onModeChange('select')}
-        className="px-2 py-1 bg-blue-600 text-white rounded"
+        className={`px-2 py-1 ${colors.bg.info} ${colors.text.inverted} rounded`}
       >
         Select
       </button>
       <button
         onClick={() => props.onModeChange('draw')}
-        className="px-2 py-1 bg-blue-600 text-white rounded"
+        className={`px-2 py-1 ${colors.bg.info} ${colors.text.inverted} rounded`}
       >
         Draw
       </button>
       <button
         onClick={() => props.onModeChange('edit')}
-        className="px-2 py-1 bg-blue-600 text-white rounded"
+        className={`px-2 py-1 ${colors.bg.info} ${colors.text.inverted} rounded`}
       >
         Edit
       </button>

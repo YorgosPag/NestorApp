@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
   Building,
   Building2,
@@ -37,6 +38,7 @@ export function HierarchicalDestinationSelector({
 }: HierarchicalDestinationSelectorProps) {
   const iconSizes = useIconSizes();
   const { quick, radius, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const {
     companies,
     selectedCompany,
@@ -180,7 +182,7 @@ export function HierarchicalDestinationSelector({
     return (
       <div className="text-center py-8">
         <AnimatedSpinner size="large" className="mx-auto mb-4" />
-        <p className="text-gray-400">Φόρτωση δεδομένων...</p>
+        <p className="${colors.text.muted}">Φόρτωση δεδομένων...</p>
       </div>
     );
   }
@@ -188,10 +190,10 @@ export function HierarchicalDestinationSelector({
   if (error) {
     return (
       <div className="text-center py-8">
-        <p className="text-red-400 mb-4">Σφάλμα: {error}</p>
+        <p className={`${colors.text.error} mb-4`}>Σφάλμα: {error}</p>
         <button
           onClick={loadCompanies}
-          className={`px-4 py-2 bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white rounded-lg`}
+          className={`px-4 py-2 ${colors.bg.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} rounded-lg`}
         >
           Ξαναδοκιμή
         </button>
@@ -201,8 +203,8 @@ export function HierarchicalDestinationSelector({
 
   return (
     <div>
-      <h3 className="text-lg font-medium text-white mb-2">{getStepTitle()}</h3>
-      <p className="text-gray-400 mb-6">{getStepDescription()}</p>
+      <h3 className={`text-lg font-medium ${colors.text.primary} mb-2`}>{getStepTitle()}</h3>
+      <p className="${colors.text.muted} mb-6">{getStepDescription()}</p>
 
       {/* Breadcrumb */}
       <div className="flex items-center space-x-2 mb-6 text-sm">
@@ -210,40 +212,40 @@ export function HierarchicalDestinationSelector({
           <>
             <button
               onClick={() => setCurrentStep('company')}
-              className={`text-blue-400 ${HOVER_TEXT_EFFECTS.LIGHTER} flex items-center space-x-1`}
+              className={`${colors.text.info} ${HOVER_TEXT_EFFECTS.LIGHTER} flex items-center space-x-1`}
             >
               <Building className={iconSizes.sm} />
               <span>{selectedCompany.companyName}</span>
             </button>
-            {selectedProject && <span className="text-gray-500">→</span>}
+            {selectedProject && <span className="${colors.text.muted}">→</span>}
           </>
         )}
         {selectedProject && (
           <>
             <button
               onClick={() => setCurrentStep('project')}
-              className={`text-blue-400 ${HOVER_TEXT_EFFECTS.LIGHTER} flex items-center space-x-1`}
+              className={`${colors.text.info} ${HOVER_TEXT_EFFECTS.LIGHTER} flex items-center space-x-1`}
             >
               <Folder className={iconSizes.sm} />
               <span>{selectedProject.name}</span>
             </button>
-            {selectedBuilding && <span className="text-gray-500">→</span>}
+            {selectedBuilding && <span className="${colors.text.muted}">→</span>}
           </>
         )}
         {selectedBuilding && (
           <>
             <button
               onClick={() => setCurrentStep('building')}
-              className={`text-blue-400 ${HOVER_TEXT_EFFECTS.LIGHTER} flex items-center space-x-1`}
+              className={`${colors.text.info} ${HOVER_TEXT_EFFECTS.LIGHTER} flex items-center space-x-1`}
             >
               <Building2 className={iconSizes.sm} />
               <span>{selectedBuilding.name}</span>
             </button>
-            {selectedFloor && <span className="text-gray-500">→</span>}
+            {selectedFloor && <span className="${colors.text.muted}">→</span>}
           </>
         )}
         {selectedFloor && (
-          <span className="text-gray-300 flex items-center space-x-1">
+          <span className="${colors.text.secondary} flex items-center space-x-1">
             <Home className={iconSizes.sm} />
             <span>{selectedFloor.name}</span>
           </span>
@@ -255,7 +257,7 @@ export function HierarchicalDestinationSelector({
         {currentStep === 'company' && (
           <>
             {companies.length === 0 ? (
-              <div className="text-gray-500 text-center py-8">
+              <div className="${colors.text.muted} text-center py-8">
                 Δεν βρέθηκαν εταιρείες στο σύστημα.
               </div>
             ) : (
@@ -276,23 +278,23 @@ export function HierarchicalDestinationSelector({
         {/* Project Selection */}
         {currentStep === 'project' && selectedCompany && (
           <div className="space-y-3">
-            <label className="text-sm font-medium text-white">Επιλέξτε Έργο</label>
+            <label className={`text-sm font-medium ${colors.text.primary}`}>Επιλέξτε Έργο</label>
             {projects.length === 0 ? (
-              <div className={`text-gray-500 text-center py-8 bg-gray-800 rounded-lg ${getStatusBorder('muted')}`}>
+              <div className={`${colors.text.muted} text-center py-8 ${colors.bg.secondary} rounded-lg ${getStatusBorder('muted')}`}>
                 Δεν βρέθηκαν έργα για την επιλεγμένη εταιρεία.
               </div>
             ) : (
               <Select onValueChange={handleProjectSelect}>
-                <SelectTrigger className={`w-full bg-gray-700 ${getStatusBorder('muted')} text-white`}>
+                <SelectTrigger className={`w-full ${colors.bg.hover} ${getStatusBorder('muted')} ${colors.text.primary}`}>
                   <SelectValue placeholder="-- Επιλέξτε Έργο --" />
                 </SelectTrigger>
                 <SelectContent>
                   {projects.map(project => (
                     <SelectItem key={project.id} value={project.id}>
                       <div className="flex items-center space-x-2">
-                        <Folder className={`${iconSizes.sm} text-blue-400`} />
+                        <Folder className={`${iconSizes.sm} ${colors.text.info}`} />
                         <span>{project.name}</span>
-                        <span className="text-gray-400 text-xs">({project.buildings.length} κτίρια)</span>
+                        <span className="${colors.text.muted} text-xs">({project.buildings.length} κτίρια)</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -306,7 +308,7 @@ export function HierarchicalDestinationSelector({
         {currentStep === 'building' && selectedProject && (
           <>
             {selectedProject.buildings.length === 0 ? (
-              <div className="text-gray-500 text-center py-8">
+              <div className="${colors.text.muted} text-center py-8">
                 Δεν βρέθηκαν κτίρια για το επιλεγμένο έργο.
               </div>
             ) : (
@@ -327,7 +329,7 @@ export function HierarchicalDestinationSelector({
         {currentStep === 'floor' && selectedBuilding && (
           <>
             {selectedBuilding.floors.length === 0 ? (
-              <div className="text-gray-500 text-center py-8">
+              <div className="${colors.text.muted} text-center py-8">
                 Δεν βρέθηκαν όροφοι για το επιλεγμένο κτίριο.
               </div>
             ) : (
@@ -338,10 +340,10 @@ export function HierarchicalDestinationSelector({
                   className={`w-full text-left p-4 rounded-lg ${getStatusBorder('muted')} ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
                 >
                   <div className="flex items-center space-x-3">
-                    <Home className={`${iconSizes.lg} text-blue-400`} />
+                    <Home className={`${iconSizes.lg} ${colors.text.info}`} />
                     <div>
-                      <div className="text-white font-medium">{floor.name}</div>
-                      <div className="text-gray-400 text-sm">
+                      <div className={`${colors.text.primary} font-medium`}>{floor.name}</div>
+                      <div className="${colors.text.muted} text-sm">
                         {floor.units.length} μονάδες
                       </div>
                     </div>
@@ -361,17 +363,17 @@ export function HierarchicalDestinationSelector({
                 onClick={() => handleFinalDestinationSelect(dest)}
                 className={`w-full text-left p-4 rounded-lg border transition-colors ${
                   selectedDestination?.id === dest.id
-                    ? `${useBorderTokens().getStatusBorder('info')} bg-blue-900/30`
+                    ? `${useBorderTokens().getStatusBorder('info')} ${colors.bg.selection}`
                     : `${getStatusBorder('muted')} ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
                 }`}
               >
                 <div className="flex items-center space-x-3">
                   {React.createElement(getDestinationIcon(dest.type), {
-                    className: `${iconSizes.lg} text-blue-400`
+                    className: `${iconSizes.lg} ${colors.text.info}`
                   })}
                   <div>
-                    <div className="text-white font-medium">{dest.label}</div>
-                    <div className="text-gray-400 text-sm capitalize">{dest.type}</div>
+                    <div className={`${colors.text.primary} font-medium`}>{dest.label}</div>
+                    <div className="${colors.text.muted} text-sm capitalize">{dest.type}</div>
                   </div>
                 </div>
               </button>

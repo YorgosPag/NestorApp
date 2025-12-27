@@ -4,7 +4,7 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import { PropertyGridViewCompatible as PropertyGridView } from '@/components/property-viewer/PropertyGrid';
 
@@ -15,7 +15,7 @@ const LoadingComponent = () => {
     <div className={`min-h-screen ${colors.bg.secondary} dark:bg-background flex items-center justify-center`}>
       <div className="text-center">
         <AnimatedSpinner size="large" className="mx-auto mb-4" />
-        <p className="text-gray-600 dark:text-muted-foreground">Φόρτωση μονάδων...</p>
+        <p className={colors.text.muted}>Φόρτωση μονάδων...</p>
       </div>
     </div>
   );

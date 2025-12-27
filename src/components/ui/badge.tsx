@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 import { INTERACTIVE_PATTERNS } from "@/components/ui/effects"
 import { useBorderTokens } from '@/hooks/useBorderTokens'
-import { useSemanticColors } from '@/hooks/useSemanticColors'
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'
 
 // 🏢 ENTERPRISE: Dynamic badge variants using centralized border tokens and semantic colors
 const createBadgeVariants = (borderTokens: ReturnType<typeof useBorderTokens>, colors: ReturnType<typeof useSemanticColors>) => cva(
@@ -20,15 +20,15 @@ const createBadgeVariants = (borderTokens: ReturnType<typeof useBorderTokens>, c
           `${borderTokens.style.none} bg-destructive text-destructive-foreground ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`,
         outline: "text-foreground",
         success:
-          `${borderTokens.style.none} ${colors.bg.success}/50 text-green-700 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`,
+          `${borderTokens.style.none} ${colors.bg.success}/50 ${colors.text.success} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`,
         warning:
-          `${borderTokens.style.none} ${colors.bg.warning}/50 text-yellow-700 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
+          `${borderTokens.style.none} ${colors.bg.warning}/50 ${colors.text.warning} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
         info:
-          `${borderTokens.style.none} ${colors.bg.info}/50 text-blue-700 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
+          `${borderTokens.style.none} ${colors.bg.info}/50 ${colors.text.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
         error:
-          `${borderTokens.style.none} ${colors.bg.error}/50 text-red-700 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`,
+          `${borderTokens.style.none} ${colors.bg.error}/50 ${colors.text.danger} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`,
         purple:
-          `${borderTokens.style.none} ${colors.bg.info}/50 text-purple-700 ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`,
+          `${borderTokens.style.none} ${colors.bg.info}/50 ${colors.text.accent} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`,
       },
     },
     defaultVariants: {

@@ -43,7 +43,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // 🚫 MOCK DATA ΕΝΤΕΛΩΣ ΑΦΑΙΡΕΜΕΝΑ - Καθαρή εφαρμογή χωρίς seed functionality
 
@@ -537,20 +537,20 @@ export function ContactsPageContent() {
     if (contactIdParam && selectedContact) {
       const contactName = getContactDisplayName(selectedContact);
       return (
-        <div className={`px-4 py-2 bg-green-50 ${getDirectionalBorder('success', 'bottom')}`}>
+        <div className={`px-4 py-2 ${colors.bg.success} ${getDirectionalBorder('success', 'bottom')}`}>
           <div className="flex items-center justify-between max-w-full">
             <div className="flex items-center space-x-2">
-              <Filter className={`${iconSizes.sm} text-green-600`} />
-              <span className="text-sm text-green-800">
+              <Filter className={`${iconSizes.sm} ${colors.text.success}`} />
+              <span className={`text-sm ${colors.text.success}`}>
                 Προβολή πελάτη: <strong>{contactName}</strong>
               </span>
-              <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+              <span className={`text-xs ${colors.text.success} ${colors.bg.successSubtle} px-2 py-1 rounded`}>
                 Επιλεγμένη επαφή
               </span>
             </div>
             <button
               onClick={handleClearURLFilter}
-              className={`flex items-center space-x-1 px-2 py-1 text-sm text-green-600 rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST}`}
+              className={`flex items-center space-x-1 px-2 py-1 text-sm ${colors.text.success} rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST}`}
               title="Επιστροφή στη λίστα επαφών"
             >
               <X className={iconSizes.sm} />
@@ -568,17 +568,17 @@ export function ContactsPageContent() {
         <div className={`px-4 py-2 ${colors.bg.info} ${getDirectionalBorder('info', 'bottom')}`}>
           <div className="flex items-center justify-between max-w-full">
             <div className="flex items-center space-x-2">
-              <Filter className={`${iconSizes.sm} text-blue-600`} />
-              <span className="text-sm text-blue-800">
+              <Filter className={`${iconSizes.sm} ${colors.text.info}`} />
+              <span className={`text-sm ${colors.text.info}`}>
                 Φιλτράρισμα για: <strong>"{filterValue}"</strong>
               </span>
-              <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
+              <span className={`text-xs ${colors.text.info} ${colors.bg.infoSubtle} px-2 py-1 rounded`}>
                 {filteredContacts.length} επαφή{filteredContacts.length !== 1 ? 'ς' : ''}
               </span>
             </div>
             <button
               onClick={handleClearURLFilter}
-              className={`flex items-center space-x-1 px-2 py-1 text-sm text-blue-600 rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST}`}
+              className={`flex items-center space-x-1 px-2 py-1 text-sm ${colors.text.info} rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST}`}
               title="Εμφάνιση όλων των επαφών"
             >
               <X className={iconSizes.sm} />
@@ -619,7 +619,7 @@ export function ContactsPageContent() {
               stats={dashboardStats}
               columns={4}
               onCardClick={handleCardClick}
-              className="px-1 py-4 sm:px-4 sm:py-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 overflow-hidden"
+              className={`px-1 py-4 sm:px-4 sm:py-4 border-b ${colors.bg.gradient} overflow-hidden`}
             />
           </section>
         )}

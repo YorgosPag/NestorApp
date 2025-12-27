@@ -3,23 +3,25 @@
 import dynamic from 'next/dynamic';
 import { ComponentProps } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Generic Modal Skeleton
 function ModalSkeleton() {
+  const colors = useSemanticColors();
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-card rounded-lg shadow-xl w-full max-w-2xl mx-4">
+      <div className={`${colors.bg.primary} rounded-lg shadow-xl w-full max-w-2xl mx-4`}>
         <div className="p-6 border-b">
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-48 animate-pulse"></div>
+          <div className={`h-6 ${colors.bg.skeleton} rounded w-48 animate-pulse`}></div>
         </div>
         <div className="p-6 space-y-4">
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full animate-pulse"></div>
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 animate-pulse"></div>
-          <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          <div className={`h-4 ${colors.bg.skeleton} rounded w-full animate-pulse`}></div>
+          <div className={`h-4 ${colors.bg.skeleton} rounded w-3/4 animate-pulse`}></div>
+          <div className={`h-32 ${colors.bg.skeleton} rounded animate-pulse`}></div>
         </div>
         <div className="p-6 border-t flex justify-end space-x-3">
-          <div className="h-10 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-          <div className="h-10 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          <div className={`h-10 w-20 ${colors.bg.skeleton} rounded animate-pulse`}></div>
+          <div className={`h-10 w-20 ${colors.bg.skeleton} rounded animate-pulse`}></div>
         </div>
       </div>
     </div>
@@ -33,14 +35,14 @@ function FormSkeleton() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="space-y-2">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse"></div>
-            <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            <div className={`h-4 ${colors.bg.skeleton} rounded w-24 animate-pulse`}></div>
+            <div className={`h-10 ${colors.bg.skeleton} rounded animate-pulse`}></div>
           </div>
         ))}
       </div>
       <div className="space-y-2">
-        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
-        <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+        <div className={`h-4 ${colors.bg.skeleton} rounded w-32 animate-pulse`}></div>
+        <div className={`h-24 ${colors.bg.skeleton} rounded animate-pulse`}></div>
       </div>
     </div>
   );
@@ -87,8 +89,8 @@ export const ChartContainerLazy = dynamic(
   () => import('@/components/ui/ChartContainer').then(mod => ({ default: mod.ChartContainer })),
   {
     loading: () => (
-      <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse flex items-center justify-center">
-        <div className="text-gray-500 dark:text-gray-400">Loading chart...</div>
+      <div className={`h-64 ${colors.bg.skeleton} rounded animate-pulse flex items-center justify-center`}>
+        <div className={colors.text.muted}>Loading chart...</div>
       </div>
     ),
     ssr: false
@@ -102,12 +104,12 @@ export const AdminLayerManagerLazy = dynamic(
     loading: () => (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
-          <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          <div className={`h-6 ${colors.bg.skeleton} rounded w-32 animate-pulse`}></div>
+          <div className={`h-8 w-24 ${colors.bg.skeleton} rounded animate-pulse`}></div>
         </div>
         <div className="space-y-2">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            <div key={i} className={`h-12 ${colors.bg.skeleton} rounded animate-pulse`}></div>
           ))}
         </div>
       </div>
@@ -123,12 +125,12 @@ export const SidebarLazy = dynamic(
     loading: () => (
       <div className="w-64 bg-card border-r h-full">
         <div className="p-4">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse mb-6"></div>
+          <div className={`h-8 ${colors.bg.skeleton} rounded w-32 animate-pulse mb-6`}></div>
           <div className="space-y-2">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="flex items-center space-x-3 p-2">
-                <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded flex-1 animate-pulse"></div>
+                <div className={`h-5 w-5 ${colors.bg.skeleton} rounded animate-pulse`}></div>
+                <div className={`h-4 ${colors.bg.skeleton} rounded flex-1 animate-pulse`}></div>
               </div>
             ))}
           </div>

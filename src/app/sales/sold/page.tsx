@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Placeholder stats for Sold Properties
 const soldStats: DashboardStat[] = [
@@ -56,6 +57,7 @@ const soldStats: DashboardStat[] = [
 export default function SoldPropertiesPage() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   return (
     <TooltipProvider>
       <div className="flex h-screen bg-background">
@@ -87,8 +89,8 @@ export default function SoldPropertiesPage() {
               {/* Διαμερίσματα */}
               <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-green-500/10 rounded-lg">
-                    <Home className={`${iconSizes.md} text-green-500`} />
+                  <div className={`p-2 ${colors.bg.success}/10 rounded-lg`}>
+                    <Home className={`${iconSizes.md} ${colors.text.success}`} />
                   </div>
                   <h3 className="font-semibold">Διαμερίσματα</h3>
                 </div>
@@ -99,7 +101,7 @@ export default function SoldPropertiesPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Συνολικά έσοδα</span>
-                    <span className="font-semibold text-green-600">€12.8M</span>
+                    <span className="font-semibold ${colors.text.success}">€12.8M</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Μέση τιμή</span>
@@ -115,8 +117,8 @@ export default function SoldPropertiesPage() {
               {/* Αποθήκες */}
               <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-orange-500/10 rounded-lg">
-                    <Package className={`${iconSizes.md} text-orange-500`} />
+                  <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
+                    <Package className={`${iconSizes.md} ${colors.text.warning}`} />
                   </div>
                   <h3 className="font-semibold">Αποθήκες</h3>
                 </div>
@@ -127,7 +129,7 @@ export default function SoldPropertiesPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Συνολικά έσοδα</span>
-                    <span className="font-semibold text-green-600">€3.2M</span>
+                    <span className="font-semibold ${colors.text.success}">€3.2M</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Μέση τιμή</span>
@@ -143,8 +145,8 @@ export default function SoldPropertiesPage() {
               {/* Parking */}
               <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <Car className={`${iconSizes.md} text-blue-500`} />
+                  <div className={`p-2 ${colors.bg.info}/10 rounded-lg`}>
+                    <Car className={`${iconSizes.md} ${colors.text.info}`} />
                   </div>
                   <h3 className="font-semibold">Θέσεις Στάθμευσης</h3>
                 </div>
@@ -155,7 +157,7 @@ export default function SoldPropertiesPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Συνολικά έσοδα</span>
-                    <span className="font-semibold text-green-600">€2.4M</span>
+                    <span className="font-semibold ${colors.text.success}">€2.4M</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Μέση τιμή</span>
@@ -182,14 +184,14 @@ export default function SoldPropertiesPage() {
                   <div className={`p-4 bg-card ${quick.card}`}>
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-medium">2024 (μέχρι σήμερα)</span>
-                      <span className="bg-green-500/20 text-green-500 px-2 py-1 rounded text-sm font-medium">
+                      <span className={`${colors.bg.success}/20 ${colors.text.success} px-2 py-1 rounded text-sm font-medium`}>
                         89 πωλήσεις
                       </span>
                     </div>
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Έσοδα</span>
-                        <span className="text-green-600 font-medium">€3.2M</span>
+                        <span className="${colors.text.success} font-medium">€3.2M</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Μέση τιμή</span>
@@ -201,14 +203,14 @@ export default function SoldPropertiesPage() {
                   <div className={`p-4 bg-card ${quick.card}`}>
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-medium">2023</span>
-                      <span className="bg-blue-500/20 text-blue-500 px-2 py-1 rounded text-sm font-medium">
+                      <span className={`${colors.bg.info}/20 ${colors.text.info} px-2 py-1 rounded text-sm font-medium`}>
                         156 πωλήσεις
                       </span>
                     </div>
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Έσοδα</span>
-                        <span className="text-green-600 font-medium">€5.8M</span>
+                        <span className="${colors.text.success} font-medium">€5.8M</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Μέση τιμή</span>
@@ -220,14 +222,14 @@ export default function SoldPropertiesPage() {
                   <div className={`p-4 bg-card ${quick.card}`}>
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-medium">2022</span>
-                      <span className="bg-purple-500/20 text-purple-500 px-2 py-1 rounded text-sm font-medium">
+                      <span className={`${colors.bg.warning}/20 ${colors.text.warning} px-2 py-1 rounded text-sm font-medium`}>
                         198 πωλήσεις
                       </span>
                     </div>
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Έσοδα</span>
-                        <span className="text-green-600 font-medium">€6.8M</span>
+                        <span className="${colors.text.success} font-medium">€6.8M</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Μέση τιμή</span>
@@ -277,19 +279,19 @@ export default function SoldPropertiesPage() {
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Success Rate (λιστάρισμα → πώληση)</span>
-                      <span className="font-medium text-green-600">78%</span>
+                      <span className="font-medium ${colors.text.success}">78%</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Μέσο discount από αρχική τιμή</span>
-                      <span className="font-medium text-orange-600">-3.2%</span>
+                      <span className="font-medium ${colors.text.warning}">-3.2%</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Ταχύτερη πώληση</span>
-                      <span className="font-medium text-blue-600">8 ημέρες</span>
+                      <span className="font-medium ${colors.text.info}">8 ημέρες</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Αργότερη πώληση</span>
-                      <span className="font-medium text-red-600">18 μήνες</span>
+                      <span className="font-medium ${colors.text.error}">18 μήνες</span>
                     </div>
                   </div>
                 </div>

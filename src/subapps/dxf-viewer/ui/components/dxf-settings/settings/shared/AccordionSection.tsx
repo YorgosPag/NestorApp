@@ -76,6 +76,7 @@ import React, { useState, useCallback, useId, useRef, useEffect, useMemo, memo }
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ===== TYPES =====
 
@@ -211,10 +212,10 @@ const getSizeStyles = (iconSizes: ReturnType<typeof useIconSizes>): Record<Accor
   }
 });
 
-const getVariantStyles = (getBorder: ReturnType<typeof useBorderTokens>['getElementBorder']): Record<AccordionVariant, { container: string; header: string }> => ({
+const getVariantStyles = (getBorder: ReturnType<typeof useBorderTokens>['getElementBorder'], colors: ReturnType<typeof useSemanticColors>): Record<AccordionVariant, { container: string; header: string }> => ({
   default: {
     container: `${getBorder('card', 'default')} rounded-lg`,
-    header: `bg-gray-800 ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`
+    header: `${colors.bg.secondary} ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`
   },
   ghost: {
     container: 'border-0',
@@ -222,7 +223,7 @@ const getVariantStyles = (getBorder: ReturnType<typeof useBorderTokens>['getElem
   },
   bordered: {
     container: `${getBorder('card', 'focus')} rounded-lg shadow-lg`,
-    header: `bg-gray-800 ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`
+    header: `${colors.bg.secondary} ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`
   }
 });
 
@@ -266,6 +267,7 @@ export const AccordionSection = memo(function AccordionSection({
 }: AccordionSectionProps) {
   const iconSizes = useIconSizes();
   const { getElementBorder, getStatusBorder, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // ===== STATE (Controlled/Uncontrolled Hybrid) =====
 
@@ -410,7 +412,7 @@ export const AccordionSection = memo(function AccordionSection({
 
   const styles = useMemo(() => ({
     size: getSizeStyles(iconSizes)[size],
-    variant: getVariantStyles(getElementBorder)[variant],
+    variant: getVariantStyles(getElementBorder, colors)[variant],
     density: densityStyles[density]
   }), [size, variant, density, iconSizes, getElementBorder]);
 
@@ -418,17 +420,17 @@ export const AccordionSection = memo(function AccordionSection({
 
   const renderChevron = () => {
     if (loading) {
-      return <LoadingSpinner className={`${styles.size.icon} text-gray-400`} />;
+      return <LoadingSpinner className={`${styles.size.icon} ${colors.text.muted}`} />;
     }
     if (error) {
-      return <ErrorIcon className={`${styles.size.icon} text-red-400`} />;
+      return <ErrorIcon className={`${styles.size.icon} ${colors.text.error}`} />;
     }
     if (chevron) {
       return chevron;
     }
     return (
       <div
-        className={`flex-shrink-0 text-gray-400 transition-transform duration-200 ${
+        className={`flex-shrink-0 ${colors.text.muted} transition-transform duration-200 ${
           isOpen && !reducedMotion ? 'rotate-180' : ''
         }`}
         style={shouldAnimate ? undefined : { transition: 'none' }}
@@ -489,7 +491,7 @@ export const AccordionSection = memo(function AccordionSection({
 
             {/* Icon */}
             {icon && (
-              <div className="flex-shrink-0 text-gray-400">
+              <div className={`flex-shrink-0 ${colors.text.muted}`}>
                 {icon}
               </div>
             )}
@@ -530,7 +532,7 @@ export const AccordionSection = memo(function AccordionSection({
           }}
         >
           <div
-            className={`${styles.size.content} bg-gray-700 ${getDirectionalBorder('default', 'top')} overflow-visible ${contentClassName}`}
+            className={`${styles.size.content} ${colors.bg.secondary} ${getDirectionalBorder('default', 'top')} overflow-visible ${contentClassName}`}
           >
             {/* Error Message */}
             {error && typeof error === 'string' && (

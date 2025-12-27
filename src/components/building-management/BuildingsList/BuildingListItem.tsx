@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { Building } from '../BuildingsPageContent';
 
 import { BuildingListItemHeader } from './ListItem/BuildingListItemHeader';
@@ -30,6 +31,7 @@ export function BuildingListItem({
     onToggleFavorite
 }: BuildingListItemProps) {
     const { getStatusBorder } = useBorderTokens();
+    const colors = useSemanticColors();
 
     return (
         <TooltipProvider>
@@ -38,7 +40,7 @@ export function BuildingListItem({
                     "relative p-3 rounded-lg border cursor-pointer group",
                     INTERACTIVE_PATTERNS.CARD_STANDARD,
                     isSelected
-                    ? `${getStatusBorder('info')} bg-blue-50 dark:bg-blue-950/20 shadow-sm`
+                    ? `${getStatusBorder('info')} ${colors.bg.info} shadow-sm`
                     : cn("border-border bg-card", INTERACTIVE_PATTERNS.BORDER_BLUE, INTERACTIVE_PATTERNS.ACCENT_HOVER_SUBTLE)
                 )}
                 onClick={onSelect}

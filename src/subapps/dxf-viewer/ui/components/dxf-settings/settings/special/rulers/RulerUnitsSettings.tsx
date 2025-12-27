@@ -7,6 +7,7 @@
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -46,6 +47,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
 
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   const {
     state: { rulers: rulerSettings },
@@ -125,10 +127,10 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Ruler Units */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
+      <div className={`p-2 ${colors.bg.hover} rounded space-y-2`}>
         <div className="text-sm text-white">
           <div className="font-medium">Μονάδες Μέτρησης</div>
-          <div className="font-normal text-gray-400">Μονάδα μέτρησης στους χάρακες</div>
+          <div className={`font-normal ${colors.text.muted}`}>Μονάδα μέτρησης στους χάρακες</div>
         </div>
         <div className="grid grid-cols-3 gap-2">
           {(['mm', 'cm', 'm'] as const).map((unit) => (
@@ -137,8 +139,8 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
               onClick={() => handleRulerUnitsChange(unit)}
               className={`p-2 rounded text-xs border transition-colors ${
                 rulerSettings.units === unit
-                  ? `bg-blue-600 ${getStatusBorder('info')}`
-                  : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
+                  ? `${colors.bg.info} ${getStatusBorder('info')}`
+                  : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
               }`}
             >
               {unit}
@@ -148,18 +150,18 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
       </div>
 
       {/* Units Visibility Toggle */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
+      <div className={`p-2 ${colors.bg.hover} rounded space-y-2`}>
         <div className="text-sm text-white">
           <div className="font-medium">Εμφάνιση Μονάδων</div>
-          <div className="font-normal text-gray-400">Εμφάνιση/απόκρυψη μονάδων μέτρησης στους χάρακες</div>
+          <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη μονάδων μέτρησης στους χάρακες</div>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => handleUnitsVisibilityChange(true)}
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               unitsVisible
-                ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
+                ? `${colors.bg.info} ${getStatusBorder('info')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
             }`}
           >
             Ενεργό
@@ -168,8 +170,8 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
             onClick={() => handleUnitsVisibilityChange(false)}
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               !unitsVisible
-                ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
+                ? `${colors.bg.info} ${getStatusBorder('info')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
             }`}
           >
             Ανενεργό
@@ -178,10 +180,10 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
       </div>
 
       {/* Units Font Size */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
+      <div className={`p-2 ${colors.bg.hover} rounded space-y-2`}>
         <div className="text-sm text-white">
           <div className="font-medium">Μέγεθος Μονάδων</div>
-          <div className="font-normal text-gray-400">Μέγεθος των μονάδων μέτρησης στους χάρακες</div>
+          <div className={`font-normal ${colors.text.muted}`}>Μέγεθος των μονάδων μέτρησης στους χάρακες</div>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -193,17 +195,17 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
             onChange={(e) => handleRulerUnitsFontSizeChange(parseInt(e.target.value))}
             className="flex-1"
           />
-          <div className="w-12 text-xs bg-gray-600 text-white rounded px-2 py-1 text-center">
+          <div className={`w-12 text-xs ${colors.bg.muted} text-white rounded px-2 py-1 text-center`}>
             {rulerSettings.horizontal.unitsFontSize || 10}px
           </div>
         </div>
       </div>
 
       {/* Units Color */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
+      <div className={`p-2 ${colors.bg.hover} rounded space-y-2`}>
         <div className="text-sm text-white">
           <div className="font-medium">Χρώμα Μονάδων</div>
-          <div className="font-normal text-gray-400">Χρώμα των μονάδων μέτρησης στους χάρακες</div>
+          <div className={`font-normal ${colors.text.muted}`}>Χρώμα των μονάδων μέτρησης στους χάρακες</div>
         </div>
         <div className="flex items-center gap-2">
           <div
@@ -239,7 +241,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
               '#ffffff'
             }
             onChange={(e) => handleUnitsColorChange(e.target.value)}
-            className={`w-20 px-2 py-1 text-xs bg-gray-600 text-white rounded ${getStatusBorder('secondary')}`}
+            className={`w-20 px-2 py-1 text-xs ${colors.bg.muted} text-white rounded ${getStatusBorder('secondary')}`}
             placeholder="#ffffff"
           />
         </div>

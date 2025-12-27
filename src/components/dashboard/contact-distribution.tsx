@@ -10,9 +10,11 @@ import {
 import { ThemeProgressBar } from "@/core/progress/ThemeProgressBar";
 import { User, Building2, Landmark } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export function ContactDistribution() {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   return (
     <Card>
       <CardHeader>
@@ -24,7 +26,7 @@ export function ContactDistribution() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <User className={`${iconSizes.sm} text-blue-600`} />
+                <User className={`${iconSizes.sm} ${colors.text.info}`} />
                 <span className="text-sm font-medium">Φυσικά Πρόσωπα</span>
               </div>
               <span className="text-sm text-muted-foreground">
@@ -42,7 +44,7 @@ export function ContactDistribution() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Building2 className={`${iconSizes.sm} text-purple-600`} />
+                <Building2 className={`${iconSizes.sm} ${colors.text.accent}`} />
                 <span className="text-sm font-medium">Νομικά Πρόσωπα</span>
               </div>
               <span className="text-sm text-muted-foreground">312 (25%)</span>
@@ -58,7 +60,7 @@ export function ContactDistribution() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Landmark className={`${iconSizes.sm} text-green-600`} />
+                <Landmark className={`${iconSizes.sm} ${colors.text.success}`} />
                 <span className="text-sm font-medium">Δημόσιες Υπηρεσίες</span>
               </div>
               <span className="text-sm text-muted-foreground">79 (6.4%)</span>

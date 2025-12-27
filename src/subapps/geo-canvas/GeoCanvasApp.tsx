@@ -1,17 +1,18 @@
 'use client';
 
 import React, { Suspense } from 'react';
-import { NotificationProvider } from '../../providers/NotificationProvider';
-import { CacheProvider } from '../../contexts/CacheProvider';
-import { OptimizedUserRoleProvider } from '../../contexts/OptimizedUserRoleContext';
+import { NotificationProvider } from '@/providers/NotificationProvider';
+import { CacheProvider } from '@/contexts/CacheProvider';
+import { OptimizedUserRoleProvider } from '@/contexts/OptimizedUserRoleContext';
 import { GeoCanvasContent } from './app/GeoCanvasContent';
 import ErrorBoundary from '@/components/ui/ErrorBoundary/ErrorBoundary';
-import { GlobalPerformanceDashboard } from '../../core/performance/components/GlobalPerformanceDashboard';
-import { PerformanceCategory } from '../../core/performance/types/performance.types';
+import { GlobalPerformanceDashboard } from '@/core/performance/components/GlobalPerformanceDashboard';
+import { PerformanceCategory } from '@/core/performance/types/performance.types';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { AnimatedSpinner } from '../dxf-viewer/components/modal/ModalLoadingStates';
-import type { GeoCanvasAppProps } from './types';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
+import type { GeoCanvasAppProps } from './types/components';
 
 /**
  * GEO-CANVAS APPLICATION
@@ -26,6 +27,7 @@ import type { GeoCanvasAppProps } from './types';
 export function GeoCanvasApp(props: GeoCanvasAppProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   return (
     <NotificationProvider>
       <CacheProvider>
@@ -45,7 +47,7 @@ export function GeoCanvasApp(props: GeoCanvasAppProps) {
 
             {/* 📍 CORE APPLICATION CONTENT */}
             <Suspense fallback={
-              <div className="w-full h-full flex items-center justify-center bg-gray-900 text-white">
+              <div className={`w-full h-full flex items-center justify-center ${colors.bg.secondary} text-white`}>
                 <div className="text-center">
                   <AnimatedSpinner size="large" className="mx-auto mb-4" />
                   <p className="text-white">Loading Geo-Canvas...</p>

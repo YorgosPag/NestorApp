@@ -14,6 +14,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface SimplePDFUploaderProps {
   currentFloor: { id: string; name: string; buildingId: string } | null;
@@ -24,6 +25,7 @@ interface SimplePDFUploaderProps {
 export function SimplePDFUploader({ currentFloor, onPDFUpdate, className }: SimplePDFUploaderProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -221,9 +223,9 @@ export function SimplePDFUploader({ currentFloor, onPDFUpdate, className }: Simp
 
           {/* Success Alert */}
           {success && (
-            <Alert className={`${quick.success} bg-green-50`}>
-              <Check className={`${iconSizes.sm} text-green-600`} />
-              <AlertDescription className="text-green-700">
+            <Alert className={`${quick.success} ${colors.bg.success}`}>
+              <Check className={`${iconSizes.sm} ${colors.text.success}`} />
+              <AlertDescription className={`${colors.text.success}`}>
                 Η κάτοψη ανέβηκε επιτυχώς!
               </AlertDescription>
             </Alert>
@@ -257,7 +259,7 @@ export function SimplePDFUploader({ currentFloor, onPDFUpdate, className }: Simp
             <Card>
               <CardContent className="pt-4">
                 <div className="flex items-center gap-3">
-                  <FileText className={`${iconSizes.xl2} text-red-500`} />
+                  <FileText className={`${iconSizes.xl2} ${colors.text.error}`} />
                   <div className="flex-1">
                     <p className="font-medium text-sm">{selectedFile.name}</p>
                     <p className="text-xs text-muted-foreground">

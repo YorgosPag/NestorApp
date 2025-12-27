@@ -6,18 +6,30 @@ import { cn } from '@/lib/utils';
 import type { Storage } from '@/types/storage/contracts';
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface StorageListItemHeaderProps {
   storage: Storage;
 }
 
-function getStatusColor(status: Storage['status']) {
+function getStatusColor(status: Storage['status'], colors?: ReturnType<typeof useSemanticColors>) {
+  if (!colors) {
+    // Enterprise fallback
+    switch (status) {
+      case 'available': return 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300';
+      case 'occupied': return 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300';
+      case 'reserved': return 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300';
+      case 'maintenance': return 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300';
+      default: return 'bg-slate-100 text-slate-700 dark:bg-slate-950 dark:text-slate-300';
+    }
+  }
+
   switch (status) {
-    case 'available': return 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300';
-    case 'occupied': return 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300';
-    case 'reserved': return 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300';
-    case 'maintenance': return 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300';
-    default: return 'bg-gray-100 text-gray-700 dark:bg-gray-950 dark:text-gray-300';
+    case 'available': return `${colors.bg.successSubtle} ${colors.text.success}`;
+    case 'occupied': return `${colors.bg.infoSubtle} ${colors.text.info}`;
+    case 'reserved': return `${colors.bg.accentSubtle} ${colors.text.accent}`;
+    case 'maintenance': return `${colors.bg.warningSubtle} ${colors.text.warning}`;
+    default: return `${colors.bg.muted} ${colors.text.muted}`;
   }
 }
 
@@ -44,6 +56,7 @@ function getTypeLabel(type: Storage['type']) {
 
 export function StorageListItemHeader({ storage }: StorageListItemHeaderProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   return (
     <EntityDetailsHeader
       icon={Warehouse}
@@ -55,7 +68,7 @@ export function StorageListItemHeader({ storage }: StorageListItemHeaderProps) {
       <div className="flex gap-2 mt-2 mb-2">
         <span className={cn(
           "inline-flex items-center px-2 py-1 text-xs font-medium rounded-full",
-          getStatusColor(storage.status)
+          getStatusColor(storage.status, colors)
         )}>
           {getStatusLabel(storage.status)}
         </span>

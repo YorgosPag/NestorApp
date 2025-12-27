@@ -12,7 +12,7 @@ import { BaseCard } from '@/components/core/BaseCard/BaseCard';
 import { AlertCircle, CheckCircle2, Info, AlertTriangle, Upload } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { spacing, typography } from '@/styles/design-tokens';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
@@ -46,43 +46,43 @@ export const ModalContainer: React.FC<ModalContainerProps> = ({
       case 'info':
         return {
           containerClass: `${quick.info} ${colors.bg.info}`,
-          iconColor: 'text-blue-500',
-          titleColor: 'text-blue-700 dark:text-blue-300',
+          iconColor: colors.text.info,
+          titleColor: colors.text.info,
           defaultIcon: <Info className={iconSizes.md} />,
         };
       case 'success':
         return {
-          containerClass: `${quick.success} bg-green-50 dark:bg-green-950/30`,
-          iconColor: 'text-green-500',
-          titleColor: 'text-green-700 dark:text-green-300',
+          containerClass: `${quick.success} ${colors.bg.success}`,
+          iconColor: colors.text.success,
+          titleColor: colors.text.success,
           defaultIcon: <CheckCircle2 className={iconSizes.md} />,
         };
       case 'warning':
         return {
-          containerClass: `${useBorderTokens().getStatusBorder('warning')} bg-orange-50 dark:bg-orange-950/30`,
-          iconColor: 'text-orange-500',
-          titleColor: 'text-orange-700 dark:text-orange-300',
+          containerClass: `${useBorderTokens().getStatusBorder('warning')} ${colors.bg.warning}`,
+          iconColor: colors.text.warning,
+          titleColor: colors.text.warning,
           defaultIcon: <AlertTriangle className={iconSizes.md} />,
         };
       case 'error':
         return {
-          containerClass: `${quick.error} bg-red-50 dark:bg-red-950/30`,
-          iconColor: 'text-red-500',
-          titleColor: 'text-red-700 dark:text-red-300',
+          containerClass: `${quick.error} ${colors.bg.error}`,
+          iconColor: colors.text.error,
+          titleColor: colors.text.error,
           defaultIcon: <AlertCircle className={iconSizes.md} />,
         };
       case 'upload':
         return {
-          containerClass: `${useBorderTokens().getStatusBorder('warning')} bg-gray-800 dark:bg-gray-800`,
-          iconColor: 'text-orange-500',
-          titleColor: 'text-white dark:text-white',
+          containerClass: `${useBorderTokens().getStatusBorder('warning')} ${colors.bg.primary}`,
+          iconColor: colors.text.warning,
+          titleColor: colors.text.foreground,
           defaultIcon: <Upload className={iconSizes.md} />,
         };
       default:
         return {
           containerClass: quick.default,
-          iconColor: 'text-gray-500',
-          titleColor: 'text-gray-900 dark:text-gray-100',
+          iconColor: colors.text.muted,
+          titleColor: colors.text.foreground,
           defaultIcon: <Info className={iconSizes.md} />,
         };
     }
@@ -132,7 +132,7 @@ export const UploadModalContainer: React.FC<{
     <ModalContainer
       variant="upload"
       title={title}
-      icon={<Upload className={iconSizes.md} />}
+      icon={<Upload className={useIconSizes().md} />}
       className={className}
     >
       {children}
@@ -227,13 +227,13 @@ export const ModalField: React.FC<{
 }> = ({ label, children, description, required = false, className = '' }) => {
   return (
     <div className={className}>
-      <label className="block text-xs font-medium text-gray-300 mb-2">
+      <label className={`block text-xs font-medium ${colors.text.muted} mb-2`}>
         {label}
-        {required && <span className="text-red-400 ml-1">*</span>}
+        {required && <span className={`${colors.text.error} ml-1`}>*</span>}
       </label>
       {children}
       {description && (
-        <p className="text-xs text-gray-400 mt-1">
+        <p className={`text-xs ${colors.text.muted} mt-1`}>
           {description}
         </p>
       )}

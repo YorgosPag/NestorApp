@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Dynamic import για SSR compatibility
 const TestCursorPageClient = () => {
+  const colors = useSemanticColors();
   const [CursorComponent, setCursorComponent] = useState<React.ComponentType | null>(null);
 
   useEffect(() => {
@@ -18,8 +20,8 @@ const TestCursorPageClient = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-lg">
+    <div className={`min-h-screen ${colors.bg.secondary} flex items-center justify-center`}>
+      <div className={`${colors.bg.hover} p-8 rounded-lg shadow-lg`}>
         <h1 className="text-white text-2xl mb-4">Test Cursor Settings Panel</h1>
         <p className="text-gray-300 mb-4">
           Το κουμπί cursor θα εμφανιστεί κάτω αριστερά.

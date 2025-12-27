@@ -18,6 +18,7 @@ import React, { useState, useCallback, useRef } from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
   Dialog,
   DialogContent,
@@ -97,6 +98,7 @@ export function FloorPlanUploadModal({
 }: FloorPlanUploadModalProps) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const { t } = useTranslationLazy('geo-canvas');
 
   // Drag state
@@ -197,13 +199,13 @@ export function FloorPlanUploadModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className={`sm:max-w-[600px] bg-gray-900 text-white ${quick.card}`}>
+      <DialogContent className={`sm:max-w-[600px] ${colors.bg.secondary} text-white ${quick.card}`}>
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-blue-400 flex items-center gap-2">
             <CraneIcon className={iconSizes.lg} />
             {t('floorPlan.uploadModal.title')}
           </DialogTitle>
-          <DialogDescription className="text-gray-400">
+          <DialogDescription className={colors.text.muted}>
             {t('floorPlan.uploadModal.description')}
           </DialogDescription>
         </DialogHeader>
@@ -220,7 +222,7 @@ export function FloorPlanUploadModal({
             <p className="text-lg font-medium text-white mb-2">
               Parsing file...
             </p>
-            <p className="text-sm text-gray-400">
+            <p className={`text-sm ${colors.text.muted}`}>
               Please wait while we process your floor plan
             </p>
           </div>
@@ -236,7 +238,7 @@ export function FloorPlanUploadModal({
             text-center
             transition-all duration-200
             ${isDragging
-              ? `${getStatusBorder('info')} bg-blue-500/10 scale-105`  // Drag state = Info semantic
+              ? `${getStatusBorder('info')} ${colors.bg.info}/10 scale-105`  // Drag state = Info semantic
               : `${quick.card} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
             }
           `}
@@ -260,7 +262,7 @@ export function FloorPlanUploadModal({
                 : t('floorPlan.uploadModal.dragText')
               }
             </p>
-            <p className="text-sm text-gray-400">
+            <p className={`text-sm ${colors.text.muted}`}>
               {t('floorPlan.uploadModal.orText')}
             </p>
           </div>
@@ -270,7 +272,7 @@ export function FloorPlanUploadModal({
             onClick={handleBrowseClick}
             className="
               px-6 py-3
-              bg-blue-600 text-white font-medium
+              ${colors.bg.info} text-white font-medium
               rounded-lg
               transition-all duration-200
               transform active:scale-95
@@ -292,28 +294,28 @@ export function FloorPlanUploadModal({
         </div>
 
         {/* Supported Formats */}
-        <div className="bg-gray-800 rounded-lg p-4">
-          <p className="text-sm font-medium text-gray-300 mb-2">
+        <div className={`${colors.bg.primary} rounded-lg p-4`}>
+          <p className={`text-sm font-medium ${colors.text.secondary} mb-2`}>
             {t('floorPlan.uploadModal.supportedFormats')}
           </p>
           <div className="flex flex-wrap gap-2">
             {['DXF', 'DWG', 'PDF', 'PNG', 'JPG', 'TIFF'].map((format) => (
               <span
                 key={format}
-                className="px-3 py-1 bg-gray-700 text-gray-300 text-xs rounded-full"
+                className={`px-3 py-1 ${colors.bg.hover} ${colors.text.secondary} text-xs rounded-full`}
               >
                 {format}
               </span>
             ))}
           </div>
-          <p className="text-xs text-gray-500 mt-3">
+          <p className={`text-xs ${colors.text.tertiary} mt-3`}>
             {t('floorPlan.uploadModal.maxSize')}
           </p>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className={`bg-red-900/20 ${quick.card} ${getStatusBorder('error')} p-4`}>  {/* Error state = Error semantic */}
+          <div className={`${colors.bg.error}/20 ${quick.card} ${getStatusBorder('error')} p-4`}>
             <p className="text-sm text-red-400">
               ❌ {error}
             </p>
@@ -327,7 +329,7 @@ export function FloorPlanUploadModal({
             onClick={onClose}
             className="
               px-4 py-2
-              bg-gray-700
+              ${colors.bg.hover}
               ${HOVER_BACKGROUND_EFFECTS.MUTED}
               text-white
               rounded-lg

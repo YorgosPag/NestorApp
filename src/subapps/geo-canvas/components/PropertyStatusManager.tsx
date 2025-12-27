@@ -13,7 +13,7 @@ import {
 import { STATUS_COLORS_MAPPING } from '@/subapps/dxf-viewer/config/color-mapping';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface PropertyStatusManagerProps {
@@ -144,8 +144,8 @@ export function PropertyStatusManager({
             onClick={() => handleColorSchemeChange('status')}
             className={`px-3 py-2 text-sm rounded-md font-medium transition-colors ${
               colorScheme === 'status'
-                ? `${colors.bg.blue['100']} text-blue-700 ${quick.info}`
-                : `${colors.bg.gray['100']} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                ? `${colors.bg.infoSubtle} ${colors.text.info} ${quick.info}`
+                : `${colors.bg.neutralSubtle} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }`}
           >
             {t('propertyStatusManager.colorScheme.status')}
@@ -154,8 +154,8 @@ export function PropertyStatusManager({
             onClick={() => handleColorSchemeChange('price')}
             className={`px-3 py-2 text-sm rounded-md font-medium transition-colors ${
               colorScheme === 'price'
-                ? `${colors.bg.blue['100']} text-blue-700 ${quick.info}`
-                : `${colors.bg.gray['100']} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                ? `${colors.bg.infoSubtle} ${colors.text.info} ${quick.info}`
+                : `${colors.bg.neutralSubtle} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }`}
           >
             {t('propertyStatusManager.colorScheme.price')}
@@ -164,8 +164,8 @@ export function PropertyStatusManager({
             onClick={() => handleColorSchemeChange('type')}
             className={`px-3 py-2 text-sm rounded-md font-medium transition-colors ${
               colorScheme === 'type'
-                ? `${colors.bg.blue['100']} text-blue-700 ${quick.info}`
-                : `${colors.bg.gray['100']} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                ? `${colors.bg.infoSubtle} ${colors.text.info} ${quick.info}`
+                : `${colors.bg.neutralSubtle} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }`}
           >
             {t('propertyStatusManager.colorScheme.type')}
@@ -183,7 +183,7 @@ export function PropertyStatusManager({
             </label>
             <button
               onClick={handleSelectAll}
-              className={`text-xs text-blue-600 ${HOVER_TEXT_EFFECTS.DARKER} font-medium`}
+              className={`text-xs ${colors.text.info} ${HOVER_TEXT_EFFECTS.DARKER} font-medium`}
             >
               {selectedStatuses.length === getAllStatuses().length
                 ? t('propertyStatusManager.selectNone')
@@ -221,8 +221,8 @@ export function PropertyStatusManager({
                     onClick={() => handleStatusToggle(status)}
                     className={`p-1 rounded transition-colors ${
                       isVisible
-                        ? `text-blue-600 ${HOVER_TEXT_EFFECTS.DARKER}`
-                        : `text-gray-400 ${HOVER_TEXT_EFFECTS.DARKER}`
+                        ? `${colors.text.info} ${HOVER_TEXT_EFFECTS.DARKER}`
+                        : `${colors.text.muted} ${HOVER_TEXT_EFFECTS.DARKER}`
                     }`}
                     title={isVisible ? t('propertyStatusManager.hide') : t('propertyStatusManager.show')}
                   >
@@ -238,17 +238,17 @@ export function PropertyStatusManager({
       {/* Statistics */}
       <div className={`${colors.bg.info} ${quick.card} ${colors.border.info} p-3`}>
         <div className="flex items-center gap-2 mb-2">
-          <Info className={`${iconSizes.sm} text-blue-600`} />
-          <span className="text-sm font-medium text-blue-900">{t('propertyStatusManager.statistics.title')}</span>
+          <Info className={`${iconSizes.sm} ${colors.text.info}`} />
+          <span className={`text-sm font-medium ${colors.text.info}`}>{t('propertyStatusManager.statistics.title')}</span>
         </div>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <span className="text-blue-700">{t('propertyStatusManager.statistics.visibleStatus')}</span>
-            <span className="ml-2 font-semibold text-blue-900">{selectedStatuses.length}/{getAllStatuses().length}</span>
+            <span className={colors.text.info}>{t('propertyStatusManager.statistics.visibleStatus')}</span>
+            <span className={`ml-2 font-semibold ${colors.text.info}`}>{selectedStatuses.length}/{getAllStatuses().length}</span>
           </div>
           <div>
-            <span className="text-blue-700">{t('propertyStatusManager.statistics.scheme')}</span>
-            <span className="ml-2 font-semibold text-blue-900">{t(`propertyStatusManager.colorScheme.${colorScheme}`)}</span>
+            <span className={colors.text.info}>{t('propertyStatusManager.statistics.scheme')}</span>
+            <span className={`ml-2 font-semibold ${colors.text.info}`}>{t(`propertyStatusManager.colorScheme.${colorScheme}`)}</span>
           </div>
         </div>
       </div>

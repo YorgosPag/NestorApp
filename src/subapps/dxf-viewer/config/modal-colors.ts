@@ -8,7 +8,7 @@
  */
 
 // Import existing color systems from centralized design tokens
-import { colors, semanticColors } from '@/styles/design-tokens';
+import { colors } from '@/styles/design-tokens';
 
 // 🏢 ENTERPRISE: Import centralized panel tokens instead of duplicates
 import { PANEL_COLORS } from './panel-tokens';
@@ -44,17 +44,17 @@ export const MODAL_COLOR_SCHEMES = {
   // DXF Technical Interface Colors (dark, professional)
   DXF_TECHNICAL: {
     background: {
-      primary: 'bg-gray-800',
-      secondary: 'bg-gray-700',
+      primary: 'bg-background-secondary', // ✅ ENTERPRISE: bg-gray-800 → semantic background
+      secondary: 'bg-background-tertiary', // ✅ ENTERPRISE: bg-gray-700 → semantic background
       overlay: 'bg-black/75 backdrop-blur-sm',
-      field: 'bg-gray-700',
+      field: 'bg-input', // ✅ ENTERPRISE: bg-gray-700 → semantic field background
     },
     text: {
       primary: 'text-white',
-      secondary: 'text-gray-300',
-      accent: 'text-orange-500',
-      label: 'text-gray-300',
-      description: 'text-gray-400',
+      secondary: 'text-gray-300', // Static text secondary
+      accent: 'text-accent', // ✅ ENTERPRISE: text-orange-500 → semantic accent
+      label: 'text-gray-300', // Static text secondary
+      description: 'text-gray-400', // Static text muted
     },
     border: {
       primary: `border ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
@@ -149,13 +149,13 @@ export const MODAL_COLOR_SCHEMES = {
  * Ensures visual hierarchy and accessibility
  */
 export const MODAL_ICON_COLORS = {
-  default: 'text-gray-500',
-  info: 'text-blue-500',
-  success: 'text-green-500',
-  warning: 'text-orange-500',
-  error: 'text-red-500',
-  upload: 'text-orange-500',
-  dxf_technical: 'text-orange-500',
+  default: 'text-gray-500', // Static text disabled
+  info: 'text-primary', // ✅ ENTERPRISE: text-blue-500 → semantic primary
+  success: 'text-success', // ✅ ENTERPRISE: text-green-500 → semantic success
+  warning: 'text-warning', // ✅ ENTERPRISE: text-orange-500 → semantic warning
+  error: 'text-destructive', // ✅ ENTERPRISE: text-red-500 → semantic destructive
+  upload: 'text-accent', // ✅ ENTERPRISE: text-orange-500 → semantic accent
+  dxf_technical: 'text-accent', // ✅ ENTERPRISE: text-orange-500 → semantic accent
 } as const;
 
 // ====================================================================
@@ -185,8 +185,8 @@ export const MODAL_BUTTON_COLORS = {
   // DXF Technical interface buttons
   DXF_TECHNICAL: {
     primary: 'bg-orange-600 text-white hover:bg-orange-700',
-    secondary: `bg-gray-700 border ${PANEL_COLORS.BORDER_PRIMARY} text-white hover:bg-gray-600`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
-    outline: `border ${PANEL_COLORS.BORDER_PRIMARY} text-gray-300 hover:bg-gray-700 hover:text-white`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
+    secondary: `${PANEL_COLORS.BG_SECONDARY} border ${PANEL_COLORS.BORDER_PRIMARY} text-white hover:${PANEL_COLORS.BG_TERTIARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
+    outline: `border ${PANEL_COLORS.BORDER_PRIMARY} ${PANEL_COLORS.TEXT_SECONDARY} hover:${PANEL_COLORS.BG_HOVER} hover:text-white`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
   },
 } as const;
 
@@ -208,18 +208,18 @@ export const MODAL_FORM_COLORS = {
 
   // DXF Technical interface forms
   DXF_TECHNICAL: {
-    input: `bg-gray-700 border ${PANEL_COLORS.BORDER_PRIMARY} text-white focus:border-orange-500 focus:ring-orange-500/20`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
-    label: 'text-gray-300',
-    description: 'text-gray-400',
-    error: 'text-red-400',
+    input: `bg-input border ${PANEL_COLORS.BORDER_PRIMARY} text-foreground focus:border-accent focus:ring-accent/20`, // ✅ ENTERPRISE: All hardcoded → semantic // ✅ ENTERPRISE: Using centralized PANEL_COLORS
+    label: 'text-gray-300', // Static text secondary
+    description: 'text-gray-400', // Static text muted
+    error: 'text-destructive', // ✅ ENTERPRISE: text-red-400 → semantic destructive
   },
 
   // Light business interface forms
   LIGHT_BUSINESS: {
-    input: `bg-white border ${PANEL_COLORS.BORDER_SECONDARY} text-gray-900 focus:border-blue-500`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
-    label: 'text-gray-700',
-    description: 'text-gray-500',
-    error: 'text-red-600',
+    input: `bg-background border ${PANEL_COLORS.BORDER_SECONDARY} text-foreground focus:border-primary`, // ✅ ENTERPRISE: bg-white/text-black → semantic // ✅ ENTERPRISE: Using centralized PANEL_COLORS - black for light theme
+    label: `${PANEL_COLORS.TEXT_DISABLED}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
+    description: `${PANEL_COLORS.TEXT_DISABLED}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
+    error: 'text-destructive', // ✅ ENTERPRISE: text-red-600 → semantic destructive
   },
 } as const;
 

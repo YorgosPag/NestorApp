@@ -13,6 +13,7 @@
 import React from 'react';
 import { Label } from '@/components/ui/label';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { designSystem } from '@/lib/design-system';
 import { Palette } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -47,6 +48,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const { quick, radius, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // ============================================================================
   // DATA & COMPUTED VALUES
@@ -109,11 +111,11 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           // Base styles
           'p-3 ${radius.lg} border text-center',
           TRANSITION_PRESETS.STANDARD_ALL,
-          'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+          `focus:outline-none focus:ring-2 ${colors.ring.info} focus:ring-offset-2`,
 
           // Selection states
           isSelected
-            ? `${getStatusBorder('info')} bg-blue-50 dark:bg-blue-900/20 shadow-md`
+            ? `${getStatusBorder('info')} ${colors.bg.infoSubtle} shadow-md`
             : `${quick.card} ${INTERACTIVE_PATTERNS.BORDER_SUBTLE}`,
 
           // Disabled state
@@ -129,7 +131,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
         <figure className={designSystem.cn(
           designSystem.getTypographyClass('lg'),
           'mb-2',
-          isSelected && 'text-blue-600 dark:text-blue-400'
+          isSelected && `${colors.text.info}`
         )} role="img" aria-label={`Εικονίδιο ${template.name}`}>
           {template.icon}
         </figure>
@@ -139,8 +141,8 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           designSystem.getTypographyClass('xs', 'medium'),
           'mb-1',
           isSelected
-            ? 'text-blue-900 dark:text-blue-100'
-            : 'text-gray-900 dark:text-gray-100'
+            ? `${colors.text.info}`
+            : `${colors.text.primary}`
         )}>
           {template.name}
         </header>
@@ -149,15 +151,15 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
         <p className={designSystem.cn(
           designSystem.getTypographyClass('xs'),
           'text-muted-foreground',
-          isSelected && 'text-blue-700 dark:text-blue-300'
+          isSelected && `${colors.text.info}`
         )}>
           {template.description}
         </p>
 
         {/* Selected Indicator */}
         {isSelected && (
-          <aside className={`absolute top-2 right-2 ${iconSizes.xs} bg-blue-500 ${radius.full} flex items-center justify-center`} role="status" aria-label="Επιλεγμένο">
-            <div className="w-1.5 h-1.5 bg-white ${radius.full}" />
+          <aside className={`absolute top-2 right-2 ${iconSizes.xs} ${colors.bg.info} ${radius.full} flex items-center justify-center`} role="status" aria-label="Επιλεγμένο">
+            <div className={`w-1.5 h-1.5 ${designSystem.getBackgroundColor('primary')} ${radius.full}`} />
           </aside>
         )}
       </button>
@@ -174,11 +176,11 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
       <Label className={designSystem.cn(
         "flex items-center gap-2",
         designSystem.getTypographyClass('sm', 'medium'),
-        disabled && 'text-gray-400 dark:text-gray-500'
+        disabled && `${colors.text.disabled}`
       )}>
         <Palette className={designSystem.cn(
           iconSizes.sm,
-          disabled ? 'text-gray-400' : 'text-blue-600'
+          disabled ? `${colors.text.disabled}` : `${colors.text.info}`
         )} />
         Email Template
       </Label>
@@ -249,9 +251,9 @@ export const CompactTemplateSelector: React.FC<TemplateSelectorProps & {
                 TRANSITION_PRESETS.STANDARD_COLORS,
                 'flex items-center gap-1.5',
                 isSelected
-                  ? `${getStatusBorder('info')} bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300`
+                  ? `${getStatusBorder('info')} ${colors.bg.infoSubtle} ${colors.text.info}`
                   : designSystem.cn(
-                      `${quick.card} text-gray-700 dark:text-gray-300`,
+                      `${quick.card} ${colors.text.primary}`,
                       INTERACTIVE_PATTERNS.SUBTLE_HOVER
                     ),
                 disabled && 'opacity-50 cursor-not-allowed'

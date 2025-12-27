@@ -20,6 +20,7 @@ import {
 import { useTranslation } from "@/i18n";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { QuickStats } from "@/types/dashboard";
 
 interface StatsCardsProps {
@@ -29,6 +30,7 @@ interface StatsCardsProps {
 export function StatsCards({ stats }: StatsCardsProps) {
   const iconSizes = useIconSizes();
   const { getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const { t } = useTranslation('dashboard');
   
   return (
@@ -47,8 +49,8 @@ export function StatsCards({ stats }: StatsCardsProps) {
             {stats.totalContacts.toLocaleString("el-GR")}
           </data>
           <div className="flex items-center text-xs text-muted-foreground mt-2">
-            <TrendingUp className={`mr-1 ${iconSizes.xs} text-green-600`} />
-            <span className="text-green-600 font-medium">+12.5%</span>
+            <TrendingUp className={`mr-1 ${iconSizes.xs} ${colors.text.success}`} />
+            <span className={`${colors.text.success} font-medium`}>+12.5%</span>
             <span className="ml-1">{t('stats.periods.lastMonth')}</span>
           </div>
         </CardContent>

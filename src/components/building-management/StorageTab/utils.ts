@@ -3,14 +3,26 @@
 
 import { Car, Package } from 'lucide-react';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
-export const getStatusColor = (status: StorageStatus) => {
+export const getStatusColor = (status: StorageStatus, colors?: ReturnType<typeof useSemanticColors>) => {
+    if (!colors) {
+        // Enterprise fallback
+        switch (status) {
+          case 'available': return 'bg-green-500';
+          case 'sold': return 'bg-blue-500';
+          case 'reserved': return 'bg-yellow-500';
+          case 'maintenance': return 'bg-red-500';
+          default: return 'bg-slate-500';
+        }
+    }
+
     switch (status) {
-      case 'available': return 'bg-green-500';
-      case 'sold': return 'bg-blue-500';
-      case 'reserved': return 'bg-yellow-500';
-      case 'maintenance': return 'bg-red-500';
-      default: return 'bg-gray-500';
+      case 'available': return colors.bg.success;
+      case 'sold': return colors.bg.info;
+      case 'reserved': return colors.bg.warning;
+      case 'maintenance': return colors.bg.error;
+      default: return colors.bg.muted;
     }
 };
 

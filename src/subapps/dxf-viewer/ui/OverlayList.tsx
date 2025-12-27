@@ -8,9 +8,12 @@ import { Input } from '../../../components/ui/input';
 import { Eye, EyeOff, Edit3, Trash2, Search } from 'lucide-react';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, type Overlay } from '../overlays/types';
-import { layoutUtilities } from '@/styles/design-tokens';
+import { getSemanticIntent } from '../config/status-semantic';
+import { getSemanticBgClass } from '../ui-adapters/semantic-bg-adapter';
+import type { PropertyStatus } from '../../../constants/property-statuses-enterprise';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface OverlayListProps {
   overlays: Overlay[];
@@ -31,9 +34,16 @@ export const OverlayList: React.FC<OverlayListProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const [searchQuery, setSearchQuery] = useState('');
   const [hiddenOverlays, setHiddenOverlays] = useState<Set<string>>(new Set());
   const selectedCardRef = React.useRef<HTMLDivElement>(null);
+
+  // 🏢 ENTERPRISE: Clean semantic pipeline - PropertyStatus → SemanticIntent → CSS class
+  const getOverlayBgClass = (status: PropertyStatus) => {
+    const semanticIntent = getSemanticIntent(status);
+    return getSemanticBgClass(semanticIntent, colors);
+  };
 
   // Auto-scroll to selected overlay card when selection changes
   React.useEffect(() => {
@@ -79,7 +89,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
   };
 
   return (
-    <Card className={`w-full h-full flex flex-col bg-gray-800 ${getStatusBorder('default')} text-white`}>
+    <Card className={`w-full h-full flex flex-col ${colors.bg.secondary} ${getStatusBorder('default')} ${colors.text.primary}`}>
       <CardHeader className="pb-2 pt-3 px-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm">Overlays</CardTitle>
@@ -87,17 +97,17 @@ export const OverlayList: React.FC<OverlayListProps> = ({
             status="company"
             customLabel={overlays.length.toString()}
             variant="secondary"
-            className="text-xs bg-gray-700 text-gray-300"
+            className={`text-xs ${colors.bg.hover} ${colors.text.tertiary}`}
           />
         </div>
         
         <div className="relative mt-2">
-          <Search className={`absolute left-2 top-2.5 ${iconSizes.sm} text-gray-400`} />
+          <Search className={`absolute left-2 top-2.5 ${iconSizes.sm} ${colors.text.muted}`} />
           <Input
             placeholder="Αναζήτηση..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`pl-8 ${iconSizes.xl} text-sm bg-gray-900 ${quick.input} text-white placeholder-gray-400`}
+            className={`pl-8 ${iconSizes.xl} text-sm ${colors.bg.primary} ${quick.input} ${colors.text.primary} placeholder:${colors.text.muted}`}
           />
         </div>
       </CardHeader>
@@ -107,7 +117,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
           <div className="px-2 py-2 space-y-2">
             {filteredOverlays.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-sm text-gray-400">
+                <p className={`text-sm ${colors.text.muted}`}>
                   {searchQuery ? 'Δεν βρέθηκαν overlays' : 'Δεν υπάρχουν overlays'}
                 </p>
               </div>
@@ -121,7 +131,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                     key={overlay.id}
                     ref={isSelected ? selectedCardRef : null}
                     className={`flex items-center gap-1 px-2 py-2 rounded transition-colors cursor-pointer w-full overflow-hidden ${
-                      isSelected ? `bg-blue-900/50 ${getStatusBorder('active')}` : `bg-gray-900/50 ${quick.card} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                      isSelected ? `${colors.bg.info}/50 ${getStatusBorder('active')}` : `${colors.bg.primary}/50 ${quick.card} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
                     }`}
                     onClick={() => onSelect(overlay.id === selectedOverlayId ? null : overlay.id)}
                   >
@@ -129,22 +139,22 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                       variant="ghost"
                       size="sm"
                       onClick={(e) => handleToggleVisibility(overlay.id, e)}
-                      className={`p-0.5 ${iconSizes.md} text-gray-400 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+                      className={`p-0.5 ${iconSizes.md} ${colors.text.muted}${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
                     >
                       {isVisible ? <Eye className={iconSizes.xs} /> : <EyeOff className={`${iconSizes.xs} opacity-50`} />}
                     </Button>
 
                     <div
-                      className={`${iconSizes.xs} rounded ${quick.button} flex-shrink-0`}
-                      style={layoutUtilities.dxf.colors.backgroundColor(
-                        STATUS_COLORS[overlay.status || 'for-sale']
-                      )}
+                      className={`${iconSizes.xs} rounded ${quick.button} flex-shrink-0 ${(() => {
+                        const status: PropertyStatus = overlay.status ?? 'for-sale';
+                        return getOverlayBgClass(status);
+                      })()}`}
                     />
                     <div className="flex-1 min-w-0 overflow-hidden">
                       <div className="text-sm font-medium truncate">
                         {STATUS_LABELS[overlay.status || 'for-sale']} {KIND_LABELS[overlay.kind]}
                       </div>
-                      <div className="text-xs text-gray-400 truncate">
+                      <div className="text-xs ${colors.text.muted}truncate">
                         {overlay.label || `Overlay ${overlay.id.slice(0, 6)}`}
                       </div>
                     </div>
@@ -153,7 +163,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                         variant="ghost"
                         size="sm"
                         onClick={(e) => handleEdit(overlay.id, e)}
-                        className={`p-0.5 ${iconSizes.md} text-gray-400 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+                        className={`p-0.5 ${iconSizes.md} ${colors.text.muted}${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
                         title="Επεξεργασία"
                       >
                         <Edit3 className={iconSizes.xs} />

@@ -12,6 +12,7 @@ import { EnterpriseComboBox } from '../settings/shared/EnterpriseComboBox';
 import type { LineType } from '../../../../settings-core/types';
 import { getDashArray } from '../../../../settings-core/defaults';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface LineStyleControlProps {
   value: LineType;
@@ -42,7 +43,7 @@ export const LineStyleControl: React.FC<LineStyleControlProps> = ({
     <div className="flex items-center justify-between w-full">
       <span className="text-sm">{option.label}</span>
       {showPreview && (
-        <span className={`text-xs font-mono ml-4 ${isSelected ? 'text-blue-400' : 'text-gray-400'}`}>
+        <span className={`text-xs font-mono ml-4 ${isSelected ? 'text-blue-400' : colors.text.muted}`}>
           {option.preview}
         </span>
       )}
@@ -50,6 +51,7 @@ export const LineStyleControl: React.FC<LineStyleControlProps> = ({
   );
 
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   return (
     <div className="space-y-2">
@@ -62,13 +64,13 @@ export const LineStyleControl: React.FC<LineStyleControlProps> = ({
         disabled={disabled}
         enableTypeahead={false}
         renderOption={renderOption}
-        buttonClassName={`bg-gray-900 ${getStatusBorder('muted').replace('border ', '')} text-gray-100`}
-        listboxClassName={`bg-gray-900 ${getStatusBorder('muted').replace('border ', '')}`}
+        buttonClassName={`${colors.bg.backgroundSecondary} ${getStatusBorder('muted').replace('border ', '')} ${colors.text.secondary}`}
+        listboxClassName={`${colors.bg.backgroundSecondary} ${getStatusBorder('muted').replace('border ', '')}`}
       />
 
       {/* 🏢 ENTERPRISE: Visual SVG preview (unchanged from original) */}
       {showPreview && (
-        <div className="h-8 flex items-center justify-center bg-gray-800 rounded">
+        <div className={`h-8 flex items-center justify-center ${colors.bg.secondary} rounded`}>
           <svg width="100%" height="2" className="overflow-visible">
             <line
               x1="10"

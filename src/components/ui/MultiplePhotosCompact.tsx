@@ -4,6 +4,7 @@ import React from 'react';
 import { TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Image, Plus, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
@@ -122,6 +123,7 @@ export function MultiplePhotosCompact({
 }: MultiplePhotosCompactProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // ========================================================================
   // COMPUTED VALUES
@@ -326,7 +328,7 @@ export function MultiplePhotosCompact({
       {showProfileSelector && availableSlots < maxPhotos && (
         <footer className="border-t pt-4 mt-4" role="contentinfo" aria-label="Επιλογή Φωτογραφίας Προφίλ">
           <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
-            <Star className={`${iconSizes.sm} text-yellow-500`} />
+            <Star className={`${iconSizes.sm} ${colors.text.warning}`} />
             Επιλογή Φωτογραφίας Προφίλ
           </h4>
           <nav className={PHOTO_LAYOUTS.INDIVIDUAL_GRID.container} role="group" aria-label="Επιλογές Φωτογραφίες Προφίλ">
@@ -354,7 +356,7 @@ export function MultiplePhotosCompact({
                     </Button>
                   </figure>
                 ) : (
-                  <aside className={`w-full h-20 bg-gray-100 ${quick.rounded} ${quick.input} flex items-center justify-center`} role="status" aria-label="Κενό σλοτ">
+                  <aside className={`w-full h-20 ${colors.bg.muted} ${quick.rounded} ${quick.input} flex items-center justify-center`} role="status" aria-label="Κενό σλοτ">
                     <span className={`text-xs ${PHOTO_TEXT_COLORS.MUTED}`}>Κενό {index + 1}</span>
                   </aside>
                 )}

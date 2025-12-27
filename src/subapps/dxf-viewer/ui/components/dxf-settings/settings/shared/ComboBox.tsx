@@ -71,6 +71,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { layoutUtilities } from '@/styles/design-tokens';
 
@@ -149,6 +150,7 @@ export function ComboBox<T>({
 }: ComboBoxProps<T>) {
   const iconSizes = useIconSizes();
   const { getFocusBorder, getStatusBorder, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // ===== STATE =====
 
@@ -250,7 +252,7 @@ export function ComboBox<T>({
         <div className="flex-1">
           <div className="font-medium">{option.label}</div>
           {option.description && (
-            <div className={`text-xs ${isHighlighted ? 'text-blue-200' : 'text-gray-400'}`}>
+            <div className={`text-xs ${isHighlighted ? 'text-blue-200' : colors.text.muted}`}>
               {option.description}
             </div>
           )}
@@ -268,7 +270,7 @@ export function ComboBox<T>({
     <div className={`space-y-2 ${className}`} ref={dropdownRef}>
       {/* Label (optional) */}
       {label && (
-        <label className="block text-sm font-medium text-gray-200">{label}</label>
+        <label className={`block text-sm font-medium ${colors.text.secondary}`}>{label}</label>
       )}
 
       {/* Button */}
@@ -282,7 +284,7 @@ export function ComboBox<T>({
           }}
           onKeyDown={handleKeyDown}
           disabled={disabled}
-          className={`w-full px-3 py-2 pr-8 bg-gray-700 ${getStatusBorder('default')} rounded-md text-white text-left ${HOVER_BACKGROUND_EFFECTS.GRAY} focus:ring-2 focus:ring-blue-500 ${getFocusBorder('input')} ${
+          className={`w-full px-3 py-2 pr-8 ${colors.bg.hover} ${getStatusBorder('default')} rounded-md text-white text-left ${HOVER_BACKGROUND_EFFECTS.GRAY} focus:ring-2 focus:ring-blue-500 ${getFocusBorder('input')} ${
             disabled ? 'opacity-50 cursor-not-allowed' : ''
           } ${buttonClassName}`}
         >
@@ -291,7 +293,7 @@ export function ComboBox<T>({
 
         {/* Chevron Icon */}
         <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-          <ChevronDownIcon className={`${iconSizes.sm} text-gray-400`} isOpen={isOpen} />
+          <ChevronDownIcon className={`${iconSizes.sm} ${colors.text.muted}`} isOpen={isOpen} />
         </div>
 
         {/* Dropdown Content */}
@@ -321,7 +323,7 @@ export function ComboBox<T>({
                 return (
                   <div key={group.category} className={`${getDirectionalBorder('default', 'bottom')} last:border-none`}>
                     {/* Category Header */}
-                    <div className="px-3 py-2 text-xs font-medium text-gray-400 bg-gray-800">
+                    <div className={`px-3 py-2 text-xs font-medium ${colors.text.muted} ${colors.bg.primary}`}>
                       {group.categoryLabel || group.category}
                     </div>
                     {/* Category Options */}

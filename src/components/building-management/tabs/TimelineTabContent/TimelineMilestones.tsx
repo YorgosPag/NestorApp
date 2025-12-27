@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { MilestoneItem } from './MilestoneItem';
 
 interface TimelineMilestonesProps {
@@ -12,6 +13,8 @@ interface TimelineMilestonesProps {
 }
 
 export function TimelineMilestones({ milestones, getStatusColor, getStatusText, getTypeIcon }: TimelineMilestonesProps) {
+    const colors = useSemanticColors();
+
     return (
         <Card>
             <CardHeader>
@@ -19,7 +22,7 @@ export function TimelineMilestones({ milestones, getStatusColor, getStatusText, 
             </CardHeader>
             <CardContent>
                 <div className="relative">
-                    <div className="absolute left-6 top-4 bottom-4 w-0.5 bg-gray-200 dark:bg-gray-700"></div>
+                    <div className={`absolute left-6 top-4 bottom-4 w-0.5 ${colors.bg.muted}`}></div>
 
                     <div className="space-y-6">
                         {milestones.map((milestone) => (

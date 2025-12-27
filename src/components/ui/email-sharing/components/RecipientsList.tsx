@@ -19,6 +19,7 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { Users, Plus, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Types
 import type { RecipientsListProps } from '../types';
@@ -51,6 +52,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // ============================================================================
   // COMPUTED VALUES
@@ -308,7 +310,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
 
       {/* Custom Validation Error */}
       {customValidationError && showValidation && (
-        <aside className={`p-3 bg-red-50 dark:bg-red-900/20 rounded-lg ${getStatusBorder('error')}`} role="alert">
+        <aside className={`p-3 ${colors.bg.error} rounded-lg ${getStatusBorder('error')}`} role="alert">
           <p className={designSystem.cn(
             designSystem.getTypographyClass('sm', 'medium'),
             'text-red-800 dark:text-red-300 flex items-center gap-2'

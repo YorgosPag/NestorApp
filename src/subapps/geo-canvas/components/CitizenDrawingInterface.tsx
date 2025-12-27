@@ -8,7 +8,7 @@ import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEst
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ✅ NEW: Enterprise Centralized Polygon System
 import { useCentralizedPolygonSystem } from '../systems/polygon-system';
@@ -355,7 +355,7 @@ export function CitizenDrawingInterface({
             ${isDrawing && selectedTool !== 'freehand' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.MEDIUM}'}
           `}
         >
-          <Hand className={`${iconSizes.xl} mb-2 text-purple-600`} />
+          <Hand className={`${iconSizes.xl} mb-2 ${colors.text.accent}`} />
           <span className="text-sm font-medium">{t('drawingInterfaces.citizen.tools.freehand')}</span>
           <span className={`text-xs ${colors.text.muted}`}>{t('drawingInterfaces.citizen.tools.freehandDrawing')}</span>
         </button>
@@ -389,7 +389,7 @@ export function CitizenDrawingInterface({
             flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${showAddressSearch
-              ? `${getStatusBorder('info')} bg-indigo-50`
+              ? `${getStatusBorder('info')} ${colors.bg.info}/10`
               : `\${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.bg.primary}`
             }
             cursor-pointer ${HOVER_SHADOWS.MEDIUM}
@@ -407,7 +407,7 @@ export function CitizenDrawingInterface({
             flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${showAdminDemo
-              ? `${getStatusBorder('info')} bg-violet-50`
+              ? `${getStatusBorder('info')} ${colors.bg.accent}/10`
               : `\${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.bg.primary}`
             }
             cursor-pointer ${HOVER_SHADOWS.MEDIUM}
@@ -425,7 +425,7 @@ export function CitizenDrawingInterface({
             flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${showBoundaryControl
-              ? `${getStatusBorder('success')} bg-emerald-50`
+              ? `${getStatusBorder('success')} ${colors.bg.success}/10`
               : `\${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.bg.primary}`
             }
             cursor-pointer ${HOVER_SHADOWS.MEDIUM}
@@ -433,7 +433,7 @@ export function CitizenDrawingInterface({
         >
           <div className={`${iconSizes.xl} mb-2 text-emerald-600 font-bold text-lg`}>🎛️</div>
           <span className="text-sm font-medium">Layer Control</span>
-          <span className="text-xs text-gray-500">
+          <span className={`text-xs ${colors.text.muted}`}>
             {boundaryLayers.length} layers
           </span>
         </button>

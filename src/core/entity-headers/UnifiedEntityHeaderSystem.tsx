@@ -14,6 +14,7 @@ import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ===== TYPES & INTERFACES =====
 
@@ -193,6 +194,7 @@ const EntityBadge: React.FC<EntityHeaderBadge> = ({
   size = 'sm',
   className
 }) => {
+  const colors = useSemanticColors();
   const baseClasses = "inline-flex items-center rounded-md font-medium transition-colors";
 
   const sizeClasses = {
@@ -208,9 +210,9 @@ const EntityBadge: React.FC<EntityHeaderBadge> = ({
   };
 
   const typeClasses = {
-    status: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-    progress: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
-    category: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
+    status: `${colors.bg.info} text-blue-700 dark:text-blue-300`,
+    progress: `${colors.bg.success} text-green-700 dark:text-green-300`,
+    category: `${colors.bg.accent} text-purple-700 dark:text-purple-300`,
     custom: variantClasses[variant]
   };
 

@@ -3,6 +3,7 @@
 import React from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
 import type { ToolType } from '../toolbar/types';
 import type { PropertyStatus } from '../../../../constants/property-statuses-enterprise';
@@ -47,6 +48,7 @@ interface DraggableOverlayToolbarProps {
 export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (props) => {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, radius } = useBorderTokens();
+  const colors = useSemanticColors();
   // 🎯 OVERLAY CREATION & STORE HOOKS
   const { startOverlayCreation } = useUnifiedOverlayCreation();
   const overlayStore = useOverlayStore();
@@ -180,10 +182,10 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
         {/* 🎯 HEADER ROW: Title, Drag Handle, Close */}
         <div className="flex items-center gap-3 flex-1">
           <Activity className={`${iconSizes.sm} text-blue-500`} />
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Drawing Tools</h3>
+          <h3 className={`text-sm font-semibold ${colors.text.primary}`}>Drawing Tools</h3>
 
           <div
-            className="ml-auto cursor-grab transition-colors text-xs select-none text-gray-500 hover:text-gray-700"
+            className={`ml-auto cursor-grab transition-colors text-xs select-none ${colors.text.muted} ${colors.text.secondary}`}
             title="Drag to move"
             onMouseDown={draggable.handleMouseDown}
           >
@@ -191,7 +193,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
           </div>
 
           <button
-            className={`p-1 ${radius.md} transition-colors text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800`}
+            className={`p-1 ${radius.md} transition-colors ${colors.text.muted} ${colors.text.secondary} ${colors.bg.hover} ${colors.bg.primary}`}
             title="Hide toolbar"
           >
             <X className={iconSizes.xs} />
@@ -216,7 +218,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                   flex items-center justify-center gap-1
                   ${props.mode === btnMode
                     ? `bg-blue-600 text-white ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                    : `bg-gray-700 text-gray-200 ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
+                    : `${colors.bg.hover} ${colors.text.primary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
                   }
                 `}
               >
@@ -230,7 +232,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
 
           {/* Status Palette */}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-gray-400">Status:</span>
+            <span className="text-xs font-medium ${colors.text.muted}">Status:</span>
             <div className="flex items-center gap-1">
               {(Object.keys(STATUS_COLORS) as Status[]).map(status => (
                 <button
@@ -251,7 +253,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
 
           {/* Kind Selection */}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-gray-400">Τύπος:</span>
+            <span className="text-xs font-medium ${colors.text.muted}">Τύπος:</span>
             <div className="flex items-center gap-1">
               {(Object.keys(KIND_LABELS) as OverlayKind[]).map(kind => {
                 const Icon = kindIcons[kind];
@@ -265,7 +267,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                       flex items-center justify-center
                       ${props.currentKind === kind
                         ? `bg-blue-600 text-white ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                        : `bg-gray-700 text-gray-200 ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
+                        : `${colors.bg.hover} ${colors.text.primary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
                       }
                     `}
                   >
@@ -287,7 +289,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
               className={`
                 ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
                 flex items-center justify-center
-                bg-gray-700 text-gray-200 ${getStatusBorder('default')}
+                ${colors.bg.hover} ${colors.text.primary} ${getStatusBorder('default')}
                 disabled:opacity-50 disabled:cursor-not-allowed
               `}
             >
@@ -301,7 +303,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
               className={`
                 ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
                 flex items-center justify-center
-                bg-gray-700 text-red-400 ${getStatusBorder('default')}
+                ${colors.bg.hover} ${colors.text.danger} ${getStatusBorder('default')}
                 disabled:opacity-50 disabled:cursor-not-allowed
               `}
             >
@@ -320,7 +322,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
               className={`
                 ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
                 flex items-center justify-center
-                bg-gray-700 text-gray-200 ${getStatusBorder('default')}
+                ${colors.bg.hover} ${colors.text.primary} ${getStatusBorder('default')}
                 disabled:opacity-50 disabled:cursor-not-allowed
               `}
             >
@@ -333,7 +335,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
               className={`
                 ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
                 flex items-center justify-center
-                bg-gray-700 text-gray-200 ${getStatusBorder('default')}
+                ${colors.bg.hover} ${colors.text.primary} ${getStatusBorder('default')}
                 disabled:opacity-50 disabled:cursor-not-allowed
               `}
             >

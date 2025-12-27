@@ -25,6 +25,7 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import styles from './PerformanceComponents.module.css';
 import {
@@ -743,6 +744,7 @@ export const AdminBoundariesPerformancePanel = memo(({
   const { theme } = useTheme();
   const iconSizes = useIconSizes();
   const { getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const [metrics, setMetrics] = useState<AdminBoundariesMetrics | null>(null);
   const [alerts, setAlerts] = useState<AdminBoundariesAlert[]>([]);
   const [isMonitoring, setIsMonitoring] = useState(false);
@@ -973,7 +975,7 @@ export const AdminBoundariesPerformancePanel = memo(({
         >
           {isMonitoring ? (
             <span className="flex items-center justify-center gap-2">
-              <span className={`${iconSizes.xs} bg-green-500 rounded-full animate-pulse`}></span>
+              <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full animate-pulse`}></span>
               Monitoring Active • Updates every {refreshInterval / 1000}s
             </span>
           ) : (

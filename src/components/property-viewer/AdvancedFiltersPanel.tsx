@@ -1,7 +1,7 @@
 'use client';
 
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export function AdvancedFiltersPanel({
   show,
@@ -26,7 +26,7 @@ export function AdvancedFiltersPanel({
         <div className={`mt-4 p-4 ${colors.bg.secondary} dark:bg-muted/30 ${quick.card}`}>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-muted-foreground mb-1 block">Εύρος Τιμής (€)</label>
+              <label className={`text-sm font-medium ${colors.text.foreground} mb-1 block`}>Εύρος Τιμής (€)</label>
               <div className="flex gap-2">
                 <input
                   type="number"
@@ -45,7 +45,7 @@ export function AdvancedFiltersPanel({
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-muted-foreground mb-1 block">Εμβαδόν (m²)</label>
+              <label className={`text-sm font-medium ${colors.text.foreground} mb-1 block`}>Εμβαδόν (m²)</label>
               <div className="flex gap-2">
                 <input
                   type="number"

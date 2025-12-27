@@ -18,6 +18,7 @@
 import React from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import type { GeoCoordinate } from '../../types';
 
@@ -72,6 +73,7 @@ export const GeoCoordinateDisplay: React.FC<GeoCoordinateDisplayProps> = ({
   className = ''
 }) => {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { t } = useTranslationLazy('geo-canvas');
 
   // ========================================================================
@@ -94,7 +96,7 @@ export const GeoCoordinateDisplay: React.FC<GeoCoordinateDisplayProps> = ({
 
   return (
     <section
-      className={`absolute top-4 right-4 bg-gray-900 bg-opacity-90 text-white p-3 rounded-lg shadow-lg ${className}`}
+      className={`absolute top-4 right-4 ${colors.bg.secondary} bg-opacity-90 text-white p-3 rounded-lg shadow-lg ${className}`}
       aria-label={t('map.coordinate.displayLabel')}
     >
       <div className="text-sm space-y-1">
@@ -108,8 +110,8 @@ export const GeoCoordinateDisplay: React.FC<GeoCoordinateDisplayProps> = ({
                 onClick={() => onMapStyleChange(style)}
                 className={`${iconSizes.lg} rounded text-xs transition-colors ${
                   currentMapStyle === style
-                    ? 'bg-blue-600 text-white'
-                    : `bg-gray-700 text-gray-400 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+                    ? `${colors.bg.info} text-white`
+                    : `${colors.bg.hover} text-gray-400 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
                 }`}
                 title={mapStyleNames[style]}
                 aria-pressed={currentMapStyle === style}

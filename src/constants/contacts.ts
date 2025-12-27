@@ -9,6 +9,7 @@ import { Users, Building2, Landmark } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { brandClasses } from '@/styles/design-tokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // 📋 CONTACT TYPES - Μοναδική πηγή αλήθειας για τύπους επαφών
 export const CONTACT_TYPES = {
@@ -202,10 +203,32 @@ export const CONTACT_STYLES = {
     loadingState: 'flex items-center justify-center p-4',
   },
 
-  // 🎯 BADGE & STATUS STYLING
+  // 🎯 BADGE & STATUS STYLING - Enterprise function
+  getBadges: (colors?: ReturnType<typeof useSemanticColors>) => {
+    if (!colors) {
+      // Enterprise fallback
+      return {
+        primary: 'bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full',
+        secondary: 'bg-slate-100 text-slate-800 text-xs px-2 py-1 rounded-full',
+        success: 'bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full',
+        warning: 'bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full',
+        danger: 'bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full',
+      };
+    }
+
+    return {
+      primary: `${colors.bg.infoSubtle} ${colors.text.info} text-xs px-2 py-1 rounded-full`,
+      secondary: `${colors.bg.muted} ${colors.text.muted} text-xs px-2 py-1 rounded-full`,
+      success: `${colors.bg.successSubtle} ${colors.text.success} text-xs px-2 py-1 rounded-full`,
+      warning: `${colors.bg.warningSubtle} ${colors.text.warning} text-xs px-2 py-1 rounded-full`,
+      danger: `${colors.bg.errorSubtle} ${colors.text.error} text-xs px-2 py-1 rounded-full`,
+    };
+  },
+
+  // Legacy export for backward compatibility
   badges: {
     primary: 'bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full',
-    secondary: 'bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full',
+    secondary: 'bg-slate-100 text-slate-800 text-xs px-2 py-1 rounded-full',
     success: 'bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full',
     warning: 'bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full',
     danger: 'bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full',

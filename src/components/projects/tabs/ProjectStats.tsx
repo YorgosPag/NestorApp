@@ -9,6 +9,7 @@ import { getProjectStats } from '@/services/projects.service';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface ProjectStatsProps {
   projectId: number;
@@ -17,18 +18,19 @@ interface ProjectStatsProps {
 const StatCard = ({ icon: Icon, value, label, loading, colorClass }: { icon: React.ElementType, value: string | number, label: string, loading: boolean, colorClass: string }) => {
     const iconSizes = useIconSizes();
     const { quick } = useBorderTokens();
+    const colors = useSemanticColors();
 
     return (
     <Card className={cn("p-4", colorClass)}>
         <div className="flex items-center gap-4">
-            <div className={`p-3 ${quick.card} bg-white/20`}>
+            <div className={`p-3 ${quick.card} ${colors.bg.secondary} opacity-60`}>
                <Icon className={iconSizes.md} />
             </div>
             <div>
                 {loading ? (
                     <>
-                        <Skeleton className="h-6 w-16 mb-1 bg-white/50" />
-                        <Skeleton className="h-4 w-24 bg-white/50" />
+                        <Skeleton className={`h-6 w-16 mb-1 ${colors.bg.secondary} opacity-50`} />
+                        <Skeleton className={`h-4 w-24 ${colors.bg.secondary} opacity-50`} />
                     </>
                 ) : (
                     <>
@@ -70,21 +72,21 @@ export function ProjectStats({ projectId }: ProjectStatsProps) {
             value={loading ? '...' : stats?.totalUnits ?? 0}
             label="Σύνολο Μονάδων"
             loading={loading}
-            colorClass="bg-blue-600 text-white"
+            colorClass={`${colors.bg.info} ${colors.text.inverted}`}
         />
         <StatCard 
             icon={CheckCircle}
             value={loading ? '...' : stats?.soldUnits ?? 0}
             label="Πωλημένες Μονάδες"
             loading={loading}
-            colorClass="bg-green-600 text-white"
+            colorClass={`${colors.bg.success} ${colors.text.inverted}`}
         />
         <StatCard 
             icon={Ruler}
             value={loading ? '...' : `${(stats?.totalSoldArea ?? 0).toLocaleString('el-GR')} m²`}
             label="Συνολικό Εμβαδόν Πωληθέντων"
             loading={loading}
-            colorClass="bg-purple-600 text-white"
+            colorClass={`${colors.bg.accent} ${colors.text.inverted}`}
         />
     </div>
   );

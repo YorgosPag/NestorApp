@@ -4,6 +4,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { Target, ChevronDown, ChevronUp, Settings } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { ExtendedSnapType } from '../../snapping/extended-types';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
@@ -57,6 +58,7 @@ const SnapButton: React.FC<SnapButtonProps> = ({ mode, enabled, onClick, compact
   const label = SNAP_LABELS[mode];
   const tooltip = SNAP_TOOLTIPS[mode];
   const { quick, getStatusBorder, radius } = useBorderTokens();
+  const colors = useSemanticColors();
 
   if (!label) return null;
 
@@ -69,8 +71,8 @@ const SnapButton: React.FC<SnapButtonProps> = ({ mode, enabled, onClick, compact
         ${radius.md} border transition-all duration-150 font-medium
         flex items-center justify-center
         ${enabled
-          ? `bg-blue-600 ${getStatusBorder('info')} text-white shadow-md ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
-          : `bg-gray-700 ${getStatusBorder('default')} text-gray-300 ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
+          ? `${colors.bg.primary} ${getStatusBorder('info')} text-white shadow-md ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
+          : `${colors.bg.secondary} ${getStatusBorder('default')} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
         }
       `}
     >
@@ -121,6 +123,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, radius } = useBorderTokens();
+  const colors = useSemanticColors();
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleMasterToggle = useCallback(() => {
@@ -147,11 +150,11 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
   const advancedEnabledCount = useMemo(() => ADVANCED_MODES.filter(mode => enabledModes?.has(mode)).length, [enabledModes]);
   
   return (
-    <div className={`flex items-center gap-2 p-2 bg-gray-800 ${quick.card} ${className}`}>
+    <div className={`flex items-center gap-2 p-2 ${colors.bg.primary} ${quick.card} ${className}`}>
       <button
         onClick={handleMasterToggle}
         className={`px-3 py-1 ${radius.md} text-sm font-bold transition-colors border flex items-center gap-1 ${
-          snapEnabled ? `bg-blue-600 text-white ${getStatusBorder('info')} shadow-md` : `bg-gray-700 text-gray-300 ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
+          snapEnabled ? `${colors.bg.primary} text-white ${getStatusBorder('info')} shadow-md` : `${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
         }`}
         title="Ενεργοποίηση/Απενεργοποίηση Object Snap (F3)"
       >
@@ -174,11 +177,11 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
 
       {ADVANCED_MODES.length > 0 && (
         <>
-          <div className="w-px h-6 bg-gray-600" />
+          <div className="w-px h-6 ${colors.bg.muted}" />
           <button
             onClick={handleToggleAdvanced}
             className={`${iconSizes.xl} ${radius.md} border transition-all duration-150 flex items-center justify-center ${
-              showAdvanced || advancedEnabledCount > 0 ? `bg-gray-600 ${getStatusBorder('subtle')} text-white` : `bg-gray-700 ${getStatusBorder('default')} text-gray-400 ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
+              showAdvanced || advancedEnabledCount > 0 ? `${colors.bg.muted} ${getStatusBorder('subtle')} text-white` : `${colors.bg.secondary} ${getStatusBorder('default')} ${colors.text.muted} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
             }`}
             title={`${showAdvanced ? 'Απόκρυψη' : 'Εμφάνιση'} προχωρημένων λειτουργιών`}
           >
@@ -187,10 +190,10 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
         </>
       )}
 
-      <div className="w-px h-6 bg-gray-600" />
+      <div className="w-px h-6 ${colors.bg.muted}" />
       <button
         onClick={handleQuickEnable}
-        className={`${iconSizes.xl} ${radius.md} border transition-all duration-150 flex items-center justify-center text-gray-400 ${HOVER_TEXT_EFFECTS.WHITE} bg-gray-700 ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`}
+        className={`${iconSizes.xl} ${radius.md} border transition-all duration-150 flex items-center justify-center ${colors.text.muted} ${HOVER_TEXT_EFFECTS.WHITE} ${colors.bg.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`}
         title="Ενεργοποίηση βασικών λειτουργιών"
       >
         <Settings size={14} />

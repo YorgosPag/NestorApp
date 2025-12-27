@@ -10,7 +10,7 @@ import { LucideIcon } from 'lucide-react';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { AnimatedSpinner } from '../modal/ModalLoadingStates';
 
 // Button variants for consistent styling
@@ -34,13 +34,13 @@ const getVariantStyles = (
   borderTokens: ReturnType<typeof useBorderTokens>,
   colors: ReturnType<typeof useSemanticColors>
 ): Record<ButtonVariant, string> => ({
-  primary: `${colors.bg.info} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white ${borderTokens.getStatusBorder('info')}`,
-  secondary: `${colors.bg.hover} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-gray-200 ${borderTokens.quick.card}`,
-  ghost: `bg-transparent ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-200 border-transparent`,
-  outline: `bg-transparent ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-300 ${borderTokens.quick.card}`,
-  tool: `${colors.bg.hover} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-gray-200 ${borderTokens.quick.card}`,
-  tab: `${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-300 ${borderTokens.quick.card}`,
-  action: `${colors.bg.hover} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-gray-200 ${borderTokens.quick.card}`
+  primary: `${colors.bg.info} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${colors.text.inverted} ${borderTokens.getStatusBorder('info')}`,
+  secondary: `${colors.bg.hover} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.secondary} ${borderTokens.quick.card}`,
+  ghost: `bg-transparent ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.text.secondary} border-transparent`,
+  outline: `bg-transparent ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.text.muted} ${borderTokens.quick.card}`,
+  tool: `${colors.bg.hover} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.secondary} ${borderTokens.quick.card}`,
+  tab: `${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.text.muted} ${borderTokens.quick.card}`,
+  action: `${colors.bg.hover} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.secondary} ${borderTokens.quick.card}`
 });
 
 // ✅ ENTERPRISE: Dynamic active variant styles με CSS variables
@@ -48,13 +48,13 @@ const getActiveVariantStyles = (
   borderTokens: ReturnType<typeof useBorderTokens>,
   colors: ReturnType<typeof useSemanticColors>
 ): Record<ButtonVariant, string> => ({
-  primary: `${colors.bg.info} text-white ${borderTokens.getStatusBorder('info')}`,
-  secondary: `${colors.bg.active} text-white ${borderTokens.quick.card}`,
-  ghost: `${colors.bg.hover} text-white ${borderTokens.quick.card}`,
-  outline: `${colors.bg.hover} text-white ${borderTokens.quick.card}`,
-  tool: `${colors.bg.info} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white ${borderTokens.getStatusBorder('info')}`,
-  tab: `${colors.bg.info} text-white ${borderTokens.getStatusBorder('info')}`,
-  action: `${colors.bg.info} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white ${borderTokens.getStatusBorder('info')}`
+  primary: `${colors.bg.info} ${colors.text.inverted} ${borderTokens.getStatusBorder('info')}`,
+  secondary: `${colors.bg.active} ${colors.text.inverted} ${borderTokens.quick.card}`,
+  ghost: `${colors.bg.hover} ${colors.text.inverted} ${borderTokens.quick.card}`,
+  outline: `${colors.bg.hover} ${colors.text.inverted} ${borderTokens.quick.card}`,
+  tool: `${colors.bg.info} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${colors.text.inverted} ${borderTokens.getStatusBorder('info')}`,
+  tab: `${colors.bg.info} ${colors.text.inverted} ${borderTokens.getStatusBorder('info')}`,
+  action: `${colors.bg.info} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${colors.text.inverted} ${borderTokens.getStatusBorder('info')}`
 });
 
 const sizeStyles: Record<ButtonSize, string> = {

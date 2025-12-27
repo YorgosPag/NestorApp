@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { Phase } from './hooks/useDynamicInputState';
 
 interface DynamicInputFooterProps {
@@ -11,8 +12,9 @@ interface DynamicInputFooterProps {
 
 export function DynamicInputFooter({ activeTool, drawingPhase }: DynamicInputFooterProps) {
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   return (
-    <div className={`text-xs text-gray-400 mt-2 border-t ${quick.muted} pt-2`}>
+    <div className={`text-xs ${colors.text.muted} mt-2 border-t ${quick.muted} pt-2`}>
       <div className="text-blue-400 font-semibold mb-1">
         {activeTool === 'line' 
           ? drawingPhase === 'first-point'
@@ -27,7 +29,7 @@ export function DynamicInputFooter({ activeTool, drawingPhase }: DynamicInputFoo
           : '⚠️ Length: Μόνο θετικές τιμές (χωρίς μείον)'
         }
       </div>
-      <div className="text-xs text-gray-500 mt-1">
+      <div className={`text-xs ${colors.text.tertiary} mt-1`}>
         Tab: Επόμενο πεδίο | Enter: Εφαρμογή | Esc: Ακύρωση
       </div>
     </div>

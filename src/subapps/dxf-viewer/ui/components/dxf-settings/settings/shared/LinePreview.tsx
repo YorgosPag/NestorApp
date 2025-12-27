@@ -2,6 +2,7 @@ import React from 'react';
 import type { LineType } from '../../../../../settings-core/types';
 import { getDashArray } from '../../../../../settings-core/defaults';
 import { layoutUtilities } from '@/styles/design-tokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Helper για SVG stroke-dasharray (χρησιμοποιεί την κεντρική getDashArray)
 const getDashArrayForSvg = (type: LineType | string, scale: number = 1) => {
@@ -64,6 +65,7 @@ interface LinePreviewProps {
 }
 
 export function LinePreview({ lineSettings, textSettings, gripSettings, activeTab, className = '' }: LinePreviewProps) {
+  const colors = useSemanticColors();
   // Μετατροπή των ρυθμίσεων για το SVG
   // ΔΙΟΡΘΩΣΗ: Η προεπισκόπηση πρέπει να δείχνει πάντα τις ρυθμίσεις γραμμής, ανεξάρτητα από την καρτέλα
   const effectiveColor = lineSettings.color;
@@ -88,7 +90,7 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
   };
 
   return (
-    <div className={`bg-gray-700 rounded p-6 space-y-4 ${className}`}>
+    <div className={`${colors.bg.secondary} rounded p-6 space-y-4 ${className}`}>
       {/* Live Preview με πραγματικές ρυθμίσεις - ΠΛΗΡΗΣ ΠΡΟΕΠΙΣΚΟΠΗΣΗ GRIPS */}
       <div className="relative h-12 flex items-center">
         <svg width="100%" height="100%" className="absolute inset-0">

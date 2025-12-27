@@ -1,22 +1,24 @@
 import React from 'react';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { LayerStatisticsProps } from './types';
 
-export function LayerStatisticsDisplay({ 
-  statistics, 
-  isConnected, 
-  lastSyncTime 
+export function LayerStatisticsDisplay({
+  statistics,
+  isConnected,
+  lastSyncTime
 }: LayerStatisticsProps) {
+  const colors = useSemanticColors();
   return (
     <>
       {/* Layer Statistics */}
-      <div className="flex justify-between text-xs text-gray-400">
+      <div className="flex justify-between text-xs ${colors.text.muted}">
         <span>Σύνολο: {statistics.totalLayers}</span>
         <span>Ορατά: {statistics.visibleLayers}</span>
         <span>Στοιχεία: {statistics.totalElements}</span>
       </div>
       
       {/* Sync Status Info */}
-      <div className="text-xs text-gray-400">
+      <div className="text-xs ${colors.text.muted}">
         <div className="flex justify-between items-center">
           <span>Sync Status:</span>
           <span className={isConnected ? 'text-green-400' : 'text-red-400'}>
@@ -29,7 +31,7 @@ export function LayerStatisticsDisplay({
         </div>
       </div>
 
-      <div className="h-px bg-gray-600"></div>
+      <div className="h-px ${colors.bg.muted}"></div>
     </>
   );
 }

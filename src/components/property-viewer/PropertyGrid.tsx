@@ -9,7 +9,7 @@ import { Home, Building, MapPin, Euro, Ruler, SlidersHorizontal } from 'lucide-r
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { COMPLEX_HOVER_EFFECTS, INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import type { Property } from '@/types/property-viewer';
 import { formatFloorLabel, formatCurrency } from '@/lib/intl-utils';
@@ -37,38 +37,38 @@ const propertyTypeIcons: { [key: string]: React.ElementType } = {
 function PropertyCard({ property, onSelect, isSelected }: { property: Property, onSelect: () => void, isSelected: boolean }) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
-  const { bg } = useSemanticColors();
+  const colors = useSemanticColors();
 
   // 🎨 ENTERPRISE BORDER TOKENS - Centralized status configuration
   const statusConfig = {
     'for-sale': {
       label: 'Προς Πώληση',
-      color: `${getStatusBorder('success')} ${bg.success} dark:bg-green-950/20`,
-      textColor: 'text-green-700 dark:text-green-300'
+      color: `${getStatusBorder('success')} ${colors.bg.success}`,
+      textColor: colors.text.success
     },
     'for-rent': {
       label: 'Προς Ενοικίαση',
-      color: `${brandClasses.primary.border} ${brandClasses.primary.bg} dark:bg-blue-950/20`,
+      color: `${brandClasses.primary.border} ${brandClasses.primary.bg}`,
       textColor: brandClasses.primary.text
     },
     'sold': {
       label: 'Πουλημένο',
-      color: `${getStatusBorder('error')} ${bg.error} dark:bg-red-950/20`,
-      textColor: 'text-red-700 dark:text-red-300'
+      color: `${getStatusBorder('error')} ${colors.bg.error}`,
+      textColor: colors.text.error
     },
     'rented': {
       label: 'Ενοικιασμένο',
-      color: `${getStatusBorder('warning')} ${bg.warning} dark:bg-orange-950/20`,
-      textColor: 'text-orange-700 dark:text-orange-300'
+      color: `${getStatusBorder('warning')} ${colors.bg.warning}`,
+      textColor: colors.text.warning
     },
     'reserved': {
       label: 'Δεσμευμένο',
-      color: `${getStatusBorder('warning')} ${bg.warning} dark:bg-yellow-950/20`,
-      textColor: 'text-yellow-700 dark:text-yellow-300'
+      color: `${getStatusBorder('warning')} ${colors.bg.warning}`,
+      textColor: colors.text.warning
     },
   };
 
-  const statusInfo = statusConfig[property.status as keyof typeof statusConfig] || { color: `${quick.card}`, label: 'Άγνωστο', textColor: 'text-gray-700' };
+  const statusInfo = statusConfig[property.status as keyof typeof statusConfig] || { color: `${quick.card}`, label: 'Άγνωστο', textColor: colors.text.muted };
   const IconComponent = propertyTypeIcons[property.type] || Home;
 
   return (
@@ -97,7 +97,7 @@ function PropertyCard({ property, onSelect, isSelected }: { property: Property, 
         </div>
       </CardHeader>
       <CardContent className="p-4 space-y-3">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className={`flex items-center gap-2 text-xs ${colors.text.muted}`}>
           <Building className={iconSizes.xs} />
           <span>{property.building}</span>
           <MapPin className={`${iconSizes.xs} ml-2`} />
@@ -105,13 +105,13 @@ function PropertyCard({ property, onSelect, isSelected }: { property: Property, 
         </div>
         <div className="flex justify-between items-center text-sm">
             {property.price && (
-                <div className="flex items-center gap-1 font-semibold text-green-600">
+                <div className={`flex items-center gap-1 font-semibold ${colors.text.success}`}>
                     <Euro className={iconSizes.sm}/>
                     {formatCurrency(property.price)}
                 </div>
             )}
             {property.area && (
-                 <div className="flex items-center gap-1 text-muted-foreground">
+                 <div className={`flex items-center gap-1 ${colors.text.muted}`}>
                     <Ruler className={iconSizes.sm}/>
                     {property.area} τ.μ.
                 </div>
@@ -142,7 +142,7 @@ interface PropertyGridProps {
 export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanced }: PropertyGridProps) {
   const iconSizes = useIconSizes();
   const { quick, radius, getStatusBorder } = useBorderTokens();
-  const { bg } = useSemanticColors();
+  const colors = useSemanticColors();
   const router = useRouter();
 
   // 🚀 ENTERPRISE: Conditional enhanced features (PropertyGridView integration)
@@ -175,7 +175,7 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
   // Empty state
   if (displayProperties.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
+      <div className={`flex flex-col items-center justify-center h-full ${colors.text.muted} p-4`}>
         <Home className={`${iconSizes.xl} mb-4`} />
         <h2 className="text-xl font-semibold">Δεν βρέθηκαν ακίνητα</h2>
         <p className="text-sm">Δοκιμάστε να αλλάξετε τα φίλτρα</p>
@@ -186,7 +186,7 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
   // 🚀 ENHANCED MODE: Full PropertyGridView features
   if (enhanced?.withHeader) {
     return (
-      <div className={`min-h-screen ${bg.secondary} dark:bg-background overflow-x-hidden`}>
+      <div className={`min-h-screen ${colors.bg.secondary} dark:bg-background overflow-x-hidden`}>
         {/* Header */}
         <div className="sticky top-0 z-10">
           <PageHeader
@@ -218,7 +218,7 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
                   key="advfilters"
                   onClick={() => gridFilters?.setShowFilters(!showFilters)}
                   className={`px-4 py-2.5 border ${radius.lg} flex items-center gap-2 transition-colors h-9 ${
-                    showFilters ? `${bg.info} dark:bg-blue-900/50 ${getStatusBorder('info')} text-blue-600` : `${quick.card} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                    showFilters ? `${colors.bg.info} ${getStatusBorder('info')} ${colors.text.info}` : `${quick.card} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
                   }`}
                 >
                   <SlidersHorizontal className={iconSizes.sm} />
@@ -234,7 +234,7 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
                 <button
                   key="floorplan"
                   onClick={handleViewAllFloorPlan}
-                  className={`px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white ${radius.lg} transition-all flex items-center gap-2 font-medium h-8 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
+                  className={`px-4 py-2 ${colors.bg.gradient} text-white ${radius.lg} transition-all flex items-center gap-2 font-medium h-8 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
                 >
                   <MapPin className={iconSizes.sm} />
                   Προβολή σε Κάτοψη
@@ -276,17 +276,17 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
         </div>
 
         {/* Bottom CTA */}
-        <div className="dark:bg-muted/30 py-12 mt-12">
+        <div className={`${colors.bg.secondary}/30 py-12 mt-12`}>
           <div className="max-w-4xl mx-auto text-center px-4">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-foreground mb-4">
+            <h2 className={`text-2xl font-bold ${colors.text.foreground} mb-4`}>
               Θέλετε να δείτε τα ακίνητα στην κάτοψη του ορόφου;
             </h2>
-            <p className="text-gray-600 dark:text-muted-foreground mb-6">
+            <p className={`${colors.text.muted} mb-6`}>
               Δείτε την ακριβή θέση και διάταξη των ακινήτων στην κάτοψη του κτηρίου.
             </p>
             <button
               onClick={handleViewAllFloorPlan}
-              className={`px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white ${radius.lg} font-medium transition-all ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
+              className={`px-8 py-3 ${colors.bg.gradient} text-white ${radius.lg} font-medium transition-all ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
             >
               Προβολή Κάτοψης
             </button>

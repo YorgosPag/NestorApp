@@ -5,7 +5,7 @@ import { useGeoTransform } from '../hooks/useGeoTransform';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { dxfGeoTransformService } from '../services/geo-transform/DxfGeoTransform';
 import type { DxfCoordinate, GeoCoordinate, SpatialEntity } from '../types';
 
