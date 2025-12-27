@@ -14,7 +14,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: any; onV
 
   return (
     <article className={`w-full flex flex-col ${colors.bg.primary} ${radius.xl} shadow-md ring-1 ${colors.border.muted} overflow-hidden group cursor-pointer ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`} itemScope itemType="https://schema.org/RealEstateProperty">
-      <header className={`relative h-48 overflow-hidden ${colors.bg.secondary}`}>
+      <header className={`relative h-48 overflow-hidden ${colors.bg.muted}`}> {/* ✅ ENTERPRISE: Better contrast in dark mode (was secondary) */}
         <img
           src={getPropertyImage(property)}
           alt={property.name}
@@ -85,8 +85,8 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: any; onV
         <footer className="flex gap-2" role="contentinfo" aria-label="Ενέργειες Ακινήτου">
           <button
             onClick={() => onViewFloorPlan(property.id)}
-            className={`flex-1 px-4 py-2 ${colors.bg.info} ${colors.text.infoContrast} ${radius.lg} flex items-center justify-center gap-2 text-sm font-medium ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-          >
+            className={`flex-1 px-4 py-2 bg-primary text-primary-foreground ${radius.lg} flex items-center justify-center gap-2 text-sm font-medium ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+          > {/* ✅ ENTERPRISE: Fixed contrast - using primary colors for proper visibility */}
             <Eye className={iconSizes.sm} />
             Δείτε στην κάτοψη
           </button>

@@ -23,6 +23,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { TRANSITION_PRESETS, HOVER_BACKGROUND_EFFECTS } from "@/components/ui/effects";
 import { useKeyboardShortcut } from "@/hooks/useKeyboardShortcuts";
 import { SEARCH_UI } from "./constants"; // 🏢 ENTERPRISE search constants
+import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
 
 interface HeaderSearchProps {
   placeholder?: string;
@@ -44,6 +45,7 @@ export function HeaderSearch({
   shortcutKey = "k"
 }: HeaderSearchProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -107,11 +109,11 @@ export function HeaderSearch({
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           className={cn(
-            "pl-10 pr-4 h-10 bg-muted/50 border-0 focus:bg-background",
+            `pl-10 pr-4 h-10 bg-muted/50 border-0 focus:${colors.bg.primary}`,
             SEARCH_UI.INPUT.FOCUS, // 🏢 Enterprise centralized focus ring
             TRANSITION_PRESETS.SMOOTH_ALL,
             HOVER_BACKGROUND_EFFECTS.MUTED,
-            searchFocused && "bg-background shadow-lg"
+            searchFocused && `${colors.bg.primary} shadow-lg`
           )}
           autoComplete="off"
         />

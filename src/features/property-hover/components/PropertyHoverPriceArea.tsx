@@ -2,6 +2,7 @@
 import { Euro, Ruler } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export function PropertyHoverPriceArea({
   hasPrice, price, priceLabel, isRentLike,
@@ -11,6 +12,7 @@ export function PropertyHoverPriceArea({
   hasArea: boolean; area?: number; pricePerSqm?: string;
 }) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   return (
     <div className="space-y-2">
@@ -18,9 +20,9 @@ export function PropertyHoverPriceArea({
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground">{priceLabel}:</p>
           <div className="flex items-center gap-1">
-            <Euro className={`${iconSizes.sm} text-green-600`} />
+            <Euro className={`${iconSizes.sm} ${colors.text.success}`} />
             {price && price > 0 ? (
-              <span className="font-semibold text-sm text-green-600">
+              <span className={`font-semibold text-sm ${colors.text.success}`}>
                 {price.toLocaleString('el-GR')}€
                 {isRentLike && <span className="text-xs text-muted-foreground">/μήνα</span>}
               </span>

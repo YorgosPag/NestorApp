@@ -43,6 +43,7 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useEnterprisePerformance } from '../hooks/useEnterprisePerformance';
 import {
   PerformanceCategory,
@@ -92,6 +93,7 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
 }) => {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, radius } = useBorderTokens();
+  const colors = useSemanticColors();
   const [mounted, setMounted] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [showOptimizations, setShowOptimizations] = useState(false);
@@ -191,7 +193,7 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
       <button
         onClick={() => setIsVisible(true)}
         className={FloatingStyleUtils?.getCornerButtonClasses?.('top-right') ??
-          `fixed top-4 right-4 z-[9999] p-2 bg-background ${getStatusBorder('default')} ${radius.md} shadow-lg hover:bg-accent transition-colors`}
+          `fixed top-4 right-4 z-[9999] p-2 ${colors.bg.primary} ${getStatusBorder('default')} ${radius.md} shadow-lg hover:bg-accent transition-colors`}
         title="Show Performance Dashboard"
       >
         <Activity className={iconSizes.sm} />

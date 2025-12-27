@@ -206,7 +206,7 @@ const EntityBadge: React.FC<EntityHeaderBadge> = ({
   const variantClasses = {
     default: "bg-primary text-primary-foreground",
     secondary: "bg-secondary text-secondary-foreground",
-    outline: "border border-input bg-background text-foreground"
+    outline: `border border-input ${colors.bg.primary} text-foreground`
   };
 
   const typeClasses = {

@@ -50,7 +50,7 @@ export function PropertyGridView() {
   };
 
   return (
-    <div className={`min-h-screen ${colors.bg.secondary} dark:bg-background overflow-x-hidden`}>
+    <div className={`min-h-screen ${colors.bg.secondary} dark:${colors.bg.primary} overflow-x-hidden`}>
       {/* Header */}
       <div className="sticky top-0 z-10">
         <PageHeader

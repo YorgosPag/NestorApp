@@ -12,6 +12,7 @@
  */
 
 import { semanticColors, spacing, typography } from '../../styles/design-tokens';
+import { hardcodedColorValues } from '../../design-system/tokens/colors';
 import type { SemanticColorName } from '../useSemanticColors';
 
 // =============================================================================
@@ -163,7 +164,7 @@ export const ENTERPRISE_COLOR_MAPPING: Record<SemanticColorName, ColorTokenBridg
     rawValue: '#6b7280',
     variants: {
       text: 'text-gray-600',
-      bg: 'bg-gray-100',
+      bg: hardcodedColorValues.background.gray[100],
       border: 'border-gray-300',
       ring: 'ring-gray-300',
       placeholder: 'placeholder-gray-400'
@@ -189,7 +190,7 @@ export const ENTERPRISE_COLOR_MAPPING: Record<SemanticColorName, ColorTokenBridg
     rawValue: '#9ca3af',
     variants: {
       text: 'text-gray-400',
-      bg: 'bg-gray-50',
+      bg: hardcodedColorValues.background.gray[50],
       border: 'border-gray-200',
       ring: 'ring-gray-200',
       placeholder: 'placeholder-gray-300'
@@ -204,7 +205,7 @@ export const ENTERPRISE_COLOR_MAPPING: Record<SemanticColorName, ColorTokenBridg
     rawValue: '#111827',
     variants: {
       text: 'text-gray-900',
-      bg: 'bg-gray-900',
+      bg: hardcodedColorValues.background.gray[900],
       border: 'border-gray-900',
       ring: 'ring-gray-900',
       placeholder: 'placeholder-gray-500'
@@ -212,15 +213,15 @@ export const ENTERPRISE_COLOR_MAPPING: Record<SemanticColorName, ColorTokenBridg
   },
   background: {
     token: semanticColors.status.info, // Using info as background
-    tailwind: 'text-white',
-    cssVar: 'hsl(var(--status-info))',
-    rawValue: '#ffffff',
+    tailwind: 'text-background',
+    cssVar: 'hsl(var(--background))',
+    rawValue: 'hsl(214, 95%, 93%)', // ✅ ENTERPRISE: Beautiful light blue (was white)
     variants: {
-      text: 'text-white',
-      bg: 'bg-white',
-      border: 'border-white',
-      ring: 'ring-white',
-      placeholder: 'placeholder-white'
+      text: 'text-background',
+      bg: 'bg-background', // ✅ ENTERPRISE: Using beautiful blue background
+      border: 'border-background',
+      ring: 'ring-background',
+      placeholder: 'placeholder-background'
     }
   }
 };
@@ -354,12 +355,8 @@ export function convertTailwindToToken(tailwindClass: string): {
     }
   }
 
-  // Typography conversion
-  for (const [semantic, mapping] of Object.entries(ENTERPRISE_TYPOGRAPHY_MAPPING)) {
-    if (mapping.tailwind === tailwindClass || mapping.fullClass.includes(tailwindClass)) {
-      return { token: mapping.token, semantic, category: 'typography' };
-    }
-  }
+  // Typography conversion - ❌ REMOVED: Use useTypography hook instead
+  // TODO: Implement typography conversion using useTypography patterns
 
   return { token: tailwindClass, semantic: 'unknown', category: 'unknown' };
 }
@@ -397,12 +394,8 @@ export function enterpriseTokenBridgeHealthCheck(): {
     }
   }
 
-  // Validate typography mappings
-  for (const [name, mapping] of Object.entries(ENTERPRISE_TYPOGRAPHY_MAPPING)) {
-    if (!mapping.token || !mapping.tailwind || !mapping.role) {
-      issues.push(`Typography mapping '${name}' is incomplete`);
-    }
-  }
+  // Validate typography mappings - ❌ REMOVED: Typography handled by useTypography hook
+  // Typography validation is handled by existing useTypography.ts (186 production uses)
 
   return {
     isHealthy: issues.length === 0,
@@ -410,10 +403,10 @@ export function enterpriseTokenBridgeHealthCheck(): {
     report: {
       colorMappings: Object.keys(ENTERPRISE_COLOR_MAPPING).length,
       spacingMappings: Object.keys(ENTERPRISE_SPACING_MAPPING).length,
-      typographyMappings: Object.keys(ENTERPRISE_TYPOGRAPHY_MAPPING).length,
+      typographyMappings: 0, // ❌ REMOVED: Typography handled by useTypography hook
       totalMappings: Object.keys(ENTERPRISE_COLOR_MAPPING).length +
                      Object.keys(ENTERPRISE_SPACING_MAPPING).length +
-                     Object.keys(ENTERPRISE_TYPOGRAPHY_MAPPING).length
+                     0 // ❌ REMOVED: Typography handled by useTypography hook
     }
   };
 }

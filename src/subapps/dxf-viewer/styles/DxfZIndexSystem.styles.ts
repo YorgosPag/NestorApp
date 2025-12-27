@@ -339,7 +339,7 @@ export const dxfOverlayStyles: DxfOverlayStyles = {
   zoomWindow: {
     position: 'absolute',
     border: '2px solid #007ACC',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'hsl(var(--background) / 0.9)', // ✅ ENTERPRISE: CSS variable (adapts to dark mode)
     borderRadius: '4px',
     overflow: 'hidden',
     pointerEvents: 'none',

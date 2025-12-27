@@ -13,8 +13,8 @@ export function ToasterClient() {
       toastOptions={{
         duration: 3000,
         style: {
-          background: '#363636',
-          color: '#fff',
+          background: 'hsl(var(--popover))',
+          color: 'hsl(var(--popover-foreground))',
         },
       }}
     />

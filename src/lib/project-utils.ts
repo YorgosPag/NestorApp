@@ -5,6 +5,8 @@ import { ENHANCED_STATUS_LABELS as PROPERTY_STATUS_LABELS, ENHANCED_STATUS_COLOR
 import { getDaysUntilCompletion as getDaysUntilCompletionI18n } from '@/lib/intl-utils';
 import { brandClasses } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { hardcodedColorValues } from '@/design-system/tokens/colors';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 // ⚠️ DEPRECATED: Use formatCurrency from intl-utils.ts for enterprise currency formatting
 // 🔄 BACKWARD COMPATIBILITY: This function is maintained for legacy support
@@ -19,9 +21,9 @@ export const formatCurrency = (amount: number) => {
 // All imports have been updated to use @/lib/intl-utils
 
 export const getProgressColor = (progress: number) => {
-    if (progress < 25) return 'text-red-500';
-    if (progress < 50) return 'text-yellow-500';
-    if (progress >= 75) return 'text-green-500';
+    if (progress < 25) return COLOR_BRIDGE.text.error;      // ✅ SEMANTIC: text-red-500 -> error
+    if (progress < 50) return COLOR_BRIDGE.text.warning;    // ✅ SEMANTIC: text-yellow-500 -> warning
+    if (progress >= 75) return COLOR_BRIDGE.text.success;   // ✅ SEMANTIC: text-green-500 -> success
     return brandClasses.primary.text;
 };
 
@@ -37,18 +39,18 @@ export const getDaysUntilCompletion = (completionDate?: string) => {
 // 🏢 Enterprise Status Colors Function με Semantic Color System
 export const getProjectStatusColors = (colors?: ReturnType<typeof useSemanticColors>): Record<string, string> => {
     if (!colors) {
-        // Enterprise fallback για non-React contexts
+        // ✅ ENTERPRISE: Enterprise fallback για non-React contexts με semantic colors
         return {
-            'planning': 'bg-yellow-100 text-yellow-800',
+            'planning': `${COLOR_BRIDGE.bg.warning} ${COLOR_BRIDGE.text.warning}`,        // ✅ SEMANTIC: yellow -> warning
             'in_progress': brandClasses.primary.badge,
-            'completed': 'bg-green-100 text-green-800',
-            'on_hold': 'bg-slate-100 text-slate-800',
-            'cancelled': 'bg-red-100 text-red-800',
-            'default': 'bg-slate-100 text-slate-800',
-            'for-sale': 'bg-green-100 text-green-800',
-            'sold': 'bg-red-100 text-red-800',
+            'completed': `${COLOR_BRIDGE.bg.success} ${COLOR_BRIDGE.text.success}`,      // ✅ SEMANTIC: green -> success
+            'on_hold': `${hardcodedColorValues.background.gray[100]} text-slate-800`,
+            'cancelled': `${COLOR_BRIDGE.bg.error} ${COLOR_BRIDGE.text.error}`,          // ✅ SEMANTIC: red -> error
+            'default': `${hardcodedColorValues.background.gray[100]} text-slate-800`,
+            'for-sale': `${COLOR_BRIDGE.bg.success} ${COLOR_BRIDGE.text.success}`,      // ✅ SEMANTIC: green -> success
+            'sold': `${COLOR_BRIDGE.bg.error} ${COLOR_BRIDGE.text.error}`,              // ✅ SEMANTIC: red -> error
             'for-rent': brandClasses.primary.badge,
-            'rented': 'bg-orange-100 text-orange-800',
+            'rented': `${COLOR_BRIDGE.bg.warning} ${COLOR_BRIDGE.text.warning}`,        // ✅ SEMANTIC: orange -> warning
         };
     }
 

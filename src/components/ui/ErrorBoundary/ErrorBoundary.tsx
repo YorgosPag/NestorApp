@@ -398,7 +398,7 @@ ${errorDetails.stack || 'Stack trace not available'}
 
       // Default error UI
       return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className={`min-h-screen ${colors ? colors.bg.primary : 'bg-background'} flex items-center justify-center p-4`}>
           <div className="max-w-2xl w-full">
             <div className={`bg-card ${borderTokens ? borderTokens.quick.error : 'border'} p-8 shadow-lg`}>
               {/* Error Header */}

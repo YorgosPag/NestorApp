@@ -1405,7 +1405,7 @@ export const PerformanceDashboardTokens = {
 
 // Performance Monitor Utilities
 export const performanceMonitorUtilities = {
-  getOverlayContainerClasses: () => 'fixed bg-white border rounded-lg shadow-lg',
+  getOverlayContainerClasses: () => 'fixed bg-[hsl(var(--bg-primary))] border rounded-lg shadow-lg',
   getOverlayContainerStyles: () => ({ zIndex: zIndex.modal }),
   getOverlayHeaderClasses: () => 'flex items-center justify-between p-3 border-b',
   getOverlayHeaderStyles: () => ({ backgroundColor: colors.background.primary }),

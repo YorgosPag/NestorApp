@@ -3,14 +3,15 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 import { useBorderTokens } from '@/hooks/useBorderTokens'
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'
 
 // 🏢 ENTERPRISE: Dynamic alert variants using centralized border tokens
-const createAlertVariants = (borderTokens: ReturnType<typeof useBorderTokens>) => cva(
+const createAlertVariants = (borderTokens: ReturnType<typeof useBorderTokens>, colors?: ReturnType<typeof useSemanticColors>) => cva(
   `relative w-full ${borderTokens.quick.card} p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground`,
   {
     variants: {
       variant: {
-        default: "bg-background text-foreground",
+        default: `${colors?.bg.primary || 'bg-background'} text-foreground`,
         destructive: `${borderTokens.quick.error} text-destructive dark:border-destructive [&>svg]:text-destructive`,
       },
     },
@@ -29,9 +30,10 @@ const Alert = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & AlertVariantProps
 >(({ className, variant, ...props }, ref) => {
-  // 🏢 ENTERPRISE: Use centralized border tokens
+  // 🏢 ENTERPRISE: Use centralized border tokens and semantic colors
   const borderTokens = useBorderTokens();
-  const alertVariants = createAlertVariants(borderTokens);
+  const colors = useSemanticColors();
+  const alertVariants = createAlertVariants(borderTokens, colors);
 
   return (
     <div

@@ -14,6 +14,7 @@ import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, HOVER_TEXT_EFFECTS, HOVER_BAC
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
   Search,
   X,
@@ -204,6 +205,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // ============================================================================
   // 🏢 ENTERPRISE: STATE MANAGEMENT
@@ -620,7 +622,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
           {showDropdown && dropdownPosition && typeof document !== 'undefined' && createPortal(
             <Card
               ref={dropdownRef}
-              className={`shadow-xl bg-background ${quick.card}`}
+              className={`shadow-xl ${colors.bg.primary} ${quick.card}`}
               style={layoutUtilities.dropdown.portal(dropdownPosition)}
             >
               <CardContent className={getEmployeeSelectorCardStyle()}>

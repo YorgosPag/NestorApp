@@ -4,6 +4,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { layoutUtilities } from '@/styles/design-tokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 /**
  * 🎨 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ THEME-AWARE PROGRESS BAR
@@ -25,12 +26,14 @@ export function ThemeProgressBar({
   size = 'md',
   showPercentage = true
 }: ThemeProgressBarProps) {
-  // Theme-aware progress bar colors using CSS variables
+  const colors = useSemanticColors();
+
+  // ✅ ENTERPRISE: Theme-aware progress bar colors using semantic system
   const getProgressColorClass = (value: number) => {
-    if (value >= 80) return 'text-green-500';      // Success (green) - για το χρώμα του ποσοστού
-    if (value >= 60) return 'text-primary';        // Primary (blue/dark)
-    if (value >= 40) return 'text-orange-500';     // Warning (orange)
-    return 'text-destructive';                     // Destructive (red)
+    if (value >= 80) return colors.text.success;      // ✅ SEMANTIC: text-green-500 -> success text
+    if (value >= 60) return 'text-primary';           // Keep primary (framework)
+    if (value >= 40) return colors.text.warning;      // ✅ SEMANTIC: text-orange-500 -> warning text
+    return 'text-destructive';                        // Keep destructive (framework)
   };
 
   // Theme-aware progress bar background colors

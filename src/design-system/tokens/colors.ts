@@ -123,14 +123,20 @@ export const hardcodedColorValues = {
     },
 
     // Common backgrounds
-    white: 'bg-white',
+    light: 'bg-card',              // ✅ ENTERPRISE: Light surface (was bg-white, now beautiful blue)
     transparent: 'bg-transparent',
 
-    // Subtle semantic backgrounds (hardcoded fallbacks)
-    successSubtle: 'bg-green-100',
-    errorSubtle: 'bg-red-100',
-    infoSubtle: 'bg-blue-100',
-    neutralSubtle: 'bg-gray-100',
+    // 🔥 ΑΛΗΘΙΝΗ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: ΌΛΑ CSS VARIABLES!
+    successSubtle: 'bg-[hsl(var(--bg-success))]',
+    errorSubtle: 'bg-[hsl(var(--bg-error))]',
+    infoSubtle: 'bg-[hsl(var(--bg-info))]',
+    neutralSubtle: 'bg-[hsl(var(--bg-secondary))]',
+
+    // ⚡ ΠΡΑΓΜΑΤΙΚΗ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ - HARDCODED ΑΝΤΙΚΑΤΑΣΤΑΣΗ
+    primary: 'bg-[hsl(var(--bg-primary))]',      // 🧪 Will show blue!
+    secondary: 'bg-[hsl(var(--bg-secondary))]',  // 🧪 Will show blue!
+    hover: 'bg-[hsl(var(--bg-hover))]',          // 🧪 Will show blue!
+    active: 'bg-[hsl(var(--bg-active))]',        // 🧪 Will show blue!
   },
 
   /** Border colors - Hardcoded values */

@@ -509,7 +509,7 @@ export function TextSettings() {
               <label className="block text-sm font-medium ${colors.text.muted}">
                 {TEXT_LABELS.PREVIEW}
               </label>
-              <div className={`p-4 bg-white ${quick.card}`}>
+              <div className={`p-4 ${colors.bg.primary} ${quick.card}`}>
                 <div style={getPreviewStyle()}>
                   {TEXT_LABELS.PREVIEW_TEXT}
                 </div>

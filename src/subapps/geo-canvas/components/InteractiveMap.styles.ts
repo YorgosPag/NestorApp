@@ -188,8 +188,8 @@ const markerStyles: MarkerStylesType = {
     width: '4px',
     height: '4px',
     borderRadius: '50%',
-    backgroundColor: '#ffffff',
-    border: '1px solid #000000'
+    backgroundColor: 'hsl(var(--background))',
+    border: '1px solid hsl(var(--foreground))'
   }),
 
   /**
@@ -218,8 +218,8 @@ const markerStyles: MarkerStylesType = {
     width: '3px',
     height: '3px',
     borderRadius: '50%',
-    backgroundColor: '#ffffff',
-    border: '1px solid #000000'
+    backgroundColor: 'hsl(var(--background))',
+    border: '1px solid hsl(var(--foreground))'
   }),
 
   /**

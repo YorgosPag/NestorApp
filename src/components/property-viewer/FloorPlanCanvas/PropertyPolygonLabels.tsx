@@ -20,7 +20,7 @@ export function PropertyPolygonLabels({ name, type, centroid }: PropertyPolygonL
         fontSize="10"
         fill="black"
         className="select-none font-medium"
-        style={svgUtilities.text.withStroke('rgba(255,255,255,0.8)', 3)}
+        style={svgUtilities.text.withStroke('hsl(var(--background) / 0.8)', 3)} // ✅ ENTERPRISE: CSS variable (adapts to dark mode)
       >
         {name.replace(/ - .*/, '')}
       </text>
@@ -31,7 +31,7 @@ export function PropertyPolygonLabels({ name, type, centroid }: PropertyPolygonL
         fontSize="8"
         fill="black"
         className="select-none"
-        style={svgUtilities.text.outlined('rgba(255,255,255,0.7)', 2)}
+        style={svgUtilities.text.outlined('hsl(var(--background) / 0.7)', 2)} // ✅ ENTERPRISE: CSS variable (adapts to dark mode)
       >
         {type}
       </text>

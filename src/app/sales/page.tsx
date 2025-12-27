@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Placeholder stats for Sales
 const salesStats: DashboardStat[] = [
@@ -55,13 +56,14 @@ const salesStats: DashboardStat[] = [
 export default function SalesPage() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   return (
     <TooltipProvider>
-      <div className="flex h-screen bg-background">
+      <div className={`flex h-screen ${colors.bg.primary}`}>
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className={`border-b ${colors.bg.primary}/95 backdrop-blur supports-[backdrop-filter]:${colors.bg.primary}/60`}>
             <div className="flex h-14 items-center px-4">
               <div className="flex items-center gap-2">
                 <DollarSign className={`${iconSizes.md} text-muted-foreground`} />

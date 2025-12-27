@@ -4,6 +4,7 @@ import React from 'react';
 import { Input } from '@/components/ui/input';
 import { HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // 🏢 ENTERPRISE UNIVERSAL CLICKABLE FIELD RENDERER
@@ -108,9 +109,10 @@ export function UniversalClickableField({
  */
 function renderClickableLink(type: string, value: string, fieldId: string): React.ReactNode {
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // 🎨 ENTERPRISE DISABLED INPUT STYLING - Centralized pattern
-  const disabledInputClasses = `min-h-10 flex items-center px-3 py-2 ${quick.input} bg-background text-sm`;
+  const disabledInputClasses = `min-h-10 flex items-center px-3 py-2 ${quick.input} ${colors.bg.primary} text-sm`;
   // 📧 EMAIL LINK - Always use Gmail web interface
   if (type === 'email') {
     return (

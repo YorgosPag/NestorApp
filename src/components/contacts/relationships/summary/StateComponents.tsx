@@ -51,7 +51,7 @@ export const NewContactState: React.FC<StateComponentProps> = ({ className }) =>
   <Card className={className}>
     <CardContent className="pt-6">
       <div className={`text-center ${colors.text.muted}`}>
-        <Users className={`h-12 w-12 mx-auto mb-4 ${colors.text.disabled}`} />
+        <Users className={"h-12 w-12 mx-auto mb-4 " + colors.text.muted} />
         <h3 className="font-medium text-lg mb-2">Σχέσεις Επαφής</h3>
         <p className="text-sm mb-4">
           Οι σχέσεις θα είναι διαθέσιμες μετά την αποθήκευση της επαφής.
@@ -115,6 +115,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   onManageRelationships
 }) => {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   return (
   <Card className={className}>
@@ -138,7 +139,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     </CardHeader>
     <CardContent>
       <div className="text-center py-8">
-        <Users className={`h-12 w-12 mx-auto mb-4 ${colors.text.disabled}`} />
+        <Users className={"h-12 w-12 mx-auto mb-4 " + colors.text.muted} />
         <h3 className="font-medium mb-2">Δεν υπάρχουν σχέσεις</h3>
         <p className={`${colors.text.muted} text-sm mb-4`}>
           Προσθέστε επαγγελματικές σχέσεις, εργαζόμενους και συνεργάτες.

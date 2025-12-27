@@ -3,6 +3,7 @@ import { Home, Building } from "lucide-react";
 import { PROPERTY_STATUS_LABELS } from '@/constants/property-statuses-enterprise';
 import { borderVariants } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 /**
  * 🏢 ENTERPRISE PROPERTY STATUS CONFIGURATION με SEMANTIC COLORS
@@ -16,23 +17,23 @@ export const getPropertyStatusConfig = (colors?: ReturnType<typeof useSemanticCo
         return {
     'for-sale': {
         label: PROPERTY_STATUS_LABELS['for-sale'],
-        color: `bg-green-50 text-green-800 ${borderVariants.status.success.className}`,
+        color: `${COLOR_BRIDGE.bg.success} ${COLOR_BRIDGE.text.success} ${borderVariants.status.success.className}`,  // ✅ SEMANTIC: green -> success
     },
     'for-rent': {
         label: PROPERTY_STATUS_LABELS['for-rent'],
-        color: `bg-blue-50 text-blue-800 ${borderVariants.status.info.className}`,
+        color: `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info} ${borderVariants.status.info.className}`,          // ✅ SEMANTIC: blue -> info
     },
     'sold': {
         label: PROPERTY_STATUS_LABELS['sold'],
-        color: `bg-red-50 text-red-800 ${borderVariants.status.error.className}`,
+        color: `${COLOR_BRIDGE.bg.error} ${COLOR_BRIDGE.text.error} ${borderVariants.status.error.className}`,        // ✅ SEMANTIC: red -> error
     },
     'rented': {
         label: PROPERTY_STATUS_LABELS['rented'],
-        color: `bg-yellow-50 text-yellow-800 ${borderVariants.status.warning.className}`,
+        color: `${COLOR_BRIDGE.bg.warning} ${COLOR_BRIDGE.text.warning} ${borderVariants.status.warning.className}`,  // ✅ SEMANTIC: yellow -> warning
     },
     'reserved': {
         label: PROPERTY_STATUS_LABELS['reserved'],
-        color: `bg-orange-50 text-orange-800 ${borderVariants.status.warning.className}`,
+        color: `${COLOR_BRIDGE.bg.warning} ${COLOR_BRIDGE.text.warning} ${borderVariants.status.warning.className}`,  // ✅ SEMANTIC: orange -> warning
     },
     default: {
         label: 'Άγνωστο',

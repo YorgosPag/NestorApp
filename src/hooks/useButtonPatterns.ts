@@ -36,6 +36,7 @@
 import { useMemo } from 'react';
 import type { ButtonProps } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 // ============================================================================
 // 🎯 HOOK INTERFACE - TYPE-SAFE RETURNS
@@ -276,7 +277,7 @@ export function useButtonPatterns(): UseButtonPatternsReturn {
 
     // 🎨 RAW BUTTON PATTERNS - For <button> elements
     raw: {
-      iconButton: 'p-2 rounded-md border bg-background border-border hover:bg-accent hover:text-accent-foreground transition-colors duration-200',
+      iconButton: `p-2 rounded-md border ${COLOR_BRIDGE.bg.primary} border-border hover:bg-accent hover:text-accent-foreground transition-colors duration-200`,
       tabButton: 'px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 hover:bg-accent hover:text-accent-foreground',
       menuButton: 'w-full px-2 py-1.5 text-sm text-left rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors duration-200',
       floatingButton: `fixed bottom-4 right-4 ${iconSizes.xl3} rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-shadow duration-300`,

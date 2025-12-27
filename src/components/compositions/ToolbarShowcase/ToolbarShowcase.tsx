@@ -1,13 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
+import {
   BuildingManagementToolbar,
   ProjectToolbar,
-  ContactsToolbar 
+  ContactsToolbar
 } from '@/components/compositions';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export function ToolbarShowcase() {
+  const colors = useSemanticColors();
   // Shared state για demonstration
   const [buildingState, setBuildingState] = useState({
     selectedItems: [] as number[],
@@ -28,7 +30,7 @@ export function ToolbarShowcase() {
   });
 
   return (
-    <div className="space-y-8 bg-background p-6">
+    <div className={`space-y-8 ${colors.bg.primary} p-6`}>
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold">Toolbar Composition Showcase</h1>
         <p className="text-muted-foreground">
@@ -151,7 +153,7 @@ export function ToolbarShowcase() {
         </h2>
         <div className="p-4 border rounded-lg bg-muted/20">
           <h3 className="font-medium mb-2">Χρήση στην εφαρμογή:</h3>
-          <pre className="text-sm bg-background p-3 rounded border overflow-x-auto">
+          <pre className={`text-sm ${colors.bg.primary} p-3 rounded border overflow-x-auto`}>
 {`import { BuildingManagementToolbar, ProjectToolbar, ContactsToolbar } from '@/components/compositions';
 
 // Building management page

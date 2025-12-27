@@ -17,6 +17,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { TestsModal } from '../TestsModal'; // Adjust path to: './components/tests-modal/TestsModal'
 import { useBorderTokens } from '@/hooks/useBorderTokens'; // Enterprise border system
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'; // Enterprise semantic colors
 
 // Example: Using react-hot-toast for notifications
 // npm install react-hot-toast
@@ -34,6 +35,7 @@ interface TestResult {
 
 export function AdvancedUsageExample() {
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // 1. Modal state
   const [isTestsOpen, setIsTestsOpen] = useState(false);
@@ -131,7 +133,7 @@ export function AdvancedUsageExample() {
   }, [testHistory]);
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4">
+    <div className={`min-h-screen ${colors.bg.primary} text-white p-4`}>
       {/* Toast container */}
       <Toaster />
 
@@ -139,7 +141,7 @@ export function AdvancedUsageExample() {
         <header className="mb-8">
           <h1 className="text-3xl font-bold mb-2">DXF Viewer - Advanced Testing</h1>
           <p className="text-gray-400">
-            Press <kbd className="px-2 py-1 bg-gray-700 rounded">Ctrl+T</kbd> to toggle tests modal
+            Press <kbd className={`px-2 py-1 ${colors.bg.secondary} rounded`}>Ctrl+T</kbd> to toggle tests modal
           </p>
         </header>
 
@@ -156,7 +158,7 @@ export function AdvancedUsageExample() {
           {/* Test History Stats */}
           <button
             onClick={() => setIsTestsOpen(true)}
-            className={`p-4 bg-gray-800 rounded-lg ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} transition-all`}
+            className={`p-4 ${colors.bg.secondary} rounded-lg ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} transition-all`}
           >
             <div className="text-xl mb-1">
               📊 {testHistory.length} Tests Run
@@ -171,7 +173,7 @@ export function AdvancedUsageExample() {
           <button
             onClick={clearHistory}
             disabled={testHistory.length === 0}
-            className={`p-4 bg-gray-800 rounded-lg ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+            className={`p-4 ${colors.bg.secondary} rounded-lg ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             <div className="text-xl mb-1">🗑️ Clear History</div>
             <div className="text-sm text-gray-400">Reset test results</div>
@@ -180,7 +182,7 @@ export function AdvancedUsageExample() {
 
         {/* Test History Table */}
         {testHistory.length > 0 && (
-          <div className="bg-gray-800 rounded-lg p-4 mb-8">
+          <div className={`${colors.bg.secondary} rounded-lg p-4 mb-8`}>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">📝 Test History</h2>
               <button
@@ -235,7 +237,7 @@ export function AdvancedUsageExample() {
           <div className={`bg-green-900/20 ${getStatusBorder('success')} rounded-lg p-4`}>
             <div className="text-green-400 font-bold mb-2">🚀 Auto-Run</div>
             <div className="text-sm">
-              Add <code className="px-1 bg-gray-700 rounded">?autorun=true</code> to URL
+              Add <code className={`px-1 ${colors.bg.secondary} rounded`}>?autorun=true</code> to URL
               to automatically open tests on page load.
             </div>
           </div>

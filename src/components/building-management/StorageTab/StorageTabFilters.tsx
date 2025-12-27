@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, BarChart3 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { StorageType, StorageStatus } from '@/types/storage';
 
 interface StorageTabFiltersProps {
@@ -26,6 +27,7 @@ export function StorageTabFilters({
     onFilterStatusChange,
 }: StorageTabFiltersProps) {
     const iconSizes = useIconSizes();
+    const colors = useSemanticColors();
     return (
         <Card>
             <CardContent className="p-4">
@@ -43,7 +45,7 @@ export function StorageTabFilters({
                     <select
                         value={filterType}
                         onChange={(e) => onFilterTypeChange(e.target.value as StorageType | 'all')}
-                        className="h-10 px-3 rounded-md border border-input bg-background text-sm"
+                        className={`h-10 px-3 rounded-md border border-input ${colors.bg.primary} text-sm`}
                     >
                         <option value="all">Όλοι οι τύποι</option>
                         <option value="storage">Αποθήκες</option>
@@ -53,7 +55,7 @@ export function StorageTabFilters({
                     <select
                         value={filterStatus}
                         onChange={(e) => onFilterStatusChange(e.target.value as StorageStatus | 'all')}
-                        className="h-10 px-3 rounded-md border border-input bg-background text-sm"
+                        className={`h-10 px-3 rounded-md border border-input ${colors.bg.primary} text-sm`}
                     >
                         <option value="all">Όλες οι καταστάσεις</option>
                         <option value="available">Διαθέσιμες</option>

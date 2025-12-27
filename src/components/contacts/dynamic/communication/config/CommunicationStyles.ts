@@ -10,6 +10,8 @@
 
 import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import type { SemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 // ============================================================================
 // STYLE CONFIGURATION OBJECTS
@@ -28,7 +30,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
  * - Empty state presentation
  * - Header styling για grouped layouts
  */
-export function getCommunicationStyles() {
+export function getCommunicationStyles(colors?: SemanticColors) {
   const { quick } = useBorderTokens();
 
   return {
@@ -37,7 +39,7 @@ export function getCommunicationStyles() {
       container: `${quick.card} bg-card p-4 w-full max-w-none`,
       row: `grid gap-3 p-4 ${quick.borderB} last:border-b-0 bg-card transition-colors ${HOVER_BACKGROUND_EFFECTS.ACCENT}`,
       emptyState: `text-center text-muted-foreground py-8 ${quick.card} bg-muted/30`,
-      input: `bg-background ${quick.input} focus:bg-background focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20`
+      input: `${colors?.bg.primary || 'bg-background'} ${quick.input} focus:${colors?.bg.primary || 'bg-background'} focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20`
     }
   } as const;
 }
@@ -53,7 +55,7 @@ export const COMMUNICATION_STYLES = {
     container: 'border rounded-lg bg-card p-4 w-full max-w-none',
     row: `grid gap-3 p-4 border-b last:border-b-0 bg-card transition-colors ${HOVER_BACKGROUND_EFFECTS.ACCENT}`,
     emptyState: 'text-center text-muted-foreground py-8 border rounded-lg bg-muted/30',
-    input: 'bg-background border-input focus:bg-background focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20'
+    input: `${COLOR_BRIDGE.bg.primary} border-input focus:${COLOR_BRIDGE.bg.primary} focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20` // Legacy - use getCommunicationStyles() instead
   }
 } as const;
 
@@ -104,7 +106,7 @@ export const RESPONSIVE_GRID_CLASSES = {
  * Consistent button styling για communication actions
  */
 export const COMMUNICATION_BUTTON_STYLES = {
-  add: 'w-full bg-background border-input focus:bg-background focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20',
+  add: `w-full ${COLOR_BRIDGE.bg.primary} border-input focus:${COLOR_BRIDGE.bg.primary} focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20`, // Legacy - use getCommunicationStyles() instead
   delete: `${HOVER_TEXT_EFFECTS.RED}`,
   primary: `cursor-pointer ${INTERACTIVE_PATTERNS.OPACITY_HOVER}`
 } as const;

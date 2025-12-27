@@ -428,7 +428,7 @@ export const getStatusBadgeStyle = (status: string): CSSProperties => {
     fontSize: '0.75rem',
     fontWeight: '500',
     backgroundColor: statusColorMap[status] || semanticColors.info,
-    color: '#ffffff'
+    color: 'hsl(var(--background))'
   } as const;
 };
 

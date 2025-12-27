@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { Opportunity, CrmTask } from '@/types/crm';
 import type { CrmTaskType, CrmTaskPriority } from '@/types/crm-extra';
 import { Button } from '@/components/ui/button';
@@ -78,6 +79,7 @@ const initialFormData: FormState = {
 export default function CreateTaskModal({ isOpen, onClose, onTaskCreated, preselectedLead = null }: CreateTaskModalProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const [formData, setFormData] = useState<FormState>(initialFormData);
   const [leads, setLeads] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(false);
@@ -216,7 +218,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated, presel
 
           <div>
             <Label htmlFor="leadId">Σύνδεση με Lead</Label>
-            <select id="leadId" name="leadId" value={formData.leadId} onChange={handleChange} className="w-full mt-1 h-10 px-3 border border-input rounded-md bg-background text-sm" disabled={loading || loadingLeads}>
+            <select id="leadId" name="leadId" value={formData.leadId} onChange={handleChange} className={`w-full mt-1 h-10 px-3 border border-input rounded-md ${colors.bg.primary} text-sm`} disabled={loading || loadingLeads}>
               <option value="">{loadingLeads ? 'Φόρτωση...' : 'Επιλέξτε πελάτη (προαιρετικό)'}</option>
               {leads.map((lead) => (
                 <option key={lead.id} value={lead.id!}>{lead.fullName}</option>
@@ -237,7 +239,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated, presel
 
           <div>
             <Label htmlFor="priority">Προτεραιότητα</Label>
-            <select id="priority" name="priority" value={formData.priority} onChange={handleChange} className="w-full mt-1 h-10 px-3 border border-input rounded-md bg-background text-sm" disabled={loading}>
+            <select id="priority" name="priority" value={formData.priority} onChange={handleChange} className={`w-full mt-1 h-10 px-3 border border-input rounded-md ${colors.bg.primary} text-sm`} disabled={loading}>
               {priorityOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
             </select>
           </div>

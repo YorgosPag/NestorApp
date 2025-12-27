@@ -8,6 +8,7 @@ import { UserMenu } from "@/components/header/user-menu"
 import { LanguageSwitcher } from "@/components/header/language-switcher"
 import { NotificationBell } from "@/components/NotificationBell.enterprise"
 import { useFirestoreNotifications } from "@/hooks/useFirestoreNotifications"
+import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors"
 
 export function AppHeader() {
   // ✅ FIRESTORE: Real-time notifications με onSnapshot
@@ -17,8 +18,11 @@ export function AppHeader() {
     enabled: true
   });
 
+  // 🌉 BRIDGE: Semantic colors
+  const colors = useSemanticColors();
+
   return (
-    <header className="sticky top-0 z-50 w-full max-w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 overflow-hidden">
+    <header className={`sticky top-0 z-50 w-full max-w-full border-b ${colors.bg.primary}/95 backdrop-blur supports-[backdrop-filter]:${colors.bg.primary}/60 overflow-hidden`}>
       <div className="flex h-16 items-center justify-between px-1 sm:px-4 w-full max-w-full overflow-hidden">
         <SidebarTrigger />
 

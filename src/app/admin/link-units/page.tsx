@@ -10,18 +10,20 @@ import SoldUnitsPreview from '@/components/admin/SoldUnitsPreview';
 import { useEnterpriseConfig } from '@/core/configuration/useEnterpriseConfig';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export default function LinkUnitsPage() {
   // Enterprise Configuration Hook - replaces hardcoded values
   const { companyConfig, isLoading } = useEnterpriseConfig();
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { quick } = useBorderTokens();
 
   // Get current project name from centralized configuration
   const currentProjectName = companyConfig?.currentProject?.name || 'έργου';
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className={`min-h-screen ${colors.bg.primary} p-6`}>
       <div className="max-w-6xl mx-auto space-y-6">
 
         {/* Header */}

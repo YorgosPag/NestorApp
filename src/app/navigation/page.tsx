@@ -17,7 +17,7 @@ export default function NavigationPage() {
   const colors = useSemanticColors();
 
   return (
-    <main className={`min-h-screen ${colors.bg.primary} dark:bg-background`}>
+    <main className={`min-h-screen ${colors.bg.primary}`}>
       {/* Header */}
       <header className={`${quick.separatorH} ${colors.bg.primary}`}>
         <div className="max-w-full mx-auto px-2 sm:px-3 lg:px-4">

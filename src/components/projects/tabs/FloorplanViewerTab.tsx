@@ -86,7 +86,7 @@ export function FloorplanViewerTab({
       
       // Use original layer colors from DXF (same as main canvas)
       const getLayerColor = (layerName: string) => {
-        return floorplanData.layers?.[layerName]?.color || '#ffffff';
+        return floorplanData.layers?.[layerName]?.color || '#e2e8f0'; // ✅ ENTERPRISE: Light gray fallback instead of white
       };
       
       ctx.lineWidth = 1;

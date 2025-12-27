@@ -6,6 +6,7 @@ import { Home, Filter } from 'lucide-react';
 import { PageHeader } from '@/core/headers';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { ViewMode as CoreViewMode } from '@/core/headers';
 
 export type UnitsViewMode = 'list' | 'grid';
@@ -36,6 +37,7 @@ export function UnitsHeader({
 }: UnitsHeaderProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   return (
     <PageHeader
         variant="sticky-rounded"
@@ -69,7 +71,7 @@ export function UnitsHeader({
               className={`md:hidden p-2 rounded-md ${TRANSITION_PRESETS.STANDARD_COLORS} ${
                 showFilters
                   ? `bg-primary text-primary-foreground ${quick.focus}`
-                  : `bg-background ${quick.input} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`
+                  : `${colors.bg.primary} ${quick.input} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`
               }`}
               aria-label="Toggle filters"
             >

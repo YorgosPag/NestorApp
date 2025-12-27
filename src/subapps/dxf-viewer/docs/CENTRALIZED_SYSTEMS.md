@@ -171,7 +171,8 @@ const report = await geoAlertEngine.generateQuickReport();
 **🎯 Enterprise Patterns**:
 ```typescript
 // 🏗️ Design system integration
-import { useBorderTokens, useTypography, useSemanticColors } from '@/hooks';
+import { useBorderTokens, useTypography } from '@/hooks';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 const { quick } = useBorderTokens(); // 519+ uses proven
 const { headings } = useTypography();
 const { status } = useSemanticColors();
@@ -1761,7 +1762,7 @@ src/subapps/dxf-viewer/
 |------------|-------------|-----------|------------|
 | **Main Design Tokens** | `src/styles/design-tokens.ts` | Core tokens system (colors, spacing, typography, borders) | ✅ **ACTIVE** |
 | **Border Tokens Hook** | `src/hooks/useBorderTokens.ts` | Centralized border system με enterprise patterns | ✅ **PRODUCTION READY** |
-| **Semantic Colors Hook** | `src/hooks/useSemanticColors.ts` | 🎯 **ENTERPRISE BACKGROUND CENTRALIZATION** - CSS Variables integration (success, error, warning, info) | ✅ **PRODUCTION READY** |
+| **Semantic Colors Hook** | `src/ui-adapters/react/useSemanticColors.ts` | 🎯 **ENTERPRISE BACKGROUND CENTRALIZATION** - CSS Variables integration (success, error, warning, info) | ✅ **PRODUCTION READY** |
 | **Typography Hook** | `src/hooks/useTypography.ts` | Typography patterns με responsive support | ✅ **PRODUCTION READY** |
 | **Icon Sizes Hook** | `src/hooks/useIconSizes.ts` | Centralized icon sizing system | ✅ **PRODUCTION READY** |
 | **Design System Bridge** | `src/hooks/internal/enterprise-token-bridge.ts` | Integration bridge για existing systems | ✅ **PRODUCTION READY** |
@@ -1781,7 +1782,7 @@ src/subapps/dxf-viewer/
 
 **Design & Layout (8 hooks)**:
 - `useDesignSystem()` - Unified design tokens access
-- `useSemanticColors()` - Semantic color patterns
+- `useSemanticColors()` - Semantic color patterns (from '@/ui-adapters/react/useSemanticColors')
 - `useBorderTokens()` - Border system
 - `useTypography()` - Typography patterns
 - `useIconSizes()` - Icon sizing
@@ -2046,7 +2047,7 @@ src/subapps/dxf-viewer/
 **Location**: `src/hooks/`
 
 **🎨 Design System Hooks** ✅ **ENTERPRISE GRADE**:
-- `useSemanticColors.ts` - 500+ lines semantic color patterns (text, bg, borders, status, interactive)
+- `useSemanticColors.ts` - 500+ lines semantic color patterns (text, bg, borders, status, interactive) [CORRECTED PATH: ui-adapters/react/]
 - `useBorderTokens.ts` - 380+ lines border design system με enterprise API
 - `useTypography.ts` - Typography tokens centralization
 - `useDesignSystem.ts` - Unified design system access
@@ -2319,7 +2320,7 @@ src/subapps/dxf-viewer/
 
 ### **🔗 HOOK INTEGRATION (AGENT_B)**
 
-**Location**: `src/hooks/useSemanticColors.ts`
+**Location**: `src/ui-adapters/react/useSemanticColors.ts`
 
 **Migration Pattern**:
 ```typescript
@@ -2394,7 +2395,7 @@ bg.error: 'bg-[hsl(var(--bg-error))]'
 **🎯 NEXT ACTIONS FOR AGENT_C**:
 1. Run `node scripts/background-audit.js` για current violations
 2. Focus on high-priority DXF Viewer components first
-3. Use `useSemanticColors()` hook for all migrations
+3. Use `useSemanticColors()` hook from '@/ui-adapters/react/useSemanticColors' for all migrations
 4. Update progress metrics in test suite
 
 ### **🏢 ENTERPRISE CERTIFICATION**

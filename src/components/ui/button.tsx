@@ -5,9 +5,11 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 import { INTERACTIVE_PATTERNS } from "@/components/ui/effects"
 import { useBorderTokens } from '@/hooks/useBorderTokens'
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'
+import type { SemanticColors } from '@/ui-adapters/react/useSemanticColors'
 
 // 🏢 ENTERPRISE: Dynamic button variants using centralized border tokens
-const createButtonVariants = (borderTokens: ReturnType<typeof useBorderTokens>) => cva(
+const createButtonVariants = (borderTokens: ReturnType<typeof useBorderTokens>, colors?: SemanticColors) => cva(
   `inline-flex items-center justify-center gap-2 whitespace-nowrap ${borderTokens.quick.input} text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50`,
   {
     variants: {
@@ -16,7 +18,7 @@ const createButtonVariants = (borderTokens: ReturnType<typeof useBorderTokens>) 
         destructive:
           `bg-destructive text-destructive-foreground ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`,
         outline:
-          `${borderTokens.quick.input} bg-background ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`,
+          `${borderTokens.quick.input} ${colors?.bg.primary || 'bg-background'} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`,
         secondary:
           `bg-secondary text-secondary-foreground ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
         ghost: `${INTERACTIVE_PATTERNS.ACCENT_HOVER}`,
@@ -59,9 +61,10 @@ const buttonVariants = createButtonVariants(borderTokens);
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
-    // 🏢 ENTERPRISE: Use centralized border tokens
+    // 🏢 ENTERPRISE: Use centralized border tokens and semantic colors
     const dynamicBorderTokens = useBorderTokens();
-    const dynamicButtonVariants = createButtonVariants(dynamicBorderTokens);
+    const colors = useSemanticColors();
+    const dynamicButtonVariants = createButtonVariants(dynamicBorderTokens, colors);
 
     const Comp = asChild ? Slot : "button"
     return (

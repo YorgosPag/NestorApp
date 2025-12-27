@@ -319,7 +319,7 @@ export function TasksTab() {
               const leadName = getLeadName(task.leadId);
               const meta = (task.metadata || {}) as TaskMetadata;
               return (
-                <div key={task.id} className={`bg-background p-4 rounded-lg border ${HOVER_SHADOWS.SUBTLE}`}>
+                <div key={task.id} className={`${colors.bg.primary} p-4 rounded-lg border ${HOVER_SHADOWS.SUBTLE}`}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">

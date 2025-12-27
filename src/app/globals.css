@@ -11,25 +11,25 @@
 
 @layer base {
   :root {
-    --background: 212 22% 95%; /* Adjusted for a very light grey */
+    --background: 214 95% 93%; /* ✅ ENTERPRISE: Beautiful light blue (was light grey) */
     --foreground: 222.2 47.4% 11.2%;
-    
-    --card: 210 40% 96.1%; /* Changed to gray-100 equivalent for dropdown cards */
+
+    --card: 213 92% 95%; /* ✅ ENTERPRISE: Elegant light blue card (was grey) */
     --card-foreground: 222.2 47.4% 11.2%;
-    
-    --popover: 0 0% 100%;
+
+    --popover: 212 89% 97%; /* ✅ ENTERPRISE: Soft blue popover (was white) */
     --popover-foreground: 222.2 47.4% 11.2%;
-    
+
     --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    
-    --secondary: 210 40% 96.1%;
+    --primary-foreground: 214 95% 97%;
+
+    --secondary: 213 88% 96%; /* ✅ ENTERPRISE: Refined blue secondary (was grey) */
     --secondary-foreground: 222.2 47.4% 11.2%;
-    
-    --muted: 210 40% 96.1%;
+
+    --muted: 212 85% 94%; /* ✅ ENTERPRISE: Harmonious blue muted (was grey) */
     --muted-foreground: 215.4 16.3% 46.9%;
-    
-    --accent: 210 40% 96.1%;
+
+    --accent: 211 83% 92%; /* ✅ ENTERPRISE: Sophisticated blue accent (was grey) */
     --accent-foreground: 222.2 47.4% 11.2%;
     
     --destructive: 0 84.2% 60.2%;
@@ -53,25 +53,25 @@
     --bg-error: 0 86% 97%;            /* error background - red-50 */
     --bg-warning: 48 96% 95%;         /* warning background - yellow-50 */
     --bg-info: 214 95% 97%;           /* info background - blue-50 */
-    --bg-primary: 0 0% 100%;          /* primary background - white */
-    --bg-secondary: 210 40% 96.1%;    /* secondary background - slate-50 */
-    --bg-hover: 220 14% 96%;          /* hover background - slate-100 */
-    --bg-active: 220 13% 91%;         /* active background - slate-200 */
+    --bg-primary: 214 95% 93%;        /* ✅ ENTERPRISE: primary background - Beautiful light blue (no white) */
+    --bg-secondary: 213 92% 95%;      /* ✅ ENTERPRISE: secondary background - Elegant blue (no grey) */
+    --bg-hover: 212 89% 90%;          /* ✅ ENTERPRISE: hover background - Rich blue interaction */
+    --bg-active: 211 85% 87%;         /* ✅ ENTERPRISE: active background - Deep blue state */
 
     /* Additional Enterprise Surface Variables */
-    --bg-elevated: 0 0% 98%;          /* elevated surface - gray-50 */
-    --bg-sunken: 220 14% 94%;         /* sunken surface - slate-200 */
-    --bg-overlay: 220 26% 14%;        /* overlay background - slate-800 */
-    --bg-modal: 0 0% 100%;            /* modal background - white */
-    --bg-disabled: 220 14% 96%;       /* disabled state - slate-100 */
-    --bg-selected: 214 95% 93%;       /* selected state - blue-100 */
+    --bg-elevated: 212 87% 96%;       /* ✅ ENTERPRISE: elevated surface - Soft blue (no grey) */
+    --bg-sunken: 211 82% 91%;         /* ✅ ENTERPRISE: sunken surface - Refined blue (no grey) */
+    --bg-overlay: 220 26% 14%;        /* overlay background - dark slate (keep dark) */
+    --bg-modal: 213 90% 97%;          /* ✅ ENTERPRISE: modal background - Clean blue (no white) */
+    --bg-disabled: 212 80% 94%;       /* ✅ ENTERPRISE: disabled state - Muted blue (no grey) */
+    --bg-selected: 210 78% 89%;       /* ✅ ENTERPRISE: selected state - Vibrant blue selection */
 
     /* Sidebar Variables */
-    --sidebar-background: 212 22% 95%;
+    --sidebar-background: 214 92% 94%; /* ✅ ENTERPRISE: Beautiful sidebar blue (no grey) */
     --sidebar-foreground: 222.2 47.4% 11.2%;
-    --sidebar-accent: 210 40% 96.1%;
+    --sidebar-accent: 213 88% 96%;     /* ✅ ENTERPRISE: Refined sidebar accent (no grey) */
     --sidebar-accent-foreground: 222.2 47.4% 11.2%;
-    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-border: 212 85% 89%;     /* ✅ ENTERPRISE: Harmonious border blue (no grey) */
     --sidebar-ring: 222.2 47.4% 11.2%;
   }
 
@@ -85,8 +85,8 @@
     --popover: 220 20% 11%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 217 33% 17%; /* ✅ ENTERPRISE: Dark primary background - NO WHITE BACKGROUNDS! */
+    --primary-foreground: 210 40% 98%;
     
     --secondary: 217 33% 25%;
     --secondary-foreground: 210 40% 98%;
@@ -116,15 +116,15 @@
     --bg-error: 0 86% 15%;            /* dark error background */
     --bg-warning: 48 96% 15%;         /* dark warning background */
     --bg-info: 214 95% 15%;           /* dark info background */
-    --bg-primary: 220 20% 11%;        /* dark primary background */
-    --bg-secondary: 217 33% 17%;      /* dark secondary background */
-    --bg-hover: 217 33% 20%;          /* dark hover background */
-    --bg-active: 217 33% 25%;         /* dark active background */
-    --bg-elevated: 217 33% 19%;       /* dark elevated surface */
-    --bg-sunken: 220 20% 8%;          /* dark sunken surface */
-    --bg-overlay: 220 26% 6%;         /* dark overlay background */
+    --bg-primary: 217 33% 17%;        /* ✅ ENTERPRISE: dark primary - Rich slate (no white) */
+    --bg-secondary: 216 30% 20%;      /* ✅ ENTERPRISE: dark secondary - Elegant slate (no light grey) */
+    --bg-hover: 215 28% 23%;          /* ✅ ENTERPRISE: dark hover - Interactive slate */
+    --bg-active: 214 25% 26%;         /* ✅ ENTERPRISE: dark active - Deep slate state */
+    --bg-elevated: 218 35% 19%;       /* ✅ ENTERPRISE: dark elevated - Sophisticated slate */
+    --bg-sunken: 219 38% 12%;         /* ✅ ENTERPRISE: dark sunken - Deep contrast slate */
+    --bg-overlay: 220 40% 8%;         /* ✅ ENTERPRISE: dark overlay - Premium overlay */
     --bg-modal: 217 33% 17%;          /* dark modal background */
-    --bg-disabled: 217 33% 15%;       /* dark disabled state */
+    --bg-disabled: 216 30% 15%;       /* ✅ ENTERPRISE: dark disabled - Muted slate */
     --bg-selected: 214 95% 25%;       /* dark selected state */
 
     /* Sidebar Variables - Dark Mode */
@@ -163,24 +163,24 @@
   cursor: none !important;
 }
 
-/* 🎯 DROPDOWN CONTACT CARDS - FORCE GRAY BACKGROUND */
-/* Αυτό override το bg-card CSS variable μόνο για τα dropdown contact items */
+/* 🎯 DROPDOWN CONTACT CARDS - ENTERPRISE BLUE BACKGROUND */
+/* ✅ ENTERPRISE: Using beautiful blue shades (no grey/white) */
 [data-dropdown-contact-item="true"] {
-  background-color: #f3f4f6 !important; /* Force gray-100 equivalent */
-  background: #f3f4f6 !important; /* Double override για safety */
+  background-color: hsl(213, 88%, 96%) !important; /* ✅ ENTERPRISE: Beautiful blue (was grey) */
+  background: hsl(213, 88%, 96%) !important; /* Double override για safety */
   background-image: none !important; /* Prevent any background images */
 }
 
 [data-dropdown-contact-item="true"]:hover {
-  background-color: #e5e7eb !important; /* Force gray-200 on hover */
-  background: #e5e7eb !important;
+  background-color: hsl(212, 85%, 93%) !important; /* ✅ ENTERPRISE: Rich blue hover (was grey) */
+  background: hsl(212, 85%, 93%) !important;
 }
 
-/* Special case για highlighted items (blue background) */
+/* Special case για highlighted items (enhanced blue background) */
 [data-dropdown-contact-item="true"].bg-blue-100,
 [data-dropdown-contact-item="true"][class*="bg-blue"] {
-  background-color: #dbeafe !important; /* Force blue-100 */
-  background: #dbeafe !important;
+  background-color: hsl(211, 82%, 90%) !important; /* ✅ ENTERPRISE: Vibrant blue selection */
+  background: hsl(211, 82%, 90%) !important;
 }
 
 /* 🔥 UNIVERSAL MOBILE OVERFLOW PROTECTION */

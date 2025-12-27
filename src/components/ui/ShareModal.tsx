@@ -231,7 +231,7 @@ export function ShareModal({
           <DialogTitle className={designSystem.cn(
             designSystem.presets.text.title,
             "bg-gradient-to-r bg-clip-text text-transparent",
-            "from-gray-900 to-gray-600 dark:from-white dark:to-gray-300"
+            "from-gray-900 to-gray-600 dark:from-gray-100 dark:to-gray-400"
           )}>
             Κοινοποίηση Ακινήτου
           </DialogTitle>

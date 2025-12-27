@@ -12,6 +12,7 @@ import type { Notification, Severity, UserPreferences } from '@/types/notificati
 import { NotificationClient } from '@/api/notificationClient';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 type DrawerState = { isOpen: boolean; open: () => void; close: () => void; };
 
@@ -42,6 +43,7 @@ export function NotificationDrawer() {
   const { items, order, markRead, status, error: storeError, ingest, setStatus, setError, cursor, setCursor } = useNotificationCenter();
   const { t, i18n } = useTranslation('common');
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
 
@@ -212,7 +214,7 @@ export function NotificationDrawer() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="notif-title"
-        className="fixed right-0 top-0 h-screen w-[420px] bg-background shadow-xl flex flex-col z-[99999] border-l"
+        className={`fixed right-0 top-0 h-screen w-[420px] ${colors.bg.primary} shadow-xl flex flex-col z-[99999] border-l`}
       >
         {/* ✅ ENTERPRISE: Live region for screen readers */}
         <div aria-live="polite" aria-atomic="true" className="sr-only">

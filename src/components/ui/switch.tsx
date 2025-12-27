@@ -5,12 +5,14 @@ import * as SwitchPrimitives from "@radix-ui/react-switch"
 
 import { cn } from "@/lib/utils"
 import { useIconSizes } from "@/hooks/useIconSizes"
+import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors"
 
 const Switch = React.forwardRef<
   React.ElementRef<typeof SwitchPrimitives.Root>,
   React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root>
 >(({ className, ...props }, ref) => {
   const iconSizes = useIconSizes()
+  const colors = useSemanticColors()
   return (
   <SwitchPrimitives.Root
     className={cn(
@@ -22,7 +24,7 @@ const Switch = React.forwardRef<
   >
     <SwitchPrimitives.Thumb
       className={cn(
-        `pointer-events-none block ${iconSizes.md} rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0`
+        `pointer-events-none block ${iconSizes.md} rounded-full ${colors.bg.primary} shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0`
       )}
     />
   </SwitchPrimitives.Root>

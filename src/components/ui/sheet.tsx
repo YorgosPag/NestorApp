@@ -8,6 +8,7 @@ import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects'
 import { useIconSizes } from '@/hooks/useIconSizes'
+import { useSemanticColors, type SemanticColors } from '@/ui-adapters/react/useSemanticColors'
 
 // ╭─────────────────────────────────────────────╮
 // │          SECTION: Sheet Root Primitives     │
@@ -62,8 +63,8 @@ SheetOverlay.displayName = SheetPrimitive.Overlay.displayName
 // ╭─────────────────────────────────────────────╮
 // │      SECTION: Sheet Content & Variants      │
 // ╰─────────────────────────────────────────────╯
-const sheetVariants = cva(
-  "fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
+const createSheetVariants = (colors?: SemanticColors) => cva(
+  `fixed z-50 gap-4 ${colors?.bg.primary || 'bg-background'} p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500`,
   {
     variants: {
       side: {
@@ -83,24 +84,29 @@ const sheetVariants = cva(
 
 interface SheetContentProps
   extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
-    VariantProps<typeof sheetVariants> {}
+    VariantProps<ReturnType<typeof createSheetVariants>> {}
 
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, ...props }, ref) => (
-  <SheetPortal>
-    <SheetOverlay />
-    <SheetPrimitive.Content
-      ref={ref}
-      className={cn(sheetVariants({ side }), className)}
-      {...props}
-    >
-      {children}
-      <SheetClose />
-    </SheetPrimitive.Content>
-  </SheetPortal>
-))
+>(({ side = "right", className, children, ...props }, ref) => {
+  const colors = useSemanticColors();
+  const sheetVariants = createSheetVariants(colors);
+
+  return (
+    <SheetPortal>
+      <SheetOverlay />
+      <SheetPrimitive.Content
+        ref={ref}
+        className={cn(sheetVariants({ side }), className)}
+        {...props}
+      >
+        {children}
+        <SheetClose />
+      </SheetPrimitive.Content>
+    </SheetPortal>
+  );
+})
 SheetContent.displayName = SheetPrimitive.Content.displayName
 
 

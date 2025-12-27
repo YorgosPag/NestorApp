@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Dark Mode</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .debug-info {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Dark Mode Debug Test</h1>
+    <p>Αυτό το script θα ελέγξει την κατάσταση dark mode στο http://localhost:3002</p>
+
+    <div class="debug-info">
+        <h3>📋 Test Results:</h3>
+        <div id="results"></div>
+    </div>
+
+    <button onclick="testDarkMode()">🧪 Run Dark Mode Test</button>
+    <button onclick="testLocalhost()">🌐 Test Localhost App</button>
+
+    <script>
+        async function testDarkMode() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<div class="status warning">🔄 Running tests...</div>';
+
+            try {
+                // Test 1: Check if we can access localhost
+                const response = await fetch('http://localhost:3002/');
+
+                if (response.ok) {
+                    results.innerHTML += '<div class="status success">✅ Localhost accessible</div>';
+
+                    const html = await response.text();
+
+                    // Test 2: Check if ThemeProvider is present
+                    if (html.includes('ThemeProvider') || html.includes('theme-preference')) {
+                        results.innerHTML += '<div class="status success">✅ ThemeProvider detected in HTML</div>';
+                    } else {
+                        results.innerHTML += '<div class="status error">❌ ThemeProvider not found in HTML</div>';
+                    }
+
+                    // Test 3: Check if CSS variables are defined
+                    if (html.includes('--card') || html.includes('--background')) {
+                        results.innerHTML += '<div class="status success">✅ CSS variables detected</div>';
+                    } else {
+                        results.innerHTML += '<div class="status error">❌ CSS variables not found</div>';
+                    }
+
+                    // Test 4: Check next-themes
+                    if (html.includes('next-themes')) {
+                        results.innerHTML += '<div class="status success">✅ next-themes detected</div>';
+                    } else {
+                        results.innerHTML += '<div class="status warning">⚠️ next-themes not explicitly found</div>';
+                    }
+
+                } else {
+                    results.innerHTML += '<div class="status error">❌ Cannot access localhost:3002</div>';
+                }
+
+            } catch (error) {
+                results.innerHTML += `<div class="status error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        function testLocalhost() {
+            // Open localhost in new window for manual testing
+            window.open('http://localhost:3002', '_blank');
+        }
+
+        // Auto-run test on page load
+        window.onload = () => {
+            setTimeout(testDarkMode, 1000);
+        };
+    </script>
+</body>
+</html>

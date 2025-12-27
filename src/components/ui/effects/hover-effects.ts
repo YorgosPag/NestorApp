@@ -10,6 +10,8 @@
 // ============================================================================
 
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { hardcodedColorValues } from '@/design-system/tokens/colors';
 
 /**
  * 🔄 CORE HOVER TRANSFORMATIONS
@@ -297,7 +299,7 @@ export const INTERACTIVE_PATTERNS = {
   BUTTON_PRIMARY_SELECTED_HOVER: 'hover:bg-primary hover:text-primary-foreground',
 
   /** Button overlay hover για floating/overlay buttons */
-  BUTTON_OVERLAY: 'hover:bg-white/90 hover:shadow-lg transition-all duration-200',
+  BUTTON_OVERLAY: 'hover:bg-[hsl(var(--bg-primary))]/90 hover:shadow-lg transition-all duration-200',
 
   // ========================================================================
   // 🏢 SIDEBAR-SPECIFIC HOVER PATTERNS (New for Batch 10 Migration)
@@ -331,10 +333,10 @@ export const INTERACTIVE_PATTERNS = {
  */
 export const HOVER_BACKGROUND_EFFECTS = {
   /** Light background για navigation items */
-  LIGHT: 'hover:bg-slate-50 dark:hover:bg-slate-800/50',
+  LIGHT: `hover:${COLOR_BRIDGE.bg.card} dark:hover:bg-slate-800/50`,
 
   /** Gray light background για subtle interactions */
-  GRAY_LIGHT: 'hover:bg-slate-100 dark:hover:bg-slate-800/30',
+  GRAY_LIGHT: `hover:${hardcodedColorValues.background.gray[100]} dark:hover:bg-slate-800/30`,
 
   /** Muted background για subtle interactions */
   MUTED: 'hover:bg-muted/50',
@@ -346,7 +348,7 @@ export const HOVER_BACKGROUND_EFFECTS = {
   PRIMARY: 'hover:bg-primary/10',
 
   /** Transparent background με transitions */
-  TRANSPARENT: 'hover:bg-black/5 dark:hover:bg-white/5',
+  TRANSPARENT: 'hover:bg-black/5 dark:hover:bg-[hsl(var(--bg-primary))]/5',
 
   /** Blue button background hover (darker shade) */
   BLUE_BUTTON: 'hover:bg-blue-700',
@@ -367,13 +369,13 @@ export const HOVER_BACKGROUND_EFFECTS = {
   INDIGO_BUTTON: 'hover:bg-indigo-700',
 
   /** Gray button background hover (darker shade) */
-  GRAY_BUTTON: 'hover:bg-slate-700',
+  GRAY_BUTTON: `hover:${hardcodedColorValues.background.gray[700]}`,
 
   /** Gray panel background hover (medium shade) */
-  GRAY_PANEL: 'hover:bg-slate-600',
+  GRAY_PANEL: `hover:${hardcodedColorValues.background.gray[600]}`,
 
   /** Gray dark background hover (darker shade for modals) */
-  GRAY_DARK: 'hover:bg-slate-800',
+  GRAY_DARK: `hover:${hardcodedColorValues.background.gray[800]}`,
 
   /** Blue light background hover (lighter shade) */
   BLUE_LIGHT: 'hover:bg-blue-500',
@@ -382,10 +384,10 @@ export const HOVER_BACKGROUND_EFFECTS = {
   PURPLE_LIGHT: 'hover:bg-purple-500',
 
   /** Gray 750 background hover (custom dark shade) */
-  GRAY_750: 'hover:bg-slate-750',
+  GRAY_750: `hover:${hardcodedColorValues.background.gray[700]}`, // Fallback to 700
 
   /** Gray background hover with opacity (semi-transparent) */
-  GRAY_SEMI: 'hover:bg-slate-700/50',
+  GRAY_SEMI: `hover:${hardcodedColorValues.background.gray[700]}/50`,
 
   /** Success state hover (green with light opacity) */
   SUCCESS_HOVER: 'hover:bg-green-500/20',
@@ -394,10 +396,10 @@ export const HOVER_BACKGROUND_EFFECTS = {
   FILE_INPUT: 'hover:file:bg-sky-500',
 
   /** DXF Toolbar button hover (dark background) */
-  TOOLBAR_DEFAULT: 'hover:bg-zinc-800 hover:border-muted-foreground',
+  TOOLBAR_DEFAULT: `hover:${hardcodedColorValues.background.gray[800]} hover:border-muted-foreground`,
 
   /** DXF Toolbar primary button hover */
-  TOOLBAR_PRIMARY: 'hover:bg-slate-700 hover:border-muted',
+  TOOLBAR_PRIMARY: `hover:${hardcodedColorValues.background.gray[700]} hover:border-muted`,
 
   /** DXF Toolbar success button hover */
   TOOLBAR_SUCCESS: 'hover:bg-green-800 hover:border-hsl(var(--border-success))',
@@ -495,7 +497,7 @@ export const ACCESSIBLE_HOVER_PATTERNS = {
   FOCUS_BUTTON: 'transition-all duration-200 hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
 
   /** High contrast hover */
-  HIGH_CONTRAST: 'hover:bg-foreground hover:text-background transition-colors duration-200',
+  HIGH_CONTRAST: 'hover:bg-accent hover:text-accent-foreground transition-colors duration-200',
 
   /** Keyboard navigation friendly */
   KEYBOARD_NAV: 'transition-all duration-200 hover:bg-accent focus:bg-accent focus:outline-none focus:ring-2 focus:ring-ring'

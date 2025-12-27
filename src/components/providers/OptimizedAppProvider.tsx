@@ -12,6 +12,8 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects/hover-effects';
 import { AlertTriangle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 interface OptimizedAppProviderProps {
   children: React.ReactNode;
@@ -25,6 +27,7 @@ interface OptimizedAppProviderProps {
 // App initialization component with progressive loading
 function AppInitializer({ children }: { children: React.ReactNode }) {
   const { currentStep, isComplete, start, nextStep } = useProgressiveLoader(LoadingPresets.appInit);
+  const colors = useSemanticColors();
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -56,11 +59,11 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
 
   if (!isComplete) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className={`min-h-screen ${colors.bg.primary} flex items-center justify-center`}>
         <div className="w-full max-w-md px-4">
           <div className="text-center mb-8">
             <div className={`${iconSizes.xl} ${iconSizes.xl} bg-primary rounded-full mx-auto mb-4 flex items-center justify-center`}>
-              <div className={`${iconSizes.lg} bg-primary-foreground rounded-full`}></div>
+              <div className={`${iconSizes.lg} ${colors.bg.secondary} rounded-full`}></div>
             </div>
             <h1 className="text-2xl font-bold text-foreground mb-2">Nextn CRM</h1>
             <p className="text-muted-foreground">Initializing application...</p>
@@ -128,7 +131,7 @@ function AppErrorBoundary({ children }: { children: React.ReactNode }) {
       maxRetries={2}
       enableReporting={true}
       fallback={(error, errorInfo, retry) => (
-        <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className={`min-h-screen ${COLOR_BRIDGE.bg.primary} flex items-center justify-center`}>
           <div className="max-w-lg w-full p-6">
             <div className="text-center">
               <div className={`${iconSizes.xl} ${iconSizes.xl} bg-red-100 dark:bg-red-900/20 rounded-full mx-auto mb-4 flex items-center justify-center`}>
@@ -224,7 +227,7 @@ export function OptimizedAppProvider({
               <AppInitializer>
                 <Suspense 
                   fallback={
-                    <div className="min-h-screen bg-background flex items-center justify-center">
+                    <div className={`min-h-screen ${COLOR_BRIDGE.bg.primary} flex items-center justify-center`}>
                       <div className="text-center space-y-4">
                         <Skeleton className={`${iconSizes.xl} ${iconSizes.xl} rounded-full mx-auto`} />
                         <Skeleton className={`${iconSizes.lg} w-48 mx-auto`} />

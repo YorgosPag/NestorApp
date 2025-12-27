@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Info } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface FormFieldProps {
   id: string;
@@ -42,6 +43,7 @@ export function FormField({
   isPercentage = false
 }: FormFieldProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const formatValue = (val: number | string) => {
     if (typeof val === 'number') {
         if (isPercentage) {
@@ -94,7 +96,7 @@ export function FormField({
             readOnly={readOnly}
             className={cn(
                 'h-8',
-                readOnly ? 'bg-muted/50 border-dashed' : 'bg-background',
+                readOnly ? 'bg-muted/50 border-dashed' : colors.bg.primary,
                 unit && unitPosition === 'left' && 'pl-8',
                 unit && unitPosition === 'right' && 'pr-8'
             )}

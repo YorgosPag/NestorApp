@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { BulkAssignToolbar } from './BulkAssignToolbar';
 import { useUnitsToolbarState } from './hooks/useUnitsToolbarState';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export function UnitsToolbar({
   selectedUnitIds,
@@ -29,6 +30,7 @@ export function UnitsToolbar({
 }) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   const {
     isAdvancedMode,
     sortDirection,
@@ -93,7 +95,7 @@ export function UnitsToolbar({
               variant={isAdvancedMode ? 'default' : 'ghost'}
               className={
                 isAdvancedMode
-                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                  ? `${colors.bg.info} ${colors.text.info}` // ✅ SEMANTIC: blue -> info semantic
                   : ''
               }
             >

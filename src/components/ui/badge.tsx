@@ -13,11 +13,11 @@ const createBadgeVariants = (borderTokens: ReturnType<typeof useBorderTokens>, c
     variants: {
       variant: {
         default:
-          `${borderTokens.style.none} bg-primary text-primary-foreground ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
+          `${borderTokens.style.none} ${colors.bg.primary} ${colors.text.inverse} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
         secondary:
-          `${borderTokens.style.none} bg-secondary text-secondary-foreground ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
+          `${borderTokens.style.none} ${colors.bg.secondary} ${colors.text.primary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
         destructive:
-          `${borderTokens.style.none} bg-destructive text-destructive-foreground ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`,
+          `${borderTokens.style.none} ${colors.bg.error} ${colors.text.inverse} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`,
         outline: "text-foreground",
         success:
           `${borderTokens.style.none} ${colors.bg.success}/50 ${colors.text.success} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`,

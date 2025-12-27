@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { ShareModal, useShareModal } from '@/components/ui/ShareModal';
 import { type ShareData } from '@/lib/share-utils';
 
@@ -39,6 +40,7 @@ export function ShareButton({
   onShareError,
 }: ShareButtonProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { quick } = useBorderTokens();
   const [justCopied, setJustCopied] = useState(false);
   const { isOpen, openModal, closeModal } = useShareModal();
@@ -73,7 +75,7 @@ export function ShareButton({
         size={size}
         className={cn(
           'transition-all duration-200',
-          justCopied && `text-green-600 ${quick.success}`,
+          justCopied && `${colors.text.success} ${quick.success}`,  // ✅ SEMANTIC: text-green-600 -> success
           className
         )}
         onClick={handleButtonClick}

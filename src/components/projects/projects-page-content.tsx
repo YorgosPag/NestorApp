@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useProjectsPageState } from '@/hooks/useProjectsPageState';
 import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
@@ -31,6 +32,7 @@ import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoad
 
 export function ProjectsPageContent() {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   // Φόρτωση έργων από Firestore αντί για sample data
   const { projects: firestoreProjects, loading, error } = useFirestoreProjects();
 
@@ -155,7 +157,7 @@ export function ProjectsPageContent() {
   
   return (
     <TooltipProvider>
-      <main className="h-full flex flex-col bg-background" role="main" aria-label="Διαχείριση Έργων">
+      <main className={`h-full flex flex-col ${colors.bg.primary}`} role="main" aria-label="Διαχείριση Έργων">
         <ProjectsHeader
             viewMode={viewMode}
             setViewMode={setViewMode}

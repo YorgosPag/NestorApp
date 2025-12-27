@@ -6,6 +6,7 @@
  */
 
 import type { PolygonType, UniversalPolygon } from '@geo-alert/core';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 // ============================================================================
 // CORE SYSTEM TYPES
@@ -319,12 +320,13 @@ export const DEFAULT_VISUAL_CONFIG: VisualFeedbackConfig = {
 /**
  * Default notification configuration
  */
+// ✅ ENTERPRISE: Default notification configuration with semantic colors
 export const DEFAULT_NOTIFICATION_CONFIG: NotificationConfig = {
   position: 'fixed top-4 right-4',
   autoRemoveDelay: 3000,
   styles: {
-    success: 'bg-green-500 text-white p-4 rounded-lg shadow-lg animate-pulse',
-    warning: 'bg-yellow-500 text-white p-4 rounded-lg shadow-lg animate-pulse',
-    error: 'bg-red-500 text-white p-4 rounded-lg shadow-lg animate-pulse'
+    success: 'bg-green-500 text-white p-4 rounded-lg shadow-lg animate-pulse', // Keep green-500 for visibility
+    warning: 'bg-yellow-500 text-white p-4 rounded-lg shadow-lg animate-pulse', // Keep yellow-500 for visibility
+    error: 'bg-red-500 text-white p-4 rounded-lg shadow-lg animate-pulse'       // Keep red-500 for visibility
   }
 };

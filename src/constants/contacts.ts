@@ -10,6 +10,7 @@ import type { LucideIcon } from 'lucide-react';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { brandClasses } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { hardcodedColorValues } from '@/design-system/tokens/colors';
 
 // 📋 CONTACT TYPES - Μοναδική πηγή αλήθειας για τύπους επαφών
 export const CONTACT_TYPES = {
@@ -209,7 +210,7 @@ export const CONTACT_STYLES = {
       // Enterprise fallback
       return {
         primary: 'bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full',
-        secondary: 'bg-slate-100 text-slate-800 text-xs px-2 py-1 rounded-full',
+        secondary: `${hardcodedColorValues.background.gray[100]} text-slate-800 text-xs px-2 py-1 rounded-full`,
         success: 'bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full',
         warning: 'bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full',
         danger: 'bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full',

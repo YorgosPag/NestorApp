@@ -74,7 +74,9 @@ export function renderTextAtEdgePosition(
   ctx.rotate(textAngle);
 
   if (withBackground) {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    // ✅ ENTERPRISE: Use CSS variable instead of hardcoded white (adapts to dark mode)
+    const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--background').trim();
+    ctx.fillStyle = bgColor ? `hsl(${bgColor} / 0.9)` : 'rgba(30, 41, 59, 0.9)'; // fallback to slate-800
     ctx.fillRect(-20, -8, 40, 16);
     ctx.strokeStyle = '#333';
     ctx.strokeRect(-20, -8, 40, 16);

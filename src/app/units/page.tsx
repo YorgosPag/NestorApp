@@ -49,6 +49,7 @@ const getTypeLabel = (type: string) => {
 };
 
 function UnitsPageContent() {
+  const colors = useSemanticColors();
   const {
     properties,
     setProperties,
@@ -261,7 +262,7 @@ function UnitsPageContent() {
 
   return (
     <TooltipProvider>
-      <div className="h-full flex flex-col bg-background">
+      <div className={`h-full flex flex-col ${colors.bg.primary}`}>
         <UnitsHeader
           viewMode={viewMode as 'list' | 'grid'}
           setViewMode={setViewMode}
@@ -350,7 +351,7 @@ function UnitsPageFallback() {
   const colors = useSemanticColors();
 
   return (
-    <div className={`min-h-screen ${colors.bg.secondary} dark:bg-background flex items-center justify-center`}>
+    <div className={`min-h-screen ${colors.bg.secondary} dark:${colors.bg.primary} flex items-center justify-center`}>
       <div className="text-center">
         <AnimatedSpinner size="large" className="mx-auto mb-4" />
         <p className={`${colors.text.muted}`}>Φόρτωση μονάδων...</p>

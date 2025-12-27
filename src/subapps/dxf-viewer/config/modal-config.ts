@@ -9,6 +9,7 @@
 
 // 🏢 ENTERPRISE: Import centralized panel tokens instead of local duplicates
 import { PANEL_COLORS } from './panel-tokens';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 // 🏢 ENTERPRISE: Import semantic colors for proper centralization
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -71,7 +72,7 @@ export const MODAL_HEIGHTS = {
 export const MODAL_THEMES = {
   // Default theme for general use
   DEFAULT: {
-    content: 'bg-background text-foreground border',
+    content: `${COLOR_BRIDGE.bg.primary} text-foreground border`,
     overlay: 'bg-black/80',
     header: 'border-b border-border',
     footer: 'border-t border-border',
@@ -87,7 +88,7 @@ export const MODAL_THEMES = {
 
   // Light theme for admin and business interfaces
   LIGHT_BUSINESS: {
-    content: `bg-background text-foreground border ${PANEL_COLORS.BORDER_SECONDARY}`, // ✅ ENTERPRISE: bg-white/text-black → semantic colors // ✅ ENTERPRISE: Using centralized PANEL_COLORS - black for light theme
+    content: `${COLOR_BRIDGE.bg.primary} text-foreground border ${PANEL_COLORS.BORDER_SECONDARY}`, // ✅ ENTERPRISE: bg-white/text-black → semantic colors // ✅ ENTERPRISE: Using centralized PANEL_COLORS - black for light theme
     overlay: 'bg-black/50',
     header: `border-b ${PANEL_COLORS.BORDER_SECONDARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
     footer: `border-t ${PANEL_COLORS.BORDER_SECONDARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS

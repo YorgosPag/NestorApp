@@ -31,7 +31,7 @@ export function getThemeSystem() {
     contactCardArchived: "bg-muted/30",
 
     // Minimal containers (simple wrappers)
-    minimal: "bg-background p-2",
+    minimal: `${colors.bg.primary} p-2`,
     minimalDark: `${colors.bg.elevated} p-2`,
     minimalLight: `${colors.bg.secondary} p-2`
   },

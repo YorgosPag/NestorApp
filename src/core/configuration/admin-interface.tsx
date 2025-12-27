@@ -62,6 +62,7 @@ import {
   User
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 // Import our enterprise configuration system
 import {
@@ -736,7 +737,7 @@ export const ConfigurationAdminInterface: React.FC = () => {
                   <div>Current: {migrationProgress.currentItem}</div>
                   <div>Progress: {migrationProgress.itemsProcessed} / {migrationProgress.totalItems}</div>
                   {migrationProgress.errors.length > 0 && (
-                    <div className="text-red-600">
+                    <div className={COLOR_BRIDGE.text.error}>
                       Errors: {migrationProgress.errors.length}
                     </div>
                   )}
@@ -771,19 +772,19 @@ export const ConfigurationAdminInterface: React.FC = () => {
           <CardContent>
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Building className={`${iconSizes.sm} text-blue-600`} />
+                <Building className={`${iconSizes.sm} ${COLOR_BRIDGE.text.info}`} />
                 <span>Company information (email, phone, address)</span>
               </div>
               <div className="flex items-center gap-2">
-                <Globe className={`${iconSizes.sm} text-green-600`} />
+                <Globe className={`${iconSizes.sm} ${COLOR_BRIDGE.text.success}`} />
                 <span>System URLs and API endpoints</span>
               </div>
               <div className="flex items-center gap-2">
-                <Database className={`${iconSizes.sm} text-orange-600`} />
+                <Database className={`${iconSizes.sm} ${COLOR_BRIDGE.text.warning}`} />
                 <span>Project templates and defaults</span>
               </div>
               <div className="flex items-center gap-2">
-                <Settings className="${iconSizes.sm} text-purple-600" />
+                <Settings className={`${iconSizes.sm} ${COLOR_BRIDGE.text.secondary}`} />
                 <span>Integration settings and webhooks</span>
               </div>
             </div>

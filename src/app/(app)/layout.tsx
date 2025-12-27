@@ -21,6 +21,13 @@ import { PhotoPreviewProvider } from '@/providers/PhotoPreviewProvider';
 import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/ClientOnlyPerformanceDashboard';
 import { PerformanceCategory } from '@/core/performance/types/performance.types';
 import { GlobalErrorSetup } from '@/components/GlobalErrorSetup';
+import dynamic from 'next/dynamic';
+
+// 🌉 Client component for Bridge colors - Dynamic loading
+const AppMainContent = dynamic(
+  () => import('../components/MainContentBridge').then(mod => mod.MainContentBridge),
+  { ssr: false }
+);
 
 const roboto = Roboto({
   subsets: ["latin", "greek"],
@@ -86,9 +93,9 @@ export default function RootLayout({
                             <SidebarInset className="flex flex-1 flex-col w-full max-w-full">
                               <AppHeader />
                               {/* Κράτα scroll μόνο εδώ – dropdown portals ξεφεύγουν */}
-                              <main className="flex-1 overflow-y-auto overflow-x-hidden bg-background/95 w-full max-w-full">
+                              <AppMainContent>
                                 {children}
-                              </main>
+                              </AppMainContent>
                             </SidebarInset>
                           </div>
                         </SidebarProvider>

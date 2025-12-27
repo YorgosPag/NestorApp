@@ -63,6 +63,23 @@ export default {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))',
         },
+        // 🏢 ENTERPRISE BACKGROUND SYSTEM - Single Source of Truth
+        'bg-enterprise': {
+          success: 'hsl(var(--bg-success))',
+          error: 'hsl(var(--bg-error))',
+          warning: 'hsl(var(--bg-warning))',
+          info: 'hsl(var(--bg-info))',
+          primary: 'hsl(var(--bg-primary))',
+          secondary: 'hsl(var(--bg-secondary))',
+          hover: 'hsl(var(--bg-hover))',
+          active: 'hsl(var(--bg-active))',
+          elevated: 'hsl(var(--bg-elevated))',
+          sunken: 'hsl(var(--bg-sunken))',
+          overlay: 'hsl(var(--bg-overlay))',
+          modal: 'hsl(var(--bg-modal))',
+          disabled: 'hsl(var(--bg-disabled))',
+          selected: 'hsl(var(--bg-selected))',
+        },
         // 🏢 ENTERPRISE PERFORMANCE SYSTEM - CSS Variables Integration
         performance: {
           success: {

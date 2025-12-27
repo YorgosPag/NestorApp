@@ -23,6 +23,7 @@ import { useStoragesPageState } from '@/hooks/useStoragesPageState';
 import { useStorageStats } from '@/hooks/useStorageStats';
 import { useFirestoreStorages } from '@/hooks/useFirestoreStorages';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AdvancedFiltersPanel, storageFiltersConfig } from '@/components/core/AdvancedFilters';
 import { ListContainer } from '@/core/containers';
 
@@ -32,6 +33,7 @@ export type { Storage } from '@/types/storage/contracts';
 function StoragePageContent() {
   // 🏢 ENTERPRISE: Centralized icon sizes
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   // Firestore data connection - πραγματικά δεδομένα αντί για mock data
   const { storages, loading, error, refetch } = useFirestoreStorages();
@@ -126,7 +128,7 @@ function StoragePageContent() {
 
   return (
     <TooltipProvider>
-      <div className="flex h-screen bg-background">
+      <div className={`flex h-screen ${colors.bg.primary}`}>
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
           {/* Header */}

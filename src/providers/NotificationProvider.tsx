@@ -5,6 +5,7 @@ import { toast, Toaster } from 'sonner';
 import { CheckCircle, AlertCircle, AlertTriangle, Info, Loader2, X } from 'lucide-react';
 import { useTranslation } from '@/i18n';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import type {
   NotificationContextValue,
   NotificationOptions,
@@ -102,13 +103,13 @@ export function NotificationProvider({
   const getNotificationIcon = useCallback((type: NotificationType) => {
     switch (type) {
       case 'success':
-        return <CheckCircle className={`${iconSizes.sm} text-green-500`} />;
+        return <CheckCircle className={`${iconSizes.sm} ${COLOR_BRIDGE.text.success}`} />;  // ✅ SEMANTIC: green -> success
       case 'error':
-        return <AlertCircle className={`${iconSizes.sm} text-red-500`} />;
+        return <AlertCircle className={`${iconSizes.sm} ${COLOR_BRIDGE.text.error}`} />;    // ✅ SEMANTIC: red -> error
       case 'warning':
-        return <AlertTriangle className={`${iconSizes.sm} text-yellow-500`} />;
+        return <AlertTriangle className={`${iconSizes.sm} ${COLOR_BRIDGE.text.warning}`} />; // ✅ SEMANTIC: yellow -> warning
       case 'info':
-        return <Info className={`${iconSizes.sm} text-blue-500`} />;
+        return <Info className={`${iconSizes.sm} ${COLOR_BRIDGE.text.info}`} />;         // ✅ SEMANTIC: blue -> info
       case 'loading':
         return <Loader2 className={`${iconSizes.sm} text-gray-500 animate-spin`} />;
       default:
@@ -305,12 +306,12 @@ export function NotificationProvider({
         }
 
         [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] .max-h-\[60vh\]::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.3);
+          background: hsl(var(--muted-foreground) / 0.3); /* ✅ ENTERPRISE: CSS variable (adapts to dark mode) */
           border-radius: 4px;
         }
 
         [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] .max-h-\[60vh\]::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.5);
+          background: hsl(var(--muted-foreground) / 0.5); /* ✅ ENTERPRISE: CSS variable (adapts to dark mode) */
         }
 
         /* ✅ MESSAGE TEXT: Preserve formatting για ΟΛΑ τα text elements */

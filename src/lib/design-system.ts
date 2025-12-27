@@ -3,6 +3,7 @@ import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { designTokens } from '@/styles/design-tokens';
 import { borders } from '@/styles/design-tokens';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 // Enhanced cn function με design system support
 export function cn(...inputs: ClassValue[]) {
@@ -171,21 +172,21 @@ export const getResponsiveClass = (
 // Color scheme utilities για theming
 export const colorScheme = {
   light: {
-    background: 'bg-background',
+    background: COLOR_BRIDGE.bg.primary,
     foreground: 'text-foreground',
     card: 'bg-card text-card-foreground',
     muted: 'bg-muted text-muted-foreground',
     accent: 'bg-accent text-accent-foreground',
   },
   dark: {
-    background: 'dark:bg-background',
+    background: `dark:${COLOR_BRIDGE.bg.primary}`,
     foreground: 'dark:text-foreground',
     card: 'dark:bg-card dark:text-card-foreground',
     muted: 'dark:bg-muted dark:text-muted-foreground',
     accent: 'dark:bg-accent dark:text-accent-foreground',
   },
   responsive: {
-    background: 'bg-background dark:bg-background',
+    background: `${COLOR_BRIDGE.bg.primary} dark:${COLOR_BRIDGE.bg.primary}`,
     foreground: 'text-foreground dark:text-foreground',
     card: 'bg-card text-card-foreground dark:bg-card dark:text-card-foreground',
     muted: 'bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground',
@@ -230,7 +231,7 @@ export const presets = {
     ),
     outline: cn(
       'inline-flex items-center justify-center rounded-md text-sm font-medium',
-      'bg-background',
+      COLOR_BRIDGE.bg.primary,
       borders.variants.button.default.className,
       getComponentSizeClass('button', 'md'),
       getInteractiveStateClass('button')
@@ -242,7 +243,7 @@ export const presets = {
     container: 'container mx-auto px-4',
     section: 'py-8 px-4',
     grid: getGridClass('cards'),
-    toolbar: cn('flex items-center justify-between p-4 bg-background', borders.variants.separator.horizontal.className),
+    toolbar: cn(`flex items-center justify-between p-4 ${COLOR_BRIDGE.bg.primary}`, borders.variants.separator.horizontal.className),
   },
 
   // Text presets
@@ -277,7 +278,7 @@ export const getStatusBadgeClass = (status: string, variant: 'default' | 'outlin
 // Form field utilities
 export const getFormFieldClass = (hasError: boolean = false, disabled: boolean = false) => {
   return cn(
-    'flex h-10 w-full rounded-md bg-background px-3 py-2 text-sm',
+    `flex h-10 w-full rounded-md ${COLOR_BRIDGE.bg.primary} px-3 py-2 text-sm`,
     borders.variants.input.default.className,
     'ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium',
     'placeholder:text-muted-foreground',

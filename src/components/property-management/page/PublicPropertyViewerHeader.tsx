@@ -8,6 +8,7 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/component
 import type { FilterState } from '@/types/property-viewer';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects/hover-effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface PublicPropertyViewerHeaderProps {
   viewMode: 'list' | 'grid';
@@ -25,6 +26,7 @@ export function PublicPropertyViewerHeader({
   availableCount
 }: PublicPropertyViewerHeaderProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const router = useRouter();
   
   return (
@@ -82,7 +84,7 @@ export function PublicPropertyViewerHeader({
             </Button>
             
             {/* View Mode Toggle */}
-            <div className="flex border rounded-md bg-background">
+            <div className={`flex border rounded-md ${colors.bg.primary}`}>
               <Button
                 variant={viewMode === 'list' ? "default" : "ghost"}
                 size="sm"

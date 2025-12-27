@@ -127,7 +127,7 @@ export const DEFAULT_RULER_SETTINGS: RulerSettings = {
     height: 30,
     position: 'top',
     color: '#f0f0f0', // Ουδέτερο γκρι
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: 'hsl(var(--background) / 0.8)', // ✅ ENTERPRISE: CSS variable (adapts to dark mode)
     fontSize: 10,
     fontFamily: 'Arial, sans-serif',
     unitsFontSize: 10,  // Same as fontSize by default
@@ -151,7 +151,7 @@ export const DEFAULT_RULER_SETTINGS: RulerSettings = {
     width: 30,
     position: 'left',
     color: '#f0f0f0', // Ουδέτερο γκρι
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: 'hsl(var(--background) / 0.8)', // ✅ ENTERPRISE: CSS variable (adapts to dark mode)
     fontSize: 10,
     fontFamily: 'Arial, sans-serif',
     unitsFontSize: 10,  // Same as fontSize by default

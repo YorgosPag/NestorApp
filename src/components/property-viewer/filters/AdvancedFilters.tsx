@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ interface AdvancedFiltersProps {
 export function AdvancedFilters({ features, onFeatureChange }: AdvancedFiltersProps) {
     const iconSizes = useIconSizes();
     const { quick } = useBorderTokens();
+    const colors = useSemanticColors();
     const { t } = useTranslation('properties');
     const [showAdvanced, setShowAdvanced] = useState(false);
     
@@ -37,7 +39,7 @@ export function AdvancedFilters({ features, onFeatureChange }: AdvancedFiltersPr
                     {showAdvanced ? t('filters.advanced.hide') : t('filters.advanced.show')}
                 </Button>
             </CollapsibleTrigger>
-            <CollapsibleContent className={`mt-4 p-4 ${quick.card} bg-background animate-in fade-in-0 zoom-in-95`}>
+            <CollapsibleContent className={`mt-4 p-4 ${quick.card} ${colors.bg.primary} animate-in fade-in-0 zoom-in-95`}>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                  {featureOptions.map(feature => (
                     <div key={feature.id} className="flex items-center space-x-2">

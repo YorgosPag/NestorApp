@@ -16,6 +16,7 @@ import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface ToolbarMainActionsProps {
   selectedItemsCount: number;
@@ -23,6 +24,7 @@ interface ToolbarMainActionsProps {
 
 export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const handleNew = () => console.log('Creating new unit...');
   const handleEdit = () => console.log('Editing unit...');
   const handleDelete = () => console.log('Deleting unit...');
@@ -32,7 +34,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
       <ToolbarButton
         tooltip="Νέα Μονάδα (Ctrl+N)"
         onClick={handleNew}
-        className={`text-green-600 dark:text-green-500 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`}
+        className={`${colors.text.success} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`} // ✅ SEMANTIC: green -> success
       >
         <Plus className={iconSizes.sm} />
       </ToolbarButton>
@@ -40,7 +42,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
       <ToolbarButton
         tooltip="Επεξεργασία Επιλεγμένης (Ctrl+E)"
         onClick={handleEdit}
-        className={`text-blue-600 dark:text-blue-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
+        className={`${colors.text.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`} // ✅ SEMANTIC: blue -> info
         disabled={selectedItemsCount === 0}
       >
         <Edit className={iconSizes.sm} />
@@ -51,7 +53,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
           <div>
             <ToolbarButton
               tooltip="Διαγραφή Επιλεγμένης (Delete)"
-              className={`text-red-600 dark:text-red-500 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
+              className={`${colors.text.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`} // ✅ SEMANTIC: red -> error
               disabled={selectedItemsCount === 0}
             >
               <Trash2 className={iconSizes.sm} />

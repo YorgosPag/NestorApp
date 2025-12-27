@@ -8,6 +8,7 @@ import { ProjectDetails } from './project-details';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface ProjectViewSwitchProps {
   projects: Project[];
@@ -18,6 +19,7 @@ interface ProjectViewSwitchProps {
 
 export function ProjectViewSwitch({
   iconSizes = useIconSizes(), projects, selectedProject, onSelectProject, companies }: ProjectViewSwitchProps) {
+  const colors = useSemanticColors();
 
   const getProjectWithCompanyName = (project: Project) => {
     const company = companies?.find(c => c.id === project.companyId);
@@ -59,14 +61,14 @@ export function ProjectViewSwitch({
           <>
             <button
               onClick={() => {/* TODO: Edit project handler */}}
-              className={`p-2 rounded-md border bg-background border-border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+              className={`p-2 rounded-md border ${colors.bg.primary} border-border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               aria-label="Επεξεργασία Έργου"
             >
               <Edit className={iconSizes.sm} />
             </button>
             <button
               onClick={() => {/* TODO: Delete project handler */}}
-              className={`p-2 rounded-md border bg-background border-border text-destructive ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+              className={`p-2 rounded-md border ${colors.bg.primary} border-border text-destructive ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               aria-label="Διαγραφή Έργου"
             >
               <Trash2 className={iconSizes.sm} />

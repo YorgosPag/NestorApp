@@ -9,6 +9,7 @@ import { fetchNotifications, connectSampleWS } from '@/api/notificationApi';
 import { useTranslation } from '@/i18n';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 type DrawerState = { isOpen: boolean; open: () => void; close: () => void; };
 
@@ -34,6 +35,7 @@ const colorMap = {
 
 export function NotificationDrawer() {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { isOpen, close } = useNotificationDrawer();
   const { items, markRead } = useNotificationStore();
   const { t, i18n } = useTranslation('common');
@@ -127,7 +129,7 @@ export function NotificationDrawer() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="notif-title"
-        className="fixed right-0 top-0 h-screen w-[420px] bg-background shadow-xl flex flex-col z-[9999] border-l"
+        className={`fixed right-0 top-0 h-screen w-[420px] ${colors.bg.primary} shadow-xl flex flex-col z-[9999] border-l`}
       >
         {/* ✅ ENTERPRISE: Live region for screen readers */}
         <div aria-live="polite" aria-atomic="true" className="sr-only">

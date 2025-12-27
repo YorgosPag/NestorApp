@@ -8,6 +8,7 @@ import type { ViewMode } from '@/hooks/useContactsState';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 
 interface ContactsHeaderProps {
@@ -39,6 +40,7 @@ export function ContactsHeader({
 }: ContactsHeaderProps) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   return (
     <PageHeader
@@ -72,7 +74,7 @@ export function ContactsHeader({
             className: `md:hidden p-2 ${quick.input} ${TRANSITION_PRESETS.STANDARD_COLORS} ${
               showFilters
                 ? `bg-primary text-primary-foreground ${getStatusBorder('default')}`
-                : `bg-background ${quick.card} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+                : `${colors.bg.primary} ${quick.card} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
             }`,
             'aria-label': 'Toggle filters',
             children: React.createElement(Filter, { className: iconSizes.sm })

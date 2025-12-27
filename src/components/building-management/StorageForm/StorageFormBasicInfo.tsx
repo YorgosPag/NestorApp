@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Info } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { StorageUnit, StorageType } from '@/types/storage';
 import { cn } from '@/lib/utils';
 
@@ -30,6 +31,7 @@ export function StorageFormBasicInfo({
 }: StorageFormBasicInfoProps) {
   const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { getStatusBorder } = useBorderTokens();
   
   return (
@@ -68,7 +70,7 @@ export function StorageFormBasicInfo({
             <select
               value={formData.status}
               onChange={(e) => updateField('status', e.target.value)}
-              className="h-10 w-full px-3 rounded-md border border-input bg-background text-sm"
+              className={`h-10 w-full px-3 rounded-md border border-input ${colors.bg.primary} text-sm`}
             >
               <option value="available">{t('storage.status.available')}</option>
               <option value="sold">{t('storage.status.sold')}</option>

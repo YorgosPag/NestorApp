@@ -6,6 +6,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import { BuildingsList } from './BuildingsList';
 import { BuildingDetails } from './BuildingDetails';
@@ -35,6 +36,7 @@ export type { Building } from '@/types/building/contracts';
 
 export function BuildingsPageContent() {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   // Load buildings from Firestore
   const { buildings: buildingsData, loading: buildingsLoading, error: buildingsError } = useFirestoreBuildings();
@@ -152,7 +154,7 @@ export function BuildingsPageContent() {
   if (buildingsLoading) {
     return (
       <TooltipProvider>
-        <main className="h-full flex flex-col bg-background" role="main" aria-label="Φόρτωση Κτιρίων">
+        <main className={`h-full flex flex-col ${colors.bg.primary}`} role="main" aria-label="Φόρτωση Κτιρίων">
           <section className="flex-1 flex items-center justify-center" role="status" aria-live="polite">
             <div className="text-center">
               <AnimatedSpinner size="large" className="mx-auto mb-4" />
@@ -168,7 +170,7 @@ export function BuildingsPageContent() {
   if (buildingsError) {
     return (
       <TooltipProvider>
-        <main className="h-full flex flex-col bg-background" role="main" aria-label="Σφάλμα Κτιρίων">
+        <main className={`h-full flex flex-col ${colors.bg.primary}`} role="main" aria-label="Σφάλμα Κτιρίων">
           <section className="flex-1 flex items-center justify-center" role="alert" aria-label="Σφάλμα Φόρτωσης">
             <div className="text-center text-red-500">
               <p className="mb-4">❌ Σφάλμα φόρτωσης κτιρίων:</p>
@@ -182,7 +184,7 @@ export function BuildingsPageContent() {
 
   return (
     <TooltipProvider>
-      <main className="h-full flex flex-col bg-background" role="main" aria-label="Διαχείριση Κτιρίων">
+      <main className={`h-full flex flex-col ${colors.bg.primary}`} role="main" aria-label="Διαχείριση Κτιρίων">
         <BuildingsHeader
           viewMode={viewMode}
           setViewMode={setViewMode}
@@ -253,7 +255,7 @@ export function BuildingsPageContent() {
                     <button
                       onClick={() => {/* TODO: Edit building handler */}}
                       className={cn(
-                        "p-2 rounded-md border bg-background border-border",
+                        `p-2 rounded-md border ${colors.bg.primary} border-border`,
                         INTERACTIVE_PATTERNS.ACCENT_HOVER,
                         TRANSITION_PRESETS.STANDARD_COLORS
                       )}
@@ -264,7 +266,7 @@ export function BuildingsPageContent() {
                     <button
                       onClick={() => {/* TODO: Delete building handler */}}
                       className={cn(
-                        "p-2 rounded-md border bg-background border-border text-destructive",
+                        `p-2 rounded-md border ${colors.bg.primary} border-border text-destructive`,
                         INTERACTIVE_PATTERNS.ACCENT_HOVER,
                         TRANSITION_PRESETS.STANDARD_COLORS
                       )}

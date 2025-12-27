@@ -1480,10 +1480,10 @@ export class GeoAlertPerformanceProfiler {
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; }
         .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; }
         .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 20px 0; }
-        .metric-card { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #007bff; }
+        .metric-card { background: hsl(var(--card)); padding: 15px; border-radius: 8px; border-left: 4px solid #007bff; }
         .score { font-size: 2em; font-weight: bold; color: #28a745; }
-        .bottleneck { background: #fff3cd; padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #ffc107; }
-        .recommendation { background: #d1ecf1; padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #17a2b8; }
+        .bottleneck { background: hsl(var(--muted)); padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #ffc107; }
+        .recommendation { background: hsl(var(--accent)); padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #17a2b8; }
         .critical { border-left-color: #dc3545; }
         .high { border-left-color: #fd7e14; }
         .medium { border-left-color: #ffc107; }

@@ -38,8 +38,8 @@ export interface ThumbnailOptions {
 const DEFAULT_OPTIONS: Required<ThumbnailOptions> = {
   width: 400,
   height: 400,
-  backgroundColor: '#ffffff',
-  strokeColor: '#000000',
+  backgroundColor: '#f8fafc', // ✅ ENTERPRISE: Light gray instead of pure white for better contrast
+  strokeColor: '#1e293b',      // ✅ ENTERPRISE: Dark gray instead of black for softer contrast
   strokeWidth: 1,
   padding: 20,
   quality: 0.9

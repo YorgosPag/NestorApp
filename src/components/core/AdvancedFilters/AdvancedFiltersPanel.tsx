@@ -12,6 +12,7 @@ import { useGenericFilters } from './useGenericFilters';
 import type { FilterPanelConfig, GenericFilterState } from './types';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface AdvancedFiltersPanelProps<T extends GenericFilterState> {
   config: FilterPanelConfig;
@@ -28,6 +29,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
 }: AdvancedFiltersPanelProps<T>) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(defaultOpen);
 
@@ -104,7 +106,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
                       {showAdvanced ? 'Απόκρυψη προηγμένων φίλτρων' : 'Εμφάνιση προηγμένων φίλτρων'}
                     </Button>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className={`mt-4 p-4 ${quick.card} bg-background animate-in fade-in-0 zoom-in-95`}>
+                  <CollapsibleContent className={`mt-4 p-4 ${quick.card} ${colors.bg.primary} animate-in fade-in-0 zoom-in-95`}>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1 sm:gap-4 w-full min-w-0 overflow-hidden">
                       {config.advancedFilters.options.map(option => (
                         <div key={option.id} className="flex items-center space-x-2">

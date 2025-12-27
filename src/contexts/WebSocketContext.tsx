@@ -10,6 +10,7 @@ import { useOptimizedUserRole } from './OptimizedUserRoleContext';
 import { useCache } from './CacheProvider';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 interface WebSocketContextType {
   connectionState: WebSocketConnectionState;
@@ -365,11 +366,11 @@ export function WebSocketDebugPanel() {
 
   const getConnectionColor = () => {
     switch (connectionState) {
-      case 'connected': return 'text-green-600';
-      case 'connecting': return 'text-yellow-600';
-      case 'reconnecting': return 'text-orange-600';
-      case 'error': return 'text-red-600';
-      default: return 'text-gray-600';
+      case 'connected': return COLOR_BRIDGE.text.success;      // ✅ SEMANTIC: text-green-600 -> success
+      case 'connecting': return COLOR_BRIDGE.text.warning;     // ✅ SEMANTIC: text-yellow-600 -> warning
+      case 'reconnecting': return COLOR_BRIDGE.text.warning;   // ✅ SEMANTIC: text-orange-600 -> warning
+      case 'error': return COLOR_BRIDGE.text.error;            // ✅ SEMANTIC: text-red-600 -> error
+      default: return COLOR_BRIDGE.text.secondary;             // ✅ SEMANTIC: text-gray-600 -> secondary
     }
   };
 

@@ -11,6 +11,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { canvasUtilities } from '@/styles/design-tokens';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export interface ContactSummary {
   id: string;
@@ -54,6 +55,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
 }) => {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -365,7 +367,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
         onClick={handleToggle}
         disabled={readonly}
         className={cn(
-          "w-full justify-between h-10 px-3 py-2 text-sm border bg-background",
+          `w-full justify-between h-10 px-3 py-2 text-sm border ${colors.bg.primary}`,
           error ? "border-destructive" : "border-input",
           INTERACTIVE_PATTERNS.ACCENT_HOVER,
           "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"

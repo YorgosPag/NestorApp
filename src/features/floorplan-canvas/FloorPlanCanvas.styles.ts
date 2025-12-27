@@ -179,7 +179,7 @@ export const floorPlanStyles: FloorPlanOverlayStyles = {
    */
   pdfLayer: {
     position: 'absolute',
-    backgroundColor: 'rgba(255, 255, 255, 1)',
+    backgroundColor: 'hsl(var(--background))', // ✅ ENTERPRISE: CSS variable (adapts to dark mode)
     border: '4px solid #a855f7' // Purple-500
   } as const,
 
@@ -193,7 +193,7 @@ export const floorPlanStyles: FloorPlanOverlayStyles = {
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: debugColors.warning,
-    color: '#ffffff',
+    color: 'hsl(var(--background))',
     fontSize: '2.25rem',
     fontWeight: 'bold',
     zIndex: floorPlanZIndex.overlayMessages
@@ -209,7 +209,7 @@ export const floorPlanStyles: FloorPlanOverlayStyles = {
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: debugColors.loading,
-    color: '#ffffff',
+    color: 'hsl(var(--background))',
     fontSize: '1.5rem',
     fontWeight: 'bold',
     zIndex: floorPlanZIndex.overlayMessages
@@ -225,7 +225,7 @@ export const floorPlanStyles: FloorPlanOverlayStyles = {
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: debugColors.error,
-    color: '#ffffff',
+    color: 'hsl(var(--background))',
     fontSize: '1.25rem',
     fontWeight: 'bold',
     padding: '1rem',
@@ -241,7 +241,7 @@ export const floorPlanStyles: FloorPlanOverlayStyles = {
     left: '50%',
     transform: 'translateX(-50%)',
     backgroundColor: debugColors.success,
-    color: '#ffffff',
+    color: 'hsl(var(--background))',
     paddingLeft: '1.5rem',
     paddingRight: '1.5rem',
     paddingTop: '0.75rem',
@@ -260,7 +260,7 @@ export const floorPlanStyles: FloorPlanOverlayStyles = {
     bottom: '1rem',
     right: '1rem',
     backgroundColor: '#000000',
-    color: '#ffffff',
+    color: 'hsl(var(--background))',
     padding: '0.75rem',
     borderRadius: '0.375rem',
     maxWidth: '24rem',

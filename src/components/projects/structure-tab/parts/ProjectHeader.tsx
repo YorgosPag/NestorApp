@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Building2 } from 'lucide-react';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface ProjectHeaderProps {
   name: string;
@@ -10,8 +11,10 @@ interface ProjectHeaderProps {
 }
 
 export function ProjectHeader({ name, buildingsCount, totalUnits }: ProjectHeaderProps) {
+  const colors = useSemanticColors();
+
   return (
-    <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border">
+    <div className={`flex items-center gap-3 p-4 ${colors.bg.infoSubtle} dark:bg-blue-900/30 rounded-lg border`}>
       <Building2 className="text-primary" size={24} />
       <div>
         <div className="font-semibold text-foreground">{name}</div>

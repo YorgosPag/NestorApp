@@ -8,12 +8,14 @@ import { PanelLeft } from "lucide-react"
 import { useIsMobile } from "@/hooks/useMobile"
 import { useIconSizes } from "@/hooks/useIconSizes"
 import { useBorderTokens } from "@/hooks/useBorderTokens"
+import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@/components/ui/effects'
+import { COLOR_BRIDGE } from '@/design-system/color-bridge'
 import {
   Tooltip,
   TooltipContent,
@@ -331,11 +333,12 @@ const SidebarInset = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"main">
 >(({ className, ...props }, ref) => {
+  const colors = useSemanticColors();
   return (
     <main
       ref={ref}
       className={cn(
-        "relative flex min-h-svh flex-1 flex-col bg-background",
+        `relative flex min-h-svh flex-1 flex-col ${colors.bg.primary}`,
         "peer-data-[variant=inset]:min-h-[calc(100svh-theme(spacing.4))] md:peer-data-[variant=inset]:m-2 md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow",
         className
       )}
@@ -353,12 +356,13 @@ const SidebarInput = React.forwardRef<
   React.ElementRef<typeof Input>,
   React.ComponentProps<typeof Input>
 >(({ className, ...props }, ref) => {
+  const colors = useSemanticColors();
   return (
     <Input
       ref={ref}
       data-sidebar="input"
       className={cn(
-        "h-8 w-full bg-background shadow-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+        `h-8 w-full ${colors.bg.primary} shadow-none focus-visible:ring-2 focus-visible:ring-sidebar-ring`,
         className
       )}
       {...props}
@@ -548,7 +552,7 @@ const sidebarMenuButtonVariants = cva(
       variant: {
         default: INTERACTIVE_PATTERNS.SIDEBAR_ACCENT_HOVER,
         outline:
-          `bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] ${INTERACTIVE_PATTERNS.SIDEBAR_ACCENT_HOVER} ${HOVER_SHADOWS.SIDEBAR_ACCENT}`,
+          `${COLOR_BRIDGE.bg.primary} shadow-[0_0_0_1px_hsl(var(--sidebar-border))] ${INTERACTIVE_PATTERNS.SIDEBAR_ACCENT_HOVER} ${HOVER_SHADOWS.SIDEBAR_ACCENT}`,
       },
       size: {
         default: "h-8 text-sm",

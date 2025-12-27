@@ -9,6 +9,7 @@
 
 // Import existing color systems from centralized design tokens
 import { colors } from '@/styles/design-tokens';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 // 🏢 ENTERPRISE: Import centralized panel tokens instead of duplicates
 import { PANEL_COLORS } from './panel-tokens';
@@ -25,7 +26,7 @@ export const MODAL_COLOR_SCHEMES = {
   // Default Modal Colors (neutral, professional)
   DEFAULT: {
     background: {
-      primary: 'bg-background',
+      primary: COLOR_BRIDGE.bg.primary,
       secondary: 'bg-muted/50',
       overlay: 'bg-black/80',
     },
@@ -178,7 +179,7 @@ export const MODAL_BUTTON_COLORS = {
   // Secondary action buttons
   SECONDARY: {
     default: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-    outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
+    outline: `border border-input ${COLOR_BRIDGE.bg.primary} hover:bg-accent hover:text-accent-foreground`,
     ghost: 'hover:bg-accent hover:text-accent-foreground',
   },
 
@@ -200,7 +201,7 @@ export const MODAL_BUTTON_COLORS = {
 export const MODAL_FORM_COLORS = {
   // Default form styling
   DEFAULT: {
-    input: 'bg-background border-input text-foreground focus:border-ring',
+    input: `${COLOR_BRIDGE.bg.primary} border-input text-foreground focus:border-ring`,
     label: 'text-foreground',
     description: 'text-muted-foreground',
     error: 'text-destructive',
@@ -216,7 +217,7 @@ export const MODAL_FORM_COLORS = {
 
   // Light business interface forms
   LIGHT_BUSINESS: {
-    input: `bg-background border ${PANEL_COLORS.BORDER_SECONDARY} text-foreground focus:border-primary`, // ✅ ENTERPRISE: bg-white/text-black → semantic // ✅ ENTERPRISE: Using centralized PANEL_COLORS - black for light theme
+    input: `${COLOR_BRIDGE.bg.primary} border ${PANEL_COLORS.BORDER_SECONDARY} text-foreground focus:border-primary`, // ✅ ENTERPRISE: bg-white/text-black → semantic // ✅ ENTERPRISE: Using centralized PANEL_COLORS - black for light theme
     label: `${PANEL_COLORS.TEXT_DISABLED}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
     description: `${PANEL_COLORS.TEXT_DISABLED}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
     error: 'text-destructive', // ✅ ENTERPRISE: text-red-600 → semantic destructive

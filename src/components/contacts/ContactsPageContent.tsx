@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
@@ -43,8 +44,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-
 // 🚫 MOCK DATA ΕΝΤΕΛΩΣ ΑΦΑΙΡΕΜΕΝΑ - Καθαρή εφαρμογή χωρίς seed functionality
 
 export function ContactsPageContent() {
@@ -594,7 +593,7 @@ export function ContactsPageContent() {
 
   return (
     <TooltipProvider>
-      <main className="h-full flex flex-col bg-background w-full overflow-hidden" role="main" aria-label="Διαχείριση Επαφών">
+      <main className={`h-full flex flex-col ${colors.bg.primary} w-full overflow-hidden`} role="main" aria-label="Διαχείριση Επαφών">
         {/* Main Header - Works for both desktop and mobile */}
         <ContactsHeader
           viewMode={viewMode}
@@ -619,7 +618,7 @@ export function ContactsPageContent() {
               stats={dashboardStats}
               columns={4}
               onCardClick={handleCardClick}
-              className={`px-1 py-4 sm:px-4 sm:py-4 border-b ${colors.bg.gradient} overflow-hidden`}
+              className={`px-1 py-4 sm:px-4 sm:py-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 overflow-hidden`}
             />
           </section>
         )}
@@ -704,14 +703,14 @@ export function ContactsPageContent() {
                   <>
                     <button
                       onClick={() => handleEditContact()}
-                      className={`p-2 rounded-md border bg-background border-border ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                      className={`p-2 rounded-md border ${colors.bg.primary} border-border ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                       aria-label="Επεξεργασία Επαφής"
                     >
                       <Edit className={iconSizes.sm} />
                     </button>
                     <button
                       onClick={() => handleDeleteContacts()}
-                      className={`p-2 rounded-md border bg-background border-border text-destructive ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                      className={`p-2 rounded-md border ${colors.bg.primary} border-border text-destructive ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                       aria-label="Διαγραφή Επαφής"
                     >
                       <Trash2 className={iconSizes.sm} />

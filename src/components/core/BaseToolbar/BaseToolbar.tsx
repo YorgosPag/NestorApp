@@ -3,6 +3,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CommonBadge } from '@/core/badges';
@@ -93,19 +94,20 @@ export function BaseToolbar({
   disabled = false,
   ...props
 }: BaseToolbarProps) {
-  
+  const colors = useSemanticColors();
+
   // Styling variants
   const toolbarVariants = {
-    default: 'flex items-center justify-between p-4 bg-background border-b',
-    compact: 'flex flex-wrap items-center justify-between gap-2 p-2 bg-background border-b min-h-[3rem]',
-    expanded: 'flex flex-col gap-4 p-6 bg-background border-b',
-    narrow: 'flex flex-wrap items-center gap-2 p-2 bg-background border-b',
+    default: `flex items-center justify-between p-4 ${colors.bg.primary} border-b`,
+    compact: `flex flex-wrap items-center justify-between gap-2 p-2 ${colors.bg.primary} border-b min-h-[3rem]`,
+    expanded: `flex flex-col gap-4 p-6 ${colors.bg.primary} border-b`,
+    narrow: `flex flex-wrap items-center gap-2 p-2 ${colors.bg.primary} border-b`,
   };
 
   const positionVariants = {
     top: '',
     bottom: 'border-t border-b-0',
-    sticky: 'sticky top-0 z-10 backdrop-blur-sm bg-background/95',
+    sticky: `sticky top-0 z-10 backdrop-blur-sm ${colors.bg.primary}/95`,
   };
 
   // Συνδυασμός όλων των actions

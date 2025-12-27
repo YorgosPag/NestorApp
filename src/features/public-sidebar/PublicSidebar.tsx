@@ -21,6 +21,7 @@ interface PublicSidebarProps {
 
 export function PublicSidebar({ isAuthenticated = false, userEmail }: PublicSidebarProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { getDirectionalBorder } = useBorderTokens();
   const { isActive } = useActiveItem();
 
@@ -65,7 +66,7 @@ export function PublicSidebar({ isAuthenticated = false, userEmail }: PublicSide
         {isAuthenticated ? (
           <div className="flex items-center gap-3">
             <div className={`flex ${iconSizes.xl} items-center justify-center rounded-full bg-blue-100`}>
-              <User className={`${iconSizes.sm} text-blue-600`} />
+              <User className={`${iconSizes.sm} ${colors.text.info}`} />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">Επισκέπτης</p>

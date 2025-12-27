@@ -17,7 +17,7 @@
   padding: var(--spacing-1-5, 6px) var(--spacing-2, 8px);
   transition: all 0.2s ease;
   cursor: pointer;
-  background-color: var(--bg-primary, white);
+  background-color: var(--bg-primary, hsl(var(--background)));
 }
 
 .tableRow:hover {
@@ -150,7 +150,7 @@
 .tableContainer {
   width: 100%;
   overflow-x: auto;
-  background-color: var(--bg-primary, white);
+  background-color: var(--bg-primary, hsl(var(--background)));
   border: 1px solid var(--border-primary, #e5e7eb);
   border-radius: var(--border-radius-lg, 8px);
 }

@@ -11,6 +11,7 @@
 // ============================================================================
 
 import { hardcodedColorValues } from '../../design-system/tokens/colors';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 /**
  * CSS Variable to Tailwind Mapping
@@ -41,28 +42,24 @@ export const tailwindTextColors = {
 } as const;
 
 /**
- * Tailwind Background Color Mappings - CSS Variables
- * Enterprise approach: Use CSS variables for theming
+ * 🔥 ΑΛΗΘΙΝΗ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ - Background Color Mappings
+ * ΜΟΝΟΣ ΤΡΟΠΟΣ: Χρήση hardcoded system που συνδέεται με CSS variables
  */
 export const tailwindBackgroundColors = {
-  // CSS variable mappings
-  success: mapCssVarToTailwind('--bg-success', 'bg'),
-  error: mapCssVarToTailwind('--bg-error', 'bg'),
-  warning: mapCssVarToTailwind('--bg-warning', 'bg'),
-  info: mapCssVarToTailwind('--bg-info', 'bg'),
-  primary: mapCssVarToTailwind('--bg-primary', 'bg'),
-  secondary: mapCssVarToTailwind('--bg-secondary', 'bg'),
-  hover: mapCssVarToTailwind('--bg-hover', 'bg'),
-  active: mapCssVarToTailwind('--bg-active', 'bg'),
+  // ⚡ ΠΡΑΓΜΑΤΙΚΗ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Direct connection to CSS variables
+  success: hardcodedColorValues.background.successSubtle,    // bg-[hsl(var(--bg-success))]
+  error: hardcodedColorValues.background.errorSubtle,        // bg-[hsl(var(--bg-error))]
+  warning: hardcodedColorValues.background.infoSubtle,       // bg-[hsl(var(--bg-info))] (using info for warning)
+  info: hardcodedColorValues.background.infoSubtle,          // bg-[hsl(var(--bg-info))]
+  primary: hardcodedColorValues.background.primary,          // bg-[hsl(var(--bg-primary))] 🧪 WILL SHOW BLUE!
+  secondary: hardcodedColorValues.background.secondary,      // bg-[hsl(var(--bg-secondary))] 🧪 WILL SHOW BLUE!
+  hover: hardcodedColorValues.background.hover,              // bg-[hsl(var(--bg-hover))]
+  active: hardcodedColorValues.background.active,            // bg-[hsl(var(--bg-active))]
 
-  // Subtle semantic backgrounds for soft visual treatment
-  errorSubtle: hardcodedColorValues.background.errorSubtle,
-  successSubtle: hardcodedColorValues.background.successSubtle,
-  infoSubtle: hardcodedColorValues.background.infoSubtle,
-  neutralSubtle: hardcodedColorValues.background.neutralSubtle,
-
-  // Hardcoded fallbacks
-  hardcoded: hardcodedColorValues.background,
+  // Additional backgrounds
+  neutral: hardcodedColorValues.background.neutralSubtle,
+  light: hardcodedColorValues.background.light, // ✅ ENTERPRISE: Use light instead of white - respects dark mode!
+  transparent: hardcodedColorValues.background.transparent,
 } as const;
 
 /**
@@ -105,8 +102,8 @@ export const tailwindInteractiveStates = {
   },
 
   focus: {
-    border: 'focus:border-blue-500',
-    ring: 'focus:ring-2 focus:ring-blue-200',
+    border: `focus:${COLOR_BRIDGE.border.focus}`,      // ✅ SEMANTIC: focus:border-blue-500 -> focus border
+    ring: 'focus:ring-2 focus:ring-blue-200',         // Keep ring for now (specific shade needed)
     background: 'focus:bg-[hsl(var(--bg-hover))]',
   },
 
@@ -122,8 +119,8 @@ export const tailwindInteractiveStates = {
  */
 export const tailwindLayoutPatterns = {
   page: {
-    fullScreen: 'min-h-screen bg-[hsl(var(--bg-secondary))] dark:bg-background',
-    light: 'min-h-screen bg-slate-50 dark:bg-background',
+    fullScreen: `min-h-screen bg-[hsl(var(--bg-secondary))] dark:${COLOR_BRIDGE.bg.primary}`,
+    light: `min-h-screen ${COLOR_BRIDGE.bg.light} dark:${COLOR_BRIDGE.bg.primary}`,
   },
   container: {
     default: 'bg-[hsl(var(--bg-primary))]',
@@ -141,36 +138,37 @@ export const tailwindLayoutPatterns = {
  * Tailwind Status Pattern Mappings
  * Status-specific color combinations
  */
+// ✅ ENTERPRISE: Status patterns with semantic color mapping
 export const tailwindStatusPatterns = {
   active: {
-    text: 'text-green-700',
+    text: COLOR_BRIDGE.text.success,                    // ✅ SEMANTIC: text-green-700 -> success text
     bg: mapCssVarToTailwind('--bg-success', 'bg'),
-    border: 'border-green-300',
-    combined: 'text-green-700 bg-[hsl(var(--bg-success))] border-green-300',
+    border: COLOR_BRIDGE.border.success,               // ✅ SEMANTIC: border-green-300 -> success border
+    combined: `${COLOR_BRIDGE.text.success} bg-[hsl(var(--bg-success))] ${COLOR_BRIDGE.border.success}`,
   },
   inactive: {
-    text: 'text-slate-600',
-    bg: 'bg-slate-50',
-    border: 'border-slate-300',
-    combined: 'text-slate-600 bg-slate-50 border-slate-300',
+    text: COLOR_BRIDGE.text.secondary,                 // ✅ SEMANTIC: text-slate-600 -> secondary text
+    bg: `${COLOR_BRIDGE.bg.light}`,
+    border: COLOR_BRIDGE.border.muted,                 // ✅ SEMANTIC: border-slate-300 -> muted border
+    combined: `${COLOR_BRIDGE.text.secondary} ${COLOR_BRIDGE.bg.light} ${COLOR_BRIDGE.border.muted}`,
   },
   pending: {
-    text: 'text-yellow-700',
+    text: COLOR_BRIDGE.text.warning,                   // ✅ SEMANTIC: text-yellow-700 -> warning text
     bg: mapCssVarToTailwind('--bg-warning', 'bg'),
-    border: 'border-yellow-300',
-    combined: 'text-yellow-700 bg-[hsl(var(--bg-warning))] border-yellow-300',
+    border: COLOR_BRIDGE.border.warning,              // ✅ SEMANTIC: border-yellow-300 -> warning border
+    combined: `${COLOR_BRIDGE.text.warning} bg-[hsl(var(--bg-warning))] ${COLOR_BRIDGE.border.warning}`,
   },
   completed: {
-    text: 'text-blue-700',
+    text: COLOR_BRIDGE.text.info,                      // ✅ SEMANTIC: text-blue-700 -> info text
     bg: mapCssVarToTailwind('--bg-info', 'bg'),
-    border: 'border-blue-300',
-    combined: 'text-blue-700 bg-[hsl(var(--bg-info))] border-blue-300',
+    border: COLOR_BRIDGE.border.info,                 // ✅ SEMANTIC: border-blue-300 -> info border
+    combined: `${COLOR_BRIDGE.text.info} bg-[hsl(var(--bg-info))] ${COLOR_BRIDGE.border.info}`,
   },
   cancelled: {
-    text: 'text-red-700',
+    text: COLOR_BRIDGE.text.error,                     // ✅ SEMANTIC: text-red-700 -> error text
     bg: mapCssVarToTailwind('--bg-error', 'bg'),
-    border: 'border-red-300',
-    combined: 'text-red-700 bg-[hsl(var(--bg-error))] border-red-300',
+    border: COLOR_BRIDGE.border.error,                // ✅ SEMANTIC: border-red-300 -> error border
+    combined: `${COLOR_BRIDGE.text.error} bg-[hsl(var(--bg-error))] ${COLOR_BRIDGE.border.error}`,
   },
 } as const;
 

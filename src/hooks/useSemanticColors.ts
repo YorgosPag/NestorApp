@@ -100,7 +100,7 @@ export interface SemanticBackgroundColors {
   readonly warning: string;
   /** Info background color - 'bg-blue-50' */
   readonly info: string;
-  /** Primary background color - 'bg-white' */
+  /** Primary background color - 'bg-background' (beautiful blue) */
   readonly primary: string;
   /** Secondary background color - 'bg-slate-50' */
   readonly secondary: string;
@@ -208,9 +208,9 @@ export interface InteractiveColorPatterns {
 export interface CommonUIPatterns {
   /** Card patterns */
   readonly card: {
-    /** Standard card pattern - 'bg-white border border-slate-200' */
+    /** Standard card pattern - 'bg-card border border-border' (beautiful blue) */
     readonly standard: string;
-    /** Hover card pattern - 'bg-white border border-slate-200 hover:bg-slate-50' */
+    /** Hover card pattern - 'bg-card border border-border hover:bg-accent' (beautiful blue) */
     readonly hover: string;
     /** Selected card pattern - 'bg-blue-50 border border-blue-300' */
     readonly selected: string;

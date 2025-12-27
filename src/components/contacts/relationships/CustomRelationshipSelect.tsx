@@ -9,6 +9,7 @@ import { ChevronDown, Check } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useEnterprisePortal, createPortalConfig } from '@/components/ui/enterprise-portal';
 import { portalComponents, layoutUtilities } from '@/styles/design-tokens';
 
@@ -33,6 +34,7 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
 }) => {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
 
@@ -146,7 +148,7 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
         variant="outline"
         onClick={handleToggle}
         disabled={disabled}
-        className={`w-full justify-between h-10 px-3 py-2 text-sm bg-background ${quick.input}`}
+        className={`w-full justify-between h-10 px-3 py-2 text-sm ${colors.bg.primary} ${quick.input}`}
         type="button"
       >
         <div className="flex items-center space-x-2 flex-1 text-left">
@@ -172,7 +174,7 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
         >
           <Card
             ref={dropdownRef}
-            className={`shadow-xl bg-background ${quick.card}`}
+            className={`shadow-xl ${colors.bg.primary} ${quick.card}`}
             data-custom-relationship-select="true"
             data-custom-dropdown-portal="true"
             style={{

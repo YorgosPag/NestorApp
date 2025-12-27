@@ -3,6 +3,7 @@
 import React from 'react';
 import { formatCurrency, formatNumber as formatNumberIntl } from '@/lib/intl-utils';
 import type { Property } from '@/types/property-viewer';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface UnitListItemStatsProps {
   unit: Property;
@@ -36,6 +37,8 @@ function formatPrice(price: number | undefined): string {
 }
 
 export function UnitListItemStats({ unit }: UnitListItemStatsProps) {
+  const colors = useSemanticColors();
+
   return (
     <div className="grid grid-cols-2 gap-3 text-xs">
       <div>
@@ -44,7 +47,7 @@ export function UnitListItemStats({ unit }: UnitListItemStatsProps) {
       </div>
       <div>
         <p className="text-muted-foreground">Αξία</p>
-        <p className="font-medium text-green-600">{formatPrice(unit.price)}</p>
+        <p className={`font-medium ${colors.text.success}`}>{formatPrice(unit.price)}</p>
       </div>
       {unit.project && (
         <div className="col-span-2">

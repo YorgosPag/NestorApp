@@ -5,6 +5,7 @@ import React from 'react';
 import { Building2, Filter } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PageHeader } from '@/core/headers';
 import { CompactToolbar, buildingsConfig } from '@/components/core/CompactToolbar';
 import type { ViewMode } from '@/core/headers';
@@ -35,6 +36,7 @@ export function BuildingsHeader({
   setShowFilters,
 }: BuildingsHeaderProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { quick, radius } = useBorderTokens();
   return (
     <PageHeader
@@ -69,7 +71,7 @@ export function BuildingsHeader({
             className={`md:hidden p-2 ${radius.md} ${TRANSITION_PRESETS.STANDARD_COLORS} ${
               showFilters
                 ? `bg-primary text-primary-foreground ${quick.focus}`
-                : `bg-background ${quick.input} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
+                : `${colors.bg.primary} ${quick.input} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
             }`}
             aria-label="Toggle filters"
           >

@@ -16,6 +16,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { hardcodedColorValues } from '@/design-system/tokens/colors';
 
 /**
  * 🏗️ Relationship Type Configuration Interface
@@ -46,8 +47,8 @@ const getRelationshipColors = (colors?: ReturnType<typeof useSemanticColors>) =>
       colleague: 'bg-yellow-100 text-yellow-800',
       friend: 'bg-pink-100 text-pink-800',
       family: 'bg-violet-100 text-violet-800',
-      business_contact: 'bg-slate-100 text-slate-800',
-      default: 'bg-slate-100 text-slate-800'
+      business_contact: `${hardcodedColorValues.background.gray[100]} text-slate-800`,
+      default: `${hardcodedColorValues.background.gray[100]} text-slate-800`
     };
   }
 

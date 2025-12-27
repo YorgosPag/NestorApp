@@ -13,6 +13,7 @@
 import type { HeaderTheme, ViewMode, HeaderVariant, HeaderLayout, HeaderSpacing } from '../types';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { borderVariants } from '@/styles/design-tokens';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 // ============================================================================
 // 🎨 HEADER THEMES - ENTERPRISE STYLING
@@ -59,7 +60,7 @@ export const HEADER_THEME: HeaderTheme = {
       container: "flex flex-wrap items-center gap-2",
       button: "px-3 py-1.5 text-xs border rounded-full transition-colors",
       active: `bg-primary text-primary-foreground ${borderVariants.status.info.className}`,
-      inactive: `bg-background border-border ${INTERACTIVE_PATTERNS.BORDER_SUBTLE}`
+      inactive: `${COLOR_BRIDGE.bg.primary} border-border ${INTERACTIVE_PATTERNS.BORDER_SUBTLE}`
     },
     actions: {
       default: "flex flex-wrap items-center gap-2 w-full sm:w-auto justify-center sm:justify-end",
@@ -68,7 +69,7 @@ export const HEADER_THEME: HeaderTheme = {
       iconButton: "h-9 w-9"
     },
     viewToggle: {
-      desktop: "flex border rounded-md bg-background",
+      desktop: `flex border rounded-md ${COLOR_BRIDGE.bg.primary}`,
       mobile: "h-8 px-2"
     }
   }

@@ -12,6 +12,7 @@
 
 import React, { useState } from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { borders } from '@/styles/design-tokens';
 
 export function BorderSystemDemo() {
@@ -26,11 +27,12 @@ export function BorderSystemDemo() {
     colors,
     radius
   } = useBorderTokens();
+  const colors = useSemanticColors();
 
   const [selectedDemo, setSelectedDemo] = useState<'basic' | 'variants' | 'status' | 'responsive'>('basic');
 
   return (
-    <div className="p-8 space-y-8 bg-background">
+    <div className={`p-8 space-y-8 ${colors.bg.primary}`}>
       <div className={`${quick.card} p-6`}>
         <h1 className="text-3xl font-bold mb-4 text-foreground">
           🎨 Enterprise Border System Demo
@@ -142,15 +144,15 @@ export function BorderSystemDemo() {
             <div className="space-y-3 max-w-sm">
               <input
                 placeholder="Default input"
-                className={`${getElementBorder('input', 'default')} px-3 py-2 w-full bg-background`}
+                className={`${getElementBorder('input', 'default')} px-3 py-2 w-full ${colors.bg.primary}`}
               />
               <input
                 placeholder="Focus state (simulated)"
-                className={`${getElementBorder('input', 'focus')} px-3 py-2 w-full bg-background`}
+                className={`${getElementBorder('input', 'focus')} px-3 py-2 w-full ${colors.bg.primary}`}
               />
               <input
                 placeholder="Error state"
-                className={`${getElementBorder('input', 'error')} px-3 py-2 w-full bg-background`}
+                className={`${getElementBorder('input', 'error')} px-3 py-2 w-full ${colors.bg.primary}`}
               />
             </div>
           </div>
@@ -244,7 +246,7 @@ export function BorderSystemDemo() {
               </button>
               <input
                 placeholder="Responsive Input"
-                className={`${getResponsiveBorder('input')} px-3 py-2 bg-background`}
+                className={`${getResponsiveBorder('input')} px-3 py-2 ${colors.bg.primary}`}
               />
             </div>
           </div>

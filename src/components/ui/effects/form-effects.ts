@@ -9,6 +9,7 @@
 // ============================================================================
 
 import { borders } from '@/styles/design-tokens';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 /**
  * 🎯 FORM INPUT FOCUS EFFECTS
@@ -67,10 +68,10 @@ export const FORM_HOVER_EFFECTS = {
  */
 export const FORM_STATE_EFFECTS = {
   /** Default/neutral state */
-  DEFAULT: 'border-border bg-background text-foreground',
+  DEFAULT: `border-border ${COLOR_BRIDGE.bg.primary} text-foreground`,
 
   /** Active/focused state */
-  ACTIVE: `${borders.variants.input.focus.className} bg-background text-foreground shadow-sm`,
+  ACTIVE: `${borders.variants.input.focus.className} ${COLOR_BRIDGE.bg.primary} text-foreground shadow-sm`,
 
   /** Error state */
   ERROR: 'border-destructive bg-destructive/5 text-foreground',

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -44,6 +45,7 @@ export function ActionsTabContent({
   onDeleteProject
 }: TabContentProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   return (
     <>
       <Button
@@ -75,7 +77,7 @@ export function ActionsTabContent({
         <Trash2 className={`${iconSizes.sm} mr-1`} />
         Διαγραφή
         {selectedItems.length > 0 && (
-          <span className="ml-1 bg-background text-destructive px-1 rounded text-xs">
+          <span className={`ml-1 ${colors.bg.primary} text-destructive px-1 rounded text-xs`}>
             {selectedItems.length}
           </span>
         )}

@@ -12,7 +12,7 @@ import { PropertyGridViewCompatible as PropertyGridView } from '@/components/pro
 const LoadingComponent = () => {
   const colors = useSemanticColors();
   return (
-    <div className={`min-h-screen ${colors.bg.secondary} dark:bg-background flex items-center justify-center`}>
+    <div className={`min-h-screen ${colors.bg.secondary} dark:${colors.bg.primary} flex items-center justify-center`}>
       <div className="text-center">
         <AnimatedSpinner size="large" className="mx-auto mb-4" />
         <p className={colors.text.muted}>Φόρτωση μονάδων...</p>

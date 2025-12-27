@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { BaseToolbar } from '@/components/core/BaseToolbar/BaseToolbar';
 import type { ToolbarAction, ToolbarFilter, ToolbarSearch } from '@/components/core/BaseToolbar/BaseToolbar';
 import { 
@@ -54,6 +55,7 @@ export function BuildingToolbar({
   onExport,
   onRefresh
 }: BuildingToolbarProps) {
+  const colors = useSemanticColors();
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const handleClearFilters = () => {
@@ -263,7 +265,7 @@ export function BuildingToolbar({
           </div>
         )
       }
-      className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+      className={`${colors.bg.primary}/95 backdrop-blur supports-[backdrop-filter]:${colors.bg.primary}/60`}
     />
   );
 }

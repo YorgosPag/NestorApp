@@ -38,6 +38,12 @@ export const metadata: Metadata = {
   description: "Μια εφαρμογή για να αποτυπώσετε τις σκέψεις σας, ενισχυμένες με AI.",
 };
 
+// 🌉 Client component for Bridge colors - Dynamic loading
+const MainContent = dynamic(
+  () => import('./components/MainContentBridge').then(mod => mod.MainContentBridge),
+  { ssr: false }
+);
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -88,9 +94,9 @@ export default function RootLayout({
                         <AppSidebar />
                         <SidebarInset className="flex flex-1 flex-col w-full max-w-full overflow-hidden">
                           <AppHeader />
-                          <main className="flex-1 overflow-y-auto overflow-x-hidden bg-background/95 w-full max-w-full">
+                          <MainContent>
                               {children}
-                          </main>
+                          </MainContent>
                         </SidebarInset>
                       </div>
                         </SidebarProvider>

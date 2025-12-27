@@ -7,6 +7,7 @@ import type { ViewMode } from '@/core/headers';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface StoragesHeaderProps {
   viewMode: 'list' | 'grid' | 'byType' | 'byStatus';
@@ -34,6 +35,7 @@ export function StoragesHeader({
 }: StoragesHeaderProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
 
   return (
     <PageHeader
@@ -68,7 +70,7 @@ export function StoragesHeader({
             className={`md:hidden p-2 rounded-md ${TRANSITION_PRESETS.STANDARD_COLORS} ${
               showFilters
                 ? `bg-primary text-primary-foreground ${quick.focus}`
-                : `bg-background ${quick.input} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
+                : `${colors.bg.primary} ${quick.input} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
             }`}
             aria-label="Toggle filters"
           >

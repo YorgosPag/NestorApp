@@ -7,6 +7,7 @@ import { Check, ChevronRight, Circle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useIconSizes } from "@/hooks/useIconSizes"
 import { useBorderTokens } from "@/hooks/useBorderTokens"
+import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors"
 
 function MenubarMenu({
   ...props
@@ -43,12 +44,13 @@ const Menubar = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof MenubarPrimitive.Root>
 >(({ className, ...props }, ref) => {
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
 
   return (
     <MenubarPrimitive.Root
       ref={ref}
       className={cn(
-        `flex h-10 items-center space-x-1 ${quick.table} bg-background p-1`,
+        `flex h-10 items-center space-x-1 ${quick.table} ${colors.bg.primary} p-1`,
         className
       )}
       {...props}

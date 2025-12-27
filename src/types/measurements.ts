@@ -110,7 +110,7 @@ export const MEASUREMENT_UNITS: Record<MeasurementUnit, { name: string; factor: 
 
 export const DEFAULT_RULER_STYLE: RulerStyle = {
   lineColor: '#00ff00',
-  textColor: '#ffffff',
+  textColor: '#f1f5f9', // ✅ ENTERPRISE: High contrast light gray instead of pure white
   backgroundColor: '#000000',
   lineWidth: 1,
   fontSize: 12,

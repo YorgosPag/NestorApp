@@ -43,7 +43,7 @@ export function VertexHandle({
       cy={vertex.y}
       r={5}
       fill={getFillColor()}
-      stroke="#ffffff"
+      stroke="hsl(var(--border))"
       strokeWidth={2}
       className={cn(
         "transition-colors",

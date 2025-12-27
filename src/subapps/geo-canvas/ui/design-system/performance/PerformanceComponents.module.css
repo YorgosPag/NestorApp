@@ -236,7 +236,7 @@
   padding: var(--spacing-2, 8px) var(--spacing-4, 16px);
   border: 1px solid var(--error-border, #fecaca);
   border-radius: var(--border-radius, 4px);
-  background-color: var(--button-bg, white);
+  background-color: var(--button-bg, hsl(var(--background)));
   color: var(--error-color, #dc2626);
   cursor: pointer;
   font-size: 14px;
@@ -292,7 +292,7 @@
 /* ============================================================================ */
 
 .performanceMonitor {
-  background-color: var(--monitor-bg, white);
+  background-color: var(--monitor-bg, hsl(var(--background)));
   border: 1px solid var(--border-color, #e5e7eb);
   border-radius: var(--border-radius, 8px);
   padding: var(--spacing-4, 16px);

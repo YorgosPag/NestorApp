@@ -30,6 +30,7 @@ import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, HOV
 
 // 🏢 ENTERPRISE: Import enterprise semantic colors (SINGLE SOURCE OF TRUTH)
 import { tailwindColorMappings } from '../../../ui-adapters/tailwind/colors.adapter';
+import { hardcodedColorValues } from '../../../design-system/tokens/colors';
 import type { UseSemanticColorsReturn } from '../../../ui-adapters/react/useSemanticColors';
 
 // ============================================================================
@@ -239,9 +240,9 @@ export const PANEL_LAYOUT = {
  */
 export const PANEL_COLORS = {
   // ✅ ENTERPRISE: Background colors από centralized semantic system
-  BG_PRIMARY: 'bg-gray-800',                    // Static primary background
-  BG_SECONDARY: 'bg-gray-700',                  // Static secondary background
-  BG_TERTIARY: 'bg-gray-600',                   // Static tertiary background
+  BG_PRIMARY: hardcodedColorValues.background.gray[800],                    // Static primary background
+  BG_SECONDARY: hardcodedColorValues.background.gray[700],                  // Static secondary background
+  BG_TERTIARY: hardcodedColorValues.background.gray[600],                   // Static tertiary background
   BG_HOVER: 'hover:bg-gray-600',                // Static hover state
 
   // ✅ ENTERPRISE: Text colors από centralized semantic system
@@ -495,7 +496,7 @@ export const GENERAL_SETTINGS_TOKENS = {
 
   TAB_NAVIGATION: {
     CONTAINER: `border-b mb-4`, // Enterprise: Use borderTokens.getStatusBorder() in components
-    BORDER_CLASS: 'border-gray-600', // Static fallback - use semantic colors hook in components
+    BORDER_CLASS: `border-${hardcodedColorValues.background.gray[600].replace('bg-', '')}`, // Static fallback - use semantic colors hook in components
   },
 
   LOADING_STATE: {

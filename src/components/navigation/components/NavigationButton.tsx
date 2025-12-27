@@ -11,6 +11,7 @@ import { NavigationStatus } from '../../../core/types/BadgeTypes';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '../../ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface NavigationButtonProps {
   onClick: () => void;
@@ -44,6 +45,7 @@ export function NavigationButton({
 }: NavigationButtonProps) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const baseClasses = `w-full text-left ${quick.button} ${TRANSITION_PRESETS.STANDARD_COLORS} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`;
 
   const variantClasses = {
@@ -57,9 +59,9 @@ export function NavigationButton({
 
   // 🏢 ENTERPRISE: χρωματική διαφοροποίηση με centralized status borders
   const selectedClasses = isSelected
-    ? `${getStatusBorder('info')} bg-blue-50 dark:bg-blue-900/30`
+    ? `${getStatusBorder('info')} ${colors.bg.infoSubtle} dark:bg-blue-900/30`
     : effectiveBadgeStatus
-      ? `${getStatusBorder('warning')} bg-orange-50 dark:bg-orange-900/20 ${HOVER_BORDER_EFFECTS.ORANGE}`
+      ? `${getStatusBorder('warning')} ${colors.bg.warning} dark:bg-orange-900/20 ${HOVER_BORDER_EFFECTS.ORANGE}`
       : `${quick.card} ${HOVER_BORDER_EFFECTS.GRAY}`;
 
   const iconSize = variant === 'compact' ? iconSizes.sm : iconSizes.md;

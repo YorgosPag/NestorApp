@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ObligationDocument, TableOfContentsItem } from '@/types/obligations';
 import { cn } from "@/lib/utils";
+import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
 
 import { PreviewHeader } from './live-preview/parts/PreviewHeader';
 import { DocumentHeader } from './live-preview/parts/DocumentHeader';
@@ -33,6 +34,7 @@ export function LivePreview({
   zoom = 100,
   className,
 }: LivePreviewProps) {
+  const colors = useSemanticColors();
   const [showToc, setShowToc] = useState(true);
 
   const tableOfContents = useToc(doc);
@@ -54,7 +56,7 @@ export function LivePreview({
   }, []);
 
   return (
-    <div className={cn("bg-background", className)}>
+    <div className={cn(colors.bg.primary, className)}>
       <PreviewHeader 
         showToc={showToc}
         onToggleToc={() => setShowToc(prev => !prev)}

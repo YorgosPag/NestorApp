@@ -16,6 +16,7 @@
 // Typography handled by individual components using useTypography hook
 // Import centralized icon sizes - 🔥 NO MORE DUPLICATES!
 import { componentSizes, semanticColors } from '../../../styles/design-tokens';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 // 🏢 ENTERPRISE: Import centralized panel tokens
 import { PANEL_COLORS } from './panel-tokens';
 
@@ -38,7 +39,7 @@ export const MODAL_SELECT_STYLES = {
 
   // Default Light Select
   DEFAULT: {
-    trigger: 'w-full bg-background border-input text-foreground focus:border-ring',
+    trigger: `w-full ${COLOR_BRIDGE.bg.primary} border-input text-foreground focus:border-ring`,
     content: 'bg-popover',
     item: 'hover:bg-accent focus:bg-accent',
     placeholder: 'text-muted-foreground',

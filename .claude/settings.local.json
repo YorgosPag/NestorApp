@@ -31,7 +31,11 @@
       "Bash(grep:*)",
       "Bash(cat:*)",
       "Bash(git checkout:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(start chrome \"http://localhost:3003/crm/leads/1\")",
+      "Bash(npm run build:*)",
+      "Bash(start \"C:\\Nestor_Pagonis\\debug-dark-mode.html\")",
+      "Bash(start chrome \"http://localhost:3001/crm/leads/1\")"
     ],
     "deny": [],
     "ask": []

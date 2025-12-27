@@ -2,6 +2,7 @@
 
 import type { ParkingSpotType, ParkingSpotStatus } from '@/types/parking';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { hardcodedColorValues } from '@/design-system/tokens/colors';
 
 export const PARKING_TYPE_LABELS: Record<ParkingSpotType, string> = {
   underground: 'Υπόγεια',
@@ -23,7 +24,7 @@ export const getParkingStatusColors = (colors?: ReturnType<typeof useSemanticCol
     return {
       sold: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
       owner: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-      available: 'bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-300',
+      available: `${hardcodedColorValues.background.gray[100]} text-slate-800 dark:bg-slate-900 dark:text-slate-300`,
       reserved: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
     };
   }
@@ -50,7 +51,7 @@ export const getParkingStatusLabel = (status: ParkingSpotStatus) => PARKING_STAT
 // Enhanced function with semantic colors support
 export const getParkingStatusColor = (status: ParkingSpotStatus, colors?: ReturnType<typeof useSemanticColors>) => {
   const colorMap = getParkingStatusColors(colors);
-  return colorMap[status] || (colors ? `${colors.bg.muted} ${colors.text.muted}` : 'bg-slate-100 text-slate-800');
+  return colorMap[status] || (colors ? `${colors.bg.muted} ${colors.text.muted}` : `${hardcodedColorValues.background.gray[100]} text-slate-800`);
 };
 
 // Legacy function for backward compatibility

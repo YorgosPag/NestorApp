@@ -28,7 +28,7 @@ export function EdgeMidpoint({
       cy={midpoint.y}
       r={4}
       fill="#10b981"
-      stroke="#ffffff"
+      stroke="hsl(var(--border))"
       strokeWidth={1}
       className={`cursor-pointer opacity-70 ${INTERACTIVE_PATTERNS.OPACITY_REVEAL} ${CORE_HOVER_TRANSFORMS.SCALE_UP_SMALL} transition-all`}
       onMouseDown={(e) => onMouseDown(index, e)}

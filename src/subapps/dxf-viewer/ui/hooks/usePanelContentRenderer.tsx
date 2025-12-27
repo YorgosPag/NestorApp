@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { LazyPanelWrapper } from '../components/shared';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ✅ CENTRALIZED: Use existing LazyLoadWrapper system instead of duplicate React.lazy
 import {
@@ -46,6 +47,7 @@ export function usePanelContentRenderer({
   setExpandedKeys,
   layerOperations
 }: UsePanelContentRendererParams) {
+  const colors = useSemanticColors();
 
   const renderPanelContent = () => {
     switch (activePanel) {
@@ -53,7 +55,7 @@ export function usePanelContentRenderer({
         return (
           <div className="space-y-4">
             <LazyPanelWrapper loadingText="Φόρτωση διαχείρισης επιπέδων...">
-              <AdminLayerManager className="bg-gray-800 rounded-lg p-4" />
+              <AdminLayerManager className={`${colors.bg.secondary} rounded-lg p-4`} />
             </LazyPanelWrapper>
           </div>
         );

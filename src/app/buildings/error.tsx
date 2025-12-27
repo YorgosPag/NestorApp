@@ -3,6 +3,7 @@
 import React from 'react';
 import { Building, AlertTriangle, RefreshCw, ArrowLeft } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface BuildingsErrorProps {
   error: Error & { digest?: string };
@@ -11,12 +12,13 @@ interface BuildingsErrorProps {
 
 export default function BuildingsError({ error, reset }: BuildingsErrorProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   React.useEffect(() => {
     console.error('Buildings page error:', error);
   }, [error]);
 
   return (
-    <main className="min-h-screen bg-background p-6">
+    <main className={`min-h-screen ${colors.bg.primary} p-6`}>
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
           <div className={`${iconSizes.xl4} bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4`}>
@@ -35,7 +37,7 @@ export default function BuildingsError({ error, reset }: BuildingsErrorProps) {
                 <AlertTriangle className={`${iconSizes.sm} text-amber-500`} />
                 Τεχνικές πληροφορίες σφάλματος
               </summary>
-              <div className="mt-2 p-3 bg-background rounded border">
+              <div className={`mt-2 p-3 ${colors.bg.primary} rounded border`}>
                 <p className="text-sm font-mono text-muted-foreground break-words">
                   <strong>Error:</strong> {error.message}
                 </p>
@@ -61,7 +63,7 @@ export default function BuildingsError({ error, reset }: BuildingsErrorProps) {
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => window.history.back()}
-              className="border border-input bg-background hover:bg-accent hover:text-accent-foreground px-6 py-3 rounded-md font-medium flex items-center justify-center gap-2 transition-colors"
+              className={`border border-input ${colors.bg.primary} hover:bg-accent hover:text-accent-foreground px-6 py-3 rounded-md font-medium flex items-center justify-center gap-2 transition-colors`}
             >
               <ArrowLeft className={iconSizes.sm} />
               Πίσω
@@ -69,7 +71,7 @@ export default function BuildingsError({ error, reset }: BuildingsErrorProps) {
 
             <button
               onClick={() => window.location.href = '/'}
-              className="border border-input bg-background hover:bg-accent hover:text-accent-foreground px-6 py-3 rounded-md font-medium flex items-center justify-center gap-2 transition-colors"
+              className={`border border-input ${colors.bg.primary} hover:bg-accent hover:text-accent-foreground px-6 py-3 rounded-md font-medium flex items-center justify-center gap-2 transition-colors`}
             >
               Αρχική
             </button>

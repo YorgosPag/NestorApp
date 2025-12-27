@@ -11,6 +11,7 @@ import {
   StorageCard 
 } from '@/components/compositions';
 import type { CrmTask } from '@/types/crm';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Mock data για demonstration
 const mockTask: CrmTask = {
@@ -51,10 +52,11 @@ const mockUser = {
 };
 
 export function ComponentShowcase() {
+  const colors = useSemanticColors();
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
 
   return (
-    <div className="p-6 space-y-8 bg-background">
+    <div className={`p-6 space-y-8 ${colors.bg.primary}`}>
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold">Component Composition Showcase</h1>
         <p className="text-muted-foreground">
@@ -161,7 +163,7 @@ export function ComponentShowcase() {
         </h2>
         <div className="p-4 border rounded-lg bg-muted/20">
           <h3 className="font-medium mb-2">Χρήση στην εφαρμογή:</h3>
-          <pre className="text-sm bg-background p-3 rounded border overflow-x-auto">
+          <pre className={`text-sm ${colors.bg.primary} p-3 rounded border overflow-x-auto`}>
 {`import { TaskCard, UserCard } from '@/components/compositions';
 
 // TaskCard usage

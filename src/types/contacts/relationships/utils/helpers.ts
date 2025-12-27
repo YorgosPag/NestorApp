@@ -11,6 +11,7 @@
 // Import related types
 import type { ContactRelationship } from '../interfaces/relationship';
 import { RELATIONSHIP_TYPE_PRIORITY_SCORES } from '../core/relationship-types';
+import { COLOR_BRIDGE } from '../../../../design-system/color-bridge';
 
 /**
  * ⭐ Get relationship priority score for sorting
@@ -91,24 +92,25 @@ export function getRelationshipDisplayLabel(relationship: ContactRelationship): 
 export function getRelationshipBadgeColor(relationship: ContactRelationship): string {
   // Fallback implementation that now uses hardcoded values (for backward compatibility)
   const colorMap = {
-    'employee': 'bg-blue-100 text-blue-800',
-    'manager': 'bg-purple-100 text-purple-800',
-    'director': 'bg-purple-100 text-purple-800',
-    'executive': 'bg-purple-100 text-purple-800',
-    'ceo': 'bg-purple-100 text-purple-800',
-    'shareholder': 'bg-green-100 text-green-800',
-    'board_member': 'bg-orange-100 text-orange-800',
-    'chairman': 'bg-red-100 text-red-800',
-    'civil_servant': 'bg-indigo-100 text-indigo-800',
-    'department_head': 'bg-red-100 text-red-800',
-    'consultant': 'bg-teal-100 text-teal-800',
-    'contractor': 'bg-yellow-100 text-yellow-800',
-    'vendor': 'bg-slate-100 text-slate-800',
-    'client': 'bg-emerald-100 text-emerald-800',
-    'partner': 'bg-pink-100 text-pink-800'
+    // ✅ ENTERPRISE: Semantic color mapping
+    'employee': `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`,           // Blue -> Info semantic
+    'manager': `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`,            // Purple -> Info semantic
+    'director': `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`,           // Purple -> Info semantic
+    'executive': `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`,          // Purple -> Info semantic
+    'ceo': `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`,                // Purple -> Info semantic
+    'shareholder': `${COLOR_BRIDGE.bg.success} ${COLOR_BRIDGE.text.success}`,  // Green -> Success semantic
+    'board_member': `${COLOR_BRIDGE.bg.warning} ${COLOR_BRIDGE.text.warning}`, // Orange -> Warning semantic
+    'chairman': `${COLOR_BRIDGE.bg.error} ${COLOR_BRIDGE.text.error}`,         // Red -> Error semantic
+    'civil_servant': `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`,      // Indigo -> Info semantic
+    'department_head': `${COLOR_BRIDGE.bg.error} ${COLOR_BRIDGE.text.error}`,  // Red -> Error semantic
+    'consultant': `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`,         // Teal -> Info semantic
+    'contractor': `${COLOR_BRIDGE.bg.warning} ${COLOR_BRIDGE.text.warning}`,   // Yellow -> Warning semantic
+    'vendor': `${COLOR_BRIDGE.bg.neutralSubtle} ${COLOR_BRIDGE.text.secondary}`, // ✅ ALREADY MIGRATED
+    'client': `${COLOR_BRIDGE.bg.success} ${COLOR_BRIDGE.text.success}`,       // Emerald -> Success semantic
+    'partner': `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`             // Pink -> Info semantic
   };
 
-  return colorMap[relationship.relationshipType] || 'bg-slate-100 text-slate-800';
+  return colorMap[relationship.relationshipType] || `${COLOR_BRIDGE.bg.neutralSubtle} ${COLOR_BRIDGE.text.secondary}`;
 }
 
 /**
@@ -131,14 +133,15 @@ export function getRelationshipDurationDays(relationship: ContactRelationship): 
  */
 export function getRelationshipStatusInfo(relationship: ContactRelationship) {
   const statusMap = {
-    'active': { label: 'Ενεργή', color: 'bg-green-100 text-green-800' },
-    'inactive': { label: 'Αδρανής', color: 'bg-yellow-100 text-yellow-800' },
-    'pending': { label: 'Εκκρεμής', color: 'bg-blue-100 text-blue-800' },
-    'terminated': { label: 'Τερματισμένη', color: 'bg-red-100 text-red-800' },
-    'suspended': { label: 'Αναστολή', color: 'bg-orange-100 text-orange-800' }
+    // ✅ ENTERPRISE: Semantic color mapping for relationship statuses
+    'active': { label: 'Ενεργή', color: `${COLOR_BRIDGE.bg.success} ${COLOR_BRIDGE.text.success}` },
+    'inactive': { label: 'Αδρανής', color: `${COLOR_BRIDGE.bg.warning} ${COLOR_BRIDGE.text.warning}` },
+    'pending': { label: 'Εκκρεμής', color: `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}` },
+    'terminated': { label: 'Τερματισμένη', color: `${COLOR_BRIDGE.bg.error} ${COLOR_BRIDGE.text.error}` },
+    'suspended': { label: 'Αναστολή', color: `${COLOR_BRIDGE.bg.warning} ${COLOR_BRIDGE.text.warning}` }
   };
 
-  return statusMap[relationship.status] || { label: relationship.status, color: 'bg-slate-100 text-slate-800' };
+  return statusMap[relationship.status] || { label: relationship.status, color: `${COLOR_BRIDGE.bg.neutralSubtle} ${COLOR_BRIDGE.text.secondary}` };
 }
 
 /**

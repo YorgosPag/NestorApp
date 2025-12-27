@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 
 /**
@@ -21,6 +22,7 @@ import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoad
 export default function SpacesApartmentsRedirectPage() {
   const router = useRouter();
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   useEffect(() => {
     // Enterprise-grade client-side redirect
@@ -29,7 +31,7 @@ export default function SpacesApartmentsRedirectPage() {
 
   // Loading state while redirecting
   return (
-    <div className="flex h-screen items-center justify-center bg-background">
+    <div className={`flex h-screen items-center justify-center ${colors.bg.primary}`}>
       <div className="text-center space-y-4">
         <AnimatedSpinner size="large" className="mx-auto" />
         <p className="text-sm text-muted-foreground">

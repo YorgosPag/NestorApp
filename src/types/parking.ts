@@ -1,3 +1,5 @@
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+
 export interface ParkingSpot {
     id: string;
     code: string;
@@ -78,9 +80,10 @@ export interface ParkingSpot {
    *
    * @deprecated Use colors.getParkingStatusClass(status) from useSemanticColors hook
    */
+  // ✅ ENTERPRISE: Semantic color mapping for parking statuses
   export const PARKING_STATUS_COLORS: Record<ParkingSpotStatus, string> = {
-    sold: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-    owner: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-    available: 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300',
-    reserved: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
+    sold: `${COLOR_BRIDGE.bg.success} ${COLOR_BRIDGE.text.success}`,     // Green -> Success semantic
+    owner: `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`,          // Blue -> Info semantic
+    available: `${COLOR_BRIDGE.bg.neutralSubtle} ${COLOR_BRIDGE.text.secondary}`, // Slate -> Neutral semantic
+    reserved: `${COLOR_BRIDGE.bg.warning} ${COLOR_BRIDGE.text.warning}`   // Yellow -> Warning semantic
   };

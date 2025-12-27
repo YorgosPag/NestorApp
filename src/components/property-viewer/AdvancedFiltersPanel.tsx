@@ -18,7 +18,7 @@ export function AdvancedFiltersPanel({
   const colors = useSemanticColors();
 
   // Enterprise input styling - centralized pattern
-  const inputClasses = `flex-1 px-3 py-2 ${quick.input} dark:border-border dark:bg-background focus:outline-none focus:ring-2 focus:ring-blue-500`;
+  const inputClasses = `flex-1 px-3 py-2 ${quick.input} dark:border-border ${colors.bg.primary} focus:outline-none focus:ring-2 focus:ring-blue-500`;
 
   return (
     <>

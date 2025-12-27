@@ -1,6 +1,7 @@
 'use client';
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
 import { ChartTooltipLabel } from "./components/Label";
 import { ChartTooltipItem } from "./components/Item";
 import type { ChartTooltipContentProps } from "./types";
@@ -25,6 +26,7 @@ export const ChartTooltipContent = React.forwardRef<HTMLDivElement, ChartTooltip
     },
     ref
   ) => {
+    const colors = useSemanticColors();
     if (!active || !payload?.length) return null;
     const nestLabel = payload.length === 1 && indicator !== "dot";
 
@@ -32,7 +34,7 @@ export const ChartTooltipContent = React.forwardRef<HTMLDivElement, ChartTooltip
       <div
         ref={ref}
         className={cn(
-          "grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl",
+          `grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-border/50 ${colors.bg.primary} px-2.5 py-1.5 text-xs shadow-xl`,
           className
         )}
         {...rest}
