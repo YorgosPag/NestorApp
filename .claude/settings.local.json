@@ -5,7 +5,9 @@
       "Bash(git add:*)",
       "Bash(npx tsc:*)",
       "Bash(npm run dev:*)",
-      "Bash(del \"C:\\Nestor_Pagonis\\src\\subapps\\geo-canvas\\components\\AlertManagementPanel.tsx\")"
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\subapps\\geo-canvas\\components\\AlertManagementPanel.tsx\")",
+      "Bash(git push:*)",
+      "Bash(powershell.exe:*)"
     ],
     "deny": [],
     "ask": []

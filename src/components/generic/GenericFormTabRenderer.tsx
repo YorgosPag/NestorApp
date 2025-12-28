@@ -7,7 +7,7 @@ import { TabsContent } from '@/components/ui/tabs';
 import { getIconComponent } from './utils/IconMapping';
 import { GenericFormRenderer } from './GenericFormRenderer';
 import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
-import type { SectionConfig } from '@/config/company-gemi-config';
+import type { SectionConfig } from '@/config/company-gemi';
 
 // ============================================================================
 // INTERFACES
@@ -129,7 +129,7 @@ function createFormTabsFromConfig(
  *
  * @example
  * ```tsx
- * import { getSortedSections } from '@/config/company-gemi-config';
+ * import { getSortedSections } from '@/config/company-gemi';
  *
  * function MyTabbedForm() {
  *   const sections = getSortedSections();

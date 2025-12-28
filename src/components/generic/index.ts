@@ -73,11 +73,11 @@ export {
   getCompanySection,
   getCompanyField,
   getAllCompanyFields
-} from '@/config/company-gemi-config';
+} from '@/config/company-gemi';
 
 export type {
   FieldConfig,
   SectionConfig,
   FieldType,
   SelectOption
-} from '@/config/company-gemi-config';
+} from '@/config/company-gemi';

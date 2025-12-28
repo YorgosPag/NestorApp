@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { FieldConfig, SectionConfig } from '@/config/company-gemi-config';
+import type { FieldConfig, SectionConfig } from '@/config/company-gemi';
 import { getIconComponent } from './utils/IconMapping';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatDate } from '@/lib/intl-utils';
@@ -239,7 +239,7 @@ function FullSectionRenderer({
  *
  * @example
  * ```tsx
- * import { getCompanySection } from '@/config/company-gemi-config';
+ * import { getCompanySection } from '@/config/company-gemi';
  *
  * function ContactDetailsTab() {
  *   const section = getCompanySection('basicInfo');

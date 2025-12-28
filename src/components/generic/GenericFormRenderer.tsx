@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { UniversalClickableField } from '@/components/ui/form/UniversalClickableField';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import type { FieldConfig, SectionConfig } from '@/config/company-gemi-config';
+import type { FieldConfig, SectionConfig } from '@/config/company-gemi';
 import { getIconComponent } from './utils/IconMapping';
 
 // ============================================================================
@@ -238,7 +238,7 @@ function renderField(
  *
  * @example
  * ```tsx
- * import { getSortedSections } from '@/config/company-gemi-config';
+ * import { getSortedSections } from '@/config/company-gemi';
  *
  * function MyForm() {
  *   const sections = getSortedSections();
