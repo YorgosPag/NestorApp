@@ -26,7 +26,11 @@ import type { CSSProperties } from 'react';
 import {
   mapInteractionTokens,
   mapControlPointTokens,
-  layoutUtilities
+  layoutUtilities,
+  colors,
+  spacing,
+  shadows,
+  zIndex
 } from '../../../styles/design-tokens';
 
 // ============================================================================
@@ -115,7 +119,7 @@ const accuracyStyles: AccuracyStylesType = {
     border: `2px solid ${color}`,
     backgroundColor: `${color}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`,
     transform: 'translate(-50%, -50%)',
-    zIndex: 500,
+    zIndex: zIndex.sticky,
     pointerEvents: 'none' as const
   }),
 
@@ -132,7 +136,7 @@ const accuracyStyles: AccuracyStylesType = {
       backgroundColor: `${color}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`,
       border: `1px solid ${color}`,
       transform: 'translate(-50%, -50%)',
-      zIndex: 400
+      zIndex: zIndex.docked
     };
   },
 
@@ -146,7 +150,7 @@ const accuracyStyles: AccuracyStylesType = {
     justifyContent: 'center',
     width: '100%',
     height: '100%',
-    fontSize: '0.75rem',
+    fontSize: spacing.component.gap.sm,
     fontWeight: 'bold' as const,
     textAlign: 'center' as const,
     pointerEvents: 'none' as const
@@ -170,14 +174,14 @@ const markerStyles: MarkerStylesType = {
     width: `${radius * 2}px`,
     height: `${radius * 2}px`,
     borderRadius: '50%',
-    backgroundColor: '#ef4444', // red-500
-    border: '2px solid #fca5a5', // red-300
+    backgroundColor: colors.red[500],
+    border: `2px solid ${colors.red[300]}`,
     opacity,
     transform: 'translate(-50%, -50%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1000
+    zIndex: zIndex.dropdown
   }),
 
   /**
@@ -185,8 +189,8 @@ const markerStyles: MarkerStylesType = {
    * Replaces: canvasUtilities.geoInteractive.pinCenterDot()
    */
   centerDot: (): CSSProperties => ({
-    width: '4px',
-    height: '4px',
+    width: spacing.xs,
+    height: spacing.xs,
     borderRadius: '50%',
     backgroundColor: 'hsl(var(--background))',
     border: '1px solid hsl(var(--foreground))'
@@ -197,8 +201,8 @@ const markerStyles: MarkerStylesType = {
    * Replaces: canvasUtilities.geoInteractive.dynamicPinMarker()
    */
   dynamicPin: (strokeColor: string, fillColor: string): CSSProperties => ({
-    width: '16px',
-    height: '16px',
+    width: spacing.md,
+    height: spacing.md,
     borderRadius: '50%',
     backgroundColor: fillColor,
     border: `2px solid ${strokeColor}`,
@@ -206,7 +210,7 @@ const markerStyles: MarkerStylesType = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1000,
+    zIndex: zIndex.dropdown,
     cursor: 'pointer' as const
   }),
 
@@ -215,8 +219,8 @@ const markerStyles: MarkerStylesType = {
    * Replaces: canvasUtilities.geoInteractive.dynamicPinCenterDot()
    */
   dynamicCenterDot: (): CSSProperties => ({
-    width: '3px',
-    height: '3px',
+    width: spacing.xs,
+    height: spacing.xs,
     borderRadius: '50%',
     backgroundColor: 'hsl(var(--background))',
     border: '1px solid hsl(var(--foreground))'
@@ -227,13 +231,13 @@ const markerStyles: MarkerStylesType = {
    * Replaces: canvasUtilities.geoInteractive.drawingPoint()
    */
   drawingPoint: (index: number): CSSProperties => ({
-    width: '12px',
-    height: '12px',
+    width: spacing.component.gap.md,
+    height: spacing.component.gap.md,
     borderRadius: '50%',
-    backgroundColor: '#3b82f6', // blue-500
-    border: '2px solid #93c5fd', // blue-300
+    backgroundColor: colors.blue[500],
+    border: `2px solid ${colors.blue[300]}`,
     transform: 'translate(-50%, -50%)',
-    zIndex: 800 + index,
+    zIndex: zIndex.banner + index,
     cursor: 'pointer' as const
   })
 } as const;
@@ -252,15 +256,15 @@ const labelStyles: LabelStylesType = {
    * Replaces: canvasUtilities.geoInteractive.radiusLabel()
    */
   radiusLabel: (): CSSProperties => ({
-    fontSize: '0.75rem', // text-xs
+    fontSize: spacing.component.gap.sm,
     fontWeight: 'bold' as const,
-    color: '#ffffff',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    padding: '2px 6px',
-    borderRadius: '4px',
+    color: colors.text.inverse,
+    backgroundColor: colors.background.overlay,
+    padding: `${spacing.xs} ${spacing.component.gap.sm}`,
+    borderRadius: spacing.xs,
     whiteSpace: 'nowrap' as const,
     transform: 'translate(-50%, -50%)',
-    zIndex: 1100,
+    zIndex: zIndex.sticky,
     pointerEvents: 'none' as const
   }),
 
@@ -269,15 +273,15 @@ const labelStyles: LabelStylesType = {
    * Replaces: canvasUtilities.geoInteractive.previewRadiusLabel()
    */
   previewLabel: (opacity: number): CSSProperties => ({
-    fontSize: '0.75rem', // text-xs
+    fontSize: spacing.component.gap.sm,
     fontWeight: 'bold' as const,
-    color: '#ffffff',
+    color: colors.text.inverse,
     backgroundColor: `rgba(0, 0, 0, ${opacity * 0.7})`,
-    padding: '2px 6px',
-    borderRadius: '4px',
+    padding: `${spacing.xs} ${spacing.component.gap.sm}`,
+    borderRadius: spacing.xs,
     whiteSpace: 'nowrap' as const,
     transform: 'translate(-50%, -50%)',
-    zIndex: 1100,
+    zIndex: zIndex.sticky,
     opacity,
     pointerEvents: 'none' as const
   }),
@@ -288,7 +292,7 @@ const labelStyles: LabelStylesType = {
    */
   legendItem: (color: string): CSSProperties => ({
     borderColor: color,
-    borderWidth: '2px',
+    borderWidth: spacing.xs,
     borderStyle: 'solid',
     backgroundColor: `${color}40` // Add transparency
   })
@@ -386,10 +390,10 @@ export const getControlPointStateStyle = (
  */
 export const getAccuracyLevelColor = (level: 'excellent' | 'good' | 'poor'): string => {
   switch (level) {
-    case 'excellent': return '#22c55e'; // green-500
-    case 'good': return '#eab308'; // yellow-500
-    case 'poor': return '#ef4444'; // red-500
-    default: return '#6b7280'; // gray-500
+    case 'excellent': return colors.green[500];
+    case 'good': return colors.orange[500]; // Using orange instead of yellow for better visibility
+    case 'poor': return colors.red[500];
+    default: return colors.gray[500];
   }
 };
 
@@ -417,14 +421,14 @@ export const draggablePanelContainer = (
   left: `${position.x}px`,
   top: `${position.y}px`,
   width: width ? `${width}px` : 'auto',
-  minWidth: '200px',
-  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-  border: '1px solid #e5e5e5',
-  borderRadius: '8px',
+  minWidth: '200px', // Keep as specific requirement for panels
+  backgroundColor: colors.background.primary,
+  border: `1px solid ${colors.border.primary}`,
+  borderRadius: spacing.sm,
   boxShadow: isDragging
-    ? '0 8px 25px -5px rgba(0, 0, 0, 0.3)'
-    : '0 4px 15px -3px rgba(0, 0, 0, 0.2)',
-  zIndex: 1000,
+    ? shadows.xl
+    : shadows.lg,
+  zIndex: zIndex.dropdown,
   cursor: isDragging ? 'grabbing' : 'auto',
   userSelect: 'none' as const,
   backdropFilter: 'blur(4px)',
@@ -438,20 +442,117 @@ export const draggablePanelContainer = (
  * Replaces: canvasUtilities.geoInteractive.draggablePanelHandle()
  */
 export const draggablePanelHandle = (isDragging: boolean): CSSProperties => ({
-  padding: '8px 12px',
-  backgroundColor: isDragging ? '#f3f4f6' : '#f9fafb',
-  borderBottom: '1px solid #e5e7eb',
-  borderTopLeftRadius: '8px',
-  borderTopRightRadius: '8px',
+  padding: `${spacing.sm} ${spacing.component.gap.md}`,
+  backgroundColor: isDragging ? colors.gray[100] : colors.gray[50],
+  borderBottom: `1px solid ${colors.border.secondary}`,
+  borderTopLeftRadius: spacing.sm,
+  borderTopRightRadius: spacing.sm,
   cursor: isDragging ? 'grabbing' : 'grab',
   userSelect: 'none' as const,
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  fontSize: '14px',
+  fontSize: spacing.component.gap.sm,
   fontWeight: 500,
-  color: '#374151',
+  color: colors.text.primary,
   transition: isDragging ? 'none' : 'background-color 0.2s ease-in-out'
+});
+
+/**
+ * 🎯 FLOOR PLAN OVERLAY UTILITY
+ * Styling for floor plan overlay containers
+ * Replaces: canvasUtilities.geoInteractive.floorPlanOverlay()
+ */
+export const floorPlanOverlay = (
+  width: string = '100%',
+  height: string = '100%',
+  opacity: number = 0.8
+): CSSProperties => ({
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  width,
+  height,
+  opacity,
+  pointerEvents: 'none' as const,
+  zIndex: zIndex.base,
+  mixBlendMode: 'multiply' as const
+});
+
+/**
+ * 🎯 FIXED SIDEBAR PANEL UTILITY
+ * Styling for fixed sidebar panels
+ * Replaces: canvasUtilities.geoInteractive.fixedSidebarPanel()
+ */
+export const fixedSidebarPanel = (side: 'left' | 'right', width: string): CSSProperties => ({
+  position: 'fixed',
+  top: 0,
+  bottom: 0,
+  [side]: 0,
+  width,
+  backgroundColor: colors.background.primary,
+  borderLeft: side === 'right' ? `1px solid ${colors.border.secondary}` : 'none',
+  borderRight: side === 'left' ? `1px solid ${colors.border.secondary}` : 'none',
+  zIndex: zIndex.dropdown,
+  overflowY: 'auto' as const,
+  backdropFilter: 'blur(8px)'
+});
+
+/**
+ * 🎯 DRAGGABLE PANEL TAB NAVIGATION UTILITY
+ * Styling for tab navigation in draggable panels
+ * Replaces: canvasUtilities.geoInteractive.draggablePanelTabNavigation()
+ */
+export const draggablePanelTabNavigation = (): CSSProperties => ({
+  display: 'flex',
+  borderBottom: `1px solid ${colors.border.secondary}`,
+  backgroundColor: colors.gray[50]
+});
+
+/**
+ * 🎯 DRAGGABLE PANEL TAB BUTTON UTILITY
+ * Styling for tab buttons in draggable panels
+ * Replaces: canvasUtilities.geoInteractive.draggablePanelTabButton()
+ */
+export const draggablePanelTabButton = (isActive: boolean): CSSProperties => ({
+  flex: 1,
+  padding: `${spacing.sm} ${spacing.md}`,
+  fontSize: spacing.component.gap.sm,
+  fontWeight: isActive ? 600 : 400,
+  color: isActive ? colors.blue[500] : colors.gray[500],
+  backgroundColor: isActive ? colors.background.primary : 'transparent',
+  border: 'none',
+  borderBottom: isActive ? `2px solid ${colors.blue[500]}` : '2px solid transparent',
+  cursor: 'pointer',
+  transition: 'all 0.2s ease-in-out',
+  ':hover': {
+    backgroundColor: isActive ? colors.background.primary : colors.gray[100]
+  }
+});
+
+/**
+ * 🎯 DRAGGABLE PANEL PROGRESS BAR UTILITY
+ * Styling for progress bars in draggable panels
+ * Replaces: canvasUtilities.geoInteractive.draggablePanelProgressBar()
+ */
+export const draggablePanelProgressBar = (percentage: number): CSSProperties => ({
+  width: '100%',
+  height: spacing.xs,
+  backgroundColor: colors.border.secondary,
+  borderRadius: spacing.xs,
+  overflow: 'hidden',
+  position: 'relative',
+  '::after': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: '100%',
+    width: `${Math.min(100, Math.max(0, percentage))}%`,
+    backgroundColor: colors.blue[500],
+    borderRadius: spacing.xs,
+    transition: 'width 0.3s ease-in-out'
+  }
 });
 
 // ============================================================================

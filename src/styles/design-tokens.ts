@@ -1171,6 +1171,77 @@ export const canvasUtilities = {
       backgroundColor: colors.background.secondary,
       border: 'none',
       outline: 'none'
+    }),
+
+    /**
+     * 🎯 DRAGGABLE PANEL CONTAINER UTILITY
+     * ENTERPRISE: Centralized draggable panel styling για geo interface
+     * Replaces: inline styles in geo components
+     */
+    draggablePanelContainer: (
+      position: { x: number; y: number },
+      isDragging: boolean,
+      width?: number
+    ): React.CSSProperties => ({
+      position: 'absolute',
+      left: `${position.x}px`,
+      top: `${position.y}px`,
+      width: width ? `${width}px` : 'auto',
+      minWidth: '200px',
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      border: '1px solid #e5e5e5',
+      borderRadius: '8px',
+      boxShadow: isDragging
+        ? '0 8px 25px -5px rgba(0, 0, 0, 0.3)'
+        : '0 4px 15px -3px rgba(0, 0, 0, 0.2)',
+      zIndex: 1000,
+      cursor: isDragging ? 'grabbing' : 'auto',
+      userSelect: 'none' as const,
+      backdropFilter: 'blur(4px)',
+      transform: isDragging ? 'scale(1.02)' : 'scale(1)',
+      transition: isDragging ? 'none' : 'all 0.2s ease-in-out'
+    }),
+
+    /**
+     * 🎯 PDF FALLBACK CONTAINER UTILITY
+     * ENTERPRISE: PDF fallback container styling
+     */
+    pdfFallbackContainer: (width: number, height: number): React.CSSProperties => ({
+      width: `${width}px`,
+      height: `${height}px`,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background.secondary,
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: '8px',
+      color: colors.text.muted,
+      fontSize: '14px'
+    }),
+
+    /**
+     * 🎯 PDF DISPLAY WRAPPER UTILITY
+     * ENTERPRISE: PDF display wrapper styling
+     */
+    pdfDisplayWrapper: (width: number, height: number): React.CSSProperties => ({
+      width: `${width}px`,
+      height: `${height}px`,
+      position: 'relative',
+      overflow: 'hidden',
+      backgroundColor: colors.background.primary
+    }),
+
+    /**
+     * 🎯 DEBUG CROSSHAIR POSITION UTILITY
+     * ENTERPRISE: Debug crosshair positioning
+     */
+    debugCrosshairPosition: (x: number, y: number): React.CSSProperties => ({
+      position: 'absolute',
+      left: `${x}px`,
+      top: `${y}px`,
+      transform: 'translate(-50%, -50%)',
+      pointerEvents: 'none' as const,
+      zIndex: 9999
     })
 
     /**

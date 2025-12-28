@@ -30,7 +30,13 @@ import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { canvasUtilities } from '@/styles/design-tokens';
 import { layoutUtilities } from '@/styles/design-tokens';
-import { draggablePanelContainer, draggablePanelHandle } from '../../components/InteractiveMap.styles';
+import {
+  draggablePanelContainer,
+  draggablePanelHandle,
+  draggablePanelTabNavigation,
+  draggablePanelTabButton,
+  draggablePanelProgressBar
+} from '../../components/InteractiveMap.styles';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { CheckCircle, AlertTriangle, Info, MapPin } from 'lucide-react';
@@ -415,16 +421,16 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
       </div>
 
       {/* TAB NAVIGATION */}
-      <div style={canvasUtilities.geoInteractive.draggablePanelTabNavigation()}>
+      <div style={draggablePanelTabNavigation()}>
         <button
           onClick={() => setActiveTab('visual')}
-          style={canvasUtilities.geoInteractive.draggablePanelTabButton(activeTab === 'visual')}
+          style={draggablePanelTabButton(activeTab === 'visual')}
         >
           🎯 {t('floorPlanControlPoints.tabs.visualPicking')}
         </button>
         <button
           onClick={() => setActiveTab('manual')}
-          style={canvasUtilities.geoInteractive.draggablePanelTabButton(activeTab === 'manual')}
+          style={draggablePanelTabButton(activeTab === 'manual')}
         >
           📝 {t('floorPlanControlPoints.tabs.manualInput')}
         </button>
@@ -677,7 +683,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
               className={`h-2 rounded-full transition-all ${
                 hasMinPoints ? colors.bg.success : colors.bg.warning
               }`}
-              style={canvasUtilities.geoInteractive.draggablePanelProgressBar((points.length / 3) * 100)}
+              style={draggablePanelProgressBar((points.length / 3) * 100)}
             />
           </div>
         </div>
