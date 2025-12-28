@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(move:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run dev:*)",
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\subapps\\geo-canvas\\components\\AlertManagementPanel.tsx\")"
     ],
     "deny": [],
     "ask": []

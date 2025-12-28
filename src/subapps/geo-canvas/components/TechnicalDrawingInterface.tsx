@@ -48,7 +48,6 @@ export function TechnicalDrawingInterface({
   const [selectedTool, setSelectedTool] = useState<'dxf-viewer' | 'precision' | 'settings' | 'automated-alerts' | null>(null);
   // ✅ ENTERPRISE: Combine local and centralized drawing state
   const [isDrawing, setIsDrawing] = useState(false);
-  const actualIsDrawing = isDrawing || systemIsDrawing;
 
   // 🚨 Phase 2.5.3: Automated Alerts Integration
   const [showAutomatedAlerts, setShowAutomatedAlerts] = useState(false);
@@ -82,6 +81,9 @@ export function TechnicalDrawingInterface({
     isDrawing: systemIsDrawing,
     currentRole
   } = useCentralizedPolygonSystem();
+
+  // ✅ ENTERPRISE: Combine local and centralized drawing state
+  const actualIsDrawing = isDrawing || systemIsDrawing;
 
   // Advanced automated alert creation
   const handleAutomatedAlertCreation = useCallback((polygon: any) => {
