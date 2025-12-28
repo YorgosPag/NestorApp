@@ -62,6 +62,7 @@ import {
   useTextDraftSettings,
   useGripDraftSettings
 } from '../../settings-provider';
+import { UI_COLORS } from '../../config/color-config';
 import type { LineSettings } from '../../settings-core/types';
 import type { TextSettings } from '../../contexts/TextSettingsContext';
 import type { GripSettings } from '../../types/gripSettings';
@@ -73,18 +74,18 @@ const defaultLinePreviewSettings: LineSettings = {
   enabled: true,  // ✅ Διατηρούμε το enabled στις ειδικές ρυθμίσεις
   lineType: 'dashed',
   lineWidth: 2,
-  color: '#ffffff',
+  color: UI_COLORS.WHITE,
   opacity: 1.0,
   dashScale: 1.0,
   dashOffset: 0,
   lineCap: 'butt',
   lineJoin: 'miter',
   breakAtCenter: false,
-  hoverColor: '#ffff00',
+  hoverColor: UI_COLORS.SNAP_DEFAULT,
   hoverType: 'solid',
   hoverWidth: 3,
   hoverOpacity: 0.8,
-  finalColor: '#00ff00',
+  finalColor: UI_COLORS.MEASUREMENT_TEXT,
   finalType: 'solid',
   finalWidth: 2,
   finalOpacity: 1.0,
@@ -96,18 +97,18 @@ const defaultLineCompletionSettings: LineSettings = {
   enabled: true,
   lineType: 'solid',               // ✅ ISO 128: Continuous line as default
   lineWidth: 0.25,                 // ✅ ISO 128: Standard 0.25mm line weight
-  color: '#FFFFFF',                // ✅ AutoCAD ACI 7: White for main lines
+  color: UI_COLORS.WHITE,                // ✅ AutoCAD ACI 7: White for main lines
   opacity: 1.0,                    // ✅ Full opacity standard
   dashScale: 1.0,                  // ✅ Standard dash scale
   dashOffset: 0,                   // ✅ No offset standard
   lineCap: 'round',                // ✅ Round caps standard
   lineJoin: 'round',               // ✅ Round joins standard
   breakAtCenter: false,            // ✅ No break at center default
-  hoverColor: '#FFFF00',           // ✅ AutoCAD ACI 2: Yellow for hover
+  hoverColor: UI_COLORS.SNAP_DEFAULT,           // ✅ AutoCAD ACI 2: Yellow for hover
   hoverType: 'solid',              // ✅ Solid hover type
   hoverWidth: 0.35,                // ✅ ISO 128: Next standard width
   hoverOpacity: 0.8,               // ✅ Reduced opacity for hover
-  finalColor: '#00FF00',           // ✅ AutoCAD ACI 3: Green for final state
+  finalColor: UI_COLORS.MEASUREMENT_TEXT,           // ✅ AutoCAD ACI 3: Green for final state
   finalType: 'solid',              // ✅ Solid final type
   finalWidth: 0.35,                // ✅ ISO 128: Slightly thicker for final
   finalOpacity: 1.0,               // ✅ Full opacity for final
@@ -119,7 +120,7 @@ const defaultTextPreviewSettings: TextSettings = {
   enabled: true,
   fontFamily: 'Arial, sans-serif',    // ✅ ISO 3098: Sans-serif font recommended
   fontSize: 2.5,                      // ✅ ISO 3098: Standard 2.5mm text height
-  color: '#FFFFFF',                   // ✅ AutoCAD ACI 7: White for text
+  color: UI_COLORS.WHITE,                   // ✅ AutoCAD ACI 7: White for text
   isBold: false,                      // ✅ ISO 3098: Normal weight default
   isItalic: false,                    // ✅ ISO 3098: Upright text default
   isUnderline: false,                 // ✅ ISO 3098: No underline default
@@ -233,10 +234,10 @@ const defaultGripPreviewSettings: MockGripSettings = {
   apertureSize: 10,         // ✅ AutoCAD APERTURE default: 10 pixels
   opacity: 1.0,             // ✅ Full opacity by default
   colors: {
-    cold: '#0000FF',        // ✅ AutoCAD standard: Blue (ACI 5) - unselected grips
-    warm: '#FF69B4',        // ✅ AutoCAD standard: Hot Pink - hover grips
-    hot: '#FF0000',         // ✅ AutoCAD standard: Red (ACI 1) - selected grips
-    contour: '#000000'      // ✅ AutoCAD standard: Black contour
+    cold: UI_COLORS.SNAP_CENTER,        // ✅ AutoCAD standard: Blue (ACI 5) - unselected grips
+    warm: UI_COLORS.SNAP_INTERSECTION,        // ✅ AutoCAD standard: Hot Pink - hover grips
+    hot: UI_COLORS.SELECTED_RED,         // ✅ AutoCAD standard: Red (ACI 1) - selected grips
+    contour: UI_COLORS.BLACK      // ✅ AutoCAD standard: Black contour
   },
   showAperture: true,       // ✅ AutoCAD APBOX default: enabled
   multiGripEdit: true,      // ✅ ΑΠΟΚΑΤΑΣΤΑΣΗ: Ενεργοποίηση multi grips
@@ -327,7 +328,7 @@ export function useUnifiedLineHover() {
   const globalLineSettings = useLineSettingsFromProvider();
 
   // Default hover settings (orange)
-  const defaultHoverSettings = { ...defaultLinePreviewSettings, color: '#ffaa00' };
+  const defaultHoverSettings = { ...defaultLinePreviewSettings, color: UI_COLORS.DRAWING_TEMP };
 
   // Backwards compatibility wrapper
   return {
@@ -362,7 +363,7 @@ export function useUnifiedLineSelection() {
   const globalLineSettings = useLineSettingsFromProvider();
 
   // Default selection settings (red)
-  const defaultSelectionSettings = { ...defaultLinePreviewSettings, color: '#ff4444' };
+  const defaultSelectionSettings = { ...defaultLinePreviewSettings, color: UI_COLORS.SELECTION_RED };
 
   // Backwards compatibility wrapper
   return {

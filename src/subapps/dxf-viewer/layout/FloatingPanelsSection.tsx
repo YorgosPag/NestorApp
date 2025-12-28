@@ -12,6 +12,7 @@
 'use client';
 
 import React from 'react';
+import { UI_COLORS } from '../config/color-config';
 import type { SceneModel } from '../types/scene';
 import type { OverlayEditorMode, OverlayKind, Status, Overlay } from '../overlays/types';
 import type { ToolType } from '../ui/toolbar/types';
@@ -162,7 +163,7 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
           visible: true,
           locked: false,
           layer: 'base',
-          style: { strokeColor: '#0066cc', fillColor: '#0066cc', strokeWidth: 2 },
+          style: { strokeColor: UI_COLORS.BUTTON_PRIMARY, fillColor: UI_COLORS.BUTTON_PRIMARY, strokeWidth: 2 },
           vertices: [{ x: 100, y: 100 }, { x: 200, y: 100 }, { x: 200, y: 200 }, { x: 100, y: 200 }]
         }}
         onUpdate={(overlayId, updates) =>

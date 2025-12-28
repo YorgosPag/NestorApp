@@ -6,6 +6,7 @@
 
 import type { Point2D, Viewport, ViewTransform } from '../rendering/types/Types';
 import type { UIElementSettings } from '../rendering/ui/core/UIRenderer';
+import { UI_COLORS } from '../config/color-config';
 
 /**
  * 🎯 RULER DEBUG MODE
@@ -155,13 +156,13 @@ export interface RulerDebugSettings extends UIElementSettings {
  */
 export const DEFAULT_TICK_MARKER_STYLE: TickMarkerStyle = {
   enabled: true,
-  majorTickColor: '#ff0000',   // Red dots for major ticks
-  minorTickColor: '#00ff00',   // Green dots for minor ticks
+  majorTickColor: UI_COLORS.RULER_MAJOR_TICK,   // Red dots for major ticks
+  minorTickColor: UI_COLORS.RULER_MINOR_TICK,   // Green dots for minor ticks
   majorTickSize: 4,            // 4px radius
   minorTickSize: 2,            // 2px radius
   opacity: 0.8,
   showLabels: true,
-  labelColor: '#ffffff',
+  labelColor: UI_COLORS.WHITE,
   labelFontSize: 10
 };
 
@@ -171,14 +172,14 @@ export const DEFAULT_TICK_MARKER_STYLE: TickMarkerStyle = {
 export const DEFAULT_CALIBRATION_GRID_SETTINGS: CalibrationGridSettings = {
   enabled: true,
   gridSpacing: 100,            // 100mm grid
-  lineColor: '#00ffff',        // Cyan for high visibility
+  lineColor: UI_COLORS.RULER_CALIBRATION,        // Cyan for high visibility
   lineWidth: 1,
   opacity: 0.5,                // Semi-transparent
   showLabels: true,
-  labelColor: '#00ffff',
+  labelColor: UI_COLORS.RULER_CALIBRATION,
   labelFontSize: 12,
   showOriginMarker: true,
-  originMarkerColor: '#ff00ff', // Magenta
+  originMarkerColor: UI_COLORS.RULER_ORIGIN_MARKER, // Magenta
   originMarkerSize: 10
 };
 

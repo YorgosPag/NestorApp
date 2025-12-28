@@ -21,6 +21,7 @@ import {
   RulerSettingsUpdate,
   GridSettingsUpdate
 } from './config';
+import { UI_COLORS } from '../../config/color-config';
 
 // ✅ ENTERPRISE: Window interface extension for debug globals
 declare global {
@@ -111,10 +112,10 @@ function useRulersGridSystemIntegration({
       result.horizontal.showMajorTicks = true;
     }
     if (result.horizontal.majorTickColor === undefined) {
-      result.horizontal.majorTickColor = result.horizontal.tickColor || '#ffffff';
+      result.horizontal.majorTickColor = result.horizontal.tickColor || UI_COLORS.WHITE;
     }
     if (result.horizontal.minorTickColor === undefined) {
-      result.horizontal.minorTickColor = '#ffffff';
+      result.horizontal.minorTickColor = UI_COLORS.WHITE;
     }
     if (result.vertical.showLabels === undefined) {
       result.vertical.showLabels = true;
@@ -132,16 +133,16 @@ function useRulersGridSystemIntegration({
       result.vertical.showMajorTicks = true;
     }
     if (result.vertical.majorTickColor === undefined) {
-      result.vertical.majorTickColor = result.vertical.tickColor || '#ffffff';
+      result.vertical.majorTickColor = result.vertical.tickColor || UI_COLORS.WHITE;
     }
     if (result.vertical.minorTickColor === undefined) {
-      result.vertical.minorTickColor = '#ffffff';
+      result.vertical.minorTickColor = UI_COLORS.WHITE;
     }
     if (result.horizontal.unitsColor === undefined) {
-      result.horizontal.unitsColor = result.horizontal.textColor || '#ffffff';
+      result.horizontal.unitsColor = result.horizontal.textColor || UI_COLORS.WHITE;
     }
     if (result.vertical.unitsColor === undefined) {
-      result.vertical.unitsColor = result.vertical.textColor || '#ffffff';
+      result.vertical.unitsColor = result.vertical.textColor || UI_COLORS.WHITE;
     }
 
     return result;

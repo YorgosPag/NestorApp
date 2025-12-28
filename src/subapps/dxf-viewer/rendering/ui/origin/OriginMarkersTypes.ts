@@ -4,6 +4,7 @@
  */
 
 import type { UIElementSettings } from '../core/UIRenderer';
+import { UI_COLORS } from '../../../config/color-config';
 
 /**
  * 🎯 ORIGIN MARKERS SETTINGS
@@ -36,7 +37,7 @@ export const DEFAULT_ORIGIN_MARKERS_SETTINGS: OriginMarkersSettings = {
   zIndex: 1000,               // Top-most layer για debugging
 
   // Origin crosshair
-  color: '#ff0000',           // Κόκκινο για καλύτερη ορατότητα
+  color: UI_COLORS.DEBUG_ORIGIN,    // Κόκκινο για καλύτερη ορατότητα
   size: 15,                   // Μεγαλύτερο για debugging
   lineWidth: 2,               // Έντονες γραμμές
   showCenter: true,           // Center dot για ακρίβεια
@@ -45,7 +46,7 @@ export const DEFAULT_ORIGIN_MARKERS_SETTINGS: OriginMarkersSettings = {
 
   // Axis lines
   showAxisLines: true,        // Δείχνει πλήρεις άξονες X,Y
-  axisColor: '#ff00ff',       // MAGENTA για μέγιστη ορατότητα
+  axisColor: UI_COLORS.RULER_ORIGIN_MARKER, // MAGENTA για μέγιστη ορατότητα
   axisLineWidth: 4,           // ΠΑΧΥΤΕΡΕΣ γραμμές
   axisOpacity: 1.0            // 100% OPACITY - μη διαφανείς
 };

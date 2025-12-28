@@ -8,7 +8,9 @@
       "Bash(del \"C:\\Nestor_Pagonis\\src\\subapps\\geo-canvas\\components\\AlertManagementPanel.tsx\")",
       "Bash(git push:*)",
       "Bash(powershell.exe:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(dir:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

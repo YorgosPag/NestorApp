@@ -12,6 +12,7 @@
 
 import type { GripStylePort } from '../ports';
 import { gripStyleStore } from '../../../stores/GripStyleStore';
+import { UI_COLORS } from '../../../config/color-config';
 
 /**
  * Grip Style Adapter
@@ -28,9 +29,9 @@ export const gripStyleAdapter: GripStylePort = {
     const state = gripStyleStore.get();
     return {
       size: state.gripSize,
-      color: state.colors?.cold ?? '#0000FF',
-      hoverColor: state.colors?.warm ?? '#FF69B4',
-      selectedColor: state.colors?.hot ?? '#FF0000'
+      color: state.colors?.cold ?? UI_COLORS.OVERLAY_GRIP_COLD,
+      hoverColor: state.colors?.warm ?? UI_COLORS.TEST_GRIP_HOVER,
+      selectedColor: state.colors?.hot ?? UI_COLORS.OVERLAY_GRIP_HOT
     };
   },
 
@@ -53,10 +54,10 @@ export const gripStyleAdapter: GripStylePort = {
     if (partial.color !== undefined || partial.hoverColor !== undefined || partial.selectedColor !== undefined) {
       const currentState = gripStyleStore.get();
       updates.colors = {
-        cold: partial.color ?? currentState.colors?.cold ?? '#0000FF',
-        warm: partial.hoverColor ?? currentState.colors?.warm ?? '#FF69B4',
-        hot: partial.selectedColor ?? currentState.colors?.hot ?? '#FF0000',
-        contour: currentState.colors?.contour ?? '#000000'
+        cold: partial.color ?? currentState.colors?.cold ?? UI_COLORS.OVERLAY_GRIP_COLD,
+        warm: partial.hoverColor ?? currentState.colors?.warm ?? UI_COLORS.TEST_GRIP_HOVER,
+        hot: partial.selectedColor ?? currentState.colors?.hot ?? UI_COLORS.OVERLAY_GRIP_HOT,
+        contour: currentState.colors?.contour ?? UI_COLORS.BLACK
       };
     }
 
@@ -68,9 +69,9 @@ export const gripStyleAdapter: GripStylePort = {
     return gripStyleStore.subscribe((state) => {
       handler({
         size: state.gripSize,
-        color: state.colors?.cold ?? '#0000FF',
-        hoverColor: state.colors?.warm ?? '#FF69B4',
-        selectedColor: state.colors?.hot ?? '#FF0000'
+        color: state.colors?.cold ?? UI_COLORS.OVERLAY_GRIP_COLD,
+        hoverColor: state.colors?.warm ?? UI_COLORS.TEST_GRIP_HOVER,
+        selectedColor: state.colors?.hot ?? UI_COLORS.OVERLAY_GRIP_HOT
       });
     });
   }

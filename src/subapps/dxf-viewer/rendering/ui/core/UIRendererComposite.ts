@@ -13,6 +13,7 @@ import type {
   UIRendererFactory
 } from './UIRenderer';
 import { createUIRenderContext, DEFAULT_UI_TRANSFORM } from './UIRenderContext';
+import { UI_COLORS, withOpacity } from '../../../config/color-config';
 
 /**
  * 🔺 UI RENDERER REGISTRY ENTRY
@@ -207,9 +208,9 @@ export class UIRendererComposite {
    */
   private renderDebugInfo(viewport: Viewport, totalTime: number): void {
     this.ctx.save();
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    this.ctx.fillStyle = withOpacity(UI_COLORS.BLACK, 0.8);
     this.ctx.fillRect(10, 10, 200, 60);
-    this.ctx.fillStyle = 'white';
+    this.ctx.fillStyle = UI_COLORS.WHITE;
     this.ctx.font = '12px monospace';
     this.ctx.fillText(`UI Render: ${totalTime.toFixed(2)}ms`, 15, 25);
     this.ctx.fillText(`Renderers: ${this.renderers.size}`, 15, 40);

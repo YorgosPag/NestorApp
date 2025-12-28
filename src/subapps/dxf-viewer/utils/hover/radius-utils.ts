@@ -5,6 +5,7 @@
 
 import { HOVER_CONFIG } from './config';
 import type { Point2D } from '../../rendering/types/Types';
+import { UI_COLORS } from '../../config/color-config';
 
 export function renderRadiusWithMeasurement(
   ctx: CanvasRenderingContext2D,
@@ -29,7 +30,7 @@ export function renderRadiusWithMeasurement(
   const textY = midY - (HOVER_CONFIG.offsets?.gripAvoidance || 15);
 
   ctx.save();
-  ctx.fillStyle = HOVER_CONFIG.colors?.distance || '#00ff00';
+  ctx.fillStyle = HOVER_CONFIG.colors?.distance || UI_COLORS.MEASUREMENT_TEXT;
   ctx.font = HOVER_CONFIG.fonts?.distance || '12px Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';

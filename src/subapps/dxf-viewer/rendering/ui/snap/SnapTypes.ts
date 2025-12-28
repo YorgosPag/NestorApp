@@ -5,6 +5,7 @@
 
 import type { Point2D } from '../../types/Types';
 import type { UIElementSettings } from '../core/UIRenderer';
+import { UI_COLORS } from '../../../config/color-config';
 
 /**
  * 🔺 SNAP TYPES
@@ -85,20 +86,20 @@ export const DEFAULT_SNAP_SETTINGS: SnapSettings = {
   enabled: true,
   visible: true,
   opacity: 0.9,
-  color: '#ffff00',           // Yellow default
+  color: UI_COLORS.SNAP_DEFAULT,           // Yellow default
   size: 8,
   lineWidth: 2,
   tolerance: 10,              // 10px snap tolerance
 
   // Type-specific colors
-  endpointColor: '#ff0000',   // Red for endpoints
-  midpointColor: '#00ff00',   // Green for midpoints
-  centerColor: '#0000ff',     // Blue for centers
-  intersectionColor: '#ff00ff', // Magenta for intersections
+  endpointColor: UI_COLORS.SNAP_ENDPOINT,   // Red for endpoints
+  midpointColor: UI_COLORS.SNAP_MIDPOINT,   // Green for midpoints
+  centerColor: UI_COLORS.SNAP_CENTER,     // Blue for centers
+  intersectionColor: UI_COLORS.SNAP_INTERSECTION, // Magenta for intersections
 
   // Visual feedback
   showTooltip: true,
   tooltipOffset: 15,
-  highlightColor: '#ffffff',
+  highlightColor: UI_COLORS.SNAP_HIGHLIGHT,
   zIndex: 950                 // Very high priority for snap visibility
 };

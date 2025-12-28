@@ -3,6 +3,7 @@ import type { Point2D } from '../rendering/types/Types';
 import type { Region, RegionStatus } from '../types/overlay';
 import type { Overlay } from './types';
 import { getStatusColors } from '../config/color-mapping';
+import { UI_COLORS } from '../config/color-config';
 
 export function overlaysToRegions(overlays: Overlay[]): Region[] {
   return overlays.map((ov) => {
@@ -35,7 +36,7 @@ export function overlaysToRegions(overlays: Overlay[]): Region[] {
       visible: true,
       // Προαιρετικά/αισθητικά:
       opacity: ov.style?.opacity ?? ov.opacity ?? 0.7,
-      color: ov.style?.fill ?? getStatusColors(status)?.fill ?? '#3b82f6',
+      color: ov.style?.fill ?? getStatusColors(status)?.fill ?? UI_COLORS.INFO,
       levelId: ov.levelId,
       locked: ov.locked ?? false,
       metadata: { label: ov.label, kind: ov.kind },

@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from 'react';
 import { CollaborationUser, Annotation } from './CollaborationManager';
 import { isFeatureEnabled } from '../config/experimental-features';
 import { dxfComponentStyles, dxfAccessibility } from '../styles/DxfZIndexSystem.styles';
+import { UI_COLORS } from '../config/color-config';
 
 interface CollaborationOverlayProps {
   users: CollaborationUser[];
@@ -68,7 +69,7 @@ export function CollaborationOverlay({
     // Draw cursor
     ctx.save();
     ctx.fillStyle = user.color;
-    ctx.strokeStyle = '#ffffff';
+    ctx.strokeStyle = UI_COLORS.CANVAS_STROKE_DEFAULT;
     ctx.lineWidth = 2;
 
     // Cursor arrow
@@ -84,7 +85,7 @@ export function CollaborationOverlay({
     // User name label
     ctx.fillStyle = user.color;
     ctx.fillRect(x + 15, y - 8, ctx.measureText(user.name).width + 8, 20);
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = UI_COLORS.WHITE;
     ctx.font = '12px Inter, sans-serif';
     ctx.fillText(user.name, x + 19, y + 6);
 
@@ -117,18 +118,18 @@ export function CollaborationOverlay({
     ctx.save();
 
     // Annotation marker
-    ctx.fillStyle = annotation.type === 'note' ? '#4F46E5' : 
-                   annotation.type === 'measurement' ? '#059669' : '#DC2626';
-    ctx.strokeStyle = '#ffffff';
+    ctx.fillStyle = annotation.type === 'note' ? UI_COLORS.BUTTON_PRIMARY :
+                   annotation.type === 'measurement' ? UI_COLORS.SUCCESS : UI_COLORS.ERROR;
+    ctx.strokeStyle = UI_COLORS.WHITE;
     ctx.lineWidth = 2;
 
     // ⚡ NUCLEAR: COLLABORATION CIRCLES ELIMINATED
 
     // Annotation number/icon
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = UI_COLORS.WHITE;
     ctx.font = 'bold 10px Inter, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(annotation.type === 'note' ? '!' : 
+    ctx.fillText(annotation.type === 'note' ? '!' :
                 annotation.type === 'measurement' ? 'M' : '×', x, y + 3);
 
     ctx.restore();

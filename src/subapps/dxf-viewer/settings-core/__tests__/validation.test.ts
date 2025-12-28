@@ -18,6 +18,7 @@ import {
   DEFAULT_TEXT_SETTINGS,
   DEFAULT_GRIP_SETTINGS
 } from '../defaults';
+import { UI_COLORS } from '../../config/color-config';
 
 describe('Validation Functions', () => {
   describe('validateLineWidth', () => {
@@ -45,29 +46,29 @@ describe('Validation Functions', () => {
 
   describe('validateColor', () => {
     it('should accept valid hex colors', () => {
-      expect(validateColor('#000000')).toBe('#000000');
-      expect(validateColor('#FFFFFF')).toBe('#FFFFFF');
-      expect(validateColor('#FF00FF')).toBe('#FF00FF');
-      expect(validateColor('#123456')).toBe('#123456');
+      expect(validateColor(UI_COLORS.BLACK)).toBe(UI_COLORS.BLACK);
+      expect(validateColor(UI_COLORS.WHITE)).toBe(UI_COLORS.WHITE);
+      expect(validateColor(UI_COLORS.LEGACY_COLORS.MAGENTA)).toBe(UI_COLORS.LEGACY_COLORS.MAGENTA);
+      expect(validateColor(UI_COLORS.CUSTOM_TEST_COLOR)).toBe(UI_COLORS.CUSTOM_TEST_COLOR);
     });
 
     it('should normalize color formats', () => {
-      expect(validateColor('#fff')).toBe('#FFFFFF'); // 3-digit to 6-digit
-      expect(validateColor('#ABC')).toBe('#AABBCC');
-      expect(validateColor('fff')).toBe('#FFFFFF'); // Missing #
-      expect(validateColor('000000')).toBe('#000000');
+      expect(validateColor('#fff')).toBe(UI_COLORS.WHITE); // 3-digit to 6-digit
+      expect(validateColor('#ABC')).toBe(UI_COLORS.LIGHT_GRAY_ALT);
+      expect(validateColor('fff')).toBe(UI_COLORS.WHITE); // Missing #
+      expect(validateColor('000000')).toBe(UI_COLORS.BLACK);
     });
 
     it('should reject invalid colors', () => {
-      expect(validateColor('#GGGGGG')).toBe('#FFFFFF'); // Invalid hex
-      expect(validateColor('invalid')).toBe('#FFFFFF');
-      expect(validateColor('')).toBe('#FFFFFF');
-      expect(validateColor(null as never)).toBe('#FFFFFF');
+      expect(validateColor('#GGGGGG')).toBe(UI_COLORS.WHITE); // Invalid hex
+      expect(validateColor('invalid')).toBe(UI_COLORS.WHITE);
+      expect(validateColor('')).toBe(UI_COLORS.WHITE);
+      expect(validateColor(null as never)).toBe(UI_COLORS.WHITE);
     });
 
     it('should handle RGB color notation', () => {
-      expect(validateColor('rgb(255,0,0)')).toBe('#FF0000');
-      expect(validateColor('rgb(0, 128, 255)')).toBe('#0080FF');
+      expect(validateColor('rgb(255,0,0)')).toBe(UI_COLORS.SELECTED_RED);
+      expect(validateColor('rgb(0, 128, 255)')).toBe(UI_COLORS.INDICATOR_BLUE);
     });
   });
 
@@ -120,7 +121,7 @@ describe('Validation Functions', () => {
       const result = validateLineSettings(input);
 
       expect(result.lineWidth).toBe(0.1); // Clamped to min
-      expect(result.lineColor).toBe('#FFFFFF'); // Default color
+      expect(result.lineColor).toBe(UI_COLORS.WHITE); // Default color
       expect(result.lineType).toBe('solid'); // Default type
       expect(result.opacity).toBe(1); // Clamped to max
       expect(result.dashScale).toBe(0.1); // Clamped to min
@@ -130,7 +131,7 @@ describe('Validation Functions', () => {
       const input = {
         ...DEFAULT_LINE_SETTINGS,
         lineWidth: 2,
-        lineColor: '#FF0000'
+        lineColor: UI_COLORS.SELECTED_RED
       };
 
       const result = validateLineSettings(input);
@@ -165,7 +166,7 @@ describe('Validation Functions', () => {
 
       expect(result.fontSize).toBe(72); // Max size
       expect(result.fontFamily).toBe('Arial'); // Default font
-      expect(result.fontColor).toBe('#FFFFFF'); // Default color
+      expect(result.fontColor).toBe(UI_COLORS.WHITE); // Default color
       expect(result.fontWeight).toBe('normal'); // Default weight
       expect(result.fontStyle).toBe('normal'); // Default style
     });
@@ -199,11 +200,11 @@ describe('Validation Functions', () => {
       const result = validateGripSettings(input);
 
       expect(result.size).toBe(20); // Max size
-      expect(result.color).toBe('#112233'); // Normalized
-      expect(result.hoverColor).toBe('#0000FF'); // Named color
-      expect(result.activeColor).toBe('#FF0000'); // RGB converted
+      expect(result.color).toBe(UI_COLORS.DARK_GRAY); // Normalized
+      expect(result.hoverColor).toBe(UI_COLORS.LEGACY_COLORS.BLUE); // Named color
+      expect(result.activeColor).toBe(UI_COLORS.SELECTED_RED); // RGB converted
       expect(result.borderWidth).toBe(5); // Max border
-      expect(result.borderColor).toBe('#FFFFFF'); // Invalid -> default
+      expect(result.borderColor).toBe(UI_COLORS.WHITE); // Invalid -> default
       expect(result.opacity).toBe(1); // Clamped
       expect(result.snapDistance).toBe(50); // Max snap
     });
@@ -284,7 +285,7 @@ describe('Validation Functions', () => {
     it('should handle object inputs', () => {
       const result = validateLineSettings({
         lineWidth: { value: 5 } as unknown,
-        lineColor: { toString: () => '#FF0000' } as unknown
+        lineColor: { toString: () => UI_COLORS.SELECTED_RED } as unknown
       });
 
       // Should handle gracefully

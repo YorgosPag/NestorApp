@@ -18,6 +18,8 @@
  * @since 2025-10-09
  */
 
+import { UI_COLORS } from '../config/color-config';
+
 interface TestResult {
   category: string;
   test: string;
@@ -578,7 +580,7 @@ async function testSubscriptionCleanup(): Promise<TestResult> {
       // Create fake port with subscription tracking
       let subscriptions = 0;
       const fakePort = {
-        getCurrent: () => ({ stroke: '#000000', fill: '#FFFFFF', width: 1, opacity: 1, dashArray: [] }),
+        getCurrent: () => ({ stroke: UI_COLORS.BLACK, fill: UI_COLORS.WHITE, width: 1, opacity: 1, dashArray: [] }),
         apply: () => {},
         onChange: (handler: any) => {
           subscriptions++;
@@ -599,18 +601,18 @@ async function testSubscriptionCleanup(): Promise<TestResult> {
           enabled: true,
           lineType: 'solid' as const,
           lineWidth: 0.25,
-          color: '#FFFFFF',
+          color: UI_COLORS.WHITE,
           opacity: 1.0,
           dashScale: 1.0,
           dashOffset: 0,
           lineCap: 'round' as const,
           lineJoin: 'round' as const,
           breakAtCenter: false,
-          hoverColor: '#FFFF00',
+          hoverColor: UI_COLORS.BRIGHT_YELLOW,
           hoverType: 'solid' as const,
           hoverWidth: 0.35,
           hoverOpacity: 0.8,
-          finalColor: '#00FF00',
+          finalColor: UI_COLORS.BRIGHT_GREEN,
           finalType: 'solid' as const,
           finalWidth: 0.35,
           finalOpacity: 1.0,
@@ -620,7 +622,7 @@ async function testSubscriptionCleanup(): Promise<TestResult> {
           enabled: true,
           fontFamily: 'Arial',
           fontSize: 12,
-          color: '#FFFFFF',
+          color: UI_COLORS.WHITE,
           isBold: false,
           isItalic: false,
           isUnderline: false,
@@ -635,10 +637,10 @@ async function testSubscriptionCleanup(): Promise<TestResult> {
           apertureSize: 10,
           opacity: 1.0,
           colors: {
-            cold: '#0000FF',
-            warm: '#FF69B4',
-            hot: '#FF0000',
-            contour: '#000000'
+            cold: UI_COLORS.TEST_GRIP_BLUE,
+            warm: UI_COLORS.CAD_UI_COLORS.grips.warm,
+            hot: UI_COLORS.SELECTED_RED,
+            contour: UI_COLORS.BLACK
           },
           showAperture: true,
           multiGripEdit: true,

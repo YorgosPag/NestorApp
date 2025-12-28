@@ -16,6 +16,8 @@ import type { Entity } from '../types/entities';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { getDxfCanvasCoreStyles } from '../ui/DxfViewerComponents.styles';
 import type { EntityRenderer as EntityRendererType } from '../utils/entity-renderer';
+// ✅ ENTERPRISE: Import centralized colors
+import { UI_COLORS } from '../config/color-config';
 
 // Import extracted modules
 import { createCanvasRenderer, type CanvasRenderer } from './engine/createCanvasRenderer';
@@ -128,7 +130,7 @@ export const DxfCanvasCore = forwardRef<DxfCanvasImperativeAPI, Props>(({
   
   // ✅ Safe access with defaults - avoid destructuring null
   const safeRulersGrid = rulersGrid?.state || null;
-  const grid = safeRulersGrid?.grid || { visual: { enabled: true, color: '#ffffff', opacity: 0.3, step: 25 } };
+  const grid = safeRulersGrid?.grid || { visual: { enabled: true, color: UI_COLORS.WHITE, opacity: 0.3, step: 25 } }; // ✅ CENTRALIZED: White grid color
   const rulers = safeRulersGrid?.rulers || { horizontal: { enabled: false }, vertical: { enabled: false } };
   const origin = safeRulersGrid?.origin || { x: 0, y: 0 };
 
@@ -139,7 +141,7 @@ export const DxfCanvasCore = forwardRef<DxfCanvasImperativeAPI, Props>(({
     if (!rulersGrid) {
       if (DEBUG_CANVAS_CORE) console.log('🔍 [DxfCanvasCore] No rulersGrid context, returning safe defaults');
       return storedSettings || {
-        grid: { visual: { enabled: true, color: '#ffffff', opacity: 0.3, step: 25 } },
+        grid: { visual: { enabled: true, color: UI_COLORS.WHITE, opacity: 0.3, step: 25 } }, // ✅ CENTRALIZED: White grid fallback
         rulers: { horizontal: { enabled: false }, vertical: { enabled: false } },
         origin: { x: 0, y: 0 }
       };
@@ -586,7 +588,7 @@ export const DxfCanvasCore = forwardRef<DxfCanvasImperativeAPI, Props>(({
         onMouseUp?.(e);
       }}
       onWheel={onWheel}
-      style={getDxfCanvasCoreStyles('rgba(0, 255, 0, 0.8)')}
+      style={getDxfCanvasCoreStyles(UI_COLORS.withOpacity(UI_COLORS.BRIGHT_GREEN, 0.8))} /* ✅ CENTRALIZED: Green με 80% opacity */
     />
   );
 });

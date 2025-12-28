@@ -19,6 +19,7 @@ import {
   COORDINATE_LAYOUT
 } from './config';
 import type { Point2D, ViewTransform, DOMRect } from './config';
+import { UI_COLORS } from '../../config/color-config';
 
 // Helper function to generate grid line (eliminates code duplication)
 function createGridLine(
@@ -532,7 +533,7 @@ export const RulersGridRendering = {
     ctx.save();
     
     lines.forEach((line, index) => {
-      ctx.strokeStyle = line.color || '#888888'; // Χρησιμοποιεί το χρώμα της γραμμής ή γκρι fallback
+      ctx.strokeStyle = line.color || UI_COLORS.GRID_MAJOR; // Χρησιμοποιεί το χρώμα της γραμμής ή γκρι fallback
       ctx.lineWidth = line.weight;
       ctx.globalAlpha = line.opacity;
       
@@ -572,8 +573,8 @@ export const RulersGridRendering = {
 
     ctx.save();
     // Χρησιμοποιεί τα χρώματα από τις ρυθμίσεις
-    ctx.strokeStyle = settings.tickColor || settings.color || '#666666';
-    ctx.fillStyle = settings.textColor || settings.color || '#333333';
+    ctx.strokeStyle = settings.tickColor || settings.color || UI_COLORS.RULER_DARK_GRAY;
+    ctx.fillStyle = settings.textColor || settings.color || UI_COLORS.RULER_TEXT_GRAY;
     ctx.font = `${settings.fontSize || 10}px ${settings.fontFamily || 'monospace'}`;
     ctx.lineWidth = 1;
     
@@ -618,12 +619,12 @@ export const RulersGridRendering = {
         
         // ✅ Set stroke color based on tick type
         if (tick.type === 'major') {
-          ctx.strokeStyle = settings.majorTickColor || settings.tickColor || '#666666';
+          ctx.strokeStyle = settings.majorTickColor || settings.tickColor || UI_COLORS.RULER_DARK_GRAY;
         } else if (tick.type === 'minor') {
-          ctx.strokeStyle = settings.minorTickColor || '#999999';
+          ctx.strokeStyle = settings.minorTickColor || UI_COLORS.RULER_LIGHT_GRAY;
         } else {
           // Fallback to original tickColor
-          ctx.strokeStyle = settings.tickColor || settings.color || '#666666';
+          ctx.strokeStyle = settings.tickColor || settings.color || UI_COLORS.RULER_DARK_GRAY;
         }
       }
       
@@ -673,7 +674,7 @@ export const RulersGridRendering = {
           if (settings.showUnits && unitsText) {
             ctx.save();
             ctx.font = `${settings.unitsFontSize || 10}px ${settings.fontFamily || 'monospace'}`;
-            ctx.fillStyle = settings.unitsColor || settings.textColor || '#333333';
+            ctx.fillStyle = settings.unitsColor || settings.textColor || UI_COLORS.RULER_TEXT_GRAY;
 
             ctx.fillText(unitsText, currentX, ctx.canvas.height - 3);
             ctx.restore();
@@ -732,7 +733,7 @@ export const RulersGridRendering = {
             ctx.rotate(-Math.PI / 2);
             ctx.textBaseline = 'top';
             ctx.textAlign = 'end';
-            ctx.fillStyle = settings.unitsColor || settings.textColor || '#333333';
+            ctx.fillStyle = settings.unitsColor || settings.textColor || UI_COLORS.RULER_TEXT_GRAY;
             ctx.fillText(unitsText, 0, 0);
             ctx.restore();
             currentY += ctx.measureText(unitsText).width; // Μετακίνηση για τα numbers

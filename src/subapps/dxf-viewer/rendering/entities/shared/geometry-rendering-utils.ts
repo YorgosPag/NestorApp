@@ -212,7 +212,7 @@ export function renderSquareGrip(
   position: Point2D,
   size: number = 8,
   fillColor: string = UI_COLORS.GRIP_DEFAULT,
-  strokeColor: string = '#000'
+  strokeColor: string = UI_COLORS.BLACK
 ): void {
   ctx.save();
   ctx.fillStyle = fillColor;

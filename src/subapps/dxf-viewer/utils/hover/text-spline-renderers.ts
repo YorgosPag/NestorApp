@@ -7,6 +7,7 @@ import { renderGreenDots } from './render-utils';
 import { renderPolylineHover } from './polyline-renderer';
 import type { Point2D } from '../../rendering/types/Types';
 import { extractAngleMeasurementPoints } from '../../rendering/entities/shared/geometry-rendering-utils';
+import { UI_COLORS } from '../../config/color-config';
 
 export function renderTextHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
   const position = entity.position as Point2D;
@@ -25,7 +26,7 @@ export function renderTextHover({ entity, ctx, worldToScreen, options }: HoverRe
   const width = metrics.width;
   
   // Draw bounding rectangle
-  ctx.strokeStyle = '#ffff00';
+  ctx.strokeStyle = UI_COLORS.BRIGHT_YELLOW;
   ctx.setLineDash([2, 2]);
   ctx.strokeRect(screenPos.x, screenPos.y - screenHeight, width, screenHeight);
   
@@ -61,7 +62,7 @@ export function renderAngleMeasurementHover({ entity, ctx, worldToScreen, option
   
   // Simple angle text at vertex
   ctx.save();
-  ctx.fillStyle = '#ffaa00';
+  ctx.fillStyle = UI_COLORS.DRAWING_TEMP;
   ctx.font = '14px Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';

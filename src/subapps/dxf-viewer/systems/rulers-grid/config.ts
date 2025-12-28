@@ -4,6 +4,7 @@
  */
 
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import { UI_COLORS } from '../../config/color-config';
 
 // ✅ ΔΙΟΡΑΘΩΣΗ ΔΙΠΛΟΤΥΠΟΥ: Χρήση unified ViewTransform από rendering/types/Types.ts
 export type { ViewTransform } from '../../rendering/types/Types';
@@ -126,7 +127,7 @@ export const DEFAULT_RULER_SETTINGS: RulerSettings = {
     enabled: false,  // 🔧 FIX: Start disabled to prevent race condition with localStorage
     height: 30,
     position: 'top',
-    color: '#f0f0f0', // Ουδέτερο γκρι
+    color: UI_COLORS.RULER_NEUTRAL_GRAY, // Ουδέτερο γκρι
     backgroundColor: 'hsl(var(--background) / 0.8)', // ✅ ENTERPRISE: CSS variable (adapts to dark mode)
     fontSize: 10,
     fontFamily: 'Arial, sans-serif',
@@ -137,11 +138,11 @@ export const DEFAULT_RULER_SETTINGS: RulerSettings = {
     showMajorTicks: true,  // Default: show major ticks
     minorTickLength: 5,
     majorTickLength: 10,
-    tickColor: '#666666',
-    majorTickColor: '#666666',  // Default: same color as tickColor
-    minorTickColor: '#999999',  // Default: lighter color for minor ticks
-    textColor: '#333333',
-    unitsColor: '#333333',  // Default: same color as textColor
+    tickColor: UI_COLORS.RULER_DARK_GRAY,
+    majorTickColor: UI_COLORS.RULER_DARK_GRAY,  // Default: same color as tickColor
+    minorTickColor: UI_COLORS.RULER_LIGHT_GRAY,  // Default: lighter color for minor ticks
+    textColor: UI_COLORS.RULER_TEXT_GRAY,
+    unitsColor: UI_COLORS.RULER_TEXT_GRAY,  // Default: same color as textColor
     showLabels: true,  // Default: show labels
     showUnits: true,   // Default: show units in labels
     showBackground: true  // Default: show background
@@ -150,7 +151,7 @@ export const DEFAULT_RULER_SETTINGS: RulerSettings = {
     enabled: false,  // 🔧 FIX: Start disabled to prevent race condition with localStorage
     width: 30,
     position: 'left',
-    color: '#f0f0f0', // Ουδέτερο γκρι
+    color: UI_COLORS.RULER_NEUTRAL_GRAY, // Ουδέτερο γκρι
     backgroundColor: 'hsl(var(--background) / 0.8)', // ✅ ENTERPRISE: CSS variable (adapts to dark mode)
     fontSize: 10,
     fontFamily: 'Arial, sans-serif',
@@ -161,11 +162,11 @@ export const DEFAULT_RULER_SETTINGS: RulerSettings = {
     showMajorTicks: true,  // Default: show major ticks
     minorTickLength: 5,
     majorTickLength: 10,
-    tickColor: '#666666',
-    majorTickColor: '#666666',  // Default: same color as tickColor
-    minorTickColor: '#999999',  // Default: lighter color for minor ticks
-    textColor: '#333333',
-    unitsColor: '#333333',  // Default: same color as textColor
+    tickColor: UI_COLORS.RULER_DARK_GRAY,
+    majorTickColor: UI_COLORS.RULER_DARK_GRAY,  // Default: same color as tickColor
+    minorTickColor: UI_COLORS.RULER_LIGHT_GRAY,  // Default: lighter color for minor ticks
+    textColor: UI_COLORS.RULER_TEXT_GRAY,
+    unitsColor: UI_COLORS.RULER_TEXT_GRAY,  // Default: same color as textColor
     showLabels: true,  // Default: show labels
     showUnits: true,   // Default: show units in labels
     showBackground: true  // Default: show background
@@ -182,15 +183,15 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
     enabled: true,
     step: 10,
     opacity: 0.6,
-    color: '#4444ff', // Μπλε για καλύτερη ορατότητα
+    color: UI_COLORS.GRID_BLUE, // Μπλε για καλύτερη ορατότητα
     style: 'lines', // ✅ NEW: Default grid style (lines/dots/crosses)
     subDivisions: 5,
     showOrigin: true,
     showAxes: true,
-    axesColor: '#666666', // Σκουρότερο γκρι για τους άξονες
+    axesColor: UI_COLORS.RULER_DARK_GRAY, // Σκουρότερο γκρι για τους άξονες
     axesWeight: 2,
-    majorGridColor: '#888888', // Γκρι για τις κύριες γραμμές
-    minorGridColor: '#bbbbbb', // Ανοιχτότερο γκρι για τις δευτερεύουσες γραμμές
+    majorGridColor: UI_COLORS.GRID_MAJOR, // Γκρι για τις κύριες γραμμές
+    minorGridColor: UI_COLORS.GRID_MINOR, // Ανοιχτότερο γκρι για τις δευτερεύουσες γραμμές
     majorGridWeight: 1,
     minorGridWeight: 0.5
   },
@@ -199,7 +200,7 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
     step: 10,
     tolerance: 12,
     showIndicators: true,
-    indicatorColor: '#0099ff', // Μπλε για τα indicators
+    indicatorColor: UI_COLORS.INDICATOR_BLUE, // Μπλε για τα indicators
     indicatorSize: 4
   },
   behavior: {

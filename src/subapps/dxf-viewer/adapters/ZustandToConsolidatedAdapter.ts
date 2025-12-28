@@ -8,6 +8,8 @@ import { useCallback, useEffect, useMemo } from 'react';
 import { useDxfSettingsStore } from '../stores/DxfSettingsStore';
 // ✅ UNIFIED TYPES: Μετά την ενοποίηση, όλα χρησιμοποιούν το ίδιο unified type
 import type { LineSettings, EntityId, LineCapStyle, LineJoinStyle } from '../settings-core/types';
+// ✅ ENTERPRISE: Import centralized colors
+import { UI_COLORS } from '../config/color-config';
 import type { TextSettings as LegacyTextSettings } from '../contexts/TextSettingsContext';
 import type { GripSettings as LegacyGripSettings } from '../contexts/GripSettingsContext';
 
@@ -26,11 +28,11 @@ function zustandToLegacyLine(settings: LineSettings): LineSettings {
     lineCap: settings.lineCap,
     lineJoin: settings.lineJoin,
     breakAtCenter: false,
-    hoverColor: settings.hoverColor || '#FFFF00',
+    hoverColor: settings.hoverColor || UI_COLORS.BRIGHT_YELLOW, // ✅ CENTRALIZED: Yellow hover color
     hoverType: settings.hoverType || 'solid',
     hoverWidth: settings.hoverWidth || settings.lineWidth * 1.5,
     hoverOpacity: settings.hoverOpacity || 0.8,
-    finalColor: settings.finalColor || '#00FF00',
+    finalColor: settings.finalColor || UI_COLORS.BRIGHT_GREEN, // ✅ CENTRALIZED: Green final color
     finalType: settings.finalType || settings.lineType,
     finalWidth: settings.finalWidth || settings.lineWidth,
     finalOpacity: settings.finalOpacity || settings.opacity,

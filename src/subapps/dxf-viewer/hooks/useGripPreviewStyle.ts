@@ -7,6 +7,7 @@ import { useGripContext } from '../providers/GripProvider';
 import { gripStyleStore } from '../stores/GripStyleStore';
 // ===== OVERRIDE GUARD SYSTEM =====
 import { guardGlobalAccess } from '../../../utils/overrideGuard';
+import { UI_COLORS } from '../config/color-config';
 
 export interface GripPreviewStyle {
   enabled: boolean;
@@ -86,10 +87,10 @@ export function getGripPreviewStyleWithOverride(): GripPreviewStyle {
     return {
       enabled: specificSettings.enabled !== undefined ? specificSettings.enabled : true,
       colors: {
-        cold: specificSettings.colors?.cold || '#0000FF',  // ✅ AutoCAD standard: Blue for cold grips
-        warm: specificSettings.colors?.warm || '#FFFF00',  // ✅ AutoCAD standard: Yellow for warm grips
-        hot: specificSettings.colors?.hot || '#FF0000',    // ✅ AutoCAD standard: Red for hot grips
-        contour: specificSettings.colors?.contour || '#000000' // ✅ AutoCAD standard: Black contour
+        cold: specificSettings.colors?.cold || UI_COLORS.DEBUG_CURSOR,  // ✅ AutoCAD standard: Blue for cold grips
+        warm: specificSettings.colors?.warm || UI_COLORS.BRIGHT_YELLOW,  // ✅ AutoCAD standard: Yellow for warm grips
+        hot: specificSettings.colors?.hot || UI_COLORS.SELECTED_RED,    // ✅ AutoCAD standard: Red for hot grips
+        contour: specificSettings.colors?.contour || UI_COLORS.BLACK // ✅ AutoCAD standard: Black contour
       },
       gripSize: specificSettings.gripSize || 8,
       pickBoxSize: specificSettings.pickBoxSize || 3,

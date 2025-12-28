@@ -189,10 +189,10 @@ export abstract class BaseEntityRenderer {
                                   : Math.round(base);
 
     const colors = this.gripSettings?.colors ?? {
-      cold: '#0000FF',  // ✅ AutoCAD standard: Blue (ACI 5) - unselected grips
-      warm: '#FF69B4',  // ✅ AutoCAD standard: Hot Pink - hover grips
-      hot: '#FF0000',   // ✅ AutoCAD standard: Red (ACI 1) - selected grips
-      contour: '#000000' // ✅ AutoCAD standard: Black contour
+      cold: CAD_UI_COLORS.grips.cold,  // ✅ AutoCAD standard: Blue (ACI 5) - unselected grips
+      warm: CAD_UI_COLORS.grips.warm,  // ✅ AutoCAD standard: Hot Pink - hover grips
+      hot: CAD_UI_COLORS.grips.hot,   // ✅ AutoCAD standard: Red (ACI 1) - selected grips
+      contour: CAD_UI_COLORS.grips.outline_color // ✅ AutoCAD standard: Black contour
     };
     
     // Διαφοροποίηση χρώματος ανάλογα με το gripType

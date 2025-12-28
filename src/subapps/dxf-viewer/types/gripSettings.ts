@@ -4,6 +4,7 @@
  */
 
 import type { Point2D } from '../rendering/types/Types';
+import { UI_COLORS } from '../config/color-config';
 
 export interface GripSettings {
   // === AutoCAD Variables ===
@@ -57,10 +58,10 @@ const defaultGripSettings = {
   showAperture: true, // ✅ AutoCAD APBOX default: enabled
 
   colors: {
-    cold: '#0000FF',     // ✅ AutoCAD standard: Blue (ACI 5) - unselected grips
-    warm: '#FF69B4',     // ✅ AutoCAD standard: Hot Pink - hover grips
-    hot: '#FF0000',      // ✅ AutoCAD standard: Red (ACI 1) - selected grips
-    contour: '#000000'   // ✅ AutoCAD standard: Black contour
+    cold: UI_COLORS.SNAP_CENTER,     // ✅ AutoCAD standard: Blue (ACI 5) - unselected grips
+    warm: UI_COLORS.SNAP_INTERSECTION,     // ✅ AutoCAD standard: Hot Pink - hover grips
+    hot: UI_COLORS.SNAP_ENDPOINT,      // ✅ AutoCAD standard: Red (ACI 1) - selected grips
+    contour: UI_COLORS.BLACK   // ✅ AutoCAD standard: Black contour
   },
 };
 

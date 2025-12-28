@@ -4,6 +4,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { UI_COLORS } from '../../config/color-config';
 
 // ===== BASIC TYPES =====
 export type ToolType = 
@@ -357,8 +358,8 @@ export interface ToolContext {
 
 // ===== DEFAULT CONFIGURATIONS =====
 export const DEFAULT_TOOLBAR_STYLE: ToolbarStyle = {
-  backgroundColor: '#f8f9fa',
-  borderColor: '#dee2e6',
+  backgroundColor: UI_COLORS.TOOLBAR_BG,
+  borderColor: UI_COLORS.TOOLBAR_BORDER,
   borderWidth: 1,
   borderRadius: 4,
   padding: 8,
@@ -372,10 +373,10 @@ export const DEFAULT_TOOLBAR_STYLE: ToolbarStyle = {
   iconSize: 16,
   fontSize: 12,
   fontFamily: 'Arial, sans-serif',
-  textColor: '#212529',
-  hoverColor: '#e9ecef',
-  activeColor: '#007bff',
-  disabledColor: '#6c757d'
+  textColor: UI_COLORS.TOOLBAR_TEXT,
+  hoverColor: UI_COLORS.TOOLBAR_HOVER,
+  activeColor: UI_COLORS.TOOLBAR_ACTIVE,
+  disabledColor: UI_COLORS.TOOLBAR_DISABLED
 };
 
 export const DEFAULT_TOOLBAR_BEHAVIOR: ToolbarBehavior = {

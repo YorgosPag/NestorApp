@@ -3,6 +3,8 @@
  * ✅ ΦΑΣΗ 4: Δεύτερη φάση του render pipeline με batch processing
  */
 
+import { UI_COLORS } from '../../config/color-config';
+
 import type { IRenderPass, IRenderContext, RenderPassOptions } from '../core/RenderPipeline';
 import type { EntityModel } from '../types/Types';
 
@@ -126,7 +128,7 @@ export class EntityPass implements IRenderPass {
 
     for (const entity of entities) {
       // Create batch key based on type, layer, and style
-      const batchKey = `${entity.type}_${entity.layer || 'default'}_${entity.color || '#ffffff'}_${entity.lineWidth || 1}`;
+      const batchKey = `${entity.type}_${entity.layer || 'default'}_${entity.color || UI_COLORS.WHITE}_${entity.lineWidth || 1}`;
 
       if (!batchMap.has(batchKey)) {
         batchMap.set(batchKey, {
@@ -166,7 +168,7 @@ export class EntityPass implements IRenderPass {
     // Set common style for entire batch
     context.save();
     context.setState({
-      strokeStyle: batch.color || '#ffffff',
+      strokeStyle: batch.color || UI_COLORS.WHITE,
       lineWidth: batch.lineWidth || 1,
       lineDash: [] // Reset line dash
     });
@@ -383,7 +385,7 @@ export class EntityPass implements IRenderPass {
    */
   private applyEntityStyle(context: IRenderContext, entity: EntityModel): void {
     context.setState({
-      strokeStyle: entity.color || '#ffffff',
+      strokeStyle: entity.color || UI_COLORS.WHITE,
       lineWidth: entity.lineWidth || 1,
       lineDash: entity.lineDash || [],
       globalAlpha: entity.opacity || 1

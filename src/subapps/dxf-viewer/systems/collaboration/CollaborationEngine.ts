@@ -7,6 +7,7 @@
 
 import { EventEmitter } from 'events';
 import type { Point2D } from '../../rendering/types/Types';
+import { UI_COLORS } from '../../config/color-config';
 
 /**
  * User presence data
@@ -346,8 +347,8 @@ export class CollaborationEngine extends EventEmitter {
 
   private generateUserColor(): void {
     const colors = [
-      '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A',
-      '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'
+      UI_COLORS.COLLAB_USER_1, UI_COLORS.COLLAB_USER_2, UI_COLORS.COLLAB_USER_3, UI_COLORS.COLLAB_USER_4,
+      UI_COLORS.COLLAB_USER_5, UI_COLORS.COLLAB_USER_6, UI_COLORS.COLLAB_USER_7, UI_COLORS.COLLAB_USER_8
     ];
     this.userColor = colors[Math.floor(Math.random() * colors.length)];
   }
@@ -368,7 +369,7 @@ export class CollaborationEngine extends EventEmitter {
       {
         id: 'user-alice',
         name: 'Alice',
-        color: '#FF6B6B',
+        color: UI_COLORS.COLLAB_USER_1,
         cursor: { x: 100, y: 100 },
         isActive: true,
         isDrawing: false,
@@ -379,7 +380,7 @@ export class CollaborationEngine extends EventEmitter {
       {
         id: 'user-bob',
         name: 'Bob',
-        color: '#4ECDC4',
+        color: UI_COLORS.COLLAB_USER_2,
         cursor: { x: 200, y: 150 },
         isActive: true,
         isDrawing: true,
@@ -390,7 +391,7 @@ export class CollaborationEngine extends EventEmitter {
       {
         id: 'user-charlie',
         name: 'Charlie',
-        color: '#45B7D1',
+        color: UI_COLORS.COLLAB_USER_3,
         cursor: { x: 300, y: 200 },
         isActive: true,
         isDrawing: false,

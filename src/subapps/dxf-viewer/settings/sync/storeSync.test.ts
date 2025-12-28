@@ -17,6 +17,7 @@ import { describe, it, expect, beforeEach } from '@jest/globals';
 import { createStoreSync } from './storeSync';
 import type { SyncDependencies, ToolStylePort, LoggerPort, Unsubscribe } from './ports';
 import type { EffectiveSettingsGetter } from './storeSync';
+import { UI_COLORS } from '../../config/color-config';
 
 // ============================================================================
 // FAKE PORTS (Test Doubles)
@@ -54,8 +55,8 @@ class FakeToolStylePort implements ToolStylePort {
 
   getCurrent() {
     return {
-      stroke: '#000000',
-      fill: '#FFFFFF',
+      stroke: UI_COLORS.BLACK,
+      fill: UI_COLORS.WHITE,
       width: 1,
       opacity: 1,
       dashArray: []
@@ -93,18 +94,18 @@ function createFakeEffectiveGetter(): EffectiveSettingsGetter {
       enabled: true,
       lineType: 'solid',
       lineWidth: 0.25,
-      color: '#FFFFFF',
+      color: UI_COLORS.WHITE,
       opacity: 1.0,
       dashScale: 1.0,
       dashOffset: 0,
       lineCap: 'round',
       lineJoin: 'round',
       breakAtCenter: false,
-      hoverColor: '#FFFF00',
+      hoverColor: UI_COLORS.LEGACY_COLORS.YELLOW,
       hoverType: 'solid',
       hoverWidth: 0.35,
       hoverOpacity: 0.8,
-      finalColor: '#00FF00',
+      finalColor: UI_COLORS.LEGACY_COLORS.GREEN,
       finalType: 'solid',
       finalWidth: 0.35,
       finalOpacity: 1.0,
@@ -114,7 +115,7 @@ function createFakeEffectiveGetter(): EffectiveSettingsGetter {
       enabled: true,
       fontFamily: 'Arial',
       fontSize: 12,
-      color: '#FFFFFF',
+      color: UI_COLORS.WHITE,
       isBold: false,
       isItalic: false,
       isUnderline: false,
@@ -129,10 +130,10 @@ function createFakeEffectiveGetter(): EffectiveSettingsGetter {
       apertureSize: 10,
       opacity: 1.0,
       colors: {
-        cold: '#0000FF',
-        warm: '#FF69B4',
-        hot: '#FF0000',
-        contour: '#000000'
+        cold: UI_COLORS.CAD_UI_COLORS.grips.cold,
+        warm: UI_COLORS.CAD_UI_COLORS.grips.warm,
+        hot: UI_COLORS.CAD_UI_COLORS.grips.hot,
+        contour: UI_COLORS.BLACK
       },
       showAperture: true,
       multiGripEdit: true,

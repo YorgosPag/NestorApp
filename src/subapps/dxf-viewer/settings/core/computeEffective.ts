@@ -13,6 +13,7 @@
 
 import type { ViewerMode, StorageMode, OverrideFlags } from './types';
 import { modeMap } from './modeMap';
+import { UI_COLORS } from '../../config/color-config';
 
 // ============================================================================
 // CORE MERGE ALGORITHM
@@ -46,13 +47,13 @@ import { modeMap } from './modeMap';
  * @example
  * ```typescript
  * const effective = computeEffective(
- *   { lineWidth: 1, lineColor: '#000000' },           // general
+ *   { lineWidth: 1, lineColor: UI_COLORS.BLACK },           // general
  *   { draft: { lineWidth: 2 } },                      // specific
- *   { draft: { lineColor: '#FF0000' } },              // overrides
+ *   { draft: { lineColor: UI_COLORS.SELECTED_RED } },              // overrides
  *   { draft: true, normal: false },                   // enabled
  *   'draft'                                           // mode
  * );
- * // Result: { lineWidth: 2, lineColor: '#FF0000' }
+ * // Result: { lineWidth: 2, lineColor: UI_COLORS.SELECTED_RED }
  * //         ↑ from specific  ↑ from overrides
  * ```
  */
@@ -151,7 +152,7 @@ export function hasActiveOverrides<T extends Record<string, unknown>>(
  * @example
  * ```typescript
  * const keys = getOverriddenKeys(
- *   { draft: { lineWidth: 2, lineColor: '#FF0000' } },
+ *   { draft: { lineWidth: 2, lineColor: UI_COLORS.SELECTED_RED } },
  *   { draft: true },
  *   'draft'
  * );

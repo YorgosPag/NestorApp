@@ -3,6 +3,8 @@
  * Strict typed interfaces με ISO standards και validation
  */
 
+import { UI_COLORS } from '../config/color-config';
+
 // ============================================================================
 // LINE SETTINGS
 // ============================================================================
@@ -126,18 +128,18 @@ export const validateLineSettings = (settings: Partial<LineSettings>): LineSetti
     enabled: true,
     lineType: 'solid',
     lineWidth: 0.25,
-    color: '#FFFFFF',
+    color: UI_COLORS.WHITE,
     opacity: 1.0,
     dashScale: 1.0,
     dashOffset: 0,
     lineCap: 'butt',
     lineJoin: 'miter',
     breakAtCenter: false,
-    hoverColor: '#FFFF00',
+    hoverColor: UI_COLORS.BRIGHT_YELLOW,
     hoverType: 'solid',
     hoverWidth: 0.35,
     hoverOpacity: 0.8,
-    finalColor: '#00FF00',
+    finalColor: UI_COLORS.BRIGHT_GREEN,
     finalType: 'solid',
     finalWidth: 0.35,
     finalOpacity: 1.0,
@@ -165,7 +167,7 @@ export const validateTextSettings = (settings: Partial<TextSettings>): TextSetti
     fontSize: 3.5,
     fontWeight: 400,
     fontStyle: 'normal',
-    color: '#FFFFFF',
+    color: UI_COLORS.WHITE,
     opacity: 1.0,
     letterSpacing: 0,
     lineHeight: 1.2,
@@ -181,12 +183,12 @@ export const validateTextSettings = (settings: Partial<TextSettings>): TextSetti
     shadowOffsetX: 0,
     shadowOffsetY: 0,
     shadowBlur: 0,
-    shadowColor: '#000000',
+    shadowColor: UI_COLORS.BLACK,
     strokeEnabled: false,
     strokeWidth: 1,
-    strokeColor: '#000000',
+    strokeColor: UI_COLORS.BLACK,
     backgroundEnabled: false,
-    backgroundColor: '#000000',
+    backgroundColor: UI_COLORS.BLACK,
     backgroundPadding: 4,
     activeTemplate: null
   };
@@ -213,10 +215,10 @@ export const validateGripSettings = (settings: Partial<GripSettings>): GripSetti
     apertureSize: 10,
     opacity: 1.0,
     colors: {
-      cold: '#0000FF',
-      warm: '#FF69B4',
-      hot: '#FF0000',
-      contour: '#000000'
+      cold: UI_COLORS.SNAP_CENTER,
+      warm: UI_COLORS.SNAP_INTERSECTION,
+      hot: UI_COLORS.SNAP_ENDPOINT,
+      contour: UI_COLORS.BLACK
     },
     showAperture: true,
     multiGripEdit: true,

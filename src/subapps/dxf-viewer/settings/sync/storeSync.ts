@@ -27,6 +27,7 @@ import type { SyncDependencies, ToolStylePort, TextStylePort, GripStylePort, Gri
 import type { LineSettings, TextSettings } from '../settings-core/types';
 import type { GripSettings } from '../../types/gripSettings';
 import type { ViewerMode } from '../core/types';
+import { UI_COLORS } from '../../config/color-config';
 
 // ============================================================================
 // EFFECTIVE SETTINGS GETTER TYPE
@@ -71,7 +72,7 @@ export interface StoreSync {
 function mapLineToToolStyle(line: LineSettings): Parameters<ToolStylePort['apply']>[0] {
   return {
     stroke: line.color,
-    fill: '#00000000', // Transparent fill
+    fill: UI_COLORS.TRANSPARENT, // Transparent fill
     width: line.lineWidth,
     opacity: line.opacity,
     dashArray: [] // TODO: Map from lineType to dashArray
@@ -97,9 +98,9 @@ function mapTextToTextStyle(text: TextSettings): Parameters<TextStylePort['apply
 function mapGripToGripStyle(grip: GripSettings): Parameters<GripStylePort['apply']>[0] {
   return {
     size: grip.gripSize,
-    color: grip.colors?.cold ?? '#0000FF',
-    hoverColor: grip.colors?.warm ?? '#FF69B4',
-    selectedColor: grip.colors?.hot ?? '#FF0000'
+    color: grip.colors?.cold ?? UI_COLORS.SNAP_CENTER,
+    hoverColor: grip.colors?.warm ?? UI_COLORS.SNAP_INTERSECTION,
+    selectedColor: grip.colors?.hot ?? UI_COLORS.SNAP_ENDPOINT
   };
 }
 
@@ -221,7 +222,7 @@ export function createStoreSync(deps: SyncDependencies): StoreSync {
       if (deps.grid) {
         const { push, subscriptions } = wirePort(
           deps.grid,
-          () => ({ enabled: true, spacing: 10, color: '#CCCCCC', opacity: 0.5 }), // TODO: Map from settings
+          () => ({ enabled: true, spacing: 10, color: UI_COLORS.LIGHT_GRAY, opacity: 0.5 }), // TODO: Map from settings
           deps,
           getEffective
         );
@@ -233,7 +234,7 @@ export function createStoreSync(deps: SyncDependencies): StoreSync {
       if (deps.ruler) {
         const { push, subscriptions } = wirePort(
           deps.ruler,
-          () => ({ enabled: true, units: 'mm', color: '#FFFFFF', opacity: 1.0 }), // TODO: Map from settings
+          () => ({ enabled: true, units: 'mm', color: UI_COLORS.WHITE, opacity: 1.0 }), // TODO: Map from settings
           deps,
           getEffective
         );

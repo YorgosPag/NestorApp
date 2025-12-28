@@ -5,6 +5,7 @@
 
 // Re-export DrawingTool type from existing hook
 export type { DrawingTool, DrawingState } from '../../hooks/drawing/useUnifiedDrawing';
+import { UI_COLORS } from '../../config/color-config';
 
 // Entity creation configuration
 export interface EntityCreationConfig {
@@ -52,7 +53,7 @@ export const DEFAULT_ENTITY_CREATION_CONFIG: EntityCreationConfig = {
   continuousDrawing: false,
   showPreview: true,
   defaultLineStyle: {
-    color: '#ffffff',
+    color: UI_COLORS.WHITE,
     width: 1,
   },
   tools: {

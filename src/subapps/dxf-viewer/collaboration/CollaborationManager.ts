@@ -2,6 +2,7 @@
 
 import type { WebSocketService, WebSocketMessage } from '../../../services/websocket/WebSocketService';
 import type { Point2D } from '../rendering/types/Types';
+import { SIMPLE_COLORS } from '../config/color-config';
 
 // DXF Viewer Collaboration Manager
 export interface CollaborationUser {
@@ -305,13 +306,8 @@ class DXFCollaborationManager {
 
   // Utility methods
   private generateUserColor(userId: string): string {
-    const colors = [
-      '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-      '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
-    ];
-    
     const hash = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return colors[hash % colors.length];
+    return SIMPLE_COLORS[hash % SIMPLE_COLORS.length];
   }
 
   // Cleanup

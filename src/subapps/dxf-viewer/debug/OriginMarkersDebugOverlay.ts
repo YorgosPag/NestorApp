@@ -5,6 +5,7 @@
  */
 
 import type { Point2D, Viewport, ViewTransform } from '../rendering/types/Types';
+import { UI_COLORS } from '../config/color-config';
 
 export interface OriginMarkerDebugSettings {
   enabled: boolean;
@@ -23,7 +24,7 @@ export interface OriginMarkerDebugSettings {
 
 export const DEFAULT_DEBUG_ORIGIN_SETTINGS: OriginMarkerDebugSettings = {
   enabled: false,         // 🚫 OFF by default - debug only
-  color: '#ff0000',       // Κόκκινο για καλύτερη ορατότητα
+  color: UI_COLORS.DEBUG_ORIGIN,       // Κόκκινο για καλύτερη ορατότητα
   size: 15,               // Μεγαλύτερο για debugging
   lineWidth: 2,           // Έντονες γραμμές
   showCenter: true,       // Center dot για ακρίβεια
@@ -31,7 +32,7 @@ export const DEFAULT_DEBUG_ORIGIN_SETTINGS: OriginMarkerDebugSettings = {
   showLabel: true,        // Debug label
   opacity: 0.8,          // Slightly transparent για μη παρεμβολή
   showAxisLines: true,    // 🎯 Δείχνει πλήρεις άξονες X,Y
-  axisColor: '#ff00ff',   // 🎯 MAGENTA για μέγιστη ορατότητα!
+  axisColor: UI_COLORS.DEBUG_ORIGIN,   // 🎯 MAGENTA για μέγιστη ορατότητα!
   axisLineWidth: 4,       // 🎯 ΠΑΧΥΤΕΡΕΣ γραμμές!
   axisOpacity: 1.0       // 🎯 100% OPACITY - μη διαφανείς!
 };
@@ -218,7 +219,7 @@ export class OriginMarkersDebugOverlay {
       console.log('🎯 AXIS LINES STROKE CALLED!');
 
       // 🎯 DEBUG TEST: Σχεδιάζω ένα φωτεινό κόκκινο τετράγωνο στη γωνία
-      ctx.fillStyle = '#ff0000';
+      ctx.fillStyle = UI_COLORS.DEBUG_ORIGIN;
       ctx.globalAlpha = 1.0;
       ctx.fillRect(10, 10, 50, 50);
       console.log('🎯 TEST RECTANGLE DRAWN!');

@@ -9,6 +9,7 @@ import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { CAD_UI_COLORS, UI_COLORS } from '../../../../../config/color-config';
 
 // SVG Icons για τα accordion sections
 const CogIcon = ({ className }: { className?: string }) => (
@@ -176,9 +177,9 @@ export function GripSettings() {
             <div className="space-y-2">
               <label className="block text-sm font-medium ${colors.text.secondary}">Χρώμα Cold</label>
               <ColorDialogTrigger
-                value={gripSettings.colors.cold || '#0000FF'}
+                value={gripSettings.colors.cold || CAD_UI_COLORS.grips.cold}
                 onChange={(color) => updateSettings({ colors: { ...gripSettings.colors, cold: color } })}
-                label={gripSettings.colors.cold || '#0000FF'}
+                label={gripSettings.colors.cold || CAD_UI_COLORS.grips.cold}
                 title="Επιλογή Χρώματος Cold Grip"
                 alpha={false}
                 modes={['hex', 'rgb', 'hsl']}
@@ -192,9 +193,9 @@ export function GripSettings() {
             <div className="space-y-2">
               <label className="block text-sm font-medium ${colors.text.secondary}">Χρώμα Warm (Hover)</label>
               <ColorDialogTrigger
-                value={gripSettings.colors.warm || '#00FF80'}
+                value={gripSettings.colors.warm || CAD_UI_COLORS.grips.warm}
                 onChange={(color) => updateSettings({ colors: { ...gripSettings.colors, warm: color } })}
-                label={gripSettings.colors.warm || '#00FF80'}
+                label={gripSettings.colors.warm || CAD_UI_COLORS.grips.warm}
                 title="Επιλογή Χρώματος Warm Grip"
                 alpha={false}
                 modes={['hex', 'rgb', 'hsl']}
@@ -208,9 +209,9 @@ export function GripSettings() {
             <div className="space-y-2">
               <label className="block text-sm font-medium ${colors.text.secondary}">Χρώμα Hot (Επιλεγμένα)</label>
               <ColorDialogTrigger
-                value={gripSettings.colors.hot || '#FF3B30'}
+                value={gripSettings.colors.hot || CAD_UI_COLORS.grips.hot}
                 onChange={(color) => updateSettings({ colors: { ...gripSettings.colors, hot: color } })}
-                label={gripSettings.colors.hot || '#FF3B30'}
+                label={gripSettings.colors.hot || UI_COLORS.HIGHLIGHTED_ENTITY}
                 title="Επιλογή Χρώματος Hot Grip"
                 alpha={false}
                 modes={['hex', 'rgb', 'hsl']}

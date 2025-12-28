@@ -5,6 +5,7 @@
 
 import { BaseConfigurationManager } from '../../rendering/entities/shared/geometry-rendering-utils';
 import type { Point2D, Viewport } from '../../rendering/types/Types';
+import { UI_COLORS } from '../../config/color-config';
 
 // ===== TYPES =====
 export interface CursorSettings {
@@ -97,7 +98,7 @@ export const DEFAULT_CURSOR_SETTINGS: CursorSettings = {
   crosshair: {
     enabled: true,             // 🔺 ALWAYS TRUE - το crosshair πάντα ενεργοποιημένο
     size_percent: 25,          // 🔺 BIGGER: Αυξημένο μέγεθος για καλύτερη ορατότητα
-    color: '#ffffff',
+    color: UI_COLORS.WHITE,
     line_width: 1,             // πάχος γραμμής
     line_style: 'solid',       // τύπος γραμμής
     opacity: 0.9,              // 90% διαφάνεια
@@ -111,7 +112,7 @@ export const DEFAULT_CURSOR_SETTINGS: CursorSettings = {
     enabled: true,
     shape: 'circle',           // AutoCAD default shape
     size: 10,                  // μέγεθος σε pixels
-    color: '#00FF80',          // 🔺 ΔΙΑΦΟΡΕΤΙΚΟ ΧΡΩΜΑ ΑΠΟ CROSSHAIR - πράσινο για αυτονομία
+    color: UI_COLORS.SUCCESS_BRIGHT,          // 🔺 ΔΙΑΦΟΡΕΤΙΚΟ ΧΡΩΜΑ ΑΠΟ CROSSHAIR - πράσινο για αυτονομία
     line_style: 'solid',       // συνεχόμενη γραμμή
     line_width: 1,             // 🔺 ΑΥΤΟΝΟΜΗ ΡΥΘΜΙΣΗ - πάχος γραμμής κέρσορα
     opacity: 0.9               // 90% διαφάνεια
@@ -119,17 +120,17 @@ export const DEFAULT_CURSOR_SETTINGS: CursorSettings = {
   
   selection: {
     window: {
-      fillColor: '#0080ff',    // AutoCAD μπλε
+      fillColor: UI_COLORS.BLUE_DEFAULT,    // AutoCAD μπλε
       fillOpacity: 0.2,        // διαφάνεια γεμίσματος
-      borderColor: '#0080ff',
+      borderColor: UI_COLORS.BLUE_DEFAULT,
       borderOpacity: 1.0,      // συμπαγές περίγραμμα
       borderStyle: 'solid',
       borderWidth: 2           // πάχος γραμμής 2px
     },
     crossing: {
-      fillColor: '#00ff80',    // AutoCAD πράσινο
+      fillColor: UI_COLORS.SUCCESS_BRIGHT,    // AutoCAD πράσινο
       fillOpacity: 0.2,        // διαφάνεια γεμίσματος
-      borderColor: '#00ff80',
+      borderColor: UI_COLORS.SUCCESS_BRIGHT,
       borderOpacity: 1.0,      // συμπαγές περίγραμμα
       borderStyle: 'dashed',
       borderWidth: 2           // πάχος γραμμής 2px

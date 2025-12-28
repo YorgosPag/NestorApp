@@ -3,7 +3,7 @@ import type { Region, RegionStatus } from '../types/overlay';
 import type { ViewTransform } from '../rendering/types/Types';
 import type { GripSettings } from '../types/gripSettings';
 import { getStatusColors } from '../config/color-mapping'; // 🔺 Κεντρική function για ελληνικά/αγγλικά mapping
-import { CAD_UI_COLORS } from '../config/color-config';
+import { CAD_UI_COLORS, UI_COLORS } from '../config/color-config';
 import { drawVerticesPath } from '../rendering/entities/shared/geometry-rendering-utils';
 
 // DEBUG FLAG - Set to false to disable performance-heavy logging
@@ -58,7 +58,7 @@ export class OverlayDrawingEngine {
 
     // 🔺 ΚΕΝΤΡΙΚΗ ΛΟΓΙΚΗ: Χρήση getStatusColors() για ελληνικά/αγγλικά mapping
     const statusColors = getStatusColors(region.status);
-    const fillColor = region.style?.fill || statusColors?.fill || '#3b82f6';
+    const fillColor = region.style?.fill || statusColors?.fill || UI_COLORS.BUTTON_PRIMARY;
     const fillOpacity = region.style?.opacity ?? region.opacity ?? 0.3;
 
     // 🐛 FIX: Επαναφορά globalCompositeOperation για να μη "μαυρίζει" από blend
@@ -75,18 +75,18 @@ export class OverlayDrawingEngine {
     // Check if region is hovered (has grip interaction)
     const isHovered = options.gripInteractionState?.hovered?.entityId === region.id;
     // 🔺 ΚΕΝΤΡΙΚΗ ΛΟΓΙΚΗ: Χρήση ίδιων statusColors για consistency
-    const strokeColor = region.style?.stroke || statusColors?.stroke || '#64748b';
+    const strokeColor = region.style?.stroke || statusColors?.stroke || UI_COLORS.BUTTON_SECONDARY;
     const lineWidth = region.style?.lineWidth || 2;
 
     if (isHovered) {
       // DXF HOVER STYLE: white, thick, dashed
-      ctx.strokeStyle = '#FFFFFF';
+      ctx.strokeStyle = UI_COLORS.WHITE;
       ctx.lineWidth = Math.max(3, lineWidth);
       ctx.setLineDash([12, 6]);
 
     } else if (isSelected) {
       // SELECTED STYLE: red border
-      ctx.strokeStyle = '#ef4444';
+      ctx.strokeStyle = UI_COLORS.ERROR;
       ctx.lineWidth = Math.max(2, lineWidth);
       ctx.setLineDash([]);
     } else {
@@ -138,7 +138,7 @@ export class OverlayDrawingEngine {
     
     // 🔺 ΚΕΝΤΡΙΚΗ ΛΟΓΙΚΗ: Χρήση getStatusColors() για drawing preview
     const statusColors = getStatusColors(status);
-    ctx.strokeStyle = statusColors?.stroke || '#3b82f6';
+    ctx.strokeStyle = statusColors?.stroke || UI_COLORS.BUTTON_PRIMARY;
     ctx.lineWidth = 2;
 
     drawVerticesPath(ctx, screenVertices, false);
@@ -276,8 +276,8 @@ export class OverlayDrawingEngine {
 
     // Bubble
     ctx.globalAlpha = 0.9;
-    ctx.fillStyle = isSelected ? '#ef4444' : '#374151';
-    ctx.strokeStyle = '#ffffff';
+    ctx.fillStyle = isSelected ? UI_COLORS.ERROR : UI_COLORS.UPLOAD_AREA_BG;
+    ctx.strokeStyle = UI_COLORS.WHITE;
     ctx.lineWidth = 1;
 
     const padding = 6;
@@ -298,7 +298,7 @@ export class OverlayDrawingEngine {
 
     // Text
     ctx.globalAlpha = 1;
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = UI_COLORS.WHITE;
     ctx.fillText(text, centerX, centerY + 4);
 
     ctx.restore();

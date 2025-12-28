@@ -2,6 +2,7 @@ import type { Point2D } from '../rendering/types/Types';
 import type { Region, RegionStatus, OverlayLayer } from '../types/overlay';
 import { calculateRegionArea, calculateRegionPerimeter } from '../types/overlay';
 import { getStatusColors } from '../config/color-mapping';
+import { UI_COLORS } from '../config/color-config';
 
 /**
  * Utility functions for region geometry and validation
@@ -98,7 +99,7 @@ export class RegionOperations {
     return {
       id,
       levelId,
-      color: getStatusColors(status)?.fill || '#3b82f6',
+      color: getStatusColors(status)?.fill || UI_COLORS.BUTTON_PRIMARY,
       opacity: 0.7,
       status,
       vertices: vertices.map(v => ({ x: v.x, y: v.y })),

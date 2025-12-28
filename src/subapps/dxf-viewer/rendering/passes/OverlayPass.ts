@@ -5,6 +5,7 @@
 
 import type { IRenderPass, IRenderContext, RenderPassOptions } from '../core/RenderPipeline';
 import type { EntityModel } from '../types/Types';
+import { UI_COLORS } from '../../config/color-config';
 
 export interface GripInfo {
   entityId: string;
@@ -139,7 +140,7 @@ export class OverlayPass implements IRenderPass {
 
     // Selection highlight style
     context.setState({
-      strokeStyle: '#00ff00', // Green for selection
+      strokeStyle: UI_COLORS.OVERLAY_SELECTION, // Green for selection
       lineWidth: 2,
       lineDash: [5, 5],
       globalAlpha: 0.8
@@ -164,7 +165,7 @@ export class OverlayPass implements IRenderPass {
     // Hover highlight (different color)
     if (this.selection.hoveredEntityId) {
       context.setState({
-        strokeStyle: '#ffff00', // Yellow for hover
+        strokeStyle: UI_COLORS.OVERLAY_HOVER, // Yellow for hover
         lineWidth: 3,
         lineDash: []
       });
@@ -204,16 +205,16 @@ export class OverlayPass implements IRenderPass {
 
     switch (grip.state) {
       case 'hot':
-        fillColor = '#ff0000'; // Red when hot (hovering)
-        strokeColor = '#ffffff';
+        fillColor = UI_COLORS.OVERLAY_GRIP_HOT; // Red when hot (hovering)
+        strokeColor = UI_COLORS.WHITE;
         break;
       case 'selected':
-        fillColor = '#00ff00'; // Green when selected
-        strokeColor = '#ffffff';
+        fillColor = UI_COLORS.OVERLAY_SELECTION; // Green when selected
+        strokeColor = UI_COLORS.WHITE;
         break;
       default: // 'cold'
-        fillColor = '#0000ff'; // Blue when cold
-        strokeColor = '#ffffff';
+        fillColor = UI_COLORS.OVERLAY_GRIP_COLD; // Blue when cold
+        strokeColor = UI_COLORS.WHITE;
     }
 
     context.setState({
@@ -260,8 +261,8 @@ export class OverlayPass implements IRenderPass {
 
     context.save();
     context.setState({
-      strokeStyle: '#ff00ff', // Magenta for snap points
-      fillStyle: '#ff00ff',
+      strokeStyle: UI_COLORS.OVERLAY_SNAP_POINT, // Magenta for snap points
+      fillStyle: UI_COLORS.OVERLAY_SNAP_POINT,
       lineWidth: 2,
       globalAlpha: 0.9
     });
@@ -300,7 +301,7 @@ export class OverlayPass implements IRenderPass {
 
     context.save();
     context.setState({
-      strokeStyle: '#000000',
+      strokeStyle: UI_COLORS.BLACK,
       lineWidth: 1,
       globalAlpha: 0.8
     });
@@ -321,7 +322,7 @@ export class OverlayPass implements IRenderPass {
 
       case 'grab':
         // Draw hand cursor indicator
-        context.setState({ fillStyle: '#000000' });
+        context.setState({ fillStyle: UI_COLORS.BLACK });
         context.fillText('✋', screenPos.x + 10, screenPos.y - 10);
         break;
 
@@ -357,8 +358,8 @@ export class OverlayPass implements IRenderPass {
     if (this.cursor.snapPoint) {
       const snapScreen = context.worldToScreen(this.cursor.snapPoint);
       context.setState({
-        strokeStyle: '#ff00ff',
-        fillStyle: '#ff00ff'
+        strokeStyle: UI_COLORS.OVERLAY_SNAP_POINT,
+        fillStyle: UI_COLORS.OVERLAY_SNAP_POINT
       });
       context.beginPath();
       context.arc(snapScreen.x, snapScreen.y, 3, 0, Math.PI * 2);
@@ -378,7 +379,7 @@ export class OverlayPass implements IRenderPass {
 
     context.save();
     context.setState({
-      fillStyle: '#000000',
+      fillStyle: UI_COLORS.BLACK,
       font: '12px Arial',
       textAlign: 'center',
       textBaseline: 'middle'

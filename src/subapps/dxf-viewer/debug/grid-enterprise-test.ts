@@ -8,6 +8,8 @@
 // 4. COORDINATE PRECISION: Millimeter-level accuracy
 // 5. TOPOLOGICAL INTEGRITY: Grid-Canvas-Context integration
 
+import { UI_COLORS } from '../config/color-config';
+
 interface TestResult {
   category: string;
   test: string;
@@ -708,8 +710,8 @@ export async function runGridEnterpriseTests(): Promise<GridTestReport> {
     enabled: gridSettings.visual?.enabled || false,
     visible: gridSettings.visual?.enabled || false,
     style: gridSettings.visual?.style || 'lines',
-    majorColor: gridSettings.visual?.majorGridColor || '#888888',
-    minorColor: gridSettings.visual?.minorGridColor || '#bbbbbb',
+    majorColor: gridSettings.visual?.majorGridColor || UI_COLORS.GRID_MAJOR,
+    minorColor: gridSettings.visual?.minorGridColor || UI_COLORS.GRID_MINOR,
     majorWeight: gridSettings.visual?.majorGridWeight || 1,
     minorWeight: gridSettings.visual?.minorGridWeight || 0.5,
     size: gridSettings.visual?.step || 10

@@ -33,15 +33,16 @@ export interface GripStyle {
 }
 
 import { useSyncExternalStore } from 'react';
+import { UI_COLORS } from '../config/color-config';
 
 type Listener = () => void;
 let current: GripStyle = {
   enabled: true,
   colors: {
-    cold: '#0000FF',   // ✅ AutoCAD standard: Blue (ACI 5) - unselected grips
-    warm: '#FF69B4',   // ✅ AutoCAD standard: Hot Pink - hover grips
-    hot: '#FF0000',    // ✅ AutoCAD standard: Red (ACI 1) - selected grips
-    contour: '#000000' // ✅ AutoCAD standard: Black contour
+    cold: UI_COLORS.BLUE_DEFAULT,   // ✅ AutoCAD standard: Blue (ACI 5) - unselected grips
+    warm: UI_COLORS.SNAP_INTERSECTION,   // ✅ AutoCAD standard: Hot Pink - hover grips
+    hot: UI_COLORS.SNAP_ENDPOINT,    // ✅ AutoCAD standard: Red (ACI 1) - selected grips
+    contour: UI_COLORS.BLACK // ✅ AutoCAD standard: Black contour
   },
   gripSize: 10,
   pickBoxSize: 3,

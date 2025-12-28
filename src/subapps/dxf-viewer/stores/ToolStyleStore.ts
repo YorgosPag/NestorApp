@@ -4,6 +4,7 @@
  */
 
 import type { LineType } from '../settings-core/types';
+import { UI_COLORS } from '../config/color-config';
 
 export interface ToolStyle {
   enabled: boolean;          // ΝΕΟ! Ενεργοποίηση/απενεργοποίηση γραμμών
@@ -21,8 +22,8 @@ import { useSyncExternalStore } from 'react';
 type Listener = () => void;
 let current: ToolStyle = {
   enabled: true,           // Default: γραμμές ενεργοποιημένες
-  strokeColor: '#ff5555',
-  fillColor:   '#00000000',
+  strokeColor: UI_COLORS.TEST_PREVIEW_RED,
+  fillColor:   UI_COLORS.TRANSPARENT,
   lineWidth:   1,
   opacity:     1,
   lineType:    'dashed' as LineType, // Default lineType

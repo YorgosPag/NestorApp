@@ -1,6 +1,8 @@
 // 🎯 ENTERPRISE GRID WORKFLOW TEST
 // Πλήρες testing suite για Grid rendering system
 // Βασισμένο σε CAD QA Standards (ISO 9000, SASIG PDQ, VDA 4955)
+
+import { UI_COLORS } from '../config/color-config';
 //
 // ΤΕΣΤ ΚΑΤΗΓΟΡΙΕΣ:
 // 1. MORPHOLOGIC TESTS: Grid structure integrity
@@ -8,6 +10,8 @@
 // 3. SEMANTIC TESTS: Grid functionality validation
 // 4. COORDINATE PRECISION: Millimeter-level accuracy (CAD standard)
 // 5. TOPOLOGICAL INTEGRITY: Grid-Canvas-Context integration
+
+import { UI_COLORS } from '../config/color-config';
 
 interface StepResult {
   step: string;
@@ -226,8 +230,8 @@ async function checkGridPanelSettings(): Promise<any> {
     enabled: true,
     visible: true,
     style: 'lines',
-    majorGridColor: '#888888',
-    minorGridColor: '#bbbbbb',
+    majorGridColor: UI_COLORS.GRID_MAJOR,
+    minorGridColor: UI_COLORS.GRID_MINOR,
     majorGridWeight: 1,
     minorGridWeight: 0.5,
     size: 10

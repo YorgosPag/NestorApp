@@ -4,6 +4,7 @@
  */
 
 import type { UIElementSettings } from '../core/UIRenderer';
+import { UI_COLORS } from '../../../config/color-config';
 
 /**
  * 🔺 RULER POSITIONS
@@ -89,9 +90,9 @@ export const DEFAULT_RULER_SETTINGS: RulerSettings = {
   enabled: true,
   visible: true,
   opacity: 1.0,
-  color: '#333333',
-  backgroundColor: '#f0f0f0',
-  textColor: '#000000',
+  color: UI_COLORS.DARK_BACKGROUND,
+  backgroundColor: UI_COLORS.LIGHT_GRAY,
+  textColor: UI_COLORS.BLACK,
   fontSize: 12,
   height: 30,              // 30px for horizontal rulers
   width: 30,               // 30px for vertical rulers
@@ -99,8 +100,8 @@ export const DEFAULT_RULER_SETTINGS: RulerSettings = {
   // Ticks configuration
   showMajorTicks: true,
   showMinorTicks: true,
-  majorTickColor: '#333333',
-  minorTickColor: '#666666',
+  majorTickColor: UI_COLORS.DARK_BACKGROUND,
+  minorTickColor: UI_COLORS.MEDIUM_GRAY,
   majorTickLength: 10,
   minorTickLength: 5,
   tickInterval: 100,       // Major tick every 100 units
@@ -110,12 +111,12 @@ export const DEFAULT_RULER_SETTINGS: RulerSettings = {
   showUnits: true,
   unit: 'mm',
   unitsFontSize: 10,
-  unitsColor: '#666666',
+  unitsColor: UI_COLORS.MEDIUM_GRAY,
   labelPrecision: 0,       // No decimal places by default
 
   // Background
   showBackground: true,
-  borderColor: '#cccccc',
+  borderColor: UI_COLORS.LIGHT_GRAY,
   borderWidth: 1,
 
   zIndex: 200             // Medium priority for ruler rendering

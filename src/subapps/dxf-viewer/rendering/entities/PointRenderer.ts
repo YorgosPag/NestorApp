@@ -1,6 +1,7 @@
 import { BaseEntityRenderer } from './BaseEntityRenderer';
 import { EntityModel } from '../../../types/scene';
 import type { Point2D } from '../types/Types';
+import { UI_COLORS } from '../../config/color-config';
 
 // Extended point entity interface
 interface PointEntity extends EntityModel {
@@ -35,7 +36,7 @@ export class PointRenderer extends BaseEntityRenderer {
     if (isPreview) {
       return; // Δεν εμφανίζουμε καθόλου preview points
     } else {
-      this.ctx.fillStyle = '#00FFFF'; // Κυανό
+      this.ctx.fillStyle = UI_COLORS.DEBUG_RULER; // Κυανό
     }
 
     // ⚡ NUCLEAR: POINT CIRCLE ELIMINATED

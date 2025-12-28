@@ -18,6 +18,7 @@ import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import { renderStyledText, renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 import { getGripPreviewStyleWithOverride } from '../../hooks/useGripPreviewStyle';
 import type { EntityModel, GripInfo } from '../../rendering/types/Types';
+import { UI_COLORS } from '../../config/color-config';
 import type { RenderOptions } from '../../rendering/types/Types';
 import type { GripSettings } from '../../types/gripSettings';
 import { CAD_UI_COLORS } from '../../config/color-config';
@@ -64,7 +65,7 @@ function renderMeasurementText(
   measurements: { label: string; value: number; unit?: string }[]
 ) {
   ctx.save();
-  ctx.fillStyle = '#ffffff'; // ⚡ WHITE FOR LIVE MEASUREMENTS
+  ctx.fillStyle = UI_COLORS.WHITE; // ⚡ WHITE FOR LIVE MEASUREMENTS
   ctx.font = '12px Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -135,8 +136,8 @@ export class PhaseManager {
         if (isOverlayEntity) {
           const toolStyle = toolStyleStore.get();
 
-          this.ctx.strokeStyle = toolStyle.strokeColor || '#22c55e';
-          this.ctx.fillStyle = toolStyle.fillColor || '#ff000080'; // Semi-transparent fill
+          this.ctx.strokeStyle = toolStyle.strokeColor || UI_COLORS.SUCCESS_GREEN;
+          this.ctx.fillStyle = toolStyle.fillColor || UI_COLORS.SEMI_TRANSPARENT_RED; // Semi-transparent fill
           this.ctx.lineWidth = toolStyle.lineWidth || 2;
           this.ctx.setLineDash([5, 5]); // Overlay entities keep dashed style
         } else {
@@ -172,12 +173,12 @@ export class PhaseManager {
           // Phase 3a: White dashed for hover
           this.ctx.lineWidth = 2;
           this.ctx.setLineDash([5, 5]);
-          this.ctx.strokeStyle = '#FFFFFF';
+          this.ctx.strokeStyle = UI_COLORS.WHITE;
         } else {
           // Phase 3b: White solid for selection (same as Phase 2 but white)
           this.ctx.lineWidth = 1;
           this.ctx.setLineDash([]);
-          this.ctx.strokeStyle = '#ffffff';
+          this.ctx.strokeStyle = UI_COLORS.WHITE;
         }
         break;
     }
@@ -219,7 +220,7 @@ export class PhaseManager {
    */
   getPreviewDotColor(entity?: EntityModel): string {
     // 🔺 Κίτρινο χρώμα για όλες τις οντότητες κατά την προεπισκόπηση - κεντρικοποιημένη λογική
-    return '#ffff00'; // Κίτρινο για όλες τις οντότητες στη φάση προεπισκόπησης
+    return UI_COLORS.YELLOW; // Κίτρινο για όλες τις οντότητες στη φάση προεπισκόπησης
   }
 
   /**
@@ -314,7 +315,7 @@ export class PhaseManager {
       // Edge/midpoint grips use specific colors
       fillColor = colorState === 'hot' ? colors.hot
                 : colorState === 'warm' ? colors.warm
-                                        : '#00ff80';    // Green for edge grips (special case)
+                                        : UI_COLORS.SUCCESS_BRIGHT;    // Green for edge grips (special case)
 
     } else {
       // Vertex grips use standard grip colors
@@ -387,7 +388,7 @@ export class PhaseManager {
     
     this.ctx.save();
 
-    this.ctx.fillStyle = '#ff0000'; // Red for live measurements
+    this.ctx.fillStyle = UI_COLORS.RED; // Red for live measurements
     this.ctx.font = '12px Arial';
     this.ctx.textBaseline = 'middle';
     
@@ -435,7 +436,7 @@ export class PhaseManager {
     // Render live measurements
     this.ctx.save();
 
-    this.ctx.fillStyle = '#ff0000'; // Red for live measurements
+    this.ctx.fillStyle = UI_COLORS.RED; // Red for live measurements
     this.ctx.font = '12px Arial';
     this.ctx.textBaseline = 'middle';
     
@@ -548,7 +549,7 @@ export class PhaseManager {
     // Render live measurements near the grip being dragged
     this.ctx.save();
 
-    this.ctx.fillStyle = '#ff0000'; // Red for live measurements
+    this.ctx.fillStyle = UI_COLORS.RED; // Red for live measurements
     this.ctx.font = '12px Arial';
     
     // Smart positioning - avoid screen edges and grip overlap
@@ -716,7 +717,7 @@ export class PhaseManager {
     // Render live measurements
     this.ctx.save();
 
-    this.ctx.fillStyle = '#ff0000'; // Red for live measurements
+    this.ctx.fillStyle = UI_COLORS.RED; // Red for live measurements
     this.ctx.font = '12px Arial';
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';

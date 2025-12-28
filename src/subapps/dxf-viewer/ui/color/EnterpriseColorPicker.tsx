@@ -23,6 +23,7 @@ import React, { useState, useCallback } from 'react';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { UI_COLORS } from '../../config/color-config';
 import { EnterpriseColorArea } from './EnterpriseColorArea';
 import { HueSlider, AlphaSlider } from './EnterpriseColorSlider';
 import { EnterpriseColorField } from './EnterpriseColorField';
@@ -60,7 +61,7 @@ export function EnterpriseColorPicker({
   labels = {},
   className = '',
   showContrast = false,
-  contrastBackground = '#ffffff',
+  contrastBackground = UI_COLORS.WHITE,
   onModeChange,
 }: EnterpriseColorPickerProps) {
   const [currentMode, setCurrentMode] = useState<ColorMode>(modes[0] || 'hex');

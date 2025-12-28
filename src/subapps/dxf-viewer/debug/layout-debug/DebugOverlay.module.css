@@ -180,20 +180,20 @@
   }
 
   .sectionTitle {
-    color: #ffffff;
+    color: var(--ui-white, #ffffff);
     text-shadow: none;
   }
 
   .coordinateLabel,
   .coordinateLabelCanvas,
   .coordinateLabelWorld {
-    color: #ffffff;
+    color: var(--ui-white, #ffffff);
   }
 
   .cornerIndicatorBase {
-    background-color: #000000;
-    color: #ffffff;
-    border: 2px solid #ffffff;
+    background-color: var(--ui-black, #000000);
+    color: var(--ui-white, #ffffff);
+    border: 2px solid var(--ui-white, #ffffff);
   }
 }
 

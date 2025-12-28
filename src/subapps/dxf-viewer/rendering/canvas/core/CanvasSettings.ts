@@ -3,6 +3,8 @@
  * ✅ ΦΑΣΗ 7: Centralized settings για όλα τα canvas instances
  */
 
+import { UI_COLORS } from '../../../config/color-config';
+
 import type { CrosshairSettings } from '../../ui/crosshair/CrosshairTypes';
 import type { UICursorSettings } from '../../ui/cursor/CursorTypes';
 import type { SnapSettings } from '../../ui/snap/SnapTypes';
@@ -69,7 +71,7 @@ export class CanvasSettings {
       crosshair: {
         enabled: true,
         visible: true,
-        color: '#00ff00',
+        color: UI_COLORS.BRIGHT_GREEN,
         lineWidth: 1,
         length: 20,
         gap: 5,
@@ -81,8 +83,8 @@ export class CanvasSettings {
         visible: true,
         shape: 'crosshair',
         size: 16,
-        color: '#ffffff',
-        strokeColor: '#000000',
+        color: UI_COLORS.WHITE,
+        strokeColor: UI_COLORS.BLACK,
         strokeWidth: 1,
         opacity: 1.0,
         zIndex: 1001
@@ -91,7 +93,7 @@ export class CanvasSettings {
         enabled: true,
         tolerance: 10,
         types: ['endpoint', 'midpoint', 'intersection'],
-        color: '#ffff00',
+        color: UI_COLORS.BRIGHT_YELLOW,
         size: 8,
         opacity: 1.0,
         zIndex: 900
@@ -100,7 +102,7 @@ export class CanvasSettings {
         enabled: true,
         visible: true,
         spacing: 20,
-        color: '#cccccc',
+        color: UI_COLORS.LIGHT_GRAY,
         opacity: 0.5,
         pattern: 'lines',
         zIndex: 1
@@ -108,9 +110,9 @@ export class CanvasSettings {
       rulers: {
         enabled: true,
         visible: true,
-        color: '#666666',
-        backgroundColor: '#f0f0f0',
-        textColor: '#333333',
+        color: UI_COLORS.MEDIUM_GRAY,
+        backgroundColor: UI_COLORS.LIGHT_GRAY_ALT,
+        textColor: UI_COLORS.DARK_BACKGROUND,
         fontSize: 12,
         height: 30,
         width: 30,
@@ -118,17 +120,17 @@ export class CanvasSettings {
       },
       selection: {
         window: {
-          fillColor: '#0066cc',
+          fillColor: UI_COLORS.BUTTON_PRIMARY,
           fillOpacity: 0.1,
-          borderColor: '#0066cc',
+          borderColor: UI_COLORS.BUTTON_PRIMARY,
           borderOpacity: 0.8,
           borderStyle: 'solid',
           borderWidth: 1
         },
         crossing: {
-          fillColor: '#00cc66',
+          fillColor: UI_COLORS.SUCCESS,
           fillOpacity: 0.1,
-          borderColor: '#00cc66',
+          borderColor: UI_COLORS.SUCCESS,
           borderOpacity: 0.8,
           borderStyle: 'dashed',
           borderWidth: 1

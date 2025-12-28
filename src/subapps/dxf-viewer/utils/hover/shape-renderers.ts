@@ -111,7 +111,7 @@ export function renderCircleHover({ entity, ctx, worldToScreen, options }: Hover
     const labelX = (gapStart + gapEnd) / 2;
     const labelY = screenCenterTransformed.y;
     const label = `R: ${radius.toFixed(2)}`;
-    renderMeasurementLabel(ctx, labelX, labelY, label, '#00ff00');
+    renderMeasurementLabel(ctx, labelX, labelY, label, UI_COLORS.MEASUREMENT_TEXT);
   }
 
   ctx.restore();
@@ -121,8 +121,8 @@ export function renderCircleHover({ entity, ctx, worldToScreen, options }: Hover
   const circumference = 2 * Math.PI * radius;
   
   // Display area and circumference (same positions as preview)
-  renderMeasurementLabel(ctx, screenCenterTransformed.x, screenCenterTransformed.y - screenRadiusTransformed / 2, `Εμβαδόν: ${area.toFixed(2)}`, '#00ff00');
-  renderMeasurementLabel(ctx, screenCenterTransformed.x, screenCenterTransformed.y + screenRadiusTransformed / 2, `Περιφέρεια: ${circumference.toFixed(2)}`, '#00ff00');
+  renderMeasurementLabel(ctx, screenCenterTransformed.x, screenCenterTransformed.y - screenRadiusTransformed / 2, `Εμβαδόν: ${area.toFixed(2)}`, UI_COLORS.MEASUREMENT_TEXT);
+  renderMeasurementLabel(ctx, screenCenterTransformed.x, screenCenterTransformed.y + screenRadiusTransformed / 2, `Περιφέρεια: ${circumference.toFixed(2)}`, UI_COLORS.MEASUREMENT_TEXT);
 }
 
 export function renderRectangleHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
@@ -136,7 +136,7 @@ export function renderRectangleHover({ entity, ctx, worldToScreen, options }: Ho
   
   ctx.save();
   ctx.setLineDash([8, 6]);
-  ctx.strokeStyle = '#FFFFFF';
+  ctx.strokeStyle = UI_COLORS.WHITE;
   ctx.lineWidth = 1;
   
   // Draw simple dashed rectangle without measurements

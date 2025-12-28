@@ -19,6 +19,7 @@ import {
   DEFAULT_GRIP_SETTINGS,
   DEFAULT_DXF_SETTINGS
 } from '../defaults';
+import { UI_COLORS } from '../../config/color-config';
 
 describe('Override Engine', () => {
   describe('mergeSettings', () => {
@@ -31,11 +32,11 @@ describe('Override Engine', () => {
 
     it('should merge override into base', () => {
       const base = DEFAULT_LINE_SETTINGS;
-      const override = { lineColor: '#FF0000', lineWidth: 3 };
+      const override = { lineColor: UI_COLORS.SELECTED_RED, lineWidth: 3 };
 
       const result = mergeSettings(base, override);
 
-      expect(result.lineColor).toBe('#FF0000');
+      expect(result.lineColor).toBe(UI_COLORS.SELECTED_RED);
       expect(result.lineWidth).toBe(3);
       expect(result.lineType).toBe(base.lineType); // Unchanged
     });
@@ -54,14 +55,14 @@ describe('Override Engine', () => {
     it('should merge all setting categories', () => {
       const base = DEFAULT_DXF_SETTINGS;
       const override = {
-        line: { lineColor: '#00FF00' },
+        line: { lineColor: UI_COLORS.LEGACY_COLORS.GREEN },
         text: { fontSize: 16 },
         grip: { size: 10 }
       };
 
       const result = mergeDxfSettings(base, override);
 
-      expect(result.line.lineColor).toBe('#00FF00');
+      expect(result.line.lineColor).toBe(UI_COLORS.LEGACY_COLORS.GREEN);
       expect(result.text.fontSize).toBe(16);
       expect(result.grip.size).toBe(10);
     });
@@ -119,12 +120,12 @@ describe('Override Engine', () => {
 
     it('should ignore unchanged properties', () => {
       const base = {
-        lineColor: '#000000',
+        lineColor: UI_COLORS.BLACK,
         lineWidth: 1,
         lineType: 'solid'
       };
       const compare = {
-        lineColor: '#FF0000', // Changed
+        lineColor: UI_COLORS.SELECTED_RED, // Changed
         lineWidth: 1,         // Same
         lineType: 'solid'     // Same
       };
@@ -132,7 +133,7 @@ describe('Override Engine', () => {
       const diff = diffSettings(base, compare);
 
       expect(diff).toEqual({
-        lineColor: '#FF0000'
+        lineColor: UI_COLORS.SELECTED_RED
       });
     });
   });
@@ -141,7 +142,7 @@ describe('Override Engine', () => {
     it('should extract all overrides from entity settings', () => {
       const base = DEFAULT_DXF_SETTINGS;
       const entity = {
-        line: { ...DEFAULT_LINE_SETTINGS, lineColor: '#123456' },
+        line: { ...DEFAULT_LINE_SETTINGS, lineColor: UI_COLORS.CUSTOM_TEST_COLOR || '#123456' },
         text: { ...DEFAULT_TEXT_SETTINGS, fontSize: 20 },
         grip: DEFAULT_GRIP_SETTINGS // No change
       };
@@ -149,7 +150,7 @@ describe('Override Engine', () => {
       const overrides = extractOverrides(base, entity);
 
       expect(overrides).toEqual({
-        line: { lineColor: '#123456' },
+        line: { lineColor: UI_COLORS.CUSTOM_TEST_COLOR || '#123456' },
         text: { fontSize: 20 }
         // grip not included (no differences)
       });
@@ -167,7 +168,7 @@ describe('Override Engine', () => {
 
   describe('hasOverrides', () => {
     it('should detect when overrides exist', () => {
-      expect(hasOverrides({ line: { lineColor: '#FF0000' } })).toBe(true);
+      expect(hasOverrides({ line: { lineColor: UI_COLORS.SELECTED_RED } })).toBe(true);
       expect(hasOverrides({ text: {} })).toBe(false);
       expect(hasOverrides({})).toBe(false);
       expect(hasOverrides(null)).toBe(false);
@@ -191,7 +192,7 @@ describe('Override Engine', () => {
   describe('cleanEmptyOverrides', () => {
     it('should remove empty override objects', () => {
       const overrides = {
-        line: { lineColor: '#FF0000' },
+        line: { lineColor: UI_COLORS.SELECTED_RED },
         text: {}, // Empty
         grip: undefined
       };
@@ -199,7 +200,7 @@ describe('Override Engine', () => {
       const cleaned = cleanEmptyOverrides(overrides);
 
       expect(cleaned).toEqual({
-        line: { lineColor: '#FF0000' }
+        line: { lineColor: UI_COLORS.SELECTED_RED }
       });
     });
 
@@ -225,14 +226,14 @@ describe('Override Engine', () => {
     it('should apply multiple overrides in sequence', () => {
       const base = DEFAULT_DXF_SETTINGS;
       const overrides = [
-        { line: { lineColor: '#FF0000' } },
+        { line: { lineColor: UI_COLORS.SELECTED_RED } },
         { line: { lineWidth: 2 }, text: { fontSize: 16 } },
         { grip: { size: 8 } }
       ];
 
       const result = applyOverridesToBase(base, overrides);
 
-      expect(result.line.lineColor).toBe('#FF0000');
+      expect(result.line.lineColor).toBe(UI_COLORS.SELECTED_RED);
       expect(result.line.lineWidth).toBe(2);
       expect(result.text.fontSize).toBe(16);
       expect(result.grip.size).toBe(8);
@@ -249,14 +250,14 @@ describe('Override Engine', () => {
       const base = DEFAULT_DXF_SETTINGS;
       const overrides = [
         null,
-        { line: { lineColor: '#0000FF' } },
+        { line: { lineColor: UI_COLORS.LEGACY_COLORS.BLUE } },
         undefined,
         { text: { fontSize: 18 } }
       ];
 
       const result = applyOverridesToBase(base, overrides as unknown);
 
-      expect(result.line.lineColor).toBe('#0000FF');
+      expect(result.line.lineColor).toBe(UI_COLORS.LEGACY_COLORS.BLUE);
       expect(result.text.fontSize).toBe(18);
     });
   });
@@ -278,7 +279,7 @@ describe('Override Engine', () => {
 
     it('should use reference equality for unchanged objects', () => {
       const base = DEFAULT_DXF_SETTINGS;
-      const override = { line: { lineColor: '#FF0000' } };
+      const override = { line: { lineColor: UI_COLORS.SELECTED_RED } };
 
       const result = mergeDxfSettings(base, override);
 
@@ -300,7 +301,7 @@ describe('Override Engine', () => {
 
       const override = {
         line: {
-          lineColor: '#FF0000',
+          lineColor: UI_COLORS.SELECTED_RED,
           // Nested object that shouldn't exist but testing robustness
           nested: { value: 'test' }
         } as unknown
@@ -308,7 +309,7 @@ describe('Override Engine', () => {
 
       const result = mergeDxfSettings(base, override);
 
-      expect(result.line.lineColor).toBe('#FF0000');
+      expect(result.line.lineColor).toBe(UI_COLORS.SELECTED_RED);
       expect((result.line as Record<string, unknown>).nested).toEqual({ value: 'test' });
     });
 

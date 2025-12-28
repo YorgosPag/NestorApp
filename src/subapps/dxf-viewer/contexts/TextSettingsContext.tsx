@@ -7,6 +7,8 @@ import { useViewerConfig } from '../providers/ConfigurationProvider';
 import { useTextSettingsFromProvider } from '../settings-provider';
 // ===== OVERRIDE GUARD SYSTEM =====
 import { guardGlobalAccess } from '../../../utils/overrideGuard';
+// ===== CENTRALIZED COLORS =====
+import { UI_COLORS } from '../config/color-config';
 
 // Text Settings Interface
 export interface TextSettings {
@@ -42,7 +44,7 @@ const defaultTextSettings: TextSettings = {
   enabled: true,               // Default: κείμενο ενεργοποιημένο
   fontFamily: 'Arial, sans-serif', // ✅ ISO 3098: Sans-serif font recommended
   fontSize: 2.5,               // ✅ ISO 3098: Standard 2.5mm text height
-  color: '#FFFFFF',            // ✅ AutoCAD ACI 7: White for text
+  color: UI_COLORS.WHITE,            // ✅ AutoCAD ACI 7: White for text
   isBold: false,               // ✅ ISO 3098: Normal weight default
   isItalic: false,             // ✅ ISO 3098: Upright text default
   isUnderline: false,          // ✅ ISO 3098: No underline default
@@ -61,7 +63,7 @@ export const TEXT_TEMPLATES: TextTemplate[] = [
       enabled: true,
       fontFamily: 'Arial, sans-serif',    // ✅ ISO 3098: Sans-serif font recommended
       fontSize: 2.5,                      // ✅ ISO 3098: Standard 2.5mm text height
-      color: '#FFFFFF',                   // ✅ AutoCAD ACI 7: White for text
+      color: UI_COLORS.WHITE,                   // ✅ AutoCAD ACI 7: White for text
       isBold: false,
       isItalic: false,
       isUnderline: false,
@@ -78,7 +80,7 @@ export const TEXT_TEMPLATES: TextTemplate[] = [
       enabled: true,
       fontFamily: 'Arial, sans-serif',    // ✅ ISO 3098: Sans-serif font recommended
       fontSize: 3.5,                      // ✅ ISO 3098: Larger text for headings
-      color: '#FFFFFF',                   // ✅ AutoCAD ACI 7: White for text
+      color: UI_COLORS.WHITE,                   // ✅ AutoCAD ACI 7: White for text
       isBold: true,
       isItalic: false,
       isUnderline: false,
@@ -95,7 +97,7 @@ export const TEXT_TEMPLATES: TextTemplate[] = [
       enabled: true,
       fontFamily: 'Arial, sans-serif',    // ✅ ISO 3098: Sans-serif font recommended
       fontSize: 2.0,                      // ✅ ISO 3098: Smaller text for technical notes
-      color: '#FFFFFF',                   // ✅ AutoCAD ACI 7: White for text
+      color: UI_COLORS.WHITE,                   // ✅ AutoCAD ACI 7: White for text
       isBold: false,
       isItalic: false,
       isUnderline: false,

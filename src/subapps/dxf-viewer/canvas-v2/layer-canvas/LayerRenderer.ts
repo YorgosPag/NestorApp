@@ -18,6 +18,7 @@ import type { CrosshairSettings } from '../../rendering/ui/crosshair/CrosshairTy
 import type { CursorSettings } from '../../systems/cursor/config';
 import { CoordinateTransforms, COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
 import { getStatusColors } from '../../config/color-mapping';
+import { UI_COLORS } from '../../config/color-config';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 
 // ✅ ΦΑΣΗ 7: Import unified canvas system
@@ -193,7 +194,7 @@ export class LayerRenderer {
       calculated: { originX, originY }
     });
     this.ctx.save();
-    this.ctx.strokeStyle = 'blue';
+    this.ctx.strokeStyle = UI_COLORS.BUTTON_PRIMARY; // ✅ CENTRALIZED: Blue για LayerRenderer origin marker
     this.ctx.lineWidth = 3;
     this.ctx.beginPath();
     // BOTTOM vertical line (down from origin)
@@ -204,7 +205,7 @@ export class LayerRenderer {
     this.ctx.lineTo(originX + 20, originY);
     this.ctx.stroke();
     // Label
-    this.ctx.fillStyle = 'blue';
+    this.ctx.fillStyle = UI_COLORS.BUTTON_PRIMARY; // ✅ CENTRALIZED: Blue text για LayerRenderer label
     this.ctx.font = 'bold 12px monospace';
     this.ctx.fillText('LAYER', originX + 5, originY + 30);
     this.ctx.restore();
@@ -510,9 +511,9 @@ export class LayerRenderer {
       }
 
       // Fallback στο layer color αν δεν υπάρχει valid stroke
-      strokeColor = strokeColor || layer.color || '#000000';
+      strokeColor = strokeColor || layer.color || UI_COLORS.BLACK;
 
-      this.ctx.strokeStyle = polygon.selected ? '#ff0000' : strokeColor;
+      this.ctx.strokeStyle = polygon.selected ? UI_COLORS.SELECTED_RED : strokeColor;
       this.ctx.lineWidth = polygon.strokeWidth;
       this.ctx.stroke();
       // Debug disabled: console.log('🔍 Applied stroke:', strokeColor);
@@ -520,7 +521,7 @@ export class LayerRenderer {
 
     // Selection highlight
     if (polygon.selected) {
-      this.ctx.strokeStyle = '#00ff00';
+      this.ctx.strokeStyle = UI_COLORS.BRIGHT_GREEN;
       this.ctx.lineWidth = 2;
       this.ctx.setLineDash([5, 5]);
       this.ctx.stroke();

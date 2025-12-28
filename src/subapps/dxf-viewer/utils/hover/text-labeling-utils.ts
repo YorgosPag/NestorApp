@@ -5,6 +5,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { renderStyledText } from '../../hooks/useTextPreviewStyle';
+import { UI_COLORS } from '../../config/color-config';
 
 /**
  * Calculate optimal text position and rotation for edge labeling
@@ -76,9 +77,9 @@ export function renderTextAtEdgePosition(
   if (withBackground) {
     // ✅ ENTERPRISE: Use CSS variable instead of hardcoded white (adapts to dark mode)
     const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--background').trim();
-    ctx.fillStyle = bgColor ? `hsl(${bgColor} / 0.9)` : 'rgba(30, 41, 59, 0.9)'; // fallback to slate-800
+    ctx.fillStyle = bgColor ? `hsl(${bgColor} / 0.9)` : UI_COLORS.TEXT_LABEL_BG_FALLBACK; // fallback to slate-800
     ctx.fillRect(-20, -8, 40, 16);
-    ctx.strokeStyle = '#333';
+    ctx.strokeStyle = UI_COLORS.TEXT_LABEL_BORDER;
     ctx.strokeRect(-20, -8, 40, 16);
   }
 

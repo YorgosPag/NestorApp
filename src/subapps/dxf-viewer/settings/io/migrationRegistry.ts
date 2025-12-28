@@ -18,6 +18,7 @@
  */
 
 import type { SettingsStateType } from './schema';
+import { UI_COLORS } from '../../config/color-config';
 
 // ============================================================================
 // MIGRATION TYPES
@@ -444,10 +445,10 @@ function fixGripPropertyNames(entitySettings: unknown): unknown {
     // color/hoverColor → colors{cold,warm,hot,contour}
     if ('color' in fixed || 'hoverColor' in fixed) {
       fixed.colors = {
-        cold: fixed.color || '#0000FF',           // Blue (unselected)
-        warm: fixed.hoverColor || '#00FFFF',      // Cyan (hover)
-        hot: '#FF0000',                           // Red (selected)
-        contour: '#000000'                        // Black (contour)
+        cold: fixed.color || UI_COLORS.SNAP_CENTER,    // Blue (unselected)
+        warm: fixed.hoverColor || UI_COLORS.SNAP_INTERSECTION, // Cyan (hover)
+        hot: UI_COLORS.SNAP_ENDPOINT,            // Red (selected)
+        contour: UI_COLORS.BLACK                 // Black (contour)
       };
       delete fixed.color;
       delete fixed.hoverColor;
@@ -579,8 +580,8 @@ function revertGripPropertyNames(entitySettings: unknown): unknown {
 
     if ('colors' in reverted && typeof reverted.colors === 'object') {
       const colors = reverted.colors as { cold?: string; warm?: string };
-      reverted.color = colors.cold || '#0000FF';
-      reverted.hoverColor = colors.warm || '#00FFFF';
+      reverted.color = colors.cold || UI_COLORS.SNAP_CENTER;
+      reverted.hoverColor = colors.warm || UI_COLORS.SNAP_INTERSECTION;
       delete reverted.colors;
     }
 

@@ -9,6 +9,7 @@ import type { CursorSettings as SystemCursorSettings } from '../../../systems/cu
 import { CursorRenderer } from './CursorRenderer';
 import { createUIRenderContext, DEFAULT_UI_TRANSFORM } from '../core/UIRenderContext';
 import type { UITransform } from '../core/UIRenderer';
+import { UI_COLORS } from '../../../config/color-config';
 
 /**
  * 🔺 LEGACY ADAPTER
@@ -47,7 +48,7 @@ export class LegacyCursorAdapter {
       shape: this.mapShape(settings.cursor.shape),
       style: this.mapLineStyle(settings.cursor.line_style),
       showFill: false, // Legacy cursor doesn't support fill
-      fillColor: '#ffffff',
+      fillColor: UI_COLORS.WHITE,
       fillOpacity: 0.1,
       zIndex: 900
     };

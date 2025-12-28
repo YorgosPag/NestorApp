@@ -11,6 +11,7 @@
 import type { Point2D } from '../rendering/types/Types';
 import type { CanvasConfig } from '../rendering/types/Types';
 import { CanvasUtils } from '../rendering/canvas/utils/CanvasUtils';
+import { UI_COLORS } from '../config/color-config';
 
 interface AlignmentDebugState {
   enabled: boolean;
@@ -261,21 +262,21 @@ class CursorSnapAlignmentDebugger {
 
     // Draw cursor marker (BLUE)
     if (this.state.cursorPos) {
-      this.drawMarker(ctx, this.state.cursorPos, '#0066FF', 'Cursor');
+      this.drawMarker(ctx, this.state.cursorPos, UI_COLORS.DEBUG_CURSOR, 'Cursor');
     }
 
     // Draw crosshair center marker (GREEN)
     if (this.state.crosshairPos) {
-      this.drawMarker(ctx, this.state.crosshairPos, '#00FF00', 'Crosshair', 8);
+      this.drawMarker(ctx, this.state.crosshairPos, UI_COLORS.DEBUG_CROSSHAIR, 'Crosshair', 8);
     }
 
     // Draw snap marker (RED)
     if (this.state.snapPos) {
-      this.drawMarker(ctx, this.state.snapPos, '#FF0000', 'Snap', 12);
+      this.drawMarker(ctx, this.state.snapPos, UI_COLORS.DEBUG_SNAP, 'Snap', 12);
 
       // Draw distance lines
       if (this.state.cursorPos) {
-        this.drawDistanceLine(ctx, this.state.cursorPos, this.state.snapPos, '#FF00FF');
+        this.drawDistanceLine(ctx, this.state.cursorPos, this.state.snapPos, UI_COLORS.DEBUG_DISTANCE);
       }
     }
 

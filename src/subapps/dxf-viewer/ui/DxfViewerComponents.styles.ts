@@ -15,6 +15,7 @@ import type { PropertyStatus } from '../../../constants/property-statuses-enterp
 import { BUTTON_STATUS_COLORS } from '../config/color-mapping';
 import { PANEL_COLORS } from '../config/panel-tokens'; // 🏢 ENTERPRISE: Centralized border colors
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { UI_COLORS } from '../config/color-config';
 
 // 🏢 ENTERPRISE: CSS Custom Properties για κεντρικοποιημένα χρώματα
 const CSS_VARS = {
@@ -82,7 +83,7 @@ export const getStatusButtonStyles = (
     ? '2px solid white'
     : '2px solid transparent',
   boxShadow: isActive
-    ? '0 0 0 2px rgba(59, 130, 246, 0.5)'
+    ? `0 0 0 2px ${UI_COLORS.FOCUS_RING}`
     : 'none',
   borderRadius: 'var(--radius)' // Enterprise border radius from design tokens
 });
@@ -101,7 +102,7 @@ export const getTestResultsModalBackdropStyles = () => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  backgroundColor: 'rgba(0, 0, 0, 0.75)',
+  backgroundColor: UI_COLORS.MODAL_OVERLAY_MEDIUM,
   pointerEvents: 'auto' as const,
   zIndex: 999999 // Πολύ ψηλό z-index για να είναι πάνω από όλα
 });
@@ -225,7 +226,7 @@ export const getEnterpriseContactScrollAreaStyles = () => ({
   minHeight: '200px',
   overflowY: 'scroll' as const,
   scrollbarWidth: 'thin' as const,
-  scrollbarColor: '#cbd5e1 transparent',
+  scrollbarColor: `${UI_COLORS.SCROLLBAR_GRAY} transparent`,
   WebkitScrollbarWidth: '6px',
   // Custom scrollbar styling για enterprise look
   '&::-webkit-scrollbar': {
@@ -235,11 +236,11 @@ export const getEnterpriseContactScrollAreaStyles = () => ({
     background: 'transparent'
   },
   '&::-webkit-scrollbar-thumb': {
-    background: '#cbd5e1',
+    background: UI_COLORS.SCROLLBAR_GRAY,
     borderRadius: '3px'
   },
   '&::-webkit-scrollbar-thumb:hover': {
-    background: '#94a3b8'
+    background: UI_COLORS.SCROLLBAR_GRAY_HOVER
   }
 });
 
@@ -727,7 +728,7 @@ export const getCalibrationTestMarkerStyles = (x: number, y: number, isSuccess: 
   width: '12px',
   height: '12px',
   borderRadius: '50%',
-  backgroundColor: isSuccess ? '#22c55e' : '#ef4444', // green-500 : red-500
+  backgroundColor: isSuccess ? UI_COLORS.SUCCESS_GREEN : UI_COLORS.ERROR, // green-500 : red-500
   border: '2px solid white',
   transform: 'translate(-50%, -50%)',
   zIndex: 1000,

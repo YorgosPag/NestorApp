@@ -1,5 +1,7 @@
 // 🎯 ENTERPRISE SETTINGS TESTING SUITE
 // Based on Enterprise Architecture Standards (TOGAF, Zachman Framework)
+
+import { UI_COLORS } from '../config/color-config';
 //
 // TEST CATEGORIES (Enterprise Quality Assurance):
 // 1. STORAGE INTEGRITY: IndexedDB + LocalStorage validation
@@ -163,11 +165,11 @@ async function testLegacyMigrationFunction(): Promise<TestResult> {
 
       // Create mock legacy state
       const mockLegacyState = {
-        line: { lineWidth: 0.5, lineColor: '#FFFFFF', lineStyle: 'solid', opacity: 1.0 },
-        text: { fontSize: 12, fontFamily: 'Arial', textColor: '#FFFFFF', opacity: 1.0 },
-        grip: { size: 8, color: '#0000FF', hoverColor: '#00FFFF', shape: 'square', opacity: 1.0 },
+        line: { lineWidth: 0.5, lineColor: UI_COLORS.TEST_LINE_COLOR, lineStyle: 'solid', opacity: 1.0 },
+        text: { fontSize: 12, fontFamily: 'Arial', textColor: UI_COLORS.TEST_TEXT_COLOR, opacity: 1.0 },
+        grip: { size: 8, color: UI_COLORS.TEST_GRIP_BLUE, hoverColor: UI_COLORS.TEST_GRIP_HOVER, shape: 'square', opacity: 1.0 },
         specific: {
-          line: { draft: { lineColor: '#808080' } },
+          line: { draft: { lineColor: UI_COLORS.TEST_DRAFT_GRAY } },
           text: {},
           grip: {}
         },
@@ -222,11 +224,11 @@ async function testPreviewToDraftAlias(): Promise<TestResult> {
 
       // Mock legacy state with 'preview' mode
       const mockLegacyState = {
-        line: { lineWidth: 0.5, lineColor: '#FFFFFF', lineStyle: 'solid', opacity: 1.0 },
-        text: { fontSize: 12, fontFamily: 'Arial', textColor: '#FFFFFF', opacity: 1.0 },
-        grip: { size: 8, color: '#0000FF', hoverColor: '#00FFFF', shape: 'square', opacity: 1.0 },
+        line: { lineWidth: 0.5, lineColor: UI_COLORS.TEST_LINE_COLOR, lineStyle: 'solid', opacity: 1.0 },
+        text: { fontSize: 12, fontFamily: 'Arial', textColor: UI_COLORS.TEST_TEXT_COLOR, opacity: 1.0 },
+        grip: { size: 8, color: UI_COLORS.TEST_GRIP_BLUE, hoverColor: UI_COLORS.TEST_GRIP_HOVER, shape: 'square', opacity: 1.0 },
         specific: {
-          line: { preview: { lineColor: '#FF0000' } },  // Old 'preview' mode
+          line: { preview: { lineColor: UI_COLORS.TEST_PREVIEW_RED } },  // Old 'preview' mode
           text: {},
           grip: {}
         },
@@ -243,7 +245,7 @@ async function testPreviewToDraftAlias(): Promise<TestResult> {
       // Check if 'preview' was converted to 'draft'
       const draftColor = migratedState.line.specific.draft?.lineColor;
 
-      if (draftColor === '#FF0000') {
+      if (draftColor === UI_COLORS.TEST_PREVIEW_RED) {
         return {
           status: "success",
           message: "✅ Preview→Draft alias working (backward compatibility)",
@@ -253,7 +255,7 @@ async function testPreviewToDraftAlias(): Promise<TestResult> {
         return {
           status: "failed",
           message: "❌ Preview→Draft alias not working",
-          details: { expected: '#FF0000', actual: draftColor }
+          details: { expected: UI_COLORS.TEST_PREVIEW_RED, actual: draftColor }
         };
       }
     } catch (err: any) {

@@ -9,6 +9,8 @@ import { useViewerConfig } from '../providers/ConfigurationProvider';
 import { useLineSettingsFromProvider } from '../settings-provider';
 // ===== OVERRIDE GUARD SYSTEM =====
 import { guardGlobalAccess } from '../../../utils/overrideGuard';
+// ===== CENTRALIZED COLORS =====
+import { UI_COLORS } from '../config/color-config';
 
 // ✅ ΔΙΟΡΑΘΩΣΗ ΔΙΠΛΟΤΥΠΩΝ: Use unified types από settings-core
 import type { LineType, LineCapStyle, LineJoinStyle, LineSettings } from '../settings-core/types';
@@ -35,18 +37,18 @@ const defaultSettings: LineSettings = {
   enabled: true,               // Default: γραμμές ενεργοποιημένες
   lineType: 'solid',           // ✅ ISO 128: Continuous line as default
   lineWidth: 0.25,             // ✅ ISO 128: Standard 0.25mm line weight
-  color: '#FFFFFF',            // ✅ AutoCAD ACI 7: White for main lines
+  color: UI_COLORS.WHITE,            // ✅ AutoCAD ACI 7: White for main lines
   opacity: 1.0,                // ✅ Full opacity standard
   dashScale: 1.0,              // ✅ Standard dash scale
   dashOffset: 0,               // ✅ No offset standard
   lineCap: 'round',            // ✅ Round caps standard
   lineJoin: 'round',           // ✅ Round joins standard
   breakAtCenter: false,        // ✅ No break at center default
-  hoverColor: '#FFFF00',       // ✅ AutoCAD ACI 2: Yellow for hover
+  hoverColor: UI_COLORS.SNAP_DEFAULT,       // ✅ AutoCAD ACI 2: Yellow for hover
   hoverType: 'solid',          // ✅ Solid hover type
   hoverWidth: 0.35,            // ✅ ISO 128: Next standard width
   hoverOpacity: 0.8,           // ✅ Reduced opacity for hover
-  finalColor: '#00FF00',       // ✅ AutoCAD ACI 3: Green for final state
+  finalColor: UI_COLORS.MEASUREMENT_TEXT,       // ✅ AutoCAD ACI 3: Green for final state
   finalType: 'solid',          // ✅ Solid final type
   finalWidth: 0.35,            // ✅ ISO 128: Slightly thicker for final
   finalOpacity: 1.0,           // ✅ Full opacity for final

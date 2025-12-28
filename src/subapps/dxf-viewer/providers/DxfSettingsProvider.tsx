@@ -77,6 +77,7 @@
  */
 
 import React, { createContext, useContext, useReducer, useEffect, useCallback, useMemo } from 'react';
+import { UI_COLORS } from '../config/color-config';
 import type { LineSettings, TextSettings } from '../settings-core/types';
 import type { GripSettings } from '../types/gripSettings';
 import type { GridSettings, RulerSettings } from '../systems/rulers-grid/config';
@@ -364,18 +365,18 @@ const defaultLineSettings: LineSettings = {
   enabled: true,               // Default: γραμμές ενεργοποιημένες
   lineType: 'solid',           // ✅ ISO 128: Continuous line as default
   lineWidth: 0.25,             // ✅ ISO 128: Standard 0.25mm line weight
-  color: '#FFFFFF',            // ✅ AutoCAD ACI 7: White for main lines
+  color: UI_COLORS.WHITE,            // ✅ AutoCAD ACI 7: White for main lines
   opacity: 1.0,                // ✅ Full opacity standard
   dashScale: 1.0,              // ✅ Standard dash scale
   dashOffset: 0,               // ✅ No offset standard
   lineCap: 'round',            // ✅ Round caps standard
   lineJoin: 'round',           // ✅ Round joins standard
   breakAtCenter: false,        // ✅ No break at center default
-  hoverColor: '#FFFF00',       // ✅ AutoCAD ACI 2: Yellow for hover
+  hoverColor: UI_COLORS.SNAP_DEFAULT,       // ✅ AutoCAD ACI 2: Yellow for hover
   hoverType: 'solid',          // ✅ Solid hover type
   hoverWidth: 0.35,            // ✅ ISO 128: Next standard width
   hoverOpacity: 0.8,           // ✅ Reduced opacity for hover
-  finalColor: '#00FF00',       // ✅ AutoCAD ACI 3: Green for final state
+  finalColor: UI_COLORS.MEASUREMENT_TEXT,       // ✅ AutoCAD ACI 3: Green for final state
   finalType: 'solid',          // ✅ Solid final type
   finalWidth: 0.35,            // ✅ ISO 128: Slightly thicker for final
   finalOpacity: 1.0,           // ✅ Full opacity for final
@@ -388,7 +389,7 @@ const defaultTextSettings: TextSettings = {
   fontSize: 2.5,               // ✅ ISO 3098: Standard 2.5mm text height
   fontWeight: 400,             // ✅ Normal weight (400 = normal)
   fontStyle: 'normal',         // ✅ Normal style (not italic/oblique)
-  color: '#FFFFFF',            // ✅ AutoCAD ACI 7: White for text
+  color: UI_COLORS.WHITE,            // ✅ AutoCAD ACI 7: White for text
   opacity: 1.0,                // ✅ Full opacity
   letterSpacing: 0,            // ✅ Normal letter spacing
   lineHeight: 1.2,             // ✅ Standard line height
@@ -404,12 +405,12 @@ const defaultTextSettings: TextSettings = {
   shadowOffsetX: 0,            // ✅ Shadow offset X
   shadowOffsetY: 0,            // ✅ Shadow offset Y
   shadowBlur: 0,               // ✅ Shadow blur
-  shadowColor: '#000000',      // ✅ Black shadow
+  shadowColor: UI_COLORS.BLACK,      // ✅ Black shadow
   strokeEnabled: false,        // ✅ No stroke by default
   strokeWidth: 0,              // ✅ Stroke width
-  strokeColor: '#000000',      // ✅ Black stroke
+  strokeColor: UI_COLORS.BLACK,      // ✅ Black stroke
   backgroundEnabled: false,    // ✅ No background by default
-  backgroundColor: '#000000',  // ✅ Black background
+  backgroundColor: UI_COLORS.BLACK,  // ✅ Black background
   backgroundPadding: 0,        // ✅ No padding
   activeTemplate: null         // ✅ No active template default
 };
@@ -422,10 +423,10 @@ const defaultGripSettings: GripSettings = {
   apertureSize: 10,         // ✅ AutoCAD APERTURE default: 10 pixels
   showAperture: true,       // ✅ AutoCAD APBOX default: enabled
   colors: {
-    cold: '#0000FF',        // ✅ AutoCAD standard: Blue (ACI 5) - unselected grips
-    warm: '#FF69B4',        // ✅ AutoCAD standard: Hot Pink - hover grips
-    hot: '#FF0000',         // ✅ AutoCAD standard: Red (ACI 1) - selected grips
-    contour: '#000000'      // ✅ AutoCAD standard: Black contour
+    cold: UI_COLORS.SNAP_CENTER,        // ✅ AutoCAD standard: Blue (ACI 5) - unselected grips
+    warm: UI_COLORS.SNAP_INTERSECTION,        // ✅ AutoCAD standard: Hot Pink - hover grips
+    hot: UI_COLORS.SELECTED_RED,         // ✅ AutoCAD standard: Red (ACI 1) - selected grips
+    contour: UI_COLORS.BLACK      // ✅ AutoCAD standard: Black contour
   },
   multiGripEdit: true,      // ✅ ΑΠΟΚΑΤΑΣΤΑΣΗ: Ενεργοποίηση multi grips
   snapToGrips: true,        // ✅ ΑΠΟΚΑΤΑΣΤΑΣΗ: Ενεργοποίηση snap to grips
@@ -454,28 +455,28 @@ const initialState: DxfSettingsState = {
       // 🆕 Προσχεδίαση (Draft) - First click, temporary line
       draft: {
         lineType: 'dashed',
-        color: '#FFFF00',    // ✅ AutoCAD ACI 2: Yellow for draft
+        color: UI_COLORS.SNAP_DEFAULT,    // ✅ AutoCAD ACI 2: Yellow for draft
         opacity: 0.7,
         lineWidth: 0.25
       },
       // 🆕 Αιώρηση (Hover) - Mouse over entity
       hover: {
         lineType: 'solid',
-        color: '#FF8C00',    // ✅ AutoCAD: Orange for hover
+        color: UI_COLORS.DRAWING_TEMP,    // ✅ AutoCAD: Orange for hover
         opacity: 0.8,
         lineWidth: 0.35
       },
       // 🆕 Επιλογή (Selection) - Entity selected
       selection: {
         lineType: 'solid',
-        color: '#00BFFF',    // ✅ AutoCAD: Light blue for selection
+        color: UI_COLORS.BUTTON_PRIMARY,    // ✅ AutoCAD: Light blue for selection
         opacity: 1.0,
         lineWidth: 0.35
       },
       // ✅ Ολοκλήρωση (Completion) - Final entity state
       completion: {
         lineType: 'solid',
-        color: '#00FF00',    // ✅ AutoCAD ACI 3: Green for completion
+        color: UI_COLORS.MEASUREMENT_TEXT,    // ✅ AutoCAD ACI 3: Green for completion
         opacity: 1.0,
         lineWidth: 0.25
       }
@@ -483,7 +484,7 @@ const initialState: DxfSettingsState = {
     text: {
       // 🆕 Προσχεδίαση (Draft) - Temporary text
       draft: {
-        color: '#FFFF00',    // ✅ Yellow for text draft
+        color: UI_COLORS.SNAP_DEFAULT,    // ✅ Yellow for text draft
         opacity: 0.8,
         fontSize: 2.5
       }
@@ -492,10 +493,10 @@ const initialState: DxfSettingsState = {
       // 🆕 Προσχεδίαση (Draft) - Grips during drawing
       draft: {
         colors: {
-          cold: '#0000FF',   // ✅ Blue - unselected
-          warm: '#FF69B4',   // ✅ Hot Pink - hover
-          hot: '#FF0000',    // ✅ Red - selected
-          contour: '#000000' // ✅ Black contour
+          cold: UI_COLORS.SNAP_CENTER,   // ✅ Blue - unselected
+          warm: UI_COLORS.SNAP_INTERSECTION,   // ✅ Hot Pink - hover
+          hot: UI_COLORS.SELECTED_RED,    // ✅ Red - selected
+          contour: UI_COLORS.BLACK // ✅ Black contour
         },
         gripSize: 8,
         showGrips: true,
@@ -1949,7 +1950,7 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
       lineWidth: effectiveLineSettings.lineWidth,
       opacity: effectiveLineSettings.opacity,
       lineType: effectiveLineSettings.lineType,
-      fillColor: '#00000000' // Default transparent fill
+      fillColor: UI_COLORS.TRANSPARENT // Default transparent fill
     });
 
   }, [state.line, state.templateOverrides.line, state.isLoaded, state.mode, state.specific.line, state.overrides.line, state.overrideEnabled.line, getEffectiveLineSettings]);
@@ -2046,11 +2047,11 @@ export function useLineSettingsFromProvider() {
       breakAtCenter: templateSettings.breakAtCenter,
       // Copy remaining fields from template or use defaults
       enabled: templateSettings.enabled ?? true,
-      hoverColor: templateSettings.hoverColor ?? '#FFFF00',
+      hoverColor: templateSettings.hoverColor ?? UI_COLORS.SNAP_DEFAULT,
       hoverType: templateSettings.hoverType ?? 'solid',
       hoverWidth: templateSettings.hoverWidth ?? 0.35,
       hoverOpacity: templateSettings.hoverOpacity ?? 0.8,
-      finalColor: templateSettings.finalColor ?? '#00FF00',
+      finalColor: templateSettings.finalColor ?? UI_COLORS.MEASUREMENT_TEXT,
       finalType: templateSettings.finalType ?? 'solid',
       finalWidth: templateSettings.finalWidth ?? 0.35,
       finalOpacity: templateSettings.finalOpacity ?? 1.0,
@@ -2362,7 +2363,7 @@ export function useGripStyles(mode?: ViewerMode) {
  * @usage
  * ```tsx
  * const draft = useLineDraftSettings();
- * draft.updateSettings({ color: '#FF0000' });
+ * draft.updateSettings({ color: UI_COLORS.SELECTED_RED });
  * const effective = draft.getEffectiveSettings(); // Returns specific or general
  * ```
  *

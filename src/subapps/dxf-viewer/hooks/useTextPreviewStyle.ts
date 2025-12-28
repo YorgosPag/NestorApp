@@ -4,6 +4,7 @@
  */
 
 import { textStyleStore } from '../stores/TextStyleStore';
+import { UI_COLORS } from '../config/color-config';
 
 export interface TextPreviewStyle {
   enabled: boolean;          // ΝΕΟ! Ενεργοποίηση/απενεργοποίηση κειμένου
@@ -38,7 +39,7 @@ export function getTextPreviewStyle(): TextPreviewStyle {
     enabled: textStyle.enabled !== undefined ? textStyle.enabled : true, // Default: enabled
     fontFamily: textStyle.fontFamily || 'Arial, sans-serif',
     fontSize: `${textStyle.fontSize || 12}px`,
-    color: textStyle.color || '#ffffff', // Λευκό default (συνεπές με DXF ρυθμίσεις)
+    color: textStyle.color || UI_COLORS.WHITE, // Λευκό default (συνεπές με DXF ρυθμίσεις)
     fontWeight: textStyle.fontWeight || 'normal',
     fontStyle: textStyle.fontStyle || 'normal',
     textDecoration: getTextDecoration(textStyle),
@@ -78,7 +79,7 @@ export function getTextPreviewStyleWithOverride(): TextPreviewStyle {
       enabled: specificSettings.enabled !== undefined ? specificSettings.enabled : true,
       fontFamily: specificSettings.fontFamily || 'Arial, sans-serif',
       fontSize: `${specificSettings.fontSize || 12}px`,
-      color: specificSettings.color || '#FF0000', // ✅ AutoCAD standard: Red for preview text
+      color: specificSettings.color || UI_COLORS.TEST_PREVIEW_RED, // ✅ AutoCAD standard: Red for preview text
       fontWeight: specificSettings.isBold ? 'bold' : 'normal',
       fontStyle: specificSettings.isItalic ? 'italic' : 'normal',
       textDecoration: getSpecificTextDecoration(specificSettings),

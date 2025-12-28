@@ -8,6 +8,7 @@ import type { SnapSettings, SnapResult } from './SnapTypes';
 import type { SnapSettings as LayerSnapSettings, SnapResult as LayerSnapResult } from '../../../canvas-v2/layer-canvas/layer-types';
 import { SnapRenderer } from './SnapRenderer';
 import { createUIRenderContext, DEFAULT_UI_TRANSFORM } from '../core/UIRenderContext';
+import { UI_COLORS } from '../../../config/color-config';
 import type { UITransform } from '../core/UIRenderer';
 
 /**
@@ -40,21 +41,21 @@ export class LegacySnapAdapter {
       enabled: settings.enabled,
       visible: true,
       opacity: 0.9,
-      color: '#ffff00',
+      color: UI_COLORS.SNAP_DEFAULT,
       size: 8,
       lineWidth: 2,
       tolerance: settings.tolerance,
 
       // Type-specific colors (using defaults)
-      endpointColor: '#ff0000',
-      midpointColor: '#00ff00',
-      centerColor: '#0000ff',
-      intersectionColor: '#ff00ff',
+      endpointColor: UI_COLORS.SNAP_ENDPOINT,
+      midpointColor: UI_COLORS.SNAP_MIDPOINT,
+      centerColor: UI_COLORS.SNAP_CENTER,
+      intersectionColor: UI_COLORS.SNAP_INTERSECTION,
 
       // Visual feedback
       showTooltip: true,
       tooltipOffset: 15,
-      highlightColor: '#ffffff',
+      highlightColor: UI_COLORS.SNAP_HIGHLIGHT,
       zIndex: 950
     };
 

@@ -17,6 +17,7 @@
 
 import type { CSSProperties } from 'react';
 import { zIndex as globalZIndex } from '../../../styles/design-tokens';
+import { UI_COLORS, withOpacity } from '../config/color-config';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
@@ -233,7 +234,7 @@ export const dxfComponentStyles: DxfComponentStyles = {
     left: 0,
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backgroundColor: UI_COLORS.MODAL_OVERLAY_MEDIUM,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -249,7 +250,7 @@ export const dxfComponentStyles: DxfComponentStyles = {
     left: 0,
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: UI_COLORS.MODAL_OVERLAY_LIGHT,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -265,7 +266,7 @@ export const dxfComponentStyles: DxfComponentStyles = {
     left: 0,
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: UI_COLORS.MODAL_OVERLAY_CRITICAL,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -286,8 +287,8 @@ export const dxfOverlayStyles: DxfOverlayStyles = {
    */
   selectionMarquee: {
     position: 'absolute',
-    border: '1px dashed #007ACC',
-    backgroundColor: 'rgba(0, 122, 204, 0.1)',
+    border: `1px dashed ${UI_COLORS.INDICATOR_BLUE}`,
+    backgroundColor: UI_COLORS.SELECTION_MARQUEE_BG,
     pointerEvents: 'none',
     zIndex: dxfZIndex.overlays.selection
   } as const,
@@ -312,7 +313,7 @@ export const dxfOverlayStyles: DxfOverlayStyles = {
     position: 'absolute',
     pointerEvents: 'none',
     zIndex: dxfZIndex.overlays.snap,
-    color: '#00FF00',
+    color: UI_COLORS.BRIGHT_GREEN,
     fontSize: '12px',
     fontFamily: 'monospace'
   } as const,
@@ -322,8 +323,8 @@ export const dxfOverlayStyles: DxfOverlayStyles = {
    */
   cursorTooltip: {
     position: 'absolute',
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    color: '#FFFFFF',
+    backgroundColor: UI_COLORS.MODAL_OVERLAY_HEAVY,
+    color: UI_COLORS.WHITE,
     padding: '4px 8px',
     borderRadius: '4px',
     fontSize: '11px',
@@ -338,7 +339,7 @@ export const dxfOverlayStyles: DxfOverlayStyles = {
    */
   zoomWindow: {
     position: 'absolute',
-    border: '2px solid #007ACC',
+    border: `2px solid ${UI_COLORS.INDICATOR_BLUE}`,
     backgroundColor: 'hsl(var(--background) / 0.9)', // ✅ ENTERPRISE: CSS variable (adapts to dark mode)
     borderRadius: '4px',
     overflow: 'hidden',
@@ -377,7 +378,7 @@ export const createModalBackdropStyle = (
 
   return {
     ...baseStyle,
-    backgroundColor: `rgba(0, 0, 0, ${opacity})`,
+    backgroundColor: withOpacity(UI_COLORS.BLACK, opacity),
     zIndex: dxfZIndex.modals[modalType]
   } as const;
 };

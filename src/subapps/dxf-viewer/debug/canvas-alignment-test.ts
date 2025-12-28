@@ -1,6 +1,8 @@
 // 🎯 ENTERPRISE CANVAS ALIGNMENT TEST
 // Συνδυασμός CSS z-index, DOM order και Visual stacking με elementFromPoint
 
+import { UI_COLORS } from '../config/color-config';
+
 function getZIndexSafe(el: HTMLElement): number | "auto" {
   const z = getComputedStyle(el).zIndex;
   if (z === "auto") return "auto";
@@ -159,8 +161,8 @@ function findGreenBorder() {
     const hasGreenBorder =
       style.borderColor.includes('green') ||
       style.borderColor.includes('lime') ||
-      style.borderColor.includes('rgb(0, 255') ||
-      style.backgroundColor.includes('rgba(0, 255, 0,');
+      style.borderColor.includes(UI_COLORS.BRIGHT_GREEN.substring(0, 10)) ||
+      style.backgroundColor.includes(`rgba(0, 255, 0,`);
     return hasGreenBorder;
   });
 

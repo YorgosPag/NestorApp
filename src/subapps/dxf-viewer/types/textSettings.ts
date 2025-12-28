@@ -6,12 +6,14 @@ export type {
   TextTemplate
 } from '../contexts/TextSettingsContext';
 
+import { UI_COLORS } from '../config/color-config';
+
 // Default settings που χρησιμοποιούνται από το ConfigurationProvider
 export const DEFAULT_TEXT_SETTINGS = {
   enabled: true,
   fontFamily: 'Arial, sans-serif',
   fontSize: 12,
-  color: '#ffffff',
+  color: UI_COLORS.WHITE,
   isBold: false,
   isItalic: false,
   isUnderline: false,

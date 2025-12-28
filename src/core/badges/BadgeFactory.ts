@@ -5,7 +5,7 @@
  * Single Source of Truth - Factory Pattern Implementation
  */
 
-import { cn } from '@/lib/utils';
+import { cn } from '../../lib/utils';
 import type {
   DomainType,
   ProjectStatus,
@@ -18,21 +18,27 @@ import type {
   BadgeFactoryOptions,
   BadgeVariant
 } from '../types/BadgeTypes';
-import { UNIFIED_BADGE_SYSTEM } from '../status/StatusConstants';
+import { createUnifiedBadgeSystem } from '../status/StatusConstants';
+import type { UseSemanticColorsReturn } from '../../ui-adapters/react/useSemanticColors';
 
 // ===== MAIN BADGE FACTORY CLASS =====
 
 export class BadgeFactory {
   /**
-   * Δημιουργεί badge για συγκεκριμένο domain και status
+   * ✅ ENTERPRISE PROFESSIONAL: Δημιουργεί badge με dependency injection pattern
+   * @param colors - useSemanticColors result (από React component)
    */
   static create(
     domain: DomainType,
     status: string,
+    colors: UseSemanticColorsReturn,
     options: BadgeFactoryOptions = {}
   ): BadgeDefinition {
+    // Δημιούργησε το unified badge system με τα injected colors
+    const UNIFIED_BADGE_SYSTEM = createUnifiedBadgeSystem(colors);
+
     // Βρες την κατάλληλη configuration
-    const badgeConfig = this.getBadgeConfig(domain, status);
+    const badgeConfig = this.getBadgeConfig(domain, status, UNIFIED_BADGE_SYSTEM);
 
     if (!badgeConfig) {
       // Fallback για unknown statuses
@@ -52,72 +58,81 @@ export class BadgeFactory {
   }
 
   /**
-   * Δημιουργεί project badge
+   * ✅ ENTERPRISE PROFESSIONAL: Δημιουργεί project badge με dependency injection
    */
   static createProjectBadge(
     status: ProjectStatus,
+    colors: UseSemanticColorsReturn,
     options: BadgeFactoryOptions = {}
   ): BadgeDefinition {
-    return this.create('PROJECT', status, options);
+    return this.create('PROJECT', status, colors, options);
   }
 
   /**
-   * Δημιουργεί building badge
+   * ✅ ENTERPRISE PROFESSIONAL: Δημιουργεί building badge με dependency injection
    */
   static createBuildingBadge(
     status: BuildingStatus,
+    colors: UseSemanticColorsReturn,
     options: BadgeFactoryOptions = {}
   ): BadgeDefinition {
-    return this.create('BUILDING', status, options);
+    return this.create('BUILDING', status, colors, options);
   }
 
   /**
-   * Δημιουργεί contact badge
+   * ✅ ENTERPRISE PROFESSIONAL: Δημιουργεί contact badge με dependency injection
    */
   static createContactBadge(
     status: ContactStatus,
+    colors: UseSemanticColorsReturn,
     options: BadgeFactoryOptions = {}
   ): BadgeDefinition {
-    return this.create('CONTACT', status, options);
+    return this.create('CONTACT', status, colors, options);
   }
 
   /**
-   * Δημιουργεί property badge
+   * ✅ ENTERPRISE PROFESSIONAL: Δημιουργεί property badge με dependency injection
    */
   static createPropertyBadge(
     status: PropertyStatus,
+    colors: UseSemanticColorsReturn,
     options: BadgeFactoryOptions = {}
   ): BadgeDefinition {
-    return this.create('PROPERTY', status, options);
+    return this.create('PROPERTY', status, colors, options);
   }
 
   /**
-   * Δημιουργεί unit badge
+   * ✅ ENTERPRISE PROFESSIONAL: Δημιουργεί unit badge με dependency injection
    */
   static createUnitBadge(
     status: UnitStatus,
+    colors: UseSemanticColorsReturn,
     options: BadgeFactoryOptions = {}
   ): BadgeDefinition {
-    return this.create('UNIT', status, options);
+    return this.create('UNIT', status, colors, options);
   }
 
   /**
-   * Δημιουργεί navigation badge
+   * ✅ ENTERPRISE PROFESSIONAL: Δημιουργεί navigation badge με dependency injection
    */
   static createNavigationBadge(
     status: NavigationStatus,
+    colors: UseSemanticColorsReturn,
     options: BadgeFactoryOptions = {}
   ): BadgeDefinition {
-    return this.create('NAVIGATION', status, options);
+    return this.create('NAVIGATION', status, colors, options);
   }
 
   /**
-   * Δημιουργεί common badge
+   * ✅ ENTERPRISE PROFESSIONAL: Δημιουργεί common badge με dependency injection
    */
   static createCommonBadge(
     status: string,
+    colors: UseSemanticColorsReturn,
     options: BadgeFactoryOptions = {}
   ): BadgeDefinition {
+    // Δημιούργησε το unified badge system με τα injected colors
+    const UNIFIED_BADGE_SYSTEM = createUnifiedBadgeSystem(colors);
     const badgeConfig = UNIFIED_BADGE_SYSTEM.common[status];
 
     if (!badgeConfig) {
@@ -136,10 +151,10 @@ export class BadgeFactory {
   // ===== PRIVATE HELPER METHODS =====
 
   /**
-   * Βρίσκει την κατάλληλη badge configuration
+   * ✅ ENTERPRISE PROFESSIONAL: Βρίσκει την κατάλληλη badge configuration με dependency injection
    */
-  private static getBadgeConfig(domain: DomainType, status: string): BadgeDefinition | null {
-    const domainConfig = UNIFIED_BADGE_SYSTEM.domains[domain];
+  private static getBadgeConfig(domain: DomainType, status: string, badgeSystem: any): BadgeDefinition | null {
+    const domainConfig = badgeSystem.domains[domain];
     return domainConfig?.[status as keyof typeof domainConfig] || null;
   }
 
@@ -163,30 +178,34 @@ export class BadgeFactory {
   // ===== UTILITY METHODS =====
 
   /**
-   * Επιστρέφει όλα τα διαθέσιμα statuses για domain
+   * ✅ ENTERPRISE PROFESSIONAL: Επιστρέφει όλα τα διαθέσιμα statuses για domain
    */
-  static getAvailableStatuses(domain: DomainType): string[] {
+  static getAvailableStatuses(domain: DomainType, colors: UseSemanticColorsReturn): string[] {
+    const UNIFIED_BADGE_SYSTEM = createUnifiedBadgeSystem(colors);
     const domainConfig = UNIFIED_BADGE_SYSTEM.domains[domain];
     return domainConfig ? Object.keys(domainConfig) : [];
   }
 
   /**
-   * Ελέγχει αν ένα status υπάρχει σε domain
+   * ✅ ENTERPRISE PROFESSIONAL: Ελέγχει αν ένα status υπάρχει σε domain
    */
-  static isValidStatus(domain: DomainType, status: string): boolean {
+  static isValidStatus(domain: DomainType, status: string, colors: UseSemanticColorsReturn): boolean {
+    const UNIFIED_BADGE_SYSTEM = createUnifiedBadgeSystem(colors);
     const domainConfig = UNIFIED_BADGE_SYSTEM.domains[domain];
     return domainConfig ? status in domainConfig : false;
   }
 
   /**
-   * Επιστρέφει CSS classes για badge
+   * ✅ ENTERPRISE PROFESSIONAL: Επιστρέφει CSS classes για badge με dependency injection
    */
   static getBadgeClasses(
     domain: DomainType,
     status: string,
+    colors: UseSemanticColorsReturn,
     additionalClasses?: string
   ): string {
-    const badgeConfig = this.getBadgeConfig(domain, status);
+    const UNIFIED_BADGE_SYSTEM = createUnifiedBadgeSystem(colors);
+    const badgeConfig = this.getBadgeConfig(domain, status, UNIFIED_BADGE_SYSTEM);
 
     if (!badgeConfig) {
       return cn('badge-fallback', additionalClasses);
@@ -239,13 +258,14 @@ export class BadgeFactory {
   // ===== BATCH OPERATIONS =====
 
   /**
-   * Δημιουργεί πολλαπλά badges με μία κλήση
+   * ✅ ENTERPRISE PROFESSIONAL: Δημιουργεί πολλαπλά badges με μία κλήση και dependency injection
    */
   static createBadges(
-    badges: Array<{ domain: DomainType; status: string; options?: BadgeFactoryOptions }>
+    badges: Array<{ domain: DomainType; status: string; options?: BadgeFactoryOptions }>,
+    colors: UseSemanticColorsReturn
   ): BadgeDefinition[] {
     return badges.map(({ domain, status, options }) =>
-      this.create(domain, status, options || {})
+      this.create(domain, status, colors, options || {})
     );
   }
 }
@@ -253,49 +273,55 @@ export class BadgeFactory {
 // ===== CONVENIENCE FUNCTIONS =====
 
 /**
- * Shorthand function για project badges
+ * ✅ ENTERPRISE PROFESSIONAL: Shorthand function για project badges με dependency injection
  */
 export const createProjectBadge = (
   status: ProjectStatus,
+  colors: UseSemanticColorsReturn,
   options?: BadgeFactoryOptions
-): BadgeDefinition => BadgeFactory.createProjectBadge(status, options);
+): BadgeDefinition => BadgeFactory.createProjectBadge(status, colors, options);
 
 /**
- * Shorthand function για building badges
+ * ✅ ENTERPRISE PROFESSIONAL: Shorthand function για building badges με dependency injection
  */
 export const createBuildingBadge = (
   status: BuildingStatus,
+  colors: UseSemanticColorsReturn,
   options?: BadgeFactoryOptions
-): BadgeDefinition => BadgeFactory.createBuildingBadge(status, options);
+): BadgeDefinition => BadgeFactory.createBuildingBadge(status, colors, options);
 
 /**
- * Shorthand function για contact badges
+ * ✅ ENTERPRISE PROFESSIONAL: Shorthand function για contact badges με dependency injection
  */
 export const createContactBadge = (
   status: ContactStatus,
+  colors: UseSemanticColorsReturn,
   options?: BadgeFactoryOptions
-): BadgeDefinition => BadgeFactory.createContactBadge(status, options);
+): BadgeDefinition => BadgeFactory.createContactBadge(status, colors, options);
 
 /**
- * Shorthand function για property badges
+ * ✅ ENTERPRISE PROFESSIONAL: Shorthand function για property badges με dependency injection
  */
 export const createPropertyBadge = (
   status: PropertyStatus,
+  colors: UseSemanticColorsReturn,
   options?: BadgeFactoryOptions
-): BadgeDefinition => BadgeFactory.createPropertyBadge(status, options);
+): BadgeDefinition => BadgeFactory.createPropertyBadge(status, colors, options);
 
 /**
- * Shorthand function για unit badges
+ * ✅ ENTERPRISE PROFESSIONAL: Shorthand function για unit badges με dependency injection
  */
 export const createUnitBadge = (
   status: UnitStatus,
+  colors: UseSemanticColorsReturn,
   options?: BadgeFactoryOptions
-): BadgeDefinition => BadgeFactory.createUnitBadge(status, options);
+): BadgeDefinition => BadgeFactory.createUnitBadge(status, colors, options);
 
 /**
- * Shorthand function για navigation badges
+ * ✅ ENTERPRISE PROFESSIONAL: Shorthand function για navigation badges με dependency injection
  */
 export const createNavigationBadge = (
   status: NavigationStatus,
+  colors: UseSemanticColorsReturn,
   options?: BadgeFactoryOptions
-): BadgeDefinition => BadgeFactory.createNavigationBadge(status, options);
+): BadgeDefinition => BadgeFactory.createNavigationBadge(status, colors, options);

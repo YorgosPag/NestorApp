@@ -13,6 +13,7 @@ import { useEntityStyles } from './useEntityStyles';
 import { usePreviewMode } from './usePreviewMode';
 import { useOverrideSystem } from './useOverrideSystem';
 import { layoutUtilities } from '@/styles/design-tokens';
+import { UI_COLORS } from '../config/color-config';
 
 // ===== TEST COMPONENT =====
 
@@ -52,10 +53,10 @@ function HooksTestComponent() {
         <p>Line Color: {lineStyles.settings.color}</p>
         <p>Text Color: {textStyles.settings.color}</p>
         <p>Grip Size: {gripStyles.settings.gripSize}</p>
-        <button onClick={() => lineStyles.update({ color: '#FF0000' })}>
+        <button onClick={() => lineStyles.update({ color: UI_COLORS.TEST_PREVIEW_RED })}>
           Set Line Red
         </button>
-        <button onClick={() => textStyles.update({ color: '#00FF00' })}>
+        <button onClick={() => textStyles.update({ color: UI_COLORS.BRIGHT_GREEN })}>
           Set Text Green
         </button>
         <button onClick={() => gripStyles.update({ gripSize: 12 })}>

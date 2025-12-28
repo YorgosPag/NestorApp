@@ -16,6 +16,7 @@
 
 import type { SettingsState, StorageMode } from './core/types';
 import { ACI_PALETTE } from './standards/aci';
+import { UI_COLORS } from '../config/color-config';
 
 // ============================================================================
 // CURRENT SCHEMA VERSION
@@ -116,7 +117,7 @@ const GRIP_DEFAULTS = {
     cold: ACI_PALETTE[5] as string,       // Blue (ACI 5)
     warm: ACI_PALETTE[4] as string,       // Cyan (ACI 4) on hover
     hot: ACI_PALETTE[1] as string,        // Red (ACI 1) on selection
-    contour: '#000000'                    // Black contour
+    contour: UI_COLORS.BLACK              // Black contour
   },
   shape: 'square' as const,     // Square (CAD standard)
   opacity: 1.0,

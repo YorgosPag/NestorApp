@@ -9,6 +9,7 @@
  */
 
 import { statusIndicatorComponents, autoSaveStatusTokens } from '@/styles/design-tokens';
+import { UI_COLORS } from '../../config/color-config';
 
 // ============================================================================
 // DYNAMIC STYLE UTILITIES
@@ -49,8 +50,8 @@ export const getSettingsDotStyle = (
     flexShrink: 0,
     transition: 'background-color 150ms ease'
   };
-  const activeColor = type === 'general' ? '#3B82F6' : '#22C55E';
-  const inactiveColor = '#6B7280';
+  const activeColor = type === 'general' ? UI_COLORS.STATUS_GENERAL_ACTIVE : UI_COLORS.STATUS_SPECIFIC_ACTIVE;
+  const inactiveColor = UI_COLORS.STATUS_INACTIVE;
 
   return {
     ...baseStyle,
@@ -67,7 +68,7 @@ export const getGeneralSettingsDotStyle = (isActive: boolean) => ({
   borderRadius: '50%',
   flexShrink: 0,
   transition: 'background-color 150ms ease',
-  backgroundColor: isActive ? '#3B82F6' : '#6B7280'
+  backgroundColor: isActive ? UI_COLORS.STATUS_GENERAL_ACTIVE : UI_COLORS.STATUS_INACTIVE
 });
 
 /**
@@ -79,7 +80,7 @@ export const getSpecificSettingsDotStyle = (isActive: boolean) => ({
   borderRadius: '50%',
   flexShrink: 0,
   transition: 'background-color 150ms ease',
-  backgroundColor: isActive ? '#22C55E' : '#6B7280'
+  backgroundColor: isActive ? UI_COLORS.STATUS_SPECIFIC_ACTIVE : UI_COLORS.STATUS_INACTIVE
 });
 
 /**
@@ -88,7 +89,7 @@ export const getSpecificSettingsDotStyle = (isActive: boolean) => ({
 export const getSeparatorStyle = () => ({
   width: '1px',
   height: '1rem',
-  backgroundColor: '#6B7280',
+  backgroundColor: UI_COLORS.STATUS_INACTIVE,
   opacity: 0.7
 });
 
@@ -164,8 +165,8 @@ export const centralizedAutoSaveStatusStyles = {
   // Settings indicators (fallback to basic styles)
   settingsDots: {
     container: { display: 'flex', gap: '0.5rem', alignItems: 'center' },
-    general: { dot: { base: statusIndicatorComponents.statusDot, active: { backgroundColor: '#3B82F6' }, inactive: { backgroundColor: '#6B7280' } } },
-    specific: { dot: { base: statusIndicatorComponents.statusDot, active: { backgroundColor: '#22C55E' }, inactive: { backgroundColor: '#6B7280' } } }
+    general: { dot: { base: statusIndicatorComponents.statusDot, active: { backgroundColor: UI_COLORS.STATUS_GENERAL_ACTIVE }, inactive: { backgroundColor: UI_COLORS.STATUS_INACTIVE } } },
+    specific: { dot: { base: statusIndicatorComponents.statusDot, active: { backgroundColor: UI_COLORS.STATUS_SPECIFIC_ACTIVE }, inactive: { backgroundColor: UI_COLORS.STATUS_INACTIVE } } }
   },
 
   // Separator

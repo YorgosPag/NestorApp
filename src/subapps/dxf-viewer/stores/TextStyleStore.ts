@@ -17,13 +17,14 @@ export interface TextStyle {
 }
 
 import { useSyncExternalStore } from 'react';
+import { UI_COLORS } from '../config/color-config';
 
 type Listener = () => void;
 let current: TextStyle = {
   enabled: true,               // Default: κείμενο ενεργοποιημένο
   fontFamily: 'Arial, sans-serif',
   fontSize: 12,
-  color: '#ffffff', // Λευκό για προσχεδίαση (συνεπές με DXF ρυθμίσεις)
+  color: UI_COLORS.WHITE, // Λευκό για προσχεδίαση (συνεπές με DXF ρυθμίσεις)
   fontWeight: 'normal',
   fontStyle: 'normal',
   textDecoration: 'none',

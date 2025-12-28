@@ -10,7 +10,7 @@ import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoad
 // Dynamic import to avoid SSR issues with localStorage
 // 🔧 FIXED: Import DxfViewerApp (with all providers) instead of DxfViewerContent directly
 const DxfViewerApp = dynamic(
-  () => import('@/subapps/dxf-viewer/DxfViewerApp').then(mod => ({ default: mod.DxfViewerApp })),
+  () => import('@/subapps/dxf-viewer/DxfViewerApp'),
   {
     loading: () => {
       const iconSizes = useIconSizes();

@@ -6,6 +6,7 @@
 import { toolStyleStore } from '../stores/ToolStyleStore';
 import type { LineType } from '../settings-core/types';
 import { getDashArray } from '../settings-core/defaults';
+import { UI_COLORS } from '../config/color-config';
 
 // Αφαιρώ το direct import της συνάρτησης για να αποφύγω circular dependency
 // θα την κάλεσω μέσω require εντός της συνάρτησης
@@ -62,7 +63,7 @@ export function getLinePreviewStyleWithOverride(): LinePreviewStyle {
     const lineDash = getDashArray(lineType, toolStyle.dashScale || 1);
     return {
       enabled: specificSettings.enabled !== undefined ? specificSettings.enabled : true,
-      strokeColor: specificSettings.color || '#FF0000', // ✅ AutoCAD standard: Red for preview
+      strokeColor: specificSettings.color || UI_COLORS.TEST_PREVIEW_RED, // ✅ AutoCAD standard: Red for preview
       lineWidth: specificSettings.lineWidth || 1,        // ✅ AutoCAD standard: 1 pixel default
       lineDash,
       opacity: specificSettings.opacity || 1.0,

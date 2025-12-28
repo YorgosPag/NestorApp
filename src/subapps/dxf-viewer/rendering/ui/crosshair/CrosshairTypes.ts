@@ -5,6 +5,7 @@
 
 import type { Point2D } from '../../types/Types';
 import type { UIElementSettings } from '../core/UIRenderer';
+import { UI_COLORS } from '../../../config/color-config';
 
 /**
  * 🔺 CROSSHAIR SETTINGS
@@ -61,7 +62,7 @@ export const DEFAULT_CROSSHAIR_SETTINGS: CrosshairSettings = {
   enabled: true,
   visible: true,
   opacity: 1.0,
-  color: '#ffffff',
+  color: UI_COLORS.WHITE,
   size: 100,             // Full screen
   lineWidth: 1,
   style: 'solid',

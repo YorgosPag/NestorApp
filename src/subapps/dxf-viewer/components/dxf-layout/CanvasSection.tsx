@@ -9,6 +9,7 @@ import type { CursorSettings } from '../../systems/cursor/config';
 import { useCanvasOperations } from '../../hooks/interfaces/useCanvasOperations';
 import { useCanvasContext } from '../../contexts/CanvasContext';
 import { useDrawingHandlers } from '../../hooks/drawing/useDrawingHandlers';
+import { UI_COLORS } from '../../config/color-config';
 // CanvasProvider removed - not needed for Canvas V2
 // OverlayCanvas import removed - it was dead code
 import { FloatingPanelContainer } from '../../ui/FloatingPanelContainer';
@@ -168,18 +169,18 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const rulerSettings: RulerSettings = {
     enabled: true, // ✅ FORCE ENABLE RULERS
     unit: (rulerContextSettings?.units as 'mm' | 'cm' | 'm') ?? 'mm',
-    color: rulerContextSettings?.horizontal?.color ?? '#ffffff', // ✅ WHITE για visibility
-    backgroundColor: rulerContextSettings?.horizontal?.backgroundColor ?? '#333333', // ✅ DARK BACKGROUND για contrast
+    color: rulerContextSettings?.horizontal?.color ?? UI_COLORS.WHITE, // ✅ CENTRALIZED WHITE για visibility
+    backgroundColor: rulerContextSettings?.horizontal?.backgroundColor ?? UI_COLORS.DARK_BACKGROUND, // ✅ CENTRALIZED DARK BACKGROUND για contrast
     fontSize: rulerContextSettings?.horizontal?.fontSize ?? 12,
     // Extended properties από RulersGridSystem
-    textColor: rulerContextSettings?.horizontal?.textColor ?? '#ffffff', // ✅ WHITE TEXT για visibility
+    textColor: rulerContextSettings?.horizontal?.textColor ?? UI_COLORS.WHITE, // ✅ CENTRALIZED WHITE TEXT για visibility
     showLabels: rulerContextSettings?.horizontal?.showLabels ?? true,
     showUnits: rulerContextSettings?.horizontal?.showUnits ?? true,
     showBackground: rulerContextSettings?.horizontal?.showBackground ?? true,
     showMajorTicks: rulerContextSettings?.horizontal?.showMajorTicks ?? true,
     showMinorTicks: rulerContextSettings?.horizontal?.showMinorTicks ?? true,
-    majorTickColor: rulerContextSettings?.horizontal?.majorTickColor ?? '#ffffff', // ✅ WHITE TICKS
-    minorTickColor: rulerContextSettings?.horizontal?.minorTickColor ?? '#cccccc', // ✅ LIGHT GRAY MINOR TICKS
+    majorTickColor: rulerContextSettings?.horizontal?.majorTickColor ?? UI_COLORS.WHITE, // ✅ CENTRALIZED WHITE TICKS
+    minorTickColor: rulerContextSettings?.horizontal?.minorTickColor ?? UI_COLORS.LIGHT_GRAY, // ✅ CENTRALIZED LIGHT GRAY MINOR TICKS
     majorTickLength: rulerContextSettings?.horizontal?.majorTickLength ?? 10,
     minorTickLength: rulerContextSettings?.horizontal?.minorTickLength ?? 5,
     height: rulerContextSettings?.horizontal?.height ?? 30,
@@ -187,7 +188,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     position: rulerContextSettings?.horizontal?.position ?? 'bottom',
     // 🔺 MISSING UNITS SETTINGS - Σύνδεση με floating panel
     unitsFontSize: rulerContextSettings?.horizontal?.unitsFontSize ?? 10,
-    unitsColor: rulerContextSettings?.horizontal?.unitsColor ?? '#ffffff' // ✅ WHITE UNITS TEXT
+    unitsColor: rulerContextSettings?.horizontal?.unitsColor ?? UI_COLORS.WHITE // ✅ CENTRALIZED WHITE UNITS TEXT
   };
 
   const {
@@ -216,9 +217,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     size: gridContextSettings?.visual?.step ?? 10,
 
     // ✅ COLORS: Από panel settings (NOT hardcoded!)
-    color: gridContextSettings?.visual?.color ?? '#4444ff', // Default blue από panel
-    majorGridColor: gridContextSettings?.visual?.majorGridColor ?? '#888888',
-    minorGridColor: gridContextSettings?.visual?.minorGridColor ?? '#bbbbbb',
+    color: gridContextSettings?.visual?.color ?? UI_COLORS.BLUE_DEFAULT, // CENTRALIZED default blue από panel
+    majorGridColor: gridContextSettings?.visual?.majorGridColor ?? UI_COLORS.MEDIUM_GRAY,
+    minorGridColor: gridContextSettings?.visual?.minorGridColor ?? UI_COLORS.LIGHT_GRAY_ALT,
 
     // ✅ OPACITY: Από panel settings
     opacity: gridContextSettings?.visual?.opacity ?? 0.6,
@@ -309,15 +310,15 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         return {
           id: overlay.id,
           name: `Layer ${index + 1}`,
-          color: overlay.color || getStatusColors(overlay.status)?.fill || '#3b82f6',
+          color: overlay.color || getStatusColors(overlay.status)?.fill || UI_COLORS.BUTTON_PRIMARY,
           opacity: overlay.opacity || 0.7,  // Slightly transparent so we can see them
           visible: overlay.visible !== false,
           zIndex: index,
           polygons: [{
             id: `polygon_${overlay.id}`,
             vertices,
-            fillColor: overlay.color || getStatusColors(overlay.status)?.fill || '#3b82f6',  // Use κεντρικά STATUS_COLORS
-            strokeColor: overlay.selected ? '#ff0000' : '#000000',  // Black stroke for visibility
+            fillColor: overlay.color || getStatusColors(overlay.status)?.fill || UI_COLORS.BUTTON_PRIMARY,  // Use κεντρικά STATUS_COLORS
+            strokeColor: overlay.selected ? UI_COLORS.SELECTED_RED : UI_COLORS.BLACK,  // Black stroke for visibility
             strokeWidth: overlay.selected ? 3 : 2,  // Thicker stroke
             selected: overlay.id === overlayStore.selectedOverlayId
           }]
@@ -405,7 +406,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         const base = {
           id: entity.id,
           layer: entity.layer,
-          color: entity.color || layerInfo?.color || '#ffffff', // Use layer color if entity has no color
+          color: entity.color || layerInfo?.color || UI_COLORS.WHITE, // Use layer color if entity has no color
           lineWidth: entity.lineweight || 1,
           visible: entity.visible
         };
@@ -457,7 +458,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
             id: linePreview.id,
             type: 'line' as const,
             layer: linePreview.layer || '0',
-            color: linePreview.color || '#00ff00', // Green for preview
+            color: linePreview.color || UI_COLORS.BRIGHT_GREEN, // Green for preview
             lineWidth: linePreview.lineweight || 1,
             visible: true,
             start: linePreview.start,
@@ -872,7 +873,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                 showMajorTicks: globalRulerSettings.horizontal.showMajorTicks,
                 showMinorTicks: true,
                 majorTickColor: globalRulerSettings.horizontal.color,
-                minorTickColor: '#666666',
+                minorTickColor: UI_COLORS.BUTTON_SECONDARY,
                 majorTickLength: 10,
                 minorTickLength: 5,
                 tickInterval: gridSettings.size * gridMajorInterval, // ✅ SYNC WITH GRID: Use major grid interval!

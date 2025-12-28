@@ -4,6 +4,7 @@
  */
 
 import type { UIElementSettings } from '../core/UIRenderer';
+import { UI_COLORS } from '../../../config/color-config';
 
 /**
  * 🔺 GRID STYLES
@@ -64,14 +65,14 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
   enabled: true,
   visible: true,
   opacity: 0.3,
-  color: '#808080',
+  color: UI_COLORS.MEDIUM_GRAY,
   size: 10,              // 10 units spacing
   style: 'lines',
   lineWidth: 1,
 
   // Advanced features
-  majorGridColor: '#606060',
-  minorGridColor: '#404040',
+  majorGridColor: UI_COLORS.GRID_MAJOR,
+  minorGridColor: UI_COLORS.GRID_MINOR,
   majorInterval: 5,      // Major grid every 5 intervals
   showMajorGrid: true,
   showMinorGrid: true,

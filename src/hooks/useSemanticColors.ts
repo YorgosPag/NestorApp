@@ -288,7 +288,7 @@ export function useSemanticColors(): UseSemanticColorsReturn {
  */
 export function useStatusColors() {
   const colors = useSemanticColors();
-  return useMemo(() => colors.status, [colors.status]);
+  return colors.status;
 }
 
 /**
@@ -297,7 +297,7 @@ export function useStatusColors() {
  */
 export function useTextColors() {
   const colors = useSemanticColors();
-  return useMemo(() => colors.text, [colors.text]);
+  return colors.text;
 }
 
 /**
@@ -306,7 +306,7 @@ export function useTextColors() {
  */
 export function useInteractiveColors() {
   const colors = useSemanticColors();
-  return useMemo(() => colors.interactive, [colors.interactive]);
+  return colors.interactive;
 }
 
 /**
@@ -315,7 +315,7 @@ export function useInteractiveColors() {
  */
 export function useUIPatterns() {
   const colors = useSemanticColors();
-  return useMemo(() => colors.patterns, [colors.patterns]);
+  return colors.patterns;
 }
 
 // ============================================================================

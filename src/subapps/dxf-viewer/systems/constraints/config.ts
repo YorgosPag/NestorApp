@@ -4,6 +4,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { UI_COLORS } from '../../config/color-config';
 
 // ===== BASIC TYPES =====
 export type ConstraintType = 'ortho' | 'polar' | 'angle' | 'distance' | 'parallel' | 'perpendicular' | 'tangent' | 'horizontal' | 'vertical';
@@ -229,7 +230,7 @@ export const DEFAULT_ORTHO_SETTINGS: OrthoConstraintSettings = {
   visualFeedback: {
     showConstraintLines: true,
     showAngleIndicator: true,
-    lineColor: '#00ff00',
+    lineColor: UI_COLORS.GREEN,
     lineWidth: 1,
     lineStyle: 'dashed',
     opacity: 0.7
@@ -255,12 +256,12 @@ export const DEFAULT_POLAR_SETTINGS: PolarConstraintSettings = {
     showPolarRay: true,
     showDistanceMarker: true,
     showAngleArc: true,
-    rayColor: '#ffff00',
+    rayColor: UI_COLORS.YELLOW,
     rayWidth: 1,
     rayLength: 100,
-    arcColor: '#ffff00',
+    arcColor: UI_COLORS.YELLOW,
     arcRadius: 30,
-    markerColor: '#ff0000',
+    markerColor: UI_COLORS.RED,
     markerSize: 4,
     opacity: 0.8
   },
@@ -343,14 +344,14 @@ export const CONSTRAINTS_CONFIG = {
   
   // Color constants
   COLORS: {
-    ORTHO: '#00ff00',
-    POLAR: '#ffff00', 
-    ANGLE: '#0066ff',
-    DISTANCE: '#ff6600',
-    PARALLEL: '#9966ff',
-    PERPENDICULAR: '#ff0066',
-    ACTIVE: '#ffffff',
-    INACTIVE: '#666666'
+    ORTHO: UI_COLORS.GREEN,
+    POLAR: UI_COLORS.YELLOW,
+    ANGLE: UI_COLORS.BLUE_DEFAULT,
+    DISTANCE: UI_COLORS.ORANGE,
+    PARALLEL: UI_COLORS.PURPLE,
+    PERPENDICULAR: UI_COLORS.MAGENTA,
+    ACTIVE: UI_COLORS.WHITE,
+    INACTIVE: UI_COLORS.MEDIUM_GRAY
   }
 } as const;
 

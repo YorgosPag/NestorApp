@@ -7,6 +7,7 @@ import { CurrentSettingsDisplay } from '../dxf-settings/settings/shared/CurrentS
 import { OverrideToggle } from './OverrideToggle';
 import { INTERACTIVE_PATTERNS } from '../../../ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { UI_COLORS } from '../../../config/color-config';
 
 export type SubTabType = 'draft' | 'completion' | 'hover' | 'selection';
 export type SubTabContent = 'line' | 'text' | 'grips';
@@ -86,11 +87,11 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
   const getColoredSettings = React.useCallback((baseSettings: Record<string, unknown>) => {
     switch (config.type) {
       case 'hover':
-        return { ...baseSettings, color: '#ffaa00' };
+        return { ...baseSettings, color: UI_COLORS.ORANGE };
       case 'selection':
-        return { ...baseSettings, color: '#ff4444' };
+        return { ...baseSettings, color: UI_COLORS.RED };
       case 'completion':
-        return { ...baseSettings, color: '#00ff88' };
+        return { ...baseSettings, color: UI_COLORS.SUCCESS_BRIGHT };
       default:
         return baseSettings;
     }

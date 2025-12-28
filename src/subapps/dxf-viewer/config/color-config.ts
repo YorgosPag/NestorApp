@@ -10,6 +10,52 @@ export const UI_COLORS = {
   WHITE: '#FFFFFF',
   BLACK: '#000000',
   TRANSPARENT: 'transparent',
+
+  // UI Background Colors για fallbacks
+  DARK_BACKGROUND: '#333333',
+  LIGHT_GRAY: '#cccccc',
+  MEDIUM_GRAY: '#888888',
+  LIGHT_GRAY_ALT: '#bbbbbb',
+  BLUE_DEFAULT: '#4444ff',
+
+  // Ruler colors
+  RULER_NEUTRAL_GRAY: '#f0f0f0',
+  RULER_DARK_GRAY: '#666666',
+  RULER_LIGHT_GRAY: '#999999',
+  RULER_TEXT_GRAY: '#333333',
+
+  // Text labeling colors
+  TEXT_LABEL_BORDER: '#333333',
+  TEXT_LABEL_BG_FALLBACK: 'rgba(30, 41, 59, 0.9)',
+
+  // Scrollbar colors
+  SCROLLBAR_GRAY: '#cbd5e1',
+  SCROLLBAR_GRAY_HOVER: '#94a3b8',
+
+  // Toolbar colors
+  TOOLBAR_BG: '#f8f9fa',
+  TOOLBAR_BORDER: '#dee2e6',
+  TOOLBAR_TEXT: '#212529',
+  TOOLBAR_HOVER: '#e9ecef',
+  TOOLBAR_ACTIVE: '#007bff',
+  TOOLBAR_DISABLED: '#6c757d',
+
+  // Collaboration colors
+  COLLAB_USER_1: '#FF6B6B',  // Red
+  COLLAB_USER_2: '#4ECDC4',  // Teal
+  COLLAB_USER_3: '#45B7D1',  // Blue
+  COLLAB_USER_4: '#FFA07A',  // Light salmon
+  COLLAB_USER_5: '#98D8C8',  // Mint green
+  COLLAB_USER_6: '#F7DC6F',  // Yellow
+  COLLAB_USER_7: '#BB8FCE',  // Purple
+  COLLAB_USER_8: '#85C1E2',  // Light blue
+
+  // Grid colors
+  GRID_BLUE: '#4444ff',
+  GRID_AXES_GRAY: '#666666',
+
+  // Indicators
+  INDICATOR_BLUE: '#0099ff',
   
   // Entity colors
   DEFAULT_ENTITY: '#FFFFFF',
@@ -21,6 +67,14 @@ export const UI_COLORS = {
   DRAWING_LINE: '#FFFFFF',
   DRAWING_PREVIEW: '#00ff80',
   DRAWING_TEMP: '#ffaa00',
+  DRAWING_HIGHLIGHT: '#ff6600', // Orange highlight για DxfRenderer
+
+  // Critical canvas rendering colors (από log analysis)
+  SELECTED_RED: '#ff0000',      // Red για selected polygons/entities
+  BRIGHT_GREEN: '#00ff00',      // Bright green για measurements/previews
+  BRIGHT_YELLOW: '#ffff00',     // Bright yellow για warnings/highlights
+  CANVAS_STROKE_DEFAULT: '#ffffff', // Default stroke color for canvas
+  OVERLAY_RED: '#ff6b6b',       // Red για overlays
   
   // Measurement colors
   MEASUREMENT_TEXT: '#00ff00',
@@ -35,12 +89,13 @@ export const UI_COLORS = {
   GRIP_OUTLINE: '#000000',
   
   // Snap indicator colors
-  SNAP_MIDPOINT: '#ffffff',
-  SNAP_ENDPOINT: '#00E5FF',
-  SNAP_INTERSECTION: '#FF6B35',
+  SNAP_MIDPOINT: '#00ff00',      // Green for midpoints
+  SNAP_ENDPOINT: '#ff0000',      // Red for endpoints
+  SNAP_INTERSECTION: '#ff00ff',  // Magenta for intersections
   SNAP_PERPENDICULAR: '#9B59B6',
-  SNAP_CENTER: '#E67E22',
-  SNAP_DEFAULT: '#ffffff',
+  SNAP_CENTER: '#0000ff',        // Blue for centers
+  SNAP_DEFAULT: '#ffff00',       // Yellow default
+  SNAP_HIGHLIGHT: '#ffffff',     // White highlight
   
   // Thermal/Phase colors
   THERMAL_COLD: '#ffffff',
@@ -52,12 +107,36 @@ export const UI_COLORS = {
   SELECTION_HIGHLIGHT: '#ffffff',
   SELECTION_MARQUEE: '#3b82f6',
   SELECTION_LASSO: '#3b82f6',
+  SELECTION_RED: '#ff4444',
   
   // UI Element colors
   BUTTON_PRIMARY: '#3b82f6',
   BUTTON_PRIMARY_HOVER: '#2563eb',
   BUTTON_SECONDARY: '#6b7280',
   BUTTON_SECONDARY_HOVER: '#4b5563',
+
+  // Status Indicator colors
+  STATUS_GENERAL_ACTIVE: '#3B82F6',    // Blue for general settings active
+  STATUS_SPECIFIC_ACTIVE: '#22C55E',   // Green for specific settings active
+  STATUS_INACTIVE: '#6B7280',          // Gray for inactive states
+
+  // Focus ring colors
+  FOCUS_RING: 'rgba(59, 130, 246, 0.5)', // Primary focus ring
+
+  // Box shadow colors
+  SHADOW_LIGHT: 'rgba(0, 0, 0, 0.05)',   // Light shadow (shadow-sm)
+  SHADOW_MEDIUM: 'rgba(0, 0, 0, 0.1)',   // Medium shadow (shadow-md)
+  SHADOW_HEAVY: 'rgba(0, 0, 0, 0.2)',    // Heavy shadow (shadow-lg)
+  SHADOW_XL: 'rgba(0, 0, 0, 0.25)',      // Extra large shadow (shadow-xl)
+
+  // Modal overlay colors
+  MODAL_OVERLAY_LIGHT: 'rgba(0, 0, 0, 0.5)',     // Base modal backdrop
+  MODAL_OVERLAY_MEDIUM: 'rgba(0, 0, 0, 0.75)',   // Import modal backdrop
+  MODAL_OVERLAY_HEAVY: 'rgba(0, 0, 0, 0.8)',     // Cursor tooltip backdrop
+  MODAL_OVERLAY_CRITICAL: 'rgba(0, 0, 0, 0.9)',  // Critical modal backdrop
+
+  // Selection overlay colors
+  SELECTION_MARQUEE_BG: 'rgba(0, 122, 204, 0.1)', // Selection rectangle background
 
   // Custom Upload Area Color (Enterprise Dark Blue-Gray)
   UPLOAD_AREA_BG: 'rgb(43, 59, 85)',
@@ -69,6 +148,56 @@ export const UI_COLORS = {
   WARNING: '#f59e0b',
   ERROR: '#ef4444',
   INFO: '#3b82f6',
+
+  // Additional status colors for property-status-enterprise
+  DARK_RED: '#dc2626',       // Rented status
+  LIGHT_ORANGE: '#fbbf24',   // Under negotiation
+  LIGHT_PURPLE: '#a855f7',   // Coming soon
+  LIGHT_GRAY: '#9ca3af',     // Off market
+  DARK_GRAY: '#6b7280',      // Unavailable
+
+  // Test colors
+  CUSTOM_TEST_COLOR: '#123456',  // For unit tests
+
+  // Grid Colors
+  GRID_MAJOR: '#888888',        // Major grid lines
+  GRID_MINOR: '#bbbbbb',        // Minor grid lines
+
+  // Debug & Development Colors
+  DEBUG_CURSOR: '#0066FF',      // Blue for cursor debug markers
+  SUCCESS_GREEN: '#22c55e',     // Green for overlay success
+  SUCCESS_BRIGHT: '#00ff80',    // Bright green for edge grips
+  SEMI_TRANSPARENT_RED: '#ff000080', // Semi-transparent red for fills
+  DEBUG_CROSSHAIR: '#00FF00',   // Green for crosshair debug
+  DEBUG_SNAP: '#FF0000',        // Red for snap debug
+  DEBUG_DISTANCE: '#FFAA00',    // Orange for distance measurements
+  DEBUG_ORIGIN: '#FF00FF',      // Magenta for origin markers
+  DEBUG_RULER: '#00FFFF',       // Cyan for ruler debug
+  DEBUG_GRID: '#FFFFFF',        // White for grid debug
+
+  // Ruler Debug Colors
+  RULER_MAJOR_TICK: '#FF0000',  // Red for major ticks
+  RULER_MINOR_TICK: '#00FF00',  // Green for minor ticks
+  RULER_CALIBRATION: '#00FFFF', // Cyan for calibration grid
+  RULER_ORIGIN_MARKER: '#FF00FF', // Magenta for origin
+
+  // Settings & Test Colors
+  TEST_LINE_COLOR: '#FFFFFF',   // White for test line colors
+  TEST_TEXT_COLOR: '#FFFFFF',   // White for test text
+  TEST_GRIP_BLUE: '#0000FF',    // Blue for test grips
+  TEST_GRIP_HOVER: '#00FFFF',   // Cyan for test grip hover
+  TEST_DRAFT_GRAY: '#808080',   // Gray for draft mode
+  TEST_PREVIEW_RED: '#FF0000',  // Red for preview mode
+
+  // Overlay & Rendering Colors
+  OVERLAY_SELECTION: '#00ff00',  // Green for selection
+  OVERLAY_HOVER: '#ffff00',     // Yellow for hover
+  OVERLAY_SNAP_POINT: '#ff00ff', // Magenta for snap points
+  OVERLAY_GRIP_HOT: '#ff0000',  // Red for hot grips
+  OVERLAY_GRIP_COLD: '#0000ff', // Blue for cold grips
+  OVERLAY_AXIS_X: '#ff0000',    // Red for X axis
+  OVERLAY_AXIS_Y: '#00ff00',    // Green for Y axis
+  OVERLAY_ORIGIN: '#0000ff'     // Blue for origin
 } as const;
 
 // Opacity variations
@@ -224,8 +353,9 @@ export const LEGACY_COLORS = {
   // Common legacy names
   GREEN: UI_COLORS.MEASUREMENT_TEXT,
   YELLOW: '#FFFF00', // CHANGED πίσω σε κίτρινο
-  BLUE: UI_COLORS.SELECTED_ENTITY,
+  BLUE: '#0000FF', // Blue for test cases
   WHITE: UI_COLORS.WHITE,
   BLACK: UI_COLORS.BLACK,
   ORANGE: UI_COLORS.DRAWING_TEMP,
+  MAGENTA: '#FF00FF', // Magenta for test cases
 } as const;

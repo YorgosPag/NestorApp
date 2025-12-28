@@ -9,6 +9,7 @@
  */
 
 import { dialogComponents } from '@/styles/design-tokens';
+import { UI_COLORS } from '../config/color-config';
 
 // ============================================================================
 // DIALOG STYLING UTILITIES
@@ -25,7 +26,7 @@ export const getSelectStyles = () => ({
  * Get option element styles for consistent dropdown appearance
  */
 export const getOptionStyles = () => ({
-  backgroundColor: '#374151',
+  backgroundColor: UI_COLORS.UPLOAD_AREA_BG,
   color: 'white'
 });
 
@@ -52,14 +53,14 @@ export const getModalContentStyles = () => ({
  */
 export const getSelectFocusHandlers = () => ({
   onFocus: (e: React.FocusEvent<HTMLSelectElement>) => {
-    const focusStyle = { borderColor: '#3B82F6', outline: '2px solid rgba(59, 130, 246, 0.2)' };
+    const focusStyle = { borderColor: UI_COLORS.BUTTON_PRIMARY, outline: `2px solid ${UI_COLORS.withOpacity(UI_COLORS.BUTTON_PRIMARY, 0.2)}` };
     if (focusStyle) {
       Object.assign(e.currentTarget.style, focusStyle);
     }
   },
   onBlur: (e: React.FocusEvent<HTMLSelectElement>) => {
     // Reset to base styles on blur
-    e.currentTarget.style.borderColor = '#4b5563'; // gray-600
+    e.currentTarget.style.borderColor = UI_COLORS.BUTTON_SECONDARY; // gray-600
     e.currentTarget.style.boxShadow = 'none';
   }
 });
@@ -104,17 +105,17 @@ export const simpleProjectDialogStyles = {
   // Header
   header: dialogComponents.modal.header,
   title: dialogComponents.modal.title,
-  subtitle: { fontSize: '0.875rem', color: '#9CA3AF', marginTop: '0.25rem' },
+  subtitle: { fontSize: '0.875rem', color: UI_COLORS.BUTTON_SECONDARY, marginTop: '0.25rem' },
   closeButton: dialogComponents.modal.closeButton,
 
   // Form Elements
   form: {
     fieldset: dialogComponents.form.fieldset,
-    legend: { fontSize: '1rem', fontWeight: '600', color: '#F9FAFB', marginBottom: '0.5rem' },
+    legend: { fontSize: '1rem', fontWeight: '600', color: UI_COLORS.WHITE, marginBottom: '0.5rem' },
     label: dialogComponents.form.label,
     select: dialogComponents.form.select,
     option: {
-      backgroundColor: '#374151',
+      backgroundColor: UI_COLORS.UPLOAD_AREA_BG,
       color: 'white'
     }
   },
@@ -130,16 +131,16 @@ export const simpleProjectDialogStyles = {
 
   // Info Cards
   infoCard: {
-    company: { padding: '1rem', backgroundColor: '#374151', borderRadius: '0.5rem' },
-    project: { padding: '1rem', backgroundColor: '#374151', borderRadius: '0.5rem' },
-    building: { padding: '1rem', backgroundColor: '#374151', borderRadius: '0.5rem' }
+    company: { padding: '1rem', backgroundColor: UI_COLORS.UPLOAD_AREA_BG, borderRadius: '0.5rem' },
+    project: { padding: '1rem', backgroundColor: UI_COLORS.UPLOAD_AREA_BG, borderRadius: '0.5rem' },
+    building: { padding: '1rem', backgroundColor: UI_COLORS.UPLOAD_AREA_BG, borderRadius: '0.5rem' }
   },
 
   // Steps
   steps: {
     container: { display: 'flex', flexDirection: 'column' as const, gap: '1rem' },
-    title: { fontSize: '1.125rem', fontWeight: '600', color: '#F9FAFB' },
-    description: { fontSize: '0.875rem', color: '#9CA3AF' }
+    title: { fontSize: '1.125rem', fontWeight: '600', color: UI_COLORS.WHITE },
+    description: { fontSize: '0.875rem', color: UI_COLORS.BUTTON_SECONDARY }
   }
 } as const;
 
@@ -191,19 +192,19 @@ export const getLoadingStyles = () => ({
     alignItems: 'center',
     gap: '0.75rem',
     padding: '0.75rem',
-    backgroundColor: '#374151',
+    backgroundColor: UI_COLORS.UPLOAD_AREA_BG,
     borderRadius: '0.5rem'
   },
   spinner: {
     width: '1.25rem',
     height: '1.25rem',
-    border: '2px solid #2563eb',
+    border: `2px solid ${UI_COLORS.BUTTON_PRIMARY}`,
     borderTop: '2px solid transparent',
     borderRadius: '50%',
     animation: 'spin 1s linear infinite'
   },
   text: {
-    color: '#d1d5db'
+    color: UI_COLORS.WHITE
   }
 });
 
@@ -213,18 +214,18 @@ export const getLoadingStyles = () => ({
 export const getErrorStyles = () => ({
   container: {
     padding: '0.75rem',
-    backgroundColor: 'rgba(127, 29, 29, 0.2)',
-    border: '1px solid #dc2626',
+    backgroundColor: UI_COLORS.withOpacity(UI_COLORS.ERROR, 0.2),
+    border: `1px solid ${UI_COLORS.ERROR}`,
     borderRadius: '0.5rem'
   },
   text: {
-    color: '#fca5a5',
+    color: UI_COLORS.ERROR,
     fontSize: '0.875rem',
     marginBottom: '0.5rem'
   },
   button: {
     padding: '0.25rem 0.75rem',
-    backgroundColor: '#dc2626',
+    backgroundColor: UI_COLORS.ERROR,
     color: 'white',
     fontSize: '0.875rem',
     borderRadius: '0.25rem',
@@ -240,11 +241,11 @@ export const getEmptyStateStyles = () => ({
   container: {
     marginTop: '0.75rem',
     padding: '0.75rem',
-    backgroundColor: '#374151',
+    backgroundColor: UI_COLORS.UPLOAD_AREA_BG,
     borderRadius: '0.5rem'
   },
   text: {
-    color: '#d1d5db',
+    color: UI_COLORS.WHITE,
     fontSize: '0.875rem'
   }
 });
@@ -254,7 +255,7 @@ export const getEmptyStateStyles = () => ({
  */
 export const getStatusTextStyles = () => ({
   textAlign: 'center' as const,
-  color: '#9ca3af',
+  color: UI_COLORS.BUTTON_SECONDARY,
   fontSize: '0.875rem'
 });
 
@@ -273,15 +274,15 @@ export const getHierarchyDisplayStyles = () => ({
     display: 'flex',
     alignItems: 'center',
     gap: '0.5rem',
-    color: '#d1d5db'
+    color: UI_COLORS.WHITE
   },
   label: {
     fontWeight: '500' as const
   },
   value: {
-    company: { color: '#60a5fa' },
-    project: { color: '#4ade80' },
-    building: { color: '#a78bfa' }
+    company: { color: UI_COLORS.BUTTON_PRIMARY },
+    project: { color: UI_COLORS.SUCCESS },
+    building: { color: UI_COLORS.BUTTON_PRIMARY }
   }
 });
 
@@ -292,9 +293,9 @@ export const getFloorplanOptionsStyles = () => ({
   container: {
     marginTop: '1.5rem',
     padding: '1rem',
-    backgroundColor: '#374151',
+    backgroundColor: UI_COLORS.UPLOAD_AREA_BG,
     borderRadius: '0.5rem',
-    borderTop: '1px solid #4b5563'
+    borderTop: `1px solid ${UI_COLORS.BUTTON_SECONDARY}`
   },
   title: {
     color: 'white',
@@ -308,7 +309,7 @@ export const getFloorplanOptionsStyles = () => ({
     justifyContent: 'center'
   },
   description: {
-    color: '#9ca3af',
+    color: UI_COLORS.BUTTON_SECONDARY,
     fontSize: '0.75rem',
     textAlign: 'center' as const,
     marginTop: '0.5rem'

@@ -8,6 +8,7 @@
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
 import type { DxfScene, DxfEntityUnion, DxfRenderOptions } from './dxf-types';
 import { CoordinateTransforms, COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
+import { UI_COLORS } from '../../config/color-config';
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 
 // ✅ ΝΕΟ: Import unified rendering system
@@ -75,7 +76,7 @@ export class DxfRenderer {
       calculated: { originX, originY }
     });
     this.ctx.save();
-    this.ctx.strokeStyle = 'orange';
+    this.ctx.strokeStyle = UI_COLORS.DRAWING_HIGHLIGHT; // ✅ CENTRALIZED: Orange highlight για DXF origin marker
     this.ctx.lineWidth = 3;
     this.ctx.beginPath();
     // TOP vertical line (up from origin)
@@ -86,7 +87,7 @@ export class DxfRenderer {
     this.ctx.lineTo(originX - 20, originY);
     this.ctx.stroke();
     // Label
-    this.ctx.fillStyle = 'orange';
+    this.ctx.fillStyle = UI_COLORS.DRAWING_HIGHLIGHT; // ✅ CENTRALIZED: Orange text για DXF label
     this.ctx.font = 'bold 12px monospace';
     this.ctx.fillText('DXF', originX - 45, originY - 10);
     this.ctx.restore();
@@ -220,7 +221,7 @@ export class DxfRenderer {
     if (options.selectedEntityIds.length === 0) return;
 
     this.ctx.save();
-    this.ctx.strokeStyle = '#ff6600';
+    this.ctx.strokeStyle = UI_COLORS.DRAWING_HIGHLIGHT;
     this.ctx.lineWidth = 2;
     this.ctx.setLineDash([5, 5]);
 

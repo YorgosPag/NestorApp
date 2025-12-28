@@ -1,6 +1,8 @@
 // 🎯 ENTERPRISE LAYERING WORKFLOW TEST
 // Αντάξιο μεγάλων enterprise συστημάτων
 
+import { UI_COLORS } from '../config/color-config';
+
 interface StepResult {
   step: string;
   status: "success" | "failed";
@@ -372,7 +374,7 @@ function findColoredOverlayCard(): HTMLElement {
       const style = window.getComputedStyle(el);
       const hasColor = style.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
                       style.backgroundColor !== 'transparent' &&
-                      style.backgroundColor !== 'rgb(255, 255, 255)';
+                      style.backgroundColor !== UI_COLORS.WHITE;
       const hasColorIndicator = el.querySelector('[class*="color"], [class*="badge"], [style*="background"]');
       const hasText = el.textContent && el.textContent.trim().length > 0;
       return (hasColor || hasColorIndicator) && hasText;
@@ -394,7 +396,7 @@ function findColoredOverlayCard(): HTMLElement {
     // Ελέγχουμε για χρώμα και reasonable size
     const hasColor = style.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
                     style.backgroundColor !== 'transparent' &&
-                    style.backgroundColor !== 'rgb(255, 255, 255)';
+                    style.backgroundColor !== UI_COLORS.WHITE;
     const hasColorIndicator = el.querySelector('[class*="color"], [class*="badge"], [style*="background"]');
     const hasReasonableSize = rect.width > 50 && rect.height > 20;
     const hasText = el.textContent && el.textContent.trim().length > 0 && el.textContent.trim().length < 50;

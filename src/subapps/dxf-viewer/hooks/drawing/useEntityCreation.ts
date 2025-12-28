@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import type { Point, DXFEntity, ToolType } from '../../types';
+import { UI_COLORS } from '../../config/color-config';
 // import { layerManager } from '../../tools/LayerManager';
 
 export type DrawingTool = 'line' | 'rectangle' | 'circle' | 'polyline';
@@ -32,7 +33,7 @@ export const useEntityCreation = () => {
         const baseEntity = {
             id: `${tool}_${entityIdCounter.current++}`,
             layer: layer,
-            color: '#FFFFFF',
+            color: UI_COLORS.WHITE,
             visible: true,
             selected: false,
             points: [] as Point[],

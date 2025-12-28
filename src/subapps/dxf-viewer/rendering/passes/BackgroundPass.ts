@@ -4,6 +4,7 @@
  */
 
 import type { IRenderPass, IRenderContext, RenderPassOptions } from '../core/RenderPipeline';
+import { UI_COLORS } from '../../config/color-config';
 
 export interface BackgroundConfig {
   gridEnabled: boolean;
@@ -218,7 +219,7 @@ export class BackgroundPass implements IRenderPass {
 
     context.save();
     context.setState({
-      strokeStyle: '#ff0000', // Red for X axis
+      strokeStyle: UI_COLORS.OVERLAY_AXIS_X, // Red for X axis
       lineWidth: 2,
       globalAlpha: 0.8
     });
@@ -232,7 +233,7 @@ export class BackgroundPass implements IRenderPass {
     context.stroke();
 
     // Y-axis (green)
-    context.setState({ strokeStyle: '#00ff00' });
+    context.setState({ strokeStyle: UI_COLORS.OVERLAY_AXIS_Y });
     context.beginPath();
     context.moveTo(originScreen.x, originScreen.y);
     context.lineTo(originScreen.x, originScreen.y - axisLength);
@@ -240,8 +241,8 @@ export class BackgroundPass implements IRenderPass {
 
     // Origin point
     context.setState({
-      fillStyle: '#0000ff', // Blue for origin
-      strokeStyle: '#0000ff'
+      fillStyle: UI_COLORS.OVERLAY_ORIGIN, // Blue for origin
+      strokeStyle: UI_COLORS.OVERLAY_ORIGIN
     });
     context.beginPath();
     context.arc(originScreen.x, originScreen.y, 3, 0, Math.PI * 2);
@@ -249,7 +250,7 @@ export class BackgroundPass implements IRenderPass {
 
     // Labels
     context.setState({
-      fillStyle: '#000000',
+      fillStyle: UI_COLORS.BLACK,
       font: '14px Arial',
       textAlign: 'left',
       textBaseline: 'top'
@@ -276,9 +277,9 @@ export function createBackgroundPass(config?: Partial<BackgroundConfig>): Backgr
     rulersEnabled: true,
     coordinateSystemEnabled: true,
     gridSize: 10,
-    gridColor: '#e0e0e0',
-    rulerColor: '#f0f0f0',
-    backgroundColor: '#ffffff'
+    gridColor: UI_COLORS.LIGHT_GRAY,
+    rulerColor: UI_COLORS.LIGHT_GRAY_ALT,
+    backgroundColor: UI_COLORS.WHITE
   };
 
   return new BackgroundPass({ ...defaultConfig, ...config });

@@ -9,6 +9,7 @@ const DEBUG_ENTITY_RENDERER = false;
 import { EntityRendererComposite } from '../rendering/core/EntityRendererComposite';
 import type { Point2D, ViewTransform } from '../rendering/types/Types';
 import type { GripSettings, GripInteractionState } from '../types/gripSettings';
+import { UI_COLORS } from '../config/color-config';
 
 export interface EntityModel {
   id: string;
@@ -69,14 +70,14 @@ export class EntityRenderer {
     const showPreviewGrips = ('showPreviewGrips' in entity && entity.showPreviewGrips === true);
 
     // ✅ ΚΡΙΣΙΜΗ ΔΙΟΡΘΩΣΗ: Preview entities μπορούν να έχουν grips!
-    const shouldShowGrips = isSelected || (strokeOverride === '#FFFFFF') || showPreviewGrips;
+    const shouldShowGrips = isSelected || (strokeOverride === UI_COLORS.WHITE) || showPreviewGrips;
 
     const options = {
       strokeOverride,
       isSelected: isSelected || false,
       selected: isSelected || false,
       grips: shouldShowGrips, // ✅ Show grips when entity is selected, hovered, OR preview with grips
-      hovered: strokeOverride === '#FFFFFF', // White stroke means hovered
+      hovered: strokeOverride === UI_COLORS.WHITE, // White stroke means hovered
       measurement: ('measurement' in entity && entity.measurement === true), // Check if entity is a measurement
       preview: isPreviewEntity // Pass preview flag for preview entities
     };

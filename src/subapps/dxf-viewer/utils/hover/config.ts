@@ -3,6 +3,8 @@
  * Centralized configuration for consistent hover behavior styling
  */
 
+import { UI_COLORS } from '../../config/color-config';
+
 export interface HoverConfig {
   colors: {
     distance: string;
@@ -27,9 +29,9 @@ export interface HoverConfig {
 // Configuration based on existing polyline styling
 export const HOVER_CONFIG: HoverConfig = {
   colors: {
-    distance: '#00AA00',  // Green - from existing distance labels
-    angle: '#ffaa00',     // Orange - from existing angle arcs
-    area: '#00ff00'       // Bright green - from existing area labels
+    distance: UI_COLORS.MEASUREMENT_TEXT,  // Green - from existing distance labels
+    angle: UI_COLORS.DEBUG_DISTANCE,     // Orange - from existing angle arcs
+    area: UI_COLORS.BRIGHT_GREEN       // Bright green - from existing area labels
   },
   fonts: {
     distance: '11px Arial',  // From PolylineRenderer
