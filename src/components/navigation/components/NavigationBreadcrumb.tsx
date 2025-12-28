@@ -8,7 +8,6 @@ import React from 'react';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { Building, Construction, Home } from 'lucide-react';
 import { useNavigation } from '../core/NavigationContext';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import type { BreadcrumbItem } from '../core/types';
 
 interface NavigationBreadcrumbProps {
@@ -16,7 +15,6 @@ interface NavigationBreadcrumbProps {
 }
 
 export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
-  const iconSizes = useIconSizes();
   const {
     selectedCompany,
     selectedProject,
@@ -90,7 +88,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
               {typeof item.icon === 'string' ? (
                 item.icon
               ) : (
-                <item.icon className={iconSizes.sm} />
+                <item.icon className="h-4 w-4" />
               )}
             </span>
             <span className="truncate max-w-[120px]">{item.label}</span>

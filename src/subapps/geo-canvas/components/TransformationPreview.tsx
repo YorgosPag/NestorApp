@@ -8,6 +8,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { dxfGeoTransformService } from '../services/geo-transform/DxfGeoTransform';
 import type { DxfCoordinate, GeoCoordinate, SpatialEntity } from '../types';
+// 🏭 SMART ACTION FACTORY - ZERO DUPLICATES
+import { createSmartActionGroup } from '@/core/actions/SmartActionFactory';
 
 // Import DXF scene types
 import type { SceneModel, AnySceneEntity } from '../../dxf-viewer/types/scene';
@@ -424,38 +426,44 @@ export function TransformationPreview({
   // ACTION BUTTONS
   // ========================================================================
 
-  const renderActionButtons = () => (
-    <div className={`${colors.bg.primary} rounded-lg p-4`}>
-      <div className="space-y-2">
-        <button
-          onClick={processTransformation}
-          disabled={!transformState.isCalibrated || !dxfScene}
-          className={`w-full ${colors.bg.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} disabled:${colors.bg.hover} disabled:cursor-not-allowed ${colors.text.foreground} py-2 px-4 rounded transition-colors`}
-        >
-          🔄 Refresh Preview
-        </button>
+  const renderActionButtons = () => {
+    const actions = [
+      {
+        action: 'refresh' as const,
+        variant: 'primary' as const,
+        label: '🔄 Refresh Preview',
+        onClick: processTransformation,
+        disabled: !transformState.isCalibrated || !dxfScene
+      }
+    ];
 
-        {transformedGeoJSON && (
-          <button
-            onClick={() => {
-              // Export GeoJSON
-              const dataStr = JSON.stringify(transformedGeoJSON, null, 2);
-              const dataBlob = new Blob([dataStr], { type: 'application/json' });
-              const url = URL.createObjectURL(dataBlob);
-              const link = document.createElement('a');
-              link.href = url;
-              link.download = 'transformed_dxf.geojson';
-              link.click();
-              URL.revokeObjectURL(url);
-            }}
-            className={`w-full ${colors.bg.success} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} ${colors.text.foreground} py-2 px-4 rounded transition-colors`}
-          >
-            💾 Export GeoJSON
-          </button>
-        )}
-      </div>
-    </div>
-  );
+    // Add export action conditionally
+    if (transformedGeoJSON) {
+      actions.push({
+        action: 'export' as const,
+        variant: 'success' as const,
+        label: '💾 Export GeoJSON',
+        onClick: () => {
+          // Export GeoJSON
+          const dataStr = JSON.stringify(transformedGeoJSON, null, 2);
+          const dataBlob = new Blob([dataStr], { type: 'application/json' });
+          const url = URL.createObjectURL(dataBlob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'transformed_dxf.geojson';
+          link.click();
+          URL.revokeObjectURL(url);
+        }
+      });
+    }
+
+    return createSmartActionGroup({
+      entityType: 'geo-canvas',
+      layout: 'vertical',
+      spacing: 'tight',
+      actions
+    });
+  };
 
   // ========================================================================
   // MAIN RENDER

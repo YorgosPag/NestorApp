@@ -13,8 +13,6 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Loader2, Home, Building, Layers, MapPin } from 'lucide-react';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '../../ui/effects';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface Item {
   id: string;
@@ -75,7 +73,6 @@ export function SelectItemModal({
   itemType,
   isLoading = false,
 }: SelectItemModalProps) {
-  const iconSizes = useIconSizes();
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -111,7 +108,7 @@ export function SelectItemModal({
       <DialogContent className="sm:max-w-[600px] max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Icon className={`${iconSizes.md} ${iconColor}`} />
+            <Icon className={`h-5 w-5 ${iconColor}`} />
             {title}
           </DialogTitle>
           <DialogDescription>
@@ -122,7 +119,7 @@ export function SelectItemModal({
         <div className="space-y-4">
           {/* Search Input */}
           <div className="relative">
-            <Search className={`absolute left-3 top-3 ${iconSizes.sm} text-gray-400`} />
+            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <Input
               placeholder={searchPlaceholder}
               value={searchTerm}
@@ -134,7 +131,7 @@ export function SelectItemModal({
           {/* Loading State */}
           {isLoading && (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className={`${iconSizes.lg} animate-spin text-blue-600`} />
+              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
               <span className="ml-2 text-sm text-gray-600">Φόρτωση...</span>
             </div>
           )}
@@ -146,12 +143,12 @@ export function SelectItemModal({
                 <div className="text-center py-8 text-gray-500">
                   {items.length === 0 ? (
                     <div>
-                      <Icon className={`${iconSizes.xl} mx-auto mb-3 text-gray-300`} />
+                      <Icon className={`h-12 w-12 mx-auto mb-3 text-gray-300`} />
                       <p>Δεν βρέθηκαν διαθέσιμα στοιχεία.</p>
                     </div>
                   ) : (
                     <div>
-                      <Search className={`${iconSizes.xl} mx-auto mb-3 text-gray-300`} />
+                      <Search className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                       <p>Δεν βρέθηκαν στοιχεία για "{searchTerm}"</p>
                     </div>
                   )}
@@ -162,9 +159,9 @@ export function SelectItemModal({
                     <div
                       key={item.id}
                       onClick={() => handleSelectItem(item)}
-                      className={`flex items-center gap-3 p-3 ${useBorderTokens().quick.card} cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                      className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                     >
-                      <Icon className={`${iconSizes.md} ${iconColor} flex-shrink-0`} />
+                      <Icon className={`h-5 w-5 ${iconColor} flex-shrink-0`} />
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-gray-900 dark:text-foreground truncate">
                           {item.name}

@@ -13,12 +13,10 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ContactsService } from '@/services/contacts.service';
 import type { Contact } from '@/types/contacts';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import { getContactDisplayName } from '@/types/contacts';
 import { Building, Loader2, Factory, CheckCircle2 } from 'lucide-react';
 import { SearchInput } from '@/components/ui/search';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '../../ui/effects';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface SelectCompanyContactModalProps {
   open: boolean;
@@ -34,7 +32,6 @@ export function SelectCompanyContactModal({
   onCompanySelected,
   existingCompanyIds = [],
 }: SelectCompanyContactModalProps) {
-  const iconSizes = useIconSizes();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -133,19 +130,31 @@ export function SelectCompanyContactModal({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* 🏢 ENTERPRISE UNIFIED Search Input - Zero visual changes */}
-          <SearchInput
-            value={searchTerm}
-            onChange={setSearchTerm}
-            placeholder="Αναζήτηση εταιρείας..."
-            debounceMs={300}
-            showClearButton={true}
-          />
+          {/* 🏢 ENTERPRISE LIST-STYLE HEADER - Same pattern as GenericListHeader */}
+          <div className="flex items-center gap-2">
+            {/* Left: Icon + Title + Count - Same as lists */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Building className="h-4 w-4 text-blue-600" />
+              <span className="font-medium text-sm whitespace-nowrap">
+                Εταιρείες ({filteredContacts.length})
+              </span>
+            </div>
+
+            {/* Right: Search Input - Same as lists */}
+            <SearchInput
+              value={searchTerm}
+              onChange={setSearchTerm}
+              placeholder="Αναζήτηση εταιρείας..."
+              debounceMs={300}
+              showClearButton={true}
+              className="h-8 text-sm flex-1"
+            />
+          </div>
 
           {/* Loading State */}
           {isLoading && (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className={`${iconSizes.lg} animate-spin text-blue-600`} />
+              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
               <span className="ml-2 text-sm text-gray-600">Φόρτωση εταιρειών...</span>
             </div>
           )}
@@ -195,7 +204,7 @@ export function SelectCompanyContactModal({
                     <div
                       key={contact.id}
                       onClick={() => handleSelectCompany(contact)}
-                      className={`flex items-center gap-3 p-3 ${useBorderTokens().quick.card} cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                      className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                     >
                       <Factory className="h-5 w-5 text-blue-600 flex-shrink-0" />
                       <div className="flex-1 min-w-0">

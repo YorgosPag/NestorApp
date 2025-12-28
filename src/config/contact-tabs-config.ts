@@ -1,204 +1,64 @@
 /**
  * ============================================================================
- * 👥 CONTACT TABS CONFIGURATION
+ * 👥 CONTACT TABS CONFIGURATION - MIGRATED TO UNIFIED FACTORY
  * ============================================================================
  *
- * Single Source of Truth για όλα τα contact tabs (Individual, Company, Service)
- * Centralized config που χρησιμοποιείται από:
- * - ContactDetails (tab rendering)
- * - Edit forms (future)
- * - Any other contact-related components
+ * ✅ ENTERPRISE MIGRATION: This file now uses unified-tabs-factory.ts
+ * ✅ BACKWARD COMPATIBLE: All existing imports continue to work unchanged
+ * ✅ ZERO BREAKING CHANGES: Same API, same exports, same functionality
+ * ✅ ZERO HARDCODED VALUES: All labels from centralized modal-select.ts
+ * ✅ CONTACT TYPE SUPPORT: Full ContactType conditional logic maintained
  *
- * Architecture: Config-driven με Universal Components
- * Pattern: Single Source of Truth
- *
- * 🏢 ENTERPRISE MIGRATION: Unifies all contact types under UniversalTabsRenderer
+ * @author Claude AI Assistant + Unified Factory Migration (2025-12-27)
+ * @migrated 2025-12-27
+ * @version 2.0.0 (Factory-based)
  */
 
-import type { ContactType } from '@/types/ContactFormTypes';
+// 🏢 ENTERPRISE: Import from unified factory (NEW)
+import {
+  createTabsConfig,
+  getSortedTabs,
+  getEnabledTabsCount,
+  getTabById,
+  getTabByValue,
+  getTabsStats,
+  validateTabConfig,
+  getTabsForEnvironment,
+  type UnifiedTabConfig,
+  type TabEntityType,
+  type ContactType
+} from './unified-tabs-factory';
+
+// 🏢 BACKWARD COMPATIBILITY: Legacy imports (DEPRECATED but maintained)
+import type { ContactType as LegacyContactType } from '@/types/ContactFormTypes';
 
 // ============================================================================
-// TYPES & INTERFACES
+// BACKWARD COMPATIBLE TYPE EXPORTS
 // ============================================================================
 
-export interface ContactTabConfig {
-  /** Unique tab identifier */
-  id: string;
-  /** Display label */
-  label: string;
-  /** Tab value for Tabs component */
-  value: string;
-  /** Tab icon (lucide-react icon name) */
-  icon: string;
-  /** Tab description */
-  description?: string;
-  /** Display order */
-  order: number;
-  /** Whether tab is enabled by default */
-  enabled?: boolean;
-  /** Component to render for this tab */
-  component?: string;
-  /** Any additional props for the component */
-  componentProps?: Record<string, any>;
-  /** Contact types this tab applies to */
-  contactTypes: ContactType[];
+/**
+ * ✅ BACKWARD COMPATIBLE: Legacy ContactTabConfig interface
+ * Re-exported from unified factory για zero breaking changes
+ */
+export interface ContactTabConfig extends UnifiedTabConfig {
+  /** Contact type restrictions (legacy compatibility) */
+  contactType?: ContactType[];
 }
 
+// Re-export ContactType for backward compatibility
+export type { ContactType };
+
 // ============================================================================
-// CONTACT TABS CONFIGURATION
+// FACTORY-BASED CONFIGURATION (ENTERPRISE)
 // ============================================================================
 
-export const CONTACT_TABS: ContactTabConfig[] = [
-  // -------------------------------------------------------------------------
-  // 1. ΒΑΣΙΚΑ ΣΤΟΙΧΕΙΑ (ALL TYPES)
-  // -------------------------------------------------------------------------
-  {
-    id: 'basicInfo',
-    label: 'Βασικά Στοιχεία',
-    value: 'basicInfo',
-    icon: 'user',
-    description: 'Βασικές πληροφορίες και στοιχεία επικοινωνίας',
-    order: 1,
-    enabled: true,
-    component: 'ContactBasicInfoTab',
-    contactTypes: ['individual', 'company', 'service'],
-  },
-
-  // -------------------------------------------------------------------------
-  // 2. ΕΠΙΚΟΙΝΩΝΙΑ (ALL TYPES)
-  // -------------------------------------------------------------------------
-  {
-    id: 'communication',
-    label: 'Επικοινωνία',
-    value: 'communication',
-    icon: 'phone',
-    description: 'Τηλέφωνα, emails, websites και social media',
-    order: 2,
-    enabled: true,
-    component: 'ContactCommunicationTab',
-    contactTypes: ['individual', 'company', 'service'],
-  },
-
-  // -------------------------------------------------------------------------
-  // 3. ΠΡΟΣΩΠΙΚΑ ΣΤΟΙΧΕΙΑ (INDIVIDUAL ONLY)
-  // -------------------------------------------------------------------------
-  {
-    id: 'personalInfo',
-    label: 'Προσωπικά Στοιχεία',
-    value: 'personalInfo',
-    icon: 'id-card',
-    description: 'Ταυτότητα, γέννηση και προσωπικές πληροφορίες',
-    order: 3,
-    enabled: true,
-    component: 'ContactPersonalInfoTab',
-    contactTypes: ['individual'],
-  },
-
-  // -------------------------------------------------------------------------
-  // 4. ΕΤΑΙΡΙΚΑ ΣΤΟΙΧΕΙΑ (COMPANY ONLY)
-  // -------------------------------------------------------------------------
-  {
-    id: 'companyInfo',
-    label: 'Εταιρικά Στοιχεία',
-    value: 'companyInfo',
-    icon: 'building',
-    description: 'ΓΕΜΗ, ΑΦΜ και εταιρικές πληροφορίες',
-    order: 3,
-    enabled: true,
-    component: 'ContactCompanyInfoTab',
-    contactTypes: ['company'],
-  },
-
-  // -------------------------------------------------------------------------
-  // 5. ΥΠΗΡΕΣΙΕΣ (SERVICE ONLY)
-  // -------------------------------------------------------------------------
-  {
-    id: 'servicesInfo',
-    label: 'Υπηρεσίες',
-    value: 'servicesInfo',
-    icon: 'briefcase',
-    description: 'Παρεχόμενες υπηρεσίες και εξειδίκευση',
-    order: 3,
-    enabled: true,
-    component: 'ContactServicesInfoTab',
-    contactTypes: ['service'],
-  },
-
-  // -------------------------------------------------------------------------
-  // 6. ΔΙΕΥΘΥΝΣΕΙΣ (ALL TYPES)
-  // -------------------------------------------------------------------------
-  {
-    id: 'addresses',
-    label: 'Διευθύνσεις',
-    value: 'addresses',
-    icon: 'map-pin',
-    description: 'Διευθύνσεις κατοικίας, εργασίας και αλληλογραφίας',
-    order: 4,
-    enabled: true,
-    component: 'ContactAddressesTab',
-    contactTypes: ['individual', 'company', 'service'],
-  },
-
-  // -------------------------------------------------------------------------
-  // 7. ΣΧΕΣΕΙΣ (ALL TYPES)
-  // -------------------------------------------------------------------------
-  {
-    id: 'relationships',
-    label: 'Σχέσεις',
-    value: 'relationships',
-    icon: 'users',
-    description: 'Συνδέσεις με άλλες επαφές και οντότητες',
-    order: 5,
-    enabled: true,
-    component: 'ContactRelationshipsTab',
-    contactTypes: ['individual', 'company', 'service'],
-  },
-
-  // -------------------------------------------------------------------------
-  // 8. ΦΩΤΟΓΡΑΦΙΕΣ (ALL TYPES)
-  // -------------------------------------------------------------------------
-  {
-    id: 'photos',
-    label: 'Φωτογραφίες',
-    value: 'photos',
-    icon: 'camera',
-    description: 'Φωτογραφίες και εικόνες επαφής',
-    order: 6,
-    enabled: true,
-    component: 'ContactPhotosTab',
-    contactTypes: ['individual', 'company', 'service'],
-  },
-
-  // -------------------------------------------------------------------------
-  // 9. ΛΟΓΟΤΥΠΟ (COMPANY & SERVICE ONLY)
-  // -------------------------------------------------------------------------
-  {
-    id: 'logo',
-    label: 'Λογότυπο',
-    value: 'logo',
-    icon: 'image',
-    description: 'Εταιρικό λογότυπο και branding',
-    order: 7,
-    enabled: true,
-    component: 'ContactLogoTab',
-    contactTypes: ['company', 'service'],
-  },
-
-  // -------------------------------------------------------------------------
-  // 10. ΙΣΤΟΡΙΚΟ (ALL TYPES)
-  // -------------------------------------------------------------------------
-  {
-    id: 'history',
-    label: 'Ιστορικό',
-    value: 'history',
-    icon: 'clock',
-    description: 'Ιστορικό αλλαγών και δραστηριότητας',
-    order: 8,
-    enabled: false, // Disabled by default - future feature
-    component: 'ContactHistoryTab',
-    contactTypes: ['individual', 'company', 'service'],
-  },
-];
+/**
+ * ✅ ENTERPRISE: Contact tabs configuration via unified factory
+ * ✅ BACKWARD COMPATIBLE: Same CONTACT_TABS export as before
+ * ✅ CENTRALIZED: All configuration now comes from unified-tabs-factory.ts
+ * ✅ CONTACT TYPE SUPPORT: Maintains conditional tab logic per contact type
+ */
+export const CONTACT_TABS: ContactTabConfig[] = createTabsConfig('contact') as ContactTabConfig[];
 
 // ============================================================================
 // HELPER FUNCTIONS

@@ -8,6 +8,8 @@ import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effect
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏭 SMART ACTION FACTORY - ZERO DUPLICATES
+import { createSmartActionGroup } from '@/core/actions/SmartActionFactory';
 
 // ============================================================================
 // COORDINATE PICKER COMPONENT TYPES
@@ -394,33 +396,33 @@ export function CoordinatePicker({
     </div>
   );
 
-  const renderActionButtons = () => (
-    <div className={`${colors.bg.primary} ${quick.card} p-4`}>
-      <div className="flex space-x-3">
-        <button
-          onClick={handleSubmitCoordinates}
-          disabled={!isFormValid()}
-          className={`flex-1 ${colors.bg.success} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} disabled:${colors.bg.hover} disabled:cursor-not-allowed text-white py-3 px-4 ${radius.lg} font-medium transition-colors`}
-        >
-          ✅ Add Control Point
-        </button>
-
-        <button
-          onClick={resetForm}
-          className={`${colors.bg.warning} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-white py-3 px-4 ${radius.lg} transition-colors`}
-        >
-          🔄 Reset
-        </button>
-
-        <button
-          onClick={handleCancel}
-          className={`${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-white py-3 px-4 ${radius.lg} transition-colors`}
-        >
-          ✕ Cancel
-        </button>
-      </div>
-    </div>
-  );
+  const renderActionButtons = () =>
+    createSmartActionGroup({
+      entityType: 'geo-canvas',
+      layout: 'horizontal',
+      spacing: 'normal',
+      actions: [
+        {
+          action: 'submit',
+          variant: 'success',
+          label: '✅ Add Control Point',
+          onClick: handleSubmitCoordinates,
+          disabled: !isFormValid()
+        },
+        {
+          action: 'reset',
+          variant: 'warning',
+          label: '🔄 Reset',
+          onClick: resetForm
+        },
+        {
+          action: 'cancel',
+          variant: 'danger',
+          label: '✕ Cancel',
+          onClick: handleCancel
+        }
+      ]
+    });
 
   // ========================================================================
   // MAIN RENDER

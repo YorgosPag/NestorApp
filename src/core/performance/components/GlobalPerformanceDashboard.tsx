@@ -58,6 +58,12 @@ import {
 } from '@/styles/design-tokens';
 // 🌊 ENTERPRISE UNIFIED FLOATING SYSTEM
 import { FloatingStyleUtils, PerformanceDashboardTokens } from '@/styles/design-tokens';
+// 🏭 SMART ACTION FACTORY - ZERO DUPLICATES
+import {
+  createSmartAction,
+  createSmartActionGroup,
+  migrateLegacyActionButton
+} from '@/core/actions/SmartActionFactory';
 
 interface GlobalPerformanceDashboardProps {
   /** Position of the dashboard */
@@ -462,28 +468,7 @@ const PerformanceAlerts: React.FC<{
   );
 };
 
-/**
- * 🎯 Action Button Component - Enterprise CSS Classes
- */
-const ActionButton: React.FC<{
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-  variant: 'blue' | 'green' | 'purple';
-  title?: string;
-  fullWidth?: boolean;
-}> = ({ onClick, icon, label, variant, title, fullWidth = false }) => {
-  return (
-    <button
-      onClick={onClick}
-      title={title}
-      className={performanceMonitorUtilities.getActionButtonClasses(variant, fullWidth)}
-    >
-      {icon}
-      <span>{label}</span>
-    </button>
-  );
-};
+// 🏭 REMOVED: Duplicate ActionButton - Using Smart Action Factory instead
 
 /**
  * ⚡ Quick Actions με Test button - Enterprise CSS Classes
@@ -497,22 +482,22 @@ const QuickActions: React.FC<{
     <div className="flex flex-col gap-performance-sm">
       <div className="flex items-center justify-between">
         <div className="flex gap-performance-sm">
-          <ActionButton
-            onClick={controls.measurePerformance}
-            icon={<RefreshCcw className={iconSizes.xs} />}
-            label="Test"
-            variant="blue"
-            title="Measure performance"
-          />
-          {recommendations.length > 0 && (
-            <ActionButton
-              onClick={controls.applyAllOptimizations}
-              icon={<Zap className={iconSizes.xs} />}
-              label="Optimize"
-              variant="green"
-              title="Apply all optimizations"
-            />
+          {migrateLegacyActionButton(
+            controls.measurePerformance,
+            <RefreshCcw className={iconSizes.xs} />,
+            "Test",
+            "blue",
+            { title: "Measure performance" }
           )}
+          {recommendations.length > 0 &&
+            migrateLegacyActionButton(
+              controls.applyAllOptimizations,
+              <Zap className={iconSizes.xs} />,
+              "Optimize",
+              "green",
+              { title: "Apply all optimizations" }
+            )
+          }
         </div>
         <span className="text-performance-xs text-muted-foreground">
           {recommendations.length} recommendations
@@ -520,14 +505,16 @@ const QuickActions: React.FC<{
       </div>
 
       {/* 📊 DETAILED ANALYTICS BUTTON */}
-      <ActionButton
-        onClick={() => window.open('/admin/performance', '_blank')}
-        icon={<BarChart3 className={iconSizes.xs} />}
-        label="Detailed Analytics"
-        variant="purple"
-        title="Open detailed analytics dashboard"
-        fullWidth={true}
-      />
+      {migrateLegacyActionButton(
+        () => window.open('/admin/performance', '_blank'),
+        <BarChart3 className={iconSizes.xs} />,
+        "Detailed Analytics",
+        "purple",
+        {
+          title: "Open detailed analytics dashboard",
+          fullWidth: true
+        }
+      )}
     </div>
   );
 };
@@ -571,12 +558,12 @@ const OptimizationPanel: React.FC<{
                 {rec.estimatedImprovement}
               </div>
             </div>
-            <ActionButton
-              onClick={() => onApplyOptimization(rec.id)}
-              icon={<></>}
-              label="Apply"
-              variant="blue"
-            />
+            {migrateLegacyActionButton(
+              () => onApplyOptimization(rec.id),
+              <></>,
+              "Apply",
+              "blue"
+            )}
           </div>
         ))}
       </div>

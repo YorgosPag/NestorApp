@@ -9,9 +9,6 @@ import { LucideIcon } from 'lucide-react';
 import { UnifiedBadge } from '../../../core/badges/UnifiedBadgeSystem';
 import { NavigationStatus } from '../../../core/types/BadgeTypes';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '../../ui/effects';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface NavigationButtonProps {
   onClick: () => void;
@@ -43,28 +40,25 @@ export function NavigationButton({
   hasWarning = false,
   warningText
 }: NavigationButtonProps) {
-  const iconSizes = useIconSizes();
-  const { quick, getStatusBorder } = useBorderTokens();
-  const colors = useSemanticColors();
-  const baseClasses = `w-full text-left ${quick.button} ${TRANSITION_PRESETS.STANDARD_COLORS} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`;
+  const baseClasses = `w-full text-left rounded-lg border ${TRANSITION_PRESETS.STANDARD_COLORS} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`;
 
   const variantClasses = {
-    default: `p-4 ${quick.card}`,
-    compact: `p-2 ${quick.card}`
+    default: "p-4 border-gray-200 dark:border-gray-600",
+    compact: "p-2 border-gray-200 dark:border-gray-600"
   };
 
   // Backward compatibility: χρήση hasWarning για badgeStatus
   const effectiveBadgeStatus = badgeStatus || (hasWarning ? 'no_projects' : undefined);
   const effectiveBadgeText = badgeText || warningText;
 
-  // 🏢 ENTERPRISE: χρωματική διαφοροποίηση με centralized status borders
+  // Χρωματική διαφοροποίηση βάσει κατάστασης
   const selectedClasses = isSelected
-    ? `${getStatusBorder('info')} ${colors.bg.infoSubtle} dark:bg-blue-900/30`
+    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30"
     : effectiveBadgeStatus
-      ? `${getStatusBorder('warning')} ${colors.bg.warning} dark:bg-orange-900/20 ${HOVER_BORDER_EFFECTS.ORANGE}`
-      : `${quick.card} ${HOVER_BORDER_EFFECTS.GRAY}`;
+      ? `border-orange-300 bg-orange-50 dark:bg-orange-900/20 ${HOVER_BORDER_EFFECTS.ORANGE}`
+      : `border-gray-200 dark:border-gray-600 ${HOVER_BORDER_EFFECTS.GRAY}`;
 
-  const iconSize = variant === 'compact' ? iconSizes.sm : iconSizes.md;
+  const iconSize = variant === 'compact' ? 'h-4 w-4' : 'h-5 w-5';
   const spacing = variant === 'compact' ? 'space-x-2' : 'space-x-3';
 
   const renderIcon = () => {
@@ -74,7 +68,7 @@ export function NavigationButton({
     } else {
       // Lucide icon component
       const IconComponent = icon;
-      return <IconComponent className={`${iconSize} text-muted-foreground`} />;
+      return <IconComponent className={`${iconSize} text-gray-600 dark:text-gray-400`} />;
     }
   };
 
@@ -107,7 +101,7 @@ export function NavigationButton({
             </div>
           )}
           {extraInfo && (
-            <div className={`text-sm truncate ${effectiveBadgeStatus ? 'text-orange-500 dark:text-orange-400' : 'text-muted-foreground'}`}>
+            <div className={`text-sm truncate ${effectiveBadgeStatus ? 'text-orange-500 dark:text-orange-400' : 'text-gray-400 dark:text-muted-foreground'}`}>
               {extraInfo}
             </div>
           )}

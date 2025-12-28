@@ -1,5 +1,10 @@
 import { z } from 'zod';
 import i18n from '@/i18n/config';
+// ✅ ENTERPRISE: Import centralized validation messages
+import { getValidationMessages } from '@/subapps/dxf-viewer/config/modal-select';
+
+// ✅ ENTERPRISE: Get centralized validation messages ONCE
+const validationMessages = getValidationMessages();
 
 // Helper function to get validation message with i18n
 export const getValidationMessage = (key: string, params?: Record<string, any>) => {
@@ -86,7 +91,7 @@ export const validationRules = {
         const date = new Date(dateStr);
         return !isNaN(date.getTime()) && date <= new Date();
       }, {
-        message: message || 'Η ημερομηνία γέννησης δεν μπορεί να είναι μελλοντική'
+        message: message || validationMessages.birthdate_future_error
       }),
 
   /**
@@ -100,7 +105,7 @@ export const validationRules = {
         const date = new Date(dateStr);
         return !isNaN(date.getTime()) && date <= new Date();
       }, {
-        message: message || 'Η ημερομηνία έκδοσης δεν μπορεί να είναι μελλοντική'
+        message: message || validationMessages.issue_date_future_error
       }),
 
   /**
@@ -120,7 +125,7 @@ export const validationRules = {
 
         return expiryDate > issueDateObj;
       }, {
-        message: message || 'Η ημερομηνία λήξης πρέπει να είναι μετά την ημερομηνία έκδοσης'
+        message: message || validationMessages.expiry_after_issue_error
       }),
 
   /**
@@ -136,7 +141,7 @@ export const validationRules = {
         today.setHours(0, 0, 0, 0); // Start of today
         return !isNaN(date.getTime()) && date >= today;
       }, {
-        message: message || 'Η ημερομηνία δεν μπορεί να είναι παρελθούσα'
+        message: message || validationMessages.past_date_error
       }),
 
   /**
@@ -353,11 +358,11 @@ export const fieldValidations = {
   // 🏢 INDIVIDUAL CONTACT DATE VALIDATIONS
   individual: {
     // Basic info
-    firstName: validationRules.required('Το όνομα είναι υποχρεωτικό'),
-    lastName: validationRules.required('Το επώνυμο είναι υποχρεωτικό'),
+    firstName: validationRules.required(validationMessages.first_name_required),
+    lastName: validationRules.required(validationMessages.last_name_required),
 
     // Date validations
-    birthDate: validationRules.reasonablePastDate(150, 'Η ημερομηνία γέννησης δεν είναι έγκυρη'),
+    birthDate: validationRules.reasonablePastDate(150, validationMessages.birthdate_invalid),
     documentIssueDate: validationRules.documentIssueDate(),
 
     // Contact info
@@ -365,21 +370,21 @@ export const fieldValidations = {
     phone: validationRules.phone().optional(),
 
     // VAT/AMKA numbers
-    vatNumber: validationRules.exactLength(9, 'Το ΑΦΜ πρέπει να είναι 9 ψηφία').optional(),
-    amka: validationRules.exactLength(11, 'Το ΑΜΚΑ πρέπει να είναι 11 ψηφία').optional(),
+    vatNumber: validationRules.exactLength(9, validationMessages.vat_individual_format).optional(),
+    amka: validationRules.exactLength(11, validationMessages.amka_format).optional(),
   },
 
   // 🏢 COMPANY CONTACT VALIDATIONS
   company: {
-    companyName: validationRules.required('Η επωνυμία εταιρείας είναι υποχρεωτική'),
-    vatNumber: validationRules.exactLength(9, 'Το ΑΦΜ εταιρείας πρέπει να είναι 9 ψηφία'),
+    companyName: validationRules.required(validationMessages.company_name_required),
+    vatNumber: validationRules.exactLength(9, validationMessages.vat_company_format),
     email: validationRules.email().optional(),
     phone: validationRules.phone().optional(),
   },
 
   // 🏢 SERVICE CONTACT VALIDATIONS
   service: {
-    serviceName: validationRules.required('Το όνομα υπηρεσίας είναι υποχρεωτικό'),
+    serviceName: validationRules.required(validationMessages.service_name_required),
     email: validationRules.email().optional(),
     phone: validationRules.phone().optional(),
   },
@@ -421,7 +426,7 @@ export const validateDocumentDates = (formData: {
 
   return {
     isValid,
-    error: isValid ? undefined : 'Η ημερομηνία λήξης πρέπει να είναι μετά την ημερομηνία έκδοσης'
+    error: isValid ? undefined : validationMessages.date_comparison_error
   };
 };
 

@@ -7,6 +7,11 @@ import { Loader2, Save, X, Trash2, Plus, Edit, Archive, RotateCcw, Phone, Mail, 
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS } from '../effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE CENTRALIZED IMPORTS
+import { getActionButtons } from '@/subapps/dxf-viewer/config/modal-select';
+
+// 🏢 ENTERPRISE CENTRALIZED CONSTANTS
+const actionLabels = getActionButtons();
 
 // Enterprise Button Categorization - Global Design System Standards
 // Based on Google Material Design, Microsoft Fluent, Apple HIG, Bootstrap 5
@@ -75,7 +80,7 @@ interface BaseButtonProps {
 
 // SaveButton - Για αποθήκευση forms
 export function SaveButton({
-  children = "Αποθήκευση",
+  children = actionLabels.save,
   loading = false,
   disabled = false,
   onClick,
@@ -92,7 +97,7 @@ export function SaveButton({
       {loading ? (
         <>
           <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
-          Αποθήκευση...
+          {actionLabels.save_loading}
         </>
       ) : (
         <>
@@ -106,7 +111,7 @@ export function SaveButton({
 
 // CancelButton - Για ακύρωση
 export function CancelButton({
-  children = "Άκυρο",
+  children = actionLabels.cancel,
   disabled = false,
   onClick,
   className
@@ -128,7 +133,7 @@ export function CancelButton({
 
 // DeleteButton - Για διαγραφή
 export function DeleteButton({
-  children = "Διαγραφή",
+  children = actionLabels.delete,
   loading = false,
   disabled = false,
   onClick,
@@ -145,7 +150,7 @@ export function DeleteButton({
       {loading ? (
         <>
           <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
-          Διαγραφή...
+          {actionLabels.delete_loading}
         </>
       ) : (
         <>
@@ -159,7 +164,7 @@ export function DeleteButton({
 
 // AddButton - Για προσθήκη νέων items
 export function AddButton({
-  children = "Προσθήκη",
+  children = actionLabels.add,
   disabled = false,
   onClick,
   className
@@ -180,7 +185,7 @@ export function AddButton({
 
 // EditButton - Για επεξεργασία
 export function EditButton({
-  children = "Επεξεργασία",
+  children = actionLabels.edit,
   disabled = false,
   onClick,
   className
@@ -201,7 +206,7 @@ export function EditButton({
 
 // ArchiveButton - Για αρχειοθέτηση
 export function ArchiveButton({
-  children = "Αρχειοθέτηση",
+  children = actionLabels.archive,
   loading = false,
   disabled = false,
   onClick,
@@ -218,7 +223,7 @@ export function ArchiveButton({
       {loading ? (
         <>
           <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
-          Αρχειοθέτηση...
+          {actionLabels.archive_loading}
         </>
       ) : (
         <>
@@ -232,7 +237,7 @@ export function ArchiveButton({
 
 // RestoreButton - Για επαναφορά από archive
 export function RestoreButton({
-  children = "Επαναφορά",
+  children = actionLabels.restore,
   loading = false,
   disabled = false,
   onClick,
@@ -249,7 +254,7 @@ export function RestoreButton({
       {loading ? (
         <>
           <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
-          Επαναφορά...
+          {actionLabels.restore_loading}
         </>
       ) : (
         <>
@@ -263,7 +268,7 @@ export function RestoreButton({
 
 // Toolbar variants - Για ContactsToolbar με consistent styling
 export function ToolbarAddButton({
-  children = "Προσθήκη",
+  children = actionLabels.add,
   disabled = false,
   onClick,
   className,
@@ -291,7 +296,7 @@ export function ToolbarAddButton({
 }
 
 export function ToolbarEditButton({
-  children = "Επεξεργασία",
+  children = actionLabels.edit,
   disabled = false,
   onClick,
   className,
@@ -319,7 +324,7 @@ export function ToolbarEditButton({
 }
 
 export function ToolbarDeleteButton({
-  children = "Διαγραφή",
+  children = actionLabels.delete,
   disabled = false,
   onClick,
   className,
@@ -356,7 +361,7 @@ export function ToolbarDeleteButton({
 }
 
 export function ToolbarArchiveButton({
-  children = "Αρχειοθέτηση",
+  children = actionLabels.archive,
   disabled = false,
   onClick,
   className,
@@ -388,7 +393,7 @@ export function ToolbarArchiveButton({
 
 // Communication buttons - Subtle styling
 export function ToolbarCallButton({
-  children = "Κλήση",
+  children = actionLabels.call,
   disabled = false,
   onClick,
   className,
@@ -409,7 +414,7 @@ export function ToolbarCallButton({
 }
 
 export function ToolbarEmailButton({
-  children = "Email",
+  children = actionLabels.email,
   disabled = false,
   onClick,
   className,
@@ -430,7 +435,7 @@ export function ToolbarEmailButton({
 }
 
 export function ToolbarSMSButton({
-  children = "SMS",
+  children = actionLabels.sms,
   disabled = false,
   onClick,
   className,
@@ -452,7 +457,7 @@ export function ToolbarSMSButton({
 
 // Management buttons - Same dark theme styling as communication
 export function ToolbarExportButton({
-  children = "Εξαγωγή",
+  children = actionLabels.export,
   disabled = false,
   onClick,
   className,
@@ -473,7 +478,7 @@ export function ToolbarExportButton({
 }
 
 export function ToolbarImportButton({
-  children = "Εισαγωγή",
+  children = actionLabels.import,
   disabled = false,
   onClick,
   className,
@@ -512,13 +517,13 @@ export function ToolbarSortToggleButton({
       className={cn(BUTTON_STYLES.variants.sort, "flex items-center gap-2 min-w-[100px] justify-start", className)}
     >
       {icon}
-      <span className="hidden md:inline">Ταξινόμηση</span>
+      <span className="hidden md:inline">{actionLabels.sort}</span>
     </Button>
   );
 }
 
 export function ToolbarHelpButton({
-  children = "Βοήθεια",
+  children = actionLabels.help,
   disabled = false,
   onClick,
   className,
@@ -544,7 +549,7 @@ interface FilterButtonProps extends BaseButtonProps {
 }
 
 export function ToolbarFavoritesButton({
-  children = "Αγαπημένα",
+  children = actionLabels.favorites,
   disabled = false,
   onClick,
   className,
@@ -571,7 +576,7 @@ export function ToolbarFavoritesButton({
 }
 
 export function ToolbarArchivedFilterButton({
-  children = "Αρχειοθετημένα",
+  children = actionLabels.archived,
   disabled = false,
   onClick,
   className,
@@ -599,7 +604,7 @@ export function ToolbarArchivedFilterButton({
 
 // Refresh button - Utility action for refreshing data
 export function ToolbarRefreshButton({
-  children = "Ανανέωση",
+  children = actionLabels.refresh,
   disabled = false,
   onClick,
   className,

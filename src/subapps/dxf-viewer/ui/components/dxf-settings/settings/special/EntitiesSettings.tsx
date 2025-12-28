@@ -27,6 +27,14 @@ import { CurrentSettingsDisplay } from '../shared/CurrentSettingsDisplay';
 import { OverrideToggle } from '../../../shared/OverrideToggle';
 import { SubTabRenderer, SubTabType } from '../../../shared/SubTabRenderer';
 import { useEntitiesSettingsReducer } from '../../../../reducers/entitiesSettingsReducer';
+
+// 🏢 ENTERPRISE: Import centralized DXF entities settings labels - ZERO HARDCODED VALUES
+import {
+  DXF_SETTINGS_TAB_LABELS,
+  DXF_SETTINGS_OVERRIDE_LABELS,
+  DXF_DRAWING_SIMPLE_LABELS,
+  DXF_MEASUREMENT_SIMPLE_LABELS
+} from '@/constants/property-statuses-enterprise';
 import { updateDraftSettingsStore } from '../../../../../hooks/useLinePreviewStyle';
 import { updateDraftTextSettingsStore } from '../../../../../hooks/useTextPreviewStyle';
 import { updateDraftGripSettingsStore } from '../../../../../hooks/useGripPreviewStyle';
@@ -241,18 +249,20 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
   // The real globalLineSettings is defined at line ~110 via useLineSettingsFromProvider hook
 
   // Drawing tools - χρησιμοποιούν τα ίδια εικονίδια με την κεντρική εργαλειοθήκη
+  // ✅ CENTRALIZED: Using DXF_DRAWING_SIMPLE_LABELS from central system - ZERO HARDCODED VALUES
   const drawingTools: MockToolIcon[] = [
-    { id: 'line', label: 'Γραμμή', icon: Minus, hotkey: 'L' },
-    { id: 'rectangle', label: 'Ορθογώνιο', icon: Square, hotkey: 'R' },
-    { id: 'circle', label: 'Κύκλος', icon: CircleRadiusIcon, hotkey: 'C', dropdownOptions: ['radius', 'diameter'] },
-    { id: 'polyline', label: 'Πολυγραμμή', icon: Pen, hotkey: 'PL' },
-    { id: 'polygon', label: 'Πολύγωνο', icon: Hexagon, hotkey: 'POL' }
+    { id: 'line', label: DXF_DRAWING_SIMPLE_LABELS.LINE, icon: Minus, hotkey: 'L' },
+    { id: 'rectangle', label: DXF_DRAWING_SIMPLE_LABELS.RECTANGLE, icon: Square, hotkey: 'R' },
+    { id: 'circle', label: DXF_DRAWING_SIMPLE_LABELS.CIRCLE, icon: CircleRadiusIcon, hotkey: 'C', dropdownOptions: ['radius', 'diameter'] },
+    { id: 'polyline', label: DXF_DRAWING_SIMPLE_LABELS.POLYLINE, icon: Pen, hotkey: 'PL' },
+    { id: 'polygon', label: DXF_DRAWING_SIMPLE_LABELS.POLYGON, icon: Hexagon, hotkey: 'POL' }
   ];
 
+  // ✅ CENTRALIZED: Using DXF_MEASUREMENT_SIMPLE_LABELS from central system - ZERO HARDCODED VALUES
   const measurementTools: MockToolIcon[] = [
-    { id: 'measure-distance', label: 'Απόσταση', icon: Ruler, hotkey: 'DI' },
-    { id: 'measure-area', label: 'Εμβαδόν', icon: Square, hotkey: 'AREA' },
-    { id: 'measure-angle', label: 'Γωνία', icon: Triangle, hotkey: 'ANG' }
+    { id: 'measure-distance', label: DXF_MEASUREMENT_SIMPLE_LABELS.DISTANCE, icon: Ruler, hotkey: 'DI' },
+    { id: 'measure-area', label: DXF_MEASUREMENT_SIMPLE_LABELS.AREA, icon: Square, hotkey: 'AREA' },
+    { id: 'measure-angle', label: DXF_MEASUREMENT_SIMPLE_LABELS.ANGLE, icon: Triangle, hotkey: 'ANG' }
   ];
 
   // Removed updateGripSettings mock function - now using context
@@ -381,10 +391,10 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
           {/* Καρτέλες για Line Tool σε δύο σειρές */}
           <div className="grid grid-cols-2 gap-2 mb-4">
             {[
-              { id: 'draft', label: 'Προσχεδίαση' },
-              { id: 'completion', label: 'Ολοκλήρωση' },
-              { id: 'hover', label: 'Hover' },
-              { id: 'selection', label: 'Επιλογή' }
+              { id: 'draft', label: DXF_SETTINGS_TAB_LABELS.DRAFT },
+              { id: 'completion', label: DXF_SETTINGS_TAB_LABELS.COMPLETION },
+              { id: 'hover', label: DXF_SETTINGS_TAB_LABELS.HOVER },
+              { id: 'selection', label: DXF_SETTINGS_TAB_LABELS.SELECTION }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -404,7 +414,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
           <SubTabRenderer
             config={{
               type: 'draft',
-              label: 'Προσχεδίαση',
+              label: DXF_SETTINGS_TAB_LABELS.DRAFT,
               color: 'blue-500',
               badgeColor: '${colors.bg.primary}'
             }}
@@ -420,20 +430,20 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
               line: {
                 checked: draftSettings.overrideGlobalSettings || false,
                 onChange: (checked) => updateDraftSettings({ overrideGlobalSettings: checked }),
-                label: "Παράκαμψη Γενικών Ρυθμίσεων",
+                label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
                 description: "Χρήση ειδικών ρυθμίσεων γραμμής για προσχεδίαση",
                 statusText: draftSettings.overrideGlobalSettings ? 'Ειδικές Ρυθμίσεις Draft' : 'Γενικές Ρυθμίσεις'
               },
               text: {
                 checked: specificTextSettings.overrideGlobalSettings,
                 onChange: (checked) => updateSpecificTextSettings({ overrideGlobalSettings: checked }),
-                label: "Παράκαμψη Γενικών Ρυθμίσεων",
+                label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
                 description: "Χρήση ειδικών ρυθμίσεων κειμένου για προσχεδίαση"
               },
               grips: {
                 checked: specificGripSettings.overrideGlobalSettings || false,
                 onChange: (checked) => updateSpecificGripSettings({ overrideGlobalSettings: checked }),
-                label: "Παράκαμψη Γενικών Ρυθμίσεων Grips",
+                label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
                 description: "Χρήση ειδικών ρυθμίσεων grips για προσχεδίαση",
                 statusText: specificGripSettings.overrideGlobalSettings ? 'Ειδικές Ρυθμίσεις' : 'Γενικές Ρυθμίσεις'
               }
@@ -444,7 +454,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
           <SubTabRenderer
             config={{
               type: 'hover',
-              label: 'Hover',
+              label: DXF_SETTINGS_TAB_LABELS.HOVER,
               color: 'yellow-500',
               badgeColor: `${colors.bg.warning}`
             }}
@@ -466,7 +476,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
               line: {
                 checked: hoverSettings.overrideGlobalSettings || false,
                 onChange: (checked) => updateHoverSettings({ overrideGlobalSettings: checked }),
-                label: "Παράκαμψη Γενικών Ρυθμίσεων",
+                label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
                 description: "Χρήση ειδικών ρυθμίσεων γραμμής για hover",
                 statusText: hoverSettings.overrideGlobalSettings ? 'Ειδικές Ρυθμίσεις Hover' : 'Γενικές Ρυθμίσεις'
               }
@@ -477,7 +487,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
           <SubTabRenderer
             config={{
               type: 'selection',
-              label: 'Επιλογή',
+              label: DXF_SETTINGS_TAB_LABELS.SELECTION,
               color: 'red-500',
               badgeColor: `${colors.bg.error}`
             }}
@@ -499,7 +509,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
               line: {
                 checked: selectionSettings.overrideGlobalSettings || false,
                 onChange: (checked) => updateSelectionSettings({ overrideGlobalSettings: checked }),
-                label: "Παράκαμψη Γενικών Ρυθμίσεων",
+                label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
                 description: "Χρήση ειδικών ρυθμίσεων γραμμής για επιλογή",
                 statusText: selectionSettings.overrideGlobalSettings ? 'Ειδικές Ρυθμίσεις Selection' : 'Γενικές Ρυθμίσεις'
               }
@@ -510,7 +520,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
           <SubTabRenderer
             config={{
               type: 'completion',
-              label: 'Ολοκλήρωση',
+              label: DXF_SETTINGS_TAB_LABELS.COMPLETION,
               color: 'green-500',
               badgeColor: `${colors.bg.success}`
             }}
@@ -533,7 +543,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
               line: {
                 checked: completionSettings.overrideGlobalSettings,
                 onChange: (checked) => updateCompletionSettings({ overrideGlobalSettings: checked }),
-                label: "Παράκαμψη Γενικών Ρυθμίσεων",
+                label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
                 description: "Χρήση ειδικών ρυθμίσεων γραμμής για ολοκλήρωση",
                 statusText: completionSettings.overrideGlobalSettings ? 'Ειδικές Ρυθμίσεις Completion' : 'Γενικές Ρυθμίσεις'
               }
@@ -571,8 +581,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
           {/* Tabs για Ειδικές Ρυθμίσεις */}
           <div className={`flex space-x-1 ${colors.bg.secondary} ${quick.card} p-1 mb-4`}>
             {[
-              { id: 'drawing', label: 'Σχεδίαση' },
-              { id: 'measurements', label: 'Μετρήσεις' }
+              { id: 'drawing', label: DXF_SETTINGS_TAB_LABELS.DRAWING },
+              { id: 'measurements', label: DXF_SETTINGS_TAB_LABELS.MEASUREMENTS }
             ].map((subTab) => (
               <button
                 key={subTab.id}

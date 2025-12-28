@@ -47,6 +47,7 @@ import AnalyticsTabContent from '../../building-management/tabs/AnalyticsTabCont
 import PhotosTabContent from '../../building-management/tabs/PhotosTabContent';
 import VideosTabContent from '../../building-management/tabs/VideosTabContent';
 import PlaceholderTab from '../../building-management/tabs/PlaceholderTab';
+import { FloorplanViewerTab as BuildingFloorplanViewerTab } from '../../projects/tabs/FloorplanViewerTab';
 import { StorageTab } from '../../building-management/StorageTab';
 import { BuildingCustomersTab } from '../../building-management/tabs/BuildingCustomersTab';
 
@@ -57,9 +58,17 @@ export const BUILDING_COMPONENT_MAPPING = {
   'PhotosTabContent': PhotosTabContent,
   'VideosTabContent': VideosTabContent,
   'PlaceholderTab': PlaceholderTab,
-  'FloorplanViewerTab': FloorplanViewerTab,
+  'FloorplanViewerTab': BuildingFloorplanViewerTab,
   'StorageTab': StorageTab,
   'BuildingCustomersTab': BuildingCustomersTab,
+
+  // 🏢 ENTERPRISE: Unified Factory aliases - same components, different names
+  'BuildingGeneralTab': GeneralTabContent,
+  'BuildingFloorsTab': TimelineTabContent,  // Based on unified factory mapping
+  'BuildingFloorplansTab': BuildingFloorplanViewerTab,
+  'BuildingDocumentsTab': PlaceholderTab,
+  'BuildingPhotosTab': PhotosTabContent,
+  'BuildingActivityTab': AnalyticsTabContent,  // Based on unified factory mapping
 } as const;
 
 // ============================================================================

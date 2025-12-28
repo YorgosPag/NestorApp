@@ -110,7 +110,6 @@ export default function TestUploadPage() {
           onClick={testUpload}
           disabled={!file || uploading}
           className={`px-4 py-2 ${colors.bg.info} text-white rounded disabled:opacity-50 disabled:cursor-not-allowed`}>
-        >
           {uploading ? `Uploading... ${progress}%` : 'Test Upload'}
         </button>
 

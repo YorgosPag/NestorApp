@@ -11,11 +11,16 @@
  * @updated 2025-12-27 - ✅ ENTERPRISE: Using centralized label system
  */
 
-// ✅ ENTERPRISE: Import centralized company labels
-import { getCompanyFieldLabels, MODAL_SELECT_GEMI_STATUSES } from '@/subapps/dxf-viewer/config/modal-select';
+// ✅ ENTERPRISE: Import centralized company labels & help texts
+import {
+  getCompanyFieldLabels,
+  MODAL_SELECT_GEMI_STATUSES,
+  getGemiHelpTexts
+} from '@/subapps/dxf-viewer/config/modal-select';
 
-// ✅ ENTERPRISE: Get centralized labels
+// ✅ ENTERPRISE: Get centralized labels & help texts
 const companyLabels = getCompanyFieldLabels();
+const gemiHelps = getGemiHelpTexts();
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -375,13 +380,13 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
         label: companyLabels.company_name,
         type: 'input',
         required: true,
-        helpText: 'Πλήρης επωνυμία όπως είναι καταχωρημένη στο ΓΕΜΗ',
+        helpText: gemiHelps.company_name_help,
       },
       {
         id: 'tradeName',
         label: companyLabels.trade_name,
         type: 'input',
-        helpText: 'Εμπορική επωνυμία (αν διαφέρει από την επίσημη)',
+        helpText: gemiHelps.trade_name_help,
       },
       {
         id: 'vatNumber', // 🔧 FIX: Changed from 'companyVatNumber' to 'vatNumber' to match Contact interface
@@ -390,20 +395,20 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
         required: true,
         maxLength: 9,
         placeholder: '999999999',
-        helpText: 'Αριθμός Φορολογικού Μητρώου (9 ψηφία)',
+        helpText: gemiHelps.vat_number_help,
       },
       {
         id: 'gemiNumber',
         label: companyLabels.gemi_number,
         type: 'input',
-        helpText: 'Μοναδικός αριθμός εγγραφής στο ΓΕΜΗ',
+        helpText: gemiHelps.gemi_number_help,
       },
       {
         id: 'legalForm',
         label: companyLabels.legal_form,
         type: 'select',
         options: LEGAL_FORM_OPTIONS,
-        helpText: 'Νομική μορφή εταιρείας',
+        helpText: gemiHelps.legal_form_help,
       },
       {
         id: 'gemiStatus',
@@ -411,7 +416,7 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
         type: 'select',
         options: GEMI_STATUS_OPTIONS,
         defaultValue: 'active',
-        helpText: 'Τρέχουσα κατάσταση εταιρείας στο ΓΕΜΗ',
+        helpText: gemiHelps.company_status_help,
       },
     ],
   },
@@ -431,13 +436,13 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
         label: companyLabels.activity_code,
         type: 'input',
         placeholder: 'π.χ. 47.11.10',
-        helpText: 'Κωδικός Αριθμός Δραστηριότητας',
+        helpText: gemiHelps.kad_code_help,
       },
       {
         id: 'activityDescription',
         label: companyLabels.activity_description,
         type: 'input',
-        helpText: 'Αναλυτική περιγραφή της επιχειρηματικής δραστηριότητας',
+        helpText: gemiHelps.business_description_help,
       },
       {
         id: 'activityType',
@@ -445,13 +450,13 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
         type: 'select',
         options: ACTIVITY_TYPE_OPTIONS,
         defaultValue: 'main',
-        helpText: 'Κατηγοριοποίηση δραστηριότητας',
+        helpText: gemiHelps.activity_category_help,
       },
       {
         id: 'chamber',
         label: companyLabels.chamber,
         type: 'input',
-        helpText: 'Επιμελητήριο ή τοπική υπηρεσία ΓΕΜΗ',
+        helpText: gemiHelps.chamber_office_help,
       },
     ],
   },
@@ -471,7 +476,7 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
         label: companyLabels.capital_amount,
         type: 'number',
         placeholder: 'π.χ. 50000',
-        helpText: 'Εταιρικό κεφάλαιο σε αριθμητική μορφή',
+        helpText: gemiHelps.capital_amount_help,
       },
       {
         id: 'currency',
@@ -479,13 +484,13 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
         type: 'select',
         options: CURRENCY_OPTIONS,
         defaultValue: 'EUR',
-        helpText: 'Νόμισμα κεφαλαίου',
+        helpText: gemiHelps.currency_help,
       },
       {
         id: 'extraordinaryCapital',
         label: companyLabels.extraordinary_capital,
         type: 'number',
-        helpText: 'Εγγυητικά ή εξωλογιστικά κεφάλαια',
+        helpText: gemiHelps.guarantee_capital_help,
       },
     ],
   },
@@ -504,31 +509,31 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
         id: 'registrationDate',
         label: companyLabels.registration_date,
         type: 'date',
-        helpText: 'Ημερομηνία πρώτης εγγραφής στο ΓΕΜΗ',
+        helpText: gemiHelps.registration_date_help,
       },
       {
         id: 'gemiStatusDate',
         label: companyLabels.status_date,
         type: 'date',
-        helpText: 'Ημερομηνία τελευταίας αλλαγής κατάστασης',
+        helpText: gemiHelps.last_change_date_help,
       },
       {
         id: 'prefecture',
         label: companyLabels.prefecture,
         type: 'input',
-        helpText: 'Νομός έδρας εταιρείας',
+        helpText: gemiHelps.region_help,
       },
       {
         id: 'municipality',
         label: companyLabels.municipality,
         type: 'input',
-        helpText: 'Δήμος έδρας εταιρείας',
+        helpText: gemiHelps.municipality_help,
       },
       {
         id: 'gemiDepartment',
         label: companyLabels.gemi_department,
         type: 'input',
-        helpText: 'Αρμόδια τοπική υπηρεσία ΓΕΜΗ',
+        helpText: gemiHelps.local_office_help,
       },
     ],
   },
@@ -551,7 +556,7 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
           // ✅ ENTERPRISE: Using centralized address type options - NO MORE HARDCODED VALUES
           ...getAddressTypeOptions()
         ],
-        helpText: 'Είδος διεύθυνσης (έδρα ή υποκατάστημα)',
+        helpText: gemiHelps.address_type_help,
       },
       {
         id: 'street',
@@ -563,26 +568,26 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
         id: 'streetNumber',
         label: companyLabels.street_number,
         type: 'input',
-        helpText: 'Αριθμός οδού',
+        helpText: gemiHelps.street_number_help,
       },
       {
         id: 'postalCode',
         label: companyLabels.postal_code,
         type: 'input',
         maxLength: 5,
-        helpText: 'Πενταψήφιος ταχυδρομικός κώδικας',
+        helpText: gemiHelps.postal_code_help,
       },
       {
         id: 'city',
         label: companyLabels.city,
         type: 'input',
-        helpText: 'Πόλη διεύθυνσης',
+        helpText: gemiHelps.city_help,
       },
       {
         id: 'region',
         label: companyLabels.region,
         type: 'input',
-        helpText: 'Περιφέρεια Ελλάδας',
+        helpText: gemiHelps.region_address_help,
       },
     ],
   },
@@ -601,7 +606,7 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
         id: 'shareholderName',
         label: 'Όνομα Μετόχου',
         type: 'input',
-        helpText: 'Πλήρες όνομα μετόχου ή εταίρου',
+        helpText: gemiHelps.shareholder_name_help,
       },
       {
         id: 'shareholderType',
@@ -611,31 +616,31 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
           // ✅ ENTERPRISE: Using centralized shareholder type options - NO MORE HARDCODED VALUES
           ...getShareholderTypeOptions()
         ],
-        helpText: 'Τύπος μετόχου (φυσικό ή νομικό πρόσωπο)',
+        helpText: gemiHelps.shareholder_type_help,
       },
       {
         id: 'shareholderIdNumber',
         label: companyLabels.shareholder_id,
         type: 'input',
-        helpText: 'Αριθμός ταυτότητας ή ΑΦΜ μετόχου',
+        helpText: gemiHelps.shareholder_id_help,
       },
       {
         id: 'shareType',
         label: companyLabels.share_type,
         type: 'input',
-        helpText: 'Κατηγορία μετοχών (κοινές, προνομιούχες κλπ)',
+        helpText: gemiHelps.share_category_help,
       },
       {
         id: 'sharePercentage',
         label: companyLabels.share_percentage,
         type: 'number',
-        helpText: 'Ποσοστό συμμετοχής στο κεφάλαιο',
+        helpText: gemiHelps.participation_percentage_help,
       },
       {
         id: 'nominalValue',
         label: companyLabels.nominal_value,
         type: 'number',
-        helpText: 'Ονομαστική αξία μετοχών',
+        helpText: gemiHelps.nominal_value_help,
       },
     ],
   },
@@ -658,19 +663,19 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
           // ✅ ENTERPRISE: Using centralized document type options - NO MORE HARDCODED VALUES
           ...getDocumentTypeOptions()
         ],
-        helpText: 'Κατηγορία εγγράφου ΓΕΜΗ',
+        helpText: gemiHelps.document_category_help,
       },
       {
         id: 'documentDate',
         label: companyLabels.document_date,
         type: 'date',
-        helpText: 'Ημερομηνία έκδοσης εγγράφου',
+        helpText: gemiHelps.document_date_help,
       },
       {
         id: 'documentSubject',
         label: companyLabels.document_subject,
         type: 'input',
-        helpText: 'Περιγραφή θέματος εγγράφου',
+        helpText: gemiHelps.document_subject_help,
       },
       {
         id: 'documentUrl',
@@ -695,7 +700,7 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
         id: 'decisionDate',
         label: companyLabels.decision_date,
         type: 'date',
-        helpText: 'Ημερομηνία λήψης απόφασης',
+        helpText: gemiHelps.decision_date_help,
       },
       {
         id: 'organType',
@@ -711,13 +716,13 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
         id: 'decisionSubject',
         label: companyLabels.decision_subject,
         type: 'input',
-        helpText: 'Περιγραφή θέματος απόφασης',
+        helpText: gemiHelps.decision_subject_help,
       },
       {
         id: 'protocolNumber',
         label: companyLabels.protocol_number,
         type: 'input',
-        helpText: 'Αριθμός πρωτοκόλλου απόφασης',
+        helpText: gemiHelps.protocol_number_help,
       },
       {
         id: 'decisionSummary',
@@ -885,7 +890,7 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
         id: 'statusChangeDate',
         label: companyLabels.status_change_date,
         type: 'date',
-        helpText: 'Ημερομηνία τελευταίας αλλαγής κατάστασης',
+        helpText: gemiHelps.last_change_date_help,
       },
       {
         id: 'statusReason',

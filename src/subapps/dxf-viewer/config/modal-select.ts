@@ -737,6 +737,7 @@ export function getPropertySpecialStatusLabels() {
   return MODAL_SELECT_PROPERTY_SPECIAL_STATUS_LABELS;
 }
 
+
 /**
  * Get centralized storage status labels
  */
@@ -1793,4 +1794,467 @@ export function getCompactToolbarFilterCategories() {
  */
 export function getCompactToolbarSortOptions() {
   return MODAL_SELECT_COMPACT_TOOLBAR_SORT_OPTIONS;
+}
+
+// NOTE: Unified Smart Factory tabs are handled by unified-tabs-factory.ts
+// These functions are kept for backward compatibility only
+
+// ====================================================================
+// 🏢 MAIN NAVIGATION LABELS - ENTERPRISE CENTRALIZED
+// ====================================================================
+
+/**
+ * Main Navigation Labels - Centralized για navigation.ts
+ * ✅ ENTERPRISE: Single source of truth για όλα τα navigation labels
+ */
+export const MODAL_SELECT_MAIN_NAVIGATION_LABELS = {
+  // Main menu labels
+  home: 'Αρχική',
+  properties_index: 'Ακίνητα',
+  contacts: 'Επαφές',
+  projects: 'Έργα',
+  buildings: 'Κτίρια',
+  spaces: 'Χώροι',
+  sales: 'Πωλήσεις',
+
+  // Badges
+  badge_new: 'ΝΕΟ',
+
+  // Spaces submenu
+  apartments: 'Διαμερίσματα',
+  storage: 'Αποθήκες',
+  parking: 'Parking',
+  common_areas: 'Κοινόχρηστοι',
+
+  // Sales submenu
+  available_apartments: 'Διαθέσιμα Διαμερίσματα',
+  available_storage: 'Διαθέσιμες Αποθήκες',
+  available_parking: 'Διαθέσιμα Parking',
+  sold_properties: 'Πωλημένα Ακίνητα',
+
+  // CRM submenu
+  dashboard: 'Πίνακας Ελέγχου',
+  customer_management: 'Διαχείριση Πελατών',
+  communications: 'Επικοινωνία',
+  leads_opportunities: 'Ευκαιρίες',
+  tasks_appointments: 'Εργασίες',
+  sales_pipeline: 'Πωλήσεις',
+  teams_roles: 'Ομάδες',
+  notifications: 'Ειδοποιήσεις',
+
+  // Legal documents
+  legal_documents: 'Νομικά Έγγραφα',
+  obligations_writing: 'Σύνταξη Υποχρεώσεων',
+
+  // Settings
+  settings: 'Ρυθμίσεις',
+  shortcuts: 'Συντομεύσεις'
+} as const;
+
+/**
+ * Get navigation labels
+ * ✅ CENTRALIZED: Main getter function για navigation labels
+ */
+export function getNavigationLabels() {
+  return MODAL_SELECT_MAIN_NAVIGATION_LABELS;
+}
+
+// ====================================================================
+// 🏢 ACTION BUTTONS LABELS - ENTERPRISE CENTRALIZED
+// ====================================================================
+
+/**
+ * Action Buttons Labels - Centralized για ActionButtons.tsx
+ * ✅ ENTERPRISE: Single source of truth για όλα τα action button labels
+ */
+export const MODAL_SELECT_ACTION_BUTTONS_LABELS = {
+  // Primary Actions
+  save: 'Αποθήκευση',
+  create: 'Δημιουργία',
+  add: 'Προσθήκη',
+  submit: 'Υποβολή',
+
+  // Secondary Actions
+  edit: 'Επεξεργασία',
+  update: 'Ενημέρωση',
+  cancel: 'Ακύρωση',
+  close: 'Κλείσιμο',
+
+  // Destructive Actions
+  delete: 'Διαγραφή',
+  remove: 'Αφαίρεση',
+  archive: 'Αρχειοθέτηση',
+
+  // Utility Actions
+  refresh: 'Ανανέωση',
+  reset: 'Επαναφορά',
+  download: 'Λήψη',
+  upload: 'Μεταφόρτωση',
+  export: 'Εξαγωγή',
+  import: 'Εισαγωγή',
+
+  // Communication Actions
+  call: 'Κλήση',
+  email: 'Email',
+  message: 'Μήνυμα',
+
+  // Navigation Actions
+  back: 'Πίσω',
+  next: 'Επόμενο',
+  previous: 'Προηγούμενο',
+
+  // State Actions
+  enable: 'Ενεργοποίηση',
+  disable: 'Απενεργοποίηση',
+  favorite: 'Αγαπημένο',
+
+  // Sorting Actions
+  sort_asc: 'Αύξουσα Ταξινόμηση',
+  sort_desc: 'Φθίνουσα Ταξινόμηση',
+
+  // Help Actions
+  help: 'Βοήθεια',
+  info: 'Πληροφορίες'
+} as const;
+
+/**
+ * Get action buttons labels
+ * ✅ CENTRALIZED: Getter function για action button labels
+ */
+export function getActionButtons() {
+  return MODAL_SELECT_ACTION_BUTTONS_LABELS;
+}
+
+// ====================================================================
+// 🏢 DESKTOP NAVIGATION FUNCTIONS - MISSING EXPORTS
+// ====================================================================
+
+/**
+ * Desktop Connection Modals Configuration
+ * ✅ CENTRALIZED: για DesktopMultiColumn connection modals
+ */
+export function getDesktopConnectionModals() {
+  return {
+    company: {
+      title: 'Επιλογή Εταιρείας',
+      placeholder: 'Αναζήτηση εταιρείας...',
+      emptyMessage: 'Δεν βρέθηκαν εταιρείες'
+    },
+    project: {
+      title: 'Επιλογή Έργου',
+      placeholder: 'Αναζήτηση έργου...',
+      emptyMessage: 'Δεν βρέθηκαν έργα'
+    },
+    building: {
+      title: 'Επιλογή Κτιρίου',
+      placeholder: 'Αναζήτηση κτιρίου...',
+      emptyMessage: 'Δεν βρέθηκαν κτίρια'
+    },
+    floor: {
+      title: 'Επιλογή Ορόφου',
+      placeholder: 'Αναζήτηση ορόφου...',
+      emptyMessage: 'Δεν βρέθηκαν όροφοι'
+    }
+  };
+}
+
+/**
+ * Desktop Navigation Headers Configuration
+ * ✅ CENTRALIZED: για DesktopMultiColumn headers
+ */
+export function getDesktopNavigationHeaders() {
+  return {
+    companies: 'Εταιρείες',
+    projects: 'Έργα',
+    buildings: 'Κτίρια',
+    floors: 'Όροφοι',
+    units: 'Μονάδες'
+  };
+}
+
+/**
+ * Desktop Counters Configuration
+ * ✅ CENTRALIZED: για DesktopMultiColumn counters
+ */
+export function getDesktopCounters() {
+  return {
+    companies: (count: number) => `${count} εταιρεί${count === 1 ? 'α' : 'ες'}`,
+    projects: (count: number) => `${count} έργ${count === 1 ? 'ο' : 'α'}`,
+    buildings: (count: number) => `${count} κτίρι${count === 1 ? 'ο' : 'α'}`,
+    floors: (count: number) => `${count} όροφ${count === 1 ? 'ος' : 'οι'}`,
+    units: (count: number) => `${count} μονάδ${count === 1 ? 'α' : 'ες'}`
+  };
+}
+
+/**
+ * Desktop Navigation Actions Configuration
+ * ✅ CENTRALIZED: για DesktopMultiColumn actions
+ */
+export function getDesktopNavigationActions() {
+  return {
+    add: 'Προσθήκη',
+    edit: 'Επεξεργασία',
+    remove: 'Αφαίρεση',
+    connect: 'Σύνδεση',
+    disconnect: 'Αποσύνδεση'
+  };
+}
+
+/**
+ * Desktop Status Messages Configuration
+ * ✅ CENTRALIZED: για DesktopMultiColumn status messages
+ */
+export function getDesktopStatusMessages() {
+  return {
+    loading: 'Φόρτωση...',
+    empty: 'Δεν υπάρχουν στοιχεία',
+    error: 'Σφάλμα φόρτωσης',
+    success: 'Επιτυχής ενέργεια'
+  };
+}
+
+/**
+ * Desktop Confirmation Dialog Configuration
+ * ✅ CENTRALIZED: για DesktopMultiColumn confirmation dialogs
+ */
+export function getDesktopConfirmationDialog() {
+  return {
+    title: 'Επιβεβαίωση Ενέργειας',
+    confirmText: 'Επιβεβαίωση',
+    cancelText: 'Ακύρωση',
+    messages: {
+      deleteCompany: 'Είστε σίγουροι ότι θέλετε να αφαιρέσετε αυτήν την εταιρεία;',
+      deleteProject: 'Είστε σίγουροι ότι θέλετε να αφαιρέσετε αυτό το έργο;',
+      deleteBuilding: 'Είστε σίγουροι ότι θέλετε να αφαιρέσετε αυτό το κτίριο;',
+      deleteFloor: 'Είστε σίγουροι ότι θέλετε να αφαιρέσετε αυτόν τον όροφο;'
+    }
+  };
+}
+
+/**
+ * Navigation Extended Labels Configuration
+ * ✅ CENTRALIZED: για NavigationCardToolbar extended labels
+ */
+export function getNavigationExtendedLabels() {
+  return {
+    // Extended action labels
+    addNew: 'Προσθήκη Νέου',
+    editSelected: 'Επεξεργασία Επιλεγμένου',
+    removeSelected: 'Αφαίρεση Επιλεγμένου',
+    connectNew: 'Σύνδεση Νέου',
+    disconnectSelected: 'Αποσύνδεση Επιλεγμένου',
+
+    // Extended tooltips
+    addTooltip: 'Προσθήκη νέου στοιχείου (Ctrl+N)',
+    editTooltip: 'Επεξεργασία επιλεγμένου στοιχείου (F2)',
+    removeTooltip: 'Αφαίρεση επιλεγμένου στοιχείου (Delete)',
+    connectTooltip: 'Σύνδεση νέου στοιχείου',
+    disconnectTooltip: 'Αποσύνδεση επιλεγμένου στοιχείου',
+
+    // Extended messages
+    noSelection: 'Δεν έχει επιλεγεί στοιχείο',
+    multipleSelection: 'Έχουν επιλεγεί πολλά στοιχεία',
+    singleSelection: 'Ένα στοιχείο επιλεγμένο'
+  };
+}
+
+// ====================================================================
+// 🏢 COMPANY GEMI HELP TEXTS - ENTERPRISE CENTRALIZED
+// ====================================================================
+
+/**
+ * ✅ ENTERPRISE: Centralized Help Text System για ΓΕΜΗ Fields
+ * Single Source of Truth για όλα τα help texts των company fields
+ * Αντικαθιστά διάσπαρτα help strings σε όλη την εφαρμογή
+ */
+export const MODAL_SELECT_COMPANY_HELP_TEXTS = {
+  // Basic Company Info Help Texts
+  company_name_help: 'Η επίσημη επωνυμία της εταιρείας όπως έχει καταχωρηθεί στο ΓΕΜΗ',
+  trade_name_help: 'Ο διακριτικός τίτλος υπό τον οποίο ασκείται η δραστηριότητα',
+  vat_number_help: 'Αριθμός Φορολογικού Μητρώου (9 ψηφία)',
+  gemi_number_help: 'Μοναδικός αριθμός καταχώρησης στο Γενικό Εμπορικό Μητρώο',
+  legal_form_help: 'Η νομική μορφή της εταιρείας (π.χ. ΑΕ, ΕΠΕ, ΙΚΕ κλπ)',
+  company_status_help: 'Η τρέχουσα κατάσταση της εταιρείας στο ΓΕΜΗ (ενεργή, διαγραφείσα κλπ)',
+
+  // Activities & KAD Help Texts
+  kad_code_help: 'Κωδικός Αριθμός Δραστηριότητας σύμφωνα με την ελληνική ονοματολογία ΚΑΔ',
+  business_description_help: 'Αναλυτική περιγραφή της επιχειρηματικής δραστηριότητας',
+  activity_category_help: 'Κατηγοριοποίηση δραστηριότητας (κύρια, δευτερεύουσα κλπ)',
+  chamber_office_help: 'Το επιμελητήριο στο οποίο είναι εγγεγραμμένη η εταιρεία',
+
+  // Capital & Financial Help Texts
+  capital_amount_help: 'Το εταιρικό κεφάλαιο σε ευρώ ή άλλο νόμισμα',
+  currency_help: 'Το νόμισμα στο οποίο εκφράζεται το εταιρικό κεφάλαιο',
+  guarantee_capital_help: 'Εξωλογιστικά κεφάλαια ή κεφάλαια εγγύησης',
+
+  // Dates & Location Help Texts
+  registration_date_help: 'Η ημερομηνία πρώτης καταχώρησης της εταιρείας στο ΓΕΜΗ',
+  last_change_date_help: 'Η ημερομηνία της τελευταίας μεταβολής στο μητρώο',
+  region_help: 'Ο νομός όπου έχει την έδρα της η εταιρεία',
+  municipality_help: 'Ο δήμος όπου εδρεύει η εταιρεία',
+  local_office_help: 'Η τοπική υπηρεσία ΓΕΜΗ που εποπτεύει την εταιρεία',
+
+  // Address & Branches Help Texts
+  address_type_help: 'Τύπος διεύθυνσης (έδρα, υποκατάστημα, αποθήκη κλπ)',
+  street_number_help: 'Αριθμός και στοιχεία της οδού (π.χ. 25, 10-12, χλμ 5 κλπ)',
+  postal_code_help: 'Ταχυδρομικός κώδικας περιοχής (5 ψηφία)',
+  city_help: 'Η πόλη ή κοινότητα όπου βρίσκεται η διεύθυνση',
+  region_address_help: 'Η περιφέρεια στην οποία ανήκει η διεύθυνση',
+
+  // Shareholders & Partners Help Texts
+  shareholder_name_help: 'Πλήρες όνομα φυσικού προσώπου ή επωνυμία νομικού προσώπου',
+  shareholder_type_help: 'Κατηγοριοποίηση μετόχου (φυσικό πρόσωπο, νομικό πρόσωπο κλπ)',
+  shareholder_id_help: 'ΑΦΜ για επιχειρήσεις ή ΑΔΤ για φυσικά πρόσωπα',
+  share_category_help: 'Κατηγορία μετοχών (κοινές, προνομιούχες κλπ)',
+  participation_percentage_help: 'Ποσοστό συμμετοχής του μετόχου στο εταιρικό κεφάλαιο',
+  nominal_value_help: 'Ονομαστική αξία των μετοχών σε ευρώ',
+
+  // Documents & Certificates Help Texts
+  document_category_help: 'Κατηγορία εγγράφου (καταστατικό, τροποποίηση, πιστοποιητικό κλπ)',
+  document_date_help: 'Η ημερομηνία έκδοσης ή κατάθεσης του εγγράφου',
+  document_subject_help: 'Σύντομη περιγραφή του περιεχομένου του εγγράφου',
+
+  // Decisions & Resolutions Help Texts
+  decision_date_help: 'Ημερομηνία λήψης της απόφασης από το αρμόδιο όργανο',
+  decision_subject_help: 'Θέμα ή αντικείμενο της απόφασης (π.χ. αύξηση κεφαλαίου)',
+  protocol_number_help: 'Αριθμός πρωτοκόλλου της συνεδρίασης ή της απόφασης'
+} as const;
+
+/**
+ * ✅ ENTERPRISE: Get centralized GEMI help texts
+ * Accessor function για τα help texts - διατηρεί consistency με το getCompanyFieldLabels pattern
+ */
+export function getGemiHelpTexts() {
+  return MODAL_SELECT_COMPANY_HELP_TEXTS;
+}
+
+// ====================================================================
+// 🏢 VALIDATION MESSAGES - ENTERPRISE CENTRALIZED
+// ====================================================================
+
+/**
+ * ✅ ENTERPRISE: Centralized Validation Messages System
+ * Single Source of Truth για όλα τα validation error messages
+ * Αντικαθιστά διάσπαρτα error strings σε όλη την εφαρμογή
+ */
+export const MODAL_SELECT_VALIDATION_MESSAGES = {
+  // Required field messages
+  first_name_required: 'Το όνομα είναι υποχρεωτικό',
+  last_name_required: 'Το επώνυμο είναι υποχρεωτικό',
+  company_name_required: 'Η επωνυμία εταιρείας είναι υποχρεωτική',
+  service_name_required: 'Το όνομα υπηρεσίας είναι υποχρεωτικό',
+
+  // Format validation messages
+  vat_individual_format: 'Ο ΑΦΜ πρέπει να είναι ακριβώς 9 ψηφία',
+  vat_company_format: 'Ο ΑΦΜ εταιρείας πρέπει να είναι ακριβώς 9 ψηφία',
+  amka_format: 'Ο ΑΜΚΑ πρέπει να είναι ακριβώς 11 ψηφία',
+
+  // Date validation messages
+  birthdate_invalid: 'Μη έγκυρη ημερομηνία γέννησης',
+  birthdate_future_error: 'Η ημερομηνία γέννησης δεν μπορεί να είναι μελλοντική',
+  issue_date_future_error: 'Η ημερομηνία έκδοσης δεν μπορεί να είναι μελλοντική',
+  expiry_after_issue_error: 'Η ημερομηνία λήξης πρέπει να είναι μετά την ημερομηνία έκδοσης',
+  past_date_error: 'Η ημερομηνία δεν μπορεί να είναι παρελθούσα',
+  date_comparison_error: 'Μη έγκυρη σύγκριση ημερομηνιών',
+
+  // Generic validation messages
+  required: 'Αυτό το πεδίο είναι υποχρεωτικό',
+  minLength: 'Πρέπει να είναι τουλάχιστον {min} χαρακτήρες',
+  maxLength: 'Δεν μπορεί να ξεπερνά τους {max} χαρακτήρες',
+  exactLength: 'Πρέπει να είναι ακριβώς {length} χαρακτήρες',
+  invalidEmail: 'Μη έγκυρη διεύθυνση email',
+  invalidPhone: 'Μη έγκυρος αριθμός τηλεφώνου',
+  invalidUrl: 'Μη έγκυρη διεύθυνση URL',
+  invalidNumber: 'Πρέπει να είναι έγκυρος αριθμός',
+  notInteger: 'Πρέπει να είναι ακέραιος αριθμός',
+  positiveNumber: 'Πρέπει να είναι θετικός αριθμός',
+  nonNegativeNumber: 'Δεν μπορεί να είναι αρνητικός αριθμός',
+  minValue: 'Πρέπει να είναι τουλάχιστον {min}',
+  maxValue: 'Δεν μπορεί να ξεπερνά το {max}',
+  greaterThan: 'Πρέπει να είναι μεγαλύτερος από {value}',
+  lessThan: 'Πρέπει να είναι μικρότερος από {value}',
+  invalidDate: 'Μη έγκυρη ημερομηνία',
+  pastDate: 'Η ημερομηνία πρέπει να είναι παρελθούσα',
+  futureDate: 'Η ημερομηνία πρέπει να είναι μελλοντική',
+  invalidSelection: 'Μη έγκυρη επιλογή',
+  areaRequired: 'Το εμβαδόν πρέπει να είναι θετικός αριθμός',
+  priceRequired: 'Η τιμή πρέπει να είναι θετικός αριθμός',
+  invalidCode: 'Μη έγκυρος κωδικός',
+  confirmPassword: 'Οι κωδικοί δεν ταιριάζουν'
+} as const;
+
+/**
+ * ✅ ENTERPRISE: Get centralized validation messages
+ * Accessor function για τα validation messages - διατηρεί consistency με τα άλλα get functions
+ */
+export function getValidationMessages() {
+  return MODAL_SELECT_VALIDATION_MESSAGES;
+}
+
+export function getBuildingTabLabels() {
+  return {
+    // ✅ ENTERPRISE: Πλήρης λίστα building tabs από backup configuration
+    general: "Γενικά",
+    floorplan: "Κάτοψη Κτιρίου",
+    timeline: "Timeline",
+    analytics: "Analytics",
+    storage: "Αποθήκες",
+    contracts: "Συμβόλαια",
+    protocols: "Πρωτόκολλα",
+    photos: "Φωτογραφίες",
+    customers: "Πελάτες",
+    videos: "Videos",
+
+    // 🔧 LEGACY: Παλιές ετικέτες για backward compatibility
+    details: "Λεπτομέρειες",
+    properties: "Ιδιότητες",
+    units: "Μονάδες",
+    floors: "Όροφοι",
+    amenities: "Ανέσεις",
+    documents: "Έγγραφα",
+    notes: "Σημειώσεις",
+    history: "Ιστορικό"
+  };
+}
+
+
+export function getContactTabLabels() {
+  return {
+    general: "Γενικά",
+    details: "Λεπτομέρειες",
+    properties: "Ιδιότητες",
+    units: "Μονάδες",
+    buildings: "Κτίρια",
+    projects: "Έργα",
+    documents: "Έγγραφα",
+    notes: "Σημειώσεις",
+    history: "Ιστορικό"
+  };
+}
+
+export function getProjectTabLabels() {
+  return {
+    general: "Γενικά",
+    details: "Λεπτομέρειες",
+    buildings: "Κτίρια",
+    units: "Μονάδες",
+    contacts: "Επαφές",
+    documents: "Έγγραφα",
+    photos: "Φωτογραφίες",
+    notes: "Σημειώσεις",
+    history: "Ιστορικό"
+  };
+}
+
+export function getCRMDashboardTabLabels() {
+  return {
+    dashboard: "Dashboard",
+    leads: "Leads",
+    opportunities: "Ευκαιρίες",
+    contacts: "Επαφές",
+    companies: "Εταιρείες",
+    tasks: "Εργασίες",
+    reports: "Αναφορές",
+    settings: "Ρυθμίσεις"
+  };
 }

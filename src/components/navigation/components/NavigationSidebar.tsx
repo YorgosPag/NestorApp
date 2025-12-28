@@ -9,8 +9,6 @@ import { ChevronDown, ChevronRight, MapPin } from 'lucide-react';
 import { HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
 import { NavigationTree } from './NavigationTree';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface NavigationSidebarProps {
   isExpanded?: boolean;
@@ -21,8 +19,6 @@ export function NavigationSidebar({
   isExpanded = false,
   onToggleExpanded
 }: NavigationSidebarProps) {
-  const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
 
   return (
     <div className="space-y-2">
@@ -36,19 +32,19 @@ export function NavigationSidebar({
             TRANSITION_PRESETS.STANDARD_COLORS
           )}
         >
-          <MapPin className={iconSizes.sm} />
+          <MapPin className="h-4 w-4" />
           <span className="font-medium">Πλοήγηση</span>
           {isExpanded ? (
-            <ChevronDown className={`${iconSizes.sm} ml-auto`} />
+            <ChevronDown className="h-4 w-4 ml-auto" />
           ) : (
-            <ChevronRight className={`${iconSizes.sm} ml-auto`} />
+            <ChevronRight className="h-4 w-4 ml-auto" />
           )}
         </button>
       </div>
 
       {/* Navigation Tree (Collapsible) */}
       {isExpanded && (
-        <div className={`pl-4 border-l ${quick.separatorV}`}>
+        <div className="pl-4 border-l border-gray-200 dark:border-gray-700">
           <NavigationTree />
         </div>
       )}

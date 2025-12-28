@@ -6,7 +6,15 @@
 // Single-purpose module for basic relationship type definitions
 // Part of modular Enterprise relationship types architecture
 //
+// ✅ ENTERPRISE: Using centralized relationship type labels - ZERO HARDCODED VALUES
+//
 // ============================================================================
+
+// 🏢 ENTERPRISE: Import centralized relationship type labels - ZERO HARDCODED VALUES
+import {
+  RELATIONSHIP_TYPE_LABELS,
+  EMPLOYMENT_STATUS_LABELS
+} from '@/constants/property-statuses-enterprise';
 
 /**
  * 🔗 Relationship Types - Enterprise Standard Categories
@@ -16,43 +24,43 @@
  */
 export type RelationshipType =
   // 👥 Employment Relationships
-  | 'employee'                 // Υπάλληλος
-  | 'manager'                  // Προϊστάμενος
-  | 'director'                 // Διευθυντής
-  | 'executive'                // Ανώτερο Στέλεχος
-  | 'intern'                   // Εσωτερικός Εργαζόμενος
-  | 'contractor'               // Εξωτερικός Συνεργάτης
-  | 'consultant'               // Σύμβουλος
+  | 'employee'                 // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.EMPLOYEE
+  | 'manager'                  // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.MANAGER
+  | 'director'                 // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.DIRECTOR
+  | 'executive'                // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.EXECUTIVE
+  | 'intern'                   // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.INTERN
+  | 'contractor'               // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.CONTRACTOR
+  | 'consultant'               // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.CONSULTANT
 
   // 🏢 Corporate Relationships
-  | 'shareholder'              // Μέτοχος
-  | 'board_member'             // Μέλος ΔΣ
-  | 'chairman'                 // Πρόεδρος ΔΣ
-  | 'ceo'                      // Γενικός Διευθυντής
-  | 'representative'           // Εκπρόσωπος
-  | 'partner'                  // Συνεργάτης/Εταίρος
-  | 'vendor'                   // Προμηθευτής
-  | 'client'                   // Πελάτης
+  | 'shareholder'              // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.SHAREHOLDER
+  | 'board_member'             // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.BOARD_MEMBER
+  | 'chairman'                 // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.CHAIRMAN
+  | 'ceo'                      // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.CEO
+  | 'representative'           // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.REPRESENTATIVE
+  | 'partner'                  // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.PARTNER
+  | 'vendor'                   // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.VENDOR
+  | 'client'                   // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.CLIENT
 
   // 🏛️ Government/Service Relationships
-  | 'civil_servant'            // Δημόσιος Υπάλληλος
-  | 'elected_official'         // Εκλεγμένο Πρόσωπο
-  | 'appointed_official'       // Διορισμένο Πρόσωπο
-  | 'department_head'          // Προϊστάμενος Τμήματος
-  | 'ministry_official'        // Στέλεχος Υπουργείου
-  | 'mayor'                    // Δήμαρχος
-  | 'deputy_mayor'             // Αντιδήμαρχος
-  | 'regional_governor'        // Περιφερειάρχης
+  | 'civil_servant'            // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.CIVIL_SERVANT
+  | 'elected_official'         // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.ELECTED_OFFICIAL
+  | 'appointed_official'       // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.APPOINTED_OFFICIAL
+  | 'department_head'          // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.DEPARTMENT_HEAD
+  | 'ministry_official'        // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.MINISTRY_OFFICIAL
+  | 'mayor'                    // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.MAYOR
+  | 'deputy_mayor'             // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.DEPUTY_MAYOR
+  | 'regional_governor'        // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.REGIONAL_GOVERNOR
 
   // 🔗 Other Professional Relationships
-  | 'advisor'                  // Σύμβουλος
-  | 'mentor'                   // Μέντορας
-  | 'protege'                  // Προστατευόμενος
-  | 'colleague'                // Συνάδελφος
-  | 'supplier'                 // Προμηθευτής
-  | 'customer'                 // Πελάτης
-  | 'competitor'               // Ανταγωνιστής
-  | 'other';                   // Άλλο
+  | 'advisor'                  // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.ADVISOR
+  | 'mentor'                   // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.MENTOR
+  | 'protege'                  // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.PROTEGE
+  | 'colleague'                // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.COLLEAGUE
+  | 'supplier'                 // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.SUPPLIER
+  | 'customer'                 // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.CUSTOMER
+  | 'competitor'               // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.COMPETITOR
+  | 'other';                   // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.OTHER
 
 /**
  * 📊 Relationship Status - Lifecycle Management
@@ -61,11 +69,11 @@ export type RelationshipType =
  * Essential for enterprise contact management
  */
 export type RelationshipStatus =
-  | 'active'                   // Ενεργή σχέση
-  | 'inactive'                 // Αδρανής σχέση
-  | 'pending'                  // Εκκρεμής σχέση
-  | 'terminated'               // Τερματισμένη σχέση
-  | 'suspended';               // Αναστολή σχέσης
+  | 'active'                   // ✅ CENTRALIZED: RELATIONSHIP_STATUS_LABELS.ACTIVE
+  | 'inactive'                 // ✅ CENTRALIZED: RELATIONSHIP_STATUS_LABELS.INACTIVE
+  | 'pending'                  // ✅ CENTRALIZED: RELATIONSHIP_STATUS_LABELS.PENDING
+  | 'terminated'               // ✅ CENTRALIZED: RELATIONSHIP_STATUS_LABELS.TERMINATED
+  | 'suspended';               // ✅ CENTRALIZED: RELATIONSHIP_STATUS_LABELS.SUSPENDED
 
 /**
  * 💼 Employment Status - Detailed Work Classification
@@ -74,15 +82,15 @@ export type RelationshipStatus =
  * Aligned with Greek labor law and EU standards
  */
 export type EmploymentStatus =
-  | 'full_time'                // Πλήρης απασχόληση
-  | 'part_time'                // Μερική απασχόληση
-  | 'contract'                 // Σύμβαση έργου
-  | 'temporary'                // Προσωρινός
-  | 'seasonal'                 // Εποχιακός
-  | 'volunteer'                // Εθελοντής
-  | 'retired'                  // Συνταξιούχος
-  | 'on_leave'                 // Σε άδεια
-  | 'terminated';              // Τερματισμένος
+  | 'full_time'                // ✅ CENTRALIZED: EMPLOYMENT_STATUS_LABELS.FULL_TIME
+  | 'part_time'                // ✅ CENTRALIZED: EMPLOYMENT_STATUS_LABELS.PART_TIME
+  | 'contract'                 // ✅ CENTRALIZED: EMPLOYMENT_STATUS_LABELS.CONTRACT
+  | 'temporary'                // ✅ CENTRALIZED: EMPLOYMENT_STATUS_LABELS.TEMPORARY
+  | 'seasonal'                 // ✅ CENTRALIZED: EMPLOYMENT_STATUS_LABELS.SEASONAL
+  | 'volunteer'                // ✅ CENTRALIZED: EMPLOYMENT_STATUS_LABELS.VOLUNTEER
+  | 'retired'                  // ✅ CENTRALIZED: EMPLOYMENT_STATUS_LABELS.RETIRED
+  | 'on_leave'                 // ✅ CENTRALIZED: EMPLOYMENT_STATUS_LABELS.ON_LEAVE
+  | 'terminated';              // ✅ CENTRALIZED: EMPLOYMENT_STATUS_LABELS.TERMINATED
 
 // ============================================================================
 // TYPE COLLECTIONS FOR VALIDATION

@@ -1,177 +1,89 @@
 /**
- * Units Tabs Configuration - Single Source of Truth
+ * Units Tabs Configuration - MIGRATED TO UNIFIED FACTORY
  *
- * Enterprise-class centralized configuration για τις καρτέλες μονάδων (units).
- * Χρησιμοποιεί το ίδιο architecture pattern με τις καρτέλες επαφών, έργων και κτιρίων.
+ * ✅ ENTERPRISE MIGRATION: This file now uses unified-tabs-factory.ts
+ * ✅ BACKWARD COMPATIBLE: All existing imports continue to work unchanged
+ * ✅ ZERO BREAKING CHANGES: Same API, same exports, same functionality
  *
- * @author Claude AI Assistant
- * @created 2024-11-28
- * @version 1.0.0
+ * @author Claude AI Assistant + Unified Factory Migration (2025-12-27)
+ * @migrated 2025-12-27
+ * @version 2.0.0 (Factory-based)
  */
 
+// 🏢 ENTERPRISE: Import from unified factory (NEW)
+import {
+  createTabsConfig,
+  getSortedTabs,
+  getEnabledTabsCount,
+  getTabById,
+  getTabByValue,
+  getTabsStats,
+  validateTabConfig,
+  type UnifiedTabConfig,
+  type TabEntityType
+} from './unified-tabs-factory';
+
+// 🏢 BACKWARD COMPATIBILITY: Legacy imports (DEPRECATED but maintained)
 import { LucideIcon } from 'lucide-react';
 
-// 🏢 ENTERPRISE: Import centralized tab labels
-import { getUnitsTabLabels } from '@/subapps/dxf-viewer/config/modal-select';
-
 // ============================================================================
-// INTERFACES & TYPES
+// BACKWARD COMPATIBLE TYPE EXPORTS
 // ============================================================================
 
 /**
- * Interface για τη διαμόρφωση μίας καρτέλας μονάδων
+ * ✅ BACKWARD COMPATIBLE: Legacy UnitsTabConfig interface
+ * Re-exported from unified factory για zero breaking changes
  */
-export interface UnitsTabConfig {
-  /** Unique identifier για την καρτέλα */
-  id: string;
-
-  /** Εμφανιζόμενη ετικέτα */
-  label: string;
-
-  /** Τιμή για το Tab value */
-  value: string;
-
-  /** Icon για την καρτέλα (emoji string) */
-  icon: string;
-
-  /** Περιγραφή της καρτέλας (για documentation) */
-  description?: string;
-
-  /** Σειρά εμφάνισης */
-  order: number;
-
-  /** Αν η καρτέλα είναι ενεργή */
-  enabled: boolean;
-
-  /** Το component που θα render-αρει */
-  component: string;
-
-  /** Custom props για το component */
-  componentProps?: Record<string, any>;
-
-  /** Permissions required για την καρτέλα */
-  requiredPermissions?: string[];
-
-  /** Feature flags */
-  featureFlag?: string;
-
-  /** Conditional rendering logic */
-  condition?: string;
+export interface UnitsTabConfig extends UnifiedTabConfig {
+  // Same interface as before - no changes needed
 }
 
 // ============================================================================
-// UNITS TABS CONFIGURATION
+// FACTORY-BASED CONFIGURATION (ENTERPRISE)
 // ============================================================================
 
 /**
- * Κεντρική διαμόρφωση όλων των καρτελών μονάδων
- *
- * ΣΗΜΑΝΤΙΚΟ: Αυτή είναι η ΜΟΝΑΔΙΚΗ πηγή αλήθειας για τις καρτέλες μονάδων!
- * Οποιαδήποτε αλλαγή στις καρτέλες πρέπει να γίνεται ΕΔΩ και μόνο εδώ.
- * ✅ ENTERPRISE: Uses centralized labels από modal-select.ts
+ * ✅ ENTERPRISE: Units tabs configuration via unified factory
+ * ✅ BACKWARD COMPATIBLE: Same UNITS_TABS export as before
+ * ✅ CENTRALIZED: All configuration now comes from unified-tabs-factory.ts
  */
-export const UNITS_TABS: UnitsTabConfig[] = (() => {
-  const tabLabels = getUnitsTabLabels();
-  return [
-  {
-    id: 'info',
-    label: tabLabels.info,
-    value: 'info',
-    icon: 'home',
-    description: 'Βασικές πληροφορίες και στοιχεία της μονάδας',
-    order: 1,
-    enabled: true,
-    component: 'PropertyDetailsContent',
-  },
-  {
-    id: 'customer',
-    label: tabLabels.customer,
-    value: 'customer',
-    icon: 'user',
-    description: 'Πληροφορίες και διαχείριση πελάτη της μονάδας',
-    order: 2,
-    enabled: true,
-    component: 'UnitCustomerTab',
-  },
-  {
-    id: 'floor-plan',
-    label: tabLabels.floor_plan,
-    value: 'floor-plan',
-    icon: 'map',
-    description: 'Κάτοψη και διάταξη της μονάδας',
-    order: 3,
-    enabled: true,
-    component: 'FloorPlanTab',
-  },
-  {
-    id: 'documents',
-    label: tabLabels.documents,
-    value: 'documents',
-    icon: 'file-text',
-    description: 'Έγγραφα και πιστοποιητικά της μονάδας',
-    order: 4,
-    enabled: true,
-    component: 'DocumentsPlaceholder',
-    componentProps: {
-      title: tabLabels.documents,
-      subtitle: 'Εδώ θα εμφανίζονται τα έγγραφα της μονάδας'
-    }
-  },
-  {
-    id: 'photos',
-    label: tabLabels.photos,
-    value: 'photos',
-    icon: 'camera',
-    description: 'Φωτογραφίες της μονάδας',
-    order: 5,
-    enabled: true,
-    component: 'PhotosTabContent',
-  },
-  {
-    id: 'videos',
-    label: tabLabels.videos,
-    value: 'videos',
-    icon: 'video',
-    description: 'Videos της μονάδας',
-    order: 6,
-    enabled: true,
-    component: 'VideosTabContent',
-  }
-];
-})();
+export const UNITS_TABS: UnitsTabConfig[] = createTabsConfig('units') as UnitsTabConfig[];
 
 // ============================================================================
-// UTILITY FUNCTIONS
+// BACKWARD COMPATIBLE UTILITY FUNCTIONS
 // ============================================================================
+
+/**
+ * ✅ BACKWARD COMPATIBLE: Re-exported factory functions with legacy names
+ * All functions now use unified factory internally for consistency
+ */
 
 /**
  * Επιστρέφει όλες τις ενεργές καρτέλες ταξινομημένες κατά order
  */
 export function getSortedUnitsTabs(): UnitsTabConfig[] {
-  return UNITS_TABS
-    .filter(tab => tab.enabled)
-    .sort((a, b) => a.order - b.order);
+  return getSortedTabs('units') as UnitsTabConfig[];
 }
 
 /**
  * Επιστρέφει μόνο τις enabled καρτέλες
  */
 export function getEnabledUnitsTabs(): UnitsTabConfig[] {
-  return UNITS_TABS.filter(tab => tab.enabled);
+  return getSortedTabs('units') as UnitsTabConfig[];
 }
 
 /**
  * Βρίσκει μία καρτέλα με βάση το ID
  */
 export function getUnitsTabById(id: string): UnitsTabConfig | undefined {
-  return UNITS_TABS.find(tab => tab.id === id);
+  return getTabById('units', id) as UnitsTabConfig | undefined;
 }
 
 /**
  * Βρίσκει μία καρτέλα με βάση το value
  */
 export function getUnitsTabByValue(value: string): UnitsTabConfig | undefined {
-  return UNITS_TABS.find(tab => tab.value === value);
+  return getTabByValue('units', value) as UnitsTabConfig | undefined;
 }
 
 /**
@@ -194,21 +106,17 @@ export function getUnitsTabsByCondition(
  * Επιστρέφει στατιστικά των καρτελών
  */
 export function getUnitsTabsStats() {
-  const all = UNITS_TABS;
-  const enabled = getEnabledUnitsTabs();
-
-  return {
-    total: all.length,
-    enabled: enabled.length,
-    disabled: all.length - enabled.length,
-    components: [...new Set(all.map(tab => tab.component))],
-    icons: [...new Set(all.map(tab => tab.icon))],
-  };
+  return getTabsStats('units');
 }
 
 // ============================================================================
-// VALIDATION UTILITIES
+// BACKWARD COMPATIBLE VALIDATION UTILITIES
 // ============================================================================
+
+/**
+ * ✅ BACKWARD COMPATIBLE: Legacy validation functions
+ * Now use unified factory validation internally
+ */
 
 /**
  * Ελέγχει αν όλες οι καρτέλες έχουν μοναδικά IDs
@@ -255,12 +163,11 @@ export function validateUnitsTabsConfiguration(): {
     errors.push('Duplicate tab orders found');
   }
 
-  // Έλεγχος για κενά required fields
+  // Έλεγχος για κενά required fields using unified factory validation
   UNITS_TABS.forEach((tab, index) => {
-    if (!tab.id) errors.push(`Tab at index ${index} has no ID`);
-    if (!tab.label) errors.push(`Tab at index ${index} has no label`);
-    if (!tab.value) errors.push(`Tab at index ${index} has no value`);
-    if (!tab.component) errors.push(`Tab at index ${index} has no component`);
+    if (!validateTabConfig(tab)) {
+      errors.push(`Tab at index ${index} failed validation`);
+    }
   });
 
   return {
@@ -270,19 +177,20 @@ export function validateUnitsTabsConfiguration(): {
 }
 
 // ============================================================================
-// DEVELOPMENT HELPERS
+// BACKWARD COMPATIBLE DEVELOPMENT HELPERS
 // ============================================================================
 
 /**
- * Development helper για debugging
+ * ✅ BACKWARD COMPATIBLE: Development helper για debugging
  */
 export function debugUnitsTabs(): void {
   if (process.env.NODE_ENV === 'development') {
-    console.group('🏘️ Units Tabs Configuration Debug');
+    console.group('🏘️ Units Tabs Configuration Debug (Factory-based)');
     console.log('📊 Stats:', getUnitsTabsStats());
     console.log('✅ Validation:', validateUnitsTabsConfiguration());
     console.log('📋 Enabled tabs:', getEnabledUnitsTabs().map(t => t.label));
     console.log('🎯 All tabs:', UNITS_TABS.length);
+    console.log('🏭 Factory:', 'unified-tabs-factory.ts');
     console.groupEnd();
   }
 }
@@ -293,9 +201,13 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // ============================================================================
-// EXPORTS
+// BACKWARD COMPATIBLE EXPORTS
 // ============================================================================
 
+/**
+ * ✅ BACKWARD COMPATIBLE: Default export exactly as before
+ * All functionality remains the same - powered by unified factory
+ */
 export default {
   tabs: UNITS_TABS,
   getSorted: getSortedUnitsTabs,

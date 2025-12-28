@@ -3,6 +3,13 @@ import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'fire
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
+// ✅ ENTERPRISE: Import centralized building data - NO MORE HARDCODED STRINGS
+import {
+  getBuildingFeatures,
+  getBuildingDescriptions,
+  getBuildingTechnicalTerms
+} from '@/subapps/dxf-viewer/config/modal-select';
+
 /**
  * 🏗️ ENTERPRISE DATABASE POPULATION: Real Buildings Data for ΠΑΓΩΝΗΣ Projects
  *
@@ -25,6 +32,11 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 const PAGONIS_COMPANY_ID = 'pzNUy8ksddGCtcQMqumR';
 const COMPANY_NAME = 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.';
 
+// ✅ ENTERPRISE: Get centralized building data - NO MORE HARDCODED STRINGS
+const buildingFeatures = getBuildingFeatures();
+const buildingDescriptions = getBuildingDescriptions();
+const buildingTechnicalTerms = getBuildingTechnicalTerms();
+
 // 🏗️ COMPREHENSIVE BUILDING DATA - Based on Complete Schema Research
 const BUILDING_COLLECTIONS = {
 
@@ -33,7 +45,7 @@ const BUILDING_COLLECTIONS = {
     {
       id: 'building_1_palaiologou_luxury_apartments',
       name: 'ΚΤΙΡΙΟ Α - Διαμερίσματα Παλαιολόγου',
-      description: 'Κύριο κτίριο με 12 διαμερίσματα πολυτελείας στην οδό Παλαιολόγου',
+      description: `${buildingDescriptions.luxury_apartments_main} στην οδό Παλαιολόγου`,
       address: 'Παλαιολόγου 156, Πυλαία',
       city: 'Θεσσαλονίκη',
       totalArea: 2850.75,
@@ -47,18 +59,18 @@ const BUILDING_COLLECTIONS = {
       totalValue: 3200000,
       category: 'residential' as const,
       features: [
-        'Αυτόνομη θέρμανση',
-        'Ηλιακός θερμοσίφωνας',
-        'Θέσεις στάθμευσης',
-        'Ασανσέρ',
-        'Μπαλκόνια με θέα',
-        'Ενεργειακή κλάση A+'
+        buildingFeatures.autonomous_heating,
+        buildingFeatures.solar_heating,
+        buildingFeatures.parking_spaces,
+        buildingFeatures.elevator,
+        buildingFeatures.balconies_with_view,
+        buildingFeatures.energy_class_a_plus
       ]
     },
     {
       id: 'building_2_palaiologou_commercial',
       name: 'ΚΤΙΡΙΟ Β - Καταστήματα Παλαιολόγου',
-      description: 'Εμπορικό κτίριο με καταστήματα και γραφεία στο ισόγειο',
+      description: `${buildingDescriptions.commercial_building_shops} στο ισόγειο`,
       address: 'Παλαιολόγου 158, Πυλαία',
       city: 'Θεσσαλονίκη',
       totalArea: 650.25,
@@ -72,17 +84,17 @@ const BUILDING_COLLECTIONS = {
       totalValue: 850000,
       category: 'commercial' as const,
       features: [
-        'Βιτρίνες καταστημάτων',
-        'Κλιματισμός VRV',
-        'Πυροσβεστικό σύστημα',
-        'Πρόσβαση ΑμεΑ',
-        'Φόρτωση εμπορευμάτων'
+        buildingFeatures.shop_windows,
+        buildingFeatures.vrv_climate,
+        buildingFeatures.fire_suppression,
+        buildingFeatures.disability_access,
+        buildingFeatures.loading_access
       ]
     },
     {
       id: 'building_3_palaiologou_parking',
       name: 'ΚΤΙΡΙΟ Γ - Υπόγειο Πάρκινγκ Παλαιολόγου',
-      description: 'Υπόγειος χώρος στάθμευσης με 45 θέσεις',
+      description: `${buildingDescriptions.underground_parking} με 45 θέσεις`,
       address: 'Παλαιολόγου 160, Πυλαία',
       city: 'Θεσσαλονίκη',
       totalArea: 1250.00,
@@ -96,11 +108,11 @@ const BUILDING_COLLECTIONS = {
       totalValue: 450000,
       category: 'commercial' as const,
       features: [
-        'Ηλεκτρική φόρτιση οχημάτων',
-        'Κάμερες ασφαλείας 24/7',
-        'Αυτόματη εξαερισμός',
-        'Πλυντήριο αυτοκινήτων',
-        'Σύστημα ελέγχου πρόσβασης'
+        buildingFeatures.electric_vehicle_charging,
+        buildingFeatures.security_cameras_24_7,
+        buildingFeatures.automatic_ventilation,
+        buildingFeatures.car_wash,
+        buildingFeatures.access_control
       ]
     }
   ],
@@ -110,8 +122,8 @@ const BUILDING_COLLECTIONS = {
     {
       id: 'building_1_thermi_factory_main',
       name: 'ΚΤΙΡΙΟ Α - Κύριο Εργοστάσιο Θέρμης',
-      description: 'Κύριο βιομηχανικό κτίριο παραγωγής με σύγχρονο εξοπλισμό',
-      address: 'Βιομηχανική Περιοχή Θέρμης, Οδός Α5',
+      description: buildingDescriptions.main_factory_building,
+      address: `${buildingTechnicalTerms.industrial_area_thermi}, Οδός Α5`,
       city: 'Θέρμη',
       totalArea: 4200.50,
       builtArea: 3950.25,
@@ -124,19 +136,19 @@ const BUILDING_COLLECTIONS = {
       totalValue: 5500000,
       category: 'industrial' as const,
       features: [
-        'Γερανογέφυρες 20 τόνων',
-        'Ηλεκτροδοτήση 1000kW',
-        'Συστήματα αφαίρεσης σκόνης',
-        'Φυσικός αερισμός',
-        'Πυροσβεστικό σύστημα αερίου',
-        'Συστήματα αυτοματισμού'
+        buildingFeatures.crane_bridge_20_tons,
+        buildingFeatures.power_supply_1000kw,
+        buildingFeatures.dust_removal_systems,
+        buildingFeatures.natural_ventilation,
+        buildingFeatures.gas_fire_suppression,
+        buildingFeatures.automation_systems
       ]
     },
     {
       id: 'building_2_thermi_warehouse',
       name: 'ΚΤΙΡΙΟ Β - Αποθήκη Θέρμης',
-      description: 'Κτίριο αποθήκευσης πρώτων υλών και τελικών προϊόντων',
-      address: 'Βιομηχανική Περιοχή Θέρμης, Οδός Β12',
+      description: buildingDescriptions.warehouse_building,
+      address: `${buildingTechnicalTerms.industrial_area_thermi}, Οδός Β12`,
       city: 'Θέρμη',
       totalArea: 2800.75,
       builtArea: 2650.25,
@@ -149,18 +161,18 @@ const BUILDING_COLLECTIONS = {
       totalValue: 1800000,
       category: 'industrial' as const,
       features: [
-        'Ψηλά ράφια 12 μέτρων',
-        'Συστήματα παρακολούθησης',
-        'Κλιματισμός αποθηκών',
-        'Ράμπες φόρτωσης',
-        'RFID συστήματα tracking'
+        buildingFeatures.high_shelving_12m,
+        buildingFeatures.monitoring_systems,
+        buildingFeatures.warehouse_climate,
+        buildingFeatures.loading_ramps,
+        buildingFeatures.rfid_tracking
       ]
     },
     {
       id: 'building_3_thermi_offices',
       name: 'ΚΤΙΡΙΟ Γ - Διοίκηση Θέρμης',
-      description: 'Κτίριο διοίκησης και γραφείων με αίθουσες συσκέψεων',
-      address: 'Βιομηχανική Περιοχή Θέρμης, Οδός Γ8',
+      description: buildingDescriptions.administration_building,
+      address: `${buildingTechnicalTerms.industrial_area_thermi}, Οδός Γ8`,
       city: 'Θέρμη',
       totalArea: 850.25,
       builtArea: 780.50,
@@ -173,11 +185,11 @@ const BUILDING_COLLECTIONS = {
       totalValue: 1200000,
       category: 'commercial' as const,
       features: [
-        'Τηλεδιάσκεψη σε όλες τις αίθουσες',
-        'Έξυπνος κλιματισμός',
-        'Συστήματα ασφαλείας',
-        'Υψηλής ποιότητας ακουστική',
-        'Καφετέρια προσωπικού'
+        buildingFeatures.video_conferencing_all_rooms,
+        buildingFeatures.smart_climate,
+        buildingFeatures.security_systems,
+        buildingFeatures.high_quality_acoustics,
+        buildingFeatures.staff_cafeteria
       ]
     }
   ],
@@ -187,8 +199,8 @@ const BUILDING_COLLECTIONS = {
     {
       id: 'building_1_kalamaria_mall_main',
       name: 'ΚΤΙΡΙΟ Α - Κύριο Εμπορικό Καλαμαριάς',
-      description: 'Κεντρικό κτίριο εμπορικού κέντρου με καταστήματα και εστίαση',
-      address: 'Λεωφόρος Μεγάλου Αλεξάνδρου 250, Καλαμαριά',
+      description: `${buildingDescriptions.commercial_building_main} με καταστήματα και εστίαση`,
+      address: `${buildingTechnicalTerms.avenue_megalou_alexandrou} 250, Καλαμαριά`,
       city: 'Καλαμαριά',
       totalArea: 5200.50,
       builtArea: 4850.25,
@@ -201,19 +213,19 @@ const BUILDING_COLLECTIONS = {
       totalValue: 12500000,
       category: 'commercial' as const,
       features: [
-        'Κεντρικό άτριο με φυσικό φωτισμό',
-        'Σκαλιές κυλιόμενες σε όλους τους ορόφους',
-        'Σύστημα διαχείρισης καταστημάτων',
-        'Food court 800 θέσεων',
-        'Κινηματογράφος 8 αιθουσών',
-        'Παιδότοπος 300τμ'
+        buildingFeatures.natural_lighting_atrium,
+        buildingFeatures.escalators_all_floors,
+        buildingFeatures.shop_management_system,
+        buildingFeatures.food_court_800_seats,
+        buildingFeatures.cinema_8_rooms,
+        buildingFeatures.playground_300sqm
       ]
     },
     {
       id: 'building_2_kalamaria_parking_tower',
       name: 'ΚΤΙΡΙΟ Β - Πύργος Στάθμευσης Καλαμαριάς',
-      description: 'Κτίριο στάθμευσης 6 ορόφων για 350 οχήματα',
-      address: 'Λεωφόρος Μεγάλου Αλεξάνδρου 252, Καλαμαριά',
+      description: `${buildingDescriptions.parking_tower} 6 ορόφων για 350 οχήματα`,
+      address: `${buildingTechnicalTerms.avenue_megalou_alexandrou} 252, Καλαμαριά`,
       city: 'Καλαμαριά',
       totalArea: 3200.75,
       builtArea: 2950.50,
@@ -226,11 +238,11 @@ const BUILDING_COLLECTIONS = {
       totalValue: 2800000,
       category: 'commercial' as const,
       features: [
-        'Σύστημα καθοδήγησης parking',
-        'Ηλεκτρική φόρτιση Tesla/VW',
-        'Πλυντήρια αυτοκινήτων',
-        'Μηχανικά συστήματα ασφαλείας',
-        'Έξοδοι κινδύνου σε κάθε όροφο'
+        buildingFeatures.parking_guidance_system,
+        buildingFeatures.tesla_vw_charging,
+        buildingFeatures.car_wash_plural,
+        buildingFeatures.mechanical_security,
+        buildingFeatures.emergency_exits
       ]
     }
   ]
@@ -271,16 +283,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             // 🎯 ENTERPRISE: Additional schema fields από research
             legalInfo: {
               buildingPermit: `BP-${building.id.slice(-8).toUpperCase()}`,
-              zoneDesignation: building.category === 'industrial' ? 'ΒΙ.ΠΑ.' : building.category === 'commercial' ? 'ΕΜΠ.' : 'ΚΑΤ.',
+              zoneDesignation: building.category === 'industrial' ? buildingTechnicalTerms.industrial_zone : building.category === 'commercial' ? buildingTechnicalTerms.commercial_zone : buildingTechnicalTerms.residential_zone,
               coverage: Math.round((building.builtArea / building.totalArea) * 100),
-              constructionType: 'Σκυρόδεμα Ω/Σ'
+              constructionType: buildingTechnicalTerms.reinforced_concrete
             },
 
             technicalSpecs: {
               heatingSystem: building.category === 'industrial' ? 'Βιομηχανικό' : 'Αυτόνομο',
               elevators: building.floors > 2 ? Math.ceil(building.floors / 3) : 0,
-              energyClass: building.status === 'completed' ? 'A+' : 'A',
-              seismicZone: 'Ζώνη ΙΙ',
+              energyClass: building.status === 'completed' ? buildingTechnicalTerms.energy_class_a_plus_label : buildingTechnicalTerms.energy_class_a_label,
+              seismicZone: buildingTechnicalTerms.seismic_zone_2,
               fireProtection: true
             },
 

@@ -11,7 +11,16 @@
  *
  * Architecture: Config-driven με Generic Components
  * Pattern: Single Source of Truth
+ *
+ * ✅ ENTERPRISE: Using centralized project tab labels - ZERO HARDCODED VALUES
  */
+
+// 🏢 ENTERPRISE: Import centralized project tab labels - ZERO HARDCODED VALUES
+import {
+  PROJECT_TAB_LABELS,
+  PROJECT_TAB_DESCRIPTIONS,
+  PROJECT_COMPONENT_LABELS
+} from '@/constants/property-statuses-enterprise';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -48,10 +57,10 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'general',
-    label: 'Γενικά Έργου',
+    label: PROJECT_TAB_LABELS.GENERAL,
     value: 'general',
     icon: 'construction',
-    description: 'Βασικές πληροφορίες και στοιχεία του έργου',
+    description: PROJECT_TAB_DESCRIPTIONS.GENERAL,
     order: 1,
     enabled: true,
     component: 'GeneralProjectTab',
@@ -62,15 +71,15 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'floorplan',
-    label: 'Κάτοψη Έργου',
+    label: PROJECT_TAB_LABELS.FLOORPLAN,
     value: 'floorplan',
     icon: 'ruler',
-    description: 'Αρχιτεκτονική κάτοψη και σχέδια του έργου',
+    description: PROJECT_TAB_DESCRIPTIONS.FLOORPLAN,
     order: 2,
     enabled: true,
     component: 'FloorplanViewerTab',
     componentProps: {
-      title: 'Κάτοψη Έργου',
+      title: PROJECT_COMPONENT_LABELS.FLOORPLAN_TITLE,
       type: 'project'
     }
   },
@@ -80,15 +89,15 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'parking-floorplan',
-    label: 'Κάτοψη Θ.Σ.',
+    label: PROJECT_TAB_LABELS.PARKING_FLOORPLAN,
     value: 'parking-floorplan',
     icon: 'car',
-    description: 'Κάτοψη και διάταξη θέσεων στάθμευσης',
+    description: PROJECT_TAB_DESCRIPTIONS.PARKING_FLOORPLAN,
     order: 3,
     enabled: true,
     component: 'FloorplanViewerTab',
     componentProps: {
-      title: 'Κάτοψη Θέσεων Στάθμευσης',
+      title: PROJECT_COMPONENT_LABELS.PARKING_FLOORPLAN_TITLE,
       type: 'parking'
     }
   },
@@ -98,10 +107,10 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'structure',
-    label: 'Δομή Έργου',
+    label: PROJECT_TAB_LABELS.STRUCTURE,
     value: 'structure',
     icon: 'building',
-    description: 'Οργανωτική δομή και ιεραρχία του έργου',
+    description: PROJECT_TAB_DESCRIPTIONS.STRUCTURE,
     order: 4,
     enabled: true,
     component: 'ProjectStructureTab',
@@ -112,10 +121,10 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'timeline',
-    label: 'Timeline',
+    label: PROJECT_TAB_LABELS.TIMELINE,
     value: 'timeline',
     icon: 'calendar',
-    description: 'Χρονοδιάγραμμα και ορόσημα του έργου',
+    description: PROJECT_TAB_DESCRIPTIONS.TIMELINE,
     order: 5,
     enabled: true,
     component: 'ProjectTimelineTab',
@@ -126,10 +135,10 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'customers',
-    label: 'Πελάτες',
+    label: PROJECT_TAB_LABELS.CUSTOMERS,
     value: 'customers',
     icon: 'users',
-    description: 'Πελάτες και αγοραστές του έργου',
+    description: PROJECT_TAB_DESCRIPTIONS.CUSTOMERS,
     order: 6,
     enabled: true,
     component: 'ProjectCustomersTab',
@@ -140,10 +149,10 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'building-data',
-    label: 'Στοιχεία Δόμησης',
+    label: PROJECT_TAB_LABELS.BUILDING_DATA,
     value: 'building-data',
     icon: 'bar-chart',
-    description: 'Τεχνικά στοιχεία και παράμετροι δόμησης',
+    description: PROJECT_TAB_DESCRIPTIONS.BUILDING_DATA,
     order: 7,
     enabled: true,
     component: 'BuildingDataTab',
@@ -154,10 +163,10 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'parking',
-    label: 'Θέσεις Στάθμευσης',
+    label: PROJECT_TAB_LABELS.PARKING,
     value: 'parking',
     icon: 'car',
-    description: 'Διαχείριση και κατανομή θέσεων στάθμευσης',
+    description: PROJECT_TAB_DESCRIPTIONS.PARKING,
     order: 8,
     enabled: true,
     component: 'ParkingTab',
@@ -168,10 +177,10 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'contributors',
-    label: 'Συντελεστές',
+    label: PROJECT_TAB_LABELS.CONTRIBUTORS,
     value: 'contributors',
     icon: 'handshake',
-    description: 'Συντελεστές, εργολάβοι και συνεργάτες',
+    description: PROJECT_TAB_DESCRIPTIONS.CONTRIBUTORS,
     order: 9,
     enabled: true,
     component: 'ContributorsTab',
@@ -182,10 +191,10 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'documents',
-    label: 'Έγγραφα Έργου',
+    label: PROJECT_TAB_LABELS.DOCUMENTS,
     value: 'documents',
     icon: 'file-text',
-    description: 'Συμβάσεις, άδειες και νομικά έγγραφα',
+    description: PROJECT_TAB_DESCRIPTIONS.DOCUMENTS,
     order: 10,
     enabled: true,
     component: 'DocumentsProjectTab',
@@ -196,10 +205,10 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'ika',
-    label: 'IKA',
+    label: PROJECT_TAB_LABELS.IKA,
     value: 'ika',
     icon: 'landmark',
-    description: 'Στοιχεία IKA και ασφαλιστικές υποχρεώσεις',
+    description: PROJECT_TAB_DESCRIPTIONS.IKA,
     order: 11,
     enabled: true,
     component: 'IkaTab',
@@ -210,10 +219,10 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'photos',
-    label: 'Φωτογραφίες',
+    label: PROJECT_TAB_LABELS.PHOTOS,
     value: 'photos',
     icon: 'camera',
-    description: 'Φωτογραφίες προόδου και ολοκληρωμένου έργου',
+    description: PROJECT_TAB_DESCRIPTIONS.PHOTOS,
     order: 12,
     enabled: true,
     component: 'PhotosTab',
@@ -224,10 +233,10 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'videos',
-    label: 'Βίντεο',
+    label: PROJECT_TAB_LABELS.VIDEOS,
     value: 'videos',
     icon: 'video',
-    description: 'Βίντεο παρουσίασης και τεκμηρίωσης του έργου',
+    description: PROJECT_TAB_DESCRIPTIONS.VIDEOS,
     order: 13,
     enabled: true,
     component: 'VideosTab',

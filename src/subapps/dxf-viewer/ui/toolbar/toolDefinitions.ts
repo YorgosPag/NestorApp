@@ -5,6 +5,16 @@ import {
   Grid, Settings, Crop, Download, Plus, Crosshair,
   Maximize, Calculator, Map, Edit, Hexagon, FlaskConical
 } from "lucide-react";
+
+// 🏢 ENTERPRISE: Import centralized DXF tool labels - ZERO HARDCODED VALUES
+import {
+  DXF_SELECTION_TOOL_LABELS,
+  DXF_DRAWING_TOOL_LABELS,
+  DXF_EDITING_TOOL_LABELS,
+  DXF_MEASUREMENT_TOOL_LABELS,
+  DXF_ZOOM_TOOL_LABELS,
+  DXF_UTILITY_TOOL_LABELS
+} from '@/constants/property-statuses-enterprise';
 import { 
   CircleRadiusIcon, 
   CircleDiameterIcon, 
@@ -25,60 +35,66 @@ export const toolGroups = [
   {
     name: 'Επιλογή',
     tools: [
-      { id: 'select' as ToolType, icon: MousePointer, label: 'Επιλογή', hotkey: 'S' },
-      { id: 'pan' as ToolType, icon: Hand, label: 'Μετακίνηση', hotkey: 'P' },
+      // ✅ CENTRALIZED: Using DXF_SELECTION_TOOL_LABELS from central system - ZERO HARDCODED VALUES
+      { id: 'select' as ToolType, icon: MousePointer, label: DXF_SELECTION_TOOL_LABELS.SELECT, hotkey: 'S' },
+      { id: 'pan' as ToolType, icon: Hand, label: DXF_SELECTION_TOOL_LABELS.PAN, hotkey: 'P' },
     ]
   },
   {
     name: 'Σχεδίαση',
     tools: [
-      { id: 'line' as ToolType, icon: Minus, label: 'Γραμμή', hotkey: 'L' },
-      { id: 'rectangle' as ToolType, icon: Square, label: 'Ορθογώνιο', hotkey: 'R' },
+      // ✅ CENTRALIZED: Using DXF_DRAWING_TOOL_LABELS from central system - ZERO HARDCODED VALUES
+      { id: 'line' as ToolType, icon: Minus, label: DXF_DRAWING_TOOL_LABELS.LINE, hotkey: 'L' },
+      { id: 'rectangle' as ToolType, icon: Square, label: DXF_DRAWING_TOOL_LABELS.RECTANGLE, hotkey: 'R' },
       { 
         id: 'circle' as ToolType, 
         icon: CircleRadiusIcon, 
-        label: 'Κύκλος (Ακτίνα)', 
+        label: DXF_DRAWING_TOOL_LABELS.CIRCLE_RADIUS,
         hotkey: 'C',
         dropdownOptions: [
-          { id: 'circle' as ToolType, icon: CircleRadiusIcon, label: 'Κύκλος (Ακτίνα)' },
-          { id: 'circle-diameter' as ToolType, icon: CircleDiameterIcon, label: 'Κύκλος (Διάμετρος)' },
-          { id: 'circle-2p-diameter' as ToolType, icon: Circle2PDiameterIcon, label: '2P – Διάμετρος' },
-          { id: 'circle-3p' as ToolType, icon: Circle3PIcon, label: '3P – Κύκλος' },
-          { id: 'circle-chord-sagitta' as ToolType, icon: CircleChordSagittaIcon, label: 'Χορδή + Βέλος' },
-          { id: 'circle-2p-radius' as ToolType, icon: Circle2PRadiusIcon, label: '2P + R' },
-          { id: 'circle-best-fit' as ToolType, icon: CircleBestFitIcon, label: 'N Σημεία (Best-Fit)' }
+          // ✅ CENTRALIZED: Circle tool variations - ZERO HARDCODED VALUES
+          { id: 'circle' as ToolType, icon: CircleRadiusIcon, label: DXF_DRAWING_TOOL_LABELS.CIRCLE_RADIUS },
+          { id: 'circle-diameter' as ToolType, icon: CircleDiameterIcon, label: DXF_DRAWING_TOOL_LABELS.CIRCLE_DIAMETER },
+          { id: 'circle-2p-diameter' as ToolType, icon: Circle2PDiameterIcon, label: DXF_DRAWING_TOOL_LABELS.CIRCLE_2P_DIAMETER },
+          { id: 'circle-3p' as ToolType, icon: Circle3PIcon, label: DXF_DRAWING_TOOL_LABELS.CIRCLE_3P },
+          { id: 'circle-chord-sagitta' as ToolType, icon: CircleChordSagittaIcon, label: DXF_DRAWING_TOOL_LABELS.CIRCLE_CHORD_SAGITTA },
+          { id: 'circle-2p-radius' as ToolType, icon: Circle2PRadiusIcon, label: DXF_DRAWING_TOOL_LABELS.CIRCLE_2P_RADIUS },
+          { id: 'circle-best-fit' as ToolType, icon: CircleBestFitIcon, label: DXF_DRAWING_TOOL_LABELS.CIRCLE_BEST_FIT }
         ]
       },
-      { id: 'polyline' as ToolType, icon: Pen, label: 'Πολυγραμμή', hotkey: 'Y' },
-      { id: 'polygon' as ToolType, icon: Hexagon, label: 'Πολύγωνο', hotkey: 'G' },
-      { id: 'layering' as ToolType, icon: Map, label: 'Layering', hotkey: 'O' }
+      { id: 'polyline' as ToolType, icon: Pen, label: DXF_DRAWING_TOOL_LABELS.POLYLINE, hotkey: 'Y' },
+      { id: 'polygon' as ToolType, icon: Hexagon, label: DXF_DRAWING_TOOL_LABELS.POLYGON, hotkey: 'G' },
+      { id: 'layering' as ToolType, icon: Map, label: DXF_DRAWING_TOOL_LABELS.LAYERING, hotkey: 'O' }
     ]
   },
   {
     name: 'Εργαλεία',
     tools: [
-      { id: 'grip-edit' as ToolType, icon: Edit, label: 'Επεξεργασία', hotkey: 'G' },
-      { id: 'move' as ToolType, icon: Move, label: 'Μετακίνηση', hotkey: 'M' },
-      { id: 'copy' as ToolType, icon: Copy, label: 'Αντιγραφή', hotkey: 'Ctrl+C' },
-      { id: 'delete' as ToolType, icon: Trash2, label: 'Διαγραφή', hotkey: 'Del' },
+      // ✅ CENTRALIZED: Using DXF_EDITING_TOOL_LABELS from central system - ZERO HARDCODED VALUES
+      { id: 'grip-edit' as ToolType, icon: Edit, label: DXF_EDITING_TOOL_LABELS.GRIP_EDIT, hotkey: 'G' },
+      { id: 'move' as ToolType, icon: Move, label: DXF_EDITING_TOOL_LABELS.MOVE, hotkey: 'M' },
+      { id: 'copy' as ToolType, icon: Copy, label: DXF_EDITING_TOOL_LABELS.COPY, hotkey: 'Ctrl+C' },
+      { id: 'delete' as ToolType, icon: Trash2, label: DXF_EDITING_TOOL_LABELS.DELETE, hotkey: 'Del' },
     ]
   },
   {
     name: 'Μετρήσεις',
     tools: [
-      { id: 'measure-distance' as ToolType, icon: Ruler, label: 'Μέτρηση Απόστασης', hotkey: 'D' },
-      { id: 'measure-area' as ToolType, icon: Calculator, label: 'Μέτρηση Εμβαδού', hotkey: 'A' },
+      // ✅ CENTRALIZED: Using DXF_MEASUREMENT_TOOL_LABELS from central system - ZERO HARDCODED VALUES
+      { id: 'measure-distance' as ToolType, icon: Ruler, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_DISTANCE, hotkey: 'D' },
+      { id: 'measure-area' as ToolType, icon: Calculator, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_AREA, hotkey: 'A' },
       { 
         id: 'measure-angle' as ToolType, 
         icon: AngleIcon, 
-        label: 'Μέτρηση Γωνίας', 
+        label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_ANGLE,
         hotkey: 'T',
         dropdownOptions: [
-          { id: 'measure-angle' as ToolType, icon: AngleIcon, label: 'Μέτρηση Γωνίας (Βασική)' },
-          { id: 'measure-angle-line-arc' as ToolType, icon: AngleLineArcIcon, label: 'Γραμμή + Τόξο/Κύκλο' },
-          { id: 'measure-angle-two-arcs' as ToolType, icon: AngleTwoArcsIcon, label: 'Δύο Τόξα/Κύκλοι' },
-          { id: 'measure-angle-measuregeom' as ToolType, icon: AngleMeasureGeomIcon, label: 'Μετρητής MEASUREGEOM' },
-          { id: 'measure-angle-constraint' as ToolType, icon: AngleConstraintIcon, label: 'Παραμετρικό Angle Constraint' }
+          // ✅ CENTRALIZED: Angle measurement variations - ZERO HARDCODED VALUES
+          { id: 'measure-angle' as ToolType, icon: AngleIcon, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_ANGLE_BASIC },
+          { id: 'measure-angle-line-arc' as ToolType, icon: AngleLineArcIcon, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_ANGLE_LINE_ARC },
+          { id: 'measure-angle-two-arcs' as ToolType, icon: AngleTwoArcsIcon, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_ANGLE_TWO_ARCS },
+          { id: 'measure-angle-measuregeom' as ToolType, icon: AngleMeasureGeomIcon, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_ANGLE_MEASUREGEOM },
+          { id: 'measure-angle-constraint' as ToolType, icon: AngleConstraintIcon, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_ANGLE_CONSTRAINT }
         ]
       },
     ]
@@ -86,10 +102,11 @@ export const toolGroups = [
   {
     name: 'Εστίαση',
     tools: [
-      { id: 'zoom-in' as ToolType, icon: ZoomIn, label: 'Zoom In', hotkey: '+' },
-      { id: 'zoom-out' as ToolType, icon: ZoomOut, label: 'Zoom Out', hotkey: '-' },
-      { id: 'zoom-window' as ToolType, icon: Maximize2, label: 'Zoom Window', hotkey: 'W' },
-      { id: 'zoom-extents' as ToolType, icon: Maximize, label: 'Zoom Extents', hotkey: 'F' },
+      // ✅ CENTRALIZED: Using DXF_ZOOM_TOOL_LABELS from central system - ZERO HARDCODED VALUES
+      { id: 'zoom-in' as ToolType, icon: ZoomIn, label: DXF_ZOOM_TOOL_LABELS.ZOOM_IN, hotkey: '+' },
+      { id: 'zoom-out' as ToolType, icon: ZoomOut, label: DXF_ZOOM_TOOL_LABELS.ZOOM_OUT, hotkey: '-' },
+      { id: 'zoom-window' as ToolType, icon: Maximize2, label: DXF_ZOOM_TOOL_LABELS.ZOOM_WINDOW, hotkey: 'W' },
+      { id: 'zoom-extents' as ToolType, icon: Maximize, label: DXF_ZOOM_TOOL_LABELS.ZOOM_EXTENTS, hotkey: 'F' },
     ]
   }
 ];
@@ -106,7 +123,8 @@ export const createActionButtons = (props: {
   { 
     id: 'undo', 
     icon: Undo, 
-    label: 'Αναίρεση', 
+    // ✅ CENTRALIZED: Using DXF_UTILITY_TOOL_LABELS from central system - ZERO HARDCODED VALUES
+    label: DXF_UTILITY_TOOL_LABELS.UNDO,
     hotkey: 'Ctrl+Z',
     disabled: !props.canUndo,
     onClick: () => props.onAction('undo')
@@ -114,7 +132,7 @@ export const createActionButtons = (props: {
   {
     id: 'redo',
     icon: Redo,
-    label: 'Επανάληψη',
+    label: DXF_UTILITY_TOOL_LABELS.REDO,
     hotkey: 'Ctrl+Y',
     disabled: !props.canRedo,
     onClick: () => props.onAction('redo')
@@ -122,7 +140,7 @@ export const createActionButtons = (props: {
   {
     id: 'cursor-settings',
     icon: Crosshair,
-    label: 'Ρυθμίσεις Cursor', 
+    label: DXF_UTILITY_TOOL_LABELS.CURSOR_SETTINGS,
     hotkey: 'Ctrl+Shift+C',
     active: props.showCursorSettings,
     onClick: () => props.onAction('toggle-cursor-settings')
@@ -146,7 +164,7 @@ export const createActionButtons = (props: {
   {
     id: 'fit',
     icon: Focus,
-    label: 'Fit to View',
+    label: DXF_UTILITY_TOOL_LABELS.FIT_TO_VIEW,
     hotkey: 'F',
     active: false, // 🔥 Add active state - στιγμιαίο action, όχι toggle
     disabled: false, // 🔥 Ensure it's not disabled
@@ -155,14 +173,14 @@ export const createActionButtons = (props: {
   {
     id: 'export',
     icon: Download,
-    label: 'Export',
+    label: DXF_UTILITY_TOOL_LABELS.EXPORT,
     hotkey: 'Ctrl+E',
     onClick: () => props.onAction('export')
   },
   {
     id: 'tests',
     icon: FlaskConical,
-    label: 'Run Tests',
+    label: DXF_UTILITY_TOOL_LABELS.RUN_TESTS,
     hotkey: 'Ctrl+Shift+T',
     onClick: () => props.onAction('run-tests')
   }

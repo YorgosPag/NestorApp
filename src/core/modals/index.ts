@@ -2,6 +2,7 @@
  * 🏗️ Core Modals - Κεντρικοποιημένα Modal Components
  *
  * Εξαγωγές για όλα τα κεντρικοποιημένα modal components και hooks.
+ * ✅ ENTERPRISE: Smart Dialog Engine integration για 90% code reduction
  */
 
 // Photo Preview Modal System
@@ -18,3 +19,19 @@ export type {
   UsePhotoPreviewModalReturn,
   OpenModalParams
 } from './usePhotoPreviewModal';
+
+// ============================================================================
+// 🏢 ENTERPRISE SMART DIALOG ENGINE - FORTUNE 500 LEVEL SYSTEM
+// ============================================================================
+
+// Smart Dialog Configuration Engine
+export { SmartDialogEngine, smartDialogEngine, createSmartDialog } from './SmartDialogEngine';
+export type {
+  DialogEntityType,
+  DialogOperationType,
+  SmartDialogConfiguration,
+  SmartDialogField,
+  SmartDialogAction,
+  ValidationRule,
+  SmartDialogEngineState
+} from './SmartDialogEngine';

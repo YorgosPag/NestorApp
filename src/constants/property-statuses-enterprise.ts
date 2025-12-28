@@ -1234,3 +1234,507 @@ export const BUILDING_NAME_FILTER_LABELS = {
   CONTAINS_TOWER: 'Περιέχει "Πύργο"',
   CONTAINS_COMPLEX: 'Περιέχει "Συγκρότημα"'
 } as const;
+
+// ============================================================================
+// 🎛️ DXF VIEWER TOOL LABELS - ZERO HARDCODED VALUES
+// ============================================================================
+//
+// 🎯 FORTUNE 500 CENTRALIZATION: DXF Viewer tool labels
+// Migrated from toolDefinitions.ts hardcoded strings
+// Single source of truth για όλα τα DXF tool labels
+//
+// ============================================================================
+
+/**
+ * DXF Selection Tool Labels
+ */
+export const DXF_SELECTION_TOOL_LABELS = {
+  SELECT: 'Επιλογή',
+  PAN: 'Μετακίνηση'
+} as const;
+
+/**
+ * DXF Drawing Tool Labels
+ */
+export const DXF_DRAWING_TOOL_LABELS = {
+  LINE: 'Γραμμή',
+  RECTANGLE: 'Ορθογώνιο',
+  CIRCLE_RADIUS: 'Κύκλος (Ακτίνα)',
+  CIRCLE_DIAMETER: 'Κύκλος (Διάμετρος)',
+  CIRCLE_2P_DIAMETER: '2P – Διάμετρος',
+  CIRCLE_3P: '3P – Κύκλος',
+  CIRCLE_CHORD_SAGITTA: 'Χορδή + Βέλος',
+  CIRCLE_2P_RADIUS: '2P + R',
+  CIRCLE_BEST_FIT: 'N Σημεία (Best-Fit)',
+  POLYLINE: 'Πολυγραμμή',
+  POLYGON: 'Πολύγωνο',
+  LAYERING: 'Layering'
+} as const;
+
+/**
+ * DXF Editing Tool Labels
+ */
+export const DXF_EDITING_TOOL_LABELS = {
+  GRIP_EDIT: 'Επεξεργασία',
+  MOVE: 'Μετακίνηση',
+  COPY: 'Αντιγραφή',
+  DELETE: 'Διαγραφή'
+} as const;
+
+/**
+ * DXF Measurement Tool Labels
+ */
+export const DXF_MEASUREMENT_TOOL_LABELS = {
+  MEASURE_DISTANCE: 'Μέτρηση Απόστασης',
+  MEASURE_AREA: 'Μέτρηση Εμβαδού',
+  MEASURE_ANGLE: 'Μέτρηση Γωνίας',
+  MEASURE_ANGLE_BASIC: 'Μέτρηση Γωνίας (Βασική)',
+  MEASURE_ANGLE_LINE_ARC: 'Γραμμή + Τόξο/Κύκλο',
+  MEASURE_ANGLE_TWO_ARCS: 'Δύο Τόξα/Κύκλοι',
+  MEASURE_ANGLE_MEASUREGEOM: 'Μετρητής MEASUREGEOM',
+  MEASURE_ANGLE_CONSTRAINT: 'Παραμετρικό Angle Constraint'
+} as const;
+
+/**
+ * DXF Zoom Tool Labels
+ */
+export const DXF_ZOOM_TOOL_LABELS = {
+  ZOOM_IN: 'Zoom In',
+  ZOOM_OUT: 'Zoom Out',
+  ZOOM_WINDOW: 'Zoom Window',
+  ZOOM_EXTENTS: 'Zoom Extents'
+} as const;
+
+/**
+ * DXF Utility Tool Labels
+ */
+export const DXF_UTILITY_TOOL_LABELS = {
+  UNDO: 'Αναίρεση',
+  REDO: 'Επανάληψη',
+  CURSOR_SETTINGS: 'Ρυθμίσεις Cursor',
+  FIT_TO_VIEW: 'Fit to View',
+  EXPORT: 'Export',
+  RUN_TESTS: 'Run Tests'
+} as const;
+
+// ============================================================================
+// 📋 CONTACT FORM FIELD LABELS - ZERO HARDCODED VALUES
+// ============================================================================
+//
+// 🎯 FORTUNE 500 CENTRALIZATION: Contact form field labels
+// Migrated from individual-config.ts and company-config.ts hardcoded strings
+// Single source of truth για όλα τα contact form field labels
+//
+// ============================================================================
+
+/**
+ * Personal Information Form Field Labels
+ */
+export const PERSONAL_INFO_FIELD_LABELS = {
+  FIRST_NAME: 'Όνομα',
+  LAST_NAME: 'Επώνυμο',
+  FATHER_NAME: 'Πατρώνυμο',
+  MOTHER_NAME: 'Μητρώνυμο',
+  BIRTH_DATE: 'Ημερομηνία Γέννησης',
+  BIRTH_COUNTRY: 'Χώρα Γέννησης',
+  GENDER: 'Φύλο'
+} as const;
+
+/**
+ * Identity Document Form Field Labels
+ */
+export const IDENTITY_DOCUMENT_FIELD_LABELS = {
+  AMKA: 'ΑΜΚΑ',
+  DOCUMENT_TYPE: 'Τύπος Εγγράφου',
+  DOCUMENT_ISSUER: 'Εκδούσα Αρχή',
+  DOCUMENT_NUMBER: 'Αριθμός Εγγράφου',
+  DOCUMENT_ISSUE_DATE: 'Ημερομηνία Έκδοσης',
+  DOCUMENT_EXPIRY_DATE: 'Ημερομηνία Λήξης'
+} as const;
+
+/**
+ * Tax Information Form Field Labels
+ */
+export const TAX_INFO_FIELD_LABELS = {
+  VAT_NUMBER: 'ΑΦΜ',
+  TAX_OFFICE: 'ΔΟΥ'
+} as const;
+
+/**
+ * Professional Information Form Field Labels
+ */
+export const PROFESSIONAL_INFO_FIELD_LABELS = {
+  PROFESSION: 'Επάγγελμα',
+  SPECIALTY: 'Ειδικότητα',
+  EMPLOYER: 'Επιχείρηση/Εργοδότης',
+  POSITION: 'Θέση/Ρόλος'
+} as const;
+
+/**
+ * Address Information Form Field Labels
+ */
+export const ADDRESS_INFO_FIELD_LABELS = {
+  STREET: 'Οδός',
+  STREET_NUMBER: 'Αριθμός',
+  CITY: 'Πόλη',
+  POSTAL_CODE: 'Τ.Κ.'
+} as const;
+
+/**
+ * Contact Information Form Field Labels
+ */
+export const CONTACT_INFO_FIELD_LABELS = {
+  COMMUNICATION: 'Επικοινωνία'
+} as const;
+
+// ============================================================================
+// 🏗️ DXF ENTITIES SETTINGS LABELS - ZERO HARDCODED VALUES
+// ============================================================================
+//
+// 🎯 FORTUNE 500 CENTRALIZATION: DXF Entities Settings Labels
+// Migrated from EntitiesSettings.tsx hardcoded strings
+// Single source of truth για όλα τα DXF entities settings labels
+//
+// ============================================================================
+
+/**
+ * DXF Settings Tab Labels
+ */
+export const DXF_SETTINGS_TAB_LABELS = {
+  DRAWING: 'Σχεδίαση',
+  MEASUREMENTS: 'Μετρήσεις',
+  DRAFT: 'Προσχεδίαση',
+  COMPLETION: 'Ολοκλήρωση',
+  HOVER: 'Hover',
+  SELECTION: 'Επιλογή'
+} as const;
+
+/**
+ * DXF Settings Override Labels
+ */
+export const DXF_SETTINGS_OVERRIDE_LABELS = {
+  OVERRIDE_GLOBAL_SETTINGS: 'Παράκαμψη Γενικών Ρυθμίσεων'
+} as const;
+
+/**
+ * DXF Drawing Tool Labels (Simple - without context)
+ */
+export const DXF_DRAWING_SIMPLE_LABELS = {
+  LINE: 'Γραμμή',
+  RECTANGLE: 'Ορθογώνιο',
+  CIRCLE: 'Κύκλος',
+  POLYLINE: 'Πολυγραμμή',
+  POLYGON: 'Πολύγωνο'
+} as const;
+
+/**
+ * DXF Measurement Tool Labels (Simple)
+ */
+export const DXF_MEASUREMENT_SIMPLE_LABELS = {
+  DISTANCE: 'Απόσταση',
+  AREA: 'Εμβαδόν',
+  ANGLE: 'Γωνία'
+} as const;
+
+// ============================================================================
+// 🏢 COMPANY FORM FIELD LABELS - ZERO HARDCODED VALUES
+// ============================================================================
+//
+// 🎯 FORTUNE 500 CENTRALIZATION: Company Form Field Labels
+// Migrated from company-config.ts hardcoded strings
+// Single source of truth για όλα τα company form field labels
+//
+// ============================================================================
+
+/**
+ * Company Basic Information Field Labels
+ */
+export const COMPANY_BASIC_INFO_LABELS = {
+  COMPANY_NAME: 'Επωνυμία Εταιρείας',
+  TRADE_NAME: 'Διακριτικός Τίτλος',
+  LEGAL_FORM: 'Νομική Μορφή'
+} as const;
+
+/**
+ * GEMI Information Field Labels
+ */
+export const COMPANY_GEMI_INFO_LABELS = {
+  GEMI_NUMBER: 'Αριθμός ΓΕΜΗ',
+  GEMI_STATUS: 'Κατάσταση ΓΕΜΗ',
+  CHAMBER: 'Επιμελητήριο',
+  ACTIVITY_CODE_KAD: 'Κωδικός Δραστηριότητας (ΚΑΔ)',
+  ACTIVITY_DESCRIPTION: 'Περιγραφή Δραστηριότητας'
+} as const;
+
+/**
+ * Company Contact Information Field Labels
+ */
+export const COMPANY_CONTACT_INFO_LABELS = {
+  PHONE_CENTRAL: 'Τηλέφωνο Κεντρικής',
+  EMAIL_CONTACT: 'E-mail Επικοινωνίας',
+  WEBSITE: 'Ιστοσελίδα'
+} as const;
+
+/**
+ * GEMI Status Option Labels
+ */
+export const COMPANY_GEMI_STATUS_OPTIONS = {
+  ACTIVE: 'Ενεργή',
+  INACTIVE: 'Ανενεργή',
+  SUSPENDED: 'Αναστολή Λειτουργίας',
+  DISSOLUTION: 'Σε Διαδικασία Λύσης'
+} as const;
+
+// ============================================================================
+// 🏛️ SERVICE FORM FIELD LABELS - ZERO HARDCODED VALUES
+// ============================================================================
+//
+// 🎯 FORTUNE 500 CENTRALIZATION: Service Form Field Labels
+// Migrated from service-config.ts hardcoded strings
+// Single source of truth για όλα τα service form field labels
+//
+// ============================================================================
+
+/**
+ * Service Administrative Information Field Labels
+ */
+export const SERVICE_ADMINISTRATIVE_INFO_LABELS = {
+  LEGAL_STATUS: 'Νομικό Καθεστώς',
+  ESTABLISHMENT_LAW: 'Νόμος Ίδρυσης',
+  HEAD_TITLE: 'Τίτλος Προϊσταμένου',
+  HEAD_NAME: 'Όνομα Προϊσταμένου'
+} as const;
+
+/**
+ * Service Responsibilities Field Labels
+ */
+export const SERVICE_RESPONSIBILITIES_LABELS = {
+  MAIN_RESPONSIBILITIES: 'Κύριες Αρμοδιότητες',
+  CITIZEN_SERVICES: 'Υπηρεσίες προς Πολίτες',
+  ONLINE_SERVICES: 'Ηλεκτρονικές Υπηρεσίες',
+  SERVICE_HOURS: 'Ώρες Εξυπηρέτησης'
+} as const;
+
+// ============================================================================
+// 🅿️ PARKING TABLE COLUMN LABELS - ZERO HARDCODED VALUES
+// ============================================================================
+//
+// 🎯 FORTUNE 500 CENTRALIZATION: Parking Table Column Labels
+// Migrated from parking-spot-table/columns.ts hardcoded strings
+// Single source of truth για όλα τα parking table column labels
+//
+// ============================================================================
+
+/**
+ * Parking Table Column Labels
+ */
+export const PARKING_TABLE_COLUMN_LABELS = {
+  CODE: 'Κωδικός',
+  TYPE: 'Τύπος',
+  PROPERTY_CODE: 'Ακίνητο',
+  LEVEL: 'Επίπεδο',
+  AREA: 'τ.μ.',
+  PRICE: 'Τιμή',
+  VALUE: 'Αντ. Αξία',
+  VALUE_WITH_SYNDICATE: 'Αντ. Αξία Με Συνιδιοκτησία',
+  STATUS: 'Κατάσταση',
+  OWNER: 'Ιδιοκτήτης',
+  FLOOR_PLAN: 'Κάτοψη',
+  CONSTRUCTED_BY: 'Καταχωρήθηκε Από',
+  ACTIONS: 'Ενέργειες'
+} as const;
+
+// ============================================================================
+// 🔗 RELATIONSHIP TYPE LABELS (Contact Management)
+// ============================================================================
+
+/**
+ * 🔗 Relationship Type Labels - Professional Categories
+ *
+ * ✅ ENTERPRISE: Centralized relationship type labels
+ * ✅ ZERO HARDCODED VALUES: Single source of truth
+ * ✅ Domain: Contact relationship management
+ */
+export const RELATIONSHIP_TYPE_LABELS = {
+  // 👥 Employment Relationships
+  EMPLOYEE: 'Υπάλληλος',
+  MANAGER: 'Προϊστάμενος',
+  DIRECTOR: 'Διευθυντής',
+  EXECUTIVE: 'Ανώτερο Στέλεχος',
+  INTERN: 'Εσωτερικός Εργαζόμενος',
+  CONTRACTOR: 'Εξωτερικός Συνεργάτης',
+  CONSULTANT: 'Σύμβουλος',
+
+  // 🏢 Corporate Relationships
+  SHAREHOLDER: 'Μέτοχος',
+  BOARD_MEMBER: 'Μέλος ΔΣ',
+  CHAIRMAN: 'Πρόεδρος ΔΣ',
+  CEO: 'Γενικός Διευθυντής',
+  REPRESENTATIVE: 'Εκπρόσωπος',
+  PARTNER: 'Συνεργάτης/Εταίρος',
+  VENDOR: 'Προμηθευτής',
+  CLIENT: 'Πελάτης',
+
+  // 🏛️ Government/Service Relationships
+  CIVIL_SERVANT: 'Δημόσιος Υπάλληλος',
+  ELECTED_OFFICIAL: 'Εκλεγμένο Πρόσωπο',
+  APPOINTED_OFFICIAL: 'Διορισμένο Πρόσωπο',
+  DEPARTMENT_HEAD: 'Προϊστάμενος Τμήματος',
+  MINISTRY_OFFICIAL: 'Στέλεχος Υπουργείου',
+  MAYOR: 'Δήμαρχος',
+  DEPUTY_MAYOR: 'Αντιδήμαρχος',
+  REGIONAL_GOVERNOR: 'Περιφερειάρχης',
+
+  // 🔗 Other Professional Relationships
+  ADVISOR: 'Σύμβουλος',
+  MENTOR: 'Μέντορας',
+  PROTEGE: 'Προστατευόμενος',
+  COLLEAGUE: 'Συνάδελφος',
+  SUPPLIER: 'Προμηθευτής',
+  CUSTOMER: 'Πελάτης',
+  COMPETITOR: 'Ανταγωνιστής',
+  OTHER: 'Άλλο'
+} as const;
+
+/**
+ * 📊 Employment Status Labels - Detailed Work Classification
+ *
+ * ✅ ENTERPRISE: Employment status labels for HR tracking
+ * ✅ Aligned with Greek labor law and EU standards
+ */
+export const EMPLOYMENT_STATUS_LABELS = {
+  FULL_TIME: 'Πλήρης απασχόληση',
+  PART_TIME: 'Μερική απασχόληση',
+  CONTRACT: 'Σύμβαση έργου',
+  TEMPORARY: 'Προσωρινός',
+  SEASONAL: 'Εποχιακός',
+  VOLUNTEER: 'Εθελοντής',
+  RETIRED: 'Συνταξιούχος',
+  ON_LEAVE: 'Σε άδεια',
+  TERMINATED: 'Τερματισμένος'
+} as const;
+
+// ============================================================================
+// 🏗️ PROJECT TAB LABELS (Project Management)
+// ============================================================================
+
+/**
+ * 🏗️ Project Tab Labels - Project Management Interface
+ *
+ * ✅ ENTERPRISE: Centralized project tab labels
+ * ✅ ZERO HARDCODED VALUES: Single source of truth
+ * ✅ Domain: Project navigation and organization
+ */
+export const PROJECT_TAB_LABELS = {
+  // Core Project Tabs
+  GENERAL: 'Γενικά Έργου',
+  FLOORPLAN: 'Κάτοψη Έργου',
+  PARKING_FLOORPLAN: 'Κάτοψη Θ.Σ.',
+  STRUCTURE: 'Δομή Έργου',
+  TIMELINE: 'Timeline',
+  CUSTOMERS: 'Πελάτες',
+  BUILDING_DATA: 'Στοιχεία Δόμησης',
+  PARKING: 'Θέσεις Στάθμευσης',
+  CONTRIBUTORS: 'Συντελεστές',
+  DOCUMENTS: 'Έγγραφα Έργου',
+  IKA: 'IKA',
+  PHOTOS: 'Φωτογραφίες',
+  VIDEOS: 'Βίντεο'
+} as const;
+
+/**
+ * 📝 Project Tab Descriptions - Detailed Information
+ *
+ * ✅ ENTERPRISE: Tab description labels for tooltips/help
+ */
+export const PROJECT_TAB_DESCRIPTIONS = {
+  GENERAL: 'Βασικές πληροφορίες και στοιχεία του έργου',
+  FLOORPLAN: 'Αρχιτεκτονική κάτοψη και σχέδια του έργου',
+  PARKING_FLOORPLAN: 'Κάτοψη και διάταξη θέσεων στάθμευσης',
+  STRUCTURE: 'Οργανωτική δομή και ιεραρχία του έργου',
+  TIMELINE: 'Χρονοδιάγραμμα και ορόσημα του έργου',
+  CUSTOMERS: 'Πελάτες και αγοραστές του έργου',
+  BUILDING_DATA: 'Τεχνικά στοιχεία και παράμετροι δόμησης',
+  PARKING: 'Διαχείριση και κατανομή θέσεων στάθμευσης',
+  CONTRIBUTORS: 'Συντελεστές, εργολάβοι και συνεργάτες',
+  DOCUMENTS: 'Συμβάσεις, άδειες και νομικά έγγραφα',
+  IKA: 'Στοιχεία IKA και ασφαλιστικές υποχρεώσεις',
+  PHOTOS: 'Φωτογραφίες προόδου και ολοκληρωμένου έργου',
+  VIDEOS: 'Βίντεο παρουσίασης και τεκμηρίωσης του έργου'
+} as const;
+
+/**
+ * 🏷️ Project Component Props Labels
+ *
+ * ✅ ENTERPRISE: Component title labels for FloorplanViewer
+ */
+export const PROJECT_COMPONENT_LABELS = {
+  FLOORPLAN_TITLE: 'Κάτοψη Έργου',
+  PARKING_FLOORPLAN_TITLE: 'Κάτοψη Θέσεων Στάθμευσης'
+} as const;
+
+// ============================================================================
+// 🏢 BUILDING TOOLBAR LABELS (Building Management Interface)
+// ============================================================================
+
+/**
+ * 🏢 Building Toolbar Action Labels - Building Management
+ *
+ * ✅ ENTERPRISE: Centralized building toolbar action labels
+ * ✅ ZERO HARDCODED VALUES: Single source of truth
+ * ✅ Domain: Building management interface
+ */
+export const BUILDING_TOOLBAR_LABELS = {
+  // Primary Actions
+  NEW_BUILDING: 'Νέο Κτίριο',
+  EDIT_BUILDING: 'Επεξεργασία',
+  DELETE_BUILDING: 'Διαγραφή',
+
+  // Secondary Actions
+  EXPORT: 'Εξαγωγή',
+  IMPORT: 'Εισαγωγή',
+  REFRESH: 'Ανανέωση',
+  ARCHIVE: 'Αρχειοθέτηση',
+  FAVORITES: 'Αγαπημένα',
+  HELP: 'Βοήθεια',
+
+  // Filter Labels
+  STATUS_FILTER: 'Κατάσταση',
+  TYPE_FILTER: 'Τύπος',
+  SORT_FILTER: 'Ταξινόμηση'
+} as const;
+
+/**
+ * 🔍 Building Toolbar Tooltips - Help Text
+ *
+ * ✅ ENTERPRISE: Tooltip labels for building toolbar actions
+ */
+export const BUILDING_TOOLBAR_TOOLTIPS = {
+  NEW_BUILDING: 'Προσθήκη νέου κτιρίου (Ctrl+N)',
+  EDIT_BUILDING: 'Επεξεργασία επιλεγμένου κτιρίου (Ctrl+E)',
+  DELETE_BUILDING_SINGLE: 'Διαγραφή κτιρίου',
+  DELETE_BUILDING_MULTIPLE: 'κτιρίου/ων',
+  EXPORT_DATA: 'Εξαγωγή δεδομένων',
+  IMPORT_DATA: 'Εισαγωγή δεδομένων',
+  REFRESH_DATA: 'Ανανέωση δεδομένων (F5)',
+  ARCHIVE_SELECTED: 'Αρχειοθέτηση επιλεγμένων',
+  ADD_TO_FAVORITES: 'Προσθήκη στα αγαπημένα',
+  SHOW_HELP: 'Βοήθεια και οδηγίες (F1)'
+} as const;
+
+/**
+ * 🏷️ Building Toolbar UI Labels - Interface Text
+ *
+ * ✅ ENTERPRISE: UI text for building toolbar interface
+ */
+export const BUILDING_TOOLBAR_UI_LABELS = {
+  SEARCH_PLACEHOLDER: 'Αναζήτηση κτιρίων...',
+  BUILDING_STATUS_LABEL: 'Κατάσταση κτιρίου',
+  BUILDING_TYPE_LABEL: 'Τύπος κτιρίου',
+  BUILDING_SORTING_LABEL: 'Ταξινόμηση κτιρίων',
+  SORT_ASCENDING: 'Αύξουσα (A-Z)',
+  SORT_DESCENDING: 'Φθίνουσα (Z-A)',
+  SORT_BY_DATE: 'Κατά ημερομηνία',
+  SORT_BY_SIZE: 'Κατά μέγεθος',
+  SELECTED_BUILDINGS: 'επιλεγμένα κτίρια'
+} as const;

@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import SelectCompanyContactModal from '../dialogs/SelectCompanyContactModal';
+import { SelectCompanyContactModal } from '../dialogs/SelectCompanyContactModal';
 import type { Contact } from '@/types/contacts';
 import { addCompanyToNavigation, getNavigationCompanyIds } from '@/services/navigation-companies.service';
 import { NavigationApiService } from '../core/services/navigationApi';
