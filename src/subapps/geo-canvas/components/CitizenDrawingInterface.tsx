@@ -232,7 +232,7 @@ export function CitizenDrawingInterface({
   useEffect(() => {
     if (lastPointPolygonId && selectedTool === 'point') {
       updatePolygonConfig(lastPointPolygonId, { radius: pointRadius });
-      console.log('🔄 Updated point polygon radius:', lastPointPolygonId, pointRadius);
+      console.log('Updated point polygon radius:', lastPointPolygonId, pointRadius);
     }
   }, [lastPointPolygonId, pointRadius, selectedTool, updatePolygonConfig]);
 

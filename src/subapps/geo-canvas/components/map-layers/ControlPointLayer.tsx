@@ -90,7 +90,7 @@ export const ControlPointLayer: React.FC<ControlPointLayerProps> = memo(({
                 isPolygonComplete
                   ? `${cp.id} - ✅ ΚΛΕΙΣΤΟ Πολύγωνο (±${cp.accuracy}m)`
                   : shouldHighlightFirst
-                  ? `${cp.id} - 🔄 Κάντε κλικ για ΚΛΕΙΣΙΜΟ πολυγώνου (±${cp.accuracy}m)`
+                  ? `${cp.id} - ↻ Κάντε κλικ για ΚΛΕΙΣΙΜΟ πολυγώνου (±${cp.accuracy}m)`
                   : `${cp.id} (±${cp.accuracy}m)`
               }
               onClick={(e) => {

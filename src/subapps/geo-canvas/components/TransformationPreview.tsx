@@ -6,7 +6,7 @@ import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { BarChart3 } from 'lucide-react';
+import { BarChart3, RefreshCw } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { dxfGeoTransformService } from '../services/geo-transform/DxfGeoTransform';
 import type { DxfCoordinate, GeoCoordinate, SpatialEntity } from '../types';
@@ -435,7 +435,8 @@ export function TransformationPreview({
       {
         action: 'refresh' as const,
         variant: 'primary' as const,
-        label: '🔄 Refresh Preview',
+        label: 'Refresh Preview',
+        icon: RefreshCw,
         onClick: processTransformation,
         disabled: !transformState.isCalibrated || !dxfScene
       }
@@ -494,7 +495,8 @@ export function TransformationPreview({
       {/* Header */}
       <div className={`${colors.bg.primary} rounded-lg p-4`}>
         <h2 className={`text-xl font-bold ${colors.text.accent} mb-2`}>
-          🔄 Transformation Preview
+          <RefreshCw className={iconSizes.sm} style={{ display: 'inline-block', marginRight: '8px' }} />
+          Transformation Preview
         </h2>
         <p className={`text-sm ${colors.text.muted}`}>
           Real-time DXF → Geographic visualization

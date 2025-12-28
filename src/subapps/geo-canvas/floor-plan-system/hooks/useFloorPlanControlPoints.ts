@@ -95,7 +95,7 @@ export function useFloorPlanControlPoints(): UseFloorPlanControlPointsReturn {
   // ===================================================================
 
   useEffect(() => {
-    console.log('🔄 pickingState changed to:', pickingState);
+    console.log('pickingState changed to:', pickingState);
     pickingStateRef.current = pickingState; // Update ref immediately
   }, [pickingState]);
 

@@ -8,6 +8,9 @@
 export { colors, semanticColors, spacing, typography, borderRadius, borders } from '../design-tokens';
 export { canvasUtilities, performanceComponents, configurationComponents } from '../design-tokens';
 
+// Component-specific design tokens
+export * from './components/user-type';
+
 // Default fallback export
 const designTokens = require('../design-tokens.ts');
 module.exports = designTokens;

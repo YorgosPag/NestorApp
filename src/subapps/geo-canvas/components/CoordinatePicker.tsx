@@ -8,7 +8,7 @@ import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effect
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { Square, Clipboard, Globe, ClipboardList, MapPin } from 'lucide-react';
+import { Square, Clipboard, Globe, ClipboardList, MapPin, RefreshCw } from 'lucide-react';
 // 🏭 SMART ACTION FACTORY - ZERO DUPLICATES
 import { createSmartActionGroup } from '@/core/actions/SmartActionFactory';
 
@@ -417,7 +417,8 @@ export function CoordinatePicker({
         {
           action: 'reset',
           variant: 'warning',
-          label: '🔄 Reset',
+          label: 'Reset',
+          icon: RefreshCw,
           onClick: resetForm
         },
         {

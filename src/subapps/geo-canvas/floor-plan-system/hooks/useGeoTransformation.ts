@@ -217,7 +217,7 @@ export function useGeoTransformation(
    */
   const calculate = useCallback(() => {
     if (debug) {
-      console.log('🔄 useGeoTransformation: Calculating...', {
+      console.log('useGeoTransformation: Calculating...', {
         pointCount: controlPoints.length,
         minRequired: MIN_CONTROL_POINTS
       });
@@ -264,7 +264,7 @@ export function useGeoTransformation(
    */
   const recalculate = useCallback(() => {
     if (debug) {
-      console.log('🔄 Manual recalculation triggered');
+      console.log('Manual recalculation triggered');
     }
     calculate();
   }, [calculate, debug]);
@@ -294,7 +294,7 @@ export function useGeoTransformation(
     }
 
     if (debug) {
-      console.log('🔄 Control points changed, auto-recalculating...', {
+      console.log('Control points changed, auto-recalculating...', {
         count: controlPoints.length,
         pointsKey
       });

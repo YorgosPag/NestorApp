@@ -494,11 +494,11 @@ export class GeoAlertPerformanceOptimization {
 
     // Setup CDN security
     if (this.cdnConfig.securitySettings.enableWAF) {
-      console.log('🛡️ WAF protection enabled');
+      console.log('WAF protection enabled');
     }
 
     if (this.cdnConfig.securitySettings.enableDDoSProtection) {
-      console.log('🛡️ DDoS protection enabled');
+      console.log('DDoS protection enabled');
     }
   }
 

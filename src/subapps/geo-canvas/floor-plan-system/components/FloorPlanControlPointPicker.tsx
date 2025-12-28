@@ -30,6 +30,7 @@ import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { canvasUtilities } from '@/styles/design-tokens';
 import { layoutUtilities } from '@/styles/design-tokens';
+import { draggablePanelContainer, draggablePanelHandle } from '../../components/InteractiveMap.styles';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { CheckCircle, AlertTriangle, Info, MapPin } from 'lucide-react';
@@ -402,12 +403,12 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
     <div
       ref={panelRef}
       className={`floor-plan-control-point-picker ${className}`}
-      style={canvasUtilities.geoInteractive.draggablePanelContainer(position, isDragging)}
+      style={draggablePanelContainer(position, isDragging)}
     >
       {/* 🖱️ DRAG HANDLE */}
       <div
         onMouseDown={handleMouseDown}
-        style={canvasUtilities.geoInteractive.draggablePanelHandle(isDragging)}
+        style={draggablePanelHandle(isDragging)}
       >
         <span><MapPin className={iconSizes.sm} style={{ display: 'inline-block', marginRight: '6px' }} />{t('floorPlanControlPoints.title')}</span>
         <span style={layoutUtilities.cssVars.helpText.small}>✋ {t('floorPlanControlPoints.dragHandle')}</span>

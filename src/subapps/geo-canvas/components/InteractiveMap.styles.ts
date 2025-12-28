@@ -403,6 +403,57 @@ export const radiusToPixels = (radiusInMeters: number, zoomLevel: number): numbe
   return radiusInMeters * pixelsPerMeter;
 };
 
+/**
+ * 🎯 DRAGGABLE PANEL CONTAINER UTILITY
+ * Styling for draggable panels in the geo interface
+ * Replaces: canvasUtilities.geoInteractive.draggablePanelContainer()
+ */
+export const draggablePanelContainer = (
+  position: { x: number; y: number },
+  isDragging: boolean,
+  width?: number
+): CSSProperties => ({
+  position: 'absolute',
+  left: `${position.x}px`,
+  top: `${position.y}px`,
+  width: width ? `${width}px` : 'auto',
+  minWidth: '200px',
+  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+  border: '1px solid #e5e5e5',
+  borderRadius: '8px',
+  boxShadow: isDragging
+    ? '0 8px 25px -5px rgba(0, 0, 0, 0.3)'
+    : '0 4px 15px -3px rgba(0, 0, 0, 0.2)',
+  zIndex: 1000,
+  cursor: isDragging ? 'grabbing' : 'auto',
+  userSelect: 'none' as const,
+  backdropFilter: 'blur(4px)',
+  transform: isDragging ? 'scale(1.02)' : 'scale(1)',
+  transition: isDragging ? 'none' : 'all 0.2s ease-in-out'
+});
+
+/**
+ * 🎯 DRAGGABLE PANEL HANDLE UTILITY
+ * Styling for draggable panel handles
+ * Replaces: canvasUtilities.geoInteractive.draggablePanelHandle()
+ */
+export const draggablePanelHandle = (isDragging: boolean): CSSProperties => ({
+  padding: '8px 12px',
+  backgroundColor: isDragging ? '#f3f4f6' : '#f9fafb',
+  borderBottom: '1px solid #e5e7eb',
+  borderTopLeftRadius: '8px',
+  borderTopRightRadius: '8px',
+  cursor: isDragging ? 'grabbing' : 'grab',
+  userSelect: 'none' as const,
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  fontSize: '14px',
+  fontWeight: 500,
+  color: '#374151',
+  transition: isDragging ? 'none' : 'background-color 0.2s ease-in-out'
+});
+
 // ============================================================================
 // 🔒 TYPE EXPORTS - ENTERPRISE TYPE SAFETY
 // ============================================================================

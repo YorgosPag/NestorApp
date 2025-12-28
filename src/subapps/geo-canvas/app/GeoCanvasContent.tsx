@@ -31,6 +31,7 @@ import ErrorReportingDashboard from '@/components/development/ErrorReportingDash
 import { useAnalytics } from '@/services/AnalyticsBridge';
 import { TRANSITION_PRESETS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { canvasUtilities } from '@/styles/design-tokens';
+import { draggablePanelContainer } from '../components/InteractiveMap.styles';
 import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
 import { Globe, AlertCircle, Construction, CheckCircle, RefreshCcw } from 'lucide-react';
 import type { GeoCanvasAppProps } from '../types';
@@ -375,7 +376,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
       return prev;
     });
 
-    console.log(`🔄 Layer ${layerId} visibility: ${visible}`);
+    console.log(`Layer ${layerId} visibility: ${visible}`);
   }, []);
 
   const handleLayerOpacityChange = useCallback((layerId: string, opacity: number) => {
@@ -813,7 +814,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                 {/* CONTROL POINT PICKER (STEP 2.2) */}
                 {floorPlanUpload.result && floorPlanUpload.result.success && (isProfessional || isTechnical) && (
                   <div
-                    style={canvasUtilities.geoInteractive.draggablePanelContainer(
+                    style={draggablePanelContainer(
                       { x: 16, y: 16 },
                       false,
                       200
@@ -826,7 +827,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                 {/* 🏘️ CITIZEN DRAWING INTERFACE (Phase 2.2.2) */}
                 {isCitizen && (
                   <div
-                    style={canvasUtilities.geoInteractive.draggablePanelContainer(
+                    style={draggablePanelContainer(
                       { x: 16, y: 16 },
                       false,
                       200
@@ -853,7 +854,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                 {/* 🏢 PROFESSIONAL DRAWING INTERFACE (Phase 2.2.3) */}
                 {isProfessional && (
                   <div
-                    style={canvasUtilities.geoInteractive.draggablePanelContainer(
+                    style={draggablePanelContainer(
                       { x: 16, y: 16 },
                       false,
                       200
@@ -876,7 +877,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                 {/* 🛠️ TECHNICAL DRAWING INTERFACE (Phase 2.2.4) */}
                 {isTechnical && (
                   <div
-                    style={canvasUtilities.geoInteractive.draggablePanelContainer(
+                    style={draggablePanelContainer(
                       { x: 16, y: 16 },
                       false,
                       200
@@ -1059,7 +1060,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
   );
 }
 
-// **🛡️ ENTERPRISE ERROR BOUNDARY WRAPPER**
+// **ENTERPRISE ERROR BOUNDARY WRAPPER**
 // Wrap το GeoCanvasContent με PageErrorBoundary για enterprise error handling
 const GeoCanvasContentWithErrorBoundary = (props: GeoCanvasAppProps) => (
   <PageErrorBoundary
