@@ -20,6 +20,7 @@ import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { Map, Mountain, Moon, Flag, Palette, Circle, Satellite } from 'lucide-react';
 import type { GeoCoordinate } from '../../types';
 
 // ============================================================================
@@ -48,13 +49,13 @@ export interface GeoCoordinateDisplayProps {
 // ============================================================================
 
 const MAP_STYLE_ICONS = {
-  osm: '🗺️',
-  satellite: '🛰️',
-  terrain: '🏔️',
-  dark: '🌙',
-  greece: '🇬🇷',
-  watercolor: '🎨',
-  toner: '⚫'
+  osm: Map,
+  satellite: Satellite,
+  terrain: Mountain,
+  dark: Moon,
+  greece: Flag,
+  watercolor: Palette,
+  toner: Circle
 } as const;
 
 // ============================================================================
@@ -116,7 +117,10 @@ export const GeoCoordinateDisplay: React.FC<GeoCoordinateDisplayProps> = ({
                 title={mapStyleNames[style]}
                 aria-pressed={currentMapStyle === style}
               >
-                {MAP_STYLE_ICONS[style]}
+                {(() => {
+                  const IconComponent = MAP_STYLE_ICONS[style];
+                  return <IconComponent className={iconSizes.xs} />;
+                })()}
               </button>
             ))}
           </div>

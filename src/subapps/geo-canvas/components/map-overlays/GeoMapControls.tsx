@@ -16,12 +16,13 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { Map, Mountain, Moon, Flag, Palette, Circle, Satellite, ChevronDown, MapPin, Target, Recycle, FlaskConical, Gamepad2, Languages } from 'lucide-react';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
@@ -55,13 +56,13 @@ export interface GeoMapControlsProps {
 // ============================================================================
 
 const MAP_STYLE_OPTIONS = [
-  { value: 'osm', icon: '🗺️', labelKey: 'openStreetMap' },
-  { value: 'satellite', icon: '🛰️', labelKey: 'satellite' },
-  { value: 'terrain', icon: '🏔️', labelKey: 'terrain' },
-  { value: 'dark', icon: '🌙', labelKey: 'darkMode' },
-  { value: 'greece', icon: '🇬🇷', labelKey: 'greece' },
-  { value: 'watercolor', icon: '🎨', labelKey: 'watercolor' },
-  { value: 'toner', icon: '⚫', labelKey: 'toner' }
+  { value: 'osm', labelKey: 'openStreetMap', icon: Map },
+  { value: 'satellite', labelKey: 'satellite', icon: Satellite },
+  { value: 'terrain', labelKey: 'terrain', icon: Mountain },
+  { value: 'dark', labelKey: 'darkMode', icon: Moon },
+  { value: 'greece', labelKey: 'greece', icon: Flag },
+  { value: 'watercolor', labelKey: 'watercolor', icon: Palette },
+  { value: 'toner', labelKey: 'toner', icon: Circle }
 ] as const;
 
 // ============================================================================
@@ -85,6 +86,22 @@ export const GeoMapControls: React.FC<GeoMapControlsProps> = ({
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // ========================================================================
   // 🎨 RENDER COORDINATE PICKING CONTROLS
@@ -103,7 +120,8 @@ export const GeoMapControls: React.FC<GeoMapControlsProps> = ({
           }`}
           aria-pressed={clickMode === 'add_geo'}
         >
-          📍 {t('map.controls.pickGeographicPoint')}
+          <MapPin className={iconSizes.sm} style={{ display: 'inline-block', marginRight: '6px' }} />
+          {t('map.controls.pickGeographicPoint')}
         </button>
 
         <button
@@ -141,20 +159,48 @@ export const GeoMapControls: React.FC<GeoMapControlsProps> = ({
           />
         </div>
 
-        {/* Style Selector */}
-        <select
-          value={currentMapStyle}
-          onChange={(e) => onMapStyleChange(e.target.value as typeof currentMapStyle)}
-          className={`w-full ${colors.bg.hover} ${quick.input} px-2 py-1 text-sm text-white`}
-          disabled={!mapLoaded}
-          aria-label={t('map.controls.selectMapStyle')}
-        >
-          {MAP_STYLE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.icon} {t(`map.controls.${option.labelKey}`)}
-            </option>
-          ))}
-        </select>
+        {/* Style Selector - Custom Dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className={`w-full ${colors.bg.hover} ${quick.input} px-2 py-1 text-sm text-white flex items-center justify-between`}
+            disabled={!mapLoaded}
+            aria-label={t('map.controls.selectMapStyle')}
+            aria-expanded={isDropdownOpen}
+            type="button"
+          >
+            <span className="flex items-center gap-2">
+              {currentMapStyle && (() => {
+                const option = MAP_STYLE_OPTIONS.find(opt => opt.value === currentMapStyle);
+                const IconComponent = option?.icon;
+                return IconComponent ? <IconComponent className={iconSizes.xs} /> : null;
+              })()}
+              {currentMapStyle ? t(`map.controls.${MAP_STYLE_OPTIONS.find(opt => opt.value === currentMapStyle)?.labelKey}`) : t('map.controls.selectMapStyle')}
+            </span>
+            <ChevronDown className={`${iconSizes.xs} transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {isDropdownOpen && (
+            <div className={`absolute top-full left-0 right-0 z-50 ${colors.bg.primary} ${quick.card} mt-1 py-1 max-h-48 overflow-y-auto`}>
+              {MAP_STYLE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => {
+                    onMapStyleChange(option.value as typeof currentMapStyle);
+                    setIsDropdownOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:${colors.bg.hover} transition-colors ${
+                    currentMapStyle === option.value ? colors.bg.accent : ''
+                  }`}
+                  type="button"
+                >
+                  <option.icon className={iconSizes.sm} />
+                  {t(`map.controls.${option.labelKey}`)}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Current Style Display */}
         {currentMapStyle && (
@@ -203,15 +249,15 @@ export default GeoMapControls;
  * ✅ Component composition pattern
  *
  * Differentiators από building-management MapControls:
- * 🎯 Geo-specific coordinate picking (όχι nearby projects)
- * 🗺️ Map style controls (όχι layer selection)
- * 📍 Geographic point selection (όχι project filtering)
- * 🎨 Styling consistency με geo-canvas theme
+ * <Target/> Geo-specific coordinate picking (όχι nearby projects)
+ * <Map/> Map style controls (όχι layer selection)
+ * <MapPin/> Geographic point selection (όχι project filtering)
+ * <Palette/> Styling consistency με geo-canvas theme
  *
  * Enterprise Benefits:
- * 🎯 Single Responsibility - Μόνο geo map control logic
- * 🔄 Reusability - Μπορεί να χρησιμοποιηθεί σε άλλα geo contexts
- * 🧪 Testability - Isolated component με clear props
- * 🎮 User Experience - Intuitive control interface
- * 🌐 i18n Ready - Πλήρης υποστήριξη internationalization
+ * <Target/> Single Responsibility - Μόνο geo map control logic
+ * <Recycle/> Reusability - Μπορεί να χρησιμοποιηθεί σε άλλα geo contexts
+ * <FlaskConical/> Testability - Isolated component με clear props
+ * <Gamepad2/> User Experience - Intuitive control interface
+ * <Languages/> i18n Ready - Πλήρης υποστήριξη internationalization
  */

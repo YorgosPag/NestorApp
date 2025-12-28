@@ -1,5 +1,5 @@
 /**
- * 📍 USE FLOOR PLAN CONTROL POINTS HOOK
+ * USE FLOOR PLAN CONTROL POINTS HOOK
  *
  * Custom hook για control point management (georeferencing)
  *
@@ -113,13 +113,13 @@ export function useFloorPlanControlPoints(): UseFloorPlanControlPointsReturn {
    * Start picking new control point
    */
   const startPicking = useCallback(() => {
-    console.log('📍 Starting control point picking...');
-    console.log('📍 Setting pickingState to: picking-floor');
+    console.log('Starting control point picking...');
+    console.log('Setting pickingState to: picking-floor');
     pickingStateRef.current = 'picking-floor'; // ❗ Update ref immediately!
     setPickingState('picking-floor');
     setTempFloorPlan(null);
     setTempGeo(null);
-    console.log('📍 Ref updated immediately to:', pickingStateRef.current);
+    console.log('Ref updated immediately to:', pickingStateRef.current);
   }, []);
 
   /**

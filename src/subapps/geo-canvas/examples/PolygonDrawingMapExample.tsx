@@ -15,6 +15,8 @@ import { InteractiveMap } from '../components/InteractiveMap';
 import type { UniversalPolygon, PolygonType } from '@geo-alert/core';
 import type { GeoCoordinate } from '../types';
 import { layoutUtilities, mapComponents, colors, typography, getMapButtonStyle } from '@/styles/design-tokens';
+import { useIconSizes } from '@/hooks/useIconSizes';
+import { Square, Target, Home, Trash2, Edit, MapPin, FileText, Map, Settings } from 'lucide-react';
 
 // Mock transform state (για το παράδειγμα)
 const mockTransformState = {
@@ -69,9 +71,9 @@ const MapControlSection: React.FC<{
             onChange={(e) => onModeChange(e.target.value as PolygonType)}
             style={mapComponents.controlSection.select}
           >
-            <option value="simple">📐 Simple</option>
-            <option value="complex">🎯 Complex</option>
-            <option value="property_boundary">🏠 Property Boundary</option>
+            <option value="simple">Simple</option>
+            <option value="complex">Complex</option>
+            <option value="property_boundary">Property Boundary</option>
           </select>
         </div>
       )}
@@ -95,7 +97,7 @@ const MapControlSection: React.FC<{
           disabled={polygonCount === 0}
           style={polygonCount === 0 ? getMapButtonStyle('dangerDisabled') : getMapButtonStyle('danger')}
         >
-          🗑️ Clear All ({polygonCount})
+Clear All ({polygonCount})
         </button>
       </div>
     </>
@@ -116,7 +118,7 @@ const PolygonListItem: React.FC<{
       className="polygon-list-item-hover"
     >
       <div style={mapComponents.polygonList.title}>
-        📐 {polygon.type.charAt(0).toUpperCase() + polygon.type.slice(1).replace('_', ' ')}
+{polygon.type.charAt(0).toUpperCase() + polygon.type.slice(1).replace('_', ' ')}
       </div>
       <div style={mapComponents.polygonList.metadata}>
         Points: {polygon.coordinates.length} | Area: {polygon.metadata?.area?.toFixed(2) || 'N/A'} m²
@@ -129,13 +131,13 @@ const PolygonListItem: React.FC<{
           onClick={() => onEdit(polygon)}
           style={getMapButtonStyle('secondarySmall')}
         >
-          ✏️ Edit
+Edit
         </button>
         <button
           onClick={() => onDelete(polygon.id)}
           style={getMapButtonStyle('dangerSmall')}
         >
-          🗑️ Delete
+Delete
         </button>
       </div>
     </article>
@@ -154,7 +156,7 @@ const MapSidebar: React.FC<{
     <aside style={mapComponents.sidebar.base}>
       <header style={mapComponents.sidebar.header}>
         <h3 style={mapComponents.sidebar.title}>
-          📐 Polygons ({polygons.length})
+Polygons ({polygons.length})
         </h3>
       </header>
       <section style={mapComponents.sidebar.content}>
@@ -206,7 +208,7 @@ const DebugInformation: React.FC<{
   return (
     <details style={mapComponents.debugSection.container}>
       <summary style={mapComponents.debugSection.summary}>
-        🔧 Debug Information
+Debug Information
       </summary>
       <pre style={mapComponents.debugSection.content}>
         {JSON.stringify(debugData, null, 2)}
@@ -226,37 +228,37 @@ export function PolygonDrawingMapExample(): JSX.Element {
 
   // Handle coordinate click (για control points)
   const handleCoordinateClick = useCallback((coordinate: GeoCoordinate) => {
-    console.log('📍 Coordinate clicked:', coordinate);
+    console.log('Coordinate clicked:', coordinate);
     // Εδώ θα μπορούσαμε να προσθέσουμε control points
   }, []);
 
   // Handle polygon creation
   const handlePolygonCreated = useCallback((polygon: UniversalPolygon) => {
-    console.log('✅ Polygon created:', polygon);
+    console.log('Polygon created:', polygon);
     setPolygons(prev => [...prev, polygon]);
   }, []);
 
   // Handle polygon modification
   const handlePolygonModified = useCallback((polygon: UniversalPolygon) => {
-    console.log('📝 Polygon modified:', polygon);
+    console.log('Polygon modified:', polygon);
     setPolygons(prev => prev.map(p => p.id === polygon.id ? polygon : p));
   }, []);
 
   // Handle polygon deletion
   const handlePolygonDeleted = useCallback((polygonId: string) => {
-    console.log('🗑️ Polygon deleted:', polygonId);
+    console.log('Polygon deleted:', polygonId);
     setPolygons(prev => prev.filter(p => p.id !== polygonId));
   }, []);
 
   // Handle clear all polygons
   const handleClearAllPolygons = useCallback(() => {
-    console.log('🗑️ Clearing all polygons');
+    console.log('Clearing all polygons');
     setPolygons([]);
   }, []);
 
   // Handle map ready
   const handleMapReady = useCallback((map: any) => {
-    console.log('🗺️ Map ready:', map);
+    console.log('Map ready:', map);
   }, []);
 
   return (
@@ -264,7 +266,7 @@ export function PolygonDrawingMapExample(): JSX.Element {
       {/* Header Controls */}
       <header style={mapComponents.header.base}>
         <h1 style={mapComponents.header.title}>
-          🗺️ Universal Polygon System - Map Integration
+Universal Polygon System - Map Integration
         </h1>
 
         <MapControlSection

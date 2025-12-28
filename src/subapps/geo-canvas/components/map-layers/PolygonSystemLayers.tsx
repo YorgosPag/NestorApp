@@ -136,7 +136,7 @@ export const PolygonSystemLayers: React.FC<PolygonSystemLayersProps> = memo(({
         const { polygon, feature, sourceId, isPointMode, pointRadius } = data;
 
         // ========================================================================
-        // 📍 POINT MODE RENDERING (Πινέζα με Radius Circle)
+        // POINT MODE RENDERING (Πινέζα με Radius Circle)
         // ========================================================================
 
         if (isPointMode && polygon.points.length === 1) {

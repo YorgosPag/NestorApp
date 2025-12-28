@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { MapPin, Hexagon, Hand, Trash2, Check, X, Bell, Home, Search } from 'lucide-react';
+import { MapPin, Hexagon, Hand, Trash2, Check, X, Bell, Home, Search, Building2, Settings } from 'lucide-react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import type { RealEstatePolygon } from '@geo-alert/core';
 import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
@@ -224,7 +224,7 @@ export function CitizenDrawingInterface({
 
     if (pointPolygon && pointPolygon.id !== lastPointPolygonId) {
       setLastPointPolygonId(pointPolygon.id);
-      console.log('📍 Found new point polygon for radius tracking:', pointPolygon.id);
+      console.log('Found new point polygon for radius tracking:', pointPolygon.id);
     }
   }, [polygons, lastPointPolygonId]);
 
@@ -244,7 +244,7 @@ export function CitizenDrawingInterface({
 
   // ✅ NEW: Handle location selection από address search
   const handleLocationFromSearch = useCallback((lat: number, lng: number, address?: GreekAddress) => {
-    console.log('📍 Location selected from search:', { lat, lng, address });
+    console.log('Location selected from search:', { lat, lng, address });
 
     // Close address search panel
     setShowAddressSearch(false);
@@ -413,7 +413,7 @@ export function CitizenDrawingInterface({
             cursor-pointer ${HOVER_SHADOWS.MEDIUM}
           `}
         >
-          <div className={`${iconSizes.xl} mb-2 text-violet-600 font-bold text-lg`}>🏛️</div>
+          <Building2 className={`${iconSizes.xl} mb-2 text-violet-600`} />
           <span className="text-sm font-medium">Boundaries Demo</span>
           <span className={`text-xs ${colors.text.muted}`}>Test Interface</span>
         </button>
@@ -431,7 +431,7 @@ export function CitizenDrawingInterface({
             cursor-pointer ${HOVER_SHADOWS.MEDIUM}
           `}
         >
-          <div className={`${iconSizes.xl} mb-2 text-emerald-600 font-bold text-lg`}>🎛️</div>
+          <Settings className={`${iconSizes.xl} mb-2 text-emerald-600`} />
           <span className="text-sm font-medium">Layer Control</span>
           <span className={`text-xs ${colors.text.muted}`}>
             {boundaryLayers.length} layers

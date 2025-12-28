@@ -35,8 +35,8 @@ describe('GeoCanvasApp', () => {
     render(<GeoCanvasApp />);
 
     // Check status indicators
-    expect(screen.getByText('✅ Complete')).toBeInTheDocument();
-    expect(screen.getByText('⏳ Phase 2')).toBeInTheDocument();
+    expect(screen.getByText('Complete')).toBeInTheDocument();
+    expect(screen.getByText('Phase 2')).toBeInTheDocument();
   });
 
   it('shows enterprise architecture info', () => {
@@ -92,10 +92,10 @@ describe('GeoCanvasContent Integration', () => {
     render(<GeoCanvasApp />);
 
     // Phase 1 status
-    expect(screen.getByText('✅ Phase 1 Complete')).toBeInTheDocument();
+    expect(screen.getByText('Phase 1 Complete')).toBeInTheDocument();
 
     // Future phases
-    expect(screen.getByText('⏳ Next: Phase 2')).toBeInTheDocument();
+    expect(screen.getByText('Next: Phase 2')).toBeInTheDocument();
     expect(screen.getByText('DXF transformation engine')).toBeInTheDocument();
   });
 

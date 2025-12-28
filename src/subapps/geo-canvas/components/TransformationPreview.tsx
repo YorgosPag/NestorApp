@@ -6,6 +6,8 @@ import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { BarChart3 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { dxfGeoTransformService } from '../services/geo-transform/DxfGeoTransform';
 import type { DxfCoordinate, GeoCoordinate, SpatialEntity } from '../types';
 // 🏭 SMART ACTION FACTORY - ZERO DUPLICATES
@@ -53,6 +55,7 @@ export function TransformationPreview({
 }: TransformationPreviewProps) {
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  const iconSizes = useIconSizes();
   const { t } = useTranslationLazy('geo-canvas');
   const [transformState] = useGeoTransform();
   const [previewSettings, setPreviewSettings] = useState<PreviewSettings>({
@@ -352,7 +355,8 @@ export function TransformationPreview({
   const renderStatistics = () => (
     <div className={`${colors.bg.primary} rounded-lg p-4 mb-4`}>
       <h3 className={`text-lg font-semibold mb-3 ${colors.text.accent}`}>
-        📊 Transformation Statistics
+        <BarChart3 className={iconSizes.sm} style={{ display: 'inline-block', marginRight: '8px' }} />
+        Transformation Statistics
       </h3>
 
       <div className="grid grid-cols-2 gap-4 text-sm">

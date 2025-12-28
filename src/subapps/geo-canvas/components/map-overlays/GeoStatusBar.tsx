@@ -20,6 +20,7 @@ import React from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { Globe, Target, MapPin, Map, BarChart3, Recycle, FlaskConical, Zap, Languages } from 'lucide-react';
 import type { GeoControlPoint } from '../../types';
 
 // ============================================================================
@@ -200,17 +201,17 @@ export default GeoStatusBar;
  * ✅ Component composition pattern
  *
  * Differentiators από dxf-viewer StatusBar:
- * 🌍 Geo-specific status indicators (όχι DXF entities)
- * 🎯 Control points statistics (όχι drawing entities)
- * 📍 Coordinate transformation status (όχι CAD operations)
- * 🗺️ Map-specific states (loading, calibration)
- * 📊 Accuracy metrics integration
+ * <Globe/> Geo-specific status indicators (όχι DXF entities)
+ * <Target/> Control points statistics (όχι drawing entities)
+ * Coordinate transformation status (όχι CAD operations)
+ * <Map/> Map-specific states (loading, calibration)
+ * <BarChart3/> Accuracy metrics integration
  *
  * Enterprise Benefits:
- * 🎯 Single Responsibility - Μόνο geo status display logic
- * 🔄 Reusability - Μπορεί να χρησιμοποιηθεί σε άλλα geo contexts
- * 🧪 Testability - Isolated component με clear props
- * 📊 Analytics Ready - Built-in statistics calculation
- * 🌐 i18n Ready - Πλήρης υποστήριξη internationalization
- * ⚡ Performance - Optimized με useMemo για calculations
+ * <Target/> Single Responsibility - Μόνο geo status display logic
+ * <Recycle/> Reusability - Μπορεί να χρησιμοποιηθεί σε άλλα geo contexts
+ * <FlaskConical/> Testability - Isolated component με clear props
+ * <BarChart3/> Analytics Ready - Built-in statistics calculation
+ * <Languages/> i18n Ready - Πλήρης υποστήριξη internationalization
+ * <Zap/> Performance - Optimized με useMemo για calculations
  */

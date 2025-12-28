@@ -30,7 +30,9 @@ import { PageErrorBoundary, ComponentErrorBoundary } from '@/components/ui/Error
 import ErrorReportingDashboard from '@/components/development/ErrorReportingDashboard';
 import { useAnalytics } from '@/services/AnalyticsBridge';
 import { TRANSITION_PRESETS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { canvasUtilities } from '@/styles/design-tokens';
 import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
+import { Globe, AlertCircle, Construction, CheckCircle, RefreshCcw } from 'lucide-react';
 import type { GeoCanvasAppProps } from '../types';
 import type { GeoCoordinate, DxfCoordinate } from '../types';
 
@@ -173,7 +175,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
 
   // ✅ NEW: Handle location selection από address search/GPS
   const handleLocationSelected = useCallback((lat: number, lng: number, address?: any) => {
-    console.log('📍 Location selected, centering map:', { lat, lng, address });
+    console.log('Location selected, centering map:', { lat, lng, address });
 
     // Set search marker
     let displayAddress = 'Αναζητημένη θέση';
@@ -574,12 +576,13 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
   return (
     <PolygonSystemProvider initialRole="citizen">
       <div className={`w-full h-full flex flex-col ${colors.bg.secondary} text-white`}>
-      {/* 📊 HEADER SECTION */}
+      {/* HEADER SECTION */}
       <header className={`${colors.bg.primary} ${quick.separatorH} p-4`}>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-blue-400">
-              🌍 {t('title')}
+            <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2">
+              <Globe className={iconSizes.lg} />
+              {t('title')}
             </h1>
             <p className="text-gray-400 text-sm">
               {t('subtitle')} ({t('phases.foundation')})
@@ -596,7 +599,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                   : `${colors.bg.hover} ${colors.text.muted} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
               }`}
             >
-              <span className="text-sm">🚨</span>
+              <AlertCircle className={iconSizes.sm} />
               <span className="text-sm font-medium">{t('alertDashboard.title')}</span>
             </button>
 
@@ -660,7 +663,9 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
               /* Phase 1: Foundation Display */
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center max-w-4xl p-8 w-full">
-                  <div className="text-8xl mb-6">🌍</div>
+                  <div className="flex justify-center mb-6">
+                    <Globe className="w-32 h-32 text-blue-400" />
+                  </div>
                   <h2 className="text-3xl font-bold mb-4 text-blue-400">
                     {t('title')}
                   </h2>
@@ -685,9 +690,10 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                             // ✅ ENTERPRISE: Clear user type by setting to a valid empty state
                             window.location.reload(); // Reload to reset all user state
                           }}
-                          className={`px-4 py-2 ${colors.bg.muted} text-white rounded-md text-sm ${HOVER_BACKGROUND_EFFECTS.MUTED} ${TRANSITION_PRESETS.FAST_COLORS}`}
+                          className={`px-4 py-2 ${colors.bg.muted} text-white rounded-md text-sm flex items-center gap-2 ${HOVER_BACKGROUND_EFFECTS.MUTED} ${TRANSITION_PRESETS.FAST_COLORS}`}
                         >
-                          🔄 {t('userActions.changeUserType')}
+                          <RefreshCcw className={iconSizes.sm} />
+                          {t('userActions.changeUserType')}
                         </button>
                       </div>
                     )}
@@ -695,8 +701,9 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
 
                   <div className="grid grid-cols-2 gap-6 text-left">
                     <div className={`${colors.bg.primary} p-6 rounded-lg`}>
-                      <h3 className="text-lg font-semibold mb-3 text-green-400">
-                        ✅ Phase 1 Complete
+                      <h3 className="text-lg font-semibold mb-3 text-green-400 flex items-center gap-2">
+                        <CheckCircle className={iconSizes.md} />
+                        Phase 1 Complete
                       </h3>
                       <ul className="space-y-2 text-sm text-gray-300">
                         <li>{isLoading ? '• Δομή θεμελίων' : t('phaseDetails.phase1Features.foundationStructure')}</li>
@@ -707,8 +714,9 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                     </div>
 
                     <div className={`${colors.bg.primary} p-6 rounded-lg`}>
-                      <h3 className="text-lg font-semibold mb-3 text-green-400">
-                        ✅ Phase 2 Complete
+                      <h3 className="text-lg font-semibold mb-3 text-green-400 flex items-center gap-2">
+                        <CheckCircle className={iconSizes.md} />
+                        Phase 2 Complete
                       </h3>
                       <ul className="space-y-2 text-sm text-gray-300">
                         <li>{isLoading ? '• Μηχανή μετασχηματισμού DXF' : t('phaseDetails.phase2Features.dxfTransformationEngine')}</li>
@@ -722,7 +730,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                   {/* Architecture Overview */}
                   <div className={`mt-8 p-6 ${colors.bg.primary} rounded-lg`}>
                     <h3 className="text-lg font-semibold mb-4 text-blue-400 flex items-center gap-2">
-                      <CraneIcon className={iconSizes.md} />
+                      <Construction className={iconSizes.md} />
                       {isLoading ? 'Επισκόπηση Αρχιτεκτονικής' : t('phaseDetails.architectureOverview.title')}
                     </h3>
                     <div className="text-sm text-gray-300 space-y-2">
@@ -802,7 +810,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                   </div>
                 )}
 
-                {/* 📍 CONTROL POINT PICKER (STEP 2.2) */}
+                {/* CONTROL POINT PICKER (STEP 2.2) */}
                 {floorPlanUpload.result && floorPlanUpload.result.success && (isProfessional || isTechnical) && (
                   <div
                     style={canvasUtilities.geoInteractive.draggablePanelContainer(
@@ -888,7 +896,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
           </div>
         </div>
 
-        {/* 📊 RIGHT SIDEBAR - System Status */}
+        {/* RIGHT SIDEBAR - System Status */}
         <aside className={`w-80 ${colors.bg.primary} ${quick.separatorV} p-4`}>
           <div className="space-y-6">
             {/* Phase Progress */}
@@ -1012,8 +1020,9 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
             <span className="text-gray-400">
               {t('sidebar.technicalSpecs.standardsValue')} | OGC Standards | {t('sidebar.technicalSpecs.mathEngineValue')}
             </span>
-            <span className="text-blue-400">
-              🏢 Pagonis-Nestor Geo-Canvas v2.0
+            <span className="text-blue-400 flex items-center gap-2">
+              <Globe className={iconSizes.sm} />
+              Pagonis-Nestor Geo-Canvas v2.0
             </span>
           </section>
         </nav>
@@ -1061,7 +1070,7 @@ const GeoCanvasContentWithErrorBoundary = (props: GeoCanvasAppProps) => (
     onError={(error, errorInfo, errorId) => {
       // ✅ ENTERPRISE FIX: Defer error logging to avoid setState during render
       setTimeout(() => {
-        console.error('🌍 GEO-ALERT Error Captured:', {
+        console.error('GEO-ALERT Error Captured:', {
           errorId,
           component: 'GeoCanvasContent',
           error: error.message,

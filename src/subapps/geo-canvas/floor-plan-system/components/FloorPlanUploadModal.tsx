@@ -15,8 +15,9 @@
  */
 
 import React, { useState, useCallback, useRef } from 'react';
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { Clock } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
@@ -218,7 +219,7 @@ export function FloorPlanUploadModal({
         ) : isParsing ? (
           /* Show loading state while parsing */
           <div className="flex flex-col items-center justify-center py-16 px-4">
-            <div className="animate-spin text-6xl mb-4">⏳</div>
+            <Clock className="animate-spin text-6xl mb-4" />
             <p className="text-lg font-medium text-white mb-2">
               Parsing file...
             </p>

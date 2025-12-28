@@ -21,11 +21,11 @@
     "databaseReady": "Database Ready"
   },
   "views": {
-    "foundation": "📋 Foundation Overview",
+    "foundation": " Foundation Overview",
     "georeferencing": "🗺️ Georeferencing (Phase 2)",
-    "mapping": "🌍 Mapping (Phase 3)",
+    "mapping": " Mapping (Phase 3)",
     "database": "🗄️ Database (Phase 4)",
-    "alerts": "🚨 Alerts (Phase 5)"
+    "alerts": " Alerts (Phase 5)"
   },
   "toolbar": {
     "view": "View:",
@@ -97,7 +97,7 @@
       "title": "Control Points",
       "description": "Define at least 3 control points for accurate georeferencing",
       "addPoint": "➕ Add Point",
-      "removePoint": "🗑️ Remove",
+      "removePoint": " Remove",
       "accuracy": "Accuracy:",
       "status": "Status:",
       "coordinates": {
@@ -211,42 +211,42 @@
     "addPoint": "Add Point",
     "savePoints": "💾 Save Points",
     "loadPoints": "📂 Load Points",
-    "clearAllPoints": "🗑️ Clear All Points"
+    "clearAllPoints": " Clear All Points"
   },
   "transformation": {
-    "controls": "🔧 Transformation Controls",
+    "controls": " Transformation Controls",
     "status": "Status:",
-    "calibrated": "✅ Calibrated",
+    "calibrated": "Calibrated",
     "notCalibrated": "❌ Not Calibrated",
-    "calibrating": "⏳ Calibrating...",
-    "calibrateTransformation": "📐 Calibrate Transformation",
+    "calibrating": " Calibrating...",
+    "calibrateTransformation": " Calibrate Transformation",
     "calibratingButton": "Calibrating..."
   },
   "workspace": {
     "dxfGeoreferencingWorkspace": "DXF Georeferencing Workspace",
     "phase2Transform": "Phase 2: Transform DXF coordinates → Geographic coordinates",
-    "controlPointsTitle": "✅ Control Points",
+    "controlPointsTitle": "Control Points",
     "controlPointsFeatures": {
       "addEdit": "• Add/Edit control points",
       "mapping": "• DXF ↔ Geographic mapping",
       "accuracyValidation": "• Accuracy validation",
       "spatialDistribution": "• Spatial distribution"
     },
-    "transformationEngineTitle": "🔧 Transformation Engine",
+    "transformationEngineTitle": " Transformation Engine",
     "transformationEngineFeatures": {
       "affine": "• Affine transformation",
       "leastSquares": "• Least squares calibration",
       "rmsCalculation": "• RMS accuracy calculation",
       "inverseTransformation": "• Inverse transformation"
     },
-    "nextPhase3": "⏳ Next: Phase 3",
+    "nextPhase3": " Next: Phase 3",
     "nextPhase3Features": {
       "maplibre": "• MapLibre GL integration",
       "coordinatePicker": "• Visual coordinate picker",
       "realtimePreview": "• Real-time preview",
       "basemapLayers": "• Basemap layers"
     },
-    "workflowInstructions": "📋 Workflow Instructions",
+    "workflowInstructions": " Workflow Instructions",
     "workflowSteps": {
       "step1": "Step 1: Add control points with DXF and Geographic coordinates",
       "step2": "Step 2: Ensure good spatial distribution (corners + center)",
@@ -256,20 +256,20 @@
   },
   "sidebar": {
     "phaseProgress": {
-      "title": "📊 Phase Progress",
-      "phase1Title": "✅ Phase 1: Foundation",
+      "title": "Phase Progress",
+      "phase1Title": "Phase 1: Foundation",
       "phase1Description": "Architecture + Types Complete",
-      "phase2Title": "✅ Phase 2: Transformation",
+      "phase2Title": "Phase 2: Transformation",
       "phase2Description": "DXF Georeferencing Ready",
-      "phase3Title": "⏳ Phase 3: MapLibre",
+      "phase3Title": "Phase 3: MapLibre",
       "phase3Description": "Interactive mapping",
-      "phase4Title": "⭕ Phase 4: PostGIS",
+      "phase4Title": "Phase 4: PostGIS",
       "phase4Description": "Spatial database",
-      "phase5Title": "⭕ Phase 5: Alerts",
+      "phase5Title": "Phase 5: Alerts",
       "phase5Description": "Geo-alert engine"
     },
     "availableFeatures": {
-      "title": "✅ Available Features",
+      "title": "Available Features",
       "controlPointManagement": "Control Point Management",
       "affineTransformation": "Affine Transformation",
       "accuracyValidation": "Accuracy Validation",
@@ -278,7 +278,7 @@
       "coordinateTransformation": "Coordinate Transformation"
     },
     "technicalSpecs": {
-      "title": "🔧 Technical Specs",
+      "title": " Technical Specs",
       "transformation": "Transformation:",
       "transformationValue": "Affine + Least Squares",
       "accuracy": "Accuracy:",
@@ -291,7 +291,7 @@
       "standardsValue": "ISO 19107, OGC"
     },
     "comingNext": {
-      "title": "⏭️ Coming Next (Phase 3)",
+      "title": "Coming Next (Phase 3)",
       "maplibreIntegration": "• MapLibre GL JS integration",
       "interactiveCoordinatePicking": "• Interactive coordinate picking",
       "realtimeTransformationPreview": "• Real-time transformation preview",
@@ -322,7 +322,7 @@
     "platformName": "Enterprise Geo-Alert Platform"
   },
   "accuracy": {
-    "legend": "📐 Accuracy Legend",
+    "legend": " Accuracy Legend",
     "visualization": "Visualization:",
     "types": {
       "circles": "○ Circles",
@@ -559,16 +559,16 @@
       "floorPlan": "Floor Plan:"
     },
     "technical": {
-      "title": "🔧 Technical Tools",
+      "title": " Technical Tools",
       "subtitle": "Engineers - Full DXF/DWG support with CAD precision",
       "tools": {
-        "precision": "📐 Millimeter Accuracy",
-        "settings": "⚙️ Settings",
-        "settingsAdvanced": "🔧 Advanced Settings",
-        "alertsAuto": "🚨 Automated Alerts"
+        "precision": " Millimeter Accuracy",
+        "settings": " Settings",
+        "settingsAdvanced": " Advanced Settings",
+        "alertsAuto": " Automated Alerts"
       },
       "automatedAlerts": {
-        "title": "🚨 Technical Automated Alerts",
+        "title": " Technical Automated Alerts",
         "detectionSensitivity": "Detection Sensitivity",
         "monitoringInterval": "Monitoring Interval (minutes)",
         "morePlatforms": "More platforms...",
@@ -591,19 +591,19 @@
         "coordinates": "WGS84"
       },
       "actions": {
-        "complete": "✅ Complete",
+        "complete": "Complete",
         "cancel": "❌ Cancel"
       },
       "instructions": {
-        "precision": "📐 Technical millimeter-level accuracy for CAD work",
-        "settings": "⚙️ Advanced settings for technical users",
-        "automatedAlerts": "🚨 Configure automated alerts with technical precision"
+        "precision": " Technical millimeter-level accuracy for CAD work",
+        "settings": " Advanced settings for technical users",
+        "automatedAlerts": " Configure automated alerts with technical precision"
       },
       "openViewer": "🛠️ Open DXF Viewer",
       "cadEnvironment": "CAD Environment",
       "fullDxfViewer": "🛠️ Open full DXF Viewer in new tab with all CAD tools",
-      "ultraPrecision": "📐 Ultra-precision mode: Click for millimeter accuracy points",
-      "advancedSettings": "⚙️ Advanced settings for technical users"
+      "ultraPrecision": " Ultra-precision mode: Click for millimeter accuracy points",
+      "advancedSettings": " Advanced settings for technical users"
     },
     "professional": {
       "title": "🏢 Professional Tools",
@@ -618,7 +618,7 @@
       "addPropertyPoints": "🏢 Click to add points to the property. Double click to complete",
       "autoDetectRooms": "🤖 Automatic room detection from uploaded floor plan",
       "propertyManager": "🏘️ Property status management with color coding and statistics",
-      "marketDashboard": "📊 Dashboard for real estate market monitoring and analytics"
+      "marketDashboard": "Dashboard for real estate market monitoring and analytics"
     },
     "citizen": {
       "title": "👥 Citizen Tools",
@@ -652,14 +652,14 @@
           "commercial": "Commercial"
         }
       },
-      "placePoint": "📍 Click on the map to place an alert point",
+      "placePoint": "Click on the map to place an alert point",
       "addPolygonPoints": "🔷 Click to add points to the polygon. Double click to complete",
-      "drawFreehand": "✏️ Hold and drag to draw freehand",
+      "drawFreehand": " Hold and drag to draw freehand",
       "drawInterestArea": "🏠 Draw area of interest for property alerts. Double click to complete"
     }
   },
   "mapStatus": {
-    "polygonClosed": "✅ CLOSED Polygon",
+    "polygonClosed": "CLOSED Polygon",
     "clickToClose": "🔄 Click to CLOSE polygon"
   },
   "hardcodedTexts": {
@@ -692,12 +692,12 @@
       "rmsAccuracy": "RMS Accuracy:",
       "technicalSensitivity": "Technical Sensitivity",
       "monitoringPlatforms": "Monitoring Platforms",
-      "monitoringZones": "📊 Monitoring Zones:",
-      "detectedProperties": "🎯 Detected Properties:",
+      "monitoringZones": "Monitoring Zones:",
+      "detectedProperties": " Detected Properties:",
       "lastScan": "🕐 Last Scan:",
-      "technicalMatches": "🎯 Technical Matches:",
-      "automatedAlerts": "🚨 Automated Alerts:",
-      "precisionLabel": "📊 Precision:",
+      "technicalMatches": " Technical Matches:",
+      "automatedAlerts": " Automated Alerts:",
+      "precisionLabel": "Precision:",
       "georeferencing": "Georeferencing:",
       "confidenceThreshold": "Confidence Threshold:",
       "processingLabel": "Processing:",
@@ -746,9 +746,9 @@
   },
   "instructions": {
     "citizen": {
-      "placePoint": "📍 Click on the map to place an alert point",
+      "placePoint": "Click on the map to place an alert point",
       "addPolygonPoints": "🔷 Click to add points to the polygon. Double-click to complete",
-      "drawFreehand": "✏️ Hold and drag to draw freely"
+      "drawFreehand": " Hold and drag to draw freely"
     }
   }
 }

@@ -8,6 +8,8 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { highlightSearchTerm } from '@/lib/obligations-utils'; // ✅ Using centralized function
+import { Search, Clock } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTheme } from '../theme/ThemeProvider';
 import { layoutUtilities } from '@/styles/design-tokens';
 import {
@@ -402,7 +404,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
 
       {/* Search Icon */}
       <div className={searchSystemClasses.searchInput.icon}>
-        {loading ? '⏳' : '🔍'}
+        {loading ? <Clock className={iconSizes.sm} /> : <Search className={iconSizes.sm} />}
       </div>
 
       {/* Suggestions */}
@@ -665,6 +667,7 @@ export const SearchSystem: React.FC<SearchSystemProps> = ({
   className = ''
 }) => {
   const { isDark } = useTheme();
+  const iconSizes = useIconSizes();
 
   // Configuration dengan defaults
   const searchConfig: SearchConfig = {

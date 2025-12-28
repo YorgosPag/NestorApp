@@ -18,6 +18,8 @@ import React, {
   lazy,
   Suspense
 } from 'react';
+import { Flame, AlertCircle, AlertTriangle, FileText } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTheme } from '../theme/ThemeProvider';
 import { adminBoundariesAnalytics } from '../../../services/performance/AdminBoundariesPerformanceAnalytics';
 import type { AdminBoundariesMetrics, AdminBoundariesAlert } from '../../../services/performance/AdminBoundariesPerformanceAnalytics';
@@ -812,14 +814,15 @@ export const AdminBoundariesPerformancePanel = memo(({
   }, [theme.colors.text]);
 
   const getAlertIcon = useCallback((severity: AdminBoundariesAlert['severity']) => {
+    const iconProps = { className: iconSizes.sm };
     switch (severity) {
-      case 'critical': return '🔥';
-      case 'high': return '🚨';
-      case 'medium': return '⚠️';
-      case 'low': return '📝';
-      default: return '•';
+      case 'critical': return <Flame {...iconProps} />;
+      case 'high': return <AlertCircle {...iconProps} />;
+      case 'medium': return <AlertTriangle {...iconProps} />;
+      case 'low': return <FileText {...iconProps} />;
+      default: return <span>•</span>;
     }
-  }, []);
+  }, [iconSizes.sm]);
 
   if (!isVisible) return null;
 

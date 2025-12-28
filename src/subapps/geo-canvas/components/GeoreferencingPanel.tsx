@@ -9,6 +9,8 @@ import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
+import { MapPin, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 /**
  * GEOREFERENCING PANEL COMPONENT
@@ -18,6 +20,7 @@ import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoad
 export function GeoreferencingPanel() {
   const colors = useSemanticColors();
   const { quick, getStatusBorder } = useBorderTokens();
+  const iconSizes = useIconSizes();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
   const [transformState, transformActions] = useGeoTransform();
   const [showAddPoint, setShowAddPoint] = useState(false);
@@ -98,9 +101,9 @@ export function GeoreferencingPanel() {
     };
 
     const getStatusIcon = () => {
-      if (validation.errors.length > 0) return '❌';
-      if (validation.warnings.length > 0) return '⚠️';
-      return '✅';
+      if (validation.errors.length > 0) return <XCircle className={iconSizes.sm} />;
+      if (validation.warnings.length > 0) return <AlertTriangle className={iconSizes.sm} />;
+      return <CheckCircle className={iconSizes.sm} />;
     };
 
     return (
@@ -333,7 +336,9 @@ export function GeoreferencingPanel() {
 
         {transformState.controlPoints.length === 0 && (
           <div className={`text-center py-8 ${colors.text.muted}`}>
-            <div className="text-4xl mb-2">📍</div>
+            <div className="mb-2 flex justify-center">
+              <MapPin className="w-16 h-16" />
+            </div>
             <p>{t('controlPoints.noPointsYet')}</p>
             <p className="text-sm">{t('controlPoints.addMinimumPoints')}</p>
           </div>
@@ -425,7 +430,10 @@ export function GeoreferencingPanel() {
     return (
       <div className={`${colors.bg.error} ${quick.card} ${getStatusBorder('error')} p-4 mb-4`}>
         <div className="flex items-center justify-between">
-          <span className={colors.text.error}>❌ Error: {transformState.error}</span>
+          <span className={`${colors.text.error} flex items-center gap-2`}>
+            <XCircle className={iconSizes.sm} />
+            Error: {transformState.error}
+          </span>
           <button
             onClick={transformActions.clearError}
             className={`${colors.text.error} ${HOVER_TEXT_EFFECTS.RED}`}

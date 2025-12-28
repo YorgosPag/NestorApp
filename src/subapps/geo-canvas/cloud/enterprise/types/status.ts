@@ -34,7 +34,7 @@ export interface InfrastructureStatus {
 export interface OverallStatus {
   health: 'healthy' | 'degraded' | 'critical' | 'unknown';
   availability: number; // percentage
-  performance: PerformanceStatus;
+  performance: PerformanceMetrics;
   security: SecurityStatus;
   cost: CostStatus;
 }
@@ -131,7 +131,7 @@ export interface StatusMetrics {
   performance: PerformanceMetrics;
   resource: ResourceMetrics;
   cost: CostMetrics;
-  security: SecurityMetrics;
+  security: SecurityRisk[];
   reliability: ReliabilityMetrics;
 }
 

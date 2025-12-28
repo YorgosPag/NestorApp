@@ -162,7 +162,7 @@ export const InteractiveMapPresentation: React.FC<InteractiveMapPresentationProp
         touchZoomRotate={true}
       >
         {/* ================================================================ */}
-        {/* 📍 CONTROL POINTS LAYER */}
+        {/* CONTROL POINTS LAYER */}
         {/* ================================================================ */}
         {showControlPoints && (
           <ControlPointLayer

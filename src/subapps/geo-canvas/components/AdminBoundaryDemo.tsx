@@ -1,5 +1,5 @@
 /**
- * 🏛️ ADMINISTRATIVE BOUNDARY DEMO - Testing Component
+ * ADMINISTRATIVE BOUNDARY DEMO - Testing Component
  *
  * Demo component για testing των administrative boundaries
  * Temporary component για να δοκιμάσουμε τη functionality
@@ -13,6 +13,8 @@ import React, { useState } from 'react';
 import { useAdministrativeBoundaries } from '../hooks/useAdministrativeBoundaries';
 import type { AdminSearchResult } from '../types/administrative-types';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { Building2, Search } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -21,6 +23,7 @@ export function AdminBoundaryDemo() {
   const [selectedResult, setSelectedResult] = useState<AdminSearchResult | null>(null);
   const { quick, radius } = useBorderTokens();
   const colors = useSemanticColors();
+  const iconSizes = useIconSizes();
 
   const {
     isLoading,
@@ -66,7 +69,8 @@ export function AdminBoundaryDemo() {
   return (
     <div className={`p-6 max-w-4xl mx-auto ${colors.bg.primary} ${quick.card} shadow-lg`}>
       <h2 className="text-2xl font-bold mb-6 text-gray-800">
-        🏛️ Administrative Boundaries Demo
+        <Building2 className={iconSizes.lg} style={{ display: 'inline-block', marginRight: '12px' }} />
+        Administrative Boundaries Demo
       </h2>
 
       {/* Search Section */}
@@ -85,7 +89,7 @@ export function AdminBoundaryDemo() {
             disabled={isLoading || !searchQuery.trim()}
             className={`px-6 py-2 ${colors.bg.info} text-white ${radius.lg} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} disabled:opacity-50 disabled:cursor-not-allowed`}
           >
-            {isLoading ? '🔍 Αναζήτηση...' : 'Αναζήτηση'}
+            {isLoading ? 'Αναζήτηση...' : 'Αναζήτηση'}
           </button>
           <button
             onClick={clearResults}

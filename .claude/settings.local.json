@@ -60,7 +60,8 @@
       "Bash(Copy-Item \"C:\\Nestor_Pagonis\\src\\subapps\\dxf-viewer\\config\\modal-select.ts\" \"C:\\Nestor_Pagonis\\src\\subapps\\dxf-viewer\\config\\modal-select.ts.BACKUP-20251228-1620\")",
       "Bash(timeout 30 npm run build)",
       "Bash(while read file)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Search, MapPin, Navigation, X, Clock, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Search, MapPin, Navigation, X, Clock, CheckCircle, AlertCircle, Loader2, Building2 } from 'lucide-react';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -201,7 +201,7 @@ export function AddressSearchPanel({
         setLastGpsLocation(gpsLocation);
         setIsGettingLocation(false);
 
-        console.log('📍 GPS location obtained:', gpsLocation);
+        console.log('GPS location obtained:', gpsLocation);
 
         // Call parent callback
         if (onLocationSelected) {
@@ -239,7 +239,7 @@ export function AddressSearchPanel({
    * Handle location selection (search result or recent)
    */
   const handleLocationSelect = useCallback((result: GeocodingResult) => {
-    console.log('📍 Location selected:', result);
+    console.log('Location selected:', result);
 
     // Save to recent searches
     saveRecentSearch(result);
@@ -401,23 +401,25 @@ export function AddressSearchPanel({
       <div className={`flex ${quick.separatorH} mb-4`}>
         <button
           onClick={() => setActiveTab('address')}
-          className={`flex-1 py-2 px-1 text-sm font-medium border-b-2 transition-colors ${
+          className={`flex-1 py-2 px-1 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 justify-center ${
             activeTab === 'address'
               ? `${getStatusBorder('info')} ${colors.text.info}`
               : 'border-transparent ${colors.text.muted} ${HOVER_TEXT_EFFECTS.DARKER}'
           }`}
         >
-          📍 Διευθύνσεις
+          <MapPin className={iconSizes.xs} />
+          Διευθύνσεις
         </button>
         <button
           onClick={() => setActiveTab('boundaries')}
-          className={`flex-1 py-2 px-1 text-sm font-medium border-b-2 transition-colors ${
+          className={`flex-1 py-2 px-1 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 justify-center ${
             activeTab === 'boundaries'
               ? `${getStatusBorder('info')} ${colors.text.info}`
               : 'border-transparent ${colors.text.muted} ${HOVER_TEXT_EFFECTS.DARKER}'
           }`}
         >
-          🏛️ Διοικητικά Όρια
+          <Building2 className={iconSizes.xs} />
+          Διοικητικά Όρια
         </button>
       </div>
 

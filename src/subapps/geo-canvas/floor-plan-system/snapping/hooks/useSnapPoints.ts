@@ -1,5 +1,5 @@
 /**
- * 📍 USE SNAP POINTS HOOK
+ * USE SNAP POINTS HOOK
  *
  * React hook για extraction και caching snap points από DXF
  *
@@ -46,11 +46,11 @@ export function useSnapPoints(
 
     // Extract endpoints
     const endpoints = extractEndpoints(parserResult);
-    console.log(`📍 useSnapPoints: Extracted ${endpoints.length} endpoints`);
+    console.log(`useSnapPoints: Extracted ${endpoints.length} endpoints`);
 
     // Deduplicate
     const unique = deduplicateSnapPoints(endpoints);
-    console.log(`📍 useSnapPoints: ${unique.length} unique points after deduplication`);
+    console.log(`useSnapPoints: ${unique.length} unique points after deduplication`);
 
     return unique;
   }, [parserResult, enabled]);

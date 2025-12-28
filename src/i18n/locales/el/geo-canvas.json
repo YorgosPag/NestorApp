@@ -21,11 +21,11 @@
     "databaseReady": "Βάση Δεδομένων Έτοιμη"
   },
   "views": {
-    "foundation": "📋 Επισκόπηση Θεμελίων",
+    "foundation": "Επισκόπηση Θεμελίων",
     "georeferencing": "🗺️ Γεωαναφορά (Φάση 2)",
-    "mapping": "🌍 Χαρτογράφηση (Φάση 3)",
+    "mapping": "Χαρτογράφηση (Φάση 3)",
     "database": "🗄️ Βάση Δεδομένων (Φάση 4)",
-    "alerts": "🚨 Ειδοποιήσεις (Φάση 5)"
+    "alerts": "Ειδοποιήσεις (Φάση 5)"
   },
   "toolbar": {
     "view": "Προβολή:",
@@ -107,7 +107,7 @@
       "description": "Ορίστε τουλάχιστον 3 σημεία ελέγχου για ακριβή γεωαναφορά",
       "count": "Σημεία Ελέγχου",
       "addPoint": "➕ Προσθήκη Σημείου",
-      "removePoint": "🗑️ Αφαίρεση",
+      "removePoint": "Αφαίρεση",
       "accuracy": "Ακρίβεια:",
       "status": "Κατάσταση:",
       "none": "Δεν προστέθηκαν σημεία ελέγχου ακόμη",
@@ -138,7 +138,7 @@
         "tps": "Thin Plate Spline"
       },
       "execute": "Εκτέλεση Μετασχηματισμού",
-      "calibrate": "📐 Βαθμονόμηση Μετασχηματισμού",
+      "calibrate": "Βαθμονόμηση Μετασχηματισμού",
       "notCalibrated": "❌ Μη Βαθμονομημένο",
       "features": {
         "affine": "• Affine μετασχηματισμός",
@@ -221,20 +221,20 @@
     }
   },
   "progress": {
-    "title": "📊 Πρόοδος Φάσεων",
-    "phase1": "✅ Φάση 1: Θεμέλια",
+    "title": "Πρόοδος Φάσεων",
+    "phase1": "Φάση 1: Θεμέλια",
     "phase1Description": "Αρχιτεκτονική + Τύποι Ολοκληρώθηκαν",
-    "phase2": "✅ Φάση 2: Μετασχηματισμός",
+    "phase2": "Φάση 2: Μετασχηματισμός",
     "phase2Description": "Γεωαναφορά DXF Έτοιμη",
-    "phase3": "⏳ Φάση 3: MapLibre",
+    "phase3": "Φάση 3: MapLibre",
     "phase3Description": "Διαδραστική χαρτογράφηση",
-    "phase4": "⭕ Φάση 4: PostGIS",
+    "phase4": "Φάση 4: PostGIS",
     "phase4Description": "Χωρική βάση δεδομένων",
-    "phase5": "⭕ Φάση 5: Ειδοποιήσεις",
+    "phase5": "Φάση 5: Ειδοποιήσεις",
     "phase5Description": "Μηχανή γεω-ειδοποιήσεων"
   },
   "features": {
-    "title": "✅ Διαθέσιμα Χαρακτηριστικά",
+    "title": "Διαθέσιμα Χαρακτηριστικά",
     "controlPointManagement": "Διαχείριση Σημείων Ελέγχου",
     "affineTransformation": "Affine Μετασχηματισμός",
     "accuracyValidation": "Επικύρωση Ακρίβειας",
@@ -243,7 +243,7 @@
     "coordinateTransformation": "Μετασχηματισμός Συντεταγμένων"
   },
   "technical": {
-    "title": "🔧 Τεχνικές Προδιαγραφές",
+    "title": "Τεχνικές Προδιαγραφές",
     "transformation": "Μετασχηματισμός:",
     "transformationValue": "Affine + Ελάχιστα Τετράγωνα",
     "accuracy": "Ακρίβεια:",
@@ -256,7 +256,7 @@
     "standardsValue": "ISO 19107, OGC"
   },
   "next": {
-    "title": "⏭️ Επόμενο (Φάση 3)",
+    "title": "Επόμενο (Φάση 3)",
     "maplibre": "• Ενσωμάτωση MapLibre GL JS",
     "interactivePicking": "• Διαδραστική επιλογή συντεταγμένων",
     "realtimePreview": "• Προεπισκόπηση σε πραγματικό χρόνο",
@@ -266,11 +266,11 @@
   "actions": {
     "savePoints": "💾 Αποθήκευση Σημείων",
     "loadPoints": "📂 Φόρτωση Σημείων",
-    "clearAllPoints": "🗑️ Καθαρισμός Όλων των Σημείων",
+    "clearAllPoints": "Καθαρισμός Όλων των Σημείων",
     "addPoint": "+ Προσθήκη Σημείου"
   },
   "validation": {
-    "status": "📊 Κατάσταση Επικύρωσης",
+    "status": "Κατάσταση Επικύρωσης",
     "ready": "Έτοιμο για Βαθμονόμηση",
     "needsImprovement": "Χρειάζεται Βελτίωση",
     "statistics": {
@@ -285,7 +285,7 @@
       "recommendations": "Συστάσεις:"
     }
   },
-  "panelTitle": "📍 Σημεία Ελέγχου",
+  "panelTitle": "Σημεία Ελέγχου",
   "addControlPoint": "Προσθήκη Σημείου Ελέγχου",
   "panelHeader": {
     "title": "🗺️ Γεωαναφορά DXF",
@@ -306,42 +306,42 @@
     "addPoint": "Προσθήκη Σημείου",
     "savePoints": "💾 Αποθήκευση Σημείων",
     "loadPoints": "📂 Φόρτωση Σημείων",
-    "clearAllPoints": "🗑️ Διαγραφή Όλων των Σημείων"
+    "clearAllPoints": "Διαγραφή Όλων των Σημείων"
   },
   "transformation": {
-    "controls": "🔧 Έλεγχοι Μετασχηματισμού",
+    "controls": "Έλεγχοι Μετασχηματισμού",
     "status": "Κατάσταση:",
-    "calibrated": "✅ Βαθμονομημένο",
+    "calibrated": "Βαθμονομημένο",
     "notCalibrated": "❌ Μη Βαθμονομημένο",
-    "calibrating": "⏳ Βαθμονόμηση...",
-    "calibrateTransformation": "📐 Βαθμονόμηση Μετασχηματισμού",
+    "calibrating": "Βαθμονόμηση...",
+    "calibrateTransformation": "Βαθμονόμηση Μετασχηματισμού",
     "calibratingButton": "Βαθμονόμηση..."
   },
   "workspace": {
     "dxfGeoreferencingWorkspace": "Χώρος Εργασίας Γεωαναφοράς DXF",
     "phase2Transform": "Φάση 2: Μετασχηματισμός συντεταγμένων DXF → Γεωγραφικές συντεταγμένες",
-    "controlPointsTitle": "✅ Σημεία Ελέγχου",
+    "controlPointsTitle": "Σημεία Ελέγχου",
     "controlPointsFeatures": {
       "addEdit": "• Προσθήκη/Επεξεργασία σημείων ελέγχου",
       "mapping": "• Αντιστοίχιση DXF ↔ Γεωγραφικών",
       "accuracyValidation": "• Επικύρωση ακρίβειας",
       "spatialDistribution": "• Χωρική κατανομή"
     },
-    "transformationEngineTitle": "🔧 Μηχανή Μετασχηματισμού",
+    "transformationEngineTitle": "Μηχανή Μετασχηματισμού",
     "transformationEngineFeatures": {
       "affine": "• Affine μετασχηματισμός",
       "leastSquares": "• Βαθμονόμηση ελάχιστων τετραγώνων",
       "rmsCalculation": "• Υπολογισμός ακρίβειας RMS",
       "inverseTransformation": "• Αντίστροφος μετασχηματισμός"
     },
-    "nextPhase3": "⏳ Επόμενο: Φάση 3",
+    "nextPhase3": "Επόμενο: Φάση 3",
     "nextPhase3Features": {
       "maplibre": "• Ενσωμάτωση MapLibre GL",
       "coordinatePicker": "• Οπτική επιλογή συντεταγμένων",
       "realtimePreview": "• Προεπισκόπηση σε πραγματικό χρόνο",
       "basemapLayers": "• Επίπεδα βασικού χάρτη"
     },
-    "workflowInstructions": "📋 Οδηγίες Ροής Εργασίας",
+    "workflowInstructions": "Οδηγίες Ροής Εργασίας",
     "workflowSteps": {
       "step1": "Βήμα 1: Προσθέστε σημεία ελέγχου με συντεταγμένες DXF και Γεωγραφικές",
       "step2": "Βήμα 2: Εξασφαλίστε καλή χωρική κατανομή (γωνίες + κέντρο)",
@@ -351,20 +351,20 @@
   },
   "sidebar": {
     "phaseProgress": {
-      "title": "📊 Πρόοδος Φάσεων",
-      "phase1Title": "✅ Φάση 1: Θεμέλια",
+      "title": "Πρόοδος Φάσεων",
+      "phase1Title": "Φάση 1: Θεμέλια",
       "phase1Description": "Αρχιτεκτονική + Τύποι Ολοκληρώθηκαν",
-      "phase2Title": "✅ Φάση 2: Μετασχηματισμός",
+      "phase2Title": "Φάση 2: Μετασχηματισμός",
       "phase2Description": "Γεωαναφορά DXF Έτοιμη",
-      "phase3Title": "⏳ Φάση 3: MapLibre",
+      "phase3Title": "Φάση 3: MapLibre",
       "phase3Description": "Διαδραστική χαρτογράφηση",
-      "phase4Title": "⭕ Φάση 4: PostGIS",
+      "phase4Title": "Φάση 4: PostGIS",
       "phase4Description": "Χωρική βάση δεδομένων",
-      "phase5Title": "⭕ Φάση 5: Ειδοποιήσεις",
+      "phase5Title": "Φάση 5: Ειδοποιήσεις",
       "phase5Description": "Μηχανή γεω-ειδοποιήσεων"
     },
     "availableFeatures": {
-      "title": "✅ Διαθέσιμα Χαρακτηριστικά",
+      "title": "Διαθέσιμα Χαρακτηριστικά",
       "controlPointManagement": "Διαχείριση Σημείων Ελέγχου",
       "affineTransformation": "Affine Μετασχηματισμός",
       "accuracyValidation": "Επικύρωση Ακρίβειας",
@@ -373,7 +373,7 @@
       "coordinateTransformation": "Μετασχηματισμός Συντεταγμένων"
     },
     "technicalSpecs": {
-      "title": "🔧 Τεχνικές Προδιαγραφές",
+      "title": "Τεχνικές Προδιαγραφές",
       "transformation": "Μετασχηματισμός:",
       "transformationValue": "Affine + Ελάχιστα Τετράγωνα",
       "accuracy": "Ακρίβεια:",
@@ -386,7 +386,7 @@
       "standardsValue": "ISO 19107, OGC"
     },
     "comingNext": {
-      "title": "⏭️ Επόμενα (Φάση 3)",
+      "title": "Επόμενα (Φάση 3)",
       "maplibreIntegration": "• Ενσωμάτωση MapLibre GL JS",
       "interactiveCoordinatePicking": "• Διαδραστική επιλογή συντεταγμένων",
       "realtimeTransformationPreview": "• Προεπισκόπηση μετασχηματισμού σε πραγματικό χρόνο",
@@ -470,7 +470,7 @@
     }
   },
   "accuracy": {
-    "legend": "📐 Μύημα Ακρίβειας",
+    "legend": "Μύημα Ακρίβειας",
     "visualization": "Οπτικοποίηση:",
     "types": {
       "circles": "○ Κύκλοι",
@@ -675,16 +675,16 @@
       "floorPlan": "Κάτοψη:"
     },
     "technical": {
-      "title": "🔧 Τεχνικά Εργαλεία",
+      "title": " Τεχνικά Εργαλεία",
       "subtitle": "Μηχανικοί - Πλήρης υποστήριξη DXF/DWG με ακρίβεια CAD",
       "tools": {
-        "precision": "📐 Ακρίβεια Χιλιοστού",
-        "settings": "⚙️ Ρυθμίσεις",
-        "settingsAdvanced": "🔧 Προχωρημένες Ρυθμίσεις",
-        "alertsAuto": "🚨 Αυτοματοποιημένες Ειδοποιήσεις"
+        "precision": " Ακρίβεια Χιλιοστού",
+        "settings": " Ρυθμίσεις",
+        "settingsAdvanced": " Προχωρημένες Ρυθμίσεις",
+        "alertsAuto": " Αυτοματοποιημένες Ειδοποιήσεις"
       },
       "automatedAlerts": {
-        "title": "🚨 Τεχνικές Αυτοματοποιημένες Ειδοποιήσεις",
+        "title": " Τεχνικές Αυτοματοποιημένες Ειδοποιήσεις",
         "detectionSensitivity": "Ευαισθησία Ανίχνευσης",
         "monitoringInterval": "Διάστημα Παρακολούθησης (λεπτά)",
         "morePlatforms": "Περισσότερες πλατφόρμες...",
@@ -707,19 +707,19 @@
         "coordinates": "WGS84"
       },
       "actions": {
-        "complete": "✅ Ολοκλήρωση",
+        "complete": " Ολοκλήρωση",
         "cancel": "❌ Ακύρωση"
       },
       "instructions": {
-        "precision": "📐 Τεχνική ακρίβεια επιπέδου χιλιοστού για CAD εργασίες",
-        "settings": "⚙️ Προχωρημένες ρυθμίσεις για τεχνικούς χρήστες",
-        "automatedAlerts": "🚨 Διαμόρφωση αυτοματοποιημένων ειδοποιήσεων με τεχνική ακρίβεια"
+        "precision": " Τεχνική ακρίβεια επιπέδου χιλιοστού για CAD εργασίες",
+        "settings": " Προχωρημένες ρυθμίσεις για τεχνικούς χρήστες",
+        "automatedAlerts": " Διαμόρφωση αυτοματοποιημένων ειδοποιήσεων με τεχνική ακρίβεια"
       },
       "openViewer": "🛠️ Άνοιγμα DXF Viewer",
       "cadEnvironment": "Περιβάλλον CAD",
       "fullDxfViewer": "🛠️ Άνοιγμα πλήρους DXF Viewer σε νέο tab με όλα τα CAD εργαλεία",
-      "ultraPrecision": "📐 Ultra-precision mode: Κάντε κλικ για σημεία με ακρίβεια χιλιοστού",
-      "advancedSettings": "⚙️ Προχωρημένες ρυθμίσεις για τεχνικούς χρήστες"
+      "ultraPrecision": " Ultra-precision mode: Κάντε κλικ για σημεία με ακρίβεια χιλιοστού",
+      "advancedSettings": " Προχωρημένες ρυθμίσεις για τεχνικούς χρήστες"
     },
     "professional": {
       "title": "🏢 Εργαλεία Επαγγελματία",
@@ -734,7 +734,7 @@
       "addPropertyPoints": "🏢 Κάντε κλικ για να προσθέσετε σημεία στο ακίνητο. Διπλό κλικ για ολοκλήρωση",
       "autoDetectRooms": "🤖 Αυτόματη ανίχνευση δωματίων από τη μεταφορτωμένη κάτοψη",
       "propertyManager": "🏘️ Διαχείριση κατάστασης ακινήτων με χρωματική κωδικοποίηση και στατιστικά",
-      "marketDashboard": "📊 Πίνακας ελέγχου για παρακολούθηση αγοράς ακινήτων και αναλυτικά στοιχεία"
+      "marketDashboard": " Πίνακας ελέγχου για παρακολούθηση αγοράς ακινήτων και αναλυτικά στοιχεία"
     },
     "citizen": {
       "title": "👥 Εργαλεία Πολίτη",
@@ -768,14 +768,14 @@
           "commercial": "Επαγγελματικό"
         }
       },
-      "placePoint": "📍 Κάντε κλικ στο χάρτη για να τοποθετήσετε ένα σημείο ειδοποίησης",
+      "placePoint": "Κάντε κλικ στο χάρτη για να τοποθετήσετε ένα σημείο ειδοποίησης",
       "addPolygonPoints": "🔷 Κάντε κλικ για να προσθέσετε σημεία στο πολύγωνο. Διπλό κλικ για ολοκλήρωση",
-      "drawFreehand": "✏️ Κρατήστε πατημένο και σύρετε για να σχεδιάσετε ελεύθερα",
+      "drawFreehand": " Κρατήστε πατημένο και σύρετε για να σχεδιάσετε ελεύθερα",
       "drawInterestArea": "🏠 Σχεδιάστε την περιοχή ενδιαφέροντος για ειδοποιήσεις ακινήτων. Διπλό κλικ για ολοκλήρωση"
     }
   },
   "mapStatus": {
-    "polygonClosed": "✅ ΚΛΕΙΣΤΟ Πολύγωνο",
+    "polygonClosed": " ΚΛΕΙΣΤΟ Πολύγωνο",
     "clickToClose": "🔄 Κάντε κλικ για ΚΛΕΙΣΙΜΟ πολυγώνου"
   },
   "hardcodedTexts": {
@@ -808,12 +808,12 @@
       "rmsAccuracy": "RMS Ακρίβεια:",
       "technicalSensitivity": "Τεχνική Ευαισθησία",
       "monitoringPlatforms": "Πλατφόρμες Παρακολούθησης",
-      "monitoringZones": "📊 Ζώνες Παρακολούθησης:",
-      "detectedProperties": "🎯 Εντοπισμένα Ακίνητα:",
+      "monitoringZones": " Ζώνες Παρακολούθησης:",
+      "detectedProperties": " Εντοπισμένα Ακίνητα:",
       "lastScan": "🕐 Τελευταία Σάρωση:",
-      "technicalMatches": "🎯 Τεχνικές Αντιστοιχίες:",
-      "automatedAlerts": "🚨 Αυτοματοποιημένες Ειδοποιήσεις:",
-      "precisionLabel": "📊 Ακρίβεια:",
+      "technicalMatches": " Τεχνικές Αντιστοιχίες:",
+      "automatedAlerts": " Αυτοματοποιημένες Ειδοποιήσεις:",
+      "precisionLabel": " Ακρίβεια:",
       "georeferencing": "Γεωαναφορά:",
       "confidenceThreshold": "Όριο Εμπιστοσύνης:",
       "processingLabel": "Επεξεργασία:",
@@ -862,9 +862,9 @@
   },
   "instructions": {
     "citizen": {
-      "placePoint": "📍 Κάντε κλικ στο χάρτη για να τοποθετήσετε ένα σημείο ειδοποίησης",
+      "placePoint": "Κάντε κλικ στο χάρτη για να τοποθετήσετε ένα σημείο ειδοποίησης",
       "addPolygonPoints": "🔷 Κάντε κλικ για να προσθέσετε σημεία στο πολύγωνο. Διπλό κλικ για ολοκλήρωση",
-      "drawFreehand": "✏️ Κρατήστε πατημένο και σύρετε για να σχεδιάσετε ελεύθερα"
+      "drawFreehand": " Κρατήστε πατημένο και σύρετε για να σχεδιάσετε ελεύθερα"
     }
   }
 }

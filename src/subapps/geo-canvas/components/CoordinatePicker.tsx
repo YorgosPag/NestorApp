@@ -8,6 +8,7 @@ import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effect
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { Square, Clipboard, Globe, ClipboardList, MapPin } from 'lucide-react';
 // 🏭 SMART ACTION FACTORY - ZERO DUPLICATES
 import { createSmartActionGroup } from '@/core/actions/SmartActionFactory';
 
@@ -215,7 +216,8 @@ export function CoordinatePicker({
   const renderDxfInputSection = () => (
     <div className={`${colors.bg.primary} ${quick.card} p-4 mb-4`}>
       <h3 className={`text-lg font-semibold mb-3 ${colors.text.accent}`}>
-        📐 DXF Coordinates
+        <Square className={iconSizes.sm} style={{ display: 'inline-block', marginRight: '8px' }} />
+        DXF Coordinates
       </h3>
 
       <div className="grid grid-cols-3 gap-3">
@@ -260,7 +262,8 @@ export function CoordinatePicker({
             onClick={fillFromSelectedPoint}
             className={`text-sm ${colors.bg.info} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-white px-3 py-1 rounded transition-colors`}
           >
-            📋 Fill από Selected Point
+            <Clipboard className={iconSizes.xs} style={{ display: 'inline-block', marginRight: '6px' }} />
+            Fill από Selected Point
           </button>
         </div>
       )}
@@ -271,7 +274,8 @@ export function CoordinatePicker({
     <div className={`${colors.bg.primary} ${quick.card} p-4 mb-4`}>
       <div className="flex items-center justify-between mb-3">
         <h3 className={`text-lg font-semibold ${colors.text.accent}`}>
-          🌍 Geographic Coordinates
+          <Globe className={iconSizes.sm} style={{ display: 'inline-block', marginRight: '8px' }} />
+          Geographic Coordinates
         </h3>
         <div className="flex items-center space-x-2">
           <span className={`${iconSizes.xs} ${radius.full} ${
@@ -368,7 +372,8 @@ export function CoordinatePicker({
   const renderStatusSection = () => (
     <div className={`${colors.bg.primary} ${quick.card} p-4 mb-4`}>
       <h3 className={`text-lg font-semibold mb-3 ${colors.text.accent}`}>
-        📋 Status
+        <ClipboardList className={iconSizes.sm} style={{ display: 'inline-block', marginRight: '8px' }} />
+        Status
       </h3>
 
       <div className="space-y-2 text-sm">
@@ -433,7 +438,8 @@ export function CoordinatePicker({
       {/* Header */}
       <div className={`${colors.bg.primary} ${quick.card} p-4`}>
         <h2 className={`text-xl font-bold ${colors.text.accent} mb-2`}>
-          📍 Add Control Point
+          <MapPin className={iconSizes.sm} style={{ display: 'inline-block', marginRight: '8px' }} />
+          Add Control Point
         </h2>
         <p className={`text-sm ${colors.text.muted}`}>
           Combine DXF coordinates με geographic coordinates
@@ -468,7 +474,10 @@ export function CoordinatePicker({
 
       {/* Instructions */}
       <div className={`${colors.bg.info} ${quick.info} p-4`}>
-        <h4 className={`font-semibold ${colors.text.accent} mb-2`}>📋 Instructions:</h4>
+        <h4 className={`font-semibold ${colors.text.accent} mb-2`}>
+          <ClipboardList className={iconSizes.xs} style={{ display: 'inline-block', marginRight: '6px' }} />
+          Instructions:
+        </h4>
         <ol className={`text-sm ${colors.text.info} space-y-1`}>
           <li>1. Enter DXF coordinates (X, Y, optional Z)</li>
           <li>2. Click on map για geographic coordinates</li>

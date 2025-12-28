@@ -22,31 +22,25 @@ import type {
 } from './enterprise/types/cloud-providers';
 
 import type {
-  InfrastructureConfig,
-  RegionConfig,
-  ComputeConfig,
-  InstanceConfig,
-  AutoScalingConfig,
-  ScalingPolicy,
-  ScalingMetric,
-  LoadBalancingConfig,
-  HealthCheckConfig,
-  ContainerConfig,
-  ServerlessConfig,
+  InfrastructureTemplate,
+  ComputeInstance,
   StorageConfig,
   DatabaseConfig,
-  MonitoringConfig,
+  VirtualMachine,
+  ContainerConfig,
+  ServerlessConfig,
+  AutoScalingConfig,
+  SchedulingConfig,
+  LoggingConfig,
+  AlertConfig,
   BackupConfig,
-  SecurityConfig
+  SecurityConfig,
+  ComplianceConfig,
+  CostOptimization,
+  ResourceMonitoring,
+  DeploymentConfig,
+  EnvironmentConfig
 } from './enterprise/types/infrastructure';
-
-import type {
-  NetworkConfig
-} from './enterprise/types/networking';
-
-import type {
-  InfrastructureStatus
-} from './enterprise/types/status';
 
 // ============================================================================
 // TYPE DEFINITIONS - COMMENTED OUT (NOW USING MODULAR IMPORTS)
@@ -55,13 +49,1164 @@ import type {
 // COMMENTED OUT: All original interfaces moved to modular files
 // Now using ./enterprise/types/cloud-providers.ts and ./enterprise/types/infrastructure.ts
 
+/*
+interface _LegacyCloudProvider {
+  name: 'aws' | 'azure' | 'gcp' | 'digitalocean' | 'linode';
+  region: string;
+  credentials: CloudCredentials;
+  endpoints: CloudEndpoints;
+  features: CloudFeatures;
+  pricing: CloudPricing;
+}
 
-// All original type definitions have been moved to modular files:
-// - ./enterprise/types/cloud-providers.ts
-// - ./enterprise/types/infrastructure.ts
-// - ./enterprise/types/networking.ts
-// - ./enterprise/types/status.ts
+/**
+ * Cloud credentials
+ */
+export interface CloudCredentials {
+  accessKey?: string;
+  secretKey?: string;
+  tenantId?: string;
+  subscriptionId?: string;
+  projectId?: string;
+  serviceAccountKey?: any;
+  token?: string;
+}
 
+/**
+ * Cloud endpoints
+ */
+export interface CloudEndpoints {
+  compute: string;
+  storage: string;
+  database: string;
+  networking: string;
+  monitoring: string;
+  dns: string;
+}
+
+/**
+ * Cloud features
+ */
+export interface CloudFeatures {
+  autoScaling: boolean;
+  loadBalancing: boolean;
+  cdn: boolean;
+  database: boolean;
+  objectStorage: boolean;
+  kubernetes: boolean;
+  serverless: boolean;
+  monitoring: boolean;
+}
+
+/**
+ * Cloud pricing
+ */
+export interface CloudPricing {
+  compute: PricingTier[];
+  storage: PricingTier[];
+  network: PricingTier[];
+  database: PricingTier[];
+}
+
+/**
+ * Pricing tier
+ */
+export interface PricingTier {
+  name: string;
+  cpu: number;
+  memory: number;
+  storage: number;
+  pricePerHour: number;
+  pricePerMonth: number;
+}
+
+// ============================================================================
+// INFRASTRUCTURE TYPE DEFINITIONS - COMMENTED OUT (NOW USING MODULAR IMPORTS)
+// ============================================================================
+// COMMENTED OUT: Now using ./enterprise/types/infrastructure.ts
+/**
+ * Infrastructure configuration
+ */
+export interface InfrastructureConfig {
+  name: string;
+  environment: 'development' | 'staging' | 'production';
+  providers: CloudProvider[];
+  regions: RegionConfig[];
+  networking: NetworkConfig;
+  compute: ComputeConfig;
+  storage: StorageConfig;
+  database: DatabaseConfig;
+  monitoring: MonitoringConfig;
+  security: SecurityConfig;
+  scaling: ScalingConfig;
+  backup: BackupConfig;
+}
+
+/**
+ * Region configuration
+ */
+export interface RegionConfig {
+  name: string;
+  provider: string;
+  primary: boolean;
+  availabilityZones: string[];
+  latencyRequirements: {
+    maxLatency: number;     // ms
+    targetLatency: number;  // ms
+  };
+  complianceRequirements: string[];
+}
+
+/**
+ * Network configuration
+ */
+export interface NetworkConfig {
+  vpc: VPCConfig;
+  subnets: SubnetConfig[];
+  loadBalancers: LoadBalancerConfig[];
+  cdn: CDNConfig;
+  dns: DNSConfig;
+  firewall: FirewallConfig;
+}
+
+/**
+ * VPC configuration
+ */
+export interface VPCConfig {
+  cidr: string;
+  enableDnsHostnames: boolean;
+  enableDnsSupport: boolean;
+  tags: Record<string, string>;
+}
+
+/**
+ * Subnet configuration
+ */
+export interface SubnetConfig {
+  name: string;
+  cidr: string;
+  availabilityZone: string;
+  type: 'public' | 'private' | 'database';
+  routeTable: string;
+}
+
+/**
+ * Load balancer configuration
+ */
+export interface LoadBalancerConfig {
+  name: string;
+  type: 'application' | 'network' | 'classic';
+  scheme: 'internet-facing' | 'internal';
+  listeners: ListenerConfig[];
+  healthCheck: HealthCheckConfig;
+  sslPolicy: string;
+  stickySessions: boolean;
+}
+
+/**
+ * Listener configuration
+ */
+export interface ListenerConfig {
+  port: number;
+  protocol: 'HTTP' | 'HTTPS' | 'TCP' | 'UDP';
+  ssl: boolean;
+  certificateArn?: string;
+  rules: ListenerRule[];
+}
+
+/**
+ * Listener rule
+ */
+export interface ListenerRule {
+  priority: number;
+  conditions: RuleCondition[];
+  actions: RuleAction[];
+}
+
+/**
+ * Rule condition
+ */
+export interface RuleCondition {
+  type: 'host-header' | 'path-pattern' | 'source-ip';
+  values: string[];
+}
+
+/**
+ * Rule action
+ */
+export interface RuleAction {
+  type: 'forward' | 'redirect' | 'fixed-response';
+  targetGroupArn?: string;
+  redirectConfig?: {
+    host?: string;
+    path?: string;
+    port?: string;
+    protocol?: string;
+    query?: string;
+    statusCode: 'HTTP_301' | 'HTTP_302';
+  };
+  fixedResponseConfig?: {
+    statusCode: string;
+    contentType?: string;
+    messageBody?: string;
+  };
+}
+
+/**
+ * CDN configuration
+ */
+export interface CDNConfig {
+  enabled: boolean;
+  provider: 'cloudflare' | 'aws-cloudfront' | 'azure-cdn' | 'google-cdn';
+  origins: CDNOrigin[];
+  caching: CachingConfig;
+  compression: boolean;
+  minify: boolean;
+  waf: WAFConfig;
+}
+
+/**
+ * CDN origin
+ */
+export interface CDNOrigin {
+  id: string;
+  domainName: string;
+  path?: string;
+  customHeaders: Record<string, string>;
+  sslProtocols: string[];
+}
+
+/**
+ * Caching configuration
+ */
+export interface CachingConfig {
+  defaultTtl: number;
+  maxTtl: number;
+  cachePolicyId?: string;
+  behaviors: CacheBehavior[];
+}
+
+/**
+ * Cache behavior
+ */
+export interface CacheBehavior {
+  pathPattern: string;
+  targetOriginId: string;
+  compress: boolean;
+  allowedMethods: string[];
+  cachedMethods: string[];
+  forwardCookies: 'none' | 'whitelist' | 'all';
+  forwardHeaders: string[];
+  ttl: {
+    min: number;
+    default: number;
+    max: number;
+  };
+}
+
+/**
+ * WAF configuration
+ */
+export interface WAFConfig {
+  enabled: boolean;
+  rules: WAFRule[];
+  rateLimiting: {
+    enabled: boolean;
+    requestsPerMinute: number;
+  };
+  geoBlocking: {
+    enabled: boolean;
+    blockedCountries: string[];
+    allowedCountries: string[];
+  };
+}
+
+/**
+ * WAF rule
+ */
+export interface WAFRule {
+  name: string;
+  priority: number;
+  action: 'allow' | 'block' | 'count';
+  conditions: WAFCondition[];
+}
+
+/**
+ * WAF condition
+ */
+export interface WAFCondition {
+  type: 'ip' | 'country' | 'string-match' | 'size-constraint' | 'xss' | 'sql-injection';
+  value: string;
+  operator: 'equals' | 'contains' | 'starts-with' | 'ends-with' | 'greater-than' | 'less-than';
+}
+
+/**
+ * DNS configuration
+ */
+export interface DNSConfig {
+  provider: 'route53' | 'cloudflare' | 'azure-dns' | 'google-dns';
+  domain: string;
+  records: DNSRecord[];
+  healthChecks: DNSHealthCheck[];
+}
+
+/**
+ * DNS record
+ */
+export interface DNSRecord {
+  name: string;
+  type: 'A' | 'AAAA' | 'CNAME' | 'MX' | 'TXT' | 'NS' | 'SOA';
+  value: string;
+  ttl: number;
+  geolocation?: {
+    continent?: string;
+    country?: string;
+    subdivision?: string;
+  };
+  weight?: number;
+  setIdentifier?: string;
+}
+
+/**
+ * DNS health check
+ */
+export interface DNSHealthCheck {
+  name: string;
+  type: 'HTTP' | 'HTTPS' | 'TCP';
+  target: string;
+  port?: number;
+  path?: string;
+  interval: number;
+  timeout: number;
+  failureThreshold: number;
+}
+
+/**
+ * Firewall configuration
+ */
+export interface FirewallConfig {
+  rules: FirewallRule[];
+  defaultAction: 'allow' | 'deny';
+  logging: boolean;
+}
+
+/**
+ * Firewall rule
+ */
+export interface FirewallRule {
+  name: string;
+  priority: number;
+  direction: 'inbound' | 'outbound';
+  action: 'allow' | 'deny';
+  protocol: 'TCP' | 'UDP' | 'ICMP' | 'any';
+  sourceIP?: string;
+  sourcePort?: string;
+  destinationIP?: string;
+  destinationPort?: string;
+}
+
+/**
+ * Compute configuration
+ */
+export interface ComputeConfig {
+  instances: InstanceConfig[];
+  autoScaling: AutoScalingConfig;
+  kubernetes: KubernetesConfig;
+  serverless: ServerlessConfig;
+}
+
+/**
+ * Instance configuration
+ */
+export interface InstanceConfig {
+  name: string;
+  type: string;
+  image: string;
+  keyPair: string;
+  securityGroups: string[];
+  subnet: string;
+  publicIP: boolean;
+  userData?: string;
+  tags: Record<string, string>;
+  monitoring: boolean;
+}
+
+/**
+ * Auto-scaling configuration
+ */
+export interface AutoScalingConfig {
+  enabled: boolean;
+  minInstances: number;
+  maxInstances: number;
+  desiredCapacity: number;
+  scalingPolicies: ScalingPolicy[];
+  healthCheckType: 'EC2' | 'ELB';
+  healthCheckGracePeriod: number;
+}
+
+/**
+ * Scaling policy
+ */
+export interface ScalingPolicy {
+  name: string;
+  type: 'target-tracking' | 'step' | 'simple';
+  metricType: 'cpu' | 'memory' | 'network' | 'custom';
+  targetValue?: number;
+  scaleUpAdjustment: number;
+  scaleDownAdjustment: number;
+  cooldown: number;
+}
+
+/**
+ * Kubernetes configuration
+ */
+export interface KubernetesConfig {
+  enabled: boolean;
+  version: string;
+  nodeGroups: NodeGroupConfig[];
+  addons: string[];
+  rbac: boolean;
+  networkPolicy: boolean;
+}
+
+/**
+ * Node group configuration
+ */
+export interface NodeGroupConfig {
+  name: string;
+  instanceType: string;
+  minSize: number;
+  maxSize: number;
+  desiredSize: number;
+  diskSize: number;
+  labels: Record<string, string>;
+  taints: KubernetesTaint[];
+}
+
+/**
+ * Kubernetes taint
+ */
+export interface KubernetesTaint {
+  key: string;
+  value: string;
+  effect: 'NoSchedule' | 'PreferNoSchedule' | 'NoExecute';
+}
+
+/**
+ * Serverless configuration
+ */
+export interface ServerlessConfig {
+  functions: ServerlessFunction[];
+  apiGateway: APIGatewayConfig;
+  eventSources: EventSourceConfig[];
+}
+
+/**
+ * Serverless function
+ */
+export interface ServerlessFunction {
+  name: string;
+  runtime: string;
+  handler: string;
+  memory: number;
+  timeout: number;
+  environment: Record<string, string>;
+  triggers: FunctionTrigger[];
+}
+
+/**
+ * Function trigger
+ */
+export interface FunctionTrigger {
+  type: 'http' | 'schedule' | 'queue' | 'storage' | 'database';
+  config: any;
+}
+
+/**
+ * API Gateway configuration
+ */
+export interface APIGatewayConfig {
+  name: string;
+  type: 'REST' | 'WebSocket';
+  cors: boolean;
+  authentication: 'none' | 'api-key' | 'cognito' | 'lambda';
+  throttling: {
+    rateLimit: number;
+    burstLimit: number;
+  };
+}
+
+/**
+ * Event source configuration
+ */
+export interface EventSourceConfig {
+  type: 'sqs' | 'sns' | 's3' | 'dynamodb' | 'kinesis';
+  config: any;
+}
+
+/**
+ * Storage configuration
+ */
+export interface StorageConfig {
+  objectStorage: ObjectStorageConfig;
+  blockStorage: BlockStorageConfig;
+  fileStorage: FileStorageConfig;
+  backup: BackupConfig;
+}
+
+/**
+ * Object storage configuration
+ */
+export interface ObjectStorageConfig {
+  buckets: BucketConfig[];
+  lifecycle: LifecyclePolicy[];
+  replication: ReplicationConfig[];
+}
+
+/**
+ * Bucket configuration
+ */
+export interface BucketConfig {
+  name: string;
+  region: string;
+  storageClass: string;
+  encryption: boolean;
+  versioning: boolean;
+  publicRead: boolean;
+  cors: CORSConfig;
+}
+
+/**
+ * CORS configuration
+ */
+export interface CORSConfig {
+  allowedOrigins: string[];
+  allowedMethods: string[];
+  allowedHeaders: string[];
+  maxAge: number;
+}
+
+/**
+ * Lifecycle policy
+ */
+export interface LifecyclePolicy {
+  id: string;
+  status: 'enabled' | 'disabled';
+  transitions: LifecycleTransition[];
+  expiration?: {
+    days: number;
+    expiredObjectDeleteMarker: boolean;
+  };
+}
+
+/**
+ * Lifecycle transition
+ */
+export interface LifecycleTransition {
+  days: number;
+  storageClass: string;
+}
+
+/**
+ * Replication configuration
+ */
+export interface ReplicationConfig {
+  destinationBucket: string;
+  destinationRegion: string;
+  storageClass?: string;
+  prefix?: string;
+}
+
+/**
+ * Block storage configuration
+ */
+export interface BlockStorageConfig {
+  volumes: VolumeConfig[];
+  snapshots: SnapshotConfig[];
+}
+
+/**
+ * Volume configuration
+ */
+export interface VolumeConfig {
+  name: string;
+  size: number;
+  type: 'gp2' | 'gp3' | 'io1' | 'io2' | 'st1' | 'sc1';
+  iops?: number;
+  throughput?: number;
+  encrypted: boolean;
+  availabilityZone: string;
+}
+
+/**
+ * Snapshot configuration
+ */
+export interface SnapshotConfig {
+  volumeId: string;
+  schedule: string;
+  retention: number;
+  crossRegionCopy: boolean;
+}
+
+/**
+ * File storage configuration
+ */
+export interface FileStorageConfig {
+  enabled: boolean;
+  type: 'nfs' | 'smb';
+  performance: 'general-purpose' | 'max-io';
+  throughput: 'provisioned' | 'bursting';
+  encryption: boolean;
+}
+
+/**
+ * Database configuration
+ */
+export interface DatabaseConfig {
+  primary: PrimaryDatabaseConfig;
+  replicas: ReplicaDatabaseConfig[];
+  backup: DatabaseBackupConfig;
+  monitoring: DatabaseMonitoringConfig;
+}
+
+/**
+ * Primary database configuration
+ */
+export interface PrimaryDatabaseConfig {
+  engine: 'postgresql' | 'mysql' | 'mongodb' | 'redis';
+  version: string;
+  instanceClass: string;
+  allocatedStorage: number;
+  maxAllocatedStorage: number;
+  storageType: 'gp2' | 'gp3' | 'io1' | 'io2';
+  multiAZ: boolean;
+  encryption: boolean;
+  backupRetention: number;
+  maintenanceWindow: string;
+  parameterGroup?: string;
+}
+
+/**
+ * Replica database configuration
+ */
+export interface ReplicaDatabaseConfig {
+  region: string;
+  instanceClass: string;
+  readOnly: boolean;
+  lagThreshold: number;
+}
+
+/**
+ * Database backup configuration
+ */
+export interface DatabaseBackupConfig {
+  automated: boolean;
+  retentionPeriod: number;
+  backupWindow: string;
+  copyTags: boolean;
+  crossRegionBackup: boolean;
+  pointInTimeRecovery: boolean;
+}
+
+/**
+ * Database monitoring configuration
+ */
+export interface DatabaseMonitoringConfig {
+  performanceInsights: boolean;
+  enhancedMonitoring: boolean;
+  slowQueryLog: boolean;
+  generalLog: boolean;
+  errorLog: boolean;
+}
+
+/**
+ * Monitoring configuration
+ */
+export interface MonitoringConfig {
+  metrics: MetricsConfig;
+  logging: LoggingConfig;
+  alerting: AlertingConfig;
+  dashboards: DashboardConfig[];
+}
+
+/**
+ * Metrics configuration
+ */
+export interface MetricsConfig {
+  provider: 'cloudwatch' | 'datadog' | 'newrelic' | 'prometheus';
+  retention: number;
+  customMetrics: CustomMetric[];
+  aggregation: MetricAggregation[];
+}
+
+/**
+ * Custom metric
+ */
+export interface CustomMetric {
+  name: string;
+  namespace: string;
+  dimensions: Record<string, string>;
+  unit: string;
+  statistic: 'sum' | 'average' | 'maximum' | 'minimum' | 'count';
+}
+
+/**
+ * Metric aggregation
+ */
+export interface MetricAggregation {
+  period: number;
+  statistic: string;
+  threshold: number;
+}
+
+/**
+ * Logging configuration
+ */
+export interface LoggingConfig {
+  provider: 'cloudwatch' | 'elasticsearch' | 'splunk' | 'datadog';
+  retention: number;
+  logGroups: LogGroup[];
+  parsing: LogParsingConfig;
+}
+
+/**
+ * Log group
+ */
+export interface LogGroup {
+  name: string;
+  retention: number;
+  encryption: boolean;
+  filters: LogFilter[];
+}
+
+/**
+ * Log filter
+ */
+export interface LogFilter {
+  name: string;
+  pattern: string;
+  metricTransformation?: {
+    metricName: string;
+    metricNamespace: string;
+    metricValue: string;
+  };
+}
+
+/**
+ * Log parsing configuration
+ */
+export interface LogParsingConfig {
+  format: 'json' | 'structured' | 'unstructured';
+  patterns: string[];
+  fields: string[];
+}
+
+/**
+ * Alerting configuration
+ */
+export interface AlertingConfig {
+  rules: AlertRule[];
+  channels: AlertChannel[];
+  escalation: EscalationPolicy[];
+}
+
+/**
+ * Alert rule
+ */
+export interface AlertRule {
+  name: string;
+  condition: AlertCondition;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  enabled: boolean;
+  channels: string[];
+}
+
+/**
+ * Alert condition
+ */
+export interface AlertCondition {
+  metric: string;
+  operator: 'gt' | 'gte' | 'lt' | 'lte' | 'eq' | 'ne';
+  threshold: number;
+  period: number;
+  evaluationPeriods: number;
+}
+
+/**
+ * Alert channel
+ */
+export interface AlertChannel {
+  name: string;
+  type: 'email' | 'sms' | 'slack' | 'pagerduty' | 'webhook';
+  config: any;
+}
+
+/**
+ * Escalation policy
+ */
+export interface EscalationPolicy {
+  name: string;
+  levels: EscalationLevel[];
+}
+
+/**
+ * Escalation level
+ */
+export interface EscalationLevel {
+  delay: number;
+  channels: string[];
+}
+
+/**
+ * Dashboard configuration
+ */
+export interface DashboardConfig {
+  name: string;
+  widgets: DashboardWidget[];
+  layout: DashboardLayout;
+}
+
+/**
+ * Dashboard widget
+ */
+export interface DashboardWidget {
+  type: 'metric' | 'log' | 'number' | 'graph' | 'table';
+  title: string;
+  config: any;
+  position: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+
+/**
+ * Dashboard layout
+ */
+export interface DashboardLayout {
+  columns: number;
+  rows: number;
+  spacing: number;
+}
+
+/**
+ * Security configuration
+ */
+export interface SecurityConfig {
+  encryption: EncryptionConfig;
+  iam: IAMConfig;
+  compliance: ComplianceConfig;
+  secrets: SecretsConfig;
+}
+
+/**
+ * Encryption configuration
+ */
+export interface EncryptionConfig {
+  atRest: boolean;
+  inTransit: boolean;
+  keyManagement: 'aws-kms' | 'azure-key-vault' | 'google-kms' | 'hashicorp-vault';
+  keys: EncryptionKey[];
+}
+
+/**
+ * Encryption key
+ */
+export interface EncryptionKey {
+  id: string;
+  purpose: string;
+  algorithm: string;
+  keySize: number;
+  rotation: boolean;
+  rotationPeriod?: number;
+}
+
+/**
+ * IAM configuration
+ */
+export interface IAMConfig {
+  users: IAMUser[];
+  roles: IAMRole[];
+  policies: IAMPolicy[];
+  groups: IAMGroup[];
+}
+
+/**
+ * IAM user
+ */
+export interface IAMUser {
+  username: string;
+  groups: string[];
+  policies: string[];
+  accessKeys: boolean;
+  mfa: boolean;
+}
+
+/**
+ * IAM role
+ */
+export interface IAMRole {
+  name: string;
+  trustPolicy: any;
+  policies: string[];
+  maxSessionDuration: number;
+}
+
+/**
+ * IAM policy
+ */
+export interface IAMPolicy {
+  name: string;
+  document: any;
+  type: 'managed' | 'inline';
+}
+
+/**
+ * IAM group
+ */
+export interface IAMGroup {
+  name: string;
+  policies: string[];
+}
+
+/**
+ * Compliance configuration
+ */
+export interface ComplianceConfig {
+  standards: string[];
+  auditing: boolean;
+  dataResidency: DataResidencyConfig;
+  retention: RetentionPolicy[];
+}
+
+/**
+ * Data residency configuration
+ */
+export interface DataResidencyConfig {
+  allowedRegions: string[];
+  blockedRegions: string[];
+  dataClassification: DataClassification[];
+}
+
+/**
+ * Data classification
+ */
+export interface DataClassification {
+  type: 'public' | 'internal' | 'confidential' | 'restricted';
+  requirements: string[];
+}
+
+/**
+ * Retention policy
+ */
+export interface RetentionPolicy {
+  dataType: string;
+  retentionPeriod: number;
+  archivalPolicy: string;
+  deletionPolicy: string;
+}
+
+/**
+ * Secrets configuration
+ */
+export interface SecretsConfig {
+  provider: 'aws-secrets' | 'azure-key-vault' | 'google-secret-manager' | 'hashicorp-vault';
+  rotation: boolean;
+  encryption: boolean;
+  secrets: SecretConfig[];
+}
+
+/**
+ * Secret configuration
+ */
+export interface SecretConfig {
+  name: string;
+  type: 'password' | 'api-key' | 'certificate' | 'token';
+  rotation: boolean;
+  rotationPeriod?: number;
+  accessPolicy: string;
+}
+
+/**
+ * Scaling configuration
+ */
+export interface ScalingConfig {
+  autoScaling: boolean;
+  predictiveScaling: boolean;
+  scheduledScaling: ScheduledScaling[];
+  metrics: ScalingMetric[];
+  policies: ScalingPolicy[];
+}
+
+/**
+ * Scheduled scaling
+ */
+export interface ScheduledScaling {
+  name: string;
+  schedule: string;
+  minCapacity: number;
+  maxCapacity: number;
+  desiredCapacity: number;
+}
+
+/**
+ * Scaling metric
+ */
+export interface ScalingMetric {
+  name: string;
+  targetValue: number;
+  scaleOutCooldown: number;
+  scaleInCooldown: number;
+}
+
+/**
+ * Backup configuration
+ */
+export interface BackupConfig {
+  enabled: boolean;
+  schedule: string;
+  retention: number;
+  crossRegion: boolean;
+  encryption: boolean;
+  testing: boolean;
+  resources: BackupResource[];
+}
+
+/**
+ * Backup resource
+ */
+export interface BackupResource {
+  type: 'database' | 'volume' | 'file-system' | 'application';
+  name: string;
+  schedule: string;
+  retention: number;
+}
+
+/**
+ * Infrastructure status
+ */
+export interface InfrastructureStatus {
+  name: string;
+  environment: string;
+  status: 'provisioning' | 'running' | 'updating' | 'failed' | 'destroyed';
+  regions: RegionStatus[];
+  resources: ResourceStatus[];
+  costs: CostAnalysis;
+  health: HealthStatus;
+  lastUpdated: number;
+}
+
+/**
+ * Region status
+ */
+export interface RegionStatus {
+  name: string;
+  status: 'active' | 'inactive' | 'maintenance';
+  latency: number;
+  availability: number;
+  resources: number;
+}
+
+/**
+ * Resource status
+ */
+export interface ResourceStatus {
+  id: string;
+  type: string;
+  name: string;
+  status: 'running' | 'stopped' | 'terminated' | 'failed';
+  region: string;
+  tags: Record<string, string>;
+  cost: number;
+  metrics: ResourceMetrics;
+}
+
+/**
+ * Resource metrics
+ */
+export interface ResourceMetrics {
+  cpu: number;
+  memory: number;
+  network: number;
+  storage: number;
+  requests: number;
+}
+
+/**
+ * Cost analysis
+ */
+export interface CostAnalysis {
+  total: number;
+  byService: Record<string, number>;
+  byRegion: Record<string, number>;
+  trends: CostTrend[];
+  forecasts: CostForecast[];
+  recommendations: CostOptimization[];
+}
+
+/**
+ * Cost trend
+ */
+export interface CostTrend {
+  period: string;
+  cost: number;
+  change: number;
+}
+
+/**
+ * Cost forecast
+ */
+export interface CostForecast {
+  period: string;
+  estimatedCost: number;
+  confidence: number;
+}
+
+/**
+ * Cost optimization
+ */
+export interface CostOptimization {
+  type: 'right-sizing' | 'reserved-instances' | 'spot-instances' | 'storage-optimization';
+  description: string;
+  potentialSavings: number;
+  effort: 'low' | 'medium' | 'high';
+}
+
+/**
+ * Health status
+ */
+export interface HealthStatus {
+  overall: 'healthy' | 'degraded' | 'unhealthy';
+  services: ServiceHealth[];
+  incidents: Incident[];
+}
+
+/**
+ * Service health
+ */
+export interface ServiceHealth {
+  name: string;
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  uptime: number;
+  responseTime: number;
+  errorRate: number;
+}
+
+/**
+ * Incident
+ */
+export interface Incident {
+  id: string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  status: 'open' | 'investigating' | 'resolved';
+  title: string;
+  description: string;
+  startTime: number;
+  resolvedTime?: number;
+  affectedServices: string[];
+}
+*/
 
 // ============================================================================
 // MAIN CLOUD INFRASTRUCTURE CLASS

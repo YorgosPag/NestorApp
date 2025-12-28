@@ -1,5 +1,5 @@
 /**
- * 📍 FLOOR PLAN CONTROL POINT PICKER COMPONENT
+ * FLOOR PLAN CONTROL POINT PICKER COMPONENT
  *
  * UI component για control point placement workflow
  *
@@ -31,7 +31,9 @@ import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { canvasUtilities } from '@/styles/design-tokens';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ENTERPRISE: Background centralization - ZERO DUPLICATES
+import { CheckCircle, AlertTriangle, Info, MapPin } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 /**
  * Component props
@@ -58,7 +60,8 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
 
   const { t } = useTranslationLazy('geo-canvas');
   const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
-  const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
+  const colors = useSemanticColors();  // ENTERPRISE: Background centralization - ZERO DUPLICATES
+  const iconSizes = useIconSizes();
 
   // ❗ CRITICAL: Use the passed instance, NOT a new hook call
   const {
@@ -406,7 +409,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
         onMouseDown={handleMouseDown}
         style={canvasUtilities.geoInteractive.draggablePanelHandle(isDragging)}
       >
-        <span>📍 {t('floorPlanControlPoints.title')}</span>
+        <span><MapPin className={iconSizes.sm} style={{ display: 'inline-block', marginRight: '6px' }} />{t('floorPlanControlPoints.title')}</span>
         <span style={layoutUtilities.cssVars.helpText.small}>✋ {t('floorPlanControlPoints.dragHandle')}</span>
       </div>
 
@@ -448,11 +451,13 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
             {/* Instructions */}
             <div className={`mb-4 p-3 ${colors.bg.info} ${quick.card} ${getStatusBorder('info')}`}>
               <p className={`text-sm ${colors.text.info}`}>
-                ℹ️ {getInstructions()}
+                <Info className={iconSizes.xs} style={{ display: 'inline-block', marginRight: '6px' }} />
+                {getInstructions()}
               </p>
               {tempFloorPlan && (
                 <p className={`text-xs ${colors.text.info} mt-2`}>
-                  ✅ Floor plan point selected: ({tempFloorPlan.x.toFixed(2)}, {tempFloorPlan.y.toFixed(2)})
+                  <CheckCircle className={iconSizes.xs} style={{ display: 'inline-block', marginRight: '6px' }} />
+                  Floor plan point selected: ({tempFloorPlan.x.toFixed(2)}, {tempFloorPlan.y.toFixed(2)})
                 </p>
               )}
             </div>
@@ -584,7 +589,8 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                 className={`w-full px-4 py-2 ${colors.bg.success} text-white rounded ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors text-sm font-medium`}
                 disabled={!manualInput.dxfX || !manualInput.dxfY || !manualInput.geoLng || !manualInput.geoLat}
               >
-                ✅ {t('floorPlanControlPoints.manualInput.addPoint')}
+                <CheckCircle className={iconSizes.xs} style={{ display: 'inline-block', marginRight: '6px' }} />
+                {t('floorPlanControlPoints.manualInput.addPoint')}
               </button>
             </div>
           </>
@@ -650,11 +656,13 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
             </span>
             {hasMinPoints ? (
               <span className={`text-sm ${colors.text.success} font-medium`}>
-                ✅ {t('floorPlanControlPoints.status.readyForGeoreferencing')}
+                <CheckCircle className={iconSizes.xs} style={{ display: 'inline-block', marginRight: '6px' }} />
+                {t('floorPlanControlPoints.status.readyForGeoreferencing')}
               </span>
             ) : (
               <span className={`text-sm ${colors.text.warning} font-medium`}>
-                ⚠️ {t('floorPlanControlPoints.status.needMorePoints', {
+                <AlertTriangle className={iconSizes.xs} style={{ display: 'inline-block', marginRight: '6px' }} />
+                {t('floorPlanControlPoints.status.needMorePoints', {
                   count: 3 - points.length,
                   plural: 3 - points.length !== 1 ? 's' : ''
                 })}
@@ -810,7 +818,9 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
         {/* Empty State */}
         {points.length === 0 && (
           <div className={`text-center py-8 ${colors.text.subtle}`}>
-            <div className="text-4xl mb-2">📍</div>
+            <div className="mb-2">
+              <MapPin className="text-4xl" style={{ display: 'block', margin: '0 auto' }} />
+            </div>
             <p className="text-sm">{t('floorPlanControlPoints.list.noPoints')}</p>
             <p className="text-xs mt-1">{t('floorPlanControlPoints.instructions.idle')}</p>
           </div>

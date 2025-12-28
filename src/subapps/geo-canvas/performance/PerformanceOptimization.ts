@@ -483,7 +483,7 @@ export class GeoAlertPerformanceOptimization {
     }
 
     console.log(`🌐 CDN Provider: ${this.cdnConfig.provider.toUpperCase()}`);
-    console.log(`📍 CDN Endpoints: ${this.cdnConfig.endpoints.length} active`);
+    console.log(`CDN Endpoints: ${this.cdnConfig.endpoints.length} active`);
 
     // Setup CDN endpoints
     this.cdnConfig.endpoints.forEach(endpoint => {
