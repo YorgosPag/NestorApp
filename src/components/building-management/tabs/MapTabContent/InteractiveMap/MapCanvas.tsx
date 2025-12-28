@@ -9,14 +9,9 @@ import { cn } from '@/lib/utils';
 import { GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import { nearbyProjects } from './nearbyProjects';
 import { NearbyProjectMarker } from './NearbyProjectMarker';
+import { useMapStyles, useMapCanvasStyles, useProjectMarkerStyles } from './hooks/useMapStyles';
 import {
   getProjectMarkerPosition,
-  getMapCanvasStyles,
-  getMapGridStyles,
-  getMainBuildingMarkerStyles,
-  getDistanceCircleStyles,
-  getScaleIndicatorStyles,
-  getMapTypeIndicatorStyles,
   getMapViewDisplayName,
   type MapViewType,
   type ProjectStatusType
@@ -31,21 +26,21 @@ interface MapCanvasProps {
 
 export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedLayer }: MapCanvasProps) {
     const iconSizes = useIconSizes();
-    const { createBorder, quick, getStatusBorder } = useBorderTokens();
-    const colors = useSemanticColors();
 
-    // Enterprise: Get centralized marker styles με semantic secondary border
-    const markerStyles = getMainBuildingMarkerStyles('hsl(var(--border))'); // Secondary border semantic color
+    // 🏢 ENTERPRISE: CSS-in-JS hooks - NO inline styles, NO hardcoded colors
+    const mapCanvas = useMapCanvasStyles('success');
+    const projectMarker = useProjectMarkerStyles();
+
     const filteredProjects = nearbyProjects.filter(project => {
         if (selectedLayer === 'all') return true;
         return project.status === selectedLayer;
     });
 
     return (
-        <div className={`relative h-96 bg-gradient-to-br from-green-100 via-blue-50 to-green-100 ${quick.card} border border-dashed overflow-hidden`}>
+        <div className={mapCanvas.containerClass}>
             {/* Simulated Map Background */}
-            <div className="absolute inset-0">
-                <div className="w-full h-full relative">
+            <div className={mapCanvas.innerClass}>
+                <div className={mapCanvas.relativeClass}>
                     {/* Grid pattern to simulate map */}
                     <div className="absolute inset-0 opacity-10">
                         <div className="grid grid-cols-12 grid-rows-8 h-full w-full">
@@ -55,15 +50,15 @@ export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedL
                         </div>
                     </div>
 
-                    {/* Main Building Marker - Enterprise Centralized */}
-                    <div style={markerStyles.container}>
-                        <div style={markerStyles.wrapper} className="group">
-                            <div style={markerStyles.bounceContainer}>
-                                <div style={markerStyles.marker}>
+                    {/* Main Building Marker - Enterprise CSS-in-JS */}
+                    <div className={projectMarker.containerClass}>
+                        <div className={cn(projectMarker.wrapperClass, "group")}>
+                            <div className={projectMarker.bounceClass}>
+                                <div className={projectMarker.markerClass}>
                                     <Building2 className={`${iconSizes.lg} text-white`} />
                                 </div>
                             </div>
-                            <div style={markerStyles.tooltip} className={GROUP_HOVER_PATTERNS.SHOW_ON_GROUP}>
+                            <div className={cn(projectMarker.tooltipClass, GROUP_HOVER_PATTERNS.SHOW_ON_GROUP)}>
                                 {buildingName}
                             </div>
                         </div>

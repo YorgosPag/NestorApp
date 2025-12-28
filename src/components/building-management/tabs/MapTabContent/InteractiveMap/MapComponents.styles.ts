@@ -108,13 +108,21 @@ export const getMapGridStyles = () => ({
 });
 
 /**
- * Get map canvas container styles
+ * ⚠️ DEPRECATED: getMapCanvasStyles - CLAUDE.md VIOLATIONS
+ *
+ * ❌ Contains hardcoded hex colors: #dcfce7, #eff6ff, #dcfce7
+ * ❌ Uses inline style objects instead of CSS classes
+ *
+ * 🔄 MIGRATED TO: useMapCanvasStyles hook in hooks/useMapStyles.ts
+ *
+ * @deprecated Use useMapCanvasStyles() hook instead
  */
+/* CLAUDE.md VIOLATION - COMMENTED OUT
 export const getMapCanvasStyles = () => ({
   container: {
     position: 'relative' as const,
     height: '24rem', // h-96
-    background: 'linear-gradient(to bottom right, #dcfce7, #eff6ff, #dcfce7)', // from-green-100 via-blue-50 to-green-100
+    background: 'linear-gradient(to bottom right, #dcfce7, #eff6ff, #dcfce7)', // HARDCODED HEX VIOLATION
     borderRadius: '0.5rem',
     border: '2px dashed hsl(var(--border))',
     overflow: 'hidden'
@@ -129,6 +137,7 @@ export const getMapCanvasStyles = () => ({
     position: 'relative' as const
   }
 });
+*/ // END CLAUDE.md VIOLATION
 
 // ============================================================================
 // MAP MARKER UTILITIES
@@ -137,7 +146,13 @@ export const getMapCanvasStyles = () => ({
 /**
  * Get main building marker styles
  * @param borderColor - Border color override (default: white)
+ *
+ * ⚠️ DEPRECATED: CLAUDE.md VIOLATIONS - hardcoded #ef4444
+ * 🔄 MIGRATED TO: useProjectMarkerStyles hook in hooks/useMapStyles.ts
+ *
+ * @deprecated Use useProjectMarkerStyles() hook instead
  */
+/* CLAUDE.md VIOLATION - COMMENTED OUT
 export const getMainBuildingMarkerStyles = (borderColor: string = 'white') => ({
   container: {
     position: 'absolute' as const,
@@ -178,6 +193,7 @@ export const getMainBuildingMarkerStyles = (borderColor: string = 'white') => ({
     transition: 'opacity 0.2s ease-in-out'
   }
 });
+*/ // END CLAUDE.md VIOLATION
 
 // ============================================================================
 // MAP UI ELEMENT UTILITIES

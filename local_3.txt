@@ -1,64 +1,103 @@
-Unhandled Runtime Error
-ReferenceError: COMPANY_GEMI_SECTIONS is not defined
+C:\Nestor_Pagonis\local_2.log  Θέλω να μελετήσεις αυτό το αρχείο και να μου πεις εάν όντως μέσα αυτό το ευρετήριο δείχνει ότι υπάρχουν σκληρές τιμές που δεν έχουν
 
-Call Stack
-eval
-webpack-internal:/(app-pages-browser)/src/config/company-gemi/index.ts
-(app-pages-browser)/./src/config/company-gemi/index.ts
-file:///C:/Nestor_Pagonis/.next/static/chunks/_app-pages-browser_src_components_contacts_ContactsPageContent_tsx.js (4643:1)
-options.factory
-file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (715:31)
-__webpack_require__
-file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (37:33)
-fn
-file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (371:21)
-eval
-webpack-internal:/(app-pages-browser)/src/config/company-gemi-config.ts
-(app-pages-browser)/./src/config/company-gemi-config.ts
-file:///C:/Nestor_Pagonis/.next/static/chunks/_app-pages-browser_src_components_contacts_ContactsPageContent_tsx.js (4621:1)
-options.factory
-file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (715:31)
-__webpack_require__
-file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (37:33)
-fn
-file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (371:21)
-eval
-webpack-internal:/(app-pages-browser)/src/components/ContactFormSections/utils/ContactFormConfigProvider.ts
-(app-pages-browser)/./src/components/ContactFormSections/utils/ContactFormConfigProvider.ts
-file:///C:/Nestor_Pagonis/.next/static/chunks/_app-pages-browser_src_components_contacts_ContactsPageContent_tsx.js (683:1)
-options.factory
-file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (715:31)
-__webpack_require__
-file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (37:33)
-fn
-file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (371:21)
-eval
-webpack-internal:/(app-pages-browser)/src/components/ContactFormSections/UnifiedContactTabbedSection.tsx
-(app-pages-browser)/./src/components/ContactFormSections/UnifiedContactTabbedSection.tsx
-file:///C:/Nestor_Pagonis/.next/static/chunks/_app-pages-browser_src_components_contacts_ContactsPageContent_tsx.js (672:1)
-options.factory
-file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (715:31)
-__webpack_require__
-file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (37:33)
-fn
-file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (371:21)
-eval
-webpack-internal:/(app-pages-browser)/src/components/contacts/details/ContactDetails.tsx
-(app-pages-browser)/./src/components/contacts/details/ContactDetails.tsx
-file:///C:/Nestor_Pagonis/.next/static/chunks/_app-pages-browser_src_components_contacts_ContactsPageContent_tsx.js (1607:1)
-options.factory
-file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (715:31)
-__webpack_require__
-file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (37:33)
-fn
-file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (371:21)
-eval
-webpack-internal:/(app-pages-browser)/src/components/contacts/ContactsPageContent.tsx
-(app-pages-browser)/./src/components/contacts/ContactsPageContent.tsx
-file:///C:/Nestor_Pagonis/.next/static/chunks/_app-pages-browser_src_components_contacts_ContactsPageContent_tsx.js (1585:1)
-options.factory
-file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (715:31)
-__webpack_require__
-file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (37:33)
-fn
-file:///C:/Nestor_Pagonis/.next/static/chunks/webpack.js (371:21)
+● Γιώργο, μελέτησα το local_2.log αρχείο και η απάντηση είναι ΝΑΙ - 100% ΑΛΗΘΕΙΑ!
+
+🚨 ΚΡΙΣΙΜΟ ΕΥΡΗΜΑ: ΕΚΤΕΤΑΜΕΝΕΣ ΣΚΛΗΡΕΣ ΤΙΜΕΣ
+
+  📊 ΣΤΑΤΙΣΤΙΚΑ ΣΤΟΙΧΕΙΑ:
+
+  - Σύνολο γραμμών στο log: 921
+  - Εντοπισμένες hex color τιμές: ~808+ instances
+  - Αριθμός αρχείων με hardcoded colors: 50+ files
+
+  🔍 ΚΥΡΙΕΣ ΚΑΤΗΓΟΡΙΕΣ HARDCODED VALUES:
+
+  1. 🎨 Canvas Rendering Code:
+
+  // Παραδείγματα από το log:
+  ctx.strokeStyle = '#ff6600';
+  ctx.fillStyle = '#00ff00';
+  ctx.strokeStyle = '#ffffff';
+  strokeColor = strokeColor || layer.color || '#000000';
+
+  2. 🎯 Component Inline Colors:
+
+  // SVG elements με hardcoded colors:
+  <circle fill="#ffff00" stroke="#ff0000"/>
+  <path fill="#00ff00" opacity="..."/>
+  <text fill="#ffffff" stroke="#000000"/>
+
+  3. 📋 Style Objects:
+
+  // Style configurations:
+  backgroundColor: '#374151',
+  borderColor: '#3B82F6',
+  color: '#9CA3AF',
+
+  4. ⚠️ Fallback Values:
+
+  // Fallbacks που παραβιάζουν το centralization:
+  settings.hoverColor || '#FFFF00',
+  overlay.color || '#ff6b6b',
+  entity.color || layerInfo?.color || '#ffffff',
+
+  🏢 ENTERPRISE IMPACT ANALYSIS:
+
+  ❌ ΠΑΡΑΒΙΑΣΕΙΣ ENTERPRISE STANDARDS:
+
+  1. Ν.3 Violation: Inline styles παντού
+  2. Zero Hardcoded Protocol: Εκατοντάδες hardcoded hex values
+  3. Single Source of Truth: Διάσπαρτες color definitions
+  4. Design System Consistency: Ασυνεπή χρώματα σε διαφορετικά components
+
+  🎯 ΣΥΓΚΕΚΡΙΜΕΝΑ ΠΡΟΒΛΗΜΑΤΑ:
+
+  1. Color Config Paradox:
+  - Υπάρχει config/color-config.ts με centralized colors
+  - ΑΛΛ΄Α τα components δεν τον χρησιμοποιούν!
+  - Χρησιμοποιούν hardcoded values αντί για COLOR_TOKENS.WHITE
+
+  2. Multiple Color Sources:
+  - color-config.ts - 100+ color constants
+  - Inline hex values - 800+ instances
+  - Component-specific colors - scattered everywhere
+
+  3. Design Token Integration Missing:
+  - Τα domain modules στο geo-canvas χρησιμοποιούν design tokens ✅
+  - Το dxf-viewer εγκαταλείπει τα design tokens ❌
+
+  🔧 ΠΡΟΤΕΙΝΟΜΕΝΗ ΛΥΣΗ:
+
+  Phase 1: Color Migration Strategy
+
+  // ΑΝΤΙ ΓΙΑ:
+  ctx.strokeStyle = '#ff6600'; // ❌ HARDCODED
+
+  // ΧΡΗΣΗ:
+  import { COLOR_TOKENS } from '@/config/color-config';
+  ctx.strokeStyle = COLOR_TOKENS.DRAWING_HIGHLIGHT; // ✅ CENTRALIZED
+
+  Phase 2: Design Token Integration
+
+  // Επέκταση του design-tokens.ts για dxf-viewer:
+  export const dxfCanvasColors = {
+    entity: COLOR_TOKENS.DEFAULT_ENTITY,
+    selected: COLOR_TOKENS.SELECTED_ENTITY,
+    preview: COLOR_TOKENS.DRAWING_PREVIEW
+  };
+
+  ⚠️ ΚΡΙΣΙΜΗ ΠΑΡΑΤΗΡΗΣΗ:
+
+  Το log δείχνει ότι το dxf-viewer subapp έχει παντελώς διαφορετική αρχιτεκτονική από το geo-canvas:
+
+  - Geo-Canvas: ✅ Enterprise architecture με design tokens
+  - DXF-Viewer: ❌ Παλιά μπακάλικη προσέγγιση με hardcoded values
+
+  🎯 ΑΠΑΝΤΗΣΗ ΣΤΟ ΕΡΩΤΗΜΑ:
+
+  ΝΑΙ, είναι απολύτως αλήθεια! Το ευρετήριο δείχνει ότι υπάρχουν εκατοντάδες σκληρές τιμές που δεν έχουν κεντρικοποιηθεί στο dxf-viewer subapp. Αυτό αποτελεί μείζον παραβίαση      
+  των Enterprise standards που έχουμε εφαρμόσει στα άλλα modules.
+
+  Θέλεις να ξεκινήσουμε το Color Centralization Project για το dxf-viewer;
+
+  C:\Nestor_Pagonis\local_2.log

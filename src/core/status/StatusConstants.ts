@@ -1,9 +1,10 @@
 /**
  * 🏷️ CENTRAL STATUS CONSTANTS
  *
+ * ✅ ENTERPRISE PROFESSIONAL: Zero hardcoded values - Pure dependency injection
  * ✅ CENTRALIZED: Uses existing BadgeDefinition interface
  * ✅ NO DUPLICATES: Leverages core/types/BadgeTypes.ts
- * ✅ CLEAN: Enterprise-class status definitions
+ * ✅ CLEAN: Enterprise-class status definitions με useSemanticColors hook
  */
 
 import type {
@@ -17,7 +18,6 @@ import type {
   UnitStatus,
   NavigationStatus
 } from '../types/BadgeTypes';
-import { brandClasses } from '@/styles/design-tokens';
 import type { UseSemanticColorsReturn } from '@/hooks/useSemanticColors';
 
 // 🏢 ENTERPRISE: Import centralized status labels - NO MORE HARDCODED VALUES
@@ -54,127 +54,235 @@ const recordStateLabels = getRecordStateLabels();
 const entityTypeLabels = getEntityTypeLabels();
 const documentStatusLabels = getDocumentStatusLabels();
 
-export const PROJECT_STATUSES: Record<ProjectStatus, BadgeDefinition> = {
+// ============================================================================
+// 🏢 ENTERPRISE: Dynamic Badge Generation με Dependency Injection
+// ============================================================================
+
+/**
+ * ✅ ENTERPRISE PROFESSIONAL: Project Statuses Generator
+ * 🎯 ZERO hardcoded values - Pure dependency injection pattern
+ *
+ * @param colors - useSemanticColors hook result (dependency injection)
+ * @returns Project status definitions με centralized colors
+ */
+export const createProjectStatuses = (colors: UseSemanticColorsReturn): Record<ProjectStatus, BadgeDefinition> => ({
   planning: {
     label: projectStatusLabels.planning,
     variant: 'outline',
-    color: '#6B7280',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.bg.light,
+    color: colors.text.muted,
     icon: 'planning'
   },
   in_progress: {
     label: projectStatusLabels.in_progress,
     variant: 'info',
-    color: '#3B82F6',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.bg.info,
+    color: colors.text.info,
     icon: 'play'
   },
   completed: {
     label: projectStatusLabels.completed,
     variant: 'success',
-    color: '#059669',
-    backgroundColor: '#ECFDF5',
+    backgroundColor: colors.bg.success,
+    color: colors.text.success,
     icon: 'check'
   },
   on_hold: {
     label: projectStatusLabels.on_hold,
     variant: 'warning',
-    color: '#D97706',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.bg.warning,
+    color: colors.text.warning,
     icon: 'pause'
   },
   cancelled: {
     label: projectStatusLabels.cancelled,
     variant: 'destructive',
-    color: '#DC2626',
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.bg.error,
+    color: colors.text.error,
     icon: 'x'
   },
   review: {
     label: projectStatusLabels.review,
     variant: 'purple',
-    color: '#7C3AED',
-    backgroundColor: '#F3E8FF',
+    backgroundColor: colors.bg.light,
+    color: colors.text.primary,
     icon: 'review'
   },
   approved: {
     label: projectStatusLabels.approved,
     variant: 'success',
-    color: '#059669',
-    backgroundColor: '#ECFDF5',
+    backgroundColor: colors.bg.success,
+    color: colors.text.success,
     icon: 'checkCircle'
   }
-} as const;
+});
 
-// ============================================================================
-// BUILDING STATUS DEFINITIONS
-// ============================================================================
+/**
+ * ✅ ENTERPRISE PROFESSIONAL: Contact Statuses Generator
+ */
+export const createContactStatuses = (colors: UseSemanticColorsReturn): Record<ContactStatus, BadgeDefinition> => ({
+  // Θα συμπληρωθεί με τα υπάρχοντα CONTACT_STATUSES
+  active: { label: contactStatusLabels.active, variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'userCheck' },
+  inactive: { label: contactStatusLabels.inactive, variant: 'secondary', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'userX' },
+  pending: { label: contactStatusLabels.pending, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'clock' },
+  blocked: { label: contactStatusLabels.blocked, variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'shield' },
+  archived: { label: contactStatusLabels.archived, variant: 'outline', backgroundColor: colors.bg.light, color: colors.text.muted, icon: 'archive' },
+  individual: { label: contactTypeLabels.individual, variant: 'outline', backgroundColor: colors.bg.light, color: colors.text.muted, icon: 'user' },
+  company: { label: contactTypeLabels.company, variant: 'outline', backgroundColor: colors.bg.light, color: colors.text.muted, icon: 'building' },
+  service: { label: contactTypeLabels.service, variant: 'outline', backgroundColor: colors.bg.light, color: colors.text.muted, icon: 'landmark' }
+});
 
-export const BUILDING_STATUSES: Record<BuildingStatus, BadgeDefinition> = {
+/**
+ * ✅ ENTERPRISE PROFESSIONAL: Property Statuses Generator
+ */
+export const createPropertyStatuses = (colors: UseSemanticColorsReturn): Record<PropertyStatus, BadgeDefinition> => ({
+  available: { label: propertyMarketStatusLabels.available, variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'home' },
+  reserved: { label: propertyMarketStatusLabels.reserved, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'bookmark' },
+  sold: { label: propertyMarketStatusLabels.sold, variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'dollarSign' },
+  pending: { label: propertyMarketStatusLabels.pending, variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'clock' },
+  withdrawn: { label: propertyMarketStatusLabels.withdrawn, variant: 'secondary', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'arrowLeft' },
+  expired: { label: propertyMarketStatusLabels.expired, variant: 'outline', backgroundColor: colors.bg.light, color: colors.text.muted, icon: 'calendar' },
+  'rental-only': { label: rentalTypeLabels.rent_only, variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'key' },
+  // Υπόλοιπα properties...
+  'for-sale': { label: propertySpecialStatusLabels.for_sale, variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'tag' },
+  'for-rent': { label: propertySpecialStatusLabels.for_rent, variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'key' },
+  rented: { label: propertySpecialStatusLabels.rented, variant: 'purple', backgroundColor: colors.bg.light, color: colors.text.primary, icon: 'handshake' },
+  'under-negotiation': { label: propertySpecialStatusLabels.under_negotiation, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'messageCircle' },
+  'coming-soon': { label: propertySpecialStatusLabels.available_soon, variant: 'outline', backgroundColor: colors.bg.light, color: colors.text.muted, icon: 'calendar' },
+  landowner: { label: propertySpecialStatusLabels.landowner, variant: 'secondary', backgroundColor: colors.bg.secondary, color: colors.text.secondary, icon: 'map' },
+  'off-market': { label: propertySpecialStatusLabels.off_market, variant: 'outline', backgroundColor: colors.bg.light, color: colors.text.muted, icon: 'eyeOff' },
+  unavailable: { label: propertySpecialStatusLabels.unavailable, variant: 'secondary', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'x' },
+  'long-term-rental': { label: rentalTypeLabels.long_term, variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'calendar' },
+  'short-term-rental': { label: rentalTypeLabels.short_term, variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'clock' },
+  'reserved-pending': { label: propertySpecialStatusLabels.reserved_pending, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'pause' },
+  'contract-signed': { label: propertySpecialStatusLabels.contract_signed, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'fileSignature' },
+  'deposit-paid': { label: propertySpecialStatusLabels.deposit_paid, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'creditCard' },
+  'company-owned': { label: propertySpecialStatusLabels.corporate, variant: 'purple', backgroundColor: colors.bg.light, color: colors.text.primary, icon: 'building' },
+  'not-for-sale': { label: propertySpecialStatusLabels.not_for_sale, variant: 'purple', backgroundColor: colors.bg.light, color: colors.text.primary, icon: 'shield' },
+  'family-reserved': { label: propertySpecialStatusLabels.family, variant: 'purple', backgroundColor: colors.bg.light, color: colors.text.primary, icon: 'heart' },
+  'pre-launch': { label: propertySpecialStatusLabels.pre_launch, variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'rocket' },
+  'exclusive-listing': { label: propertySpecialStatusLabels.exclusive, variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'crown' },
+  'price-reduced': { label: propertySpecialStatusLabels.reduced_price, variant: 'error', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'trendingDown' },
+  'urgent-sale': { label: propertySpecialStatusLabels.urgent_sale, variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'alertTriangle' },
+  'under-renovation': { label: propertySpecialStatusLabels.under_renovation, variant: 'secondary', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'wrench' },
+  'legal-issues': { label: propertySpecialStatusLabels.legal_issues, variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'gavel' },
+  'inspection-required': { label: propertySpecialStatusLabels.inspection_required, variant: 'outline', backgroundColor: colors.bg.light, color: colors.text.muted, icon: 'search' },
+  'documentation-pending': { label: propertySpecialStatusLabels.pending_documents, variant: 'outline', backgroundColor: colors.bg.light, color: colors.text.muted, icon: 'fileText' }
+});
+
+/**
+ * ✅ ENTERPRISE PROFESSIONAL: Unit Statuses Generator
+ */
+export const createUnitStatuses = (colors: UseSemanticColorsReturn): Record<UnitStatus, BadgeDefinition> => ({
+  available: { label: storageStatusLabels.available, variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'home' },
+  occupied: { label: storageStatusLabels.occupied, variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'users' },
+  sold: { label: propertyMarketStatusLabels.sold, variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'dollarSign' },
+  maintenance: { label: storageStatusLabels.maintenance, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'wrench' },
+  reserved: { label: storageStatusLabels.reserved, variant: 'purple', backgroundColor: colors.bg.light, color: colors.text.primary, icon: 'bookmark' }
+});
+
+/**
+ * ✅ ENTERPRISE PROFESSIONAL: Navigation Statuses Generator
+ */
+export const createNavigationStatuses = (colors: UseSemanticColorsReturn): Record<NavigationStatus, BadgeDefinition> => ({
+  no_projects: { label: priorityLabels.none, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'alertTriangle' },
+  empty: { label: priorityLabels.empty, variant: 'outline', backgroundColor: colors.bg.light, color: colors.text.muted, icon: 'circle' },
+  warning: { label: priorityLabels.warning, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'alertTriangle' },
+  alert: { label: priorityLabels.attention, variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'alert' },
+  success: { label: priorityLabels.success, variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'check' },
+  info: { label: priorityLabels.info, variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'info' }
+});
+
+/**
+ * ✅ ENTERPRISE PROFESSIONAL: Obligation Statuses Generator
+ */
+export const createObligationStatuses = (colors: UseSemanticColorsReturn): Record<ObligationStatus, BadgeDefinition> => ({
+  draft: { label: documentStatusLabels.draft, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'edit' },
+  completed: { label: documentStatusLabels.completed, variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'check' },
+  approved: { label: documentStatusLabels.approved, variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'checkCircle' }
+});
+
+/**
+ * ✅ ENTERPRISE PROFESSIONAL: Common Statuses Generator
+ */
+export const createCommonStatuses = (colors: UseSemanticColorsReturn): Record<string, BadgeDefinition> => ({
+  new: { label: recordStateLabels.new, variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'plus' },
+  updated: { label: recordStateLabels.updated, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'refresh' },
+  deleted: { label: recordStateLabels.deleted, variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'trash' },
+  company: { label: entityTypeLabels.company, variant: 'secondary', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'building' },
+  primary: { label: entityTypeLabels.main, variant: 'default', backgroundColor: colors.bg.secondary, color: colors.text.primary, icon: 'star' },
+  secondary: { label: entityTypeLabels.secondary, variant: 'outline', backgroundColor: colors.bg.light, color: colors.text.muted, icon: 'circle' }
+});
+
+/**
+ * ✅ ENTERPRISE PROFESSIONAL: Building Statuses Generator
+ * 🎯 ZERO hardcoded values - Pure dependency injection pattern
+ */
+export const createBuildingStatuses = (colors: UseSemanticColorsReturn): Record<BuildingStatus, BadgeDefinition> => ({
   available: {
     label: unitStatusLabels.available,
     variant: 'success',
-    color: '#059669',
-    backgroundColor: '#ECFDF5',
+    backgroundColor: colors.bg.success,
+    color: colors.text.success,
     icon: 'home'
   },
   occupied: {
     label: unitStatusLabels.occupied,
     variant: 'info',
-    color: '#3B82F6',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.bg.info,
+    color: colors.text.info,
     icon: 'users'
   },
   maintenance: {
     label: unitStatusLabels.maintenance,
     variant: 'warning',
-    color: '#D97706',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.bg.warning,
+    color: colors.text.warning,
     icon: 'wrench'
   },
   for_sale: {
     label: unitStatusLabels.for_sale,
     variant: 'outline',
-    color: '#6B7280',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.bg.light,
+    color: colors.text.muted,
     icon: 'tag'
   },
   for_rent: {
     label: unitStatusLabels.for_rent,
     variant: 'secondary',
-    color: '#4B5563',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.bg.secondary,
+    color: colors.text.secondary,
     icon: 'key'
   },
   sold: {
     label: unitStatusLabels.sold,
     variant: 'destructive',
-    color: '#DC2626',
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.bg.error,
+    color: colors.text.error,
     icon: 'dollarSign'
   },
   rented: {
     label: unitStatusLabels.rented,
     variant: 'purple',
-    color: '#7C3AED',
-    backgroundColor: '#F3E8FF',
+    backgroundColor: colors.bg.light,
+    color: colors.text.primary,
     icon: 'handshake'
   },
   construction: {
     label: unitStatusLabels.under_construction,
     variant: 'warning',
-    color: '#D97706',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.bg.warning,
+    color: colors.text.warning,
     icon: 'hammer'
   },
   planned: {
     label: unitStatusLabels.planned,
     variant: 'outline',
-    color: '#6B7280',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.bg.light,
+    color: colors.text.muted,
     icon: 'blueprint'
   }
-} as const;
+});
 
 // ============================================================================
 // CONTACT STATUS DEFINITIONS
@@ -184,58 +292,58 @@ export const CONTACT_STATUSES: Record<ContactStatus, BadgeDefinition> = {
   active: {
     label: contactStatusLabels.active,
     variant: 'success',
-    color: '#059669',
-    backgroundColor: '#ECFDF5',
+    color: colors.text.success,
+    backgroundColor: colors.bg.success,
     icon: 'userCheck'
   },
   inactive: {
     label: contactStatusLabels.inactive,
     variant: 'secondary',
-    color: '#6B7280',
-    backgroundColor: '#F9FAFB',
+    color: colors.text.muted,
+    backgroundColor: colors.bg.light,
     icon: 'userX'
   },
   pending: {
     label: contactStatusLabels.pending,
     variant: 'warning',
-    color: '#D97706',
-    backgroundColor: '#FFFBEB',
+    color: colors.text.warning,
+    backgroundColor: colors.bg.warning,
     icon: 'clock'
   },
   blocked: {
     label: contactStatusLabels.blocked,
     variant: 'destructive',
-    color: '#DC2626',
-    backgroundColor: '#FEF2F2',
+    color: colors.text.error,
+    backgroundColor: colors.bg.error,
     icon: 'shield'
   },
   archived: {
     label: contactStatusLabels.archived,
     variant: 'outline',
-    color: '#6B7280',
-    backgroundColor: '#F9FAFB',
+    color: colors.text.muted,
+    backgroundColor: colors.bg.light,
     icon: 'archive'
   },
   // Contact Types (added for centralization)
   individual: {
     label: contactTypeLabels.individual,
     variant: 'outline',
-    color: '#6B7280',
-    backgroundColor: '#F9FAFB',
+    color: colors.text.muted,
+    backgroundColor: colors.bg.light,
     icon: 'user'
   },
   company: {
     label: contactTypeLabels.company,
     variant: 'outline',
-    color: '#6B7280',
-    backgroundColor: '#F9FAFB',
+    color: colors.text.muted,
+    backgroundColor: colors.bg.light,
     icon: 'building'
   },
   service: {
     label: contactTypeLabels.service,
     variant: 'outline',
-    color: '#6B7280',
-    backgroundColor: '#F9FAFB',
+    color: colors.text.muted,
+    backgroundColor: colors.bg.light,
     icon: 'landmark'
   }
 } as const;
@@ -249,43 +357,43 @@ export const PROPERTY_STATUSES: Record<PropertyStatus, BadgeDefinition> = {
   available: {
     label: propertyMarketStatusLabels.available,
     variant: 'success',
-    color: '#059669',
-    backgroundColor: '#ECFDF5',
+    color: colors.text.success,
+    backgroundColor: colors.bg.success,
     icon: 'home'
   },
   reserved: {
     label: propertyMarketStatusLabels.reserved,
     variant: 'warning',
-    color: '#D97706',
-    backgroundColor: '#FFFBEB',
+    color: colors.text.warning,
+    backgroundColor: colors.bg.warning,
     icon: 'bookmark'
   },
   sold: {
     label: propertyMarketStatusLabels.sold,
     variant: 'destructive',
-    color: '#DC2626',
-    backgroundColor: '#FEF2F2',
+    color: colors.text.error,
+    backgroundColor: colors.bg.error,
     icon: 'dollarSign'
   },
   pending: {
     label: propertyMarketStatusLabels.pending,
     variant: 'info',
-    color: '#3B82F6',
-    backgroundColor: '#EFF6FF',
+    color: colors.text.info,
+    backgroundColor: colors.bg.info,
     icon: 'clock'
   },
   withdrawn: {
     label: propertyMarketStatusLabels.withdrawn,
     variant: 'secondary',
-    color: '#6B7280',
-    backgroundColor: '#F9FAFB',
+    color: colors.text.muted,
+    backgroundColor: colors.bg.light,
     icon: 'arrowLeft'
   },
   expired: {
     label: propertyMarketStatusLabels.expired,
     variant: 'outline',
-    color: '#6B7280',
-    backgroundColor: '#F9FAFB',
+    color: colors.text.muted,
+    backgroundColor: colors.bg.light,
     icon: 'calendar'
   },
 
@@ -293,22 +401,22 @@ export const PROPERTY_STATUSES: Record<PropertyStatus, BadgeDefinition> = {
   'rental-only': {
     label: rentalTypeLabels.rent_only,
     variant: 'info',
-    color: '#0369A1',
-    backgroundColor: '#E0F2FE',
+    color: colors.text.info,
+    backgroundColor: colors.bg.info,
     icon: 'key'
   },
   'long-term-rental': {
     label: rentalTypeLabels.long_term,
     variant: 'info',
-    color: '#0284C7',
-    backgroundColor: '#F0F9FF',
+    color: colors.text.info,
+    backgroundColor: colors.bg.info,
     icon: 'calendar'
   },
   'short-term-rental': {
     label: rentalTypeLabels.short_term,
     variant: 'info',
-    color: '#0EA5E9',
-    backgroundColor: '#F0FAFF',
+    color: colors.text.info,
+    backgroundColor: colors.bg.info,
     icon: 'clock'
   },
 
@@ -316,22 +424,22 @@ export const PROPERTY_STATUSES: Record<PropertyStatus, BadgeDefinition> = {
   'reserved-pending': {
     label: propertySpecialStatusLabels.reserved_pending,
     variant: 'warning',
-    color: '#EA580C',
-    backgroundColor: '#FFF7ED',
+    color: colors.text.warning,
+    backgroundColor: colors.bg.warning,
     icon: 'pause'
   },
   'contract-signed': {
     label: propertySpecialStatusLabels.contract_signed,
     variant: 'warning',
-    color: '#C2410C',
-    backgroundColor: '#FEF2F2',
+    color: colors.text.warning,
+    backgroundColor: colors.bg.error,
     icon: 'fileSignature'
   },
   'deposit-paid': {
     label: propertySpecialStatusLabels.deposit_paid,
     variant: 'warning',
-    color: '#D97706',
-    backgroundColor: '#FFFBEB',
+    color: colors.text.warning,
+    backgroundColor: colors.bg.warning,
     icon: 'creditCard'
   },
 
@@ -339,22 +447,22 @@ export const PROPERTY_STATUSES: Record<PropertyStatus, BadgeDefinition> = {
   'company-owned': {
     label: propertySpecialStatusLabels.corporate,
     variant: 'purple',
-    color: '#6B21A8',
-    backgroundColor: '#FAF5FF',
+    color: colors.text.primary,
+    backgroundColor: colors.bg.light,
     icon: 'building'
   },
   'not-for-sale': {
     label: propertySpecialStatusLabels.not_for_sale,
     variant: 'purple',
-    color: '#7C3AED',
-    backgroundColor: '#F3E8FF',
+    color: colors.text.primary,
+    backgroundColor: colors.bg.light,
     icon: 'shield'
   },
   'family-reserved': {
     label: propertySpecialStatusLabels.family,
     variant: 'purple',
-    color: '#8B5CF6',
-    backgroundColor: '#F5F3FF',
+    color: colors.text.primary,
+    backgroundColor: colors.bg.light,
     icon: 'heart'
   },
 
@@ -362,29 +470,29 @@ export const PROPERTY_STATUSES: Record<PropertyStatus, BadgeDefinition> = {
   'pre-launch': {
     label: propertySpecialStatusLabels.pre_launch,
     variant: 'success',
-    color: '#16A34A',
-    backgroundColor: '#F0FDF4',
+    color: colors.text.success,
+    backgroundColor: colors.bg.success,
     icon: 'rocket'
   },
   'exclusive-listing': {
     label: propertySpecialStatusLabels.exclusive,
     variant: 'success',
-    color: '#15803D',
-    backgroundColor: '#ECFDF5',
+    color: colors.text.success,
+    backgroundColor: colors.bg.success,
     icon: 'crown'
   },
   'price-reduced': {
     label: propertySpecialStatusLabels.reduced_price,
     variant: 'error',
-    color: '#F59E0B',
-    backgroundColor: '#FEF3C7',
+    color: colors.text.warning,
+    backgroundColor: colors.bg.warning,
     icon: 'trendingDown'
   },
   'urgent-sale': {
     label: propertySpecialStatusLabels.urgent_sale,
     variant: 'destructive',
-    color: '#DC2626',
-    backgroundColor: '#FEF2F2',
+    color: colors.text.error,
+    backgroundColor: colors.bg.error,
     icon: 'alertTriangle'
   },
 
@@ -392,29 +500,29 @@ export const PROPERTY_STATUSES: Record<PropertyStatus, BadgeDefinition> = {
   'under-renovation': {
     label: propertySpecialStatusLabels.under_renovation,
     variant: 'secondary',
-    color: '#6B7280',
-    backgroundColor: '#F9FAFB',
+    color: colors.text.muted,
+    backgroundColor: colors.bg.light,
     icon: 'wrench'
   },
   'legal-issues': {
     label: propertySpecialStatusLabels.legal_issues,
     variant: 'destructive',
-    color: '#B91C1C',
-    backgroundColor: '#FEE2E2',
+    color: colors.text.error,
+    backgroundColor: colors.bg.error,
     icon: 'gavel'
   },
   'inspection-required': {
     label: propertySpecialStatusLabels.inspection_required,
     variant: 'outline',
-    color: '#6B7280',
-    backgroundColor: '#F9FAFB',
+    color: colors.text.muted,
+    backgroundColor: colors.bg.light,
     icon: 'search'
   },
   'documentation-pending': {
     label: propertySpecialStatusLabels.pending_documents,
     variant: 'outline',
-    color: '#9CA3AF',
-    backgroundColor: '#F9FAFB',
+    color: colors.text.muted,
+    backgroundColor: colors.bg.light,
     icon: 'fileText'
   },
 
@@ -422,57 +530,57 @@ export const PROPERTY_STATUSES: Record<PropertyStatus, BadgeDefinition> = {
   'for-sale': {
     label: propertySpecialStatusLabels.for_sale,
     variant: 'success',
-    color: '#059669',
-    backgroundColor: '#ECFDF5',
+    color: colors.text.success,
+    backgroundColor: colors.bg.success,
     icon: 'tag'
   },
   'for-rent': {
     label: propertySpecialStatusLabels.for_rent,
     variant: 'info',
-    color: '#3B82F6',
-    backgroundColor: '#EFF6FF',
+    color: colors.text.info,
+    backgroundColor: colors.bg.info,
     icon: 'key'
   },
   rented: {
     label: propertySpecialStatusLabels.rented,
     variant: 'purple',
-    color: '#7C3AED',
-    backgroundColor: '#F3E8FF',
+    color: colors.text.primary,
+    backgroundColor: colors.bg.light,
     icon: 'handshake'
   },
   'under-negotiation': {
     label: propertySpecialStatusLabels.under_negotiation,
     variant: 'warning',
-    color: '#D97706',
-    backgroundColor: '#FFFBEB',
+    color: colors.text.warning,
+    backgroundColor: colors.bg.warning,
     icon: 'messageCircle'
   },
   'coming-soon': {
     label: propertySpecialStatusLabels.available_soon,
     variant: 'outline',
-    color: '#6B7280',
-    backgroundColor: '#F9FAFB',
+    color: colors.text.muted,
+    backgroundColor: colors.bg.light,
     icon: 'calendar'
   },
   landowner: {
     label: propertySpecialStatusLabels.landowner,
     variant: 'secondary',
-    color: '#4B5563',
-    backgroundColor: '#F3F4F6',
+    color: colors.text.secondary,
+    backgroundColor: colors.bg.secondary,
     icon: 'map'
   },
   'off-market': {
     label: propertySpecialStatusLabels.off_market,
     variant: 'outline',
-    color: '#6B7280',
-    backgroundColor: '#F9FAFB',
+    color: colors.text.muted,
+    backgroundColor: colors.bg.light,
     icon: 'eyeOff'
   },
   unavailable: {
     label: propertySpecialStatusLabels.unavailable,
     variant: 'secondary',
-    color: '#6B7280',
-    backgroundColor: '#F9FAFB',
+    color: colors.text.muted,
+    backgroundColor: colors.bg.light,
     icon: 'x'
   }
 } as const;
@@ -485,36 +593,36 @@ export const UNIT_STATUSES: Record<UnitStatus, BadgeDefinition> = {
   available: {
     label: storageStatusLabels.available,
     variant: 'success',
-    color: '#059669',
-    backgroundColor: '#ECFDF5',
+    color: colors.text.success,
+    backgroundColor: colors.bg.success,
     icon: 'home'
   },
   occupied: {
     label: storageStatusLabels.occupied,
     variant: 'info',
-    color: '#3B82F6',
-    backgroundColor: '#EFF6FF',
+    color: colors.text.info,
+    backgroundColor: colors.bg.info,
     icon: 'users'
   },
   sold: {
     label: propertyMarketStatusLabels.sold,
     variant: 'destructive',
-    color: '#DC2626',
-    backgroundColor: '#FEF2F2',
+    color: colors.text.error,
+    backgroundColor: colors.bg.error,
     icon: 'dollarSign'
   },
   maintenance: {
     label: storageStatusLabels.maintenance,
     variant: 'warning',
-    color: '#D97706',
-    backgroundColor: '#FFFBEB',
+    color: colors.text.warning,
+    backgroundColor: colors.bg.warning,
     icon: 'wrench'
   },
   reserved: {
     label: storageStatusLabels.reserved,
     variant: 'purple',
-    color: '#7C3AED',
-    backgroundColor: '#F3E8FF',
+    color: colors.text.primary,
+    backgroundColor: colors.bg.light,
     icon: 'bookmark'
   }
 } as const;
@@ -543,43 +651,43 @@ export const NAVIGATION_STATUSES: Record<NavigationStatus, BadgeDefinition> = {
   no_projects: {
     label: priorityLabels.none,
     variant: 'warning',
-    color: '#D97706',
-    backgroundColor: '#FFFBEB',
+    color: colors.text.warning,
+    backgroundColor: colors.bg.warning,
     icon: 'alertTriangle'
   },
   empty: {
     label: priorityLabels.empty,
     variant: 'outline',
-    color: '#6B7280',
-    backgroundColor: '#F9FAFB',
+    color: colors.text.muted,
+    backgroundColor: colors.bg.light,
     icon: 'circle'
   },
   warning: {
     label: priorityLabels.warning,
     variant: 'warning',
-    color: '#D97706',
-    backgroundColor: '#FFFBEB',
+    color: colors.text.warning,
+    backgroundColor: colors.bg.warning,
     icon: 'alertTriangle'
   },
   alert: {
     label: priorityLabels.attention,
     variant: 'destructive',
-    color: '#DC2626',
-    backgroundColor: '#FEF2F2',
+    color: colors.text.error,
+    backgroundColor: colors.bg.error,
     icon: 'alert'
   },
   success: {
     label: priorityLabels.success,
     variant: 'success',
-    color: '#059669',
-    backgroundColor: '#ECFDF5',
+    color: colors.text.success,
+    backgroundColor: colors.bg.success,
     icon: 'check'
   },
   info: {
     label: priorityLabels.info,
     variant: 'info',
-    color: '#3B82F6',
-    backgroundColor: '#EFF6FF',
+    color: colors.text.info,
+    backgroundColor: colors.bg.info,
     icon: 'info'
   }
 } as const;
@@ -592,43 +700,43 @@ export const COMMON_STATUSES: Record<string, BadgeDefinition> = {
   new: {
     label: recordStateLabels.new,
     variant: 'info',
-    color: '#3B82F6',
-    backgroundColor: '#EFF6FF',
+    color: colors.text.info,
+    backgroundColor: colors.bg.info,
     icon: 'plus'
   },
   updated: {
     label: recordStateLabels.updated,
     variant: 'warning',
-    color: '#D97706',
-    backgroundColor: '#FFFBEB',
+    color: colors.text.warning,
+    backgroundColor: colors.bg.warning,
     icon: 'refresh'
   },
   deleted: {
     label: recordStateLabels.deleted,
     variant: 'destructive',
-    color: '#DC2626',
-    backgroundColor: '#FEF2F2',
+    color: colors.text.error,
+    backgroundColor: colors.bg.error,
     icon: 'trash'
   },
   company: {
     label: entityTypeLabels.company,
     variant: 'secondary',
-    color: '#6B7280',
-    backgroundColor: '#F3F4F6',
+    color: colors.text.muted,
+    backgroundColor: colors.bg.secondary,
     icon: 'building'
   },
   primary: {
     label: entityTypeLabels.main,
     variant: 'default',
-    color: '#374151',
-    backgroundColor: '#F3F4F6',
+    color: colors.text.primary,
+    backgroundColor: colors.bg.secondary,
     icon: 'star'
   },
   secondary: {
     label: entityTypeLabels.secondary,
     variant: 'outline',
-    color: '#6B7280',
-    backgroundColor: '#F9FAFB',
+    color: colors.text.muted,
+    backgroundColor: colors.bg.light,
     icon: 'circle'
   }
 } as const;
@@ -641,22 +749,22 @@ export const OBLIGATION_STATUSES: Record<ObligationStatus, BadgeDefinition> = {
   draft: {
     label: documentStatusLabels.draft,
     variant: 'warning',
-    color: '#D97706',
-    backgroundColor: '#FFFBEB',
+    color: colors.text.warning,
+    backgroundColor: colors.bg.warning,
     icon: 'edit'
   },
   completed: {
     label: documentStatusLabels.completed,
     variant: 'success',
-    color: '#059669',
-    backgroundColor: '#ECFDF5',
+    color: colors.text.success,
+    backgroundColor: colors.bg.success,
     icon: 'check'
   },
   approved: {
     label: documentStatusLabels.approved,
     variant: 'info',
-    color: '#3B82F6',
-    backgroundColor: '#EFF6FF',
+    color: colors.text.info,
+    backgroundColor: colors.bg.info,
     icon: 'checkCircle'
   }
 } as const;
@@ -675,18 +783,14 @@ export const getObligationStatusLabel = (status: ObligationStatus): string => {
  * περνώ τα colors ως παράμετρο από το component που καλεί τη function.
  */
 export const getObligationStatusColor = (status: ObligationStatus, colors: UseSemanticColorsReturn): string => {
-  const config = OBLIGATION_STATUSES[status];
-
-  if (!config) return `${colors.status.muted.bg} ${colors.status.muted.text} ${colors.status.muted.border}`;
-
-  // Map status colors to semantic color patterns
-  const colorMap: Record<string, string> = {
-    '#D97706': `${colors.status.warning.bg} ${colors.status.warning.text} ${colors.status.warning.border}`, // Yellow
-    '#059669': `${colors.status.success.bg} ${colors.status.success.text} ${colors.status.success.border}`, // Green
-    '#3B82F6': `${colors.status.info.bg} ${colors.status.info.text} ${colors.status.info.border}`,       // Blue
+  // ✅ ENTERPRISE PROFESSIONAL: Direct mapping using centralized color system
+  const statusColorMap: Record<ObligationStatus, string> = {
+    draft: `${colors.bg.warning} ${colors.text.warning}`,
+    completed: `${colors.bg.success} ${colors.text.success}`,
+    approved: `${colors.bg.info} ${colors.text.info}`
   };
 
-  return colorMap[config.color] || `${colors.status.muted.bg} ${colors.status.muted.text} ${colors.status.muted.border}`;
+  return statusColorMap[status] || `${colors.bg.light} ${colors.text.muted}`;
 };
 
 export const getObligationStatusIcon = (status: ObligationStatus): string => {
@@ -699,18 +803,25 @@ export const getObligationStatusIcon = (status: ObligationStatus): string => {
 };
 
 // ============================================================================
-// UNIFIED BADGE SYSTEM CONFIG
+// 🏢 ENTERPRISE: UNIFIED BADGE SYSTEM CONFIG με Dependency Injection
 // ============================================================================
 
-export const UNIFIED_BADGE_SYSTEM: BadgeSystemConfig = {
+/**
+ * ✅ ENTERPRISE PROFESSIONAL: Creates unified badge system με centralized colors
+ * 🎯 ZERO hardcoded values - Pure dependency injection pattern
+ *
+ * @param colors - useSemanticColors hook result (dependency injection)
+ * @returns Complete badge system configuration με centralized colors
+ */
+export const createUnifiedBadgeSystem = (colors: UseSemanticColorsReturn): BadgeSystemConfig => ({
   domains: {
-    PROJECT: PROJECT_STATUSES,
-    BUILDING: BUILDING_STATUSES,
-    CONTACT: CONTACT_STATUSES,
-    PROPERTY: PROPERTY_STATUSES,
-    UNIT: UNIT_STATUSES,
-    NAVIGATION: NAVIGATION_STATUSES,
-    OBLIGATION: OBLIGATION_STATUSES
+    PROJECT: createProjectStatuses(colors),
+    BUILDING: createBuildingStatuses(colors),
+    CONTACT: createContactStatuses(colors),
+    PROPERTY: createPropertyStatuses(colors),
+    UNIT: createUnitStatuses(colors),
+    NAVIGATION: createNavigationStatuses(colors),
+    OBLIGATION: createObligationStatuses(colors)
   },
-  common: COMMON_STATUSES
-};
+  common: createCommonStatuses(colors)
+});

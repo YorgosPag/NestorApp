@@ -3,10 +3,8 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { Building2, Home, Users } from 'lucide-react';
-import { CORE_HOVER_TRANSFORMS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects/hover-effects';
-import { layoutUtilities } from '@/styles/design-tokens';
+import { useNearbyProjectMarkerStyles } from './hooks/useMapStyles';
 
 interface NearbyProjectMarkerProps {
   project: {
@@ -22,36 +20,41 @@ interface NearbyProjectMarkerProps {
 
 export function NearbyProjectMarker({ project, position }: NearbyProjectMarkerProps) {
   const iconSizes = useIconSizes();
-  const { getStatusBorder } = useBorderTokens();
+
+  // 🏢 ENTERPRISE: CSS-in-JS hook - ZERO inline styles, ZERO hardcoded colors
+  const markerStyles = useNearbyProjectMarkerStyles(position, project.status);
 
   const getIcon = (type: string) => {
+    const iconClass = iconSizes.xs;
     switch (type) {
-      case 'commercial': return <Building2 className={iconSizes.xs} />;
-      case 'residential': return <Home className={iconSizes.xs} />;
-      default: return <Users className={iconSizes.xs} />;
+      case 'commercial': return <Building2 className={iconClass} />;
+      case 'residential': return <Home className={iconClass} />;
+      default: return <Users className={iconClass} />;
     }
   };
 
   return (
-    <div
-      className="absolute z-10 transform -translate-x-1/2 -translate-y-1/2"
-      style={layoutUtilities.position(position.top, position.left)}
-    >
+    <div className={markerStyles.containerClass}>
       <div className="group relative">
-        <div className={cn(
-          `p-2 rounded-full shadow-md ${getStatusBorder('secondary')} cursor-pointer transition-transform`,
-          CORE_HOVER_TRANSFORMS.SCALE_UP_MEDIUM,
-          project.status === 'active' ? 'bg-blue-500' :
-          project.status === 'completed' ? 'bg-green-500' :
-          'bg-yellow-500'
-        )}>
-          <div className={`${iconSizes.sm} text-white flex items-center justify-center`}>
+        <div className={markerStyles.markerClass}>
+          <div className={cn(iconSizes.sm, markerStyles.iconContainerClass)}>
             {getIcon(project.type)}
           </div>
         </div>
-        <div className={`absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-90 text-white px-3 py-2 rounded text-xs whitespace-nowrap ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} transition-opacity`}>
+        {/* 🏷️ ENTERPRISE TOOLTIP: Centralized styling */}
+        <div className={markerStyles.tooltipClass}>
           <div className="font-medium">{project.name}</div>
           <div className="text-gray-300">{project.distance} • {project.progress}%</div>
+          {/* Progress bar - Enterprise compliance */}
+          <div className={markerStyles.progressBarClass}>
+            <div
+              className={cn(
+                markerStyles.progressFillClass,
+                // 🎯 ENTERPRISE: CSS arbitrary value instead of inline style
+                `[width:${project.progress}%]`
+              )}
+            />
+          </div>
         </div>
       </div>
     </div>

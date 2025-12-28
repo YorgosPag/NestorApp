@@ -96,6 +96,24 @@ export const COLOR_BRIDGE = {
       ring: 'focus:ring-2 focus:ring-ring',  // Focus ring → --ring
     },
   },
+
+  /** 🌈 ENTERPRISE GRADIENT MAPPINGS - Professional gradient patterns */
+  gradients: {
+    // Map-specific gradients
+    mapSuccess: 'bg-gradient-to-br from-green-100 via-blue-50 to-green-100',  // Maps success areas
+    mapWarning: 'bg-gradient-to-br from-yellow-100 via-orange-50 to-yellow-100', // Maps warning areas
+    mapInfo: 'bg-gradient-to-br from-blue-100 via-indigo-50 to-blue-100',    // Maps info areas
+
+    // Generic gradients
+    successSubtle: 'bg-gradient-to-r from-green-50 to-green-100',           // Soft success
+    warningSubtle: 'bg-gradient-to-r from-yellow-50 to-yellow-100',         // Soft warning
+    infoSubtle: 'bg-gradient-to-r from-blue-50 to-blue-100',               // Soft info
+    neutralSubtle: 'bg-gradient-to-r from-gray-50 to-gray-100',            // Soft neutral
+
+    // Card gradients
+    cardElevated: 'bg-gradient-to-b from-card to-muted',                    // Elevated cards
+    cardInteractive: 'bg-gradient-to-br from-card via-accent/5 to-card',    // Interactive cards
+  },
 } as const;
 
 /**
