@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { UnifiedFormField } from '@/components/core/FormFields/FormField';
+import { DROPDOWN_PLACEHOLDERS } from '@/constants/property-statuses-enterprise';
 
 interface Props {
   label: string;
@@ -23,7 +24,7 @@ export function FormRowSelectNew({
   onChange, 
   required,
   disabled = false,
-  placeholder = "Επιλέξτε...",
+  placeholder = DROPDOWN_PLACEHOLDERS.GENERIC_SELECT,
   error,
   helper,
   name

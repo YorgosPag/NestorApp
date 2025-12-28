@@ -1,0 +1,83 @@
+/**
+ * CLOUD PROVIDERS TYPE DEFINITIONS
+ *
+ * EXACT COPY από original CloudInfrastructure.ts για modular architecture
+ * ZERO MODIFICATIONS - Original source is the authoritative truth
+ *
+ * @module enterprise/types/cloud-providers
+ * @version 1.0.0 - EXACT ORIGINAL COPY
+ * @updated 2025-12-28 - Exact copy from CloudInfrastructure.ts lines 15-86
+ */
+
+/**
+ * Cloud provider configuration
+ */
+export interface CloudProvider {
+  name: 'aws' | 'azure' | 'gcp' | 'digitalocean' | 'linode';
+  region: string;
+  credentials: CloudCredentials;
+  endpoints: CloudEndpoints;
+  features: CloudFeatures;
+  pricing: CloudPricing;
+}
+
+/**
+ * Cloud credentials
+ */
+export interface CloudCredentials {
+  accessKey?: string;
+  secretKey?: string;
+  tenantId?: string;
+  subscriptionId?: string;
+  projectId?: string;
+  serviceAccountKey?: any;
+  token?: string;
+}
+
+/**
+ * Cloud endpoints
+ */
+export interface CloudEndpoints {
+  compute: string;
+  storage: string;
+  database: string;
+  networking: string;
+  monitoring: string;
+  dns: string;
+}
+
+/**
+ * Cloud features
+ */
+export interface CloudFeatures {
+  autoScaling: boolean;
+  loadBalancing: boolean;
+  cdn: boolean;
+  database: boolean;
+  objectStorage: boolean;
+  kubernetes: boolean;
+  serverless: boolean;
+  monitoring: boolean;
+}
+
+/**
+ * Cloud pricing
+ */
+export interface CloudPricing {
+  compute: PricingTier[];
+  storage: PricingTier[];
+  network: PricingTier[];
+  database: PricingTier[];
+}
+
+/**
+ * Pricing tier
+ */
+export interface PricingTier {
+  name: string;
+  cpu: number;
+  memory: number;
+  storage: number;
+  pricePerHour: number;
+  pricePerMonth: number;
+}

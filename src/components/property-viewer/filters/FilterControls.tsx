@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { getAllEnhancedStatuses as getAllStatuses, getStatusLabel, PROPERTY_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
+import { getAllEnhancedStatuses as getAllStatuses, getStatusLabel, PROPERTY_FILTER_LABELS, DROPDOWN_PLACEHOLDERS } from '@/constants/property-statuses-enterprise';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -83,7 +83,7 @@ export function FilterControls({ filters, onFilterChange, onRangeChange }: Filte
             value={filters.status.length === 1 ? filters.status[0] : 'all'}
           >
             <SelectTrigger className="h-9 w-full" aria-label="Φίλτρο κατάστασης">
-              <SelectValue placeholder="Επιλογή κατάστασης..." />
+              <SelectValue placeholder={DROPDOWN_PLACEHOLDERS.SELECT_STATUS} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{PROPERTY_FILTER_LABELS.ALL_STATUSES}</SelectItem>
@@ -99,19 +99,19 @@ export function FilterControls({ filters, onFilterChange, onRangeChange }: Filte
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
         <div className="flex items-center gap-2">
           <Label className="text-xs font-medium shrink-0">Έργο</Label>
-          <Select><SelectTrigger className="h-9 w-full" aria-label="Φίλτρο έργου"><SelectValue placeholder="Επιλογή Έργου" /></SelectTrigger><SelectContent><SelectItem value="all">{PROPERTY_FILTER_LABELS.ALL_PROJECTS}</SelectItem></SelectContent></Select>
+          <Select><SelectTrigger className="h-9 w-full" aria-label="Φίλτρο έργου"><SelectValue placeholder={DROPDOWN_PLACEHOLDERS.SELECT_PROJECT} /></SelectTrigger><SelectContent><SelectItem value="all">{PROPERTY_FILTER_LABELS.ALL_PROJECTS}</SelectItem></SelectContent></Select>
         </div>
         <div className="flex items-center gap-2">
           <Label className="text-xs font-medium shrink-0">Κτίριο</Label>
-          <Select><SelectTrigger className="h-9 w-full" aria-label="Φίλτρο κτιρίου"><SelectValue placeholder="Επιλογή Κτιρίου" /></SelectTrigger><SelectContent><SelectItem value="all">{PROPERTY_FILTER_LABELS.ALL_BUILDINGS}</SelectItem></SelectContent></Select>
+          <Select><SelectTrigger className="h-9 w-full" aria-label="Φίλτρο κτιρίου"><SelectValue placeholder={DROPDOWN_PLACEHOLDERS.SELECT_BUILDING} /></SelectTrigger><SelectContent><SelectItem value="all">{PROPERTY_FILTER_LABELS.ALL_BUILDINGS}</SelectItem></SelectContent></Select>
         </div>
         <div className="flex items-center gap-2">
           <Label className="text-xs font-medium shrink-0">Όροφος</Label>
-          <Select><SelectTrigger className="h-9 w-full" aria-label="Φίλτρο ορόφου"><SelectValue placeholder="Επιλογή Ορόφου" /></SelectTrigger><SelectContent><SelectItem value="all">{PROPERTY_FILTER_LABELS.ALL_FLOORS}</SelectItem></SelectContent></Select>
+          <Select><SelectTrigger className="h-9 w-full" aria-label="Φίλτρο ορόφου"><SelectValue placeholder={DROPDOWN_PLACEHOLDERS.SELECT_FLOOR} /></SelectTrigger><SelectContent><SelectItem value="all">{PROPERTY_FILTER_LABELS.ALL_FLOORS}</SelectItem></SelectContent></Select>
         </div>
         <div className="flex items-center gap-2">
           <Label className="text-xs font-medium shrink-0">Τύπος Ακινήτου</Label>
-          <Select><SelectTrigger className="h-9 w-full" aria-label="Φίλτρο τύπου ακινήτου"><SelectValue placeholder="Επιλογή Τύπου" /></SelectTrigger><SelectContent><SelectItem value="all">{PROPERTY_FILTER_LABELS.ALL_TYPES}</SelectItem></SelectContent></Select>
+          <Select><SelectTrigger className="h-9 w-full" aria-label="Φίλτρο τύπου ακινήτου"><SelectValue placeholder={DROPDOWN_PLACEHOLDERS.SELECT_TYPE} /></SelectTrigger><SelectContent><SelectItem value="all">{PROPERTY_FILTER_LABELS.ALL_TYPES}</SelectItem></SelectContent></Select>
         </div>
       </div>
     </>

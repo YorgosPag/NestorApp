@@ -16,6 +16,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { getContactDisplayName } from '@/types/contacts';
 import { useBulkAssign } from './hooks/useBulkAssign';
+import { DROPDOWN_PLACEHOLDERS } from '@/constants/property-statuses-enterprise';
 
 export function BulkAssignToolbar({
   selectedIds,
@@ -52,7 +53,7 @@ export function BulkAssignToolbar({
           </div>
           <Select value={selectedContactId} onValueChange={setSelectedContactId}>
             <SelectTrigger className="w-[250px] h-8 text-xs">
-              <SelectValue placeholder="Επιλογή πελάτη..." />
+              <SelectValue placeholder={DROPDOWN_PLACEHOLDERS.SELECT_CLIENT} />
             </SelectTrigger>
             <SelectContent>
               {contacts.map((c) => (

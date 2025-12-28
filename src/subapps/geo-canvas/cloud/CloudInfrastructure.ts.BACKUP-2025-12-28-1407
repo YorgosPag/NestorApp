@@ -9,24 +9,9 @@
 import { performance } from 'perf_hooks';
 
 // ============================================================================
-// MODULAR IMPORTS - ENTERPRISE ARCHITECTURE
+// TYPE DEFINITIONS
 // ============================================================================
 
-import type {
-  CloudProvider,
-  CloudCredentials,
-  CloudEndpoints,
-  CloudFeatures,
-  CloudPricing,
-  PricingTier
-} from './enterprise/types/cloud-providers';
-
-// ============================================================================
-// TYPE DEFINITIONS - COMMENTED OUT (NOW USING MODULAR IMPORTS)
-// ============================================================================
-
-/*
-// COMMENTED OUT: Now using ./enterprise/types/cloud-providers.ts
 /**
  * Cloud provider configuration
  */
@@ -99,11 +84,6 @@ export interface PricingTier {
   pricePerHour: number;
   pricePerMonth: number;
 }
-*/
-
-// ============================================================================
-// REMAINING TYPE DEFINITIONS (TO BE MIGRATED)
-// ============================================================================
 
 /**
  * Infrastructure configuration

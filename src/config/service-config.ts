@@ -6,10 +6,10 @@
 
 // 🏢 ENTERPRISE: Use centralized options from modal-select system
 import {
+  getServiceFieldLabels,
   getServiceCategoryOptions,
-  getLegalStatusOptions,
-  getServiceFieldLabels
-} from '@/subapps/dxf-viewer/config/modal-select';
+  getLegalStatusOptions
+} from '../subapps/dxf-viewer/config/modal-select';
 
 // 🏢 ENTERPRISE: Import centralized service form field labels - ZERO HARDCODED VALUES
 import {
@@ -17,7 +17,7 @@ import {
   SERVICE_RESPONSIBILITIES_LABELS,
   ADDRESS_INFO_FIELD_LABELS,
   COMPANY_CONTACT_INFO_LABELS
-} from '@/constants/property-statuses-enterprise';
+} from '../constants/property-statuses-enterprise';
 //
 // Κεντρικοποιημένη διαμόρφωση για δημόσιες υπηρεσίες με tab layout
 // Αντικαθιστά τα ΓΕΜΙ fields που δεν ισχύουν για δημόσιους φορείς
@@ -48,12 +48,15 @@ export interface ServiceSectionConfig {
 // ΔΗΜΟΣΙΕΣ ΥΠΗΡΕΣΙΕΣ - SECTION CONFIGURATIONS
 // ============================================================================
 
+// Get field labels once at module level
+const serviceFieldLabels = getServiceFieldLabels();
+
 /**
  * Βασικά Στοιχεία Δημόσιας Υπηρεσίας
  * ✅ ENTERPRISE: Using centralized service field labels
  */
 const basicInfoSection: ServiceSectionConfig = (() => {
-  const fieldLabels = getServiceFieldLabels();
+  const fieldLabels = serviceFieldLabels;
   return {
     id: 'basicInfo',
     title: fieldLabels.basic_info_section,

@@ -4,6 +4,7 @@
 import { CommonBadge } from "@/core/badges";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Property } from '@/types/property-viewer';
+import { DROPDOWN_PLACEHOLDERS } from '@/constants/property-statuses-enterprise';
 
 interface FloorData {
     id: string;
@@ -26,7 +27,7 @@ export function FloorSelector({ currentFloor, floors, onSelectFloor }: FloorSele
       <div className="flex items-center gap-4">
         <Select onValueChange={onSelectFloor}>
           <SelectTrigger className="w-48">
-            <SelectValue placeholder="Επιλογή ορόφου..." />
+            <SelectValue placeholder={DROPDOWN_PLACEHOLDERS.SELECT_FLOOR} />
           </SelectTrigger>
           <SelectContent>
             {(floors || []).map((floor) => (

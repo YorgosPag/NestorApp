@@ -3,11 +3,34 @@ import i18n from '@/i18n/config';
 // ✅ ENTERPRISE: Import centralized validation messages
 import { getValidationMessages } from '@/subapps/dxf-viewer/config/modal-select';
 
-// ✅ ENTERPRISE: Get centralized validation messages ONCE
-const validationMessages = getValidationMessages();
+// ✅ ENTERPRISE: Get centralized validation messages with safe fallback
+const getValidationMessagesOnce = () => {
+  try {
+    return getValidationMessages();
+  } catch (error) {
+    console.warn('Failed to load validation messages, using fallback:', error);
+    return {
+      birthdate_future_error: 'Η ημερομηνία γέννησης δεν μπορεί να είναι μελλοντική',
+      issue_date_future_error: 'Η ημερομηνία έκδοσης δεν μπορεί να είναι μελλοντική',
+      expiry_after_issue_error: 'Η ημερομηνία λήξης πρέπει να είναι μετά την ημερομηνία έκδοσης',
+      past_date_error: 'Η ημερομηνία δεν μπορεί να είναι παρελθοντική',
+      date_comparison_error: 'Λάθος σύγκριση ημερομηνιών',
+      first_name_required: 'Το όνομα είναι υποχρεωτικό',
+      last_name_required: 'Το επώνυμο είναι υποχρεωτικό',
+      birthdate_invalid: 'Μη έγκυρη ημερομηνία γέννησης',
+      vat_individual_format: 'Το ΑΦΜ πρέπει να είναι 9 ψηφία',
+      amka_format: 'Το ΑΜΚΑ πρέπει να είναι 11 ψηφία',
+      company_name_required: 'Η επωνυμία είναι υποχρεωτική',
+      vat_company_format: 'Το ΑΦΜ πρέπει να είναι 9 ψηφία',
+      service_name_required: 'Το όνομα υπηρεσίας είναι υποχρεωτικό'
+    };
+  }
+};
+
+const validationMessages = getValidationMessagesOnce();
 
 // Helper function to get validation message with i18n
-export const getValidationMessage = (key: string, params?: Record<string, any>) => {
+export const getValidationMessage = (key: string, params?: Record<string, unknown>) => {
   return i18n.t(`forms.validation.${key}`, { ...params, ns: 'forms' });
 };
 

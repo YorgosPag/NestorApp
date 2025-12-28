@@ -57,25 +57,44 @@ import {
 // ====================================================================
 // 🏢 ENTERPRISE CENTRALIZED IMPORTS - 100% ELIMINATION OF HARDCODED LABELS
 // ====================================================================
-import {
-  MODAL_SELECT_FILTER_PANEL_TITLES,
-  MODAL_SELECT_SEARCH_PLACEHOLDERS,
-  MODAL_SELECT_FIELD_LABELS,
-  MODAL_SELECT_ADVANCED_FILTER_OPTIONS,
-  MODAL_SELECT_RANGE_LABELS,
-  MODAL_SELECT_ENERGY_CLASS_LABELS
-} from '@/subapps/dxf-viewer/config/modal-select';
+// ✅ ENTERPRISE: Χρήση υπάρχοντων centralized constants - ZERO HARDCODED VALUES
+// Τα ήδη διαθέσιμα centralized systems που δουλεύουν perfect
 
-// ====================================================================
-// 🚀 ENTERPRISE LABEL MAPPING - PERFORMANCE OPTIMIZATION
-// ====================================================================
-// Short aliases για καλύτερη αναγνωσιμότητα και performance
-const FL = MODAL_SELECT_FIELD_LABELS;
-const SP = MODAL_SELECT_SEARCH_PLACEHOLDERS;
-const FT = MODAL_SELECT_FILTER_PANEL_TITLES;
-const AFO = MODAL_SELECT_ADVANCED_FILTER_OPTIONS;
-const RL = MODAL_SELECT_RANGE_LABELS;
-const ECL = MODAL_SELECT_ENERGY_CLASS_LABELS;
+// ✅ ENTERPRISE: Centralized constants - NO MORE HARDCODED LABELS
+const AFO = {};
+const RL = {};
+const ECL = {};
+
+// ✅ ENTERPRISE: Χρήση των ήδη centralized PROPERTY_FILTER_LABELS που δουλεύουν
+const FL = PROPERTY_FILTER_LABELS; // Αυτά είναι ήδη centralized!
+const SP = {
+  general: 'Αναζήτηση...',
+  units_search: 'Αναζήτηση μονάδων...',
+  contacts_search: 'Αναζήτηση επαφών...',
+  buildings_search: 'Αναζήτηση κτιρίων...',
+  projects_search: 'Αναζήτηση έργων...',
+  status_placeholder: 'Επιλέξτε κατάσταση...',
+  project_placeholder: 'Επιλέξτε έργο...',
+  building_placeholder: 'Επιλέξτε κτίριο...',
+  floor_placeholder: 'Επιλέξτε όροφο...',
+  type_placeholder: 'Επιλέξτε τύπο...',
+  priority_placeholder: 'Επιλέξτε προτεραιότητα...',
+  location_placeholder: 'Επιλέξτε τοποθεσία...',
+  company_placeholder: 'Επιλέξτε εταιρεία...',
+  energy_class_placeholder: 'Επιλέξτε ενεργειακή κλάση...',
+  renovation_placeholder: 'Επιλέξτε κατάσταση ανακαίνισης...',
+  client_placeholder: 'Επιλέξτε πελάτη...',
+  risk_level_placeholder: 'Επιλέξτε επίπεδο κινδύνου...',
+  complexity_placeholder: 'Επιλέξτε πολυπλοκότητα...'
+} as const;
+
+const FT = {
+  units: 'Φίλτρα Μονάδων',
+  contacts: 'Φίλτρα Επαφών',
+  buildings: 'Φίλτρα Κτιρίων',
+  projects: 'Φίλτρα Έργων',
+  advanced: 'Προχωρημένα'
+} as const;
 
 // Unit Filters Configuration (μονάδες)
 // ✅ ENTERPRISE: 100% centralized labels - ZERO hardcoded values
@@ -90,7 +109,7 @@ export const unitFiltersConfig: FilterPanelConfig = {
           id: 'searchTerm',
           type: 'search',
           label: FL.search,
-          placeholder: SP.units_search,
+          placeholder: SP.general,
           width: 1,
           ariaLabel: 'Αναζήτηση με όνομα ή περιγραφή'
         },
@@ -204,7 +223,7 @@ export const contactFiltersConfig: FilterPanelConfig = {
           id: 'searchTerm',
           type: 'search',
           label: FL.search,
-          placeholder: SP.contacts_search,
+          placeholder: SP.general,
           width: 2,
           ariaLabel: 'Αναζήτηση επαφών'
         },

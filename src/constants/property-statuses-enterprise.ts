@@ -876,6 +876,7 @@ export const DROPDOWN_PLACEHOLDERS = {
   // Property & Building Selection
   SELECT_FLOOR: 'Επιλογή ορόφου...',
   SELECT_TYPE: 'Επιλογή τύπου',
+  SELECT_STATUS: 'Επιλογή κατάστασης...',
 
   // CRM & Opportunity Management
   SELECT_STAGE: 'Επιλογή σταδίου...',

@@ -35,6 +35,74 @@ export const MODAL_SELECT_PLACEHOLDERS = {
   error: 'Σφάλμα φόρτωσης'
 } as const;
 
+// Field Labels
+export const MODAL_SELECT_FIELD_LABELS = {
+  unit_code: 'Κωδικός Μονάδας',
+  unit_type: 'Τύπος Μονάδας',
+  floor: 'Όροφος',
+  area: 'Εμβαδό',
+  price: 'Τιμή',
+  contact_type: 'Τύπος Επαφής',
+  company_name: 'Επωνυμία',
+  first_name: 'Όνομα',
+  last_name: 'Επώνυμο',
+  phone: 'Τηλέφωνο',
+  email: 'Email',
+  address: 'Διεύθυνση',
+  city: 'Πόλη',
+  postal_code: 'Ταχυδρομικός Κώδικας',
+  country: 'Χώρα',
+  status: 'Κατάσταση',
+  date_created: 'Ημερομηνία Δημιουργίας',
+  date_updated: 'Ημερομηνία Ενημέρωσης',
+  building_name: 'Όνομα Κτιρίου',
+  project_name: 'Όνομα Έργου',
+  owner: 'Ιδιοκτήτης',
+  tenant: 'Ενοικιαστής'
+} as const;
+
+export const MODAL_SELECT_FILTER_PANEL_TITLES = {
+  basic_info: 'Βασικές Πληροφορίες',
+  contact_details: 'Στοιχεία Επικοινωνίας',
+  location_info: 'Πληροφορίες Τοποθεσίας',
+  status_filters: 'Φίλτρα Κατάστασης',
+  date_filters: 'Φίλτρα Ημερομηνίας',
+  price_filters: 'Φίλτρα Τιμής',
+  area_filters: 'Φίλτρα Εμβαδού',
+  advanced_filters: 'Προχωρημένα Φίλτρα',
+  advanced: 'Προχωρημένα',
+  buildings: 'Κτίρια',
+  contacts: 'Επαφές',
+  projects: 'Έργα',
+  units: 'Μονάδες'
+} as const;
+
+export const MODAL_SELECT_SEARCH_PLACEHOLDERS = {
+  unit_code: 'Αναζήτηση κωδικού μονάδας...',
+  company_name: 'Αναζήτηση επωνυμίας...',
+  contact_name: 'Αναζήτηση ονόματος επαφής...',
+  building_name: 'Αναζήτηση ονόματος κτιρίου...',
+  project_name: 'Αναζήτηση ονόματος έργου...',
+  address: 'Αναζήτηση διεύθυνσης...',
+  phone: 'Αναζήτηση τηλεφώνου...',
+  email: 'Αναζήτηση email...',
+  general: 'Αναζήτηση...',
+  filter_results: 'Φιλτράρισμα αποτελεσμάτων...',
+  status_placeholder: 'Επιλέξτε κατάσταση...',
+  project_placeholder: 'Επιλέξτε έργο...',
+  building_placeholder: 'Επιλέξτε κτίριο...',
+  floor_placeholder: 'Επιλέξτε όροφο...',
+  type_placeholder: 'Επιλέξτε τύπο...',
+  priority_placeholder: 'Επιλέξτε προτεραιότητα...',
+  location_placeholder: 'Επιλέξτε τοποθεσία...',
+  company_placeholder: 'Επιλέξτε εταιρεία...',
+  energy_class_placeholder: 'Επιλέξτε ενεργειακή κλάση...',
+  renovation_placeholder: 'Επιλέξτε κατάσταση ανακαίνισης...',
+  client_placeholder: 'Επιλέξτε πελάτη...',
+  risk_level_placeholder: 'Επιλέξτε επίπεδο κινδύνου...',
+  complexity_placeholder: 'Επιλέξτε πολυπλοκότητα...'
+} as const;
+
 // Encoding Options
 import { MODAL_SELECT_ENCODING_OPTIONS as MIGRATED_ENCODING_OPTIONS } from './modal-select/core/options/encoding';
 export const MODAL_SELECT_ENCODING_OPTIONS = MIGRATED_ENCODING_OPTIONS;
@@ -621,3 +689,59 @@ export {
   getPropertyTypeOptions,
   getUnitFilterOptions
 } from './modal-select/utils/accessors';
+
+// Service field labels
+export { getServiceFieldLabels } from './modal-select/core/labels/fields';
+
+// ====================================================================
+// MISSING EXPORTS - ENTERPRISE FIX
+// ====================================================================
+
+// Missing exports που χρειάζονται στην εφαρμογή
+export const MODAL_SELECT_ADVANCED_FILTER_OPTIONS = {
+  energy_class: 'Ενεργειακή Κλάση',
+  renovation_status: 'Κατάσταση Ανακαίνισης',
+  risk_level: 'Επίπεδο Κινδύνου',
+  complexity: 'Πολυπλοκότητα'
+} as const;
+
+export const MODAL_SELECT_RANGE_LABELS = {
+  price_range: 'Εύρος Τιμής',
+  area_range: 'Εύρος Εμβαδού',
+  date_range: 'Εύρος Ημερομηνίας'
+} as const;
+
+export const MODAL_SELECT_ENERGY_CLASS_LABELS = {
+  'A+': 'Α+',
+  'A': 'Α',
+  'B': 'Β',
+  'C': 'Γ',
+  'D': 'Δ',
+  'E': 'Ε',
+  'F': 'ΣΤ',
+  'G': 'Ζ',
+  'H': 'Η'
+} as const;
+
+// Function exports που λείπουν
+export function getBooleanOptions() {
+  return MODAL_SELECT_BOOLEAN_OPTIONS;
+}
+
+export function getCompanyFieldLabels() {
+  return MODAL_SELECT_FIELD_LABELS;
+}
+
+export function getEncodingOptions() {
+  return MODAL_SELECT_ENCODING_OPTIONS;
+}
+
+export function getValidationMessages() {
+  return {
+    required: 'Αυτό το πεδίο είναι υποχρεωτικό',
+    email: 'Παρακαλώ εισάγετε έγκυρη διεύθυνση email',
+    phone: 'Παρακαλώ εισάγετε έγκυρο αριθμό τηλεφώνου',
+    minLength: 'Το κείμενο πρέπει να έχει τουλάχιστον {min} χαρακτήρες',
+    maxLength: 'Το κείμενο δεν μπορεί να έχει περισσότερους από {max} χαρακτήρες'
+  };
+}
