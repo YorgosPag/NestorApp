@@ -4,6 +4,7 @@ import type {
   ConstraintDefinition,
   ConstraintResult,
   ConstraintContext,
+  ConstraintContextData,
   OrthoConstraintSettings,
   PolarConstraintSettings,
   ConstraintsSettings
@@ -34,7 +35,7 @@ export interface ConstraintsSystemStateReturn {
   constraints: Record<string, ConstraintDefinition>;
   activeConstraints: string[];
   lastAppliedResult: ConstraintResult | null;
-  constraintContext: ConstraintContext;
+  constraintContext: ConstraintContextData;
   state: ConstraintsState;
 
   // Setters
@@ -44,7 +45,7 @@ export interface ConstraintsSystemStateReturn {
   setConstraints: React.Dispatch<React.SetStateAction<Record<string, ConstraintDefinition>>>;
   setActiveConstraints: React.Dispatch<React.SetStateAction<string[]>>;
   setLastAppliedResult: React.Dispatch<React.SetStateAction<ConstraintResult | null>>;
-  setConstraintContext: React.Dispatch<React.SetStateAction<ConstraintContext>>;
+  setConstraintContext: React.Dispatch<React.SetStateAction<ConstraintContextData>>;
 }
 
 export function useConstraintsSystemState({
@@ -87,17 +88,22 @@ export function useConstraintsSystemState({
 
   const [activeConstraints, setActiveConstraints] = useState<string[]>([]);
   const [lastAppliedResult, setLastAppliedResult] = useState<ConstraintResult | null>(null);
-  const [constraintContext, setConstraintContext] = useState<ConstraintContext>({
+  const [constraintContext, setConstraintContext] = useState<ConstraintContextData>({
     currentPoint: { x: 0, y: 0 },
-    lastPoint: null,
-    inputMode: 'point',
-    tool: 'line',
-    isFirstPoint: true,
-    modifierKeys: {
+    previousPoints: [],
+    referencePoint: undefined,
+    baseAngle: 0,
+    mousePosition: { x: 0, y: 0 },
+    keyboardModifiers: {
       shift: false,
       ctrl: false,
       alt: false
-    }
+    },
+    snapSettings: {
+      enabled: true,
+      tolerance: 5
+    },
+    activeConstraints: []
   });
 
   // Persistence effect
@@ -166,14 +172,16 @@ export function useConstraintsSystemState({
 
   // State object
   const state = useMemo<ConstraintsState>(() => ({
-    orthoSettings,
-    polarSettings,
-    settings,
+    ortho: orthoSettings,
+    polar: polarSettings,
     constraints,
     activeConstraints,
-    constraintContext,
-    lastAppliedResult
-  }), [orthoSettings, polarSettings, settings, constraints, activeConstraints, constraintContext, lastAppliedResult]);
+    currentContext: null, // Will be filled by ConstraintsSystem.tsx
+    lastResult: lastAppliedResult,
+    isEnabled: settings.general.enabled,
+    temporaryDisabled: false,
+    settings
+  }), [orthoSettings, polarSettings, settings, constraints, activeConstraints, lastAppliedResult]);
 
   return {
     // State values

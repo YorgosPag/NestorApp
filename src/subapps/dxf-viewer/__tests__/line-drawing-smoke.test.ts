@@ -54,7 +54,7 @@ describe('🎯 Line Drawing Smoke Test (CRITICAL)', () => {
         const content = fs.readFileSync(filePath, 'utf-8');
 
         // Verify previewEntity is spread into entities array
-        expect(content).toContain('drawingHandlers.drawingState.previewEntity');
+        expect(content).toContain('drawingHandlers.state.previewEntity');
         expect(content).toContain('ADD PREVIEW ENTITY');
       }
     });

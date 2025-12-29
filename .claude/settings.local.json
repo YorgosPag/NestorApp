@@ -1,8 +1,18 @@
 {
   "permissions": {
     "allow": [
+      "Bash(Select-String \"TS2322\")",
+      "Bash(npx tsc:*)",
+      "Bash(Select-String \"error TS2322\")",
+      "Bash(Select-Object -First 5)",
+      "Bash(powershell.exe:*)",
+      "Bash(Select-Object -First 10)",
+      "Bash(timeout:*)",
+      "Bash(timeout 30 npx tsc --noEmit --project .)",
+      "Bash(findstr:*)",
       "Bash(Measure-Object)",
-      "Bash(npm run dev:*)",
+      "Bash(Select-String \"error TS\")",
+      "Bash(Select-Object -First 20)",
       "Bash(git add:*)"
     ],
     "deny": [],

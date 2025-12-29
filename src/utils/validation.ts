@@ -1,33 +1,64 @@
 import { z } from 'zod';
 import i18n from '@/i18n/config';
 // ✅ ENTERPRISE: Import centralized validation messages
-import { getValidationMessages } from '@/subapps/dxf-viewer/config/modal-select';
+import { getValidationMessages, type ValidationMessagesConfig } from '@/subapps/dxf-viewer/config/modal-select';
 
 // ✅ ENTERPRISE: Get centralized validation messages with safe fallback
-const getValidationMessagesOnce = () => {
+const getValidationMessagesOnce = (): ValidationMessagesConfig => {
   try {
     return getValidationMessages();
   } catch (error) {
     console.warn('Failed to load validation messages, using fallback:', error);
+    // Fallback that matches ValidationMessagesConfig type
     return {
+      // Required field messages
+      first_name_required: 'Το όνομα είναι υποχρεωτικό',
+      last_name_required: 'Το επώνυμο είναι υποχρεωτικό',
+      company_name_required: 'Η επωνυμία είναι υποχρεωτική',
+      service_name_required: 'Το όνομα υπηρεσίας είναι υποχρεωτικό',
+
+      // Format validation messages
+      vat_individual_format: 'Το ΑΦΜ πρέπει να είναι 9 ψηφία',
+      vat_company_format: 'Το ΑΦΜ εταιρείας πρέπει να είναι 9 ψηφία',
+      amka_format: 'Το ΑΜΚΑ πρέπει να είναι 11 ψηφία',
+
+      // Date validation messages
+      birthdate_invalid: 'Μη έγκυρη ημερομηνία γέννησης',
       birthdate_future_error: 'Η ημερομηνία γέννησης δεν μπορεί να είναι μελλοντική',
       issue_date_future_error: 'Η ημερομηνία έκδοσης δεν μπορεί να είναι μελλοντική',
       expiry_after_issue_error: 'Η ημερομηνία λήξης πρέπει να είναι μετά την ημερομηνία έκδοσης',
-      past_date_error: 'Η ημερομηνία δεν μπορεί να είναι παρελθοντική',
+      past_date_error: 'Η ημερομηνία δεν μπορεί να είναι παρελθούσα',
       date_comparison_error: 'Λάθος σύγκριση ημερομηνιών',
-      first_name_required: 'Το όνομα είναι υποχρεωτικό',
-      last_name_required: 'Το επώνυμο είναι υποχρεωτικό',
-      birthdate_invalid: 'Μη έγκυρη ημερομηνία γέννησης',
-      vat_individual_format: 'Το ΑΦΜ πρέπει να είναι 9 ψηφία',
-      amka_format: 'Το ΑΜΚΑ πρέπει να είναι 11 ψηφία',
-      company_name_required: 'Η επωνυμία είναι υποχρεωτική',
-      vat_company_format: 'Το ΑΦΜ πρέπει να είναι 9 ψηφία',
-      service_name_required: 'Το όνομα υπηρεσίας είναι υποχρεωτικό'
+
+      // Generic validation messages - required for ValidationMessagesConfig
+      required: 'Αυτό το πεδίο είναι υποχρεωτικό',
+      minLength: 'Πρέπει να είναι τουλάχιστον {min} χαρακτήρες',
+      maxLength: 'Δεν μπορεί να ξεπερνά τους {max} χαρακτήρες',
+      exactLength: 'Πρέπει να είναι ακριβώς {length} χαρακτήρες',
+      invalidEmail: 'Μη έγκυρη διεύθυνση email',
+      invalidPhone: 'Μη έγκυρος αριθμός τηλεφώνου',
+      invalidUrl: 'Μη έγκυρη διεύθυνση URL',
+      invalidNumber: 'Πρέπει να είναι έγκυρος αριθμός',
+      notInteger: 'Πρέπει να είναι ακέραιος αριθμός',
+      positiveNumber: 'Πρέπει να είναι θετικός αριθμός',
+      nonNegativeNumber: 'Δεν μπορεί να είναι αρνητικός αριθμός',
+      minValue: 'Πρέπει να είναι τουλάχιστον {min}',
+      maxValue: 'Δεν μπορεί να ξεπερνά το {max}',
+      greaterThan: 'Πρέπει να είναι μεγαλύτερος από {value}',
+      lessThan: 'Πρέπει να είναι μικρότερος από {value}',
+      invalidDate: 'Μη έγκυρη ημερομηνία',
+      pastDate: 'Η ημερομηνία πρέπει να είναι παρελθούσα',
+      futureDate: 'Η ημερομηνία πρέπει να είναι μελλοντική',
+      invalidSelection: 'Μη έγκυρη επιλογή',
+      areaRequired: 'Το εμβαδόν πρέπει να είναι θετικός αριθμός',
+      priceRequired: 'Η τιμή πρέπει να είναι θετικός αριθμός',
+      invalidCode: 'Μη έγκυρος κωδικός',
+      confirmPassword: 'Οι κωδικοί δεν ταιριάζουν'
     };
   }
 };
 
-const validationMessages = getValidationMessagesOnce();
+const validationMessages: ValidationMessagesConfig = getValidationMessagesOnce();
 
 // Helper function to get validation message with i18n
 export const getValidationMessage = (key: string, params?: Record<string, unknown>) => {

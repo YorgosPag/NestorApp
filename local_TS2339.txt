@@ -1,0 +1,707 @@
+PS C:\Nestor_Pagonis> npx tsc --noEmit --pretty false --project "C:\Nestor_Pagonis\src\subapps\dxf-viewer\tsconfig.json" 2>&1 |
+>> Select-String "error TS2339"
+
+src/subapps/dxf-viewer/canvas-v2/layer-canvas/LayerRenderer.ts(894,46): error TS2339: Property 'enabled' does not exist on type 'CursorSettings'.
+src/subapps/dxf-viewer/canvas/DxfCanvas.tsx(104,34): error TS2339: Property 'canvasRef' does not exist on type 'CanvasContextType'.
+src/subapps/dxf-viewer/collaboration/CollaborationManager.ts(105,20): error TS2339: Property 'userId' does not exist on type 'Partial<CollaborationUser>'.
+src/subapps/dxf-viewer/collaboration/CollaborationManager.ts(106,39): error TS2339: Property 'userId' does not exist on type 'Partial<CollaborationUser>'.
+src/subapps/dxf-viewer/collaboration/CollaborationManager.ts(107,23): error TS2339: Property 'userId' does not exist on type 'Partial<CollaborationUser>'.
+src/subapps/dxf-viewer/collaboration/CollaborationManager.ts(108,46): error TS2339: Property 'userId' does not exist on type 'Partial<CollaborationUser>'.
+src/subapps/dxf-viewer/components/DestinationWizard.tsx(229,96): error TS2339: Property 'checkbox' does not exist on type '{ none: string; card: "border-[1px] border-[rgb(229, 231
+, 235)] rounded-lg"; button: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; input: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; ... 12 more ...; rounded: "border
+-[1px] border-[rgb(229, 231, 235)] rounded-lg"; }'.
+src/subapps/dxf-viewer/components/DestinationWizard.tsx(242,96): error TS2339: Property 'checkbox' does not exist on type '{ none: string; card: "border-[1px] border-[rgb(229, 231
+, 235)] rounded-lg"; button: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; input: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; ... 12 more ...; rounded: "border
+-[1px] border-[rgb(229, 231, 235)] rounded-lg"; }'.
+src/subapps/dxf-viewer/components/DestinationWizard.tsx(255,96): error TS2339: Property 'checkbox' does not exist on type '{ none: string; card: "border-[1px] border-[rgb(229, 231
+, 235)] rounded-lg"; button: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; input: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; ... 12 more ...; rounded: "border
+-[1px] border-[rgb(229, 231, 235)] rounded-lg"; }'.
+src/subapps/dxf-viewer/components/DestinationWizard.tsx(268,96): error TS2339: Property 'checkbox' does not exist on type '{ none: string; card: "border-[1px] border-[rgb(229, 231
+, 235)] rounded-lg"; button: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; input: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; ... 12 more ...; rounded: "border
+-[1px] border-[rgb(229, 231, 235)] rounded-lg"; }'.
+src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx(446,27): error TS2339: Property 'state' does not exist on type '{ drawingState: DrawingState; startDrawing: (tool: D
+rawingTool) => void; onDrawingPoint: (p: Pt) => void; onDrawingHover: (p: Pt | null) => void; onDrawingCancel: () => void; onDrawingDoubleClick: () => void; cancelAllOperations: (
+) => void; }'.
+src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx(447,41): error TS2339: Property 'state' does not exist on type '{ drawingState: DrawingState; startDrawing: (tool: D
+rawingTool) => void; onDrawingPoint: (p: Pt) => void; onDrawingHover: (p: Pt | null) => void; onDrawingCancel: () => void; onDrawingDoubleClick: () => void; cancelAllOperations: (
+) => void; }'.
+src/subapps/dxf-viewer/components/dxf-layout/StatusBar.tsx(91,69): error TS2339: Property 'currentPoints' does not exist on type 'DrawingState'.
+src/subapps/dxf-viewer/components/dxf-layout/StatusBar.tsx(91,114): error TS2339: Property 'currentPoints' does not exist on type 'DrawingState'.
+src/subapps/dxf-viewer/components/dxf-layout/StatusBar.tsx(115,38): error TS2339: Property 'snapPoint' does not exist on type 'DrawingState'.
+src/subapps/dxf-viewer/components/dxf-layout/StatusBar.tsx(118,51): error TS2339: Property 'snapType' does not exist on type 'DrawingState'.
+src/subapps/dxf-viewer/components/modal/ModalContainer.tsx(83,33): error TS2339: Property 'default' does not exist on type '{ none: string; card: "border-[1px] border-[rgb(229, 23
+1, 235)] rounded-lg"; button: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; input: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; ... 12 more ...; rounded: "borde
+r-[1px] border-[rgb(229, 231, 235)] rounded-lg"; }'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx(237,16): error TS2339: Property 'buildingId' does not exist on type 'Unit'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx(237,50): error TS2339: Property 'building' does not exist on type 'Unit'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx(244,78): error TS2339: Property 'buildingId' does not exist on type 'Unit'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx(441,89): error TS2339: Property 'betweenItems' does not exist on type '{ readonly betweenSections: "mb-4"; readonly betwe
+enFields: "mb-3"; readonly afterLabel: "mb-2"; readonly afterDescription: "mt-1"; }'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx(449,80): error TS2339: Property 'paddingSmall' does not exist on type '{ readonly padding: "p-4"; readonly paddingLarge: 
+"p-6"; readonly margin: "m-4"; readonly marginBottom: "mb-4"; readonly marginTop: "mt-4"; }'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx(490,88): error TS2339: Property 'betweenItems' does not exist on type '{ readonly betweenSections: "mb-4"; readonly betwe
+enFields: "mb-3"; readonly afterLabel: "mb-2"; readonly afterDescription: "mt-1"; }'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx(496,86): error TS2339: Property 'betweenItems' does not exist on type '{ readonly betweenSections: "mb-4"; readonly betwe
+enFields: "mb-3"; readonly afterLabel: "mb-2"; readonly afterDescription: "mt-1"; }'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx(543,88): error TS2339: Property 'betweenItems' does not exist on type '{ readonly betweenSections: "mb-4"; readonly betwe
+enFields: "mb-3"; readonly afterLabel: "mb-2"; readonly afterDescription: "mt-1"; }'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx(622,109): error TS2339: Property 'betweenBlocks' does not exist on type '{ readonly betweenSections: "mb-4"; readonly bet 
+weenFields: "mb-3"; readonly afterLabel: "mb-2"; readonly afterDescription: "mt-1"; }'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx(641,115): error TS2339: Property 'paddingSmall' does not exist on type '{ readonly padding: "p-4"; readonly paddingLarge:
+ "p-6"; readonly margin: "m-4"; readonly marginBottom: "mb-4"; readonly marginTop: "mt-4"; }'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx(649,117): error TS2339: Property 'betweenBlocks' does not exist on type '{ readonly betweenSections: "mb-4"; readonly bet
+weenFields: "mb-3"; readonly afterLabel: "mb-2"; readonly afterDescription: "mt-1"; }'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx(668,115): error TS2339: Property 'paddingSmall' does not exist on type '{ readonly padding: "p-4"; readonly paddingLarge:
+ "p-6"; readonly margin: "m-4"; readonly marginBottom: "mb-4"; readonly marginTop: "mt-4"; }'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx(676,52): error TS2339: Property 'betweenBlocks' does not exist on type '{ readonly betweenSections: "mb-4"; readonly betw 
+eenFields: "mb-3"; readonly afterLabel: "mb-2"; readonly afterDescription: "mt-1"; }'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx(677,81): error TS2339: Property 'betweenItems' does not exist on type '{ readonly betweenSections: "mb-4"; readonly betwe
+enFields: "mb-3"; readonly afterLabel: "mb-2"; readonly afterDescription: "mt-1"; }'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx(706,52): error TS2339: Property 'unitName' does not exist on type 'Unit'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx(728,117): error TS2339: Property 'betweenBlocks' does not exist on type '{ readonly betweenSections: "mb-4"; readonly bet 
+weenFields: "mb-3"; readonly afterLabel: "mb-2"; readonly afterDescription: "mt-1"; }'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx(739,115): error TS2339: Property 'paddingSmall' does not exist on type '{ readonly padding: "p-4"; readonly paddingLarge:
+ "p-6"; readonly margin: "m-4"; readonly marginBottom: "mb-4"; readonly marginTop: "mt-4"; }'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx(746,60): error TS2339: Property 'spaceBetween' does not exist on type '{ readonly center: "flex items-center"; readonly b
+etween: "flex items-center justify-between"; readonly start: "flex items-center justify-start"; readonly end: "flex items-center justify-end"; readonly centerWithGap: "flex items- 
+center gap-2"; readonly betweenWithGap: "flex items-center justify-between gap-3"; }'.
+src/subapps/dxf-viewer/config/modal-colors.ts(100,39): error TS2339: Property 'BORDER_SUCCESS_PRIMARY' does not exist on type '{ readonly BG_PRIMARY: "bg-background"; readonly BG_ 
+SECONDARY: "bg-muted"; readonly BG_TERTIARY: "bg-card"; readonly BG_HOVER: "hover:bg-gray-600"; readonly TEXT_PRIMARY: "text-white"; ... 19 more ...; readonly FOCUS_RING: "blue-40 
+0"; }'.
+src/subapps/dxf-viewer/config/modal-colors.ts(119,39): error TS2339: Property 'BORDER_WARNING_PRIMARY' does not exist on type '{ readonly BG_PRIMARY: "bg-background"; readonly BG_
+SECONDARY: "bg-muted"; readonly BG_TERTIARY: "bg-card"; readonly BG_HOVER: "hover:bg-gray-600"; readonly TEXT_PRIMARY: "text-white"; ... 19 more ...; readonly FOCUS_RING: "blue-40
+0"; }'.
+src/subapps/dxf-viewer/config/panel-tokens.ts(88,39): error TS2339: Property 'hover' does not exist on type '{ readonly focus: { readonly ring: "focus:ring-2 focus:ring-ring"; }; 
+}'.
+src/subapps/dxf-viewer/config/panel-tokens.ts(90,38): error TS2339: Property 'hover' does not exist on type '{ readonly focus: { readonly ring: "focus:ring-2 focus:ring-ring"; };  
+}'.
+src/subapps/dxf-viewer/config/panel-tokens.ts(135,44): error TS2339: Property 'hover' does not exist on type '{ readonly focus: { readonly ring: "focus:ring-2 focus:ring-ring"; };
+ }'.
+src/subapps/dxf-viewer/debug/DebugToolbar.tsx(184,176): error TS2339: Property 'GRADIENT_PURPLE_PINK' does not exist on type '{ readonly LIGHT: "hover:bg-card dark:hover:bg-slate- 
+800/50"; readonly GRAY_LIGHT: "hover:bg-gray-100 dark:hover:bg-slate-800/30"; readonly MUTED: "hover:bg-muted/50"; readonly ACCENT: "hover:bg-accent/50"; ... 32 more ...; readonly 
+ BLUE_DARKER: "hover:bg-blue-800"; }'.
+src/subapps/dxf-viewer/debug/layout-debug/LayoutMapper.tsx(111,66): error TS2339: Property 'disabled' does not exist on type '{ readonly primary: "text-foreground"; readonly secon
+dary: "text-muted-foreground"; readonly muted: "text-muted-foreground"; readonly inverse: "text-primary-foreground"; readonly inverted: "text-primary-foreground"; ... 14 more ...; 
+ readonly magenta: "text-pink-600"; }'.
+src/subapps/dxf-viewer/debug/layout-debug/LayoutMapper.tsx(111,161): error TS2339: Property 'debug' does not exist on type '{ readonly fullscreen: { readonly position: "fixed"; re
+adonly top: 0; readonly left: 0; readonly right: 0; readonly bottom: 0; readonly pointerEvents: "none"; }; readonly backdrop: (zIndex?: number) => { ...; }; }'.
+src/subapps/dxf-viewer/debug/layout-debug/LayoutMapper.tsx(121,102): error TS2339: Property 'debug' does not exist on type '{ readonly fullscreen: { readonly position: "fixed"; re 
+adonly top: 0; readonly left: 0; readonly right: 0; readonly bottom: 0; readonly pointerEvents: "none"; }; readonly backdrop: (zIndex?: number) => { ...; }; }'.
+src/subapps/dxf-viewer/debug/layout-debug/LayoutMapper.tsx(157,51): error TS2339: Property 'debug' does not exist on type '{ readonly fullscreen: { readonly position: "fixed"; rea
+donly top: 0; readonly left: 0; readonly right: 0; readonly bottom: 0; readonly pointerEvents: "none"; }; readonly backdrop: (zIndex?: number) => { ...; }; }'.
+src/subapps/dxf-viewer/debug/layout-debug/LayoutMapper.tsx(163,59): error TS2339: Property 'RED_LIGHT' does not exist on type '{ readonly GREEN: "text-green-600 hover:text-green-7 
+00"; readonly BLUE: "text-blue-600 hover:text-blue-700"; readonly RED: "text-red-600 hover:text-red-700"; readonly PURPLE: "text-purple-600 hover:text-purple-700"; ... 15 more ... 
+; readonly LIGHTER: "hover:text-gray-400"; }'.
+src/subapps/dxf-viewer/debug/loggers/SnapDebugLogger.ts(150,43): error TS2339: Property 'totalEntities' does not exist on type 'SnapEngineStats'.
+src/subapps/dxf-viewer/debug/store-sync-test.ts(641,29): error TS2339: Property 'CAD_UI_COLORS' does not exist on type '{ readonly WHITE: "#FFFFFF"; readonly BLACK: "#000000"; rea
+donly TRANSPARENT: "transparent"; readonly DARK_BACKGROUND: "#333333"; readonly LIGHT_GRAY: "#cccccc"; readonly MEDIUM_GRAY: "#888888"; ... 128 more ...; readonly OVERLAY_ORIGIN:  
+"#0000ff"; }'.
+src/subapps/dxf-viewer/debug/TestResultsModal.tsx(149,35): error TS2339: Property 'floatingPanel' does not exist on type '{ layers: { canvasOverlayWithPointerControl: (activeTool? 
+: string | undefined) => CSSProperties; layerCanvasWithTools: (activeTool?: string | undefined, crosshairEnabled?: boolean | undefined) => CSSProperties; dxfCanvasWithTools: (acti 
+veTool?: string | undefined, crosshairEnabled?: boolean | undefined) => CSSProper...'.
+src/subapps/dxf-viewer/debug/TestResultsModal.tsx(154,37): error TS2339: Property 'floatingPanel' does not exist on type '{ layers: { canvasOverlayWithPointerControl: (activeTool?
+: string | undefined) => CSSProperties; layerCanvasWithTools: (activeTool?: string | undefined, crosshairEnabled?: boolean | undefined) => CSSProperties; dxfCanvasWithTools: (acti 
+veTool?: string | undefined, crosshairEnabled?: boolean | undefined) => CSSProper...'.
+src/subapps/dxf-viewer/debug/TestResultsModal.tsx(184,47): error TS2339: Property 'danger' does not exist on type 'SemanticTextColors'.
+src/subapps/dxf-viewer/debug/TestResultsModal.tsx(262,50): error TS2339: Property 'disabled' does not exist on type 'SemanticTextColors'.
+src/subapps/dxf-viewer/debug/TestResultsModal.tsx(359,27): error TS2339: Property 'danger' does not exist on type 'SemanticTextColors'.
+src/subapps/dxf-viewer/debug/TestResultsModal.tsx(386,57): error TS2339: Property 'disabled' does not exist on type 'SemanticTextColors'.
+src/subapps/dxf-viewer/debug/TestResultsModal.tsx(388,47): error TS2339: Property 'disabled' does not exist on type 'SemanticTextColors'.
+src/subapps/dxf-viewer/debug/TestResultsModal.tsx(395,61): error TS2339: Property 'disabled' does not exist on type 'SemanticTextColors'.
+src/subapps/dxf-viewer/debug/TestResultsModal.tsx(396,58): error TS2339: Property 'tertiary' does not exist on type 'SemanticTextColors'.
+src/subapps/dxf-viewer/debug/TestResultsModal.tsx(400,63): error TS2339: Property 'disabled' does not exist on type 'SemanticTextColors'.
+src/subapps/dxf-viewer/debug/TestResultsModal.tsx(401,62): error TS2339: Property 'tertiary' does not exist on type 'SemanticTextColors'.
+src/subapps/dxf-viewer/debug/TestResultsModal.tsx(407,61): error TS2339: Property 'disabled' does not exist on type 'SemanticTextColors'.
+src/subapps/dxf-viewer/debug/TestResultsModal.tsx(429,46): error TS2339: Property 'tertiary' does not exist on type 'SemanticTextColors'.
+src/subapps/dxf-viewer/e2e/visual-cross-browser.spec.ts(108,25): error TS2339: Property 'fontSmooth' does not exist on type 'CSSStyleDeclaration'.
+src/subapps/dxf-viewer/e2e/visual-cross-browser.spec.ts(109,25): error TS2339: Property 'webkitFontSmoothing' does not exist on type 'CSSStyleDeclaration'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(115,21): error TS2339: Property 'corner1' does not exist on type 'RectangleEntity'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(116,26): error TS2339: Property 'corner2' does not exist on type 'RectangleEntity'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(116,50): error TS2339: Property 'corner1' does not exist on type 'RectangleEntity'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(117,21): error TS2339: Property 'corner2' does not exist on type 'RectangleEntity'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(118,26): error TS2339: Property 'corner1' does not exist on type 'RectangleEntity'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(118,50): error TS2339: Property 'corner2' does not exist on type 'RectangleEntity'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(306,15): error TS2339: Property 'corner1' does not exist on type 'RectangleEntity'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(306,24): error TS2339: Property 'corner2' does not exist on type 'RectangleEntity'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(347,15): error TS2339: Property 'corner1' does not exist on type 'RectangleEntity'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(347,24): error TS2339: Property 'corner2' does not exist on type 'RectangleEntity'.
+src/subapps/dxf-viewer/hooks/useGripDraftSettings.ts(14,37): error TS2339: Property 'updateSpecificGripSettings' does not exist on type 'EnterpriseDxfSettingsContextType'.
+src/subapps/dxf-viewer/hooks/useGripDraftSettings.ts(16,38): error TS2339: Property 'specific' does not exist on type 'EnterpriseSettingsWithMetadata'.
+src/subapps/dxf-viewer/hooks/useKeyboardShortcuts.ts(41,38): error TS2339: Property 'zoomManager' does not exist on type 'CanvasContextType'.
+src/subapps/dxf-viewer/hooks/useLineCompletionSettings.ts(14,37): error TS2339: Property 'updateSpecificLineSettings' does not exist on type 'EnterpriseDxfSettingsContextType'.    
+src/subapps/dxf-viewer/hooks/useLineCompletionSettings.ts(16,38): error TS2339: Property 'specific' does not exist on type 'EnterpriseSettingsWithMetadata'.
+src/subapps/dxf-viewer/hooks/useLineDraftSettings.ts(19,37): error TS2339: Property 'updateSpecificLineSettings' does not exist on type 'EnterpriseDxfSettingsContextType'.
+src/subapps/dxf-viewer/hooks/useLineDraftSettings.ts(21,38): error TS2339: Property 'specific' does not exist on type 'EnterpriseSettingsWithMetadata'.
+src/subapps/dxf-viewer/hooks/useLineHoverSettings.ts(14,37): error TS2339: Property 'updateSpecificLineSettings' does not exist on type 'EnterpriseDxfSettingsContextType'.
+src/subapps/dxf-viewer/hooks/useLineHoverSettings.ts(16,38): error TS2339: Property 'specific' does not exist on type 'EnterpriseSettingsWithMetadata'.
+src/subapps/dxf-viewer/hooks/useLinePreviewStyle.ts(31,53): error TS2339: Property 'dashScale' does not exist on type 'ToolStyle'.
+src/subapps/dxf-viewer/hooks/useLinePreviewStyle.ts(66,37): error TS2339: Property 'color' does not exist on type 'Partial<LinePreviewStyle>'.
+src/subapps/dxf-viewer/hooks/useLineSelectionSettings.ts(14,37): error TS2339: Property 'updateSpecificLineSettings' does not exist on type 'EnterpriseDxfSettingsContextType'.     
+src/subapps/dxf-viewer/hooks/useLineSelectionSettings.ts(16,38): error TS2339: Property 'specific' does not exist on type 'EnterpriseSettingsWithMetadata'.
+src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts(133,34): error TS2339: Property 'overlays' does not exist on type '{ getByLevel: (levelId: string) => Overlay[]; add: (overlay: C
+reateOverlayData) => Promise<string>; update: (id: string, patch: Partial<Pick<Overlay, "status" | ... 4 more ... | "linked">>) => Promise<...>; remove: (id: string) => Promise<.. 
+.>; setSelectedOverlay: (id: string | null) => void; }'.
+src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts(149,34): error TS2339: Property 'overlays' does not exist on type '{ getByLevel: (levelId: string) => Overlay[]; add: (overlay: C
+reateOverlayData) => Promise<string>; update: (id: string, patch: Partial<Pick<Overlay, "status" | ... 4 more ... | "linked">>) => Promise<...>; remove: (id: string) => Promise<..
+.>; setSelectedOverlay: (id: string | null) => void; }'.
+src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts(164,38): error TS2339: Property 'x' does not exist on type 'ProSnapResult'.
+src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts(164,55): error TS2339: Property 'y' does not exist on type 'ProSnapResult'.
+src/subapps/dxf-viewer/hooks/useTextDraftSettings.ts(14,37): error TS2339: Property 'updateSpecificTextSettings' does not exist on type 'EnterpriseDxfSettingsContextType'.
+src/subapps/dxf-viewer/hooks/useTextDraftSettings.ts(16,38): error TS2339: Property 'specific' does not exist on type 'EnterpriseSettingsWithMetadata'.
+src/subapps/dxf-viewer/overlays/overlay-adapter.ts(38,40): error TS2339: Property 'opacity' does not exist on type 'Overlay'.
+src/subapps/dxf-viewer/overlays/overlay-adapter.ts(41,18): error TS2339: Property 'locked' does not exist on type 'Overlay'.
+src/subapps/dxf-viewer/rendering/cache/PathCache.ts(177,21): error TS2339: Property 'start' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/cache/PathCache.ts(178,19): error TS2339: Property 'end' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/cache/PathCache.ts(179,22): error TS2339: Property 'center' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/cache/PathCache.ts(180,22): error TS2339: Property 'radius' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/cache/PathCache.ts(181,24): error TS2339: Property 'vertices' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/cache/PathCache.ts(183,25): error TS2339: Property 'lineWidth' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/core/EntityRendererComposite.ts(172,31): error TS2339: Property 'position' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/core/EntityRendererComposite.ts(172,50): error TS2339: Property 'center' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/core/EntityRendererComposite.ts(172,67): error TS2339: Property 'start' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/BaseEntityRenderer.ts(293,17): error TS2339: Property 'grips' does not exist on type 'RenderOptions'.
+src/subapps/dxf-viewer/rendering/entities/BaseEntityRenderer.ts(533,17): error TS2339: Property 'grips' does not exist on type 'RenderOptions'.
+src/subapps/dxf-viewer/rendering/entities/CircleRenderer.ts(30,27): error TS2339: Property 'center' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/CircleRenderer.ts(31,27): error TS2339: Property 'radius' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/CircleRenderer.ts(58,17): error TS2339: Property 'preview' does not exist on type 'RenderOptions'.
+src/subapps/dxf-viewer/rendering/entities/CircleRenderer.ts(140,27): error TS2339: Property 'center' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/CircleRenderer.ts(141,27): error TS2339: Property 'radius' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/LineRenderer.ts(59,26): error TS2339: Property 'start' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/LineRenderer.ts(60,24): error TS2339: Property 'end' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/LineRenderer.ts(122,26): error TS2339: Property 'start' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/LineRenderer.ts(123,24): error TS2339: Property 'end' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/PolylineRenderer.ts(21,29): error TS2339: Property 'vertices' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/PolylineRenderer.ts(22,27): error TS2339: Property 'closed' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/PolylineRenderer.ts(129,29): error TS2339: Property 'vertices' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/PolylineRenderer.ts(145,67): error TS2339: Property 'closed' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/entity-validation-utils.ts(18,24): error TS2339: Property 'start' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/entity-validation-utils.ts(19,22): error TS2339: Property 'end' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/entity-validation-utils.ts(35,25): error TS2339: Property 'center' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/entity-validation-utils.ts(36,25): error TS2339: Property 'radius' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/entity-validation-utils.ts(54,25): error TS2339: Property 'center' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/entity-validation-utils.ts(55,28): error TS2339: Property 'majorAxis' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/entity-validation-utils.ts(56,28): error TS2339: Property 'minorAxis' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/entity-validation-utils.ts(57,27): error TS2339: Property 'rotation' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/entity-validation-utils.ts(74,26): error TS2339: Property 'topLeft' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/entity-validation-utils.ts(75,24): error TS2339: Property 'width' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/entity-validation-utils.ts(76,25): error TS2339: Property 'height' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/entity-validation-utils.ts(94,25): error TS2339: Property 'center' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/entity-validation-utils.ts(95,25): error TS2339: Property 'radius' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/entity-validation-utils.ts(96,29): error TS2339: Property 'startAngle' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/entity-validation-utils.ts(97,27): error TS2339: Property 'endAngle' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/entity-validation-utils.ts(118,23): error TS2339: Property 'x' does not exist on type '{}'.
+src/subapps/dxf-viewer/rendering/entities/shared/entity-validation-utils.ts(119,23): error TS2339: Property 'y' does not exist on type '{}'.
+src/subapps/dxf-viewer/rendering/entities/shared/entity-validation-utils.ts(120,23): error TS2339: Property 'x' does not exist on type '{}'.
+src/subapps/dxf-viewer/rendering/entities/shared/entity-validation-utils.ts(121,23): error TS2339: Property 'y' does not exist on type '{}'.
+src/subapps/dxf-viewer/rendering/entities/shared/geometry-rendering-utils.ts(20,25): error TS2339: Property 'vertex' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/geometry-rendering-utils.ts(21,25): error TS2339: Property 'point1' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/geometry-rendering-utils.ts(22,25): error TS2339: Property 'point2' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/geometry-rendering-utils.ts(23,24): error TS2339: Property 'angle' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/phase-text-utils.ts(28,15): error TS2339: Property 'preview' does not exist on type 'RenderOptions'.
+src/subapps/dxf-viewer/rendering/entities/SplineRenderer.ts(16,34): error TS2339: Property 'controlPoints' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/SplineRenderer.ts(17,27): error TS2339: Property 'closed' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/SplineRenderer.ts(24,17): error TS2339: Property 'hovered' does not exist on type 'RenderOptions'.
+src/subapps/dxf-viewer/rendering/entities/SplineRenderer.ts(73,34): error TS2339: Property 'controlPoints' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/TextRenderer.ts(17,29): error TS2339: Property 'position' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/TextRenderer.ts(18,25): error TS2339: Property 'text' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/TextRenderer.ts(19,27): error TS2339: Property 'height' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/TextRenderer.ts(20,29): error TS2339: Property 'rotation' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/TextRenderer.ts(27,17): error TS2339: Property 'hovered' does not exist on type 'RenderOptions'.
+src/subapps/dxf-viewer/rendering/entities/TextRenderer.ts(63,29): error TS2339: Property 'position' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/Bounds.ts(61,26): error TS2339: Property 'start' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/Bounds.ts(62,24): error TS2339: Property 'end' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/Bounds.ts(76,27): error TS2339: Property 'center' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/Bounds.ts(77,28): error TS2339: Property 'radius' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/Bounds.ts(100,29): error TS2339: Property 'vertices' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/Bounds.ts(138,27): error TS2339: Property 'center' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/Bounds.ts(139,29): error TS2339: Property 'radiusX' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/Bounds.ts(140,29): error TS2339: Property 'radiusY' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/Bounds.ts(155,29): error TS2339: Property 'position' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/Bounds.ts(156,25): error TS2339: Property 'text' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/Bounds.ts(157,30): error TS2339: Property 'fontSize' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/Bounds.ts(176,34): error TS2339: Property 'controlPoints' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/Bounds.ts(176,71): error TS2339: Property 'vertices' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/Bounds.ts(189,29): error TS2339: Property 'position' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(100,25): error TS2339: Property 'buildIndex' does not exist on type 'ISpatialIndex'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(116,18): error TS2339: Property 'bounds' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(117,38): error TS2339: Property 'bounds' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(118,38): error TS2339: Property 'bounds' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(119,38): error TS2339: Property 'bounds' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(120,38): error TS2339: Property 'bounds' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(154,25): error TS2339: Property 'addEntity' does not exist on type 'ISpatialIndex'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(169,25): error TS2339: Property 'removeEntity' does not exist on type 'ISpatialIndex'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(201,38): error TS2339: Property 'queryPoint' does not exist on type 'ISpatialIndex'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(256,51): error TS2339: Property 'entity' does not exist on type 'HitTestResult'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(265,47): error TS2339: Property 'entity' does not exist on type 'HitTestResult'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(274,51): error TS2339: Property 'entity' does not exist on type 'HitTestResult'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(303,38): error TS2339: Property 'queryRegion' does not exist on type 'ISpatialIndex'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(312,38): error TS2339: Property 'bounds' does not exist on type 'SpatialQueryResult<any>'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(319,28): error TS2339: Property 'entity' does not exist on type 'SpatialQueryResult<any>'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(320,33): error TS2339: Property 'entity' does not exist on type 'SpatialQueryResult<any>'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(321,54): error TS2339: Property 'entity' does not exist on type 'SpatialQueryResult<any>'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(341,41): error TS2339: Property 'queryViewport' does not exist on type 'ISpatialIndex'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(349,47): error TS2339: Property 'transform' does not exist on type 'typeof BoundsOperations'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(350,49): error TS2339: Property 'fromViewport' does not exist on type 'typeof BoundsOperations'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(416,30): error TS2339: Property 'entity' does not exist on type 'SpatialQueryResult<any>'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(457,26): error TS2339: Property 'start' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(458,24): error TS2339: Property 'end' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(474,27): error TS2339: Property 'center' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(475,27): error TS2339: Property 'radius' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(495,29): error TS2339: Property 'vertices' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(609,45): error TS2339: Property 'getStatistics' does not exist on type 'ISpatialIndex'.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(131,113): error TS2339: Property 'lineWidth' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(139,29): error TS2339: Property 'lineWidth' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(155,29): error TS2339: Property 'lineWidth' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(291,30): error TS2339: Property 'start' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(292,28): error TS2339: Property 'end' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(300,31): error TS2339: Property 'center' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(301,31): error TS2339: Property 'radius' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(318,26): error TS2339: Property 'start' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(319,24): error TS2339: Property 'end' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(331,27): error TS2339: Property 'center' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(332,27): error TS2339: Property 'radius' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(343,29): error TS2339: Property 'vertices' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(354,16): error TS2339: Property 'closed' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(367,29): error TS2339: Property 'position' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(368,25): error TS2339: Property 'text' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(376,29): error TS2339: Property 'vertices' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(389,25): error TS2339: Property 'lineWidth' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(390,24): error TS2339: Property 'lineDash' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/ui/grid/GridRenderer.ts(152,32): error TS2339: Property 'minorGridWeight' does not exist on type 'GridSettings'.
+src/subapps/dxf-viewer/rendering/ui/grid/GridRenderer.ts(160,32): error TS2339: Property 'majorGridWeight' does not exist on type 'GridSettings'.
+src/subapps/dxf-viewer/rendering/ui/grid/GridRenderer.ts(237,47): error TS2339: Property 'minorGridWeight' does not exist on type 'GridSettings'.
+src/subapps/dxf-viewer/rendering/ui/grid/GridRenderer.ts(238,47): error TS2339: Property 'majorGridWeight' does not exist on type 'GridSettings'.
+src/subapps/dxf-viewer/rendering/ui/grid/GridRenderer.ts(276,49): error TS2339: Property 'minorGridWeight' does not exist on type 'GridSettings'.
+src/subapps/dxf-viewer/rendering/ui/grid/GridRenderer.ts(277,49): error TS2339: Property 'majorGridWeight' does not exist on type 'GridSettings'.
+src/subapps/dxf-viewer/rendering/ui/grid/GridRenderer.ts(297,46): error TS2339: Property 'majorGridWeight' does not exist on type 'GridSettings'.
+src/subapps/dxf-viewer/rendering/ui/grid/GridRenderer.ts(297,73): error TS2339: Property 'minorGridWeight' does not exist on type 'GridSettings'.
+src/subapps/dxf-viewer/security/DxfSecurityValidator.ts(169,22): error TS2339: Property 'version' does not exist on type 'SceneModel'.
+src/subapps/dxf-viewer/services/dxf-firestore.service.ts(274,39): error TS2339: Property 'length' does not exist on type 'ArrayBuffer'.
+src/subapps/dxf-viewer/services/EntityMergeService.ts(98,26): error TS2339: Property 'name' does not exist on type 'Entity'.
+src/subapps/dxf-viewer/services/EntityMergeService.ts(136,26): error TS2339: Property 'name' does not exist on type 'Entity'.
+src/subapps/dxf-viewer/services/HitTestingService.ts(93,25): error TS2339: Property 'entityId' does not exist on type 'HitTestResult'.
+src/subapps/dxf-viewer/services/HitTestingService.ts(94,27): error TS2339: Property 'entity' does not exist on type 'HitTestResult'.
+src/subapps/dxf-viewer/services/HitTestingService.ts(95,22): error TS2339: Property 'entity' does not exist on type 'HitTestResult'.
+src/subapps/dxf-viewer/settings-core/__tests__/override.test.ts(58,38): error TS2339: Property 'LEGACY_COLORS' does not exist on type '{ readonly WHITE: "#FFFFFF"; readonly BLACK:
+ "#000000"; readonly TRANSPARENT: "transparent"; readonly DARK_BACKGROUND: "#333333"; readonly LIGHT_GRAY: "#cccccc"; readonly MEDIUM_GRAY: "#888888"; ... 128 more ...; readonly O 
+VERLAY_ORIGIN: "#0000ff"; }'.
+src/subapps/dxf-viewer/settings-core/__tests__/override.test.ts(65,26): error TS2339: Property 'lineColor' does not exist on type 'LineSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/override.test.ts(65,52): error TS2339: Property 'LEGACY_COLORS' does not exist on type '{ readonly WHITE: "#FFFFFF"; readonly BLACK:
+ "#000000"; readonly TRANSPARENT: "transparent"; readonly DARK_BACKGROUND: "#333333"; readonly LIGHT_GRAY: "#cccccc"; readonly MEDIUM_GRAY: "#888888"; ... 128 more ...; readonly O 
+VERLAY_ORIGIN: "#0000ff"; }'.
+src/subapps/dxf-viewer/settings-core/__tests__/override.test.ts(67,26): error TS2339: Property 'size' does not exist on type 'GripSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/override.test.ts(253,40): error TS2339: Property 'LEGACY_COLORS' does not exist on type '{ readonly WHITE: "#FFFFFF"; readonly BLACK 
+: "#000000"; readonly TRANSPARENT: "transparent"; readonly DARK_BACKGROUND: "#333333"; readonly LIGHT_GRAY: "#cccccc"; readonly MEDIUM_GRAY: "#888888"; ... 128 more ...; readonly  
+OVERLAY_ORIGIN: "#0000ff"; }'.
+src/subapps/dxf-viewer/settings-core/__tests__/override.test.ts(260,52): error TS2339: Property 'LEGACY_COLORS' does not exist on type '{ readonly WHITE: "#FFFFFF"; readonly BLACK
+: "#000000"; readonly TRANSPARENT: "transparent"; readonly DARK_BACKGROUND: "#333333"; readonly LIGHT_GRAY: "#cccccc"; readonly MEDIUM_GRAY: "#888888"; ... 128 more ...; readonly  
+OVERLAY_ORIGIN: "#0000ff"; }'.
+src/subapps/dxf-viewer/settings-core/__tests__/override.test.ts(312,26): error TS2339: Property 'lineColor' does not exist on type 'LineSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/validation.test.ts(51,38): error TS2339: Property 'LEGACY_COLORS' does not exist on type '{ readonly WHITE: "#FFFFFF"; readonly BLAC
+K: "#000000"; readonly TRANSPARENT: "transparent"; readonly DARK_BACKGROUND: "#333333"; readonly LIGHT_GRAY: "#cccccc"; readonly MEDIUM_GRAY: "#888888"; ... 128 more ...; readonly 
+ OVERLAY_ORIGIN: "#0000ff"; }'.
+src/subapps/dxf-viewer/settings-core/__tests__/validation.test.ts(51,77): error TS2339: Property 'LEGACY_COLORS' does not exist on type '{ readonly WHITE: "#FFFFFF"; readonly BLAC
+K: "#000000"; readonly TRANSPARENT: "transparent"; readonly DARK_BACKGROUND: "#333333"; readonly LIGHT_GRAY: "#cccccc"; readonly MEDIUM_GRAY: "#888888"; ... 128 more ...; readonly
+ OVERLAY_ORIGIN: "#0000ff"; }'.
+src/subapps/dxf-viewer/settings-core/__tests__/validation.test.ts(124,21): error TS2339: Property 'lineColor' does not exist on type 'LineSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/validation.test.ts(150,21): error TS2339: Property 'lineColor' does not exist on type 'LineSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/validation.test.ts(150,59): error TS2339: Property 'lineColor' does not exist on type 'LineSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/validation.test.ts(169,21): error TS2339: Property 'fontColor' does not exist on type 'TextSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/validation.test.ts(202,21): error TS2339: Property 'size' does not exist on type 'GripSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/validation.test.ts(204,21): error TS2339: Property 'hoverColor' does not exist on type 'GripSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/validation.test.ts(204,48): error TS2339: Property 'LEGACY_COLORS' does not exist on type '{ readonly WHITE: "#FFFFFF"; readonly BLA
+CK: "#000000"; readonly TRANSPARENT: "transparent"; readonly DARK_BACKGROUND: "#333333"; readonly LIGHT_GRAY: "#cccccc"; readonly MEDIUM_GRAY: "#888888"; ... 128 more ...; readonl 
+y OVERLAY_ORIGIN: "#0000ff"; }'.
+src/subapps/dxf-viewer/settings-core/__tests__/validation.test.ts(205,21): error TS2339: Property 'activeColor' does not exist on type 'GripSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/validation.test.ts(206,21): error TS2339: Property 'borderWidth' does not exist on type 'GripSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/validation.test.ts(207,21): error TS2339: Property 'borderColor' does not exist on type 'GripSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/validation.test.ts(209,21): error TS2339: Property 'snapDistance' does not exist on type 'GripSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/validation.test.ts(216,21): error TS2339: Property 'size' does not exist on type 'GripSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/validation.test.ts(218,21): error TS2339: Property 'snapDistance' does not exist on type 'GripSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/validation.test.ts(274,21): error TS2339: Property 'lineColor' does not exist on type 'LineSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/validation.test.ts(274,59): error TS2339: Property 'lineColor' does not exist on type 'LineSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/validation.test.ts(293,21): error TS2339: Property 'lineColor' does not exist on type 'LineSettings'.
+src/subapps/dxf-viewer/settings/io/safeLoad.ts(97,21): error TS2339: Property 'general' does not exist on type '{}'.
+src/subapps/dxf-viewer/settings/io/safeLoad.ts(98,38): error TS2339: Property 'general' does not exist on type '{}'.
+src/subapps/dxf-viewer/settings/io/safeLoad.ts(106,21): error TS2339: Property 'general' does not exist on type '{}'.
+src/subapps/dxf-viewer/settings/io/safeLoad.ts(107,38): error TS2339: Property 'general' does not exist on type '{}'.
+src/subapps/dxf-viewer/settings/io/safeLoad.ts(115,21): error TS2339: Property 'general' does not exist on type '{}'.
+src/subapps/dxf-viewer/settings/io/safeLoad.ts(116,38): error TS2339: Property 'general' does not exist on type '{}'.
+src/subapps/dxf-viewer/settings/io/schema.ts(108,93): error TS2339: Property 'partial' does not exist on type 'ZodType<unknown, ZodTypeDef, unknown>'.
+src/subapps/dxf-viewer/settings/io/schema.ts(109,94): error TS2339: Property 'partial' does not exist on type 'ZodType<unknown, ZodTypeDef, unknown>'.
+src/subapps/dxf-viewer/settings/sync/adapters/gridAdapter.ts(30,22): error TS2339: Property 'enabled' does not exist on type 'GridSettings'.
+src/subapps/dxf-viewer/settings/sync/adapters/gridAdapter.ts(31,22): error TS2339: Property 'spacing' does not exist on type 'GridSettings'.
+src/subapps/dxf-viewer/settings/sync/adapters/gridAdapter.ts(32,20): error TS2339: Property 'color' does not exist on type 'GridSettings'.
+src/subapps/dxf-viewer/settings/sync/adapters/gridAdapter.ts(33,22): error TS2339: Property 'opacity' does not exist on type 'GridSettings'.
+src/subapps/dxf-viewer/settings/sync/adapters/gridAdapter.ts(58,24): error TS2339: Property 'enabled' does not exist on type 'GridSettings'.
+src/subapps/dxf-viewer/settings/sync/adapters/gridAdapter.ts(59,24): error TS2339: Property 'spacing' does not exist on type 'GridSettings'.
+src/subapps/dxf-viewer/settings/sync/adapters/gridAdapter.ts(60,22): error TS2339: Property 'color' does not exist on type 'GridSettings'.
+src/subapps/dxf-viewer/settings/sync/adapters/gridAdapter.ts(61,24): error TS2339: Property 'opacity' does not exist on type 'GridSettings'.
+src/subapps/dxf-viewer/settings/sync/adapters/rulerAdapter.ts(30,22): error TS2339: Property 'enabled' does not exist on type 'RulerSettings'.
+src/subapps/dxf-viewer/settings/sync/adapters/rulerAdapter.ts(32,20): error TS2339: Property 'color' does not exist on type 'RulerSettings'.
+src/subapps/dxf-viewer/settings/sync/adapters/rulerAdapter.ts(33,22): error TS2339: Property 'opacity' does not exist on type 'RulerSettings'.
+src/subapps/dxf-viewer/settings/sync/adapters/rulerAdapter.ts(58,24): error TS2339: Property 'enabled' does not exist on type 'RulerSettings'.
+src/subapps/dxf-viewer/settings/sync/adapters/rulerAdapter.ts(60,22): error TS2339: Property 'color' does not exist on type 'RulerSettings'.
+src/subapps/dxf-viewer/settings/sync/adapters/rulerAdapter.ts(61,24): error TS2339: Property 'opacity' does not exist on type 'RulerSettings'.
+src/subapps/dxf-viewer/settings/sync/storeSync.test.ts(104,29): error TS2339: Property 'LEGACY_COLORS' does not exist on type '{ readonly WHITE: "#FFFFFF"; readonly BLACK: "#00000 
+0"; readonly TRANSPARENT: "transparent"; readonly DARK_BACKGROUND: "#333333"; readonly LIGHT_GRAY: "#cccccc"; readonly MEDIUM_GRAY: "#888888"; ... 128 more ...; readonly OVERLAY_O 
+RIGIN: "#0000ff"; }'.
+src/subapps/dxf-viewer/settings/sync/storeSync.test.ts(108,29): error TS2339: Property 'LEGACY_COLORS' does not exist on type '{ readonly WHITE: "#FFFFFF"; readonly BLACK: "#00000
+0"; readonly TRANSPARENT: "transparent"; readonly DARK_BACKGROUND: "#333333"; readonly LIGHT_GRAY: "#cccccc"; readonly MEDIUM_GRAY: "#888888"; ... 128 more ...; readonly OVERLAY_O 
+RIGIN: "#0000ff"; }'.
+src/subapps/dxf-viewer/settings/sync/storeSync.test.ts(133,25): error TS2339: Property 'CAD_UI_COLORS' does not exist on type '{ readonly WHITE: "#FFFFFF"; readonly BLACK: "#00000
+0"; readonly TRANSPARENT: "transparent"; readonly DARK_BACKGROUND: "#333333"; readonly LIGHT_GRAY: "#cccccc"; readonly MEDIUM_GRAY: "#888888"; ... 128 more ...; readonly OVERLAY_O 
+RIGIN: "#0000ff"; }'.
+src/subapps/dxf-viewer/settings/sync/storeSync.test.ts(134,25): error TS2339: Property 'CAD_UI_COLORS' does not exist on type '{ readonly WHITE: "#FFFFFF"; readonly BLACK: "#00000
+0"; readonly TRANSPARENT: "transparent"; readonly DARK_BACKGROUND: "#333333"; readonly LIGHT_GRAY: "#cccccc"; readonly MEDIUM_GRAY: "#888888"; ... 128 more ...; readonly OVERLAY_O 
+RIGIN: "#0000ff"; }'.
+src/subapps/dxf-viewer/settings/sync/storeSync.test.ts(135,24): error TS2339: Property 'CAD_UI_COLORS' does not exist on type '{ readonly WHITE: "#FFFFFF"; readonly BLACK: "#00000 
+0"; readonly TRANSPARENT: "transparent"; readonly DARK_BACKGROUND: "#333333"; readonly LIGHT_GRAY: "#cccccc"; readonly MEDIUM_GRAY: "#888888"; ... 128 more ...; readonly OVERLAY_O 
+RIGIN: "#0000ff"; }'.
+src/subapps/dxf-viewer/snapping/engines/ExtensionSnapEngine.ts(55,28): error TS2339: Property 'length' does not exist on type '{}'.
+src/subapps/dxf-viewer/snapping/engines/ExtensionSnapEngine.ts(58,76): error TS2339: Property 'length' does not exist on type '{}'.
+src/subapps/dxf-viewer/snapping/engines/ExtensionSnapEngine.ts(58,101): error TS2339: Property 'length' does not exist on type '{}'.
+src/subapps/dxf-viewer/snapping/engines/NearestSnapEngine.ts(83,28): error TS2339: Property 'length' does not exist on type '{}'.
+src/subapps/dxf-viewer/snapping/engines/NearSnapEngine.ts(72,16): error TS2339: Property 'forEach' does not exist on type '{}'.
+src/subapps/dxf-viewer/snapping/engines/NearSnapEngine.ts(77,36): error TS2339: Property 'length' does not exist on type '{}'.
+src/subapps/dxf-viewer/snapping/engines/NearSnapEngine.ts(86,32): error TS2339: Property 'length' does not exist on type '{}'.
+src/subapps/dxf-viewer/snapping/engines/NearSnapEngine.ts(87,67): error TS2339: Property 'length' does not exist on type '{}'.
+src/subapps/dxf-viewer/snapping/engines/NodeSnapEngine.ts(102,16): error TS2339: Property 'forEach' does not exist on type '{}'.
+src/subapps/dxf-viewer/snapping/engines/NodeSnapEngine.ts(105,44): error TS2339: Property 'length' does not exist on type '{}'.
+src/subapps/dxf-viewer/snapping/engines/NodeSnapEngine.ts(111,32): error TS2339: Property 'length' does not exist on type '{}'.
+src/subapps/dxf-viewer/snapping/engines/NodeSnapEngine.ts(153,37): error TS2339: Property 'getNodeCount' does not exist on type 'ISpatialIndex'.
+src/subapps/dxf-viewer/snapping/engines/ParallelSnapEngine.ts(130,30): error TS2339: Property 'length' does not exist on type '{}'.
+src/subapps/dxf-viewer/snapping/engines/ParallelSnapEngine.ts(131,38): error TS2339: Property 'length' does not exist on type '{}'.
+src/subapps/dxf-viewer/snapping/engines/PerpendicularSnapEngine.ts(56,28): error TS2339: Property 'length' does not exist on type '{}'.
+src/subapps/dxf-viewer/snapping/engines/PerpendicularSnapEngine.ts(58,36): error TS2339: Property 'length' does not exist on type '{}'.
+src/subapps/dxf-viewer/snapping/engines/PerpendicularSnapEngine.ts(66,32): error TS2339: Property 'length' does not exist on type '{}'.
+src/subapps/dxf-viewer/snapping/engines/PerpendicularSnapEngine.ts(67,71): error TS2339: Property 'length' does not exist on type '{}'.
+src/subapps/dxf-viewer/snapping/hooks/useSnapManager.tsx(90,51): error TS2339: Property 'getCanvas' does not exist on type 'HTMLCanvasElement'.
+src/subapps/dxf-viewer/snapping/hooks/useSnapManager.tsx(90,81): error TS2339: Property 'getCanvas' does not exist on type 'HTMLCanvasElement'.
+src/subapps/dxf-viewer/state/overlay-manager.ts(170,23): error TS2339: Property 'visibleStatuses' does not exist on type 'SelectionContextType'.
+src/subapps/dxf-viewer/state/overlay-manager.ts(171,23): error TS2339: Property 'visibleUnitTypes' does not exist on type 'SelectionContextType'.
+src/subapps/dxf-viewer/state/overlay-manager.ts(173,58): error TS2339: Property 'visibleStatuses' does not exist on type 'SelectionContextType'.
+src/subapps/dxf-viewer/state/overlay-manager.ts(173,91): error TS2339: Property 'visibleUnitTypes' does not exist on type 'SelectionContextType'.
+src/subapps/dxf-viewer/statusbar/CadStatusBar.tsx(77,33): error TS2339: Property 'cadStatusBar' does not exist on type '{ layers: { canvasOverlayWithPointerControl: (activeTool?:  
+string | undefined) => CSSProperties; layerCanvasWithTools: (activeTool?: string | undefined, crosshairEnabled?: boolean | undefined) => CSSProperties; dxfCanvasWithTools: (active 
+Tool?: string | undefined, crosshairEnabled?: boolean | undefined) => CSSProper...'.
+src/subapps/dxf-viewer/statusbar/CadStatusBar.tsx(78,46): error TS2339: Property 'cadStatusBar' does not exist on type '{ layers: { canvasOverlayWithPointerControl: (activeTool?: 
+string | undefined) => CSSProperties; layerCanvasWithTools: (activeTool?: string | undefined, crosshairEnabled?: boolean | undefined) => CSSProperties; dxfCanvasWithTools: (active 
+Tool?: string | undefined, crosshairEnabled?: boolean | undefined) => CSSProper...'.
+src/subapps/dxf-viewer/statusbar/CadStatusBar.tsx(82,41): error TS2339: Property 'cadStatusBar' does not exist on type '{ layers: { canvasOverlayWithPointerControl: (activeTool?: 
+string | undefined) => CSSProperties; layerCanvasWithTools: (activeTool?: string | undefined, crosshairEnabled?: boolean | undefined) => CSSProperties; dxfCanvasWithTools: (active 
+Tool?: string | undefined, crosshairEnabled?: boolean | undefined) => CSSProper...'.
+src/subapps/dxf-viewer/statusbar/CadStatusBar.tsx(83,41): error TS2339: Property 'cadStatusBar' does not exist on type '{ layers: { canvasOverlayWithPointerControl: (activeTool?: 
+string | undefined) => CSSProperties; layerCanvasWithTools: (activeTool?: string | undefined, crosshairEnabled?: boolean | undefined) => CSSProperties; dxfCanvasWithTools: (active 
+Tool?: string | undefined, crosshairEnabled?: boolean | undefined) => CSSProper...'.
+src/subapps/dxf-viewer/statusbar/CadStatusBar.tsx(88,38): error TS2339: Property 'cadStatusBar' does not exist on type '{ layers: { canvasOverlayWithPointerControl: (activeTool?: 
+string | undefined) => CSSProperties; layerCanvasWithTools: (activeTool?: string | undefined, crosshairEnabled?: boolean | undefined) => CSSProperties; dxfCanvasWithTools: (active 
+Tool?: string | undefined, crosshairEnabled?: boolean | undefined) => CSSProper...'.
+src/subapps/dxf-viewer/statusbar/CadStatusBar.tsx(127,40): error TS2339: Property 'cadStatusBar' does not exist on type '{ layers: { canvasOverlayWithPointerControl: (activeTool?:
+ string | undefined) => CSSProperties; layerCanvasWithTools: (activeTool?: string | undefined, crosshairEnabled?: boolean | undefined) => CSSProperties; dxfCanvasWithTools: (activ 
+eTool?: string | undefined, crosshairEnabled?: boolean | undefined) => CSSProper...'.
+src/subapps/dxf-viewer/stores/__tests__/DxfSettingsStore.test.ts(47,42): error TS2339: Property 'lineColor' does not exist on type 'LineSettings'.
+src/subapps/dxf-viewer/stores/__tests__/DxfSettingsStore.test.ts(92,40): error TS2339: Property 'LEGACY_COLORS' does not exist on type '{ readonly WHITE: "#FFFFFF"; readonly BLACK 
+: "#000000"; readonly TRANSPARENT: "transparent"; readonly DARK_BACKGROUND: "#333333"; readonly LIGHT_GRAY: "#cccccc"; readonly MEDIUM_GRAY: "#888888"; ... 128 more ...; readonly  
+OVERLAY_ORIGIN: "#0000ff"; }'.
+src/subapps/dxf-viewer/stores/__tests__/DxfSettingsStore.test.ts(97,38): error TS2339: Property 'LEGACY_COLORS' does not exist on type '{ readonly WHITE: "#FFFFFF"; readonly BLACK 
+: "#000000"; readonly TRANSPARENT: "transparent"; readonly DARK_BACKGROUND: "#333333"; readonly LIGHT_GRAY: "#cccccc"; readonly MEDIUM_GRAY: "#888888"; ... 128 more ...; readonly  
+OVERLAY_ORIGIN: "#0000ff"; }'.
+src/subapps/dxf-viewer/stores/__tests__/DxfSettingsStore.test.ts(113,40): error TS2339: Property 'LEGACY_COLORS' does not exist on type '{ readonly WHITE: "#FFFFFF"; readonly BLAC
+K: "#000000"; readonly TRANSPARENT: "transparent"; readonly DARK_BACKGROUND: "#333333"; readonly LIGHT_GRAY: "#cccccc"; readonly MEDIUM_GRAY: "#888888"; ... 128 more ...; readonly 
+ OVERLAY_ORIGIN: "#0000ff"; }'.
+src/subapps/dxf-viewer/stores/__tests__/DxfSettingsStore.test.ts(120,32): error TS2339: Property 'LEGACY_COLORS' does not exist on type '{ readonly WHITE: "#FFFFFF"; readonly BLAC 
+K: "#000000"; readonly TRANSPARENT: "transparent"; readonly DARK_BACKGROUND: "#333333"; readonly LIGHT_GRAY: "#cccccc"; readonly MEDIUM_GRAY: "#888888"; ... 128 more ...; readonly
+ OVERLAY_ORIGIN: "#0000ff"; }'.
+src/subapps/dxf-viewer/stores/__tests__/DxfSettingsStore.test.ts(184,40): error TS2339: Property 'LEGACY_COLORS' does not exist on type '{ readonly WHITE: "#FFFFFF"; readonly BLAC
+K: "#000000"; readonly TRANSPARENT: "transparent"; readonly DARK_BACKGROUND: "#333333"; readonly LIGHT_GRAY: "#cccccc"; readonly MEDIUM_GRAY: "#888888"; ... 128 more ...; readonly 
+ OVERLAY_ORIGIN: "#0000ff"; }'.
+src/subapps/dxf-viewer/stores/__tests__/DxfSettingsStore.test.ts(191,28): error TS2339: Property 'lineColor' does not exist on type 'LineSettings'.
+src/subapps/dxf-viewer/stores/__tests__/DxfSettingsStore.test.ts(191,54): error TS2339: Property 'LEGACY_COLORS' does not exist on type '{ readonly WHITE: "#FFFFFF"; readonly BLAC 
+K: "#000000"; readonly TRANSPARENT: "transparent"; readonly DARK_BACKGROUND: "#333333"; readonly LIGHT_GRAY: "#cccccc"; readonly MEDIUM_GRAY: "#888888"; ... 128 more ...; readonly 
+ OVERLAY_ORIGIN: "#0000ff"; }'.
+src/subapps/dxf-viewer/stores/__tests__/DxfSettingsStore.test.ts(259,16): error TS2339: Property 'stringContaining' does not exist on type '(actual: any) => any'.
+src/subapps/dxf-viewer/systems/ai-snapping/AISnappingEngine.ts(277,33): error TS2339: Property 'lastPoint' does not exist on type 'SnapContext'.
+src/subapps/dxf-viewer/systems/ai-snapping/AISnappingEngine.ts(321,17): error TS2339: Property 'lastPoint' does not exist on type 'SnapContext'.
+src/subapps/dxf-viewer/systems/ai-snapping/AISnappingEngine.ts(322,46): error TS2339: Property 'lastPoint' does not exist on type 'SnapContext'.
+src/subapps/dxf-viewer/systems/constraints/useConstraintsSystemState.ts(68,23): error TS2339: Property 'orthoSettings' does not exist on type 'PersistedData'.
+src/subapps/dxf-viewer/systems/constraints/useConstraintsSystemState.ts(74,23): error TS2339: Property 'polarSettings' does not exist on type 'PersistedData'.
+src/subapps/dxf-viewer/systems/constraints/useConstraintsSystemState.ts(80,23): error TS2339: Property 'settings' does not exist on type 'PersistedData'.
+src/subapps/dxf-viewer/systems/constraints/useConstraintsSystemState.ts(85,23): error TS2339: Property 'constraints' does not exist on type 'PersistedData'.
+src/subapps/dxf-viewer/systems/cursor/useCentralizedMouseHandlers.ts(250,28): error TS2339: Property 'entityId' does not exist on type 'ProSnapResult'.
+src/subapps/dxf-viewer/systems/cursor/useCentralizedMouseHandlers.ts(251,28): error TS2339: Property 'distance' does not exist on type 'ProSnapResult'.
+src/subapps/dxf-viewer/systems/drawing-orchestrator/DrawingOrchestrator.ts(45,19): error TS2339: Property 'setTool' does not exist on type '{ state: DrawingState; addPoint: (world 
+Point: Point2D, transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D; }) => void; ... 6 more ...; startPolygon: (options?: { ...; }) 
+ => { ...; }; }'.
+src/subapps/dxf-viewer/systems/drawing-orchestrator/DrawingOrchestrator.ts(51,19): error TS2339: Property 'setTool' does not exist on type '{ state: DrawingState; addPoint: (world
+Point: Point2D, transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D; }) => void; ... 6 more ...; startPolygon: (options?: { ...; }) 
+ => { ...; }; }'.
+src/subapps/dxf-viewer/systems/drawing-orchestrator/DrawingOrchestrator.ts(79,34): error TS2339: Property 'finishDrawing' does not exist on type '{ state: DrawingState; addPoint:  
+(worldPoint: Point2D, transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D; }) => void; ... 6 more ...; startPolygon: (options?: { . 
+..; }) => { ...; }; }'.
+src/subapps/dxf-viewer/systems/drawing-orchestrator/DrawingOrchestrator.ts(93,34): error TS2339: Property 'finishDrawing' does not exist on type '{ state: DrawingState; addPoint: 
+(worldPoint: Point2D, transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D; }) => void; ... 6 more ...; startPolygon: (options?: { . 
+..; }) => { ...; }; }'.
+src/subapps/dxf-viewer/systems/drawing/index.ts(27,64): error TS2339: Property 'setTool' does not exist on type '{ state: DrawingState; addPoint: (worldPoint: Point2D, transform:  
+{ worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D; }) => void; ... 6 more ...; startPolygon: (options?: { ...; }) => { ...; }; }'.
+src/subapps/dxf-viewer/systems/drawing/index.ts(28,48): error TS2339: Property 'setTool' does not exist on type '{ state: DrawingState; addPoint: (worldPoint: Point2D, transform: 
+{ worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D; }) => void; ... 6 more ...; startPolygon: (options?: { ...; }) => { ...; }; }'.
+src/subapps/dxf-viewer/systems/drawing/index.ts(31,49): error TS2339: Property 'finishDrawing' does not exist on type '{ state: DrawingState; addPoint: (worldPoint: Point2D, trans 
+form: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D; }) => void; ... 6 more ...; startPolygon: (options?: { ...; }) => { ...; }; }'.     
+src/subapps/dxf-viewer/systems/drawing/index.ts(32,48): error TS2339: Property 'finishDrawing' does not exist on type '{ state: DrawingState; addPoint: (worldPoint: Point2D, trans
+form: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D; }) => void; ... 6 more ...; startPolygon: (options?: { ...; }) => { ...; }; }'.     
+src/subapps/dxf-viewer/systems/entity-creation/useEntityCreation.ts(53,25): error TS2339: Property 'snapConfig' does not exist on type '{ state: DrawingState; addPoint: (worldPoin
+t: Point2D, transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D; }) => void; ... 6 more ...; startPolygon: (options?: { ...; }) =>  
+{ ...; }; }'.
+src/subapps/dxf-viewer/systems/grip-interaction/GripInteractionManager.ts(207,37): error TS2339: Property 'start' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/grip-interaction/GripInteractionManager.ts(207,63): error TS2339: Property 'end' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/grip-interaction/GripInteractionManager.ts(209,38): error TS2339: Property 'center' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/grip-interaction/GripInteractionManager.ts(209,63): error TS2339: Property 'radius' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/grip-interaction/GripInteractionManager.ts(211,39): error TS2339: Property 'corner1' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/grip-interaction/GripInteractionManager.ts(211,71): error TS2339: Property 'corner2' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/grip-interaction/GripInteractionManager.ts(214,31): error TS2339: Property 'center' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/grip-interaction/GripInteractionManager.ts(215,26): error TS2339: Property 'radius' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/grip-interaction/GripInteractionManager.ts(216,30): error TS2339: Property 'startAngle' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/grip-interaction/GripInteractionManager.ts(217,28): error TS2339: Property 'endAngle' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/grip-interaction/GripInteractionManager.ts(220,36): error TS2339: Property 'vertices' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/grip-interaction/GripInteractionManager.ts(223,31): error TS2339: Property 'center' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/grip-interaction/GripInteractionManager.ts(224,29): error TS2339: Property 'majorAxis' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/grip-interaction/GripInteractionManager.ts(225,29): error TS2339: Property 'minorAxis' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/interaction/InteractionEngine.ts(79,27): error TS2339: Property 'screenToWorld' does not exist on type '{}'.
+src/subapps/dxf-viewer/systems/interaction/InteractionEngine.ts(80,31): error TS2339: Property 'screenToWorld' does not exist on type '{}'.
+src/subapps/dxf-viewer/systems/interaction/InteractionEngine.ts(101,42): error TS2339: Property 'snap' does not exist on type '{}'.
+src/subapps/dxf-viewer/systems/interaction/InteractionEngine.ts(106,38): error TS2339: Property 'snap' does not exist on type '{}'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(106,17): error TS2339: Property 'preview' does not exist on type 'RenderOptions'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(111,17): error TS2339: Property 'hovered' does not exist on type 'RenderOptions'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(111,36): error TS2339: Property 'selected' does not exist on type 'RenderOptions'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(113,32): error TS2339: Property 'hovered' does not exist on type 'RenderOptions'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(177,19): error TS2339: Property 'subState' does not exist on type 'PhaseRenderingState'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(204,52): error TS2339: Property 'subState' does not exist on type 'PhaseRenderingState'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(205,30): error TS2339: Property 'dragging' does not exist on type '{ hoveredGrip?: { entityId: string; gripIndex: numb 
+er; } | undefined; selectedGrip?: { entityId: string; gripIndex: number; } | undefined; dragginGrip?: { entityId: string; gripIndex: number; } | undefined; }'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(262,64): error TS2339: Property 'type' does not exist on type '{ position: Point2D; }'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(287,19): error TS2339: Property 'active' does not exist on type '{ hoveredGrip?: { entityId: string; gripIndex: number
+; } | undefined; selectedGrip?: { entityId: string; gripIndex: number; } | undefined; dragginGrip?: { entityId: string; gripIndex: number; } | undefined; }'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(288,19): error TS2339: Property 'active' does not exist on type '{ hoveredGrip?: { entityId: string; gripIndex: number 
+; } | undefined; selectedGrip?: { entityId: string; gripIndex: number; } | undefined; dragginGrip?: { entityId: string; gripIndex: number; } | undefined; }'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(293,19): error TS2339: Property 'hovered' does not exist on type '{ hoveredGrip?: { entityId: string; gripIndex: numbe 
+r; } | undefined; selectedGrip?: { entityId: string; gripIndex: number; } | undefined; dragginGrip?: { entityId: string; gripIndex: number; } | undefined; }'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(294,19): error TS2339: Property 'hovered' does not exist on type '{ hoveredGrip?: { entityId: string; gripIndex: numbe
+r; } | undefined; selectedGrip?: { entityId: string; gripIndex: number; } | undefined; dragginGrip?: { entityId: string; gripIndex: number; } | undefined; }'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(378,26): error TS2339: Property 'start' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(379,24): error TS2339: Property 'end' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(428,27): error TS2339: Property 'center' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(429,35): error TS2339: Property 'radius' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(491,38): error TS2339: Property 'vertices' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(494,30): error TS2339: Property 'corner1' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(494,48): error TS2339: Property 'start' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(495,30): error TS2339: Property 'corner2' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(495,48): error TS2339: Property 'end' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(597,27): error TS2339: Property 'center' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(598,27): error TS2339: Property 'radius' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(599,31): error TS2339: Property 'startAngle' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(600,29): error TS2339: Property 'endAngle' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(649,29): error TS2339: Property 'vertices' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(693,27): error TS2339: Property 'center' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(694,30): error TS2339: Property 'majorAxis' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts(695,30): error TS2339: Property 'minorAxis' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/selection/shared/selection-duplicate-utils.ts(32,28): error TS2339: Property 'start' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/selection/shared/selection-duplicate-utils.ts(33,26): error TS2339: Property 'end' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/selection/shared/selection-duplicate-utils.ts(41,29): error TS2339: Property 'center' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/selection/shared/selection-duplicate-utils.ts(42,29): error TS2339: Property 'radius' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/selection/shared/selection-duplicate-utils.ts(50,30): error TS2339: Property 'topLeft' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/selection/shared/selection-duplicate-utils.ts(51,28): error TS2339: Property 'width' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/selection/shared/selection-duplicate-utils.ts(52,29): error TS2339: Property 'height' does not exist on type 'BaseEntity'.
+src/subapps/dxf-viewer/systems/selection/useFilterActions.ts(26,37): error TS2339: Property 'includes' does not exist on type 'Set<PropertyStatus>'.
+src/subapps/dxf-viewer/systems/selection/useFilterActions.ts(28,38): error TS2339: Property 'includes' does not exist on type 'Set<UnitType>'.
+src/subapps/dxf-viewer/systems/selection/useSelectionReducer.ts(138,44): error TS2339: Property 'includes' does not exist on type 'Set<PropertyStatus>'.
+src/subapps/dxf-viewer/systems/selection/useSelectionReducer.ts(145,31): error TS2339: Property 'filter' does not exist on type 'Set<PropertyStatus>'.
+src/subapps/dxf-viewer/systems/selection/useSelectionReducer.ts(152,47): error TS2339: Property 'includes' does not exist on type 'Set<UnitType>'.
+src/subapps/dxf-viewer/systems/selection/useSelectionReducer.ts(159,32): error TS2339: Property 'filter' does not exist on type 'Set<UnitType>'.
+src/subapps/dxf-viewer/systems/selection/utils.ts(20,48): error TS2339: Property 'vertices' does not exist on type 'Entity'.
+src/subapps/dxf-viewer/systems/selection/utils.ts(24,28): error TS2339: Property 'corner1' does not exist on type 'Entity'.
+src/subapps/dxf-viewer/systems/selection/utils.ts(24,46): error TS2339: Property 'start' does not exist on type 'Entity'.
+src/subapps/dxf-viewer/systems/selection/utils.ts(25,28): error TS2339: Property 'corner2' does not exist on type 'Entity'.
+src/subapps/dxf-viewer/systems/selection/utils.ts(25,46): error TS2339: Property 'end' does not exist on type 'Entity'.
+src/subapps/dxf-viewer/systems/toolbars/hooks/useToolbarsContextValue.ts(136,42): error TS2339: Property 'config' does not exist on type 'ToolbarCustomization'.
+src/subapps/dxf-viewer/systems/toolbars/hooks/useToolbarsContextValue.ts(139,58): error TS2339: Property 'config' does not exist on type 'ToolbarCustomization'.
+src/subapps/dxf-viewer/systems/toolbars/hooks/useToolbarsContextValue.ts(140,62): error TS2339: Property 'config' does not exist on type 'ToolbarCustomization'.
+src/subapps/dxf-viewer/test/setupTests.ts(442,45): error TS2339: Property 'extend' does not exist on type '(actual: any) => any'.
+src/subapps/dxf-viewer/test/setupTests.ts(443,10): error TS2339: Property 'extend' does not exist on type '(actual: any) => any'.
+src/subapps/dxf-viewer/testing/performance-test.ts(95,74): error TS2339: Property 'navigationStart' does not exist on type 'PerformanceNavigationTiming'.
+src/subapps/dxf-viewer/testing/performance-test.ts(96,86): error TS2339: Property 'navigationStart' does not exist on type 'PerformanceNavigationTiming'.
+src/subapps/dxf-viewer/ui/color/EnterpriseColorArea.tsx(132,23): error TS2339: Property 'colorPicker' does not exist on type '{ container: { backgroundColor: "#ffffff"; border: st
+ring; borderRadius: "0.375rem"; }; overlay: { backgroundColor: "rgba(0, 0, 0, 0.5)"; zIndex: 1300; }; controls: { padding: "1rem"; gap: "0.5rem"; }; positioning: { ...; }; }'.     
+src/subapps/dxf-viewer/ui/color/EnterpriseColorArea.tsx(150,25): error TS2339: Property 'colorPicker' does not exist on type '{ container: { backgroundColor: "#ffffff"; border: st
+ring; borderRadius: "0.375rem"; }; overlay: { backgroundColor: "rgba(0, 0, 0, 0.5)"; zIndex: 1300; }; controls: { padding: "1rem"; gap: "0.5rem"; }; positioning: { ...; }; }'.     
+src/subapps/dxf-viewer/ui/color/EnterpriseColorPicker.tsx(149,66): error TS2339: Property 'GRAY_LIGHT' does not exist on type '{ readonly GREEN: "text-green-600 hover:text-green-7
+00"; readonly BLUE: "text-blue-600 hover:text-blue-700"; readonly RED: "text-red-600 hover:text-red-700"; readonly PURPLE: "text-purple-600 hover:text-purple-700"; ... 15 more ... 
+; readonly LIGHTER: "hover:text-gray-400"; }'.
+src/subapps/dxf-viewer/ui/color/SwatchesPalette.tsx(189,33): error TS2339: Property 'SCALE_AND_SHADOW' does not exist on type '{ readonly SOCIAL_BUTTON: "transition-all duration-2
+00 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/30"; readonly CTA_BUTTON: "transition-all duration-300 hover:scale-105 hover:shadow-xl hover:brightness-110"; readonly PRO
+DUCT_CARD: "transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:bg-ac...'.
+src/subapps/dxf-viewer/ui/components/CentralizedAutoSaveStatus.tsx(87,21): error TS2339: Property 'isAutoSaving' does not exist on type 'EnterpriseDxfSettingsContextType'.
+src/subapps/dxf-viewer/ui/components/CentralizedAutoSaveStatus.tsx(87,35): error TS2339: Property 'hasUnsavedChanges' does not exist on type 'EnterpriseDxfSettingsContextType'.
+src/subapps/dxf-viewer/ui/components/CentralizedAutoSaveStatus.tsx(168,88): error TS2339: Property 'base' does not exist on type '{ readonly width: "0.5rem"; readonly height: "0.5
+rem"; readonly borderRadius: "9999px"; readonly flexShrink: 0; readonly transition: "background-color 150ms ease"; }'.
+src/subapps/dxf-viewer/ui/components/CentralizedAutoSaveStatus.tsx(251,11): error TS2339: Property 'isAutoSaving' does not exist on type 'EnterpriseDxfSettingsContextType'.        
+src/subapps/dxf-viewer/ui/components/ColorManager.tsx(84,35): error TS2339: Property 'statusBarOverlays' does not exist on type '{ layers: { canvasOverlayWithPointerControl: (acti
+veTool?: string | undefined) => CSSProperties; layerCanvasWithTools: (activeTool?: string | undefined, crosshairEnabled?: boolean | undefined) => CSSProperties; dxfCanvasWithTools
+: (activeTool?: string | undefined, crosshairEnabled?: boolean | undefined) => CSSProper...'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/GripSettings.tsx(258,37): error TS2339: Property 'checkbox' does not exist on type '{ none: string; card: "border-[
+1px] border-[rgb(229, 231, 235)] rounded-lg"; button: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; input: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; ... 12 m 
+ore ...; rounded: "border-[1px] border-[rgb(229, 231, 235)] rounded-lg"; }'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/GripSettings.tsx(268,37): error TS2339: Property 'checkbox' does not exist on type '{ none: string; card: "border-[
+1px] border-[rgb(229, 231, 235)] rounded-lg"; button: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; input: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; ... 12 m
+ore ...; rounded: "border-[1px] border-[rgb(229, 231, 235)] rounded-lg"; }'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/GripSettings.tsx(278,37): error TS2339: Property 'checkbox' does not exist on type '{ none: string; card: "border-[
+1px] border-[rgb(229, 231, 235)] rounded-lg"; button: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; input: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; ... 12 m 
+ore ...; rounded: "border-[1px] border-[rgb(229, 231, 235)] rounded-lg"; }'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/GripSettings.tsx(384,39): error TS2339: Property 'checkbox' does not exist on type '{ none: string; card: "border-[
+1px] border-[rgb(229, 231, 235)] rounded-lg"; button: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; input: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; ... 12 m 
+ore ...; rounded: "border-[1px] border-[rgb(229, 231, 235)] rounded-lg"; }'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/GripSettings.tsx(394,39): error TS2339: Property 'checkbox' does not exist on type '{ none: string; card: "border-[ 
+1px] border-[rgb(229, 231, 235)] rounded-lg"; button: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; input: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; ... 12 m
+ore ...; rounded: "border-[1px] border-[rgb(229, 231, 235)] rounded-lg"; }'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/GripSettings.tsx(404,39): error TS2339: Property 'checkbox' does not exist on type '{ none: string; card: "border-[ 
+1px] border-[rgb(229, 231, 235)] rounded-lg"; button: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; input: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; ... 12 m 
+ore ...; rounded: "border-[1px] border-[rgb(229, 231, 235)] rounded-lg"; }'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(143,32): error TS2339: Property 'lineType' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(144,33): error TS2339: Property 'lineWidth' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(145,29): error TS2339: Property 'color' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(146,31): error TS2339: Property 'opacity' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(147,33): error TS2339: Property 'dashScale' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(148,34): error TS2339: Property 'dashOffset' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(149,31): error TS2339: Property 'lineCap' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(150,32): error TS2339: Property 'lineJoin' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(151,37): error TS2339: Property 'breakAtCenter' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(168,32): error TS2339: Property 'lineType' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(169,33): error TS2339: Property 'lineWidth' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(170,29): error TS2339: Property 'color' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(171,31): error TS2339: Property 'opacity' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(172,33): error TS2339: Property 'dashScale' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(173,34): error TS2339: Property 'dashOffset' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(174,31): error TS2339: Property 'lineCap' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(175,32): error TS2339: Property 'lineJoin' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(176,37): error TS2339: Property 'breakAtCenter' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(190,32): error TS2339: Property 'lineType' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(191,33): error TS2339: Property 'lineWidth' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(192,29): error TS2339: Property 'color' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(193,31): error TS2339: Property 'opacity' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(194,33): error TS2339: Property 'dashScale' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(195,34): error TS2339: Property 'dashOffset' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(196,31): error TS2339: Property 'lineCap' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(197,32): error TS2339: Property 'lineJoin' does not exist on type 'LineTemplate'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx(204,54): error TS2339: Property 'resetToFactory' does not exist on type '{ settings: LineSettings; 
+ updateSettings: (updates: Partial<LineSettings>) => void; resetToDefaults: () => void; applyTemplate: (template: LineTemplate) => void; getCurrentDashPattern: () => any; }'.      
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/shared/ComboBox.tsx(255,68): error TS2339: Property 'mutedInverted' does not exist on type '{ readonly primary: "text-fo
+reground"; readonly secondary: "text-muted-foreground"; readonly muted: "text-muted-foreground"; readonly inverse: "text-primary-foreground"; readonly inverted: "text-primary-fore
+ground"; ... 14 more ...; readonly magenta: "text-pink-600"; }'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/shared/ComboBox.tsx(303,171): error TS2339: Property 'zIndex' does not exist on type '{ readonly positioning: { readonly
+ absolute: "absolute"; readonly relative: "relative"; readonly fixed: "fixed"; readonly sticky: "sticky"; }; readonly dimensions: { readonly auto: "auto"; readonly full: "100%"; . 
+.. 4 more ...; readonly maxContent: "max-content"; }; ... 13 more ...; readonly dxf: { ...; }; }'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/shared/EnterpriseComboBox.tsx(566,68): error TS2339: Property 'mutedInverted' does not exist on type '{ readonly primary
+: "text-foreground"; readonly secondary: "text-muted-foreground"; readonly muted: "text-muted-foreground"; readonly inverse: "text-primary-foreground"; readonly inverted: "text-pr 
+imary-foreground"; ... 14 more ...; readonly magenta: "text-pink-600"; }'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/special/LayersSettings.tsx(63,43): error TS2339: Property 'SCALE_UP' does not exist on type '{ readonly SCALE_UP_SMALL: 
+"hover:scale-105"; readonly SCALE_UP_TINY: "hover:scale-[1.02]"; readonly SCALE_UP_MEDIUM: "hover:scale-110"; readonly SCALE_DOWN: "hover:scale-95"; readonly LIFT_SMALL: "hover:-t
+ranslate-y-1"; readonly LIFT_MEDIUM: "hover:-translate-y-2"; readonly ROTATE_SLIGHT: "hover:rotate-1"; readonly...'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/special/LayersSettings.tsx(82,65): error TS2339: Property 'WHITE' does not exist on type '{ readonly GREEN: "text-green-
+600 hover:text-green-700"; readonly BLUE: "text-blue-600 hover:text-blue-700"; readonly RED: "text-red-600 hover:text-red-700"; readonly PURPLE: "text-purple-600 hover:text-purple
+-700"; ... 15 more ...; readonly LIGHTER: "hover:text-gray-400"; }'.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/special/LayersSettings.tsx(92,65): error TS2339: Property 'WHITE' does not exist on type '{ readonly GREEN: "text-green-
+600 hover:text-green-700"; readonly BLUE: "text-blue-600 hover:text-blue-700"; readonly RED: "text-red-600 hover:text-red-700"; readonly PURPLE: "text-purple-600 hover:text-purple
+-700"; ... 15 more ...; readonly LIGHTER: "hover:text-gray-400"; }'.
+src/subapps/dxf-viewer/ui/components/layers/components/EntityCard.tsx(138,27): error TS2339: Property 'name' does not exist on type 'Entity'.
+src/subapps/dxf-viewer/ui/components/layers/components/EntityCard.tsx(141,45): error TS2339: Property 'name' does not exist on type 'Entity'.
+src/subapps/dxf-viewer/ui/components/layers/components/EntityCard.tsx(144,21): error TS2339: Property 'name' does not exist on type 'Entity'.
+src/subapps/dxf-viewer/ui/components/layers/components/EntityCard.tsx(173,43): error TS2339: Property 'name' does not exist on type 'Entity'.
+src/subapps/dxf-viewer/ui/components/layers/hooks/useColorGroups.ts(24,18): error TS2339: Property 'name' does not exist on type 'Entity'.
+src/subapps/dxf-viewer/ui/components/layers/hooks/useLayersCallbacks.ts(259,45): error TS2339: Property 'name' does not exist on type 'Entity'.
+src/subapps/dxf-viewer/ui/components/layers/hooks/useLayersCallbacks.ts(273,42): error TS2339: Property 'name' does not exist on type 'Entity'.
+src/subapps/dxf-viewer/ui/components/layers/hooks/useSearchFilter.ts(13,11): error TS2339: Property 'name' does not exist on type 'Entity'.
+src/subapps/dxf-viewer/ui/components/ProSnapToolbar.tsx(75,154): error TS2339: Property 'MUTED' does not exist on type '{ readonly BLUE: "hover:border-hsl(var(--border-info)) dark
+:hover:border-hsl(var(--border-info)),"; readonly PURPLE: "hover:border-purple-500 dark:hover:border-purple-400"; readonly GREEN: "hover:border-hsl(var(--border-success)) dark:hov
+er:border-hsl(var(--border-success)),"; readonly ORANGE: "hover:border-orange-5...'.
+src/subapps/dxf-viewer/ui/components/ProSnapToolbar.tsx(196,160): error TS2339: Property 'WHITE' does not exist on type '{ readonly GREEN: "text-green-600 hover:text-green-700"; r
+eadonly BLUE: "text-blue-600 hover:text-blue-700"; readonly RED: "text-red-600 hover:text-red-700"; readonly PURPLE: "text-purple-600 hover:text-purple-700"; ... 15 more ...; read
+only LIGHTER: "hover:text-gray-400"; }'.
+src/subapps/dxf-viewer/ui/components/tests-modal/components/UnitTestsTab.tsx(53,161): error TS2339: Property 'MUTED' does not exist on type '{ readonly BLUE: "hover:border-hsl(var
+(--border-info)) dark:hover:border-hsl(var(--border-info)),"; readonly PURPLE: "hover:border-purple-500 dark:hover:border-purple-400"; readonly GREEN: "hover:border-hsl(var(--bord
+er-success)) dark:hover:border-hsl(var(--border-success)),"; readonly ORANGE: "hover:border-orange-5...'.
+src/subapps/dxf-viewer/ui/components/tests-modal/components/UnitTestsTab.tsx(80,159): error TS2339: Property 'MUTED' does not exist on type '{ readonly BLUE: "hover:border-hsl(var
+(--border-info)) dark:hover:border-hsl(var(--border-info)),"; readonly PURPLE: "hover:border-purple-500 dark:hover:border-purple-400"; readonly GREEN: "hover:border-hsl(var(--bord
+er-success)) dark:hover:border-hsl(var(--border-success)),"; readonly ORANGE: "hover:border-orange-5...'.
+src/subapps/dxf-viewer/ui/components/tests-modal/components/UnitTestsTab.tsx(113,163): error TS2339: Property 'MUTED' does not exist on type '{ readonly BLUE: "hover:border-hsl(va
+r(--border-info)) dark:hover:border-hsl(var(--border-info)),"; readonly PURPLE: "hover:border-purple-500 dark:hover:border-purple-400"; readonly GREEN: "hover:border-hsl(var(--bor
+der-success)) dark:hover:border-hsl(var(--border-success)),"; readonly ORANGE: "hover:border-orange-5...'.
+src/subapps/dxf-viewer/ui/CoordinateCalibrationOverlay.tsx(104,79): error TS2339: Property 'calibration' does not exist on type '{ readonly fullscreen: { readonly position: "fixed
+"; readonly top: 0; readonly left: 0; readonly right: 0; readonly bottom: 0; readonly pointerEvents: "none"; }; readonly backdrop: (zIndex?: number) => { ...; }; }'.
+src/subapps/dxf-viewer/ui/DxfViewerComponents.styles.ts(186,38): error TS2339: Property 'BORDER_HEX_LIGHT' does not exist on type '{ readonly BG_PRIMARY: "bg-background"; readonly
+ BG_SECONDARY: "bg-muted"; readonly BG_TERTIARY: "bg-card"; readonly BG_HOVER: "hover:bg-gray-600"; readonly TEXT_PRIMARY: "text-white"; ... 19 more ...; readonly FOCUS_RING: "blu
+e-400"; }'.
+src/subapps/dxf-viewer/ui/effects/index.ts(88,45): error TS2339: Property 'DARKER' does not exist on type '{ readonly GREEN: "text-green-600 hover:text-green-700"; readonly BLUE: 
+"text-blue-600 hover:text-blue-700"; readonly RED: "text-red-600 hover:text-red-700"; readonly PURPLE: "text-purple-600 hover:text-purple-700"; ... 15 more ...; readonly LIGHTER: 
+"hover:text-gray-400"; }'.
+src/subapps/dxf-viewer/ui/hooks/useLayerOperations.ts(63,11): error TS2339: Property 'showConfirmDialog' does not exist on type 'NotificationContextValue'.
+src/subapps/dxf-viewer/ui/hooks/useLayerOperations.ts(157,31): error TS2339: Property 'name' does not exist on type 'Entity'.
+src/subapps/dxf-viewer/ui/hooks/useLayerOperations.ts(191,35): error TS2339: Property 'name' does not exist on type 'Entity'.
+src/subapps/dxf-viewer/ui/hooks/useLayerOperations.ts(242,19): error TS2339: Property 'name' does not exist on type 'Entity'.
+src/subapps/dxf-viewer/ui/hooks/useLayerOperations.ts(242,39): error TS2339: Property 'id' does not exist on type 'never'.
+src/subapps/dxf-viewer/ui/hooks/useLayerOperations.ts(246,100): error TS2339: Property 'name' does not exist on type 'Entity'.
+src/subapps/dxf-viewer/ui/OverlayToolbar.tsx(119,28): error TS2339: Property 'stop' does not exist on type 'Promise<{ stop: { stop: () => void; }; } | undefined>'.
+src/subapps/dxf-viewer/ui/OverlayToolbar.tsx(121,27): error TS2339: Property 'stop' does not exist on type 'Promise<{ stop: { stop: () => void; }; } | undefined>'.
+src/subapps/dxf-viewer/ui/toolbar/EnhancedDXFToolbar.tsx(256,61): error TS2339: Property 'dropdownOptions' does not exist on type '{ id: ToolType; icon: ForwardRefExoticComponent<
+Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>; label: "╬Χ╧Α╬╣╬╗╬┐╬│╬χ"; hotkey: string; } | ... 17 more ... | { ...; }'.
+src/subapps/dxf-viewer/ui/toolbar/EnhancedDXFToolbar.tsx(256,85): error TS2339: Property 'dropdownOptions' does not exist on type '{ id: ToolType; icon: ForwardRefExoticComponent<
+Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>; label: "╬Χ╧Α╬╣╬╗╬┐╬│╬χ"; hotkey: string; } | ... 17 more ... | { ...; }'.
+src/subapps/dxf-viewer/ui/toolbar/ZoomControls.tsx(141,78): error TS2339: Property 'WHITE' does not exist on type '{ readonly GREEN: "text-green-600 hover:text-green-700"; readonl
+y BLUE: "text-blue-600 hover:text-blue-700"; readonly RED: "text-red-600 hover:text-red-700"; readonly PURPLE: "text-purple-600 hover:text-purple-700"; ... 15 more ...; readonly L
+IGHTER: "hover:text-gray-400"; }'.
+src/subapps/dxf-viewer/ui/toolbar/ZoomControls.tsx(164,78): error TS2339: Property 'WHITE' does not exist on type '{ readonly GREEN: "text-green-600 hover:text-green-700"; readonl
+y BLUE: "text-blue-600 hover:text-blue-700"; readonly RED: "text-red-600 hover:text-red-700"; readonly PURPLE: "text-purple-600 hover:text-purple-700"; ... 15 more ...; readonly L
+IGHTER: "hover:text-gray-400"; }'.
+src/subapps/dxf-viewer/ui/wizard/CalibrationStep.tsx(70,85): error TS2339: Property 'MUTED' does not exist on type '{ readonly BLUE: "hover:border-hsl(var(--border-info)) dark:hov
+er:border-hsl(var(--border-info)),"; readonly PURPLE: "hover:border-purple-500 dark:hover:border-purple-400"; readonly GREEN: "hover:border-hsl(var(--border-success)) dark:hover:b 
+order-hsl(var(--border-success)),"; readonly ORANGE: "hover:border-orange-5...'.
+src/subapps/dxf-viewer/ui/wizard/CalibrationStep.tsx(84,101): error TS2339: Property 'MUTED' does not exist on type '{ readonly BLUE: "hover:border-hsl(var(--border-info)) dark:ho
+ver:border-hsl(var(--border-info)),"; readonly PURPLE: "hover:border-purple-500 dark:hover:border-purple-400"; readonly GREEN: "hover:border-hsl(var(--border-success)) dark:hover: 
+border-hsl(var(--border-success)),"; readonly ORANGE: "hover:border-orange-5...'.
+src/subapps/dxf-viewer/ui/wizard/CalibrationStep.tsx(105,101): error TS2339: Property 'MUTED' does not exist on type '{ readonly BLUE: "hover:border-hsl(var(--border-info)) dark:h
+over:border-hsl(var(--border-info)),"; readonly PURPLE: "hover:border-purple-500 dark:hover:border-purple-400"; readonly GREEN: "hover:border-hsl(var(--border-success)) dark:hover
+:border-hsl(var(--border-success)),"; readonly ORANGE: "hover:border-orange-5...'.
+src/subapps/dxf-viewer/ui/wizard/LevelSelectionStep.tsx(66,57): error TS2339: Property 'MUTED' does not exist on type '{ readonly BLUE: "hover:border-hsl(var(--border-info)) dark:
+hover:border-hsl(var(--border-info)),"; readonly PURPLE: "hover:border-purple-500 dark:hover:border-purple-400"; readonly GREEN: "hover:border-hsl(var(--border-success)) dark:hove
+r:border-hsl(var(--border-success)),"; readonly ORANGE: "hover:border-orange-5...'.
+src/subapps/dxf-viewer/ui/wizard/LevelSelectionStep.tsx(99,28): error TS2339: Property 'dashed' does not exist on type '{ none: string; card: "border-[1px] border-[rgb(229, 231, 2
+35)] rounded-lg"; button: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; input: "border-[1px] border-[rgb(229, 231, 235)] rounded-md"; ... 12 more ...; rounded: "border-[1
+px] border-[rgb(229, 231, 235)] rounded-lg"; }'.
+src/subapps/dxf-viewer/ui/wizard/LevelSelectionStep.tsx(99,59): error TS2339: Property 'MUTED' does not exist on type '{ readonly BLUE: "hover:border-hsl(var(--border-info)) dark:
+hover:border-hsl(var(--border-info)),"; readonly PURPLE: "hover:border-purple-500 dark:hover:border-purple-400"; readonly GREEN: "hover:border-hsl(var(--border-success)) dark:hove
+r:border-hsl(var(--border-success)),"; readonly ORANGE: "hover:border-orange-5...'.
+src/subapps/dxf-viewer/ui/wizard/LevelSelectionStep.tsx(132,82): error TS2339: Property 'WHITE' does not exist on type '{ readonly GREEN: "text-green-600 hover:text-green-700"; re
+adonly BLUE: "text-blue-600 hover:text-blue-700"; readonly RED: "text-red-600 hover:text-red-700"; readonly PURPLE: "text-purple-600 hover:text-purple-700"; ... 15 more ...; reado
+nly LIGHTER: "hover:text-gray-400"; }'.
+src/subapps/dxf-viewer/utils/entity-conversion.ts(34,22): error TS2339: Property 'name' does not exist on type 'LineEntity'.
+src/subapps/dxf-viewer/utils/hover/index.ts(24,18): error TS2339: Property 'hovered' does not exist on type 'RenderOptions'.
+src/subapps/dxf-viewer/utils/hover/index.ts(24,38): error TS2339: Property 'selected' does not exist on type 'RenderOptions'.
+src/subapps/dxf-viewer/utils/hover/shape-renderers.ts(31,28): error TS2339: Property 'hovered' does not exist on type 'RenderOptions'.
+src/subapps/dxf-viewer/utils/hover/shape-renderers.ts(158,11): error TS2339: Property 'center' does not exist on type '{ center: Point2D; radius: number; startAngle: number; endAn
+gle: number; } | null'.
+src/subapps/dxf-viewer/utils/hover/shape-renderers.ts(158,19): error TS2339: Property 'radius' does not exist on type '{ center: Point2D; radius: number; startAngle: number; endAn
+gle: number; } | null'.
+src/subapps/dxf-viewer/utils/hover/shape-renderers.ts(158,27): error TS2339: Property 'startAngle' does not exist on type '{ center: Point2D; radius: number; startAngle: number; e
+ndAngle: number; } | null'.
+src/subapps/dxf-viewer/utils/hover/shape-renderers.ts(158,39): error TS2339: Property 'endAngle' does not exist on type '{ center: Point2D; radius: number; startAngle: number; end
+Angle: number; } | null'.
+src/subapps/dxf-viewer/utils/hover/shape-renderers.ts(192,11): error TS2339: Property 'center' does not exist on type '{ center: Point2D; majorAxis: number; minorAxis: number; rot
+ation: number; } | null'.
+src/subapps/dxf-viewer/utils/hover/shape-renderers.ts(192,19): error TS2339: Property 'majorAxis' does not exist on type '{ center: Point2D; majorAxis: number; minorAxis: number;  
+rotation: number; } | null'.
+src/subapps/dxf-viewer/utils/hover/shape-renderers.ts(192,30): error TS2339: Property 'minorAxis' does not exist on type '{ center: Point2D; majorAxis: number; minorAxis: number; 
+rotation: number; } | null'.
+src/subapps/dxf-viewer/utils/hover/shape-renderers.ts(192,41): error TS2339: Property 'rotation' does not exist on type '{ center: Point2D; majorAxis: number; minorAxis: number; r 
+otation: number; } | null'.
+
+
+PS C:\Nestor_Pagonis> 

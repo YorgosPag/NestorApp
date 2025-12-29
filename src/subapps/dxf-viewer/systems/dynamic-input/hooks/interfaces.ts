@@ -2,6 +2,7 @@
 
 import type { Dispatch, SetStateAction } from 'react';
 import type { Field, Phase } from './useDynamicInputState';
+import type { CircleFieldState, CoordinateFieldState, ManualInputState } from '../types/common-interfaces';
 
 /**
  * Interface for field value management
@@ -25,15 +26,15 @@ export interface FieldStateActions {
   getActiveField: () => Field;
   setActiveField: (field: Field) => void;
   isFieldUnlocked: (field: Field) => boolean;
-  setFieldUnlocked: (state: { x: boolean; y: boolean; angle: boolean; length: boolean; radius: boolean }) => void;
+  setFieldUnlocked: (state: CircleFieldState) => void;
 }
 
 /**
  * Interface for coordinate anchoring/highlighting
  */
 export interface CoordinateActions {
-  anchorCoordinates: (state: { x: boolean; y: boolean }) => void;
-  setManualInput: (state: { x: boolean; y: boolean; radius?: boolean }) => void;
+  anchorCoordinates: (state: CoordinateFieldState) => void;
+  setManualInput: (state: ManualInputState) => void;
 }
 
 /**

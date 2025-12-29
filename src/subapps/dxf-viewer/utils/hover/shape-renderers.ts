@@ -12,6 +12,7 @@ import { drawVerticesPath } from '../../rendering/entities/shared/geometry-rende
 import { validateArcEntity, validateEllipseEntity } from '../../rendering/entities/shared/entity-validation-utils';
 import { renderMeasurementLabel } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { UI_COLORS } from '../../config/color-config';
+import type { HoverRenderContext } from './types';
 
 export function renderCircleHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
   return; // ⚠️ ΠΡΟΣΩΡΙΝΑ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ ΓΙΑ TESTING κίτρινων grips

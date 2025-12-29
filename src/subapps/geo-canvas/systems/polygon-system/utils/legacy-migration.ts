@@ -68,7 +68,7 @@ export function createPolygonFromLegacy(legacyData: LegacyPolygonData): Universa
       isComplete: legacyData.isComplete
     },
     style: {
-      fillColor: 'rgba(16, 185, 129, 0.3)',
+      fillColor: GEO_COLORS.withOpacity(GEO_COLORS.POLYGON.COMPLETED, 0.3),
       strokeColor: GEO_COLORS.POLYGON.COMPLETED,
       strokeWidth: 3
     }

@@ -1,7 +1,7 @@
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getApp } from 'firebase/app';
-import type { CompanyContact } from '@/types/contacts';
+import type { CompanyContact, Contact } from '@/types/contacts';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
 import { getNavigationCompanyIds } from './navigation-companies.service';
 import { getProjectsByCompanyId } from './projects.service';
@@ -13,6 +13,11 @@ const DEBUG_COMPANIES_SERVICE = true;
 // 🏢 ENTERPRISE: Centralized Firestore collection configuration
 const CONTACTS_COLLECTION = COLLECTIONS.CONTACTS;
 const PROJECTS_COLLECTION = COLLECTIONS.PROJECTS;
+
+// ✅ ENTERPRISE: Type guard για CompanyContact
+function isCompanyContact(contact: Contact): contact is CompanyContact {
+  return contact.type === 'company';
+}
 
 /**
  * Service για διαχείριση εταιριών
@@ -46,7 +51,8 @@ export class CompaniesService {
 
         allSnapshot.docs.slice(0, 3).forEach(doc => {
           const data = doc.data();
-          console.log(`🏢 Sample company: ${data.companyName} (status: ${data.status || 'UNDEFINED'})`);
+          const companyName = isCompanyContact(data) ? data.companyName : 'Unknown Company';
+          console.log(`🏢 Sample company: ${companyName} (status: ${data.status || 'UNDEFINED'})`);
         });
       }
 
@@ -97,7 +103,8 @@ export class CompaniesService {
           const companyProjects = projectsByCompany.get(companyId) || [];
 
           if (DEBUG_COMPANIES_SERVICE) {
-            console.log(`🏗️ Company ${companyId} (${companyData.companyName}) has ${companyProjects.length} projects:`, companyProjects.map(p => p.name || 'Unnamed') || []);
+            const companyName = isCompanyContact(companyData) ? companyData.companyName : 'Unknown Company';
+            console.log(`🏗️ Company ${companyId} (${companyName}) has ${companyProjects.length} projects:`, companyProjects.map(p => p.name || 'Unnamed') || []);
           }
 
           if (companyProjects.length > 0) {
@@ -191,7 +198,8 @@ export class CompaniesService {
         .map(doc => {
           const data = doc.data();
           if (DEBUG_COMPANIES_SERVICE) {
-            console.log(`🏢 Company found in Firestore: ${data.id} - ${data.companyName} (status: ${data.status})`);
+            const companyName = isCompanyContact(data) ? (data as CompanyContact).companyName : 'Unknown Company';
+            console.log(`🏢 Company found in Firestore: ${data.id} - ${companyName} (status: ${data.status})`);
           }
           return data;
         })
@@ -203,7 +211,7 @@ export class CompaniesService {
         if (DEBUG_COMPANIES_SERVICE && company.id === 'pzNUy8ksddGCtcQMqumR') {
           console.log(`🔍 ΠΑΓΩΝΗΣ filtering check:`, {
             companyId: company.id,
-            companyName: company.companyName,
+            companyName: isCompanyContact(company) ? company.companyName : 'Unknown Company',
             isInRelevantIds: isRelevant,
             relevantIdsArray: allRelevantCompanyIds,
             companyExists: !!company.id
@@ -217,7 +225,10 @@ export class CompaniesService {
         console.log(`🎯 Relevant companies: ${relevantCompanies.length}`);
         console.log(`🔍 All company IDs from Firestore:`, allCompanies.map(c => c.id));
         console.log(`🔍 Relevant company IDs array:`, allRelevantCompanyIds);
-        console.log(`🔍 Filtered relevant companies:`, relevantCompanies.map(c => `${c.id} - ${c.companyName}`));
+        console.log(`🔍 Filtered relevant companies:`, relevantCompanies.map(c => {
+          const companyName = isCompanyContact(c) ? c.companyName : 'Unknown Company';
+          return `${c.id} - ${companyName}`;
+        }));
       }
 
       return relevantCompanies;

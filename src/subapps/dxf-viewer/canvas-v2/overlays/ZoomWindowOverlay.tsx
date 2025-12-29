@@ -34,7 +34,16 @@ export default function ZoomWindowOverlay({
   return (
     <div className={`absolute inset-0 pointer-events-none ${className}`}>
       <div
-        style={canvasUI.positioning.zoomWindow.rectangle(left, top, width, height)}
+        style={{
+          position: 'absolute',
+          left: left,
+          top: top,
+          width: width,
+          height: height,
+          border: '2px solid rgba(255, 255, 0, 0.8)',
+          backgroundColor: 'rgba(255, 255, 0, 0.1)',
+          pointerEvents: 'none'
+        }}
       />
     </div>
   );

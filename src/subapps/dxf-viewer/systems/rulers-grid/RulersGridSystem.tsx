@@ -2,7 +2,7 @@
 // DEBUG FLAG - Set to false to disable performance-heavy logging
 const DEBUG_RULERS_GRID = false;
 import React, { createContext, useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import type { Point2D, ViewTransform, DOMRect } from './config';
+import type { Point2D, ViewTransform } from './config';
 import {
   RulerSettings,
   GridSettings,
@@ -365,7 +365,7 @@ function useRulersGridSystemIntegration({
   // 🛡️ ΣΤΑΘΕΡΟΠΟΙΗΣΗ: Χωρίζουμε το bounds calculation από τα snap points
   useEffect(() => {
     if (viewTransform && canvasBounds) {
-      const bounds = RulersGridCalculations.calculateGridBounds(viewTransform, canvasBounds);
+      const bounds = RulersGridCalculations.calculateVisibleBounds(viewTransform, canvasBounds);
       setLastCalculatedBounds(bounds);
     }
   }, [viewTransform, canvasBounds]);
@@ -373,8 +373,10 @@ function useRulersGridSystemIntegration({
   // 🛡️ ΣΤΑΘΕΡΟΠΟΙΗΣΗ: Ruler snap points μόνο όταν χρειάζεται
   useEffect(() => {
     if (lastCalculatedBounds && rulers.snap.enabled) {
-      const rulerSnaps = RulersGridCalculations.calculateRulerSnapPoints(rulers, lastCalculatedBounds);
-      setRulerSnapPoints(rulerSnaps);
+      // TODO: Implement calculateRulerSnapPoints method
+      // const rulerSnaps = RulersGridCalculations.calculateRulerSnapPoints(rulers, lastCalculatedBounds);
+      // setRulerSnapPoints(rulerSnaps);
+      setRulerSnapPoints([]); // Temporary: empty array until method is implemented
     } else {
       setRulerSnapPoints([]);
     }
@@ -383,8 +385,10 @@ function useRulersGridSystemIntegration({
   // 🛡️ ΣΤΑΘΕΡΟΠΟΙΗΣΗ: Grid snap points μόνο όταν χρειάζεται
   useEffect(() => {
     if (lastCalculatedBounds && grid.snap.enabled) {
-      const gridSnaps = RulersGridCalculations.calculateGridSnapPoints(grid, origin, lastCalculatedBounds);
-      setGridSnapPoints(gridSnaps);
+      // TODO: Implement calculateGridSnapPoints method
+      // const gridSnaps = RulersGridCalculations.calculateGridSnapPoints(grid, origin, lastCalculatedBounds);
+      // setGridSnapPoints(gridSnaps);
+      setGridSnapPoints([]); // Temporary: empty array until method is implemented
     } else {
       setGridSnapPoints([]);
     }
@@ -463,11 +467,11 @@ function useRulersGridSystemIntegration({
       if (settings.origin) setOrigin(settings.origin);
       if (settings.isVisible !== undefined) setIsVisible(settings.isVisible);
       
-      return { success: true, operation: 'import' };
+      return { success: true, operation: 'import-settings' };
     } catch (error) {
       return {
         success: false,
-        operation: 'import',
+        operation: 'import-settings',
         error: error instanceof Error ? error.message : 'Import failed'
       };
     }

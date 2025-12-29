@@ -346,10 +346,11 @@ export class LayerRenderer {
 
     // 5. Render selection box
     if (options.showSelectionBox && options.selectionBox) {
+      const selectionContext = createUIRenderContext(this.ctx, viewport, DEFAULT_UI_TRANSFORM);
       this.selectionRenderer.render(
-        options.selectionBox,
+        selectionContext,
         viewport,
-        selectionSettings
+        { ...selectionSettings, enabled: true, visible: true, opacity: 1.0 } as UIElementSettings
       );
     }
 
@@ -439,8 +440,8 @@ export class LayerRenderer {
     );
 
     // 🚨 MARGINS DEBUG - Check if layers are offset due to margins
-    const isOnScreen = screenVertices.some(v => v.x >= 0 && v.x <= viewport.width && v.y >= 0 && v.y <= viewport.height);
-    const isInRenderArea = screenVertices.some(v => v.x >= COORDINATE_LAYOUT.MARGINS.left && v.x <= viewport.width && v.y >= 0 && v.y <= viewport.height - COORDINATE_LAYOUT.MARGINS.top);
+    const isOnScreen = screenVertices.some((v: Point2D) => v.x >= 0 && v.x <= viewport.width && v.y >= 0 && v.y <= viewport.height);
+    const isInRenderArea = screenVertices.some((v: Point2D) => v.x >= COORDINATE_LAYOUT.MARGINS.left && v.x <= viewport.width && v.y >= 0 && v.y <= viewport.height - COORDINATE_LAYOUT.MARGINS.top);
 
     console.log(`🚨 LAYER DEBUG [${layer.id.slice(0,8)}]:`,
       `worldVert[0]=(${polygon.vertices[0].x.toFixed(1)},${polygon.vertices[0].y.toFixed(1)})`,
@@ -454,7 +455,7 @@ export class LayerRenderer {
     // console.log('🔍 Rendering polygon:', { layerId: layer.id, polygonId: polygon.id });
 
     // Check if any vertices are in viewport (for debugging only - not skipping)
-    const verticesInViewport = screenVertices.filter(v =>
+    const verticesInViewport = screenVertices.filter((v: Point2D) =>
       v.x >= -50 && v.x <= viewport.width + 50 &&
       v.y >= -50 && v.y <= viewport.height + 50
     );
@@ -573,7 +574,7 @@ export class LayerRenderer {
       this.ctx.stroke();
     } else {
       // Grid dots - ✅ UNIFIED WITH COORDINATETRANSFORMS
-      this.ctx.fillStyle = settings.color;
+      this.ctx.fillStyle = settings.color || UI_COLORS.BLACK;
 
       const startX = (transform.offsetX % gridSize);
       const baseY = viewport.height - COORDINATE_LAYOUT.MARGINS.top;
@@ -609,13 +610,13 @@ export class LayerRenderer {
 
     // Background για rulers (αν είναι enabled)
     if (settings.showBackground !== false) {
-      this.ctx.fillStyle = settings.backgroundColor;
+      this.ctx.fillStyle = settings.backgroundColor ?? UI_COLORS.WHITE;
       this.ctx.fillRect(0, horizontalRulerY, viewport.width, rulerHeight); // Bottom horizontal ruler
       this.ctx.fillRect(0, 0, rulerWidth, viewport.height); // Left ruler
     }
 
     // Text styling
-    this.ctx.fillStyle = settings.textColor ?? settings.color;
+    this.ctx.fillStyle = settings.textColor ?? settings.color ?? UI_COLORS.BLACK;
     this.ctx.font = `${settings.fontSize}px Arial`;
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
@@ -651,7 +652,8 @@ export class LayerRenderer {
 
       // Major ticks
       if (settings.showMajorTicks !== false) {
-        this.ctx.strokeStyle = settings.majorTickColor ?? settings.color;
+        // ✅ ENTERPRISE: Ensure non-undefined value for Canvas API
+        this.ctx.strokeStyle = settings.majorTickColor ?? settings.color ?? UI_COLORS.BLACK;
         this.ctx.beginPath();
         this.ctx.moveTo(x, yPosition + rulerHeight - majorTickLength);
         this.ctx.lineTo(x, yPosition + rulerHeight);
@@ -663,7 +665,7 @@ export class LayerRenderer {
         const numberText = worldX.toFixed(0);
 
         // Numbers με το κανονικό fontSize και textColor
-        this.ctx.fillStyle = settings.textColor ?? settings.color;
+        this.ctx.fillStyle = settings.textColor ?? settings.color ?? UI_COLORS.BLACK;
         this.ctx.font = `${settings.fontSize}px Arial`;
         this.ctx.fillText(numberText, x, yPosition + rulerHeight / 2);
 
@@ -673,11 +675,11 @@ export class LayerRenderer {
           const numberWidth = this.ctx.measureText(numberText).width;
 
           // 🔺 UNITS SPECIFIC STYLING - Σύνδεση με floating panel
-          this.ctx.fillStyle = settings.unitsColor ?? settings.textColor ?? settings.color;
+          this.ctx.fillStyle = settings.unitsColor ?? settings.textColor ?? settings.color ?? UI_COLORS.BLACK;
           this.ctx.font = `${settings.unitsFontSize ?? settings.fontSize}px Arial`;
 
           // Render units ΜΕΤΑ από τον αριθμό (δεξιά του)
-          this.ctx.fillText(settings.unit, x + numberWidth / 2 + 5, yPosition + rulerHeight / 2);
+          this.ctx.fillText(settings.unit ?? '', x + numberWidth / 2 + 5, yPosition + rulerHeight / 2);
         }
       }
 
@@ -687,7 +689,8 @@ export class LayerRenderer {
         for (let i = 1; i < 5; i++) {
           const minorX = x + (i * minorStep);
           if (minorX <= viewport.width) {
-            this.ctx.strokeStyle = settings.minorTickColor ?? settings.color;
+            // ✅ ENTERPRISE: Ensure non-undefined value for Canvas API
+            this.ctx.strokeStyle = settings.minorTickColor ?? settings.color ?? UI_COLORS.BLACK;
             this.ctx.beginPath();
             this.ctx.moveTo(minorX, yPosition + rulerHeight - minorTickLength);
             this.ctx.lineTo(minorX, yPosition + rulerHeight);
@@ -725,7 +728,8 @@ export class LayerRenderer {
 
       // Major ticks
       if (settings.showMajorTicks !== false) {
-        this.ctx.strokeStyle = settings.majorTickColor ?? settings.color;
+        // ✅ ENTERPRISE: Ensure non-undefined value for Canvas API
+        this.ctx.strokeStyle = settings.majorTickColor ?? settings.color ?? UI_COLORS.BLACK;
         this.ctx.beginPath();
         this.ctx.moveTo(rulerWidth - majorTickLength, y);
         this.ctx.lineTo(rulerWidth, y);
@@ -741,7 +745,7 @@ export class LayerRenderer {
         this.ctx.rotate(-Math.PI / 2);
 
         // Numbers με το κανονικό fontSize και textColor
-        this.ctx.fillStyle = settings.textColor ?? settings.color;
+        this.ctx.fillStyle = settings.textColor ?? settings.color ?? UI_COLORS.BLACK;
         this.ctx.font = `${settings.fontSize}px Arial`;
         this.ctx.fillText(numberText, 0, 0);
 
@@ -751,11 +755,11 @@ export class LayerRenderer {
           const numberWidth = this.ctx.measureText(numberText).width;
 
           // 🔺 UNITS SPECIFIC STYLING - Σύνδεση με floating panel
-          this.ctx.fillStyle = settings.unitsColor ?? settings.textColor ?? settings.color;
+          this.ctx.fillStyle = settings.unitsColor ?? settings.textColor ?? settings.color ?? UI_COLORS.BLACK;
           this.ctx.font = `${settings.unitsFontSize ?? settings.fontSize}px Arial`;
 
           // Render units ΜΕΤΑ από τον αριθμό (δεξιά του στο rotated coordinate system)
-          this.ctx.fillText(settings.unit, numberWidth / 2 + 5, 0);
+          this.ctx.fillText(settings.unit ?? '', numberWidth / 2 + 5, 0);
         }
 
         this.ctx.restore();
@@ -767,7 +771,8 @@ export class LayerRenderer {
         for (let i = 1; i < 5; i++) {
           const minorY = y + (i * minorStep);
           if (minorY <= viewport.height) {
-            this.ctx.strokeStyle = settings.minorTickColor ?? settings.color;
+            // ✅ ENTERPRISE: Ensure non-undefined value for Canvas API
+            this.ctx.strokeStyle = settings.minorTickColor ?? settings.color ?? UI_COLORS.BLACK;
             this.ctx.beginPath();
             this.ctx.moveTo(rulerWidth - minorTickLength, minorY);
             this.ctx.lineTo(rulerWidth, minorY);
@@ -858,50 +863,50 @@ export class LayerRenderer {
     // Grid settings
     if (options.showGrid && gridSettings.enabled) {
       settings.set('grid', {
+        ...gridSettings,
         enabled: true,
         visible: true,
-        opacity: 1.0,
-        ...gridSettings
+        opacity: 1.0
       } as UIElementSettings);
     }
 
     // Ruler settings
     if (options.showRulers && rulerSettings.enabled) {
       settings.set('rulers', {
+        ...rulerSettings,
         enabled: true,
         visible: true,
-        opacity: 1.0,
-        ...rulerSettings
+        opacity: 1.0
       } as UIElementSettings);
     }
 
     // Crosshair settings
     if (options.showCrosshair && crosshairSettings.enabled && options.crosshairPosition) {
       settings.set('crosshair', {
+        ...crosshairSettings,
         enabled: true,
         visible: true,
-        opacity: 1.0,
-        ...crosshairSettings
+        opacity: 1.0
       } as UIElementSettings);
     }
 
     // Cursor settings
-    if (options.showCursor && cursorSettings.enabled && options.cursorPosition) {
+    if (options.showCursor && cursorSettings.cursor.enabled && options.cursorPosition) {
       settings.set('cursor', {
+        ...cursorSettings,
         enabled: true,
         visible: true,
-        opacity: 1.0,
-        ...cursorSettings
+        opacity: 1.0
       } as UIElementSettings);
     }
 
     // Snap settings
     if (options.showSnapIndicators && snapSettings.enabled && options.snapResults?.length) {
       settings.set('snap', {
+        ...snapSettings,
         enabled: true,
         visible: true,
-        opacity: 1.0,
-        ...snapSettings
+        opacity: 1.0
       } as UIElementSettings);
     }
 

@@ -44,7 +44,9 @@ export type EntityType =
   | 'text'
   | 'rectangle'
   | 'point'
-  | 'dimension';
+  | 'dimension'
+  | 'block'
+  | 'angle-measurement';
 
 // Geometric entities
 export interface LineEntity extends BaseEntity {
@@ -118,6 +120,24 @@ export interface DimensionEntity extends BaseEntity {
   precision?: number;
 }
 
+// ✅ ENTERPRISE: Additional entity types from scene.ts integration
+export interface BlockEntity extends BaseEntity {
+  type: 'block';
+  name: string;
+  position: Point2D;
+  scale: Point2D;
+  rotation: number;
+  entities: Entity[];
+}
+
+export interface AngleMeasurementEntity extends BaseEntity {
+  type: 'angle-measurement';
+  vertex: Point2D; // Center point of the angle
+  point1: Point2D; // First arm endpoint
+  point2: Point2D; // Second arm endpoint
+  angle: number; // Angle in degrees
+}
+
 // Union type for all entities
 export type Entity =
   | LineEntity
@@ -127,7 +147,9 @@ export type Entity =
   | RectangleEntity
   | PointEntity
   | TextEntity
-  | DimensionEntity;
+  | DimensionEntity
+  | BlockEntity
+  | AngleMeasurementEntity;
 
 // Entity collection types
 export interface EntityCollection {
@@ -198,6 +220,12 @@ export const isTextEntity = (entity: Entity): entity is TextEntity =>
 export const isDimensionEntity = (entity: Entity): entity is DimensionEntity =>
   entity.type === 'dimension';
 
+export const isBlockEntity = (entity: Entity): entity is BlockEntity =>
+  entity.type === 'block';
+
+export const isAngleMeasurementEntity = (entity: Entity): entity is AngleMeasurementEntity =>
+  entity.type === 'angle-measurement';
+
 // ✅ ENTERPRISE MIGRATION: generateEntityId moved to systems/entity-creation/utils.ts
 // Re-export from centralized location for backward compatibility
 export { generateEntityId } from '../systems/entity-creation/utils';
@@ -257,3 +285,44 @@ export const getEntityBounds = (entity: Entity): { minX: number; minY: number; m
       return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
   }
 };
+
+// ============================================================================
+// 🔄 SCENE MANAGEMENT TYPES - Unified from scene.ts
+// ============================================================================
+// ✅ ENTERPRISE: Scene-specific types integrated for complete entity system
+
+export type AnySceneEntity = Entity; // ✅ UNIFIED: Now alias to main Entity type
+
+// ✅ ENTERPRISE: Legacy compatibility aliases
+export type EntityModel = BaseEntity; // ✅ LEGACY: For rendering system compatibility
+
+export interface SceneLayer {
+  name: string;
+  color: string;
+  visible: boolean;
+  locked: boolean;
+}
+
+export interface SceneBounds {
+  min: Point2D;
+  max: Point2D;
+}
+
+export interface SceneModel {
+  entities: AnySceneEntity[];
+  layers: Record<string, SceneLayer>;
+  bounds: SceneBounds;
+  units: 'mm' | 'cm' | 'm' | 'in' | 'ft';
+}
+
+export interface DxfImportResult {
+  success: boolean;
+  scene?: SceneModel;
+  error?: string;
+  warnings?: string[];
+  stats: {
+    entityCount: number;
+    layerCount: number;
+    parseTimeMs: number;
+  };
+}

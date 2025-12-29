@@ -9,6 +9,7 @@ import { renderAreaLabel } from './render-utils';
 import { renderHoverEdgeWithDistance } from './edge-utils';
 import { renderHoverAngleAtVertex } from './angle-utils';
 import type { Point2D } from '../../rendering/types/Types';
+import type { HoverRenderContext } from './types';
 
 export function renderPolylineHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
   const vertices = entity.vertices as Point2D[];

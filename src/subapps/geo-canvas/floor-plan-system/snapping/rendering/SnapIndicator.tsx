@@ -15,6 +15,7 @@
 import React from 'react';
 import type { SnapResult } from '../types';
 import { SNAP_VISUAL, SNAP_MODE_LABELS } from '../config';
+import { GEO_COLORS } from '../../../config/color-config';
 
 /**
  * Component props
@@ -62,7 +63,7 @@ export const SnapIndicator: React.FC<SnapIndicatorProps> = ({
     const { point } = snapResult;
 
     // Determine color
-    const indicatorColor = color || SNAP_VISUAL.COLORS[point.mode] || '#00FFFF';
+    const indicatorColor = color || SNAP_VISUAL.COLORS[point.mode] || GEO_COLORS.AUTOCAD_SNAP_COLORS.SNAP_INDICATOR;
     const indicatorSize = size || SNAP_VISUAL.SIZES.ACTIVE;
 
     console.log('🎨 SnapIndicator rendering:', {
@@ -149,7 +150,7 @@ function drawTooltip(
   const bgHeight = textHeight + padding * 2;
 
   // Draw background
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+  ctx.fillStyle = GEO_COLORS.withOpacity(GEO_COLORS.BLACK, 0.85);
   ctx.fillRect(bgX, bgY, bgWidth, bgHeight);
 
   // Draw border

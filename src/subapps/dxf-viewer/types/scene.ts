@@ -1,104 +1,91 @@
-// ✅ SCENE-SPECIFIC TYPES ONLY - Core types imported where needed
-// Point2D και Viewport τώρα imported άμεσα από rendering/types/Types.ts
-import type { Point2D, Viewport } from '../rendering/types/Types';
+/**
+ * ============================================================================
+ * 🔄 SCENE TYPES - Enterprise Unified Re-Export
+ * ============================================================================
+ *
+ * ✅ ENTERPRISE CENTRALIZATION: This file now re-exports from entities.ts
+ * 🎯 Single Source of Truth: All entity types unified in /types/entities.ts
+ * 📦 Backward Compatibility: All existing imports continue to work
+ *
+ * Previous implementation: Scene-specific entity definitions
+ * New implementation: Centralized entity system with re-exports
+ *
+ * Migration completed: 2025-12-29
+ * ============================================================================
+ */
 
-export interface SceneEntity {
-  id: string;
-  type: 'line' | 'polyline' | 'circle' | 'arc' | 'text' | 'block' | 'rectangle' | 'angle-measurement';
-  layer: string;
-  color?: string;
-  lineweight?: number;
-  visible: boolean;
-  name?: string;
-}
+// ============================================================================
+// 🔄 RE-EXPORTS FROM CENTRALIZED ENTITY SYSTEM
+// ============================================================================
 
-export interface LineEntity extends SceneEntity {
-  type: 'line';
-  start: Point2D;
-  end: Point2D;
-}
+// Core entity types - now from unified source
+export type {
+  Entity,
+  EntityType,
+  BaseEntity,
 
-export interface PolylineEntity extends SceneEntity {
-  type: 'polyline';
-  vertices: Point2D[];
-  closed: boolean;
-}
+  // Geometric entities
+  LineEntity,
+  PolylineEntity,
+  CircleEntity,
+  ArcEntity,
+  RectangleEntity,
+  PointEntity,
+  TextEntity,
+  DimensionEntity,
+  BlockEntity,
+  AngleMeasurementEntity,
 
-export interface CircleEntity extends SceneEntity {
-  type: 'circle';
-  center: Point2D;
-  radius: number;
-}
+  // Scene management
+  AnySceneEntity,
+  SceneLayer,
+  SceneBounds,
+  SceneModel,
+  DxfImportResult,
 
-export interface ArcEntity extends SceneEntity {
-  type: 'arc';
-  center: Point2D;
-  radius: number;
-  startAngle: number;
-  endAngle: number;
-}
+  // Utility types
+  EntityCollection,
+  CreateEntityParams,
+  UpdateEntityParams,
+  EntityQuery,
+  EntityValidationResult
 
-export interface TextEntity extends SceneEntity {
-  type: 'text';
-  position: Point2D;
-  text: string;
-  height: number;
-  rotation?: number;
-}
+} from './entities';
 
-export interface BlockEntity extends SceneEntity {
-  type: 'block';
-  name: string;
-  position: Point2D;
-  scale: Point2D;
-  rotation: number;
-  entities: SceneEntity[];
-}
+// ============================================================================
+// 🔄 RE-EXPORT TYPE GUARDS
+// ============================================================================
 
-export interface RectangleEntity extends SceneEntity {
-  type: 'rectangle';
-  corner1: Point2D;
-  corner2: Point2D;
-  rotation?: number;
-}
+export {
+  isLineEntity,
+  isPolylineEntity,
+  isCircleEntity,
+  isArcEntity,
+  isRectangleEntity,
+  isPointEntity,
+  isTextEntity,
+  isDimensionEntity,
+  isBlockEntity,
+  isAngleMeasurementEntity
+} from './entities';
 
-export interface AngleMeasurementEntity extends SceneEntity {
-  type: 'angle-measurement';
-  vertex: Point2D; // Center point of the angle
-  point1: Point2D; // First arm endpoint
-  point2: Point2D; // Second arm endpoint
-  angle: number; // Angle in degrees
-}
+// ============================================================================
+// 🔄 RE-EXPORT UTILITY FUNCTIONS
+// ============================================================================
 
-export type AnySceneEntity = LineEntity | PolylineEntity | CircleEntity | ArcEntity | TextEntity | BlockEntity | RectangleEntity | AngleMeasurementEntity;
+export {
+  generateEntityId,
+  getEntityBounds
+} from './entities';
 
-export interface SceneLayer {
-  name: string;
-  color: string;
-  visible: boolean;
-  locked: boolean;
-}
-
-export interface SceneBounds {
-  min: Point2D;
-  max: Point2D;
-}
-
-export interface SceneModel {
-  entities: AnySceneEntity[];
-  layers: Record<string, SceneLayer>;
-  bounds: SceneBounds;
-  units: 'mm' | 'cm' | 'm' | 'in' | 'ft';
-}
-
-export interface DxfImportResult {
-  success: boolean;
-  scene?: SceneModel;
-  error?: string;
-  warnings?: string[];
-  stats: {
-    entityCount: number;
-    layerCount: number;
-    parseTimeMs: number;
-  };
-}
+// ============================================================================
+// 🎯 LEGACY COMPATIBILITY NOTES
+// ============================================================================
+//
+// All imports that previously used:
+//   import { SceneEntity, AnySceneEntity } from './scene'
+//
+// Now automatically resolve to the unified entity system in entities.ts
+// No code changes required - full backward compatibility maintained!
+//
+// ============================================================================

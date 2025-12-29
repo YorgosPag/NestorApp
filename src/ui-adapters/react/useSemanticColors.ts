@@ -22,6 +22,7 @@ export interface UseSemanticColorsReturn {
   readonly text: typeof COLOR_BRIDGE.text;
   readonly bg: typeof COLOR_BRIDGE.bg;
   readonly border: typeof COLOR_BRIDGE.border;
+  readonly ring: typeof COLOR_BRIDGE.ring;
   readonly interactive: typeof COLOR_BRIDGE.interactive;
   readonly gradients: typeof COLOR_BRIDGE.gradients;
 
@@ -29,6 +30,7 @@ export interface UseSemanticColorsReturn {
   readonly getText: (type: keyof typeof COLOR_BRIDGE.text) => string;
   readonly getBg: (type: keyof typeof COLOR_BRIDGE.bg) => string;
   readonly getBorder: (type: keyof typeof COLOR_BRIDGE.border) => string;
+  readonly getRing: (type: keyof typeof COLOR_BRIDGE.ring) => string;
   readonly getGradient: (type: keyof typeof COLOR_BRIDGE.gradients) => string;
 }
 
@@ -46,6 +48,7 @@ export function useSemanticColors(): UseSemanticColorsReturn {
     text: COLOR_BRIDGE.text,
     bg: COLOR_BRIDGE.bg,
     border: COLOR_BRIDGE.border,
+    ring: COLOR_BRIDGE.ring,
     interactive: COLOR_BRIDGE.interactive,
     gradients: COLOR_BRIDGE.gradients,
 
@@ -53,6 +56,7 @@ export function useSemanticColors(): UseSemanticColorsReturn {
     getText: (type) => COLOR_BRIDGE.text[type],
     getBg: (type) => COLOR_BRIDGE.bg[type] || COLOR_BRIDGE.bg.primary,
     getBorder: (type) => COLOR_BRIDGE.border[type] || COLOR_BRIDGE.border.default,
+    getRing: (type) => COLOR_BRIDGE.ring[type] || COLOR_BRIDGE.ring.default,
     getGradient: (type) => COLOR_BRIDGE.gradients[type] || COLOR_BRIDGE.gradients.neutralSubtle,
   } as const), []);
 }

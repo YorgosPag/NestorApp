@@ -25,8 +25,8 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
         result.current.startDrawing('line');
       });
 
-      expect(result.current.drawingState.isDrawing).toBe(true);
-      expect(result.current.drawingState.currentTool).toBe('line');
+      expect(result.current.state.isDrawing).toBe(true);
+      expect(result.current.state.currentTool).toBe('line');
 
       // First click - start point
       const startPoint: Point2D = { x: 100, y: 100 };
@@ -34,8 +34,8 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
         result.current.addPoint(startPoint);
       });
 
-      expect(result.current.drawingState.tempPoints).toHaveLength(1);
-      expect(result.current.drawingState.tempPoints[0]).toEqual(startPoint);
+      expect(result.current.state.tempPoints).toHaveLength(1);
+      expect(result.current.state.tempPoints[0]).toEqual(startPoint);
 
       // Second click - end point (should complete the line)
       const endPoint: Point2D = { x: 200, y: 200 };
@@ -55,8 +55,8 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
       });
 
       // After second point, drawing should be complete
-      expect(resultWithCallback.current.drawingState.isDrawing).toBe(false);
-      expect(resultWithCallback.current.drawingState.tempPoints).toHaveLength(0);
+      expect(resultWithCallback.current.state.isDrawing).toBe(false);
+      expect(resultWithCallback.current.state.tempPoints).toHaveLength(0);
     });
 
     it('should create preview entity during drawing', () => {
@@ -83,12 +83,12 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
       });
 
       // Preview entity should exist
-      expect(result.current.drawingState.previewEntity).not.toBeNull();
+      expect(result.current.state.previewEntity).not.toBeNull();
 
-      if (result.current.drawingState.previewEntity) {
-        expect(result.current.drawingState.previewEntity.type).toBe('line');
+      if (result.current.state.previewEntity) {
+        expect(result.current.state.previewEntity.type).toBe('line');
         // Preview entity should have the preview flag
-        const previewEntity = result.current.drawingState.previewEntity as any;
+        const previewEntity = result.current.state.previewEntity as any;
         expect(previewEntity.preview).toBe(true);
       }
     });
@@ -120,10 +120,10 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
     it('should initialize with correct default state', () => {
       const { result } = renderHook(() => useUnifiedDrawing());
 
-      expect(result.current.drawingState.isDrawing).toBe(false);
-      expect(result.current.drawingState.currentTool).toBe('select');
-      expect(result.current.drawingState.previewEntity).toBeNull();
-      expect(result.current.drawingState.tempPoints).toHaveLength(0);
+      expect(result.current.state.isDrawing).toBe(false);
+      expect(result.current.state.currentTool).toBe('select');
+      expect(result.current.state.previewEntity).toBeNull();
+      expect(result.current.state.tempPoints).toHaveLength(0);
     });
 
     it('should transition to drawing state when line tool selected', () => {
@@ -133,8 +133,8 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
         result.current.startDrawing('line');
       });
 
-      expect(result.current.drawingState.isDrawing).toBe(true);
-      expect(result.current.drawingState.currentTool).toBe('line');
+      expect(result.current.state.isDrawing).toBe(true);
+      expect(result.current.state.currentTool).toBe('line');
     });
 
     it('should reset state after completing line', () => {
@@ -147,9 +147,9 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
       });
 
       // After completing line, state should reset
-      expect(result.current.drawingState.isDrawing).toBe(false);
-      expect(result.current.drawingState.tempPoints).toHaveLength(0);
-      expect(result.current.drawingState.previewEntity).toBeNull();
+      expect(result.current.state.isDrawing).toBe(false);
+      expect(result.current.state.tempPoints).toHaveLength(0);
+      expect(result.current.state.previewEntity).toBeNull();
     });
   });
 
@@ -172,7 +172,7 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
         });
       });
 
-      expect(result.current.drawingState.previewEntity).not.toBeNull();
+      expect(result.current.state.previewEntity).not.toBeNull();
     });
 
     it('🐛 BUG FIX: previewEntity must be added to scene for rendering', () => {
@@ -190,11 +190,11 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
       });
 
       // Preview entity MUST exist for rendering
-      expect(result.current.drawingState.previewEntity).toBeTruthy();
+      expect(result.current.state.previewEntity).toBeTruthy();
 
       // Preview entity should be a line
-      if (result.current.drawingState.previewEntity) {
-        expect(result.current.drawingState.previewEntity.type).toBe('line');
+      if (result.current.state.previewEntity) {
+        expect(result.current.state.previewEntity.type).toBe('line');
       }
     });
   });
@@ -216,7 +216,7 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
         });
       });
 
-      const previewEntity = result.current.drawingState.previewEntity as any;
+      const previewEntity = result.current.state.previewEntity as any;
 
       if (previewEntity && previewEntity.type === 'line') {
         expect(previewEntity.start).toEqual(start);
@@ -237,7 +237,7 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
         });
       });
 
-      const previewEntity = result.current.drawingState.previewEntity as any;
+      const previewEntity = result.current.state.previewEntity as any;
       expect(previewEntity?.preview).toBe(true);
     });
   });

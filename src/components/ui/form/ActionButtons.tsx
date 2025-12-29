@@ -7,11 +7,36 @@ import { Loader2, Save, X, Trash2, Plus, Edit, Archive, RotateCcw, Phone, Mail, 
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS } from '../effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
-// 🏢 ENTERPRISE CENTRALIZED IMPORTS
-import { getActionButtons } from '@/subapps/dxf-viewer/config/modal-select';
+// 🏢 ENTERPRISE CENTRALIZED IMPORTS - ZERO HARDCODED VALUES
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
-// 🏢 ENTERPRISE CENTRALIZED CONSTANTS
-const actionLabels = getActionButtons();
+// ✅ ENTERPRISE: Single translation hook για όλα τα components
+const useActionTranslations = () => {
+  const { t } = useTranslation();
+  return {
+    save: t('toolbars:common.actions.save'),
+    save_loading: t('toolbars:common.actions.save_loading'),
+    cancel: t('toolbars:common.actions.cancel'),
+    delete: t('toolbars:common.actions.delete'),
+    delete_loading: t('toolbars:common.actions.delete_loading'),
+    add: t('toolbars:common.actions.add'),
+    edit: t('toolbars:common.actions.edit'),
+    archive: t('toolbars:common.actions.archive'),
+    archive_loading: t('toolbars:common.actions.archive_loading'),
+    restore: t('toolbars:common.actions.restore'),
+    restore_loading: t('toolbars:common.actions.restore_loading'),
+    call: t('toolbars:common.actions.call'),
+    email: t('toolbars:common.actions.email'),
+    sms: t('toolbars:common.actions.sms'),
+    export: t('toolbars:common.actions.export'),
+    import: t('toolbars:common.actions.import'),
+    help: t('toolbars:common.actions.help'),
+    refresh: t('toolbars:common.actions.refresh'),
+    sort: t('toolbars:common.sort.sort'),
+    favorites: t('toolbars:common.actions.favorites'),
+    archived: t('toolbars:common.actions.archived')
+  };
+};
 
 // Enterprise Button Categorization - Global Design System Standards
 // Based on Google Material Design, Microsoft Fluent, Apple HIG, Bootstrap 5
@@ -80,13 +105,18 @@ interface BaseButtonProps {
 
 // SaveButton - Για αποθήκευση forms
 export function SaveButton({
-  children = actionLabels.save,
+  children,
   loading = false,
   disabled = false,
   onClick,
   className
 }: BaseButtonProps) {
   const iconSizes = useIconSizes();
+  // ✅ ENTERPRISE: Zero Hardcoded - Use centralized translations
+  const actions = useActionTranslations();
+  const defaultChildren = children ?? actions.save;
+  const loadingText = actions.save_loading;
+
   return (
     <Button
       type="submit"
@@ -97,12 +127,12 @@ export function SaveButton({
       {loading ? (
         <>
           <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
-          {actionLabels.save_loading}
+          {loadingText}
         </>
       ) : (
         <>
           <Save className={`mr-2 ${iconSizes.sm}`} />
-          {children}
+          {defaultChildren}
         </>
       )}
     </Button>
@@ -111,12 +141,16 @@ export function SaveButton({
 
 // CancelButton - Για ακύρωση
 export function CancelButton({
-  children = actionLabels.cancel,
+  children,
   disabled = false,
   onClick,
   className
 }: BaseButtonProps) {
   const iconSizes = useIconSizes();
+  // ✅ ENTERPRISE: Zero Hardcoded - Use centralized translations
+  const actions = useActionTranslations();
+  const defaultChildren = children ?? actions.cancel;
+
   return (
     <Button
       type="button"
@@ -126,20 +160,25 @@ export function CancelButton({
       className={cn(BUTTON_STYLES.variants.cancel, className)}
     >
       <X className={`mr-2 ${iconSizes.sm}`} />
-      {children}
+      {defaultChildren}
     </Button>
   );
 }
 
 // DeleteButton - Για διαγραφή
 export function DeleteButton({
-  children = actionLabels.delete,
+  children,
   loading = false,
   disabled = false,
   onClick,
   className
 }: BaseButtonProps) {
   const iconSizes = useIconSizes();
+  // ✅ ENTERPRISE: Zero Hardcoded - Use centralized translations
+  const actions = useActionTranslations();
+  const defaultChildren = children ?? actions.delete;
+  const loadingText = actions.delete_loading;
+
   return (
     <Button
       type="button"
@@ -150,12 +189,12 @@ export function DeleteButton({
       {loading ? (
         <>
           <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
-          {actionLabels.delete_loading}
+          {loadingText}
         </>
       ) : (
         <>
           <Trash2 className={`mr-2 ${iconSizes.sm}`} />
-          {children}
+          {defaultChildren}
         </>
       )}
     </Button>
@@ -164,12 +203,16 @@ export function DeleteButton({
 
 // AddButton - Για προσθήκη νέων items
 export function AddButton({
-  children = actionLabels.add,
+  children,
   disabled = false,
   onClick,
   className
 }: BaseButtonProps) {
   const iconSizes = useIconSizes();
+  // ✅ ENTERPRISE: Zero Hardcoded - Use centralized translations
+  const actions = useActionTranslations();
+  const defaultChildren = children ?? actions.add;
+
   return (
     <Button
       type="button"
@@ -178,19 +221,23 @@ export function AddButton({
       className={cn(BUTTON_STYLES.variants.add, className)}
     >
       <Plus className={`mr-2 ${iconSizes.sm}`} />
-      {children}
+      {defaultChildren}
     </Button>
   );
 }
 
 // EditButton - Για επεξεργασία
 export function EditButton({
-  children = actionLabels.edit,
+  children,
   disabled = false,
   onClick,
   className
 }: BaseButtonProps) {
   const iconSizes = useIconSizes();
+  // ✅ ENTERPRISE: Zero Hardcoded - Use centralized translations
+  const actions = useActionTranslations();
+  const defaultChildren = children ?? actions.edit;
+
   return (
     <Button
       type="button"
@@ -199,20 +246,23 @@ export function EditButton({
       className={cn(BUTTON_STYLES.variants.edit, className)}
     >
       <Edit className={`mr-2 ${iconSizes.sm}`} />
-      {children}
+      {defaultChildren}
     </Button>
   );
 }
 
 // ArchiveButton - Για αρχειοθέτηση
 export function ArchiveButton({
-  children = actionLabels.archive,
+  children,
   loading = false,
   disabled = false,
   onClick,
   className
 }: BaseButtonProps) {
   const iconSizes = useIconSizes();
+  // ✅ ENTERPRISE: Zero Hardcoded - Use centralized translations
+  const actions = useActionTranslations();
+  const defaultChildren = children ?? actions.archive;
   return (
     <Button
       type="button"
@@ -223,12 +273,12 @@ export function ArchiveButton({
       {loading ? (
         <>
           <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
-          {actionLabels.archive_loading}
+          {actions.archive_loading}
         </>
       ) : (
         <>
           <Archive className={`mr-2 ${iconSizes.sm}`} />
-          {children}
+          {defaultChildren}
         </>
       )}
     </Button>
@@ -237,13 +287,16 @@ export function ArchiveButton({
 
 // RestoreButton - Για επαναφορά από archive
 export function RestoreButton({
-  children = actionLabels.restore,
+  children,
   loading = false,
   disabled = false,
   onClick,
   className
 }: BaseButtonProps) {
   const iconSizes = useIconSizes();
+  // ✅ ENTERPRISE: Zero Hardcoded - Use centralized translations
+  const actions = useActionTranslations();
+  const defaultChildren = children ?? actions.restore;
   return (
     <Button
       type="button"
@@ -254,12 +307,12 @@ export function RestoreButton({
       {loading ? (
         <>
           <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
-          {actionLabels.restore_loading}
+          {actions.restore_loading}
         </>
       ) : (
         <>
           <RotateCcw className={`mr-2 ${iconSizes.sm}`} />
-          {children}
+          {defaultChildren}
         </>
       )}
     </Button>
@@ -268,7 +321,7 @@ export function RestoreButton({
 
 // Toolbar variants - Για ContactsToolbar με consistent styling
 export function ToolbarAddButton({
-  children = actionLabels.add,
+  children,
   disabled = false,
   onClick,
   className,
@@ -276,6 +329,9 @@ export function ToolbarAddButton({
   variant = 'default'
 }: BaseButtonProps) {
   const iconSizes = useIconSizes();
+  // ✅ ENTERPRISE: Zero Hardcoded - Use centralized translations
+  const actions = useActionTranslations();
+  const defaultChildren = children ?? actions.add;
   // Use centralized styling for default variant
   const buttonClassName = variant === 'default'
     ? cn(BUTTON_STYLES.variants.add, "flex items-center gap-2 min-w-[100px] justify-start", className)
@@ -290,13 +346,13 @@ export function ToolbarAddButton({
       className={buttonClassName}
     >
       <Plus className={iconSizes.sm} />
-      <span className="hidden md:inline">{children}</span>
+      <span className="hidden md:inline">{defaultChildren}</span>
     </Button>
   );
 }
 
 export function ToolbarEditButton({
-  children = actionLabels.edit,
+  children,
   disabled = false,
   onClick,
   className,
@@ -304,6 +360,9 @@ export function ToolbarEditButton({
   variant = 'outline'
 }: BaseButtonProps) {
   const iconSizes = useIconSizes();
+  // ✅ ENTERPRISE: Zero Hardcoded - Use centralized translations
+  const actions = useActionTranslations();
+  const defaultChildren = children ?? actions.edit;
   // Use centralized styling for outline variant (edit action)
   const buttonClassName = variant === 'outline'
     ? cn(BUTTON_STYLES.variants.edit, "flex items-center gap-2 min-w-[100px] justify-start", className)
@@ -318,13 +377,13 @@ export function ToolbarEditButton({
       className={buttonClassName}
     >
       <Edit className={iconSizes.sm} />
-      <span className="hidden md:inline">{children}</span>
+      <span className="hidden md:inline">{defaultChildren}</span>
     </Button>
   );
 }
 
 export function ToolbarDeleteButton({
-  children = actionLabels.delete,
+  children,
   disabled = false,
   onClick,
   className,
@@ -333,6 +392,9 @@ export function ToolbarDeleteButton({
   badge
 }: BaseButtonProps) {
   const iconSizes = useIconSizes();
+  // ✅ ENTERPRISE: Zero Hardcoded - Use centralized translations
+  const actions = useActionTranslations();
+  const defaultChildren = children ?? actions.delete;
   // Use centralized styling for destructive variant
   const buttonClassName = variant === 'destructive'
     ? cn(BUTTON_STYLES.variants.delete, "flex items-center gap-2 min-w-[100px] justify-start", className)
@@ -347,7 +409,7 @@ export function ToolbarDeleteButton({
       className={buttonClassName}
     >
       <Trash2 className={iconSizes.sm} />
-      <span className="hidden md:inline">{children}</span>
+      <span className="hidden md:inline">{defaultChildren}</span>
       {badge && (
         <CommonBadge
           status="company"
@@ -361,7 +423,7 @@ export function ToolbarDeleteButton({
 }
 
 export function ToolbarArchiveButton({
-  children = actionLabels.archive,
+  children,
   disabled = false,
   onClick,
   className,
@@ -370,6 +432,10 @@ export function ToolbarArchiveButton({
   badge
 }: BaseButtonProps) {
   const iconSizes = useIconSizes();
+  // ✅ ENTERPRISE: Zero Hardcoded - Use centralized translations
+  const actions = useActionTranslations();
+  const defaultChildren = children ?? actions.archive;
+
   return (
     <Button
       size={size}
@@ -378,7 +444,7 @@ export function ToolbarArchiveButton({
       className={cn(BUTTON_CATEGORIES.utility, "text-orange-400 flex items-center gap-2 min-w-[100px] justify-start", className)}
     >
       <Archive className={iconSizes.sm} />
-      <span className="hidden md:inline">{children}</span>
+      <span className="hidden md:inline">{defaultChildren}</span>
       {badge && (
         <CommonBadge
           status="company"
@@ -393,13 +459,17 @@ export function ToolbarArchiveButton({
 
 // Communication buttons - Subtle styling
 export function ToolbarCallButton({
-  children = actionLabels.call,
+  children,
   disabled = false,
   onClick,
   className,
   size = 'sm'
 }: BaseButtonProps) {
   const iconSizes = useIconSizes();
+  // ✅ ENTERPRISE: Zero Hardcoded - Use centralized translations
+  const actions = useActionTranslations();
+  const defaultChildren = children ?? actions.call;
+
   return (
     <Button
       size={size}
@@ -408,19 +478,23 @@ export function ToolbarCallButton({
       className={cn(BUTTON_STYLES.variants.call, "flex items-center gap-2 min-w-[100px] justify-start", className)}
     >
       <Phone className={iconSizes.sm} />
-      <span className="hidden md:inline">{children}</span>
+      <span className="hidden md:inline">{defaultChildren}</span>
     </Button>
   );
 }
 
 export function ToolbarEmailButton({
-  children = actionLabels.email,
+  children,
   disabled = false,
   onClick,
   className,
   size = 'sm'
 }: BaseButtonProps) {
   const iconSizes = useIconSizes();
+  // ✅ ENTERPRISE: Zero Hardcoded - Use centralized translations
+  const actions = useActionTranslations();
+  const defaultChildren = children ?? actions.email;
+
   return (
     <Button
       size={size}
@@ -429,19 +503,23 @@ export function ToolbarEmailButton({
       className={cn(BUTTON_STYLES.variants.email, "flex items-center gap-2 min-w-[100px] justify-start", className)}
     >
       <Mail className={iconSizes.sm} />
-      <span className="hidden md:inline">{children}</span>
+      <span className="hidden md:inline">{defaultChildren}</span>
     </Button>
   );
 }
 
 export function ToolbarSMSButton({
-  children = actionLabels.sms,
+  children,
   disabled = false,
   onClick,
   className,
   size = 'sm'
 }: BaseButtonProps) {
   const iconSizes = useIconSizes();
+  // ✅ ENTERPRISE: Zero Hardcoded - Use centralized translations
+  const actions = useActionTranslations();
+  const defaultChildren = children ?? actions.sms;
+
   return (
     <Button
       size={size}
@@ -450,20 +528,24 @@ export function ToolbarSMSButton({
       className={cn(BUTTON_STYLES.variants.sms, "flex items-center gap-2 min-w-[100px] justify-start", className)}
     >
       <MessageSquare className={iconSizes.sm} />
-      <span className="hidden md:inline">{children}</span>
+      <span className="hidden md:inline">{defaultChildren}</span>
     </Button>
   );
 }
 
 // Management buttons - Same dark theme styling as communication
 export function ToolbarExportButton({
-  children = actionLabels.export,
+  children,
   disabled = false,
   onClick,
   className,
   size = 'sm'
 }: BaseButtonProps) {
   const iconSizes = useIconSizes();
+  // ✅ ENTERPRISE: Zero Hardcoded - Use centralized translations
+  const actions = useActionTranslations();
+  const defaultChildren = children ?? actions.export;
+
   return (
     <Button
       size={size}
@@ -472,19 +554,23 @@ export function ToolbarExportButton({
       className={cn(BUTTON_STYLES.variants.export, "flex items-center gap-2 min-w-[100px] justify-start", className)}
     >
       <Download className={iconSizes.sm} />
-      <span className="hidden md:inline">{children}</span>
+      <span className="hidden md:inline">{defaultChildren}</span>
     </Button>
   );
 }
 
 export function ToolbarImportButton({
-  children = actionLabels.import,
+  children,
   disabled = false,
   onClick,
   className,
   size = 'sm'
 }: BaseButtonProps) {
   const iconSizes = useIconSizes();
+  // ✅ ENTERPRISE: Zero Hardcoded - Use centralized translations
+  const actions = useActionTranslations();
+  const defaultChildren = children ?? actions.import;
+
   return (
     <Button
       size={size}
@@ -493,7 +579,7 @@ export function ToolbarImportButton({
       className={cn(BUTTON_STYLES.variants.import, "flex items-center gap-2 min-w-[100px] justify-start", className)}
     >
       <Upload className={iconSizes.sm} />
-      <span className="hidden md:inline">{children}</span>
+      <span className="hidden md:inline">{defaultChildren}</span>
     </Button>
   );
 }
@@ -507,6 +593,8 @@ export function ToolbarSortToggleButton({
   sortDirection = 'asc'
 }: BaseButtonProps & { sortDirection?: 'asc' | 'desc' }) {
   const iconSizes = useIconSizes();
+  // ✅ ENTERPRISE: Zero Hardcoded - Use centralized translations
+  const actions = useActionTranslations();
   const icon = sortDirection === 'asc' ? <ArrowUpAZ className={iconSizes.sm} /> : <ArrowDownZA className={iconSizes.sm} />;
 
   return (
@@ -517,19 +605,23 @@ export function ToolbarSortToggleButton({
       className={cn(BUTTON_STYLES.variants.sort, "flex items-center gap-2 min-w-[100px] justify-start", className)}
     >
       {icon}
-      <span className="hidden md:inline">{actionLabels.sort}</span>
+      <span className="hidden md:inline">{actions.sort}</span>
     </Button>
   );
 }
 
 export function ToolbarHelpButton({
-  children = actionLabels.help,
+  children,
   disabled = false,
   onClick,
   className,
   size = 'sm'
 }: BaseButtonProps) {
   const iconSizes = useIconSizes();
+  // ✅ ENTERPRISE: Zero Hardcoded - Use centralized translations
+  const actions = useActionTranslations();
+  const defaultChildren = children ?? actions.help;
+
   return (
     <Button
       size={size}
@@ -538,7 +630,7 @@ export function ToolbarHelpButton({
       className={cn(BUTTON_STYLES.variants.help, "flex items-center gap-2 min-w-[100px] justify-start", className)}
     >
       <HelpCircle className={iconSizes.sm} />
-      <span className="hidden md:inline">{children}</span>
+      <span className="hidden md:inline">{defaultChildren}</span>
     </Button>
   );
 }
@@ -549,7 +641,7 @@ interface FilterButtonProps extends BaseButtonProps {
 }
 
 export function ToolbarFavoritesButton({
-  children = actionLabels.favorites,
+  children,
   disabled = false,
   onClick,
   className,
@@ -557,6 +649,9 @@ export function ToolbarFavoritesButton({
   active = false
 }: FilterButtonProps) {
   const iconSizes = useIconSizes();
+  // ✅ ENTERPRISE: Zero Hardcoded - Use centralized translations
+  const actions = useActionTranslations();
+  const defaultChildren = children ?? actions.favorites;
   // Active state uses primary color, inactive uses utility (subtle)
   const buttonClassName = active
     ? cn(BUTTON_CATEGORIES.primary, "flex items-center gap-2 min-w-[100px] justify-start", className)
@@ -570,13 +665,13 @@ export function ToolbarFavoritesButton({
       className={buttonClassName}
     >
       <Star className={iconSizes.sm} />
-      <span className="hidden md:inline">{children}</span>
+      <span className="hidden md:inline">{defaultChildren}</span>
     </Button>
   );
 }
 
 export function ToolbarArchivedFilterButton({
-  children = actionLabels.archived,
+  children,
   disabled = false,
   onClick,
   className,
@@ -584,6 +679,9 @@ export function ToolbarArchivedFilterButton({
   active = false
 }: FilterButtonProps) {
   const iconSizes = useIconSizes();
+  // ✅ ENTERPRISE: Zero Hardcoded - Use centralized translations
+  const actions = useActionTranslations();
+  const defaultChildren = children ?? actions.archived;
   // Active state uses primary color, inactive uses utility (subtle)
   const buttonClassName = active
     ? cn(BUTTON_CATEGORIES.primary, "flex items-center gap-2 min-w-[100px] justify-start", className)
@@ -597,20 +695,24 @@ export function ToolbarArchivedFilterButton({
       className={buttonClassName}
     >
       <Archive className={iconSizes.sm} />
-      <span className="hidden md:inline">{children}</span>
+      <span className="hidden md:inline">{defaultChildren}</span>
     </Button>
   );
 }
 
 // Refresh button - Utility action for refreshing data
 export function ToolbarRefreshButton({
-  children = actionLabels.refresh,
+  children,
   disabled = false,
   onClick,
   className,
   size = 'sm'
 }: BaseButtonProps) {
   const iconSizes = useIconSizes();
+  // ✅ ENTERPRISE: Zero Hardcoded - Use centralized translations
+  const actions = useActionTranslations();
+  const defaultChildren = children ?? actions.refresh;
+
   return (
     <Button
       size={size}
@@ -619,7 +721,7 @@ export function ToolbarRefreshButton({
       className={cn(BUTTON_CATEGORIES.utility, "text-cyan-400 flex items-center gap-2 min-w-[100px] justify-start", className)}
     >
       <RefreshCw className={iconSizes.sm} />
-      <span className="hidden md:inline">{children}</span>
+      <span className="hidden md:inline">{defaultChildren}</span>
     </Button>
   );
 }

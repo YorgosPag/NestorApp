@@ -183,8 +183,8 @@ export class OverlayDrawingEngine {
       const vertex = screenVertices[i];
       
       // Check if this grip is hovered or active
-      const isHovered = gripInteractionState?.hovered?.entityId === entityId && gripInteractionState.hovered.gripIndex === i;
-      const isActive = gripInteractionState?.active?.entityId === entityId && gripInteractionState.active.gripIndex === i;
+      const isHovered = gripInteractionState?.hovered?.entityId === entityId && gripInteractionState?.hovered?.gripIndex === i;
+      const isActive = gripInteractionState?.active?.entityId === entityId && gripInteractionState?.active?.gripIndex === i;
       
       // Choose color based on state
       if (isActive) {
@@ -218,8 +218,8 @@ export class OverlayDrawingEngine {
         
         // Check if this midpoint grip is hovered or active
         const midpointGripIndex = numVertices + i;
-        const isHovered = gripInteractionState?.hovered?.entityId === entityId && gripInteractionState.hovered.gripIndex === midpointGripIndex;
-        const isActive = gripInteractionState?.active?.entityId === entityId && gripInteractionState.active.gripIndex === midpointGripIndex;
+        const isHovered = gripInteractionState?.hovered?.entityId === entityId && gripInteractionState?.hovered?.gripIndex === midpointGripIndex;
+        const isActive = gripInteractionState?.active?.entityId === entityId && gripInteractionState?.active?.gripIndex === midpointGripIndex;
         
         // Choose color based on state
         if (isActive) {

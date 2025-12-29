@@ -115,7 +115,7 @@ export const useOverlayDrawing = ({
         polygon: draftPolygon, // ✅ Keep nested format
         status: overlayStatus,
         label: `${STATUS_ENGLISH_LABELS[overlayStatus]} ${Date.now()}`,
-        linked: null,
+        linked: undefined, // ✅ ENTERPRISE: Use undefined instead of null for optional property
       });
 
       // Clear draft and auto-select new overlay
@@ -138,9 +138,10 @@ export const useOverlayDrawing = ({
       ? (overlay.polygon as number[][])
       : Array.from({ length: overlay.polygon.length / 2 }, (_, i) => [overlay.polygon[i*2], overlay.polygon[i*2+1]]);
 
-    const newNested = nested.map((v, i) => i === vertexIndex ? [newPoint.x, newPoint.y] : v);
+    // ✅ ENTERPRISE: Explicit tuple type for Point2D coordinates
+    const newNested = nested.map((v, i) => i === vertexIndex ? [newPoint.x, newPoint.y] as [number, number] : v);
 
-    overlayStore.update(overlayId, { polygon: newNested }); // ✅ Save in nested format
+    overlayStore.update(overlayId, { polygon: newNested as [number, number][] }); // ✅ Save in nested format
   }, [overlayStore]);
 
   // Handle entire region drag & drop (for moving whole polygons)
@@ -149,7 +150,8 @@ export const useOverlayDrawing = ({
     if (!overlay || !updates.vertices) return;
 
     // Convert Point2D[] to nested number[][] format for renderer compatibility
-    const nested = updates.vertices.map(v => [v.x, v.y]);
+    // ✅ ENTERPRISE: Explicit tuple type for Point2D coordinates
+    const nested = updates.vertices.map(v => [v.x, v.y] as [number, number]);
 
     overlayStore.update(regionId, { polygon: nested });
   }, [overlayStore]);

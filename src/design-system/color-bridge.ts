@@ -30,6 +30,16 @@ export const COLOR_BRIDGE = {
     card: 'bg-card',               // Card backgrounds → --card
     surface: 'bg-card',            // Surface/elevated → --card
 
+    // ✅ ENTERPRISE MISSING MAPPINGS - Required by DXF-Viewer components
+    muted: 'bg-muted',             // Muted backgrounds
+    skeleton: 'bg-muted',          // Loading skeleton backgrounds
+    tertiary: 'bg-slate-100',      // Tertiary backgrounds
+    elevated: 'bg-card',           // Elevated surfaces
+    selection: 'bg-accent',        // Selected states
+    backgroundSecondary: 'bg-muted', // Secondary background surfaces
+    overlay: 'bg-background/95',   // Overlay backgrounds
+    accent: 'bg-accent',           // Accent backgrounds
+
     // Interactive states
     hover: 'bg-accent',            // Hover state → --accent
     active: 'bg-accent/80',        // Active state → --accent with opacity
@@ -40,15 +50,29 @@ export const COLOR_BRIDGE = {
     warning: 'bg-yellow-50',       // Warning background
     info: 'bg-blue-50',            // Info background
 
+    // ✅ ENTERPRISE MISSING STATUS VARIANTS
+    danger: 'bg-red-50',           // Danger background (alias for error)
+    successHover: 'bg-green-100',  // Success hover state
+    dangerHover: 'bg-red-100',     // Danger hover state
+
     // Subtle variants
     successSubtle: 'bg-green-50',  // Soft success
     errorSubtle: 'bg-red-50',      // Soft error
     infoSubtle: 'bg-blue-50',      // Soft info
     neutralSubtle: 'bg-muted',     // Soft neutral
+    warningSubtle: 'bg-yellow-50', // Soft warning
+    errorLight: 'bg-red-100',      // Light error background
+    warningLight: 'bg-yellow-100', // Light warning background
 
     // Special backgrounds
     light: 'bg-card',              // ✅ ENTERPRISE: Light surface (was white, now beautiful blue)
     transparent: 'bg-transparent', // Transparent
+
+    // ✅ GOOGLE-STYLE FIX: Missing constraint colors
+    yellow: 'bg-yellow-100',       // Yellow constraint backgrounds
+    orange: 'bg-orange-100',       // Orange constraint backgrounds
+    purple: 'bg-purple-100',       // Purple constraint backgrounds
+    magenta: 'bg-pink-100',        // Magenta constraint backgrounds (pink is closest)
   },
 
   /** 📝 Text Color Mappings */
@@ -58,6 +82,8 @@ export const COLOR_BRIDGE = {
     secondary: 'text-muted-foreground',   // Secondary text → --muted-foreground
     muted: 'text-muted-foreground',       // Muted text → --muted-foreground
     inverse: 'text-primary-foreground',   // Text on dark backgrounds
+    inverted: 'text-primary-foreground',  // ✅ ENTERPRISE: Alias for inverse (used in DestinationWizard)
+    foreground: 'text-foreground',        // ✅ ENTERPRISE: Direct foreground mapping
 
     // Status text colors
     success: 'text-green-600',            // Success text
@@ -69,6 +95,17 @@ export const COLOR_BRIDGE = {
     // Strong text variants
     successStrong: 'text-green-800',      // Strong success text
     errorStrong: 'text-red-800',          // Strong error text
+
+    // ✅ ENTERPRISE MISSING VARIANTS - ADDED FOR COMPONENT COMPATIBILITY
+    danger: 'text-red-600',               // Danger text (alias for error)
+    accent: 'text-blue-600',              // Accent text (alias for info)
+    tertiary: 'text-slate-500',           // Tertiary text για DynamicInput components
+
+    // ✅ GOOGLE-STYLE FIX: Missing constraint text colors
+    yellow: 'text-yellow-600',            // Yellow constraint text
+    orange: 'text-orange-600',            // Orange constraint text
+    purple: 'text-purple-600',            // Purple constraint text
+    magenta: 'text-pink-600',             // Magenta constraint text (pink is closest)
   },
 
   /** 🔲 Border Color Mappings */
@@ -82,12 +119,27 @@ export const COLOR_BRIDGE = {
     // Interactive borders
     focus: 'border-ring',                 // Focus border → --ring
     input: 'border-input',                // Input border → --input
+    checkbox: 'border-[1px] border-[rgb(229, 231, 235)] rounded-md', // ✅ ENTERPRISE: Checkbox borders
 
     // Status borders
     success: 'border-green-300',          // Success border
     error: 'border-red-300',              // Error border
     warning: 'border-yellow-300',         // Warning border
     info: 'border-blue-300',              // Info border
+  },
+
+  /** 💍 Ring Color Mappings (Focus States) */
+  ring: {
+    // Core rings
+    default: 'ring-ring',                 // Default ring → --ring
+    muted: 'ring-ring/50',               // Muted ring → --ring with opacity
+    primary: 'ring-ring',                // Primary ring → --ring
+
+    // Status rings
+    success: 'ring-green-500',           // Success ring
+    error: 'ring-red-500',               // Error ring
+    warning: 'ring-yellow-500',          // Warning ring
+    info: 'ring-blue-500',               // Info ring
   },
 
   /** 🎯 Interactive State Mappings (Legacy Support) */

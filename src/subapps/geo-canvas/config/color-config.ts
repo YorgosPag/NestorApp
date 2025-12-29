@@ -233,6 +233,12 @@ export const UI_SYSTEM_COLORS = {
   OVERLAY_LIGHT: 'rgba(0, 0, 0, 0.8)',    // Dark overlay for light theme
   OVERLAY_DARK: 'rgba(0, 0, 0, 0.9)',     // Darker overlay for dark theme
 
+  // Shadow system
+  SHADOW_SM: '0 1px 2px rgba(0, 0, 0, 0.1)',  // Small shadow
+  SHADOW_MD: '0 4px 6px rgba(0, 0, 0, 0.1)',  // Medium shadow
+  SHADOW_LG: '0 10px 15px rgba(0, 0, 0, 0.1)', // Large shadow
+  BORDER: '#ddd',                              // Border color
+
   // Performance component colors
   SCORE_EXCELLENT: '#28A745',             // Green performance score
   SCORE_GOOD: '#3B82F6',                  // Blue performance score

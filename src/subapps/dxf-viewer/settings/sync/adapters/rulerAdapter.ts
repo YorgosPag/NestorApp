@@ -28,7 +28,7 @@ export const rulerAdapter: RulerPort = {
     const state = globalRulerStore.settings;
     return {
       enabled: state.enabled,
-      units: state.units,
+      units: state.unit,
       color: state.color,
       opacity: state.opacity
     };
@@ -56,7 +56,7 @@ export const rulerAdapter: RulerPort = {
     return globalRulerStore.subscribe((state) => {
       handler({
         enabled: state.enabled,
-        units: state.units,
+        units: state.unit,
         color: state.color,
         opacity: state.opacity
       });

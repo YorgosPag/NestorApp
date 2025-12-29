@@ -24,9 +24,9 @@ import {
 
 export const getStatusColor = (status: 'active' | 'inactive' | 'error') => {
   switch (status) {
-    case 'active': return colors.semantic.success.main;
+    case 'active': return colors.green[500];
     case 'inactive': return colors.text.tertiary;
-    case 'error': return colors.semantic.error.main;
+    case 'error': return colors.red[500];
     default: return colors.text.tertiary;
   }
 };
@@ -39,14 +39,23 @@ export const getStatusStyles = (status: 'active' | 'inactive' | 'error') => ({
 export const getCardStyles = (isSelected: boolean) => ({
   ...configurationComponents.configurationCard.base,
   ...(isSelected ? {
-    backgroundColor: colors.primary[50],
+    backgroundColor: colors.blue[300],
     borderColor: colors.primary[500]
   } : {})
 });
 
 export const getRuleStatusBadgeStyles = (isEnabled: boolean) => ({
-  ...configurationComponents.rulesSection.statusBadge,
-  ...(isEnabled ? configurationComponents.rulesSection.statusActive : configurationComponents.rulesSection.statusInactive)
+  padding: `${spacing.xs} ${spacing.sm}`,
+  borderRadius: borderRadius.sm,
+  fontSize: typography.fontSize.xs,
+  fontWeight: typography.fontWeight.medium,
+  ...(isEnabled ? {
+    backgroundColor: colors.green[300],
+    color: colors.green[600]
+  } : {
+    backgroundColor: colors.gray[100],
+    color: colors.gray[500]
+  })
 });
 
 // ============================================================================
@@ -57,14 +66,14 @@ export const getConfigurationCardHoverHandlers = () => ({
   onMouseEnter: (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
     target.style.backgroundColor = colors.gray[50];
-    target.style.borderColor = colors.gray[300];
+    target.style.borderColor = colors.gray[500];
   },
   onMouseLeave: (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
     const isSelected = target.getAttribute('data-selected') === 'true';
 
     if (isSelected) {
-      target.style.backgroundColor = colors.primary[50];
+      target.style.backgroundColor = colors.blue[300];
       target.style.borderColor = colors.primary[500];
     } else {
       target.style.backgroundColor = colors.background.primary;

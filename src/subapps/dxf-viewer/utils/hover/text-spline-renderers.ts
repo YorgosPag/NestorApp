@@ -6,6 +6,7 @@
 import { renderGreenDots } from './render-utils';
 import { renderPolylineHover } from './polyline-renderer';
 import type { Point2D } from '../../rendering/types/Types';
+import type { HoverRenderContext } from './types';
 import { extractAngleMeasurementPoints } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { UI_COLORS } from '../../config/color-config';
 

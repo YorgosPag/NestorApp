@@ -462,7 +462,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                 </SelectTrigger>
                 <SelectContent>
                   {companies?.map(company => (
-                    <SelectItem key={company.id} value={company.id}>
+                    <SelectItem key={company.id} value={company.id!}>
                       <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
                         <BuildingIcon className={`${getIconSize('field')} ${getModalIconColor('info')}`} />
                         <span>{company.companyName}</span>

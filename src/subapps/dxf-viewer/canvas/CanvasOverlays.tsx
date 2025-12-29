@@ -47,18 +47,18 @@ export default function CanvasOverlays({
   transform,
   enabledSnapModes,
   activeTool = 'select',
-  tempPoints = null,
+  tempPoints = [] as Point[],
   marqueeOverlayRef,
 }: Props) {
-  const { updatePosition, updateViewport, setWorldPosition, settings } = useCursor();
+  const { updatePosition, updateViewport, updateWorldPosition, settings } = useCursor();
 
 
   // Update cursor system with mouse coordinates
   useEffect(() => {
     console.log('🖱️ [CanvasOverlays] Mouse position updated:', { mouseCss, mouseWorld });
     updatePosition(mouseCss);
-    setWorldPosition(mouseWorld);
-  }, [mouseCss, mouseWorld, updatePosition, setWorldPosition]);
+    updateWorldPosition(mouseWorld);
+  }, [mouseCss, mouseWorld, updatePosition, updateWorldPosition]);
 
   // Update cursor system with viewport
   useEffect(() => {
@@ -130,7 +130,7 @@ export default function CanvasOverlays({
   });
 
   return (
-    <div style={canvasUI.positioning.layers.overlayBase}>
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1000 }}>
       <CrosshairOverlay
         isActive={crosshairActive}  // Active in layering mode OR when mouse position available
         cursorPosition={crosshairPosition}

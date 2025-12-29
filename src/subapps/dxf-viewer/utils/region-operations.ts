@@ -4,6 +4,17 @@ import { calculateRegionArea, calculateRegionPerimeter } from '../types/overlay'
 import { getStatusColors } from '../config/color-mapping';
 import { UI_COLORS } from '../config/color-config';
 
+// Local interface for layer management (different from the centralized OverlayLayer union type)
+interface RegionLayerObject {
+  id: string;
+  name: string;
+  visible: boolean;
+  locked: boolean;
+  opacity: number;
+  regionIds: string[];
+  order: number;
+}
+
 /**
  * Utility functions for region geometry and validation
  */
@@ -70,7 +81,7 @@ export class RegionOperations {
     return generateRandomId('region', 7); // Same length as original (slice(2, 9) = 7 chars)
   }
 
-  static createDefaultLayer(): OverlayLayer {
+  static createDefaultLayer(): RegionLayerObject {
     return {
       id: 'default',
       name: 'Default Layer',
@@ -99,6 +110,7 @@ export class RegionOperations {
     return {
       id,
       levelId,
+      layer: 'base', // Default to 'base' layer (from centralized OverlayLayer type)
       color: getStatusColors(status)?.fill || UI_COLORS.BUTTON_PRIMARY,
       opacity: 0.7,
       status,
@@ -135,10 +147,10 @@ export class RegionOperations {
   }
 
   static addRegionToLayer(
-    layers: Record<string, OverlayLayer>,
+    layers: Record<string, RegionLayerObject>,
     layerId: string,
     regionId: string
-  ): Record<string, OverlayLayer> {
+  ): Record<string, RegionLayerObject> {
     const layer = layers[layerId] || RegionOperations.createDefaultLayer();
     
     return {
@@ -153,9 +165,9 @@ export class RegionOperations {
   }
 
   static removeRegionFromLayers(
-    layers: Record<string, OverlayLayer>,
+    layers: Record<string, RegionLayerObject>,
     regionId: string
-  ): Record<string, OverlayLayer> {
+  ): Record<string, RegionLayerObject> {
     const updatedLayers = { ...layers };
     
     Object.keys(updatedLayers).forEach(layerId => {

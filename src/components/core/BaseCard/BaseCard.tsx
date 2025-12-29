@@ -34,45 +34,45 @@ export interface CardStatus {
   color?: string;
 }
 
-export interface BaseCardProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface BaseCardProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'onSelect'> {
   // Selection state
   isSelected?: boolean;
   onSelect?: (selected: boolean) => void;
   selectable?: boolean;
-  
+
   // Favorite functionality
   isFavorite?: boolean;
   onFavoriteToggle?: (favorite: boolean) => void;
   showFavorite?: boolean;
-  
+
   // Status and badges
   status?: CardStatus;
   badges?: CardStatus[];
-  
+
   // Actions
   actions?: CardAction[];
   primaryAction?: CardAction;
-  
+
   // Visual options
   hoverEffects?: boolean;
   variant?: 'default' | 'bordered' | 'elevated' | 'minimal';
   size?: 'sm' | 'md' | 'lg';
-  
+
   // Content slots
   header?: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  
+
   // Image/media
   image?: {
     src: string;
     alt: string;
     aspectRatio?: 'square' | 'video' | 'auto';
   };
-  
+
   // Loading state
   loading?: boolean;
-  
+
   // Accessibility
   role?: string;
   'aria-label'?: string;
@@ -110,7 +110,7 @@ const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(({
   const cardVariants = {
     default: 'border bg-card text-card-foreground shadow-sm',
     bordered: 'border bg-card text-card-foreground',
-    elevated: `border-0 bg-card text-card-foreground shadow-md ring-1 ${colors.ring.muted}`,
+    elevated: `border-0 bg-card text-card-foreground shadow-md ring-1 ring-ring/50`,
     minimal: 'border-0 bg-transparent text-foreground shadow-none',
   };
 

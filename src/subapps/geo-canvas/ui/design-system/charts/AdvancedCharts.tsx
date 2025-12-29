@@ -12,6 +12,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { chartComponents } from '@/styles/design-tokens';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
+import { GEO_COLORS } from '../../config/color-config';
 
 // ============================================================================
 // CHART TYPES και INTERFACES
@@ -87,27 +88,18 @@ export interface AreaChartProps extends ChartProps {
 // ============================================================================
 
 const getChartColors = (semanticColors: ReturnType<typeof useSemanticColors>) => ({
-  primary: 'rgb(var(--primary))',
-  secondary: 'rgb(var(--secondary))',
-  accent: 'rgb(var(--accent))',
-  danger: 'rgb(var(--destructive))',
-  text: 'rgb(var(--foreground))',
-  textSecondary: 'rgb(var(--muted-foreground))',
-  grid: 'rgb(var(--border))',
-  background: 'rgb(var(--background))'
+  primary: GEO_COLORS.UI.PRIMARY,
+  secondary: GEO_COLORS.UI.SECONDARY,
+  accent: GEO_COLORS.UI.ACCENT,
+  danger: GEO_COLORS.UI.DESTRUCTIVE,
+  text: GEO_COLORS.UI.FOREGROUND,
+  textSecondary: GEO_COLORS.UI.MUTED_FOREGROUND,
+  grid: GEO_COLORS.UI.BORDER,
+  background: GEO_COLORS.UI.BACKGROUND
 });
 
 const generateColorPalette = (count: number, semanticColors: ReturnType<typeof useSemanticColors>): string[] => {
-  const baseColors = [
-    'rgb(var(--primary))', // Primary
-    'rgb(var(--secondary))', // Secondary
-    'rgb(var(--accent))', // Accent
-    'rgb(var(--destructive))', // Destructive
-    'rgb(var(--muted))', // Muted
-    'rgb(var(--border))', // Border
-    'rgb(var(--ring))', // Ring
-    'rgb(var(--chart-1))', // Chart 1
-  ];
+  const baseColors = GEO_COLORS.CHART;
 
   const colors: string[] = [];
   for (let i = 0; i < count; i++) {

@@ -100,10 +100,18 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 // Handle worker errors
 self.onerror = (error) => {
   console.error('❌ Worker: Global error:', error);
-  
+
+  // ✅ ENTERPRISE: Type-safe error message extraction
+  let errorMessage = 'Unknown error';
+  if (typeof error === 'string') {
+    errorMessage = error;
+  } else if (error && typeof error === 'object' && 'message' in error) {
+    errorMessage = (error as ErrorEvent).message || 'Unknown error';
+  }
+
   self.postMessage({
     success: false,
-    error: 'Worker global error: ' + (error.message || 'Unknown error'),
+    error: 'Worker global error: ' + errorMessage,
     stats: { entityCount: 0, layerCount: 0, parseTimeMs: 0 }
   });
 };

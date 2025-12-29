@@ -163,3 +163,70 @@ export interface StatusTransitionRule {
 export interface DomainTransitionRules {
   [domain: string]: StatusTransitionRule[];
 }
+
+// ===== COMPONENT PROPS INTERFACES - MISSING EXPORTS =====
+
+/**
+ * Unified Badge Props - Main badge component interface
+ */
+export interface UnifiedBadgeProps extends BadgeFactoryOptions {
+  className?: string;
+}
+
+/**
+ * Project Badge Props - Project-specific badge component
+ */
+export interface ProjectBadgeProps extends BadgeFactoryOptions {
+  projectId?: string;
+  className?: string;
+}
+
+/**
+ * Building Badge Props - Building-specific badge component
+ */
+export interface BuildingBadgeProps extends BadgeFactoryOptions {
+  buildingId?: string;
+  className?: string;
+}
+
+/**
+ * Contact Badge Props - Contact-specific badge component
+ */
+export interface ContactBadgeProps extends BadgeFactoryOptions {
+  contactId?: string;
+  className?: string;
+}
+
+/**
+ * Property Badge Props - Property-specific badge component
+ */
+export interface PropertyBadgeProps extends BadgeFactoryOptions {
+  propertyId?: string;
+  className?: string;
+}
+
+/**
+ * Unit Badge Props - Unit-specific badge component
+ */
+export interface UnitBadgeProps extends BadgeFactoryOptions {
+  unitId?: string;
+  className?: string;
+}
+
+/**
+ * Common Badge Props - Shared badge properties
+ */
+export interface CommonBadgeProps extends BadgeFactoryOptions {
+  id?: string;
+  className?: string;
+}
+
+/**
+ * Badge Group Props - Multiple badges container
+ */
+export interface BadgeGroupProps {
+  badges: BadgeFactoryOptions[];
+  className?: string;
+  orientation?: 'horizontal' | 'vertical';
+  spacing?: 'sm' | 'md' | 'lg';
+}

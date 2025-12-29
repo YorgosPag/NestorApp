@@ -32,6 +32,7 @@ import {
   shadows,
   zIndex
 } from '../../../styles/design-tokens';
+import { GEO_COLORS, withOpacity } from '../config/color-config';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
@@ -276,7 +277,7 @@ const labelStyles: LabelStylesType = {
     fontSize: spacing.component.gap.sm,
     fontWeight: 'bold' as const,
     color: colors.text.inverse,
-    backgroundColor: `rgba(0, 0, 0, ${opacity * 0.7})`,
+    backgroundColor: withOpacity(GEO_COLORS.BLACK, opacity * 0.7),
     padding: `${spacing.xs} ${spacing.component.gap.sm}`,
     borderRadius: spacing.xs,
     whiteSpace: 'nowrap' as const,

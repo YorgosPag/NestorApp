@@ -49,9 +49,9 @@ export class ExtensionSnapEngine extends BaseSnapEngine {
         extensionPoints.push(...lineExtensions.map(p => ({point: p, type: 'Line'})));
       }
     } else if (entityType === 'polyline' || entityType === 'lwpolyline') {
-      const points = entity.points || ('vertices' in entity ? entity.vertices : undefined);
+      const points = (entity.points || ('vertices' in entity ? entity.vertices : undefined)) as Point2D[] | undefined;
       const isClosed = 'closed' in entity ? entity.closed : false;
-      
+
       if (points && points.length > 1 && !isClosed) {
         // Extend first and last segments of open polylines
         const firstSegmentExtensions = this.getLineExtensions(points[0], points[1], cursorPoint, maxExtensionDistance);

@@ -7,6 +7,7 @@
  */
 
 import { performance, PerformanceObserver } from 'perf_hooks';
+import { GEO_COLORS } from '../config/color-config';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -1478,16 +1479,16 @@ export class GeoAlertPerformanceProfiler {
       <title>Performance Profile Report - ${session.name}</title>
       <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; }
+        .header { background: linear-gradient(135deg, ${GEO_COLORS.MONITORING.DASHBOARD_PRIMARY} 0%, ${GEO_COLORS.MONITORING.DASHBOARD_SECONDARY} 100%); color: ${GEO_COLORS.MONITORING.DASHBOARD_TEXT}; padding: 20px; border-radius: 8px; }
         .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 20px 0; }
-        .metric-card { background: hsl(var(--card)); padding: 15px; border-radius: 8px; border-left: 4px solid #007bff; }
-        .score { font-size: 2em; font-weight: bold; color: #28a745; }
-        .bottleneck { background: hsl(var(--muted)); padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #ffc107; }
-        .recommendation { background: hsl(var(--accent)); padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #17a2b8; }
-        .critical { border-left-color: #dc3545; }
-        .high { border-left-color: #fd7e14; }
-        .medium { border-left-color: #ffc107; }
-        .low { border-left-color: #28a745; }
+        .metric-card { background: hsl(var(--card)); padding: 15px; border-radius: 8px; border-left: 4px solid ${GEO_COLORS.MONITORING.INFO}; }
+        .score { font-size: 2em; font-weight: bold; color: ${GEO_COLORS.MONITORING.SUCCESS}; }
+        .bottleneck { background: hsl(var(--muted)); padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid ${GEO_COLORS.MONITORING.WARNING}; }
+        .recommendation { background: hsl(var(--accent)); padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid ${GEO_COLORS.MONITORING.INFO}; }
+        .critical { border-left-color: ${GEO_COLORS.MONITORING.ERROR}; }
+        .high { border-left-color: ${GEO_COLORS.MONITORING.WARNING}; }
+        .medium { border-left-color: ${GEO_COLORS.MONITORING.WARNING}; }
+        .low { border-left-color: ${GEO_COLORS.MONITORING.SUCCESS}; }
       </style>
     </head>
     <body>

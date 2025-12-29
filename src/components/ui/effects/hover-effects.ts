@@ -201,7 +201,13 @@ export const HOVER_TEXT_EFFECTS = {
   SKY: 'text-sky-600 hover:text-sky-700',
 
   /** Blue light text για navigation links */
-  BLUE_LIGHT: 'text-blue-400 hover:text-blue-300'
+  BLUE_LIGHT: 'text-blue-400 hover:text-blue-300',
+
+  /** Primary color hover - brand blue */
+  TO_PRIMARY: 'hover:text-blue-500',
+
+  /** Lighter text hover effect */
+  LIGHTER: 'hover:text-gray-400'
 } as const;
 
 /**
@@ -408,7 +414,40 @@ export const HOVER_BACKGROUND_EFFECTS = {
   TOOLBAR_DANGER: 'hover:bg-red-800 hover:border-hsl(var(--border-error))',
 
   /** Success button hover (green) */
-  SUCCESS_BUTTON: 'hover:bg-green-500'
+  SUCCESS_BUTTON: 'hover:bg-green-500',
+
+  /** Warning button hover (yellow/amber) */
+  WARNING_BUTTON: 'hover:bg-yellow-500',
+
+  /** Success state background */
+  SUCCESS: 'hover:bg-green-100',
+
+  /** Cyan background hover */
+  CYAN: 'hover:bg-cyan-100',
+
+  /** Destructive background hover */
+  DESTRUCTIVE: 'hover:bg-red-100',
+
+  /** Darker background hover */
+  DARKER: 'hover:bg-gray-800',
+
+  /** Gray dark alpha background */
+  GRAY_DARK_ALPHA: 'hover:bg-gray-800/50',
+
+  /** Gray background hover */
+  GRAY: 'hover:bg-gray-100',
+
+  /** Success subtle background */
+  SUCCESS_SUBTLE: 'hover:bg-green-50',
+
+  /** Muted dark background */
+  MUTED_DARK: 'hover:bg-gray-700',
+
+  /** Red darker background */
+  RED_DARKER: 'hover:bg-red-800',
+
+  /** Blue darker background */
+  BLUE_DARKER: 'hover:bg-blue-800'
 } as const;
 
 /**

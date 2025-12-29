@@ -226,6 +226,16 @@ export class UIRendererComposite {
   }
 
   /**
+   * Update rendering options
+   */
+  updateOptions(newOptions: Partial<UIRenderOptions>): void {
+    this.options = {
+      ...this.options,
+      ...newOptions
+    };
+  }
+
+  /**
    * Clear all cached renderers
    */
   clearCache(): void {

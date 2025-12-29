@@ -7,11 +7,10 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { useDxfSettingsStore } from '../stores/DxfSettingsStore';
 // ✅ UNIFIED TYPES: Μετά την ενοποίηση, όλα χρησιμοποιούν το ίδιο unified type
-import type { LineSettings, EntityId, LineCapStyle, LineJoinStyle } from '../settings-core/types';
+import type { LineSettings, TextSettings, GripSettings, EntityId, LineCapStyle, LineJoinStyle } from '../settings-core/types';
 // ✅ ENTERPRISE: Import centralized colors
 import { UI_COLORS } from '../config/color-config';
 import type { TextSettings as LegacyTextSettings } from '../contexts/TextSettingsContext';
-import type { GripSettings as LegacyGripSettings } from '../contexts/GripSettingsContext';
 
 /**
  * ✅ SIMPLIFIED: Μετά την ενοποίηση, δεν χρειάζεται conversion - όλα είναι ίδιο type
@@ -21,7 +20,7 @@ function zustandToLegacyLine(settings: LineSettings): LineSettings {
     enabled: true,
     lineType: settings.lineType,
     lineWidth: settings.lineWidth,
-    color: settings.lineColor,
+    color: settings.color,
     opacity: settings.opacity,
     dashScale: settings.dashScale || 1.0,
     dashOffset: settings.dashOffset || 0,
@@ -43,11 +42,11 @@ function zustandToLegacyLine(settings: LineSettings): LineSettings {
 /**
  * Μετατρέπει Legacy LineSettings σε Zustand format
  */
-function legacyToZustandLine(settings: LineSettings): Partial<LineSettings> {
+function legacyToZustandLine(settings: Partial<LineSettings>): Partial<LineSettings> {
   return {
     lineType: settings.lineType,
     lineWidth: settings.lineWidth,
-    lineColor: settings.color,
+    color: settings.color,
     opacity: settings.opacity,
     dashScale: settings.dashScale,
     dashOffset: settings.dashOffset,
@@ -171,10 +170,10 @@ export function useZustandAsTextSettings() {
     fontFamily: store.general.text.fontFamily,
     fontSize: store.general.text.fontSize,
     color: store.general.text.color,
-    isBold: store.general.text.bold,
-    isItalic: store.general.text.italic,
-    isUnderline: store.general.text.underline,
-    isStrikethrough: store.general.text.strikethrough,
+    isBold: store.general.text.isBold,
+    isItalic: store.general.text.isItalic,
+    isUnderline: store.general.text.isUnderline,
+    isStrikethrough: store.general.text.isStrikethrough,
     isSuperscript: false,
     isSubscript: false
   }), [store.general.text]);
@@ -184,10 +183,10 @@ export function useZustandAsTextSettings() {
       fontFamily: updates.fontFamily,
       fontSize: updates.fontSize,
       color: updates.color,
-      bold: updates.isBold,
-      italic: updates.isItalic,
-      underline: updates.isUnderline,
-      strikethrough: updates.isStrikethrough
+      isBold: updates.isBold,
+      isItalic: updates.isItalic,
+      isUnderline: updates.isUnderline,
+      isStrikethrough: updates.isStrikethrough
     });
   }, [store]);
 
@@ -203,18 +202,13 @@ export function useZustandAsTextSettings() {
 export function useZustandAsGripSettings() {
   const store = useDxfSettingsStore();
 
-  const settings: LegacyGripSettings = useMemo(() => ({
+  const settings: GripSettings = useMemo(() => ({
     enabled: store.general.grip.enabled,
     gripSize: store.general.grip.gripSize,
     pickBoxSize: store.general.grip.pickBoxSize,
     apertureSize: store.general.grip.apertureSize,
     opacity: store.general.grip.opacity,
-    colors: {
-      cold: store.general.grip.coldColor,
-      warm: store.general.grip.warmColor,
-      hot: store.general.grip.hotColor,
-      contour: store.general.grip.contourColor
-    },
+    colors: store.general.grip.colors,
     showAperture: store.general.grip.showAperture,
     multiGripEdit: store.general.grip.multiGripEdit,
     snapToGrips: store.general.grip.snapToGrips,
@@ -224,17 +218,14 @@ export function useZustandAsGripSettings() {
     maxGripsPerEntity: store.general.grip.maxGripsPerEntity
   }), [store.general.grip]);
 
-  const updateSettings = useCallback((updates: Partial<LegacyGripSettings>) => {
+  const updateSettings = useCallback((updates: Partial<GripSettings>) => {
     store.setGeneralGrip({
       enabled: updates.enabled,
       gripSize: updates.gripSize,
       pickBoxSize: updates.pickBoxSize,
       apertureSize: updates.apertureSize,
       opacity: updates.opacity,
-      coldColor: updates.colors?.cold,
-      warmColor: updates.colors?.warm,
-      hotColor: updates.colors?.hot,
-      contourColor: updates.colors?.contour,
+      colors: updates.colors,
       showAperture: updates.showAperture,
       multiGripEdit: updates.multiGripEdit,
       snapToGrips: updates.snapToGrips,

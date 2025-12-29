@@ -32,6 +32,13 @@ export const MODAL_SELECT_ACTION_BUTTONS_LABELS = {
   delete: 'Διαγραφή',
   remove: 'Αφαίρεση',
   archive: 'Αρχειοθέτηση',
+  restore: 'Επαναφορά',
+
+  // Loading States για Actions
+  save_loading: 'Αποθήκευση...',
+  delete_loading: 'Διαγραφή...',
+  archive_loading: 'Αρχειοθέτηση...',
+  restore_loading: 'Επαναφορά...',
 
   // Utility Actions
   refresh: 'Ανανέωση',
@@ -45,6 +52,7 @@ export const MODAL_SELECT_ACTION_BUTTONS_LABELS = {
   call: 'Κλήση',
   email: 'Email',
   message: 'Μήνυμα',
+  sms: 'SMS',
 
   // Navigation Actions
   back: 'Πίσω',
@@ -59,6 +67,11 @@ export const MODAL_SELECT_ACTION_BUTTONS_LABELS = {
   // Sorting Actions
   sort_asc: 'Αύξουσα Ταξινόμηση',
   sort_desc: 'Φθίνουσα Ταξινόμηση',
+  sort: 'Ταξινόμηση',
+
+  // Filter Actions
+  favorites: 'Αγαπημένα',
+  archived: 'Αρχειοθετημένα',
 
   // Help Actions
   help: 'Βοήθεια',

@@ -101,8 +101,8 @@ export const DEFAULT_SELECTION_STATE: SelectionState = {
   ghostPreview: false,
 };
 
-// Default filter state (matching original implementation)
-const DEFAULT_VISIBLE_STATUSES: RegionStatus[] = ['draft', 'active', 'for-sale', 'for-rent', 'reserved', 'sold'];
+// Default filter state (using valid PropertyStatus values)
+const DEFAULT_VISIBLE_STATUSES: RegionStatus[] = ['for-sale', 'for-rent', 'reserved', 'sold', 'coming-soon', 'under-negotiation'];
 const DEFAULT_VISIBLE_UNIT_TYPES: UnitType[] = ['studio', '1BR', '2BR', '3BR', 'maisonette', 'store', 'office', 'other'];
 
 export const DEFAULT_FILTER_STATE: FilterState = {

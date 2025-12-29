@@ -10,19 +10,15 @@ export * from './config';
 export * from './utils';
 
 // Hooks (can be imported safely)
-export { 
-  useRulersGrid, 
-  useRulerState, 
+export {
+  useRulersGrid,
+  useRulerState,
   useGridState,
   useSnapState,
   useOriginState,
   useRulersGridCalculations,
   useRulersGridDisplay,
-  useRulersGridSettings,
-  // Legacy compatibility hooks
-  useRulers,
-  useGrid,
-  useRulersAndGrid
+  useRulersGridSettings
 } from './useRulersGrid';
 
 // Components need to be imported from .tsx files directly

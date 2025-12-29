@@ -4,7 +4,7 @@
  */
 
 import type { Point2D } from '../../types/Types';
-import type { EntityModel } from '../../types/Types';
+import type { EntityModel, AngleMeasurementEntity } from '../../types/Types';
 import { UI_COLORS } from '../../../config/color-config';
 import { renderStyledText } from '../../../hooks/useTextPreviewStyle';
 
@@ -17,10 +17,14 @@ export function extractAngleMeasurementPoints(entity: EntityModel): {
   point2: Point2D;
   angle: number;
 } | null {
-  const vertex = entity.vertex as Point2D;
-  const point1 = entity.point1 as Point2D;
-  const point2 = entity.point2 as Point2D;
-  const angle = entity.angle as number;
+  // ✅ ENTERPRISE: Type guard for angle measurement entity
+  if (entity.type !== 'angle-measurement') return null;
+
+  const angleEntity = entity as AngleMeasurementEntity;
+  const vertex = angleEntity.vertex;
+  const point1 = angleEntity.point1;
+  const point2 = angleEntity.point2;
+  const angle = angleEntity.angle;
   
   if (!vertex || !point1 || !point2) return null;
   

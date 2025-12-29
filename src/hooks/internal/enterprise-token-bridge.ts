@@ -223,6 +223,47 @@ export const ENTERPRISE_COLOR_MAPPING: Record<SemanticColorName, ColorTokenBridg
       ring: 'ring-background',
       placeholder: 'placeholder-background'
     }
+  },
+
+  // ✅ ENTERPRISE: Additional semantic colors (required by SemanticColorName type)
+  price: {
+    token: semanticColors.status.success, // Using success as price (green for positive value)
+    tailwind: 'text-green-600',
+    cssVar: 'hsl(var(--status-success))',
+    rawValue: '#16a34a',
+    variants: {
+      text: 'text-green-600',
+      bg: 'bg-green-50',
+      border: 'border-green-300',
+      ring: 'ring-green-300',
+      placeholder: 'placeholder-green-400'
+    }
+  },
+  hover: {
+    token: semanticColors.status.info, // Using info as hover (blue for interactive state)
+    tailwind: 'text-blue-500',
+    cssVar: 'hsl(var(--status-info))',
+    rawValue: '#3b82f6',
+    variants: {
+      text: 'text-blue-500',
+      bg: 'bg-blue-100',
+      border: 'border-blue-400',
+      ring: 'ring-blue-400',
+      placeholder: 'placeholder-blue-300'
+    }
+  },
+  focus: {
+    token: semanticColors.status.info, // Using info as focus (blue for focus state)
+    tailwind: 'text-blue-700',
+    cssVar: 'hsl(var(--status-info))',
+    rawValue: '#1d4ed8',
+    variants: {
+      text: 'text-blue-700',
+      bg: 'bg-blue-200',
+      border: 'border-blue-500',
+      ring: 'ring-blue-500',
+      placeholder: 'placeholder-blue-400'
+    }
   }
 };
 
@@ -235,7 +276,7 @@ export const ENTERPRISE_COLOR_MAPPING: Record<SemanticColorName, ColorTokenBridg
  *
  * Maps design-tokens.ts spacing to Tailwind classes and semantic categories
  */
-export const ENTERPRISE_SPACING_MAPPING: Record<keyof typeof spacing, SpacingTokenBridge> = {
+export const ENTERPRISE_SPACING_MAPPING: Record<keyof typeof spacing | 'component', SpacingTokenBridge> = {
   // Micro spacing (1-4px)
   xs: {
     token: spacing.xs,
@@ -295,6 +336,44 @@ export const ENTERPRISE_SPACING_MAPPING: Record<keyof typeof spacing, SpacingTok
       mobile: 'space-x-6',
       tablet: 'space-x-8',
       desktop: 'space-x-8'
+    }
+  },
+
+  // ✅ ENTERPRISE: Additional spacing sizes from design tokens
+  '2xl': {
+    token: spacing['2xl'], // ✅ Using actual spacing token
+    tailwind: 'space-x-12',
+    cssVar: 'var(--spacing-2xl)',
+    rawValue: '3rem',
+    category: 'macro',
+    responsive: {
+      mobile: 'space-x-8',
+      tablet: 'space-x-10',
+      desktop: 'space-x-12'
+    }
+  },
+  '3xl': {
+    token: spacing['3xl'], // ✅ Using actual spacing token
+    tailwind: 'space-x-16',
+    cssVar: 'var(--spacing-3xl)',
+    rawValue: '4rem',
+    category: 'macro',
+    responsive: {
+      mobile: 'space-x-10',
+      tablet: 'space-x-12',
+      desktop: 'space-x-16'
+    }
+  },
+  component: {
+    token: spacing.component.padding.md, // ✅ Using actual component spacing
+    tailwind: 'space-x-6',
+    cssVar: 'var(--spacing-component)',
+    rawValue: '1rem',
+    category: 'medium',
+    responsive: {
+      mobile: 'space-x-4',
+      tablet: 'space-x-6',
+      desktop: 'space-x-6'
     }
   }
 };

@@ -38,13 +38,16 @@ export default function SelectionMarqueeOverlay({
   return (
     <div className={`absolute inset-0 pointer-events-none ${className}`}>
       <div
-        style={canvasUI.positioning.marquee.rectangle(
-          left,
-          top,
-          width,
-          height,
-          marquee.kind
-        )}
+        style={{
+          position: 'absolute',
+          left: left,
+          top: top,
+          width: width,
+          height: height,
+          border: '1px dashed rgba(0, 123, 255, 0.8)',
+          backgroundColor: marquee.kind === 'window' ? 'rgba(0, 123, 255, 0.1)' : 'rgba(0, 255, 0, 0.1)',
+          pointerEvents: 'none'
+        }}
       />
     </div>
   );

@@ -57,11 +57,11 @@ export function useConstraintOperations(
           throw new Error(`Unknown operation: ${operation.type}`);
       }
       
-      return { success: true, operation: operation.type };
+      return { success: true, operation };
     } catch (error) {
       return {
         success: false,
-        operation: operation.type,
+        operation,
         error: error instanceof Error ? error.message : 'Operation failed'
       };
     }
@@ -80,11 +80,11 @@ export function useConstraintOperations(
         setConstraints(preset.constraints);
       }
       
-      return { success: true, operation: 'load-preset', data: preset };
+      return { success: true, operation: { type: 'load-preset', presetId }, data: preset };
     } catch (error) {
       return {
         success: false,
-        operation: 'load-preset',
+        operation: { type: 'load-preset', presetId },
         error: error instanceof Error ? error.message : 'Failed to load preset'
       };
     }
@@ -103,16 +103,29 @@ export function useConstraintOperations(
 
   const importSettings = useCallback((data: unknown): ConstraintOperationResult => {
     try {
-      if (data.orthoSettings) setOrthoSettings({ ...DEFAULT_ORTHO_SETTINGS, ...data.orthoSettings });
-      if (data.polarSettings) setPolarSettings({ ...DEFAULT_POLAR_SETTINGS, ...data.polarSettings });
-      if (data.settings) setSettings({ ...DEFAULT_CONSTRAINTS_SETTINGS, ...data.settings });
-      if (data.constraints) setConstraints(data.constraints);
+      // ✅ ENTERPRISE: Type guard pattern αντί για 'as any'
+      if (typeof data === 'object' && data !== null) {
+        const validData = data as Record<string, unknown>;
+
+        if ('orthoSettings' in validData && validData.orthoSettings) {
+          setOrthoSettings({ ...DEFAULT_ORTHO_SETTINGS, ...validData.orthoSettings as Partial<OrthoConstraintSettings> });
+        }
+        if ('polarSettings' in validData && validData.polarSettings) {
+          setPolarSettings({ ...DEFAULT_POLAR_SETTINGS, ...validData.polarSettings as Partial<PolarConstraintSettings> });
+        }
+        if ('settings' in validData && validData.settings) {
+          setSettings({ ...DEFAULT_CONSTRAINTS_SETTINGS, ...validData.settings as Partial<ConstraintsSettings> });
+        }
+        if ('constraints' in validData && validData.constraints) {
+          setConstraints(validData.constraints as Record<string, ConstraintDefinition>);
+        }
+      }
       
-      return { success: true, operation: 'import' };
+      return { success: true, operation: { type: 'import' } };
     } catch (error) {
       return {
         success: false,
-        operation: 'import',
+        operation: { type: 'import' },
         error: error instanceof Error ? error.message : 'Import failed'
       };
     }

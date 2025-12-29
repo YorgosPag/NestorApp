@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import type { Field, Phase } from './useDynamicInputState';
-import type { FieldValueSetters } from '../types/common-interfaces';
+import type { FieldValueSetters, FullFieldState, CoordinateFieldState } from '../types/common-interfaces';
 import type { Point2D } from '../../../rendering/types/Types';
 
 interface UseDynamicInputToolResetArgs extends FieldValueSetters {
@@ -10,11 +10,11 @@ interface UseDynamicInputToolResetArgs extends FieldValueSetters {
   drawingPhase: Phase;
   getFieldsToShow: () => string[];
   setActiveField: (f: Field) => void;
-  setIsManualInput: (s: { x: boolean; y: boolean }) => void;
+  setIsManualInput: (s: CoordinateFieldState) => void;
   setHideAngleLengthFields: (h: boolean) => void;
   setShowLengthDuringDraw: (s: boolean) => void;
   setFirstClickPoint: (p: Point2D | null) => void;
-  setFieldUnlocked: (u: { x: boolean; y: boolean; angle: boolean; length: boolean; radius: boolean; diameter: boolean }) => void;
+  setFieldUnlocked: (u: FullFieldState) => void;
   
   // Ref access
   hideAngleLengthFieldsRef: React.MutableRefObject<boolean>;

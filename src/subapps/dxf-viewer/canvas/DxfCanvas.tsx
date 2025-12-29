@@ -221,6 +221,7 @@ export const DxfCanvas = forwardRef<DxfCanvasRef, DxfCanvasProps>((props, ref) =
         onSelectEntity={onSelectEntity}
         onRequestColorMenu={onRequestColorMenu}
         onMouseMove={handleMouseMove}
+        onRendererReady={() => {}}
         alwaysShowCoarseGrid={alwaysShowCoarseGrid}
         showCalibration={showCalibration}
         onCalibrationToggle={onCalibrationToggle}

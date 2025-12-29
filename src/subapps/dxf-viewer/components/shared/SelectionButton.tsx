@@ -9,7 +9,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface SelectionButtonProps {
   onClick: () => void;
-  icon: string;
+  icon: React.ReactElement | string;
   title: string;
   subtitle?: string;
   extraInfo?: string;

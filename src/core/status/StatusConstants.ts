@@ -19,6 +19,8 @@ import type {
   NavigationStatus
 } from '../types/BadgeTypes';
 import type { UseSemanticColorsReturn } from '../../ui-adapters/react/useSemanticColors';
+// ✅ ENTERPRISE SOLUTION: Import complete COLOR_BRIDGE με all missing properties
+import { COLOR_BRIDGE } from '../../design-system/color-bridge';
 
 // 🏢 ENTERPRISE: Import centralized status labels - NO MORE HARDCODED VALUES
 import {
@@ -65,14 +67,15 @@ const documentStatusLabels = getDocumentStatusLabels();
  * @param colors - useSemanticColors hook result (dependency injection)
  * @returns Project status definitions με centralized colors
  */
-export const createProjectStatuses = (colors: UseSemanticColorsReturn): Record<ProjectStatus, BadgeDefinition> => ({
-  planning: {
-    label: projectStatusLabels.planning,
-    variant: 'outline',
-    backgroundColor: colors.bg.secondary,
-    color: colors.text.muted,
-    icon: 'planning'
-  },
+export const createProjectStatuses = (colors: UseSemanticColorsReturn): Record<ProjectStatus, BadgeDefinition> => {
+  return ({
+    planning: {
+      label: projectStatusLabels.planning,
+      variant: 'outline',
+      backgroundColor: colors.bg.secondary,
+      color: colors.text.muted,
+      icon: 'planning'
+    },
   in_progress: {
     label: projectStatusLabels.in_progress,
     variant: 'info',
@@ -116,6 +119,7 @@ export const createProjectStatuses = (colors: UseSemanticColorsReturn): Record<P
     icon: 'checkCircle'
   }
 });
+};
 
 /**
  * ✅ ENTERPRISE PROFESSIONAL: Contact Statuses Generator
@@ -367,3 +371,49 @@ export const createUnifiedBadgeSystem = (colors: UseSemanticColorsReturn): Badge
     ...createContactTypes(colors) // Add contact types to common patterns
   }
 });
+
+// ============================================================================
+// 🏢 ENTERPRISE: Static Exports με Default Colors - ΛΥΣΗ ΓΙΑ BACKWARDS COMPATIBILITY
+// ============================================================================
+
+/**
+ * ✅ ENTERPRISE SOLUTION: Default-initialized exports για legacy code
+ * 🎯 Uses centralized useSemanticColors με fallback values
+ * 🔧 Solves import issues while maintaining enterprise standards
+ */
+
+// ============================================================================
+// 🏢 ENTERPRISE: Color System Integration με Direct COLOR_BRIDGE Access
+// ============================================================================
+
+const getDefaultColors = (): UseSemanticColorsReturn => {
+  // 🏢 ENTERPRISE SOLUTION: Use actual COLOR_BRIDGE με all properties
+  return {
+    // 🌉 Direct bridge mappings - ZERO LOGIC (same as useSemanticColors)
+    text: COLOR_BRIDGE.text,
+    bg: COLOR_BRIDGE.bg,
+    border: COLOR_BRIDGE.border,
+    interactive: COLOR_BRIDGE.interactive,
+    gradients: COLOR_BRIDGE.gradients,
+    ring: COLOR_BRIDGE.ring, // ✅ ENTERPRISE: Added missing ring property
+
+    // 🎯 Simple utility methods - PURE MAPPING (same as useSemanticColors)
+    getText: (type) => COLOR_BRIDGE.text[type],
+    getBg: (type) => COLOR_BRIDGE.bg[type] || COLOR_BRIDGE.bg.primary,
+    getBorder: (type) => COLOR_BRIDGE.border[type] || COLOR_BRIDGE.border.default,
+    getGradient: (type) => COLOR_BRIDGE.gradients[type] || COLOR_BRIDGE.gradients.neutralSubtle,
+    getRing: (type) => COLOR_BRIDGE.ring[type] || COLOR_BRIDGE.ring.default, // ✅ ENTERPRISE: Added missing getRing method
+  };
+};
+
+// ============================================================================
+// 🏷️ STATIC EXPORTS - Enterprise Compatibility Layer με Lazy Initialization
+// ============================================================================
+
+export const PROJECT_STATUSES = createProjectStatuses(getDefaultColors());
+export const BUILDING_STATUSES = createBuildingStatuses(getDefaultColors());
+export const CONTACT_STATUSES = createContactStatuses(getDefaultColors());
+export const PROPERTY_STATUSES = createPropertyStatuses(getDefaultColors());
+export const UNIT_STATUSES = createUnitStatuses(getDefaultColors());
+export const COMMON_STATUSES = createCommonStatuses(getDefaultColors());
+export const UNIFIED_BADGE_SYSTEM = createUnifiedBadgeSystem(getDefaultColors());

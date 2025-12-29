@@ -145,6 +145,9 @@ export function CursorSystem({ children }: { children: React.ReactNode }) {
       dispatch({ type: 'UPDATE_POSITION', position }),
     updateWorldPosition: (position: Point2D | null) =>
       dispatch({ type: 'UPDATE_WORLD_POSITION', position }),
+    // ✅ ENTERPRISE: Alias for updateWorldPosition (used in CanvasOverlays)
+    setWorldPosition: (position: Point2D | null) =>
+      dispatch({ type: 'UPDATE_WORLD_POSITION', position }),
     updateViewport: (viewport: Viewport) =>
       dispatch({ type: 'UPDATE_VIEWPORT', viewport }),
 

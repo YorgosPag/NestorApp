@@ -18,7 +18,7 @@ import {
   RULERS_GRID_CONFIG,
   COORDINATE_LAYOUT
 } from './config';
-import type { Point2D, ViewTransform, DOMRect } from './config';
+import type { Point2D, ViewTransform } from './config';
 import { UI_COLORS } from '../../config/color-config';
 
 // Helper function to generate grid line (eliminates code duplication)
@@ -30,8 +30,8 @@ function createGridLine(
 ): GridLine {
 
   if (isAxis) {
-    const axisLine = {
-      type: 'axis',
+    const axisLine: GridLine = {
+      type: 'axis' as const,
       position,
       orientation,
       opacity: 1.0,
@@ -41,8 +41,8 @@ function createGridLine(
 
     return axisLine;
   } else {
-    const majorLine = {
-      type: 'major',
+    const majorLine: GridLine = {
+      type: 'major' as const,
       position,
       orientation,
       opacity: settings.visual.opacity,
@@ -408,7 +408,7 @@ export const RulerCalculations = {
 };
 
 // ===== SETTINGS VALIDATION UTILITIES =====
-export const SettingsValidation = {
+export const SettingsValidationUtils = {
   /**
    * Validates ruler settings
    */
@@ -566,7 +566,7 @@ export const RulersGridRendering = {
   renderRuler: (
     ctx: CanvasRenderingContext2D,
     ticks: RulerTick[],
-    settings: GridSettings,
+    settings: RulerSettings['horizontal'] | RulerSettings['vertical'],
     type: 'horizontal' | 'vertical',
     transform: ViewTransform
   ) => {
@@ -630,12 +630,13 @@ export const RulersGridRendering = {
       
       if (type === 'horizontal') {
         const screenX = (tick.position + safeTransform.offsetX) * safeTransform.scale;
-        
+        const horizontalSettings = settings as RulerSettings['horizontal'];
+
         // Draw tick line only if it should be visible
         if (shouldDrawTickLine) {
 
-          ctx.moveTo(screenX, ctx.canvas.height - settings.height);
-          ctx.lineTo(screenX, ctx.canvas.height - settings.height + tick.length);
+          ctx.moveTo(screenX, ctx.canvas.height - horizontalSettings.height);
+          ctx.lineTo(screenX, ctx.canvas.height - horizontalSettings.height + tick.length);
         }
         
         if (tick.label && shouldShowLabel(tick, ticks, 'horizontal', safeTransform.scale) && (settings.showLabels || settings.showUnits)) {
@@ -685,14 +686,15 @@ export const RulersGridRendering = {
         // For vertical rulers, we need to convert world coordinates to screen coordinates
         const worldY = tick.position;
         const { bottom } = COORDINATE_LAYOUT.MARGINS;
-        
+        const verticalSettings = settings as RulerSettings['vertical'];
+
         const y = ctx.canvas.height - bottom - (worldY + safeTransform.offsetY) * safeTransform.scale;
 
         // Draw tick line only if it should be visible
         if (shouldDrawTickLine) {
 
-          ctx.moveTo(settings.width - tick.length, y);
-          ctx.lineTo(settings.width, y);
+          ctx.moveTo(verticalSettings.width - tick.length, y);
+          ctx.lineTo(verticalSettings.width, y);
         }
         
         if (tick.label && shouldShowLabel(tick, ticks, 'vertical', safeTransform.scale) && (settings.showLabels || settings.showUnits)) {
@@ -822,6 +824,6 @@ export const RulersGridUtils = {
   ...UnitConversion,
   ...GridCalculations,
   ...RulerCalculations,
-  ...SettingsValidation,
+  ...SettingsValidationUtils,
   ...PerformanceUtilities
 };

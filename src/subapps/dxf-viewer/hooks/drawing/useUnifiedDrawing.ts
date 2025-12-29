@@ -103,6 +103,10 @@ export interface DrawingState {
   tempPoints: Point2D[];
   measurementId?: string;
   isOverlayMode?: boolean; // 🔺 ΝΕΟ: Flag για overlay mode
+  // ✅ ENTERPRISE: Missing properties used in StatusBar
+  currentPoints: Point2D[];
+  snapPoint: Point2D | null;
+  snapType: string | null;
 }
 
 export function useUnifiedDrawing() {
@@ -110,7 +114,11 @@ export function useUnifiedDrawing() {
     currentTool: 'select',
     isDrawing: false,
     previewEntity: null,
-    tempPoints: []
+    tempPoints: [],
+    // ✅ ENTERPRISE: Initialize missing properties
+    currentPoints: [],
+    snapPoint: null,
+    snapType: null
   });
 
   const {
@@ -406,16 +414,17 @@ export function useUnifiedDrawing() {
       if (newEntity && currentLevelId) {
         // Apply completion settings from ColorPalettePanel (for line entities only)
         if (newEntity.type === 'line' && state.currentTool === 'line' && lineCompletionStyles) {
-          // ✅ FIX (ChatGPT-5): Guard against undefined + useLineStyles returns LineSettings directly
-          newEntity.color = lineCompletionStyles.color;
-          newEntity.lineweight = lineCompletionStyles.lineWidth;
-          newEntity.opacity = lineCompletionStyles.opacity;
-          newEntity.lineType = lineCompletionStyles.lineType;
-          newEntity.dashScale = lineCompletionStyles.dashScale;
-          newEntity.lineCap = lineCompletionStyles.lineCap;
-          newEntity.lineJoin = lineCompletionStyles.lineJoin;
-          newEntity.dashOffset = lineCompletionStyles.dashOffset;
-          newEntity.breakAtCenter = lineCompletionStyles.breakAtCenter;
+          // ✅ ENTERPRISE: Type-safe property assignment with proper assertion
+          const lineEntity = newEntity as LineEntity;
+          lineEntity.color = lineCompletionStyles.color;
+          lineEntity.lineweight = lineCompletionStyles.lineWidth;
+          lineEntity.opacity = lineCompletionStyles.opacity;
+          lineEntity.lineType = lineCompletionStyles.lineType;
+          lineEntity.dashScale = lineCompletionStyles.dashScale;
+          lineEntity.lineCap = lineCompletionStyles.lineCap;
+          lineEntity.lineJoin = lineCompletionStyles.lineJoin;
+          lineEntity.dashOffset = lineCompletionStyles.dashOffset;
+          lineEntity.breakAtCenter = lineCompletionStyles.breakAtCenter;
         }
 
         const scene = getLevelScene(currentLevelId);

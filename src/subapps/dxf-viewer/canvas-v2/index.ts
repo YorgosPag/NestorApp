@@ -3,6 +3,9 @@
  * Clean canvas system exports
  */
 
+// ✅ ENTERPRISE: Import required types
+import type { Point2D } from '../rendering/types/Types';
+
 // === MAIN COMPONENTS ===
 // Conditional exports για αποφυγή compilation errors
 export { DxfCanvas } from './dxf-canvas/DxfCanvas';

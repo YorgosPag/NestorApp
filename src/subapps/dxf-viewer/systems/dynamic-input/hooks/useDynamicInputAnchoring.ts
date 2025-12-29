@@ -2,16 +2,17 @@
 
 import { useEffect } from 'react';
 import type { Phase } from './useDynamicInputState';
+import type { CoordinateFieldState, CircleFieldState } from '../types/common-interfaces';
 
 interface UseDynamicInputAnchoringArgs {
-  isCoordinateAnchored: { x: boolean; y: boolean };
+  isCoordinateAnchored: CoordinateFieldState;
   drawingPhase: Phase;
   activeTool: string;
-  
+
   // Setters
-  setIsCoordinateAnchored: (s: { x: boolean; y: boolean }) => void;
-  setIsManualInput: (s: { x: boolean; y: boolean }) => void;
-  setFieldUnlocked: (u: { x: boolean; y: boolean; angle: boolean; length: boolean; radius: boolean }) => void;
+  setIsCoordinateAnchored: (s: CoordinateFieldState) => void;
+  setIsManualInput: (s: CoordinateFieldState) => void;
+  setFieldUnlocked: (u: CircleFieldState) => void;
 }
 
 export function useDynamicInputAnchoring({

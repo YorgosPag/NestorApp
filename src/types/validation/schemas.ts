@@ -1,14 +1,20 @@
 import { z } from 'zod';
 import { validationRules } from '@/utils/validation';
+import { PROJECT_STATUSES as CENTRALIZED_PROJECT_STATUSES, BUILDING_STATUSES as CENTRALIZED_BUILDING_STATUSES } from '@/core/status/StatusConstants';
+
+// 🏢 ENTERPRISE: Use centralized status constants (NO MORE DUPLICATES)
+const PROJECT_STATUSES = Object.keys(CENTRALIZED_PROJECT_STATUSES);
+const BUILDING_STATUSES = Object.keys(CENTRALIZED_BUILDING_STATUSES);
 
 // 🏢 ENTERPRISE: Configurable business constants (NO MORE HARDCODED VALUES)
 export const BUILDING_CATEGORIES = (process.env.NEXT_PUBLIC_BUILDING_CATEGORIES || 'residential,commercial,mixed,industrial').split(',').map(c => c.trim());
-export const PROJECT_STATUSES = (process.env.NEXT_PUBLIC_PROJECT_STATUSES || 'planning,active,paused,completed,cancelled').split(',').map(s => s.trim());
 export const TASK_TYPES = (process.env.NEXT_PUBLIC_TASK_TYPES || 'call,meeting,viewing,follow_up,email,document,other').split(',').map(t => t.trim());
 export const PRIORITY_LEVELS = (process.env.NEXT_PUBLIC_PRIORITY_LEVELS || 'low,medium,high,urgent').split(',').map(p => p.trim());
 export const CRM_STAGES = (process.env.NEXT_PUBLIC_CRM_STAGES || 'initial_contact,qualification,viewing,proposal,negotiation,contract,closed_won,closed_lost').split(',').map(s => s.trim());
 export const TASK_STATUSES = (process.env.NEXT_PUBLIC_TASK_STATUSES || 'pending,in_progress,completed,cancelled').split(',').map(s => s.trim());
-export const BUILDING_STATUSES = (process.env.NEXT_PUBLIC_BUILDING_STATUSES || 'active,construction,planned,completed').split(',').map(s => s.trim());
+
+// 🏷️ ENTERPRISE: Export the centralized status arrays for validation
+export { PROJECT_STATUSES, BUILDING_STATUSES };
 
 // 🔍 ENTERPRISE: Configurable filter options
 export const FILTER_TIMEFRAMES = (process.env.NEXT_PUBLIC_FILTER_TIMEFRAMES || 'all,overdue,today,tomorrow,week').split(',').map(t => t.trim());

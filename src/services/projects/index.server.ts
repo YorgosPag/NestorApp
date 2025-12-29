@@ -16,18 +16,18 @@ export async function getProjectsByCompanyId(companyId: string) {
     return result;
 }
 
-export async function getProjectStructure(projectId: number) {
+export async function getProjectStructure(projectId: string) {
     return await service.getProjectStructure(projectId);
 }
 
-export async function getProjectCustomers(projectId: number) {
+export async function getProjectCustomers(projectId: string) {
     return await service.getProjectCustomers(projectId);
 }
 
-export async function getProjectStats(projectId: number) {
+export async function getProjectStats(projectId: string) {
     return await service.getProjectStats(projectId);
 }
 
-export async function debugProjectData(projectId: number) {
+export async function debugProjectData(projectId: string) {
     return await service.debugProjectData(projectId);
 }

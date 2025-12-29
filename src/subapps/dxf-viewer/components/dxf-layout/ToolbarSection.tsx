@@ -53,7 +53,7 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
           autoCrop={false}
           canUndo={dxfProps.canUndo}
           canRedo={dxfProps.canRedo}
-          snapEnabled={dxfProps.snapEnabled}
+          snapEnabled={dxfProps.snapEnabled ?? false}
           showLayers={dxfProps.showLayers}
           showCalibration={dxfProps.showCalibration}
           showCursorSettings={dxfProps.showCursorSettings}

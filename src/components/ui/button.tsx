@@ -6,10 +6,10 @@ import { cn } from "@/lib/utils"
 import { INTERACTIVE_PATTERNS } from "@/components/ui/effects"
 import { useBorderTokens } from '@/hooks/useBorderTokens'
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'
-import type { SemanticColors } from '@/ui-adapters/react/useSemanticColors'
+import type { UseSemanticColorsReturn } from '@/ui-adapters/react/useSemanticColors'
 
 // 🏢 ENTERPRISE: Dynamic button variants using centralized border tokens
-const createButtonVariants = (borderTokens: ReturnType<typeof useBorderTokens>, colors?: SemanticColors) => cva(
+const createButtonVariants = (borderTokens: ReturnType<typeof useBorderTokens>, colors?: UseSemanticColorsReturn) => cva(
   `inline-flex items-center justify-center gap-2 whitespace-nowrap ${borderTokens.quick.input} text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50`,
   {
     variants: {
@@ -50,14 +50,14 @@ export interface ButtonProps
   asChild?: boolean
 }
 
-// 🏢 ENTERPRISE: Create default buttonVariants for export (using default border tokens)
-const borderTokens = {
-  quick: {
-    input: "rounded-md border",
-    card: "rounded-lg border"
-  }
-};
-const buttonVariants = createButtonVariants(borderTokens);
+// 🏢 ENTERPRISE: Dynamic button variants using CENTRALIZED SYSTEM ONLY
+function getButtonVariants() {
+  // ✅ ZERO HARDCODED VALUES - Use centralized hook directly
+  const borderTokens = useBorderTokens();
+  return createButtonVariants(borderTokens);
+}
+
+const buttonVariants = getButtonVariants();
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
@@ -78,4 +78,4 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 )
 Button.displayName = "Button"
 
-export { Button, buttonVariants, createButtonVariants, type ButtonVariantProps }
+export { Button, buttonVariants, createButtonVariants }

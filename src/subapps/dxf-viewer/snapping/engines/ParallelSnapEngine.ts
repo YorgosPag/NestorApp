@@ -126,7 +126,7 @@ export class ParallelSnapEngine extends BaseSnapEngine {
           }
         }
       } else if (entityType === 'polyline' || entityType === 'lwpolyline') {
-        const points = entity.points || ('vertices' in entity ? entity.vertices : undefined);
+        const points = (entity.points || ('vertices' in entity ? entity.vertices : undefined)) as Point2D[] | undefined;
         if (points && points.length > 1) {
           for (let i = 1; i < points.length; i++) {
             const distance = GeometricCalculations.distancePointToLine(cursorPoint, points[i-1], points[i]);

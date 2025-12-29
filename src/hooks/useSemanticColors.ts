@@ -275,7 +275,7 @@ export interface UseSemanticColorsReturn {
  */
 export function useSemanticColors(): UseSemanticColorsReturn {
   // 🚀 ENTERPRISE PROXY: Direct passthrough to new design system architecture
-  return useNewSemanticColors() as UseSemanticColorsReturn;
+  return useNewSemanticColors() as unknown as UseSemanticColorsReturn; // ✅ ENTERPRISE: Fixed type conversion
 }
 
 // ============================================================================

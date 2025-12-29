@@ -7,6 +7,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { resetPhaseForNewShape } from '../utils/field-value-utils';
 import type { Point2D, Phase } from '../../../rendering/types/Types';
+import type { CircleFieldState, ManualInputState, CoordinateFieldState } from '../types/common-interfaces';
 
 interface UseDynamicInputPhaseArgs {
   activeTool: string;
@@ -16,16 +17,16 @@ interface UseDynamicInputPhaseArgs {
   mouseWorldPosition: Point2D | null;
 
   // current state
-  isCoordinateAnchored: { x: boolean; y: boolean };
+  isCoordinateAnchored: CoordinateFieldState;
 
   // state setters
   setXValue: (v: string) => void;
   setYValue: (v: string) => void;
   setLengthValue: (v: string) => void;
   setActiveField: (f: 'x' | 'y' | 'angle' | 'length' | 'radius') => void;
-  setFieldUnlocked: Dispatch<SetStateAction<{ x: boolean; y: boolean; angle: boolean; length: boolean; radius: boolean }>>;
-  setIsCoordinateAnchored: (s: { x: boolean; y: boolean }) => void;
-  setIsManualInput: (s: { x: boolean; y: boolean; radius?: boolean }) => void;
+  setFieldUnlocked: Dispatch<SetStateAction<CircleFieldState>>;
+  setIsCoordinateAnchored: (s: CoordinateFieldState) => void;
+  setIsManualInput: (s: ManualInputState) => void;
 
   // phase management
   drawingPhase: Phase;

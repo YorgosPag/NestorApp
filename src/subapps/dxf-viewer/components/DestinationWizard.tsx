@@ -35,7 +35,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
   const [currentStep, setCurrentStep] = useState<WizardStep>('destination');
   const [selectedDestination, setSelectedDestination] = useState<DxfDestination | null>(null);
-  const [processingOptions, setProcessingOptions] = useState<Omit<DxfProcessingOptions, 'destination'> & { destination: DxfDestination | null }>({
+  const [processingOptions, setProcessingOptions] = useState<DxfProcessingOptions>({ // ✅ ENTERPRISE: Simplified type after DxfProcessingOptions.destination made nullable
     destination: null,
     processLayers: true,
     preserveGrid: false,

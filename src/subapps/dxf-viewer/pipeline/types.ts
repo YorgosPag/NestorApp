@@ -15,7 +15,7 @@ export interface DxfDestination {
 }
 
 export interface DxfProcessingOptions {
-  destination: DxfDestination;
+  destination: DxfDestination | null; // ✅ ENTERPRISE: Nullable for initial state before destination selection
   processLayers: boolean;
   preserveGrid: boolean;
   preserveRulers: boolean;
@@ -26,7 +26,7 @@ import type { SceneModel } from '../types/scene';
 
 export interface ProcessedDxfResult {
   success: boolean;
-  scene: SceneModel;
+  scene: SceneModel | null; // ✅ ENTERPRISE: Nullable for error cases where processing fails
   destination: DxfDestination;
   processedLayers?: LayerInfo[];
   error?: string;

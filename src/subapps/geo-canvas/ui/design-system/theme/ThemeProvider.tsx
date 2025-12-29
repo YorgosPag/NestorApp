@@ -8,6 +8,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { colorTokens } from '@/design-system/tokens/colors';
+import { GEO_COLORS } from '../../config/color-config';
 
 // For now, keep the hardcoded values until we fully migrate to the centralized design system
 // TODO: Replace with centralized tokens from @/design-system/tokens/*
@@ -17,7 +18,7 @@ const colors = {
     secondary: 'hsl(var(--muted))',
     tertiary: 'hsl(var(--card))',
     inverse: 'hsl(var(--foreground))',
-    overlay: 'rgba(0, 0, 0, 0.8)',
+    overlay: GEO_COLORS.UI.OVERLAY_LIGHT,
     disabled: 'hsl(var(--muted))'
   },
   text: {
@@ -46,7 +47,7 @@ const typography = {
   fontSize: { sm: '14px', base: '16px', lg: '18px' }
 };
 const spacing = { xs: '4px', sm: '8px', md: '16px', lg: '24px' };
-const shadows = { sm: '0 1px 2px rgba(0,0,0,0.1)', md: '0 4px 6px rgba(0,0,0,0.1)' };
+const shadows = { sm: GEO_COLORS.UI.SHADOW_SM, md: GEO_COLORS.UI.SHADOW_MD };
 const borderRadius = { sm: '4px', md: '8px', lg: '12px' };
 const animations = { duration: { fast: '150ms', normal: '300ms' } };
 
@@ -98,7 +99,7 @@ const darkColors = {
     secondary: 'hsl(var(--muted))',
     tertiary: 'hsl(var(--card))',
     inverse: 'hsl(var(--foreground))',
-    overlay: 'rgba(0, 0, 0, 0.8)',
+    overlay: GEO_COLORS.UI.OVERLAY_LIGHT,
     disabled: 'hsl(var(--muted))'
   },
 
@@ -168,7 +169,7 @@ const highContrastColors = {
     secondary: 'hsl(var(--background))',
     tertiary: 'hsl(var(--muted))',
     inverse: 'hsl(var(--foreground))',
-    overlay: 'rgba(0, 0, 0, 0.9)',
+    overlay: GEO_COLORS.UI.OVERLAY_DARK,
     disabled: 'hsl(var(--muted))'
   },
 

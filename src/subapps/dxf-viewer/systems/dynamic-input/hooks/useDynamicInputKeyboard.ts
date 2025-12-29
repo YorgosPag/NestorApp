@@ -5,7 +5,7 @@ const DEBUG_DYNAMIC_INPUT_KEYBOARD = false;
 
 import { useEffect, useCallback } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import type { FieldValueSetters, FieldValues } from '../types/common-interfaces';
+import type { FieldValueSetters, FieldValues, FullFieldState, CoordinateFieldState } from '../types/common-interfaces';
 import type { Point2D } from '../../../rendering/types/Types';
 
 type Phase = 'first-point' | 'second-point' | 'continuous';
@@ -27,9 +27,9 @@ interface UseDynamicInputKeyboardArgs extends FieldValueSetters, FieldValues {
   setShowInput: (show: boolean) => void;
 
   // gating / flags
-  setFieldUnlocked: Dispatch<SetStateAction<{ x: boolean; y: boolean; angle: boolean; length: boolean; radius: boolean; diameter: boolean }>>;
-  setIsCoordinateAnchored: (s: { x: boolean; y: boolean }) => void;
-  setIsManualInput: (s: { x: boolean; y: boolean }) => void;
+  setFieldUnlocked: Dispatch<SetStateAction<FullFieldState>>;
+  setIsCoordinateAnchored: (s: CoordinateFieldState) => void;
+  setIsManualInput: (s: CoordinateFieldState) => void;
 
   // validators
   normalizeNumber: (v: string) => string;

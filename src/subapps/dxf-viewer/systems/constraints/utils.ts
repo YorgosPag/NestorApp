@@ -12,9 +12,9 @@ import type {
   OrthoConstraintSettings,
   PolarConstraintSettings,
   PolarCoordinates,
-  CartesianCoordinates,
-  CONSTRAINTS_CONFIG
+  CartesianCoordinates
 } from './config';
+import { CONSTRAINTS_CONFIG } from './config';
 import type { Point2D } from '../../rendering/types/Types';
 
 // ===== HELPER FUNCTIONS =====
@@ -492,12 +492,13 @@ export const ConstraintApplicationUtils = {
     }
 
     // Calculate metadata
-    const angle = context.referencePoint 
-      ? AngleUtils.angleBetweenPoints(context.referencePoint, constrainedPoint)
+    const contextData = context.getConstraintContext ? context.getConstraintContext() : null;
+    const angle = contextData?.referencePoint
+      ? AngleUtils.angleBetweenPoints(contextData.referencePoint, constrainedPoint)
       : 0;
-    
-    const distance = context.referencePoint
-      ? DistanceUtils.distance(context.referencePoint, constrainedPoint)
+
+    const distance = contextData?.referencePoint
+      ? DistanceUtils.distance(contextData.referencePoint, constrainedPoint)
       : 0;
 
     return {
@@ -607,6 +608,51 @@ export const ValidationUtils = {
   }
 };
 
+// ===== MISSING EXPORTS - Required by useConstraintApplication.ts =====
+
+/**
+ * ✅ ENTERPRISE: Constraint calculation engine
+ * Centralized calculations για όλα τα constraint types
+ */
+export const ConstraintCalculations = {
+  ...AngleUtils,
+  ...DistanceUtils,
+  ...CoordinateUtils,
+  ...ConstraintApplicationUtils,
+  ...ValidationUtils,
+
+  // Combined calculation methods
+  calculateConstraintResult: ConstraintApplicationUtils.applyConstraints,
+  validateConstraintPoint: (point: Point2D, context: ConstraintContext): boolean => {
+    return point && typeof point.x === 'number' && typeof point.y === 'number';
+  }
+};
+
+/**
+ * ✅ ENTERPRISE: Ortho constraint engine
+ * Dedicated engine για orthogonal constraints
+ */
+export const OrthoConstraintEngine = {
+  ...OrthoUtils,
+  ...AngleUtils,
+  apply: OrthoUtils.applyOrthoConstraint,
+  getFeedback: OrthoUtils.getOrthoFeedback,
+  validate: ValidationUtils.validateOrthoSettings
+};
+
+/**
+ * ✅ ENTERPRISE: Polar constraint engine
+ * Dedicated engine για polar constraints
+ */
+export const PolarConstraintEngine = {
+  ...PolarUtils,
+  ...CoordinateUtils,
+  apply: PolarUtils.applyPolarConstraint,
+  getFeedback: PolarUtils.getPolarFeedback,
+  getTrackingAngles: PolarUtils.getTrackingAngles,
+  validate: ValidationUtils.validatePolarSettings
+};
+
 // ===== COMBINED UTILITY EXPORT =====
 export const ConstraintUtils = {
   ...AngleUtils,
@@ -617,3 +663,6 @@ export const ConstraintUtils = {
   ...ConstraintApplicationUtils,
   ...ValidationUtils
 };
+
+// ✅ ENTERPRISE: Alias για backward compatibility με useCoordinateConversion.ts
+export const CoordinateConverter = CoordinateUtils;

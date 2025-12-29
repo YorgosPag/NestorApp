@@ -10,6 +10,8 @@ interface CanvasContextType {
   overlayRef: React.RefObject<OverlayCanvasImperativeAPI>;
   transform: ViewTransform;
   setTransform: (transform: ViewTransform) => void;
+  // ✅ ENTERPRISE: Alias for dxfRef (used in DxfCanvas.tsx)
+  canvasRef: React.RefObject<DxfCanvasImperativeAPI>;
 }
 
 const CanvasContext = createContext<CanvasContextType | null>(null);
@@ -33,7 +35,7 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
   const [transform, setTransform] = useState<ViewTransform>({ scale: 1, offsetX: 0, offsetY: 0 });
 
   return (
-    <CanvasContext.Provider value={{ dxfRef, overlayRef, transform, setTransform }}>
+    <CanvasContext.Provider value={{ dxfRef, overlayRef, transform, setTransform, canvasRef: dxfRef }}>
       {children}
     </CanvasContext.Provider>
   );

@@ -31,7 +31,16 @@ export default function SnapIndicatorOverlay({
 
   return (
     <div className={className} style={portalComponents.overlay.fullscreen}>
-      <div style={canvasUI.positioning.snapIndicator.point(point.x, point.y)} />
+      <div style={{
+        position: 'absolute',
+        left: point.x - 4,
+        top: point.y - 4,
+        width: 8,
+        height: 8,
+        border: '2px solid #00ff00',
+        borderRadius: '50%',
+        pointerEvents: 'none'
+      }} />
     </div>
   );
 }

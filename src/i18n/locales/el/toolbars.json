@@ -12,7 +12,23 @@
       "archive": "Αρχειοθέτηση",
       "favorite": "Αγαπημένα",
       "share": "Κοινοποίηση",
-      "help": "Βοήθεια"
+      "help": "Βοήθεια",
+      "save": "Αποθήκευση",
+      "create": "Δημιουργία",
+      "add": "Προσθήκη",
+      "submit": "Υποβολή",
+      "update": "Ενημέρωση",
+      "cancel": "Ακύρωση",
+      "restore": "Επαναφορά",
+      "sms": "SMS",
+      "info": "Πληροφορίες",
+
+      "save_loading": "Αποθήκευση...",
+      "delete_loading": "Διαγραφή...",
+      "archive_loading": "Αρχειοθέτηση...",
+      "restore_loading": "Επαναφορά...",
+      "favorites": "Αγαπημένα",
+      "archived": "Αρχειοθετημένα"
     },
     "search": {
       "placeholder": "Αναζήτηση...",
@@ -26,6 +42,7 @@
     },
     "sort": {
       "label": "Ταξινόμηση",
+      "sort": "Ταξινόμηση",
       "ascending": "Αύξουσα",
       "descending": "Φθίνουσα",
       "byName": "Κατά όνομα",

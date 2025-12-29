@@ -1578,6 +1578,68 @@ export const canvasUI = {
         // DXF specific styling
         backgroundColor: 'transparent' // Allow layers to show through
       })
+    },
+
+    // ✅ ENTERPRISE: Canvas overlay positioning utilities
+    tooltip: {
+      positioned: (x: number, y: number): React.CSSProperties => ({
+        position: 'absolute',
+        left: `${x + 10}px`,
+        top: `${y - 10}px`,
+        zIndex: zIndex.tooltip,
+        pointerEvents: 'none',
+        backgroundColor: colors.background.primary,
+        color: colors.text.primary,
+        padding: spacing.xs,
+        borderRadius: borderRadius.sm,
+        fontSize: typography.fontSize.sm,
+        border: `1px solid ${colors.border.primary}`,
+        boxShadow: shadows.sm
+      })
+    },
+
+    marquee: {
+      positioned: (startX: number, startY: number, endX: number, endY: number): React.CSSProperties => ({
+        position: 'absolute',
+        left: `${Math.min(startX, endX)}px`,
+        top: `${Math.min(startY, endY)}px`,
+        width: `${Math.abs(endX - startX)}px`,
+        height: `${Math.abs(endY - startY)}px`,
+        border: `2px dashed ${colors.primary[500]}`,
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        pointerEvents: 'none',
+        zIndex: zIndex.overlay
+      })
+    },
+
+    snapIndicator: {
+      positioned: (x: number, y: number): React.CSSProperties => ({
+        position: 'absolute',
+        left: `${x - 5}px`,
+        top: `${y - 5}px`,
+        width: '10px',
+        height: '10px',
+        border: `2px solid ${colors.green[500]}`,
+        borderRadius: '50%',
+        backgroundColor: colors.background.primary,
+        pointerEvents: 'none',
+        zIndex: zIndex.overlay,
+        boxShadow: `0 0 4px ${colors.green[500]}`
+      })
+    },
+
+    zoomWindow: {
+      positioned: (startX: number, startY: number, endX: number, endY: number): React.CSSProperties => ({
+        position: 'absolute',
+        left: `${Math.min(startX, endX)}px`,
+        top: `${Math.min(startY, endY)}px`,
+        width: `${Math.abs(endX - startX)}px`,
+        height: `${Math.abs(endY - startY)}px`,
+        border: `2px solid ${colors.blue[600]}`,
+        backgroundColor: 'rgba(59, 130, 246, 0.05)',
+        pointerEvents: 'none',
+        zIndex: zIndex.overlay
+      })
     }
   }
 };
@@ -2056,18 +2118,84 @@ export const mapControlPointTokens = {
     isComplete: boolean
   ): React.CSSProperties => {
     const base = mapControlPointTokens.base;
-    let state = mapControlPointTokens.states.default;
+    let state: React.CSSProperties = mapControlPointTokens.states.default as React.CSSProperties;
 
     if (isComplete) {
-      state = { ...state, ...mapControlPointTokens.states.complete };
+      state = { ...state, ...(mapControlPointTokens.states.complete as React.CSSProperties) };
     }
     if (shouldHighlight) {
-      state = { ...state, ...mapControlPointTokens.states.highlight };
+      state = { ...state, ...(mapControlPointTokens.states.highlight as React.CSSProperties) };
     }
     if (isSelected) {
-      state = { ...state, ...mapControlPointTokens.states.selected };
+      state = { ...state, ...(mapControlPointTokens.states.selected as React.CSSProperties) };
     }
 
     return { ...base, ...state };
   }
+};
+
+// ============================================================================
+// 🎨 TAILWIND CSS CLASS MAPPINGS - ENTERPRISE SYSTEM
+// ============================================================================
+
+/**
+ * ENTERPRISE BACKGROUND UTILITY CLASSES
+ * Maps semantic background concepts to Tailwind CSS classes
+ * Used throughout DXF Viewer for consistent background styling
+ */
+export const bg = {
+  // Core backgrounds
+  primary: 'bg-background',
+  secondary: 'bg-muted',
+  card: 'bg-card',
+  surface: 'bg-card',
+  muted: 'bg-muted',
+  tertiary: 'bg-slate-100',
+  backgroundSecondary: 'bg-muted',
+
+  // Skeleton loading states
+  skeleton: 'bg-muted',
+
+  // Accent backgrounds
+  accent: 'bg-accent',
+
+  // Selection states
+  selection: 'bg-blue-100',
+
+  // Status backgrounds
+  success: 'bg-green-100',
+  successHover: 'bg-green-200',
+  warning: 'bg-yellow-100',
+  error: 'bg-red-100',
+  info: 'bg-blue-100',
+
+  // Interactive states
+  hover: 'bg-accent/10',
+
+  // Overlay backgrounds
+  overlay: 'bg-black/50',
+
+  // Specialty colors
+  violet: 'bg-violet-100',
+  pink: 'bg-pink-100',
+  indigo: 'bg-indigo-100',
+  cyan: 'bg-cyan-100',
+  emerald: 'bg-emerald-100',
+  amber: 'bg-amber-100',
+  lime: 'bg-lime-100',
+  rose: 'bg-rose-100',
+  sky: 'bg-sky-100',
+  orange: 'bg-orange-100',
+  teal: 'bg-teal-100',
+  purple: 'bg-purple-100',
+  yellow: 'bg-yellow-100',
+  green: 'bg-green-100',
+  blue: 'bg-blue-100',
+  red: 'bg-red-100',
+  gray: 'bg-gray-100',
+  slate: 'bg-slate-100',
+  stone: 'bg-stone-100',
+  neutral: 'bg-neutral-100',
+  zinc: 'bg-zinc-100',
+  magenta: 'bg-pink-100'
 } as const;

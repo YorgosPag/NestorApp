@@ -114,9 +114,16 @@ export function validateEntityType(entity: EntityModel, expectedType: string | s
  * Check if point is valid (has numeric x and y coordinates)
  */
 export function isValidPoint(point: unknown): point is Point2D {
-  return point && 
-         typeof point.x === 'number' && 
-         typeof point.y === 'number' && 
-         !isNaN(point.x) && 
-         !isNaN(point.y);
+  // ✅ ENTERPRISE: Proper type guard with explicit boolean return and object type check
+  return Boolean(
+    point &&
+    typeof point === 'object' &&
+    point !== null &&
+    'x' in point &&
+    'y' in point &&
+    typeof (point as any).x === 'number' &&
+    typeof (point as any).y === 'number' &&
+    !isNaN((point as any).x) &&
+    !isNaN((point as any).y)
+  );
 }

@@ -20,7 +20,7 @@ import { type ErrorTrackerConfig } from '@/services/ErrorTracker';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 const isProduction = process.env.NODE_ENV === 'production';
-const isStaging = process.env.VERCEL_ENV === 'preview' || process.env.NODE_ENV === 'staging';
+const isStaging = process.env.VERCEL_ENV === 'preview'; // ✅ ENTERPRISE: Fixed - Remove invalid NODE_ENV staging check
 
 // ============================================================================
 // ERROR REPORTING CONFIGURATION

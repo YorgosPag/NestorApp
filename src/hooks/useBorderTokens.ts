@@ -218,6 +218,9 @@ export function useBorderTokens() {
       /** Info border */
       info: borderVariants.status.info.className,
 
+      /** Muted border για DynamicInput components */
+      muted: borderVariants.status.muted.className,
+
       /** Focus state border */
       focus: borderVariants.interactive.focus.className,
 

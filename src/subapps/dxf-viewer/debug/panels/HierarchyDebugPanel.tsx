@@ -70,9 +70,9 @@ export function HierarchyDebugPanel() {
       
       {/* Companies List */}
       <div className="mb-4">
-        <h4 className={`${colors.text.tertiary} font-medium mb-2`}>{t('panels.hierarchy.companies')} ({companies.length})</h4>
+        <h4 className={`${colors.text.secondary} font-medium mb-2`}>{t('panels.hierarchy.companies')} ({companies.length})</h4>
         {companies.length === 0 ? (
-          <p className={`${colors.text.disabled} text-sm`}>{t('panels.hierarchy.noCompanies')}</p>
+          <p className={`${colors.text.muted} text-sm`}>{t('panels.hierarchy.noCompanies')}</p>
         ) : (
           <div className="space-y-1">
             {companies.map(company => (
@@ -82,7 +82,7 @@ export function HierarchyDebugPanel() {
                 className={`w-full text-left px-2 py-1 rounded text-sm ${
                   selectedCompany?.id === company.id
                     ? `${colors.bg.warning} text-white`
-                    : `${colors.bg.hover} ${colors.text.tertiary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
+                    : `${colors.bg.hover} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
                 }`}
               >
                 <Building className={`${iconSizes.sm} inline mr-1`} />{company.companyName}
@@ -111,9 +111,9 @@ export function HierarchyDebugPanel() {
           
           {/* Projects for Selected Company */}
           <div className="mb-3">
-            <h5 className="${colors.text.tertiary} text-sm font-medium mb-2">{t('panels.hierarchy.projects')} ({projects.length})</h5>
+            <h5 className="${colors.text.secondary} text-sm font-medium mb-2">{t('panels.hierarchy.projects')} ({projects.length})</h5>
             {projects.length === 0 ? (
-              <p className="${colors.text.disabled} text-xs">{t('panels.hierarchy.noProjects')}</p>
+              <p className="${colors.text.muted} text-xs">{t('panels.hierarchy.noProjects')}</p>
             ) : (
               <div className="space-y-1">
                 {projects.map(project => (
@@ -123,7 +123,7 @@ export function HierarchyDebugPanel() {
                     className={`w-full text-left px-2 py-1 rounded text-sm ${
                       selectedProject?.id === project.id
                         ? `${colors.bg.info} text-white`
-                        : `${colors.bg.hover} ${colors.text.tertiary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
+                        : `${colors.bg.hover} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
                     }`}
                   >
                     <FolderIcon className={`${iconSizes.sm} inline mr-1`} />{project.name}
@@ -151,7 +151,7 @@ export function HierarchyDebugPanel() {
           {/* Buildings */}
           {selectedProject.buildings.length > 0 && (
             <div className="mb-3">
-              <h5 className="${colors.text.tertiary} text-sm font-medium mb-1">{t('panels.hierarchy.buildings')}</h5>
+              <h5 className="${colors.text.secondary} text-sm font-medium mb-1">{t('panels.hierarchy.buildings')}</h5>
               <div className="space-y-1">
                 {selectedProject.buildings.map(building => (
                   <button
@@ -160,7 +160,7 @@ export function HierarchyDebugPanel() {
                     className={`w-full text-left px-2 py-1 rounded text-sm ${
                       selectedBuilding?.id === building.id
                         ? `${colors.bg.success} text-white`
-                        : `${colors.bg.hover} ${colors.text.tertiary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
+                        : `${colors.bg.hover} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
                     }`}
                   >
                     <Building2 className={`${iconSizes.sm} inline mr-1`} />{building.name}
@@ -205,7 +205,7 @@ export function HierarchyDebugPanel() {
                     className={`w-full text-left px-2 py-1 rounded text-sm ${
                       selectedFloor?.id === floor.id
                         ? `${colors.bg.info} text-white`
-                        : `${colors.bg.hover} ${colors.text.tertiary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
+                        : `${colors.bg.hover} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
                     }`}
                   >
                     <Home className={`${iconSizes.sm} inline mr-1`} />{floor.name}

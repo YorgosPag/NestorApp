@@ -7,6 +7,7 @@
  */
 
 import { performance } from 'perf_hooks';
+import { GEO_COLORS } from '../config/color-config';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -1300,15 +1301,15 @@ export class GeoAlertProductionMonitoring {
             id: 'dark-theme',
             name: 'Dark Theme',
             colors: {
-              primary: '#00D2FF',
-              secondary: '#3A3A3A',
-              background: '#1F1B24',
-              surface: '#2D2A32',
-              text: '#FFFFFF',
-              success: '#4CAF50',
-              warning: '#FF9800',
-              error: '#F44336',
-              info: '#2196F3'
+              primary: GEO_COLORS.MONITORING.DASHBOARD_PRIMARY,
+              secondary: GEO_COLORS.MONITORING.DASHBOARD_SECONDARY,
+              background: GEO_COLORS.MONITORING.DASHBOARD_BACKGROUND,
+              surface: GEO_COLORS.MONITORING.DASHBOARD_SURFACE,
+              text: GEO_COLORS.MONITORING.DASHBOARD_TEXT,
+              success: GEO_COLORS.MONITORING.SUCCESS,
+              warning: GEO_COLORS.MONITORING.WARNING,
+              error: GEO_COLORS.MONITORING.ERROR,
+              info: GEO_COLORS.MONITORING.INFO
             },
             typography: {
               fontFamily: 'Inter, sans-serif',
@@ -1469,7 +1470,7 @@ export class GeoAlertProductionMonitoring {
             legend: { show: false, position: 'bottom', columns: [] },
             tooltip: { mode: 'single', sort: 'none' },
             graph: { showPoints: false, pointSize: 5, lineWidth: 1, fill: 0, staircase: false },
-            color: { mode: 'value', fixedColor: '#4CAF50', seriesBy: 'last' }
+            color: { mode: 'value', fixedColor: GEO_COLORS.MONITORING.SUCCESS, seriesBy: 'last' }
           },
           fieldConfig: {
             defaults: {
@@ -1477,9 +1478,9 @@ export class GeoAlertProductionMonitoring {
               min: 0,
               max: 100,
               thresholds: [
-                { color: '#F44336', value: 0 },
-                { color: '#FF9800', value: 70 },
-                { color: '#4CAF50', value: 90 }
+                { color: GEO_COLORS.MONITORING.ERROR, value: 0 },
+                { color: GEO_COLORS.MONITORING.WARNING, value: 70 },
+                { color: GEO_COLORS.MONITORING.SUCCESS, value: 90 }
               ]
             },
             overrides: []
@@ -1510,9 +1511,9 @@ export class GeoAlertProductionMonitoring {
             defaults: {
               unit: 'ms',
               thresholds: [
-                { color: '#4CAF50', value: 0 },
-                { color: '#FF9800', value: 200 },
-                { color: '#F44336', value: 500 }
+                { color: GEO_COLORS.MONITORING.SUCCESS, value: 0 },
+                { color: GEO_COLORS.MONITORING.WARNING, value: 200 },
+                { color: GEO_COLORS.MONITORING.ERROR, value: 500 }
               ]
             },
             overrides: []
@@ -1544,9 +1545,9 @@ export class GeoAlertProductionMonitoring {
               unit: 'percent',
               min: 0,
               thresholds: [
-                { color: '#4CAF50', value: 0 },
-                { color: '#FF9800', value: 1 },
-                { color: '#F44336', value: 5 }
+                { color: GEO_COLORS.MONITORING.SUCCESS, value: 0 },
+                { color: GEO_COLORS.MONITORING.WARNING, value: 1 },
+                { color: GEO_COLORS.MONITORING.ERROR, value: 5 }
               ]
             },
             overrides: []
@@ -1609,9 +1610,9 @@ export class GeoAlertProductionMonitoring {
               min: 0,
               max: 100,
               thresholds: [
-                { color: '#4CAF50', value: 0 },
-                { color: '#FF9800', value: 70 },
-                { color: '#F44336', value: 90 }
+                { color: GEO_COLORS.MONITORING.SUCCESS, value: 0 },
+                { color: GEO_COLORS.MONITORING.WARNING, value: 70 },
+                { color: GEO_COLORS.MONITORING.ERROR, value: 90 }
               ]
             },
             overrides: []
@@ -1644,9 +1645,9 @@ export class GeoAlertProductionMonitoring {
               min: 0,
               max: 100,
               thresholds: [
-                { color: '#4CAF50', value: 0 },
-                { color: '#FF9800', value: 80 },
-                { color: '#F44336', value: 95 }
+                { color: GEO_COLORS.MONITORING.SUCCESS, value: 0 },
+                { color: GEO_COLORS.MONITORING.WARNING, value: 80 },
+                { color: GEO_COLORS.MONITORING.ERROR, value: 95 }
               ]
             },
             overrides: []
@@ -1694,9 +1695,9 @@ export class GeoAlertProductionMonitoring {
             defaults: {
               unit: 's',
               thresholds: [
-                { color: '#4CAF50', value: 0 },
-                { color: '#FF9800', value: 30 },
-                { color: '#F44336', value: 60 }
+                { color: GEO_COLORS.MONITORING.SUCCESS, value: 0 },
+                { color: GEO_COLORS.MONITORING.WARNING, value: 30 },
+                { color: GEO_COLORS.MONITORING.ERROR, value: 60 }
               ]
             },
             overrides: []
@@ -1721,15 +1722,15 @@ export class GeoAlertProductionMonitoring {
             legend: { show: false, position: 'bottom', columns: [] },
             tooltip: { mode: 'single', sort: 'none' },
             graph: { showPoints: false, pointSize: 5, lineWidth: 1, fill: 0, staircase: false },
-            color: { mode: 'value', fixedColor: '#2196F3', seriesBy: 'last' }
+            color: { mode: 'value', fixedColor: GEO_COLORS.MONITORING.INFO, seriesBy: 'last' }
           },
           fieldConfig: {
             defaults: {
               unit: 'short',
               thresholds: [
-                { color: '#4CAF50', value: 0 },
-                { color: '#FF9800', value: 1000 },
-                { color: '#F44336', value: 5000 }
+                { color: GEO_COLORS.MONITORING.SUCCESS, value: 0 },
+                { color: GEO_COLORS.MONITORING.WARNING, value: 1000 },
+                { color: GEO_COLORS.MONITORING.ERROR, value: 5000 }
               ]
             },
             overrides: []

@@ -236,8 +236,9 @@ export class DxfPerformanceTestRunner {
 
       for (const resource of resources) {
         if (resource.name.includes('/_next/static/chunks/') || resource.name.includes('.js')) {
-          // @ts-ignore - transferSize may not be available in all browsers
-          totalSize += (resource as any).transferSize || 0;
+          // ✅ ENTERPRISE: Type-safe access to transferSize property
+          const resourceWithTransfer = resource as PerformanceResourceTiming & { transferSize?: number };
+          totalSize += resourceWithTransfer.transferSize || 0;
         }
       }
 

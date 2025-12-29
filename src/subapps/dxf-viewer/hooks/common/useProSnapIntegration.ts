@@ -42,9 +42,10 @@ export function useProSnapIntegration(parentSnapEnabled?: boolean): ProSnapInteg
   }, [currentLevelId, getLevelScene]);
 
   // Create stable stats object
+  // ✅ ENTERPRISE: Explicit typing to prevent 'never[]' inference
   const [stats, setStats] = useState(() => ({
     enabled: false,
-    modes: [],
+    modes: [] as ExtendedSnapType[],
     entityCount: 0,
     lastUpdate: Date.now()
   }));

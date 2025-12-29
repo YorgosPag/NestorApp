@@ -51,33 +51,31 @@ export interface BoundingBox {
   max: Point2D;
 }
 
-// ===== ENTITY TYPES =====
-export interface EntityModel {
-  id: string;
-  type: string;
-  visible?: boolean;
-  selected?: boolean;
-  hovered?: boolean;
-  layer?: string;
-  color?: string;
-  lineType?: LineType;
-  lineWeight?: number;
+// ===== LEGACY ENTITY SUPPORT =====
+// ✅ ENTERPRISE: EntityModel interface moved to centralized entity system
+// ✅ BACKWARD COMPATIBILITY: Re-export for any legacy code that still uses EntityModel
+export type { EntityModel } from '../../types/entities';
 
-  // Geometry properties - different per entity type
-  position?: Point2D;
-  center?: Point2D;
-  start?: Point2D;
-  end?: Point2D;
-  radius?: number;
-  points?: Point2D[];
+// Note: EntityModel is now defined in types/entities.ts as BaseEntity interface
+// Legacy code using EntityModel should gradually migrate to Entity types
 
-  // Additional properties για specialized entities
-  [key: string]: any;
-}
+// ============================================================================
+// 🔄 ENTERPRISE CENTRALIZATION: Entity types now from unified system
+// ============================================================================
+//
+// ✅ FIXED: Removed problematic aliases that caused TypeScript conflicts
+// ✅ ENTERPRISE: Import from centralized entity system
+// ✅ BACKWARD COMPATIBILITY: Use proper re-exports instead of conflicting aliases
+//
+// Previous: export type Entity = EntityModel;           // ❌ CONFLICT!
+// Previous: export type AnySceneEntity = EntityModel;   // ❌ CONFLICT!
+// New: Use proper imports from centralized system
+//
+// Migration completed: 2025-12-29
+// ============================================================================
 
-// Legacy compatibility - alias for different naming conventions
-export type Entity = EntityModel;
-export type AnySceneEntity = EntityModel;
+// Re-export Entity types from centralized system (maintains backward compatibility)
+export type { Entity, AnySceneEntity } from '../../types/entities';
 
 // ===== RENDER OPTIONS =====
 export interface RenderOptions {

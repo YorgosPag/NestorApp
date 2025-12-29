@@ -17,13 +17,13 @@ export function useConstraintManagement(
       
       return {
         success: true,
-        operation: 'add',
+        operation: { type: 'add-constraint' },
         constraintId: constraint.id
       };
     } catch (error) {
       return {
         success: false,
-        operation: 'add',
+        operation: { type: 'add-constraint' },
         constraintId: constraint.id,
         error: error instanceof Error ? error.message : 'Failed to add constraint'
       };
@@ -39,13 +39,13 @@ export function useConstraintManagement(
       
       return {
         success: true,
-        operation: 'remove',
+        operation: { type: 'remove-constraint' },
         constraintId
       };
     } catch (error) {
       return {
         success: false,
-        operation: 'remove',
+        operation: { type: 'remove-constraint' },
         constraintId,
         error: error instanceof Error ? error.message : 'Failed to remove constraint'
       };

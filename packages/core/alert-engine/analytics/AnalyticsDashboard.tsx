@@ -7,8 +7,8 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useIconSizes } from '../../../../src/hooks/useIconSizes';
+import { useBorderTokens } from '../../../../src/hooks/useBorderTokens';
 import { formatDate, formatDateTime } from '../../../../src/lib/intl-utils';
 import {
   EventAnalyticsEngine,

@@ -214,9 +214,10 @@ export function buildSubcollectionPath(
 
 /**
  * Validate collection name exists
+ * ✅ ENTERPRISE: Type-safe collection validation
  */
 export function isValidCollection(collectionName: string): boolean {
-  return Object.values(COLLECTIONS).includes(collectionName as any);
+  return (Object.values(COLLECTIONS) as string[]).includes(collectionName);
 }
 
 /**

@@ -4,10 +4,10 @@
  */
 
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
-import { UI_COLORS } from '../../config/color-config';
 
-// ✅ ΔΙΟΡΑΘΩΣΗ ΔΙΠΛΟΤΥΠΟΥ: Χρήση unified ViewTransform από rendering/types/Types.ts
-export type { ViewTransform } from '../../rendering/types/Types';
+// Re-export για συμβατότητα με existing imports
+export type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import { UI_COLORS } from '../../config/color-config';
 
 export interface BoundingBox {
   min: Point2D;
@@ -299,6 +299,8 @@ export type RulersGridOperation =
   | 'set-ruler-units'
   | 'reset-origin'
   | 'toggle-snap'
+  | 'toggle-ruler-snap'
+  | 'toggle-grid-snap'
   | 'auto-fit-grid'
   | 'export-settings'
   | 'import-settings';

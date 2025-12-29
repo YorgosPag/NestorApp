@@ -4,7 +4,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { Entity, ExtendedSnapType } from '../extended-types';
+import { Entity, ExtendedSnapType, SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { SpatialFactory } from '../../core/spatial';
 import type { ISpatialIndex, SpatialBounds } from '../../core/spatial';
@@ -94,7 +94,7 @@ export class NodeSnapEngine extends BaseSnapEngine {
       }
       
     } else if (entityType === 'polyline' || entityType === 'lwpolyline') {
-      const points = entity.points || ('vertices' in entity ? entity.vertices : undefined);
+      const points = (entity.points || ('vertices' in entity ? entity.vertices : undefined)) as Point2D[] | undefined;
       const isClosed = 'closed' in entity ? entity.closed : false;
       
       if (points) {

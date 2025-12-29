@@ -11,9 +11,10 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface CustomErrorInfo {
-  componentStack: string;
+  componentStack: string | null | undefined; // ✅ ENTERPRISE: Handle React's full nullable componentStack
   errorBoundary?: string;
-  errorBoundaryStack?: string;
+  errorBoundaryStack?: string | null | undefined; // ✅ ENTERPRISE: Handle nullable stack
+  digest?: string; // ✅ ENTERPRISE: Added missing React ErrorInfo property
 }
 
 interface ErrorBoundaryState {
@@ -74,7 +75,15 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   componentDidCatch(error: Error, errorInfo: ReactErrorInfo) {
     const { onError, componentName } = this.props;
 
-    this.setState({ errorInfo });
+    // ✅ ENTERPRISE: Convert ReactErrorInfo to CustomErrorInfo format
+    const customErrorInfo: CustomErrorInfo = {
+      componentStack: errorInfo.componentStack,
+      errorBoundary: componentName || 'ErrorBoundary',
+      errorBoundaryStack: errorInfo.componentStack,
+      digest: errorInfo.digest || undefined // React 18+ error digest (handle null)
+    };
+
+    this.setState({ errorInfo: customErrorInfo });
 
     // **🚀 INTEGRATION WITH ERRORTRACKER SERVICE**
     // Capture error με το ErrorTracker service
@@ -109,7 +118,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       userAgent: navigator.userAgent,
       url: window.location.href,
       userId: this.getUserId(),
-      errorInfo,
+      errorInfo: customErrorInfo,
       trackerErrorId // Add ErrorTracker ID
     };
 
@@ -117,7 +126,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     if (process.env.NODE_ENV === 'development') {
       console.group('🚨 Error Boundary Caught Error');
       console.error('Error:', error);
-      console.error('Component Stack:', errorInfo.componentStack);
+      console.error('Component Stack:', customErrorInfo.componentStack);
       console.error('Error Stack:', error.stack);
       console.error('ErrorTracker ID:', trackerErrorId);
       console.groupEnd();
@@ -125,7 +134,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
     // Call custom error handler με ErrorTracker ID
     if (onError && this.state.errorId) {
-      onError(error, errorInfo, trackerErrorId || this.state.errorId);
+      onError(error, customErrorInfo, trackerErrorId || this.state.errorId);
     }
 
     // Auto-retry after delay if enabled

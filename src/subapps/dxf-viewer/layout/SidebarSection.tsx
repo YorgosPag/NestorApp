@@ -57,7 +57,7 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
             selectedEntityIds={selectedEntityIds}
             onEntitySelect={setSelectedEntityIds}
             zoomLevel={currentZoom}
-            currentTool={activeTool}
+            currentTool={activeTool as ToolType} // ✅ ENTERPRISE: Type assertion for activeTool string to ToolType
           />
         </div>
 

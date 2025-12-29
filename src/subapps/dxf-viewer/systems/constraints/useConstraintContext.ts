@@ -17,16 +17,28 @@ export function useConstraintContext(
   }, [setConstraintContext]);
 
   const setCurrentTool = useCallback((tool: string) => {
-    updateContext({ tool });
-  }, [updateContext]);
+    // Update context through setConstraintContext with method call
+    setConstraintContext(prev => {
+      prev.setCurrentTool(tool);
+      return prev;
+    });
+  }, [setConstraintContext]);
 
   const setInputMode = useCallback((mode: 'point' | 'distance' | 'angle') => {
-    updateContext({ inputMode: mode });
-  }, [updateContext]);
+    // Update context through setConstraintContext with method call
+    setConstraintContext(prev => {
+      prev.setInputMode(mode);
+      return prev;
+    });
+  }, [setConstraintContext]);
 
   const setLastPoint = useCallback((point: Point2D | null) => {
-    updateContext({ lastPoint: point, isFirstPoint: point === null });
-  }, [updateContext]);
+    // Update context through setConstraintContext with method call
+    setConstraintContext(prev => {
+      prev.setLastPoint(point);
+      return prev;
+    });
+  }, [setConstraintContext]);
 
   return {
     updateContext,

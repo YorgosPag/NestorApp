@@ -84,8 +84,8 @@ export interface ConstraintDefinition {
   feedback?: (point: Point2D, context: ConstraintContext) => ConstraintFeedback;
 }
 
-// ===== CONSTRAINT CONTEXT =====
-export interface ConstraintContext {
+// ===== CONSTRAINT CONTEXT DATA =====
+export interface ConstraintContextData {
   currentPoint: Point2D;
   previousPoints: Point2D[];
   referencePoint?: Point2D;
@@ -101,6 +101,87 @@ export interface ConstraintContext {
     tolerance: number;
   };
   activeConstraints: ConstraintDefinition[];
+}
+
+// ===== CONSTRAINT CONTEXT INTERFACE =====
+/**
+ * 🏢 ENTERPRISE: Complete ConstraintContext interface
+ * Combines all constraint-related interfaces για unified API
+ * Based on existing centralized interfaces - ZERO DUPLICATES
+ */
+export interface ConstraintContext extends
+  PolarConstraintsInterface,
+  ConstraintManagementInterface {
+
+  // State and Data
+  state: ConstraintsState;
+
+  // Ortho Constraints (from OrthoConstraintsHook)
+  enableOrtho: () => void;
+  disableOrtho: () => void;
+  toggleOrtho: () => void;
+  isOrthoEnabled: () => boolean;
+  updateOrthoSettings: (updates: Partial<OrthoConstraintSettings>) => void;
+  getOrthoSettings: () => OrthoConstraintSettings;
+
+  // Constraint Application
+  applyConstraints: (point: Point2D, context?: Partial<ConstraintContextData>) => ConstraintResult;
+  validatePoint: (point: Point2D, context?: Partial<ConstraintContextData>) => boolean;
+  getConstrainedPoint: (point: Point2D, context?: Partial<ConstraintContextData>) => Point2D;
+  getConstraintContext: () => ConstraintContextData;
+  setConstraintContext: (context: ConstraintContextData) => void;
+  updateConstraintContext: (updates: Partial<ConstraintContextData>) => void;
+
+  // ✅ ENTERPRISE: Additional context methods (από useConstraintContext.ts requirements)
+  setCurrentTool: (tool: string) => void;
+  setInputMode: (mode: 'point' | 'distance' | 'angle') => void;
+  setLastPoint: (point: Point2D | null) => void;
+
+  // ✅ ENTERPRISE: Context data access (από utils.ts requirements)
+  referencePoint?: Point2D;
+
+  // Coordinate Conversion
+  cartesianToPolar: (point: Point2D, basePoint?: Point2D) => PolarCoordinates;
+  polarToCartesian: (polar: PolarCoordinates, basePoint?: Point2D) => Point2D;
+  normalizeAngle: (angle: number) => number;
+  snapToAngle: (angle: number, step?: number) => number;
+  getAngleBetweenPoints: (point1: Point2D, point2: Point2D) => number;
+  getDistanceBetweenPoints: (point1: Point2D, point2: Point2D) => number;
+
+  // Settings Management
+  getSettings: () => ConstraintsSettings;
+  updateSettings: (updates: Partial<ConstraintsSettings>) => void;
+  resetSettings: () => void;
+  loadPreset: (presetId: string) => void;
+  savePreset: (preset: ConstraintPreset) => void;
+  getPresets: () => ConstraintPreset[];
+  deletePreset: (presetId: string) => void;
+
+  // Input Handling
+  handleKeyDown: (event: KeyboardEvent) => void;
+  handleKeyUp: (event: KeyboardEvent) => void;
+  handleMouseMove: (event: MouseEvent, canvasRect: DOMRect) => void;
+  isEnabled: () => boolean;
+  temporarilyDisable: () => void;
+  enable: () => void;
+  disable: () => void;
+
+  // Visualization
+  getRenderData: () => ConstraintFeedback[];
+  shouldShowFeedback: () => boolean;
+  getConstraintLines: () => Array<{ start: Point2D; end: Point2D; color: string; width: number; style: string; }>;
+  getConstraintMarkers: () => Array<{ position: Point2D; type: string; color: string; size: number; }>;
+
+  // Context Management
+  updateContext: (updates: Partial<ConstraintContextData>) => void;
+  getContext: () => ConstraintContextData;
+
+  // Operations
+  performOperation: (operation: ConstraintOperation) => Promise<ConstraintOperationResult>;
+
+  // Coordinate Conversion Aliases (compatibility)
+  toPolar: (point: Point2D, basePoint?: Point2D) => PolarCoordinates;
+  toCartesian: (polar: PolarCoordinates, basePoint?: Point2D) => Point2D;
 }
 
 // ===== CONSTRAINT FEEDBACK =====
@@ -356,16 +437,30 @@ export const CONSTRAINTS_CONFIG = {
 } as const;
 
 // ===== CONSTRAINT OPERATIONS =====
-export type ConstraintOperation = 
+export type ConstraintOperationType =
   | 'enable-constraint'
   | 'disable-constraint'
   | 'toggle-constraint'
+  | 'toggle-ortho'
+  | 'toggle-polar'
+  | 'reset-settings'
+  | 'load-preset'
   | 'set-base-point'
   | 'set-base-angle'
   | 'add-constraint'
   | 'remove-constraint'
+  | 'add'
+  | 'remove'
+  | 'import'
+  | 'remove-constraint'
   | 'clear-constraints'
   | 'reset-constraints';
+
+export interface ConstraintOperation {
+  type: ConstraintOperationType;
+  presetId?: string;
+  payload?: unknown;
+}
 
 export interface ConstraintOperationResult {
   success: boolean;
@@ -411,7 +506,12 @@ export const DEFAULT_CONSTRAINT_PRESETS: ConstraintPreset[] = [
     constraints: [],
     settings: {
       general: {
-        priority: ['ortho', 'polar', 'parallel', 'perpendicular']
+        enabled: true,
+        priority: ['ortho', 'polar', 'parallel', 'perpendicular'],
+        globalTolerance: 0.01,
+        showFeedback: true,
+        audioFeedback: false,
+        hapticFeedback: false
       }
     },
     tags: ['architecture', 'building', 'construction']
@@ -423,7 +523,12 @@ export const DEFAULT_CONSTRAINT_PRESETS: ConstraintPreset[] = [
     constraints: [],
     settings: {
       general: {
-        priority: ['angle', 'distance', 'parallel', 'tangent']
+        enabled: true,
+        priority: ['angle', 'distance', 'parallel', 'tangent'],
+        globalTolerance: 0.001,
+        showFeedback: true,
+        audioFeedback: true,
+        hapticFeedback: true
       }
     },
     tags: ['mechanical', 'engineering', 'precision']
@@ -436,12 +541,19 @@ export const DEFAULT_CONSTRAINT_PRESETS: ConstraintPreset[] = [
     settings: {
       general: {
         enabled: false,
-        showFeedback: false
+        priority: [],
+        globalTolerance: 0.1,
+        showFeedback: false,
+        audioFeedback: false,
+        hapticFeedback: false
       }
     },
     tags: ['art', 'creative', 'freeform']
   }
 ];
+
+// ✅ ENTERPRISE: Alias για backward compatibility με useConstraintOperations.ts
+export const CONSTRAINT_PRESETS = DEFAULT_CONSTRAINT_PRESETS;
 
 // ===== SHARED HOOK INTERFACES =====
 /**

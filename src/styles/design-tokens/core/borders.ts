@@ -299,7 +299,22 @@ export const borderVariants = {
       color: borderColors.info.css,
       radius: borderRadius.md,
       className: 'border border-blue-500 rounded-md'
+    },
+    /** Muted border για DynamicInput components */
+    muted: {
+      width: borderWidth.default,
+      color: borderColors.muted.css,
+      radius: borderRadius.md,
+      className: 'border border-gray-300 rounded-md'
     }
+  },
+
+  /** Form controls - checkboxes, radios, etc. */
+  checkbox: {
+    width: borderWidth.default,
+    color: borderColors.default.css,
+    radius: borderRadius.md,
+    className: 'border-[1px] border-[rgb(229, 231, 235)] rounded-md'
   }
 } as const;
 
@@ -323,8 +338,8 @@ export const borderUtils = {
    * Get CSS class for border variant
    */
   getVariantClass: (variant: keyof typeof borderVariants): string => {
-    const variantConfig = borderVariants[variant];
-    if ('className' in variantConfig) {
+    const variantConfig = borderVariants[variant] as any;
+    if ('className' in variantConfig && typeof variantConfig.className === 'string') {
       return variantConfig.className;
     }
     return '';

@@ -9,7 +9,7 @@
  */
 
 import { dialogComponents } from '@/styles/design-tokens';
-import { UI_COLORS } from '../config/color-config';
+import { UI_COLORS, withOpacity } from '../config/color-config';
 
 // ============================================================================
 // DIALOG STYLING UTILITIES
@@ -53,7 +53,7 @@ export const getModalContentStyles = () => ({
  */
 export const getSelectFocusHandlers = () => ({
   onFocus: (e: React.FocusEvent<HTMLSelectElement>) => {
-    const focusStyle = { borderColor: UI_COLORS.BUTTON_PRIMARY, outline: `2px solid ${UI_COLORS.withOpacity(UI_COLORS.BUTTON_PRIMARY, 0.2)}` };
+    const focusStyle = { borderColor: UI_COLORS.BUTTON_PRIMARY, outline: `2px solid ${withOpacity(UI_COLORS.BUTTON_PRIMARY, 0.2)}` };
     if (focusStyle) {
       Object.assign(e.currentTarget.style, focusStyle);
     }
@@ -214,7 +214,7 @@ export const getLoadingStyles = () => ({
 export const getErrorStyles = () => ({
   container: {
     padding: '0.75rem',
-    backgroundColor: UI_COLORS.withOpacity(UI_COLORS.ERROR, 0.2),
+    backgroundColor: withOpacity(UI_COLORS.ERROR, 0.2),
     border: `1px solid ${UI_COLORS.ERROR}`,
     borderRadius: '0.5rem'
   },

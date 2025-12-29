@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { BadgeFactory } from './BadgeFactory';
 import { getDynamicElementClasses } from '@/components/ui/utils/dynamic-styles';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type {
   DomainType,
   ProjectStatus,
@@ -44,8 +45,10 @@ export const UnifiedBadge: React.FC<UnifiedBadgeProps> = ({
   onMouseLeave,
   ...options
 }) => {
+  // ✅ ZERO HARDCODED VALUES - Use centralized semantic colors
+  const colors = useSemanticColors();
   // Δημιουργία badge configuration μέσω Factory
-  const badgeConfig = BadgeFactory.create(domain, status, options);
+  const badgeConfig = BadgeFactory.create(domain, status, colors, options);
 
   return (
     <Badge
@@ -125,7 +128,8 @@ interface CommonBadgeProps extends Omit<UnifiedBadgeProps, 'domain'> {
 }
 
 export const CommonBadge: React.FC<CommonBadgeProps> = ({ status, ...props }) => {
-  const badgeConfig = BadgeFactory.createCommonBadge(status, props);
+  const colors = useSemanticColors();
+  const badgeConfig = BadgeFactory.createCommonBadge(status, colors, props);
 
   return (
     <Badge
@@ -194,9 +198,11 @@ export const BadgeGroup: React.FC<BadgeGroupProps> = ({
  * Hook για badge configuration
  */
 export const useBadgeConfig = (domain: DomainType, status: string, options?: BadgeFactoryOptions): BadgeDefinition => {
+  // ✅ ZERO HARDCODED VALUES - Use centralized semantic colors
+  const colors = useSemanticColors();
   return React.useMemo(() =>
-    BadgeFactory.create(domain, status, options || {}),
-    [domain, status, options]
+    BadgeFactory.create(domain, status, colors, options || {}),
+    [domain, status, colors, options]
   );
 };
 
@@ -204,10 +210,12 @@ export const useBadgeConfig = (domain: DomainType, status: string, options?: Bad
  * Hook για validation
  */
 export const useBadgeValidation = (domain: DomainType, status: string) => {
+  // ✅ ZERO HARDCODED VALUES - Use centralized semantic colors
+  const colors = useSemanticColors();
   return React.useMemo(() => ({
-    isValid: BadgeFactory.isValidStatus(domain, status),
-    availableStatuses: BadgeFactory.getAvailableStatuses(domain)
-  }), [domain, status]);
+    isValid: BadgeFactory.isValidStatus(domain, status, colors),
+    availableStatuses: BadgeFactory.getAvailableStatuses(domain, colors)
+  }), [domain, status, colors]);
 };
 
 // ===== HIGHER-ORDER COMPONENTS =====

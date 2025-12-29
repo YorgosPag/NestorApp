@@ -7,6 +7,7 @@
  */
 
 import { performance } from 'perf_hooks';
+import { GEO_COLORS } from '../config/color-config';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -1794,8 +1795,8 @@ export class GeoAlertTestSuite {
         .warning { color: orange; }
         .skipped { color: gray; }
         table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
+        th, td { border: 1px solid ${GEO_COLORS.UI.BORDER}; padding: 8px; text-align: left; }
+        th { background-color: ${GEO_COLORS.UI.BACKGROUND}; }
       </style>
     </head>
     <body>

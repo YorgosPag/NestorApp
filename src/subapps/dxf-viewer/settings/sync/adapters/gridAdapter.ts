@@ -28,7 +28,7 @@ export const gridAdapter: GridPort = {
     const state = globalGridStore.settings;
     return {
       enabled: state.enabled,
-      spacing: state.spacing,
+      spacing: state.size,
       color: state.color,
       opacity: state.opacity
     };
@@ -56,7 +56,7 @@ export const gridAdapter: GridPort = {
     return globalGridStore.subscribe((state) => {
       handler({
         enabled: state.enabled,
-        spacing: state.spacing,
+        spacing: state.size,
         color: state.color,
         opacity: state.opacity
       });

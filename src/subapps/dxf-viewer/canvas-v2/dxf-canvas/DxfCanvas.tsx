@@ -189,8 +189,8 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
         cursorRendererRef.current = new LegacyCursorAdapter(ctx);
         selectionRendererRef.current = new SelectionRenderer(ctx);
         // ✅ ADD: Initialize Grid and Ruler renderers για independent UI
-        gridRendererRef.current = new GridRenderer(ctx);
-        rulerRendererRef.current = new RulerRenderer(ctx);
+        gridRendererRef.current = new GridRenderer();
+        rulerRendererRef.current = new RulerRenderer();
       }
     } catch (error) {
       console.error('Failed to initialize DXF renderer:', error);
@@ -290,7 +290,7 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
             rotation: 0
           };
           const context = createUIRenderContext(ctx, viewport, uiTransform);
-          gridRendererRef.current.render(context, viewport, gridSettings);
+          gridRendererRef.current.render(context, viewport, gridSettings as any);
           console.log('✅ DxfCanvas: GRID rendered successfully');
         }
       }
@@ -309,7 +309,7 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
             rotation: 0
           };
           const context = createUIRenderContext(ctx, viewport, uiTransform);
-          rulerRendererRef.current.render(context, viewport, rulerSettings);
+          rulerRendererRef.current.render(context, viewport, rulerSettings as any);
           console.log('✅ DxfCanvas: RULERS rendered successfully');
         }
       }
@@ -394,11 +394,11 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
       className={`dxf-canvas ${className}`}
       {...props} // 🎯 SPREAD: Περνάω τα extra props (data-canvas-type κ.λπ.)
       style={canvasUI.positioning.layers.dxfCanvasWithTools(activeTool, crosshairSettings?.enabled)}
-      onMouseDown={(e) => mouseHandlers.handleMouseDown(e, canvasRef.current!)}
-      onMouseMove={(e) => mouseHandlers.handleMouseMove(e, canvasRef.current!)}
+      onMouseDown={(e) => mouseHandlers.handleMouseDown(e)}
+      onMouseMove={(e) => mouseHandlers.handleMouseMove(e)}
       onMouseUp={mouseHandlers.handleMouseUp}
-      onMouseLeave={(e) => mouseHandlers.handleMouseLeave(e, canvasRef.current!)}
-      onWheel={(e) => mouseHandlers.handleWheel(e, canvasRef.current!)}
+      onMouseLeave={(e) => mouseHandlers.handleMouseLeave(e)}
+      onWheel={(e) => mouseHandlers.handleWheel(e)}
     />
   );
 });

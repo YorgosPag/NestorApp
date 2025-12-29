@@ -10,13 +10,5 @@ export { Trans, Translation } from 'react-i18next';
 // Export TypeScript types for type safety
 export type {
   TranslationNamespace,
-  TranslationKeys,
-  TFunction,
-  CommonKeys,
-  AuthKeys,
-  NavigationKeys,
-  DashboardKeys,
-  CrmKeys,
-  PropertiesKeys,
-  FormsKeys
+  TranslationKey // ✅ ENTERPRISE: Only export what exists in types/i18n
 } from '@/types/i18n';

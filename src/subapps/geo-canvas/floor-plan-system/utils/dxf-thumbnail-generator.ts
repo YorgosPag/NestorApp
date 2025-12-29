@@ -12,6 +12,8 @@
  * - High-quality antialiasing
  */
 
+import { GEO_COLORS } from '../../config/color-config';
+
 /**
  * Thumbnail generation options
  */
@@ -20,9 +22,9 @@ export interface ThumbnailOptions {
   width?: number;
   /** Thumbnail height (default: 400px) */
   height?: number;
-  /** Background color (default: '#ffffff') */
+  /** Background color (default: GEO_COLORS.CAD.FLOOR_PLAN_BG) */
   backgroundColor?: string;
-  /** Entity stroke color (default: '#000000') */
+  /** Entity stroke color (default: GEO_COLORS.CAD.FLOOR_PLAN_STROKE) */
   strokeColor?: string;
   /** Entity stroke width (default: 1) */
   strokeWidth?: number;
@@ -38,8 +40,8 @@ export interface ThumbnailOptions {
 const DEFAULT_OPTIONS: Required<ThumbnailOptions> = {
   width: 400,
   height: 400,
-  backgroundColor: '#f8fafc', // ✅ ENTERPRISE: Light gray instead of pure white for better contrast
-  strokeColor: '#1e293b',      // ✅ ENTERPRISE: Dark gray instead of black for softer contrast
+  backgroundColor: GEO_COLORS.CAD.FLOOR_PLAN_BG, // ✅ ENTERPRISE: Light gray instead of pure white for better contrast
+  strokeColor: GEO_COLORS.CAD.FLOOR_PLAN_STROKE,      // ✅ ENTERPRISE: Dark gray instead of black for softer contrast
   strokeWidth: 1,
   padding: 20,
   quality: 0.9
@@ -57,7 +59,7 @@ const DEFAULT_OPTIONS: Required<ThumbnailOptions> = {
  * const thumbnail = await generateDxfThumbnail(geoJSON, bounds, {
  *   width: 400,
  *   height: 400,
- *   backgroundColor: '#f5f5f5'
+ *   backgroundColor: GEO_COLORS.CAD.FLOOR_PLAN_BG
  * });
  */
 export async function generateDxfThumbnail(

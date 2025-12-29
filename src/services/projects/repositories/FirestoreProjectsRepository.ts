@@ -1,7 +1,8 @@
 import { db, safeDbOperation } from '@/lib/firebase-admin';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase-admin/firestore';
 import type { IProjectsRepository } from '../contracts';
 import type { Project } from '@/types/project';
-import type { Building } from '@/components/building-management/mockData';
+import type { Building } from '@/types/building/contracts';
 import type { Property } from '@/types/property-viewer';
 import type { Contact } from '@/types/contacts';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -62,12 +63,10 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
 
   async getProjectById(projectId: string): Promise<Project | null> {
     return await safeDbOperation(async (database) => {
-      const { doc, getDoc } = await import('firebase-admin/firestore');
-
       const docRef = doc(database, 'projects', projectId);
       const docSnap = await getDoc(docRef);
 
-      if (!docSnap.exists()) {
+      if (!docSnap.exists) {
         return null;
       }
 

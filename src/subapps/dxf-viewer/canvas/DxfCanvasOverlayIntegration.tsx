@@ -139,7 +139,9 @@ export const useOverlaySystem = (
 
   // ═══ ENTITY FINDING HELPER ═══
   const findEntityById = useCallback((entityId: string): Entity | null => {
-    return currentScene?.entities?.find((e: Entity) => e.id === entityId) || null;
+    const entity = currentScene?.entities?.find((e: any) => e.id === entityId);
+    // ✅ ENTERPRISE: Proper type conversion from AnySceneEntity to Entity
+    return entity ? (entity as Entity) : null;
   }, [currentScene]);
 
   return {

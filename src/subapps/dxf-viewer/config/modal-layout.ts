@@ -29,6 +29,7 @@ export const MODAL_SPACING = {
   CONTAINER: {
     padding: 'p-4',           // Standard container padding
     paddingLarge: 'p-6',      // Large container padding
+    paddingSmall: 'p-2',      // Small container padding
     margin: 'm-4',            // Standard margin
     marginBottom: 'mb-4',     // Standard bottom margin
     marginTop: 'mt-4',        // Standard top margin
@@ -57,6 +58,9 @@ export const MODAL_SPACING = {
     betweenFields: 'mb-3',    // Space between form fields
     afterLabel: 'mb-2',       // Space after labels
     afterDescription: 'mt-1', // Space after descriptions
+    // ✅ ENTERPRISE: Missing properties used in SimpleProjectDialog
+    betweenItems: 'space-y-2', // Space between list items
+    betweenBlocks: 'space-y-4', // Space between larger blocks
   },
 } as const;
 
@@ -135,6 +139,8 @@ export const MODAL_FLEX_PATTERNS = {
     buttonGroupBetween: 'flex gap-3 justify-between',
     formFieldGroup: 'space-y-3',
     infoCardContent: 'flex items-center space-x-2',
+    // ✅ ENTERPRISE: Missing spaceBetween layout pattern
+    spaceBetween: 'justify-between',
   },
 } as const;
 

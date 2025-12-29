@@ -121,25 +121,31 @@ export const PARKING_FILTER_LABELS = {
 //
 // ============================================================================
 
-// Core status labels extracted from UNIFIED_BADGE_SYSTEM
+// 🏢 ENTERPRISE: Dynamic status labels extracted from CENTRALIZED BADGE SYSTEM
+import { UNIT_STATUSES, BUILDING_STATUSES, PROJECT_STATUSES, CONTACT_STATUSES } from '@/core/status/StatusConstants';
+
+/**
+ * ✅ ENTERPRISE PROFESSIONAL: Dynamic status labels με centralized source
+ * 🎯 No hardcoded values - extracts from unified badge system
+ */
 export const UNIFIED_STATUS_FILTER_LABELS = {
-  // Βασικές καταστάσεις - shared across all domains
-  AVAILABLE: 'Διαθέσιμες',           // from UNIT_STATUSES.available.label (plural)
-  SOLD: 'Πωλημένες',                 // from UNIT_STATUSES.sold.label (plural)
-  RESERVED: 'Κρατημένες',            // from UNIT_STATUSES.reserved.label (plural)
-  MAINTENANCE: 'Συντήρηση',          // from UNIT_STATUSES.maintenance.label
-  OCCUPIED: 'Κατειλημμένες',         // from UNIT_STATUSES.occupied.label (plural)
+  // Βασικές καταστάσεις - shared across all domains (extracted dynamically)
+  AVAILABLE: UNIT_STATUSES.available?.label || 'Διαθέσιμες',
+  SOLD: BUILDING_STATUSES.sold?.label || 'Πωλημένες', // ✅ ENTERPRISE: Fixed - Use BUILDING_STATUSES instead of UNIT_STATUSES
+  RESERVED: UNIT_STATUSES.reserved?.label || 'Κρατημένες',
+  MAINTENANCE: UNIT_STATUSES.maintenance?.label || 'Συντήρηση',
+  OCCUPIED: UNIT_STATUSES.occupied?.label || 'Κατειλημμένες',
 
-  // Project statuses
-  PLANNING: 'Σχεδιασμένα',           // from PROJECT_STATUSES.planning.label (plural)
-  IN_PROGRESS: 'Σε εξέλιξη',        // from PROJECT_STATUSES.in_progress.label
-  COMPLETED: 'Ολοκληρωμένα',        // from PROJECT_STATUSES.completed.label (plural)
-  ON_HOLD: 'Σε αναμονή',            // from PROJECT_STATUSES.on_hold.label
+  // Project statuses (extracted dynamically)
+  PLANNING: PROJECT_STATUSES.planning?.label || 'Σχεδιασμένα',
+  IN_PROGRESS: PROJECT_STATUSES.in_progress?.label || 'Σε εξέλιξη',
+  COMPLETED: PROJECT_STATUSES.completed?.label || 'Ολοκληρωμένα',
+  ON_HOLD: PROJECT_STATUSES.on_hold?.label || 'Σε αναμονή',
 
-  // Contact statuses
-  ACTIVE: 'Ενεργές',                // from CONTACT_STATUSES.active.label (plural)
-  INACTIVE: 'Ανενεργές',            // from CONTACT_STATUSES.inactive.label (plural)
-  ARCHIVED: 'Αρχειοθετημένες',      // from CONTACT_STATUSES.archived.label (plural)
+  // Contact statuses (extracted dynamically)
+  ACTIVE: CONTACT_STATUSES.active?.label || 'Ενεργές',
+  INACTIVE: CONTACT_STATUSES.inactive?.label || 'Ανενεργές',
+  ARCHIVED: CONTACT_STATUSES.archived?.label || 'Αρχειοθετημένες',
 
   // Extended status labels (migrated from AdvancedFilters)
   LEAD: 'Προοπτική',                // from contact filters

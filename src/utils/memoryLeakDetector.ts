@@ -61,11 +61,21 @@ class MemoryLeakDetector {
   }
 
   private takeSnapshot(): MemorySnapshot | null {
-    if (!('performance' in window) || !(window.performance as any).memory) {
+    // ✅ ENTERPRISE: Type-safe access to Chrome's Memory API
+    interface PerformanceWithMemory extends Performance {
+      memory?: {
+        usedJSHeapSize: number;
+        totalJSHeapSize: number;
+        jsHeapSizeLimit: number;
+      };
+    }
+
+    const performanceWithMemory = window.performance as PerformanceWithMemory;
+    if (!('performance' in window) || !performanceWithMemory.memory) {
       return null;
     }
 
-    const memory = (window.performance as any).memory;
+    const memory = performanceWithMemory.memory;
     const snapshot: MemorySnapshot = {
       timestamp: Date.now(),
       usedJSHeapSize: memory.usedJSHeapSize,
@@ -169,9 +179,12 @@ class MemoryLeakDetector {
 
       // Memory leak warning detected (console logging removed)
 
-      // Trigger garbage collection in development
-      if (process.env.NODE_ENV === 'development' && (window as any).gc) {
-        (window as any).gc();
+      // ✅ ENTERPRISE: Type-safe access to Chrome DevTools gc() function
+      if (process.env.NODE_ENV === 'development') {
+        const windowWithGC = window as Window & { gc?: () => void };
+        if (windowWithGC.gc) {
+          windowWithGC.gc();
+        }
       }
     }
   }

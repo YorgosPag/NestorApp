@@ -140,7 +140,7 @@ export class DxfRenderer {
       selected: isSelected,
       layer: entity.layer,
       color: entity.color,
-      lineType: entityWithLineType.lineType || 'solid',
+      lineType: (entityWithLineType.lineType as any) || 'solid',
       lineWeight: entity.lineWidth,
 
       // Geometry mapping βάσει τύπου

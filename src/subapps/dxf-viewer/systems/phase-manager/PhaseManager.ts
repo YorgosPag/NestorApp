@@ -55,6 +55,11 @@ export interface PhaseRenderingState {
     hasMeasurement?: boolean;
     hasOverlayPreview?: boolean;
   };
+  gripState?: {
+    hoveredGrip?: { entityId: string; gripIndex: number };
+    selectedGrip?: { entityId: string; gripIndex: number };
+    dragginGrip?: { entityId: string; gripIndex: number };
+  };
 }
 // 🗑️ REMOVED: getLineCompletionStyle - δεν χρειάζεται πια
 
@@ -266,7 +271,7 @@ export class PhaseManager {
       // Determine grip color based on interaction state
       const gripColor = this.getGripColor(entity.id, i, state);
 
-      this.drawPhaseGrip(screenPos, gripColor, state, grip.gripType);
+      this.drawPhaseGrip(screenPos, gripColor, state, grip.type);
     }
   }
 
@@ -334,7 +339,7 @@ export class PhaseManager {
   private getGripState(entity: EntityModel): PhaseRenderingState['gripState'] {
     // TODO: This will be connected to actual grip interaction system
     // For now, return empty state
-    return {};
+    return undefined;
   }
 
   /**
@@ -388,7 +393,7 @@ export class PhaseManager {
     
     this.ctx.save();
 
-    this.ctx.fillStyle = UI_COLORS.RED; // Red for live measurements
+    this.ctx.fillStyle = UI_COLORS.SELECTED_RED; // Red for live measurements
     this.ctx.font = '12px Arial';
     this.ctx.textBaseline = 'middle';
     
@@ -436,7 +441,7 @@ export class PhaseManager {
     // Render live measurements
     this.ctx.save();
 
-    this.ctx.fillStyle = UI_COLORS.RED; // Red for live measurements
+    this.ctx.fillStyle = UI_COLORS.SELECTED_RED; // Red for live measurements
     this.ctx.font = '12px Arial';
     this.ctx.textBaseline = 'middle';
     
@@ -549,7 +554,7 @@ export class PhaseManager {
     // Render live measurements near the grip being dragged
     this.ctx.save();
 
-    this.ctx.fillStyle = UI_COLORS.RED; // Red for live measurements
+    this.ctx.fillStyle = UI_COLORS.SELECTED_RED; // Red for live measurements
     this.ctx.font = '12px Arial';
     
     // Smart positioning - avoid screen edges and grip overlap
@@ -717,7 +722,7 @@ export class PhaseManager {
     // Render live measurements
     this.ctx.save();
 
-    this.ctx.fillStyle = UI_COLORS.RED; // Red for live measurements
+    this.ctx.fillStyle = UI_COLORS.SELECTED_RED; // Red for live measurements
     this.ctx.font = '12px Arial';
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';

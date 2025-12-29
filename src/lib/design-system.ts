@@ -121,7 +121,22 @@ export const getInteractiveStateClass = (
 export const getGridClass = (
   pattern: keyof typeof designTokens.gridPatterns
 ) => {
-  return designTokens.gridPatterns[pattern].full;
+  const gridPattern = designTokens.gridPatterns[pattern];
+
+  // ✅ ENTERPRISE: Handle different grid pattern structures
+  if ('full' in gridPattern) {
+    return gridPattern.full;
+  }
+
+  // Handle form patterns with specific full variants
+  if (pattern === 'form') {
+    return gridPattern.fullDouble; // Default form layout
+  }
+
+  // Fallback: construct basic grid class
+  const mobile = 'mobile' in gridPattern ? gridPattern.mobile : 'grid-cols-1';
+  const gap = 'gap' in gridPattern ? gridPattern.gap : 'gap-4';
+  return `grid ${gap} ${mobile}`;
 };
 
 // Shadow utilities

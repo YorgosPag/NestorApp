@@ -33,7 +33,7 @@ import { GEO_COLORS } from '../../config/color-config';
  * Layer styling options
  */
 export interface FloorPlanLayerStyle {
-  /** Stroke color (default: #000000) */
+  /** Stroke color (default: GEO_COLORS.CAD.FLOOR_PLAN_STROKE) */
   strokeColor?: string;
   /** Stroke width in pixels (default: 2) */
   strokeWidth?: number;
@@ -96,7 +96,7 @@ const DEFAULT_STYLE: Required<FloorPlanLayerStyle> = {
  *   map={mapInstance}
  *   floorPlan={parserResult}
  *   visible={isVisible}
- *   style={{ strokeColor: '#FF0000', opacity: 0.8 }}
+ *   style={{ strokeColor: GEO_COLORS.CAD.FLOOR_PLAN_STROKE, opacity: 0.8 }}
  * />
  * ```
  */

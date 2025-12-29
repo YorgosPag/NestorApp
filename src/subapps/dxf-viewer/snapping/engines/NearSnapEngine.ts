@@ -66,7 +66,7 @@ export class NearSnapEngine extends BaseSnapEngine {
       }
       
     } else if (entityType === 'polyline' || entityType === 'lwpolyline') {
-      const points = entity.points || ('vertices' in entity ? entity.vertices : undefined);
+      const points = (entity.points || ('vertices' in entity ? entity.vertices : undefined)) as Point2D[] | undefined;
       if (points) {
         // All vertices
         points.forEach((point: Point2D, index: number) => {

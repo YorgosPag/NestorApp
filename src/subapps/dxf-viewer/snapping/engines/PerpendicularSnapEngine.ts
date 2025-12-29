@@ -50,7 +50,7 @@ export class PerpendicularSnapEngine extends BaseSnapEngine {
       }
       
     } else if (entityType === 'polyline' || entityType === 'lwpolyline') {
-      const points = entity.points || ('vertices' in entity ? entity.vertices : undefined);
+      const points = (entity.points || ('vertices' in entity ? entity.vertices : undefined)) as Point2D[] | undefined;
       const isClosed = 'closed' in entity ? entity.closed : false;
       
       if (points && points.length > 1) {

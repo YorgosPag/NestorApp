@@ -12,7 +12,23 @@
       "archive": "Archive",
       "favorite": "Favorites",
       "share": "Share",
-      "help": "Help"
+      "help": "Help",
+      "save": "Save",
+      "create": "Create",
+      "add": "Add",
+      "submit": "Submit",
+      "update": "Update",
+      "cancel": "Cancel",
+      "restore": "Restore",
+      "sms": "SMS",
+      "info": "Information",
+
+      "save_loading": "Saving...",
+      "delete_loading": "Deleting...",
+      "archive_loading": "Archiving...",
+      "restore_loading": "Restoring...",
+      "favorites": "Favorites",
+      "archived": "Archived"
     },
     "search": {
       "placeholder": "Search...",
@@ -26,6 +42,7 @@
     },
     "sort": {
       "label": "Sort",
+      "sort": "Sort",
       "ascending": "Ascending",
       "descending": "Descending",
       "byName": "By name",

@@ -39,6 +39,7 @@ import { canvasUI } from '@/styles/design-tokens/canvas';
 // ✅ ΦΑΣΗ 7: Event system κεντρικοποιημένο στο rendering/canvas/core/CanvasEventSystem
 import { canvasEventBus, CANVAS_EVENTS, subscribeToTransformChanges } from '../../rendering/canvas/core/CanvasEventSystem';
 import type { ViewTransform, Viewport, Point2D, CanvasConfig } from '../../rendering/types/Types';
+import type { DxfScene } from '../dxf-canvas/dxf-types';
 import type {
   ColorLayer,
   LayerRenderOptions,
@@ -147,7 +148,7 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
    * - World coordinates → Screen coordinates (CoordinateTransforms.worldToScreen)
    */
   // 🚀 Layer Hit Testing - για επιλογή layers στον καμβά - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ
-  const layerHitTestCallback = useCallback((scene: any, screenPos: Point2D, transform: ViewTransform, viewport: Viewport) => {
+  const layerHitTestCallback = useCallback((scene: DxfScene | null, screenPos: Point2D, transform: ViewTransform, viewport: Viewport): string | null => {
     // Layer hit-test callback - debug disabled for performance
 
     if (!layers || layers.length === 0) {
@@ -169,7 +170,8 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
        */
       const result = rendererRef.current?.hitTest(layers, screenPos, transform, viewport, 5);
       // Hit-test result debug disabled for performance
-      return result;
+      // ✅ ENTERPRISE: Ensure non-undefined value for interface compliance
+      return result ?? null;
     } catch (error) {
       console.error('🔥 LayerCanvas LayerRenderer hitTest failed:', error);
       return null;
@@ -516,8 +518,8 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
         canvasRef.current = el;
         if (typeof ref === 'function') {
           ref(el);
-        } else if (ref) {
-          ref.current = el;
+        } else if (ref && 'current' in ref) {
+          (ref as React.MutableRefObject<HTMLCanvasElement | null>).current = el;
         }
       }}
       className={`layer-canvas ${className}`}
@@ -582,23 +584,23 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
         // Mouse enter event handled by mouse handlers
       }}
       onMouseMove={(e) => {
-        mouseHandlers.handleMouseMove(e, canvasRef.current!);
+        mouseHandlers.handleMouseMove(e);
       }}
       onMouseLeave={(e) => {
-        mouseHandlers.handleMouseLeave(e, canvasRef.current!);
+        mouseHandlers.handleMouseLeave(e);
       }}
       onClick={(e) => {
         // Click event - handled by mouse handlers
       }}
       onMouseDown={(e) => {
         // ✅ ALLOW EVENTS: Let events flow for marquee selection
-        mouseHandlers.handleMouseDown(e, canvasRef.current!);
+        mouseHandlers.handleMouseDown(e);
       }}
       onMouseUp={(e) => {
         // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση ΜΟΝΟ των centralized mouse handlers
         mouseHandlers.handleMouseUp(e);
       }}
-      onWheel={(e) => mouseHandlers.handleWheel(e, canvasRef.current!)}
+      onWheel={(e) => mouseHandlers.handleWheel(e)}
     />
   );
 });

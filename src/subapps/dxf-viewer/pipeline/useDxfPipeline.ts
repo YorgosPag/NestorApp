@@ -15,7 +15,7 @@ import type {
 
 // ✅ INLINE DXF IMPORT UTILITIES - Αντικατάσταση διαγραμμένου canvas-core
 const createDxfImportUtils = () => ({
-  processImportResult: (result: DxfImportResult, onSuccess?: (scene: SceneModel) => void, onError?: (error: string) => void) => {
+  processImportResult: (result: DxfImportResult, onSuccess?: (scene: SceneModel) => void, onError?: (error: string) => void): SceneModel | null => {
     if (result.success && result.scene) {
       onSuccess?.(result.scene);
       return result.scene;
@@ -70,11 +70,12 @@ export function useDxfPipeline() {
 
       // Αποθήκευση σκηνής στο Level Manager
       if (lm && lm.currentLevelId) {
-
-        lm.setLevelScene(lm.currentLevelId, result.scene);
+        // ✅ ENTERPRISE: Null safety for SceneModel assignment
+        lm.setLevelScene(lm.currentLevelId, result.scene ?? null);
       }
 
-      return result.scene;
+      // ✅ ENTERPRISE: Ensure null return instead of undefined for function signature compliance
+      return (result.scene ?? null) as SceneModel | null;
     } catch (error) {
       console.error('💥 Σφάλμα κατά την εισαγωγή DXF:', error);
       setLastResult({
@@ -103,7 +104,7 @@ export function useDxfPipeline() {
       
       const dxfUtils = createDxfImportUtils();
       const scene = dxfUtils.processImportResult(result);
-      
+
       if (!scene) {
         return {
           success: false,
@@ -113,8 +114,9 @@ export function useDxfPipeline() {
         };
       }
 
+      // ✅ ENTERPRISE: Type guard ensures scene is not null before processing
       // Process based on destination type
-      const processedScene = await processSceneForDestination(scene, destination, options);
+      const processedScene = await processSceneForDestination(scene as SceneModel, destination, options);
       
       // Store in appropriate location
       await storeSceneAtDestination(processedScene, destination);

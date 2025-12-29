@@ -1,14 +1,23 @@
 import type { IProjectsService, IProjectsRepository, ProjectStructure } from '../contracts';
 import type { Project, ProjectCustomer, ProjectStats } from '@/types/project';
 import type { Contact } from '@/types/contacts';
+import type { Building } from '@/types/building/contracts';
+import type { Property } from '@/types/property-viewer';
 import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts';
 import { db } from '@/lib/firebase-admin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
-const getFirebaseAdmin = async () => {
-  const admin = await import('firebase-admin/firestore');
-  return admin;
-};
+// ✅ ENTERPRISE: Proper Firebase Admin imports
+import {
+  getFirestore,
+  collection,
+  doc,
+  getDoc,
+  query,
+  where,
+  getDocs,
+  DocumentData
+} from 'firebase-admin/firestore';
 
 export class ProjectsService implements IProjectsService {
   private firestoreRepo: IProjectsRepository;
@@ -35,7 +44,7 @@ export class ProjectsService implements IProjectsService {
 
     const buildingsData = await this.firestoreRepo.getBuildingsByProjectId(projectId);
 
-    const structureBuildings = [];
+    const structureBuildings: Array<Building & { units: Array<Property & { customerName?: string | null }> }> = [];
     const allUnitOwnerIds = new Set<string>();
 
     for (const building of buildingsData) {
@@ -47,7 +56,18 @@ export class ProjectsService implements IProjectsService {
             if (u.soldTo) allUnitOwnerIds.add(u.soldTo);
         });
 
-        structureBuildings.push({ ...building, units });
+        // ✅ ENTERPRISE: Proper typing with customerName property
+        const unitsWithCustomerName: Array<Property & { customerName?: string | null }> = units.map(unit => ({
+            ...unit,
+            customerName: null as string | null
+        }));
+
+        // ✅ ENTERPRISE: Proper type intersection - remove units property conflict
+        const { units: _, ...buildingWithoutUnits } = building;
+        structureBuildings.push({
+            ...buildingWithoutUnits,
+            units: unitsWithCustomerName
+        } as Building & { units: Array<Property & { customerName?: string | null }> });
     }
 
     const contactsMap = new Map<string, string>();
@@ -61,12 +81,12 @@ export class ProjectsService implements IProjectsService {
     for (const building of structureBuildings) {
         for (const unit of building.units) {
             if (unit.soldTo) {
-                unit.customerName = contactsMap.get(unit.soldTo);
+                unit.customerName = contactsMap.get(unit.soldTo) || null;
             }
         }
     }
 
-    return { project, buildings: structureBuildings };
+    return { project, buildings: structureBuildings } as ProjectStructure;
   }
 
   async getProjectCustomers(projectId: string): Promise<ProjectCustomer[]> {
@@ -141,15 +161,13 @@ export class ProjectsService implements IProjectsService {
         return;
     }
     try {
-        const admin = await getFirebaseAdmin();
-
-        const projectDoc = await admin.getDoc(admin.doc(db, COLLECTIONS.PROJECTS, projectId));
-        if (projectDoc.exists()) {
+        const projectDoc = await getDoc(doc(db, COLLECTIONS.PROJECTS, projectId));
+        if (projectDoc.exists) {
             // Document exists
         }
 
-        const buildingsQuery = admin.query(admin.collection(db, COLLECTIONS.BUILDINGS), admin.where('projectId', '==', projectId));
-        const buildings = await admin.getDocs(buildingsQuery);
+        const buildingsQuery = query(collection(db, COLLECTIONS.BUILDINGS), where('projectId', '==', projectId));
+        const buildings = await getDocs(buildingsQuery);
         buildings.docs.forEach(doc => {
             // Process building
         });
@@ -157,10 +175,10 @@ export class ProjectsService implements IProjectsService {
         for (const building of buildings.docs) {
             // 🏢 ENTERPRISE: Use configurable building ID pattern
             const buildingIdPattern = process.env.NEXT_PUBLIC_BUILDING_ID_PATTERN || 'building-';
-            const unitsQuery = admin.query(admin.collection(db, COLLECTIONS.UNITS), admin.where('buildingId', '==', `${buildingIdPattern}${building.id}`));
-            const units = await admin.getDocs(unitsQuery);
+            const unitsQuery = query(collection(db, COLLECTIONS.UNITS), where('buildingId', '==', `${buildingIdPattern}${building.id}`));
+            const units = await getDocs(unitsQuery);
             units.docs.forEach(doc => {
-                const data = doc.data();
+                const data = doc.data() as DocumentData;
                 // Process unit
             });
         }

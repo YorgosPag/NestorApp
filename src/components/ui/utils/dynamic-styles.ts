@@ -117,6 +117,11 @@ function isValidColor(color: string): boolean {
   // Allow named colors (basic check)
   if (color.match(/^[a-zA-Z]+$/)) return true;
 
+  // ✅ ENTERPRISE FIX: Allow Tailwind CSS classes from COLOR_BRIDGE
+  if (color.startsWith('bg-') || color.startsWith('text-') || color.startsWith('border-')) {
+    return true;
+  }
+
   return false;
 }
 

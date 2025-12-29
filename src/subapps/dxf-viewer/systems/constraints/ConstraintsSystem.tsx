@@ -6,6 +6,9 @@ import type {
   PolarConstraintSettings,
   ConstraintDefinition,
   ConstraintResult,
+  ConstraintContextData
+} from './config';
+import {
   DEFAULT_ORTHO_SETTINGS,
   DEFAULT_POLAR_SETTINGS,
   DEFAULT_CONSTRAINTS_SETTINGS
@@ -152,7 +155,7 @@ function useConstraintsSystemStateIntegration({
     
     // Context Management
     ...contextHook,
-    getContext: () => constraintContext,
+    getContext: (): ConstraintContextData => constraintContext,
     
     // Operations
     ...operationsHook,

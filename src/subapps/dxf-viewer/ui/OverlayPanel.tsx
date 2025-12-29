@@ -26,7 +26,7 @@ interface OverlayPanelProps {
 export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onStopDrawing }: OverlayPanelProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder, quick } = useBorderTokens();
-  const colors = useSemanticColors();
+  const semanticColors = useSemanticColors();
   const {
     visibleRegions, 
     selectedRegionIds,
@@ -44,11 +44,11 @@ export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onS
   return (
     <div className={`space-y-4 p-4 ${getStatusBorder('default')} ${quick.card}`}>
       <div className="flex items-center justify-between">
-        <h3 className={`text-sm font-medium ${colors.text.primary} flex items-center gap-2`}>
+        <h3 className={`text-sm font-medium ${semanticColors.text.primary} flex items-center gap-2`}>
           <Square className={iconSizes.sm} />
           Περιοχές Επικάλυψης
         </h3>
-        <div className={`flex items-center gap-1 text-xs ${colors.text.muted}`}>
+        <div className={`flex items-center gap-1 text-xs ${semanticColors.text.muted}`}>
           <span>Περιοχές: {visibleRegions.length}</span>
           <span>•</span>
           <span>Επιλεγμένες: {selectedRegionIds.length}</span>
@@ -60,23 +60,23 @@ export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onS
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" defaultChecked className="rounded" />
           <Eye className={iconSizes.sm} />
-          <span className={`${colors.text.tertiary}`}>Εμφάνιση Χερουλιών</span>
+          <span className={`${semanticColors.text.tertiary}`}>Εμφάνιση Χερουλιών</span>
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" defaultChecked className="rounded" />
           <Palette className={iconSizes.sm} />
-          <span className={`${colors.text.tertiary}`}>Εμφάνιση Ετικετών</span>
+          <span className={`${semanticColors.text.tertiary}`}>Εμφάνιση Ετικετών</span>
         </label>
       </div>
 
       {/* Status Filter */}
       <div className="space-y-2">
-        <h4 className={`text-xs font-medium ${colors.text.muted} uppercase`}>Φίλτρο Κατάστασης</h4>
-        {Object.entries(STATUS_COLORS_MAPPING).map(([status, colors]) => {
+        <h4 className={`text-xs font-medium ${semanticColors.text.muted} uppercase`}>Φίλτρο Κατάστασης</h4>
+        {Object.entries(STATUS_COLORS_MAPPING).map(([status, statusColors]) => {
           const regions = regionsByStatus[status as RegionStatus] || [];
 
           // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES (CLAUDE.md compliant)
-          const colorBgClass = useDynamicBackgroundClass(colors.fill);
+          const colorBgClass = useDynamicBackgroundClass(statusColors.fill);
 
           return (
             <div key={status} className="flex items-center justify-between">
@@ -84,11 +84,11 @@ export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onS
                 <div
                   className={`${iconSizes.xs} ${quick.button} ${colorBgClass}`}
                 />
-                <span className={`${colors.text.tertiary}`}>{REGION_STATUS_LABELS[status as RegionStatus]}</span>
+                <span className={`${semanticColors.text.tertiary}`}>{REGION_STATUS_LABELS[status as RegionStatus]}</span>
               </label>
               <div className="flex items-center gap-2">
-                <span className={`text-xs ${colors.text.muted}`}>{regions.length}</span>
-                <button className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER}`}>
+                <span className={`text-xs ${semanticColors.text.muted}`}>{regions.length}</span>
+                <button className={`${semanticColors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER}`}>
                   <Eye className={iconSizes.xs} />
                 </button>
               </div>

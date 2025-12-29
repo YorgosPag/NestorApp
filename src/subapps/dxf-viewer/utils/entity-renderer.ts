@@ -7,30 +7,14 @@
 const DEBUG_ENTITY_RENDERER = false;
 
 import { EntityRendererComposite } from '../rendering/core/EntityRendererComposite';
-import type { Point2D, ViewTransform } from '../rendering/types/Types';
+import type { Point2D, ViewTransform, GripInfo } from '../rendering/types/Types';
 import type { GripSettings, GripInteractionState } from '../types/gripSettings';
 import { UI_COLORS } from '../config/color-config';
 
-export interface EntityModel {
-  id: string;
-  type: string;
-  layer: string;
-  preview?: boolean;
-  start?: Point2D;
-  end?: Point2D;
-  center?: Point2D;
-  radius?: number;
-  bounds?: { min: Point2D; max: Point2D };
-  [key: string]: unknown;
-}
+// ✅ ENTERPRISE: EntityModel now imported from centralized entity system
+// ✅ REMOVED DUPLICATE: No need for local EntityModel interface
+import type { EntityModel } from '../types/entities';
 
-export interface GripInfo {
-  entityId: string;
-  gripType: 'vertex' | 'edge' | 'center' | 'corner';
-  gripIndex: number;
-  position: Point2D;
-  state: 'cold' | 'warm' | 'hot';
-}
 
 /**
  * Legacy EntityRenderer class that delegates to the new composite renderer

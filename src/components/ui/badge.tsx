@@ -26,9 +26,15 @@ const createBadgeVariants = (borderTokens: ReturnType<typeof useBorderTokens>, c
         info:
           `${borderTokens.style.none} ${colors.bg.info}/50 ${colors.text.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
         error:
-          `${borderTokens.style.none} ${colors.bg.error}/50 ${colors.text.danger} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`,
+          `${borderTokens.style.none} ${colors.bg.error}/50 ${colors.text.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`,
         purple:
-          `${borderTokens.style.none} ${colors.bg.info}/50 ${colors.text.accent} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`,
+          `${borderTokens.style.none} ${colors.bg.info}/50 ${colors.text.info} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`,
+        light:
+          `${borderTokens.style.none} ${colors.bg.light} ${colors.text.primary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
+        muted:
+          `${borderTokens.style.none} ${colors.bg.muted} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
+        subtle:
+          `${borderTokens.style.none} ${colors.bg.neutralSubtle} ${colors.text.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
       },
     },
     defaultVariants: {
@@ -39,7 +45,7 @@ const createBadgeVariants = (borderTokens: ReturnType<typeof useBorderTokens>, c
 
 // 🏢 ENTERPRISE: Badge variant type definition
 export type BadgeVariantProps = {
-  variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'error' | 'purple';
+  variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'error' | 'purple' | 'light' | 'muted' | 'subtle';
 }
 
 export interface BadgeProps
@@ -60,4 +66,4 @@ function Badge({ className, variant, ...props }: BadgeProps) {
 // Export badgeVariants function για backward compatibility
 const badgeVariants = (borderTokens: ReturnType<typeof useBorderTokens>, colors: ReturnType<typeof useSemanticColors>) => createBadgeVariants(borderTokens, colors);
 
-export { Badge, badgeVariants, createBadgeVariants, type BadgeVariantProps }
+export { Badge, badgeVariants, createBadgeVariants }

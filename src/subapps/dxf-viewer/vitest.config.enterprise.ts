@@ -13,8 +13,23 @@
  * @module vitest.config.enterprise
  */
 
-import { defineConfig } from 'vitest/config';
+// ✅ ENTERPRISE: Type-safe conditional import για production compatibility
 import path from 'path';
+
+interface VitestConfig {
+  test?: any;
+  [key: string]: any;
+}
+
+let defineConfig: (config: VitestConfig) => VitestConfig;
+
+try {
+  const vitestModule = eval('require')('vitest/config');
+  defineConfig = vitestModule.defineConfig;
+} catch {
+  // Production fallback - vitest not available
+  defineConfig = (config: VitestConfig) => config;
+}
 
 export default defineConfig({
   test: {

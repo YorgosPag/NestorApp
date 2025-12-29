@@ -17,7 +17,7 @@ import { layoutUtilities } from '@/styles/design-tokens';
 import { getDxfCanvasCoreStyles } from '../ui/DxfViewerComponents.styles';
 import type { EntityRenderer as EntityRendererType } from '../utils/entity-renderer';
 // ✅ ENTERPRISE: Import centralized colors
-import { UI_COLORS } from '../config/color-config';
+import { UI_COLORS, withOpacity } from '../config/color-config';
 
 // Import extracted modules
 import { createCanvasRenderer, type CanvasRenderer } from './engine/createCanvasRenderer';
@@ -50,6 +50,7 @@ interface Props {
   hoveredEntityId?: string | null;
   alwaysShowCoarseGrid?: boolean;
   scene?: SceneModel | null;
+  overlayEntities?: Entity[]; // 🎯 NEW: Extract overlay entities for snapping
   className?: string;
   isZoomWindowActive?: boolean;
   activeTool?: string;
@@ -104,7 +105,7 @@ export const DxfCanvasCore = forwardRef<DxfCanvasImperativeAPI, Props>(({
   const previewOverrideRef = useRef<{ entityId: string; next: Partial<Entity> } | null>(null);
   
   // ✅ Ref to keep latest grid settings - prevents loss during renderer/scene initialization
-  const lastGridSettingsRef = useRef<GridSettings | null>(null);
+  const lastGridSettingsRef = useRef<{ grid: GridSettings; rulers: RulerSettings; origin: Point2D } | null>(null);
   
   // ✅ Readiness states
   const [rendererReady, setRendererReady] = useState(false);
@@ -134,17 +135,22 @@ export const DxfCanvasCore = forwardRef<DxfCanvasImperativeAPI, Props>(({
   const rulers = safeRulersGrid?.rulers || { horizontal: { enabled: false }, vertical: { enabled: false } };
   const origin = safeRulersGrid?.origin || { x: 0, y: 0 };
 
-  const getRulersGridSettings = () => {
+  // ✅ ENTERPRISE: Explicit return type to match interface requirements
+  const getRulersGridSettings = (): { grid: GridSettings; rulers: RulerSettings; origin: Point2D } => {
     // ✅ Προτεραιότητα στις πιο πρόσφατες ρυθμίσεις από το ref
     const storedSettings = lastGridSettingsRef.current;
     
     if (!rulersGrid) {
       if (DEBUG_CANVAS_CORE) console.log('🔍 [DxfCanvasCore] No rulersGrid context, returning safe defaults');
-      return storedSettings || {
+      // ✅ ENTERPRISE: Ensure correct return type structure
+      if (storedSettings && 'grid' in storedSettings && 'rulers' in storedSettings && 'origin' in storedSettings) {
+        return storedSettings as { grid: GridSettings; rulers: RulerSettings; origin: Point2D };
+      }
+      return {
         grid: { visual: { enabled: true, color: UI_COLORS.WHITE, opacity: 0.3, step: 25 } }, // ✅ CENTRALIZED: White grid fallback
         rulers: { horizontal: { enabled: false }, vertical: { enabled: false } },
         origin: { x: 0, y: 0 }
-      };
+      } as { grid: GridSettings; rulers: RulerSettings; origin: Point2D };
     }
     
     const settings = {
@@ -588,7 +594,7 @@ export const DxfCanvasCore = forwardRef<DxfCanvasImperativeAPI, Props>(({
         onMouseUp?.(e);
       }}
       onWheel={onWheel}
-      style={getDxfCanvasCoreStyles(UI_COLORS.withOpacity(UI_COLORS.BRIGHT_GREEN, 0.8))} /* ✅ CENTRALIZED: Green με 80% opacity */
+      style={getDxfCanvasCoreStyles(withOpacity(UI_COLORS.BRIGHT_GREEN, 0.8))} /* ✅ CENTRALIZED: Green με 80% opacity */
     />
   );
 });

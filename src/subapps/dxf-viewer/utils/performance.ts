@@ -124,6 +124,7 @@ export interface VirtualScrollResult {
   visibleRange: { start: number; end: number };
   totalHeight: number;
   offsetY: number;
+  handleScroll: (e: React.UIEvent<HTMLElement>) => void;
 }
 
 export function useVirtualScroll({
@@ -207,6 +208,7 @@ export function useDeepMemo<T>(
 
 /**
  * Deep equality check για complex objects
+ * ✅ ENTERPRISE: Type-safe deep comparison με proper type guards
  */
 function deepEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
@@ -217,16 +219,24 @@ function deepEqual(a: unknown, b: unknown): boolean {
 
   if (typeof a !== 'object') return a === b;
 
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
+  // ✅ ENTERPRISE: Type guard για object με index signature
+  if (typeof a === 'object' && typeof b === 'object' && a !== null && b !== null) {
+    const objectA = a as Record<string, unknown>;
+    const objectB = b as Record<string, unknown>;
 
-  if (keysA.length !== keysB.length) return false;
+    const keysA = Object.keys(objectA);
+    const keysB = Object.keys(objectB);
 
-  for (const key of keysA) {
-    if (!deepEqual(a[key], b[key])) return false;
+    if (keysA.length !== keysB.length) return false;
+
+    for (const key of keysA) {
+      if (!deepEqual(objectA[key], objectB[key])) return false;
+    }
+
+    return true;
   }
 
-  return true;
+  return false;
 }
 
 /**

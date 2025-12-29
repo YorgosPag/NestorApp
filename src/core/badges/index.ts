@@ -68,13 +68,16 @@ export type {
   DomainTransitionRules
 } from '../types/BadgeTypes';
 
-// ===== CONSTANTS =====
+// ===== ENTERPRISE STATUS FACTORY FUNCTIONS =====
 export {
-  PROJECT_STATUSES,
-  BUILDING_STATUSES,
-  CONTACT_STATUSES,
-  PROPERTY_STATUSES,
-  UNIT_STATUSES,
-  COMMON_STATUSES,
-  UNIFIED_BADGE_SYSTEM
+  createProjectStatuses,
+  createBuildingStatuses,
+  createContactStatuses,
+  createPropertyStatuses,
+  createUnitStatuses,
+  createCommonStatuses,
+  createContactTypes,
+  createNavigationStatuses,
+  createObligationStatuses,
+  createUnifiedBadgeSystem
 } from '../status/StatusConstants';

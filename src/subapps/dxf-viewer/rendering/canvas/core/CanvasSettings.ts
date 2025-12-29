@@ -81,7 +81,7 @@ export class CanvasSettings {
       cursor: {
         enabled: true,
         visible: true,
-        shape: 'crosshair',
+        shape: 'cross', // ✅ ENTERPRISE: Use valid CursorShape type ('cross' instead of 'crosshair')
         size: 16,
         color: UI_COLORS.WHITE,
         strokeColor: UI_COLORS.BLACK,

@@ -11,8 +11,11 @@ import type { Point2D } from '../rendering/types/Types';
 import { FitToViewService } from '../services/FitToViewService';
 import type { DxfScene } from '../canvas-v2/dxf-canvas/dxf-types';
 import type { ColorLayer } from '../canvas-v2/layer-canvas/layer-types';
+// ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Import centralized BoundingBox από rulers-grid system
+import type { BoundingBox } from '../systems/rulers-grid/config';
 
-interface BoundingBox {
+// Local interface for legacy compatibility (different from centralized BoundingBox)
+interface LegacyBoundingBox {
   minX: number;
   minY: number;
   maxX: number;
@@ -35,13 +38,13 @@ interface Entity {
 interface Scene {
   entities: Entity[];
   version?: number;
-  bounds?: BoundingBox;
+  bounds?: LegacyBoundingBox;
   [key: string]: unknown;
 }
 
 export class SmartBoundsManager {
   private lastBoundsHash: string | null = null;
-  private lastBounds: BoundingBox | null = null;
+  private lastBounds: LegacyBoundingBox | null = null;
   private sceneBoundsVersion = 0;
   private pendingFitToView = false;
   private rafId: number | null = null;
@@ -83,7 +86,7 @@ export class SmartBoundsManager {
 
   // ═══ BOUNDS CALCULATION ═══
 
-  calculateSceneBounds(scene: Scene): BoundingBox | null {
+  calculateSceneBounds(scene: Scene): LegacyBoundingBox | null {
     if (!scene?.entities || scene.entities.length === 0) {
       return null;
     }
@@ -123,7 +126,7 @@ export class SmartBoundsManager {
     };
   }
 
-  private getEntityBounds(entity: Entity): BoundingBox | null {
+  private getEntityBounds(entity: Entity): LegacyBoundingBox | null {
     switch (entity.type) {
       case 'line':
         if (entity.start && entity.end) {
@@ -162,7 +165,7 @@ export class SmartBoundsManager {
         break;
 
       case 'polyline':
-        if (entity.vertices && entity.vertices.length > 0) {
+        if (entity.vertices && Array.isArray(entity.vertices) && entity.vertices.length > 0) {
           let minX = Infinity, minY = Infinity;
           let maxX = -Infinity, maxY = -Infinity;
 
@@ -187,8 +190,11 @@ export class SmartBoundsManager {
 
       default:
         // Generic fallback για unknown entity types
-        if (entity.bounds) {
-          return entity.bounds;
+        if (entity.bounds && typeof entity.bounds === 'object') {
+          const bounds = entity.bounds as any;
+          if (bounds.minX !== undefined && bounds.maxX !== undefined) {
+            return bounds as LegacyBoundingBox;
+          }
         }
     }
 
@@ -197,7 +203,7 @@ export class SmartBoundsManager {
 
   // ═══ BOUNDS TRACKING ═══
 
-  generateBoundsHash(bounds: BoundingBox): string {
+  generateBoundsHash(bounds: LegacyBoundingBox): string {
     // Precision to avoid micro-differences
     const precision = 100; // 2 decimal places
     return [

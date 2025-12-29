@@ -177,9 +177,10 @@ class WebSocketService {
   }
 
   private applyMiddleware(message: WebSocketMessage): WebSocketMessage | null {
-    return this.middleware.reduce((msg, middleware) => {
-      return msg ? middleware(msg) : null;
-    }, message);
+    // ✅ ENTERPRISE: Fix reduce callback signature - explicit parameter types
+    return this.middleware.reduce<WebSocketMessage | null>((msg: WebSocketMessage | null, middlewareFunc: (message: WebSocketMessage<any>) => WebSocketMessage<any> | null) => {
+      return msg ? middlewareFunc(msg) : null;
+    }, message as WebSocketMessage | null);
   }
 
   private handleSystemError(message: WebSocketMessage): void {

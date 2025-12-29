@@ -412,8 +412,8 @@ export class HitTester {
    * 🔺 ANALYZE HIT
    * Μετατρέπει SpatialQueryResult σε HitTestResult με detailed analysis
    */
-  private analyzeHit(candidate: SpatialQueryResult, point: Point2D, tolerance: number, options: HitTestOptions): HitTestResult | null {
-    const entity = candidate.entity;
+  private analyzeHit(candidate: SpatialQueryResult & { entity: any }, point: Point2D, tolerance: number, options: HitTestOptions): HitTestResult | null {
+    const entity = candidate.entity; // ✅ ENTERPRISE: Extended SpatialQueryResult with entity property
 
     // Detailed hit analysis based on entity type
     const detailedHit = this.performDetailedHitTest(entity, point, tolerance);

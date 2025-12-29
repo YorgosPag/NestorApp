@@ -153,8 +153,16 @@ export const UI_COLORS = {
   DARK_RED: '#dc2626',       // Rented status
   LIGHT_ORANGE: '#fbbf24',   // Under negotiation
   LIGHT_PURPLE: '#a855f7',   // Coming soon
-  LIGHT_GRAY: '#9ca3af',     // Off market
+  LIGHT_GRAY_OFF_MARKET: '#9ca3af',     // Off market - enterprise status color
   DARK_GRAY: '#6b7280',      // Unavailable
+
+  // Constraint system colors (για compatibility με constraints/config.ts)
+  YELLOW: '#FFFF00',         // Polar constraints
+  ORANGE: '#ffaa00',         // Distance constraints
+  PURPLE: '#9c27b0',         // Parallel constraints
+  MAGENTA: '#FF00FF',        // Perpendicular constraints
+  GREEN: '#22c55e',          // Ortho constraints
+  RED: '#ef4444',            // Error/critical constraints
 
   // Test colors
   CUSTOM_TEST_COLOR: '#123456',  // For unit tests

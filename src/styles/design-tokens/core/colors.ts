@@ -13,7 +13,9 @@ export const colors = {
     primary: '#1e293b',
     secondary: '#64748b',
     tertiary: '#94a3b8',
-    inverse: '#ffffff'
+    muted: '#94a3b8',        // ✅ ENTERPRISE: Muted text color (same as tertiary for consistency)
+    inverse: '#ffffff',
+    inverted: '#ffffff'      // ✅ ENTERPRISE: Inverted text color (alias for inverse, used in components)
   },
 
   border: {
