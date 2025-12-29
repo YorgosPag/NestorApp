@@ -7,6 +7,7 @@
 
 import type { PolygonType, UniversalPolygon } from '@geo-alert/core';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { GEO_COLORS } from '../../../config/color-config';
 
 // ============================================================================
 // CORE SYSTEM TYPES
@@ -280,32 +281,32 @@ export const DEFAULT_VISUAL_CONFIG: VisualFeedbackConfig = {
   controlPoints: {
     normal: {
       size: 16,
-      color: '#ef4444',
-      borderColor: '#fca5a5',
+      color: GEO_COLORS.POLYGON.ERROR,
+      borderColor: GEO_COLORS.withOpacity(GEO_COLORS.POLYGON.ERROR, 0.5),
       cursor: 'pointer'
     },
     highlighted: {
       size: 32,
-      color: '#4ade80',
-      borderColor: '#bbf7d0',
+      color: GEO_COLORS.POLYGON.COMPLETED,
+      borderColor: GEO_COLORS.withOpacity(GEO_COLORS.POLYGON.COMPLETED, 0.3),
       animation: 'animate-bounce',
       shadow: 'shadow-lg shadow-green-500/50'
     },
     completed: {
       size: 16,
-      color: '#10b981',
-      borderColor: '#6ee7b7',
+      color: GEO_COLORS.POLYGON.COMPLETED,
+      borderColor: GEO_COLORS.withOpacity(GEO_COLORS.POLYGON.COMPLETED, 0.4),
       cursor: 'default'
     }
   },
   lines: {
     drawing: {
-      color: '#3b82f6',
+      color: GEO_COLORS.POLYGON.DRAFT,
       width: 2,
       dashArray: [2, 2]
     },
     completed: {
-      color: '#10b981',
+      color: GEO_COLORS.POLYGON.COMPLETED,
       width: 3,
       dashArray: [1, 0]
     }

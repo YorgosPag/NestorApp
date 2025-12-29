@@ -45,6 +45,7 @@ import { useRulersGridContext } from '../../../../../../systems/rulers-grid/Rule
 import { ColorDialogTrigger } from '../../../../../color/EnterpriseColorDialog';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { UI_COLORS, withOpacity } from '../../../../../../config/color-config';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export interface RulerMinorLinesSettingsProps {
@@ -98,28 +99,13 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
   };
 
   const handleMinorTickOpacityChange = (opacity: number) => {
-    const minorTickColor = rulerSettings.horizontal.minorTickColor || '#ffffff';
-    let r, g, b;
-
-    if (minorTickColor.includes('rgba')) {
-      const match = minorTickColor.match(/rgba\((\d+),\s*(\d+),\s*(\d+)/);
-      if (match) {
-        r = parseInt(match[1]);
-        g = parseInt(match[2]);
-        b = parseInt(match[3]);
-      } else {
-        r = g = b = 255;
-      }
-    } else {
-      const hex = minorTickColor.replace('#', '');
-      r = parseInt(hex.substr(0, 2), 16);
-      g = parseInt(hex.substr(2, 2), 16);
-      b = parseInt(hex.substr(4, 2), 16);
-    }
+    // Use centralized withOpacity function instead of manual rgba construction
+    const baseColor = rulerSettings.horizontal.minorTickColor || UI_COLORS.WHITE;
+    const colorWithOpacity = withOpacity(baseColor, opacity);
 
     updateRulerSettings({
-      horizontal: { ...rulerSettings.horizontal, minorTickColor: `rgba(${r}, ${g}, ${b}, ${opacity})` },
-      vertical: { ...rulerSettings.vertical, minorTickColor: `rgba(${r}, ${g}, ${b}, ${opacity})` }
+      horizontal: { ...rulerSettings.horizontal, minorTickColor: colorWithOpacity },
+      vertical: { ...rulerSettings.vertical, minorTickColor: colorWithOpacity }
     });
   };
 

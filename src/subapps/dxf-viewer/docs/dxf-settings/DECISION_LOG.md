@@ -674,7 +674,7 @@ After refactoring completes, what to do with original `DxfSettingsPanel.tsx`?
  * This component has been refactored into a modular structure.
  * Use DxfSettingsPanel instead.
  *
- * @deprecated Use ui/components/dxf-settings/DxfSettingsPanel.tsx
+ * @note Migrated to ui/components/dxf-settings/DxfSettingsPanel.tsx
  * @see ui/components/dxf-settings/DxfSettingsPanel.tsx
  * @see docs/REFACTORING_ROADMAP_DxfSettingsPanel.md
  */

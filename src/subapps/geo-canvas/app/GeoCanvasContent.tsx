@@ -18,6 +18,7 @@ import { AnimatedSpinner } from '../../dxf-viewer/components/modal/ModalLoadingS
 
 // ✅ NEW: Enterprise Centralized Polygon System Provider
 import { PolygonSystemProvider } from '../systems/polygon-system';
+import { GEO_COLORS } from '../config/color-config';
 
 import { useFloorPlanUpload } from '../floor-plan-system/hooks/useFloorPlanUpload';
 import { useFloorPlanControlPoints } from '../floor-plan-system/hooks/useFloorPlanControlPoints';
@@ -245,33 +246,33 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
     if (result.adminLevel === 4) { // Region
       type = 'region';
       defaultStyle = {
-        strokeColor: '#7c3aed',
+        strokeColor: GEO_COLORS.POLYGON.ADMINISTRATIVE,
         strokeWidth: 3,
-        fillColor: '#8b5cf6',
+        fillColor: GEO_COLORS.POLYGON.ADMINISTRATIVE,
         fillOpacity: 0.15
       };
     } else if (result.adminLevel === 8) { // Municipality
       type = 'municipality';
       defaultStyle = {
-        strokeColor: '#2563eb',
+        strokeColor: GEO_COLORS.POLYGON.DRAFT,
         strokeWidth: 2,
-        fillColor: '#3b82f6',
+        fillColor: GEO_COLORS.POLYGON.DRAFT,
         fillOpacity: 0.1
       };
     } else if (result.adminLevel === 9) { // Municipal Unit
       type = 'municipal_unit';
       defaultStyle = {
-        strokeColor: '#059669',
+        strokeColor: GEO_COLORS.POLYGON.COMPLETED,
         strokeWidth: 2,
-        fillColor: '#10b981',
+        fillColor: GEO_COLORS.POLYGON.COMPLETED,
         fillOpacity: 0.1
       };
     } else { // Community or other
       type = 'community';
       defaultStyle = {
-        strokeColor: '#d97706',
+        strokeColor: GEO_COLORS.POLYGON.WARNING,
         strokeWidth: 2,
-        fillColor: '#f59e0b',
+        fillColor: GEO_COLORS.POLYGON.WARNING,
         fillOpacity: 0.1
       };
     }

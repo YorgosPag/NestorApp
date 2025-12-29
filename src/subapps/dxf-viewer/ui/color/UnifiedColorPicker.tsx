@@ -23,6 +23,7 @@ import { EnterpriseColorField } from './EnterpriseColorField';
 import type { ColorValue, PickerVariant } from './types';
 import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { layoutUtilities } from '@/styles/design-tokens';
+import { UI_COLORS } from '../../config/color-config';
 
 // ============================================================================
 // UNIFIED PROPS INTERFACE
@@ -169,7 +170,7 @@ function InlineColorPicker({
           value={value}
           onChange={handleTextChange}
           disabled={disabled}
-          placeholder="#ffffff"
+          placeholder={UI_COLORS.WHITE}
           className={`px-2 py-1 ${colors.bg.hover} ${quick.muted} rounded text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
           style={{ width: '6rem' }}
         />
@@ -355,7 +356,7 @@ export function ColorPickerModal({
   title,
   onColorSelect,
   onClose,
-  initialColor = '#ff0000'
+  initialColor = UI_COLORS.SELECTED_RED
 }: ColorPickerModalProps) {
   const [tempColor, setTempColor] = useState(initialColor);
 

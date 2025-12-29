@@ -13,9 +13,9 @@
 
 import type { PropertyStatus } from '../../../constants/property-statuses-enterprise';
 import { BUTTON_STATUS_COLORS } from '../config/color-mapping';
+import { UI_COLORS } from '../config/color-config';
 import { PANEL_COLORS } from '../config/panel-tokens'; // 🏢 ENTERPRISE: Centralized border colors
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { UI_COLORS } from '../config/color-config';
 
 // 🏢 ENTERPRISE: CSS Custom Properties για κεντρικοποιημένα χρώματα
 const CSS_VARS = {
@@ -115,7 +115,7 @@ export const getTestResultsModalContentStyles = () => ({
   position: 'relative' as const,
   backgroundColor: CSS_VARS.BG_PRIMARY, // ✅ ENTERPRISE: bg-gray-900 → semantic background
   borderRadius: 'calc(var(--radius) + 2px)', // Enterprise lg border radius
-  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', // shadow-2xl
+  boxShadow: `0 25px 50px -12px ${UI_COLORS.SHADOW_XL}`, // shadow-2xl
   border: `1px solid ${PANEL_COLORS.BORDER_HEX_PRIMARY}`, // ✅ ENTERPRISE: Centralized border color
   display: 'flex',
   flexDirection: 'column' as const,
@@ -214,7 +214,7 @@ export const getEnterpriseContactDropdownStyles = (buttonRect: DOMRect) => ({
   color: 'hsl(var(--popover-foreground))',
   border: '1px solid hsl(var(--border))',
   borderRadius: 'calc(var(--radius) + 2px)', // Enterprise lg border radius
-  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' // shadow-lg
+  boxShadow: `0 10px 15px -3px ${UI_COLORS.SHADOW_MEDIUM}, 0 4px 6px -2px ${UI_COLORS.SHADOW_LIGHT}` // shadow-lg
 });
 
 /**
@@ -711,7 +711,7 @@ export const getCalibrationDebugPanelStyles = () => ({
   color: 'white',
   padding: '1rem', // p-4
   borderRadius: 'calc(var(--radius) + 2px)', // Enterprise lg border radius
-  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)', // shadow-lg
+  boxShadow: `0 10px 15px -3px ${UI_COLORS.SHADOW_MEDIUM}, 0 4px 6px -2px ${UI_COLORS.SHADOW_LIGHT}`, // shadow-lg
   pointerEvents: 'auto' as const,
   minWidth: '320px',
   maxWidth: '500px'
@@ -745,7 +745,7 @@ export const getCalibrationTooltipStyles = () => ({
   top: '-30px',
   left: '50%',
   transform: 'translateX(-50%)',
-  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  backgroundColor: UI_COLORS.MODAL_OVERLAY_HEAVY,
   color: 'white',
   padding: '2px 6px',
   borderRadius: '4px',
@@ -833,11 +833,11 @@ export const getButtonHoverAnimationStyles = () => ({
   transition: 'all 0.15s ease-in-out',
   ':hover': {
     transform: 'translateY(-1px)',
-    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)'
+    boxShadow: `0 4px 8px ${UI_COLORS.SHADOW_HEAVY}`
   },
   ':active': {
     transform: 'translateY(0)',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+    boxShadow: `0 2px 4px ${UI_COLORS.SHADOW_HEAVY}`
   }
 });
 

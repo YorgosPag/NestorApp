@@ -5,6 +5,7 @@
  */
 
 import type { Point2D, Viewport } from '../../rendering/types/Types';
+import { UI_COLORS } from '../../config/color-config';
 
 export interface VisualTestOptions {
   seed?: number;
@@ -70,17 +71,17 @@ async function renderOriginMarkers(
   seed: number
 ): Promise<void> {
   // Canvas origin (top-left)
-  ctx.fillStyle = '#ff0000';
+  ctx.fillStyle = UI_COLORS.SELECTED_RED;
   ctx.fillRect(0, 0, 4, 4);
 
   // Canvas center
   const centerX = viewport.width / 2;
   const centerY = viewport.height / 2;
-  ctx.fillStyle = '#00ff00';
+  ctx.fillStyle = UI_COLORS.BRIGHT_GREEN;
   ctx.fillRect(centerX - 2, centerY - 2, 4, 4);
 
   // Corner markers για reference
-  ctx.fillStyle = '#0000ff';
+  ctx.fillStyle = UI_COLORS.SNAP_CENTER;
   ctx.fillRect(viewport.width - 4, 0, 4, 4); // Top-right
   ctx.fillRect(0, viewport.height - 4, 4, 4); // Bottom-left
   ctx.fillRect(viewport.width - 4, viewport.height - 4, 4, 4); // Bottom-right
@@ -97,7 +98,7 @@ async function renderTestGrid(
 ): Promise<void> {
   const gridSize = 50; // Fixed grid size για consistency
 
-  ctx.strokeStyle = '#cccccc';
+  ctx.strokeStyle = UI_COLORS.LIGHT_GRAY;
   ctx.lineWidth = 1;
   ctx.setLineDash([]);
 
@@ -118,7 +119,7 @@ async function renderTestGrid(
   ctx.stroke();
 
   // Major grid lines
-  ctx.strokeStyle = '#999999';
+  ctx.strokeStyle = UI_COLORS.RULER_LIGHT_GRAY;
   ctx.lineWidth = 2;
   ctx.beginPath();
 
@@ -148,7 +149,7 @@ async function renderTestCrosshair(
   const centerX = viewport.width / 2;
   const centerY = viewport.height / 2;
 
-  ctx.strokeStyle = '#ff6600';
+  ctx.strokeStyle = UI_COLORS.DRAWING_HIGHLIGHT;
   ctx.lineWidth = 2;
   ctx.setLineDash([5, 5]);
 
@@ -186,7 +187,7 @@ async function renderCombinedOverlay(
   await renderTestCrosshair(ctx, viewport, seed);
 
   // Add test labels για identification
-  ctx.fillStyle = '#000000';
+  ctx.fillStyle = UI_COLORS.BLACK;
   ctx.font = '12px monospace';
   ctx.fillText(`Seed: ${seed}`, 10, viewport.height - 10);
   ctx.fillText(`${viewport.width}x${viewport.height}`, 10, 20);
@@ -219,15 +220,15 @@ export async function renderCoordinateSystemTest(
     { x: 100, y: 100 },    // Diagonal point
   ];
 
-  ctx.fillStyle = '#ff0000';
+  ctx.fillStyle = UI_COLORS.SELECTED_RED;
   worldPoints.forEach((point, index) => {
     ctx.fillRect(point.x - 2, point.y - 2, 4, 4);
 
     // Add labels
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = UI_COLORS.BLACK;
     ctx.font = '10px monospace';
     ctx.fillText(`(${point.x},${point.y})`, point.x + 5, point.y - 5);
-    ctx.fillStyle = '#ff0000';
+    ctx.fillStyle = UI_COLORS.SELECTED_RED;
   });
 
   ctx.restore();

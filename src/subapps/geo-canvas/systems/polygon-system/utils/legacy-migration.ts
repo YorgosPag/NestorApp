@@ -6,6 +6,7 @@
  */
 
 import type { UniversalPolygon } from '@geo-alert/core';
+import { GEO_COLORS } from '../../../config/color-config';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -68,7 +69,7 @@ export function createPolygonFromLegacy(legacyData: LegacyPolygonData): Universa
     },
     style: {
       fillColor: 'rgba(16, 185, 129, 0.3)',
-      strokeColor: '#10b981',
+      strokeColor: GEO_COLORS.POLYGON.COMPLETED,
       strokeWidth: 3
     }
   };

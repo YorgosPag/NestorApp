@@ -4,6 +4,7 @@ import { layoutUtilities } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { UI_COLORS } from '../../../config/color-config';
 
 export interface CursorColors {
   crosshairColor: string;
@@ -77,7 +78,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
           onChange={(e) => handleColorChange(colorKey, e.target.value)}
           className={`px-2 py-1 text-xs ${semanticColors.bg.muted} text-white rounded ${getStatusBorder('secondary')}`}
           style={{ width: '5rem' }}
-          placeholder="#ffffff"
+          placeholder={UI_COLORS.WHITE}
         />
         {opacityKey && (
           <>

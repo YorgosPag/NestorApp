@@ -3,6 +3,7 @@ import type { LineType } from '../../../../../settings-core/types';
 import { getDashArray } from '../../../../../settings-core/defaults';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { UI_COLORS } from '../../../../../config/color-config';
 
 // Helper για SVG stroke-dasharray (χρησιμοποιεί την κεντρική getDashArray)
 const getDashArrayForSvg = (type: LineType | string, scale: number = 1) => {
@@ -305,7 +306,7 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
                   width={gripSettings.apertureSize}
                   height={gripSettings.apertureSize}
                   fill="none"
-                  stroke="#00ff00"
+                  stroke={UI_COLORS.BRIGHT_GREEN}
                   strokeWidth="1"
                   strokeOpacity="0.6"
                   strokeDasharray="2,1"
@@ -321,7 +322,7 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
                     x="10%"
                     y="20%"
                     fontSize={textSettings.fontSize}
-                    fill="#ff6600"
+                    fill={UI_COLORS.DRAWING_HIGHLIGHT}
                     fontFamily={textSettings.fontFamily}
                   >
                     Max: {gripSettings.maxGripsPerEntity} ({totalGrips} grips)
@@ -349,7 +350,7 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
                   x="85%"
                   y="85%"
                   fontSize={textSettings.fontSize}
-                  fill="#00ff00"
+                  fill={UI_COLORS.BRIGHT_GREEN}
                   fontFamily={textSettings.fontFamily}
                   fontWeight={textSettings.isBold ? 'bold' : 'normal'}
                   fontStyle={textSettings.isItalic ? 'italic' : 'normal'}

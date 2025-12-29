@@ -7,6 +7,7 @@ import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } fr
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { GEO_COLORS } from '../config/color-config';
 
 // ============================================================================
 // TYPES
@@ -329,20 +330,20 @@ export function BoundaryLayerControlPanel({
           width: 16px;
           height: 16px;
           border-radius: 50%;
-          background: #3b82f6;
+          background: ${GEO_COLORS.MAP_LAYER.BOUNDARY_CONTROL_BG};
           cursor: pointer;
-          border: 2px solid #ffffff;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          border: 2px solid ${GEO_COLORS.MAP_LAYER.BOUNDARY_CONTROL_BORDER};
+          box-shadow: 0 2px 4px ${GEO_COLORS.withOpacity(GEO_COLORS.BLACK, 0.1)};
         }
 
         .slider::-moz-range-thumb {
           width: 16px;
           height: 16px;
           border-radius: 50%;
-          background: #3b82f6;
+          background: ${GEO_COLORS.MAP_LAYER.BOUNDARY_CONTROL_BG};
           cursor: pointer;
-          border: 2px solid #ffffff;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          border: 2px solid ${GEO_COLORS.MAP_LAYER.BOUNDARY_CONTROL_BORDER};
+          box-shadow: 0 2px 4px ${GEO_COLORS.withOpacity(GEO_COLORS.BLACK, 0.1)};
         }
       `}</style>
     </div>

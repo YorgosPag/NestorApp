@@ -4,6 +4,7 @@ import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { UI_COLORS } from '../../../../../config/color-config';
 
 export function SelectionSettings() {
   const [activeSelectionTab, setActiveSelectionTab] = useState<'window' | 'crossing'>('window');
@@ -36,17 +37,17 @@ export function SelectionSettings() {
     updateSettings({
       selection: {
         window: {
-          fillColor: '#0080ff',
+          fillColor: UI_COLORS.GRID_BLUE,
           fillOpacity: 0.2,
-          borderColor: '#0080ff',
+          borderColor: UI_COLORS.GRID_BLUE,
           borderOpacity: 1.0,
           borderStyle: 'solid' as const,
           borderWidth: 2
         },
         crossing: {
-          fillColor: '#00ff80',
+          fillColor: UI_COLORS.DRAWING_PREVIEW,
           fillOpacity: 0.2,
-          borderColor: '#00ff80',
+          borderColor: UI_COLORS.DRAWING_PREVIEW,
           borderOpacity: 1.0,
           borderStyle: 'dashed' as const,
           borderWidth: 2

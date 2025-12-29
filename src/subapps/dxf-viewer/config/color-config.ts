@@ -359,3 +359,35 @@ export const LEGACY_COLORS = {
   ORANGE: UI_COLORS.DRAWING_TEMP,
   MAGENTA: '#FF00FF', // Magenta for test cases
 } as const;
+
+// ============================================================================
+// UI GRADIENTS SYSTEM - Enterprise Color Picker Gradients
+// ============================================================================
+
+/**
+ * Enterprise-grade CSS gradients για color picker components
+ * Fortune 500 standards για brand consistency και theming support
+ */
+export const UI_GRADIENTS = {
+  // Color Picker Gradients
+  HUE_SPECTRUM: 'linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)',
+
+  // Alpha transparency patterns
+  ALPHA_CHECKERBOARD: `
+    linear-gradient(45deg, #ccc 25%, transparent 25%),
+    linear-gradient(-45deg, #ccc 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #ccc 75%),
+    linear-gradient(-45deg, transparent 75%, #ccc 75%)
+  `,
+
+  // Dynamic gradients (functions για runtime values)
+  ALPHA_FADE: (color: string) => `linear-gradient(to right, transparent, ${color})`,
+  SATURATION_FADE: (color: string) => `linear-gradient(to right, #808080, ${color})`,
+  BRIGHTNESS_FADE: (color: string) => `linear-gradient(to right, #000000, ${color}, #ffffff)`,
+  LIGHTNESS_FADE: (color: string) => `linear-gradient(to right, #000000, ${color}, #ffffff)`,
+
+  // Individual RGB channel gradients
+  RED_CHANNEL: 'linear-gradient(to right, #000000, #ff0000)',
+  GREEN_CHANNEL: 'linear-gradient(to right, #000000, #00ff00)',
+  BLUE_CHANNEL: 'linear-gradient(to right, #000000, #0000ff)',
+} as const;

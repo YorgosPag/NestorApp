@@ -7,6 +7,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useCentralizedPolygonSystem } from '../systems/polygon-system';
+import { GEO_COLORS } from '../config/color-config';
 import { FloorPlanUploadModal } from '../floor-plan-system/components/FloorPlanUploadModal';
 import { PropertyStatusManager } from './PropertyStatusManager';
 import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
@@ -149,8 +150,8 @@ export function ProfessionalDrawingInterface({
       case 'polygon':
         // Professional polygon mode (more precise)
         startDrawing('simple', {
-          fillColor: 'rgba(34, 197, 94, 0.3)', // Green fill
-          strokeColor: '#22c55e',
+          fillColor: GEO_COLORS.USER_INTERFACE.PROFESSIONAL_FILL, // Green professional fill
+          strokeColor: GEO_COLORS.USER_INTERFACE.PROFESSIONAL_STROKE,
           strokeWidth: 2
         });
         setIsDrawing(true);

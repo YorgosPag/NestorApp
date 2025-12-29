@@ -12,6 +12,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ✅ NEW: Enterprise Centralized Polygon System
 import { useCentralizedPolygonSystem } from '../systems/polygon-system';
+import { GEO_COLORS } from '../config/color-config';
 
 // ✅ NEW: Address Search Integration
 import { AddressSearchPanel } from './AddressSearchPanel';
@@ -154,8 +155,8 @@ export function CitizenDrawingInterface({
         // Point mode - pin/marker με ακτίνα
         // Θα δημιουργήσουμε ένα point marker με radius circle
         startDrawing('simple', {
-          fillColor: `rgba(59, 130, 246, 0.2)`, // Light blue fill για το radius circle
-          strokeColor: '#3b82f6',
+          fillColor: GEO_COLORS.withOpacity(GEO_COLORS.USER_INTERFACE.CITIZEN_STROKE, 0.2), // Light blue fill για το radius circle
+          strokeColor: GEO_COLORS.USER_INTERFACE.CITIZEN_STROKE,
           strokeWidth: 2,
           pointMode: true,
           radius: pointRadius
@@ -165,8 +166,8 @@ export function CitizenDrawingInterface({
       case 'polygon':
         // Simple polygon mode using centralized system
         startDrawing('simple', {
-          fillColor: 'rgba(59, 130, 246, 0.3)', // Blue fill
-          strokeColor: '#3b82f6',
+          fillColor: GEO_COLORS.USER_INTERFACE.CITIZEN_POLYGON_FILL, // Blue fill
+          strokeColor: GEO_COLORS.USER_INTERFACE.CITIZEN_POLYGON_STROKE,
           strokeWidth: 2
         });
         console.log('🔷 Citizen: Polygon mode started');
@@ -175,8 +176,8 @@ export function CitizenDrawingInterface({
       case 'freehand':
         // Freehand drawing mode using centralized system
         startDrawing('freehand', {
-          fillColor: 'rgba(16, 185, 129, 0.3)', // Green fill
-          strokeColor: '#10b981',
+          fillColor: GEO_COLORS.USER_INTERFACE.CITIZEN_AREA_FILL, // Green fill
+          strokeColor: GEO_COLORS.USER_INTERFACE.CITIZEN_AREA_STROKE,
           strokeWidth: 2
         });
         console.log('✏️ Citizen: Freehand mode started');
@@ -575,8 +576,8 @@ export function CitizenDrawingInterface({
               onClick={() => {
                 // Start polygon drawing for real estate alert using centralized system
                 startDrawing('simple', {
-                  fillColor: 'rgba(255, 165, 0, 0.3)', // Orange fill
-                  strokeColor: '#ff8c00',
+                  fillColor: GEO_COLORS.USER_INTERFACE.EMERGENCY_FILL, // Orange fill
+                  strokeColor: GEO_COLORS.USER_INTERFACE.EMERGENCY_STROKE,
                   strokeWidth: 2
                 });
                 setSelectedTool('real-estate');

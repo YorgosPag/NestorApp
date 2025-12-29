@@ -22,6 +22,7 @@ import type { EnterpriseColorFieldProps, ColorMode, RGBColor, HSLColor } from '.
 import { parseColor, rgbToHex, formatRgb, formatHsl, parseHex, parseRgb, parseHsl, hslToRgb } from './utils';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { UI_COLORS } from '../../config/color-config';
 
 /**
  * Enterprise Color Field Component
@@ -127,7 +128,7 @@ export function EnterpriseColorField({
         onBlur={handleBlur}
         disabled={disabled}
         readOnly={readOnly}
-        placeholder="#000000"
+        placeholder={UI_COLORS.BLACK}
         className={`
           flex-1 px-3 py-2 ${colors.bg.secondary} ${quick.input}
           text-sm text-white font-mono

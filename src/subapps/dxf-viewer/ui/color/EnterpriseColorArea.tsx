@@ -25,6 +25,7 @@ import { parseColor as parseAriaColor } from '@react-stately/color';
 import { useFocusRing } from '@react-aria/focus';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { UI_COLORS } from '../../config/color-config';
 import type { AriaColorAreaProps } from '@react-aria/color';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
@@ -68,8 +69,8 @@ export function EnterpriseColorArea({
   const inputYRef = useRef<HTMLInputElement>(null);
 
   // ✅ FIX (ChatGPT-5): Guard against undefined/null value
-  // Default to white (#FFFFFF) if value is missing
-  const safeValue = value || '#FFFFFF';
+  // Default to white if value is missing
+  const safeValue = value || UI_COLORS.WHITE;
 
   // Parse color using React Aria's parser and convert to HSB
   const parsedColor = parseAriaColor(safeValue);

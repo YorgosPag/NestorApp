@@ -8,6 +8,7 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { UI_COLORS } from '../../../../../../config/color-config';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -214,12 +215,12 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
               backgroundColor: getPreviewBackground(
                 rulerSettings.horizontal.unitsColor ||
                 rulerSettings.horizontal.textColor ||
-                '#ffffff'
+                UI_COLORS.WHITE
               ),
               borderColor: getPreviewColor(
                 rulerSettings.horizontal.unitsColor ||
                 rulerSettings.horizontal.textColor ||
-                '#ffffff'
+                UI_COLORS.WHITE
               )
             }}
           />
@@ -228,7 +229,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
             value={getPreviewColor(
               rulerSettings.horizontal.unitsColor ||
               rulerSettings.horizontal.textColor ||
-              '#ffffff'
+              UI_COLORS.WHITE
             )}
             onChange={(e) => handleUnitsColorChange(e.target.value)}
             className={`${iconSizes.xl} h-6 rounded border-0 cursor-pointer`}
@@ -238,11 +239,11 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
             value={
               rulerSettings.horizontal.unitsColor ||
               rulerSettings.horizontal.textColor ||
-              '#ffffff'
+              UI_COLORS.WHITE
             }
             onChange={(e) => handleUnitsColorChange(e.target.value)}
             className={`w-20 px-2 py-1 text-xs ${colors.bg.muted} text-white rounded ${getStatusBorder('secondary')}`}
-            placeholder="#ffffff"
+            placeholder={UI_COLORS.WHITE}
           />
         </div>
       </div>

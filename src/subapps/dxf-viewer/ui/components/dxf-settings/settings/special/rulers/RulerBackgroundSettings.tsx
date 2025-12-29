@@ -9,6 +9,7 @@ import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles'
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { UI_COLORS, withOpacity } from '../../../../../../config/color-config';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -65,7 +66,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
   );
 
   // Ruler background color state (για εύκολο syncing με color picker)
-  const [rulerBackgroundColor, setRulerBackgroundColor] = useState<string>('#ffffff');
+  const [rulerBackgroundColor, setRulerBackgroundColor] = useState<string>(UI_COLORS.WHITE);
 
   // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES (CLAUDE.md compliant)
   const rulerBgClass = useDynamicBackgroundClass(rulerBackgroundColor);
@@ -113,28 +114,22 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
       if (match) opacity = parseFloat(match[1]);
     }
 
-    // Convert hex to rgb
-    const hex = color.replace('#', '');
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
+    // Use centralized withOpacity function instead of manual rgba construction
+    const colorWithOpacity = withOpacity(color, opacity);
 
     updateRulerSettings({
-      horizontal: { ...rulerSettings.horizontal, backgroundColor: `rgba(${r}, ${g}, ${b}, ${opacity})` },
-      vertical: { ...rulerSettings.vertical, backgroundColor: `rgba(${r}, ${g}, ${b}, ${opacity})` }
+      horizontal: { ...rulerSettings.horizontal, backgroundColor: colorWithOpacity },
+      vertical: { ...rulerSettings.vertical, backgroundColor: colorWithOpacity }
     });
   };
 
   const handleRulerOpacityChange = (opacity: number) => {
-    // Διατηρούμε το τρέχον χρώμα και αλλάζουμε μόνο την opacity
-    const hex = rulerBackgroundColor.replace('#', '');
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
+    // Use centralized withOpacity function instead of manual rgba construction
+    const colorWithOpacity = withOpacity(rulerBackgroundColor, opacity);
 
     updateRulerSettings({
-      horizontal: { ...rulerSettings.horizontal, backgroundColor: `rgba(${r}, ${g}, ${b}, ${opacity})` },
-      vertical: { ...rulerSettings.vertical, backgroundColor: `rgba(${r}, ${g}, ${b}, ${opacity})` }
+      horizontal: { ...rulerSettings.horizontal, backgroundColor: colorWithOpacity },
+      vertical: { ...rulerSettings.vertical, backgroundColor: colorWithOpacity }
     });
   };
 
@@ -209,7 +204,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
             value={rulerBackgroundColor}
             onChange={(e) => handleRulerBackgroundColorChange(e.target.value)}
             className={`w-20 px-2 py-1 text-xs ${colors.bg.muted} text-white rounded ${quick.input}`}
-            placeholder="#ffffff"
+            placeholder={UI_COLORS.WHITE}
           />
         </div>
       </div>

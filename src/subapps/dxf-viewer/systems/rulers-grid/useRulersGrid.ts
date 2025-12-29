@@ -7,6 +7,7 @@
 const DEBUG_RULERS_GRID = false;
 
 import React, { useContext } from 'react';
+import { UI_COLORS } from '../../config/color-config';
 import type {
   RulerSettings,
   GridSettings,
@@ -149,7 +150,7 @@ export function useGridState() {
   const rulersGrid = useRulersGrid();
   if (!rulersGrid) {
     return {
-      settings: { visual: { enabled: false, color: '#ffffff', opacity: 0.3, step: 25 } },
+      settings: { visual: { enabled: false, color: UI_COLORS.WHITE, opacity: 0.3, step: 25 } },
       isVisible: false,
       toggleGrid: () => {},
       setGridVisibility: () => {},

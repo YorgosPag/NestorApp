@@ -16,6 +16,7 @@ import { useDxfSettings } from '../settings-provider';
 import { toolStyleStore } from '../stores/ToolStyleStore';
 import { textStyleStore } from '../stores/TextStyleStore';
 import { gripStyleStore } from '../stores/GripStyleStore';
+import { withOpacity } from '../config/color-config';
 
 // ===== CONTEXT CREATION =====
 
@@ -26,19 +27,13 @@ const StyleManagerContext = createContext<StyleManagerContextType | null>(null);
 // 🔄 MIGRATION NOTE: Type assertion needed because adapter returns Old types
 // but these sync functions expect specific entity types
 const syncLineStore = (settings: any) => {
-  const hexToRgba = (hex: string, opacity: number) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-  };
-
+  // Use centralized withOpacity function instead of manual rgba construction
   toolStyleStore.set({
     enabled: settings.enabled,
     strokeColor: settings.color,
     lineWidth: settings.lineWidth,
     opacity: settings.opacity,
-    fillColor: hexToRgba(settings.color, 0),
+    fillColor: withOpacity(settings.color, 0), // Fully transparent fill
     lineType: settings.lineType,
   });
 };

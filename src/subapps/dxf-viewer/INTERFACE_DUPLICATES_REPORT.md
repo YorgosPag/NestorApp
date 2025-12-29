@@ -852,9 +852,9 @@ export function subtract(p1: Point2D, p2: Point2D): Point2D;
 ```
 
 **Migration:**
-1. Create new file
+1. Create new centralized file
 2. Update all imports to use central location
-3. Deprecate old locations with JSDoc @deprecated tags
+3. Mark legacy locations as consolidated
 
 ---
 
@@ -1179,7 +1179,7 @@ See detailed recommendations in Sections 1-3 for exact interface definitions.
 ```typescript
 // Example: rendering/types/Types.ts
 /**
- * @deprecated Use BoundingBox from types/geometry.ts instead
+ * @note Migrated to types/geometry.ts - use centralized version
  */
 export interface BoundingBox {
   min: Point2D;
@@ -1296,7 +1296,7 @@ npm run test:visual
 4. **Document Type Hierarchy**
    - Add JSDoc comments explaining relationships
    - Reference canonical location in @see tags
-   - Use @deprecated for old locations
+   - Mark consolidated status for migrated locations
 
 5. **Automated Enforcement**
    - Add ESLint rule to detect duplicate interface names

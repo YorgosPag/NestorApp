@@ -7,6 +7,7 @@
  */
 
 import { performance } from 'perf_hooks';
+import { GEO_COLORS } from '../config/color-config';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -805,19 +806,19 @@ export class GeoAlertBundleOptimizer {
       <title>Geo-Alert Bundle Analysis Report</title>
       <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; }
-        .summary { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        .bundle { border: 1px solid #dee2e6; padding: 15px; margin: 10px 0; border-radius: 5px; }
-        .critical { border-left: 4px solid #dc3545; }
-        .high { border-left: 4px solid #fd7e14; }
-        .medium { border-left: 4px solid #ffc107; }
-        .low { border-left: 4px solid #28a745; }
-        .recommendation { margin: 5px 0; padding: 10px; background: #e9ecef; border-radius: 3px; }
+        .summary { background: ${GEO_COLORS.OPTIMIZATION.REPORT_BACKGROUND}; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .bundle { border: 1px solid ${GEO_COLORS.OPTIMIZATION.REPORT_BORDER}; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .critical { border-left: 4px solid ${GEO_COLORS.OPTIMIZATION.CRITICAL_PRIORITY}; }
+        .high { border-left: 4px solid ${GEO_COLORS.OPTIMIZATION.HIGH_PRIORITY}; }
+        .medium { border-left: 4px solid ${GEO_COLORS.OPTIMIZATION.MEDIUM_PRIORITY}; }
+        .low { border-left: 4px solid ${GEO_COLORS.OPTIMIZATION.LOW_PRIORITY}; }
+        .recommendation { margin: 5px 0; padding: 10px; background: ${GEO_COLORS.OPTIMIZATION.RECOMMENDATION_BG}; border-radius: 3px; }
         table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        .size-large { color: #dc3545; font-weight: bold; }
-        .size-medium { color: #fd7e14; }
-        .size-small { color: #28a745; }
+        th, td { border: 1px solid ${GEO_COLORS.OPTIMIZATION.TABLE_BORDER}; padding: 8px; text-align: left; }
+        th { background-color: ${GEO_COLORS.OPTIMIZATION.TABLE_HEADER}; }
+        .size-large { color: ${GEO_COLORS.OPTIMIZATION.SIZE_LARGE}; font-weight: bold; }
+        .size-medium { color: ${GEO_COLORS.OPTIMIZATION.SIZE_MEDIUM}; }
+        .size-small { color: ${GEO_COLORS.OPTIMIZATION.SIZE_SMALL}; }
       </style>
     </head>
     <body>

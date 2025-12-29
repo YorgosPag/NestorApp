@@ -6,6 +6,7 @@
 
 import { createCanvas, GlobalFonts, Image } from '@napi-rs/canvas';
 import type { Canvas, SKRSContext2D } from '@napi-rs/canvas';
+import { UI_COLORS } from '../config/color-config';
 
 // 🎯 DETERMINISTIC FONT SETUP
 // Load fixed fonts για consistent text rendering
@@ -150,9 +151,9 @@ export function createDeterministicCanvas(
     ctx.font = font;
 
     // Clear με consistent background
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = UI_COLORS.WHITE;
     ctx.fillRect(0, 0, width, height);
-    ctx.fillStyle = '#000000'; // Reset to black
+    ctx.fillStyle = UI_COLORS.BLACK; // Reset to black
   }
 
   return canvas;
@@ -234,7 +235,7 @@ export const CanvasTestUtils = {
   /**
    * Clear canvas με deterministic background
    */
-  clearCanvas: (canvas: HTMLCanvasElement, fillColor: string = '#ffffff') => {
+  clearCanvas: (canvas: HTMLCanvasElement, fillColor: string = UI_COLORS.WHITE) => {
     const ctx = canvas.getContext('2d');
     if (ctx) {
       ctx.fillStyle = fillColor;

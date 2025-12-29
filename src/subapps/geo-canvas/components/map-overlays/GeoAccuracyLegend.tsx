@@ -24,6 +24,7 @@ import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/
 import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { interactiveMapStyles } from '../InteractiveMap.styles';
 import type { GeoControlPoint } from '../../types';
+import { GEO_COLORS } from '../../config/color-config';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
@@ -54,11 +55,11 @@ export interface GeoAccuracyLegendProps {
 // ============================================================================
 
 const ACCURACY_LEVELS = [
-  { level: 'excellent', color: '#10B981', threshold: 0.5 },
-  { level: 'good', color: '#3B82F6', threshold: 1.0 },
-  { level: 'fair', color: '#F59E0B', threshold: 2.0 },
-  { level: 'poor', color: '#EF4444', threshold: 5.0 },
-  { level: 'very_poor', color: '#9333EA', threshold: Infinity }
+  { level: 'excellent', color: GEO_COLORS.POLYGON.ACCURACY_EXCELLENT, threshold: 0.5 },
+  { level: 'good', color: GEO_COLORS.POLYGON.ACCURACY_GOOD, threshold: 1.0 },
+  { level: 'fair', color: GEO_COLORS.POLYGON.ACCURACY_FAIR, threshold: 2.0 },
+  { level: 'poor', color: GEO_COLORS.POLYGON.ACCURACY_POOR, threshold: 5.0 },
+  { level: 'very_poor', color: GEO_COLORS.POLYGON.ACCURACY_VERY_POOR, threshold: Infinity }
 ] as const;
 
 // ============================================================================

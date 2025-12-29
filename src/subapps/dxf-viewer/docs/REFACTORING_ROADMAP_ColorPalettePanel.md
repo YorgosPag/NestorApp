@@ -302,7 +302,8 @@ ui/components/dxf-settings/
 import React from 'react';
 
 export interface LinesTabProps {
-  // TODO: Define props
+  onSettingChange?: (key: string, value: unknown) => void;
+  currentSettings?: Record<string, unknown>;
 }
 
 export const LinesTab: React.FC<LinesTabProps> = () => {
@@ -962,12 +963,11 @@ case 'colors':
 **Add deprecation notice:**
 ```typescript
 /**
- * ⚠️ DEPRECATED - DO NOT USE
+ * ⚠️ LEGACY COMPONENT - MIGRATION COMPLETED
  *
- * This component has been refactored into a modular structure.
- * Use DxfSettingsPanel instead.
+ * This component has been successfully refactored into modular structure.
+ * New implementation: ui/components/dxf-settings/DxfSettingsPanel.tsx
  *
- * @deprecated Use ui/components/dxf-settings/DxfSettingsPanel.tsx
  * @see ui/components/dxf-settings/DxfSettingsPanel.tsx
  * @see docs/REFACTORING_ROADMAP_DxfSettingsPanel.md
  */

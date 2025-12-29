@@ -6,6 +6,7 @@
 
 import { renderHook, act } from '@testing-library/react';
 import { useDxfSettingsStore } from '../DxfSettingsStore';
+import { UI_COLORS } from '../../config/color-config';
 import {
   DEFAULT_LINE_SETTINGS,
   DEFAULT_TEXT_SETTINGS,
@@ -38,12 +39,12 @@ describe('DxfSettingsStore', () => {
       act(() => {
         result.current.setGeneralLine({
           lineWidth: 3,
-          lineColor: '#FF0000'
+          lineColor: UI_COLORS.SELECTED_RED
         });
       });
 
       expect(result.current.general.line.lineWidth).toBe(3);
-      expect(result.current.general.line.lineColor).toBe('#FF0000');
+      expect(result.current.general.line.lineColor).toBe(UI_COLORS.SELECTED_RED);
       // Άλλες τιμές παραμένουν default
       expect(result.current.general.line.lineType).toBe(DEFAULT_LINE_SETTINGS.lineType);
     });
@@ -66,7 +67,7 @@ describe('DxfSettingsStore', () => {
 
       act(() => {
         // Αλλαγή settings
-        result.current.setGeneralLine({ lineColor: '#123456' });
+        result.current.setGeneralLine({ lineColor: UI_COLORS.CUSTOM_TEST_COLOR });
         result.current.setGeneralText({ fontSize: 20 });
 
         // Reset
@@ -88,12 +89,12 @@ describe('DxfSettingsStore', () => {
 
       act(() => {
         result.current.setOverride(entityId, {
-          line: { lineColor: '#00FF00' }
+          line: { lineColor: UI_COLORS.LEGACY_COLORS.GREEN }
         });
       });
 
       expect(result.current.overrides[entityId]).toEqual({
-        line: { lineColor: '#00FF00' }
+        line: { lineColor: UI_COLORS.LEGACY_COLORS.GREEN }
       });
     });
 
@@ -109,14 +110,14 @@ describe('DxfSettingsStore', () => {
 
         // Δεύτερο override (merge)
         result.current.setOverride(entityId, {
-          line: { lineColor: '#0000FF' }
+          line: { lineColor: UI_COLORS.LEGACY_COLORS.BLUE }
         });
       });
 
       expect(result.current.overrides[entityId]).toEqual({
         line: {
           lineWidth: 2,
-          lineColor: '#0000FF'
+          lineColor: UI_COLORS.LEGACY_COLORS.BLUE
         }
       });
     });
@@ -127,7 +128,7 @@ describe('DxfSettingsStore', () => {
 
       act(() => {
         result.current.setOverride(entityId, {
-          line: { lineColor: '#FF0000' }
+          line: { lineColor: UI_COLORS.SELECTED_RED }
         });
 
         // Clear the override
@@ -180,14 +181,14 @@ describe('DxfSettingsStore', () => {
 
         // Set override
         result.current.setOverride(entityId, {
-          line: { lineColor: '#FF00FF' }
+          line: { lineColor: UI_COLORS.LEGACY_COLORS.MAGENTA }
         });
       });
 
       const effectiveLine = result.current.getEffectiveLine(entityId);
 
       expect(effectiveLine.lineWidth).toBe(2); // From general
-      expect(effectiveLine.lineColor).toBe('#FF00FF'); // From override
+      expect(effectiveLine.lineColor).toBe(UI_COLORS.LEGACY_COLORS.MAGENTA); // From override
       expect(effectiveLine.lineType).toBe(DEFAULT_LINE_SETTINGS.lineType); // Default
     });
 

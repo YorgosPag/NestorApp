@@ -11,6 +11,7 @@ import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@
 import type { RealEstatePolygon } from '@geo-alert/core';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { GEO_COLORS } from '../config/color-config';
 
 interface TechnicalDrawingInterfaceProps {
   mapRef: React.RefObject<any>;
@@ -140,8 +141,8 @@ export function TechnicalDrawingInterface({
       case 'precision':
         // Ultra-precision polygon mode
         startDrawing('simple', {
-          fillColor: 'rgba(168, 85, 247, 0.2)', // Purple fill (technical theme)
-          strokeColor: '#a855f7',
+          fillColor: GEO_COLORS.withOpacity(GEO_COLORS.USER_INTERFACE.TECHNICAL_STROKE, 0.2), // Purple fill (technical theme)
+          strokeColor: GEO_COLORS.USER_INTERFACE.TECHNICAL_STROKE,
           strokeWidth: 1 // Thin lines για precision
         });
         setIsDrawing(true);

@@ -3,6 +3,8 @@
  * Comprehensive test environment configuration με mocks και utilities
  */
 
+import { UI_COLORS } from '../config/color-config';
+
 // JSDOM + Canvas mocks για browser environment simulation
 Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
   value: jest.fn(() => ({
@@ -33,8 +35,8 @@ Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
     })),
     measureText: jest.fn(() => ({ width: 10 })),
     // Properties που χρειάζονται για rendering
-    fillStyle: '#000000',
-    strokeStyle: '#000000',
+    fillStyle: UI_COLORS.BLACK,
+    strokeStyle: UI_COLORS.BLACK,
     lineWidth: 1,
     font: '10px Arial',
     textAlign: 'start',

@@ -28,6 +28,7 @@ import { layoutUtilities } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { GEO_COLORS } from '../../../config/color-config';
 import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import styles from './PerformanceComponents.module.css';
 import {
@@ -805,10 +806,10 @@ export const AdminBoundariesPerformancePanel = memo(({
 
   const getAlertColor = useCallback((severity: AdminBoundariesAlert['severity']) => {
     switch (severity) {
-      case 'critical': return '#ef4444';
-      case 'high': return '#f97316';
-      case 'medium': return '#eab308';
-      case 'low': return '#3b82f6';
+      case 'critical': return GEO_COLORS.OPTIMIZATION.CRITICAL_PRIORITY;
+      case 'high': return GEO_COLORS.OPTIMIZATION.HIGH_PRIORITY;
+      case 'medium': return GEO_COLORS.OPTIMIZATION.MEDIUM_PRIORITY;
+      case 'low': return GEO_COLORS.OPTIMIZATION.LOW_PRIORITY;
       default: return theme.colors.text;
     }
   }, [theme.colors.text]);

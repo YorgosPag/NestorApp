@@ -18,6 +18,7 @@ import React, { memo, useMemo } from 'react';
 import { Source, Layer, Marker } from 'react-map-gl/maplibre';
 import type { GeoCoordinate } from '../../types';
 import { interactiveMapStyles } from '../InteractiveMap.styles';
+import { GEO_COLORS } from '../../config/color-config';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
@@ -170,7 +171,7 @@ export const LiveDrawingPreview: React.FC<LiveDrawingPreviewProps> = memo(({
             id="point-preview-circle-fill"
             type="fill"
             paint={{
-              'fill-color': '#3b82f6',
+              'fill-color': GEO_COLORS.MAP_LAYER.LIVE_DRAWING_FILL,
               'fill-opacity': 0.05
             }}
           />
@@ -178,7 +179,7 @@ export const LiveDrawingPreview: React.FC<LiveDrawingPreviewProps> = memo(({
             id="point-preview-circle-stroke"
             type="line"
             paint={{
-              'line-color': '#3b82f6',
+              'line-color': GEO_COLORS.MAP_LAYER.LIVE_DRAWING_STROKE,
               'line-opacity': 0.4,
               'line-width': 1,
               'line-dasharray': [8, 8]
@@ -246,7 +247,7 @@ export const LiveDrawingPreview: React.FC<LiveDrawingPreviewProps> = memo(({
               id="preview-line-layer"
               type="line"
               paint={{
-                'line-color': '#3b82f6',
+                'line-color': GEO_COLORS.MAP_LAYER.LIVE_DRAWING_STROKE,
                 'line-width': 2,
                 'line-dasharray': [4, 4],
                 'line-opacity': 0.8

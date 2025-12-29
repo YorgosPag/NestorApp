@@ -18,6 +18,7 @@ import React, { memo, useMemo } from 'react';
 import { Marker } from 'react-map-gl/maplibre';
 import type { GeoControlPoint } from '../../types';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { GEO_COLORS } from '../../config/color-config';
 import { interactiveMapStyles, getAccuracyLevelColor } from '../InteractiveMap.styles';
 import { getDynamicTextClass } from '@/components/ui/utils/dynamic-styles';
 
@@ -55,25 +56,25 @@ const getAccuracyLevel = (accuracy: number): AccuracyInfo => {
   if (accuracy <= 1) {
     return {
       level: 'excellent',
-      color: '#10b981', // Green
+      color: GEO_COLORS.POLYGON.ACCURACY_EXCELLENT, // Green - Survey-grade
       icon: '✓'
     };
   } else if (accuracy <= 3) {
     return {
       level: 'good',
-      color: '#3b82f6', // Blue
+      color: GEO_COLORS.POLYGON.ACCURACY_GOOD, // Blue - Engineering-grade
       icon: '○'
     };
   } else if (accuracy <= 10) {
     return {
       level: 'fair',
-      color: '#f59e0b', // Yellow
+      color: GEO_COLORS.POLYGON.ACCURACY_FAIR, // Orange - Planning-grade
       icon: '△'
     };
   } else {
     return {
       level: 'poor',
-      color: '#ef4444', // Red
+      color: GEO_COLORS.POLYGON.ACCURACY_POOR, // Red - Poor estimation
       icon: '✕'
     };
   }

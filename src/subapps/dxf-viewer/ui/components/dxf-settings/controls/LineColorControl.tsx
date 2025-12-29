@@ -8,6 +8,8 @@ import { Button } from '../../../../../../components/ui/button';
 import { Input } from '../../../../../../components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../../../../components/ui/popover';
 import { Palette } from 'lucide-react';
+import { UI_COLORS } from '../../../../../config/color-config';
+import { ACI_PALETTE } from '../../../../settings/standards/aci';
 import { HOVER_BACKGROUND_EFFECTS, createHoverBorderEffects } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -22,17 +24,17 @@ interface LineColorControlProps {
   showHex?: boolean;
 }
 
-// AutoCAD Standard Colors
+// AutoCAD Standard Colors - Using centralized ACI palette
 const PRESET_COLORS = [
-  '#FF0000', // Red (ACI 1)
-  '#FFFF00', // Yellow (ACI 2)
-  '#00FF00', // Green (ACI 3)
-  '#00FFFF', // Cyan (ACI 4)
-  '#0000FF', // Blue (ACI 5)
-  '#FF00FF', // Magenta (ACI 6)
-  '#FFFFFF', // White (ACI 7)
-  '#808080', // Gray (ACI 8)
-  '#C0C0C0', // Light Gray (ACI 9)
+  ACI_PALETTE[1], // Red (ACI 1)
+  ACI_PALETTE[2], // Yellow (ACI 2)
+  ACI_PALETTE[3], // Green (ACI 3)
+  ACI_PALETTE[4], // Cyan (ACI 4)
+  ACI_PALETTE[5], // Blue (ACI 5)
+  ACI_PALETTE[6], // Magenta (ACI 6)
+  ACI_PALETTE[7], // White (ACI 7)
+  ACI_PALETTE[8], // Gray (ACI 8)
+  ACI_PALETTE[9], // Light Gray (ACI 9)
 ];
 
 export const LineColorControl: React.FC<LineColorControlProps> = ({
@@ -141,7 +143,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
                         }
                       }
                     }}
-                    placeholder="#FFFFFF"
+                    placeholder={UI_COLORS.WHITE}
                     className={`flex-1 ${colors.bg.secondary} ${getStatusBorder('muted').replace('border ', '')} ${colors.text.secondary} font-mono text-sm`}
                   />
                 </div>

@@ -11,6 +11,7 @@ import type {
   DEFAULT_VISUAL_CONFIG,
   DEFAULT_NOTIFICATION_CONFIG
 } from '../types/polygon-system.types';
+import { GEO_COLORS } from '../../../config/color-config';
 
 // 🏢 ENTERPRISE INTEGRATION: Import existing centralized notification service
 import { enterpriseNotificationService } from '@/services/notification/EnterpriseNotificationService';
@@ -67,32 +68,32 @@ const CITIZEN_CONFIG: RoleBasedConfig = {
     controlPoints: {
       normal: {
         size: 16,
-        color: '#ef4444',
-        borderColor: '#fca5a5',
+        color: GEO_COLORS.POLYGON.ERROR,
+        borderColor: GEO_COLORS.withOpacity(GEO_COLORS.POLYGON.ERROR, 0.5),
         cursor: 'pointer'
       },
       highlighted: {
         size: 32,
-        color: '#4ade80',
-        borderColor: '#bbf7d0',
+        color: GEO_COLORS.POLYGON.COMPLETED,
+        borderColor: GEO_COLORS.withOpacity(GEO_COLORS.POLYGON.COMPLETED, 0.3),
         animation: 'animate-bounce',
         shadow: 'shadow-lg shadow-green-500/50'
       },
       completed: {
         size: 16,
-        color: '#10b981',
-        borderColor: '#6ee7b7',
+        color: GEO_COLORS.POLYGON.COMPLETED,
+        borderColor: GEO_COLORS.withOpacity(GEO_COLORS.POLYGON.COMPLETED, 0.4),
         cursor: 'default'
       }
     },
     lines: {
       drawing: {
-        color: '#3b82f6',
+        color: GEO_COLORS.POLYGON.DRAFT,
         width: 2,
         dashArray: [2, 2]
       },
       completed: {
-        color: '#10b981',
+        color: GEO_COLORS.POLYGON.COMPLETED,
         width: 3,
         dashArray: [1, 0]
       }
@@ -131,32 +132,32 @@ const PROFESSIONAL_CONFIG: RoleBasedConfig = {
     controlPoints: {
       normal: {
         size: 14,
-        color: '#f59e0b',
-        borderColor: '#fcd34d',
+        color: GEO_COLORS.POLYGON.WARNING,
+        borderColor: GEO_COLORS.withOpacity(GEO_COLORS.POLYGON.WARNING, 0.5),
         cursor: 'pointer'
       },
       highlighted: {
         size: 28,
-        color: '#10b981',
-        borderColor: '#6ee7b7',
+        color: GEO_COLORS.POLYGON.COMPLETED,
+        borderColor: GEO_COLORS.withOpacity(GEO_COLORS.POLYGON.COMPLETED, 0.4),
         animation: 'animate-pulse',
         shadow: 'shadow-md shadow-emerald-500/50'
       },
       completed: {
         size: 14,
-        color: '#059669',
-        borderColor: '#34d399',
+        color: GEO_COLORS.POLYGON.COMPLETED,
+        borderColor: GEO_COLORS.withOpacity(GEO_COLORS.POLYGON.COMPLETED, 0.6),
         cursor: 'default'
       }
     },
     lines: {
       drawing: {
-        color: '#f59e0b',
+        color: GEO_COLORS.POLYGON.WARNING,
         width: 2,
         dashArray: [3, 1]
       },
       completed: {
-        color: '#059669',
+        color: GEO_COLORS.POLYGON.COMPLETED,
         width: 3,
         dashArray: [1, 0]
       }
@@ -195,32 +196,32 @@ const TECHNICAL_CONFIG: RoleBasedConfig = {
     controlPoints: {
       normal: {
         size: 12,
-        color: '#8b5cf6',
-        borderColor: '#c4b5fd',
+        color: GEO_COLORS.POLYGON.ADMINISTRATIVE,
+        borderColor: GEO_COLORS.withOpacity(GEO_COLORS.POLYGON.ADMINISTRATIVE, 0.4),
         cursor: 'crosshair'
       },
       highlighted: {
         size: 24,
-        color: '#06b6d4',
-        borderColor: '#67e8f9',
+        color: GEO_COLORS.POLYGON.DRAFT,
+        borderColor: GEO_COLORS.withOpacity(GEO_COLORS.POLYGON.DRAFT, 0.3),
         animation: 'animate-ping',
         shadow: 'shadow-sm shadow-cyan-500/50'
       },
       completed: {
         size: 12,
-        color: '#0891b2',
-        borderColor: '#22d3ee',
+        color: GEO_COLORS.POLYGON.DRAFT,
+        borderColor: GEO_COLORS.withOpacity(GEO_COLORS.POLYGON.DRAFT, 0.5),
         cursor: 'default'
       }
     },
     lines: {
       drawing: {
-        color: '#8b5cf6',
+        color: GEO_COLORS.POLYGON.ADMINISTRATIVE,
         width: 1,
         dashArray: [4, 1, 1, 1]
       },
       completed: {
-        color: '#0891b2',
+        color: GEO_COLORS.POLYGON.DRAFT,
         width: 2,
         dashArray: [1, 0]
       }

@@ -303,7 +303,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           //   overlayId: overlay.id,
           //   originalPolygon: overlay.polygon.slice(0, 3), // Τα πρώτα 3 points
           //   convertedVertices: vertices.slice(0, 3), // Τα πρώτα 3 vertices
-          //   color: overlay.color || '#ff6b6b'
+          //   color: overlay.color || UI_COLORS.OVERLAY_RED
           // });
         }
 

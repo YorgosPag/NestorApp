@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { ACI_PALETTE } from '../../../../../settings/standards/aci';
+import { UI_COLORS } from '../../../../../config/color-config';
 import { Minus, Square, Pen, Hexagon, Ruler, Triangle } from 'lucide-react';
 import { CircleRadiusIcon } from '../../../../toolbar/icons/CircleIcon';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -48,10 +50,10 @@ const DEFAULT_GRIP_SETTINGS = {
   apertureSize: 10,         // ✅ AutoCAD APERTURE default: 10 pixels
   opacity: 1.0,
   colors: {
-    cold: '#0000FF',        // ✅ AutoCAD standard: Blue (ACI 5) - unselected grips
-    warm: '#FF69B4',        // ✅ AutoCAD standard: Hot Pink - hover grips
-    hot: '#FF0000',         // ✅ AutoCAD standard: Red (ACI 1) - selected grips
-    contour: '#000000'      // ✅ AutoCAD standard: Black contour
+    cold: ACI_PALETTE[5],   // ✅ AutoCAD standard: Blue (ACI 5) - unselected grips
+    warm: '#FF69B4',        // ✅ AutoCAD standard: Hot Pink - hover grips (Custom color)
+    hot: ACI_PALETTE[1],    // ✅ AutoCAD standard: Red (ACI 1) - selected grips
+    contour: UI_COLORS.BLACK // ✅ AutoCAD standard: Black contour
   },
   showAperture: true,
   multiGripEdit: true,
@@ -236,7 +238,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
   const [mockTextSettings] = useState({
     fontSize: 2.5,           // ✅ ISO 3098: Standard 2.5mm text height
     fontFamily: 'Arial, sans-serif',  // ✅ ISO 3098: Sans-serif font recommended
-    color: '#FFFFFF',        // ✅ AutoCAD ACI 7: White for text
+    color: ACI_PALETTE[7],   // ✅ AutoCAD ACI 7: White for text
     isBold: false,
     isItalic: false,
     isUnderline: false,

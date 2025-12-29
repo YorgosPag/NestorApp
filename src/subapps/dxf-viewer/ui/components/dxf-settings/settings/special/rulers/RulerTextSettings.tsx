@@ -19,6 +19,7 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useRulersGridContext } from '../../../../../../systems/rulers-grid/RulersGridSystem';
 import { UnifiedColorPicker } from '../../../../../color';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { UI_COLORS } from '../../../../../../config/color-config';
 
 export interface RulerTextSettingsProps {
   className?: string;
@@ -119,7 +120,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
             value={rulerSettings.horizontal.textColor}
             onChange={(e) => handleRulerTextColorChange(e.target.value)}
             className={`px-2 py-1 text-xs ${colors.bg.muted} text-white ${radius.md} ${getStatusBorder('default')} w-20`}
-            placeholder="#ffffff"
+            placeholder={UI_COLORS.WHITE}
           />
         </div>
       </div>

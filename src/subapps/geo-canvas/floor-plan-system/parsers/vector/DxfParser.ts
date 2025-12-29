@@ -28,6 +28,7 @@ import DxfParserLib, {
 
 import type { ParserResult } from '../../types';
 import { generateDxfThumbnail } from '../../utils/dxf-thumbnail-generator';
+import { GEO_COLORS } from '../../../config/color-config';
 
 /**
  * DXF Parser Implementation
@@ -81,8 +82,8 @@ export class DxfParser {
       const thumbnail = await generateDxfThumbnail(geoJSON, bounds, {
         width: 400,
         height: 400,
-        backgroundColor: '#f5f5f5',
-        strokeColor: '#000000',
+        backgroundColor: GEO_COLORS.CAD.FLOOR_PLAN_BG,
+        strokeColor: GEO_COLORS.CAD.FLOOR_PLAN_STROKE,
         strokeWidth: 0.8,  // Visible lines (0.8px on screen) - ensures small arcs are visible
         padding: 20
       });

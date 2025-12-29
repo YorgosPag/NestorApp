@@ -24,6 +24,7 @@ import { useColorSliderState } from '@react-stately/color';
 import { parseColor as parseAriaColor } from '@react-stately/color';
 import { useFocusRing } from '@react-aria/focus';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { UI_COLORS, UI_GRADIENTS } from '../../config/color-config';
 import type { AriaColorSliderProps } from '@react-aria/color';
 
 type SliderChannel = 'hue' | 'saturation' | 'brightness' | 'lightness' | 'red' | 'green' | 'blue' | 'alpha';
@@ -76,8 +77,8 @@ export function EnterpriseColorSlider({
   const colors = useSemanticColors();
 
   // ✅ FIX (ChatGPT-5): Guard against undefined/null value
-  // Default to white (#FFFFFF) if value is missing
-  const safeValue = value || '#FFFFFF';
+  // Default to white if value is missing
+  const safeValue = value || UI_COLORS.WHITE;
 
   // Parse color and convert to appropriate format
   const parsedColor = parseAriaColor(safeValue);
@@ -158,12 +159,7 @@ export function EnterpriseColorSlider({
           <div
             className="absolute inset-0 rounded"
             style={{
-              backgroundImage: `
-                linear-gradient(45deg, #ccc 25%, transparent 25%),
-                linear-gradient(-45deg, #ccc 25%, transparent 25%),
-                linear-gradient(45deg, transparent 75%, #ccc 75%),
-                linear-gradient(-45deg, transparent 75%, #ccc 75%)
-              `,
+              backgroundImage: UI_GRADIENTS.ALPHA_CHECKERBOARD,
               backgroundSize: '8px 8px',
               backgroundPosition: '0 0, 0 4px, 4px -4px, -4px 0px',
             }}
@@ -241,46 +237,46 @@ function getTrackGradient(channel: SliderChannel, currentColor: string): React.C
   switch (channel) {
     case 'hue':
       return {
-        background: 'linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)',
+        background: UI_GRADIENTS.HUE_SPECTRUM,
       };
 
     case 'alpha':
       // Gradient from transparent to current color
       return {
-        background: `linear-gradient(to right, transparent, ${currentColor})`,
+        background: UI_GRADIENTS.ALPHA_FADE(currentColor),
       };
 
     case 'saturation':
       // From gray to saturated color
       return {
-        background: `linear-gradient(to right, #808080, ${currentColor})`,
+        background: UI_GRADIENTS.SATURATION_FADE(currentColor),
       };
 
     case 'brightness':
     case 'lightness':
       // From black to color to white
       return {
-        background: `linear-gradient(to right, #000000, ${currentColor}, #ffffff)`,
+        background: UI_GRADIENTS.BRIGHTNESS_FADE(currentColor),
       };
 
     case 'red':
       return {
-        background: 'linear-gradient(to right, #000000, #ff0000)',
+        background: UI_GRADIENTS.RED_CHANNEL,
       };
 
     case 'green':
       return {
-        background: 'linear-gradient(to right, #000000, #00ff00)',
+        background: UI_GRADIENTS.GREEN_CHANNEL,
       };
 
     case 'blue':
       return {
-        background: 'linear-gradient(to right, #000000, #0000ff)',
+        background: UI_GRADIENTS.BLUE_CHANNEL,
       };
 
     default:
       return {
-        background: '#808080',
+        background: UI_COLORS.MEDIUM_GRAY,
       };
   }
 }

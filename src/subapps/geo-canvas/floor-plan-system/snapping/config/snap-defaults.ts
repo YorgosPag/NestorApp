@@ -12,6 +12,7 @@
  */
 
 import { SnapMode, SnapSettings } from '../types';
+import { GEO_COLORS } from '../../../config/color-config';
 
 /**
  * Default Snap Settings
@@ -28,8 +29,8 @@ export const DEFAULT_SNAP_SETTINGS: SnapSettings = {
   /** Initially only endpoint snap enabled */
   enabledModes: [SnapMode.ENDPOINT],
 
-  /** Indicator color: Cyan (#00FFFF) - AutoCAD standard */
-  indicatorColor: '#00FFFF',
+  /** Indicator color: Cyan (AutoCAD ACI standard) */
+  indicatorColor: GEO_COLORS.SNAP.ENDPOINT,
 
   /** Indicator size: 8px radius (visible but not obtrusive) */
   indicatorSize: 8,
@@ -54,14 +55,14 @@ export const SNAP_RADIUS_LIMITS = {
  * Visual Constants
  */
 export const SNAP_VISUAL = {
-  /** Indicator colors by snap mode */
+  /** Indicator colors by snap mode - AutoCAD ACI Standard */
   COLORS: {
-    [SnapMode.ENDPOINT]: '#00FFFF',      // Cyan
-    [SnapMode.MIDPOINT]: '#00FF00',      // Green
-    [SnapMode.CENTER]: '#FF00FF',        // Magenta
-    [SnapMode.INTERSECTION]: '#FFFF00',  // Yellow
-    [SnapMode.NEAREST]: '#FFA500',       // Orange
-    [SnapMode.PERPENDICULAR]: '#FF0000'  // Red
+    [SnapMode.ENDPOINT]: GEO_COLORS.SNAP.ENDPOINT,      // Cyan (ACI standard)
+    [SnapMode.MIDPOINT]: GEO_COLORS.SNAP.MIDPOINT,      // Green (ACI standard)
+    [SnapMode.CENTER]: GEO_COLORS.SNAP.CENTER,          // Magenta (ACI standard)
+    [SnapMode.INTERSECTION]: GEO_COLORS.SNAP.INTERSECTION,  // Yellow (ACI standard)
+    [SnapMode.NEAREST]: GEO_COLORS.SNAP.NEAREST,        // Orange (ACI standard)
+    [SnapMode.PERPENDICULAR]: GEO_COLORS.SNAP.PERPENDICULAR  // Red (ACI standard)
   },
 
   /** Indicator sizes (radius in pixels) */

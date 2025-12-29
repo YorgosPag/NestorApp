@@ -16,6 +16,7 @@
 
 import React, { memo } from 'react';
 import { Source, Layer } from 'react-map-gl/maplibre';
+import { GEO_COLORS } from '../../config/color-config';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
@@ -124,7 +125,7 @@ export const TransformationPreviewLayer: React.FC<TransformationPreviewLayerProp
           id="dxf-preview-layer"
           type="line"
           paint={{
-            'line-color': '#ff6b6b',
+            'line-color': GEO_COLORS.MAP_LAYER.TRANSFORMATION_PREVIEW,
             'line-width': 2,
             'line-opacity': previewOpacity,
             'line-dasharray': [4, 4]

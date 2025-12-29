@@ -18,6 +18,7 @@ import React from 'react';
 import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { canvasUtilities } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { GEO_COLORS } from '../../config/color-config';
 
 /**
  * Component props
@@ -118,7 +119,7 @@ export function FloorPlanControls({
           disabled={!visible}
           className={`w-full h-2 ${colors.bg.hover} rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
           style={{
-            accentColor: '#3b82f6'
+            accentColor: GEO_COLORS.POLYGON.DRAFT
           }}
         />
 

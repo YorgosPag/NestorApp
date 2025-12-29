@@ -372,7 +372,7 @@ function findColoredOverlayCard(): HTMLElement {
       '.card, [class*="card"], [class*="overlay-card"], button, div'
     )).filter(el => {
       const style = window.getComputedStyle(el);
-      const hasColor = style.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
+      const hasColor = style.backgroundColor !== UI_COLORS.TRANSPARENT &&
                       style.backgroundColor !== 'transparent' &&
                       style.backgroundColor !== UI_COLORS.WHITE;
       const hasColorIndicator = el.querySelector('[class*="color"], [class*="badge"], [style*="background"]');
@@ -394,7 +394,7 @@ function findColoredOverlayCard(): HTMLElement {
     const rect = (el as HTMLElement).getBoundingClientRect();
 
     // Ελέγχουμε για χρώμα και reasonable size
-    const hasColor = style.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
+    const hasColor = style.backgroundColor !== UI_COLORS.TRANSPARENT &&
                     style.backgroundColor !== 'transparent' &&
                     style.backgroundColor !== UI_COLORS.WHITE;
     const hasColorIndicator = el.querySelector('[class*="color"], [class*="badge"], [style*="background"]');

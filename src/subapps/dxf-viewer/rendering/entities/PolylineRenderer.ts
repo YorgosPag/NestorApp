@@ -8,6 +8,7 @@ import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
 import { calculatePolygonArea, calculatePolygonCentroid } from './shared/geometry-utils';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+import { UI_COLORS } from '../../config/color-config';
 import { hitTestLineSegments, createEdgeGrips, calculatePerimeter } from './shared/line-utils';
 import { drawVerticesPath } from './shared/geometry-rendering-utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
@@ -66,7 +67,7 @@ export class PolylineRenderer extends BaseEntityRenderer {
       const isOverlayEntity = ('isOverlayPreview' in entity && entity.isOverlayPreview === true);
       
       // 🔺 ΚΡΙΤΙΚΗ ΔΙΟΡΘΩΣΗ: fill() πρώτα, stroke() μετά για σωστό layering
-      if (isOverlayEntity && closed && this.ctx.fillStyle !== 'rgba(0,0,0,0)') {
+      if (isOverlayEntity && closed && this.ctx.fillStyle !== UI_COLORS.TRANSPARENT) {
         this.ctx.fill();
         this.ctx.stroke();
       } else {

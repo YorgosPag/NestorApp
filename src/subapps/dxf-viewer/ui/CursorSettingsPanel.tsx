@@ -13,6 +13,7 @@ import {
   type CursorSettings
 } from "../systems/cursor/config";
 import { useRulersGridContext } from "../systems/rulers-grid/RulersGridSystem";
+import { UI_COLORS } from "../config/color-config";
 import { SimpleColorPicker } from "./color";
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -350,7 +351,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
         left: position.x,
         top: position.y,
         width: dynamicWidth, // Use dynamic width instead of w-96
-        backgroundColor: 'rgb(31, 41, 55)',
+        backgroundColor: UI_COLORS.UPLOAD_AREA_BG,
         opacity: 1,
         pointerEvents: 'all',
         zIndex: 2147483647, // Maximum z-index value

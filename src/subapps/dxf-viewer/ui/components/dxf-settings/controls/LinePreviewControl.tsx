@@ -8,6 +8,7 @@ import React, { useMemo } from 'react';
 import type { LineSettings } from '../../../../settings-core/types';
 import { getDashArray } from '../../../../settings-core/defaults';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { UI_COLORS } from '../../../../../config/color-config';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface LinePreviewControlProps {
@@ -60,7 +61,7 @@ const LinePreviewControlComponent: React.FC<LinePreviewControlProps> = ({
               y1="50%"
               x2="90%"
               y2="50%"
-              stroke={settings.color || '#FFFFFF'}
+              stroke={settings.color || UI_COLORS.WHITE}
               strokeWidth={strokeWidth}
               strokeOpacity={settings.opacity || 1}
               strokeDasharray={dashArray}
@@ -74,7 +75,7 @@ const LinePreviewControlComponent: React.FC<LinePreviewControlProps> = ({
               cx="10%"
               cy="50%"
               r="3"
-              fill={settings.color || '#FFFFFF'}
+              fill={settings.color || UI_COLORS.WHITE}
               opacity={settings.opacity || 1}
             />
 
@@ -83,7 +84,7 @@ const LinePreviewControlComponent: React.FC<LinePreviewControlProps> = ({
               cx="90%"
               cy="50%"
               r="3"
-              fill={settings.color || '#FFFFFF'}
+              fill={settings.color || UI_COLORS.WHITE}
               opacity={settings.opacity || 1}
             />
           </svg>
@@ -98,7 +99,7 @@ const LinePreviewControlComponent: React.FC<LinePreviewControlProps> = ({
       <div className="flex items-center justify-between text-xs ${colors.text.muted}">
         <span>{settings.enabled !== false ? (settings.lineType || 'solid') : 'Απενεργοποιημένη'}</span>
         <span>{(settings.lineWidth || 0.25).toFixed(2)}mm</span>
-        <span>{settings.color || '#FFFFFF'}</span>
+        <span>{settings.color || UI_COLORS.WHITE}</span>
       </div>
     </div>
   );

@@ -27,6 +27,7 @@ import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { ParserResult } from '../types';
 import type { UseSnapEngineReturn } from '../snapping/hooks/useSnapEngine';
 import { canvasUtilities } from '@/styles/design-tokens';
+import { GEO_COLORS } from '../../config/color-config';
 
 /**
  * Layer styling options
@@ -76,9 +77,9 @@ export interface FloorPlanCanvasLayerProps {
  * Default layer style
  */
 const DEFAULT_STYLE: Required<FloorPlanLayerStyle> = {
-  strokeColor: '#FF0000',
+  strokeColor: GEO_COLORS.CAD.SELECTED_ENTITY,
   strokeWidth: 2,
-  fillColor: '#FF0000',
+  fillColor: GEO_COLORS.CAD.SELECTED_ENTITY,
   fillOpacity: 0.1,
   opacity: 0.8,
   lineDash: []
@@ -225,7 +226,7 @@ export function FloorPlanCanvasLayer({
     if (snapEngine && snapEngine.snapResult && floorPlan.bounds) {
       const { point } = snapEngine.snapResult;
       const bounds = floorPlan.bounds;
-      const indicatorColor = '#00FFFF'; // Cyan
+      const indicatorColor = GEO_COLORS.CAD.CROSSHAIR_INDICATOR; // Cyan - AutoCAD standard
       const indicatorSize = 8;
 
       // 🔄 FIX: Transform DXF local coordinates → canvas pixels

@@ -17,6 +17,7 @@
 import React, { memo, useMemo } from 'react';
 import { Source, Layer } from 'react-map-gl/maplibre';
 import type { GeoControlPoint } from '../../types';
+import { GEO_COLORS } from '../../config/color-config';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
@@ -79,7 +80,7 @@ export const PolygonLinesLayer: React.FC<PolygonLinesLayerProps> = memo(({
   // ✅ PERFORMANCE: Memoized paint configuration
   const linePaint = useMemo(() => ({
     // ✅ ENTERPRISE: Different styles για complete vs incomplete polygon
-    'line-color': isPolygonComplete ? '#10b981' : '#3b82f6', // Green when complete, blue when drawing
+    'line-color': isPolygonComplete ? GEO_COLORS.MAP_LAYER.POLYGON_COMPLETE : GEO_COLORS.MAP_LAYER.POLYGON_INCOMPLETE, // Centralized: Green when complete, blue when drawing
     'line-width': isPolygonComplete ? 3 : 2,
     'line-dasharray': isPolygonComplete ? [1, 0] : [2, 2], // Solid when complete, dashed when drawing
     'line-opacity': 0.8
