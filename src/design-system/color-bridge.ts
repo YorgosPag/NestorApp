@@ -85,6 +85,10 @@ export const COLOR_BRIDGE = {
     inverted: 'text-primary-foreground',  // ✅ ENTERPRISE: Alias for inverse (used in DestinationWizard)
     foreground: 'text-foreground',        // ✅ ENTERPRISE: Direct foreground mapping
 
+    // ✅ ENTERPRISE FIX: Missing text colors for LayersSettings, ProSnapToolbar, ZoomControls
+    WHITE: 'text-white',                  // White text for LayersSettings, ProSnapToolbar, ZoomControls
+    DARKER: 'text-gray-800',              // Darker text for ui/effects
+
     // Status text colors
     success: 'text-green-600',            // Success text
     error: 'text-red-600',                // Error text
@@ -101,11 +105,20 @@ export const COLOR_BRIDGE = {
     accent: 'text-blue-600',              // Accent text (alias for info)
     tertiary: 'text-slate-500',           // Tertiary text για DynamicInput components
 
+    // ✅ ENTERPRISE FIX: Missing text colors for TestResultsModal and other components
+    disabled: 'text-gray-400',            // Disabled text state
+
     // ✅ GOOGLE-STYLE FIX: Missing constraint text colors
     yellow: 'text-yellow-600',            // Yellow constraint text
     orange: 'text-orange-600',            // Orange constraint text
     purple: 'text-purple-600',            // Purple constraint text
     magenta: 'text-pink-600',             // Magenta constraint text (pink is closest)
+
+    // ✅ ENTERPRISE FIX: Missing text color for LayoutMapper debug components
+    RED_LIGHT: 'text-red-400',            // Light red text for debug components
+
+    // ✅ ENTERPRISE FIX: Missing mutedInverted for ComboBox.tsx and EnterpriseComboBox.tsx
+    mutedInverted: 'text-white',           // Muted text on dark backgrounds
   },
 
   /** 🔲 Border Color Mappings */
@@ -115,6 +128,9 @@ export const COLOR_BRIDGE = {
     muted: 'border-border',               // Muted border → --border
     primary: 'border-border',             // Primary border → --border
     secondary: 'border-border',           // Secondary border → --border
+
+    // ✅ ENTERPRISE FIX: Missing border colors for ProSnapToolbar, UnitTestsTab
+    MUTED: 'border-muted',                // Muted border for ProSnapToolbar, UnitTestsTab
 
     // Interactive borders
     focus: 'border-ring',                 // Focus border → --ring
@@ -147,6 +163,17 @@ export const COLOR_BRIDGE = {
     focus: {
       ring: 'focus:ring-2 focus:ring-ring',  // Focus ring → --ring
     },
+    // ✅ ENTERPRISE FIX: Missing hover object for panel-tokens.ts TS2339 errors
+    hover: {
+      bg: 'hover:bg-accent/50',             // Hover background effect
+      text: 'hover:text-foreground',        // Hover text effect
+      border: 'hover:border-ring',          // Hover border effect
+      scale: 'hover:scale-105',             // Hover scale effect
+
+      // ✅ ENTERPRISE FIX: Additional properties for panel-tokens compatibility
+      background: 'hover:bg-accent/50',     // Alias for bg (panel-tokens compatibility)
+      error: 'hover:text-red-600',          // Error hover text effect
+    },
   },
 
   /** 🌈 ENTERPRISE GRADIENT MAPPINGS - Professional gradient patterns */
@@ -165,6 +192,9 @@ export const COLOR_BRIDGE = {
     // Card gradients
     cardElevated: 'bg-gradient-to-b from-card to-muted',                    // Elevated cards
     cardInteractive: 'bg-gradient-to-br from-card via-accent/5 to-card',    // Interactive cards
+
+    // ✅ ENTERPRISE FIX: Missing gradient for DebugToolbar TS2339 error
+    GRADIENT_PURPLE_PINK: 'bg-gradient-to-br from-purple-500 via-pink-500 to-purple-600', // Purple-pink gradient for debug UI
   },
 } as const;
 

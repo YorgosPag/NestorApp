@@ -35,10 +35,10 @@ export function overlaysToRegions(overlays: Overlay[]): Region[] {
       // 🔑 ΧΩΡΙΣ ΑΥΤΟ ΔΕΝ ΖΩΓΡΑΦΙΖΕΙ:
       visible: true,
       // Προαιρετικά/αισθητικά:
-      opacity: ov.style?.opacity ?? ov.opacity ?? 0.7,
+      opacity: ov.style?.opacity ?? 0.7,
       color: ov.style?.fill ?? getStatusColors(status)?.fill ?? UI_COLORS.INFO,
       levelId: ov.levelId,
-      locked: ov.locked ?? false,
+      locked: false, // ✅ ENTERPRISE: Default false since locked property doesn't exist in Overlay interface
       metadata: { label: ov.label, kind: ov.kind },
       // Pass through the style from overlay
       style: ov.style

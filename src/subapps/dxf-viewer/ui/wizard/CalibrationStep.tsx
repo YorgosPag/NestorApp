@@ -66,7 +66,7 @@ export function CalibrationStep() {
               onClick={() => handleUnitsChange(unit.value as typeof units)}
               className={`p-2 text-sm transition-colors ${
                 units === unit.value
-                  ? `${getStatusBorder('active')} ${colors.bg.info} ${colors.text.info}`
+                  ? `${getStatusBorder('info')} ${colors.bg.info} ${colors.text.info}`
                   : `${quick.button} ${colors.text.tertiary} ${HOVER_BORDER_EFFECTS.MUTED}`
               }`}
             >

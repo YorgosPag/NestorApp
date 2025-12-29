@@ -400,42 +400,42 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     entities: [
       ...(props.currentScene.entities?.map((entity): DxfEntityUnion | null => {
         // Get layer color information
-        const layerInfo = props.currentScene?.layers?.[entity.layer];
+        const layerInfo = entity.layer ? props.currentScene?.layers?.[entity.layer] : null;
 
         // Convert SceneEntity to DxfEntityUnion
         const base = {
           id: entity.id,
-          layer: entity.layer,
-          color: entity.color || layerInfo?.color || UI_COLORS.WHITE, // Use layer color if entity has no color
+          layer: entity.layer || 'default',
+          color: String(entity.color || layerInfo?.color || UI_COLORS.WHITE), // ✅ ENTERPRISE FIX: Ensure string type
           lineWidth: entity.lineweight || 1,
-          visible: entity.visible
+          visible: entity.visible ?? true // ✅ ENTERPRISE FIX: Default to true if undefined
         };
 
         switch (entity.type) {
           case 'line': {
             // Type guard: Entity με type 'line' έχει start & end
             const lineEntity = entity as typeof entity & { start: Point2D; end: Point2D };
-            return { ...base, type: 'line' as const, start: lineEntity.start, end: lineEntity.end };
+            return { ...base, type: 'line' as const, start: lineEntity.start, end: lineEntity.end } as DxfEntityUnion;
           }
           case 'circle': {
             // Type guard: Entity με type 'circle' έχει center & radius
             const circleEntity = entity as typeof entity & { center: Point2D; radius: number };
-            return { ...base, type: 'circle' as const, center: circleEntity.center, radius: circleEntity.radius };
+            return { ...base, type: 'circle' as const, center: circleEntity.center, radius: circleEntity.radius } as DxfEntityUnion;
           }
           case 'polyline': {
             // Type guard: Entity με type 'polyline' έχει vertices & closed
             const polylineEntity = entity as typeof entity & { vertices: Point2D[]; closed: boolean };
-            return { ...base, type: 'polyline' as const, vertices: polylineEntity.vertices, closed: polylineEntity.closed };
+            return { ...base, type: 'polyline' as const, vertices: polylineEntity.vertices, closed: polylineEntity.closed } as DxfEntityUnion;
           }
           case 'arc': {
             // Type guard: Entity με type 'arc' έχει center, radius, startAngle, endAngle
             const arcEntity = entity as typeof entity & { center: Point2D; radius: number; startAngle: number; endAngle: number };
-            return { ...base, type: 'arc' as const, center: arcEntity.center, radius: arcEntity.radius, startAngle: arcEntity.startAngle, endAngle: arcEntity.endAngle };
+            return { ...base, type: 'arc' as const, center: arcEntity.center, radius: arcEntity.radius, startAngle: arcEntity.startAngle, endAngle: arcEntity.endAngle } as DxfEntityUnion;
           }
           case 'text': {
             // Type guard: Entity με type 'text' έχει position, text, height, rotation
             const textEntity = entity as typeof entity & { position: Point2D; text: string; height: number; rotation?: number };
-            return { ...base, type: 'text' as const, position: textEntity.position, text: textEntity.text, height: textEntity.height, rotation: textEntity.rotation };
+            return { ...base, type: 'text' as const, position: textEntity.position, text: textEntity.text, height: textEntity.height, rotation: textEntity.rotation } as DxfEntityUnion;
           }
           default:
             console.warn('🔍 Unsupported entity type for DxfCanvas:', entity.type);

@@ -11,9 +11,9 @@ import { useEnterpriseDxfSettings } from '../settings-provider';
 import type { GripSettings } from '../types/gripSettings';
 
 export function useGripDraftSettings() {
-  const { getEffectiveGripSettings, updateSpecificGripSettings, settings } =
+  const { getEffectiveGripSettings, updateSpecificGripSettings, toggleGripOverride, settings } =
     useEnterpriseDxfSettings();
-  const isOverrideEnabled = settings.specific?.grip?.draft?.enabled ?? false;
+  const isOverrideEnabled = settings.overrideEnabled?.grip?.draft ?? false;
 
   // ✅ ENTERPRISE: Stable dependency - depend on data, not functions
   const effectiveSettings = React.useMemo(
@@ -29,8 +29,7 @@ export function useGripDraftSettings() {
     getEffectiveSettings: () => getEffectiveGripSettings('preview'),
     isOverrideEnabled,
     toggleOverride: (enabled: boolean) => {
-      // ✅ ENTERPRISE: Type-safe - enabled is Partial<GripSettings>
-      updateSpecificGripSettings?.('draft', { enabled } as Partial<GripSettings>);
+      toggleGripOverride('draft', enabled);
     }
   };
 }

@@ -50,7 +50,7 @@ export function useDrawingInteraction() {
     updatePreview: drawing.updatePreview,
     finishEntity: drawing.finishEntity,
     finishPolyline: drawing.finishPolyline,
-    snapConfig: drawing.snapConfig,
+    // ✅ ENTERPRISE FIX: snapConfig removed - handled at DxfCanvas level per useUnifiedDrawing comment
   };
 }
 

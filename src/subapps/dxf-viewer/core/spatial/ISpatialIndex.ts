@@ -37,6 +37,9 @@ export interface SpatialBounds {
   minY: number;
   maxX: number;
   maxY: number;
+  // ✅ ENTERPRISE FIX: Added convenience properties για center calculations
+  centerX?: number; // Convenience getter για center point X
+  centerY?: number; // Convenience getter για center point Y
 }
 
 /**
@@ -57,6 +60,7 @@ export interface SpatialQueryResult<T = any> {
   item: SpatialItem;
   distance: number;
   data: T;
+  bounds?: SpatialBounds; // ✅ ENTERPRISE FIX: Added bounds property για HitTester.ts
 }
 
 /**
@@ -173,6 +177,41 @@ export interface ISpatialIndex {
    * Debug information (development only)
    */
   debug(): any;
+
+  // ========================================
+  // LEGACY COMPATIBILITY METHODS
+  // ========================================
+
+  /**
+   * @deprecated Use insert() instead. Legacy alias for backward compatibility.
+   */
+  addEntity?(item: SpatialItem): void;
+
+  /**
+   * @deprecated Use optimize() instead. Legacy alias for backward compatibility.
+   */
+  buildIndex?(): void;
+
+  /**
+   * @deprecated Use queryNear() or hitTest() instead. Legacy alias for backward compatibility.
+   */
+  queryPoint?(point: Point2D, tolerance?: number): SpatialQueryResult[];
+
+  // ✅ ENTERPRISE FIX: Added missing methods για TS2339 errors
+  /**
+   * Query a region for spatial items
+   */
+  queryRegion?(bounds: SpatialBounds): SpatialQueryResult[];
+
+  /**
+   * Get spatial index statistics
+   */
+  getStatistics?(): { itemCount: number; nodeCount?: number; depth?: number; [key: string]: any };
+
+  /**
+   * Get node count (για debugging/monitoring)
+   */
+  getNodeCount?(): number;
 }
 
 // ========================================

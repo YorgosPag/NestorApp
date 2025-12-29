@@ -225,6 +225,8 @@ export const ModalField: React.FC<{
   required?: boolean;
   className?: string;
 }> = ({ label, children, description, required = false, className = '' }) => {
+  const colors = useSemanticColors();
+
   return (
     <div className={className}>
       <label className={`block text-xs font-medium ${colors.text.muted} mb-2`}>

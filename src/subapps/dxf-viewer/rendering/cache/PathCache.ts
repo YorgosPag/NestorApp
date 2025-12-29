@@ -4,6 +4,18 @@
  */
 
 import type { EntityModel } from '../types/Types';
+import type {
+  LineEntity,
+  CircleEntity,
+  ArcEntity,
+  PolylineEntity,
+  RectangleEntity,
+  PointEntity,
+  TextEntity,
+  DimensionEntity,
+  BlockEntity,
+  AngleMeasurementEntity
+} from '../../types/entities';
 
 export interface CacheEntry {
   path: Path2D;
@@ -170,20 +182,79 @@ export class PathCache {
    * Υπολογίζει hash για ένα entity (για cache invalidation)
    */
   static calculateEntityHash(entity: EntityModel, transform?: { scale: number; offsetX: number; offsetY: number }): string {
-    // Include relevant entity properties that affect rendering
-    const relevant = {
+    // ✅ ENTERPRISE FIX: Use type guards to safely access entity-specific properties
+    const relevant: Record<string, any> = {
       type: entity.type,
-      // Geometric properties
-      start: entity.start,
-      end: entity.end,
-      center: entity.center,
-      radius: entity.radius,
-      vertices: entity.vertices,
-      // Style properties that affect path
-      lineWidth: entity.lineWidth,
+      // Style properties that affect path (available on BaseEntity)
+      lineWidth: (entity as any).lineWidth || entity.lineweight,
       // Transform properties
       transform: transform ? `${transform.scale}_${transform.offsetX}_${transform.offsetY}` : null
     };
+
+    // Add geometric properties based on entity type using type guards
+    switch (entity.type) {
+      case 'line':
+        const lineEntity = entity as LineEntity;
+        relevant.start = lineEntity.start;
+        relevant.end = lineEntity.end;
+        break;
+      case 'circle':
+        const circleEntity = entity as CircleEntity;
+        relevant.center = circleEntity.center;
+        relevant.radius = circleEntity.radius;
+        break;
+      case 'arc':
+        const arcEntity = entity as ArcEntity;
+        relevant.center = arcEntity.center;
+        relevant.radius = arcEntity.radius;
+        relevant.startAngle = arcEntity.startAngle;
+        relevant.endAngle = arcEntity.endAngle;
+        break;
+      case 'polyline':
+        const polylineEntity = entity as PolylineEntity;
+        relevant.vertices = polylineEntity.vertices;
+        relevant.closed = polylineEntity.closed;
+        break;
+      case 'rectangle':
+        const rectEntity = entity as RectangleEntity;
+        relevant.x = rectEntity.x;
+        relevant.y = rectEntity.y;
+        relevant.width = rectEntity.width;
+        relevant.height = rectEntity.height;
+        relevant.rotation = rectEntity.rotation;
+        break;
+      case 'point':
+        const pointEntity = entity as PointEntity;
+        relevant.position = pointEntity.position;
+        break;
+      case 'text':
+        const textEntity = entity as TextEntity;
+        relevant.position = textEntity.position;
+        relevant.text = textEntity.text;
+        relevant.fontSize = textEntity.fontSize;
+        relevant.rotation = textEntity.rotation;
+        break;
+      case 'dimension':
+        const dimEntity = entity as DimensionEntity;
+        relevant.startPoint = dimEntity.startPoint;
+        relevant.endPoint = dimEntity.endPoint;
+        relevant.textPosition = dimEntity.textPosition;
+        break;
+      case 'block':
+        const blockEntity = entity as BlockEntity;
+        relevant.position = blockEntity.position;
+        relevant.scale = blockEntity.scale;
+        relevant.rotation = blockEntity.rotation;
+        relevant.name = blockEntity.name;
+        break;
+      case 'angle-measurement':
+        const angleEntity = entity as AngleMeasurementEntity;
+        relevant.vertex = angleEntity.vertex;
+        relevant.point1 = angleEntity.point1;
+        relevant.point2 = angleEntity.point2;
+        relevant.angle = angleEntity.angle;
+        break;
+    }
 
     // Simple hash (could use crypto.subtle.digest for better hashing)
     return btoa(JSON.stringify(relevant)).replace(/[^a-zA-Z0-9]/g, '').substring(0, 32);

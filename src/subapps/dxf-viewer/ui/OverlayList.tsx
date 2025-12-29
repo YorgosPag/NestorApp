@@ -131,7 +131,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                     key={overlay.id}
                     ref={isSelected ? selectedCardRef : null}
                     className={`flex items-center gap-1 px-2 py-2 rounded transition-colors cursor-pointer w-full overflow-hidden ${
-                      isSelected ? `${colors.bg.info}/50 ${getStatusBorder('active')}` : `${colors.bg.primary}/50 ${quick.card} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                      isSelected ? `${colors.bg.info}/50 ${getStatusBorder('info')}` : `${colors.bg.primary}/50 ${quick.card} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
                     }`}
                     onClick={() => onSelect(overlay.id === selectedOverlayId ? null : overlay.id)}
                   >

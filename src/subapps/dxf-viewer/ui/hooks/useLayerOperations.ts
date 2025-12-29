@@ -5,7 +5,7 @@
  */
 
 import { useMemo } from 'react';
-import type { SceneModel } from '../../types/scene';
+import type { SceneModel, AnySceneEntity } from '../../types/scene';
 // ✅ ENTERPRISE MIGRATION: Using ServiceRegistry instead of direct imports
 import { serviceRegistry } from '../../services';
 import { useNotifications } from '../../../../providers/NotificationProvider';
@@ -237,9 +237,12 @@ export function useLayerOperations({
     const targetEntity = scene.entities.find(e => e.id === targetEntityId);
     if (!targetEntity) return;
 
-    const sourceNames = scene.entities
-      .filter(e => sourceEntityIds.includes(e.id))
-      .map(e => e.name || e.type || e.id.substring(0, 8));
+    // ✅ ENTERPRISE FIX: Handle entity ID access with type safety
+    const sourceEntities = scene.entities.filter(e => e && e.id && sourceEntityIds.includes(e.id));
+    const sourceNames = sourceEntities.map(e => {
+      const entityId = e.id || 'unknown';
+      return e.name || e.type || entityId.substring(0, 8);
+    });
 
     const confirmed = await showConfirmDialog({
       title: 'Συγχώνευση Entities',

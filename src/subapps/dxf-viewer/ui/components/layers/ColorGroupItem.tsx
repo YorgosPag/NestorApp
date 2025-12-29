@@ -136,7 +136,7 @@ export function ColorGroupItem({
     <div className="space-y-1">
       {/* Color Group Header */}
       <div 
-        className={`flex items-center justify-between p-2 ${colors.bg.secondary} ${getStatusBorder('focus')} rounded cursor-pointer ${INTERACTIVE_PATTERNS.PURPLE_HOVER} transition-colors ${
+        className={`flex items-center justify-between p-2 ${colors.bg.secondary} ${getStatusBorder('info')} rounded cursor-pointer ${INTERACTIVE_PATTERNS.PURPLE_HOVER} transition-colors ${
           selectedColorGroupsForMerge.has(colorName) ? 'ring-2 ring-blue-400 bg-blue-900 bg-opacity-30' : ''
         }`}
         onClick={handleGroupClick}
@@ -173,7 +173,7 @@ export function ColorGroupItem({
               onChange={(e) => setEditingColorGroupName(e.target.value)}
               onKeyDown={handleNameKeyDown}
               onBlur={handleNameBlur}
-              className={`${colors.bg.hover} text-purple-200 text-sm font-medium px-1 rounded ${getStatusBorder('focus')} focus:outline-none focus:ring-1 focus:ring-purple-400 min-w-0 flex-1`}
+              className={`${colors.bg.hover} text-purple-200 text-sm font-medium px-1 rounded ${getStatusBorder('info')} focus:outline-none focus:ring-1 focus:ring-purple-400 min-w-0 flex-1`}
               autoFocus
             />
           ) : (

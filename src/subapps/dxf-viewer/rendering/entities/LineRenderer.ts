@@ -53,12 +53,14 @@ import { hitTestLineSegments, createEdgeGrips, renderSplitLine, renderLineWithTe
 import { calculateDistance } from './shared/geometry-rendering-utils';
 
 export class LineRenderer extends BaseEntityRenderer {
-  render(entity: EntityModel, options: RenderOptions = {}): void {
+  render(entity: Entity, options: RenderOptions = {}): void {
     if (entity.type !== 'line') return;
-    
+
+    // ✅ ENTERPRISE FIX: Use type guard for safe property access
+    if (!('start' in entity) || !('end' in entity)) return;
     const start = entity.start as Point2D;
     const end = entity.end as Point2D;
-    
+
     if (!start || !end) return;
 
     // 🔺 ΌΛΑ τα lines χρησιμοποιούν το 3-phase system
@@ -116,12 +118,14 @@ export class LineRenderer extends BaseEntityRenderer {
     // ⚡ NUCLEAR: LINE ENDPOINT DOTS ELIMINATED
   }
 
-  getGrips(entity: EntityModel): GripInfo[] {
+  getGrips(entity: Entity): GripInfo[] {
     if (entity.type !== 'line') return [];
-    
+
+    // ✅ ENTERPRISE FIX: Use type guard for safe property access
+    if (!('start' in entity) || !('end' in entity)) return [];
     const start = entity.start as Point2D;
     const end = entity.end as Point2D;
-    
+
     if (!start || !end) return [];
     
     const grips: GripInfo[] = [];

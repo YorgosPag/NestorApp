@@ -42,13 +42,13 @@ export function useDrawingOrchestrator({
   
   const startDrawing = useCallback((tool: DrawingTool) => {
 
-    drawingSystem.setTool(tool);
+    drawingSystem.startDrawing(tool); // ✅ ENTERPRISE FIX: Use startDrawing method instead of setTool
     onToolChange?.(tool);
   }, [drawingSystem, onToolChange]);
-  
+
   const cancelDrawing = useCallback(() => {
 
-    drawingSystem.setTool('select');
+    drawingSystem.cancelDrawing(); // ✅ ENTERPRISE FIX: Use cancelDrawing method instead of setTool
     onToolChange?.('select');
   }, [drawingSystem, onToolChange]);
   
@@ -76,26 +76,26 @@ export function useDrawingOrchestrator({
   
   const finishDrawing = useCallback(() => {
 
-    const result = drawingSystem.finishDrawing();
-    
+    const result = drawingSystem.finishEntity(); // ✅ ENTERPRISE FIX: Use finishEntity method instead of finishDrawing
+
     if (result && onEntityCreated) {
-      onEntityCreated(result);
+      onEntityCreated(result as Entity);
     }
-    
+
     // Return to select tool after completion
     onToolChange?.('select');
-    
+
     return result;
   }, [drawingSystem, onEntityCreated, onToolChange]);
-  
+
   const finishPolyline = useCallback(() => {
 
-    const result = drawingSystem.finishDrawing();
+    const result = drawingSystem.finishPolyline(); // ✅ ENTERPRISE FIX: Use finishPolyline method instead of finishDrawing
     
     if (result && onEntityCreated) {
-      onEntityCreated(result);
+      onEntityCreated(result as Entity);
     }
-    
+
     // Return to select tool after polyline completion
     onToolChange?.('select');
     

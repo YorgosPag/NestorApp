@@ -21,6 +21,7 @@ interface LegacyRectangleEntity extends Entity {
 // Snap context interface
 interface SnapContext {
   maxCandidates: number;
+  lastPoint?: Point2D; // ✅ ENTERPRISE FIX: Added lastPoint για AISnappingEngine.ts
 }
 
 /**

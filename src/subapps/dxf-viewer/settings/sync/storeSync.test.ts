@@ -67,10 +67,10 @@ class FakeToolStylePort implements ToolStylePort {
     this.applyCalls.push(partial);
   }
 
-  onChange(handler: (partial: Parameters<ToolStylePort['apply']>[0]) => void): Unsubscribe {
-    this.changeHandlers.push(handler);
+  onChange(handler: (partial: unknown) => void): Unsubscribe {
+    this.changeHandlers.push(handler as (partial: Parameters<ToolStylePort['apply']>[0]) => void);
     return () => {
-      const index = this.changeHandlers.indexOf(handler);
+      const index = this.changeHandlers.indexOf(handler as (partial: Parameters<ToolStylePort['apply']>[0]) => void);
       if (index >= 0) this.changeHandlers.splice(index, 1);
     };
   }

@@ -8,6 +8,7 @@ import type { Point2D } from '../rendering/types/Types';
 // Base entity interface
 export interface BaseEntity {
   id: string;
+  name?: string;             // Optional user-friendly name for the entity
   type: EntityType;
   layer?: string;
   color?: string;
@@ -91,6 +92,10 @@ export interface RectangleEntity extends BaseEntity {
   rotation?: number;
   fillColor?: string;
   strokeWidth?: number;
+
+  // ✅ ENTERPRISE COMPATIBILITY: Computed properties for grip interaction
+  corner1?: Point2D;   // Top-left corner (computed from x, y)
+  corner2?: Point2D;   // Bottom-right corner (computed from x+width, y+height)
 }
 
 export interface PointEntity extends BaseEntity {
@@ -123,7 +128,7 @@ export interface DimensionEntity extends BaseEntity {
 // ✅ ENTERPRISE: Additional entity types from scene.ts integration
 export interface BlockEntity extends BaseEntity {
   type: 'block';
-  name: string;
+  name: string;              // Required: Block name (overrides optional name from BaseEntity)
   position: Point2D;
   scale: Point2D;
   rotation: number;
@@ -139,7 +144,8 @@ export interface AngleMeasurementEntity extends BaseEntity {
 }
 
 // Union type for all entities
-export type Entity =
+// ✅ ENTERPRISE FIX: Explicit intersection with BaseEntity to ensure name property is available
+export type Entity = (
   | LineEntity
   | PolylineEntity
   | CircleEntity
@@ -149,7 +155,8 @@ export type Entity =
   | TextEntity
   | DimensionEntity
   | BlockEntity
-  | AngleMeasurementEntity;
+  | AngleMeasurementEntity
+) & Pick<BaseEntity, 'name'>; // ✅ ENTERPRISE: Ensures name property is always available on Entity type
 
 // Entity collection types
 export interface EntityCollection {
@@ -313,6 +320,7 @@ export interface SceneModel {
   layers: Record<string, SceneLayer>;
   bounds: SceneBounds;
   units: 'mm' | 'cm' | 'm' | 'in' | 'ft';
+  version?: string; // ✅ ENTERPRISE FIX: Added version property για SceneModel validation
 }
 
 export interface DxfImportResult {

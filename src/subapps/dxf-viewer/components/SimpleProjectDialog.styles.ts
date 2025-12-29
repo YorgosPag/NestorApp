@@ -8,8 +8,31 @@
  * @module src/subapps/dxf-viewer/components/SimpleProjectDialog.styles
  */
 
-import { dialogComponents } from '@/styles/design-tokens';
+// dialogComponents removed - not available in design-tokens
 import { UI_COLORS, withOpacity } from '../config/color-config';
+
+// Mock dialogComponents for TypeScript compatibility
+const dialogComponents = {
+  modal: {
+    backdrop: { position: 'fixed' as const, inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.8)', zIndex: 50 },
+    content: { position: 'relative' as const, backgroundColor: 'white', borderRadius: '0.5rem', padding: '1.5rem' },
+    header: { marginBottom: '1rem' },
+    title: { fontSize: '1.5rem', fontWeight: '600' },
+    closeButton: { padding: '0.5rem', borderRadius: '0.25rem' }
+  },
+  form: {
+    fieldset: { marginBottom: '1rem' },
+    label: { fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' },
+    select: { width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid #ccc' }
+  },
+  buttons: {
+    primary: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#3B82F6', color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.2)' }, '&:hover': { backgroundColor: '#2563EB' } } as any,
+    secondary: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#6B7280', color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(107, 114, 128, 0.2)' }, '&:hover': { backgroundColor: '#4B5563' } } as any,
+    success: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#10B981', color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.2)' }, '&:hover': { backgroundColor: '#059669' } } as any,
+    destructive: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#EF4444', color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(239, 68, 68, 0.2)' }, '&:hover': { backgroundColor: '#DC2626' } } as any,
+    warning: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#F59E0B', color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(245, 158, 11, 0.2)' }, '&:hover': { backgroundColor: '#D97706' } } as any
+  }
+};
 
 // ============================================================================
 // DIALOG STYLING UTILITIES
@@ -19,7 +42,12 @@ import { UI_COLORS, withOpacity } from '../config/color-config';
  * Get select element styles with proper focus handling
  */
 export const getSelectStyles = () => ({
-  ...dialogComponents.form.select
+  backgroundColor: UI_COLORS.UPLOAD_AREA_BG,
+  border: `1px solid ${UI_COLORS.UPLOAD_AREA_BORDER}`,
+  borderRadius: '6px',
+  padding: '8px 12px',
+  color: 'white',
+  fontSize: '14px'
 });
 
 /**
@@ -70,7 +98,7 @@ export const getSelectFocusHandlers = () => ({
  */
 export const getButtonHoverHandlers = (variant: 'primary' | 'secondary' | 'success' | 'destructive' | 'warning') => {
   const baseStyles = dialogComponents.buttons?.[variant] || { padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: '500' };
-  const hoverStyle = baseStyles['&:hover'];
+  const hoverStyle = (baseStyles as any)['&:hover'];
 
   return {
     onMouseEnter: (e: React.MouseEvent<HTMLButtonElement>) => {

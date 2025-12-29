@@ -84,7 +84,11 @@ export function CentralizedAutoSaveStatus() {
 
   if (!dxfSettings) return null;
 
-  const { settings, isAutoSaving, hasUnsavedChanges } = dxfSettings;
+  // ✅ ENTERPRISE FIX: Extract only existing properties from EnterpriseDxfSettingsContextType
+  const { settings } = dxfSettings;
+  // TODO: Add isAutoSaving and hasUnsavedChanges to context type in future
+  const isAutoSaving = settings?.saveStatus === 'saving';
+  const hasUnsavedChanges = settings?.saveStatus !== 'saved';
 
   const getStatusIcon = () => {
     if (isAutoSaving) {
@@ -165,7 +169,7 @@ export function CentralizedAutoSaveStatus() {
       {...getStatusContainerProps()}
     >
       {/* Status Icon */}
-      <div className="flex-shrink-0" style={centralizedAutoSaveStatusStyles.statusIcon.base}>
+      <div className="flex-shrink-0" style={centralizedAutoSaveStatusStyles.statusIcon}>
         {getStatusIcon()}
       </div>
 

@@ -3,7 +3,8 @@
  * Υποστηρίζει fitToView με unified bounds calculation
  */
 
-import type { Point2D } from '../types/scene';
+// ✅ ENTERPRISE FIX: Correct Point2D import path
+import type { Point2D } from '../rendering/types/Types';
 
 export interface Bounds {
   min: Point2D;

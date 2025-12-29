@@ -1,5 +1,6 @@
 import { db, safeDbOperation } from '@/lib/firebase-admin';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase-admin/firestore';
+// ✅ ENTERPRISE FIX: Use Firestore functions from db instance, not direct imports
+// Firebase Admin SDK Firestore functions are methods on the db instance
 import type { IProjectsRepository } from '../contracts';
 import type { Project } from '@/types/project';
 import type { Building } from '@/types/building/contracts';
@@ -63,8 +64,8 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
 
   async getProjectById(projectId: string): Promise<Project | null> {
     return await safeDbOperation(async (database) => {
-      const docRef = doc(database, 'projects', projectId);
-      const docSnap = await getDoc(docRef);
+      const docRef = database.collection('projects').doc(projectId);
+      const docSnap = await docRef.get();
 
       if (!docSnap.exists) {
         return null;

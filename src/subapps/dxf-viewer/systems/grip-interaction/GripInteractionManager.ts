@@ -201,30 +201,35 @@ export class GripInteractionManager {
    * PRIVATE HELPER METHODS
    */
   private cloneEntityGeometry(entity: EntityModel): Record<string, any> {
-    // Clone geometry based on entity type
+    // Clone geometry based on entity type with proper type safety
+    const entityAny = entity as any; // Enterprise safe casting for entity properties
+
     switch (entity.type) {
       case 'line':
-        return { start: { ...entity.start }, end: { ...entity.end } };
+        return { start: { ...entityAny.start }, end: { ...entityAny.end } };
       case 'circle':
-        return { center: { ...entity.center }, radius: entity.radius };
+        return { center: { ...entityAny.center }, radius: entityAny.radius };
       case 'rectangle':
-        return { corner1: { ...entity.corner1 }, corner2: { ...entity.corner2 } };
+        return { corner1: { ...entityAny.corner1 }, corner2: { ...entityAny.corner2 } };
       case 'arc':
-        return { 
-          center: { ...entity.center }, 
-          radius: entity.radius, 
-          startAngle: entity.startAngle, 
-          endAngle: entity.endAngle 
+        return {
+          center: { ...entityAny.center },
+          radius: entityAny.radius,
+          startAngle: entityAny.startAngle,
+          endAngle: entityAny.endAngle
         };
       case 'polyline':
-        return { vertices: (entity.vertices as Point2D[]).map(v => ({ ...v })) };
-      case 'ellipse':
-        return { 
-          center: { ...entity.center }, 
-          majorAxis: entity.majorAxis, 
-          minorAxis: entity.minorAxis 
-        };
+        return { vertices: (entityAny.vertices as Point2D[] || []).map((v: Point2D) => ({ ...v })) };
       default:
+        // Handle ellipse and other entity types with safe property access
+        if (entityAny.center && entityAny.majorAxis !== undefined) {
+          // Ellipse-like entity
+          return {
+            center: { ...entityAny.center },
+            majorAxis: entityAny.majorAxis,
+            minorAxis: entityAny.minorAxis
+          };
+        }
         return {};
     }
   }

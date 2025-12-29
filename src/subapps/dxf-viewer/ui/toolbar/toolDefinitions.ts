@@ -29,9 +29,9 @@ import { AngleLineArcIcon } from './icons/AngleLineArcIcon';
 import { AngleTwoArcsIcon } from './icons/AngleTwoArcsIcon';
 import { AngleMeasureGeomIcon } from './icons/AngleMeasureGeomIcon';
 import { AngleConstraintIcon } from './icons/AngleConstraintIcon';
-import type { ToolType, ActionDefinition } from './types';
+import type { ToolType, ActionDefinition, ToolDefinition } from './types';
 
-export const toolGroups = [
+export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
   {
     name: 'Επιλογή',
     tools: [

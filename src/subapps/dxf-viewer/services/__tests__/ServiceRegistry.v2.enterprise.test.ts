@@ -83,7 +83,7 @@ describe('EnterpriseServiceRegistry - Fortune 500 Tests', () => {
       registry.registerFactory('layer-operations', async () => {
         initCount++;
         await new Promise(resolve => setTimeout(resolve, 30));
-        return { initialized: true };
+        return { initialized: true } as any;
       }, { async: true });
 
       // Start multiple concurrent requests
@@ -118,7 +118,7 @@ describe('EnterpriseServiceRegistry - Fortune 500 Tests', () => {
         if (attemptCount < 3) {
           throw new Error('Init failed');
         }
-        return { initialized: true };
+        return { initialized: true } as any;
       }, { async: true, retries: 3, backoffMs: 1 });
 
       const service = await registry.get('canvas-bounds');
@@ -158,7 +158,7 @@ describe('EnterpriseServiceRegistry - Fortune 500 Tests', () => {
       registry.registerFactory('dxf-import', async () => {
         // Simulate slow initialization (200ms)
         await new Promise(resolve => setTimeout(resolve, 200));
-        return { loaded: true };
+        return { loaded: true } as any;
       }, { async: true, timeout: 50 }); // 50ms timeout
 
       await expect(registry.get('dxf-import')).rejects.toThrow(/timeout/i);
@@ -231,7 +231,7 @@ describe('EnterpriseServiceRegistry - Fortune 500 Tests', () => {
       registry.registerFactory('smart-bounds', () => {
         const obj = { data: new Array(1000).fill(0) };
         weakRef = new WeakRef(obj);
-        return obj;
+        return obj as any;
       });
 
       // Get service
@@ -532,7 +532,7 @@ describe('EnterpriseServiceRegistry - Fortune 500 Tests', () => {
         if (failureCount === 1) {
           throw new Error('First attempt fails');
         }
-        return { recovered: true };
+        return { recovered: true } as any;
       }, { async: true, retries: 2, backoffMs: 1 });
 
       const service = await registry.get('layer-operations');

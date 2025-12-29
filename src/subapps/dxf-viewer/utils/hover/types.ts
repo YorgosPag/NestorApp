@@ -4,15 +4,17 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { EntityModel, RenderOptions } from '../entity-renderer';
+// ✅ ENTERPRISE FIX: Use centralized Entity type instead of EntityModel
+import type { Entity } from '../../types/entities';
+import type { RenderOptions } from '../../rendering/types/Types';
 
 export type { Point2D };
-export type { EntityModel, RenderOptions };
+export type { Entity, RenderOptions };
 
 export type WorldToScreenFn = (p: Point2D) => Point2D;
 
 export interface HoverRenderContext {
-  entity: EntityModel;
+  entity: Entity;
   ctx: CanvasRenderingContext2D;
   worldToScreen: WorldToScreenFn;
   options: RenderOptions;

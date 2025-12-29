@@ -4,8 +4,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
+  Building2 as BuildingIcon,
   Building,
-  Building2,
   Home,
   Package,
   ParkingCircle,
@@ -16,7 +16,7 @@ import { useProjectHierarchy } from '../contexts/ProjectHierarchyContext';
 import { SelectionButton } from './shared/SelectionButton';
 import type { DxfDestination } from '../pipeline/types';
 import type { CompanyContact } from '../../../types/contacts';
-import type { Project, Building, Floor } from '../contexts/ProjectHierarchyContext';
+import type { Project, Building as ProjectBuilding, Floor } from '../contexts/ProjectHierarchyContext';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS, HOVER_TEXT_EFFECTS } from '../ui/effects';
 import { AnimatedSpinner } from '../components/modal/ModalLoadingStates';
 import {
@@ -169,8 +169,8 @@ export function HierarchicalDestinationSelector({
 
   const getDestinationIcon = (type: string) => {
     switch (type) {
-      case 'project': return Building;
-      case 'building': return Building2;
+      case 'project': return BuildingIcon;
+      case 'building': return Building;
       case 'floor': return Home;
       case 'storage': return Package;
       case 'parking': return ParkingCircle;
@@ -182,7 +182,7 @@ export function HierarchicalDestinationSelector({
     return (
       <div className="text-center py-8">
         <AnimatedSpinner size="large" className="mx-auto mb-4" />
-        <p className="${colors.text.muted}">Φόρτωση δεδομένων...</p>
+        <p className={`${colors.text.muted}`}>Φόρτωση δεδομένων...</p>
       </div>
     );
   }
@@ -214,10 +214,10 @@ export function HierarchicalDestinationSelector({
               onClick={() => setCurrentStep('company')}
               className={`${colors.text.info} ${HOVER_TEXT_EFFECTS.LIGHTER} flex items-center space-x-1`}
             >
-              <Building className={iconSizes.sm} />
+              <BuildingIcon className={iconSizes.sm} />
               <span>{selectedCompany.companyName}</span>
             </button>
-            {selectedProject && <span className="${colors.text.muted}">→</span>}
+            {selectedProject && <span className={`${colors.text.muted}`}>→</span>}
           </>
         )}
         {selectedProject && (
@@ -238,7 +238,7 @@ export function HierarchicalDestinationSelector({
               onClick={() => setCurrentStep('building')}
               className={`${colors.text.info} ${HOVER_TEXT_EFFECTS.LIGHTER} flex items-center space-x-1`}
             >
-              <Building2 className={iconSizes.sm} />
+              <Building className={iconSizes.sm} />
               <span>{selectedBuilding.name}</span>
             </button>
             {selectedFloor && <span className="${colors.text.muted}">→</span>}
@@ -257,7 +257,7 @@ export function HierarchicalDestinationSelector({
         {currentStep === 'company' && (
           <>
             {companies.length === 0 ? (
-              <div className="${colors.text.muted} text-center py-8">
+              <div className={`${colors.text.muted} text-center py-8`}>
                 Δεν βρέθηκαν εταιρείες στο σύστημα.
               </div>
             ) : (
@@ -265,7 +265,7 @@ export function HierarchicalDestinationSelector({
                 <SelectionButton
                   key={company.id}
                   onClick={() => handleCompanySelect(company.id!)}
-                  icon={<Building className={iconSizes.md} />}
+                  icon={<BuildingIcon className={iconSizes.md} />}
                   title={company.companyName}
                   subtitle={company.industry}
                   extraInfo={company.vatNumber ? `ΑΦΜ: ${company.vatNumber}` : undefined}
@@ -308,7 +308,7 @@ export function HierarchicalDestinationSelector({
         {currentStep === 'building' && selectedProject && (
           <>
             {selectedProject.buildings.length === 0 ? (
-              <div className="${colors.text.muted} text-center py-8">
+              <div className={`${colors.text.muted} text-center py-8`}>
                 Δεν βρέθηκαν κτίρια για το επιλεγμένο έργο.
               </div>
             ) : (
@@ -316,7 +316,7 @@ export function HierarchicalDestinationSelector({
                 <SelectionButton
                   key={building.id}
                   onClick={() => handleBuildingSelect(building.id)}
-                  icon={<Building2 className={iconSizes.md} />}
+                  icon={<Building className={iconSizes.md} />}
                   title={building.name}
                   subtitle={`${building.floors.length} όροφοι`}
                 />
@@ -329,7 +329,7 @@ export function HierarchicalDestinationSelector({
         {currentStep === 'floor' && selectedBuilding && (
           <>
             {selectedBuilding.floors.length === 0 ? (
-              <div className="${colors.text.muted} text-center py-8">
+              <div className={`${colors.text.muted} text-center py-8`}>
                 Δεν βρέθηκαν όροφοι για το επιλεγμένο κτίριο.
               </div>
             ) : (

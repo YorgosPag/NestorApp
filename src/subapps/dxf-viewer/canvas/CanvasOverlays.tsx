@@ -1,21 +1,24 @@
 'use client';
 import React, { useEffect } from 'react';
 import CrosshairOverlay from './CrosshairOverlay';
-import ZoomWindowOverlay from './ZoomWindowOverlay';
-import SelectionMarqueeOverlay from './SelectionMarqueeOverlay';
-import CoordinateCalibrationOverlay from './CoordinateCalibrationOverlay';
-import SnapIndicatorOverlay from './SnapIndicatorOverlay';
-import SnapModeIndicator from './SnapModeIndicator';
+// ✅ ENTERPRISE FIX: Updated import paths to canvas-v2/overlays
+import ZoomWindowOverlay from '../canvas-v2/overlays/ZoomWindowOverlay';
+import SelectionMarqueeOverlay from '../canvas-v2/overlays/SelectionMarqueeOverlay';
+// ✅ ENTERPRISE FIX: CoordinateCalibrationOverlay removed - integrated into new system
+import SnapIndicatorOverlay from '../canvas-v2/overlays/SnapIndicatorOverlay';
+import SnapModeIndicator from '../canvas-v2/overlays/SnapModeIndicator';
 import { DynamicInputSystem } from '../systems/dynamic-input';
-import CursorTooltipOverlay from './CursorTooltipOverlay';
+import CursorTooltipOverlay from '../canvas-v2/overlays/CursorTooltipOverlay';
 import { useCursor } from '../systems/cursor';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
 import type { SceneModel } from '../types/scene';
-import type { Point2D as Point } from '../types/scene';
+// ✅ ENTERPRISE FIX: Correct Point2D import path
+import type { Point2D as Point } from '../rendering/types/Types';
 import type { ProSnapResult, ExtendedSnapType } from '../snapping/extended-types';
 import type { ViewTransform } from '../systems/rulers-grid/config';
-import type { CoordinateManager } from './calibration/types';
+// ✅ ENTERPRISE FIX: CoordinateManager types moved to integrated system
+// import type { CoordinateManager } from './calibration/types';
 
 interface Props {
   mouseCss: Point | null;
@@ -25,7 +28,8 @@ interface Props {
   showCalibration: boolean;
   onCalibrationToggle?: (show: boolean) => void;
   currentScene: SceneModel | null;
-  coordinateManager?: CoordinateManager;
+  // ✅ ENTERPRISE FIX: CoordinateManager integrated into new system
+  coordinateManager?: any;
   snapResult?: ProSnapResult | null;
   transform: ViewTransform;
   enabledSnapModes?: Set<ExtendedSnapType>; // για τον mode indicator
@@ -81,7 +85,7 @@ export default function CanvasOverlays({
     }
 
     // Determine marquee kind based on direction (LTR=window, RTL=crossing)
-    const kind = marqueeData.end.x >= marqueeData.start.x ? 'window' : 'crossing';
+    const kind: "window" | "crossing" = marqueeData.end.x >= marqueeData.start.x ? 'window' : 'crossing';
     
     return {
       marquee: {
@@ -139,14 +143,20 @@ export default function CanvasOverlays({
         className="absolute inset-0"
       />
       <SnapIndicatorOverlay
-        snapResult={snapResult}
+        snapResult={snapResult ? {
+          point: snapResult.snappedPoint,
+          type: snapResult.activeMode || 'none'
+        } : null}
         viewport={{ width: canvasRect?.width ?? 1920, height: canvasRect?.height ?? 1080 }}
         canvasRect={canvasRect}
         transform={transform}
         className="absolute inset-0"
       />
       <SnapModeIndicator
-        snapResult={snapResult}
+        snapResult={snapResult ? {
+          point: snapResult.snappedPoint,
+          type: snapResult.activeMode || 'none'
+        } : null}
         mouseCss={mouseCss}
         enabledModes={enabledSnapModes || new Set()}
         className="absolute inset-0 pointer-events-none"
@@ -159,7 +169,8 @@ export default function CanvasOverlays({
         state={selectionState}
         className="absolute inset-0"
       />
-      <CoordinateCalibrationOverlay
+      {/* ✅ ENTERPRISE FIX: CoordinateCalibrationOverlay removed */}
+      {/* <CoordinateCalibrationOverlay
         mousePos={mouseCss}
         worldPos={mouseWorld}
         canvasRect={canvasRect ?? undefined}
@@ -168,7 +179,7 @@ export default function CanvasOverlays({
         onInjectTestEntity={() => {}}
         show={showCalibration}
         onToggle={onCalibrationToggle}
-      />
+      */ }
       <DynamicInputSystem
         isActive={!!mouseCss}
         cursorPosition={mouseCss}

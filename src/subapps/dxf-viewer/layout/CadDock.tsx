@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useRef, memo } from 'react';
-import { DockviewReact, DockviewReadyEvent } from 'dockview';
+import { DockviewReact, DockviewReadyEvent, DockviewApi } from 'dockview';
 import 'dockview/dist/styles/dockview.css';
 
 // Import the ProSnapToolbar instead of deleted SnapButtonsPanel
@@ -116,10 +116,12 @@ HistoryView.displayName = 'HistoryView';
 
 // 🏗️ MAIN CAD DOCK
 const CadDock = memo(({ children }: { children?: React.ReactNode }) => {
-  const apiRef = useRef<{ addPanel?: (config: unknown) => void } | null>(null);
+  // ✅ ENTERPRISE FIX: Use compatible type for API ref
+  const apiRef = useRef<{ addPanel?: ((config: unknown) => void) | undefined } | null>(null);
 
   const onReady = (e: DockviewReadyEvent) => {
-    apiRef.current = e.api;
+    // ✅ ENTERPRISE FIX: Type-safe API reference assignment
+    apiRef.current = e.api as any;
 
     try {
 

@@ -6,14 +6,17 @@
 import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
+import type { CircleEntity } from '../../types/entities';
 
-// Extended circle entity interface for mode-specific properties
-interface ExtendedCircleEntity extends EntityModel {
-  type: 'circle';
-  center: Point2D;
-  radius: number;
+// ✅ ENTERPRISE: Extended circle entity interface για mode-specific properties
+interface ExtendedCircleEntity extends CircleEntity {
   diameterMode?: boolean;
   twoPointDiameter?: boolean;
+}
+
+// ✅ ENTERPRISE: Type guard function για safe type checking
+function isCircleEntity(entity: EntityModel): entity is CircleEntity {
+  return entity.type === 'circle' && 'center' in entity && 'radius' in entity;
 }
 import { HoverManager } from '../../utils/hover';
 import { createGripsFromPoints } from './shared/grip-utils';
@@ -24,12 +27,18 @@ import { UI_COLORS } from '../../config/color-config';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 
 export class CircleRenderer extends BaseEntityRenderer {
-  render(entity: EntityModel, options: RenderOptions = {}): void {
+  render(entity: Entity, options: RenderOptions = {}): void {
     if (entity.type !== 'circle') return;
-    
-    const center = entity.center as Point2D;
-    const radius = entity.radius as number;
-    
+
+    // ✅ ENTERPRISE: Type-safe entity validation αντί για 'as any'
+    if (!isCircleEntity(entity)) {
+      console.warn('CircleRenderer: Invalid entity type or missing circle properties');
+      return;
+    }
+
+    const center = entity.center;
+    const radius = entity.radius;
+
     if (!center || !radius) return;
 
     // Use universal 3-phase rendering template
@@ -133,22 +142,30 @@ export class CircleRenderer extends BaseEntityRenderer {
 
   // ΔΙΑΓΡΑΜΜΕΝΗ FUNCTION: renderCircleYellowDots - αφαιρέθηκε για εξάλειψη κίτρινων grips
 
-  getGrips(entity: EntityModel): GripInfo[] {
+  getGrips(entity: Entity): GripInfo[] {
     if (entity.type !== 'circle') return [];
-    
+
+    // ✅ ENTERPRISE: Type-safe entity validation αντί για 'as any'
+    if (!isCircleEntity(entity)) {
+      console.warn('CircleRenderer.getGrips: Invalid entity type or missing circle properties');
+      return [];
+    }
+
     const grips: GripInfo[] = [];
-    const center = entity.center as Point2D;
-    const radius = entity.radius as number;
-    
+    const center = entity.center;
+    const radius = entity.radius;
+
     if (!center || !radius) return grips;
     
     // Center grip
     grips.push({
+      id: `${entity.id}-center-0`,
       entityId: entity.id,
-      gripType: 'center',
+      type: 'center',
+      gripType: 'center',        // Backward compatibility
       gripIndex: 0,
       position: center,
-      state: 'cold'
+      isVisible: true
     });
     
     // Quadrant grips (4 cardinal points)
@@ -162,6 +179,27 @@ export class CircleRenderer extends BaseEntityRenderer {
     return createGripsFromPoints(entity.id, quadrants);
   }
 
+  // ✅ ENTERPRISE: Required abstract method implementation
+  hitTest(entity: EntityModel, point: Point2D, tolerance: number = 5): boolean {
+    if (entity.type !== 'circle') return false;
+
+    if (!isCircleEntity(entity)) {
+      return false;
+    }
+
+    const center = entity.center;
+    const radius = entity.radius;
+
+    if (!center || !radius) return false;
+
+    // Distance from point to circle center
+    const distance = Math.sqrt(
+      Math.pow(point.x - center.x, 2) + Math.pow(point.y - center.y, 2)
+    );
+
+    // Hit test: point is near the circle circumference (within tolerance)
+    return Math.abs(distance - radius) <= tolerance;
+  }
 
   private renderPreviewCircleWithMeasurements(center: Point2D, radius: number, entity: EntityModel): void {
     // Setup preview style (blue dashed line like line preview)

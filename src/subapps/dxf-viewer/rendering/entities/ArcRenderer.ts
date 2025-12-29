@@ -16,13 +16,13 @@ import {
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 
 export class ArcRenderer extends BaseEntityRenderer {
-  private validateArc(entity: EntityModel) {
+  private validateArc(entity: Entity) {
     // 🔺 Χρήση κεντρικοποιημένης validation - μείωση διπλότυπου κώδικα
     return validateArcEntity(entity);
   }
 
   render(entity: EntityModel, options: RenderOptions = {}): void {
-    const arcData = this.validateArc(entity);
+    const arcData = this.validateArc(entity as Entity);
     if (!arcData) return;
     
     // 🔺 Χρήση 3-phase system όπως όλες οι άλλες οντότητες

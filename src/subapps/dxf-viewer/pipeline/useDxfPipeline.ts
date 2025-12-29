@@ -69,9 +69,11 @@ export function useDxfPipeline() {
       }
 
       // Αποθήκευση σκηνής στο Level Manager
-      if (lm && lm.currentLevelId) {
-        // ✅ ENTERPRISE: Null safety for SceneModel assignment
-        lm.setLevelScene(lm.currentLevelId, result.scene ?? null);
+      if (lm && lm.currentLevelId && result.scene) {
+        // ✅ ENTERPRISE: Null safety for SceneModel assignment - ensure scene is not null
+        if (result.scene !== null) {
+          lm.setLevelScene(lm.currentLevelId, result.scene);
+        }
       }
 
       // ✅ ENTERPRISE: Ensure null return instead of undefined for function signature compliance

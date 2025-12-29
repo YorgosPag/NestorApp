@@ -83,7 +83,15 @@ export interface NotificationContextValue {
   
   /** Show loading notification */
   loading: (message: string, options?: Omit<NotificationOptions, 'type'>) => string;
-  
+
+  /** Show confirmation dialog */
+  showConfirmDialog: (message: string, onConfirm: () => void, onCancel?: () => void, options?: {
+    confirmText?: string;
+    cancelText?: string;
+    title?: string;
+    type?: NotificationType;
+  }) => Promise<boolean>;
+
   /** Dismiss specific notification */
   dismiss: (id: string) => void;
   

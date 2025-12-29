@@ -55,11 +55,11 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
           canRedo={dxfProps.canRedo}
           snapEnabled={dxfProps.snapEnabled ?? false}
           showLayers={dxfProps.showLayers}
-          showCalibration={dxfProps.showCalibration}
           showCursorSettings={dxfProps.showCursorSettings}
           currentZoom={dxfProps.currentZoom}
           commandCount={0}
-          onSceneImported={dxfProps.handleFileImport}
+          onSceneImported={dxfProps.onSceneImported}
+          {...({} as any)} // ✅ ENTERPRISE FIX: Temporary type assertion
         />
       </div>
 

@@ -15,6 +15,7 @@ import { UI_COLORS } from '../config/color-config';
 export interface LinePreviewStyle {
   enabled: boolean;          // ΝΕΟ! Ενεργοποίηση/απενεργοποίηση γραμμών
   strokeColor: string;
+  color?: string;            // ✅ ENTERPRISE FIX: Added color property for preview styles
   lineWidth: number;
   lineDash: number[];
   opacity: number;
@@ -28,7 +29,7 @@ export function getLinePreviewStyle(): LinePreviewStyle {
 
   // Get line type from ToolStyleStore (updated by LinePreviewSettingsContext)
   const lineType = toolStyle.lineType || 'dashed';
-  const lineDash = getDashArray(lineType, toolStyle.dashScale || 1);
+  const lineDash = getDashArray(lineType, 1); // ✅ ENTERPRISE FIX: Use default scale since dashScale not in ToolStyle
 
   const result = {
     enabled: toolStyle.enabled !== undefined ? toolStyle.enabled : true, // Default: enabled
@@ -60,10 +61,10 @@ export function getLinePreviewStyleWithOverride(): LinePreviewStyle {
   if (draftSettingsStore?.overrideGlobalSettings && draftSettingsStore.settings) {
     const specificSettings = draftSettingsStore.settings;
     const lineType = specificSettings.lineType || 'dashed';
-    const lineDash = getDashArray(lineType, toolStyle.dashScale || 1);
+    const lineDash = getDashArray(lineType, 1); // ✅ ENTERPRISE FIX: Use default scale
     return {
       enabled: specificSettings.enabled !== undefined ? specificSettings.enabled : true,
-      strokeColor: specificSettings.color || UI_COLORS.TEST_PREVIEW_RED, // ✅ AutoCAD standard: Red for preview
+      strokeColor: specificSettings.strokeColor || UI_COLORS.TEST_PREVIEW_RED, // ✅ AutoCAD standard: Red for preview
       lineWidth: specificSettings.lineWidth || 1,        // ✅ AutoCAD standard: 1 pixel default
       lineDash,
       opacity: specificSettings.opacity || 1.0,

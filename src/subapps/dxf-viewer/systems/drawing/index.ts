@@ -24,12 +24,12 @@ export const drawingSystem = {
   },
   
   // Delegate methods to instance
-  startDrawing: (tool: DrawingTool) => _drawingSystemInstance?.setTool(tool),
-  cancelDrawing: () => _drawingSystemInstance?.setTool('select'),
+  startDrawing: (tool: DrawingTool) => _drawingSystemInstance?.startDrawing(tool),
+  cancelDrawing: () => _drawingSystemInstance?.cancelDrawing(),
   addPoint: (point: Point2D, transform: DrawingTransform) => _drawingSystemInstance?.addPoint(point, transform),
   updatePreview: (point: Point2D, transform: DrawingTransform) => _drawingSystemInstance?.updatePreview(point, transform),
-  finishPolyline: () => _drawingSystemInstance?.finishDrawing(),
-  finishDrawing: () => _drawingSystemInstance?.finishDrawing()
+  finishPolyline: () => _drawingSystemInstance?.finishPolyline(),
+  finishDrawing: () => _drawingSystemInstance?.finishEntity() // ✅ ENTERPRISE FIX: Use finishEntity method
 };
 
 // Re-export types and hooks

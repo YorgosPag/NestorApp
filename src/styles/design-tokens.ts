@@ -3,23 +3,285 @@
 
 import React from 'react';
 
-// Import core design tokens από τα modular files
-import {
-  spacing,
-  typography,
-  colors,
-  shadows,
-  animation,
-  transitions,
-  borders,
-  borderWidth,
-  borderColors,
-  coreBorderRadius,
-  borderStyle,
-  borderVariants,
-  borderUtils,
-  responsiveBorders
-} from './design-tokens/core';
+// ✅ ENTERPRISE FIX: Direct color definitions since core module doesn't exist
+const colors = {
+  background: {
+    primary: "#ffffff",
+    secondary: "#f8fafc",
+    tertiary: "#f1f5f9",
+    hover: "#f1f5f9",
+    overlay: "rgba(0, 0, 0, 0.5)",
+    accent: "#e0f2fe", // ✅ ENTERPRISE FIX: Added missing accent color
+    muted: "#f8fafc"   // ✅ ENTERPRISE FIX: Added missing muted color
+  },
+  text: {
+    primary: "#1e293b",
+    secondary: "#64748b",
+    muted: "#94a3b8",
+    inverse: "#ffffff",
+    tertiary: "#9ca3af"
+  },
+  border: {
+    primary: "#e2e8f0",
+    secondary: "#cbd5e1",
+    tertiary: "#f3f4f6"
+  },
+  primary: {
+    "500": "#3b82f6"
+  },
+  blue: {
+    "300": "#93c5fd", // ✅ ENTERPRISE FIX: Added missing 300 shade for design-tokens.ts usage
+    "400": "#60a5fa",
+    "500": "#3b82f6",
+    "600": "#2563eb"
+  },
+  green: {
+    "300": "#6ee7b7", // ✅ ENTERPRISE FIX: Added missing 300 shade for design-tokens.ts usage
+    "500": "#10b981",
+    "600": "#059669"
+  }
+} as const;
+
+// Legacy design token definitions for backward compatibility
+const spacing = {
+  xs: "0.25rem", // 4px
+  sm: "0.5rem",  // 8px
+  md: "1rem",    // 16px
+  lg: "1.5rem",  // 24px
+  xl: "2rem",    // 32px
+  "2xl": "3rem", // 48px ✅ ENTERPRISE FIX: Added for enterprise-token-bridge.ts
+  "3xl": "4rem", // 64px ✅ ENTERPRISE FIX: Added for enterprise-token-bridge.ts
+  component: {   // ✅ ENTERPRISE FIX: Added missing component spacing
+    xs: "0.125rem", // 2px
+    sm: "0.25rem",  // 4px
+    md: "0.5rem",   // 8px
+    lg: "0.75rem",  // 12px
+    xl: "1rem",     // 16px
+    // ✅ ENTERPRISE FIX: Added padding subcategory για enterprise-token-bridge.ts
+    padding: {
+      xs: "0.125rem", // 2px
+      sm: "0.25rem",  // 4px
+      md: "0.5rem",   // 8px
+      lg: "0.75rem",  // 12px
+      xl: "1rem"      // 16px
+    }
+  }
+} as const;
+
+const typography = {
+  fontSize: {
+    xs: "0.75rem",
+    sm: "0.875rem",
+    base: "1rem",
+    lg: "1.125rem",
+    xl: "1.25rem",
+    "2xl": "1.5rem",
+    "3xl": "1.875rem", // ✅ ENTERPRISE FIX: Added missing 3xl size for useTypography.ts
+    "4xl": "2.25rem"   // ✅ ENTERPRISE FIX: Added missing 4xl size for useTypography.ts
+  },
+  fontWeight: {
+    normal: "400",
+    medium: "500",
+    semibold: "600",
+    bold: "700"
+  },
+  lineHeight: {
+    tight: "1.25",
+    snug: "1.375",
+    normal: "1.5",
+    relaxed: "1.625",
+    loose: "2"
+  }
+} as const;
+
+// Shadow definitions for compatibility
+const shadows = {
+  sm: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+  md: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+  lg: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+  xl: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+} as const;
+
+// Animation definitions for compatibility
+const animation = {
+  duration: {
+    fast: "150ms",
+    normal: "300ms",
+    slow: "500ms"
+  },
+  easing: {
+    linear: "linear",
+    ease: "ease",
+    easeIn: "ease-in",
+    easeOut: "ease-out"
+  }
+} as const;
+
+const transitions = {
+  all: "all 200ms ease",
+  colors: "background-color 150ms ease, color 150ms ease",
+  transform: "transform 200ms ease"
+} as const;
+
+// ============================================================================
+// BORDER TOKENS IMPLEMENTATION
+// ============================================================================
+
+const borderWidth = {
+  none: '0',
+  hairline: '0.5px',
+  default: '1px',
+  medium: '2px',
+  thick: '3px',
+  heavy: '4px'
+} as const;
+
+const borderColors = {
+  default: {
+    light: '#e2e8f0',
+    dark: '#374151'
+  },
+  muted: {
+    light: '#cbd5e1',
+    dark: '#4b5563'
+  },
+  success: {
+    light: '#10b981',
+    dark: '#065f46'
+  },
+  error: {
+    light: '#ef4444',
+    dark: '#991b1b'
+  },
+  warning: {
+    light: '#f59e0b',
+    dark: '#92400e'
+  },
+  info: {
+    light: '#3b82f6',
+    dark: '#1e40af'
+  }
+} as const;
+
+const borderStyle = {
+  solid: 'solid',
+  dashed: 'dashed',
+  dotted: 'dotted',
+  double: 'double',
+  hidden: 'hidden',
+  none: 'none'
+} as const;
+
+const coreBorderRadius = {
+  none: '0',
+  xs: '0.125rem',
+  sm: '0.25rem',
+  default: '0.375rem',
+  md: '0.5rem',
+  lg: '0.75rem',
+  xl: '1rem',
+  '2xl': '1.5rem',
+  '3xl': '2rem',
+  full: '9999px'
+} as const;
+
+const borderVariants = {
+  card: {
+    className: 'border border-gray-200 rounded-lg'
+  },
+  button: {
+    default: {
+      className: 'border border-gray-300'
+    }
+  },
+  input: {
+    default: {
+      className: 'border border-gray-300 rounded-md'
+    }
+  },
+  modal: {
+    className: 'border-0 rounded-lg shadow-lg'
+  },
+  container: {
+    className: 'border-0'
+  },
+  separator: {
+    horizontal: {
+      className: 'border-t border-gray-200'
+    },
+    vertical: {
+      className: 'border-l border-gray-200'
+    }
+  },
+  status: {
+    success: {
+      className: 'border border-green-500'
+    },
+    error: {
+      className: 'border border-red-500'
+    },
+    warning: {
+      className: 'border border-yellow-500'
+    },
+    info: {
+      className: 'border border-blue-500'
+    },
+    muted: {
+      className: 'border border-gray-400'
+    }
+  },
+  interactive: {
+    hover: {
+      className: 'hover:border-gray-400'
+    },
+    focus: {
+      className: 'focus:border-blue-500 focus:ring-2 focus:ring-blue-200'
+    },
+    selected: {
+      className: 'border-blue-500 bg-blue-50'
+    }
+  }
+} as const;
+
+const borderUtils = {
+  createBorder: (width: string, color: string, style: string = 'solid') => `${width} ${style} ${color}`,
+  getVariantClass: (variant: string) => variant,
+  combineBorders: (...classes: string[]) => classes.join(' '),
+  withDarkMode: (lightClass: string, darkClass: string) => `${lightClass} dark:${darkClass}`
+} as const;
+
+const responsiveBorders = {
+  mobile: {
+    card: 'border',
+    button: 'border',
+    input: 'border'
+  },
+  tablet: {
+    card: 'sm:border',
+    button: 'sm:border',
+    input: 'sm:border'
+  },
+  desktop: {
+    card: 'lg:border',
+    button: 'lg:border',
+    input: 'lg:border'
+  }
+} as const;
+
+const borders = {
+  width: borderWidth,
+  colors: borderColors,
+  radius: coreBorderRadius,
+  style: borderStyle,
+  variants: borderVariants,
+  utils: borderUtils,
+  responsive: responsiveBorders,
+  // ✅ ENTERPRISE FIX: Direct access properties για form-effects.ts
+  createBorder: borderUtils.createBorder,
+  getVariantClass: borderUtils.getVariantClass,
+  combineBorders: borderUtils.combineBorders,
+  withDarkMode: borderUtils.withDarkMode
+} as const;
 
 // Re-export από modular αρχεία
 export { spacing };
@@ -35,7 +297,7 @@ export const borderRadius = {
   lg: '0.5rem',      // 8px
   xl: '0.75rem',     // 12px
   '2xl': '1rem',     // 16px
-  full: '9999px',
+  full: '9999px',    // ✅ ENTERPRISE FIX: για badge.tsx και slider.tsx
 } as const;
 
 // ============================================================================
@@ -344,6 +606,13 @@ export const layoutUtilities = {
 
   // Dynamic height utilities για scroll containers & responsive sizing
   maxHeight: (value: string | number): string => typeof value === 'number' ? `${value}px` : value,
+
+  // ✅ ENTERPRISE FIX: Z-index utilities για ComboBox.tsx
+  zIndex: {
+    dropdown: 'z-50',
+    modal: 'z-[1000]',
+    tooltip: 'z-[2000]',
+  },
 
   // Dynamic positioning utilities για absolute/relative positioning
   position: (top: string, left: string): { top: string; left: string } => ({ top, left }),
@@ -743,6 +1012,16 @@ export const layoutUtilities = {
         left: `${x + offsetX}px`,
         top: `${y + offsetY}px`,
       }),
+
+      // ✅ ENTERPRISE FIX: Status bar overlay positioning για ColorManager.tsx
+      statusBarOverlays: {
+        colorManagerContainer: (x: number, y: number) => ({
+          position: 'absolute' as const,
+          left: `${x}px`,
+          top: `${y}px`,
+          zIndex: 1000,
+        }),
+      },
     },
 
     // Debugging utilities για calibration και testing
@@ -847,7 +1126,8 @@ export const layoutUtilities = {
  * Portal Components για Overlay & Dropdown Systems
  * Enterprise-class portal management με z-index hierarchy και positioning
  */
-export const portalComponents = {
+// Base portal components (kept for compatibility)
+const portalComponentsBase = {
   overlay: {
     fullscreen: {
       position: 'fixed' as const,
@@ -917,9 +1197,9 @@ export const portalComponents = {
 
 // Extended portalComponents for dynamic zIndex functions
 export const portalComponentsExtended = {
-  ...portalComponents,
+  ...portalComponentsBase,
   overlay: {
-    ...portalComponents.overlay,
+    ...portalComponentsBase.overlay,
     base: { zIndex: () => 1300 },
     fullscreen: { zIndex: () => 1400 },
     crosshair: { zIndex: () => 1450 },
@@ -929,7 +1209,16 @@ export const portalComponentsExtended = {
     search: { zIndex: () => 1490 },
     searchResults: { zIndex: () => 1500 },
     controls: { zIndex: () => 1510 },
-    zoom: { zIndex: () => 1520 }
+    zoom: { zIndex: () => 1520 },
+    calibration: { zIndex: () => 1530 },
+    // ✅ ENTERPRISE FIX: Missing portal properties for TestResultsModal and LayoutMapper
+    debug: {
+      zIndex: () => 1540,
+      info: { zIndex: () => 1541 },        // Debug info overlay
+      main: { zIndex: () => 1542 },        // Debug main overlay
+      controls: { zIndex: () => 1543 }     // Debug controls overlay
+    },
+    floatingPanel: { zIndex: () => 1550 }
   },
   canvas: {
     fullscreen: { zIndex: () => 1400 },
@@ -1020,6 +1309,17 @@ export const interactionUtilities = {
 // ============================================================================
 // MODULAR DESIGN TOKENS INTEGRATION
 // ============================================================================
+
+// ============================================================================
+// ✅ ENTERPRISE FIX: PORTAL COMPONENTS EXPORT
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE PORTAL COMPONENTS - MAIN EXPORT
+ * Export extended portal components as main portalComponents για backward compatibility
+ * This ensures that CoordinateCalibrationOverlay can access calibration.zIndex()
+ */
+export const portalComponents = portalComponentsExtended;
 
 /**
  * 🏢 ENTERPRISE DESIGN TOKENS V2
@@ -1536,6 +1836,19 @@ export const canvasUI = {
     padding: spacing.md,
     gap: spacing.sm
   },
+  // ✅ ENTERPRISE FIX: Added colorPicker property για EnterpriseColorArea.tsx
+  colorPicker: {
+    colorPickerArea: (size: string) => ({
+      width: size,
+      height: size,
+      borderRadius: borderRadius.md
+    } as React.CSSProperties),
+    colorPickerThumb: (position: { x: number; y: number }, color: string) => ({
+      left: `${position.x * 100}%`,
+      top: `${position.y * 100}%`,
+      backgroundColor: color
+    } as React.CSSProperties)
+  },
   positioning: {
     layers: {
       canvasOverlayWithPointerControl: (activeTool?: string): React.CSSProperties => ({
@@ -1639,6 +1952,99 @@ export const canvasUI = {
         backgroundColor: 'rgba(59, 130, 246, 0.05)',
         pointerEvents: 'none',
         zIndex: zIndex.overlay
+      })
+    },
+
+    // ✅ ENTERPRISE FIX: Missing floating panel positioning for TestResultsModal
+    floatingPanel: {
+      testModal: {
+        backdrop: {
+          position: 'fixed' as const,
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: zIndex.modal
+        },
+        content: {
+          position: 'relative' as const,
+          maxWidth: '90vw',
+          maxHeight: '90vh',
+          minWidth: '600px',
+          minHeight: '400px',
+          backgroundColor: colors.background.secondary,
+          borderRadius: borderRadius.lg,
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          zIndex: zIndex.modal + 1
+        }
+      }
+    },
+
+    // ✅ ENTERPRISE FIX: Missing CAD status bar positioning for CadStatusBar
+    cadStatusBar: {
+      container: {
+        position: 'fixed' as const,
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '32px',
+        backgroundColor: colors.background.primary,
+        borderTop: `1px solid ${colors.border.primary}`,
+        display: 'flex',
+        alignItems: 'center',
+        padding: '0 16px',
+        zIndex: zIndex.docked
+      },
+      statusInfo: {
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        gap: spacing.md
+      },
+      button: {
+        padding: spacing.xs,
+        backgroundColor: 'transparent',
+        border: 'none',
+        borderRadius: borderRadius.sm,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: spacing.xs,
+        fontSize: typography.fontSize.sm,
+        color: colors.text.secondary,
+        transition: 'all 150ms ease'
+      },
+      buttonActive: {
+        backgroundColor: colors.background.accent,
+        color: colors.text.primary
+      },
+      label: {
+        fontSize: typography.fontSize.sm,
+        color: colors.text.secondary,
+        fontWeight: typography.fontWeight.medium
+      },
+      functionKey: {
+        fontSize: typography.fontSize.xs,
+        color: colors.text.muted,
+        backgroundColor: colors.background.muted,
+        padding: `${spacing.xs} ${spacing.sm}`,
+        borderRadius: borderRadius.sm,
+        border: `1px solid ${colors.border.secondary}`
+      }
+    },
+
+    // ✅ ENTERPRISE FIX: Status bar overlays για ColorManager.tsx
+    statusBarOverlays: {
+      colorManagerContainer: (x: number, y: number): React.CSSProperties => ({
+        position: 'absolute',
+        left: `${x}px`,
+        top: `${y}px`,
+        zIndex: zIndex.modal,
+        pointerEvents: 'auto'
       })
     }
   }

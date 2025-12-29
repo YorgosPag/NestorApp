@@ -61,7 +61,7 @@ export function useSnapManagement(
     
     return RulersGridSnapping.findSnapPoint(
       point,
-      state,
+      state as GridSettings,
       viewTransform,
       onSnapResult
     );

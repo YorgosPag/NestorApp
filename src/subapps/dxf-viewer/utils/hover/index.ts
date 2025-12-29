@@ -8,7 +8,7 @@ import { renderPolylineHover } from './polyline-renderer';
 import { renderCircleHover, renderRectangleHover, renderArcHover, renderEllipseHover } from './shape-renderers';
 import { renderTextHover, renderSplineHover, renderAngleMeasurementHover } from './text-spline-renderers';
 import type { Point2D } from '../../rendering/types/Types';
-import type { EntityModel, RenderOptions } from './types';
+import type { Entity, RenderOptions } from './types';
 
 export class HoverManager {
   /**
@@ -16,8 +16,8 @@ export class HoverManager {
    * Replaces individual renderer hover methods
    */
   static renderHover(
-    entity: EntityModel, 
-    ctx: CanvasRenderingContext2D, 
+    entity: Entity,
+    ctx: CanvasRenderingContext2D,
     options: RenderOptions,
     worldToScreen: (p: Point2D) => Point2D
   ): void {

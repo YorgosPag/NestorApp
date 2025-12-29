@@ -86,6 +86,14 @@ export interface SemanticTextColors {
   readonly muted: string;
   /** Inverse text color - 'text-white' */
   readonly inverse: string;
+
+  // ✅ ENTERPRISE FIX: Missing properties for TestResultsModal and debug components
+  /** Danger text color - 'text-red-600' (alias for error) */
+  readonly danger: string;
+  /** Disabled text color - 'text-gray-400' */
+  readonly disabled: string;
+  /** Tertiary text color - 'text-slate-500' */
+  readonly tertiary: string;
 }
 
 /**

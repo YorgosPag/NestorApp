@@ -104,10 +104,10 @@ export const MODAL_THEMES = {
 
   // Warning theme for destructive actions
   WARNING: {
-    content: `bg-destructive/10 text-destructive-foreground border ${PANEL_COLORS.BORDER_ERROR_PRIMARY}`, // ✅ ENTERPRISE: bg-red-50/text-red-900 → semantic destructive // ✅ ENTERPRISE: Centralized error border
+    content: `bg-destructive/10 text-destructive-foreground border ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: bg-red-50/text-red-900 → semantic destructive // ✅ ENTERPRISE: Centralized error border
     overlay: 'bg-black/70',
-    header: `border-b ${PANEL_COLORS.BORDER_ERROR_PRIMARY}`, // ✅ ENTERPRISE: Centralized error border
-    footer: `border-t ${PANEL_COLORS.BORDER_ERROR_PRIMARY}`, // ✅ ENTERPRISE: Centralized error border
+    header: `border-b ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Centralized error border
+    footer: `border-t ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Centralized error border
   },
 } as const;
 

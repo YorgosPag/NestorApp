@@ -116,6 +116,8 @@ interface GeometryEntity {
  */
 export function entityToSegments(entity: GeometryEntity): Segment[] {
   if (entity.type === 'line') {
+    // Type guard: Ensure start and end exist on line entity
+    if (!entity.start || !entity.end) return [];
     return [{ start: entity.start, end: entity.end }];
   }
   
@@ -135,7 +137,9 @@ export function entityToSegments(entity: GeometryEntity): Segment[] {
   }
   
   if (entity.type === 'arc') {
-    const vertices = arcToPolyline(entity);
+    // Type guard: Ensure required arc properties exist
+    if (!entity.center || typeof entity.radius !== 'number') return [];
+    const vertices = arcToPolyline(entity as Arc);
     const segs: Segment[] = [];
     
     for (let i = 0; i < vertices.length - 1; i++) {

@@ -68,11 +68,14 @@ export function useEntityGripInteraction({
         );
         if (startDistance <= tolerance) {
           return {
+            id: `${entity.id}-start`,
             entityId: entity.id,
-            gripType: 'vertex',
+            type: 'vertex',
             gripIndex: 0,
             position: line.start,
-            state: 'warm'
+            isVisible: true,
+            isHovered: true,
+            gripType: 'vertex' // Backward compatibility alias
           };
         }
 
@@ -82,11 +85,14 @@ export function useEntityGripInteraction({
         );
         if (endDistance <= tolerance) {
           return {
+            id: `${entity.id}-end`,
             entityId: entity.id,
-            gripType: 'vertex',
+            type: 'vertex',
             gripIndex: 1,
             position: line.end,
-            state: 'warm'
+            isVisible: true,
+            isHovered: true,
+            gripType: 'vertex' // Backward compatibility alias
           };
         }
 
@@ -97,11 +103,14 @@ export function useEntityGripInteraction({
         );
         if (midDistance <= tolerance) {
           return {
+            id: `${entity.id}-mid`,
             entityId: entity.id,
-            gripType: 'edge',
+            type: 'midpoint',
             gripIndex: 2,
             position: midpoint,
-            state: 'warm'
+            isVisible: true,
+            isHovered: true,
+            gripType: 'midpoint' // Backward compatibility alias
           };
         }
       }
@@ -110,12 +119,21 @@ export function useEntityGripInteraction({
       if (entity.type === 'rectangle') {
         const rectangle = entity as RectangleEntity;
         
+        // ✅ ENTERPRISE FIX: Add null checks for optional corners
+        if (!rectangle.corner1 || !rectangle.corner2) {
+          return null; // Skip if corners are not defined
+        }
+
+        // ✅ ENTERPRISE FIX: Type-safe corner access with assertion
+        const corner1 = rectangle.corner1 as Point2D;
+        const corner2 = rectangle.corner2 as Point2D;
+
         // Calculate all 4 vertices from corners
-        const vertices = [
-          rectangle.corner1,
-          { x: rectangle.corner2.x, y: rectangle.corner1.y },
-          rectangle.corner2,
-          { x: rectangle.corner1.x, y: rectangle.corner2.y }
+        const vertices: Point2D[] = [
+          corner1,
+          { x: corner2.x, y: corner1.y },
+          corner2,
+          { x: corner1.x, y: corner2.y }
         ];
         
         // Check corner grips (vertices)
@@ -126,11 +144,14 @@ export function useEntityGripInteraction({
           );
           if (distance <= tolerance) {
             return {
+              id: `${entity.id}-corner-${i}`,
               entityId: entity.id,
-              gripType: 'corner',
+              type: 'corner',
               gripIndex: i,
               position: vertex,
-              state: 'warm'
+              isVisible: true,
+              isHovered: true,
+              gripType: 'corner' // Backward compatibility alias
             };
           }
         }
@@ -144,11 +165,14 @@ export function useEntityGripInteraction({
           );
           if (distance <= tolerance) {
             return {
+              id: `${entity.id}-edge-${j}`,
               entityId: entity.id,
-              gripType: 'edge',
+              type: 'edge',
               gripIndex: vertices.length + j, // Offset to avoid collision with corner indices
               position: midpoint,
-              state: 'warm'
+              isVisible: true,
+              isHovered: true,
+              gripType: 'edge' // Backward compatibility alias
             };
           }
         }
@@ -218,10 +242,10 @@ export function useEntityGripInteraction({
               !(g.entityId === clickedGrip.entityId && g.gripIndex === clickedGrip.gripIndex)
             );
           } else {
-            newSelectedGrips = [...prev.selectedGrips, { ...clickedGrip, state: 'hot' }];
+            newSelectedGrips = [...prev.selectedGrips, { ...clickedGrip, isSelected: true }];
           }
         } else {
-          newSelectedGrips = isAlreadySelected ? [] : [{ ...clickedGrip, state: 'hot' }];
+          newSelectedGrips = isAlreadySelected ? [] : [{ ...clickedGrip, isSelected: true }];
         }
         
         return {
@@ -301,7 +325,7 @@ export function useEntityGripInteraction({
     let updatedEntity: AnySceneEntity | null = null;
 
     // Handle rectangle grip dragging
-    if (entity.type === 'rectangle' && draggedGrip.gripType === 'corner') {
+    if (entity.type === 'rectangle' && draggedGrip.type === 'corner') {
       const rectangle = entity as RectangleEntity;
       const { corner1, corner2 } = rectangle;
       
@@ -342,7 +366,7 @@ export function useEntityGripInteraction({
     }
     
     // Handle rectangle edge grip dragging (resize along one dimension)
-    else if (entity.type === 'rectangle' && draggedGrip.gripType === 'edge') {
+    else if (entity.type === 'rectangle' && draggedGrip.type === 'edge') {
       const rectangle = entity as RectangleEntity;
       const { corner1, corner2 } = rectangle;
       const edgeIndex = draggedGrip.gripIndex - 4; // Offset by 4 since corners are 0-3

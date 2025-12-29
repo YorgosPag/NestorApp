@@ -247,8 +247,8 @@ export function useCentralizedMouseHandlers({
           setSnapResults([{
             point: snappedScreenPos, // ✅ Store SCREEN coordinates for rendering
             type: snap.activeMode || 'default',
-            entityId: snap.entityId,
-            distance: snap.distance || 0,
+            entityId: snap.snapPoint?.entityId || null, // ✅ ENTERPRISE FIX: ProSnapResult has entityId in snapPoint
+            distance: snap.snapPoint?.distance || 0, // ✅ ENTERPRISE FIX: Use distance from snapPoint
             priority: 0
           }]);
         } else {

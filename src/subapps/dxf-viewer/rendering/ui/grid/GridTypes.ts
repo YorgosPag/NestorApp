@@ -35,6 +35,10 @@ export interface GridSettings extends UIElementSettings {
   readonly adaptiveOpacity: boolean; // Fade out when zoomed out
   readonly minVisibleSize: number;   // Minimum pixel size to show grid
 
+  // ✅ ENTERPRISE FIX: Missing properties used by GridRenderer
+  readonly majorGridWeight: number; // Major grid line thickness
+  readonly minorGridWeight: number; // Minor grid line thickness
+
 }
 
 /**
@@ -79,6 +83,9 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
   adaptiveOpacity: true,
   minVisibleSize: 5,     // Don't show grid if smaller than 5px
 
+  // ✅ ENTERPRISE FIX: Default values for missing properties
+  majorGridWeight: 2,    // Thicker major grid lines
+  minorGridWeight: 1,    // Standard minor grid lines
 
   zIndex: 100           // Low priority for background rendering
 };

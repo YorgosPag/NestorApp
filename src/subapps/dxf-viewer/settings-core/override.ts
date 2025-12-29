@@ -21,11 +21,11 @@ import type {
  * @param override - Οι ειδικές ρυθμίσεις (partial overrides)
  * @returns Τα effective settings (merged)
  */
-export function mergeSettings<T extends Record<string, unknown>>(
+export function mergeSettings<T>(
   general: T,
   override: Partial<T> | null | undefined
 ): T {
-  if (!override || Object.keys(override).length === 0) {
+  if (!override || Object.keys(override as object).length === 0) {
     return general;
   }
 
@@ -109,15 +109,15 @@ export function mergeDxfSettings(
 
 /**
  * Υπολογίζει τη διαφορά μεταξύ δύο settings objects
- * Επιστρέφει μόνο τα πεδία που άλλαξαν
+ * Επιστρέφει μόνο τα πεδία που άλλαξαν ή null αν δεν υπάρχουν διαφορές
  * @param from - Τα αρχικά settings
  * @param to - Τα νέα settings
- * @returns Μόνο τα πεδία που άλλαξαν
+ * @returns Μόνο τα πεδία που άλλαξαν ή null αν είναι ίδια
  */
-export function diffSettings<T extends Record<string, unknown>>(
+export function diffSettings<T>(
   from: T,
   to: T
-): Partial<T> {
+): Partial<T> | null {
   const diff: Partial<T> = {};
 
   for (const key in to) {
@@ -138,6 +138,11 @@ export function diffSettings<T extends Record<string, unknown>>(
     }
   }
 
+  // Επιστρέφουμε null αν δεν υπάρχουν διαφορές
+  if (Object.keys(diff).length === 0) {
+    return null;
+  }
+
   return diff;
 }
 
@@ -147,8 +152,8 @@ export function diffSettings<T extends Record<string, unknown>>(
 export function diffLineSettings(
   from: LineSettings,
   to: LineSettings
-): Partial<LineSettings> {
-  return diffSettings(from, to);
+): Partial<LineSettings> | null {
+  return diffSettings(from as Record<string, unknown>, to as Record<string, unknown>) as Partial<LineSettings> | null;
 }
 
 /**
@@ -157,8 +162,8 @@ export function diffLineSettings(
 export function diffTextSettings(
   from: TextSettings,
   to: TextSettings
-): Partial<TextSettings> {
-  return diffSettings(from, to);
+): Partial<TextSettings> | null {
+  return diffSettings(from as Record<string, unknown>, to as Record<string, unknown>) as Partial<TextSettings> | null;
 }
 
 /**
@@ -167,8 +172,8 @@ export function diffTextSettings(
 export function diffGripSettings(
   from: GripSettings,
   to: GripSettings
-): Partial<GripSettings> {
-  return diffSettings(from, to);
+): Partial<GripSettings> | null {
+  return diffSettings(from as Record<string, unknown>, to as Record<string, unknown>) as Partial<GripSettings> | null;
 }
 
 // ============================================================================
@@ -182,18 +187,11 @@ export function diffGripSettings(
  * @param effective - Τα effective settings (merged)
  * @returns Μόνο τα overrides (deltas)
  */
-export function extractOverrides<T extends Record<string, unknown>>(
+export function extractOverrides<T>(
   general: T,
   effective: T
 ): Partial<T> | null {
-  const overrides = diffSettings(general, effective);
-
-  // Αν δεν υπάρχουν διαφορές, επιστρέφουμε null
-  if (Object.keys(overrides).length === 0) {
-    return null;
-  }
-
-  return overrides;
+  return diffSettings(general, effective);
 }
 
 // ============================================================================
@@ -206,7 +204,7 @@ export function extractOverrides<T extends Record<string, unknown>>(
  * @param fields - Τα πεδία που θέλουμε να καθαρίσουμε
  * @returns Τα νέα overrides χωρίς τα specified fields
  */
-export function clearOverrideFields<T extends Record<string, unknown>>(
+export function clearOverrideFields<T>(
   overrides: Partial<T> | null,
   fields: Array<keyof T>
 ): Partial<T> | null {
@@ -272,4 +270,30 @@ export function cleanEmptyOverrides(overrides: PartialDxfSettings | null): Parti
   }
 
   return cleaned;
+}
+
+// ============================================================================
+// BATCH OVERRIDE APPLICATION - Εφαρμογή πολλαπλών overrides
+// ============================================================================
+
+/**
+ * Εφαρμόζει array από overrides σειριακά σε base settings
+ * @param base - Τα base settings
+ * @param overrides - Array από overrides για εφαρμογή
+ * @returns Τα final merged settings
+ */
+export function applyOverridesToBase(
+  base: DxfSettings,
+  overrides: (PartialDxfSettings | null | undefined)[]
+): DxfSettings {
+  if (!overrides || overrides.length === 0) {
+    return base;
+  }
+
+  return overrides.reduce<DxfSettings>((accumulated, override) => {
+    if (!override) {
+      return accumulated;
+    }
+    return mergeDxfSettings(accumulated, override);
+  }, base);
 }

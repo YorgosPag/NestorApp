@@ -86,7 +86,7 @@ export const getTypographyClass = (
 // Spacing utilities
 export const getSpacingClass = (
   type: 'p' | 'm' | 'gap',
-  size: keyof typeof designTokens.spacing.component.padding,
+  size: keyof typeof designTokens.spacing,
   direction?: 'x' | 'y' | 't' | 'r' | 'b' | 'l'
 ) => {
   const sizeMap = {
@@ -95,10 +95,13 @@ export const getSpacingClass = (
     md: '4',
     lg: '6',
     xl: '8',
-  };
+    '2xl': '12',   // ✅ ENTERPRISE FIX: Added missing 2xl mapping
+    '3xl': '16',   // ✅ ENTERPRISE FIX: Added missing 3xl mapping
+    component: '4' // ✅ ENTERPRISE FIX: Added missing component mapping (fallback to md)
+  } as Record<string, string>;
 
   const base = direction ? `${type}${direction}` : type;
-  return `${base}-${sizeMap[size]}`;
+  return `${base}-${sizeMap[size as keyof typeof sizeMap] || '4'}`; // ✅ ENTERPRISE FIX: Type safety with fallback
 };
 
 // Component size utilities

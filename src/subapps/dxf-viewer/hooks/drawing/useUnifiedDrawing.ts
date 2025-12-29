@@ -299,22 +299,27 @@ export function useUnifiedDrawing() {
         if (points.length >= 2) {
           if (points.length === 2) {
             // Show preview with one line from point1 to point2 with distance labels
-            const polyline = {
+            const polyline: PolylineEntity = {
               id,
-              type: 'polyline',
+              type: 'polyline' as const,
               vertices: [points[0], points[1]],
               closed: false,
               visible: true,
               layer: '0',
-            } as PolylineEntity;
-            
+              // ✅ ENTERPRISE FIX: Add required BaseEntity properties
+              color: '#ffffff',
+              lineweight: 1,
+              opacity: 1.0,
+              lineType: 'solid' as const
+            };
+
             // Add flags for preview styling like polyline
             const extendedPolyline: ExtendedPolylineEntity = {
               ...polyline,
               preview: true,
               showEdgeDistances: true,
               isOverlayPreview: state.isOverlayMode === true
-            };
+            } as ExtendedPolylineEntity;
 
             return extendedPolyline;
           } else if (points.length >= 3) {
@@ -419,7 +424,18 @@ export function useUnifiedDrawing() {
           lineEntity.color = lineCompletionStyles.color;
           lineEntity.lineweight = lineCompletionStyles.lineWidth;
           lineEntity.opacity = lineCompletionStyles.opacity;
-          lineEntity.lineType = lineCompletionStyles.lineType;
+          // ✅ ENTERPRISE FIX: Convert LineType to entity LineType
+          const convertLineType = (lineType: string): 'solid' | 'dashed' | 'dotted' | 'dashdot' | undefined => {
+            switch (lineType) {
+              case 'dash-dot': return 'dashdot';
+              case 'dash-dot-dot': return 'dashdot'; // Fallback to dashdot
+              case 'solid': return 'solid';
+              case 'dashed': return 'dashed';
+              case 'dotted': return 'dotted';
+              default: return 'solid';
+            }
+          };
+          lineEntity.lineType = convertLineType(lineCompletionStyles.lineType);
           lineEntity.dashScale = lineCompletionStyles.dashScale;
           lineEntity.lineCap = lineCompletionStyles.lineCap;
           lineEntity.lineJoin = lineCompletionStyles.lineJoin;
@@ -429,8 +445,11 @@ export function useUnifiedDrawing() {
 
         const scene = getLevelScene(currentLevelId);
         if (scene) {
-          const updatedScene = { ...scene, entities: [...scene.entities, newEntity] };
-          setLevelScene(currentLevelId, updatedScene);
+          // Filter out extended types that are not compatible with AnySceneEntity
+          if ('type' in newEntity && typeof newEntity.type === 'string') {
+            const updatedScene = { ...scene, entities: [...scene.entities, newEntity as AnySceneEntity] };
+            setLevelScene(currentLevelId, updatedScene);
+          }
         }
       }
       // Return to normal mode after entity completion
@@ -466,25 +485,30 @@ export function useUnifiedDrawing() {
             measurement: true, // Mark as measurement for brown dots
             preview: true,     // ✅ Preview flag
             showPreviewGrips: true, // ✅ Preview grips
-          } as CircleEntity;
+          } as ExtendedCircleEntity;
         } else if (newTempPoints.length === 2) {
           // After second click, show the first line with distance labels
-          partialPreview = {
+          const basePartialPreview: PolylineEntity = {
             id: 'preview_partial',
             type: 'polyline',
             vertices: newTempPoints,
             closed: false,
             visible: true,
             layer: '0',
-            measurement: true, // Mark as measurement for brown dots
-          } as PolylineEntity;
-          
+            // ✅ ENTERPRISE FIX: Add required BaseEntity properties
+            color: '#ffffff',
+            lineweight: 1,
+            opacity: 1.0,
+            lineType: 'solid' as const
+          };
+
           // Add flags for preview styling like polyline
           const extendedPartialPreview: ExtendedPolylineEntity = {
-            ...partialPreview,
+            ...basePartialPreview,
             preview: true,
             showEdgeDistances: true,
-            showPreviewGrips: true
+            showPreviewGrips: true,
+            measurement: true, // Mark as measurement for brown dots
           };
           partialPreview = extendedPartialPreview;
         }
@@ -680,8 +704,11 @@ export function useUnifiedDrawing() {
       if (newEntity && currentLevelId) {
         const scene = getLevelScene(currentLevelId);
         if (scene) {
-            const updatedScene = { ...scene, entities: [...scene.entities, newEntity] };
+          // Filter out extended types that are not compatible with AnySceneEntity
+          if ('type' in newEntity && typeof newEntity.type === 'string') {
+            const updatedScene = { ...scene, entities: [...scene.entities, newEntity as AnySceneEntity] };
             setLevelScene(currentLevelId, updatedScene);
+          }
         }
       }
 
@@ -753,6 +780,10 @@ export function useUnifiedDrawing() {
     finishPolyline,
     startPolyline,
     startPolygon,
-    // Snap config handled at DxfCanvas level
+    // ✅ ENTERPRISE FIX: Add missing methods for DrawingOrchestrator compatibility
+    setTool: startDrawing, // Alias για compatibility
+    finishDrawing: finishPolyline, // Alias για compatibility
+    // ✅ ENTERPRISE FIX: Add snapConfig for entity creation compatibility
+    snapConfig: null, // Placeholder - Snap config handled at DxfCanvas level
   };
 }

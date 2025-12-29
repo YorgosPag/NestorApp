@@ -45,7 +45,7 @@ export class EntityRenderer {
   }
 
   render(entity: EntityModel, options: { strokeOverride?: string; isSelected?: boolean; showGrips?: boolean } = {}) {
-    this.composite.render(entity, options);
+    this.composite.render(entity as any, options);
   }
 
   // Alias for backward compatibility with scene-render.ts
@@ -76,8 +76,8 @@ export class EntityRenderer {
     if (entity.type === 'rectangle' && DEBUG_ENTITY_RENDERER) {
 
     }
-    
-    this.composite.render(entity, options);
+
+    this.composite.render(entity as any, options);
   }
 
   // ✅ Helper function to check if entity is selected and hovered
@@ -87,19 +87,19 @@ export class EntityRenderer {
   }
 
   renderEntities(entities: EntityModel[], options: { strokeOverride?: string; isSelected?: boolean; showGrips?: boolean } = {}) {
-    this.composite.renderEntities(entities, options);
+    this.composite.renderEntities(entities as any[], options);
   }
 
   findGripAtPoint(entity: EntityModel, screenPoint: Point2D, tolerance: number = 8): GripInfo | null {
-    return this.composite.findGripAtPoint(entity, screenPoint, tolerance);
+    return this.composite.findGripAtPoint(entity as any, screenPoint, tolerance);
   }
 
   getEntityGrips(entity: EntityModel): GripInfo[] {
-    return this.composite.getEntityGrips(entity);
+    return this.composite.getEntityGrips(entity as any);
   }
 
   hitTest(entities: EntityModel[], point: Point2D, tolerance: number): EntityModel | null {
-    return this.composite.hitTest(entities, point, tolerance);
+    return this.composite.hitTest(entities as any[], point, tolerance);
   }
 
   clear() {

@@ -39,12 +39,12 @@ describe('DxfSettingsStore', () => {
       act(() => {
         result.current.setGeneralLine({
           lineWidth: 3,
-          lineColor: UI_COLORS.SELECTED_RED
+          color: UI_COLORS.SELECTED_RED
         });
       });
 
       expect(result.current.general.line.lineWidth).toBe(3);
-      expect(result.current.general.line.lineColor).toBe(UI_COLORS.SELECTED_RED);
+      expect(result.current.general.line.color).toBe(UI_COLORS.SELECTED_RED);
       // Άλλες τιμές παραμένουν default
       expect(result.current.general.line.lineType).toBe(DEFAULT_LINE_SETTINGS.lineType);
     });
@@ -67,7 +67,7 @@ describe('DxfSettingsStore', () => {
 
       act(() => {
         // Αλλαγή settings
-        result.current.setGeneralLine({ lineColor: UI_COLORS.CUSTOM_TEST_COLOR });
+        result.current.setGeneralLine({ color: UI_COLORS.CUSTOM_TEST_COLOR });
         result.current.setGeneralText({ fontSize: 20 });
 
         // Reset
@@ -89,12 +89,12 @@ describe('DxfSettingsStore', () => {
 
       act(() => {
         result.current.setOverride(entityId, {
-          line: { lineColor: UI_COLORS.LEGACY_COLORS.GREEN }
+          line: { color: UI_COLORS.LEGACY_COLORS.GREEN }
         });
       });
 
       expect(result.current.overrides[entityId]).toEqual({
-        line: { lineColor: UI_COLORS.LEGACY_COLORS.GREEN }
+        line: { color: UI_COLORS.LEGACY_COLORS.GREEN }
       });
     });
 
@@ -110,14 +110,14 @@ describe('DxfSettingsStore', () => {
 
         // Δεύτερο override (merge)
         result.current.setOverride(entityId, {
-          line: { lineColor: UI_COLORS.LEGACY_COLORS.BLUE }
+          line: { color: UI_COLORS.LEGACY_COLORS.BLUE }
         });
       });
 
       expect(result.current.overrides[entityId]).toEqual({
         line: {
           lineWidth: 2,
-          lineColor: UI_COLORS.LEGACY_COLORS.BLUE
+          color: UI_COLORS.LEGACY_COLORS.BLUE
         }
       });
     });
@@ -128,7 +128,7 @@ describe('DxfSettingsStore', () => {
 
       act(() => {
         result.current.setOverride(entityId, {
-          line: { lineColor: UI_COLORS.SELECTED_RED }
+          line: { color: UI_COLORS.SELECTED_RED }
         });
 
         // Clear the override
@@ -181,14 +181,14 @@ describe('DxfSettingsStore', () => {
 
         // Set override
         result.current.setOverride(entityId, {
-          line: { lineColor: UI_COLORS.LEGACY_COLORS.MAGENTA }
+          line: { color: UI_COLORS.LEGACY_COLORS.MAGENTA }
         });
       });
 
       const effectiveLine = result.current.getEffectiveLine(entityId);
 
       expect(effectiveLine.lineWidth).toBe(2); // From general
-      expect(effectiveLine.lineColor).toBe(UI_COLORS.LEGACY_COLORS.MAGENTA); // From override
+      expect(effectiveLine.color).toBe(UI_COLORS.LEGACY_COLORS.MAGENTA); // From override
       expect(effectiveLine.lineType).toBe(DEFAULT_LINE_SETTINGS.lineType); // Default
     });
 
@@ -256,7 +256,7 @@ describe('DxfSettingsStore', () => {
 
       expect(setItemSpy).toHaveBeenCalledWith(
         'dxf-settings-v2',
-        expect.stringContaining('"lineWidth":3')
+        (expect as any).stringContaining('"lineWidth":3') // ✅ ENTERPRISE FIX: Jest expect.stringContaining needs any cast
       );
 
       setItemSpy.mockRestore();

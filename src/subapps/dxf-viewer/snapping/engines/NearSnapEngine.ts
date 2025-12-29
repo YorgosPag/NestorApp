@@ -4,7 +4,8 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { Entity, ExtendedSnapType } from '../extended-types';
+import { ExtendedSnapType } from '../extended-types';
+import type { Entity } from '../../types/entities';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { findEntityBasedSnapCandidates, GenericSnapPoint, processRectangleSnapping } from './shared/snap-engine-utils';
@@ -92,19 +93,20 @@ export class NearSnapEngine extends BaseSnapEngine {
       }
       
     } else if (entityType === 'rectangle') {
-      const rectEntity = entity as { corner1?: Point2D; corner2?: Point2D };
-      processRectangleSnapping(rectEntity, (corner, index, type) => {
-        nearPoints.push({point: corner, type});
-      });
-        
-      // Sample points along edges
-      const lines = GeometricCalculations.getRectangleLines(rectEntity);
-      lines.forEach((line, lineIndex) => {
-        const edgeSamples = this.sampleLinePoints(line.start, line.end, 3);
-        edgeSamples.forEach((point, sampleIndex) => {
-          nearPoints.push({point, type: `Edge ${lineIndex + 1} Point ${sampleIndex + 1}`});
+      if ('corner1' in entity && 'corner2' in entity) {
+        processRectangleSnapping(entity, (corner, index, type) => {
+          nearPoints.push({point: corner, type});
         });
-      });
+
+        // Sample points along edges
+        const lines = GeometricCalculations.getRectangleLines(entity);
+        lines.forEach((line, lineIndex) => {
+          const edgeSamples = this.sampleLinePoints(line.start, line.end, 3);
+          edgeSamples.forEach((point, sampleIndex) => {
+            nearPoints.push({point, type: `Edge ${lineIndex + 1} Point ${sampleIndex + 1}`});
+          });
+        });
+      }
     }
     
     return nearPoints;

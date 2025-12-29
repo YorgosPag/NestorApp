@@ -141,7 +141,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
               className={`p-2 rounded text-xs border transition-colors ${
                 rulerSettings.units === unit
                   ? `${colors.bg.info} ${getStatusBorder('info')}`
-                  : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
+                  : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
               }`}
             >
               {unit}
@@ -162,7 +162,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               unitsVisible
                 ? `${colors.bg.info} ${getStatusBorder('info')}`
-                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
             }`}
           >
             Ενεργό
@@ -172,7 +172,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               !unitsVisible
                 ? `${colors.bg.info} ${getStatusBorder('info')}`
-                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
+                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
             }`}
           >
             Ανενεργό
@@ -242,7 +242,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
               UI_COLORS.WHITE
             }
             onChange={(e) => handleUnitsColorChange(e.target.value)}
-            className={`w-20 px-2 py-1 text-xs ${colors.bg.muted} text-white rounded ${getStatusBorder('secondary')}`}
+            className={`w-20 px-2 py-1 text-xs ${colors.bg.muted} text-white rounded ${getStatusBorder('muted')}`}
             placeholder={UI_COLORS.WHITE}
           />
         </div>

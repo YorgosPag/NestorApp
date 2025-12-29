@@ -12,7 +12,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { COLOR_BRIDGE } from '../../design-system/color-bridge';
 
 /**
  * 🌉 BRIDGE-BASED Semantic Colors Hook Interface

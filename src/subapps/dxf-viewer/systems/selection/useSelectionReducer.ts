@@ -120,44 +120,54 @@ export function selectionReducer(state: SelectionContextState, action: Selection
         ...state,
         filters: {
           ...state.filters,
-          visibleStatuses: action.statuses,
+          visibleStatuses: new Set(action.statuses),
         },
       };
-      
+
     case 'SET_UNIT_TYPE_FILTER':
       return {
         ...state,
         filters: {
           ...state.filters,
-          visibleUnitTypes: action.unitTypes,
+          visibleUnitTypes: new Set(action.unitTypes),
         },
       };
       
     case 'TOGGLE_STATUS_FILTER':
       const currentStatuses = state.filters.visibleStatuses;
-      const statusExists = currentStatuses.includes(action.status);
-      
+      const statusExists = currentStatuses.has(action.status);
+
+      const newStatuses = new Set(currentStatuses);
+      if (statusExists) {
+        newStatuses.delete(action.status);
+      } else {
+        newStatuses.add(action.status);
+      }
+
       return {
         ...state,
         filters: {
           ...state.filters,
-          visibleStatuses: statusExists 
-            ? currentStatuses.filter(status => status !== action.status)
-            : [...currentStatuses, action.status],
+          visibleStatuses: newStatuses,
         },
       };
       
     case 'TOGGLE_UNIT_TYPE_FILTER':
       const currentUnitTypes = state.filters.visibleUnitTypes;
-      const unitTypeExists = currentUnitTypes.includes(action.unitType);
-      
+      const unitTypeExists = currentUnitTypes.has(action.unitType);
+
+      const newUnitTypes = new Set(currentUnitTypes);
+      if (unitTypeExists) {
+        newUnitTypes.delete(action.unitType);
+      } else {
+        newUnitTypes.add(action.unitType);
+      }
+
       return {
         ...state,
         filters: {
           ...state.filters,
-          visibleUnitTypes: unitTypeExists
-            ? currentUnitTypes.filter(type => type !== action.unitType)
-            : [...currentUnitTypes, action.unitType],
+          visibleUnitTypes: newUnitTypes,
         },
       };
       

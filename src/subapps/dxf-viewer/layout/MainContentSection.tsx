@@ -161,7 +161,12 @@ export const MainContentSection = React.memo<MainContentSectionProps>(({
           transform={canvasTransform}
           onTransformChange={wrappedHandleTransformChange}
           onRegionClick={handleRegionClick}
-          onMouseMove={handleCanvasMouseMove}
+          onMouseMove={(worldPoint: Point2D, event: React.MouseEvent) => {
+            // ✅ ENTERPRISE FIX: Convert interface to match expected signature
+            // handleCanvasMouseMove expects (screenPos, worldPos) but onMouseMove provides (worldPoint, event)
+            // For now, use worldPoint for both parameters since screen position isn't available
+            handleCanvasMouseMove(worldPoint, worldPoint);
+          }}
           dxfCanvasVisible={dxfCanvasVisible}
           layerCanvasVisible={layerCanvasVisible}
           overlayMode={overlayMode}

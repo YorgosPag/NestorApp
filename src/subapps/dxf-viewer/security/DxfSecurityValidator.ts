@@ -166,7 +166,8 @@ export class DxfSecurityValidator extends SceneValidator {
     // Basic scene structure validation (adapt for SceneModel)
     const sceneWithVersion = {
       ...scene,
-      version: scene.version || 1 // Add version if missing for compatibility
+      // ✅ ENTERPRISE FIX: SceneModel.version is optional string, convert to number for validator
+      version: scene.version ? parseInt(scene.version as string) : 1
     };
     const isBasicValid = new SceneValidator().validateScene(sceneWithVersion);
     if (!isBasicValid) {

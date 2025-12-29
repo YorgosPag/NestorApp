@@ -17,7 +17,8 @@ const DEBUG_PHASE_MANAGER = true; // ✅ ΕΝΕΡΓΟΠΟΙΗΣΗ για testing
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import { renderStyledText, renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 import { getGripPreviewStyleWithOverride } from '../../hooks/useGripPreviewStyle';
-import type { EntityModel, GripInfo } from '../../rendering/types/Types';
+import type { Entity } from '../../types/entities';
+import type { GripInfo } from '../../rendering/types/Types';
 import { UI_COLORS } from '../../config/color-config';
 import type { RenderOptions } from '../../rendering/types/Types';
 import type { GripSettings } from '../../types/gripSettings';
@@ -27,15 +28,8 @@ import { renderSquareGrip } from '../../rendering/entities/shared/geometry-rende
 import { toolStyleStore } from '../../stores/ToolStyleStore';
 import { getLinePreviewStyleWithOverride } from '../../hooks/useLinePreviewStyle';
 
-// Extended entity interface for phase-specific properties
-export interface ExtendedEntity extends EntityModel {
-  preview?: boolean;
-  measurement?: boolean;
-  isOverlayPreview?: boolean;
-  showPreviewGrips?: boolean;
-  previewGripPoints?: Array<{ position: Point2D }>;
-  closed?: boolean;
-}
+// ✅ ENTERPRISE FIX: Export GripInfo for external usage
+export type { GripInfo } from '../../rendering/types/Types';
 
 // Local interface definitions
 export interface PhaseManagerOptions {
@@ -100,12 +94,15 @@ export class PhaseManager {
   /**
    * Main method to determine and apply rendering phase
    */
-  determinePhase(entity: EntityModel, options: RenderOptions = {}): PhaseRenderingState {
+  determinePhase(entity: Entity, options: RenderOptions = {}): PhaseRenderingState {
     // ✅ ΚΡΙΣΙΜΗ ΔΙΟΡΘΩΣΗ: Έλεγχος για preview entity από το entity flag
-    const entityWithPhase = entity as ExtendedEntity;
-    if (options.preview || entityWithPhase.preview === true) {
-
-      return { phase: 'preview' };
+    if (options.preview || entity.preview === true) {
+      return {
+        phase: 'preview',
+        isActive: true,
+        priority: 1,
+        context: { fromEntity: true, hasPreview: true }
+      };
     }
 
     if (options.hovered || options.selected) {
@@ -113,19 +110,29 @@ export class PhaseManager {
       const subState = options.hovered ? 'hover' : 'selected';
 
       return {
-        phase: 'interactive',
-        subState,
+        phase: options.hovered ? 'preview' : 'normal', // ✅ FIX: Use valid phase values
+        isActive: true,
+        priority: options.selected ? 3 : 2,
+        context: {
+          fromEntity: true,
+          hasPreview: options.hovered,
+        },
         gripState: this.getGripState(entity)
       };
     }
 
-    return { phase: 'normal' };
+    return {
+      phase: 'normal',
+      isActive: true,
+      priority: 0,
+      context: { fromEntity: true }
+    };
   }
 
   /**
    * Apply phase-specific styling to canvas context
    */
-  applyPhaseStyle(entity: EntityModel, state: PhaseRenderingState): void {
+  applyPhaseStyle(entity: Entity, state: PhaseRenderingState): void {
     // ALWAYS reset line dash first to prevent "sticking"
     this.ctx.setLineDash([]);
     
@@ -135,8 +142,7 @@ export class PhaseManager {
         // Note: lineWidth και setLineDash θα οριστούν παρακάτω ανάλογα με το entity type
 
         // 🔺 ΔΙΟΡΘΩΣΗ: Χρήση ToolStyleStore χρωμάτων για overlay/layering entities μόνο
-        const entityExt = entity as ExtendedEntity;
-        const isOverlayEntity = entityExt.isOverlayPreview === true;
+        const isOverlayEntity = entity.isOverlayPreview === true;
 
         if (isOverlayEntity) {
           const toolStyle = toolStyleStore.get();
@@ -173,18 +179,11 @@ export class PhaseManager {
         }
         break;
         
-      case 'interactive':
-        if (state.subState === 'hover') {
-          // Phase 3a: White dashed for hover
-          this.ctx.lineWidth = 2;
-          this.ctx.setLineDash([5, 5]);
-          this.ctx.strokeStyle = UI_COLORS.WHITE;
-        } else {
-          // Phase 3b: White solid for selection (same as Phase 2 but white)
-          this.ctx.lineWidth = 1;
-          this.ctx.setLineDash([]);
-          this.ctx.strokeStyle = UI_COLORS.WHITE;
-        }
+      case 'measurement':
+        // ✅ FIX: Handle measurement phase
+        this.ctx.lineWidth = 1;
+        this.ctx.setLineDash([]);
+        this.ctx.strokeStyle = UI_COLORS.WHITE;
         break;
     }
   }
@@ -193,23 +192,23 @@ export class PhaseManager {
    * Render measurements based on phase requirements
    * 🔺 MEASUREMENT ENTITIES: Always show measurements in all phases
    */
-  shouldRenderMeasurements(state: PhaseRenderingState, entity?: EntityModel): boolean {
+  shouldRenderMeasurements(state: PhaseRenderingState, entity?: Entity): boolean {
     // For measurement entities, ALWAYS show measurements
     if (entity && this.isMeasurementEntity(entity)) {
       return true;
     }
     
     // For normal entities, show measurements during preview, hover, or dragging
-    return state.phase === 'preview' || 
-           (state.phase === 'interactive' && state.subState === 'hover') ||
-           (state.gripState?.dragging === true);
+    return state.phase === 'preview' ||
+           (state.phase === 'measurement') ||
+           (state.gripState?.dragginGrip !== undefined);
   }
 
   /**
    * Render colored dots for preview phase and measurement entities
    * 🔺 MEASUREMENT ENTITIES: Always show dots in all phases
    */
-  shouldRenderYellowDots(state: PhaseRenderingState, entity?: EntityModel): boolean {
+  shouldRenderYellowDots(state: PhaseRenderingState, entity?: Entity): boolean {
     // For measurement entities, ALWAYS show dots
     if (entity && this.isMeasurementEntity(entity)) {
       return true;
@@ -223,7 +222,7 @@ export class PhaseManager {
    * Get appropriate dot color based on entity type and phase
    * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΟ ΧΡΏΜΑ ΒΟΥΛΙΤΣΩΝ - μία αλλαγή εδώ αλλάζει όλα
    */
-  getPreviewDotColor(entity?: EntityModel): string {
+  getPreviewDotColor(entity?: Entity): string {
     // 🔺 Κίτρινο χρώμα για όλες τις οντότητες κατά την προεπισκόπηση - κεντρικοποιημένη λογική
     return UI_COLORS.YELLOW; // Κίτρινο για όλες τις οντότητες στη φάση προεπισκόπησης
   }
@@ -231,35 +230,32 @@ export class PhaseManager {
   /**
    * Check if entity is a measurement entity
    */
-  private isMeasurementEntity(entity: EntityModel): boolean {
-    const entityExt = entity as ExtendedEntity;
-    return entityExt.measurement === true || 
+  private isMeasurementEntity(entity: Entity): boolean {
+    return entity.measurement === true ||
            entity.type === 'angle-measurement' ||
-           entity.type === 'measure-distance' ||
-           entity.type === 'measure-area';
+           entity.type === 'dimension';
   }
 
   /**
    * Render grips with phase-appropriate colors
    * ⚠️ ΠΡΟΣΩΡΙΝΗ ΑΠΕΝΕΡΓΟΠΟΙΗΣΗ ΓΙΑ TESTING
    */
-  renderPhaseGrips(entity: EntityModel, grips: GripInfo[], state: PhaseRenderingState): void {
+  renderPhaseGrips(entity: Entity, grips: GripInfo[], state: PhaseRenderingState): void {
     // ✅ ΕΝΕΡΓΟΠΟΙΗΜΕΝΟ: Εμφάνιση grips στην προσχεδίαση
     // ✅ ΕΝΗΜΕΡΩΣΗ: Επιτρέπουμε preview grips όταν έχουν το flag showPreviewGrips
-    const entityExt = entity as ExtendedEntity;
-    if (state.phase === 'preview' && !entityExt.showPreviewGrips) {
+    if (state.phase === 'preview' && !entity.showPreviewGrips) {
       return; // No grips during preview unless explicitly enabled
     }
 
     // ✅ ΝΕΟ! Για preview entities, χρησιμοποιούμε τα previewGripPoints αν υπάρχουν
-    if (state.phase === 'preview' && entityExt.previewGripPoints) {
-      const previewGrips = entityExt.previewGripPoints;
+    if (state.phase === 'preview' && entity.previewGripPoints) {
+      const previewGrips = entity.previewGripPoints;
       for (let i = 0; i < previewGrips.length; i++) {
         const gripPoint = previewGrips[i];
-        const screenPos = this.worldToScreen(gripPoint.position);
+        const screenPos = this.worldToScreen(gripPoint);
 
         // Preview grips χρησιμοποιούν το κρύο χρώμα από τις ρυθμίσεις
-        this.drawPhaseGrip(screenPos, 'cold', state, gripPoint.type);
+        this.drawPhaseGrip(screenPos, 'cold', state, undefined);
       }
       return;
     }
@@ -284,14 +280,14 @@ export class PhaseManager {
     if (!gripState) return 'cold';
     
     // Hot (red) - Active/dragging grip
-    if (gripState.active?.entityId === entityId && 
-        gripState.active?.gripIndex === gripIndex) {
+    if (gripState.dragginGrip?.entityId === entityId &&
+        gripState.dragginGrip?.gripIndex === gripIndex) {
       return 'hot';
     }
-    
+
     // Warm (orange) - Hovered grip
-    if (gripState.hovered?.entityId === entityId && 
-        gripState.hovered?.gripIndex === gripIndex) {
+    if (gripState.hoveredGrip?.entityId === entityId &&
+        gripState.hoveredGrip?.gripIndex === gripIndex) {
       return 'warm';
     }
     
@@ -336,7 +332,7 @@ export class PhaseManager {
   /**
    * Get current grip state (to be extended with actual grip interaction logic)
    */
-  private getGripState(entity: EntityModel): PhaseRenderingState['gripState'] {
+  private getGripState(entity: Entity): PhaseRenderingState['gripState'] {
     // TODO: This will be connected to actual grip interaction system
     // For now, return empty state
     return undefined;
@@ -345,7 +341,7 @@ export class PhaseManager {
   /**
    * Render real-time measurements during grip dragging
    */
-  renderDragMeasurements(entity: EntityModel, draggedGripIndex: number, currentPosition: Point2D): void {
+  renderDragMeasurements(entity: Entity, draggedGripIndex: number, currentPosition: Point2D): void {
     // This will render live distance/angle/area measurements while dragging
     // Implementation depends on entity type
     switch (entity.type) {
@@ -356,27 +352,30 @@ export class PhaseManager {
         this.renderCircleDragMeasurements(entity, draggedGripIndex, currentPosition);
         break;
       case 'rectangle':
-      case 'rect':
-        this.renderRectangleDragMeasurements(entity, draggedGripIndex, currentPosition);
-        break;
+      // 'rect' is not a valid EntityType, removing
+      // case 'rect':
+      //   this.renderRectangleDragMeasurements(entity, draggedGripIndex, currentPosition);
+      //   break;
       case 'arc':
         this.renderArcDragMeasurements(entity, draggedGripIndex, currentPosition);
         break;
       case 'polyline':
         this.renderPolylineDragMeasurements(entity, draggedGripIndex, currentPosition);
         break;
-      case 'ellipse':
-        this.renderEllipseDragMeasurements(entity, draggedGripIndex, currentPosition);
-        break;
+      // 'ellipse' is not a valid EntityType, removing
+      // case 'ellipse':
+      //   this.renderEllipseDragMeasurements(entity, draggedGripIndex, currentPosition);
+      //   break;
     }
   }
 
   /**
    * Render live measurements for line during grip drag
    */
-  private renderLineDragMeasurements(entity: EntityModel, gripIndex: number, currentPos: Point2D): void {
-    const start = entity.start as Point2D;
-    const end = entity.end as Point2D;
+  private renderLineDragMeasurements(entity: Entity, gripIndex: number, currentPos: Point2D): void {
+    if (entity.type !== 'line') return;
+    const start = entity.start;
+    const end = entity.end;
     
     let newStart = start, newEnd = end;
     if (gripIndex === 0) newStart = currentPos;
@@ -424,9 +423,10 @@ export class PhaseManager {
   /**
    * Render live measurements for circle during grip drag
    */
-  private renderCircleDragMeasurements(entity: EntityModel, gripIndex: number, currentPos: Point2D): void {
-    const center = entity.center as Point2D;
-    const originalRadius = entity.radius as number;
+  private renderCircleDragMeasurements(entity: Entity, gripIndex: number, currentPos: Point2D): void {
+    if (entity.type !== 'circle') return;
+    const center = entity.center;
+    const originalRadius = entity.radius;
     
     // Calculate new radius based on dragged position
     const newRadius = Math.sqrt(
@@ -486,17 +486,14 @@ export class PhaseManager {
   /**
    * Render live measurements for rectangle during grip drag
    */
-  private renderRectangleDragMeasurements(entity: EntityModel, gripIndex: number, currentPos: Point2D): void {
-    // Get current vertices (either from vertices array or from corners)
-    let vertices: Point2D[] = entity.vertices as Point2D[] || [];
-    
-    if (vertices.length === 0) {
-      const corner1 = entity.corner1 || entity.start;
-      const corner2 = entity.corner2 || entity.end;
-      if (corner1 && corner2) {
-        vertices = createRectangleVertices(corner1, corner2);
-      }
-    }
+  private renderRectangleDragMeasurements(entity: Entity, gripIndex: number, currentPos: Point2D): void {
+    if (entity.type !== 'rectangle') return;
+
+    // Get vertices from rectangle entity properties
+    const vertices = createRectangleVertices(
+      { x: entity.x, y: entity.y },
+      { x: entity.x + entity.width, y: entity.y + entity.height }
+    );
     
     if (vertices.length < 4) return;
     
@@ -593,11 +590,12 @@ export class PhaseManager {
   /**
    * Render live measurements for arc during grip drag
    */
-  private renderArcDragMeasurements(entity: EntityModel, gripIndex: number, currentPos: Point2D): void {
-    const center = entity.center as Point2D;
-    const radius = entity.radius as number;
-    const startAngle = entity.startAngle as number;
-    const endAngle = entity.endAngle as number;
+  private renderArcDragMeasurements(entity: Entity, gripIndex: number, currentPos: Point2D): void {
+    if (entity.type !== 'arc') return;
+    const center = entity.center;
+    const radius = entity.radius;
+    const startAngle = entity.startAngle;
+    const endAngle = entity.endAngle;
     
     if (!center || !radius) return;
     
@@ -645,13 +643,14 @@ export class PhaseManager {
   /**
    * Render live measurements for polyline during grip drag
    */
-  private renderPolylineDragMeasurements(entity: EntityModel, gripIndex: number, currentPos: Point2D): void {
-    const vertices = entity.vertices as Point2D[] || [];
+  private renderPolylineDragMeasurements(entity: Entity, gripIndex: number, currentPos: Point2D): void {
+    if (entity.type !== 'polyline') return;
+    const vertices = entity.vertices || [];
     if (vertices.length < 2 || gripIndex >= vertices.length) return;
-    
+
     const newVertices = [...vertices];
     newVertices[gripIndex] = currentPos;
-    
+
     // Calculate total length
     let totalLength = 0;
     for (let i = 0; i < newVertices.length - 1; i++) {
@@ -659,11 +658,10 @@ export class PhaseManager {
       const dy = newVertices[i + 1].y - newVertices[i].y;
       totalLength += Math.sqrt(dx * dx + dy * dy);
     }
-    
+
     // Calculate area if closed
     let area = 0;
-    const entityExt = entity as ExtendedEntity;
-    if (entityExt.closed && newVertices.length >= 3) {
+    if (entity.closed && newVertices.length >= 3) {
       // Shoelace formula
       for (let i = 0; i < newVertices.length; i++) {
         const j = (i + 1) % newVertices.length;
@@ -688,52 +686,11 @@ export class PhaseManager {
 
   /**
    * Render live measurements for ellipse during grip drag
+   * Note: Ellipse is not in EntityType union, so this function is unused
    */
-  private renderEllipseDragMeasurements(entity: EntityModel, gripIndex: number, currentPos: Point2D): void {
-    const center = entity.center as Point2D;
-    const majorAxis = entity.majorAxis as number;
-    const minorAxis = entity.minorAxis as number;
-    
-    if (!center || !majorAxis || !minorAxis) return;
-    
-    // Calculate new axes based on grip being dragged
-    let newMajorAxis = majorAxis;
-    let newMinorAxis = minorAxis;
-    
-    if (gripIndex === 1 || gripIndex === 3) {
-      // Major axis grips
-      const dx = currentPos.x - center.x;
-      const dy = currentPos.y - center.y;
-      newMajorAxis = Math.sqrt(dx * dx + dy * dy);
-    } else if (gripIndex === 2 || gripIndex === 4) {
-      // Minor axis grips
-      const dx = currentPos.x - center.x;
-      const dy = currentPos.y - center.y;
-      newMinorAxis = Math.sqrt(dx * dx + dy * dy);
-    }
-    
-    // Calculate measurements
-    const area = Math.PI * newMajorAxis * newMinorAxis;
-    const perimeter = Math.PI * (3 * (newMajorAxis + newMinorAxis) - 
-      Math.sqrt((3 * newMajorAxis + newMinorAxis) * (newMajorAxis + 3 * newMinorAxis)));
-    
-    const screenCenter = this.worldToScreen(center);
-    
-    // Render live measurements
-    this.ctx.save();
-
-    this.ctx.fillStyle = UI_COLORS.SELECTED_RED; // Red for live measurements
-    this.ctx.font = '12px Arial';
-    this.ctx.textAlign = 'center';
-    this.ctx.textBaseline = 'middle';
-    
-    // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
-    renderStyledText(this.ctx, `Ma: ${newMajorAxis.toFixed(2)}`, screenCenter.x, screenCenter.y - 30);
-    renderStyledText(this.ctx, `Mi: ${newMinorAxis.toFixed(2)}`, screenCenter.x, screenCenter.y - 10);
-    renderStyledText(this.ctx, `A: ${area.toFixed(2)}`, screenCenter.x, screenCenter.y + 10);
-    renderStyledText(this.ctx, `P: ${perimeter.toFixed(2)}`, screenCenter.x, screenCenter.y + 30);
-    
-    this.ctx.restore();
+  private renderEllipseDragMeasurements(entity: Entity, gripIndex: number, currentPos: Point2D): void {
+    // Ellipse is not in EntityType union, so this function is unused
+    return;
   }
 
   /**

@@ -105,8 +105,9 @@ async function setupDeterministicPage(page: Page, viewport: { width: number; hei
     }
 
     // Fix font rendering για consistency
-    document.body.style.fontSmooth = 'never';
-    document.body.style.webkitFontSmoothing = 'none';
+    // ✅ ENTERPRISE FIX: Use setProperty for CSS properties που δεν είναι στο CSSStyleDeclaration type
+    document.body.style.setProperty('-webkit-font-smoothing', 'none');
+    document.body.style.setProperty('font-smooth', 'never');
     document.body.style.textRendering = 'optimizeSpeed';
   });
 

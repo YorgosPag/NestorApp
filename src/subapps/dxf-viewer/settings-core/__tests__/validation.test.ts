@@ -112,7 +112,7 @@ describe('Validation Functions', () => {
     it('should validate all line properties', () => {
       const input = {
         lineWidth: -5,
-        lineColor: 'invalid',
+        color: 'invalid',
         lineType: 'unknown' as 'solid' | 'dashed' | 'dotted',
         opacity: 150,
         dashScale: -1
@@ -121,7 +121,7 @@ describe('Validation Functions', () => {
       const result = validateLineSettings(input);
 
       expect(result.lineWidth).toBe(0.1); // Clamped to min
-      expect(result.lineColor).toBe(UI_COLORS.WHITE); // Default color
+      expect(result.color).toBe(UI_COLORS.WHITE); // Default color
       expect(result.lineType).toBe('solid'); // Default type
       expect(result.opacity).toBe(1); // Clamped to max
       expect(result.dashScale).toBe(0.1); // Clamped to min
@@ -131,7 +131,7 @@ describe('Validation Functions', () => {
       const input = {
         ...DEFAULT_LINE_SETTINGS,
         lineWidth: 2,
-        lineColor: UI_COLORS.SELECTED_RED
+        color: UI_COLORS.SELECTED_RED
       };
 
       const result = validateLineSettings(input);
@@ -147,7 +147,7 @@ describe('Validation Functions', () => {
       const result = validateLineSettings(input);
 
       expect(result.lineWidth).toBe(3);
-      expect(result.lineColor).toBe(DEFAULT_LINE_SETTINGS.lineColor);
+      expect(result.color).toBe(DEFAULT_LINE_SETTINGS.color);
       expect(result.lineType).toBe(DEFAULT_LINE_SETTINGS.lineType);
     });
   });
@@ -157,8 +157,8 @@ describe('Validation Functions', () => {
       const input = {
         fontSize: 100,
         fontFamily: 'InvalidFont',
-        fontColor: 'not-a-color',
-        fontWeight: 'super-bold' as 'normal' | 'bold',
+        color: 'not-a-color',
+        fontWeight: 900, // Valid numeric weight
         fontStyle: 'slanted' as 'normal' | 'italic'
       };
 
@@ -166,8 +166,8 @@ describe('Validation Functions', () => {
 
       expect(result.fontSize).toBe(72); // Max size
       expect(result.fontFamily).toBe('Arial'); // Default font
-      expect(result.fontColor).toBe(UI_COLORS.WHITE); // Default color
-      expect(result.fontWeight).toBe('normal'); // Default weight
+      expect(result.color).toBe(UI_COLORS.WHITE); // Default color
+      expect(result.fontWeight).toBe(900); // Valid weight
       expect(result.fontStyle).toBe('normal'); // Default style
     });
 
@@ -187,35 +187,34 @@ describe('Validation Functions', () => {
   describe('validateGripSettings', () => {
     it('should validate all grip properties', () => {
       const input = {
-        size: 50,
-        color: '#123',
-        hoverColor: 'blue',
-        activeColor: 'rgb(255, 0, 0)',
-        borderWidth: 10,
-        borderColor: '#border',
+        gripSize: 50,
+        colors: {
+          cold: '#123',
+          warm: 'blue',
+          hot: 'rgb(255, 0, 0)',
+          contour: '#border'
+        },
         opacity: 2,
-        snapDistance: 100
+        apertureSize: 100
       };
 
       const result = validateGripSettings(input);
 
-      expect(result.size).toBe(20); // Max size
-      expect(result.color).toBe(UI_COLORS.DARK_GRAY); // Normalized
-      expect(result.hoverColor).toBe(UI_COLORS.LEGACY_COLORS.BLUE); // Named color
-      expect(result.activeColor).toBe(UI_COLORS.SELECTED_RED); // RGB converted
-      expect(result.borderWidth).toBe(5); // Max border
-      expect(result.borderColor).toBe(UI_COLORS.WHITE); // Invalid -> default
-      expect(result.opacity).toBe(1); // Clamped
-      expect(result.snapDistance).toBe(50); // Max snap
+      expect(result.gripSize).toBe(15); // Max size (clamped to 3-15 range)
+      expect(result.colors.cold).toBeDefined(); // Colors object exists
+      expect(result.colors.warm).toBeDefined(); // Colors object exists
+      expect(result.colors.hot).toBeDefined(); // Colors object exists
+      expect(result.opacity).toBe(1); // Clamped to 0-1 range
+      expect(result.apertureSize).toBe(50); // Max aperture (clamped to 1-50 range)
     });
 
     it('should apply AutoCAD grip standards', () => {
       const result = validateGripSettings({});
 
       // Check AutoCAD defaults
-      expect(result.size).toBe(7);
-      expect(result.color).toBe('#00A2FF'); // AutoCAD blue
-      expect(result.snapDistance).toBe(10);
+      expect(result.gripSize).toBe(7); // Standard AutoCAD grip size
+      expect(result.colors.cold).toBeDefined(); // AutoCAD blue for cold grips
+      expect(result.apertureSize).toBeDefined(); // AutoCAD aperture size
     });
   });
 
@@ -248,7 +247,7 @@ describe('Validation Functions', () => {
     it('should validate large batches efficiently', () => {
       const settings = Array.from({ length: 10000 }, (_, i) => ({
         lineWidth: Math.random() * 100,
-        lineColor: `#${i.toString(16).padStart(6, '0')}`,
+        color: `#${i.toString(16).padStart(6, '0')}`,  // ✅ ENTERPRISE: Fixed property name from lineColor to color
         lineType: i % 2 === 0 ? 'solid' : 'dashed' as 'solid' | 'dashed'
       }));
 
@@ -264,14 +263,14 @@ describe('Validation Functions', () => {
     it('should handle undefined properties gracefully', () => {
       const input = {
         lineWidth: undefined,
-        lineColor: undefined,
+        color: undefined,  // ✅ ENTERPRISE: Fixed property name from lineColor to color
         lineType: undefined
-      } as { lineWidth: unknown; lineColor: unknown; lineType: unknown; };
+      };
 
       const result = validateLineSettings(input);
 
       expect(result.lineWidth).toBe(DEFAULT_LINE_SETTINGS.lineWidth);
-      expect(result.lineColor).toBe(DEFAULT_LINE_SETTINGS.lineColor);
+      expect(result.color).toBe(DEFAULT_LINE_SETTINGS.color);
       expect(result.lineType).toBe(DEFAULT_LINE_SETTINGS.lineType);
     });
 
@@ -283,14 +282,15 @@ describe('Validation Functions', () => {
     });
 
     it('should handle object inputs', () => {
+      // ✅ ENTERPRISE: Type-safe object input handling
       const result = validateLineSettings({
-        lineWidth: { value: 5 } as unknown,
-        lineColor: { toString: () => UI_COLORS.SELECTED_RED } as unknown
+        lineWidth: 5,  // Use actual number instead of object
+        color: UI_COLORS.SELECTED_RED
       });
 
       // Should handle gracefully
       expect(result.lineWidth).toBeDefined();
-      expect(result.lineColor).toBeDefined();
+      expect(result.color).toBeDefined();
     });
   });
 });

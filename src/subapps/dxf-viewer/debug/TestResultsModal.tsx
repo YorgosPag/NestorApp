@@ -53,7 +53,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
   // ✅ ENTERPRISE: Tab borders με CSS variables
   const getTabBorder = (tabName: string) => {
     return activeTab === tabName
-      ? `${colors.bg.secondary} text-white ${getStatusBorder('active')} ${getMultiDirectionalBorder('active', ['top', 'left', 'right'])}`
+      ? `${colors.bg.secondary} text-white ${getStatusBorder('info')}`
       : `${colors.bg.hover} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${HOVER_BACKGROUND_EFFECTS.GRAY_750}`;
   };
 

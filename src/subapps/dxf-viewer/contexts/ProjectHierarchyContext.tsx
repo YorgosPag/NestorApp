@@ -23,6 +23,10 @@ export interface Unit {
   floor: number;
   area: number;
   status: 'owner' | 'sold' | 'forRent' | 'forSale' | 'reserved';
+  // ✅ ENTERPRISE FIX: Missing Unit properties for SimpleProjectDialog TS2339 errors
+  buildingId: string;                // Building ID reference (required)
+  building: string;                  // Building name/identifier (required)
+  unitName?: string;                 // Optional unit name for backward compatibility
 }
 
 export interface Floor {
@@ -147,11 +151,11 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
       console.log('✅ [ProjectHierarchy] Companies loaded successfully:', companies.length);
 
       // Remove duplicates by id AND by companyName (multiple deduplication strategies)
-      const uniqueCompanies = companies.reduce((unique, company) => {
+      const uniqueCompanies = companies.reduce((unique: any[], company: any) => {
         // Check for duplicate by ID
-        const duplicateById = unique.find(c => c.id === company.id);
+        const duplicateById = unique.find((c: any) => c.id === company.id);
         // Check for duplicate by company name
-        const duplicateByName = unique.find(c => c.companyName === company.companyName);
+        const duplicateByName = unique.find((c: any) => c.companyName === company.companyName);
         
         if (!duplicateById && !duplicateByName) {
           unique.push(company);
@@ -253,7 +257,7 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
       const projectsData = result.data?.projects || [];
 
       // Transform to our structure with buildings data
-      const projects: Project[] = projectsData.map((project) => {
+      const projects: Project[] = projectsData.map((project: any) => {
 
         // Transform buildings if they exist in the project data
         const buildings: Building[] = (project.buildings || []).map((building: { id: string; name: string; floors?: unknown[] }) => ({

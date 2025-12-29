@@ -62,19 +62,19 @@ import { PointRenderer } from './entities/PointRenderer';
  */
 export function registerStandardRenderers(): void {
   const standardRenderers: Record<string, RendererFactory> = {
-    'line': (ctx) => new LineRenderer(ctx),
-    'circle': (ctx) => new CircleRenderer(ctx),
-    'polyline': (ctx) => new PolylineRenderer(ctx),
-    'lwpolyline': (ctx) => new PolylineRenderer(ctx), // Alias
-    'arc': (ctx) => new ArcRenderer(ctx),
-    'text': (ctx) => new TextRenderer(ctx),
-    'mtext': (ctx) => new TextRenderer(ctx), // Alias
-    'rectangle': (ctx) => new RectangleRenderer(ctx),
-    'rect': (ctx) => new RectangleRenderer(ctx), // Alias
-    'ellipse': (ctx) => new EllipseRenderer(ctx),
-    'spline': (ctx) => new SplineRenderer(ctx),
-    'point': (ctx) => new PointRenderer(ctx),
-    'angle-measurement': (ctx) => new AngleMeasurementRenderer(ctx),
+    'line': (ctx) => new LineRenderer(ctx as CanvasRenderingContext2D),
+    'circle': (ctx) => new CircleRenderer(ctx as CanvasRenderingContext2D),
+    'polyline': (ctx) => new PolylineRenderer(ctx as CanvasRenderingContext2D),
+    'lwpolyline': (ctx) => new PolylineRenderer(ctx as CanvasRenderingContext2D), // Alias
+    'arc': (ctx) => new ArcRenderer(ctx as CanvasRenderingContext2D),
+    'text': (ctx) => new TextRenderer(ctx as CanvasRenderingContext2D),
+    'mtext': (ctx) => new TextRenderer(ctx as CanvasRenderingContext2D), // Alias
+    'rectangle': (ctx) => new RectangleRenderer(ctx as CanvasRenderingContext2D),
+    'rect': (ctx) => new RectangleRenderer(ctx as CanvasRenderingContext2D), // Alias
+    'ellipse': (ctx) => new EllipseRenderer(ctx as CanvasRenderingContext2D),
+    'spline': (ctx) => new SplineRenderer(ctx as CanvasRenderingContext2D),
+    'point': (ctx) => new PointRenderer(ctx as CanvasRenderingContext2D) as BaseEntityRenderer,
+    'angle-measurement': (ctx) => new AngleMeasurementRenderer(ctx as CanvasRenderingContext2D),
   };
 
   globalRendererRegistry.registerBatch(standardRenderers);

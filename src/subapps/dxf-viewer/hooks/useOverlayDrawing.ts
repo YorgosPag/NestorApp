@@ -32,6 +32,7 @@ interface UseOverlayDrawingConfig {
     update: (id: string, patch: UpdateOverlayData) => Promise<void>;
     remove: (id: string) => Promise<void>;
     setSelectedOverlay: (id: string | null) => void;
+    overlays?: { [id: string]: Overlay }; // ✅ ENTERPRISE FIX: Added overlays property για direct access
   } | null;
   levelManager: {
     getCurrentLevel: () => { id: string } | null;
@@ -130,7 +131,8 @@ export const useOverlayDrawing = ({
 
   // Handle vertex drag for overlay editing
   const handleVertexDrag = useCallback((overlayId: string, vertexIndex: number, newPoint: Point2D) => {
-    const overlay = overlayStore.overlays[overlayId];
+    // ✅ ENTERPRISE FIX: Find overlay by level (overlayStore interface doesn't have overlays property)
+    const overlay = overlayStore?.getByLevel(levelManager.currentLevelId || '')?.find(o => o.id === overlayId);
     if (!overlay) return;
 
     // overlay.polygon can be flat [x1,y1,...] or nested [[x,y],...]
@@ -146,7 +148,8 @@ export const useOverlayDrawing = ({
 
   // Handle entire region drag & drop (for moving whole polygons)
   const handleRegionUpdate = useCallback((regionId: string, updates: { vertices?: Point2D[] }) => {
-    const overlay = overlayStore.overlays[regionId];
+    // ✅ ENTERPRISE FIX: Find overlay by level (overlayStore interface doesn't have overlays property)
+    const overlay = overlayStore?.getByLevel(levelManager.currentLevelId || '')?.find(o => o.id === regionId);
     if (!overlay || !updates.vertices) return;
 
     // Convert Point2D[] to nested number[][] format for renderer compatibility
@@ -161,7 +164,8 @@ export const useOverlayDrawing = ({
     if (overlayMode === 'draw' && snapManager.findSnapPoint) {
       const snapResult = snapManager.findSnapPoint(worldX, worldY);
       if (snapResult) {
-        setSnapPoint({ x: snapResult.x, y: snapResult.y });
+        // ✅ ENTERPRISE FIX: Use snappedPoint coordinates instead of x,y properties
+        setSnapPoint({ x: snapResult.snappedPoint.x, y: snapResult.snappedPoint.y });
       } else {
         setSnapPoint(null);
       }

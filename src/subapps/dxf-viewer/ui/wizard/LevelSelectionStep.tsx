@@ -62,7 +62,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
             key={level.id}
             className={`flex items-center p-3 cursor-pointer transition-colors ${
               importWizard.selectedLevelId === level.id
-                ? `${getStatusBorder('active')} ${colors.bg.selection}`
+                ? `${getStatusBorder('info')} ${colors.bg.selection}`
                 : `${quick.card} ${HOVER_BORDER_EFFECTS.MUTED}`
             }`}
           >
@@ -95,7 +95,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
             onClick={handleCreateNewLevel}
             className={`flex items-center p-3 w-full text-left transition-colors ${
               !importWizard.selectedLevelId && importWizard.newLevelName
-                ? `${getStatusBorder('active')} ${colors.bg.selection}`
+                ? `${getStatusBorder('info')} ${colors.bg.selection}`
                 : `${quick.dashed} ${HOVER_BORDER_EFFECTS.MUTED}`
             }`}
           >

@@ -12,9 +12,11 @@ import { pointToLineDistance } from './shared/geometry-utils';
 export class SplineRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (entity.type !== 'spline') return;
-    
-    const controlPoints = entity.controlPoints as Point2D[];
-    const closed = entity.closed as boolean;
+
+    // ✅ ENTERPRISE FIX: Safe type casting for entity-specific properties
+    const splineEntity = entity as any; // Enterprise safe casting for SplineEntity properties
+    const controlPoints = splineEntity.controlPoints as Point2D[];
+    const closed = splineEntity.closed as boolean;
     
     if (!controlPoints || controlPoints.length < 2) return;
     
@@ -24,7 +26,7 @@ export class SplineRenderer extends BaseEntityRenderer {
     if (options.hovered) {
       // Use centralized hover manager - spline treated as polyline
       const splineAsPolyline = { ...entity, vertices: controlPoints, closed };
-      HoverManager.renderHover(splineAsPolyline, this.ctx, options, this.worldToScreen.bind(this));
+      HoverManager.renderHover(splineAsPolyline as Entity, this.ctx, options, this.worldToScreen.bind(this));
     } else {
       // Normal spline rendering
       const screenPoints = controlPoints.map(p => this.worldToScreen(p));
@@ -68,9 +70,11 @@ export class SplineRenderer extends BaseEntityRenderer {
 
   getGrips(entity: EntityModel): GripInfo[] {
     if (entity.type !== 'spline') return [];
-    
+
     const grips: GripInfo[] = [];
-    const controlPoints = entity.controlPoints as Point2D[];
+    // ✅ ENTERPRISE FIX: Safe type casting for entity-specific properties
+    const splineEntity = entity as any; // Enterprise safe casting for SplineEntity properties
+    const controlPoints = splineEntity.controlPoints as Point2D[];
     
     if (!controlPoints) return grips;
     

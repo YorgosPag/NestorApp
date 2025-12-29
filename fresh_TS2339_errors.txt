@@ -1,0 +1,674 @@
+npm info using npm@10.8.2
+npm info using node@v20.17.0
+src/subapps/dxf-viewer/__tests__/line-drawing-functionality.test.ts(78,24): error TS2554: Expected 2 arguments, but got 1.
+src/subapps/dxf-viewer/__tests__/line-drawing-functionality.test.ts(85,11): error TS2353: Object literal may only specify known properties, and 'scale' does not exist in type '{ worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D; }'.
+src/subapps/dxf-viewer/__tests__/line-drawing-functionality.test.ts(175,11): error TS2353: Object literal may only specify known properties, and 'scale' does not exist in type '{ worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D; }'.
+src/subapps/dxf-viewer/__tests__/line-drawing-functionality.test.ts(192,11): error TS2353: Object literal may only specify known properties, and 'scale' does not exist in type '{ worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D; }'.
+src/subapps/dxf-viewer/__tests__/line-drawing-functionality.test.ts(219,11): error TS2353: Object literal may only specify known properties, and 'scale' does not exist in type '{ worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D; }'.
+src/subapps/dxf-viewer/__tests__/line-drawing-functionality.test.ts(240,11): error TS2353: Object literal may only specify known properties, and 'scale' does not exist in type '{ worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D; }'.
+src/subapps/dxf-viewer/__tests__/visual-metrics.test.ts(174,32): error TS2352: Conversion of type '{ test: string; phase: string; unit?: undefined; } | { test: string; unit: string; phase?: undefined; }' to type 'Record<string, string>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ test: string; unit: string; phase?: undefined; }' is not comparable to type 'Record<string, string>'.
+    Property 'phase' is incompatible with index signature.
+      Type 'undefined' is not comparable to type 'string'.
+src/subapps/dxf-viewer/__tests__/visual-metrics.test.ts(253,30): error TS2352: Conversion of type '{ suite: string; type?: undefined; unit?: undefined; } | { type: string; suite: string; unit?: undefined; } | { unit: string; suite?: undefined; type?: undefined; }' to type 'Record<string, string>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ unit: string; suite?: undefined; type?: undefined; }' is not comparable to type 'Record<string, string>'.
+    Property 'suite' is incompatible with index signature.
+      Type 'undefined' is not comparable to type 'string'.
+src/subapps/dxf-viewer/canvas-v2/layer-canvas/LayerCanvas.tsx(518,19): error TS2540: Cannot assign to 'current' because it is a read-only property.
+src/subapps/dxf-viewer/canvas/CanvasOverlays.tsx(7,42): error TS2307: Cannot find module '../canvas-v2/overlays/CoordinateCalibrationOverlay' or its corresponding type declarations.
+src/subapps/dxf-viewer/canvas/CanvasOverlays.tsx(16,15): error TS2305: Module '"../types/scene"' has no exported member 'Point2D'.
+src/subapps/dxf-viewer/canvas/CanvasOverlays.tsx(19,40): error TS2307: Cannot find module './calibration/types' or its corresponding type declarations.
+src/subapps/dxf-viewer/canvas/CanvasOverlays.tsx(143,9): error TS2322: Type 'ProSnapResult | null | undefined' is not assignable to type 'SnapResult | null | undefined'.
+  Type 'ProSnapResult' is missing the following properties from type 'SnapResult': point, type
+src/subapps/dxf-viewer/canvas/CanvasOverlays.tsx(150,9): error TS2322: Type 'ProSnapResult | null | undefined' is not assignable to type 'SnapResult | null | undefined'.
+  Type 'ProSnapResult' is missing the following properties from type 'SnapResult': point, type
+src/subapps/dxf-viewer/canvas/CanvasOverlays.tsx(160,9): error TS2322: Type '{ marquee: { active: boolean; start?: undefined; end?: undefined; kind?: undefined; }; lasso: { active: boolean; points: never[]; }; } | { marquee: { active: boolean; start: Point; end: Point; kind: string; }; lasso: { active: boolean; points: never[]; }; }' is not assignable to type 'SelectionState'.
+  Type '{ marquee: { active: boolean; start: Point; end: Point; kind: string; }; lasso: { active: boolean; points: never[]; }; }' is not assignable to type 'SelectionState'.
+    The types of 'marquee.kind' are incompatible between these types.
+      Type 'string' is not assignable to type '"window" | "crossing" | undefined'.
+src/subapps/dxf-viewer/canvas/CrosshairOverlay.tsx(7,32): error TS2307: Cannot find module './hooks/useCanvasSetup' or its corresponding type declarations.
+src/subapps/dxf-viewer/canvas/CrosshairOverlay.tsx(9,15): error TS2305: Module '"../types/scene"' has no exported member 'Viewport'.
+src/subapps/dxf-viewer/canvas/DxfCanvas.tsx(8,15): error TS2305: Module '"../types/scene"' has no exported member 'Point2D'.
+src/subapps/dxf-viewer/canvas/DxfCanvas.tsx(10,37): error TS2307: Cannot find module '../types/measurements' or its corresponding type declarations.
+src/subapps/dxf-viewer/canvas/DxfCanvas.tsx(257,15): error TS2484: Export declaration conflicts with exported declaration of 'DxfCanvasRef'.
+src/subapps/dxf-viewer/canvas/DxfCanvasCore.tsx(13,37): error TS2307: Cannot find module '../types/measurements' or its corresponding type declarations.
+src/subapps/dxf-viewer/canvas/DxfCanvasCore.tsx(14,37): error TS2307: Cannot find module '../utils/measurement-tools' or its corresponding type declarations.
+src/subapps/dxf-viewer/canvas/DxfCanvasCore.tsx(24,35): error TS2307: Cannot find module './interaction/useHoverAndSelect' or its corresponding type declarations.
+src/subapps/dxf-viewer/canvas/DxfCanvasCore.tsx(25,36): error TS2307: Cannot find module './interaction/useGripInteraction' or its corresponding type declarations.
+src/subapps/dxf-viewer/canvas/DxfCanvasCore.tsx(109,3): error TS2300: Duplicate identifier 'gripSettings'.
+src/subapps/dxf-viewer/canvas/DxfCanvasCore.tsx(123,68): error TS2304: Cannot find name 'RulerSettings'.
+src/subapps/dxf-viewer/canvas/DxfCanvasCore.tsx(134,11): error TS2300: Duplicate identifier 'gripSettings'.
+src/subapps/dxf-viewer/canvas/DxfCanvasCore.tsx(154,67): error TS2304: Cannot find name 'RulerSettings'.
+src/subapps/dxf-viewer/canvas/DxfCanvasCore.tsx(162,64): error TS2304: Cannot find name 'RulerSettings'.
+src/subapps/dxf-viewer/canvas/DxfCanvasCore.tsx(172,42): error TS2304: Cannot find name 'RulerSettings'.
+src/subapps/dxf-viewer/canvas/DxfCanvasCore.tsx(213,65): error TS2304: Cannot find name 'overlayEntities'.
+src/subapps/dxf-viewer/canvas/DxfCanvasCore.tsx(213,65): error TS2554: Expected 1-2 arguments, but got 3.
+src/subapps/dxf-viewer/canvas/DxfCanvasCore.tsx(479,20): error TS7006: Parameter 'entityId' implicitly has an 'any' type.
+src/subapps/dxf-viewer/canvas/DxfCanvasCore.tsx(479,30): error TS7006: Parameter 'next' implicitly has an 'any' type.
+src/subapps/dxf-viewer/canvas/DxfCanvasOverlayIntegration.tsx(10,33): error TS2307: Cannot find module './overlay-renderer' or its corresponding type declarations.
+src/subapps/dxf-viewer/canvas/DxfCanvasOverlayIntegration.tsx(11,31): error TS2307: Cannot find module '../utils/devlog' or its corresponding type declarations.
+src/subapps/dxf-viewer/canvas/DxfCanvasOverlayIntegration.tsx(66,45): error TS2551: Property 'getTransform' does not exist on type 'EntityRenderer'. Did you mean 'setTransform'?
+src/subapps/dxf-viewer/canvas/DxfCanvasOverlayIntegration.tsx(71,28): error TS2551: Property 'getTransform' does not exist on type 'EntityRenderer'. Did you mean 'setTransform'?
+src/subapps/dxf-viewer/canvas/DxfCanvasOverlayIntegration.tsx(114,43): error TS2551: Property 'getTransform' does not exist on type 'EntityRenderer'. Did you mean 'setTransform'?
+src/subapps/dxf-viewer/canvas/engine/createCanvasRenderer.ts(7,10): error TS2305: Module '"../../systems/rulers-grid/config"' has no exported member 'coordTransforms'.
+src/subapps/dxf-viewer/canvas/engine/createCanvasRenderer.ts(9,49): error TS2307: Cannot find module './scene-render' or its corresponding type declarations.
+src/subapps/dxf-viewer/canvas/engine/createCanvasRenderer.ts(10,40): error TS2307: Cannot find module './transforms' or its corresponding type declarations.
+src/subapps/dxf-viewer/canvas/engine/createCanvasRenderer.ts(11,34): error TS2440: Import declaration conflicts with local declaration of 'Bounds'.
+src/subapps/dxf-viewer/canvas/engine/createCanvasRenderer.ts(162,5): error TS18047: 'ctx' is possibly 'null'.
+src/subapps/dxf-viewer/canvas/engine/createCanvasRenderer.ts(163,5): error TS18047: 'ctx' is possibly 'null'.
+src/subapps/dxf-viewer/canvas/engine/createCanvasRenderer.ts(164,5): error TS18047: 'ctx' is possibly 'null'.
+src/subapps/dxf-viewer/canvas/engine/createCanvasRenderer.ts(165,5): error TS18047: 'ctx' is possibly 'null'.
+src/subapps/dxf-viewer/canvas/engine/createCanvasRenderer.ts(167,5): error TS18047: 'ctx' is possibly 'null'.
+src/subapps/dxf-viewer/collaboration/CollaborationManager.ts(3,15): error TS2614: Module '"../../../services/websocket/WebSocketService"' has no exported member 'WebSocketService'. Did you mean to use 'import WebSocketService from "../../../services/websocket/WebSocketService"' instead?
+src/subapps/dxf-viewer/components/DestinationWizard.tsx(106,18): error TS2345: Argument of type 'ProcessedDxfResult' is not assignable to parameter of type 'DxfProcessingOptions'.
+  Type 'ProcessedDxfResult' is missing the following properties from type 'DxfProcessingOptions': processLayers, preserveGrid, preserveRulers, autoScale
+src/subapps/dxf-viewer/components/DestinationWizard.tsx(278,32): error TS2820: Type '"x-large"' is not assignable to type '"small" | "medium" | "large" | undefined'. Did you mean '"large"'?
+src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx(403,56): error TS2538: Type 'undefined' cannot be used as an index type.
+src/subapps/dxf-viewer/components/dxf-layout/FullscreenView.tsx(25,6): error TS2739: Type '{ dxfFile: File | null; status: Status; onClear: () => void; onViewModeChange: (mode: ViewMode) => void; onCanvasMouseDown: (worldPoint: Point, event: MouseEvent<Element, MouseEvent>) => void; ... 55 more ...; onEntityCreated: (entity: AnySceneEntity) => void; }' is missing the following properties from type 'ToolbarSectionProps': currentStatus, setCurrentStatus, currentKind, setCurrentKind
+src/subapps/dxf-viewer/components/dxf-layout/FullscreenView.tsx(71,9): error TS2739: Type '{ dxfFile: File | null; status: Status; onClear: () => void; onViewModeChange: (mode: ViewMode) => void; onCanvasMouseDown: (worldPoint: Point, event: MouseEvent<Element, MouseEvent>) => void; ... 55 more ...; onEntityCreated: (entity: AnySceneEntity) => void; }' is missing the following properties from type '{ overlayMode: OverlayEditorMode; currentStatus: PropertyStatus; currentKind: OverlayKind; }': currentStatus, currentKind
+src/subapps/dxf-viewer/components/dxf-layout/StatusBar.tsx(15,3): error TS2344: Type '"entities" | "selectedEntityIds" | "activeTool" | "snapEnabled" | "status" | "onClear" | "measurements" | "onViewModeChange" | "drawingState"' does not satisfy the constraint 'keyof DXFViewerLayoutProps'.
+  Type '"measurements"' is not assignable to type 'keyof DXFViewerLayoutProps'.
+src/subapps/dxf-viewer/components/dxf-layout/StatusBar.tsx(124,10): error TS18046: 'measurements' is of type 'unknown'.
+src/subapps/dxf-viewer/components/dxf-layout/StatusBar.tsx(127,46): error TS18046: 'measurements' is of type 'unknown'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(71,7): error TS2304: Cannot find name 'showModeSelector'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(71,27): error TS2304: Cannot find name 'selectedFile'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(74,28): error TS2304: Cannot find name 'colors'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(76,53): error TS2304: Cannot find name 'colors'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(76,77): error TS2304: Cannot find name 't'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(78,16): error TS2304: Cannot find name 't'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(78,50): error TS2304: Cannot find name 'selectedFile'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(85,30): error TS2304: Cannot find name 'handleModeSelect'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(86,103): error TS2554: Expected 1 arguments, but got 2.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(86,122): error TS2304: Cannot find name 'colors'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(87,25): error TS2304: Cannot find name 'destinations'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(92,37): error TS2304: Cannot find name 'colors'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(92,73): error TS2304: Cannot find name 't'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(94,22): error TS2304: Cannot find name 't'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(96,20): error TS2304: Cannot find name 'destinations'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(97,38): error TS2304: Cannot find name 'colors'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(98,24): error TS2304: Cannot find name 't'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(107,30): error TS2304: Cannot find name 'handleModeSelect'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(108,104): error TS2554: Expected 1 arguments, but got 2.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(108,123): error TS2304: Cannot find name 'colors'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(113,37): error TS2304: Cannot find name 'colors'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(113,73): error TS2304: Cannot find name 't'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(115,22): error TS2304: Cannot find name 't'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(124,24): error TS2304: Cannot find name 'handleWizardClose'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(127,16): error TS2304: Cannot find name 't'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(130,16): error TS2304: Cannot find name 't'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(130,57): error TS2304: Cannot find name 'destinations'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(139,8): error TS2304: Cannot find name 'selectedFile'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(142,28): error TS2304: Cannot find name 'colors'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(145,55): error TS2304: Cannot find name 'colors'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(145,79): error TS2304: Cannot find name 't'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(147,26): error TS2304: Cannot find name 'handleWizardClose'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(150,18): error TS2304: Cannot find name 't'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(156,133): error TS2554: Expected 1 arguments, but got 2.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(162,29): error TS2304: Cannot find name 'handleFileSelect'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(169,34): error TS2304: Cannot find name 'colors'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(169,75): error TS2304: Cannot find name 't'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(170,66): error TS2304: Cannot find name 't'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(177,16): error TS2304: Cannot find name 't'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(186,7): error TS2304: Cannot find name 'importMode'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(188,8): error TS2304: Cannot find name 'DestinationWizard'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(190,18): error TS2304: Cannot find name 'handleWizardClose'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(191,23): error TS2304: Cannot find name 'selectedFile'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(192,21): error TS2304: Cannot find name 'handleWizardComplete'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(197,8): error TS2304: Cannot find name 'ImportWizard'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(199,18): error TS2304: Cannot find name 'handleWizardClose'.
+src/subapps/dxf-viewer/components/EnhancedImportWizard.tsx(200,21): error TS2304: Cannot find name 'handleWizardComplete'.
+src/subapps/dxf-viewer/components/HierarchicalDestinationSelector.tsx(7,3): error TS2300: Duplicate identifier 'Building'.
+src/subapps/dxf-viewer/components/HierarchicalDestinationSelector.tsx(19,24): error TS2300: Duplicate identifier 'Building'.
+src/subapps/dxf-viewer/components/modal/ModalContainer.tsx(230,54): error TS2304: Cannot find name 'colors'.
+src/subapps/dxf-viewer/components/modal/ModalContainer.tsx(232,42): error TS2304: Cannot find name 'colors'.
+src/subapps/dxf-viewer/components/modal/ModalContainer.tsx(236,34): error TS2304: Cannot find name 'colors'.
+src/subapps/dxf-viewer/components/modal/ModalLoadingStates.tsx(54,72): error TS2345: Argument of type '"primary"' is not assignable to parameter of type '"error" | "default" | "info" | "success" | "warning" | "upload" | "dxf_technical"'.
+src/subapps/dxf-viewer/components/modal/ModalLoadingStates.tsx(171,48): error TS2304: Cannot find name 'colors'.
+src/subapps/dxf-viewer/components/shared/BaseModal.tsx(241,21): error TS2304: Cannot find name 'colors'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.styles.ts(11,10): error TS2305: Module '"@/styles/design-tokens"' has no exported member 'dialogComponents'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx(376,106): error TS2345: Argument of type '{ projectId: string; buildingId: string | undefined; type: "unit" | "building" | "storage" | "parking" | "project"; scene: SceneModel; fileName: string; timestamp: number; encoding: string; }' is not assignable to parameter of type 'FloorplanData'.
+  Types of property 'type' are incompatible.
+    Type '"unit" | "building" | "storage" | "parking" | "project"' is not assignable to type '"building" | "storage" | "parking" | "project"'.
+      Type '"unit"' is not assignable to type '"building" | "storage" | "parking" | "project"'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx(383,52): error TS2345: Argument of type '{ projectId: string; buildingId: string | undefined; type: "unit" | "building" | "storage" | "parking" | "project"; scene: SceneModel; fileName: string; timestamp: number; encoding: string; }' is not assignable to parameter of type 'FloorplanData'.
+  Types of property 'type' are incompatible.
+    Type '"unit" | "building" | "storage" | "parking" | "project"' is not assignable to type '"parking" | "project"'.
+      Type '"unit"' is not assignable to type '"parking" | "project"'.
+src/subapps/dxf-viewer/components/SimpleProjectDialog.tsx(385,52): error TS2345: Argument of type '{ projectId: string; buildingId: string | undefined; type: "unit" | "building" | "storage" | "parking" | "project"; scene: SceneModel; fileName: string; timestamp: number; encoding: string; }' is not assignable to parameter of type 'FloorplanData'.
+  Types of property 'type' are incompatible.
+    Type '"unit" | "building" | "storage" | "parking" | "project"' is not assignable to type '"parking" | "project"'.
+      Type '"unit"' is not assignable to type '"parking" | "project"'.
+src/subapps/dxf-viewer/components/StorageStatus.tsx(3,35): error TS2307: Cannot find module './StorageErrorBoundary' or its corresponding type declarations.
+src/subapps/dxf-viewer/components/StorageStatus.tsx(146,56): error TS2304: Cannot find name 'colors'.
+src/subapps/dxf-viewer/components/StorageStatus.tsx(147,29): error TS2304: Cannot find name 'iconSizes'.
+src/subapps/dxf-viewer/config/color-config.ts(212,14): error TS7022: 'UI_COLORS' implicitly has type 'any' because it does not have a type annotation and is referenced directly or indirectly in its own initializer.
+src/subapps/dxf-viewer/config/color-config.ts(214,3): error TS2448: Block-scoped variable 'CAD_UI_COLORS' used before its declaration.
+src/subapps/dxf-viewer/config/color-config.ts(214,3): error TS2454: Variable 'CAD_UI_COLORS' is used before being assigned.
+src/subapps/dxf-viewer/config/color-config.ts(215,3): error TS2448: Block-scoped variable 'LEGACY_COLORS' used before its declaration.
+src/subapps/dxf-viewer/config/color-config.ts(367,14): error TS7022: 'LEGACY_COLORS' implicitly has type 'any' because it does not have a type annotation and is referenced directly or indirectly in its own initializer.
+src/subapps/dxf-viewer/config/modal-colors.ts(81,39): error TS2551: Property 'BORDER_INFO_PRIMARY' does not exist on type '{ readonly BG_PRIMARY: "bg-background"; readonly BG_SECONDARY: "bg-muted"; readonly BG_TERTIARY: "bg-card"; readonly BG_HOVER: "hover:bg-gray-600"; readonly TEXT_PRIMARY: "text-white"; ... 23 more ...; readonly FOCUS_RING: "blue-400"; }'. Did you mean 'BORDER_PRIMARY'?
+src/subapps/dxf-viewer/config/modal-colors.ts(82,41): error TS2551: Property 'BORDER_INFO_SECONDARY' does not exist on type '{ readonly BG_PRIMARY: "bg-background"; readonly BG_SECONDARY: "bg-muted"; readonly BG_TERTIARY: "bg-card"; readonly BG_HOVER: "hover:bg-gray-600"; readonly TEXT_PRIMARY: "text-white"; ... 23 more ...; readonly FOCUS_RING: "blue-400"; }'. Did you mean 'BORDER_SECONDARY'?
+src/subapps/dxf-viewer/config/modal-colors.ts(120,41): error TS2551: Property 'BORDER_WARNING_SECONDARY' does not exist on type '{ readonly BG_PRIMARY: "bg-background"; readonly BG_SECONDARY: "bg-muted"; readonly BG_TERTIARY: "bg-card"; readonly BG_HOVER: "hover:bg-gray-600"; readonly TEXT_PRIMARY: "text-white"; ... 23 more ...; readonly FOCUS_RING: "blue-400"; }'. Did you mean 'BORDER_SECONDARY'?
+src/subapps/dxf-viewer/config/modal-colors.ts(138,39): error TS2551: Property 'BORDER_ERROR_PRIMARY' does not exist on type '{ readonly BG_PRIMARY: "bg-background"; readonly BG_SECONDARY: "bg-muted"; readonly BG_TERTIARY: "bg-card"; readonly BG_HOVER: "hover:bg-gray-600"; readonly TEXT_PRIMARY: "text-white"; ... 23 more ...; readonly FOCUS_RING: "blue-400"; }'. Did you mean 'BORDER_PRIMARY'?
+src/subapps/dxf-viewer/config/modal-colors.ts(139,41): error TS2551: Property 'BORDER_ERROR_SECONDARY' does not exist on type '{ readonly BG_PRIMARY: "bg-background"; readonly BG_SECONDARY: "bg-muted"; readonly BG_TERTIARY: "bg-card"; readonly BG_HOVER: "hover:bg-gray-600"; readonly TEXT_PRIMARY: "text-white"; ... 23 more ...; readonly FOCUS_RING: "blue-400"; }'. Did you mean 'BORDER_SECONDARY'?
+src/subapps/dxf-viewer/config/modal-colors.ts(240,50): error TS2551: Property 'BORDER_INFO_SECONDARY' does not exist on type '{ readonly BG_PRIMARY: "bg-background"; readonly BG_SECONDARY: "bg-muted"; readonly BG_TERTIARY: "bg-card"; readonly BG_HOVER: "hover:bg-gray-600"; readonly TEXT_PRIMARY: "text-white"; ... 23 more ...; readonly FOCUS_RING: "blue-400"; }'. Did you mean 'BORDER_SECONDARY'?
+src/subapps/dxf-viewer/config/modal-colors.ts(242,55): error TS2551: Property 'BORDER_WARNING_SECONDARY' does not exist on type '{ readonly BG_PRIMARY: "bg-background"; readonly BG_SECONDARY: "bg-muted"; readonly BG_TERTIARY: "bg-card"; readonly BG_HOVER: "hover:bg-gray-600"; readonly TEXT_PRIMARY: "text-white"; ... 23 more ...; readonly FOCUS_RING: "blue-400"; }'. Did you mean 'BORDER_SECONDARY'?
+src/subapps/dxf-viewer/config/modal-colors.ts(243,50): error TS2551: Property 'BORDER_ERROR_SECONDARY' does not exist on type '{ readonly BG_PRIMARY: "bg-background"; readonly BG_SECONDARY: "bg-muted"; readonly BG_TERTIARY: "bg-card"; readonly BG_HOVER: "hover:bg-gray-600"; readonly TEXT_PRIMARY: "text-white"; ... 23 more ...; readonly FOCUS_RING: "blue-400"; }'. Did you mean 'BORDER_SECONDARY'?
+src/subapps/dxf-viewer/config/modal-config.ts(107,83): error TS2551: Property 'BORDER_ERROR_PRIMARY' does not exist on type '{ readonly BG_PRIMARY: "bg-background"; readonly BG_SECONDARY: "bg-muted"; readonly BG_TERTIARY: "bg-card"; readonly BG_HOVER: "hover:bg-gray-600"; readonly TEXT_PRIMARY: "text-white"; ... 23 more ...; readonly FOCUS_RING: "blue-400"; }'. Did you mean 'BORDER_PRIMARY'?
+src/subapps/dxf-viewer/config/modal-config.ts(109,38): error TS2551: Property 'BORDER_ERROR_PRIMARY' does not exist on type '{ readonly BG_PRIMARY: "bg-background"; readonly BG_SECONDARY: "bg-muted"; readonly BG_TERTIARY: "bg-card"; readonly BG_HOVER: "hover:bg-gray-600"; readonly TEXT_PRIMARY: "text-white"; ... 23 more ...; readonly FOCUS_RING: "blue-400"; }'. Did you mean 'BORDER_PRIMARY'?
+src/subapps/dxf-viewer/config/modal-config.ts(110,38): error TS2551: Property 'BORDER_ERROR_PRIMARY' does not exist on type '{ readonly BG_PRIMARY: "bg-background"; readonly BG_SECONDARY: "bg-muted"; readonly BG_TERTIARY: "bg-card"; readonly BG_HOVER: "hover:bg-gray-600"; readonly TEXT_PRIMARY: "text-white"; ... 23 more ...; readonly FOCUS_RING: "blue-400"; }'. Did you mean 'BORDER_PRIMARY'?
+src/subapps/dxf-viewer/config/modal-select-old.ts(1328,10): error TS2304: Cannot find name 'MODAL_SELECT_NAVIGATION_LEVEL_TITLES'.
+src/subapps/dxf-viewer/config/modal-select-old.ts(1336,10): error TS2304: Cannot find name 'MODAL_SELECT_NAVIGATION_BASE_LABELS'.
+src/subapps/dxf-viewer/config/modal-select-old.ts(1344,10): error TS2304: Cannot find name 'MODAL_SELECT_NAVIGATION_SEARCH_PLACEHOLDERS'.
+src/subapps/dxf-viewer/config/modal-select-old.ts(1352,10): error TS2304: Cannot find name 'MODAL_SELECT_NAVIGATION_TOOLTIPS'.
+src/subapps/dxf-viewer/config/modal-select-old.ts(1360,10): error TS2304: Cannot find name 'MODAL_SELECT_NAVIGATION_FILTER_CATEGORIES'.
+src/subapps/dxf-viewer/config/modal-select/core/styles/select-styles.ts(55,75): error TS2551: Property 'BORDER_ERROR_SECONDARY' does not exist on type '{ readonly BG_PRIMARY: "bg-background"; readonly BG_SECONDARY: "bg-muted"; readonly BG_TERTIARY: "bg-card"; readonly BG_HOVER: "hover:bg-gray-600"; readonly TEXT_PRIMARY: "text-white"; ... 23 more ...; readonly FOCUS_RING: "blue-400"; }'. Did you mean 'BORDER_SECONDARY'?
+src/subapps/dxf-viewer/config/modal-select/core/styles/select-styles.ts(56,68): error TS2551: Property 'BORDER_ERROR_SECONDARY' does not exist on type '{ readonly BG_PRIMARY: "bg-background"; readonly BG_SECONDARY: "bg-muted"; readonly BG_TERTIARY: "bg-card"; readonly BG_HOVER: "hover:bg-gray-600"; readonly TEXT_PRIMARY: "text-white"; ... 23 more ...; readonly FOCUS_RING: "blue-400"; }'. Did you mean 'BORDER_SECONDARY'?
+src/subapps/dxf-viewer/config/modal-select/core/styles/select-styles.ts(63,71): error TS2551: Property 'BORDER_WARNING_SECONDARY' does not exist on type '{ readonly BG_PRIMARY: "bg-background"; readonly BG_SECONDARY: "bg-muted"; readonly BG_TERTIARY: "bg-card"; readonly BG_HOVER: "hover:bg-gray-600"; readonly TEXT_PRIMARY: "text-white"; ... 23 more ...; readonly FOCUS_RING: "blue-400"; }'. Did you mean 'BORDER_SECONDARY'?
+src/subapps/dxf-viewer/config/modal-select/core/styles/select-styles.ts(64,64): error TS2551: Property 'BORDER_WARNING_SECONDARY' does not exist on type '{ readonly BG_PRIMARY: "bg-background"; readonly BG_SECONDARY: "bg-muted"; readonly BG_TERTIARY: "bg-card"; readonly BG_HOVER: "hover:bg-gray-600"; readonly TEXT_PRIMARY: "text-white"; ... 23 more ...; readonly FOCUS_RING: "blue-400"; }'. Did you mean 'BORDER_SECONDARY'?
+src/subapps/dxf-viewer/config/settings-config.ts(134,27): error TS2307: Cannot find module '../ui/components/dxf-settings/DxfSettingsPanel' or its corresponding type declarations.
+src/subapps/dxf-viewer/config/settings-config.ts(142,27): error TS2307: Cannot find module '../ui/hooks/useConsolidatedSettings' or its corresponding type declarations.
+src/subapps/dxf-viewer/contexts/CanvasContext.tsx(5,49): error TS2307: Cannot find module '../canvas/OverlayCanvasCore' or its corresponding type declarations.
+src/subapps/dxf-viewer/contexts/CanvasContext.tsx(6,15): error TS2305: Module '"../types/scene"' has no exported member 'ViewTransform'.
+src/subapps/dxf-viewer/contexts/LineConstants.tsx(76,15): error TS2304: Cannot find name 'LineType'.
+src/subapps/dxf-viewer/contexts/LineConstants.tsx(82,14): error TS2304: Cannot find name 'LineCapStyle'.
+src/subapps/dxf-viewer/contexts/LineConstants.tsx(83,15): error TS2304: Cannot find name 'LineJoinStyle'.
+src/subapps/dxf-viewer/contexts/LineConstants.tsx(86,16): error TS2304: Cannot find name 'LineType'.
+src/subapps/dxf-viewer/contexts/LineConstants.tsx(90,16): error TS2304: Cannot find name 'LineType'.
+src/subapps/dxf-viewer/contexts/LineSettingsContext.tsx(7,33): error TS2307: Cannot find module '../providers/ConfigurationProvider' or its corresponding type declarations.
+src/subapps/dxf-viewer/contexts/ProjectHierarchyContext.tsx(154,49): error TS7006: Parameter 'unique' implicitly has an 'any' type.
+src/subapps/dxf-viewer/contexts/ProjectHierarchyContext.tsx(154,57): error TS7006: Parameter 'company' implicitly has an 'any' type.
+src/subapps/dxf-viewer/contexts/ProjectHierarchyContext.tsx(156,43): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/subapps/dxf-viewer/contexts/ProjectHierarchyContext.tsx(158,45): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/subapps/dxf-viewer/contexts/ProjectHierarchyContext.tsx(168,30): error TS7006: Parameter 'u' implicitly has an 'any' type.
+src/subapps/dxf-viewer/contexts/ProjectHierarchyContext.tsx(260,53): error TS7006: Parameter 'project' implicitly has an 'any' type.
+src/subapps/dxf-viewer/contexts/TextSettingsContext.tsx(5,33): error TS2307: Cannot find module '../providers/ConfigurationProvider' or its corresponding type declarations.
+src/subapps/dxf-viewer/core/spatial/GridSpatialIndex.ts(37,24): error TS1361: 'SpatialIndexType' cannot be used as a value because it was imported using 'import type'.
+src/subapps/dxf-viewer/core/spatial/index.ts(52,43): error TS2304: Cannot find name 'SpatialBounds'.
+src/subapps/dxf-viewer/core/spatial/index.ts(61,37): error TS2304: Cannot find name 'SpatialItem'.
+src/subapps/dxf-viewer/core/spatial/ISpatialIndex.ts(273,19): error TS2391: Function implementation is missing or not immediately following the declaration.
+src/subapps/dxf-viewer/core/spatial/ISpatialIndex.ts(274,19): error TS2391: Function implementation is missing or not immediately following the declaration.
+src/subapps/dxf-viewer/core/spatial/ISpatialIndex.ts(275,19): error TS2391: Function implementation is missing or not immediately following the declaration.
+src/subapps/dxf-viewer/core/spatial/ISpatialIndex.ts(276,19): error TS2391: Function implementation is missing or not immediately following the declaration.
+src/subapps/dxf-viewer/core/spatial/ISpatialIndex.ts(277,19): error TS2391: Function implementation is missing or not immediately following the declaration.
+src/subapps/dxf-viewer/core/spatial/ISpatialIndex.ts(278,19): error TS2391: Function implementation is missing or not immediately following the declaration.
+src/subapps/dxf-viewer/core/spatial/QuadTreeSpatialIndex.ts(38,24): error TS1361: 'SpatialIndexType' cannot be used as a value because it was imported using 'import type'.
+src/subapps/dxf-viewer/debug/DebugToolbar.tsx(291,149): error TS2551: Property 'PRIMARY_BUTTON' does not exist on type '{ readonly LIGHT: "hover:bg-card dark:hover:bg-slate-800/50"; readonly GRAY_LIGHT: "hover:bg-gray-100 dark:hover:bg-slate-800/30"; readonly MUTED: "hover:bg-muted/50"; readonly ACCENT: "hover:bg-accent/50"; ... 34 more ...; readonly GRADIENT_PURPLE_PINK: "bg-gradient-to-br from-purple-500 via-pink-500 to-purple-600"...'. Did you mean 'GRAY_BUTTON'?
+src/subapps/dxf-viewer/debug/DebugToolbar.tsx(323,149): error TS2551: Property 'PRIMARY_BUTTON' does not exist on type '{ readonly LIGHT: "hover:bg-card dark:hover:bg-slate-800/50"; readonly GRAY_LIGHT: "hover:bg-gray-100 dark:hover:bg-slate-800/30"; readonly MUTED: "hover:bg-muted/50"; readonly ACCENT: "hover:bg-accent/50"; ... 34 more ...; readonly GRADIENT_PURPLE_PINK: "bg-gradient-to-br from-purple-500 via-pink-500 to-purple-600"...'. Did you mean 'GRAY_BUTTON'?
+src/subapps/dxf-viewer/debug/DebugToolbar.tsx(381,149): error TS2551: Property 'PRIMARY_BUTTON' does not exist on type '{ readonly LIGHT: "hover:bg-card dark:hover:bg-slate-800/50"; readonly GRAY_LIGHT: "hover:bg-gray-100 dark:hover:bg-slate-800/30"; readonly MUTED: "hover:bg-muted/50"; readonly ACCENT: "hover:bg-accent/50"; ... 34 more ...; readonly GRADIENT_PURPLE_PINK: "bg-gradient-to-br from-purple-500 via-pink-500 to-purple-600"...'. Did you mean 'GRAY_BUTTON'?
+src/subapps/dxf-viewer/debug/DebugToolbar.tsx(424,149): error TS2551: Property 'PRIMARY_BUTTON' does not exist on type '{ readonly LIGHT: "hover:bg-card dark:hover:bg-slate-800/50"; readonly GRAY_LIGHT: "hover:bg-gray-100 dark:hover:bg-slate-800/30"; readonly MUTED: "hover:bg-muted/50"; readonly ACCENT: "hover:bg-accent/50"; ... 34 more ...; readonly GRADIENT_PURPLE_PINK: "bg-gradient-to-br from-purple-500 via-pink-500 to-purple-600"...'. Did you mean 'GRAY_BUTTON'?
+src/subapps/dxf-viewer/debug/DebugToolbar.tsx(502,149): error TS2551: Property 'PRIMARY_BUTTON' does not exist on type '{ readonly LIGHT: "hover:bg-card dark:hover:bg-slate-800/50"; readonly GRAY_LIGHT: "hover:bg-gray-100 dark:hover:bg-slate-800/30"; readonly MUTED: "hover:bg-muted/50"; readonly ACCENT: "hover:bg-accent/50"; ... 34 more ...; readonly GRADIENT_PURPLE_PINK: "bg-gradient-to-br from-purple-500 via-pink-500 to-purple-600"...'. Did you mean 'GRAY_BUTTON'?
+src/subapps/dxf-viewer/debug/grid-workflow-test.ts(5,10): error TS2300: Duplicate identifier 'UI_COLORS'.
+src/subapps/dxf-viewer/debug/grid-workflow-test.ts(14,10): error TS2300: Duplicate identifier 'UI_COLORS'.
+src/subapps/dxf-viewer/debug/loggers/SnapDebugLogger.ts(133,7): error TS2740: Type 'SnapOrchestratorStats' is missing the following properties from type 'SnapEngineStats': totalSnapAttempts, successfulSnaps, snapsByType, averageSearchTime, and 2 more.
+src/subapps/dxf-viewer/debug/RulerDebugOverlay.ts(55,19): error TS2540: Cannot assign to 'enabled' because it is a read-only property.
+src/subapps/dxf-viewer/debug/RulerDebugOverlay.ts(65,19): error TS2540: Cannot assign to 'enabled' because it is a read-only property.
+src/subapps/dxf-viewer/debug/store-sync-test.ts(657,35): error TS2345: Argument of type '{ line: () => { enabled: boolean; lineType: "solid"; lineWidth: number; color: any; opacity: number; dashScale: number; dashOffset: number; lineCap: "round"; lineJoin: "round"; breakAtCenter: boolean; ... 8 more ...; activeTemplate: null; }; text: () => { ...; }; grip: () => { ...; }; }' is not assignable to parameter of type 'EffectiveSettingsGetter'.
+  The types returned by 'grip(...)' are incompatible between these types.
+    Property 'showGrips' is missing in type '{ enabled: boolean; gripSize: number; pickBoxSize: number; apertureSize: number; opacity: number; colors: { cold: any; warm: any; hot: any; contour: any; }; showAperture: boolean; multiGripEdit: boolean; ... 6 more ...; maxGripsPerEntity: number; }' but required in type 'GripSettings'.
+src/subapps/dxf-viewer/debug/TestResultsModal.tsx(56,62): error TS2345: Argument of type '"active"' is not assignable to parameter of type '"error" | "default" | "medium" | "info" | "success" | "warning" | "muted" | "subtle" | "critical" | "high" | "low"'.
+src/subapps/dxf-viewer/debug/TestResultsModal.tsx(56,101): error TS2345: Argument of type '"active"' is not assignable to parameter of type '"error" | "default" | "info" | "success" | "warning" | "muted" | "subtle"'.
+src/subapps/dxf-viewer/debug/TestResultsModal.tsx(374,73): error TS2304: Cannot find name 'getStatusBorder'.
+src/subapps/dxf-viewer/debug/TestResultsModal.tsx(392,49): error TS2304: Cannot find name 'getStatusBorder'.
+src/subapps/dxf-viewer/debug/TestResultsModal.tsx(392,79): error TS2304: Cannot find name 'getDirectionalBorder'.
+src/subapps/dxf-viewer/hooks/common/useProSnapIntegration.ts(7,10): error TS2724: '"../../systems/rulers-grid/config"' has no exported member named 'getGridSettings'. Did you mean 'GridSettings'?
+src/subapps/dxf-viewer/hooks/common/useProSnapIntegration.ts(113,5): error TS2739: Type '{ enabled: boolean; modes: ExtendedSnapType[]; entityCount: number; lastUpdate: number; }' is missing the following properties from type '{ enabledModes: number; totalEntities: number; lastUpdate: number; }': enabledModes, totalEntities
+src/subapps/dxf-viewer/hooks/common/useToolbarState.ts(13,38): error TS2307: Cannot find module '../../types/measurements' or its corresponding type declarations.
+src/subapps/dxf-viewer/hooks/drawing/useDrawingHandlers.ts(152,27): error TS2345: Argument of type '(LineEntity & Pick<BaseEntity, "name">) | (PolylineEntity & Pick<BaseEntity, "name">) | (CircleEntity & Pick<...>) | ... 9 more ... | ExtendedLineEntity' is not assignable to parameter of type 'Entity'.
+  Type 'ExtendedPolylineEntity' is not assignable to type 'Entity'.
+    Type 'ExtendedPolylineEntity' is not assignable to type 'PolylineEntity & Pick<BaseEntity, "name">'.
+      Type 'ExtendedPolylineEntity' is not assignable to type 'PolylineEntity'.
+        Types of property 'previewGripPoints' are incompatible.
+          Type 'PreviewGripPoint[] | undefined' is not assignable to type 'Point2D[] | undefined'.
+            Type 'PreviewGripPoint[]' is not assignable to type 'Point2D[]'.
+              Type 'PreviewGripPoint' is missing the following properties from type 'Point2D': x, y
+src/subapps/dxf-viewer/hooks/drawing/useEntityCreation.ts(70,55): error TS2304: Cannot find name 'layerManager'.
+src/subapps/dxf-viewer/hooks/drawing/useUnifiedDrawing.ts(55,18): error TS2430: Interface 'ExtendedPolylineEntity' incorrectly extends interface 'PolylineEntity'.
+  Types of property 'previewGripPoints' are incompatible.
+    Type 'PreviewGripPoint[] | undefined' is not assignable to type 'Point2D[] | undefined'.
+      Type 'PreviewGripPoint[]' is not assignable to type 'Point2D[]'.
+        Type 'PreviewGripPoint' is missing the following properties from type 'Point2D': x, y
+src/subapps/dxf-viewer/hooks/drawing/useUnifiedDrawing.ts(72,18): error TS2430: Interface 'ExtendedLineEntity' incorrectly extends interface 'LineEntity'.
+  Types of property 'previewGripPoints' are incompatible.
+    Type 'PreviewGripPoint[] | undefined' is not assignable to type 'Point2D[] | undefined'.
+      Type 'PreviewGripPoint[]' is not assignable to type 'Point2D[]'.
+        Type 'PreviewGripPoint' is missing the following properties from type 'Point2D': x, y
+src/subapps/dxf-viewer/hooks/drawing/useUnifiedDrawing.ts(449,41): error TS2345: Argument of type '{ entities: (Entity | PreviewPoint | ExtendedPolylineEntity | ExtendedLineEntity)[]; layers: Record<string, SceneLayer>; bounds: SceneBounds; units: "mm" | "cm" | "m" | "in" | "ft"; version?: string; }' is not assignable to parameter of type 'SceneModel'.
+  Types of property 'entities' are incompatible.
+    Type '(Entity | PreviewPoint | ExtendedPolylineEntity | ExtendedLineEntity)[]' is not assignable to type 'Entity[]'.
+      Type 'Entity | PreviewPoint | ExtendedPolylineEntity | ExtendedLineEntity' is not assignable to type 'Entity'.
+        Type 'ExtendedPolylineEntity' is not assignable to type 'Entity'.
+          Type 'ExtendedPolylineEntity' is not assignable to type 'PolylineEntity & Pick<BaseEntity, "name">'.
+            Type 'ExtendedPolylineEntity' is not assignable to type 'PolylineEntity'.
+              Types of property 'previewGripPoints' are incompatible.
+                Type 'PreviewGripPoint[] | undefined' is not assignable to type 'Point2D[] | undefined'.
+                  Type 'PreviewGripPoint[]' is not assignable to type 'Point2D[]'.
+                    Type 'PreviewGripPoint' is missing the following properties from type 'Point2D': x, y
+src/subapps/dxf-viewer/hooks/drawing/useUnifiedDrawing.ts(503,17): error TS2322: Type '{ preview: true; showEdgeDistances: true; showPreviewGrips: true; measurement: true; type: "polyline"; vertices: Point2D[]; closed?: boolean; lineWidth?: number; lineStyle?: string; id: string; ... 16 more ...; breakAtCenter?: boolean; }' is not assignable to type 'ExtendedPolylineEntity'.
+  Types of property 'previewGripPoints' are incompatible.
+    Type 'Point2D[] | undefined' is not assignable to type 'PreviewGripPoint[] | undefined'.
+      Type 'Point2D[]' is not assignable to type 'PreviewGripPoint[]'.
+        Type 'Point2D' is missing the following properties from type 'PreviewGripPoint': position, type
+src/subapps/dxf-viewer/hooks/drawing/useUnifiedDrawing.ts(705,43): error TS2345: Argument of type '{ entities: ((LineEntity & Pick<BaseEntity, "name">) | (PolylineEntity & Pick<BaseEntity, "name">) | (CircleEntity & Pick<...>) | ... 9 more ... | ExtendedLineEntity)[]; layers: Record<string, SceneLayer>; bounds: SceneBounds; units: "mm" | "cm" | "m" | "in" | "ft"; version?: string; }' is not assignable to parameter of type 'SceneModel'.
+  Types of property 'entities' are incompatible.
+    Type '((LineEntity & Pick<BaseEntity, "name">) | (PolylineEntity & Pick<BaseEntity, "name">) | (CircleEntity & Pick<...>) | ... 9 more ... | ExtendedLineEntity)[]' is not assignable to type 'Entity[]'.
+      Type '(LineEntity & Pick<BaseEntity, "name">) | (PolylineEntity & Pick<BaseEntity, "name">) | (CircleEntity & Pick<...>) | ... 9 more ... | ExtendedLineEntity' is not assignable to type 'Entity'.
+        Type 'ExtendedPolylineEntity' is not assignable to type 'Entity'.
+          Type 'ExtendedPolylineEntity' is not assignable to type 'PolylineEntity & Pick<BaseEntity, "name">'.
+            Type 'ExtendedPolylineEntity' is not assignable to type 'PolylineEntity'.
+              Types of property 'previewGripPoints' are incompatible.
+                Type 'PreviewGripPoint[] | undefined' is not assignable to type 'Point2D[] | undefined'.
+                  Type 'PreviewGripPoint[]' is not assignable to type 'Point2D[]'.
+                    Type 'PreviewGripPoint' is missing the following properties from type 'Point2D': x, y
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(338,16): error TS18048: 'corner1' is possibly 'undefined'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(339,16): error TS18048: 'corner1' is possibly 'undefined'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(347,16): error TS18048: 'corner2' is possibly 'undefined'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(348,16): error TS18048: 'corner2' is possibly 'undefined'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(355,25): error TS18048: 'corner1' is possibly 'undefined'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(355,39): error TS18048: 'corner1' is possibly 'undefined'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(356,25): error TS18048: 'corner2' is possibly 'undefined'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(356,49): error TS18048: 'corner2' is possibly 'undefined'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(362,25): error TS18048: 'corner1' is possibly 'undefined'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(362,49): error TS18048: 'corner1' is possibly 'undefined'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(363,25): error TS18048: 'corner2' is possibly 'undefined'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(363,39): error TS18048: 'corner2' is possibly 'undefined'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(372,25): error TS18048: 'draggedGrip.gripIndex' is possibly 'undefined'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(378,25): error TS18048: 'corner1' is possibly 'undefined'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(378,39): error TS18048: 'corner1' is possibly 'undefined'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(384,25): error TS18048: 'corner2' is possibly 'undefined'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(384,49): error TS18048: 'corner2' is possibly 'undefined'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(390,25): error TS18048: 'corner2' is possibly 'undefined'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(390,39): error TS18048: 'corner2' is possibly 'undefined'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(396,25): error TS18048: 'corner1' is possibly 'undefined'.
+src/subapps/dxf-viewer/hooks/grips/useEntityGripInteraction.ts(396,49): error TS18048: 'corner1' is possibly 'undefined'.
+src/subapps/dxf-viewer/hooks/grips/useGripSettings.ts(12,35): error TS2307: Cannot find module '../../../utils/overrideGuard' or its corresponding type declarations.
+src/subapps/dxf-viewer/hooks/interfaces/useCanvasOperations.ts(8,15): error TS2305: Module '"../../types/scene"' has no exported member 'Point2D'.
+src/subapps/dxf-viewer/hooks/interfaces/useCanvasOperations.ts(8,24): error TS2305: Module '"../../types/scene"' has no exported member 'ViewTransform'.
+src/subapps/dxf-viewer/hooks/interfaces/useCanvasOperations.ts(58,26): error TS2551: Property 'setTransform' does not exist on type 'DxfCanvasImperativeAPI'. Did you mean 'getTransform'?
+src/subapps/dxf-viewer/hooks/interfaces/useCanvasOperations.ts(59,22): error TS2551: Property 'setTransform' does not exist on type 'DxfCanvasImperativeAPI'. Did you mean 'getTransform'?
+src/subapps/dxf-viewer/hooks/scene/useSceneState.ts(54,48): error TS2304: Cannot find name 'AnySceneEntity'.
+src/subapps/dxf-viewer/hooks/test-new-hooks.tsx(10,39): error TS2307: Cannot find module '../providers/ConfigurationProvider' or its corresponding type declarations.
+src/subapps/dxf-viewer/hooks/useDxfViewerState.ts(11,34): error TS2307: Cannot find module './useUnifiedDrawing' or its corresponding type declarations.
+src/subapps/dxf-viewer/hooks/useDxfViewerState.ts(46,5): error TS2345: Argument of type 'SceneModel | null' is not assignable to parameter of type 'SceneModel | undefined'.
+  Type 'null' is not assignable to type 'SceneModel | undefined'.
+src/subapps/dxf-viewer/hooks/useEntityStyles.ts(82,12): error TS2352: Conversion of type 'LineSettings' to type 'EntityStylesHookResult<EntitySettingsMap[T]>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'LineSettings' is missing the following properties from type 'EntityStylesHookResult<EntitySettingsMap[T]>': settings, isOverridden, update, reset
+src/subapps/dxf-viewer/hooks/useEntityStyles.ts(84,12): error TS2352: Conversion of type 'TextSettings' to type 'EntityStylesHookResult<EntitySettingsMap[T]>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'TextSettings' is missing the following properties from type 'EntityStylesHookResult<EntitySettingsMap[T]>': settings, isOverridden, update, reset
+src/subapps/dxf-viewer/hooks/useEntityStyles.ts(86,12): error TS2352: Conversion of type 'GripSettings' to type 'EntityStylesHookResult<EntitySettingsMap[T]>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'GripSettings' is missing the following properties from type 'EntityStylesHookResult<EntitySettingsMap[T]>': settings, isOverridden, update, reset
+src/subapps/dxf-viewer/hooks/useKeyboardShortcuts.ts(71,102): error TS2551: Property 'selectedOverlayId' does not exist on type '{ getByLevel: (levelId: string) => Overlay[]; add: (overlay: CreateOverlayData) => Promise<string>; update: (id: string, patch: Partial<Pick<Overlay, "style" | ... 4 more ... | "linked">>) => Promise<...>; remove: (id: string) => Promise<...>; setSelectedOverlay: (id: string | null) => void; }'. Did you mean 'setSelectedOverlay'?
+src/subapps/dxf-viewer/hooks/useKeyboardShortcuts.ts(73,42): error TS2551: Property 'selectedOverlayId' does not exist on type '{ getByLevel: (levelId: string) => Overlay[]; add: (overlay: CreateOverlayData) => Promise<string>; update: (id: string, patch: Partial<Pick<Overlay, "style" | ... 4 more ... | "linked">>) => Promise<...>; remove: (id: string) => Promise<...>; setSelectedOverlay: (id: string | null) => void; }'. Did you mean 'setSelectedOverlay'?
+src/subapps/dxf-viewer/hooks/useKeyboardShortcuts.ts(115,30): error TS2554: Expected 0 arguments, but got 1.
+src/subapps/dxf-viewer/hooks/useKeyboardShortcuts.ts(117,31): error TS2554: Expected 0 arguments, but got 1.
+src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts(16,7): error TS2739: Type '{ 'for-sale': string; 'for-rent': string; reserved: string; sold: string; landowner: string; }' is missing the following properties from type 'Record<PropertyStatus, string>': rented, "under-negotiation", "coming-soon", "off-market", unavailable
+src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts(65,5): error TS2353: Object literal may only specify known properties, and 'enabled' does not exist in type 'UseSnapManagerOptions'.
+src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts(103,10): error TS18047: 'levelManager' is possibly 'null'.
+src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts(103,23): error TS2551: Property 'currentLevelId' does not exist on type '{ getCurrentLevel: () => { id: string; } | null; setLevelScene: (levelId: string, scene: SceneModel) => void; getLevelScene: (levelId: string) => SceneModel | null; }'. Did you mean 'getCurrentLevel'?
+src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts(113,31): error TS18047: 'overlayStore' is possibly 'null'.
+src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts(114,18): error TS18047: 'levelManager' is possibly 'null'.
+src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts(114,31): error TS2551: Property 'currentLevelId' does not exist on type '{ getCurrentLevel: () => { id: string; } | null; setLevelScene: (levelId: string, scene: SceneModel) => void; getLevelScene: (levelId: string) => SceneModel | null; }'. Did you mean 'getCurrentLevel'?
+src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts(124,7): error TS18047: 'overlayStore' is possibly 'null'.
+src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts(130,35): error TS18047: 'levelManager' is possibly 'null'.
+src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts(130,48): error TS2551: Property 'currentLevelId' does not exist on type '{ getCurrentLevel: () => { id: string; } | null; setLevelScene: (levelId: string, scene: SceneModel) => void; getLevelScene: (levelId: string) => SceneModel | null; }'. Did you mean 'getCurrentLevel'?
+src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts(135,46): error TS18047: 'levelManager' is possibly 'null'.
+src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts(135,59): error TS2551: Property 'currentLevelId' does not exist on type '{ getCurrentLevel: () => { id: string; } | null; setLevelScene: (levelId: string, scene: SceneModel) => void; getLevelScene: (levelId: string) => SceneModel | null; }'. Did you mean 'getCurrentLevel'?
+src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts(146,5): error TS18047: 'overlayStore' is possibly 'null'.
+src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts(152,46): error TS18047: 'levelManager' is possibly 'null'.
+src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts(152,59): error TS2551: Property 'currentLevelId' does not exist on type '{ getCurrentLevel: () => { id: string; } | null; setLevelScene: (levelId: string, scene: SceneModel) => void; getLevelScene: (levelId: string) => SceneModel | null; }'. Did you mean 'getCurrentLevel'?
+src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts(159,5): error TS18047: 'overlayStore' is possibly 'null'.
+src/subapps/dxf-viewer/hooks/useSelectionSystem.ts(22,10): error TS2352: Conversion of type 'SelectionContextType' to type 'SelectionState & SelectionActions & FilterState & FilterActions & ViewActions' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'SelectionContextType' is not comparable to type 'FilterState'.
+    Types of property 'visibleStatuses' are incompatible.
+      Type 'PropertyStatus[] | undefined' is not comparable to type 'Set<PropertyStatus>'.
+        Type 'PropertyStatus[]' is missing the following properties from type 'Set<PropertyStatus>': add, clear, delete, has, and 9 more.
+src/subapps/dxf-viewer/integration/types.ts(14,18): error TS2430: Interface 'DXFViewerLayoutProps' incorrectly extends interface '{ gripSettings: GripSettings; activeTool: ToolType; setActiveTool: Dispatch<SetStateAction<ToolType>>; handleToolChange: (tool: ToolType) => void; ... 31 more ...; handleFileImport: (file: File) => Promise<...>; }'.
+  Types of property 'snapEnabled' are incompatible.
+    Type 'boolean | undefined' is not assignable to type 'boolean'.
+      Type 'undefined' is not assignable to type 'boolean'.
+src/subapps/dxf-viewer/io/dxf-import.ts(5,30): error TS2312: An interface can only extend an object type or intersection of object types with statically known members.
+src/subapps/dxf-viewer/io/dxf-import.ts(11,34): error TS2312: An interface can only extend an object type or intersection of object types with statically known members.
+src/subapps/dxf-viewer/io/dxf-import.ts(16,32): error TS2312: An interface can only extend an object type or intersection of object types with statically known members.
+src/subapps/dxf-viewer/io/dxf-import.ts(22,29): error TS2312: An interface can only extend an object type or intersection of object types with statically known members.
+src/subapps/dxf-viewer/io/dxf-import.ts(28,30): error TS2312: An interface can only extend an object type or intersection of object types with statically known members.
+src/subapps/dxf-viewer/io/dxf-import.ts(35,31): error TS2312: An interface can only extend an object type or intersection of object types with statically known members.
+src/subapps/dxf-viewer/jest.config.ts(137,7): error TS2353: Object literal may only specify known properties, and 'testTimeout' does not exist in type 'InitialProjectOptions'.
+src/subapps/dxf-viewer/jest.config.ts(145,7): error TS2353: Object literal may only specify known properties, and 'testTimeout' does not exist in type 'InitialProjectOptions'.
+src/subapps/dxf-viewer/jest.config.ts(154,7): error TS2353: Object literal may only specify known properties, and 'testTimeout' does not exist in type 'InitialProjectOptions'.
+src/subapps/dxf-viewer/layout/CadDock.tsx(132,9): error TS2353: Object literal may only specify known properties, and 'contentComponent' does not exist in type '{ params?: Parameters | undefined; id: string; title?: string | undefined; component: string; tabComponent?: string | undefined; renderer?: DockviewPanelRenderer | undefined; inactive?: boolean | undefined; initialWidth?: number | undefined; initialHeight?: number | undefined; } & Partial<...> & Partial<...>'.
+src/subapps/dxf-viewer/layout/CadDock.tsx(140,9): error TS2353: Object literal may only specify known properties, and 'contentComponent' does not exist in type '{ params?: Parameters | undefined; id: string; title?: string | undefined; component: string; tabComponent?: string | undefined; renderer?: DockviewPanelRenderer | undefined; inactive?: boolean | undefined; initialWidth?: number | undefined; initialHeight?: number | undefined; } & Partial<...> & Partial<...>'.
+src/subapps/dxf-viewer/layout/CadDock.tsx(148,9): error TS2353: Object literal may only specify known properties, and 'contentComponent' does not exist in type '{ params?: Parameters | undefined; id: string; title?: string | undefined; component: string; tabComponent?: string | undefined; renderer?: DockviewPanelRenderer | undefined; inactive?: boolean | undefined; initialWidth?: number | undefined; initialHeight?: number | undefined; } & Partial<...> & Partial<...>'.
+src/subapps/dxf-viewer/layout/CadDock.tsx(156,9): error TS2353: Object literal may only specify known properties, and 'contentComponent' does not exist in type '{ params?: Parameters | undefined; id: string; title?: string | undefined; component: string; tabComponent?: string | undefined; renderer?: DockviewPanelRenderer | undefined; inactive?: boolean | undefined; initialWidth?: number | undefined; initialHeight?: number | undefined; } & Partial<...> & Partial<...>'.
+src/subapps/dxf-viewer/layout/FloatingPanelsSection.tsx(178,25): error TS2345: Argument of type '"LAYOUT_DEBUG_SYSTEM"' is not assignable to parameter of type '"COLLABORATION_OVERLAY" | "DXF_CANVAS_OVERLAY_INTEGRATION" | "ADVANCED_SNAPPING" | "MULTI_LAYER_GRIPS" | "ENTERPRISE_SETTINGS_SHADOW_MODE" | "ENTERPRISE_SETTINGS_PRODUCTION_MODE" | "ENABLE_SETTINGS_SYNC"'.
+src/subapps/dxf-viewer/layout/SidebarSection.tsx(60,40): error TS2304: Cannot find name 'ToolType'.
+src/subapps/dxf-viewer/managers/SceneUpdateManager.ts(10,15): error TS2305: Module '"../types/scene"' has no exported member 'EntityRenderer'.
+src/subapps/dxf-viewer/managers/SceneUpdateManager.ts(153,22): error TS2345: Argument of type '{ entities: ((LineEntity & Pick<BaseEntity, "name">) | (PolylineEntity & Pick<BaseEntity, "name">) | (CircleEntity & Pick<...>) | ... 93 more ... | { ...; })[]; layers: Record<string, SceneLayer>; version: number; metadata?: Record<string, unknown>; }' is not assignable to parameter of type 'Scene'.
+  Types of property 'entities' are incompatible.
+    Type '((LineEntity & Pick<BaseEntity, "name">) | (PolylineEntity & Pick<BaseEntity, "name">) | (CircleEntity & Pick<...>) | ... 93 more ... | { ...; })[]' is not assignable to type 'Entity[]'.
+      Type '(LineEntity & Pick<BaseEntity, "name">) | (PolylineEntity & Pick<BaseEntity, "name">) | (CircleEntity & Pick<...>) | ... 93 more ... | { ...; }' is not assignable to type 'Entity'.
+        Type '{ type: "line" | "polyline"; vertices?: Point2D[] | undefined; closed?: boolean | undefined; lineWidth?: number; lineStyle?: string; id: string; name?: string; layer?: string; color?: string; selected?: boolean; ... 18 more ...; end: Point2D; }' is not assignable to type 'Entity'.
+          Type '{ type: "line" | "polyline"; vertices?: Point2D[] | undefined; closed?: boolean | undefined; lineWidth?: number; lineStyle?: string; id: string; name?: string; layer?: string; color?: string; selected?: boolean; ... 18 more ...; end: Point2D; }' is not assignable to type '(LineEntity & Pick<BaseEntity, "name">) | (PolylineEntity & Pick<BaseEntity, "name">)'.
+            Type '{ type: "line" | "polyline"; vertices?: Point2D[] | undefined; closed?: boolean | undefined; lineWidth?: number; lineStyle?: string; id: string; name?: string; layer?: string; color?: string; selected?: boolean; ... 18 more ...; end: Point2D; }' is not assignable to type 'PolylineEntity & Pick<BaseEntity, "name">'.
+              Type '{ type: "line" | "polyline"; vertices?: Point2D[] | undefined; closed?: boolean | undefined; lineWidth?: number; lineStyle?: string; id: string; name?: string; layer?: string; color?: string; selected?: boolean; ... 18 more ...; end: Point2D; }' is not assignable to type 'PolylineEntity'.
+                Types of property 'type' are incompatible.
+                  Type '"line" | "polyline"' is not assignable to type '"polyline"'.
+                    Type '"line"' is not assignable to type '"polyline"'.
+src/subapps/dxf-viewer/overlays/overlay-adapter.ts(20,27): error TS2352: Conversion of type '[number, number][]' to type 'number[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '[number, number]' is not comparable to type 'number'.
+src/subapps/dxf-viewer/overlays/overlay-store.tsx(62,13): error TS18046: 'polygon' is of type 'unknown'.
+src/subapps/dxf-viewer/pipeline/useDxfPipeline.ts(74,45): error TS2345: Argument of type 'SceneModel | null' is not assignable to parameter of type 'SceneModel'.
+  Type 'null' is not assignable to type 'SceneModel'.
+src/subapps/dxf-viewer/providers/DxfSettingsProvider.tsx(1772,11): error TS7053: Element implicitly has an 'any' type because expression of type 'StorageMode' can't be used to index type '{ draft?: Partial<LineSettings> | undefined; hover?: Partial<LineSettings> | undefined; selection?: Partial<LineSettings> | undefined; completion?: Partial<...> | undefined; preview?: Partial<...> | undefined; }'.
+  Property 'normal' does not exist on type '{ draft?: Partial<LineSettings> | undefined; hover?: Partial<LineSettings> | undefined; selection?: Partial<LineSettings> | undefined; completion?: Partial<...> | undefined; preview?: Partial<...> | undefined; }'.
+src/subapps/dxf-viewer/providers/DxfSettingsProvider.tsx(1773,38): error TS7053: Element implicitly has an 'any' type because expression of type 'StorageMode' can't be used to index type '{ draft?: Partial<LineSettings> | undefined; hover?: Partial<LineSettings> | undefined; selection?: Partial<LineSettings> | undefined; completion?: Partial<...> | undefined; preview?: Partial<...> | undefined; }'.
+  Property 'normal' does not exist on type '{ draft?: Partial<LineSettings> | undefined; hover?: Partial<LineSettings> | undefined; selection?: Partial<LineSettings> | undefined; completion?: Partial<...> | undefined; preview?: Partial<...> | undefined; }'.
+src/subapps/dxf-viewer/providers/DxfSettingsProvider.tsx(1780,11): error TS7053: Element implicitly has an 'any' type because expression of type 'StorageMode' can't be used to index type '{ draft: boolean; hover: boolean; selection: boolean; completion: boolean; }'.
+  Property 'normal' does not exist on type '{ draft: boolean; hover: boolean; selection: boolean; completion: boolean; }'.
+src/subapps/dxf-viewer/providers/DxfSettingsProvider.tsx(1780,53): error TS7053: Element implicitly has an 'any' type because expression of type 'StorageMode' can't be used to index type '{ draft?: Partial<LineSettings> | undefined; hover?: Partial<LineSettings> | undefined; selection?: Partial<LineSettings> | undefined; completion?: Partial<...> | undefined; preview?: Partial<...> | undefined; }'.
+  Property 'normal' does not exist on type '{ draft?: Partial<LineSettings> | undefined; hover?: Partial<LineSettings> | undefined; selection?: Partial<LineSettings> | undefined; completion?: Partial<...> | undefined; preview?: Partial<...> | undefined; }'.
+src/subapps/dxf-viewer/providers/DxfSettingsProvider.tsx(1781,38): error TS7053: Element implicitly has an 'any' type because expression of type 'StorageMode' can't be used to index type '{ draft?: Partial<LineSettings> | undefined; hover?: Partial<LineSettings> | undefined; selection?: Partial<LineSettings> | undefined; completion?: Partial<...> | undefined; preview?: Partial<...> | undefined; }'.
+  Property 'normal' does not exist on type '{ draft?: Partial<LineSettings> | undefined; hover?: Partial<LineSettings> | undefined; selection?: Partial<LineSettings> | undefined; completion?: Partial<...> | undefined; preview?: Partial<...> | undefined; }'.
+src/subapps/dxf-viewer/providers/DxfSettingsProvider.tsx(1795,11): error TS7053: Element implicitly has an 'any' type because expression of type 'StorageMode' can't be used to index type '{ draft?: Partial<TextSettings> | undefined; preview?: Partial<TextSettings> | undefined; }'.
+  Property 'normal' does not exist on type '{ draft?: Partial<TextSettings> | undefined; preview?: Partial<TextSettings> | undefined; }'.
+src/subapps/dxf-viewer/providers/DxfSettingsProvider.tsx(1796,38): error TS7053: Element implicitly has an 'any' type because expression of type 'StorageMode' can't be used to index type '{ draft?: Partial<TextSettings> | undefined; preview?: Partial<TextSettings> | undefined; }'.
+  Property 'normal' does not exist on type '{ draft?: Partial<TextSettings> | undefined; preview?: Partial<TextSettings> | undefined; }'.
+src/subapps/dxf-viewer/providers/DxfSettingsProvider.tsx(1803,11): error TS7053: Element implicitly has an 'any' type because expression of type 'StorageMode' can't be used to index type '{ draft: boolean; }'.
+  Property 'normal' does not exist on type '{ draft: boolean; }'.
+src/subapps/dxf-viewer/providers/DxfSettingsProvider.tsx(1803,53): error TS7053: Element implicitly has an 'any' type because expression of type 'StorageMode' can't be used to index type '{ draft?: Partial<TextSettings> | undefined; preview?: Partial<TextSettings> | undefined; }'.
+  Property 'normal' does not exist on type '{ draft?: Partial<TextSettings> | undefined; preview?: Partial<TextSettings> | undefined; }'.
+src/subapps/dxf-viewer/providers/DxfSettingsProvider.tsx(1804,38): error TS7053: Element implicitly has an 'any' type because expression of type 'StorageMode' can't be used to index type '{ draft?: Partial<TextSettings> | undefined; preview?: Partial<TextSettings> | undefined; }'.
+  Property 'normal' does not exist on type '{ draft?: Partial<TextSettings> | undefined; preview?: Partial<TextSettings> | undefined; }'.
+src/subapps/dxf-viewer/providers/DxfSettingsProvider.tsx(1818,11): error TS7053: Element implicitly has an 'any' type because expression of type 'StorageMode' can't be used to index type '{ draft?: Partial<GripSettings> | undefined; preview?: Partial<GripSettings> | undefined; }'.
+  Property 'normal' does not exist on type '{ draft?: Partial<GripSettings> | undefined; preview?: Partial<GripSettings> | undefined; }'.
+src/subapps/dxf-viewer/providers/DxfSettingsProvider.tsx(1819,38): error TS7053: Element implicitly has an 'any' type because expression of type 'StorageMode' can't be used to index type '{ draft?: Partial<GripSettings> | undefined; preview?: Partial<GripSettings> | undefined; }'.
+  Property 'normal' does not exist on type '{ draft?: Partial<GripSettings> | undefined; preview?: Partial<GripSettings> | undefined; }'.
+src/subapps/dxf-viewer/providers/DxfSettingsProvider.tsx(1826,11): error TS7053: Element implicitly has an 'any' type because expression of type 'StorageMode' can't be used to index type '{ draft: boolean; }'.
+  Property 'normal' does not exist on type '{ draft: boolean; }'.
+src/subapps/dxf-viewer/providers/DxfSettingsProvider.tsx(1826,53): error TS7053: Element implicitly has an 'any' type because expression of type 'StorageMode' can't be used to index type '{ draft?: Partial<GripSettings> | undefined; preview?: Partial<GripSettings> | undefined; }'.
+  Property 'normal' does not exist on type '{ draft?: Partial<GripSettings> | undefined; preview?: Partial<GripSettings> | undefined; }'.
+src/subapps/dxf-viewer/providers/DxfSettingsProvider.tsx(1827,38): error TS7053: Element implicitly has an 'any' type because expression of type 'StorageMode' can't be used to index type '{ draft?: Partial<GripSettings> | undefined; preview?: Partial<GripSettings> | undefined; }'.
+  Property 'normal' does not exist on type '{ draft?: Partial<GripSettings> | undefined; preview?: Partial<GripSettings> | undefined; }'.
+src/subapps/dxf-viewer/providers/DxfSettingsProvider.tsx(2202,24): error TS7053: Element implicitly has an 'any' type because expression of type 'StorageMode' can't be used to index type '{ draft: boolean; hover: boolean; selection: boolean; completion: boolean; }'.
+  Property 'normal' does not exist on type '{ draft: boolean; hover: boolean; selection: boolean; completion: boolean; }'.
+src/subapps/dxf-viewer/rendering/canvas/core/CanvasSettings.ts(76,9): error TS2353: Object literal may only specify known properties, and 'length' does not exist in type 'CrosshairSettings'.
+src/subapps/dxf-viewer/rendering/canvas/core/CanvasSettings.ts(87,9): error TS2353: Object literal may only specify known properties, and 'strokeColor' does not exist in type 'UICursorSettings'.
+src/subapps/dxf-viewer/rendering/canvas/core/CanvasSettings.ts(95,9): error TS2353: Object literal may only specify known properties, and 'types' does not exist in type 'SnapSettings'.
+src/subapps/dxf-viewer/rendering/canvas/core/CanvasSettings.ts(104,9): error TS2353: Object literal may only specify known properties, and 'spacing' does not exist in type 'GridSettings'.
+src/subapps/dxf-viewer/rendering/canvas/core/CanvasSettings.ts(110,7): error TS2740: Type '{ enabled: true; visible: true; color: any; backgroundColor: any; textColor: any; fontSize: number; height: number; width: number; zIndex: number; }' is missing the following properties from type 'RulerSettings': showMajorTicks, showMinorTicks, majorTickColor, minorTickColor, and 13 more.
+src/subapps/dxf-viewer/rendering/core/EntityRendererComposite.ts(60,33): error TS2345: Argument of type 'PointRenderer' is not assignable to parameter of type 'BaseEntityRenderer'.
+  Types of property 'render' are incompatible.
+    Type '(entity: EntityModel, options?: RenderOptions) => void' is not assignable to type '(entity: BaseEntity, options: RenderOptions) => void'.
+      Types of parameters 'options' and 'options' are incompatible.
+        Type 'RenderOptions' has no properties in common with type 'RenderOptions'.
+src/subapps/dxf-viewer/rendering/core/EntityRendererComposite.ts(132,9): error TS2353: Object literal may only specify known properties, and 'targetEntityId' does not exist in type 'HitTestOptions'.
+src/subapps/dxf-viewer/rendering/entities/AngleMeasurementRenderer.ts(13,14): error TS2515: Non-abstract class 'AngleMeasurementRenderer' does not implement inherited abstract member hitTest from class 'BaseEntityRenderer'.
+src/subapps/dxf-viewer/rendering/entities/AngleMeasurementRenderer.ts(143,9): error TS2353: Object literal may only specify known properties, and 'state' does not exist in type 'GripInfo'.
+src/subapps/dxf-viewer/rendering/entities/AngleMeasurementRenderer.ts(150,9): error TS2353: Object literal may only specify known properties, and 'state' does not exist in type 'GripInfo'.
+src/subapps/dxf-viewer/rendering/entities/AngleMeasurementRenderer.ts(157,9): error TS2353: Object literal may only specify known properties, and 'state' does not exist in type 'GripInfo'.
+src/subapps/dxf-viewer/rendering/entities/ArcRenderer.ts(18,14): error TS2515: Non-abstract class 'ArcRenderer' does not implement inherited abstract member hitTest from class 'BaseEntityRenderer'.
+src/subapps/dxf-viewer/rendering/entities/ArcRenderer.ts(21,30): error TS2345: Argument of type 'BaseEntity' is not assignable to parameter of type 'Entity'.
+  Type 'BaseEntity' is not assignable to type 'AngleMeasurementEntity & Pick<BaseEntity, "name">'.
+    Type 'BaseEntity' is missing the following properties from type 'AngleMeasurementEntity': vertex, point1, point2, angle
+src/subapps/dxf-viewer/rendering/entities/BaseEntityRenderer.ts(87,7): error TS2353: Object literal may only specify known properties, and 'hovered' does not exist in type '{ hoveredGrip?: { entityId: string; gripIndex: number; } | undefined; selectedGrip?: { entityId: string; gripIndex: number; } | undefined; dragginGrip?: { entityId: string; gripIndex: number; } | undefined; }'.
+src/subapps/dxf-viewer/rendering/entities/CircleRenderer.ts(30,18): error TS2304: Cannot find name 'Entity'.
+src/subapps/dxf-viewer/rendering/entities/CircleRenderer.ts(145,20): error TS2304: Cannot find name 'Entity'.
+src/subapps/dxf-viewer/rendering/entities/EllipseRenderer.ts(16,14): error TS2515: Non-abstract class 'EllipseRenderer' does not implement inherited abstract member hitTest from class 'BaseEntityRenderer'.
+src/subapps/dxf-viewer/rendering/entities/EllipseRenderer.ts(132,7): error TS2353: Object literal may only specify known properties, and 'state' does not exist in type 'GripInfo'.
+src/subapps/dxf-viewer/rendering/entities/LineRenderer.ts(52,65): error TS2305: Module '"./shared/line-utils"' has no exported member 'renderLineWithTextCheck'.
+src/subapps/dxf-viewer/rendering/entities/LineRenderer.ts(55,14): error TS2515: Non-abstract class 'LineRenderer' does not implement inherited abstract member hitTest from class 'BaseEntityRenderer'.
+src/subapps/dxf-viewer/rendering/entities/LineRenderer.ts(56,18): error TS2304: Cannot find name 'Entity'.
+src/subapps/dxf-viewer/rendering/entities/LineRenderer.ts(121,20): error TS2304: Cannot find name 'Entity'.
+src/subapps/dxf-viewer/rendering/entities/LineRenderer.ts(139,7): error TS2353: Object literal may only specify known properties, and 'state' does not exist in type 'GripInfo'.
+src/subapps/dxf-viewer/rendering/entities/LineRenderer.ts(148,7): error TS2353: Object literal may only specify known properties, and 'state' does not exist in type 'GripInfo'.
+src/subapps/dxf-viewer/rendering/entities/PointRenderer.ts(2,29): error TS2307: Cannot find module '../../../types/scene' or its corresponding type declarations.
+src/subapps/dxf-viewer/rendering/entities/PointRenderer.ts(20,14): error TS2654: Non-abstract class 'PointRenderer' is missing implementations for the following members of 'BaseEntityRenderer': 'getGrips', 'hitTest'.
+src/subapps/dxf-viewer/rendering/entities/PointRenderer.ts(21,3): error TS2416: Property 'render' in type 'PointRenderer' is not assignable to the same property in base type 'BaseEntityRenderer'.
+  Type '(entity: EntityModel, options?: RenderOptions) => void' is not assignable to type '(entity: BaseEntity, options: RenderOptions) => void'.
+    Types of parameters 'options' and 'options' are incompatible.
+      Type 'RenderOptions' has no properties in common with type 'RenderOptions'.
+src/subapps/dxf-viewer/rendering/entities/PolylineRenderer.ts(16,14): error TS2515: Non-abstract class 'PolylineRenderer' does not implement inherited abstract member hitTest from class 'BaseEntityRenderer'.
+src/subapps/dxf-viewer/rendering/entities/PolylineRenderer.ts(19,39): error TS2367: This comparison appears to be unintentional because the types '"angle-measurement" | "line" | "circle" | "arc" | "rectangle" | "point" | "text" | "dimension" | "block"' and '"lwpolyline"' have no overlap.
+src/subapps/dxf-viewer/rendering/entities/PolylineRenderer.ts(127,20): error TS2304: Cannot find name 'Entity'.
+src/subapps/dxf-viewer/rendering/entities/PolylineRenderer.ts(144,9): error TS2353: Object literal may only specify known properties, and 'state' does not exist in type 'GripInfo'.
+src/subapps/dxf-viewer/rendering/entities/RectangleRenderer.ts(16,14): error TS2515: Non-abstract class 'RectangleRenderer' does not implement inherited abstract member hitTest from class 'BaseEntityRenderer'.
+src/subapps/dxf-viewer/rendering/entities/RectangleRenderer.ts(18,33): error TS2345: Argument of type 'BaseEntity' is not assignable to parameter of type 'Entity'.
+  Type 'BaseEntity' is not assignable to type 'AngleMeasurementEntity & Pick<BaseEntity, "name">'.
+    Type 'BaseEntity' is missing the following properties from type 'AngleMeasurementEntity': vertex, point1, point2, angle
+src/subapps/dxf-viewer/rendering/entities/RectangleRenderer.ts(22,40): error TS2367: This comparison appears to be unintentional because the types '"angle-measurement" | "line" | "polyline" | "circle" | "arc" | "point" | "text" | "dimension" | "block"' and '"rect"' have no overlap.
+src/subapps/dxf-viewer/rendering/entities/RectangleRenderer.ts(150,40): error TS2367: This comparison appears to be unintentional because the types '"angle-measurement" | "line" | "polyline" | "circle" | "arc" | "point" | "text" | "dimension" | "block"' and '"rect"' have no overlap.
+src/subapps/dxf-viewer/rendering/entities/RectangleRenderer.ts(163,9): error TS2353: Object literal may only specify known properties, and 'state' does not exist in type 'GripInfo'.
+src/subapps/dxf-viewer/rendering/entities/shared/geometry-rendering-utils.ts(7,28): error TS2305: Module '"../../types/Types"' has no exported member 'AngleMeasurementEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/geometry-rendering-utils.ts(103,36): error TS2352: Conversion of type 'BaseEntity' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/entities/shared/grip-utils.ts(28,7): error TS2353: Object literal may only specify known properties, and 'state' does not exist in type 'GripInfo'.
+src/subapps/dxf-viewer/rendering/entities/shared/grip-utils.ts(44,5): error TS2353: Object literal may only specify known properties, and 'state' does not exist in type 'GripInfo'.
+src/subapps/dxf-viewer/rendering/entities/shared/grip-utils.ts(57,5): error TS2353: Object literal may only specify known properties, and 'state' does not exist in type 'GripInfo'.
+src/subapps/dxf-viewer/rendering/entities/shared/grip-utils.ts(70,5): error TS2353: Object literal may only specify known properties, and 'state' does not exist in type 'GripInfo'.
+src/subapps/dxf-viewer/rendering/entities/shared/line-utils.ts(35,7): error TS2353: Object literal may only specify known properties, and 'state' does not exist in type 'GripInfo'.
+src/subapps/dxf-viewer/rendering/entities/shared/line-utils.ts(51,7): error TS2353: Object literal may only specify known properties, and 'state' does not exist in type 'GripInfo'.
+src/subapps/dxf-viewer/rendering/entities/SplineRenderer.ts(12,14): error TS2515: Non-abstract class 'SplineRenderer' does not implement inherited abstract member hitTest from class 'BaseEntityRenderer'.
+src/subapps/dxf-viewer/rendering/entities/SplineRenderer.ts(14,9): error TS2367: This comparison appears to be unintentional because the types 'EntityType' and '"spline"' have no overlap.
+src/subapps/dxf-viewer/rendering/entities/SplineRenderer.ts(29,32): error TS2345: Argument of type '{ vertices: Point2D[]; closed: boolean; id: string; name?: string; type: EntityType; layer?: string; color?: string; selected?: boolean; preview?: boolean; measurement?: boolean; ... 14 more ...; showEdgeDistances?: boolean; }' is not assignable to parameter of type 'Entity'.
+  Type '{ vertices: Point2D[]; closed: boolean; id: string; name?: string; type: EntityType; layer?: string; color?: string; selected?: boolean; preview?: boolean; measurement?: boolean; ... 14 more ...; showEdgeDistances?: boolean; }' is not assignable to type 'PolylineEntity & Pick<BaseEntity, "name">'.
+    Type '{ vertices: Point2D[]; closed: boolean; id: string; name?: string; type: EntityType; layer?: string; color?: string; selected?: boolean; preview?: boolean; measurement?: boolean; ... 14 more ...; showEdgeDistances?: boolean; }' is not assignable to type 'PolylineEntity'.
+      Types of property 'type' are incompatible.
+        Type 'EntityType' is not assignable to type '"polyline"'.
+          Type '"angle-measurement"' is not assignable to type '"polyline"'.
+src/subapps/dxf-viewer/rendering/entities/SplineRenderer.ts(72,9): error TS2367: This comparison appears to be unintentional because the types 'EntityType' and '"spline"' have no overlap.
+src/subapps/dxf-viewer/rendering/entities/SplineRenderer.ts(88,9): error TS2353: Object literal may only specify known properties, and 'state' does not exist in type 'GripInfo'.
+src/subapps/dxf-viewer/rendering/entities/TextRenderer.ts(13,14): error TS2515: Non-abstract class 'TextRenderer' does not implement inherited abstract member hitTest from class 'BaseEntityRenderer'.
+src/subapps/dxf-viewer/rendering/entities/TextRenderer.ts(15,35): error TS2367: This comparison appears to be unintentional because the types '"angle-measurement" | "line" | "polyline" | "circle" | "arc" | "rectangle" | "point" | "dimension" | "block"' and '"mtext"' have no overlap.
+src/subapps/dxf-viewer/rendering/entities/TextRenderer.ts(62,35): error TS2367: This comparison appears to be unintentional because the types '"angle-measurement" | "line" | "polyline" | "circle" | "arc" | "rectangle" | "point" | "dimension" | "block"' and '"mtext"' have no overlap.
+src/subapps/dxf-viewer/rendering/hitTesting/Bounds.ts(37,12): error TS2678: Type '"lwpolyline"' is not comparable to type 'EntityType'.
+src/subapps/dxf-viewer/rendering/hitTesting/Bounds.ts(40,12): error TS2678: Type '"rect"' is not comparable to type 'EntityType'.
+src/subapps/dxf-viewer/rendering/hitTesting/Bounds.ts(42,12): error TS2678: Type '"ellipse"' is not comparable to type 'EntityType'.
+src/subapps/dxf-viewer/rendering/hitTesting/Bounds.ts(45,12): error TS2678: Type '"mtext"' is not comparable to type 'EntityType'.
+src/subapps/dxf-viewer/rendering/hitTesting/Bounds.ts(47,12): error TS2678: Type '"spline"' is not comparable to type 'EntityType'.
+src/subapps/dxf-viewer/rendering/hitTesting/Bounds.ts(194,54): error TS2353: Object literal may only specify known properties, and 'vertices' does not exist in type 'BaseEntity'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(110,34): error TS2551: Property 'min' does not exist on type 'BoundingBox'. Did you mean 'minX'?
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(111,34): error TS2551: Property 'min' does not exist on type 'BoundingBox'. Did you mean 'minX'?
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(112,34): error TS2551: Property 'max' does not exist on type 'BoundingBox'. Did you mean 'maxX'?
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(113,34): error TS2551: Property 'max' does not exist on type 'BoundingBox'. Did you mean 'maxX'?
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(138,46): error TS2551: Property 'min' does not exist on type 'BoundingBox'. Did you mean 'minX'?
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(139,46): error TS2551: Property 'min' does not exist on type 'BoundingBox'. Did you mean 'minX'?
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(140,46): error TS2551: Property 'max' does not exist on type 'BoundingBox'. Did you mean 'maxX'?
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(141,46): error TS2551: Property 'max' does not exist on type 'BoundingBox'. Did you mean 'maxX'?
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(185,32): error TS2551: Property 'min' does not exist on type 'BoundingBox'. Did you mean 'minX'?
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(186,32): error TS2551: Property 'min' does not exist on type 'BoundingBox'. Did you mean 'minX'?
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(187,32): error TS2551: Property 'max' does not exist on type 'BoundingBox'. Did you mean 'maxX'?
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(188,32): error TS2551: Property 'max' does not exist on type 'BoundingBox'. Did you mean 'maxX'?
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(364,39): error TS2345: Argument of type 'SpatialBounds' is not assignable to parameter of type 'BoundingBox'.
+  Type 'SpatialBounds' is missing the following properties from type 'BoundingBox': width, height
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(419,52): error TS2345: Argument of type '{ minX: number; minY: number; maxX: number; maxY: number; }' is not assignable to parameter of type 'BoundingBox'.
+  Type '{ minX: number; minY: number; maxX: number; maxY: number; }' is missing the following properties from type 'BoundingBox': width, height, centerX, centerY
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(441,11): error TS2353: Object literal may only specify known properties, and 'entityId' does not exist in type 'SpatialQueryResult<any>'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(467,11): error TS2353: Object literal may only specify known properties, and 'entityId' does not exist in type 'SpatialQueryResult<any>'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(496,26): error TS2551: Property 'selectable' does not exist on type 'Entity'. Did you mean 'selected'?
+  Property 'selectable' does not exist on type 'LineEntity & Pick<BaseEntity, "name">'.
+src/subapps/dxf-viewer/rendering/hitTesting/HitTester.ts(512,12): error TS2678: Type '"lwpolyline"' is not comparable to type '"angle-measurement" | "line" | "polyline" | "circle" | "arc" | "rectangle" | "point" | "text" | "dimension" | "block"'.
+src/subapps/dxf-viewer/rendering/hitTesting/index.ts(19,3): error TS2459: Module '"./Bounds"' declares 'Point2D' locally, but it is not exported.
+src/subapps/dxf-viewer/rendering/index.ts(35,1): error TS2308: Module './core/IRenderContext' has already exported a member named 'BoundingBox'. Consider explicitly re-exporting to resolve the ambiguity.
+src/subapps/dxf-viewer/rendering/index.ts(35,1): error TS2308: Module './core/IRenderContext' has already exported a member named 'Point2D'. Consider explicitly re-exporting to resolve the ambiguity.
+src/subapps/dxf-viewer/rendering/index.ts(39,1): error TS2308: Module './core/IRenderContext' has already exported a member named 'BoundingBox'. Consider explicitly re-exporting to resolve the ambiguity.
+src/subapps/dxf-viewer/rendering/index.ts(39,1): error TS2308: Module './hitTesting' has already exported a member named 'HitTestResult'. Consider explicitly re-exporting to resolve the ambiguity.
+src/subapps/dxf-viewer/rendering/index.ts(39,1): error TS2308: Module './passes' has already exported a member named 'GripInfo'. Consider explicitly re-exporting to resolve the ambiguity.
+src/subapps/dxf-viewer/rendering/index.ts(65,39): error TS2345: Argument of type 'IRenderContext' is not assignable to parameter of type 'CanvasRenderingContext2D'.
+  Type 'IRenderContext' is missing the following properties from type 'CanvasRenderingContext2D': globalAlpha, globalCompositeOperation, fillStyle, strokeStyle, and 45 more.
+src/subapps/dxf-viewer/rendering/index.ts(66,43): error TS2345: Argument of type 'IRenderContext' is not assignable to parameter of type 'CanvasRenderingContext2D'.
+  Type 'IRenderContext' is missing the following properties from type 'CanvasRenderingContext2D': globalAlpha, globalCompositeOperation, fillStyle, strokeStyle, and 45 more.
+src/subapps/dxf-viewer/rendering/index.ts(67,47): error TS2345: Argument of type 'IRenderContext' is not assignable to parameter of type 'CanvasRenderingContext2D'.
+  Type 'IRenderContext' is missing the following properties from type 'CanvasRenderingContext2D': globalAlpha, globalCompositeOperation, fillStyle, strokeStyle, and 45 more.
+src/subapps/dxf-viewer/rendering/index.ts(68,49): error TS2345: Argument of type 'IRenderContext' is not assignable to parameter of type 'CanvasRenderingContext2D'.
+  Type 'IRenderContext' is missing the following properties from type 'CanvasRenderingContext2D': globalAlpha, globalCompositeOperation, fillStyle, strokeStyle, and 45 more.
+src/subapps/dxf-viewer/rendering/index.ts(69,37): error TS2345: Argument of type 'IRenderContext' is not assignable to parameter of type 'CanvasRenderingContext2D'.
+  Type 'IRenderContext' is missing the following properties from type 'CanvasRenderingContext2D': globalAlpha, globalCompositeOperation, fillStyle, strokeStyle, and 45 more.
+src/subapps/dxf-viewer/rendering/index.ts(70,39): error TS2345: Argument of type 'IRenderContext' is not assignable to parameter of type 'CanvasRenderingContext2D'.
+  Type 'IRenderContext' is missing the following properties from type 'CanvasRenderingContext2D': globalAlpha, globalCompositeOperation, fillStyle, strokeStyle, and 45 more.
+src/subapps/dxf-viewer/rendering/index.ts(71,40): error TS2345: Argument of type 'IRenderContext' is not assignable to parameter of type 'CanvasRenderingContext2D'.
+  Type 'IRenderContext' is missing the following properties from type 'CanvasRenderingContext2D': globalAlpha, globalCompositeOperation, fillStyle, strokeStyle, and 45 more.
+src/subapps/dxf-viewer/rendering/index.ts(72,49): error TS2345: Argument of type 'IRenderContext' is not assignable to parameter of type 'CanvasRenderingContext2D'.
+  Type 'IRenderContext' is missing the following properties from type 'CanvasRenderingContext2D': globalAlpha, globalCompositeOperation, fillStyle, strokeStyle, and 45 more.
+src/subapps/dxf-viewer/rendering/index.ts(73,44): error TS2345: Argument of type 'IRenderContext' is not assignable to parameter of type 'CanvasRenderingContext2D'.
+  Type 'IRenderContext' is missing the following properties from type 'CanvasRenderingContext2D': globalAlpha, globalCompositeOperation, fillStyle, strokeStyle, and 45 more.
+src/subapps/dxf-viewer/rendering/index.ts(74,45): error TS2345: Argument of type 'IRenderContext' is not assignable to parameter of type 'CanvasRenderingContext2D'.
+  Type 'IRenderContext' is missing the following properties from type 'CanvasRenderingContext2D': globalAlpha, globalCompositeOperation, fillStyle, strokeStyle, and 45 more.
+src/subapps/dxf-viewer/rendering/index.ts(75,43): error TS2345: Argument of type 'IRenderContext' is not assignable to parameter of type 'CanvasRenderingContext2D'.
+  Type 'IRenderContext' is missing the following properties from type 'CanvasRenderingContext2D': globalAlpha, globalCompositeOperation, fillStyle, strokeStyle, and 45 more.
+src/subapps/dxf-viewer/rendering/index.ts(76,41): error TS2345: Argument of type 'IRenderContext' is not assignable to parameter of type 'CanvasRenderingContext2D'.
+  Type 'IRenderContext' is missing the following properties from type 'CanvasRenderingContext2D': globalAlpha, globalCompositeOperation, fillStyle, strokeStyle, and 45 more.
+src/subapps/dxf-viewer/rendering/index.ts(76,49): error TS2304: Cannot find name 'BaseEntityRenderer'.
+src/subapps/dxf-viewer/rendering/index.ts(77,64): error TS2345: Argument of type 'IRenderContext' is not assignable to parameter of type 'CanvasRenderingContext2D'.
+  Type 'IRenderContext' is missing the following properties from type 'CanvasRenderingContext2D': globalAlpha, globalCompositeOperation, fillStyle, strokeStyle, and 45 more.
+src/subapps/dxf-viewer/rendering/passes/BackgroundPass.ts(6,28): error TS2459: Module '"../core/RenderPipeline"' declares 'IRenderContext' locally, but it is not exported.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(8,28): error TS2459: Module '"../core/RenderPipeline"' declares 'IRenderContext' locally, but it is not exported.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(220,12): error TS2678: Type '"lwpolyline"' is not comparable to type '"angle-measurement" | "line" | "polyline" | "circle" | "arc" | "rectangle" | "point" | "text" | "dimension" | "block"'.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(227,12): error TS2678: Type '"mtext"' is not comparable to type '"angle-measurement" | "line" | "polyline" | "circle" | "arc" | "rectangle" | "point" | "text" | "dimension" | "block"'.
+src/subapps/dxf-viewer/rendering/passes/EntityPass.ts(231,12): error TS2678: Type '"rect"' is not comparable to type '"angle-measurement" | "line" | "polyline" | "circle" | "arc" | "rectangle" | "point" | "text" | "dimension" | "block"'.
+src/subapps/dxf-viewer/rendering/passes/OverlayPass.ts(6,28): error TS2459: Module '"../core/RenderPipeline"' declares 'IRenderContext' locally, but it is not exported.
+src/subapps/dxf-viewer/rendering/ui/grid/LegacyGridAdapter.ts(36,11): error TS2739: Type '{ enabled: boolean; visible: true; opacity: number; color: string; size: number; style: "lines" | "dots" | "crosses"; lineWidth: number; majorGridColor: string; minorGridColor: string; majorInterval: number; ... 4 more ...; zIndex: number; }' is missing the following properties from type 'GridSettings': majorGridWeight, minorGridWeight
+src/subapps/dxf-viewer/rendering/ui/snap/SnapRenderer.ts(183,38): error TS2454: Variable 'quarter' is used before being assigned.
+src/subapps/dxf-viewer/rendering/ui/snap/SnapRenderer.ts(184,38): error TS2454: Variable 'quarter' is used before being assigned.
+src/subapps/dxf-viewer/rendering/ui/snap/SnapRenderer.ts(185,38): error TS2454: Variable 'quarter' is used before being assigned.
+src/subapps/dxf-viewer/rendering/ui/snap/SnapRenderer.ts(186,38): error TS2454: Variable 'quarter' is used before being assigned.
+src/subapps/dxf-viewer/rendering/ui/snap/SnapRenderer.ts(286,7): error TS2322: Type '{ point: Point2D; type: string; entity?: { id: string; type: string; } | undefined; }[]' is not assignable to type 'SnapResult[]'.
+  Type '{ point: Point2D; type: string; entity?: { id: string; type: string; } | undefined; }' is missing the following properties from type 'SnapResult': distance, priority
+src/subapps/dxf-viewer/services/__tests__/global-setup.ts(21,15): error TS2540: Cannot assign to 'NODE_ENV' because it is a read-only property.
+src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.test.ts(15,65): error TS2307: Cannot find module 'vitest' or its corresponding type declarations.
+src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts(10,65): error TS2307: Cannot find module 'vitest' or its corresponding type declarations.
+src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts(83,52): error TS2345: Argument of type '() => Promise<{ initialized: boolean; }>' is not assignable to parameter of type 'ServiceFactory<LayerOperationsService>'.
+  Type 'Promise<{ initialized: boolean; }>' is not assignable to type 'LayerOperationsService | Promise<LayerOperationsService>'.
+    Type 'Promise<{ initialized: boolean; }>' is not assignable to type 'Promise<LayerOperationsService>'.
+      Type '{ initialized: boolean; }' is missing the following properties from type 'LayerOperationsService': changeLayerColor, renameLayer, toggleLayerVisibility, deleteLayer, and 7 more.
+src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts(116,49): error TS2345: Argument of type '() => Promise<{ initialized: boolean; }>' is not assignable to parameter of type 'ServiceFactory<CanvasBoundsService>'.
+  Type 'Promise<{ initialized: boolean; }>' is not assignable to type 'CanvasBoundsService | Promise<CanvasBoundsService>'.
+    Type 'Promise<{ initialized: boolean; }>' is not assignable to type 'Promise<CanvasBoundsService>'.
+      Type '{ initialized: boolean; }' is missing the following properties from type 'CanvasBoundsService': boundsCache, frameId, getBounds, updateBounds, and 4 more.
+src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts(158,46): error TS2345: Argument of type '() => Promise<{ loaded: boolean; }>' is not assignable to parameter of type 'ServiceFactory<DxfImportService>'.
+  Type 'Promise<{ loaded: boolean; }>' is not assignable to type 'DxfImportService | Promise<DxfImportService>'.
+    Type 'Promise<{ loaded: boolean; }>' is not assignable to type 'Promise<DxfImportService>'.
+      Type '{ loaded: boolean; }' is missing the following properties from type 'DxfImportService': worker, getWorker, calculateTightBounds, tryReadFileWithEncoding, and 6 more.
+src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts(231,48): error TS2345: Argument of type '() => { data: any[]; }' is not assignable to parameter of type 'ServiceFactory<SmartBoundsManager>'.
+  Type '{ data: any[]; }' is not assignable to type 'SmartBoundsManager | Promise<SmartBoundsManager>'.
+src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts(257,55): error TS2322: Type '{ data: string; }' is not assignable to type 'typeof DxfFirestoreService | Promise<typeof DxfFirestoreService>'.
+src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts(283,9): error TS2578: Unused '@ts-expect-error' directive.
+src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts(290,9): error TS2578: Unused '@ts-expect-error' directive.
+src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts(297,9): error TS2578: Unused '@ts-expect-error' directive.
+src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts(304,9): error TS2578: Unused '@ts-expect-error' directive.
+src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts(311,9): error TS2578: Unused '@ts-expect-error' directive.
+src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts(359,58): error TS2322: Type '{ id: string; }' is not assignable to type 'LayerOperationsService | Promise<LayerOperationsService>'.
+src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts(368,58): error TS2322: Type '{ id: string; }' is not assignable to type 'LayerOperationsService | Promise<LayerOperationsService>'.
+src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts(385,54): error TS2322: Type '{ test: boolean; }' is not assignable to type 'EntityMergeService | Promise<EntityMergeService>'.
+src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts(395,9): error TS2578: Unused '@ts-expect-error' directive.
+src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts(412,54): error TS2322: Type '{}' is not assignable to type 'SmartBoundsManager | Promise<SmartBoundsManager>'.
+src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts(425,52): error TS2322: Type '{}' is not assignable to type 'DxfImportService | Promise<DxfImportService>'.
+src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts(469,54): error TS2322: Type '{ test: boolean; }' is not assignable to type 'SceneUpdateManager | Promise<SceneUpdateManager>'.
+src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts(509,53): error TS2322: Type '{ dispose: () => number; }' is not assignable to type 'HitTestingService | Promise<HitTestingService>'.
+src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts(530,52): error TS2345: Argument of type '() => Promise<{ recovered: boolean; }>' is not assignable to parameter of type 'ServiceFactory<LayerOperationsService>'.
+  Type 'Promise<{ recovered: boolean; }>' is not assignable to type 'LayerOperationsService | Promise<LayerOperationsService>'.
+    Type 'Promise<{ recovered: boolean; }>' is not assignable to type 'Promise<LayerOperationsService>'.
+      Type '{ recovered: boolean; }' is missing the following properties from type 'LayerOperationsService': changeLayerColor, renameLayer, toggleLayerVisibility, deleteLayer, and 7 more.
+src/subapps/dxf-viewer/services/__tests__/setup.ts(7,20): error TS2307: Cannot find module 'vitest' or its corresponding type declarations.
+src/subapps/dxf-viewer/services/EntityMergeService.ts(106,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(...items: ConcatArray<Entity>[]): Entity[]', gave the following error.
+    Argument of type '{ id: string; type: string; layer: string | undefined; visible: boolean; vertices: Point2D[]; closed: boolean; name: string; color: string | undefined; }' is not assignable to parameter of type 'ConcatArray<Entity>'.
+      Type '{ id: string; type: string; layer: string | undefined; visible: boolean; vertices: Point2D[]; closed: boolean; name: string; color: string | undefined; }' is missing the following properties from type 'ConcatArray<Entity>': length, join, slice
+  Overload 2 of 2, '(...items: (Entity | ConcatArray<Entity>)[]): Entity[]', gave the following error.
+    Argument of type '{ id: string; type: string; layer: string | undefined; visible: boolean; vertices: Point2D[]; closed: boolean; name: string; color: string | undefined; }' is not assignable to parameter of type 'Entity | ConcatArray<Entity>'.
+      Type '{ id: string; type: string; layer: string | undefined; visible: boolean; vertices: Point2D[]; closed: boolean; name: string; color: string | undefined; }' is not assignable to type 'PolylineEntity & Pick<BaseEntity, "name">'.
+        Type '{ id: string; type: string; layer: string | undefined; visible: boolean; vertices: Point2D[]; closed: boolean; name: string; color: string | undefined; }' is not assignable to type 'PolylineEntity'.
+          Types of property 'type' are incompatible.
+            Type 'string' is not assignable to type '"polyline"'.
+src/subapps/dxf-viewer/services/HitTestingService.ts(59,32): error TS2345: Argument of type 'BaseEntity[]' is not assignable to parameter of type 'Entity[]'.
+  Type 'BaseEntity' is not assignable to type 'Entity'.
+    Type 'BaseEntity' is not assignable to type 'AngleMeasurementEntity & Pick<BaseEntity, "name">'.
+      Type 'BaseEntity' is missing the following properties from type 'AngleMeasurementEntity': vertex, point1, point2, angle
+src/subapps/dxf-viewer/services/HitTestingService.ts(153,7): error TS2322: Type 'string' is not assignable to type '"dashed" | "dotted" | "solid" | "dashdot" | undefined'.
+src/subapps/dxf-viewer/services/HitTestingService.ts(169,11): error TS2353: Object literal may only specify known properties, and 'start' does not exist in type 'Partial<BaseEntity>'.
+src/subapps/dxf-viewer/services/HitTestingService.ts(175,11): error TS2353: Object literal may only specify known properties, and 'center' does not exist in type 'Partial<BaseEntity>'.
+src/subapps/dxf-viewer/services/HitTestingService.ts(183,11): error TS2353: Object literal may only specify known properties, and 'points' does not exist in type 'Partial<BaseEntity>'.
+src/subapps/dxf-viewer/services/HitTestingService.ts(190,11): error TS2353: Object literal may only specify known properties, and 'center' does not exist in type 'Partial<BaseEntity>'.
+src/subapps/dxf-viewer/services/HitTestingService.ts(199,11): error TS2353: Object literal may only specify known properties, and 'position' does not exist in type 'Partial<BaseEntity>'.
+src/subapps/dxf-viewer/services/index.ts(70,15): error TS2305: Module '"../rendering/types/Types"' has no exported member 'Bounds'.
+src/subapps/dxf-viewer/services/LayerOperationsService.ts(208,7): error TS2322: Type '{ layers: { [x: string]: SceneLayer | { name: string; visible: boolean; color: string; frozen: boolean; }; }; entities: AnySceneEntity[]; bounds: SceneBounds; units: "mm" | "cm" | "m" | "in" | "ft"; version?: string; }' is not assignable to type 'SceneModel'.
+  Types of property 'layers' are incompatible.
+    Type '{ [x: string]: SceneLayer | { name: string; visible: boolean; color: string; frozen: boolean; }; }' is not assignable to type 'Record<string, SceneLayer>'.
+      'string' index signatures are incompatible.
+        Type 'SceneLayer | { name: string; visible: boolean; color: string; frozen: boolean; }' is not assignable to type 'SceneLayer'.
+          Property 'locked' is missing in type '{ name: string; visible: boolean; color: string; frozen: boolean; }' but required in type 'SceneLayer'.
+src/subapps/dxf-viewer/services/LayerOperationsService.ts(234,33): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/subapps/dxf-viewer/services/LayerOperationsService.ts(253,51): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/subapps/dxf-viewer/services/LayerOperationsService.ts(304,32): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/subapps/dxf-viewer/services/LayerOperationsService.ts(311,48): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/subapps/dxf-viewer/services/LayerOperationsService.ts(339,48): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/subapps/dxf-viewer/services/LayerOperationsService.ts(343,41): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/subapps/dxf-viewer/services/LayerOperationsService.ts(382,32): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/subapps/dxf-viewer/services/LayerOperationsService.ts(389,48): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/subapps/dxf-viewer/services/LayerOperationsService.ts(416,23): error TS2538: Type 'undefined' cannot be used as an index type.
+src/subapps/dxf-viewer/services/LayerOperationsService.ts(416,56): error TS2538: Type 'undefined' cannot be used as an index type.
+src/subapps/dxf-viewer/settings-core/__tests__/override.test.ts(14,3): error TS2305: Module '"../override"' has no exported member 'applyOverridesToBase'.
+src/subapps/dxf-viewer/settings-core/__tests__/override.test.ts(28,36): error TS2345: Argument of type 'LineSettings' is not assignable to parameter of type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'LineSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/override.test.ts(37,36): error TS2345: Argument of type 'LineSettings' is not assignable to parameter of type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'LineSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/override.test.ts(48,36): error TS2345: Argument of type 'LineSettings' is not assignable to parameter of type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'LineSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/override.test.ts(87,46): error TS2345: Argument of type 'undefined' is not assignable to parameter of type 'PartialDxfSettings | null'.
+src/subapps/dxf-viewer/settings-core/__tests__/override.test.ts(163,42): error TS2345: Argument of type 'DxfSettings' is not assignable to parameter of type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'DxfSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/override.test.ts(310,45): error TS2345: Argument of type '{ line: unknown; }' is not assignable to parameter of type 'PartialDxfSettings'.
+  Types of property 'line' are incompatible.
+    Type 'unknown' is not assignable to type 'Partial<LineSettings> | undefined'.
+src/subapps/dxf-viewer/settings-core/__tests__/override.test.ts(313,15): error TS2352: Conversion of type 'LineSettings' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'LineSettings'.
+src/subapps/dxf-viewer/settings-core/__tests__/override.test.ts(319,7): error TS18046: 'override.line' is of type 'unknown'.
+src/subapps/dxf-viewer/settings-core/override.ts(52,9): error TS2322: Type '(Partial<T>[Extract<keyof T, string>] & null) | (Partial<T>[Extract<keyof T, string>] & {}) | (Partial<T>[Extract<...>] & object) | (Partial<...>[Extract<...>] & ... 1 more ... & any[])' is not assignable to type 'T[Extract<keyof T, string>]'.
+  '(Partial<T>[Extract<keyof T, string>] & null) | (Partial<T>[Extract<keyof T, string>] & {}) | (Partial<T>[Extract<...>] & object) | (Partial<...>[Extract<...>] & ... 1 more ... & any[])' is assignable to the constraint of type 'T[Extract<keyof T, string>]', but 'T[Extract<keyof T, string>]' could be instantiated with a different subtype of constraint 'unknown'.
+    Type 'Partial<T>[Extract<keyof T, string>] & object' is not assignable to type 'T[Extract<keyof T, string>]'.
+      'Partial<T>[Extract<keyof T, string>] & object' is assignable to the constraint of type 'T[Extract<keyof T, string>]', but 'T[Extract<keyof T, string>]' could be instantiated with a different subtype of constraint 'unknown'.
+src/subapps/dxf-viewer/settings-core/override.ts(67,3): error TS2740: Type 'Record<string, unknown>' is missing the following properties from type 'LineSettings': enabled, lineType, lineWidth, color, and 15 more.
+src/subapps/dxf-viewer/settings-core/override.ts(67,24): error TS2345: Argument of type 'LineSettings' is not assignable to parameter of type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'LineSettings'.
+src/subapps/dxf-viewer/settings-core/override.ts(77,3): error TS2740: Type 'Record<string, unknown>' is missing the following properties from type 'TextSettings': enabled, fontFamily, fontSize, fontWeight, and 25 more.
+src/subapps/dxf-viewer/settings-core/override.ts(77,24): error TS2345: Argument of type 'TextSettings' is not assignable to parameter of type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'TextSettings'.
+src/subapps/dxf-viewer/settings-core/override.ts(87,3): error TS2740: Type 'Record<string, unknown>' is missing the following properties from type 'GripSettings': enabled, gripSize, pickBoxSize, apertureSize, and 10 more.
+src/subapps/dxf-viewer/settings-core/override.ts(87,24): error TS2345: Argument of type 'GripSettings' is not assignable to parameter of type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'GripSettings'.
+src/subapps/dxf-viewer/settings-core/override.ts(151,23): error TS2345: Argument of type 'LineSettings' is not assignable to parameter of type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'LineSettings'.
+src/subapps/dxf-viewer/settings-core/override.ts(161,23): error TS2345: Argument of type 'TextSettings' is not assignable to parameter of type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'TextSettings'.
+src/subapps/dxf-viewer/settings-core/override.ts(171,23): error TS2345: Argument of type 'GripSettings' is not assignable to parameter of type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'GripSettings'.
+src/subapps/dxf-viewer/settings-provider/EnterpriseDxfSettingsProvider.tsx(287,72): error TS2741: Property 'resetToFactory' is missing in type '{ setMode: React.Dispatch<React.SetStateAction<"normal" | "preview" | "selection" | "draft" | "hover" | "completion">>; isLoaded: boolean; isSaving: boolean; isAutoSaving: boolean; ... 16 more ...; settings: { ...; }; }' but required in type 'EnterpriseDxfSettingsContextType'.
+src/subapps/dxf-viewer/settings/FACTORY_DEFAULTS.ts(218,5): error TS2739: Type '{ enabled: boolean; lineWidth: number; color: string; lineType: "solid"; opacity: number; }' is missing the following properties from type 'LineSettings': lineColor, lineStyle
+src/subapps/dxf-viewer/settings/FACTORY_DEFAULTS.ts(231,5): error TS2741: Property 'textColor' is missing in type '{ enabled: boolean; fontSize: number; fontFamily: string; fontWeight: number; fontStyle: "normal"; color: string; opacity: number; }' but required in type 'TextSettings'.
+src/subapps/dxf-viewer/settings/FACTORY_DEFAULTS.ts(244,5): error TS2739: Type '{ enabled: boolean; gripSize: number; pickBoxSize: number; apertureSize: number; colors: { cold: string; warm: string; hot: string; contour: any; }; shape: "square"; opacity: number; showAperture: boolean; ... 5 more ...; maxGripsPerEntity: number; }' is missing the following properties from type 'GripSettings': size, color, hoverColor
+src/subapps/dxf-viewer/settings/io/LocalStorageDriver.ts(28,27): error TS2307: Cannot find module 'lz-string' or its corresponding type declarations.
+src/subapps/dxf-viewer/settings/io/safeLoad.ts(181,15): error TS2352: Conversion of type '{ line: { general: { color: string; lineWidth: number; opacity: number; lineType: "dashed" | "dotted" | "solid"; enabled: boolean; } & { [k: string]: unknown; }; specific: Partial<Record<"normal" | "selection" | "draft" | "hover" | "completion", any>>; overrides: Partial<...>; }; text: { ...; }; __standards_version:...' to type 'SettingsState' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  The types of 'line.general' are incompatible between these types.
+    Type '{ color: string; lineWidth: number; opacity: number; lineType: "dashed" | "dotted" | "solid"; enabled: boolean; } & { [k: string]: unknown; }' is missing the following properties from type 'LineSettings': lineColor, lineStyle
+src/subapps/dxf-viewer/settings/io/safeLoad.ts(191,25): error TS2352: Conversion of type '{ line: { general: { color: string; lineWidth: number; opacity: number; lineType: "dashed" | "dotted" | "solid"; enabled: boolean; } & { [k: string]: unknown; }; specific: Partial<Record<"normal" | "selection" | "draft" | "hover" | "completion", any>>; overrides: Partial<...>; }; text: { ...; }; __standards_version:...' to type 'SettingsState' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  The types of 'line.general' are incompatible between these types.
+    Type '{ color: string; lineWidth: number; opacity: number; lineType: "dashed" | "dotted" | "solid"; enabled: boolean; } & { [k: string]: unknown; }' is missing the following properties from type 'LineSettings': lineColor, lineStyle
+src/subapps/dxf-viewer/settings/io/safeLoad.ts(191,58): error TS2345: Argument of type 'SettingsState' is not assignable to parameter of type '{ line: { general: { color: string; lineWidth: number; opacity: number; lineType: "dashed" | "dotted" | "solid"; enabled: boolean; } & { [k: string]: unknown; }; specific: Partial<Record<"normal" | "selection" | "draft" | "hover" | "completion", any>>; overrides: Partial<...>; }; text: { ...; }; __standards_version:...'.
+  The types of 'line.general' are incompatible between these types.
+    Type 'LineSettings' is not assignable to type '{ color: string; lineWidth: number; opacity: number; lineType: "dashed" | "dotted" | "solid"; enabled: boolean; } & { [k: string]: unknown; }'.
+      Type 'LineSettings' is missing the following properties from type '{ color: string; lineWidth: number; opacity: number; lineType: "dashed" | "dotted" | "solid"; enabled: boolean; }': color, lineType, enabled
+src/subapps/dxf-viewer/settings/io/safeSave.ts(133,72): error TS2352: Conversion of type '{ line: { general: { color: string; lineWidth: number; opacity: number; lineType: "dashed" | "dotted" | "solid"; enabled: boolean; } & { [k: string]: unknown; }; specific: Partial<Record<"normal" | "selection" | "draft" | "hover" | "completion", any>>; overrides: Partial<...>; }; text: { ...; }; __standards_version:...' to type 'SettingsState' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  The types of 'line.general' are incompatible between these types.
+    Type '{ color: string; lineWidth: number; opacity: number; lineType: "dashed" | "dotted" | "solid"; enabled: boolean; } & { [k: string]: unknown; }' is missing the following properties from type 'LineSettings': lineColor, lineStyle
+src/subapps/dxf-viewer/settings/io/schema.ts(204,7): error TS2322: Type '{ general: Record<string, unknown>; specific: Record<string, Partial<Record<string, unknown>>>; overrides: Record<string, Partial<Record<string, unknown>>>; }' is not assignable to type '{ general: { color: string; lineWidth: number; opacity: number; lineType: "dashed" | "dotted" | "solid"; enabled: boolean; } & { [k: string]: unknown; }; specific: Partial<Record<"normal" | "selection" | "draft" | "hover" | "completion", any>>; overrides: Partial<...>; }'.
+  Types of property 'general' are incompatible.
+    Type 'Record<string, unknown>' is not assignable to type '{ color: string; lineWidth: number; opacity: number; lineType: "dashed" | "dotted" | "solid"; enabled: boolean; } & { [k: string]: unknown; }'.
+      Type 'Record<string, unknown>' is missing the following properties from type '{ color: string; lineWidth: number; opacity: number; lineType: "dashed" | "dotted" | "solid"; enabled: boolean; }': color, lineWidth, opacity, lineType, enabled
+src/subapps/dxf-viewer/settings/io/schema.ts(208,7): error TS2322: Type '{ general: Record<string, unknown>; specific: Record<string, Partial<Record<string, unknown>>>; overrides: Record<string, Partial<Record<string, unknown>>>; }' is not assignable to type '{ general: { color: string; opacity: number; fontSize: number; fontFamily: string; enabled: boolean; fontWeight: number; fontStyle: "normal" | "italic" | "oblique"; } & { [k: string]: unknown; }; specific: Partial<...>; overrides: Partial<...>; }'.
+  Types of property 'general' are incompatible.

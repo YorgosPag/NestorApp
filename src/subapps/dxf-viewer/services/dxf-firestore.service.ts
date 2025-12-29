@@ -271,7 +271,7 @@ export class DxfFirestoreService {
 
       console.log('✅ [DxfFirestore] Storage load complete:', {
         fileId,
-        sizeKB: Math.round(sceneBytes.length / 1024),
+        sizeKB: Math.round(sceneBytes.byteLength / 1024), // ✅ ENTERPRISE FIX: ArrayBuffer has byteLength, not length
         entities: scene.entities.length
       });
 

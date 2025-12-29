@@ -86,6 +86,13 @@ export interface RenderOptions {
   showBounds?: boolean;
   clipToBounds?: boolean;
   alpha?: number;
+  // ✅ ENTERPRISE FIX: Missing properties for hover/index.ts TS2339 errors
+  hovered?: boolean;    // Whether entity is in hovered state
+  selected?: boolean;   // Whether entity is in selected state
+  preview?: boolean;    // Whether entity is in preview state (PhaseManager compatibility)
+
+  // ✅ ENTERPRISE FIX: Missing grips property for BaseEntityRenderer TS2339 errors
+  grips?: boolean;      // Whether to show entity grips
 }
 
 // ===== GRIP TYPES =====
@@ -97,6 +104,10 @@ export interface GripInfo {
   isVisible: boolean;
   isSelected?: boolean;
   isHovered?: boolean;
+
+  // ✅ ENTERPRISE FIX: Missing properties for useEntityGripInteraction
+  gripIndex?: number;   // Index of the grip within the entity
+  gripType?: 'corner' | 'midpoint' | 'center' | 'control' | 'vertex' | 'edge'; // Alias for type (backward compatibility)
 }
 
 export interface GripSettings {
@@ -177,8 +188,10 @@ export interface MaterialDefinition {
 // ===== HIT TESTING TYPES =====
 export interface HitTestResult {
   entityId: string | null;
-  point: Point2D;
-  distance: number;
+  entityType?: string; // ✅ ENTERPRISE FIX: Added entity type για HitTestingService.ts
+  layer?: string; // ✅ ENTERPRISE FIX: Added layer για HitTestingService.ts
+  point?: Point2D; // ✅ ENTERPRISE FIX: Made optional για flexibility
+  distance?: number; // ✅ ENTERPRISE FIX: Made optional για flexibility
   gripInfo?: GripInfo;
 }
 

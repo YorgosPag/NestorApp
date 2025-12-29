@@ -8,12 +8,12 @@
 
 import React from 'react';
 import { useEnterpriseDxfSettings } from '../settings-provider';
-import type { TextSettings } from '../contexts/TextSettingsContext';
+import type { TextSettings } from '../settings-core/types';
 
 export function useTextDraftSettings() {
-  const { getEffectiveTextSettings, updateSpecificTextSettings, settings } =
+  const { getEffectiveTextSettings, updateSpecificTextSettings, toggleTextOverride, settings } =
     useEnterpriseDxfSettings();
-  const isOverrideEnabled = settings.specific?.text?.draft?.enabled ?? false;
+  const isOverrideEnabled = settings.overrideEnabled?.text?.draft ?? false;
 
   // ✅ ENTERPRISE: Stable dependency - depend on data, not functions
   const effectiveSettings = React.useMemo(
@@ -29,8 +29,7 @@ export function useTextDraftSettings() {
     getEffectiveSettings: () => getEffectiveTextSettings('preview'),
     isOverrideEnabled,
     toggleOverride: (enabled: boolean) => {
-      // ✅ ENTERPRISE: Type-safe - enabled is Partial<TextSettings>
-      updateSpecificTextSettings?.('draft', { enabled } as Partial<TextSettings>);
+      toggleTextOverride('draft', enabled);
     }
   };
 }

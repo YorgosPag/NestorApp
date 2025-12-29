@@ -79,6 +79,9 @@ export interface FilterActions {
   clearAllFilters: () => void;
   isStatusVisible: (status: RegionStatus) => boolean;
   isUnitTypeVisible: (unitType: UnitType) => boolean;
+  // ✅ ENTERPRISE FIX: Added missing properties για SelectionContextType
+  visibleStatuses?: RegionStatus[]; // Currently visible status filters
+  visibleUnitTypes?: UnitType[]; // Currently visible unit type filters
 }
 
 // View actions interface

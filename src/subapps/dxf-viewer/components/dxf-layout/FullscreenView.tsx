@@ -22,7 +22,15 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
   const colors = useSemanticColors();
   return (
   <div className={`fixed inset-0 z-50 ${colors.bg.accent} flex flex-col`}>
-    <ToolbarSection {...props} />
+    <ToolbarSection
+      {...props}
+      overlayMode={"select" as any}
+      setOverlayMode={() => {}}
+      currentStatus={"ready" as any}
+      setCurrentStatus={() => {}}
+      currentKind={"measurement" as any}
+      setCurrentKind={() => {}}
+    />
     <div className={`flex justify-between items-center p-2 ${colors.bg.secondary} ${getDirectionalBorder('muted', 'bottom')}`}>
       <div className="flex gap-2 items-center">
         <Button
@@ -68,7 +76,12 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
     </div>
     
     <div className="flex-1 flex overflow-hidden">
-       <CanvasSection {...props} />
+       <CanvasSection
+          {...props}
+          overlayMode={"select" as any}
+          currentStatus={"ready" as any}
+          currentKind={"measurement" as any}
+        />
     </div>
   </div>
   );

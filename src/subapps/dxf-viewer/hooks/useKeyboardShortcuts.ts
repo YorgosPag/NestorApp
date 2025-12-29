@@ -87,6 +87,7 @@ export const useKeyboardShortcuts = ({
       if (e.shiftKey && (e.code === 'Digit0' || e.code === 'Numpad0')) {
         if (inputFocused || !zoomManager) return;
         e.preventDefault();
+        // ✅ ENTERPRISE FIX: Use zoomTo100() method from context interface
         zoomManager.zoomTo100(lastMouseRef.current || undefined);
         return;
       }

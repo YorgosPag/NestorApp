@@ -13,28 +13,28 @@ const createBadgeVariants = (borderTokens: ReturnType<typeof useBorderTokens>, c
     variants: {
       variant: {
         default:
-          `${borderTokens.style.none} ${colors.bg.primary} ${colors.text.inverse} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
+          `${borderTokens.style.none} bg-blue-600 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER || 'hover:bg-blue-700'}`,
         secondary:
-          `${borderTokens.style.none} ${colors.bg.secondary} ${colors.text.primary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
+          `${borderTokens.style.none} bg-gray-100 text-gray-900 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:bg-gray-200'}`,
         destructive:
-          `${borderTokens.style.none} ${colors.bg.error} ${colors.text.inverse} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`,
+          `${borderTokens.style.none} bg-red-600 text-white ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER || 'hover:bg-red-700'}`,
         outline: "text-foreground",
         success:
-          `${borderTokens.style.none} ${colors.bg.success}/50 ${colors.text.success} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`,
+          `${borderTokens.style.none} bg-green-50 text-green-600 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER || 'hover:bg-green-100'}`,
         warning:
-          `${borderTokens.style.none} ${colors.bg.warning}/50 ${colors.text.warning} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
+          `${borderTokens.style.none} bg-yellow-50 text-yellow-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:bg-yellow-100'}`,
         info:
-          `${borderTokens.style.none} ${colors.bg.info}/50 ${colors.text.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
+          `${borderTokens.style.none} bg-blue-50 text-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER || 'hover:bg-blue-100'}`,
         error:
-          `${borderTokens.style.none} ${colors.bg.error}/50 ${colors.text.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`,
+          `${borderTokens.style.none} bg-red-50 text-red-600 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER || 'hover:bg-red-100'}`,
         purple:
-          `${borderTokens.style.none} ${colors.bg.info}/50 ${colors.text.info} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`,
+          `${borderTokens.style.none} bg-purple-50 text-purple-600 ${INTERACTIVE_PATTERNS.ACCENT_HOVER || 'hover:bg-purple-100'}`,
         light:
-          `${borderTokens.style.none} ${colors.bg.light} ${colors.text.primary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
+          `${borderTokens.style.none} bg-gray-50 text-gray-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:bg-gray-100'}`,
         muted:
-          `${borderTokens.style.none} ${colors.bg.muted} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
+          `${borderTokens.style.none} bg-gray-100 text-gray-500 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:bg-gray-200'}`,
         subtle:
-          `${borderTokens.style.none} ${colors.bg.neutralSubtle} ${colors.text.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
+          `${borderTokens.style.none} bg-slate-50 text-slate-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:bg-slate-100'}`,
       },
     },
     defaultVariants: {

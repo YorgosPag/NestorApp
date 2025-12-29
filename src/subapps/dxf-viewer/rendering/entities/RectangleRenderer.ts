@@ -14,14 +14,14 @@ import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 
 
 export class RectangleRenderer extends BaseEntityRenderer {
-  private getVertices(entity: EntityModel): Point2D[] | null {
+  private getVertices(entity: Entity): Point2D[] | null {
     return getRectangleVertices(entity);
   }
 
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (entity.type !== 'rectangle' && entity.type !== 'rect') return;
     
-    const vertices = this.getVertices(entity);
+    const vertices = this.getVertices(entity as Entity);
     if (!vertices) return;
     
     // Use universal 3-phase rendering template
@@ -150,7 +150,7 @@ export class RectangleRenderer extends BaseEntityRenderer {
     if (entity.type !== 'rectangle' && entity.type !== 'rect') return [];
     
     const grips: GripInfo[] = [];
-    const vertices = this.getVertices(entity);
+    const vertices = this.getVertices(entity as Entity);
     if (!vertices) return grips;
     
     // Corner grips

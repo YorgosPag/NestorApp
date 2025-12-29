@@ -105,8 +105,8 @@ export function createEntitySettingsSchema<T extends z.ZodTypeAny>(
   // ✅ ENTERPRISE: Use z.ZodType<unknown> instead of any for type-safe partial schemas
   return z.object({
     general: settingsSchema,
-    specific: z.record(StorageModeSchema, (settingsSchema as unknown as z.ZodType<unknown>).partial()),
-    overrides: z.record(StorageModeSchema, (settingsSchema as unknown as z.ZodType<unknown>).partial())
+    specific: z.record(StorageModeSchema, (settingsSchema as any).partial()), // ✅ ENTERPRISE FIX: Use any for Zod partial() method access
+    overrides: z.record(StorageModeSchema, (settingsSchema as any).partial()) // ✅ ENTERPRISE FIX: Use any for Zod partial() method access
   });
 }
 

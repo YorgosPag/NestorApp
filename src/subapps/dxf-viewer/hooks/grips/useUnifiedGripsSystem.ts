@@ -31,7 +31,10 @@ interface UseUnifiedGripsSystemReturn {
   startRegionDrag: (regionId: string, startPoint: Point2D) => void;
   handleDragMove: (
     currentPoint: Point2D,
-    renderer: { renderGrips?: (grips: unknown[]) => void; getCoordinateManager?: () => unknown },
+    renderer: {
+      renderGrips?: ((grips: unknown[]) => void) | undefined;
+      getCoordinateManager?: (() => unknown) | undefined;
+    },
     transform: ViewTransform,
     regions: Region[],
     onUpdateRegion: (regionId: string, updates: Partial<Region>) => void

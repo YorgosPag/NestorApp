@@ -20,6 +20,7 @@ import {
   DEFAULT_DXF_SETTINGS
 } from '../defaults';
 import { UI_COLORS } from '../../config/color-config';
+import type { PartialDxfSettings } from '../types';
 
 describe('Override Engine', () => {
   describe('mergeSettings', () => {
@@ -32,11 +33,11 @@ describe('Override Engine', () => {
 
     it('should merge override into base', () => {
       const base = DEFAULT_LINE_SETTINGS;
-      const override = { lineColor: UI_COLORS.SELECTED_RED, lineWidth: 3 };
+      const override = { color: UI_COLORS.SELECTED_RED, lineWidth: 3 }; // ✅ ENTERPRISE FIX: LineSettings uses 'color', not 'color'
 
       const result = mergeSettings(base, override);
 
-      expect(result.lineColor).toBe(UI_COLORS.SELECTED_RED);
+      expect(result.color).toBe(UI_COLORS.SELECTED_RED); // ✅ ENTERPRISE FIX: LineSettings uses 'color', not 'color'
       expect(result.lineWidth).toBe(3);
       expect(result.lineType).toBe(base.lineType); // Unchanged
     });
@@ -55,16 +56,16 @@ describe('Override Engine', () => {
     it('should merge all setting categories', () => {
       const base = DEFAULT_DXF_SETTINGS;
       const override = {
-        line: { lineColor: UI_COLORS.LEGACY_COLORS.GREEN },
+        line: { color: UI_COLORS.LEGACY_COLORS.GREEN }, // ✅ ENTERPRISE FIX: LineSettings uses 'color', not 'color'
         text: { fontSize: 16 },
-        grip: { size: 10 }
+        grip: { gripSize: 10 } // ✅ ENTERPRISE FIX: GripSettings uses 'gripSize', not 'size'
       };
 
       const result = mergeDxfSettings(base, override);
 
-      expect(result.line.lineColor).toBe(UI_COLORS.LEGACY_COLORS.GREEN);
+      expect(result.line.color).toBe(UI_COLORS.LEGACY_COLORS.GREEN); // ✅ ENTERPRISE FIX: LineSettings uses 'color', not 'color'
       expect(result.text.fontSize).toBe(16);
-      expect(result.grip.size).toBe(10);
+      expect(result.grip.gripSize).toBe(10); // ✅ ENTERPRISE FIX: GripSettings uses 'gripSize', not 'size'
     });
 
     it('should handle partial overrides', () => {
@@ -84,7 +85,7 @@ describe('Override Engine', () => {
     it('should handle null/undefined override', () => {
       const base = DEFAULT_DXF_SETTINGS;
 
-      const result1 = mergeDxfSettings(base, undefined);
+      const result1 = mergeDxfSettings(base, null);
       const result2 = mergeDxfSettings(base, null as never);
 
       expect(result1).toBe(base);
@@ -106,34 +107,34 @@ describe('Override Engine', () => {
       const base = DEFAULT_LINE_SETTINGS;
       const compare = {
         ...DEFAULT_LINE_SETTINGS,
-        lineColor: '#DIFFERENT',
+        color: '#DIFFERENT', // ✅ ENTERPRISE FIX: LineSettings uses 'color', not 'color'
         lineWidth: 99
       };
 
       const diff = diffSettings(base, compare);
 
       expect(diff).toEqual({
-        lineColor: '#DIFFERENT',
+        color: '#DIFFERENT', // ✅ ENTERPRISE FIX: LineSettings uses 'color', not 'color'
         lineWidth: 99
       });
     });
 
     it('should ignore unchanged properties', () => {
       const base = {
-        lineColor: UI_COLORS.BLACK,
+        color: UI_COLORS.BLACK,
         lineWidth: 1,
         lineType: 'solid'
       };
       const compare = {
-        lineColor: UI_COLORS.SELECTED_RED, // Changed
+        color: UI_COLORS.SELECTED_RED, // Changed
         lineWidth: 1,         // Same
         lineType: 'solid'     // Same
       };
 
-      const diff = diffSettings(base, compare);
+      const diff = diffSettings(base, compare as any);
 
       expect(diff).toEqual({
-        lineColor: UI_COLORS.SELECTED_RED
+        color: UI_COLORS.SELECTED_RED
       });
     });
   });
@@ -142,7 +143,7 @@ describe('Override Engine', () => {
     it('should extract all overrides from entity settings', () => {
       const base = DEFAULT_DXF_SETTINGS;
       const entity = {
-        line: { ...DEFAULT_LINE_SETTINGS, lineColor: UI_COLORS.CUSTOM_TEST_COLOR || '#123456' },
+        line: { ...DEFAULT_LINE_SETTINGS, color: UI_COLORS.CUSTOM_TEST_COLOR || '#123456' },
         text: { ...DEFAULT_TEXT_SETTINGS, fontSize: 20 },
         grip: DEFAULT_GRIP_SETTINGS // No change
       };
@@ -150,7 +151,7 @@ describe('Override Engine', () => {
       const overrides = extractOverrides(base, entity);
 
       expect(overrides).toEqual({
-        line: { lineColor: UI_COLORS.CUSTOM_TEST_COLOR || '#123456' },
+        line: { color: UI_COLORS.CUSTOM_TEST_COLOR || '#123456' },
         text: { fontSize: 20 }
         // grip not included (no differences)
       });
@@ -160,7 +161,7 @@ describe('Override Engine', () => {
       const base = DEFAULT_DXF_SETTINGS;
       const entity = DEFAULT_DXF_SETTINGS;
 
-      const overrides = extractOverrides(base, entity);
+      const overrides = extractOverrides(base as unknown as Record<string, unknown>, entity as unknown as Record<string, unknown>);
 
       expect(overrides).toBeNull();
     });
@@ -168,7 +169,7 @@ describe('Override Engine', () => {
 
   describe('hasOverrides', () => {
     it('should detect when overrides exist', () => {
-      expect(hasOverrides({ line: { lineColor: UI_COLORS.SELECTED_RED } })).toBe(true);
+      expect(hasOverrides({ line: { color: UI_COLORS.SELECTED_RED } })).toBe(true);
       expect(hasOverrides({ text: {} })).toBe(false);
       expect(hasOverrides({})).toBe(false);
       expect(hasOverrides(null)).toBe(false);
@@ -192,7 +193,7 @@ describe('Override Engine', () => {
   describe('cleanEmptyOverrides', () => {
     it('should remove empty override objects', () => {
       const overrides = {
-        line: { lineColor: UI_COLORS.SELECTED_RED },
+        line: { color: UI_COLORS.SELECTED_RED },
         text: {}, // Empty
         grip: undefined
       };
@@ -200,7 +201,7 @@ describe('Override Engine', () => {
       const cleaned = cleanEmptyOverrides(overrides);
 
       expect(cleaned).toEqual({
-        line: { lineColor: UI_COLORS.SELECTED_RED }
+        line: { color: UI_COLORS.SELECTED_RED }
       });
     });
 
@@ -226,17 +227,17 @@ describe('Override Engine', () => {
     it('should apply multiple overrides in sequence', () => {
       const base = DEFAULT_DXF_SETTINGS;
       const overrides = [
-        { line: { lineColor: UI_COLORS.SELECTED_RED } },
+        { line: { color: UI_COLORS.SELECTED_RED } },
         { line: { lineWidth: 2 }, text: { fontSize: 16 } },
-        { grip: { size: 8 } }
+        { grip: { gripSize: 8 } }
       ];
 
       const result = applyOverridesToBase(base, overrides);
 
-      expect(result.line.lineColor).toBe(UI_COLORS.SELECTED_RED);
+      expect(result.line.color).toBe(UI_COLORS.SELECTED_RED); // ✅ ENTERPRISE FIX: LineSettings uses 'color', not 'color'
       expect(result.line.lineWidth).toBe(2);
       expect(result.text.fontSize).toBe(16);
-      expect(result.grip.size).toBe(8);
+      expect(result.grip.gripSize).toBe(8);
     });
 
     it('should handle empty overrides array', () => {
@@ -250,14 +251,14 @@ describe('Override Engine', () => {
       const base = DEFAULT_DXF_SETTINGS;
       const overrides = [
         null,
-        { line: { lineColor: UI_COLORS.LEGACY_COLORS.BLUE } },
+        { line: { color: UI_COLORS.LEGACY_COLORS.BLUE } },
         undefined,
         { text: { fontSize: 18 } }
       ];
 
-      const result = applyOverridesToBase(base, overrides as unknown);
+      const result = applyOverridesToBase(base, overrides);
 
-      expect(result.line.lineColor).toBe(UI_COLORS.LEGACY_COLORS.BLUE);
+      expect(result.line.color).toBe(UI_COLORS.LEGACY_COLORS.BLUE);
       expect(result.text.fontSize).toBe(18);
     });
   });
@@ -266,7 +267,7 @@ describe('Override Engine', () => {
     it('should handle large override sets efficiently', () => {
       const base = DEFAULT_DXF_SETTINGS;
       const overrides = Array.from({ length: 1000 }, (_, i) => ({
-        line: { lineColor: `#${i.toString(16).padStart(6, '0')}` }
+        line: { color: `#${i.toString(16).padStart(6, '0')}` }
       }));
 
       const start = performance.now();
@@ -274,12 +275,12 @@ describe('Override Engine', () => {
       const end = performance.now();
 
       expect(end - start).toBeLessThan(100); // Should complete within 100ms
-      expect(result.line.lineColor).toBe('#0003e7'); // Last override
+      expect(result.line.color).toBe('#0003e7'); // Last override
     });
 
     it('should use reference equality for unchanged objects', () => {
       const base = DEFAULT_DXF_SETTINGS;
-      const override = { line: { lineColor: UI_COLORS.SELECTED_RED } };
+      const override = { line: { color: UI_COLORS.SELECTED_RED } };
 
       const result = mergeDxfSettings(base, override);
 
@@ -301,22 +302,22 @@ describe('Override Engine', () => {
 
       const override = {
         line: {
-          lineColor: UI_COLORS.SELECTED_RED,
+          color: UI_COLORS.SELECTED_RED, // ✅ ENTERPRISE FIX: LineSettings uses 'color', not 'color'
           // Nested object that shouldn't exist but testing robustness
           nested: { value: 'test' }
         } as unknown
       };
 
-      const result = mergeDxfSettings(base, override);
+      const result = mergeDxfSettings(base, override as PartialDxfSettings);
 
-      expect(result.line.lineColor).toBe(UI_COLORS.SELECTED_RED);
-      expect((result.line as Record<string, unknown>).nested).toEqual({ value: 'test' });
+      expect(result.line.color).toBe(UI_COLORS.SELECTED_RED); // ✅ ENTERPRISE FIX: LineSettings uses 'color', not 'color'
+      expect((result.line as any).nested).toEqual({ value: 'test' });
     });
 
     it('should handle circular references gracefully', () => {
       const base = DEFAULT_DXF_SETTINGS;
-      const override: Record<string, unknown> = { line: {} };
-      override.line.circular = override; // Create circular reference
+      const override: Record<string, any> = { line: {} };
+      (override.line as any).circular = override; // Create circular reference
 
       // Should not throw or infinite loop
       const result = mergeDxfSettings(base, override);

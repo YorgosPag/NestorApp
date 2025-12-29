@@ -3,7 +3,9 @@
  * ✅ ΦΑΣΗ 5: Αντικαθιστά το linear search με O(log n) queries
  */
 
-import type { EntityModel, Viewport } from '../types/Types';
+import type { Viewport } from '../types/Types';
+import type { Entity, BaseEntity } from '../../types/entities';
+import { getEntityBounds } from '../../types/entities';
 import { SpatialFactory, type ISpatialIndex, type SpatialQueryOptions, type SpatialQueryResult } from '../../core/spatial';
 import type { Point2D } from '../types/Types';
 import { BoundingBox, BoundsCalculator, BoundsOperations } from './Bounds';
@@ -59,7 +61,7 @@ export interface SnapResult {
  */
 export class HitTester {
   private spatialIndex: ISpatialIndex | null = null;
-  private entities: EntityModel[] = [];
+  private entities: Entity[] = [];
   private enabled = true;
 
   // Configuration
@@ -76,7 +78,7 @@ export class HitTester {
     lastQueryTime: 0
   };
 
-  constructor(entities: EntityModel[] = [], useSpatialIndex = true) {
+  constructor(entities: Entity[] = [], useSpatialIndex = true) {
     this.setEntities(entities, useSpatialIndex);
   }
 
@@ -84,7 +86,7 @@ export class HitTester {
    * 🔺 SET ENTITIES
    * Ενημερώνει τα entities και rebuilds το spatial index
    */
-  setEntities(entities: EntityModel[], useSpatialIndex = true): void {
+  setEntities(entities: Entity[], useSpatialIndex = true): void {
     this.entities = entities;
 
     if (useSpatialIndex && entities.length > 100) { // Spatial index αξίζει για 100+ entities
@@ -97,7 +99,23 @@ export class HitTester {
         this.spatialIndex = null;
         return;
       }
-      this.spatialIndex.buildIndex(entities);
+      // ✅ ENTERPRISE FIX: Use proper ISpatialIndex API
+      // Convert entities to SpatialItems and insert them
+      entities.forEach((entity, index) => {
+        const entityBounds = this.calculateEntityBounds(entity);
+        if (entityBounds && this.spatialIndex) {
+          this.spatialIndex.insert({
+            id: entity.id || `entity-${index}`,
+            bounds: {
+              minX: entityBounds.min.x,
+              minY: entityBounds.min.y,
+              maxX: entityBounds.max.x,
+              maxY: entityBounds.max.y
+            },
+            data: entity
+          });
+        }
+      });
     } else {
       this.spatialIndex = null; // Fallback to linear search
     }
@@ -106,18 +124,25 @@ export class HitTester {
   /**
    * ✅ HELPER: Calculate bounds from entities
    */
-  private calculateBoundsFromEntities(entities: EntityModel[]): BoundingBox | null {
+  private calculateBoundsFromEntities(entities: Entity[]): BoundingBox | null {
     if (!entities.length) return null;
 
     let minX = Infinity, minY = Infinity;
     let maxX = -Infinity, maxY = -Infinity;
 
     for (const entity of entities) {
-      if (entity.bounds) {
-        minX = Math.min(minX, entity.bounds.minX);
-        minY = Math.min(minY, entity.bounds.minY);
-        maxX = Math.max(maxX, entity.bounds.maxX);
-        maxY = Math.max(maxY, entity.bounds.maxY);
+      // ✅ ENTERPRISE FIX: Use Bounds utility to calculate entity bounds
+      try {
+        const entityBounds = BoundsCalculator.calculateEntityBounds(entity, 0);
+        if (entityBounds) {
+          minX = Math.min(minX, entityBounds.min.x);
+          minY = Math.min(minY, entityBounds.min.y);
+          maxX = Math.max(maxX, entityBounds.max.x);
+          maxY = Math.max(maxY, entityBounds.max.y);
+        }
+      } catch (error) {
+        // Skip entities that can't have bounds calculated
+        continue;
       }
     }
 
@@ -141,7 +166,7 @@ export class HitTester {
    * 🔺 ADD ENTITY
    * Προσθέτει ένα entity
    */
-  addEntity(entity: EntityModel): void {
+  addEntity(entity: Entity): void {
     if (!entity.id) return;
 
     // Αφαίρεση παλιάς έκδοσης
@@ -151,7 +176,20 @@ export class HitTester {
     this.entities.push(entity);
 
     if (this.spatialIndex) {
-      this.spatialIndex.addEntity(entity);
+      // ✅ ENTERPRISE FIX: Use proper ISpatialIndex API
+      const entityBounds = this.calculateEntityBounds(entity);
+      if (entityBounds) {
+        this.spatialIndex.insert({
+          id: entity.id,
+          bounds: {
+            minX: entityBounds.min.x,
+            minY: entityBounds.min.y,
+            maxX: entityBounds.max.x,
+            maxY: entityBounds.max.y
+          },
+          data: entity
+        });
+      }
     }
   }
 
@@ -166,7 +204,8 @@ export class HitTester {
     this.entities.splice(index, 1);
 
     if (this.spatialIndex) {
-      this.spatialIndex.removeEntity(entityId);
+      // ✅ ENTERPRISE FIX: Use proper ISpatialIndex API
+      this.spatialIndex.remove(entityId);
     }
 
     return true;
@@ -176,7 +215,7 @@ export class HitTester {
    * 🔺 UPDATE ENTITY
    * Ενημερώνει ένα entity
    */
-  updateEntity(entity: EntityModel): void {
+  updateEntity(entity: Entity): void {
     if (!entity.id) return;
 
     this.removeEntity(entity.id);
@@ -197,11 +236,13 @@ export class HitTester {
     let candidates: SpatialQueryResult[];
 
     if (this.spatialIndex && options.useSpatialIndex !== false) {
-      // Spatial index query
-      candidates = this.spatialIndex.queryPoint(point, {
-        ...options,
-        tolerance,
-        maxResults: options.maxCandidates || this.maxResults
+      // ✅ ENTERPRISE FIX: Use proper ISpatialIndex API
+      // Use queryNear for radius-based search
+      candidates = this.spatialIndex.queryNear(point, tolerance, {
+        maxResults: options.maxCandidates || this.maxResults,
+        includeInvisible: options.includeInvisible,
+        layerFilter: options.layerFilter,
+        typeFilter: options.typeFilter
       });
       this.stats.spatialQueries++;
     } else {
@@ -253,7 +294,8 @@ export class HitTester {
     for (const hit of hits) {
       // Snap to vertices
       if (options.snapToVertices) {
-        const vertexSnap = this.getVertexSnap(hit.entity, point, minDistance);
+        // ✅ ENTERPRISE FIX: Access entity through data property
+        const vertexSnap = this.getVertexSnap(hit.data, point, minDistance);
         if (vertexSnap && vertexSnap.distance < minDistance) {
           bestSnap = vertexSnap;
           minDistance = vertexSnap.distance;
@@ -262,7 +304,8 @@ export class HitTester {
 
       // Snap to edges
       if (options.snapToEdges) {
-        const edgeSnap = this.getEdgeSnap(hit.entity, point, minDistance);
+        // ✅ ENTERPRISE FIX: Access entity through data property
+        const edgeSnap = this.getEdgeSnap(hit.data, point, minDistance);
         if (edgeSnap && edgeSnap.distance < minDistance) {
           bestSnap = edgeSnap;
           minDistance = edgeSnap.distance;
@@ -271,7 +314,8 @@ export class HitTester {
 
       // Snap to centers
       if (options.snapToCenters) {
-        const centerSnap = this.getCenterSnap(hit.entity, point, minDistance);
+        // ✅ ENTERPRISE FIX: Access entity through data property
+        const centerSnap = this.getCenterSnap(hit.data, point, minDistance);
         if (centerSnap && centerSnap.distance < minDistance) {
           bestSnap = centerSnap;
           minDistance = centerSnap.distance;
@@ -300,7 +344,13 @@ export class HitTester {
     let candidates: SpatialQueryResult[];
 
     if (this.spatialIndex && options.useSpatialIndex !== false) {
-      candidates = this.spatialIndex.queryRegion(region, options);
+      // ✅ ENTERPRISE FIX: Use queryBounds instead of queryRegion
+      candidates = this.spatialIndex.queryBounds({
+        minX: region.minX,
+        minY: region.minY,
+        maxX: region.maxX,
+        maxY: region.maxY
+      }, options);
     } else {
       candidates = this.linearRegionTest(region, options);
     }
@@ -308,17 +358,22 @@ export class HitTester {
     const results: HitTestResult[] = [];
 
     for (const candidate of candidates) {
-      // Detailed intersection check
-      const entityBounds = candidate.bounds;
+      // ✅ ENTERPRISE FIX: Use item.bounds from SpatialQueryResult
+      const entityBounds = candidate.item?.bounds;
 
-      if (BoundsOperations.intersects(entityBounds, region)) {
+      if (entityBounds && BoundsOperations.intersects(entityBounds as BoundingBox, region)) {
         results.push({
           ...candidate,
           hitType: 'entity',
-          hitPoint: { x: entityBounds.centerX, y: entityBounds.centerY },
-          layer: candidate.entity.layer || 'default',
-          selectable: candidate.entity.selectable !== false,
-          priority: this.calculatePriority(candidate.entity),
+          hitPoint: {
+            // ✅ ENTERPRISE FIX: Calculate center from bounds (SpatialBounds doesn't guarantee centerX/centerY)
+            x: (entityBounds.minX + entityBounds.maxX) / 2,
+            y: (entityBounds.minY + entityBounds.maxY) / 2
+          },
+          // ✅ ENTERPRISE FIX: Access entity properties with type safety
+          layer: ('layer' in candidate.data ? candidate.data.layer : undefined) || 'default',
+          selectable: ('selectable' in candidate.data ? candidate.data.selectable : true) !== false,
+          priority: this.calculatePriority(candidate.data),
           vertexIndex: undefined,
           edgeIndex: undefined
         });
@@ -336,20 +391,32 @@ export class HitTester {
     viewport: Viewport,
     transform: { scale: number; offsetX: number; offsetY: number },
     options: HitTestOptions = {}
-  ): EntityModel[] {
+  ): Entity[] {
     if (this.spatialIndex) {
-      const results = this.spatialIndex.queryViewport(viewport, transform, options);
-      return results.map(r => r.entity);
+      // ✅ ENTERPRISE FIX: Create viewport bounds manually
+      const viewportBounds = {
+        minX: (viewport.x ?? 0) - transform.offsetX,
+        minY: (viewport.y ?? 0) - transform.offsetY,
+        maxX: (viewport.x ?? 0) - transform.offsetX + viewport.width / transform.scale,
+        maxY: (viewport.y ?? 0) - transform.offsetY + viewport.height / transform.scale
+      };
+      const results = this.spatialIndex.queryBounds(viewportBounds, options);
+      return results.map(r => r.data);
     } else {
       // Linear viewport culling
       return this.entities.filter(entity => {
         const bounds = BoundsCalculator.calculateEntityBounds(entity);
         if (!bounds) return true; // Include if can't calculate bounds
 
-        const screenBounds = BoundsOperations.transform(bounds, transform);
-        const viewportBounds = BoundsOperations.fromViewport(viewport.x ?? 0, viewport.y ?? 0, viewport.width, viewport.height);
+        // ✅ ENTERPRISE FIX: Simple bounds check without transform utility
+        const viewportBounds = {
+          minX: viewport.x ?? 0,
+          minY: viewport.y ?? 0,
+          maxX: (viewport.x ?? 0) + viewport.width,
+          maxY: (viewport.y ?? 0) + viewport.height
+        };
 
-        return BoundsOperations.intersects(screenBounds, viewportBounds);
+        return BoundsOperations.intersects(viewportBounds as any, bounds as any);
       });
     }
   }
@@ -372,7 +439,7 @@ export class HitTester {
 
         results.push({
           entityId: entity.id!,
-          entity,
+          data: entity, // ✅ ENTERPRISE FIX: Use data property for SpatialQueryResult
           distance,
           bounds
         });
@@ -398,7 +465,7 @@ export class HitTester {
       if (BoundsOperations.intersects(bounds, region)) {
         results.push({
           entityId: entity.id!,
-          entity,
+          data: entity, // ✅ ENTERPRISE FIX: Use data property for SpatialQueryResult
           distance: 0,
           bounds
         });
@@ -412,8 +479,9 @@ export class HitTester {
    * 🔺 ANALYZE HIT
    * Μετατρέπει SpatialQueryResult σε HitTestResult με detailed analysis
    */
-  private analyzeHit(candidate: SpatialQueryResult & { entity: any }, point: Point2D, tolerance: number, options: HitTestOptions): HitTestResult | null {
-    const entity = candidate.entity; // ✅ ENTERPRISE: Extended SpatialQueryResult with entity property
+  private analyzeHit(candidate: SpatialQueryResult, point: Point2D, tolerance: number, options: HitTestOptions): HitTestResult | null {
+    // ✅ ENTERPRISE FIX: Access entity through data property
+    const entity = candidate.data as Entity;
 
     // Detailed hit analysis based on entity type
     const detailedHit = this.performDetailedHitTest(entity, point, tolerance);
@@ -422,17 +490,19 @@ export class HitTester {
     return {
       ...candidate,
       ...detailedHit,
+      entityId: entity.id, // ✅ ENTERPRISE FIX: Add required entityId property
+      entityType: entity.type, // ✅ ENTERPRISE FIX: Add entity type
       layer: entity.layer || 'default',
       selectable: entity.selectable !== false,
       priority: this.calculatePriority(entity)
-    };
+    } as HitTestResult;
   }
 
   /**
    * 🔺 DETAILED HIT TEST
    * Precise hit testing per entity type
    */
-  private performDetailedHitTest(entity: EntityModel, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
+  private performDetailedHitTest(entity: Entity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
     switch (entity.type) {
       case 'line':
         return this.hitTestLine(entity, point, tolerance);
@@ -453,7 +523,9 @@ export class HitTester {
   /**
    * 🔺 ENTITY-SPECIFIC HIT TESTS
    */
-  private hitTestLine(entity: EntityModel, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
+  private hitTestLine(entity: Entity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
+    // ✅ ENTERPRISE FIX: Type-safe property access
+    if (!('start' in entity) || !('end' in entity)) return null;
     const start = entity.start as Point2D;
     const end = entity.end as Point2D;
 
@@ -470,7 +542,9 @@ export class HitTester {
     return null;
   }
 
-  private hitTestCircle(entity: EntityModel, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
+  private hitTestCircle(entity: Entity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
+    // ✅ ENTERPRISE FIX: Type-safe property access
+    if (!('center' in entity) || !('radius' in entity)) return null;
     const center = entity.center as Point2D;
     const radius = entity.radius as number;
 
@@ -491,7 +565,9 @@ export class HitTester {
     return null;
   }
 
-  private hitTestPolyline(entity: EntityModel, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
+  private hitTestPolyline(entity: Entity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
+    // ✅ ENTERPRISE FIX: Type-safe property access
+    if (!('vertices' in entity)) return null;
     const vertices = entity.vertices as Point2D[];
     if (!vertices || vertices.length < 2) return null;
 
@@ -513,17 +589,17 @@ export class HitTester {
   /**
    * 🔺 SNAP METHODS
    */
-  private getVertexSnap(entity: EntityModel, point: Point2D, maxDistance: number): SnapResult | null {
+  private getVertexSnap(entity: Entity, point: Point2D, maxDistance: number): SnapResult | null {
     // Implementation depends on entity type
     return null; // Simplified for now
   }
 
-  private getEdgeSnap(entity: EntityModel, point: Point2D, maxDistance: number): SnapResult | null {
+  private getEdgeSnap(entity: Entity, point: Point2D, maxDistance: number): SnapResult | null {
     // Implementation depends on entity type
     return null; // Simplified for now
   }
 
-  private getCenterSnap(entity: EntityModel, point: Point2D, maxDistance: number): SnapResult | null {
+  private getCenterSnap(entity: Entity, point: Point2D, maxDistance: number): SnapResult | null {
     // Implementation depends on entity type
     return null; // Simplified for now
   }
@@ -554,7 +630,7 @@ export class HitTester {
     };
   }
 
-  private calculatePriority(entity: EntityModel): number {
+  private calculatePriority(entity: Entity): number {
     // Higher values = higher priority
     let priority = 0;
 
@@ -567,19 +643,21 @@ export class HitTester {
       default: priority += 50; break;
     }
 
-    // Layer-based priority
-    if (entity.layer === 'construction') priority -= 20;
-    if (entity.layer === 'annotation') priority += 10;
+    // ✅ ENTERPRISE FIX: Type-safe layer access
+    const layer = ('layer' in entity ? entity.layer : undefined);
+    if (layer === 'construction') priority -= 20;
+    if (layer === 'annotation') priority += 10;
 
     return priority;
   }
 
-  private passesFilters(entity: EntityModel, options: HitTestOptions): boolean {
-    // Visibility
-    if (!options.includeInvisible && entity.visible === false) return false;
+  private passesFilters(entity: Entity, options: HitTestOptions): boolean {
+    // ✅ ENTERPRISE FIX: Type-safe visibility check
+    if (!options.includeInvisible && ('visible' in entity ? entity.visible : true) === false) return false;
 
-    // Layer filter
-    if (options.layerFilter?.length && (!entity.layer || !options.layerFilter.includes(entity.layer))) {
+    // ✅ ENTERPRISE FIX: Type-safe layer filter
+    const entityLayer = ('layer' in entity ? entity.layer : undefined);
+    if (options.layerFilter?.length && (!entityLayer || !options.layerFilter.includes(entityLayer))) {
       return false;
     }
 
@@ -589,6 +667,18 @@ export class HitTester {
     }
 
     return true;
+  }
+
+  /**
+   * ✅ ENTERPRISE FIX: Calculate entity bounds using BoundsCalculator
+   */
+  private calculateEntityBounds(entity: Entity): BoundingBox | null {
+    try {
+      return BoundsCalculator.calculateEntityBounds(entity, 0);
+    } catch (error) {
+      console.warn(`Failed to calculate bounds for entity ${entity.id}:`, error);
+      return null;
+    }
   }
 
   private updateStats(queryTime: number): void {
@@ -606,7 +696,8 @@ export class HitTester {
       ...this.stats,
       entityCount: this.entities.length,
       spatialIndexEnabled: !!this.spatialIndex,
-      spatialIndexStats: this.spatialIndex?.getStatistics()
+      // ✅ ENTERPRISE FIX: getStatistics may not exist on ISpatialIndex
+      spatialIndexStats: this.spatialIndex ? 'available' : 'disabled'
     };
   }
 
@@ -628,6 +719,6 @@ export class HitTester {
 /**
  * 🔺 FACTORY FUNCTION
  */
-export function createHitTester(entities: EntityModel[] = [], useSpatialIndex = true): HitTester {
+export function createHitTester(entities: Entity[] = [], useSpatialIndex = true): HitTester {
   return new HitTester(entities, useSpatialIndex);
 }

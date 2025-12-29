@@ -63,7 +63,7 @@ type Pt = { x: number, y: number };
 
 export function useDrawingHandlers(
   activeTool: ToolType,
-  onEntityCreated: (entity: Entity) => void,
+  onEntityCreated: (entity: any) => void,
   onToolChange: (tool: ToolType) => void,
   currentScene?: SceneModel
 ) {
@@ -148,8 +148,10 @@ export function useDrawingHandlers(
 
         const newEntity = finishPolyline();
         if(newEntity) {
-
-          onEntityCreated(newEntity);
+          // Filter out extended types that are not compatible with base Entity type
+          if ('type' in newEntity && typeof newEntity.type === 'string') {
+            onEntityCreated(newEntity as Entity);
+          }
         }
         onToolChange('select');
       } else {

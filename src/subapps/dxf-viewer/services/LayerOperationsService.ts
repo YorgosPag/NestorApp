@@ -231,7 +231,7 @@ export class LayerOperationsService {
     
     // Move all entities from source layers to target layer
     const updatedEntities = scene.entities.map(entity =>
-      sourceLayerNames.includes(entity.layer)
+      entity.layer && sourceLayerNames.includes(entity.layer)
         ? { ...entity, layer: targetLayerName }
         : entity
     );
@@ -250,7 +250,7 @@ export class LayerOperationsService {
     };
     
     const affectedEntityIds = scene.entities
-      .filter(entity => sourceLayerNames.includes(entity.layer))
+      .filter(entity => entity.layer && sourceLayerNames.includes(entity.layer))
       .map(entity => entity.id);
 
     return {
@@ -301,16 +301,16 @@ export class LayerOperationsService {
         )
       },
       entities: scene.entities.map(entity =>
-        layersInGroup.includes(entity.layer)
+        entity.layer && layersInGroup.includes(entity.layer)
           ? { ...entity, visible }
           : entity
       )
     };
-    
+
     const affectedEntityIds = scene.entities
-      .filter(entity => layersInGroup.includes(entity.layer))
+      .filter(entity => entity.layer && layersInGroup.includes(entity.layer))
       .map(entity => entity.id);
-    
+
     return {
       updatedScene,
       affectedEntityIds,
@@ -336,11 +336,11 @@ export class LayerOperationsService {
     );
     
     const deletedEntityIds = scene.entities
-      .filter(entity => layersInGroup.includes(entity.layer))
+      .filter(entity => entity.layer && layersInGroup.includes(entity.layer))
       .map(entity => entity.id);
     
     const remainingEntities = scene.entities.filter(
-      entity => !layersInGroup.includes(entity.layer)
+      entity => !entity.layer || !layersInGroup.includes(entity.layer)
     );
     
     const updatedScene = {
@@ -379,16 +379,16 @@ export class LayerOperationsService {
         )
       },
       entities: scene.entities.map(entity =>
-        layersInGroup.includes(entity.layer)
+        entity.layer && layersInGroup.includes(entity.layer)
           ? { ...entity, color }
           : entity
       )
     };
     
     const affectedEntityIds = scene.entities
-      .filter(entity => layersInGroup.includes(entity.layer))
+      .filter(entity => entity.layer && layersInGroup.includes(entity.layer))
       .map(entity => entity.id);
-    
+
     return {
       updatedScene,
       affectedEntityIds,

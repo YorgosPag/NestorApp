@@ -54,16 +54,16 @@ export const usePhotoColors = () => {
  */
 export const PHOTO_BORDERS = {
   /** Dashed borders για empty states */
-  EMPTY_STATE: `border-2 border-dashed ${borderVariants.input.default.className.split(' ')[1]}`,
+  EMPTY_STATE: `border-2 border-dashed border-gray-300`,
 
-  /** Hover border για empty states */
-  EMPTY_HOVER: `hover:${borderVariants.input.focus.className}`,
+  /** Hover border για empty states - Safe fallback */
+  EMPTY_HOVER: `hover:border-2 hover:border-primary hover:rounded-md`,
 
   /** Primary border για active states */
   PRIMARY: 'border-primary',
 
   /** Standard border */
-  STANDARD: 'border-border'
+  STANDARD: 'border-gray-200'
 } as const;
 
 /**

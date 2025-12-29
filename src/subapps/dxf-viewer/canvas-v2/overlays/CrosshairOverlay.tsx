@@ -238,7 +238,7 @@ export default function CrosshairOverlay({
     <canvas
       ref={canvasRef}
       className={`${className}`}
-      style={portalComponents.overlay.fullscreen}
+      style={{ zIndex: 1400 }}
     />
   );
 }

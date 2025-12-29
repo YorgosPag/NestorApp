@@ -25,6 +25,9 @@ export const EXPERIMENTAL_FEATURES = {
   // 🆕 PORTS & ADAPTERS: Store Sync with Dependency Injection
   // Enables decoupled store synchronization via ports
   ENABLE_SETTINGS_SYNC: true,
+
+  // Layout Debug System
+  LAYOUT_DEBUG_SYSTEM: false,
 } as const;
 
 export function isFeatureEnabled(feature: keyof typeof EXPERIMENTAL_FEATURES): boolean {

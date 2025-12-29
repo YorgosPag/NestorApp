@@ -15,6 +15,12 @@ import { renderHook, act } from '@testing-library/react';
 import { useUnifiedDrawing } from '../hooks/drawing/useUnifiedDrawing';
 import type { Point2D } from '../rendering/types/Types';
 
+// ✅ ENTERPRISE FIX: Mock transform for all addPoint calls
+const mockTransform = {
+  worldToScreen: (point: Point2D) => point,
+  screenToWorld: (point: Point2D) => point
+};
+
 describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
   describe('✅ Basic Line Drawing', () => {
     it('should draw a line with two clicks', () => {
@@ -31,7 +37,7 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
       // First click - start point
       const startPoint: Point2D = { x: 100, y: 100 };
       act(() => {
-        result.current.addPoint(startPoint);
+        result.current.addPoint(startPoint, mockTransform);
       });
 
       expect(result.current.state.tempPoints).toHaveLength(1);
@@ -46,12 +52,12 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
 
       act(() => {
         resultWithCallback.current.startDrawing('line');
-        resultWithCallback.current.addPoint(startPoint);
+        resultWithCallback.current.addPoint(startPoint, mockTransform);
       });
 
       // The line should complete on second point
       act(() => {
-        resultWithCallback.current.addPoint(endPoint);
+        resultWithCallback.current.addPoint(endPoint, mockTransform);
       });
 
       // After second point, drawing should be complete
@@ -69,17 +75,13 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
       // First click
       const startPoint: Point2D = { x: 50, y: 50 };
       act(() => {
-        result.current.addPoint(startPoint);
+        result.current.addPoint(startPoint, mockTransform); // ✅ ENTERPRISE FIX: Added missing transform argument
       });
 
       // Hover to create preview
       const hoverPoint: Point2D = { x: 150, y: 150 };
       act(() => {
-        result.current.updatePreview(hoverPoint, {
-          scale: 1,
-          offsetX: 0,
-          offsetY: 0
-        });
+        result.current.updatePreview(hoverPoint, mockTransform); // ✅ ENTERPRISE FIX: Use mockTransform instead of invalid scale object
       });
 
       // Preview entity should exist
@@ -142,8 +144,8 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
 
       act(() => {
         result.current.startDrawing('line');
-        result.current.addPoint({ x: 0, y: 0 });
-        result.current.addPoint({ x: 100, y: 100 });
+        result.current.addPoint({ x: 0, y: 0 }, mockTransform);
+        result.current.addPoint({ x: 100, y: 100 }, mockTransform);
       });
 
       // After completing line, state should reset
@@ -160,16 +162,12 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
 
       act(() => {
         result.current.startDrawing('line');
-        result.current.addPoint({ x: 0, y: 0 });
+        result.current.addPoint({ x: 0, y: 0 }, mockTransform);
       });
 
       // updatePreview should work (this was broken before)
       act(() => {
-        result.current.updatePreview({ x: 50, y: 50 }, {
-          scale: 1,
-          offsetX: 0,
-          offsetY: 0
-        });
+        result.current.updatePreview({ x: 50, y: 50 }, mockTransform); // ✅ ENTERPRISE FIX: Use mockTransform instead of invalid scale object
       });
 
       expect(result.current.state.previewEntity).not.toBeNull();
@@ -181,12 +179,8 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
 
       act(() => {
         result.current.startDrawing('line');
-        result.current.addPoint({ x: 10, y: 10 });
-        result.current.updatePreview({ x: 100, y: 100 }, {
-          scale: 1,
-          offsetX: 0,
-          offsetY: 0
-        });
+        result.current.addPoint({ x: 10, y: 10 }, mockTransform);
+        result.current.updatePreview({ x: 100, y: 100 }, mockTransform); // ✅ ENTERPRISE FIX: Use mockTransform instead of invalid scale object
       });
 
       // Preview entity MUST exist for rendering
@@ -208,12 +202,8 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
 
       act(() => {
         result.current.startDrawing('line');
-        result.current.addPoint(start);
-        result.current.updatePreview(end, {
-          scale: 1,
-          offsetX: 0,
-          offsetY: 0
-        });
+        result.current.addPoint(start, mockTransform);
+        result.current.updatePreview(end, mockTransform); // ✅ ENTERPRISE FIX: Use mockTransform instead of invalid scale object
       });
 
       const previewEntity = result.current.state.previewEntity as any;
@@ -229,12 +219,8 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
 
       act(() => {
         result.current.startDrawing('line');
-        result.current.addPoint({ x: 0, y: 0 });
-        result.current.updatePreview({ x: 50, y: 50 }, {
-          scale: 1,
-          offsetX: 0,
-          offsetY: 0
-        });
+        result.current.addPoint({ x: 0, y: 0 }, mockTransform);
+        result.current.updatePreview({ x: 50, y: 50 }, mockTransform); // ✅ ENTERPRISE FIX: Use mockTransform instead of invalid scale object
       });
 
       const previewEntity = result.current.state.previewEntity as any;

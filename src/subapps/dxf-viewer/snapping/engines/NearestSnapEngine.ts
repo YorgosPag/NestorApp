@@ -81,7 +81,7 @@ export class NearestSnapEngine extends BaseSnapEngine {
     } else if (entityType === 'polyline' || entityType === 'lwpolyline') {
       const points = (entity.points || ('vertices' in entity ? entity.vertices : undefined)) as Point2D[] | undefined;
       if (points && points.length > 1) {
-        const isClosed = 'closed' in entity ? entity.closed : false;
+        const isClosed = 'closed' in entity ? Boolean(entity.closed) : false;
         return this.getNearestPointOnPolyline(point, points, isClosed);
       }
     }

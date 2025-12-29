@@ -49,6 +49,11 @@ export interface EnterpriseActions {
     (mode: StorageMode, updates: Partial<GripSettings>, layer?: 'general' | 'specific' | 'overrides'): void; // NEW API
   };
 
+  // ✅ ENTERPRISE FIX: Missing specific update methods used by hooks
+  updateSpecificLineSettings: (mode: StorageMode, updates: Partial<LineSettings>) => void;
+  updateSpecificTextSettings: (mode: StorageMode, updates: Partial<TextSettings>) => void;
+  updateSpecificGripSettings: (mode: StorageMode, updates: Partial<GripSettings>) => void;
+
   // Override toggles
   toggleLineOverride: (mode: StorageMode, enabled: boolean) => void;
   toggleTextOverride: (mode: StorageMode, enabled: boolean) => void;
@@ -155,10 +160,26 @@ export function useEnterpriseActions(
     dispatch({ type: 'RESET_TO_DEFAULTS' });
   }, [dispatch]);
 
+  // ✅ ENTERPRISE FIX: Missing specific update methods
+  const updateSpecificLineSettings = useCallback((mode: StorageMode, updates: Partial<LineSettings>) => {
+    dispatch({ type: 'UPDATE_LINE', payload: { mode, updates, layer: 'specific' } });
+  }, [dispatch]);
+
+  const updateSpecificTextSettings = useCallback((mode: StorageMode, updates: Partial<TextSettings>) => {
+    dispatch({ type: 'UPDATE_TEXT', payload: { mode, updates, layer: 'specific' } });
+  }, [dispatch]);
+
+  const updateSpecificGripSettings = useCallback((mode: StorageMode, updates: Partial<GripSettings>) => {
+    dispatch({ type: 'UPDATE_GRIP', payload: { mode, updates, layer: 'specific' } });
+  }, [dispatch]);
+
   return {
     updateLineSettings,
     updateTextSettings,
     updateGripSettings,
+    updateSpecificLineSettings,
+    updateSpecificTextSettings,
+    updateSpecificGripSettings,
     toggleLineOverride,
     toggleTextOverride,
     toggleGripOverride,

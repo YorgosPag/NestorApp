@@ -276,7 +276,7 @@ export const ENTERPRISE_COLOR_MAPPING: Record<SemanticColorName, ColorTokenBridg
  *
  * Maps design-tokens.ts spacing to Tailwind classes and semantic categories
  */
-export const ENTERPRISE_SPACING_MAPPING: Record<keyof typeof spacing | 'component', SpacingTokenBridge> = {
+export const ENTERPRISE_SPACING_MAPPING: Record<keyof typeof spacing, SpacingTokenBridge> = {
   // Micro spacing (1-4px)
   xs: {
     token: spacing.xs,
@@ -365,7 +365,7 @@ export const ENTERPRISE_SPACING_MAPPING: Record<keyof typeof spacing | 'componen
     }
   },
   component: {
-    token: spacing.component.padding.md, // ✅ Using actual component spacing
+    token: spacing.md, // ✅ ENTERPRISE FIX: Use base spacing since component has complex structure
     tailwind: 'space-x-6',
     cssVar: 'var(--spacing-component)',
     rawValue: '1rem',

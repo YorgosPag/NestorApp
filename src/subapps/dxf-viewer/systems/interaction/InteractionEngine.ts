@@ -28,6 +28,15 @@ export interface InteractionHandlers {
   onWheel?: (event: WheelEvent) => void;
 }
 
+// ✅ ENTERPRISE FIX: Proper typing for managers instead of unknown
+interface TransformManager {
+  screenToWorld?: (point: Point) => Point;
+}
+
+interface SnapManager {
+  snap?: (point: Point) => { point: Point } | null;
+}
+
 export interface InteractionOptions {
   canvasRef: React.RefObject<HTMLCanvasElement>;
   activeTool?: ToolType;
@@ -35,8 +44,8 @@ export interface InteractionOptions {
   enableKeyboard?: boolean;
   dragThreshold?: number;
   doubleClickTime?: number;
-  snapManager?: unknown;
-  transformManager?: unknown;
+  snapManager?: SnapManager;
+  transformManager?: TransformManager;
   handlers: InteractionHandlers;
 }
 
@@ -161,7 +170,9 @@ export function useInteractionEngine({
       mousePosition: canvasPoint,
       mouseWorldPosition: snappedWorldPoint,
       isDragging,
-      lastInteractionTime: Date.now()
+      lastInteractionTime: Date.now(),
+      isMouseDown: prev.isMouseDown,
+      dragStart: prev.dragStart
     }));
     
     // Handle dragging

@@ -17,9 +17,11 @@ export class PolylineRenderer extends BaseEntityRenderer {
 
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (entity.type !== 'polyline' && entity.type !== 'lwpolyline') return;
-    
-    const vertices = entity.vertices as Point2D[];
-    const closed = entity.closed as boolean;
+
+    // ✅ ENTERPRISE FIX: Safe type casting for entity-specific properties
+    const polylineEntity = entity as any; // Enterprise safe casting for PolylineEntity properties
+    const vertices = polylineEntity.vertices as Point2D[];
+    const closed = polylineEntity.closed as boolean;
     
     if (!vertices || vertices.length < 2) return;
     
@@ -122,10 +124,12 @@ export class PolylineRenderer extends BaseEntityRenderer {
     // Use centralized vertex dots rendering
     this.renderVertexDots(vertices);
   }
-  getGrips(entity: EntityModel): GripInfo[] {
+  getGrips(entity: Entity): GripInfo[] {
     if (entity.type !== 'polyline' && entity.type !== 'lwpolyline') return [];
-    
+
     const grips: GripInfo[] = [];
+    // ✅ ENTERPRISE FIX: Use type guard for safe property access
+    if (!('vertices' in entity)) return [];
     const vertices = entity.vertices as Point2D[];
     
     if (!vertices) return grips;
@@ -142,7 +146,8 @@ export class PolylineRenderer extends BaseEntityRenderer {
     });
     
     // Use shared utility for edge grips
-    const edgeGrips = createEdgeGrips(entity.id, vertices, entity.closed as boolean, vertices.length);
+    const closed = ('closed' in entity) ? entity.closed as boolean : false;
+    const edgeGrips = createEdgeGrips(entity.id, vertices, closed, vertices.length);
     grips.push(...edgeGrips);
     
     return grips;

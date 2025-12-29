@@ -1,12 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Point2D } from '../rendering/types/Types';
-import type { OverlayState, Region, OverlayLayer, RegionStatus } from '../types/overlay';
+import type { Region, OverlayLayer, RegionStatus } from '../types/overlay';
+
+// ✅ ENTERPRISE FIX: Extended OverlayState for manager use
+interface ExtendedOverlayState {
+  regions: Record<string, Region>; // Object instead of array for efficient lookup
+  layers: Record<string, any>;
+  groups: Record<string, any>;
+  currentLayerId: string;
+}
 import { RegionOperations, DuplicationGuard } from '../utils/region-operations';
 import { useDrawingSystem } from '../hooks/drawing/useDrawingSystem';
-import { useSelection } from '../systems/selection/SelectionSystem';
+// ✅ ENTERPRISE FIX: Import hooks only, not React components
+import { useSelection } from '../systems/selection';
 import { useLevels } from '../systems/levels';
 
-const initialState: Pick<OverlayState, 'regions' | 'layers' | 'groups' | 'currentLayerId'> = {
+const initialState: ExtendedOverlayState = {
   regions: {},
   layers: { default: RegionOperations.createDefaultLayer() },
   groups: {},
@@ -66,11 +75,11 @@ export function useOverlayManager() {
       return duplicateCheck.existingId;
     }
 
-    // Check for existing identical regions
+    // ✅ ENTERPRISE FIX: Pass regions object directly
     const existing = RegionOperations.findRegionDuplicate(
-      coreState.regions, 
-      vertices, 
-      currentLevelId, 
+      coreState.regions,
+      vertices,
+      currentLevelId,
       status
     );
     
@@ -164,13 +173,14 @@ export function useOverlayManager() {
   const getVisibleRegions = useCallback(() => {
     if (!currentLevelId) return [];
     
+    // ✅ ENTERPRISE FIX: Pass regions object directly
     return RegionOperations.getVisibleRegions(
       coreState.regions,
       currentLevelId,
-      selectionSystem.visibleStatuses,
-      selectionSystem.visibleUnitTypes
+      selectionSystem.filters.visibleStatuses,
+      selectionSystem.filters.visibleUnitTypes
     );
-  }, [coreState.regions, currentLevelId, selectionSystem.visibleStatuses, selectionSystem.visibleUnitTypes]);
+  }, [coreState.regions, currentLevelId, selectionSystem.filters.visibleStatuses, selectionSystem.filters.visibleUnitTypes]);
 
   return {
     // Core state (computed)

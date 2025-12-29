@@ -6,11 +6,11 @@
 import { UI_COLORS } from '../../config/color-config';
 
 import type { IRenderPass, IRenderContext, RenderPassOptions } from '../core/RenderPipeline';
-import type { EntityModel } from '../types/Types';
+import type { Entity } from '../../types/entities';  // ✅ ENTERPRISE FIX: Use proper Entity type instead of EntityModel
 
 export interface EntityBatch {
   entityType: string;
-  entities: EntityModel[];
+  entities: Entity[];  // ✅ ENTERPRISE FIX: Use Entity instead of EntityModel
   layer?: string;
   color?: string;
   lineWidth?: number;
@@ -37,7 +37,7 @@ export class EntityPass implements IRenderPass {
   readonly priority = 2; // Δεύτερο στη σειρά
 
   private config: EntityPassConfig;
-  private entities: EntityModel[] = [];
+  private entities: Entity[] = [];
   private enabled = true;
   private pathCache = new Map<string, Path2D>();
 
@@ -70,7 +70,7 @@ export class EntityPass implements IRenderPass {
    * 🔺 SET ENTITIES TO RENDER
    * Ενημερώνει τη λίστα των entities που θα render-αριστούν
    */
-  setEntities(entities: EntityModel[]): void {
+  setEntities(entities: Entity[]): void {
     this.entities = entities;
     this.resetStats();
   }
@@ -95,7 +95,7 @@ export class EntityPass implements IRenderPass {
    * 🔺 BATCH RENDERING
    * Οργανώνει entities σε batches και τα render-άρει με optimization
    */
-  private renderWithBatching(context: IRenderContext, entities: EntityModel[], options: RenderPassOptions): void {
+  private renderWithBatching(context: IRenderContext, entities: Entity[], options: RenderPassOptions): void {
     const batches = this.createBatches(entities);
 
     context.startBatch?.();
@@ -112,7 +112,7 @@ export class EntityPass implements IRenderPass {
    * 🔺 SEQUENTIAL RENDERING
    * Render entities ένα προς ένα (fallback mode)
    */
-  private renderSequential(context: IRenderContext, entities: EntityModel[], options: RenderPassOptions): void {
+  private renderSequential(context: IRenderContext, entities: Entity[], options: RenderPassOptions): void {
     for (const entity of entities) {
       this.renderEntity(context, entity, options);
       this.stats.entitiesRendered++;
@@ -123,20 +123,22 @@ export class EntityPass implements IRenderPass {
    * 🔺 CREATE BATCHES
    * Ομαδοποιεί entities για optimized rendering
    */
-  private createBatches(entities: EntityModel[]): EntityBatch[] {
+  private createBatches(entities: Entity[]): EntityBatch[] {
     const batchMap = new Map<string, EntityBatch>();
 
     for (const entity of entities) {
       // Create batch key based on type, layer, and style
-      const batchKey = `${entity.type}_${entity.layer || 'default'}_${entity.color || UI_COLORS.WHITE}_${entity.lineWidth || 1}`;
+      // ✅ ENTERPRISE FIX: Safe property access with type guards
+      const entityWithStyle = entity as Entity & { layer?: string; color?: string; lineWidth?: number; };
+      const batchKey = `${entity.type}_${entityWithStyle.layer || 'default'}_${entityWithStyle.color || UI_COLORS.WHITE}_${entityWithStyle.lineWidth || 1}`;
 
       if (!batchMap.has(batchKey)) {
         batchMap.set(batchKey, {
           entityType: entity.type,
           entities: [],
-          layer: entity.layer,
-          color: entity.color,
-          lineWidth: entity.lineWidth
+          layer: entityWithStyle.layer,
+          color: entityWithStyle.color,
+          lineWidth: entityWithStyle.lineWidth
         });
       }
 
@@ -150,9 +152,9 @@ export class EntityPass implements IRenderPass {
         batchMap.set(overflowKey, {
           entityType: entity.type,
           entities: [],
-          layer: entity.layer,
-          color: entity.color,
-          lineWidth: entity.lineWidth
+          layer: entityWithStyle.layer,
+          color: entityWithStyle.color,
+          lineWidth: entityWithStyle.lineWidth
         });
       }
     }
@@ -186,7 +188,7 @@ export class EntityPass implements IRenderPass {
    * 🔺 RENDER SINGLE ENTITY
    * Render ένα entity με ή χωρίς style setup
    */
-  private renderEntity(context: IRenderContext, entity: EntityModel, options: RenderPassOptions, skipStyleSetup = false): void {
+  private renderEntity(context: IRenderContext, entity: Entity, options: RenderPassOptions, skipStyleSetup = false): void {
     // Check cache first
     if (this.config.cacheEnabled) {
       const cacheKey = this.getCacheKey(entity);
@@ -242,8 +244,8 @@ export class EntityPass implements IRenderPass {
    * 🔺 VIEWPORT CULLING
    * Αφαιρεί entities που είναι εκτός viewport
    */
-  private cullEntitiesOutsideViewport(entities: EntityModel[], viewport: any, transform: any): EntityModel[] {
-    const visible: EntityModel[] = [];
+  private cullEntitiesOutsideViewport(entities: Entity[], viewport: any, transform: any): Entity[] {
+    const visible: Entity[] = [];
 
     for (const entity of entities) {
       if (this.isEntityVisible(entity, viewport, transform)) {
@@ -260,7 +262,7 @@ export class EntityPass implements IRenderPass {
    * 🔺 VISIBILITY CHECK
    * Ελέγχει αν ένα entity είναι ορατό στο viewport
    */
-  private isEntityVisible(entity: EntityModel, viewport: any, transform: any): boolean {
+  private isEntityVisible(entity: Entity, viewport: any, transform: any): boolean {
     // Simple bounding box check - can be optimized with proper bounds calculation
     const bounds = this.calculateEntityBounds(entity);
     if (!bounds) return true; // If can't calculate bounds, assume visible
@@ -284,7 +286,7 @@ export class EntityPass implements IRenderPass {
    * 🔺 ENTITY BOUNDS CALCULATION
    * Υπολογίζει τα bounds ενός entity (simplified)
    */
-  private calculateEntityBounds(entity: EntityModel): { minX: number; minY: number; maxX: number; maxY: number } | null {
+  private calculateEntityBounds(entity: Entity): { minX: number; minY: number; maxX: number; maxY: number } | null {
     // Simplified bounds calculation - should be expanded for all entity types
     switch (entity.type) {
       case 'line':
@@ -314,7 +316,9 @@ export class EntityPass implements IRenderPass {
    * 🔺 SIMPLE ENTITY RENDERERS
    * Simplified rendering για demonstration - θα χρησιμοποιήσουμε τους υπάρχοντες renderers
    */
-  private renderLine(context: IRenderContext, entity: EntityModel, options: RenderPassOptions): void {
+  private renderLine(context: IRenderContext, entity: Entity, options: RenderPassOptions): void {
+    // ✅ ENTERPRISE FIX: Safe property access with type guard
+    if (!('start' in entity) || !('end' in entity)) return;
     const start = entity.start as { x: number; y: number };
     const end = entity.end as { x: number; y: number };
 
@@ -327,7 +331,9 @@ export class EntityPass implements IRenderPass {
     context.stroke();
   }
 
-  private renderCircle(context: IRenderContext, entity: EntityModel, options: RenderPassOptions): void {
+  private renderCircle(context: IRenderContext, entity: Entity, options: RenderPassOptions): void {
+    // ✅ ENTERPRISE FIX: Safe property access with type guard
+    if (!('center' in entity) || !('radius' in entity)) return;
     const center = entity.center as { x: number; y: number };
     const radius = entity.radius as number;
 
@@ -339,7 +345,9 @@ export class EntityPass implements IRenderPass {
     context.stroke();
   }
 
-  private renderPolyline(context: IRenderContext, entity: EntityModel, options: RenderPassOptions): void {
+  private renderPolyline(context: IRenderContext, entity: Entity, options: RenderPassOptions): void {
+    // ✅ ENTERPRISE FIX: Safe property access with type guard
+    if (!('vertices' in entity)) return;
     const vertices = entity.vertices as { x: number; y: number }[];
     if (!vertices || vertices.length < 2) return;
 
@@ -351,19 +359,22 @@ export class EntityPass implements IRenderPass {
       context.lineTo(screenVertices[i].x, screenVertices[i].y);
     }
 
-    if (entity.closed) {
+    // ✅ ENTERPRISE FIX: Safe property access
+    if ('closed' in entity && entity.closed) {
       context.closePath();
     }
 
     context.stroke();
   }
 
-  private renderArc(context: IRenderContext, entity: EntityModel, options: RenderPassOptions): void {
+  private renderArc(context: IRenderContext, entity: Entity, options: RenderPassOptions): void {
     // Simplified arc rendering
     this.renderCircle(context, entity, options);
   }
 
-  private renderText(context: IRenderContext, entity: EntityModel, options: RenderPassOptions): void {
+  private renderText(context: IRenderContext, entity: Entity, options: RenderPassOptions): void {
+    // ✅ ENTERPRISE FIX: Safe property access with type guards
+    if (!('position' in entity) || !('text' in entity)) return;
     const position = entity.position as { x: number; y: number };
     const text = entity.text as string;
 
@@ -372,7 +383,9 @@ export class EntityPass implements IRenderPass {
     context.fillText(text, screenPos.x, screenPos.y);
   }
 
-  private renderRectangle(context: IRenderContext, entity: EntityModel, options: RenderPassOptions): void {
+  private renderRectangle(context: IRenderContext, entity: Entity, options: RenderPassOptions): void {
+    // ✅ ENTERPRISE FIX: Safe property access with type guard
+    if (!('vertices' in entity)) return;
     const vertices = entity.vertices as { x: number; y: number }[];
     if (!vertices || vertices.length < 4) return;
 
@@ -383,12 +396,14 @@ export class EntityPass implements IRenderPass {
    * 🔺 ENTITY STYLING
    * Εφαρμόζει styling σε ένα entity
    */
-  private applyEntityStyle(context: IRenderContext, entity: EntityModel): void {
+  private applyEntityStyle(context: IRenderContext, entity: Entity): void {
+    // ✅ ENTERPRISE FIX: Safe property access with type assertion
+    const entityWithStyle = entity as Entity & { color?: string; lineWidth?: number; lineDash?: number[]; opacity?: number; };
     context.setState({
-      strokeStyle: entity.color || UI_COLORS.WHITE,
-      lineWidth: entity.lineWidth || 1,
-      lineDash: entity.lineDash || [],
-      globalAlpha: entity.opacity || 1
+      strokeStyle: entityWithStyle.color || UI_COLORS.WHITE,
+      lineWidth: entityWithStyle.lineWidth || 1,
+      lineDash: entityWithStyle.lineDash || [],
+      globalAlpha: entityWithStyle.opacity || 1
     });
   }
 
@@ -396,7 +411,7 @@ export class EntityPass implements IRenderPass {
    * 🔺 CACHE KEY GENERATION
    * Δημιουργεί unique key για caching
    */
-  private getCacheKey(entity: EntityModel): string {
+  private getCacheKey(entity: Entity): string {
     return `${entity.type}_${entity.id}_${JSON.stringify(entity)}`;
   }
 

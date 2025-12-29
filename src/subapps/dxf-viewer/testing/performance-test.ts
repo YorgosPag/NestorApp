@@ -92,8 +92,8 @@ export class DxfPerformanceTestRunner {
       const performanceEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
       const navigation = performanceEntries[0];
 
-      const loadTime = navigation ? navigation.loadEventEnd - navigation.navigationStart : 0;
-      const domReady = navigation ? navigation.domContentLoadedEventEnd - navigation.navigationStart : 0;
+      const loadTime = navigation ? navigation.loadEventEnd - navigation.startTime : 0; // ✅ ENTERPRISE FIX: Use startTime instead of deprecated navigationStart
+      const domReady = navigation ? navigation.domContentLoadedEventEnd - navigation.startTime : 0; // ✅ ENTERPRISE FIX: Use startTime instead of deprecated navigationStart
 
       const duration = performance.now() - startTime;
 

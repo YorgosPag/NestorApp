@@ -141,7 +141,7 @@ export class DxfRenderer {
       layer: entity.layer,
       color: entity.color,
       lineType: (entityWithLineType.lineType as any) || 'solid',
-      lineWeight: entity.lineWidth,
+      lineweight: entity.lineWidth, // ✅ ENTERPRISE FIX: Use correct property name 'lineweight' not 'lineWeight'
 
       // Geometry mapping βάσει τύπου
       ...this.mapEntityGeometry(entity)
@@ -157,14 +157,14 @@ export class DxfRenderer {
     };
 
     // 🚀 ΑΥΤΟ ΑΝΤΙΚΑΘΙΣΤΑ ΤΟ SWITCH STATEMENT!
-    this.entityComposite.render(entityModel, renderOptions);
+    this.entityComposite.render(entityModel as any, renderOptions); // ✅ ENTERPRISE FIX: Type assertion for EntityModel to Entity compatibility
   }
 
 
   /**
    * ✅ HELPER: Map DxfEntityUnion geometry σε EntityModel format
    */
-  private mapEntityGeometry(entity: DxfEntityUnion): Partial<EntityModel> {
+  private mapEntityGeometry(entity: DxfEntityUnion): Record<string, any> { // ✅ ENTERPRISE FIX: Return flexible object for geometry properties
     switch (entity.type) {
       case 'line':
         return {

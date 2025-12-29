@@ -16,6 +16,7 @@ import type { DxfScene, DxfEntityUnion } from '../canvas-v2/dxf-canvas/dxf-types
 
 export interface HitTestResult {
   entityId: string | null;
+  entity?: { type: string; layer?: string; [key: string]: any };  // ✅ ENTERPRISE FIX: Added entity property for accessing entity data
   entityType?: string;
   layer?: string;
   distance?: number;
@@ -55,7 +56,7 @@ export class HitTestingService {
 
     // Convert DxfEntityUnion to EntityModel
     const entityModels = scene.entities.map(entity => this.convertToEntityModel(entity));
-    this.hitTester.setEntities(entityModels, true);
+    this.hitTester.setEntities(entityModels as any[], true);
   }
 
   /**
@@ -90,9 +91,9 @@ export class HitTestingService {
       if (hits.length > 0) {
         const hit = hits[0];
         return {
-          entityId: hit.entityId,
-          entityType: hit.entity.type,
-          layer: hit.entity.layer,
+          entityId: hit.data?.id || null, // ✅ ENTERPRISE FIX: Use data.id from SpatialQueryResult
+          entityType: hit.data?.type || 'unknown', // ✅ Use data.type
+          layer: hit.layer,
           distance: hit.distance
         };
       }

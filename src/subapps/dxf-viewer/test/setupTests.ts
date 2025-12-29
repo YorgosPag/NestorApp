@@ -439,8 +439,8 @@ const visualMatchers = {
 };
 
 // Apply matchers
-if (typeof expect !== 'undefined' && expect.extend) {
-  expect.extend(visualMatchers);
+if (typeof expect !== 'undefined' && (expect as any).extend) {
+  (expect as any).extend(visualMatchers); // ✅ ENTERPRISE FIX: Jest expect.extend type assertion
 }
 
 // Export all utilities για test files

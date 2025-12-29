@@ -111,7 +111,7 @@ export function CurrentSettingsDisplay({
                   <span className={`${colors.text.primary} font-mono flex items-center gap-2`}>
                     {lineSettings.color}
                     <div
-                      className={`w-3 h-3 rounded ${getStatusBorder('secondary')} ${lineColorBgClass}`}
+                      className={`w-3 h-3 rounded ${getStatusBorder('muted')} ${lineColorBgClass}`}
                     ></div>
                   </span>
                 </div>
@@ -154,7 +154,7 @@ export function CurrentSettingsDisplay({
                   <span className={`${colors.text.primary} font-mono flex items-center gap-2`}>
                     {effectiveTextSettings.color}
                     <div
-                      className={`w-3 h-3 rounded ${getStatusBorder('secondary')} ${textColorBgClass}`}
+                      className={`w-3 h-3 rounded ${getStatusBorder('muted')} ${textColorBgClass}`}
                     ></div>
                   </span>
                 </div>
@@ -212,7 +212,7 @@ export function CurrentSettingsDisplay({
                   <span className={`${colors.text.primary} font-mono flex items-center gap-2`}>
                     {gripSettings.colors.cold}
                     <div
-                      className={`w-3 h-3 rounded ${getStatusBorder('secondary')} ${gripColdColorBgClass}`}
+                      className={`w-3 h-3 rounded ${getStatusBorder('muted')} ${gripColdColorBgClass}`}
                     ></div>
                   </span>
                 </div>
@@ -221,7 +221,7 @@ export function CurrentSettingsDisplay({
                   <span className={`${colors.text.primary} font-mono flex items-center gap-2`}>
                     {gripSettings.colors.warm}
                     <div
-                      className={`w-3 h-3 rounded ${getStatusBorder('secondary')} ${gripWarmColorBgClass}`}
+                      className={`w-3 h-3 rounded ${getStatusBorder('muted')} ${gripWarmColorBgClass}`}
                     ></div>
                   </span>
                 </div>

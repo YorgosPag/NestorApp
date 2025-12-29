@@ -13,6 +13,7 @@ export interface ToolStyle {
   lineWidth: number;
   opacity: number;
   lineType: LineType; // Added lineType for preview styling
+  dashScale?: number; // ✅ ENTERPRISE FIX: Added dashScale property για line preview
 }
 
 type OverlayCompletionCallback = () => void;

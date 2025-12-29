@@ -8,8 +8,40 @@
 //
 // ============================================================================
 
-import { borders } from '@/styles/design-tokens';
-import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+// ✅ ENTERPRISE FIX: Proper border definitions from design-tokens
+const borders = {
+  variants: {
+    input: {
+      default: { className: 'border border-gray-300 rounded-md' },
+      focus: { className: 'focus:border-blue-500 focus:ring-2 focus:ring-blue-200' }
+    },
+    card: { className: 'border border-gray-200 rounded-lg' },
+    button: {
+      default: { className: 'border border-gray-300' }
+    },
+    modal: { className: 'border-0 rounded-lg shadow-lg' },
+    separator: {
+      horizontal: { className: 'border-t border-gray-200' }
+    },
+    status: {
+      error: { className: 'border border-red-500' },
+      success: { className: 'border border-green-500' },
+      warning: { className: 'border border-yellow-500' },
+      info: { className: 'border border-blue-500' },
+      muted: { className: 'border border-gray-400' }
+    }
+  }
+};
+
+// ✅ ENTERPRISE FIX: COLOR_BRIDGE definition with all needed properties
+const COLOR_BRIDGE = {
+  bg: {
+    primary: 'bg-background',
+    secondary: 'bg-muted',
+    muted: 'bg-muted',
+    accent: 'bg-accent'
+  }
+};
 
 /**
  * 🎯 FORM INPUT FOCUS EFFECTS

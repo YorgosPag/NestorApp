@@ -4,9 +4,11 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { getCursorSettings, subscribeToCursorSettings, type CursorSettings } from '../systems/cursor/config';
 import { useGripContext } from '../providers/GripProvider';
-import { useCanvasSetup } from './hooks/useCanvasSetup';
+// ✅ ENTERPRISE FIX: Updated imports for missing modules
+// import { useCanvasSetup } from './hooks/useCanvasSetup'; // Deprecated - using direct canvas setup
 import type { ViewTransform, Point2D } from '../systems/rulers-grid/config';
-import type { Viewport } from '../types/scene';
+// ✅ ENTERPRISE FIX: Viewport type import corrected
+import type { Viewport } from '../rendering/types/Types';
 import { canvasUtilities, portalComponents } from '@/styles/design-tokens';
 import { getCrosshairOverlayCanvasStyles } from '../ui/DxfViewerComponents.styles';
 

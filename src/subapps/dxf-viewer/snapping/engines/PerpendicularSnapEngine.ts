@@ -4,7 +4,8 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { Entity, ExtendedSnapType } from '../extended-types';
+import { ExtendedSnapType } from '../extended-types';
+import type { Entity } from '../../types/entities';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
@@ -72,9 +73,8 @@ export class PerpendicularSnapEngine extends BaseSnapEngine {
       }
       
     } else if (entityType === 'rectangle') {
-      const rectEntity = entity as { corner1?: Point2D; corner2?: Point2D };
-      if (rectEntity.corner1 && rectEntity.corner2) {
-        const lines = GeometricCalculations.getRectangleLines(rectEntity);
+      if ('corner1' in entity && 'corner2' in entity && entity.corner1 && entity.corner2) {
+        const lines = GeometricCalculations.getRectangleLines(entity);
         lines.forEach((line, index) => {
           const perpPoint = this.getPerpendicularToLine(line.start, line.end, cursorPoint);
           if (perpPoint && calculateDistance(cursorPoint, perpPoint) <= maxDistance) {

@@ -20,7 +20,7 @@ import { useProjectHierarchy, type Building, type Unit } from '../contexts/Proje
 import { useFloorplan } from '../../../contexts/FloorplanContext';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { dxfImportService } from '../io/dxf-import';
-import { FloorplanService } from '../../../services/floorplans/FloorplanService';
+import { FloorplanService, type FloorplanData } from '../../../services/floorplans/FloorplanService';
 import { BuildingFloorplanService } from '../../../services/floorplans/BuildingFloorplanService';
 import { UnitFloorplanService } from '../../../services/floorplans/UnitFloorplanService';
 import { useNotifications } from '../../../providers/NotificationProvider';
@@ -349,7 +349,17 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           timestamp: Date.now(),
           encoding: encoding // Store the encoding used
         };
-        
+
+        // Create compatible floorplan data without encoding - ensure proper type matching
+        const projectFloorplanData = {
+          projectId: floorplanData.projectId,
+          buildingId: floorplanData.buildingId,
+          type: floorplanData.type as 'project' | 'parking' | 'building' | 'storage',
+          scene: floorplanData.scene,
+          fileName: floorplanData.fileName,
+          timestamp: floorplanData.timestamp
+        } satisfies FloorplanData;
+
         // Save to Firestore (persistent storage) - use appropriate service
         let saved = false;
         if (currentStep === 'unit' && type === 'unit') {
@@ -358,8 +368,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
             type: 'unit' as const,
             scene,
             fileName: file.name,
-            timestamp: Date.now(),
-            encoding: encoding
+            timestamp: Date.now()
           };
           saved = await UnitFloorplanService.saveFloorplan(selectedUnitId, unitData);
         } else if (currentStep === 'building' && (type === 'building' || type === 'storage')) {
@@ -368,21 +377,34 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
             type: type as 'building' | 'storage',
             scene,
             fileName: file.name,
-            timestamp: Date.now(),
-            encoding: encoding
+            timestamp: Date.now()
           };
           saved = await BuildingFloorplanService.saveFloorplan(selectedBuildingId, type as 'building' | 'storage', buildingData);
         } else {
-          saved = await FloorplanService.saveFloorplan(selectedProjectId, type as 'project' | 'parking', floorplanData);
+          saved = await FloorplanService.saveFloorplan(selectedProjectId, type as 'project' | 'parking', projectFloorplanData);
         }
         
         if (saved) {
 
-          // Store in context for immediate access
+          // Store in context for immediate access - create context-compatible objects
           if (type === 'project') {
-            setProjectFloorplan(selectedProjectId, floorplanData);
+            const contextData = {
+              projectId: projectFloorplanData.projectId,
+              type: 'project' as const,
+              scene: projectFloorplanData.scene,
+              fileName: projectFloorplanData.fileName,
+              timestamp: projectFloorplanData.timestamp
+            };
+            setProjectFloorplan(selectedProjectId, contextData);
           } else if (type === 'parking') {
-            setParkingFloorplan(selectedProjectId, floorplanData);
+            const contextData = {
+              projectId: projectFloorplanData.projectId,
+              type: 'parking' as const,
+              scene: projectFloorplanData.scene,
+              fileName: projectFloorplanData.fileName,
+              timestamp: projectFloorplanData.timestamp
+            };
+            setParkingFloorplan(selectedProjectId, contextData);
           }
         } else {
           console.error(`❌ Failed to save ${type} floorplan to Firestore`);
@@ -743,7 +765,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           )}
         </main>
 
-          <DialogFooter className={MODAL_FLEX_PATTERNS.ROW.spaceBetween}>
+          <DialogFooter className={MODAL_FLEX_PATTERNS.ROW.between}>
             <Button
               variant="outline"
               onClick={currentStep === 'company' ? handleClose : handleBack}

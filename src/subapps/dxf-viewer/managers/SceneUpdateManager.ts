@@ -150,7 +150,7 @@ export class SceneUpdateManager {
       entities
     };
 
-    this.updateScene(updatedScene, { source, reason: `entity-${entityId}` });
+    this.updateScene(updatedScene as Scene, { source, reason: `entity-${entityId}` });
   }
 
   addEntity(entity: AnySceneEntity, source = 'add-entity'): void {

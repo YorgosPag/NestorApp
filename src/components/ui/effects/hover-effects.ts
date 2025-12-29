@@ -9,9 +9,9 @@
 // 🏢 ENTERPRISE: Integrated με centralized border token system
 // ============================================================================
 
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { COLOR_BRIDGE } from '@/design-system/color-bridge';
-import { hardcodedColorValues } from '@/design-system/tokens/colors';
+import { useBorderTokens } from '../../../hooks/useBorderTokens';
+import { COLOR_BRIDGE } from '../../../design-system/color-bridge';
+import { hardcodedColorValues } from '../../../design-system/tokens/colors';
 
 /**
  * 🔄 CORE HOVER TRANSFORMATIONS
@@ -40,7 +40,10 @@ export const CORE_HOVER_TRANSFORMS = {
   ROTATE_SLIGHT: 'hover:rotate-1',
 
   /** Combined scale and lift για premium feel */
-  SCALE_AND_LIFT: 'hover:scale-105 hover:-translate-y-1'
+  SCALE_AND_LIFT: 'hover:scale-105 hover:-translate-y-1',
+
+  /** ✅ ENTERPRISE FIX: Shorthand alias για SCALE_UP_SMALL (LayersSettings.tsx) */
+  SCALE_UP: 'hover:scale-105'
 } as const;
 
 /**
@@ -141,7 +144,9 @@ export const HOVER_BORDER_EFFECTS = {
   /** @deprecated */
   RED: 'hover:border-hsl(var(--border-error)) dark:hover:border-hsl(var(--border-error)),',
   /** @deprecated */
-  GRAY: 'hover:border-border'
+  GRAY: 'hover:border-border',
+  /** Muted border για subtle interactions */
+  MUTED: 'hover:border-muted dark:hover:border-muted'
 } as const;
 
 /**
@@ -169,6 +174,15 @@ export const HOVER_TEXT_EFFECTS = {
 
   /** Neutral/archive actions */
   GRAY: 'text-gray-600 hover:text-gray-700',
+
+  /** ✅ ENTERPRISE FIX: White text hover for LayersSettings, ProSnapToolbar, ZoomControls */
+  WHITE: 'text-white hover:text-gray-100',
+
+  /** ✅ ENTERPRISE FIX: Darker text hover for ui/effects */
+  DARKER: 'text-gray-800 hover:text-gray-900',
+
+  /** ✅ ENTERPRISE FIX: Missing hover text effects for LayoutMapper */
+  RED_LIGHT: 'text-red-400 hover:text-red-500',
 
   /** Export actions */
   EMERALD: 'text-emerald-600 hover:text-emerald-700',
@@ -207,7 +221,10 @@ export const HOVER_TEXT_EFFECTS = {
   TO_PRIMARY: 'hover:text-blue-500',
 
   /** Lighter text hover effect */
-  LIGHTER: 'hover:text-gray-400'
+  LIGHTER: 'hover:text-gray-400',
+
+  /** Gray light text hover effect */
+  GRAY_LIGHT: 'hover:text-gray-300' // ✅ ENTERPRISE FIX: Added GRAY_LIGHT για EnterpriseColorPicker.tsx
 } as const;
 
 /**
@@ -447,7 +464,13 @@ export const HOVER_BACKGROUND_EFFECTS = {
   RED_DARKER: 'hover:bg-red-800',
 
   /** Blue darker background */
-  BLUE_DARKER: 'hover:bg-blue-800'
+  BLUE_DARKER: 'hover:bg-blue-800',
+
+  /** ✅ ENTERPRISE FIX: Missing LIGHTER for LineSettings.tsx TS2339 errors */
+  LIGHTER: 'hover:bg-gray-50',
+
+  /** ✅ ENTERPRISE FIX: Gradient hover effect for DebugToolbar TS2339 error */
+  GRADIENT_PURPLE_PINK: COLOR_BRIDGE.gradients.GRADIENT_PURPLE_PINK
 } as const;
 
 /**
@@ -525,6 +548,9 @@ export const COMPLEX_HOVER_EFFECTS = {
   NOTIFICATION: `transition-all duration-200 hover:bg-accent hover:border-accent-foreground/20`,
 
   /** Dashboard stat card - USE createEnterpriseInteractivePatterns().STAT_CARD για centralized version */
+
+  /** ✅ ENTERPRISE FIX: Scale and shadow για SwatchesPalette.tsx */
+  SCALE_AND_SHADOW: `transition-all duration-200 ${CORE_HOVER_TRANSFORMS.SCALE_UP_SMALL} ${HOVER_SHADOWS.ENHANCED}`
 } as const;
 
 /**
@@ -592,7 +618,7 @@ export const createEnterpriseInteractivePatterns = (borderTokens: ReturnType<typ
   DESTRUCTIVE_HOVER: `transition-all duration-200 hover:bg-red-50 hover:text-red-700 hover:${borderTokens.getStatusBorder('error')} dark:hover:bg-red-900/20 dark:hover:text-red-300`,
 
   /** Navigation item hover με centralized radius */
-  NAV_ITEM: `transition-all duration-200 hover:bg-accent hover:text-accent-foreground ${borderTokens.radius.md}`,
+  NAV_ITEM: `transition-all duration-200 hover:bg-accent hover:text-accent-foreground rounded-md`,
 
   /** Dashboard stat card με centralized border */
   STAT_CARD: `transition-all duration-200 ${CORE_HOVER_TRANSFORMS.SCALE_UP_TINY} ${HOVER_SHADOWS.SUBTLE} hover:${borderTokens.getStatusBorder('info')}/50`,
@@ -607,16 +633,16 @@ export const createEnterpriseInteractivePatterns = (borderTokens: ReturnType<typ
  */
 export const createEnterpriseComplexEffects = (borderTokens: ReturnType<typeof useBorderTokens>) => ({
   /** Primary button gradient με centralized radius */
-  PRIMARY_BUTTON: `bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold ${borderTokens.radius.lg} hover:from-blue-700 hover:to-purple-700`,
+  PRIMARY_BUTTON: `bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700`,
 
   /** Success button gradient με centralized radius */
-  SUCCESS_BUTTON: `bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold ${borderTokens.radius.lg} hover:from-green-600 hover:to-emerald-700`,
+  SUCCESS_BUTTON: `bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold rounded-lg hover:from-green-600 hover:to-emerald-700`,
 
   /** Warning button gradient με centralized radius */
-  WARNING_BUTTON: `bg-gradient-to-r from-orange-500 to-red-600 text-white font-semibold ${borderTokens.radius.lg} hover:from-orange-600 hover:to-red-700`,
+  WARNING_BUTTON: `bg-gradient-to-r from-orange-500 to-red-600 text-white font-semibold rounded-lg hover:from-orange-600 hover:to-red-700`,
 
   /** Neutral button gradient με centralized radius */
-  NEUTRAL_BUTTON: `bg-gradient-to-r from-gray-600 to-slate-700 text-white font-semibold ${borderTokens.radius.lg} hover:from-gray-700 hover:to-slate-800`,
+  NEUTRAL_BUTTON: `bg-gradient-to-r from-gray-600 to-slate-700 text-white font-semibold rounded-lg hover:from-gray-700 hover:to-slate-800`,
 
   /** Toolbar hover με centralized borders */
   TOOLBAR_DEFAULT: `hover:bg-[#262626] hover:${borderTokens.getStatusBorder('muted')}`,

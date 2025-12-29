@@ -19,6 +19,8 @@
  */
 
 import { UI_COLORS } from '../config/color-config';
+import type { LineSettings, TextSettings, GripSettings } from '../settings-core/types';
+import type { EffectiveSettingsGetter } from '../settings-core/types/EffectiveSettingsGetter';
 
 interface TestResult {
   category: string;
@@ -512,7 +514,7 @@ async function testGracefulDegradation(): Promise<TestResult> {
 
       const deps = {
         logger: consoleLoggerAdapter,
-        toolStyle: faultyPort as any
+        toolStyle: faultyPort
       };
 
       const sync = createStoreSync(deps);
@@ -590,14 +592,14 @@ async function testSubscriptionCleanup(): Promise<TestResult> {
 
       const deps = {
         logger: consoleLoggerAdapter,
-        toolStyle: fakePort as any
+        toolStyle: fakePort
       };
 
       const sync = createStoreSync(deps);
 
       // Create fake effective getter
       const effectiveGetter = {
-        line: () => ({
+        line: (mode?: any): LineSettings => ({
           enabled: true,
           lineType: 'solid' as const,
           lineWidth: 0.25,
@@ -618,19 +620,38 @@ async function testSubscriptionCleanup(): Promise<TestResult> {
           finalOpacity: 1.0,
           activeTemplate: null
         }),
-        text: () => ({
+        text: (mode?: any): TextSettings => ({
           enabled: true,
           fontFamily: 'Arial',
           fontSize: 12,
+          fontWeight: 400,
+          fontStyle: 'normal',
           color: UI_COLORS.WHITE,
+          opacity: 1.0,
+          letterSpacing: 0,
+          lineHeight: 1.2,
+          textAlign: 'left',
+          textBaseline: 'alphabetic',
           isBold: false,
           isItalic: false,
           isUnderline: false,
           isStrikethrough: false,
           isSuperscript: false,
-          isSubscript: false
+          isSubscript: false,
+          shadowEnabled: false,
+          shadowOffsetX: 0,
+          shadowOffsetY: 0,
+          shadowBlur: 0,
+          shadowColor: UI_COLORS.BLACK,
+          strokeEnabled: false,
+          strokeWidth: 1,
+          strokeColor: UI_COLORS.BLACK,
+          backgroundEnabled: false,
+          backgroundColor: UI_COLORS.WHITE,
+          backgroundPadding: 2,
+          activeTemplate: null
         }),
-        grip: () => ({
+        grip: (mode?: any): GripSettings => ({
           enabled: true,
           gripSize: 5,
           pickBoxSize: 3,
@@ -645,12 +666,11 @@ async function testSubscriptionCleanup(): Promise<TestResult> {
           showAperture: true,
           multiGripEdit: true,
           snapToGrips: true,
-          showGripTips: false,
-          dpiScale: 1.0,
           showMidpoints: true,
           showCenters: true,
           showQuadrants: true,
-          maxGripsPerEntity: 50
+          maxGripsPerEntity: 50,
+          showGrips: true
         })
       };
 

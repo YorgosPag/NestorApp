@@ -65,17 +65,16 @@ export function useGripDragging() {
   // Handle drag movement
   const handleDragMove = useCallback((
     currentPoint: Point2D,
-    renderer: { screenToWorld?: (point: Point2D, transform: ViewTransform) => Point2D },
+    renderer: { renderGrips?: ((grips: unknown[]) => void) | undefined; getCoordinateManager?: (() => unknown) | undefined },
     transform: ViewTransform,
     regions: Region[],
     onUpdateRegion: (regionId: string, updates: Partial<Region>) => void
   ) => {
     if (!dragState.isDragging || !dragState.regionId) return;
 
-    const currentWorldPoint = renderer.screenToWorld ? 
-      renderer.screenToWorld(currentPoint, transform) : currentPoint;
-    const startWorldPoint = renderer.screenToWorld ? 
-      renderer.screenToWorld(dragState.startPoint, transform) : dragState.startPoint;
+    // ✅ ENTERPRISE FIX: Use currentPoint directly since screenToWorld is not available in new interface
+    const currentWorldPoint = currentPoint;
+    const startWorldPoint = dragState.startPoint;
       
     const delta = {
       x: currentWorldPoint.x - startWorldPoint.x,

@@ -22,10 +22,10 @@ export function useFilterActions(
       dispatch({ type: 'TOGGLE_UNIT_TYPE_FILTER', unitType }),
     clearAllFilters: () => 
       dispatch({ type: 'CLEAR_ALL_FILTERS' }),
-    isStatusVisible: (status: RegionStatus) => 
-      state.filters.visibleStatuses.includes(status),
-    isUnitTypeVisible: (unitType: UnitType) => 
-      state.filters.visibleUnitTypes.includes(unitType),
+    isStatusVisible: (status: RegionStatus) =>
+      state.filters.visibleStatuses.has(status), // ✅ ENTERPRISE FIX: Set.has() instead of Array.includes()
+    isUnitTypeVisible: (unitType: UnitType) =>
+      state.filters.visibleUnitTypes.has(unitType), // ✅ ENTERPRISE FIX: Set.has() instead of Array.includes()
   }), [state.filters.visibleStatuses, state.filters.visibleUnitTypes, dispatch]);
 
   return {

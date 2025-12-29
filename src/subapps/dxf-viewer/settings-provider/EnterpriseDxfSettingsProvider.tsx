@@ -99,10 +99,16 @@ interface EnterpriseDxfSettingsContextType {
     (mode: StorageMode, updates: Partial<GripSettings>, layer?: 'general' | 'specific' | 'overrides'): void;
   };
 
+  // ✅ ENTERPRISE FIX: Missing specific update methods used by hooks
+  updateSpecificLineSettings: (mode: StorageMode, updates: Partial<LineSettings>) => void;
+  updateSpecificTextSettings: (mode: StorageMode, updates: Partial<TextSettings>) => void;
+  updateSpecificGripSettings: (mode: StorageMode, updates: Partial<GripSettings>) => void;
+
   toggleLineOverride: (mode: StorageMode, enabled: boolean) => void;
   toggleTextOverride: (mode: StorageMode, enabled: boolean) => void;
   toggleGripOverride: (mode: StorageMode, enabled: boolean) => void;
   resetToDefaults: () => void;
+  resetToFactory: () => void; // ✅ ENTERPRISE FIX: Added missing resetToFactory interface member
 
   // Computed
   getEffectiveLineSettings: (mode?: ViewerMode) => LineSettings;
@@ -115,6 +121,8 @@ interface EnterpriseDxfSettingsContextType {
   // Metadata
   isLoaded: boolean;
   isSaving: boolean;
+  isAutoSaving: boolean; // ✅ ENTERPRISE FIX: Added for CentralizedAutoSaveStatus.tsx
+  hasUnsavedChanges: boolean; // ✅ ENTERPRISE FIX: Added for CentralizedAutoSaveStatus.tsx
   lastError: string | null;
 
   // Storage Quota (Enterprise)
@@ -297,6 +305,8 @@ export function EnterpriseDxfSettingsProvider({
     // Metadata
     isLoaded: state.isLoaded,
     isSaving: state.isSaving,
+    isAutoSaving: state.isSaving, // ✅ ENTERPRISE FIX: Use same value as isSaving for compatibility
+    hasUnsavedChanges: false, // ✅ ENTERPRISE FIX: For now, default to false
     lastError: state.lastError,
 
     // Storage Quota (Enterprise) - Using stable reference
@@ -396,17 +406,19 @@ export const useDxfSettings = useEnterpriseDxfSettings;
  * Backward compatible provider hooks
  */
 export function useLineSettingsFromProvider(mode?: ViewerMode) {
-  const { getEffectiveLineSettings, updateLineSettings, resetToDefaults } = useEnterpriseDxfSettings();
+  const { getEffectiveLineSettings, updateLineSettings, resetToDefaults, resetToFactory } = useEnterpriseDxfSettings();
   const effectiveSettings = getEffectiveLineSettings(mode);
 
   return {
     settings: effectiveSettings,
     updateSettings: updateLineSettings as (updates: Partial<LineSettings>) => void,
     resetToDefaults,
+    resetToFactory, // ✅ ENTERPRISE FIX: Added missing resetToFactory για LineSettingsContext.tsx
     getCurrentDashPattern: () => {
       const { getDashArray } = require('../settings-core/defaults');
       return getDashArray(effectiveSettings.lineType, effectiveSettings.dashScale);
-    }
+    },
+    applyTemplate: () => {} // ✅ ENTERPRISE FIX: Added missing applyTemplate για LineSettingsContext.tsx
   };
 }
 

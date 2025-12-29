@@ -220,6 +220,58 @@ export function NotificationProvider({
     return notify(message, { ...options, type: 'loading', duration: 0 }); // Persistent until dismissed
   }, [notify]);
 
+  // Confirmation dialog
+  const showConfirmDialog = useCallback(async (
+    message: string,
+    onConfirm: () => void,
+    onCancel?: () => void,
+    options?: {
+      confirmText?: string;
+      cancelText?: string;
+      title?: string;
+      type?: NotificationType;
+    }
+  ): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const confirmText = options?.confirmText || t('confirm', 'Confirm');
+      const cancelText = options?.cancelText || t('cancel', 'Cancel');
+      const type = options?.type || 'warning';
+
+      const id = notify(
+        options?.title ? `${options.title}\n${message}` : message,
+        {
+          type,
+          duration: 0, // Persistent
+          actions: [
+            {
+              label: cancelText,
+              onClick: () => {
+                dismiss(id);
+                onCancel?.();
+                resolve(false);
+              },
+              variant: 'outline'
+            },
+            {
+              label: confirmText,
+              onClick: () => {
+                dismiss(id);
+                onConfirm();
+                resolve(true);
+              },
+              variant: 'default'
+            }
+          ],
+          dismissible: true,
+          onCancel: () => {
+            onCancel?.();
+            resolve(false);
+          }
+        }
+      );
+    });
+  }, [notify, t]);
+
   // Dismiss functions
   const dismiss = useCallback((id: string) => {
     toast.dismiss(id);
@@ -243,6 +295,7 @@ export function NotificationProvider({
     warning,
     info,
     loading,
+    showConfirmDialog,
     dismiss,
     dismissAll,
     notifications,

@@ -87,7 +87,7 @@ export const useSnapManager = (
       // Create viewport from canvas (with proper HTMLCanvasElement access)
       if (canvasRef.current) {
         try {
-          const canvasElement = canvasRef.current.getCanvas ? canvasRef.current.getCanvas() : canvasRef.current;
+          const canvasElement = (canvasRef.current as any)?.getCanvas?.() || canvasRef.current;
           
           if (canvasElement && typeof canvasElement.getContext === 'function') {
             const transform = canvasElement.getContext('2d')?.getTransform();

@@ -84,10 +84,10 @@ export function createPanelColors(colors: UseSemanticColorsReturn) {
     ACTIVE_TEXT: colors.text.inverse,                 // Dynamic inverted text
 
     // ✅ ENTERPRISE: Status states από centralized semantic system
-    SUCCESS_BG: colors.bg.success,                    // Dynamic semantic success
-    SUCCESS_HOVER: colors.interactive.hover.background.success, // Centralized hover
-    DANGER_TEXT: colors.text.error,                   // Dynamic semantic error
-    DANGER_HOVER: colors.interactive.hover.text.error, // Centralized error hover
+    SUCCESS_BG: 'bg-green-600',                       // Static semantic success
+    SUCCESS_HOVER: 'hover:bg-green-700',              // Static success hover
+    DANGER_TEXT: colors.text.primary,                 // Dynamic semantic error
+    DANGER_HOVER: COLOR_BRIDGE.interactive.hover.error, // Centralized error hover από COLOR_BRIDGE
     FOCUS_RING: colors.border.info,                   // Dynamic focus indication
   } as const;
 }
@@ -132,9 +132,9 @@ export function createPanelTokens(
 
     // Interactive patterns with centralized hover effects
     INTERACTIVE: {
-      HOVER_BACKGROUND: colors.interactive.hover.background.light,
+      HOVER_BACKGROUND: COLOR_BRIDGE.interactive.hover.bg, // Από COLOR_BRIDGE instead of colors
       FOCUS_RING: borderTokens.getStatusBorder('info'),
-      ACTIVE_BACKGROUND: colors.bg.info,
+      ACTIVE_BACKGROUND: colors.bg.primary,
       DISABLED_OPACITY: 'opacity-50',                 // Standard disabled state
     },
 
@@ -258,10 +258,16 @@ export const PANEL_COLORS = {
   BORDER_MUTED: 'gray-600',                     // Static muted borders
   BORDER_ACCENT: 'blue-400',                    // Static accent borders
 
+  // ✅ ENTERPRISE FIX: Missing border colors for DxfViewerComponents.styles
+  BORDER_HEX_LIGHT: '#e5e7eb',                  // Light border hex for dashed borders
+
   // ✅ ENTERPRISE: Status borders από centralized semantic system
   BORDER_INFO: 'blue-400',                      // Static info borders
   BORDER_SUCCESS: 'green-400',                  // Static success borders
+  BORDER_SUCCESS_PRIMARY: 'border-green-400',   // Success border for modal-colors.ts
+  BORDER_SUCCESS_SECONDARY: 'border-green-300', // Success secondary border for modal-colors.ts
   BORDER_WARNING: 'orange-400',                 // Static warning borders
+  BORDER_WARNING_PRIMARY: 'border-orange-400',  // Warning border for modal-colors.ts
   BORDER_ERROR: 'red-400',                      // Static error borders
 
   // ✅ ENTERPRISE: Interactive states από centralized semantic system

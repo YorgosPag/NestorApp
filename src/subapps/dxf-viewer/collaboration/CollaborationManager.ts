@@ -1,6 +1,7 @@
 'use client';
 
-import type { WebSocketService, WebSocketMessage } from '../../../services/websocket/WebSocketService';
+import WebSocketService from '../../../services/websocket/WebSocketService';
+import type { WebSocketMessage } from '../../../services/websocket/WebSocketService';
 import type { Point2D } from '../rendering/types/Types';
 import { SIMPLE_COLORS } from '../config/color-config';
 
@@ -18,7 +19,7 @@ export interface CollaborationUser {
 
 export interface CollaborationEvent {
   id: string;
-  type: 'cursor_move' | 'selection_change' | 'viewport_change' | 'annotation_add' | 'user_join' | 'user_leave';
+  type: 'cursor_move' | 'selection_change' | 'viewport_change' | 'annotation_add' | 'annotation_resolve' | 'user_join' | 'user_leave';
   userId: string;
   timestamp: number;
   data: unknown;
@@ -66,7 +67,7 @@ class DXFCollaborationManager {
   };
 
   constructor(wsService?: WebSocketService) {
-    this.wsService = wsService;
+    this.wsService = wsService ?? null;
     this.setupWebSocketListeners();
   }
 
@@ -74,16 +75,16 @@ class DXFCollaborationManager {
     if (!this.wsService) return;
 
     // Listen for collaboration events
-    this.wsService.addEventListener('dxf_collaboration', (message: WebSocketMessage<unknown>) => {
+    this.wsService.addEventListener('dxf_collaboration', (message: WebSocketMessage<CollaborationEvent>) => {
       this.handleCollaborationEvent(message.payload);
     });
 
     // User presence events
-    this.wsService.addEventListener('user_online', (message: WebSocketMessage<unknown>) => {
+    this.wsService.addEventListener('user_online', (message: WebSocketMessage<Partial<CollaborationUser>>) => {
       this.handleUserJoin(message.payload);
     });
 
-    this.wsService.addEventListener('user_offline', (message: WebSocketMessage<unknown>) => {
+    this.wsService.addEventListener('user_offline', (message: WebSocketMessage<{ userId: string; }>) => {
       this.handleUserLeave(message.payload);
     });
   }
@@ -102,10 +103,10 @@ class DXFCollaborationManager {
 
   private handleUserJoin(userData: Partial<CollaborationUser>) {
     const user: CollaborationUser = {
-      id: userData.userId,
-      name: userData.name || userData.userId,
-      email: userData.userId,
-      color: this.generateUserColor(userData.userId),
+      id: userData.id || 'unknown',
+      name: userData.name || userData.id || 'Unknown User',
+      email: userData.email || userData.id || 'unknown@example.com',
+      color: this.generateUserColor(userData.id || 'unknown'),
       isActive: true,
       lastSeen: Date.now()
     };
@@ -262,16 +263,16 @@ class DXFCollaborationManager {
 
     switch (event.type) {
       case 'cursor_move':
-        this.handleCursorMove(event.userId, event.data);
+        this.handleCursorMove(event.userId, event.data as Point2D);
         break;
       case 'selection_change':
-        this.handleSelectionChange(event.userId, event.data);
+        this.handleSelectionChange(event.userId, event.data as { entityIds: string[] });
         break;
       case 'viewport_change':
-        this.handleViewportChange(event.userId, event.data);
+        this.handleViewportChange(event.userId, event.data as ViewportState);
         break;
       case 'annotation_add':
-        this.handleAnnotationAdd(event.data);
+        this.handleAnnotationAdd(event.data as Annotation);
         break;
     }
   }

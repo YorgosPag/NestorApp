@@ -4,8 +4,8 @@
  * Eliminates hardcoded color values and ensures consistency
  */
 
-// Core UI Colors
-export const UI_COLORS = {
+// Core UI Colors (Base)
+const UI_COLORS_BASE = {
   // Basic colors
   WHITE: '#FFFFFF',
   BLACK: '#000000',
@@ -205,12 +205,14 @@ export const UI_COLORS = {
   OVERLAY_GRIP_COLD: '#0000ff', // Blue for cold grips
   OVERLAY_AXIS_X: '#ff0000',    // Red for X axis
   OVERLAY_AXIS_Y: '#00ff00',    // Green for Y axis
-  OVERLAY_ORIGIN: '#0000ff'     // Blue for origin
+  OVERLAY_ORIGIN: '#0000ff',    // Blue for origin
 } as const;
+
+// ✅ ENTERPRISE FIX: Export UI_COLORS moved after CAD_UI_COLORS and LEGACY_COLORS
 
 // Opacity variations
 export const OPACITY = {
-  FULL: 1.0,
+  OPAQUE: 1.0,
   HIGH: 0.9,
   MEDIUM: 0.7,
   LOW: 0.5,
@@ -242,30 +244,30 @@ export const withOpacity = (color: string, opacity: number): string => {
 
 export const getContrastColor = (backgroundColor: string): string => {
   // Simple contrast calculation - can be enhanced
-  const isLight = backgroundColor === UI_COLORS.WHITE || 
+  const isLight = backgroundColor === UI_COLORS_BASE.WHITE ||
                   backgroundColor.includes('fff') ||
                   backgroundColor.includes('FFF');
-  return isLight ? UI_COLORS.BLACK : UI_COLORS.WHITE;
+  return isLight ? UI_COLORS_BASE.BLACK : UI_COLORS_BASE.WHITE;
 };
 
 // Predefined color schemes
 export const COLOR_SCHEMES = {
   DEFAULT: {
-    background: UI_COLORS.BLACK,
-    foreground: UI_COLORS.WHITE,
-    accent: UI_COLORS.BUTTON_PRIMARY,
+    background: UI_COLORS_BASE.BLACK,
+    foreground: UI_COLORS_BASE.WHITE,
+    accent: UI_COLORS_BASE.BUTTON_PRIMARY,
   },
   
   CAD_CLASSIC: {
-    background: UI_COLORS.BLACK,
-    foreground: UI_COLORS.WHITE,
-    accent: UI_COLORS.SNAP_DEFAULT,
+    background: UI_COLORS_BASE.BLACK,
+    foreground: UI_COLORS_BASE.WHITE,
+    accent: UI_COLORS_BASE.SNAP_DEFAULT,
   },
-  
+
   HIGH_CONTRAST: {
-    background: UI_COLORS.BLACK,
-    foreground: UI_COLORS.WHITE,
-    accent: UI_COLORS.WARNING,
+    background: UI_COLORS_BASE.BLACK,
+    foreground: UI_COLORS_BASE.WHITE,
+    accent: UI_COLORS_BASE.WARNING,
   }
 } as const;
 
@@ -359,13 +361,20 @@ export const getLayerColor = (layerName: string): string => {
 // Legacy color mappings for backward compatibility
 export const LEGACY_COLORS = {
   // Common legacy names
-  GREEN: UI_COLORS.MEASUREMENT_TEXT,
+  GREEN: UI_COLORS_BASE.MEASUREMENT_TEXT,
   YELLOW: '#FFFF00', // CHANGED πίσω σε κίτρινο
   BLUE: '#0000FF', // Blue for test cases
-  WHITE: UI_COLORS.WHITE,
-  BLACK: UI_COLORS.BLACK,
-  ORANGE: UI_COLORS.DRAWING_TEMP,
+  WHITE: UI_COLORS_BASE.WHITE,
+  BLACK: UI_COLORS_BASE.BLACK,
+  ORANGE: UI_COLORS_BASE.DRAWING_TEMP,
   MAGENTA: '#FF00FF', // Magenta for test cases
+} as const;
+
+// ✅ ENTERPRISE FIX: Export UI_COLORS with CAD_UI_COLORS and LEGACY_COLORS included
+export const UI_COLORS = {
+  ...UI_COLORS_BASE,
+  CAD_UI_COLORS,
+  LEGACY_COLORS
 } as const;
 
 // ============================================================================

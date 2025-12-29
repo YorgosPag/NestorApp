@@ -64,7 +64,7 @@ export function useConstraintApplication(
 
     // Apply custom constraints
     const activeConstraintDefs = getActiveConstraints();
-    result = ConstraintCalculations.applyConstraints(result.constrainedPoint, activeConstraintDefs, fullContext);
+    result = ConstraintCalculations.applyConstraints(result.constrainedPoint, activeConstraintDefs, fullContext as ConstraintContext);
 
     setLastAppliedResult(result);
     onConstraintResult?.(result);

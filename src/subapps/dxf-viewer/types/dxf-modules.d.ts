@@ -124,6 +124,7 @@ declare module './types/scene' {
     layers: any[];
     bounds: { min: Point2D; max: Point2D };
     metadata: Record<string, any>;
+    version?: string; // ✅ ENTERPRISE FIX: Added version property για DxfSecurityValidator.ts
   }
 }
 

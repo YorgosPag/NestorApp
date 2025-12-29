@@ -102,7 +102,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
       };
       toolStyleStore.set(toolStyle);
 
-      const polylineControl = startOverlayCreation({
+      const polylineControlPromise = startOverlayCreation({
         status: currentStatus,        // Μεταβίβαση επιλεγμένου status
         kind: currentKind,           // Μεταβίβαση επιλεγμένου kind
         onComplete: (overlayId) => {
@@ -114,13 +114,15 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           onModeChange('select');
         }
       });
-      
-      // Αποθήκευση του stop callback για double-click handling
-      if (polylineControl?.stop) {
-        toolStyleStore.setOverlayCompletionCallback(() => {
-          polylineControl.stop();
-        });
-      }
+
+      // Αποθήκευση του stop callback για double-click handling (async)
+      polylineControlPromise?.then((polylineControl) => {
+        if (polylineControl?.stop) {
+          toolStyleStore.setOverlayCompletionCallback(() => {
+            polylineControl.stop();
+          });
+        }
+      });
     } else {
       // Για select/edit modes, επιστροφή σε layering mode
       onToolChange?.('layering');

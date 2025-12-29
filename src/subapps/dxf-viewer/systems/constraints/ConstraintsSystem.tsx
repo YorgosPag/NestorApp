@@ -97,7 +97,7 @@ function useConstraintsSystemStateIntegration({
     onConstraintResult
   );
   const coordinateHook = useCoordinateConversion(polarSettings);
-  const contextHook = useConstraintContext(setConstraintContext);
+  const contextHook = useConstraintContext(setConstraintContext as Dispatch<SetStateAction<ConstraintContext>>);
   const operationsHook = useConstraintOperations(
     orthoSettings,
     polarSettings,

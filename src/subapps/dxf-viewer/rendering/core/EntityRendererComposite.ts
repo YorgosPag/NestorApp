@@ -4,7 +4,7 @@
  */
 
 import { BaseEntityRenderer } from '../entities/BaseEntityRenderer';
-import type { EntityModel, GripInfo, RenderOptions, ViewTransform, Point2D, GripSettings, GripInteractionState, Viewport } from '../types/Types';
+import type { Entity, GripInfo, RenderOptions, ViewTransform, Point2D, GripSettings, GripInteractionState, Viewport } from '../types/Types';
 import { CoordinateTransforms } from './CoordinateTransforms';
 import { LineRenderer } from '../entities/LineRenderer';
 import { CircleRenderer } from '../entities/CircleRenderer';
@@ -57,7 +57,7 @@ export class EntityRendererComposite {
     this.renderers.set('rect', rectangleRenderer); // Alias
     this.renderers.set('ellipse', ellipseRenderer);
     this.renderers.set('spline', splineRenderer);
-    this.renderers.set('point', pointRenderer); // Use point renderer for POINT entities
+    this.renderers.set('point', pointRenderer as BaseEntityRenderer); // ✅ ENTERPRISE FIX: Type compatibility resolved
     this.renderers.set('angle-measurement', angleMeasurementRenderer);
   }
 
@@ -81,7 +81,7 @@ export class EntityRendererComposite {
   }
 
   // Main render method
-  render(entity: EntityModel, options: RenderOptions = {}): void {
+  render(entity: Entity, options: RenderOptions = {}): void {
     const renderer = this.getRenderer(entity.type);
     if (renderer) {
       renderer.render(entity, options);
@@ -92,16 +92,18 @@ export class EntityRendererComposite {
   }
 
   // Render multiple entities
-  renderEntities(entities: EntityModel[], options: RenderOptions = {}): void {
+  renderEntities(entities: Entity[], options: RenderOptions = {}): void {
     entities.forEach(entity => {
-      if (entity.visible !== false) {
+      // ✅ ENTERPRISE FIX: Type-safe visibility check
+      const isVisible = ('visible' in entity ? entity.visible : true) !== false;
+      if (isVisible) {
         this.render(entity, options);
       }
     });
   }
 
   // Get grips for an entity
-  getEntityGrips(entity: EntityModel): GripInfo[] {
+  getEntityGrips(entity: Entity): GripInfo[] {
     const renderer = this.getRenderer(entity.type);
     if (renderer) {
       return renderer.getGrips(entity);
@@ -110,7 +112,7 @@ export class EntityRendererComposite {
   }
 
   // Find grip at point
-  findGripAtPoint(entity: EntityModel, screenPoint: Point2D, tolerance: number = 8): GripInfo | null {
+  findGripAtPoint(entity: Entity, screenPoint: Point2D, tolerance: number = 8): GripInfo | null {
     const renderer = this.getRenderer(entity.type);
     if (renderer) {
       return renderer.findGripAtPoint(entity, screenPoint, tolerance);
@@ -119,7 +121,7 @@ export class EntityRendererComposite {
   }
 
   // Hit test for entity - using centralized service
-  hitTestEntity(entity: EntityModel, point: Point2D, tolerance: number): boolean {
+  hitTestEntity(entity: Entity, point: Point2D, tolerance: number): boolean {
     try {
       // Create a mock viewport and transform for the hit testing service
       const viewport = { x: 0, y: 0, width: this.ctx.canvas.width, height: this.ctx.canvas.height };
@@ -138,7 +140,7 @@ export class EntityRendererComposite {
   }
 
   // Hit test for multiple entities - using centralized service
-  hitTest(entities: EntityModel[], point: Point2D, tolerance: number): EntityModel | null {
+  hitTest(entities: Entity[], point: Point2D, tolerance: number): Entity | null {
     try {
       // Create a mock viewport and transform for the hit testing service
       const viewport = { x: 0, y: 0, width: this.ctx.canvas.width, height: this.ctx.canvas.height };
@@ -166,13 +168,22 @@ export class EntityRendererComposite {
   }
 
   // Fallback renderer for unknown entity types
-  private renderFallback(entity: EntityModel, options: RenderOptions): void {
+  private renderFallback(entity: Entity, options: RenderOptions): void {
     // Safely handle unknown entity types without causing infinite loops
     try {
-      const position = entity.position || entity.center || entity.start;
+      // ✅ ENTERPRISE FIX: Type-safe property access with proper checks
+      let position: Point2D | undefined;
+      if ('position' in entity && entity.position) {
+        position = entity.position as Point2D;
+      } else if ('center' in entity && entity.center) {
+        position = entity.center as Point2D;
+      } else if ('start' in entity && entity.start) {
+        position = entity.start as Point2D;
+      }
+
       if (!position) return;
 
-      const screenPos = this.worldToScreen(position as Point2D);
+      const screenPos = this.worldToScreen(position);
       
       this.ctx.save();
       this.ctx.strokeStyle = UI_COLORS.SELECTION_HIGHLIGHT;

@@ -171,7 +171,11 @@ describe('📊 Visual Regression Metrics & Telemetry', () => {
     ];
 
     performanceMetrics.forEach(({ metric, value, tags }) => {
-      logMetric(metric, value, tags, {
+      // ✅ ENTERPRISE FIX: Filter out undefined properties before casting to Record<string, string>
+      const cleanTags = Object.fromEntries(
+        Object.entries(tags).filter(([_, value]) => value !== undefined)
+      ) as Record<string, string>;
+      logMetric(metric, value, cleanTags, {
         environment: 'test',
         ci_build: process.env.CI_BUILD_NUMBER || 'local',
         git_commit: process.env.GIT_COMMIT || 'unknown'
@@ -250,7 +254,14 @@ describe('📊 Visual Regression Metrics & Telemetry', () => {
     ];
 
     sampleMetrics.forEach(({ name, value, tags }) => {
-      logMetric(name, value, tags, {
+      // ✅ ENTERPRISE FIX: Filter out undefined properties and ensure all values are strings
+      const cleanTags: Record<string, string> = {};
+      Object.entries(tags).forEach(([key, value]) => {
+        if (value !== undefined) {
+          cleanTags[key] = value;
+        }
+      });
+      logMetric(name, value, cleanTags, {
         report_generation: true,
         timestamp_iso: new Date().toISOString()
       });

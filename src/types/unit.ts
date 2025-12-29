@@ -20,6 +20,7 @@ export interface Unit {
   floorId: string;
   soldTo?: string | null; // ID of the contact
   saleDate?: string;
+  unitName?: string; // ✅ ENTERPRISE FIX: Optional fallback property for backward compatibility
 }
 
 export type UnitSortKey = 'name' | 'price' | 'area';

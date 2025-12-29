@@ -71,7 +71,7 @@ export function useDynamicInputState({ activeTool }: UseDynamicInputStateProps) 
     if (!(activeTool === 'circle-2p-diameter' && drawingPhase === 'second-point')) {
       setFirstClickPointSafe(null);
     }
-    setFieldUnlocked({ x: true, y: false, angle: false, length: false, radius: false });
+    setFieldUnlocked({ x: true, y: false, angle: false, length: false, radius: false, diameter: false });
   }, [activeTool, drawingPhase, setFirstClickPointSafe]);
 
   const setCurrentFieldValue = useCallback((value: string) => {

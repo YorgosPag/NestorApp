@@ -52,16 +52,16 @@ export const MODAL_SELECT_STYLES = {
 
   // Error State Select
   ERROR: {
-    trigger: `w-full ${COLOR_BRIDGE.bg.errorSubtle} border ${PANEL_COLORS.BORDER_ERROR_SECONDARY} ${COLOR_BRIDGE.text.error} focus:${COLOR_BRIDGE.border.error}`, // ✅ ENTERPRISE: Centralized error colors
-    content: `${COLOR_BRIDGE.bg.errorSubtle} border ${PANEL_COLORS.BORDER_ERROR_SECONDARY}`, // ✅ ENTERPRISE: Centralized error colors
+    trigger: `w-full ${COLOR_BRIDGE.bg.errorSubtle} border ${PANEL_COLORS.BORDER_SECONDARY} ${COLOR_BRIDGE.text.error} focus:${COLOR_BRIDGE.border.error}`, // ✅ ENTERPRISE: Centralized error colors
+    content: `${COLOR_BRIDGE.bg.errorSubtle} border ${PANEL_COLORS.BORDER_SECONDARY}`, // ✅ ENTERPRISE: Centralized error colors
     item: `${COLOR_BRIDGE.text.error} hover:${COLOR_BRIDGE.bg.error} focus:${COLOR_BRIDGE.bg.error}`,
     placeholder: COLOR_BRIDGE.text.error,
   },
 
   // Warning State Select
   WARNING: {
-    trigger: `w-full ${COLOR_BRIDGE.bg.warning} border ${PANEL_COLORS.BORDER_WARNING_SECONDARY} ${COLOR_BRIDGE.text.warning} focus:${COLOR_BRIDGE.border.warning}`, // ✅ ENTERPRISE: Centralized warning colors
-    content: `${COLOR_BRIDGE.bg.warning} border ${PANEL_COLORS.BORDER_WARNING_SECONDARY}`, // ✅ ENTERPRISE: Centralized warning colors
+    trigger: `w-full ${COLOR_BRIDGE.bg.warning} border ${PANEL_COLORS.BORDER_SECONDARY} ${COLOR_BRIDGE.text.warning} focus:${COLOR_BRIDGE.border.warning}`, // ✅ ENTERPRISE: Centralized warning colors
+    content: `${COLOR_BRIDGE.bg.warning} border ${PANEL_COLORS.BORDER_SECONDARY}`, // ✅ ENTERPRISE: Centralized warning colors
     item: `${COLOR_BRIDGE.text.warning} hover:${COLOR_BRIDGE.bg.warning} focus:${COLOR_BRIDGE.bg.warning}`,
     placeholder: COLOR_BRIDGE.text.warning,
   },

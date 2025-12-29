@@ -13,12 +13,27 @@ import { validateArcEntity, validateEllipseEntity } from '../../rendering/entiti
 import { renderMeasurementLabel } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { UI_COLORS } from '../../config/color-config';
 import type { HoverRenderContext } from './types';
+import {
+  isCircleEntity,
+  isRectangleEntity,
+  isArcEntity,
+  isPolylineEntity,
+  type CircleEntity,
+  type RectangleEntity,
+  type PolylineEntity,
+  type ArcEntity
+} from '../../types/entities';
 
 export function renderCircleHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
+  // ✅ ENTERPRISE: Type guard + manual casting για compatibility
+  if (!isCircleEntity(entity)) return;
+
   return; // ⚠️ ΠΡΟΣΩΡΙΝΑ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ ΓΙΑ TESTING κίτρινων grips
 
-  const center = entity.center as Point2D;
-  const radius = entity.radius as number;
+  // ✅ ENTERPRISE: Safe type casting μετά το type guard check
+  const circleEntity = entity as CircleEntity;
+  const center = circleEntity.center;
+  const radius = circleEntity.radius;
 
   if (!center || !radius) return;
 
@@ -57,8 +72,15 @@ export function renderCircleHover({ entity, ctx, worldToScreen, options }: Hover
   ctx.stroke();
 
   // Determine which mode we're in (copy from preview logic)
-  const isDiameterMode = ('diameterMode' in entity && entity.diameterMode === true);
-  const isTwoPointDiameter = ('twoPointDiameter' in entity && entity.twoPointDiameter === true);
+  // ✅ ENTERPRISE: Type-safe check για custom properties με proper type guards
+  interface ExtendedCircleEntity extends CircleEntity {
+    diameterMode?: boolean;
+    twoPointDiameter?: boolean;
+  }
+
+  const extendedCircle = circleEntity as ExtendedCircleEntity;
+  const isDiameterMode = extendedCircle.diameterMode === true;
+  const isTwoPointDiameter = extendedCircle.twoPointDiameter === true;
 
   if (isTwoPointDiameter || isDiameterMode) {
     // Shared diameter line calculation for both modes
@@ -127,10 +149,31 @@ export function renderCircleHover({ entity, ctx, worldToScreen, options }: Hover
 }
 
 export function renderRectangleHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
+  // ✅ ENTERPRISE FIX: Type guard for rectangle entities
+  // Note: rectangles can be represented as polylines with 4 vertices
+  if (!isRectangleEntity(entity) && !isPolylineEntity(entity)) return;
+
   return; // ⚠️ ΠΡΟΣΩΡΙΝΑ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ ΓΙΑ TESTING κίτρινων grips
 
   // ✅ PERFORMANCE FIX: Render only dashed lines, skip heavy measurements
-  const vertices = entity.vertices as Point2D[];
+  // ✅ ENTERPRISE: Type-safe access to vertices με proper casting
+  let vertices: Point2D[] = [];
+  if (isPolylineEntity(entity)) {
+    const polylineEntity = entity as PolylineEntity;
+    vertices = polylineEntity.vertices;
+  } else if (isRectangleEntity(entity)) {
+    // ✅ ENTERPRISE FIX: Calculate vertices from corner1 and corner2 properties
+    const rect = entity as RectangleEntity;
+    if (rect.corner1 && rect.corner2) {
+      vertices = [
+        rect.corner1,
+        { x: rect.corner2.x, y: rect.corner1.y },
+        rect.corner2,
+        { x: rect.corner1.x, y: rect.corner2.y }
+      ];
+    }
+  }
+
   if (!vertices || vertices.length < 4) return;
   
   const screenVertices = vertices.map(v => worldToScreen(v));
@@ -150,11 +193,16 @@ export function renderRectangleHover({ entity, ctx, worldToScreen, options }: Ho
 }
 
 export function renderArcHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
+  // ✅ ENTERPRISE FIX: Use type guard to ensure entity is ArcEntity
+  if (!isArcEntity(entity)) return;
+
   return; // ⚠️ ΠΡΟΣΩΡΙΝΑ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ ΓΙΑ TESTING κίτρινων grips
 
+  /* // ✅ ENTERPRISE: Commented out unreachable code to avoid TypeScript errors
   const arcData = validateArcEntity(entity);
   if (!arcData) return;
-  
+
+  // ✅ ENTERPRISE: Safe destructuring με guaranteed non-null μετά το check
   const { center, radius, startAngle, endAngle } = arcData;
   
   // Draw normal arc
@@ -180,15 +228,18 @@ export function renderArcHover({ entity, ctx, worldToScreen, options }: HoverRen
   ctx.textBaseline = 'middle';
   ctx.fillText(`L=${arcLength.toFixed(2)}`, textX, textY);
   ctx.restore();
+  */
 }
 
 export function renderEllipseHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
   return; // ⚠️ ΠΡΟΣΩΡΙΝΑ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ ΓΙΑ TESTING κίτρινων grips
 
+  /* // ✅ ENTERPRISE: Commented out unreachable code to avoid TypeScript errors
   // Simple ellipse - just draw the shape, no complex measurements for now
   const ellipseData = validateEllipseEntity(entity);
   if (!ellipseData) return;
-  
+
+  // ✅ ENTERPRISE: Safe destructuring με guaranteed non-null μετά το check
   const { center, majorAxis, minorAxis, rotation } = ellipseData;
   
   const screenCenter = worldToScreen(center);
@@ -202,5 +253,6 @@ export function renderEllipseHover({ entity, ctx, worldToScreen, options }: Hove
   ctx.stroke();
   
   ctx.restore();
+  */
 }
 

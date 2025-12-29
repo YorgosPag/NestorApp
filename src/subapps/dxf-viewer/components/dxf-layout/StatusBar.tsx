@@ -13,8 +13,10 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 type StatusBarProps = Pick<
   DXFViewerLayoutProps,
   'status' | 'entities' | 'selectedEntityIds' | 'drawingState' |
-  'activeTool' | 'snapEnabled' | 'measurements' | 'onViewModeChange' | 'onClear'
->;
+  'activeTool' | 'snapEnabled' | 'onViewModeChange' | 'onClear'
+> & {
+  measurements?: any[];
+};
 
 /**
  * Renders the status bar below the toolbar, displaying contextual information.
@@ -72,7 +74,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             status="company"
             customLabel={`✅ DXF (${entities.length} entities)`}
             variant="secondary"
-            className="${colors.bg.success} ${colors.text.inverted}"
+            className={`${colors.bg.success} ${colors.text.inverted}`}
           />
         )}
         
@@ -81,7 +83,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             status="company"
             customLabel={`🔺 Selected: ${selectedEntityIds.length}`}
             variant="secondary"
-            className="${colors.bg.info} ${colors.text.inverted}"
+            className={`${colors.bg.info} ${colors.text.inverted}`}
           />
         )}
         
@@ -117,16 +119,16 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             status="company"
             customLabel={`🧲 Snap: ${drawingState.snapType}`}
             variant="secondary"
-            className="${colors.bg.success} ${colors.text.inverted}"
+            className={`${colors.bg.success} ${colors.text.inverted}`}
           />
         )}
         
-        {measurements.length > 0 && (
+        {measurements && measurements.length > 0 && (
           <CommonBadge
             status="company"
             customLabel={`📏 Measurements: ${measurements.length}`}
             variant="secondary"
-            className="${colors.bg.info} ${colors.text.inverted}"
+            className={`${colors.bg.info} ${colors.text.inverted}`}
           />
         )}
     </div>

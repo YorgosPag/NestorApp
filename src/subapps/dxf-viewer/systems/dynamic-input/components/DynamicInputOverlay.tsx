@@ -254,7 +254,7 @@ export default function DynamicInputOverlay({
   // Εμφάνιση/απόκρυψη input
   useEffect(() => {
     const newShowInput = shouldShowDynamicInput();
-    setShowInput(newShowInput);
+    setShowInput(newShowInput as boolean);
     
     // Focus στο ενεργό input όταν εμφανίζεται
     if (newShowInput) {
@@ -501,7 +501,7 @@ export default function DynamicInputOverlay({
 
         {/* Multi-point information για polyline/polygon */}
         {multiPointInfo.shouldShowMultiPoint && (
-          <div className={`mt-2 pt-2 ${getDirectionalBorder('light', 'top')} text-xs ${colors.text.tertiary}`}>
+          <div className={`mt-2 pt-2 ${getDirectionalBorder('muted', 'top')} text-xs ${colors.text.tertiary}`}>
             {multiPointInfo.lastPointDistance !== null && (
               <div>Distance: {multiPointInfo.lastPointDistance.toFixed(3)}</div>
             )}

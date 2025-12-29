@@ -96,7 +96,7 @@ export function useDynamicInputPhase(args: UseDynamicInputPhaseArgs) {
         console.debug('[DIO] phase after:', 'first-point');
         
         // Reset για νέο σχήμα
-        resetPhaseForNewShape(currentArgs);
+        resetPhaseForNewShape(currentArgs as PhaseResetActions);
       }
     } else if (circleTools.includes(currentArgs.activeTool)) {
       // Circle tools: Special 2-phase logic
@@ -155,7 +155,7 @@ export function useDynamicInputPhase(args: UseDynamicInputPhaseArgs) {
         console.debug('[DIO] Three-point tool: completed, reset to first-point');
         
         // Reset για νέα μέτρηση
-        resetPhaseForNewShape(currentArgs);
+        resetPhaseForNewShape(currentArgs as PhaseResetActions);
       }
     }
 

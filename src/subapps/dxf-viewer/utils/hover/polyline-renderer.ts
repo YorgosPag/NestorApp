@@ -10,10 +10,14 @@ import { renderHoverEdgeWithDistance } from './edge-utils';
 import { renderHoverAngleAtVertex } from './angle-utils';
 import type { Point2D } from '../../rendering/types/Types';
 import type { HoverRenderContext } from './types';
+import { isPolylineEntity } from '../../types/entities';
 
 export function renderPolylineHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
-  const vertices = entity.vertices as Point2D[];
-  const isClosed = ('closed' in entity && entity.closed) || false;
+  // ✅ ENTERPRISE FIX: Use type guard to ensure entity is PolylineEntity
+  if (!isPolylineEntity(entity)) return;
+
+  const vertices = entity.vertices;
+  const isClosed = entity.closed || false;
   
   if (!vertices || vertices.length < 2) return;
 

@@ -11,9 +11,9 @@ import { useEnterpriseDxfSettings } from '../settings-provider';
 import type { LineSettings } from '../settings-core/types';
 
 export function useLineSelectionSettings() {
-  const { getEffectiveLineSettings, updateSpecificLineSettings, settings } =
+  const { getEffectiveLineSettings, updateSpecificLineSettings, toggleLineOverride, settings } =
     useEnterpriseDxfSettings();
-  const isOverrideEnabled = settings.specific?.line?.selection?.enabled ?? false;
+  const isOverrideEnabled = settings.overrideEnabled?.line?.selection ?? false;
 
   // ✅ ENTERPRISE: Stable dependency - depend on data, not functions
   const effectiveSettings = React.useMemo(
@@ -29,8 +29,7 @@ export function useLineSelectionSettings() {
     getEffectiveSettings: () => getEffectiveLineSettings('normal'),
     isOverrideEnabled,
     toggleOverride: (enabled: boolean) => {
-      // ✅ ENTERPRISE: Type-safe - enabled is Partial<LineSettings>
-      updateSpecificLineSettings?.('selection', { enabled } as Partial<LineSettings>);
+      toggleLineOverride('selection', enabled);
     }
   };
 }

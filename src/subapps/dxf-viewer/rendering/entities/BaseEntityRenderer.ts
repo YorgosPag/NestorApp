@@ -9,7 +9,7 @@ import type { ViewTransform, Point2D, Viewport } from '../types/Types';
 import { CAD_UI_COLORS } from '../../config/color-config';
 import type { GripSettings } from '../../types/gripSettings';
 import { PhaseManager } from '../../systems/phase-manager/PhaseManager';
-import type { EntityModel, RenderOptions, GripInfo, PhaseManagerOptions } from '../types/Types';
+import type { EntityModel, RenderOptions, GripInfo } from '../types/Types';
 import { calculateSplitLineGap } from './shared/line-utils';
 import { DEFAULT_TOLERANCE } from '../../config/tolerance-config';
 import { UI_COLORS } from '../../config/color-config';
@@ -78,9 +78,9 @@ export abstract class BaseEntityRenderer {
     if (!this.gripSettings?.showGrips) {
       // return; // ✅ Commented out για να δουλέψουν τα grips
     }
-    
+
     const grips = this.getGrips(entity);
-    const phaseState = this.phaseManager.determinePhase(entity, options);
+    const phaseState = this.phaseManager.determinePhase(entity as any, options);
     
     // Set grip interaction state for PhaseManager
     phaseState.gripState = {
@@ -89,7 +89,7 @@ export abstract class BaseEntityRenderer {
       dragging: false // Currently not implementing drag detection
     };
     
-    this.phaseManager.renderPhaseGrips(entity, grips, phaseState);
+    this.phaseManager.renderPhaseGrips(entity as any, grips, phaseState);
   }
 
 
@@ -232,10 +232,10 @@ export abstract class BaseEntityRenderer {
   // New phase-based style setup
   protected setupStyle(entity: EntityModel, options: RenderOptions = {}): void {
     this.ctx.save();
-    
+
     // Determine current phase and apply appropriate styling
-    const phaseState = this.phaseManager.determinePhase(entity, options);
-    this.phaseManager.applyPhaseStyle(entity, phaseState);
+    const phaseState = this.phaseManager.determinePhase(entity as any, options);
+    this.phaseManager.applyPhaseStyle(entity as any, phaseState);
   }
 
   protected applyEntityStyle(entity: EntityModel): void {
@@ -265,7 +265,7 @@ export abstract class BaseEntityRenderer {
     renderYellowDots?: () => void
   ): void {
     // 1. Determine current phase
-    const phaseState = this.phaseManager.determinePhase(entity, options);
+    const phaseState = this.phaseManager.determinePhase(entity as any, options);
     
     // 2. Setup phase-appropriate style
     this.setupStyle(entity, options);
@@ -274,16 +274,16 @@ export abstract class BaseEntityRenderer {
     renderGeometry();
     
     // 4. Render measurements if phase requires them
-    const shouldMeasure = this.phaseManager.shouldRenderMeasurements(phaseState, entity);
+    const shouldMeasure = this.phaseManager.shouldRenderMeasurements(phaseState, entity as any);
     if (shouldMeasure && renderMeasurements) {
       renderMeasurements();
     }
     
     // 5. Render colored dots with centralized color management
-    if (this.phaseManager.shouldRenderYellowDots(phaseState, entity) && renderYellowDots) {
+    if (this.phaseManager.shouldRenderYellowDots(phaseState, entity as any) && renderYellowDots) {
       // Set centralized dot color before rendering dots
       this.ctx.save();
-      this.ctx.fillStyle = this.phaseManager.getPreviewDotColor(entity);
+      this.ctx.fillStyle = this.phaseManager.getPreviewDotColor(entity as any);
       renderYellowDots();
       this.ctx.restore();
     }
@@ -362,7 +362,7 @@ export abstract class BaseEntityRenderer {
    * Επιλέγει την κατάλληλη μέθοδος ανάλογα με τη φάση (inline για preview, offset για measurements)
    */
   protected renderDistanceTextPhaseAware(worldStart: Point2D, worldEnd: Point2D, screenStart: Point2D, screenEnd: Point2D, entity: EntityModel, options: RenderOptions): void {
-    const phaseState = this.phaseManager.determinePhase(entity, options);
+    const phaseState = this.phaseManager.determinePhase(entity as any, options);
     
     if (phaseState.phase === 'preview') {
       // Στη φάση προεπισκόπησης: inline positioning (στην ίδια ευθεία)
@@ -379,7 +379,7 @@ export abstract class BaseEntityRenderer {
    */
   protected shouldRenderSplitLine(entity: EntityModel, options: RenderOptions = {}): boolean {
     // Αν είναι preview phase και έχει showEdgeDistances flag
-    const phaseState = this.phaseManager.determinePhase(entity, options);
+    const phaseState = this.phaseManager.determinePhase(entity as any, options);
     const hasDistanceFlag = ('showEdgeDistances' in entity && entity.showEdgeDistances === true);
 
     return phaseState.phase === 'preview' && hasDistanceFlag;
@@ -390,7 +390,7 @@ export abstract class BaseEntityRenderer {
    * Καθορίζει αν οι γραμμές είναι ενεργοποιημένες με υποστήριξη override
    */
   protected shouldRenderLines(entity: EntityModel, options: RenderOptions = {}): boolean {
-    const phaseState = this.phaseManager.determinePhase(entity, options);
+    const phaseState = this.phaseManager.determinePhase(entity as any, options);
 
     const lineStyle = phaseState.phase === 'preview'
       ? getLinePreviewStyleWithOverride()
@@ -404,7 +404,7 @@ export abstract class BaseEntityRenderer {
    * Σχεδιάζει γραμμή με κενό στο κέντρο για distance text - για όλες τις οντότητες κατά την προεπισκόπηση
    */
   protected renderSplitLineWithGap(screenStart: Point2D, screenEnd: Point2D, entity: EntityModel, options: RenderOptions = {}, gapSize: number = 30): void {
-    const phaseState = this.phaseManager.determinePhase(entity, options);
+    const phaseState = this.phaseManager.determinePhase(entity as any, options);
 
     // ✅ PHASE AWARE: Χρήση WithOverride για preview phase
     const textStyle = phaseState.phase === 'preview'

@@ -3,15 +3,16 @@
  * Consolidates the most common duplicate patterns in selection system
  */
 
-import type { EntityModel } from '../../../rendering/types/Types';
+import type { Entity, LineEntity, CircleEntity, RectangleEntity } from '../../../types/entities';
 import type { Point2D } from '../../../rendering/types/Types';
 import type { AnySceneEntity } from '../../../types/scene';
 import { calculateVerticesBounds } from '../../../utils/geometry/GeometryUtils';
 
 /**
  * Calculate bounding box for entities
+ * ✅ ENTERPRISE FIX: Uses proper Entity type with type narrowing for type safety
  */
-export function calculateBoundingBox(entities: EntityModel[]): {
+export function calculateBoundingBox(entities: Entity[]): {
   minX: number;
   minY: number;
   maxX: number;
@@ -27,10 +28,10 @@ export function calculateBoundingBox(entities: EntityModel[]): {
   let maxY = -Infinity;
 
   entities.forEach(entity => {
-    // Extract bounds from different entity types
+    // Extract bounds from different entity types using type narrowing
     if (entity.type === 'line') {
-      const start = entity.start as Point2D;
-      const end = entity.end as Point2D;
+      const lineEntity = entity as LineEntity;
+      const { start, end } = lineEntity;
       if (start && end) {
         minX = Math.min(minX, start.x, end.x);
         minY = Math.min(minY, start.y, end.y);
@@ -38,23 +39,22 @@ export function calculateBoundingBox(entities: EntityModel[]): {
         maxY = Math.max(maxY, start.y, end.y);
       }
     } else if (entity.type === 'circle') {
-      const center = entity.center as Point2D;
-      const radius = entity.radius as number;
-      if (center && radius) {
+      const circleEntity = entity as CircleEntity;
+      const { center, radius } = circleEntity;
+      if (center && radius !== undefined) {
         minX = Math.min(minX, center.x - radius);
         minY = Math.min(minY, center.y - radius);
         maxX = Math.max(maxX, center.x + radius);
         maxY = Math.max(maxY, center.y + radius);
       }
     } else if (entity.type === 'rectangle') {
-      const topLeft = entity.topLeft as Point2D;
-      const width = entity.width as number;
-      const height = entity.height as number;
-      if (topLeft && width && height) {
-        minX = Math.min(minX, topLeft.x);
-        minY = Math.min(minY, topLeft.y);
-        maxX = Math.max(maxX, topLeft.x + width);
-        maxY = Math.max(maxY, topLeft.y + height);
+      const rectEntity = entity as RectangleEntity;
+      const { x, y, width, height } = rectEntity;
+      if (x !== undefined && y !== undefined && width !== undefined && height !== undefined) {
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x + width);
+        maxY = Math.max(maxY, y + height);
       }
     }
   });
@@ -77,12 +77,13 @@ export function isPointInBounds(
 
 /**
  * Filter entities by visibility and layer status
+ * ✅ ENTERPRISE FIX: Uses proper Entity type for type safety
  */
-export function filterVisibleEntities(entities: EntityModel[]): EntityModel[] {
+export function filterVisibleEntities(entities: Entity[]): Entity[] {
   return entities.filter(entity => {
     // Check if entity itself is visible
     if (entity.visible === false) return false;
-    
+
     // Additional layer checks can be added here
     return true;
   });
@@ -90,9 +91,10 @@ export function filterVisibleEntities(entities: EntityModel[]): EntityModel[] {
 
 /**
  * Standard entity selection validation pattern
+ * ✅ ENTERPRISE FIX: Uses proper Entity type for type safety
  */
 export function isEntitySelectable(
-  entity: EntityModel,
+  entity: Entity,
   selectionCriteria?: {
     types?: string[];
     excludeIds?: string[];
@@ -151,8 +153,7 @@ export function calculateEntityBounds(entity: AnySceneEntity): { min: Point2D, m
       };
     case 'polyline':
       return calculateVerticesBounds(entity.vertices);
-    case 'rectangle':
-    case 'rect': {
+    case 'rectangle': {
       // Handle both corner-based and vertex-based rectangles
       let vertices: Point2D[] | undefined = ('vertices' in entity ? entity.vertices as Point2D[] : undefined);
       if (!vertices || vertices.length === 0) {

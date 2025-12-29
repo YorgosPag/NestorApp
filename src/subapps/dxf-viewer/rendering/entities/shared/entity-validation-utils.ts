@@ -3,101 +3,109 @@
  * Consolidates duplicate validation patterns across renderers
  */
 
-import type { EntityModel } from '../../types/Types';
+// ✅ ENTERPRISE: Updated imports to use centralized entity types
+import type { Entity, LineEntity, CircleEntity, ArcEntity, RectangleEntity } from '../../../types/entities';
 import type { Point2D } from '../../types/Types';
 
 /**
  * Validate line entity and extract data
  */
-export function validateLineEntity(entity: EntityModel): {
+export function validateLineEntity(entity: Entity): {
   start: Point2D;
   end: Point2D;
 } | null {
   if (entity.type !== 'line') return null;
-  
-  const start = entity.start as Point2D;
-  const end = entity.end as Point2D;
-  
+
+  const lineEntity = entity as LineEntity;
+  const start = lineEntity.start;
+  const end = lineEntity.end;
+
   if (!start || !end) return null;
-  
+
   return { start, end };
 }
 
 /**
  * Validate circle entity and extract data
  */
-export function validateCircleEntity(entity: EntityModel): {
+export function validateCircleEntity(entity: Entity): {
   center: Point2D;
   radius: number;
 } | null {
   if (entity.type !== 'circle') return null;
-  
-  const center = entity.center as Point2D;
-  const radius = entity.radius as number;
-  
+
+  const circleEntity = entity as CircleEntity;
+  const center = circleEntity.center;
+  const radius = circleEntity.radius;
+
   if (!center || !radius) return null;
-  
+
   return { center, radius };
 }
 
 /**
  * Validate ellipse entity and extract data
+ * ⚠️ NOTE: Ellipse entity type not currently supported in centralized Entity system
+ * TODO: Add ellipse support to types/entities.ts if needed
  */
-export function validateEllipseEntity(entity: EntityModel): {
+export function validateEllipseEntity(entity: any): {
   center: Point2D;
   majorAxis: number;
   minorAxis: number;
   rotation: number;
 } | null {
   if (entity.type !== 'ellipse') return null;
-  
+
   const center = entity.center as Point2D;
   const majorAxis = entity.majorAxis as number;
   const minorAxis = entity.minorAxis as number;
   const rotation = entity.rotation as number || 0;
-  
+
   if (!center || !majorAxis || !minorAxis) return null;
-  
+
   return { center, majorAxis, minorAxis, rotation };
 }
 
 /**
  * Validate rectangle entity and extract data
  */
-export function validateRectangleEntity(entity: EntityModel): {
+export function validateRectangleEntity(entity: Entity): {
   topLeft: Point2D;
   width: number;
   height: number;
 } | null {
   if (entity.type !== 'rectangle') return null;
-  
-  const topLeft = entity.topLeft as Point2D;
-  const width = entity.width as number;
-  const height = entity.height as number;
-  
+
+  const rectangleEntity = entity as RectangleEntity;
+  // Convert x,y to topLeft for compatibility
+  const topLeft = { x: rectangleEntity.x, y: rectangleEntity.y };
+  const width = rectangleEntity.width;
+  const height = rectangleEntity.height;
+
   if (!topLeft || !width || !height) return null;
-  
+
   return { topLeft, width, height };
 }
 
 /**
  * Validate arc entity and extract data
  */
-export function validateArcEntity(entity: EntityModel): {
+export function validateArcEntity(entity: Entity): {
   center: Point2D;
   radius: number;
   startAngle: number;
   endAngle: number;
 } | null {
   if (entity.type !== 'arc') return null;
-  
-  const center = entity.center as Point2D;
-  const radius = entity.radius as number;
-  const startAngle = entity.startAngle as number;
-  const endAngle = entity.endAngle as number;
-  
+
+  const arcEntity = entity as ArcEntity;
+  const center = arcEntity.center;
+  const radius = arcEntity.radius;
+  const startAngle = arcEntity.startAngle;
+  const endAngle = arcEntity.endAngle;
+
   if (!center || !radius || startAngle === undefined || endAngle === undefined) return null;
-  
+
   return { center, radius, startAngle, endAngle };
 }
 
@@ -105,7 +113,7 @@ export function validateArcEntity(entity: EntityModel): {
  * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΟΣ ΈΛΕΓΧΟΣ ENTITY TYPE - για όλους τους renderers
  * Μείωση διπλότυπου type checking pattern
  */
-export function validateEntityType(entity: EntityModel, expectedType: string | string[]): boolean {
+export function validateEntityType(entity: Entity, expectedType: string | string[]): boolean {
   const types = Array.isArray(expectedType) ? expectedType : [expectedType];
   return types.includes(entity.type);
 }

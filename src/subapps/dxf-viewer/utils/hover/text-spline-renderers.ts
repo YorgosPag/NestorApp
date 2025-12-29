@@ -9,11 +9,15 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { HoverRenderContext } from './types';
 import { extractAngleMeasurementPoints } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { UI_COLORS } from '../../config/color-config';
+import { isTextEntity, isAngleMeasurementEntity } from '../../types/entities';
 
 export function renderTextHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
-  const position = entity.position as Point2D;
-  const text = entity.text as string;
-  const height = entity.height as number || 12;
+  // ✅ ENTERPRISE FIX: Use type guard to ensure entity is TextEntity
+  if (!isTextEntity(entity)) return;
+
+  const position = entity.position;
+  const text = entity.text;
+  const height = entity.fontSize || 12;
   
   if (!position || !text) return;
   
@@ -35,8 +39,13 @@ export function renderTextHover({ entity, ctx, worldToScreen, options }: HoverRe
 }
 
 export function renderSplineHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
+  // ✅ ENTERPRISE FIX: Type-safe access to spline properties
+  if (!('controlPoints' in entity) || !('closed' in entity)) return;
+
   // Spline is treated as polyline for simplicity
-  const splineAsPolyline = { ...entity, vertices: entity.controlPoints, closed: entity.closed };
+  const controlPoints = entity.controlPoints as Point2D[];
+  const closed = entity.closed as boolean;
+  const splineAsPolyline = { ...entity, vertices: controlPoints, closed: closed };
   renderPolylineHover({ entity: splineAsPolyline, ctx, worldToScreen, options });
 }
 

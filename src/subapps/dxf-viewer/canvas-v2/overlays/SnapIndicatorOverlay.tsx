@@ -30,7 +30,7 @@ export default function SnapIndicatorOverlay({
   const { point } = snapResult;
 
   return (
-    <div className={className} style={portalComponents.overlay.fullscreen}>
+    <div className={className} style={{ zIndex: 1400 }}>
       <div style={{
         position: 'absolute',
         left: point.x - 4,

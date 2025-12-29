@@ -515,10 +515,14 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
   return (
     <canvas
       ref={(el) => {
-        canvasRef.current = el;
+        // ✅ ENTERPRISE FIX: Proper mutable ref assignment
+        if (canvasRef.current !== el) {
+          (canvasRef as React.MutableRefObject<HTMLCanvasElement | null>).current = el;
+        }
         if (typeof ref === 'function') {
           ref(el);
         } else if (ref && 'current' in ref) {
+          // ✅ ENTERPRISE FIX: Type-safe ref assignment
           (ref as React.MutableRefObject<HTMLCanvasElement | null>).current = el;
         }
       }}

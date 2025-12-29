@@ -1,13 +1,14 @@
 import { useMemo } from 'react';
-import type { 
-  ToolType, 
-  ToolbarState, 
-  ToolRunner, 
+import type {
+  ToolType,
+  ToolbarState,
+  ToolRunner,
   ToolEvents,
   ToolDefinition,
   ActionDefinition,
   ToolbarConfig,
-  ToolbarOperationResult
+  ToolbarOperationResult,
+  ToolbarsSettings
 } from '../config';
 import { DEFAULT_TOOLBAR_SETTINGS } from '../config';
 import { ToolbarSystemUtils } from '../utils';
@@ -133,11 +134,11 @@ export function useToolbarsContextValue(params: ContextValueParams): ToolbarsCon
     removeCustomization: (customizationId) => setState(prev => ({ ...prev, customizations: prev.customizations.filter(c => c.id !== customizationId) })),
     applyCustomization: (customizationId) => {
       const customization = state.customizations.find(c => c.id === customizationId);
-      if (customization && customization.config) {
+      if (customization && customization.changes) {
+        // ✅ ENTERPRISE FIX: Use changes instead of config, apply modifiedProperties
         setState(prev => ({
           ...prev,
-          toolbars: { ...prev.toolbars, ...customization.config.toolbars },
-          toolStates: { ...prev.toolStates, ...customization.config.toolStates }
+          toolbars: { ...prev.toolbars, ...customization.changes.modifiedProperties },
         }));
       }
     },

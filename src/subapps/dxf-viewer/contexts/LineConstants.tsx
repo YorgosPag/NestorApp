@@ -5,6 +5,11 @@
 
 import { UI_COLORS } from '../config/color-config';
 
+// Define missing types
+type LineType = 'solid' | 'dotted' | 'dashed' | 'dash-dot' | 'dash-dot-dot' | 'long-dash' | 'double-dot';
+type LineCapStyle = 'round' | 'square' | 'butt';
+type LineJoinStyle = 'round' | 'bevel' | 'miter';
+
 // Line type labels
 export const LINE_TYPE_LABELS = {
   solid: 'Συνεχής',

@@ -11,9 +11,9 @@ import { useEnterpriseDxfSettings } from '../settings-provider';
 import type { LineSettings } from '../settings-core/types';
 
 export function useLineCompletionSettings() {
-  const { getEffectiveLineSettings, updateSpecificLineSettings, settings } =
+  const { getEffectiveLineSettings, updateSpecificLineSettings, toggleLineOverride, settings } =
     useEnterpriseDxfSettings();
-  const isOverrideEnabled = settings.specific?.line?.completion?.enabled ?? false;
+  const isOverrideEnabled = settings.overrideEnabled?.line?.completion ?? false;
 
   // ✅ ENTERPRISE: Stable dependency - depend on data, not functions
   const effectiveSettings = React.useMemo(
@@ -29,8 +29,7 @@ export function useLineCompletionSettings() {
     getEffectiveSettings: () => getEffectiveLineSettings('completion'),
     isOverrideEnabled,
     toggleOverride: (enabled: boolean) => {
-      // ✅ ENTERPRISE: Type-safe - enabled is Partial<LineSettings>
-      updateSpecificLineSettings?.('completion', { enabled } as Partial<LineSettings>);
+      toggleLineOverride('completion', enabled);
     }
   };
 }

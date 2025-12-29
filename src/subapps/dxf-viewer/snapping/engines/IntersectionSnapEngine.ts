@@ -255,8 +255,8 @@ export class IntersectionSnapEngine extends BaseSnapEngine {
     
     const intersections: IntersectionResult[] = [];
     
-    const segments1 = getPolylineSegments(points1, poly1Entity.closed);
-    const segments2 = getPolylineSegments(points2, poly2Entity.closed);
+    const segments1 = getPolylineSegments(points1, poly1Entity.closed || false);
+    const segments2 = getPolylineSegments(points2, poly2Entity.closed || false);
     
     // Check intersection between all segment pairs
     for (const seg1 of segments1) {
@@ -289,7 +289,7 @@ export class IntersectionSnapEngine extends BaseSnapEngine {
 
     }
     
-    const segments = getPolylineSegments(points, polylineEntity.closed);
+    const segments = getPolylineSegments(points, polylineEntity.closed || false);
     
     // Check intersection between each polyline segment and the circle
     for (const segment of segments) {

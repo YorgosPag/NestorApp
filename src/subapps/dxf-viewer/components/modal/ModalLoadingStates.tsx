@@ -51,7 +51,7 @@ export const AnimatedSpinner: React.FC<LoadingSpinnerProps> = ({
   const sizeClass = MODAL_DIMENSIONS.ICONS[size];
 
   return (
-    <Loader2 className={`${sizeClass} animate-spin ${getModalIconColor('primary')} ${className}`} />
+    <Loader2 className={`${sizeClass} animate-spin ${getModalIconColor('info')} ${className}`} />
   );
 };
 
@@ -164,6 +164,8 @@ export const ModalSuccessState: React.FC<SuccessStateProps> = ({
   className = ''
 }) => {
   const typography = useTypography();
+  const colors = useSemanticColors();
+
   return (
     <SuccessModalContainer title="" className={className}>
       <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>

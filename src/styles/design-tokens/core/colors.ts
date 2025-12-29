@@ -6,6 +6,7 @@ export const colors = {
     secondary: '#f8fafc',
     tertiary: '#f1f5f9',
     hover: '#f1f5f9',
+    accent: '#e0f2fe',  // ✅ ENTERPRISE FIX: Missing accent background color
     overlay: 'rgba(0, 0, 0, 0.5)'
   },
 

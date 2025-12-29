@@ -65,6 +65,11 @@ export interface ProSnapResult {
   snappedPoint: Point2D;
   activeMode: ExtendedSnapType | null;
   timestamp: number;
+  // ✅ ENTERPRISE FIX: Added convenience properties για direct coordinate access
+  x?: number; // Convenience getter για snappedPoint.x
+  y?: number; // Convenience getter για snappedPoint.y
+  entityId?: string; // Entity ID που snap operation target
+  distance?: number; // Distance to snap point
 }
 
 // Per-mode tolerances σε pixels
@@ -144,6 +149,9 @@ export interface SnapEngineStats {
   totalEntitiesProcessed: number;
   cacheHitRate?: number;
   lastResetTime: number;
+
+  // ✅ ENTERPRISE FIX: Alias for backward compatibility with SnapDebugLogger
+  totalEntities?: number; // Alias for totalEntitiesProcessed
 }
 
 export interface SnapEngineInterface {

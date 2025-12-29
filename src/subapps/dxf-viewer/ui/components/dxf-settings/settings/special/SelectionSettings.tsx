@@ -64,7 +64,7 @@ export function SelectionSettings() {
           onClick={() => setActiveSelectionTab('window')}
           className={`px-3 py-2 text-xs rounded-t transition-colors ${
             activeSelectionTab === 'window'
-              ? `${colors.bg.primary} ${colors.text.inverted} ${getDirectionalBorder('active', 'bottom')}`
+              ? `${colors.bg.primary} ${colors.text.inverted} ${getDirectionalBorder('info', 'bottom')}`
               : `${colors.bg.secondary} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.secondary}`
           }`}
         >
@@ -74,7 +74,7 @@ export function SelectionSettings() {
           onClick={() => setActiveSelectionTab('crossing')}
           className={`px-3 py-2 text-xs rounded-t transition-colors ${
             activeSelectionTab === 'crossing'
-              ? `${colors.bg.primary} ${colors.text.inverted} ${getDirectionalBorder('active', 'bottom')}`
+              ? `${colors.bg.primary} ${colors.text.inverted} ${getDirectionalBorder('info', 'bottom')}`
               : `${colors.bg.secondary} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.secondary}`
           }`}
         >
@@ -237,7 +237,7 @@ export function SelectionSettings() {
                     onClick={() => handleWindowSelectionChange('borderStyle', style)}
                     className={`p-2 rounded text-xs transition-colors ${
                       isSelected
-                        ? `${colors.bg.primary} ${getStatusBorder('active')}`
+                        ? `${colors.bg.primary} ${getStatusBorder('info')}`
                         : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getElementBorder('button', 'default')}`
                     }`}
                   >
@@ -396,7 +396,7 @@ export function SelectionSettings() {
                     onClick={() => handleCrossingSelectionChange('borderStyle', style)}
                     className={`p-2 rounded text-xs transition-colors ${
                       isSelected
-                        ? `${colors.bg.primary} ${getStatusBorder('active')}`
+                        ? `${colors.bg.primary} ${getStatusBorder('info')}`
                         : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getElementBorder('button', 'default')}`
                     }`}
                   >

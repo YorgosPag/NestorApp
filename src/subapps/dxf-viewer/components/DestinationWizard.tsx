@@ -17,14 +17,14 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // �
 import { useProjectHierarchy } from '../contexts/ProjectHierarchyContext';
 import { useDxfPipeline } from '../pipeline/useDxfPipeline';
 import { HierarchicalDestinationSelector } from './HierarchicalDestinationSelector';
-import type { DxfDestination, DxfProcessingOptions } from '../pipeline/types';
+import type { DxfDestination, DxfProcessingOptions, ProcessedDxfResult } from '../pipeline/types';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 interface DestinationWizardProps {
   isOpen: boolean;
   onClose: () => void;
   selectedFile: File | null;
-  onComplete: (result: DxfProcessingOptions) => void;
+  onComplete: (result: ProcessedDxfResult) => void;
 }
 
 type WizardStep = 'destination' | 'options' | 'processing' | 'complete';
@@ -103,7 +103,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
         selectedDestination, 
         processingOptions
       );
-      onComplete(result);
+      onComplete(result as ProcessedDxfResult);
       if (result.success) {
         setCurrentStep('complete');
       }
@@ -275,7 +275,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
           {/* Step 3: Processing */}
           {currentStep === 'processing' && (
             <div className="text-center">
-              <AnimatedSpinner size="x-large" className="mx-auto mb-4" />
+              <AnimatedSpinner size="large" className="mx-auto mb-4" />
               <h3 className={`text-lg font-medium ${colors.text.primary} mb-2`}>
                 Επεξεργασία κάτοψης...
               </h3>

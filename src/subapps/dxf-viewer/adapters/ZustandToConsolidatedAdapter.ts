@@ -215,7 +215,8 @@ export function useZustandAsGripSettings() {
     showMidpoints: store.general.grip.showMidpoints,
     showCenters: store.general.grip.showCenters,
     showQuadrants: store.general.grip.showQuadrants,
-    maxGripsPerEntity: store.general.grip.maxGripsPerEntity
+    maxGripsPerEntity: store.general.grip.maxGripsPerEntity,
+    showGrips: store.general.grip.enabled // ✅ ENTERPRISE FIX: Map enabled to showGrips for interface compatibility
   }), [store.general.grip]);
 
   const updateSettings = useCallback((updates: Partial<GripSettings>) => {

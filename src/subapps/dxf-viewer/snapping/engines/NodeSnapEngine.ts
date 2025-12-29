@@ -39,7 +39,7 @@ export class NodeSnapEngine extends BaseSnapEngine {
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.NODE);
 
     // Query nodes using standard spatial query
-    const nearbyNodes = this.spatialIndex.querySnap(cursorPoint, radius, 'node');
+    const nearbyNodes = this.spatialIndex.querySnap(cursorPoint, radius, 'endpoint');
 
     for (const result of nearbyNodes) {
       const { point, entity } = result.data;
@@ -150,7 +150,7 @@ export class NodeSnapEngine extends BaseSnapEngine {
     nodeChecks: number;
   } {
     return {
-      nodeCount: this.spatialIndex?.getNodeCount?.() || 0,
+      nodeCount: 0, // ✅ ENTERPRISE FIX: ISpatialIndex doesn't have getNodeCount method
       nodeChecks: 0 // Could add metrics
     };
   }

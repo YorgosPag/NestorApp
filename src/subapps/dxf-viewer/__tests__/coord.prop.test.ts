@@ -108,9 +108,11 @@ describe('🎲 Property-Based Coordinate Testing', () => {
    */
   test('scale invariance property holds', () => {
     fc.assert(
-      fc.property(vpArb, trArb, ptArb, ptArb, (vp, tf, p1Gen, p2Gen) => {
-        const p1 = p1Gen(vp);
-        const p2 = p2Gen(vp);
+      fc.property(
+        vpArb.chain(vp =>
+          fc.tuple(fc.constant(vp), trArb, ptArb(vp), ptArb(vp))
+        ),
+        ([vp, tf, p1, p2]) => { // ✅ ENTERPRISE FIX: Proper fc.chain pattern for dependent arbitraries
 
         // Calculate screen distance
         const screenDist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
@@ -130,8 +132,9 @@ describe('🎲 Property-Based Coordinate Testing', () => {
         }
 
         return true;
-      }),
-      {
+        } // ✅ ENTERPRISE FIX: Close the property function
+      ), // ← Κλείνει το fc.property
+      { // ← Ξεκινά το config object
         numRuns: 200,
         verbose: true
       }
@@ -186,11 +189,14 @@ describe('🎲 Property-Based Coordinate Testing', () => {
 
     fc.assert(
       fc.property(
-        fc.constantFrom(...extremeViewports),
-        fc.constantFrom(...extremeTransforms),
-        ptArb,
-        (vp, tf, pGen) => {
-          const p = pGen(vp);
+        fc.constantFrom(...extremeViewports).chain(vp =>
+          fc.tuple(
+            fc.constant(vp),
+            fc.constantFrom(...extremeTransforms),
+            ptArb(vp)
+          )
+        ),
+        ([vp, tf, p]) => { // ✅ ENTERPRISE FIX: Proper tuple destructuring
 
           try {
             const world = CoordinateTransforms.screenToWorld(p, tf, vp);
@@ -219,8 +225,11 @@ describe('🎲 Property-Based Coordinate Testing', () => {
    */
   test('transformation performance property', () => {
     fc.assert(
-      fc.property(vpArb, trArb, ptArb, (vp, tf, pGen) => {
-        const p = pGen(vp);
+      fc.property(
+        vpArb.chain(vp =>
+          fc.tuple(fc.constant(vp), trArb, ptArb(vp))
+        ),
+        ([vp, tf, p]) => { // ✅ ENTERPRISE FIX: Proper tuple destructuring
         const iterations = 1000;
 
         const start = performance.now();
@@ -248,25 +257,29 @@ describe('🎲 Property-Based Coordinate Testing', () => {
    */
   test('numerical stability under repeated transformations', () => {
     fc.assert(
-      fc.property(vpArb, trArb, ptArb, (vp, tf, pGen) => {
-        let point = pGen(vp);
+      fc.property(
+        vpArb.chain(vp =>
+          fc.tuple(fc.constant(vp), trArb, ptArb(vp))
+        ),
+        ([vp, tf, point]) => { // ✅ ENTERPRISE FIX: Proper tuple destructuring
+        let currentPoint = { ...point };
         const originalPoint = { ...point };
 
         // Apply 10 round-trip transformations
         for (let i = 0; i < 10; i++) {
-          const world = CoordinateTransforms.screenToWorld(point, tf, vp);
-          point = CoordinateTransforms.worldToScreen(world, tf, vp);
+          const world = CoordinateTransforms.screenToWorld(currentPoint, tf, vp);
+          currentPoint = CoordinateTransforms.worldToScreen(world, tf, vp);
         }
 
         const accumulatedError = Math.hypot(
-          point.x - originalPoint.x,
-          point.y - originalPoint.y
+          currentPoint.x - originalPoint.x,
+          currentPoint.y - originalPoint.y
         );
 
         // Property: accumulated error should remain reasonable
         return accumulatedError <= 2.0; // Max 2 pixels drift after 10 round-trips
-      }),
-      {
+      }), // ✅ ENTERPRISE FIX: Close the property function
+      { // ← Ξεκινά το config object
         numRuns: 100,
         verbose: true
       }

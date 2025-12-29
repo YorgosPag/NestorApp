@@ -5,8 +5,10 @@ import { DxfCanvasCore, type DxfCanvasImperativeAPI } from './DxfCanvasCore';
 import CanvasOverlays from './CanvasOverlays';
 import { useCanvasContext } from '../contexts/CanvasContext';
 import type { SceneModel } from '../types/scene';
-import type { Point2D as Point } from '../types/scene';
+// ✅ ENTERPRISE FIX: Correct Point2D import path
+import type { Point2D as Point } from '../rendering/types/Types';
 import type { DrawingState } from '../hooks/drawing/useUnifiedDrawing';
+// ✅ ENTERPRISE FIX: AnyMeasurement type from correct path
 import type { AnyMeasurement } from '../types/measurements';
 import type { ViewTransform } from '../systems/rulers-grid/config';
 import type { Entity } from '../types/entities';
@@ -218,25 +220,14 @@ export const DxfCanvas = forwardRef<DxfCanvasRef, DxfCanvasProps>((props, ref) =
         scene={scene}
         selectedEntityIds={selectedEntityIds}
         overlayEntities={overlayEntities}
-        onSelectEntity={onSelectEntity}
+        onSelectChange={onSelectEntity}
         onRequestColorMenu={onRequestColorMenu}
         onMouseMove={handleMouseMove}
         onRendererReady={() => {}}
         alwaysShowCoarseGrid={alwaysShowCoarseGrid}
-        showCalibration={showCalibration}
-        onCalibrationToggle={onCalibrationToggle}
         onSceneChange={onSceneChange}
-        onTransformChange={handleTransformChange}
         isZoomWindowActive={isZoomWindowActive}
-        onZoomWindowModeChange={onZoomWindowModeChange}
         activeTool={activeTool}
-        measurements={measurements}
-        tempMeasurementPoints={tempMeasurementPoints}
-        drawingState={drawingState}
-        onEntityCreated={onEntityCreated}
-        onMeasurementPoint={onMeasurementPoint}
-        onMeasurementHover={onMeasurementHover}
-        onMeasurementCancel={onMeasurementCancel}
         onDrawingPoint={onDrawingPoint}
         onDrawingHover={onDrawingHover}
         onDrawingCancel={onDrawingCancel}
@@ -265,4 +256,5 @@ export const DxfCanvas = forwardRef<DxfCanvasRef, DxfCanvasProps>((props, ref) =
 DxfCanvas.displayName = 'DxfCanvas';
 
 export default DxfCanvas;
-export type { DxfCanvasRef };
+// ✅ ENTERPRISE FIX: DxfCanvasRef moved to DxfCanvasCore to avoid export conflict
+// export type { DxfCanvasRef };

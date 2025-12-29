@@ -219,8 +219,9 @@ export const ConfirmModal: React.FC<{
   cancelText = 'Άκυρο',
   variant = 'info'
 }) => {
+  const colors = useSemanticColors();
   const confirmVariant = variant === 'danger' ? 'primary' : 'secondary';
-  
+
   return (
     <BaseModal
       isOpen={isOpen}
@@ -238,7 +239,7 @@ export const ConfirmModal: React.FC<{
         </div>
       }
     >
-      <p className={colors.text.secondary}>{message}</p>
+      <p className={`${colors.text.secondary}`}>{message}</p>
     </BaseModal>
   );
 };

@@ -109,11 +109,11 @@ class EventBusCore {
     }
     
     const eventHandlers = this.handlers.get(eventType)!;
-    eventHandlers.add(handler);
+    eventHandlers.add(handler as EventHandler<keyof DrawingEventMap>);
 
     // Return unsubscribe function
     return () => {
-      eventHandlers.delete(handler);
+      eventHandlers.delete(handler as EventHandler<keyof DrawingEventMap>);
       if (eventHandlers.size === 0) {
         this.handlers.delete(eventType);
       }

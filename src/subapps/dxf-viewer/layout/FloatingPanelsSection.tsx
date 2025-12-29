@@ -175,7 +175,7 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
       />
 
       {/* PROFESSIONAL LAYOUT DEBUG SYSTEM */}
-      {isFeatureEnabled('LAYOUT_DEBUG_SYSTEM') && <LazyFullLayoutDebug />}
+      {isFeatureEnabled('ENTERPRISE_SETTINGS_SHADOW_MODE') && <LazyFullLayoutDebug />}
 
       {/* TEST RESULTS MODAL */}
       <TestResultsModal

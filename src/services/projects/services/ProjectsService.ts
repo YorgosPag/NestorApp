@@ -7,17 +7,8 @@ import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts';
 import { db } from '@/lib/firebase-admin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
-// ✅ ENTERPRISE: Proper Firebase Admin imports
-import {
-  getFirestore,
-  collection,
-  doc,
-  getDoc,
-  query,
-  where,
-  getDocs,
-  DocumentData
-} from 'firebase-admin/firestore';
+// ✅ ENTERPRISE FIX: Use Firebase Admin methods from db instance, not direct imports
+// Firebase Admin SDK Firestore functions are methods on the db instance, not standalone functions
 
 export class ProjectsService implements IProjectsService {
   private firestoreRepo: IProjectsRepository;
@@ -161,13 +152,15 @@ export class ProjectsService implements IProjectsService {
         return;
     }
     try {
-        const projectDoc = await getDoc(doc(db, COLLECTIONS.PROJECTS, projectId));
+        const database = db();
+        if (!database) return;
+        const projectDoc = await database.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
         if (projectDoc.exists) {
             // Document exists
         }
 
-        const buildingsQuery = query(collection(db, COLLECTIONS.BUILDINGS), where('projectId', '==', projectId));
-        const buildings = await getDocs(buildingsQuery);
+        const buildingsQuery = database.collection(COLLECTIONS.BUILDINGS).where('projectId', '==', projectId);
+        const buildings = await buildingsQuery.get();
         buildings.docs.forEach(doc => {
             // Process building
         });
@@ -175,17 +168,17 @@ export class ProjectsService implements IProjectsService {
         for (const building of buildings.docs) {
             // 🏢 ENTERPRISE: Use configurable building ID pattern
             const buildingIdPattern = process.env.NEXT_PUBLIC_BUILDING_ID_PATTERN || 'building-';
-            const unitsQuery = query(collection(db, COLLECTIONS.UNITS), where('buildingId', '==', `${buildingIdPattern}${building.id}`));
-            const units = await getDocs(unitsQuery);
+            const unitsQuery = database.collection(COLLECTIONS.UNITS).where('buildingId', '==', `${buildingIdPattern}${building.id}`);
+            const units = await unitsQuery.get();
             units.docs.forEach(doc => {
-                const data = doc.data() as DocumentData;
+                const data = doc.data();
                 // Process unit
             });
         }
 
         try {
-            const directUnitsQuery = admin.query(admin.collection(db, COLLECTIONS.UNITS), admin.where('projectId', '==', projectId));
-            const directUnits = await admin.getDocs(directUnitsQuery);
+            const directUnitsQuery = database.collection(COLLECTIONS.UNITS).where('projectId', '==', projectId);
+            const directUnits = await directUnitsQuery.get();
             if (!directUnits.empty) {
                 // Has direct units
             }

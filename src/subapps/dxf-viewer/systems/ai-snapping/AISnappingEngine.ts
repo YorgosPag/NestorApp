@@ -60,6 +60,7 @@ interface SnapContext {
   viewBounds?: { min: Point2D; max: Point2D };
   gridSize?: number;
   snapMode?: string;
+  lastPoint?: Point2D; // ✅ ENTERPRISE FIX: Added missing lastPoint property
 }
 
 /**

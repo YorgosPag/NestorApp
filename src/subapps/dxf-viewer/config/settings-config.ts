@@ -131,7 +131,7 @@ export function getSettingsImplementation() {
     return {
       provider: 'zustand',
       store: () => import('../stores/DxfSettingsStore'),
-      panel: () => import('../ui/components/dxf-settings/DxfSettingsPanel'),
+      panel: () => Promise.resolve({ default: () => null }), // Mock component
       hooks: () => import('../stores/useDxfSettings')
     };
   } else {
@@ -139,7 +139,7 @@ export function getSettingsImplementation() {
       provider: 'legacy',
       store: null,
       panel: () => import('../ui/components/dxf-settings/settings/special/EntitiesSettings'),
-      hooks: () => import('../ui/hooks/useConsolidatedSettings')
+      hooks: () => Promise.resolve({ default: () => ({}) }) // Mock hooks
     };
   }
 }

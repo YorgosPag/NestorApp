@@ -43,7 +43,7 @@ export function useDxfViewerState() {
       }
     },
     setActiveTool,
-    sceneState.currentScene
+    sceneState.currentScene || undefined
   );
 
   // Canvas actions through new API

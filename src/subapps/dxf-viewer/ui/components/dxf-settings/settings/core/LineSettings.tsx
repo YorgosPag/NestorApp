@@ -137,18 +137,19 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         settings: unifiedHook.settings.lineSettings,
         updateSettings: unifiedHook.updateLineSettings,
         resetToDefaults: unifiedHook.resetToDefaults,
+        resetToFactory: () => unifiedHook.resetToDefaults(), // ✅ ENTERPRISE FIX: Use resetToDefaults as factory reset
         applyTemplate: (template: LineTemplate) => {
-          // Εφαρμόζουμε το template στις ειδικές preview ρυθμίσεις
+          // ✅ ENTERPRISE FIX: Use proper nested settings structure from LineSettingsContext
           unifiedHook.updateLineSettings({
-            lineType: template.lineType,
-            lineWidth: template.lineWidth,
-            color: template.color,
-            opacity: template.opacity,
-            dashScale: template.dashScale,
-            dashOffset: template.dashOffset,
-            lineCap: template.lineCap,
-            lineJoin: template.lineJoin,
-            breakAtCenter: template.breakAtCenter
+            lineType: template.settings.lineType,
+            lineWidth: template.settings.lineWidth,
+            color: template.settings.color,
+            opacity: template.settings.opacity,
+            dashScale: template.settings.dashScale,
+            dashOffset: template.settings.dashOffset,
+            lineCap: template.settings.lineCap,
+            lineJoin: template.settings.lineJoin,
+            breakAtCenter: template.settings.breakAtCenter
           });
         },
         getCurrentDashPattern: () => {
@@ -162,18 +163,19 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         settings: unifiedHook.settings.lineSettings,
         updateSettings: unifiedHook.updateLineSettings,
         resetToDefaults: unifiedHook.resetToDefaults,
+        resetToFactory: () => unifiedHook.resetToDefaults(), // ✅ ENTERPRISE FIX: Use resetToDefaults as factory reset
         applyTemplate: (template: LineTemplate) => {
-          // Εφαρμόζουμε το template στις ειδικές completion ρυθμίσεις
+          // ✅ ENTERPRISE FIX: Use proper nested settings structure from LineSettingsContext
           unifiedHook.updateLineSettings({
-            lineType: template.lineType,
-            lineWidth: template.lineWidth,
-            color: template.color,
-            opacity: template.opacity,
-            dashScale: template.dashScale,
-            dashOffset: template.dashOffset,
-            lineCap: template.lineCap,
-            lineJoin: template.lineJoin,
-            breakAtCenter: template.breakAtCenter
+            lineType: template.settings.lineType,
+            lineWidth: template.settings.lineWidth,
+            color: template.settings.color,
+            opacity: template.settings.opacity,
+            dashScale: template.settings.dashScale,
+            dashOffset: template.settings.dashOffset,
+            lineCap: template.settings.lineCap,
+            lineJoin: template.settings.lineJoin,
+            breakAtCenter: template.settings.breakAtCenter
           });
         },
         getCurrentDashPattern: () => {
@@ -184,17 +186,19 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
       // Γενικές ρυθμίσεις - fallback
       return {
         ...generalLineSettings,
+        resetToFactory: () => generalLineSettings.resetToDefaults(), // ✅ ENTERPRISE FIX: Use resetToDefaults as factory reset
         applyTemplate: (template: LineTemplate) => {
-          // ✅ FIX: Added applyTemplate for general context
+          // ✅ ENTERPRISE FIX: Use proper nested settings structure from LineSettingsContext
           generalLineSettings.updateSettings({
-            lineType: template.lineType,
-            lineWidth: template.lineWidth,
-            color: template.color,
-            opacity: template.opacity,
-            dashScale: template.dashScale,
-            dashOffset: template.dashOffset,
-            lineCap: template.lineCap,
-            lineJoin: template.lineJoin,
+            lineType: template.settings.lineType,
+            lineWidth: template.settings.lineWidth,
+            color: template.settings.color,
+            opacity: template.settings.opacity,
+            dashScale: template.settings.dashScale,
+            dashOffset: template.settings.dashOffset,
+            lineCap: template.settings.lineCap,
+            lineJoin: template.settings.lineJoin,
+            breakAtCenter: template.settings.breakAtCenter
           });
         }
       };

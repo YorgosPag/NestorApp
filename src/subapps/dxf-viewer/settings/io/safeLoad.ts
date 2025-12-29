@@ -94,29 +94,38 @@ export async function safeLoad(
       const obj = data as Record<string, unknown>;
 
       // Check line.general for old property names OR missing enabled property
-      if (obj.line?.general) {
-        const lineGeneral = obj.line.general;
-        if ('lineColor' in lineGeneral || 'lineStyle' in lineGeneral || !('enabled' in lineGeneral)) {
-          console.log('[safeLoad] Detected old line property names (lineColor/lineStyle) or missing enabled');
-          return true;
+      if (obj.line && typeof obj.line === 'object' && obj.line !== null) {
+        const lineObj = obj.line as Record<string, unknown>;
+        if (lineObj.general && typeof lineObj.general === 'object' && lineObj.general !== null) {
+          const lineGeneral = lineObj.general as Record<string, unknown>;
+          if ('lineColor' in lineGeneral || 'lineStyle' in lineGeneral || !('enabled' in lineGeneral)) {
+            console.log('[safeLoad] Detected old line property names (lineColor/lineStyle) or missing enabled');
+            return true;
+          }
         }
       }
 
       // Check text.general for old property names OR missing enabled property
-      if (obj.text?.general) {
-        const textGeneral = obj.text.general;
-        if ('textColor' in textGeneral || !('enabled' in textGeneral)) {
-          console.log('[safeLoad] Detected old text property names (textColor) or missing enabled');
-          return true;
+      if (obj.text && typeof obj.text === 'object' && obj.text !== null) {
+        const textObj = obj.text as Record<string, unknown>;
+        if (textObj.general && typeof textObj.general === 'object' && textObj.general !== null) {
+          const textGeneral = textObj.general as Record<string, unknown>;
+          if ('textColor' in textGeneral || !('enabled' in textGeneral)) {
+            console.log('[safeLoad] Detected old text property names (textColor) or missing enabled');
+            return true;
+          }
         }
       }
 
       // Check grip.general for old property names OR missing enabled property
-      if (obj.grip?.general) {
-        const gripGeneral = obj.grip.general;
-        if ('size' in gripGeneral || ('color' in gripGeneral && !('colors' in gripGeneral)) || !('enabled' in gripGeneral)) {
-          console.log('[safeLoad] Detected old grip property names (size/color flat structure) or missing enabled');
-          return true;
+      if (obj.grip && typeof obj.grip === 'object' && obj.grip !== null) {
+        const gripObj = obj.grip as Record<string, unknown>;
+        if (gripObj.general && typeof gripObj.general === 'object' && gripObj.general !== null) {
+          const gripGeneral = gripObj.general as Record<string, unknown>;
+          if ('size' in gripGeneral || ('color' in gripGeneral && !('colors' in gripGeneral)) || !('enabled' in gripGeneral)) {
+            console.log('[safeLoad] Detected old grip property names (size/color flat structure) or missing enabled');
+            return true;
+          }
         }
       }
 
@@ -179,7 +188,7 @@ export async function safeLoad(
     console.warn('[safeLoad] Validation failed, attempting to coerce');
     warnings.push('Schema validation failed, data was coerced');
 
-    const coercedData = validateAndCoerce(processedData, FACTORY_DEFAULTS) as SettingsState;
+    const coercedData = validateAndCoerce(processedData, FACTORY_DEFAULTS);
 
     return {
       success: true,

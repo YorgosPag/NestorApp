@@ -7,14 +7,42 @@ import type {
   ConstraintContextData,
   OrthoConstraintSettings,
   PolarConstraintSettings,
-  ConstraintsSettings
+  ConstraintsSettings,
+  PolarCoordinates,
+  CartesianCoordinates,
+  ConstraintOperation,
+  ConstraintOperationResult,
+  ConstraintPreset,
+  PolarConstraintsInterface,
+  ConstraintManagementInterface,
+  ConstraintFeedback,
+  ConstraintOperationType
 } from './config';
 import {
   DEFAULT_ORTHO_SETTINGS,
   DEFAULT_POLAR_SETTINGS,
   DEFAULT_CONSTRAINTS_SETTINGS
 } from './config';
-import { useLoadPersistedSettings } from '../rulers-grid/usePersistence';
+// Import the base persistence hook
+interface ConstraintsPersistedData {
+  orthoSettings?: Partial<OrthoConstraintSettings>;
+  polarSettings?: Partial<PolarConstraintSettings>;
+  settings?: Partial<ConstraintsSettings>;
+  constraints?: Record<string, ConstraintDefinition>;
+  timestamp?: number;
+}
+
+function useLoadConstraintsSettings(enablePersistence: boolean, persistenceKey: string): () => ConstraintsPersistedData | null {
+  return () => {
+    if (!enablePersistence) return null;
+    try {
+      const stored = localStorage.getItem(persistenceKey);
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  };
+}
 
 export interface ConstraintsSystemStateProps {
   initialOrthoSettings?: Partial<OrthoConstraintSettings>;
@@ -59,7 +87,7 @@ export function useConstraintsSystemState({
   globalHotkeys = true
 }: ConstraintsSystemStateProps): ConstraintsSystemStateReturn {
 
-  const loadPersistedSettings = useLoadPersistedSettings(enablePersistence, persistenceKey);
+  const loadPersistedSettings = useLoadConstraintsSettings(enablePersistence, persistenceKey);
   const persistedData = loadPersistedSettings();
 
   // State initialization
@@ -136,10 +164,10 @@ export function useConstraintsSystemState({
     if (!globalHotkeys) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Update modifier keys state
+      // ✅ ENTERPRISE FIX: Update keyboard modifiers state with correct property name
       setConstraintContext(prev => ({
         ...prev,
-        modifierKeys: {
+        keyboardModifiers: {
           shift: event.shiftKey,
           ctrl: event.ctrlKey,
           alt: event.altKey
@@ -153,7 +181,7 @@ export function useConstraintsSystemState({
     const handleKeyUp = (event: KeyboardEvent) => {
       setConstraintContext(prev => ({
         ...prev,
-        modifierKeys: {
+        keyboardModifiers: {
           shift: event.shiftKey,
           ctrl: event.ctrlKey,
           alt: event.altKey
