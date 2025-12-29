@@ -70,7 +70,7 @@ export function ColorGroupItem({
   const handleExpandToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     const colorGroupKey = createColorGroupKey(colorName);
-    setExpandedColorGroups(prev => {
+    setExpandedColorGroups((prev: Set<string>) => {
       const newExpanded = new Set(prev);
       if (prev.has(colorGroupKey)) {
         newExpanded.delete(colorGroupKey);
@@ -136,7 +136,7 @@ export function ColorGroupItem({
     <div className="space-y-1">
       {/* Color Group Header */}
       <div 
-        className={`flex items-center justify-between p-2 ${colors.bg.secondary} ${getStatusBorder('info')} rounded cursor-pointer ${INTERACTIVE_PATTERNS.PURPLE_HOVER} transition-colors ${
+        className={`flex items-center justify-between p-2 ${colors.bg.muted} ${getStatusBorder('info')} rounded cursor-pointer ${INTERACTIVE_PATTERNS.PURPLE_HOVER} transition-colors ${
           selectedColorGroupsForMerge.has(colorName) ? 'ring-2 ring-blue-400 bg-blue-900 bg-opacity-30' : ''
         }`}
         onClick={handleGroupClick}
@@ -160,7 +160,7 @@ export function ColorGroupItem({
           <div className="relative">
             <button
               onClick={handleColorPickerToggle}
-              className={`${iconSizes.sm} rounded ${getStatusBorder('secondary')} ${hoverBorderEffects.BLUE} ${colorBgClass}`}
+              className={`${iconSizes.sm} rounded ${getStatusBorder('muted')} ${hoverBorderEffects.BLUE} ${colorBgClass}`}
               title="Αλλαγή χρώματος Color Group"
             />
           </div>

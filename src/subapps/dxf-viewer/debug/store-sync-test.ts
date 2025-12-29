@@ -20,7 +20,7 @@
 
 import { UI_COLORS } from '../config/color-config';
 import type { LineSettings, TextSettings, GripSettings } from '../settings-core/types';
-import type { EffectiveSettingsGetter } from '../settings-core/types/EffectiveSettingsGetter';
+import type { EffectiveSettingsGetter } from '../settings/sync/storeSync';
 
 interface TestResult {
   category: string;
@@ -674,7 +674,7 @@ async function testSubscriptionCleanup(): Promise<TestResult> {
         })
       };
 
-      const { stop } = sync.start(effectiveGetter);
+      const { stop } = sync.start(effectiveGetter as EffectiveSettingsGetter);
 
       const subscriptionsAfterStart = subscriptions;
 

@@ -136,7 +136,18 @@ export interface VerificationMetrics {
  * 🎯 COMPREHENSIVE RULER DEBUG SETTINGS
  * Master settings interface για enterprise ruler debugging
  */
-export interface RulerDebugSettings extends UIElementSettings {
+/**
+ * ✅ ENTERPRISE FIX: Mutable version of UIElementSettings for debug system
+ * RulerDebugOverlay needs to modify enabled property at runtime
+ */
+export interface MutableUIElementSettings {
+  enabled: boolean;        // ✅ NOT readonly - can be modified by debug system
+  readonly visible: boolean;
+  readonly opacity: number;
+  readonly zIndex?: number;
+}
+
+export interface RulerDebugSettings extends MutableUIElementSettings {
   mode: RulerDebugMode;
 
   // Sub-feature settings

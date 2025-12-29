@@ -81,7 +81,7 @@ export const OverrideToggle = React.memo<OverrideToggleProps>(function OverrideT
             checked={checked}
             onChange={handleChange}
             disabled={disabled}
-            className={`rounded ${getStatusBorder('secondary')} text-blue-600 focus:ring-blue-500 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed`}
+            className={`rounded ${getStatusBorder('muted')} text-blue-600 focus:ring-blue-500 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed`}
           />
           <div className="flex flex-col">
             <span className="text-sm ${colors.text.muted} font-medium">
@@ -101,7 +101,7 @@ export const OverrideToggle = React.memo<OverrideToggleProps>(function OverrideT
           <span className={`px-2 py-1 rounded text-xs font-medium ${
             checked
               ? `bg-orange-900/50 text-orange-300 ${quick.warning}`
-              : `${colors.bg.hover} ${colors.text.muted} ${getStatusBorder('secondary')}`
+              : `${colors.bg.hover} ${colors.text.muted} ${getStatusBorder('muted')}`
           }`}>
             {statusText || (checked ? 'Ενεργό' : 'Ανενεργό')}
           </span>

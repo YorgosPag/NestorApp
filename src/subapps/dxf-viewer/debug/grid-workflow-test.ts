@@ -3,15 +3,13 @@
 // Βασισμένο σε CAD QA Standards (ISO 9000, SASIG PDQ, VDA 4955)
 
 import { UI_COLORS } from '../config/color-config';
-//
+
 // ΤΕΣΤ ΚΑΤΗΓΟΡΙΕΣ:
 // 1. MORPHOLOGIC TESTS: Grid structure integrity
 // 2. SYNTACTIC TESTS: Grid rendering correctness
 // 3. SEMANTIC TESTS: Grid functionality validation
 // 4. COORDINATE PRECISION: Millimeter-level accuracy (CAD standard)
 // 5. TOPOLOGICAL INTEGRITY: Grid-Canvas-Context integration
-
-import { UI_COLORS } from '../config/color-config';
 
 interface StepResult {
   step: string;

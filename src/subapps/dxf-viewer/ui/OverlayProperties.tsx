@@ -124,7 +124,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
         {/* Basic Info */}
         <div className="flex items-center gap-2">
           <div
-            className={`${iconSizes.sm} rounded ${quick.button} ${useDynamicBackgroundClass('', STATUS_COLORS[overlay.status || 'for-sale'])}`}
+            className={`${iconSizes.sm} rounded ${quick.button} ${useDynamicBackgroundClass('', STATUS_COLORS[overlay.status || 'for-sale'] as string)}`}
           />
           <CommonBadge
             status="company"
@@ -157,7 +157,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
                 <SelectItem key={status} value={status}>
                   <div className="flex items-center gap-2">
                     <div
-                      className={`${iconSizes.xs} rounded ${useDynamicBackgroundClass('', STATUS_COLORS[status])}`}
+                      className={`${iconSizes.xs} rounded ${useDynamicBackgroundClass('', STATUS_COLORS[status] as string)}`}
                     />
                     {STATUS_LABELS[status]}
                   </div>

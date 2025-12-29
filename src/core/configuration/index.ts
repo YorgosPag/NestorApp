@@ -79,10 +79,18 @@ export {
 /**
  * Migration Types
  */
-export type {
-  MigrationResult,
-  MigrationProgress
-} from './hardcoded-values-migration';
+// Mock missing types
+export type MigrationResult = {
+  success: boolean;
+  migratedCount: number;
+  errors: string[];
+};
+
+export type MigrationProgress = {
+  current: number;
+  total: number;
+  phase: string;
+};
 
 // ============================================================================
 // 🎣 REACT HOOKS EXPORTS

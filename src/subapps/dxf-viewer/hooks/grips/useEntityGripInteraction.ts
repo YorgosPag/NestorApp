@@ -8,7 +8,7 @@
 
 import { useState, useCallback } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import type { AnySceneEntity, LineEntity, RectangleEntity, SceneModel } from '../../types/scene';
+import type { Entity as AnySceneEntity, LineEntity, RectangleEntity, SceneModel } from '../../types/entities';
 import { generateEdgeMidpoints, calculateMidpoint, calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { convertLineToPolyline, getClosestPointOnLineSegment, isPointNearLineSegment } from '../../utils/entity-conversion';
 import type { GripInfo } from '../../systems/phase-manager/PhaseManager';
@@ -328,39 +328,48 @@ export function useEntityGripInteraction({
     if (entity.type === 'rectangle' && draggedGrip.type === 'corner') {
       const rectangle = entity as RectangleEntity;
       const { corner1, corner2 } = rectangle;
-      
+
+      // ✅ ENTERPRISE FIX: Add null checks and type assertions for corners
+      if (!corner1 || !corner2) return;
+
+      const c1 = corner1 as Point2D;
+      const c2 = corner2 as Point2D;
+
+      // ✅ ENTERPRISE FIX: Type-safe gripIndex access with fallback
+      const gripIndex = draggedGrip.gripIndex ?? 0;
+
       // Determine which corner is being dragged and update accordingly
-      if (draggedGrip.gripIndex === 0) {
+      if (gripIndex === 0) {
         // corner1 (top-left)
         updatedEntity = {
           ...rectangle,
           corner1: {
-            x: corner1.x + delta.x,
-            y: corner1.y + delta.y
-          }
+            x: c1.x + delta.x,
+            y: c1.y + delta.y
+          } as Point2D
         };
-      } else if (draggedGrip.gripIndex === 2) {
+      } else if (gripIndex === 2) {
         // corner2 (bottom-right)
         updatedEntity = {
           ...rectangle,
           corner2: {
-            x: corner2.x + delta.x,
-            y: corner2.y + delta.y
-          }
+            x: c2.x + delta.x,
+            y: c2.y + delta.y
+          } as Point2D
         };
-      } else if (draggedGrip.gripIndex === 1) {
+      } else if (gripIndex === 1) {
         // top-right corner
         updatedEntity = {
           ...rectangle,
-          corner1: { x: corner1.x, y: corner1.y + delta.y },
-          corner2: { x: corner2.x + delta.x, y: corner2.y }
+          corner1: { x: c1.x, y: c1.y + delta.y } as Point2D,
+          corner2: { x: c2.x + delta.x, y: c2.y } as Point2D
         };
       } else if (draggedGrip.gripIndex === 3) {
         // bottom-left corner
         updatedEntity = {
           ...rectangle,
-          corner1: { x: corner1.x + delta.x, y: corner1.y },
-          corner2: { x: corner2.x, y: corner2.y + delta.y }
+          corner1: { x: c1.x + delta.x, y: c1.y } as Point2D,
+          corner2: { x: c2.x, y: c2.y + delta.y } as Point2D
         };
       }
     }
@@ -369,31 +378,42 @@ export function useEntityGripInteraction({
     else if (entity.type === 'rectangle' && draggedGrip.type === 'edge') {
       const rectangle = entity as RectangleEntity;
       const { corner1, corner2 } = rectangle;
-      const edgeIndex = draggedGrip.gripIndex - 4; // Offset by 4 since corners are 0-3
-      
+
+      // ✅ ENTERPRISE FIX: Add null checks and type assertions for corners
+      if (!corner1 || !corner2) return;
+
+      const c1 = corner1 as Point2D;
+      const c2 = corner2 as Point2D;
+
+      // ✅ ENTERPRISE FIX: Guard against undefined gripIndex
+      const gripIndex = draggedGrip.gripIndex;
+      if (gripIndex === undefined) return entity;
+
+      const edgeIndex = gripIndex - 4; // Offset by 4 since corners are 0-3
+
       if (edgeIndex === 0) {
         // Top edge
         updatedEntity = {
           ...rectangle,
-          corner1: { x: corner1.x, y: corner1.y + delta.y }
+          corner1: { x: c1.x, y: c1.y + delta.y } as Point2D
         };
       } else if (edgeIndex === 1) {
         // Right edge
         updatedEntity = {
           ...rectangle,
-          corner2: { x: corner2.x + delta.x, y: corner2.y }
+          corner2: { x: c2.x + delta.x, y: c2.y } as Point2D
         };
       } else if (edgeIndex === 2) {
         // Bottom edge
         updatedEntity = {
           ...rectangle,
-          corner2: { x: corner2.x, y: corner2.y + delta.y }
+          corner2: { x: c2.x, y: c2.y + delta.y } as Point2D
         };
       } else if (edgeIndex === 3) {
         // Left edge
         updatedEntity = {
           ...rectangle,
-          corner1: { x: corner1.x + delta.x, y: corner1.y }
+          corner1: { x: c1.x + delta.x, y: c1.y } as Point2D
         };
       }
     }

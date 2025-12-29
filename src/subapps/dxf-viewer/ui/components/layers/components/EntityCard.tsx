@@ -90,7 +90,7 @@ export const EntityCard = ({
               e.stopPropagation();
               onSetColorPickerEntity(showEntityColorPicker ? null : entity.id);
             }}
-            className={`rounded-full ${getStatusBorder('secondary')} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${
+            className={`rounded-full ${getStatusBorder('muted')} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${
               isSelected ? iconSizes.xs : iconSizes.xs
             }`}
             className={getDynamicBackgroundClass(entity.color || layer.color)}

@@ -208,11 +208,11 @@ export function tryForceConnect(
       const headToStart = Math.sqrt((chainHead.x - seg.start.x) ** 2 + (chainHead.y - seg.start.y) ** 2);
       const headToEnd = Math.sqrt((chainHead.x - seg.end.x) ** 2 + (chainHead.y - seg.end.y) ** 2);
       
-      const connections = [
-        { seg, point: 'start', distance: tailToStart, target: 'tail' },
-        { seg, point: 'end', distance: tailToEnd, target: 'tail' },
-        { seg, point: 'start', distance: headToStart, target: 'head' },
-        { seg, point: 'end', distance: headToEnd, target: 'head' }
+      const connections: ConnectionCandidate[] = [
+        { seg, point: 'start' as const, distance: tailToStart, target: 'tail' as const },
+        { seg, point: 'end' as const, distance: tailToEnd, target: 'tail' as const },
+        { seg, point: 'start' as const, distance: headToStart, target: 'head' as const },
+        { seg, point: 'end' as const, distance: headToEnd, target: 'head' as const }
       ];
       
       for (const conn of connections) {

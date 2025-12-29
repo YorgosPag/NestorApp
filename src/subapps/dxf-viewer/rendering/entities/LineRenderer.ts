@@ -53,13 +53,14 @@ import { hitTestLineSegments, createEdgeGrips, renderSplitLine, renderLineWithTe
 import { calculateDistance } from './shared/geometry-rendering-utils';
 
 export class LineRenderer extends BaseEntityRenderer {
-  render(entity: Entity, options: RenderOptions = {}): void {
+  render(entity: EntityModel, options: RenderOptions = {}): void {
     if (entity.type !== 'line') return;
 
-    // ✅ ENTERPRISE FIX: Use type guard for safe property access
+    // Use type guard for safe property access
     if (!('start' in entity) || !('end' in entity)) return;
-    const start = entity.start as Point2D;
-    const end = entity.end as Point2D;
+    const lineEntity = entity as EntityModel & { start: Point2D; end: Point2D };
+    const start = lineEntity.start;
+    const end = lineEntity.end;
 
     if (!start || !end) return;
 
@@ -118,13 +119,14 @@ export class LineRenderer extends BaseEntityRenderer {
     // ⚡ NUCLEAR: LINE ENDPOINT DOTS ELIMINATED
   }
 
-  getGrips(entity: Entity): GripInfo[] {
+  getGrips(entity: EntityModel): GripInfo[] {
     if (entity.type !== 'line') return [];
 
-    // ✅ ENTERPRISE FIX: Use type guard for safe property access
+    // Use type guard for safe property access
     if (!('start' in entity) || !('end' in entity)) return [];
-    const start = entity.start as Point2D;
-    const end = entity.end as Point2D;
+    const lineEntity = entity as EntityModel & { start: Point2D; end: Point2D };
+    const start = lineEntity.start;
+    const end = lineEntity.end;
 
     if (!start || !end) return [];
     
@@ -132,7 +134,7 @@ export class LineRenderer extends BaseEntityRenderer {
     
     // Start point grip
     grips.push({
-      entityId: entity.id,
+      entityId: lineEntity.id,
       gripType: 'vertex',
       gripIndex: 0,
       position: start,
@@ -141,7 +143,7 @@ export class LineRenderer extends BaseEntityRenderer {
     
     // End point grip
     grips.push({
-      entityId: entity.id,
+      entityId: lineEntity.id,
       gripType: 'vertex',
       gripIndex: 1,
       position: end,
@@ -149,7 +151,7 @@ export class LineRenderer extends BaseEntityRenderer {
     });
     
     // Use shared utility for edge grip
-    const edgeGrips = createEdgeGrips(entity.id, [start, end], false, 2);
+    const edgeGrips = createEdgeGrips(lineEntity.id, [start, end], false, 2);
     grips.push(...edgeGrips);
     
     return grips;

@@ -23,7 +23,7 @@ export const TestTabs: React.FC<TestTabsProps> = ({ activeTab, onTabChange }) =>
         onClick={() => onTabChange('automated')}
         className={`px-4 py-3 text-sm font-medium transition-colors relative ${
           activeTab === 'automated'
-            ? `text-purple-400 ${getDirectionalBorder('focus', 'bottom')}`
+            ? `text-purple-400 ${getDirectionalBorder('info', 'bottom')}`
             : `text-gray-400 ${HOVER_TEXT_EFFECTS.BLUE_LIGHT}`
         }`}
       >
@@ -33,7 +33,7 @@ export const TestTabs: React.FC<TestTabsProps> = ({ activeTab, onTabChange }) =>
         onClick={() => onTabChange('unit')}
         className={`px-4 py-3 text-sm font-medium transition-colors relative ${
           activeTab === 'unit'
-            ? `text-purple-400 ${getDirectionalBorder('focus', 'bottom')}`
+            ? `text-purple-400 ${getDirectionalBorder('info', 'bottom')}`
             : `text-gray-400 ${HOVER_TEXT_EFFECTS.BLUE_LIGHT}`
         }`}
       >
@@ -43,7 +43,7 @@ export const TestTabs: React.FC<TestTabsProps> = ({ activeTab, onTabChange }) =>
         onClick={() => onTabChange('standalone')}
         className={`px-4 py-3 text-sm font-medium transition-colors relative ${
           activeTab === 'standalone'
-            ? `text-purple-400 ${getDirectionalBorder('focus', 'bottom')}`
+            ? `text-purple-400 ${getDirectionalBorder('info', 'bottom')}`
             : `text-gray-400 ${HOVER_TEXT_EFFECTS.BLUE_LIGHT}`
         }`}
       >

@@ -118,15 +118,15 @@ export function useDrawingHandlers(
   const onDrawingPoint = useCallback((p: Pt) => {
 
     const snappedPoint = applySnap(p);
-    const transform = canvasOps.getTransform();
-    addPoint(snappedPoint, transform);
+    const transformUtils = canvasOps.getTransformUtils();
+    addPoint(snappedPoint, transformUtils);
 
   }, [addPoint, canvasOps, applySnap]);
-  
+
   const onDrawingHover = useCallback((p: Pt | null) => {
     if (p) {
-      const transform = canvasOps.getTransform();
-      updatePreview(p, transform);
+      const transformUtils = canvasOps.getTransformUtils();
+      updatePreview(p, transformUtils);
     }
   }, [updatePreview, canvasOps]);
   

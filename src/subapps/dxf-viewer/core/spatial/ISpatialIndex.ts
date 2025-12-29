@@ -270,10 +270,44 @@ export interface ISpatialIndexFactory {
  * Utility functions for spatial operations
  */
 export namespace SpatialUtils {
-  export function boundsFromPoints(points: Point2D[]): SpatialBounds;
-  export function boundsIntersect(a: SpatialBounds, b: SpatialBounds): boolean;
-  export function boundsContains(container: SpatialBounds, contained: SpatialBounds): boolean;
-  export function pointInBounds(point: Point2D, bounds: SpatialBounds): boolean;
-  export function distanceToPoint(point: Point2D, bounds: SpatialBounds): number;
-  export function expandBounds(bounds: SpatialBounds, margin: number): SpatialBounds;
+  export function boundsFromPoints(points: Point2D[]): SpatialBounds {
+    if (points.length === 0) return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+    const xs = points.map(p => p.x);
+    const ys = points.map(p => p.y);
+    return {
+      minX: Math.min(...xs),
+      minY: Math.min(...ys),
+      maxX: Math.max(...xs),
+      maxY: Math.max(...ys)
+    };
+  }
+
+  export function boundsIntersect(a: SpatialBounds, b: SpatialBounds): boolean {
+    return !(a.maxX < b.minX || b.maxX < a.minX || a.maxY < b.minY || b.maxY < a.minY);
+  }
+
+  export function boundsContains(container: SpatialBounds, contained: SpatialBounds): boolean {
+    return container.minX <= contained.minX && container.maxX >= contained.maxX &&
+           container.minY <= contained.minY && container.maxY >= contained.maxY;
+  }
+
+  export function pointInBounds(point: Point2D, bounds: SpatialBounds): boolean {
+    return point.x >= bounds.minX && point.x <= bounds.maxX &&
+           point.y >= bounds.minY && point.y <= bounds.maxY;
+  }
+
+  export function distanceToPoint(point: Point2D, bounds: SpatialBounds): number {
+    const dx = Math.max(bounds.minX - point.x, 0, point.x - bounds.maxX);
+    const dy = Math.max(bounds.minY - point.y, 0, point.y - bounds.maxY);
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  export function expandBounds(bounds: SpatialBounds, margin: number): SpatialBounds {
+    return {
+      minX: bounds.minX - margin,
+      minY: bounds.minY - margin,
+      maxX: bounds.maxX + margin,
+      maxY: bounds.maxY + margin
+    };
+  }
 }

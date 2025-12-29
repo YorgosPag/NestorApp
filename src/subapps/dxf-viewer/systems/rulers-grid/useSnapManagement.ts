@@ -62,10 +62,11 @@ export function useSnapManagement(
     return RulersGridSnapping.findSnapPoint(
       point,
       state as GridSettings,
+      rulers as RulerSettings,
       viewTransform,
       onSnapResult
     );
-  }, [state, viewTransform, onSnapResult]);
+  }, [state, rulers, viewTransform, onSnapResult]);
 
   return {
     toggleRulerSnap,

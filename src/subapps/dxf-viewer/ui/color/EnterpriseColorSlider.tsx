@@ -106,7 +106,7 @@ export function EnterpriseColorSlider({
       onChangeEnd?.(hex);
     },
     isDisabled: disabled,
-  });
+  } as ColorSliderStateOptions);
 
   // Use React Aria slider hook
   const { trackProps, thumbProps, inputProps, labelProps, outputProps } = useColorSlider(

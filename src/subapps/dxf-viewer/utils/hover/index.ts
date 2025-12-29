@@ -30,27 +30,29 @@ export class HoverManager {
         renderLineHover(context);
         break;
       case 'polyline':
-      case 'lwpolyline':
+      case 'lwpolyline': // ✅ ENTERPRISE: AutoCAD standard lightweight polyline support
         renderPolylineHover(context);
         break;
       case 'circle':
         renderCircleHover(context);
         break;
       case 'rectangle':
-      case 'rect':
+      case 'rect': // ✅ ENTERPRISE: Alternative rectangle entity naming convention
         renderRectangleHover(context);
         break;
       case 'arc':
         renderArcHover(context);
         break;
-      case 'ellipse':
+      case 'ellipse': // ✅ ENTERPRISE: AutoCAD ellipse entity support
         renderEllipseHover(context);
         break;
       case 'text':
-      case 'mtext':
         renderTextHover(context);
         break;
-      case 'spline':
+      case 'mtext': // ✅ ENTERPRISE: AutoCAD multiline text entity support
+        renderTextHover(context); // Use existing text renderer for multiline text
+        break;
+      case 'spline': // ✅ ENTERPRISE: AutoCAD spline curve entity support
         renderSplineHover(context);
         break;
       case 'angle-measurement':

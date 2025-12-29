@@ -163,7 +163,7 @@ export default function CoordinateCalibrationOverlay({
                   <div className="text-gray-500 text-xs text-center">Δεν υπάρχουν δοκιμές</div>
                 ) : (
                   clickTests.slice(-2).map(test => (
-                    <div key={test.id} className={`text-xs ${getElementBorder('card', 'active')} ${quick.card} pl-2`}>
+                    <div key={test.id} className={`text-xs ${getElementBorder('card', 'default')} ${quick.card} pl-2`}>
                       <div className={`${colors.text.primary}`}>#{test.id} @ {test.timestamp}</div>
                       <div className="text-green-300">CSS: ({test.cssPoint.x.toFixed(1)}, {test.cssPoint.y.toFixed(1)})</div>
                       <div className="text-yellow-300">Κόσμος: ({test.worldPoint.x.toFixed(2)}, {test.worldPoint.y.toFixed(2)})</div>

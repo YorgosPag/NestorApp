@@ -7,7 +7,8 @@
 'use client';
 
 import React from 'react';
-import { ConfigurationProvider } from '../providers/ConfigurationProvider';
+// ✅ ENTERPRISE FIX: Remove non-existent ConfigurationProvider
+// import { ConfigurationProvider } from '../providers/ConfigurationProvider';
 import { StyleManagerProvider } from '../providers/StyleManagerProvider';
 import { useEntityStyles } from './useEntityStyles';
 import { usePreviewMode } from './usePreviewMode';

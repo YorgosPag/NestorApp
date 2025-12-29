@@ -87,7 +87,7 @@ export function useToolbarsContextValue(params: ContextValueParams): ToolbarsCon
     toggleToolbar: (toolbarId) => setState(prev => ({ ...prev, toolbars: { ...prev.toolbars, [toolbarId]: { ...prev.toolbars[toolbarId], visible: !prev.toolbars[toolbarId].visible } } })),
     collapseToolbar: (toolbarId) => setState(prev => ({ ...prev, toolbars: { ...prev.toolbars, [toolbarId]: { ...prev.toolbars[toolbarId], collapsed: true } } })),
     expandToolbar: (toolbarId) => setState(prev => ({ ...prev, toolbars: { ...prev.toolbars, [toolbarId]: { ...prev.toolbars[toolbarId], collapsed: false } } })),
-    moveToolbar: (toolbarId, newPosition) => setState(prev => ({
+    moveToolbar: (toolbarId, newPosition) => setState((prev: ToolbarState) => ({
       ...prev,
       toolbars: {
         ...prev.toolbars,
@@ -136,7 +136,7 @@ export function useToolbarsContextValue(params: ContextValueParams): ToolbarsCon
       const customization = state.customizations.find(c => c.id === customizationId);
       if (customization && customization.changes) {
         // ✅ ENTERPRISE FIX: Use changes instead of config, apply modifiedProperties
-        setState(prev => ({
+        setState((prev: ToolbarState) => ({
           ...prev,
           toolbars: { ...prev.toolbars, ...customization.changes.modifiedProperties },
         }));
@@ -158,7 +158,7 @@ export function useToolbarsContextValue(params: ContextValueParams): ToolbarsCon
     
     // Event Management
     addEventListener: (event, callback) => setEventListeners(prev => ({ ...prev, [event]: callback })),
-    removeEventListener: (event) => setEventListeners(prev => { const { [event]: removed, ...remaining } = prev; return remaining; }),
+    removeEventListener: (event) => setEventListeners((prev: ToolEvents) => { const { [event]: removed, ...remaining } = prev; return remaining; }),
     
     // Utility Functions
     searchTools,

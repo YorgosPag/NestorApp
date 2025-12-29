@@ -37,10 +37,10 @@ export function useDefinitionManagement({
   }, [onError, setState]);
 
   const unregisterTool = useCallback((toolId: ToolType) => {
-    setState(prev => {
+    setState((prev): ToolbarState => {
       const { [toolId]: removedTool, ...remainingTools } = prev.tools;
       const { [toolId]: removedState, ...remainingStates } = prev.toolStates;
-      
+
       return {
         ...prev,
         tools: remainingTools,

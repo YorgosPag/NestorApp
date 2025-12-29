@@ -191,7 +191,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
     showCursorSettings,
     onAction: (action, data) => {
       console.log('🎯 EnhancedDXFToolbar onAction called:', action, data); // DEBUG - shows actual values
-      onAction(action, data);
+      onAction(action, data as string | number | Record<string, unknown>);
     }
   });
 
@@ -255,7 +255,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
                   tool={tool}
                   isActive={activeTool === tool.id || (tool.dropdownOptions && tool.dropdownOptions.some(option => option.id === activeTool))}
                   onClick={() => handleToolChange(tool.id)}
-                  onDropdownSelect={(toolId) => handleToolChange(toolId as string)}
+                  onDropdownSelect={(toolId) => handleToolChange(toolId as ToolType)}
                   activeTool={activeTool}
                 />
               ))}

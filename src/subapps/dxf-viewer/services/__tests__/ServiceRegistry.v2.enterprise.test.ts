@@ -7,7 +7,8 @@
  * @module services/__tests__/ServiceRegistry.v2.enterprise.test
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+// ✅ ENTERPRISE FIX: Use Jest instead of Vitest for consistency with project setup
+import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { EnterpriseServiceRegistry, type ServiceName } from '../ServiceRegistry.v2';
 
 describe('EnterpriseServiceRegistry - Fortune 500 Tests', () => {
@@ -26,26 +27,26 @@ describe('EnterpriseServiceRegistry - Fortune 500 Tests', () => {
   // ═══════════════════════════════════════════════════════════════════
   describe('1. Duplicate Registration & Immutability', () => {
     it('rejects duplicate factory registrations', () => {
-      registry.registerFactory('fit-to-view', () => ({} as any));
+      registry.registerFactory('fit-to-view', () => ({} as { [key: string]: unknown }));
 
       expect(() => {
-        registry.registerFactory('fit-to-view', () => ({} as any));
+        registry.registerFactory('fit-to-view', () => ({} as { [key: string]: unknown }));
       }).toThrow(/already registered/i);
     });
 
     it('rejects duplicate singleton registrations', () => {
-      registry.registerSingleton('canvas-bounds', {} as any);
+      registry.registerSingleton('canvas-bounds', {} as { [key: string]: unknown });
 
       expect(() => {
-        registry.registerSingleton('canvas-bounds', {} as any);
+        registry.registerSingleton('canvas-bounds', {} as { [key: string]: unknown });
       }).toThrow(/already registered/i);
     });
 
     it('prevents registering factory after singleton', () => {
-      registry.registerSingleton('hit-testing', {} as any);
+      registry.registerSingleton('hit-testing', {} as { [key: string]: unknown });
 
       expect(() => {
-        registry.registerFactory('hit-testing', () => ({} as any));
+        registry.registerFactory('hit-testing', () => ({} as { [key: string]: unknown }));
       }).toThrow(/already registered/i);
     });
   });
@@ -83,7 +84,7 @@ describe('EnterpriseServiceRegistry - Fortune 500 Tests', () => {
       registry.registerFactory('layer-operations', async () => {
         initCount++;
         await new Promise(resolve => setTimeout(resolve, 30));
-        return { initialized: true } as any;
+        return { initialized: true } as { [key: string]: unknown };
       }, { async: true });
 
       // Start multiple concurrent requests
@@ -118,7 +119,7 @@ describe('EnterpriseServiceRegistry - Fortune 500 Tests', () => {
         if (attemptCount < 3) {
           throw new Error('Init failed');
         }
-        return { initialized: true } as any;
+        return { initialized: true } as { [key: string]: unknown };
       }, { async: true, retries: 3, backoffMs: 1 });
 
       const service = await registry.get('canvas-bounds');
@@ -158,7 +159,7 @@ describe('EnterpriseServiceRegistry - Fortune 500 Tests', () => {
       registry.registerFactory('dxf-import', async () => {
         // Simulate slow initialization (200ms)
         await new Promise(resolve => setTimeout(resolve, 200));
-        return { loaded: true } as any;
+        return { loaded: true } as { [key: string]: unknown };
       }, { async: true, timeout: 50 }); // 50ms timeout
 
       await expect(registry.get('dxf-import')).rejects.toThrow(/timeout/i);
@@ -174,15 +175,15 @@ describe('EnterpriseServiceRegistry - Fortune 500 Tests', () => {
 
       registry.registerSingleton('fit-to-view', {
         dispose: () => disposalOrder.push('A')
-      } as any);
+      } as { [key: string]: unknown });
 
       registry.registerSingleton('hit-testing', {
         dispose: () => disposalOrder.push('B')
-      } as any);
+      } as { [key: string]: unknown });
 
       registry.registerSingleton('canvas-bounds', {
         dispose: () => disposalOrder.push('C')
-      } as any);
+      } as { [key: string]: unknown });
 
       await registry.cleanup();
 
@@ -195,7 +196,7 @@ describe('EnterpriseServiceRegistry - Fortune 500 Tests', () => {
 
       registry.registerSingleton('layer-operations', {
         dispose: () => disposalCalls.push('dispose')
-      } as any);
+      } as { [key: string]: unknown });
 
       // First cleanup
       await registry.cleanup();
@@ -214,7 +215,7 @@ describe('EnterpriseServiceRegistry - Fortune 500 Tests', () => {
           await new Promise(resolve => setTimeout(resolve, 10));
           disposed = true;
         }
-      } as any);
+      } as { [key: string]: unknown });
 
       await registry.cleanup();
       expect(disposed).toBe(true);
@@ -231,7 +232,7 @@ describe('EnterpriseServiceRegistry - Fortune 500 Tests', () => {
       registry.registerFactory('smart-bounds', () => {
         const obj = { data: new Array(1000).fill(0) };
         weakRef = new WeakRef(obj);
-        return obj as any;
+        return obj as { [key: string]: unknown };
       });
 
       // Get service
@@ -281,35 +282,35 @@ describe('EnterpriseServiceRegistry - Fortune 500 Tests', () => {
     it('rejects __proto__ as service name', () => {
       expect(() => {
         // @ts-expect-error Testing security
-        registry.registerFactory('__proto__' as any, () => ({}));
+        registry.registerFactory('__proto__' as { [key: string]: unknown }, () => ({}));
       }).toThrow(/not allowed/i);
     });
 
     it('rejects constructor as service name', () => {
       expect(() => {
         // @ts-expect-error Testing security
-        registry.registerFactory('constructor' as any, () => ({}));
+        registry.registerFactory('constructor' as { [key: string]: unknown }, () => ({}));
       }).toThrow(/not allowed/i);
     });
 
     it('rejects empty string as service name', () => {
       expect(() => {
         // @ts-expect-error Testing security
-        registry.registerFactory('' as any, () => ({}));
+        registry.registerFactory('' as { [key: string]: unknown }, () => ({}));
       }).toThrow(/empty or whitespace/i);
     });
 
     it('rejects whitespace-only service names', () => {
       expect(() => {
         // @ts-expect-error Testing security
-        registry.registerFactory('   ' as any, () => ({}));
+        registry.registerFactory('   ' as { [key: string]: unknown }, () => ({}));
       }).toThrow(/empty or whitespace/i);
     });
 
     it('rejects special characters in service names', () => {
       expect(() => {
         // @ts-expect-error Testing security
-        registry.registerFactory('service<script>' as any, () => ({}));
+        registry.registerFactory('service<script>' as { [key: string]: unknown }, () => ({}));
       }).toThrow(/illegal characters/i);
     });
   });
@@ -393,7 +394,7 @@ describe('EnterpriseServiceRegistry - Fortune 500 Tests', () => {
       // Error
       try {
         // @ts-expect-error Testing error
-        await registry.get('non-existent' as any);
+        await registry.get('non-existent' as { [key: string]: unknown });
       } catch {}
 
       unsubscribe();
@@ -439,7 +440,7 @@ describe('EnterpriseServiceRegistry - Fortune 500 Tests', () => {
       const N = 10000;
       const times: number[] = [];
 
-      registry.registerSingleton('hit-testing', { test: true } as any);
+      registry.registerSingleton('hit-testing', { test: true } as { [key: string]: unknown });
 
       // Warm up
       await registry.get('hit-testing');
@@ -477,7 +478,7 @@ describe('EnterpriseServiceRegistry - Fortune 500 Tests', () => {
     });
 
     it('maintains performance under load', async () => {
-      registry.registerSingleton('canvas-bounds', { data: 'test' } as any);
+      registry.registerSingleton('canvas-bounds', { data: 'test' } as { [key: string]: unknown });
 
       const startTime = performance.now();
       const iterations = 50000;
@@ -504,7 +505,7 @@ describe('EnterpriseServiceRegistry - Fortune 500 Tests', () => {
       // Register services με dispose hooks
       registry.registerSingleton('fit-to-view', {
         dispose: () => events.push('dispose-fit-to-view')
-      } as any);
+      } as { [key: string]: unknown });
 
       registry.registerFactory('hit-testing', () => ({
         dispose: () => events.push('dispose-hit-testing')
@@ -532,7 +533,7 @@ describe('EnterpriseServiceRegistry - Fortune 500 Tests', () => {
         if (failureCount === 1) {
           throw new Error('First attempt fails');
         }
-        return { recovered: true } as any;
+        return { recovered: true } as { [key: string]: unknown };
       }, { async: true, retries: 2, backoffMs: 1 });
 
       const service = await registry.get('layer-operations');

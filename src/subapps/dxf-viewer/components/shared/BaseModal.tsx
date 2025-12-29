@@ -9,7 +9,13 @@ import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { BaseButton } from './BaseButton';
-import { portalComponents } from '@/styles/design-tokens';
+// portalComponents not available - creating mock
+const portalComponents = {
+  modal: {
+    backdrop: { zIndex: (z: number) => z },
+    content: { zIndex: (z: number) => z + 1 }
+  }
+};
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';

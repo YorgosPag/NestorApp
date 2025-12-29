@@ -5,10 +5,11 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { ExtendedSnapType } from '../extended-types';
-import type { Entity } from '../../types/entities';
+import type { Entity, LineEntity, CircleEntity, ArcEntity, PolylineEntity, LWPolylineEntity, RectangleEntity } from '../../types/entities';
+import { isLineEntity, isCircleEntity, isArcEntity, isPolylineEntity, isLWPolylineEntity, isRectangleEntity } from '../../types/entities';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
-import { findEntityBasedSnapCandidates, GenericSnapPoint, processRectangleSnapping } from './shared/snap-engine-utils';
+import { findEntityBasedSnapCandidates, GenericSnapPoint, processRectangleSnapping, LegacyRectangleEntity } from './shared/snap-engine-utils'; // ✅ ENTERPRISE FIX: Import proper type
 
 export class NearSnapEngine extends BaseSnapEngine {
 
@@ -22,8 +23,9 @@ export class NearSnapEngine extends BaseSnapEngine {
 
   findSnapCandidates(cursorPoint: Point2D, context: SnapEngineContext): SnapEngineResult {
     // Use shared entity-based snap candidate finder to eliminate duplication
+    // ✅ ENTERPRISE FIX: Type assertion για compatibility με Entity[] type
     return findEntityBasedSnapCandidates(
-      context.entities,
+      context.entities as Entity[],
       cursorPoint,
       context,
       {
@@ -37,37 +39,39 @@ export class NearSnapEngine extends BaseSnapEngine {
 
   private getNearPoints(entity: Entity, cursorPoint: Point2D, radius: number): Array<{point: Point2D, type: string}> {
     const nearPoints: Array<{point: Point2D, type: string}> = [];
-    const entityType = entity.type.toLowerCase();
-    
-    if (entityType === 'line') {
-      if (entity.start && entity.end) {
+
+    if (isLineEntity(entity)) {
+      const lineEntity = entity as LineEntity; // ✅ ENTERPRISE FIX: Proper type guard
+      if (lineEntity.start && lineEntity.end) {
         // Sample points along the line
-        const samplePoints = this.sampleLinePoints(entity.start, entity.end, 5);
+        const samplePoints = this.sampleLinePoints(lineEntity.start, lineEntity.end, 5);
         samplePoints.forEach((point, index) => {
           nearPoints.push({point, type: `Line Point ${index + 1}`});
         });
       }
-      
-    } else if (entityType === 'circle') {
-      if (entity.center && entity.radius) {
+
+    } else if (isCircleEntity(entity)) {
+      const circleEntity = entity as CircleEntity; // ✅ ENTERPRISE FIX: Proper type guard
+      if (circleEntity.center && circleEntity.radius) {
         // Sample points around the circle
-        const samplePoints = this.sampleCirclePoints(entity.center, entity.radius, 8);
+        const samplePoints = this.sampleCirclePoints(circleEntity.center, circleEntity.radius, 8);
         samplePoints.forEach((point, index) => {
           nearPoints.push({point, type: `Circle Point ${index + 1}`});
         });
       }
-      
-    } else if (entityType === 'arc') {
-      if (entity.center && entity.radius && entity.startAngle !== undefined && entity.endAngle !== undefined) {
+
+    } else if (isArcEntity(entity)) {
+      const arcEntity = entity as ArcEntity; // ✅ ENTERPRISE FIX: Proper type guard
+      if (arcEntity.center && arcEntity.radius && arcEntity.startAngle !== undefined && arcEntity.endAngle !== undefined) {
         // Sample points along the arc
-        const samplePoints = this.sampleArcPoints(entity.center, entity.radius, entity.startAngle, entity.endAngle, 5);
+        const samplePoints = this.sampleArcPoints(arcEntity.center, arcEntity.radius, arcEntity.startAngle, arcEntity.endAngle, 5);
         samplePoints.forEach((point, index) => {
           nearPoints.push({point, type: `Arc Point ${index + 1}`});
         });
       }
-      
-    } else if (entityType === 'polyline' || entityType === 'lwpolyline') {
-      const points = (entity.points || ('vertices' in entity ? entity.vertices : undefined)) as Point2D[] | undefined;
+    } else if (isPolylineEntity(entity) || isLWPolylineEntity(entity)) {
+      const polylineEntity = entity as PolylineEntity | LWPolylineEntity; // ✅ ENTERPRISE FIX: Proper type guard
+      const points = polylineEntity.vertices as Point2D[] | undefined;
       if (points) {
         // All vertices
         points.forEach((point: Point2D, index: number) => {
@@ -83,7 +87,7 @@ export class NearSnapEngine extends BaseSnapEngine {
         }
         
         // Closing edge for closed polylines
-        const isClosed = 'closed' in entity ? entity.closed : false;
+        const isClosed = polylineEntity.closed || false;
         if (isClosed && points.length > 2) {
           const edgeSamples = this.sampleLinePoints(points[points.length - 1], points[0], 3);
           edgeSamples.forEach((point, sampleIndex) => {
@@ -91,10 +95,10 @@ export class NearSnapEngine extends BaseSnapEngine {
           });
         }
       }
-      
-    } else if (entityType === 'rectangle') {
-      if ('corner1' in entity && 'corner2' in entity) {
-        processRectangleSnapping(entity, (corner, index, type) => {
+    } else if (isRectangleEntity(entity)) {
+      const rectangleEntity = entity as RectangleEntity; // ✅ ENTERPRISE FIX: Proper type guard
+      if (rectangleEntity.corner1 && rectangleEntity.corner2) {
+        processRectangleSnapping(rectangleEntity as LegacyRectangleEntity, (corner, index, type) => {
           nearPoints.push({point: corner, type});
         });
 

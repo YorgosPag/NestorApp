@@ -194,7 +194,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
             </div>
           </div>
 
-          <div className="flex gap-2" style={getTestResultsInteractiveAutoStyles()}>
+          <div className="flex gap-2" style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}>
             <button
               onClick={handleCopy}
               className={`px-4 py-2 text-sm font-medium rounded transition-all ${
@@ -202,14 +202,14 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
                   ? `${colors.bg.success} text-white`
                   : `${colors.bg.info} text-white ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT}`
               }`}
-              style={getTestResultsInteractiveAutoStyles()}
+              style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}
             >
               {copied ? '✅ Αντιγράφηκε!' : '📋 Αντιγραφή Όλων'}
             </button>
             <button
               onClick={handleDownload}
               className={`px-4 py-2 text-sm font-medium rounded ${colors.bg.info} text-white ${HOVER_BACKGROUND_EFFECTS.PURPLE_LIGHT} transition-all`}
-              style={getTestResultsInteractiveAutoStyles()}
+              style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}
             >
               💾 Λήψη JSON
             </button>
@@ -217,14 +217,14 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
         </div>
 
         {/* TABS */}
-        <div className={`flex gap-1 px-6 pt-4 ${colors.bg.secondary}`} style={getTestResultsInteractiveAutoStyles()}>
+        <div className={`flex gap-1 px-6 pt-4 ${colors.bg.secondary}`} style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}>
           <button
             onClick={() => {
               console.log('🔘 Summary tab clicked');
               setActiveTab('summary');
             }}
             className={`px-4 py-2 text-sm font-medium rounded-t transition-all ${getTabBorder('summary')}`}
-            style={getTestResultsInteractiveAutoStyles()}
+            style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}
           >
             📊 Περίληψη
           </button>
@@ -234,7 +234,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
               setActiveTab('details');
             }}
             className={`px-4 py-2 text-sm font-medium rounded-t transition-all ${getTabBorder('details')}`}
-            style={getTestResultsInteractiveAutoStyles()}
+            style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}
           >
             🔍 Λεπτομέρειες
           </button>
@@ -244,7 +244,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
               setActiveTab('raw');
             }}
             className={`px-4 py-2 text-sm font-medium rounded-t transition-all ${getTabBorder('raw')}`}
-            style={getTestResultsInteractiveAutoStyles()}
+            style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}
           >
             📝 Ακατέργαστη Έξοδος
           </button>
@@ -334,6 +334,7 @@ const SummaryTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
 
 const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
+  const { getStatusBorder, getDirectionalBorder } = useBorderTokens(); // ✅ ENTERPRISE FIX: Add missing border tokens
   const [expandedTests, setExpandedTests] = React.useState<Set<number>>(new Set());
 
   const toggleExpand = (index: number) => {
@@ -349,7 +350,7 @@ const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
   };
 
   return (
-    <div className="space-y-2" style={getTestResultsInteractiveAutoStyles()}>
+    <div className="space-y-2" style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}>
       {report.tests.map((test, index) => {
         const isExpanded = expandedTests.has(index);
         const statusColor =
@@ -371,14 +372,14 @@ const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
             : 'ℹ️';
 
         return (
-          <div key={index} className={`rounded ${colors.bg.secondary} ${getStatusBorder('default')}`} style={getTestResultsInteractiveAutoStyles()}>
+          <div key={index} className={`rounded ${colors.bg.secondary} ${getStatusBorder('default')}`} style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}>
             <button
               onClick={() => {
                 console.log(`🔽 Toggling test ${index}: ${test.name}`);
                 toggleExpand(index);
               }}
               className={`w-full px-4 py-3 flex items-center justify-between ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK} transition-colors`}
-              style={getTestResultsInteractiveAutoStyles()}
+              style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}
             >
               <div className="flex items-center gap-3">
                 <span className="text-lg">{icon}</span>

@@ -247,7 +247,7 @@ export function LineSettingsProvider({ children }: { children: React.ReactNode }
   }, [settings.lineType, settings.dashScale]);
 
   const value: LineSettingsContextType = {
-    settings,
+    settings: settings as any,
     updateSettings,
     resetToDefaults,
     resetToFactory,

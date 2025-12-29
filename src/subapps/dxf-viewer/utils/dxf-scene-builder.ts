@@ -26,7 +26,7 @@ export class DxfSceneBuilder {
       const entity = DxfEntityParser.convertToSceneEntity(entityData, index);
       if (entity) {
         // Register layer first
-        DxfSceneBuilder.registerLayer(layers, entity.layer);
+        DxfSceneBuilder.registerLayer(layers, (entity.layer as string) || 'default');
         entities.push(entity);
         
         // Debug first 3 entities

@@ -115,7 +115,8 @@ export const DebugToolbar: React.FC<DebugToolbarProps> = ({
         console.log('🎯 F3 SHORTCUT: CURSOR-CROSSHAIR ALIGNMENT TEST TRIGGERED');
 
         import('./enterprise-cursor-crosshair-test').then(module => {
-          const { runEnterpriseMouseCrosshairTests, startEnterpriseInteractiveTest } = module.default;
+          const defaultExport = module.default as any; // ✅ ENTERPRISE FIX: Type assertion for module.default
+          const { runEnterpriseMouseCrosshairTests, startEnterpriseInteractiveTest } = defaultExport;
 
           console.log('🔍 Running enterprise cursor-crosshair alignment tests...');
           const results = runEnterpriseMouseCrosshairTests();
@@ -288,7 +289,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load DOM inspector', 'error');
           });
         }}
-        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
       >
         🔍 DOM Inspector
       </button>
@@ -298,7 +299,8 @@ Check console for detailed metrics`;
         onClick={() => {
           console.log('🏢 ENTERPRISE CURSOR-CROSSHAIR ALIGNMENT TEST TRIGGERED');
           import('./enterprise-cursor-crosshair-test').then(module => {
-            const { runEnterpriseMouseCrosshairTests, startEnterpriseInteractiveTest } = module.default;
+            const defaultExport = module.default as any; // ✅ ENTERPRISE FIX: Type assertion for module.default
+            const { runEnterpriseMouseCrosshairTests, startEnterpriseInteractiveTest } = defaultExport;
 
             console.log('🔍 Running enterprise cursor-crosshair alignment tests...');
             const results = runEnterpriseMouseCrosshairTests();
@@ -320,7 +322,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load enterprise cursor-crosshair test module', 'error');
           });
         }}
-        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
       >
         🏢 Enterprise Test (F3)
       </button>
@@ -378,7 +380,7 @@ Check console for detailed metrics`;
             console.log(diagnostics);
           });
         }}
-        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
       >
         📏 Rulers
       </button>
@@ -421,7 +423,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load alignment debug module', 'error');
           });
         }}
-        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
       >
         🎯 Alignment
       </button>
@@ -499,7 +501,7 @@ Check console for detailed metrics`;
       {/* Pan to Origin (0,0) Button */}
       <button
         onClick={panToWorldOrigin}
-        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
       >
         🏠 Pan to (0,0)
       </button>

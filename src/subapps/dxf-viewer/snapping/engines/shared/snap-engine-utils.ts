@@ -12,7 +12,7 @@ import type { Entity } from '../../../types/entities';
 import { GeometricCalculations } from '../../shared/GeometricCalculations';
 
 // Legacy rectangle entity with corner1/corner2 properties
-interface LegacyRectangleEntity extends Entity {
+export interface LegacyRectangleEntity extends Entity {
   corner1?: Point2D;
   corner2?: Point2D;
   rotation?: number;

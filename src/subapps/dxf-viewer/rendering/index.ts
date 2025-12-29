@@ -29,11 +29,12 @@ export * from './entities/AngleMeasurementRenderer';
 export * from './entities/PointRenderer';
 
 // ===== SHARED UTILITIES =====
-export * from './entities/shared';
+// export * from './entities/shared'; // ✅ ENTERPRISE FIX: Commented out - entities/shared directory doesn't exist
 
 // ===== ΦΑΣΗ 5: SPATIAL INDEXING & OPTIMIZATION =====
-export * from './hitTesting';
-export * from './cache';
+// ✅ ENTERPRISE: Explicit re-exports to resolve ambiguous names
+export { createHitTester, HitTester } from './hitTesting';
+export { getGlobalPathCache, PathCache } from './cache';
 
 // ===== TYPES =====
 export * from './types/Types';
@@ -56,25 +57,28 @@ import { EllipseRenderer } from './entities/EllipseRenderer';
 import { SplineRenderer } from './entities/SplineRenderer';
 import { AngleMeasurementRenderer } from './entities/AngleMeasurementRenderer';
 import { PointRenderer } from './entities/PointRenderer';
+import { BaseEntityRenderer } from './entities/BaseEntityRenderer';
+import type { IRenderContext } from './core/IRenderContext';
 
 /**
  * Auto-register standard renderers
  */
 export function registerStandardRenderers(): void {
+  // ✅ ENTERPRISE: Proper type casting through unknown for IRenderContext compatibility
   const standardRenderers: Record<string, RendererFactory> = {
-    'line': (ctx) => new LineRenderer(ctx as CanvasRenderingContext2D),
-    'circle': (ctx) => new CircleRenderer(ctx as CanvasRenderingContext2D),
-    'polyline': (ctx) => new PolylineRenderer(ctx as CanvasRenderingContext2D),
-    'lwpolyline': (ctx) => new PolylineRenderer(ctx as CanvasRenderingContext2D), // Alias
-    'arc': (ctx) => new ArcRenderer(ctx as CanvasRenderingContext2D),
-    'text': (ctx) => new TextRenderer(ctx as CanvasRenderingContext2D),
-    'mtext': (ctx) => new TextRenderer(ctx as CanvasRenderingContext2D), // Alias
-    'rectangle': (ctx) => new RectangleRenderer(ctx as CanvasRenderingContext2D),
-    'rect': (ctx) => new RectangleRenderer(ctx as CanvasRenderingContext2D), // Alias
-    'ellipse': (ctx) => new EllipseRenderer(ctx as CanvasRenderingContext2D),
-    'spline': (ctx) => new SplineRenderer(ctx as CanvasRenderingContext2D),
-    'point': (ctx) => new PointRenderer(ctx as CanvasRenderingContext2D) as BaseEntityRenderer,
-    'angle-measurement': (ctx) => new AngleMeasurementRenderer(ctx as CanvasRenderingContext2D),
+    'line': (ctx) => new LineRenderer(ctx as unknown as CanvasRenderingContext2D),
+    'circle': (ctx) => new CircleRenderer(ctx as unknown as CanvasRenderingContext2D),
+    'polyline': (ctx) => new PolylineRenderer(ctx as unknown as CanvasRenderingContext2D),
+    'lwpolyline': (ctx) => new PolylineRenderer(ctx as unknown as CanvasRenderingContext2D), // Alias
+    'arc': (ctx) => new ArcRenderer(ctx as unknown as CanvasRenderingContext2D),
+    'text': (ctx) => new TextRenderer(ctx as unknown as CanvasRenderingContext2D),
+    'mtext': (ctx) => new TextRenderer(ctx as unknown as CanvasRenderingContext2D), // Alias
+    'rectangle': (ctx) => new RectangleRenderer(ctx as unknown as CanvasRenderingContext2D),
+    'rect': (ctx) => new RectangleRenderer(ctx as unknown as CanvasRenderingContext2D), // Alias
+    'ellipse': (ctx) => new EllipseRenderer(ctx as unknown as CanvasRenderingContext2D),
+    'spline': (ctx) => new SplineRenderer(ctx as unknown as CanvasRenderingContext2D),
+    'point': (ctx) => new PointRenderer(ctx as unknown as CanvasRenderingContext2D) as BaseEntityRenderer,
+    'angle-measurement': (ctx) => new AngleMeasurementRenderer(ctx as unknown as CanvasRenderingContext2D),
   };
 
   globalRendererRegistry.registerBatch(standardRenderers);

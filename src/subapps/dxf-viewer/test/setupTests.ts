@@ -5,6 +5,21 @@
 
 import { UI_COLORS } from '../config/color-config';
 
+// ✅ ENTERPRISE FIX: Jest type imports for testing environment
+declare global {
+  const jest: any;
+  const beforeEach: (fn: () => void) => void;
+  const afterEach: (fn: () => void) => void;
+  const expect: any;
+
+  namespace jest {
+    interface Matchers<R> {
+      toMatchVisualBaseline(baselinePath: string, options?: any): R;
+      toBeWithinVisualThreshold(expected: number, threshold?: number): R;
+    }
+  }
+}
+
 // JSDOM + Canvas mocks για browser environment simulation
 Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
   value: jest.fn(() => ({
@@ -91,7 +106,7 @@ if (!global.performance || !global.performance.now) {
 }
 
 // DOM element creation utilities για tests
-export function createMockCanvas(options?: {
+function createMockCanvas(options?: {
   width?: number;
   height?: number;
   canvasType?: string;
@@ -105,19 +120,19 @@ export function createMockCanvas(options?: {
 
   // Override getBoundingClientRect για αυτό το specific canvas
   Object.defineProperty(canvas, 'getBoundingClientRect', {
-    value: () => ({
+    value: (): DOMRect => ({
       x: 0, y: 0, top: 0, left: 0,
       width, height,
       right: width, bottom: height,
       toJSON: () => ({})
-    })
+    } as DOMRect)
   });
 
   document.body.appendChild(canvas);
   return canvas;
 }
 
-export function createMockDOMRect(options?: {
+function createMockDOMRect(options?: {
   x?: number;
   y?: number;
   width?: number;
@@ -138,7 +153,7 @@ export function createMockDOMRect(options?: {
 }
 
 // Mouse event simulation utilities
-export function createMockMouseEvent(options?: {
+function createMockMouseEvent(options?: {
   clientX?: number;
   clientY?: number;
   button?: number;
@@ -165,13 +180,13 @@ export function createMockMouseEvent(options?: {
 }
 
 // Viewport simulation utilities
-export function createMockViewport(options?: {
+function createMockViewport(options?: {
   width?: number;
   height?: number;
   zoom?: number;
   panX?: number;
   panY?: number;
-}) {
+}): { width: number; height: number; zoom: number; panX: number; panY: number } {
   const {
     width = 800,
     height = 600,
@@ -184,11 +199,11 @@ export function createMockViewport(options?: {
 }
 
 // Transform simulation utilities
-export function createMockTransform(options?: {
+function createMockTransform(options?: {
   scale?: number;
   offsetX?: number;
   offsetY?: number;
-}) {
+}): { scale: number; offsetX: number; offsetY: number } {
   const {
     scale = 1,
     offsetX = 0,
@@ -199,12 +214,12 @@ export function createMockTransform(options?: {
 }
 
 // Test data generators
-export function generateTestPoints(count: number, bounds?: {
+function generateTestPoints(count: number, bounds?: {
   minX?: number;
   maxX?: number;
   minY?: number;
   maxY?: number;
-}) {
+}): Array<{ x: number; y: number }> {
   const {
     minX = 0,
     maxX = 800,
@@ -222,7 +237,7 @@ export function generateTestPoints(count: number, bounds?: {
   return points;
 }
 
-export function generateTestScenarios() {
+function generateTestScenarios(): Array<{ name: string; scale: number; offsetX: number; offsetY: number }> {
   return [
     { name: 'default', scale: 1, offsetX: 0, offsetY: 0 },
     { name: 'zoom_in', scale: 2, offsetX: 50, offsetY: -30 },
@@ -234,7 +249,7 @@ export function generateTestScenarios() {
 }
 
 // Error validation utilities
-export function validateCoordinateError(
+function validateCoordinateError(
   original: { x: number; y: number },
   recovered: { x: number; y: number },
   tolerance: number = 0.5
@@ -260,7 +275,7 @@ export function validateCoordinateError(
 }
 
 // Performance testing utilities
-export function measurePerformance<T>(
+function measurePerformance<T>(
   fn: () => T,
   iterations: number = 1000
 ): {
@@ -290,7 +305,7 @@ export function measurePerformance<T>(
 }
 
 // Cleanup utilities
-export function cleanupMockElements() {
+function cleanupMockElements(): void {
   // Remove all mock canvas elements
   const canvases = document.querySelectorAll('canvas[data-canvas-type]');
   canvases.forEach(canvas => canvas.remove());
@@ -315,7 +330,7 @@ afterEach(() => {
 // Console suppression για cleaner test output (optional)
 const originalConsole = global.console;
 
-export function suppressConsole() {
+function suppressConsole(): void {
   global.console = {
     ...originalConsole,
     log: jest.fn(),
@@ -326,12 +341,12 @@ export function suppressConsole() {
   };
 }
 
-export function restoreConsole() {
+function restoreConsole(): void {
   global.console = originalConsole;
 }
 
 // 🎨 VISUAL REGRESSION TESTING UTILITIES
-export function createVisualTestCanvas(options?: {
+function createVisualTestCanvas(options?: {
   width?: number;
   height?: number;
   testId?: string;
@@ -344,13 +359,13 @@ export function createVisualTestCanvas(options?: {
   return canvas;
 }
 
-export function ensureDirectoryExists(dirPath: string): void {
+function ensureDirectoryExists(dirPath: string): void {
   // Mock utility για ensuring directories exist στα tests
   // In real implementation would use fs.mkdirSync
   console.log(`Mock: Creating directory ${dirPath}`);
 }
 
-export function generateTestImageBuffer(width: number = 800, height: number = 600): Buffer {
+function generateTestImageBuffer(width: number = 800, height: number = 600): Buffer {
   // Generate deterministic test buffer για visual testing
   const mockData = new Uint8Array(width * height * 4); // RGBA
 
@@ -365,7 +380,7 @@ export function generateTestImageBuffer(width: number = 800, height: number = 60
   return Buffer.from(mockData);
 }
 
-export function validateVisualMatch(
+function validateVisualMatch(
   baseline: Buffer,
   actual: Buffer,
   options?: {

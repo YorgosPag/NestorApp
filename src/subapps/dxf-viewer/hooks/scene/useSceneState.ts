@@ -7,7 +7,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useCanvasOperations } from '../interfaces/useCanvasOperations';
-import type { SceneModel } from '../../types/scene';
+import type { SceneModel, AnySceneEntity } from '../../types/scene';
 import { UI_COLORS } from '../../config/color-config';
 import { useLevels } from '../../systems/levels';
 // ✅ ΦΑΣΗ 7: useDxfImport μεταφέρθηκε στο hooks/ folder

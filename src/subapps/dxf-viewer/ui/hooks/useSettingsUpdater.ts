@@ -98,7 +98,7 @@ export function useSettingsUpdater<T = Record<string, SettingsValue>>(config: Se
     let hasValidUpdates = false;
 
     for (const [key, value] of Object.entries(updates)) {
-      const processedValue = processValue(value, key);
+      const processedValue = processValue(value as SettingsValue, key);
       if (processedValue !== undefined) {
         (processedUpdates as Record<string, SettingsValue>)[key] = processedValue;
         hasValidUpdates = true;
@@ -155,8 +155,8 @@ export function useSettingsUpdater<T = Record<string, SettingsValue>>(config: Se
 export const commonTransformers = {
   // Για numeric values με bounds
   boundedNumber: (min: number, max: number) => (value: SettingsValue) => {
-    const num = typeof value === 'string' ? parseFloat(value) : value;
-    return Math.max(min, Math.min(max, num));
+    const num = typeof value === 'string' ? parseFloat(value) : (value as number);
+    return Math.max(min, Math.min(max, num as number));
   },
 
   // Για colors (hex validation)

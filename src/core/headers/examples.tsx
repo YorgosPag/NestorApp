@@ -8,7 +8,8 @@
 'use client';
 
 import { Users, Building2, Home, FileText } from 'lucide-react';
-import { PageHeader, ViewMode } from './UnifiedHeaderSystem';
+import { PageHeader } from './enterprise-system/components/PageHeader';
+import type { ViewMode } from './enterprise-system/types';
 import { CommonBadge } from '@/core/badges';
 import { COMMON_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 

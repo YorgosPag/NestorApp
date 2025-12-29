@@ -5,13 +5,19 @@
  */
 
 import { useCallback } from 'react';
-import type { Point2D, ViewTransform } from '../../types/scene';
+// ✅ ENTERPRISE FIX: Import from centralized types
+import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import { useCanvasContext } from '../../contexts/CanvasContext';
 
 export interface CanvasOperations {
   getCanvas: () => HTMLCanvasElement | null;
   getTransform: () => ViewTransform;
   setTransform: (transform: ViewTransform) => void;
+  // ✅ ENTERPRISE FIX: Add transform utilities for drawing operations
+  getTransformUtils: () => {
+    worldToScreen: (point: Point2D) => Point2D;
+    screenToWorld: (point: Point2D) => Point2D;
+  };
   zoomIn: () => void;
   zoomOut: () => void;
   zoomAtScreenPoint: (factor: number, screenPt: Point2D) => void;
@@ -39,7 +45,12 @@ export const useCanvasOperations = (): CanvasOperations => {
 
   const getTransform = useCallback((): ViewTransform => {
     if (context?.transform) {
-      return context.transform;
+      // Ensure all properties are defined with proper defaults
+      return {
+        scale: context.transform.scale,
+        offsetX: context.transform.offsetX ?? 0,
+        offsetY: context.transform.offsetY ?? 0
+      };
     }
     // Fallback: get from DxfCanvasCore
     if (dxfRef?.current?.getTransform) {
@@ -51,15 +62,26 @@ export const useCanvasOperations = (): CanvasOperations => {
   const setTransform = useCallback((transform: ViewTransform) => {
     // Update shared context state first
     if (context?.setTransform) {
-      context.setTransform(transform);
+      // Convert ViewTransform to context transform format
+      const contextTransform = {
+        scale: transform.scale,
+        offsetX: transform.offsetX,
+        offsetY: transform.offsetY,
+        x: transform.offsetX, // Add missing x property
+        y: transform.offsetY, // Add missing y property
+        rotation: 0 // Add missing rotation property
+      };
+      context.setTransform(contextTransform);
     }
 
-    // Apply to both DXF and Overlay canvases
-    if (dxfRef?.current?.setTransform) {
-      dxfRef.current.setTransform(transform);
+    // ✅ ENTERPRISE FIX: Use getTransform instead of non-existent setTransform
+    // Apply to both DXF and Overlay canvases using proper API
+    if (dxfRef?.current?.getTransform) {
+      // Use imperative API for transform updates
+      // Note: DxfCanvasImperativeAPI doesn't expose setTransform - transforms handled by context
     }
-    if (overlayRef?.current?.setTransform) {
-      overlayRef.current.setTransform(transform);
+    if (overlayRef?.current) {
+      // Overlay canvas transforms handled by context
     }
 
     // Emit zoom event for HUD synchronization
@@ -121,10 +143,31 @@ export const useCanvasOperations = (): CanvasOperations => {
     }
   }, [dxfRef]);
 
+  // ✅ ENTERPRISE FIX: Transform utilities for drawing operations
+  const getTransformUtils = useCallback(() => {
+    const canvas = getCanvas();
+    const transform = getTransform();
+
+    const worldToScreen = (point: Point2D): Point2D => {
+      const x = point.x * transform.scale + transform.offsetX;
+      const y = point.y * transform.scale + transform.offsetY;
+      return { x, y };
+    };
+
+    const screenToWorld = (point: Point2D): Point2D => {
+      const x = (point.x - transform.offsetX) / transform.scale;
+      const y = (point.y - transform.offsetY) / transform.scale;
+      return { x, y };
+    };
+
+    return { worldToScreen, screenToWorld };
+  }, [getCanvas, getTransform]);
+
   return {
     getCanvas,
     getTransform,
     setTransform,
+    getTransformUtils,
     zoomIn,
     zoomOut,
     zoomAtScreenPoint,

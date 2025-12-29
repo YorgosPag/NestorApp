@@ -23,7 +23,13 @@
       "Bash(dir:*)",
       "Bash(Get-Content \"C:\\Nestor_Pagonis\\local_TS2339.txt\")",
       "Bash(Measure-Object -Line)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(rm:*)",
+      "Bash(git checkout:*)",
+      "Bash(mv:*)",
+      "Bash(Get-Content \"C:\\Nestor_Pagonis\\local_3.txt\")",
+      "Bash(Get-Content \"local_TS2339.txt\")"
     ],
     "deny": [],
     "ask": []

@@ -13,6 +13,7 @@ const UI_COLORS_BASE = {
 
   // UI Background Colors για fallbacks
   DARK_BACKGROUND: '#333333',
+  DARKER: '#222222', // ✅ ENTERPRISE: Even darker background for UI elements
   LIGHT_GRAY: '#cccccc',
   MEDIUM_GRAY: '#888888',
   LIGHT_GRAY_ALT: '#bbbbbb',

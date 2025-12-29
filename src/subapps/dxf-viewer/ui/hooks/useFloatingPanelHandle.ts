@@ -69,11 +69,11 @@ export function useFloatingPanelHandle({
         }
 
         // Κλειδί 2ου επιπέδου: το Layer μέσα στο Color Group
-        next.add(layerKey(ent.layer));
+        next.add(layerKey(ent.layer as string));
 
         // Αν έχεις 3ο επίπεδο/υπο-layers:
         const sub = ('subLayer' in ent ? ent.subLayer : 'groupKey' in ent ? ent.groupKey : undefined);
-        if (sub) next.add(subLayerKey(ent.layer, sub));
+        if (sub) next.add(subLayerKey(ent.layer as string, sub));
       });
 
       console.debug('[FPC] expandForSelection ids=', ids, 'expandedKeys=', Array.from(next));

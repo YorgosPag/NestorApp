@@ -20,6 +20,14 @@ export interface DXFViewerLayoutProps extends DxfViewerState {
   onCanvasMouseDown: (worldPoint: Point, event: React.MouseEvent) => void;
   onCanvasMouseMove: (worldPoint: Point, event: React.MouseEvent) => void;
 
+  // ✅ ENTERPRISE FIX: Add missing props for FullscreenView
+  currentStatus?: PropertyStatus;
+  setCurrentStatus?: (status: PropertyStatus) => void;
+  currentKind?: OverlayKind;
+  setCurrentKind?: (kind: OverlayKind) => void;
+  overlayMode?: OverlayEditorMode;
+  setOverlayMode?: (mode: OverlayEditorMode) => void;
+
   // Props from useDxfViewerState that need to be passed down
   className?: string;
   entities: DXFEntity[];
@@ -42,11 +50,6 @@ export interface DXFViewerLayoutProps extends DxfViewerState {
   onTransformChange?: (transform: ViewTransform) => void;
   onRegionClick?: (regionId: string) => void;
   onMouseMove?: (worldPoint: Point2D, event: React.MouseEvent) => void;
-  overlayMode?: OverlayEditorMode;
-  overlayStatus?: PropertyStatus;
-  overlayKind?: OverlayKind;
-  setOverlayMode?: (mode: OverlayEditorMode) => void;
   setOverlayStatus?: (status: PropertyStatus) => void;
-  setOverlayKind?: (kind: OverlayKind) => void;
   snapEnabled?: boolean;
 }

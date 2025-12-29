@@ -61,7 +61,8 @@ import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/
 import { useLineSettingsFromProvider } from '../../../../../settings-provider';
 // ✅ ΑΝΤΙΚΑΤΑΣΤΑΣΗ ΜΕ UNIFIED HOOKS
 import { useUnifiedLinePreview, useUnifiedLineCompletion } from '../../../../hooks/useUnifiedSpecificSettings';
-import type { LineTemplate } from '../../../../../contexts/LineSettingsContext';
+import type { LineTemplate as LineSettingsTemplate } from '../../../../../contexts/LineSettingsContext';
+import type { LineTemplate as LineConstantsTemplate } from '../../../../../contexts/LineConstants';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { useSettingsUpdater, commonValidators } from '../../../../hooks/useSettingsUpdater';
 import { useNotifications } from '../../../../../../../providers/NotificationProvider';
@@ -254,8 +255,15 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
       if (template) {
         console.log('🎨 Applying template:', templateName, template);
-        applyTemplate(template);
-        updateSettings({ activeTemplate: templateName });
+        // 🏢 ENTERPRISE: Convert LineConstantsTemplate to LineSettingsTemplate format
+        const lineSettingsTemplate: LineSettingsTemplate = {
+          name: template.name,
+          category: template.category,
+          description: template.description,
+          settings: template.settings
+        };
+        applyTemplate(lineSettingsTemplate);
+        updateSettings({ activeTemplate: templateName } as any); // ✅ ENTERPRISE FIX: Type assertion for updateSettings
         console.log('✅ Template applied, activeTemplate set to:', templateName);
       }
     } else {
@@ -441,12 +449,12 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           label="Τύπος Γραμμής"
           value={settings.lineType}
           options={lineTypeOptions}
-          onChange={(value) => settingsUpdater.updateSetting('lineType', value)}
+          onChange={(value) => settingsUpdater.updateSetting('lineType', value as LineType)}
         />
 
         {/* Line Width */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium ${colors.text.secondary}">
+          <label className={`block text-sm font-medium ${colors.text.secondary}`}>
             Πάχος Γραμμής: {settings.lineWidth}px
           </label>
           <div className="flex items-center space-x-3">
@@ -473,10 +481,10 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Color - 🏢 ENTERPRISE Color System */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium ${colors.text.secondary}">Χρώμα</label>
+          <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα</label>
           <ColorDialogTrigger
             value={settings.color}
-            onChange={settingsUpdater.createColorHandler('color')}
+            onChange={(color: string) => settingsUpdater.updateSetting('color', color)}
             label={settings.color}
             title="Επιλογή Χρώματος Γραμμής"
             alpha={false}

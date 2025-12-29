@@ -1,5 +1,5 @@
 import { BaseEntityRenderer } from './BaseEntityRenderer';
-import { EntityModel } from '../../../types/scene';
+import { EntityModel } from '../../../types/entities';
 import type { Point2D, GripInfo, RenderOptions } from '../types/Types';
 import { UI_COLORS } from '../../config/color-config';
 

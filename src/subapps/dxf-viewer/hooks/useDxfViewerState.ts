@@ -8,7 +8,7 @@
 import { useCallback, useState } from 'react';
 import { useCanvasOperations } from './interfaces/useCanvasOperations';
 import type { ToolType } from '../ui/toolbar/types';
-import type { DrawingTool } from './useUnifiedDrawing';
+import type { DrawingTool } from './drawing/useUnifiedDrawing';
 import { useGripContext } from '../providers/GripProvider';
 import { useToolbarState } from './common/useToolbarState';
 import { useSceneState } from './scene/useSceneState';

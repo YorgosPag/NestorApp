@@ -161,9 +161,9 @@ export function useInteractionEngine({
     const snappedWorldPoint = applySnapping(worldPoint);
     
     // Check for drag threshold
-    const isDragging = state.isMouseDown && state.dragStart && 
+    const isDragging = Boolean(state.isMouseDown && state.dragStart &&
       (Math.abs(canvasPoint.x - state.dragStart.x) > dragThreshold ||
-       Math.abs(canvasPoint.y - state.dragStart.y) > dragThreshold);
+       Math.abs(canvasPoint.y - state.dragStart.y) > dragThreshold));
     
     setState(prev => ({
       ...prev,

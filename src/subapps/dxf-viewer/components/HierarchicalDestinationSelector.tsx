@@ -241,11 +241,11 @@ export function HierarchicalDestinationSelector({
               <Building className={iconSizes.sm} />
               <span>{selectedBuilding.name}</span>
             </button>
-            {selectedFloor && <span className="${colors.text.muted}">→</span>}
+            {selectedFloor && <span className={`${colors.text.muted}`}>→</span>}
           </>
         )}
         {selectedFloor && (
-          <span className="${colors.text.secondary} flex items-center space-x-1">
+          <span className={`${colors.text.secondary} flex items-center space-x-1`}>
             <Home className={iconSizes.sm} />
             <span>{selectedFloor.name}</span>
           </span>

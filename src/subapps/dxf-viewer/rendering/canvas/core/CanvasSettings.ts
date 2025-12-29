@@ -62,7 +62,7 @@ export interface CanvasValidationResult {
 export class CanvasSettings {
   private settings: CanvasRenderSettings;
   private displayOptions: CanvasDisplayOptions;
-  private validators: Map<string, (value: any) => boolean> = new Map();
+  private validators: Map<string, (value: unknown) => boolean> = new Map();
   private changeListeners: Set<(settings: CanvasRenderSettings) => void> = new Set();
 
   constructor(initialSettings?: Partial<CanvasRenderSettings>) {
@@ -218,9 +218,9 @@ export class CanvasSettings {
   /**
    * Get specific setting by path
    */
-  getSetting<T = any>(path: string): T | undefined {
+  getSetting<T = unknown>(path: string): T | undefined {
     const keys = path.split('.');
-    let current: any = this.settings;
+    let current: unknown = this.settings;
 
     for (const key of keys) {
       if (current && typeof current === 'object' && key in current) {
@@ -236,9 +236,9 @@ export class CanvasSettings {
   /**
    * Update specific setting by path
    */
-  updateSetting(path: string, value: any): CanvasValidationResult {
+  updateSetting(path: string, value: unknown): CanvasValidationResult {
     const keys = path.split('.');
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
     let current = updates;
 
     for (let i = 0; i < keys.length - 1; i++) {
@@ -336,7 +336,7 @@ export class CanvasSettings {
   /**
    * Get settings as configuration object for specific canvas type
    */
-  getCanvasConfig(canvasType: 'dxf' | 'layer' | 'overlay'): any {
+  getCanvasConfig(canvasType: 'dxf' | 'layer' | 'overlay'): Record<string, unknown> {
     return {
       enableHiDPI: this.settings.enableHiDPI,
       devicePixelRatio: this.settings.devicePixelRatio,

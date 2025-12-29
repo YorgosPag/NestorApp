@@ -129,7 +129,7 @@ export function EnterpriseColorArea({
       {...colorAreaProps}
       ref={containerRef}
       className={`relative rounded-lg overflow-hidden ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-crosshair'} ${className}`}
-      style={canvasUI.colorPicker.colorPickerArea(size)}
+      style={canvasUI.colorPicker.colorPickerArea(String(size))}
     >
       {/* Color gradient background */}
       <div

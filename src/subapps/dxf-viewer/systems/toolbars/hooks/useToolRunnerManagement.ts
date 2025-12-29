@@ -31,7 +31,7 @@ export function useToolRunnerManagement({
       previewData: null
     }));
 
-    eventListeners.onToolExecute?.(toolId, parameters);
+    eventListeners.onToolExecute?.(toolId, parameters as ActionParameters);
   }, [activateTool, eventListeners, setToolRunner]);
 
   const cancelTool = useCallback(() => {
@@ -49,7 +49,7 @@ export function useToolRunnerManagement({
     const currentTool = toolRunner.currentTool;
     
     if (currentTool) {
-      eventListeners.onToolComplete?.(currentTool, result);
+      eventListeners.onToolComplete?.(currentTool, result as ToolExecutionResult);
     }
     
     setToolRunner(ToolbarSystemUtils.createToolRunner());
@@ -57,7 +57,7 @@ export function useToolRunnerManagement({
   }, [toolRunner.currentTool, eventListeners, deactivateTool, setToolRunner]);
 
   const addToolInput = useCallback((input: unknown) => {
-    setToolRunner(prev => ({
+    setToolRunner((prev: ToolRunner) => ({
       ...prev,
       inputPoints: [...prev.inputPoints, input]
     }));

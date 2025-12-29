@@ -14,9 +14,9 @@ import type {
   SpatialBounds,
   SpatialQueryOptions,
   SpatialQueryResult,
-  SpatialIndexType,
   SpatialIndexStats
 } from './ISpatialIndex';
+import { SpatialIndexType } from './ISpatialIndex';
 import type { Point2D } from '../../rendering/types/Types';
 import { SpatialUtils } from './SpatialUtils';
 

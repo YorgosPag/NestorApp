@@ -9,6 +9,7 @@ const DEBUG_SNAP_DEBUG_LOGGER = false;
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity, ProSnapResult, SnapEngineStats } from '../../snapping/extended-types';
 import type { SnapEngineCore } from '../../snapping/SnapEngineCore';
+import type { SnapOrchestratorStats } from '../../snapping/orchestrator/SnapOrchestrator';
 
 // Extended entity interfaces for proper typing
 interface PolylineEntity extends Entity {
@@ -33,7 +34,7 @@ interface SnapDebugStats {
     autoMode: boolean;
     tabCycling: boolean;
   };
-  orchestrator: SnapEngineStats;
+  orchestrator: SnapOrchestratorStats;
   performance: {
     lastCursorPosition: Point2D | null;
     viewport: {
@@ -128,7 +129,7 @@ export class SnapDebugLogger {
         showSnapMarkers: settings.showSnapMarkers,
         showSnapTooltips: settings.showSnapTooltips,
         autoMode: settings.autoMode,
-        tabCycling: settings.tabCycling
+        tabCycling: (settings as any).tabCycling ?? false // ✅ ENTERPRISE FIX: Optional property with fallback
       },
       orchestrator: orchestratorStats,
       performance: {

@@ -33,6 +33,8 @@ const DEBUG_UNIFIED_DRAWING = false;
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { AnySceneEntity, LineEntity, CircleEntity, PolylineEntity, RectangleEntity, AngleMeasurementEntity } from '../../types/scene';
+// ✅ ENTERPRISE FIX: Import centralized PreviewGripPoint from entities
+import type { PreviewGripPoint } from '../../types/entities';
 
 // Extended entity types for drawing preview functionality
 export interface PreviewPoint {
@@ -43,39 +45,31 @@ export interface PreviewPoint {
   visible: boolean;
   layer: string;
   preview: boolean;
-  showPreviewGrips: boolean;
-  measurement?: boolean;
+  // ✅ ENTERPRISE FIX: Remove duplicate properties - these are in BaseEntity
+  // showPreviewGrips, measurement are inherited from BaseEntity
 }
 
-export interface PreviewGripPoint {
-  position: Point2D;
-  type: 'start' | 'end' | 'cursor' | 'vertex';
-}
+// ✅ ENTERPRISE FIX: Use centralized PreviewGripPoint from entities.ts
 
 export interface ExtendedPolylineEntity extends PolylineEntity {
-  preview?: boolean;
+  // ✅ ENTERPRISE FIX: Remove duplicate properties - these are in BaseEntity
+  // preview, showPreviewGrips, isOverlayPreview, measurement inherited from BaseEntity
+  // previewGripPoints supports both Point2D[] and PreviewGripPoint[] via BaseEntity union type
   showEdgeDistances?: boolean;
-  showPreviewGrips?: boolean;
-  isOverlayPreview?: boolean;
-  measurement?: boolean;
-  previewGripPoints?: PreviewGripPoint[];
 }
 
 export interface ExtendedCircleEntity extends CircleEntity {
-  preview?: boolean;
-  showPreviewGrips?: boolean;
-  measurement?: boolean;
+  // ✅ ENTERPRISE FIX: Remove duplicate properties - these are in BaseEntity
+  // preview, showPreviewGrips, measurement inherited from BaseEntity
   diameterMode?: boolean;
   twoPointDiameter?: boolean;
 }
 
 export interface ExtendedLineEntity extends LineEntity {
-  preview?: boolean;
+  // ✅ ENTERPRISE FIX: Remove duplicate properties - these are in BaseEntity
+  // preview, showPreviewGrips, measurement, isOverlayPreview inherited from BaseEntity
+  // previewGripPoints supports both Point2D[] and PreviewGripPoint[] via BaseEntity union type
   showEdgeDistances?: boolean;
-  showPreviewGrips?: boolean;
-  isOverlayPreview?: boolean;
-  measurement?: boolean;
-  previewGripPoints?: PreviewGripPoint[];
 }
 
 export type ExtendedSceneEntity =
@@ -292,14 +286,14 @@ export function useUnifiedDrawing() {
             closed: false,
             visible: true,
             layer: '0',
-          } as PolylineEntity;
+          } as PolylineEntity; // ✅ ENTERPRISE FIX: Polyline entity type assertion
         }
         break;
       case 'measure-angle':
         if (points.length >= 2) {
           if (points.length === 2) {
             // Show preview with one line from point1 to point2 with distance labels
-            const polyline: PolylineEntity = {
+            const polyline = { // ✅ ENTERPRISE FIX: Let TypeScript infer the type
               id,
               type: 'polyline' as const,
               vertices: [points[0], points[1]],

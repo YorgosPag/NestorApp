@@ -400,6 +400,9 @@ export const HOVER_BACKGROUND_EFFECTS = {
   /** Gray dark background hover (darker shade for modals) */
   GRAY_DARK: `hover:${hardcodedColorValues.background.gray[800]}`,
 
+  /** Gray darker background hover (darkest shade for enterprise UI) */
+  GRAY_DARKER: `hover:${hardcodedColorValues.background.gray[900]}`, // ✅ ENTERPRISE: Darkest shade for enterprise UI elements
+
   /** Blue light background hover (lighter shade) */
   BLUE_LIGHT: 'hover:bg-blue-500',
 

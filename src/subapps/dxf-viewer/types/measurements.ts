@@ -47,6 +47,9 @@ export interface DiameterMeasurement extends BaseMeasurement {
   center: Point2D;
 }
 
+// ✅ ENTERPRISE FIX: Add MeasurementType for useToolbarState compatibility
+export type MeasurementType = 'linear' | 'angular' | 'area' | 'radial' | 'diameter';
+
 // Union type for all measurement types
 export type AnyMeasurement =
   | LinearMeasurement

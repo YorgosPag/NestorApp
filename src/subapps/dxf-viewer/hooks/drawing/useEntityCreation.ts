@@ -3,7 +3,8 @@
 import { useState, useCallback, useRef } from 'react';
 import type { Point, DXFEntity, ToolType } from '../../types';
 import { UI_COLORS } from '../../config/color-config';
-// import { layerManager } from '../../tools/LayerManager';
+// ✅ ENTERPRISE FIX: Remove non-existent LayerManager import
+// TODO: Implement proper layer management system if needed
 
 export type DrawingTool = 'line' | 'rectangle' | 'circle' | 'polyline';
 
@@ -67,7 +68,7 @@ export const useEntityCreation = () => {
 
     const getPreviewEntity = useCallback((toolType: DrawingTool, points: Point[]): DXFEntity | null => {
         if (points.length === 0) return null;
-        return createEntityFromTool(toolType, points, layerManager.getCurrentLayer());
+        return createEntityFromTool(toolType, points, "0"); // ✅ ENTERPRISE FIX: Default layer when LayerManager unavailable
     }, [createEntityFromTool]);
     
     const startDrawing = (point: Point) => {

@@ -4,11 +4,11 @@ import { useSceneManager } from '../scene/useSceneManager';
 import { useLevels } from '../../systems/levels';
 import { ExtendedSnapType } from '../../snapping/extended-types';
 import { useSnapContext } from '../../snapping/context/SnapContext';
-import { getGridSettings } from '../../systems/rulers-grid/config';
+import { GridSettings } from '../../systems/rulers-grid/config';
 
 interface ProSnapIntegrationState {
   enabledModes: Set<ExtendedSnapType>;
-  stats: { enabledModes: number; totalEntities: number; lastUpdate: number };
+  stats: { enabled: boolean; modes: ExtendedSnapType[]; entityCount: number; lastUpdate: number };
   toggleMode: (mode: ExtendedSnapType, enabled: boolean) => void;
   refreshEntities: () => void;
   snapEnabled: boolean;
@@ -110,7 +110,12 @@ export function useProSnapIntegration(parentSnapEnabled?: boolean): ProSnapInteg
 
   return {
     enabledModes,
-    stats,
+    stats: {
+      enabled: snapEnabled,
+      modes: stats.modes,
+      entityCount: stats.entityCount,
+      lastUpdate: stats.lastUpdate
+    },
     toggleMode,
     refreshEntities,
     snapEnabled,

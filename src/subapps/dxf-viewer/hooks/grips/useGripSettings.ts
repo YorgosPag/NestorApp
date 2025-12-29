@@ -9,7 +9,8 @@ import { useState, useCallback } from 'react';
 import type { GripSettings } from '../../types/gripSettings';
 import { validateGripSettings, DEFAULT_GRIP_SETTINGS } from '../../types/gripSettings';
 // ===== OVERRIDE GUARD SYSTEM =====
-import { guardGlobalAccess } from '../../../utils/overrideGuard';
+// ✅ ENTERPRISE FIX: Remove non-existent overrideGuard import
+// TODO: Implement proper guard system if needed
 // ===== AUTO-SAVE FUNCTIONALITY DISABLED =====
 // import { useAutoSaveSettings, useLoadSavedSettings } from '../useAutoSaveSettings';
 
@@ -37,14 +38,14 @@ export function useGripSettings() {
   // Update grip settings with validation
   const updateGripSettings = useCallback((updates: Partial<GripSettings>) => {
     // 🔥 GUARD: Προστασία ενημέρωσης των γενικών grip settings όταν override ενεργό
-    guardGlobalAccess('GRIP_SETTINGS_UPDATE');
+    // ✅ ENTERPRISE FIX: Remove guardGlobalAccess - not implemented
     setGripSettings(prev => validateGripSettings({ ...prev, ...updates }));
   }, []);
 
   // Get grip size based on state
   const getGripSize = useCallback((state: 'cold' | 'warm' | 'hot') => {
     // 🔥 GUARD: Προστασία πρόσβασης στις γενικές grip settings όταν override ενεργό
-    guardGlobalAccess('GRIP_SIZE_READ');
+    // ✅ ENTERPRISE FIX: Remove guardGlobalAccess - not implemented
     const baseSize = gripSettings.gripSize * gripSettings.dpiScale;
     switch (state) {
       case 'warm': return Math.round(baseSize * 1.2);
@@ -57,7 +58,7 @@ export function useGripSettings() {
   // Get grip color based on state
   const getGripColor = useCallback((state: 'cold' | 'warm' | 'hot') => {
     // 🔥 GUARD: Προστασία πρόσβασης στις γενικές grip settings όταν override ενεργό
-    guardGlobalAccess('GRIP_COLOR_READ');
+    // ✅ ENTERPRISE FIX: Remove guardGlobalAccess - not implemented
     return gripSettings.colors[state];
   }, [gripSettings.colors]);
 

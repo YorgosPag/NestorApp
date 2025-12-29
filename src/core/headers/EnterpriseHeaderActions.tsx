@@ -244,11 +244,7 @@ export const EnterpriseHeaderActionsFactories = {
     <EnterpriseHeaderActions {...props} entityType="μονάδα" />
 };
 
-// Add factory methods to the main component
-EnterpriseHeaderActions.forProjects = EnterpriseHeaderActionsFactories.forProjects;
-EnterpriseHeaderActions.forBuildings = EnterpriseHeaderActionsFactories.forBuildings;
-EnterpriseHeaderActions.forContacts = EnterpriseHeaderActionsFactories.forContacts;
-EnterpriseHeaderActions.forUnits = EnterpriseHeaderActionsFactories.forUnits;
+// Factory methods available as separate exports
 
 // ============================================================================
 // EXPORTS

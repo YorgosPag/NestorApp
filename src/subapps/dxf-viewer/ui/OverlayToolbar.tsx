@@ -100,7 +100,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
         opacity: 1,
         lineType: 'solid'                  // Overlay γραμμές solid για καθαρότητα
       };
-      toolStyleStore.set(toolStyle);
+      toolStyleStore.set(toolStyle as Partial<ToolStyle>);
 
       const polylineControlPromise = startOverlayCreation({
         status: currentStatus,        // Μεταβίβαση επιλεγμένου status

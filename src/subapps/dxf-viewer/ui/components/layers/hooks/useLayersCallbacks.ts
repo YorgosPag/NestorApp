@@ -146,7 +146,7 @@ export function useLayersCallbacks({
         const selectedLayerNames = Array.from(newSelected);
         const unionIds: string[] = [];
         scene.entities?.forEach(ent => {
-          if (ent.visible !== false && selectedLayerNames.includes(ent.layer)) {
+          if (ent.visible !== false && ent.layer && selectedLayerNames.includes(ent.layer)) {
             unionIds.push(ent.id);
           }
         });
@@ -225,7 +225,7 @@ export function useLayersCallbacks({
     
     // ✅ Μάζεψε πρώτα όλα τα IDs και στείλε μία φορά
     const ids = scene.entities
-      .filter(e => layerNames.includes(e.layer) && scene.layers[e.layer]?.visible !== false && e.visible !== false)
+      .filter(e => e.layer && layerNames.includes(e.layer) && scene.layers[e.layer]?.visible !== false && e.visible !== false)
       .map(e => e.id);
 
     // ✅ ένα event – όχι καταιγισμό

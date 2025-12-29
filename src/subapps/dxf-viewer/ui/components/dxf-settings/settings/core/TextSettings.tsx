@@ -145,6 +145,7 @@ interface TextStyleButtonsProps {
 function TextStyleButtons({ settings, onToggle }: TextStyleButtonsProps) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors(); // ✅ ENTERPRISE FIX: Add missing colors hook
 
   return (
     <div className="flex flex-wrap gap-1">
@@ -174,6 +175,8 @@ interface ScriptStyleButtonsProps {
 
 function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }: ScriptStyleButtonsProps) {
   const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors(); // ✅ ENTERPRISE FIX: Add missing colors hook
+
   return (
     <div className="flex gap-1">
       <button
@@ -225,7 +228,7 @@ export function TextSettings() {
   // Handlers
 
   const toggleTextStyle = (style: keyof Pick<typeof textSettings, 'isBold' | 'isItalic' | 'isUnderline' | 'isStrikethrough'>) => {
-    updateTextSettings({ [style]: !textSettings[style] });
+    updateTextSettings({ [style]: !textSettings[style] } as Partial<TextSettings>); // ✅ ENTERPRISE FIX: Type assertion for settings update
   };
 
   const handleScriptChange = (scriptType: 'superscript' | 'subscript') => {
@@ -233,27 +236,27 @@ export function TextSettings() {
       updateTextSettings({
         isSuperscript: !textSettings.isSuperscript,
         isSubscript: false
-      });
+      } as Partial<TextSettings>); // ✅ ENTERPRISE FIX: Type assertion
     } else {
       updateTextSettings({
         isSubscript: !textSettings.isSubscript,
         isSuperscript: false
-      });
+      } as Partial<TextSettings>); // ✅ ENTERPRISE FIX: Type assertion
     }
   };
 
   const handleColorChange = (color: string) => {
-    updateTextSettings({ color });
+    updateTextSettings({ color } as Partial<TextSettings>); // ✅ ENTERPRISE FIX: Type assertion
   };
 
   const increaseFontSize = () => {
     const newSize = Math.min(200, textSettings.fontSize + 1);
-    updateTextSettings({ fontSize: newSize });
+    updateTextSettings({ fontSize: newSize } as Partial<TextSettings>); // ✅ ENTERPRISE FIX: Type assertion
   };
 
   const decreaseFontSize = () => {
     const newSize = Math.max(6, textSettings.fontSize - 1);
-    updateTextSettings({ fontSize: newSize });
+    updateTextSettings({ fontSize: newSize } as Partial<TextSettings>); // ✅ ENTERPRISE FIX: Type assertion
   };
 
   // Factory reset handlers
@@ -340,7 +343,7 @@ export function TextSettings() {
             type="checkbox"
             id="text-enabled"
             checked={textSettings.enabled}
-            onChange={(e) => updateTextSettings({ enabled: e.target.checked })}
+            onChange={(e) => updateTextSettings({ enabled: e.target.checked } as Partial<TextSettings>)}
             className={`${iconSizes.sm} text-blue-600 ${colors.bg.hover} ${quick.input} focus:ring-blue-500 focus:ring-2`}
           />
           <label
@@ -376,7 +379,7 @@ export function TextSettings() {
               label={TEXT_LABELS.FONT_FAMILY}
               value={textSettings.fontFamily}
               options={FREE_FONTS}
-              onChange={(fontFamily) => updateTextSettings({ fontFamily })}
+              onChange={(fontFamily) => updateTextSettings({ fontFamily } as Partial<TextSettings>)}
               enableTypeahead={true}
               placeholder={TEXT_LABELS.SEARCH_FONTS}
               buttonClassName="text-sm"
@@ -390,7 +393,7 @@ export function TextSettings() {
                     label={TEXT_LABELS.FONT_SIZE}
                     value={textSettings.fontSize}
                     options={FONT_SIZE_OPTIONS}
-                    onChange={(fontSize) => updateTextSettings({ fontSize })}
+                    onChange={(fontSize) => updateTextSettings({ fontSize } as Partial<TextSettings>)}
                     enableTypeahead={true}
                     placeholder={TEXT_LABELS.SEARCH_SIZE}
                     buttonClassName="text-sm"
@@ -433,7 +436,7 @@ export function TextSettings() {
 
       {/* Text Color */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium ${colors.text.secondary}">Χρώμα Κειμένου</label>
+        <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Κειμένου</label>
         <ColorDialogTrigger
           value={textSettings.color}
           onChange={handleColorChange}
@@ -461,7 +464,7 @@ export function TextSettings() {
           <div className="space-y-4">
             {/* Text Style Toggles */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium ${colors.text.muted}">
+              <label className={`block text-sm font-medium ${colors.text.muted}`}>
                 {TEXT_LABELS.TEXT_STYLE}
               </label>
               <TextStyleButtons
@@ -484,7 +487,7 @@ export function TextSettings() {
           <div className="space-y-4">
             {/* Script Toggles */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium ${colors.text.muted}">{TEXT_LABELS.SCRIPT_STYLE}</label>
+              <label className={`block text-sm font-medium ${colors.text.muted}`}>{TEXT_LABELS.SCRIPT_STYLE}</label>
               <ScriptStyleButtons
                 settings={textSettings}
                 onSuperscriptChange={() => handleScriptChange('superscript')}
@@ -505,7 +508,7 @@ export function TextSettings() {
           <div className="space-y-4">
             {/* Live Preview */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium ${colors.text.muted}">
+              <label className={`block text-sm font-medium ${colors.text.muted}`}>
                 {TEXT_LABELS.PREVIEW}
               </label>
               <div className={`p-4 ${colors.bg.primary} ${quick.card}`}>
@@ -517,7 +520,7 @@ export function TextSettings() {
 
             {/* Settings Summary */}
             <div className={`p-2 ${colors.bg.hover} ${quick.card} ${getDirectionalBorder('success', 'left')} mt-4`}>
-              <div className="text-xs ${colors.text.muted} space-y-1">
+              <div className={`text-xs ${colors.text.muted} space-y-1`}>
                 <div><strong>{FREE_FONTS.find(f => f.value === textSettings.fontFamily)?.label}</strong>, {textSettings.fontSize}pt</div>
                 <div>{[
                   textSettings.isBold && 'Έντονα',
@@ -553,8 +556,8 @@ export function TextSettings() {
 
           {/* Loss List */}
           <div className="space-y-2">
-            <p className="${colors.text.muted} font-medium">Θα χάσετε:</p>
-            <ul className="list-disc list-inside space-y-1 ${colors.text.muted} text-sm">
+            <p className={`${colors.text.muted} font-medium`}>Θα χάσετε:</p>
+            <ul className={`list-disc list-inside space-y-1 ${colors.text.muted} text-sm`}>
               <li>Όλες τις προσαρμοσμένες ρυθμίσεις κειμένου</li>
               <li>Όλα τα templates που έχετε επιλέξει</li>
               <li>Όλες τις αλλαγές που έχετε κάνει</li>
@@ -577,13 +580,13 @@ export function TextSettings() {
           <div className={`flex gap-3 justify-end pt-4 ${quick.separator}`}>
             <button
               onClick={handleFactoryResetCancel}
-              className="px-4 py-2 text-sm ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white rounded transition-colors"
+              className={`px-4 py-2 text-sm ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white rounded transition-colors`}
             >
               Ακύρωση
             </button>
             <button
               onClick={handleFactoryResetConfirm}
-              className="px-4 py-2 text-sm ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-white rounded transition-colors font-semibold"
+              className={`px-4 py-2 text-sm ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-white rounded transition-colors font-semibold`}
             >
               🏭 Επαναφορά Εργοστασιακών
             </button>

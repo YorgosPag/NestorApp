@@ -189,7 +189,7 @@ export const migrateFromLegacyContext = <T>(
     settings: migratedSettings,
     updateSettings: (updates) => {
       // Map το νέο format στο παλιό για backwards compatibility
-      legacyContextResult.updateSettings(updates);
+      legacyContextResult.updateSettings(updates as Partial<{ [key: string]: Partial<T>; overrideGlobalSettings: boolean; }>);
     },
     updateSpecificSettings: (updates) => {
       // Map στο specific property του παλιού context

@@ -5,6 +5,12 @@
 
 import type { Point2D } from '../rendering/types/Types';
 
+// ✅ ENTERPRISE FIX: Enhanced grip point interface for preview system
+export interface PreviewGripPoint {
+  position: Point2D;
+  type: 'start' | 'end' | 'cursor' | 'vertex';
+}
+
 // Base entity interface
 export interface BaseEntity {
   id: string;
@@ -17,7 +23,7 @@ export interface BaseEntity {
   measurement?: boolean;
   isOverlayPreview?: boolean;
   showPreviewGrips?: boolean;
-  previewGripPoints?: Point2D[];
+  previewGripPoints?: Point2D[] | PreviewGripPoint[];
   visible?: boolean;
   locked?: boolean;
   metadata?: Record<string, unknown>;
@@ -40,10 +46,15 @@ export interface BaseEntity {
 export type EntityType =
   | 'line'
   | 'polyline'
+  | 'lwpolyline'           // ✅ ENTERPRISE: AutoCAD lightweight polyline support
   | 'circle'
   | 'arc'
+  | 'ellipse'              // ✅ ENTERPRISE: AutoCAD ellipse entity support
   | 'text'
+  | 'mtext'                // ✅ ENTERPRISE: AutoCAD multiline text entity support
+  | 'spline'               // ✅ ENTERPRISE: AutoCAD spline curve entity support
   | 'rectangle'
+  | 'rect'                 // ✅ ENTERPRISE: Alternative rectangle entity naming convention
   | 'point'
   | 'dimension'
   | 'block'
@@ -66,6 +77,16 @@ export interface PolylineEntity extends BaseEntity {
   lineStyle?: string;
 }
 
+export interface LWPolylineEntity extends BaseEntity {
+  type: 'lwpolyline';
+  vertices: Point2D[];
+  closed?: boolean;
+  lineWidth?: number;
+  lineStyle?: string;
+  constantWidth?: number;     // ✅ ENTERPRISE: AutoCAD lightweight polyline constant width
+  elevation?: number;         // ✅ ENTERPRISE: AutoCAD Z-elevation for 2.5D entities
+}
+
 export interface CircleEntity extends BaseEntity {
   type: 'circle';
   center: Point2D;
@@ -83,8 +104,34 @@ export interface ArcEntity extends BaseEntity {
   strokeWidth?: number;
 }
 
+export interface EllipseEntity extends BaseEntity {
+  type: 'ellipse';
+  center: Point2D;
+  majorAxis: number;          // ✅ ENTERPRISE: AutoCAD ellipse major axis length
+  minorAxis: number;          // ✅ ENTERPRISE: AutoCAD ellipse minor axis length
+  rotation?: number;          // ✅ ENTERPRISE: Rotation angle in degrees
+  startParam?: number;        // ✅ ENTERPRISE: Start parameter for elliptical arcs
+  endParam?: number;          // ✅ ENTERPRISE: End parameter for elliptical arcs
+  strokeWidth?: number;
+}
+
 export interface RectangleEntity extends BaseEntity {
   type: 'rectangle';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation?: number;
+  fillColor?: string;
+  strokeWidth?: number;
+
+  // ✅ ENTERPRISE COMPATIBILITY: Computed properties for grip interaction
+  corner1?: Point2D;   // Top-left corner (computed from x, y)
+  corner2?: Point2D;   // Bottom-right corner (computed from x+width, y+height)
+}
+
+export interface RectEntity extends BaseEntity {
+  type: 'rect';
   x: number;
   y: number;
   width: number;
@@ -113,6 +160,32 @@ export interface TextEntity extends BaseEntity {
   fontFamily?: string;
   alignment?: 'left' | 'center' | 'right';
   rotation?: number;
+}
+
+export interface MTextEntity extends BaseEntity {
+  type: 'mtext';
+  position: Point2D;
+  text: string;
+  width: number;              // ✅ ENTERPRISE: AutoCAD multiline text width boundary
+  height?: number;            // ✅ ENTERPRISE: AutoCAD multiline text height boundary
+  fontSize?: number;
+  fontFamily?: string;
+  alignment?: 'left' | 'center' | 'right' | 'justify';
+  rotation?: number;
+  lineSpacing?: number;       // ✅ ENTERPRISE: AutoCAD line spacing factor
+  paragraphSpacing?: number;  // ✅ ENTERPRISE: AutoCAD paragraph spacing
+  wordWrap?: boolean;         // ✅ ENTERPRISE: AutoCAD word wrap option
+}
+
+export interface SplineEntity extends BaseEntity {
+  type: 'spline';
+  controlPoints: Point2D[];   // ✅ ENTERPRISE: AutoCAD spline control points
+  degree?: number;            // ✅ ENTERPRISE: AutoCAD spline degree (default: 3)
+  knots?: number[];           // ✅ ENTERPRISE: AutoCAD spline knot vector
+  weights?: number[];         // ✅ ENTERPRISE: AutoCAD spline control point weights (NURBS)
+  closed?: boolean;           // ✅ ENTERPRISE: AutoCAD closed spline flag
+  rational?: boolean;         // ✅ ENTERPRISE: AutoCAD rational spline (NURBS vs B-spline)
+  tolerance?: number;         // ✅ ENTERPRISE: AutoCAD spline fit tolerance
 }
 
 export interface DimensionEntity extends BaseEntity {
@@ -148,11 +221,16 @@ export interface AngleMeasurementEntity extends BaseEntity {
 export type Entity = (
   | LineEntity
   | PolylineEntity
+  | LWPolylineEntity          // ✅ ENTERPRISE: AutoCAD lightweight polyline support
   | CircleEntity
   | ArcEntity
+  | EllipseEntity            // ✅ ENTERPRISE: AutoCAD ellipse entity support
   | RectangleEntity
+  | RectEntity               // ✅ ENTERPRISE: Alternative rectangle entity naming convention
   | PointEntity
   | TextEntity
+  | MTextEntity              // ✅ ENTERPRISE: AutoCAD multiline text entity support
+  | SplineEntity             // ✅ ENTERPRISE: AutoCAD spline curve entity support
   | DimensionEntity
   | BlockEntity
   | AngleMeasurementEntity
@@ -209,20 +287,35 @@ export const isLineEntity = (entity: Entity): entity is LineEntity =>
 export const isPolylineEntity = (entity: Entity): entity is PolylineEntity =>
   entity.type === 'polyline';
 
+export const isLWPolylineEntity = (entity: Entity): entity is LWPolylineEntity =>
+  entity.type === 'lwpolyline';
+
 export const isCircleEntity = (entity: Entity): entity is CircleEntity =>
   entity.type === 'circle';
 
 export const isArcEntity = (entity: Entity): entity is ArcEntity =>
   entity.type === 'arc';
 
+export const isEllipseEntity = (entity: Entity): entity is EllipseEntity =>
+  entity.type === 'ellipse';
+
 export const isRectangleEntity = (entity: Entity): entity is RectangleEntity =>
   entity.type === 'rectangle';
+
+export const isRectEntity = (entity: Entity): entity is RectEntity =>
+  entity.type === 'rect';
 
 export const isPointEntity = (entity: Entity): entity is PointEntity =>
   entity.type === 'point';
 
 export const isTextEntity = (entity: Entity): entity is TextEntity =>
   entity.type === 'text';
+
+export const isMTextEntity = (entity: Entity): entity is MTextEntity =>
+  entity.type === 'mtext';
+
+export const isSplineEntity = (entity: Entity): entity is SplineEntity =>
+  entity.type === 'spline';
 
 export const isDimensionEntity = (entity: Entity): entity is DimensionEntity =>
   entity.type === 'dimension';
@@ -246,6 +339,19 @@ export const getEntityBounds = (entity: Entity): { minX: number; minY: number; m
         maxX: Math.max(entity.start.x, entity.end.x),
         maxY: Math.max(entity.start.y, entity.end.y)
       };
+    case 'polyline':
+    case 'lwpolyline':  // ✅ ENTERPRISE: AutoCAD lightweight polyline bounds
+      if ('vertices' in entity && entity.vertices && entity.vertices.length > 0) {
+        const xs = entity.vertices.map(v => v.x);
+        const ys = entity.vertices.map(v => v.y);
+        return {
+          minX: Math.min(...xs),
+          minY: Math.min(...ys),
+          maxX: Math.max(...xs),
+          maxY: Math.max(...ys)
+        };
+      }
+      return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
     case 'circle':
       return {
         minX: entity.center.x - entity.radius,
@@ -253,7 +359,16 @@ export const getEntityBounds = (entity: Entity): { minX: number; minY: number; m
         maxX: entity.center.x + entity.radius,
         maxY: entity.center.y + entity.radius
       };
+    case 'ellipse':  // ✅ ENTERPRISE: AutoCAD ellipse bounds calculation
+      const maxAxisRadius = Math.max(entity.majorAxis, entity.minorAxis);
+      return {
+        minX: entity.center.x - maxAxisRadius,
+        minY: entity.center.y - maxAxisRadius,
+        maxX: entity.center.x + maxAxisRadius,
+        maxY: entity.center.y + maxAxisRadius
+      };
     case 'rectangle':
+    case 'rect':     // ✅ ENTERPRISE: Alternative rectangle entity bounds
       return {
         minX: entity.x,
         minY: entity.y,
@@ -277,11 +392,33 @@ export const getEntityBounds = (entity: Entity): { minX: number; minY: number; m
         maxX: entity.position.x + textWidth,
         maxY: entity.position.y
       };
+    case 'mtext':    // ✅ ENTERPRISE: AutoCAD multiline text bounds
+      const mtextHeight = entity.height || (entity.fontSize || 12);
+      return {
+        minX: entity.position.x,
+        minY: entity.position.y - mtextHeight,
+        maxX: entity.position.x + entity.width,
+        maxY: entity.position.y
+      };
+    case 'spline':   // ✅ ENTERPRISE: AutoCAD spline bounds from control points
+      if ('controlPoints' in entity && entity.controlPoints && entity.controlPoints.length > 0) {
+        const xs = entity.controlPoints.map(p => p.x);
+        const ys = entity.controlPoints.map(p => p.y);
+        return {
+          minX: Math.min(...xs),
+          minY: Math.min(...ys),
+          maxX: Math.max(...xs),
+          maxY: Math.max(...ys)
+        };
+      }
+      return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
     default:
-      // For polyline and other complex shapes, calculate from vertices
-      if ('vertices' in entity && entity.vertices) {
-        const xs = entity.vertices.map(v => v.x);
-        const ys = entity.vertices.map(v => v.y);
+      // ✅ ENTERPRISE FIX: Type-safe fallback for entities with vertices
+      if ('vertices' in entity && entity.vertices && Array.isArray(entity.vertices) && entity.vertices.length > 0) {
+        // ✅ ENTERPRISE: Type guard to ensure vertices are Point2D objects
+        const vertices = entity.vertices as Point2D[];
+        const xs = vertices.map(v => v.x);
+        const ys = vertices.map(v => v.y);
         return {
           minX: Math.min(...xs),
           minY: Math.min(...ys),

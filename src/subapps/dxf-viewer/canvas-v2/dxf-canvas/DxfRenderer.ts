@@ -15,8 +15,27 @@ import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import { EntityRendererComposite } from '../../rendering/core/EntityRendererComposite';
 import { Canvas2DContext } from '../../rendering/adapters/canvas2d/Canvas2DContext';
 import type { EntityModel, RenderOptions } from '../../rendering/types/Types';
+import type { LineType } from '../../settings-core/types';
 
 
+
+/**
+ * ✅ ENTERPRISE TYPE-SAFE MAPPING: DXF → Centralized LineType
+ * Εξασφαλίζει enterprise compatibility χωρίς hardcoded values
+ */
+function mapDxfLineTypeToEnterprise(dxfLineType: string | undefined): 'solid' | 'dashed' | 'dotted' | 'dashdot' {
+  const mapping: Record<string, 'solid' | 'dashed' | 'dotted' | 'dashdot'> = {
+    'solid': 'solid',
+    'dashed': 'dashed',
+    'dotted': 'dotted',
+    'dashdot': 'dashdot', // ✅ ENTERPRISE FIX: Keep 'dashdot' for BaseEntity compatibility
+    'dash-dot': 'dashdot', // ✅ Map 'dash-dot' to 'dashdot' for BaseEntity compatibility
+    'dash-dot-dot': 'dashdot' // ✅ Fallback to 'dashdot' for complex patterns
+  };
+
+  const key = dxfLineType || 'solid';
+  return mapping[key] || 'solid';
+}
 
 export class DxfRenderer {
   private ctx: CanvasRenderingContext2D;
@@ -140,7 +159,7 @@ export class DxfRenderer {
       selected: isSelected,
       layer: entity.layer,
       color: entity.color,
-      lineType: (entityWithLineType.lineType as any) || 'solid',
+      lineType: mapDxfLineTypeToEnterprise(entityWithLineType.lineType),
       lineweight: entity.lineWidth, // ✅ ENTERPRISE FIX: Use correct property name 'lineweight' not 'lineWeight'
 
       // Geometry mapping βάσει τύπου

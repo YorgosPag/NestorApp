@@ -18,7 +18,6 @@ import type { Point2D as Point } from '../rendering/types/Types';
 import type { ProSnapResult, ExtendedSnapType } from '../snapping/extended-types';
 import type { ViewTransform } from '../systems/rulers-grid/config';
 // ✅ ENTERPRISE FIX: CoordinateManager types moved to integrated system
-// import type { CoordinateManager } from './calibration/types';
 
 interface Props {
   mouseCss: Point | null;

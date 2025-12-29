@@ -16,12 +16,18 @@ import type { HoverRenderContext } from './types';
 import {
   isCircleEntity,
   isRectangleEntity,
+  isRectEntity,
   isArcEntity,
   isPolylineEntity,
+  isLWPolylineEntity,
+  isEllipseEntity,
   type CircleEntity,
   type RectangleEntity,
+  type RectEntity,
   type PolylineEntity,
-  type ArcEntity
+  type LWPolylineEntity,
+  type ArcEntity,
+  type EllipseEntity
 } from '../../types/entities';
 
 export function renderCircleHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
@@ -151,25 +157,35 @@ export function renderCircleHover({ entity, ctx, worldToScreen, options }: Hover
 export function renderRectangleHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
   // ✅ ENTERPRISE FIX: Type guard for rectangle entities
   // Note: rectangles can be represented as polylines with 4 vertices
-  if (!isRectangleEntity(entity) && !isPolylineEntity(entity)) return;
+  if (!isRectangleEntity(entity) && !isRectEntity(entity) && !isPolylineEntity(entity) && !isLWPolylineEntity(entity)) return;
 
   return; // ⚠️ ΠΡΟΣΩΡΙΝΑ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ ΓΙΑ TESTING κίτρινων grips
 
   // ✅ PERFORMANCE FIX: Render only dashed lines, skip heavy measurements
   // ✅ ENTERPRISE: Type-safe access to vertices με proper casting
   let vertices: Point2D[] = [];
-  if (isPolylineEntity(entity)) {
-    const polylineEntity = entity as PolylineEntity;
+  if (isPolylineEntity(entity) || isLWPolylineEntity(entity)) {
+    const polylineEntity = entity as PolylineEntity | LWPolylineEntity;
     vertices = polylineEntity.vertices;
-  } else if (isRectangleEntity(entity)) {
+  } else if (isRectangleEntity(entity) || isRectEntity(entity)) {
     // ✅ ENTERPRISE FIX: Calculate vertices from corner1 and corner2 properties
-    const rect = entity as RectangleEntity;
+    const rect = entity as RectangleEntity | RectEntity;
     if (rect.corner1 && rect.corner2) {
+      const c1 = rect.corner1;
+      const c2 = rect.corner2;
       vertices = [
-        rect.corner1,
-        { x: rect.corner2.x, y: rect.corner1.y },
-        rect.corner2,
-        { x: rect.corner1.x, y: rect.corner2.y }
+        c1,
+        { x: c2.x, y: c1.y },
+        c2,
+        { x: c1.x, y: c2.y }
+      ];
+    } else {
+      // ✅ ENTERPRISE: Fallback to x, y, width, height properties
+      vertices = [
+        { x: rect.x, y: rect.y },
+        { x: rect.x + rect.width, y: rect.y },
+        { x: rect.x + rect.width, y: rect.y + rect.height },
+        { x: rect.x, y: rect.y + rect.height }
       ];
     }
   }
@@ -232,26 +248,26 @@ export function renderArcHover({ entity, ctx, worldToScreen, options }: HoverRen
 }
 
 export function renderEllipseHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
+  // ✅ ENTERPRISE FIX: Use type guard to ensure entity is EllipseEntity
+  if (!isEllipseEntity(entity)) return;
+
   return; // ⚠️ ΠΡΟΣΩΡΙΝΑ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ ΓΙΑ TESTING κίτρινων grips
 
   /* // ✅ ENTERPRISE: Commented out unreachable code to avoid TypeScript errors
   // Simple ellipse - just draw the shape, no complex measurements for now
-  const ellipseData = validateEllipseEntity(entity);
-  if (!ellipseData) return;
+  const ellipseEntity = entity as EllipseEntity;
+  const { center, majorAxis, minorAxis, rotation = 0 } = ellipseEntity;
 
-  // ✅ ENTERPRISE: Safe destructuring με guaranteed non-null μετά το check
-  const { center, majorAxis, minorAxis, rotation } = ellipseData;
-  
   const screenCenter = worldToScreen(center);
-  
+
   ctx.save();
   ctx.translate(screenCenter.x, screenCenter.y);
   ctx.rotate((rotation * Math.PI) / 180);
-  
+
   ctx.beginPath();
   ctx.ellipse(0, 0, majorAxis, minorAxis, 0, 0, Math.PI * 2);
   ctx.stroke();
-  
+
   ctx.restore();
   */
 }

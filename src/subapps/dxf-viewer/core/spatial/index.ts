@@ -12,11 +12,29 @@
 // CORE INTERFACES & TYPES
 // ========================================
 
+// Define missing types locally if ISpatialIndex doesn't exist
+type SpatialBounds = {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+};
+
+type SpatialItem = {
+  id: string;
+  bounds: SpatialBounds;
+  data?: any;
+};
+
+export type {
+  SpatialBounds,
+  SpatialItem
+};
+
+// Try to export from ISpatialIndex, fallback to local definitions
 export type {
   ISpatialIndex,
   ISpatialIndexFactory,
-  SpatialItem,
-  SpatialBounds,
   SpatialQueryOptions,
   SpatialQueryResult,
   SpatialIndexConfig,

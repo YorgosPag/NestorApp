@@ -30,7 +30,7 @@ interface Viewport {
   worldToScreen(p: Point2D): Point2D;
 }
 
-interface SnapOrchestratorStats {
+export interface SnapOrchestratorStats {
   totalEntities: number;
   candidateIndex: number;
   enabledEngines: ExtendedSnapType[];

@@ -226,7 +226,7 @@ export function LayerItem({
           <div className="relative">
             <button
               onClick={handleColorPickerToggle}
-              className={`${iconSizes.xs} rounded ${getStatusBorder('secondary')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
+              className={`${iconSizes.xs} rounded ${getStatusBorder('muted')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
               style={layoutUtilities.dxf.colors.backgroundColor(layer.color)}
               title="Αλλαγή χρώματος"
             />

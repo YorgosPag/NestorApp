@@ -24,6 +24,7 @@ interface KeyboardShortcutsConfig {
     update: (id: string, patch: UpdateOverlayData) => Promise<void>;
     remove: (id: string) => Promise<void>;
     setSelectedOverlay: (id: string | null) => void;
+    selectedOverlayId: string | null; // ✅ ENTERPRISE FIX: Add selectedOverlayId property
   } | null;
 }
 
@@ -70,7 +71,7 @@ export const useKeyboardShortcuts = ({
       // Delete key για διαγραφή overlay σε edit mode
       if (e.key === 'Delete' && activeTool === 'layering' && overlayMode === 'edit' && overlayStore?.selectedOverlayId) {
         e.preventDefault();
-        overlayStore.remove(overlayStore.selectedOverlayId);
+        overlayStore.remove(overlayStore.selectedOverlayId as string); // ✅ ENTERPRISE FIX: Type assertion for selectedOverlayId
         return;
       }
 

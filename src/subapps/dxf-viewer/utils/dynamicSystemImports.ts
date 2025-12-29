@@ -7,26 +7,26 @@ import dynamic from 'next/dynamic';
 import React, { ComponentType } from 'react';
 
 export const DynamicToolbarsSystem = dynamic(
-  () => import('../systems/toolbars/ToolbarsSystem'),
-  { 
+  () => import('../systems/toolbars/ToolbarsSystem').then(mod => ({ default: mod.ToolbarsSystem || (() => null) })) as Promise<{ default: ComponentType<any> }>,
+  {
     loading: () => React.createElement('div', { className: 'animate-pulse bg-muted rounded' }, 'Loading toolbars...'),
-    ssr: false 
+    ssr: false
   }
 );
 
 export const DynamicRulersGridSystem = dynamic(
-  () => import('../systems/rulers-grid/RulersGridSystem'),
-  { 
+  () => import('../systems/rulers-grid/RulersGridSystem').then(mod => ({ default: mod.RulersGridSystem || (() => null) })) as Promise<{ default: ComponentType<any> }>,
+  {
     loading: () => React.createElement('div', { className: 'animate-pulse bg-muted rounded' }, 'Loading rulers/grid...'),
-    ssr: false 
+    ssr: false
   }
 );
 
 export const DynamicConstraintsSystem = dynamic(
-  () => import('../systems/constraints/ConstraintsSystem'),
-  { 
+  () => import('../systems/constraints/ConstraintsSystem').then(mod => ({ default: mod.ConstraintsSystem || (() => null) })) as Promise<{ default: ComponentType<any> }>,
+  {
     loading: () => React.createElement('div', { className: 'animate-pulse bg-muted rounded' }, 'Loading constraints...'),
-    ssr: false 
+    ssr: false
   }
 );
 

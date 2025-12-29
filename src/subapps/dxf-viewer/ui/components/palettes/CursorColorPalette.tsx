@@ -59,7 +59,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
       </div>
       <div className="flex items-center gap-2">
         <div 
-          className={`${iconSizes.md} rounded ${getStatusBorder('secondary')}`}
+          className={`${iconSizes.md} rounded ${getStatusBorder('muted')}`}
           style={layoutUtilities.dxf.swatch.withOpacity(
             colors[colorKey] as string,
             opacityKey ? colors[opacityKey] as number : 1
@@ -76,7 +76,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
           type="text"
           value={colors[colorKey] as string}
           onChange={(e) => handleColorChange(colorKey, e.target.value)}
-          className={`px-2 py-1 text-xs ${semanticColors.bg.muted} text-white rounded ${getStatusBorder('secondary')}`}
+          className={`px-2 py-1 text-xs ${semanticColors.bg.muted} text-white rounded ${getStatusBorder('muted')}`}
           style={{ width: '5rem' }}
           placeholder={UI_COLORS.WHITE}
         />
@@ -88,7 +88,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
               max="1"
               step="0.1"
               value={colors[opacityKey] as number}
-              onChange={(e) => handleColorChange(opacityKey, parseFloat(e.target.value))}
+              onChange={(e) => handleColorChange(opacityKey, String(parseFloat(e.target.value)))}
               className=""
               style={{ width: '4rem' }}
             />
@@ -147,7 +147,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
               className={`p-2 rounded text-xs border transition-colors ${
                 isSelected
                   ? `${semanticColors.bg.info} ${getStatusBorder('info')}`
-                  : `${semanticColors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT} ${getStatusBorder('secondary').replace('border ', '')}`
+                  : `${semanticColors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT} ${getStatusBorder('muted').replace('border ', '')}`
               }`}
             >
               <div 

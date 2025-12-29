@@ -47,9 +47,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
 
   return (
     <div className={containerClasses}>
-      {icon && (
-        <icon className={iconClasses} />
-      )}
+      {icon && React.createElement(icon, { className: iconClasses })}
       <div className="flex flex-col">
         <span className={titleClasses}>
           {displayTitle}

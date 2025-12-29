@@ -37,7 +37,7 @@ export class SnapRenderer implements UIRenderer {
     viewport: Viewport,
     settings: UIElementSettings
   ): void {
-    const snapSettings = settings as SnapSettings;
+    const snapSettings = settings as UIElementSettings & SnapSettings;
 
     // Get snap data από context
     const snapData = this.getSnapData(context);
@@ -170,16 +170,18 @@ export class SnapRenderer implements UIRenderer {
         ctx.lineTo(x - halfSize, y + halfSize);
         break;
 
-      case 'perpendicular':
+      case 'perpendicular': {
         // Right angle symbol
         const quarter = halfSize / 2;
         ctx.moveTo(x - quarter, y - halfSize);
         ctx.lineTo(x - quarter, y - quarter);
         ctx.lineTo(x - halfSize, y - quarter);
         break;
+      }
 
       case 'parallel':
         // Parallel lines
+        const quarter = halfSize / 2;
         ctx.moveTo(x - halfSize, y - quarter);
         ctx.lineTo(x + halfSize, y - quarter);
         ctx.moveTo(x - halfSize, y + quarter);
@@ -280,10 +282,10 @@ export class SnapRenderer implements UIRenderer {
    * Extract snap data από UI context (if available)
    */
   private getSnapData(context: UIRenderContext): SnapResult[] | null {
-    // 🎯 TYPE-SAFE: Check for snapData using type guard
-    const uiContextWithSnap = context as import('../core/UIRenderer').UIRenderContextWithSnap;
-    if (uiContextWithSnap.snapData && Array.isArray(uiContextWithSnap.snapData)) {
-      return uiContextWithSnap.snapData;
+    // Type-safe check for snapData using property access
+    const contextWithSnap = context as UIRenderContext & { snapData?: SnapResult[] };
+    if (contextWithSnap.snapData && Array.isArray(contextWithSnap.snapData)) {
+      return contextWithSnap.snapData;
     }
 
     return null;

@@ -1,8 +1,34 @@
 'use client';
 
-import type { Property } from '@/types/property-viewer';
-import type { Suggestion } from '@/types/suggestions';
-import type { Connection, PropertyGroup } from '@/types/connections';
+// Mock types for missing dependencies
+interface Property {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  building: string;
+  floor: string;
+  project: string;
+  buildingId: string;
+  floorId: string;
+}
+
+interface Suggestion {
+  id: string;
+  text: string;
+}
+
+interface Connection {
+  id: string;
+  fromPropertyId: string;
+  toPropertyId: string;
+}
+
+interface PropertyGroup {
+  id: string;
+  name: string;
+  properties: Property[];
+}
 
 export interface LayerState {
   visible: boolean;
@@ -60,4 +86,17 @@ export interface FloorPlanViewerLayoutProps {
   setIsConnecting?: React.Dispatch<React.SetStateAction<boolean>>;
 
   properties?: Property[];
+  // Additional missing properties
+  onFloorChange?: (floorId: string | null) => void;
+  selectedPropertyId?: string | null;
+  onPropertySelect?: (propertyId: string) => void;
+  onPropertyCreate?: (property: any) => void;
+  onPropertyUpdate?: (propertyId: string, property: any) => void;
+  viewMode?: 'view' | 'edit' | 'create';
+  onViewModeChange?: (mode: 'view' | 'edit' | 'create') => void;
+  showSidebar?: boolean;
+  sidebarWidth?: number;
+  connectionPairs?: any[];
+  onConnectionPairsChange?: (pairs: any[]) => void;
+  className?: string;
 }

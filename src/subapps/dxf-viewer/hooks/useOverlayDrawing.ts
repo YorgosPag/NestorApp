@@ -10,15 +10,22 @@ import { calculateDistance } from '../rendering/entities/shared/geometry-renderi
 import { SNAP_TOLERANCE, MIN_POLY_POINTS } from '../overlays/types';
 import type { OverlayEditorMode, OverlayKind, Status, Overlay, CreateOverlayData, UpdateOverlayData } from '../overlays/types';
 import type { Point2D } from '../rendering/types/Types';
-import type { SceneModel } from '../types/scene';
+import type { SceneModel } from '../types/entities';
+// ✅ ENTERPRISE FIX: Remove non-existent import
+// TODO: Implement proper property status system if needed
 
 // Status labels in English for Firestore
-const STATUS_ENGLISH_LABELS: Record<Status, string> = {
+const STATUS_ENGLISH_LABELS: Record<Status, string> = { // ✅ ENTERPRISE FIX: Complete Status type mapping
   'for-sale': 'For Sale',
   'for-rent': 'For Rent',
   'reserved': 'Reserved',
   'sold': 'Sold',
-  'landowner': 'Landowner'
+  'landowner': 'Landowner',
+  'rented': 'Rented',
+  'under-negotiation': 'Under Negotiation',
+  'coming-soon': 'Coming Soon',
+  'off-market': 'Off Market',
+  'unavailable': 'Unavailable'
 };
 
 interface UseOverlayDrawingConfig {
@@ -62,9 +69,7 @@ export const useOverlayDrawing = ({
 
   // Snap manager
   const snapManager = useSnapManager(overlayCanvasRef, {
-    enabled: true,
-    tolerance: SNAP_TOLERANCE,
-    onSnapUpdate: (point: {x: number, y: number} | null) => {
+    onSnapPoint: (point: {x: number, y: number} | null) => {
       setSnapPoint(point);
     }
   });
@@ -100,7 +105,8 @@ export const useOverlayDrawing = ({
       return;
     }
 
-    if (!levelManager.currentLevelId) {
+    const currentLevel = levelManager?.getCurrentLevel();
+    if (!currentLevel?.id) {
       console.warn('[useOverlayDrawing] No current level selected for overlay');
       return;
     }
@@ -110,8 +116,8 @@ export const useOverlayDrawing = ({
       // Save as: [[x1,y1], [x2,y2], ...] NOT flat format
 
       // Save overlay to Firestore
-      const overlayId = await overlayStore.add({
-        levelId: levelManager.currentLevelId,
+      const overlayId = await overlayStore?.add({
+        levelId: currentLevel.id,
         kind: overlayKind,
         polygon: draftPolygon, // ✅ Keep nested format
         status: overlayStatus,
@@ -121,18 +127,19 @@ export const useOverlayDrawing = ({
 
       // Clear draft and auto-select new overlay
       setDraftPolygon([]);
-      overlayStore.setSelectedOverlay(overlayId);
+      overlayStore?.setSelectedOverlay(overlayId);
 
       // Keep drawing mode active for continuous drawing
     } catch (error) {
       console.error('Error creating overlay:', error);
     }
-  }, [draftPolygon, overlayStore, levelManager.currentLevelId, overlayKind, overlayStatus]);
+  }, [draftPolygon, overlayStore, levelManager, overlayKind, overlayStatus]);
 
   // Handle vertex drag for overlay editing
   const handleVertexDrag = useCallback((overlayId: string, vertexIndex: number, newPoint: Point2D) => {
     // ✅ ENTERPRISE FIX: Find overlay by level (overlayStore interface doesn't have overlays property)
-    const overlay = overlayStore?.getByLevel(levelManager.currentLevelId || '')?.find(o => o.id === overlayId);
+    const currentLevel = levelManager?.getCurrentLevel();
+    const overlay = overlayStore?.getByLevel(currentLevel?.id || '')?.find(o => o.id === overlayId);
     if (!overlay) return;
 
     // overlay.polygon can be flat [x1,y1,...] or nested [[x,y],...]
@@ -143,20 +150,21 @@ export const useOverlayDrawing = ({
     // ✅ ENTERPRISE: Explicit tuple type for Point2D coordinates
     const newNested = nested.map((v, i) => i === vertexIndex ? [newPoint.x, newPoint.y] as [number, number] : v);
 
-    overlayStore.update(overlayId, { polygon: newNested as [number, number][] }); // ✅ Save in nested format
+    overlayStore?.update(overlayId, { polygon: newNested as [number, number][] }); // ✅ Save in nested format
   }, [overlayStore]);
 
   // Handle entire region drag & drop (for moving whole polygons)
   const handleRegionUpdate = useCallback((regionId: string, updates: { vertices?: Point2D[] }) => {
     // ✅ ENTERPRISE FIX: Find overlay by level (overlayStore interface doesn't have overlays property)
-    const overlay = overlayStore?.getByLevel(levelManager.currentLevelId || '')?.find(o => o.id === regionId);
+    const currentLevel = levelManager?.getCurrentLevel();
+    const overlay = overlayStore?.getByLevel(currentLevel?.id || '')?.find(o => o.id === regionId);
     if (!overlay || !updates.vertices) return;
 
     // Convert Point2D[] to nested number[][] format for renderer compatibility
     // ✅ ENTERPRISE: Explicit tuple type for Point2D coordinates
     const nested = updates.vertices.map(v => [v.x, v.y] as [number, number]);
 
-    overlayStore.update(regionId, { polygon: nested });
+    overlayStore?.update(regionId, { polygon: nested });
   }, [overlayStore]);
 
   // Mouse move handler for snap functionality

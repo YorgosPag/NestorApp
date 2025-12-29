@@ -12,6 +12,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { ToolbarSection } from './ToolbarSection';
 import { CanvasSection } from './CanvasSection';
+import type { OverlayEditorMode, OverlayKind } from '../../overlays/types';
+import type { PropertyStatus } from '../../../../constants/property-statuses-enterprise';
 
 /**
  * Renders the DXF viewer in a fullscreen, immersive layout.
@@ -24,11 +26,11 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
   <div className={`fixed inset-0 z-50 ${colors.bg.accent} flex flex-col`}>
     <ToolbarSection
       {...props}
-      overlayMode={"select" as any}
+      overlayMode={"draw" as OverlayEditorMode}
       setOverlayMode={() => {}}
-      currentStatus={"ready" as any}
+      currentStatus={"for-sale" as PropertyStatus}
       setCurrentStatus={() => {}}
-      currentKind={"measurement" as any}
+      currentKind={"unit" as OverlayKind}
       setCurrentKind={() => {}}
     />
     <div className={`flex justify-between items-center p-2 ${colors.bg.secondary} ${getDirectionalBorder('muted', 'bottom')}`}>
@@ -59,7 +61,7 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
             status="company"
             customLabel={`✅ DXF Active (${props.currentScene.entities.length} entities)`}
             variant="secondary"
-            className={`${colors.bg.success} ${colors.text.inverted}`}
+            className={`${colors.bg.primary} ${colors.text.inverted}`}
           />
         )}
         
@@ -68,7 +70,7 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
             status="company"
             customLabel={`🔺 Selected: ${props.selectedEntityIds.length}`}
             variant="secondary"
-            className={`${colors.bg.info} ${colors.text.inverted}`}
+            className={`${colors.bg.secondary} ${colors.text.inverted}`}
           />
         )}
         
@@ -78,9 +80,9 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
     <div className="flex-1 flex overflow-hidden">
        <CanvasSection
           {...props}
-          overlayMode={"select" as any}
-          currentStatus={"ready" as any}
-          currentKind={"measurement" as any}
+          overlayMode="draw"
+          currentStatus="for-sale"
+          currentKind="unit"
         />
     </div>
   </div>

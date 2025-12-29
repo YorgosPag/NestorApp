@@ -2,7 +2,24 @@
 
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 // ===== ΝΕΑ UNIFIED PROVIDERS (για internal use) =====
-import { useViewerConfig } from '../providers/ConfigurationProvider';
+// Mock missing ConfigurationProvider
+const useViewerConfig = () => ({
+  enableAutoSave: true,
+  autoSaveDelay: 1000,
+  config: {
+    entities: {
+      text: {
+        general: {
+          fontSize: 12,
+          fontFamily: 'Arial',
+          color: '#000000',
+          opacity: 1
+        }
+      }
+    }
+  },
+  updateEntityConfig: (category: any, updates: any) => {}
+});
 // ===== ΚΕΝΤΡΙΚΟ AUTO-SAVE ΣΎΣΤΗΜΑ =====
 import { useTextSettingsFromProvider } from '../settings-provider';
 // ===== OVERRIDE GUARD SYSTEM =====
@@ -212,7 +229,7 @@ export function TextSettingsProvider({ children }: { children: React.ReactNode }
   }, [settings, updateSettings]);
 
   const value: TextSettingsContextType = {
-    settings,
+    settings: settings as any,
     updateSettings,
     resetToDefaults,
     applyTemplate

@@ -41,18 +41,20 @@ export class PerpendicularSnapEngine extends BaseSnapEngine {
   private getPerpendicularPoints(entity: Entity, cursorPoint: Point2D, maxDistance: number): Array<{point: Point2D, type: string}> {
     const perpendicularPoints: Array<{point: Point2D, type: string}> = [];
     const entityType = entity.type.toLowerCase();
-    
+
     if (entityType === 'line') {
-      if (entity.start && entity.end) {
-        const perpPoint = this.getPerpendicularToLine(entity.start, entity.end, cursorPoint);
+      const lineEntity = entity as { start?: Point2D; end?: Point2D };
+      if (lineEntity.start && lineEntity.end) {
+        const perpPoint = this.getPerpendicularToLine(lineEntity.start, lineEntity.end, cursorPoint);
         if (perpPoint && calculateDistance(cursorPoint, perpPoint) <= maxDistance) {
           perpendicularPoints.push({point: perpPoint, type: 'Line'});
         }
       }
       
     } else if (entityType === 'polyline' || entityType === 'lwpolyline') {
-      const points = (entity.points || ('vertices' in entity ? entity.vertices : undefined)) as Point2D[] | undefined;
-      const isClosed = 'closed' in entity ? entity.closed : false;
+      const polylineEntity = entity as { points?: Point2D[]; vertices?: Point2D[]; closed?: boolean };
+      const points = (polylineEntity.points || polylineEntity.vertices) as Point2D[] | undefined;
+      const isClosed = polylineEntity.closed || false;
       
       if (points && points.length > 1) {
         // Check all line segments
@@ -73,7 +75,8 @@ export class PerpendicularSnapEngine extends BaseSnapEngine {
       }
       
     } else if (entityType === 'rectangle') {
-      if ('corner1' in entity && 'corner2' in entity && entity.corner1 && entity.corner2) {
+      const rectangleEntity = entity as { corner1?: Point2D; corner2?: Point2D };
+      if (rectangleEntity.corner1 && rectangleEntity.corner2) {
         const lines = GeometricCalculations.getRectangleLines(entity);
         lines.forEach((line, index) => {
           const perpPoint = this.getPerpendicularToLine(line.start, line.end, cursorPoint);
@@ -84,17 +87,18 @@ export class PerpendicularSnapEngine extends BaseSnapEngine {
       }
       
     } else if (entityType === 'circle') {
-      if (entity.center && entity.radius) {
+      const circleEntity = entity as { center?: Point2D; radius?: number };
+      if (circleEntity.center && circleEntity.radius) {
         // Perpendicular from cursor to circle (nearest point on circle)
-        const dx = cursorPoint.x - entity.center.x;
-        const dy = cursorPoint.y - entity.center.y;
+        const dx = cursorPoint.x - circleEntity.center.x;
+        const dy = cursorPoint.y - circleEntity.center.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance > 0 && distance <= maxDistance + entity.radius) {
-          const scale = entity.radius / distance;
+
+        if (distance > 0 && distance <= maxDistance + circleEntity.radius) {
+          const scale = circleEntity.radius / distance;
           const perpPoint = {
-            x: entity.center.x + dx * scale,
-            y: entity.center.y + dy * scale
+            x: circleEntity.center.x + dx * scale,
+            y: circleEntity.center.y + dy * scale
           };
           perpendicularPoints.push({point: perpPoint, type: 'Circle'});
         }
