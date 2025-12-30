@@ -1,7 +1,8 @@
 import React from 'react';
-import { LineSettings } from '../dxf-settings/settings/core/LineSettings';
-import { TextSettings } from '../dxf-settings/settings/core/TextSettings';
-import { GripSettings } from '../dxf-settings/settings/core/GripSettings';
+import type { LineSettings, TextSettings, GripSettings } from '../../../settings-core/types';
+import { LineSettings as LineSettingsComponent } from '../dxf-settings/settings/core/LineSettings';
+import { TextSettings as TextSettingsComponent } from '../dxf-settings/settings/core/TextSettings';
+import { GripSettings as GripSettingsComponent } from '../dxf-settings/settings/core/GripSettings';
 import { LinePreview } from '../dxf-settings/settings/shared/LinePreview';
 import { CurrentSettingsDisplay } from '../dxf-settings/settings/shared/CurrentSettingsDisplay';
 import { OverrideToggle } from './OverrideToggle';
@@ -28,9 +29,9 @@ interface SubTabRendererProps {
   onSubTabChange: (subTab: string | null) => void;
 
   // Settings και contexts
-  lineSettings: Record<string, unknown>;
-  textSettings: Record<string, unknown>;
-  gripSettings: Record<string, unknown>;
+  lineSettings: LineSettings;
+  textSettings: TextSettings;
+  gripSettings: GripSettings;
 
   // 🔧 ΝΕΟ: Context type για isolation
   contextType?: 'preview' | 'completion';
@@ -186,7 +187,7 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
                 </span>
               </div>
             )}
-            <LineSettings contextType={contextType} />
+            <LineSettingsComponent contextType={contextType} />
           </div>
         </div>
       )}
@@ -208,7 +209,7 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
             <div className="text-sm text-white font-medium">
               Ρυθμίσεις Κειμένου {config.label}
             </div>
-            <TextSettings />
+            <TextSettingsComponent />
           </div>
         </div>
       )}
@@ -228,7 +229,7 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
             />
           )}
 
-          <GripSettings />
+          <GripSettingsComponent />
         </div>
       )}
     </div>

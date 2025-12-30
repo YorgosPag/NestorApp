@@ -9,8 +9,26 @@
 
 import { adminBoundariesAnalytics } from '../performance/AdminBoundariesPerformanceAnalytics';
 import { adminBoundariesCache } from '../cache/AdminBoundariesCacheManager';
+// ✅ ENTERPRISE FIX: Define GeoJSON types locally to avoid module dependency
+interface Geometry {
+  type: string;
+  coordinates?: any;
+}
+
+interface Feature {
+  type: 'Feature';
+  properties: Record<string, any> | null;
+  geometry: Geometry | null;
+}
+
+interface FeatureCollection {
+  type: 'FeatureCollection';
+  features: Feature[];
+}
+
+// ✅ ENTERPRISE FIX: Import GreekAdminLevel as value
+import { GreekAdminLevel } from '../../types/administrative-types';
 import type {
-  GreekAdminLevel,
   OverpassAdminResponse,
   OverpassQueryConfig,
   BoundingBox,
@@ -418,7 +436,7 @@ export class OverpassApiService {
   /**
    * Get municipality boundary by name
    */
-  async getMunicipalityBoundary(municipalityName: string): Promise<GeoJSON.Feature | null> {
+  async getMunicipalityBoundary(municipalityName: string): Promise<Feature | null> {
     try {
       console.log(`🏛️ Fetching municipality boundary: ${municipalityName}`);
 
@@ -436,7 +454,7 @@ export class OverpassApiService {
   /**
    * Get region boundary by name
    */
-  async getRegionBoundary(regionName: string): Promise<GeoJSON.Feature | null> {
+  async getRegionBoundary(regionName: string): Promise<Feature | null> {
     try {
       console.log(`🗺️ Fetching region boundary: ${regionName}`);
 
@@ -454,7 +472,7 @@ export class OverpassApiService {
   /**
    * Get all municipalities σε specific region
    */
-  async getMunicipalitiesInRegion(regionName: string): Promise<GeoJSON.FeatureCollection | null> {
+  async getMunicipalitiesInRegion(regionName: string): Promise<FeatureCollection | null> {
     try {
       console.log(`🏛️ Fetching municipalities in region: ${regionName}`);
 
@@ -493,7 +511,7 @@ export class OverpassApiService {
   /**
    * Get postal code boundary by 5-digit postal code
    */
-  async getPostalCodeBoundary(postalCode: string): Promise<GeoJSON.Feature | null> {
+  async getPostalCodeBoundary(postalCode: string): Promise<Feature | null> {
     try {
       console.log(`📮 Fetching postal code boundary: ${postalCode}`);
 
@@ -511,7 +529,7 @@ export class OverpassApiService {
   /**
    * Get all postal codes σε specific municipality
    */
-  async getPostalCodesInMunicipality(municipalityName: string): Promise<GeoJSON.FeatureCollection | null> {
+  async getPostalCodesInMunicipality(municipalityName: string): Promise<FeatureCollection | null> {
     try {
       console.log(`📮 Fetching postal codes in municipality: ${municipalityName}`);
 
@@ -547,7 +565,7 @@ export class OverpassApiService {
   /**
    * Get postal codes in geographic bounding box
    */
-  async getPostalCodesInBounds(bounds: BoundingBox): Promise<GeoJSON.FeatureCollection | null> {
+  async getPostalCodesInBounds(bounds: BoundingBox): Promise<FeatureCollection | null> {
     try {
       console.log(`📮 Fetching postal codes in bounds:`, bounds);
 
@@ -569,7 +587,7 @@ export class OverpassApiService {
   /**
    * Convert Overpass response to GeoJSON Feature
    */
-  private convertToGeoJSON(response: OverpassAdminResponse, name: string): GeoJSON.Feature | null {
+  private convertToGeoJSON(response: OverpassAdminResponse, name: string): Feature | null {
     if (!response.elements || response.elements.length === 0) {
       console.warn('No boundary data found for:', name);
       return null;
@@ -615,12 +633,12 @@ export class OverpassApiService {
   /**
    * Convert Overpass response to GeoJSON FeatureCollection
    */
-  private convertToFeatureCollection(response: OverpassAdminResponse): GeoJSON.FeatureCollection | null {
+  private convertToFeatureCollection(response: OverpassAdminResponse): FeatureCollection | null {
     if (!response.elements || response.elements.length === 0) {
       return null;
     }
 
-    const features: GeoJSON.Feature[] = [];
+    const features: Feature[] = [];
 
     for (const element of response.elements) {
       if (element.geometry && element.geometry.length > 0) {
@@ -635,7 +653,7 @@ export class OverpassApiService {
           }
         }
 
-        const feature: GeoJSON.Feature = {
+        const feature: Feature = {
           type: 'Feature',
           properties: {
             id: element.id.toString(),

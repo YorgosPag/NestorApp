@@ -2,7 +2,7 @@
  * Angle MeasureGeom Icon - Μετρητής MEASUREGEOM (χωρίς διάσταση)
  */
 
-import React from 'react';
+import * as React from 'react';
 import { AngleIconBase } from './shared/AngleIconBase';
 
 interface AngleMeasureGeomIconProps {

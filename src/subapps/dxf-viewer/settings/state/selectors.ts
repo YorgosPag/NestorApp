@@ -7,7 +7,7 @@
  *  - State Management
  */
 
-import type { SettingsState, ViewerMode, EntityType, LineSettings, TextSettings, GripSettings } from '../core/types';
+import type { SettingsState, ViewerMode, EntityType, LineSettings, TextSettings, GripSettings, OverrideFlags, StorageMode } from '../core/types';
 import { computeEffective } from '../core/computeEffective';
 
 // ============================================================================
@@ -61,7 +61,9 @@ export function selectIsOverrideEnabled(
   entity: EntityType,
   mode: ViewerMode
 ): boolean {
-  return state.overrideEnabled[entity][mode];
+  // Map ViewerMode to StorageMode (preview -> draft)
+  const storageMode: StorageMode = mode === 'preview' ? 'draft' : mode as StorageMode;
+  return state.overrideEnabled[entity][storageMode];
 }
 
 /**

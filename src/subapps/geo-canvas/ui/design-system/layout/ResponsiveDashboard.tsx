@@ -9,7 +9,7 @@
 import React, { useState, useEffect, useCallback, ReactNode } from 'react';
 import { useTheme, useBreakpoint } from '../theme/ThemeProvider';
 // Enterprise Canvas UI Migration - Phase B
-import { canvasUI } from '@/styles/design-tokens/canvas';
+import { canvasUI } from '../../../../../styles/design-tokens/canvas';
 
 // ============================================================================
 // LAYOUT TYPES

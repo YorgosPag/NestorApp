@@ -1,8 +1,9 @@
 
 'use client';
 
-import React from 'react';
-import type { DXFEntity, Layer, ToolType, ViewMode, Status, Point, Measurement } from '../types';
+import React, { Dispatch, SetStateAction } from 'react';
+import type { DXFEntity, Layer, ViewMode, Status, Point, Measurement } from '../types';
+import type { ToolType } from '../ui/toolbar/types';
 import type { DrawingState } from '../hooks/drawing/useUnifiedDrawing';
 import type { useDxfViewerState } from '../hooks/useDxfViewerState';
 import type { SceneModel } from '../types/scene';
@@ -11,7 +12,16 @@ import type { OverlayEditorMode, OverlayKind, Status as PropertyStatus } from '.
 
 export type DxfViewerState = ReturnType<typeof useDxfViewerState>;
 
-export interface DXFViewerLayoutProps extends DxfViewerState {
+export interface DXFViewerLayoutProps extends Omit<DxfViewerState, 'snapEnabled' | 'handleCalibrationToggle' | 'setSelectedEntityIds'> {
+  // ✅ ENTERPRISE FIX: Override snapEnabled to ensure boolean type
+  snapEnabled: boolean;
+
+  // ✅ FIX: Override setSelectedEntityIds with proper React Dispatch type (matches useState return)
+  setSelectedEntityIds: Dispatch<SetStateAction<string[]>>;
+
+  // ✅ FIX: Add missing setOverlayKind property
+  setOverlayKind: (kind: OverlayKind) => void;
+
   // DXFViewerApp specific props
   dxfFile: File | null;
   status: Status;
@@ -26,6 +36,7 @@ export interface DXFViewerLayoutProps extends DxfViewerState {
   currentKind?: OverlayKind;
   setCurrentKind?: (kind: OverlayKind) => void;
   overlayMode?: OverlayEditorMode;
+  overlayStatus?: PropertyStatus;
   setOverlayMode?: (mode: OverlayEditorMode) => void;
 
   // Props from useDxfViewerState that need to be passed down
@@ -35,9 +46,8 @@ export interface DXFViewerLayoutProps extends DxfViewerState {
   scene: SceneModel;
   handleTransformChange: (transform: ViewTransform) => void;
   handleSceneChange: (scene: SceneModel) => void;
-  handleCalibrationToggle: (show: boolean) => void;
+  handleCalibrationToggle: () => void;
   canvasTransform?: { scale: number; offsetX: number; offsetY: number };
-  setSelectedEntityIds: (ids: string[]) => void;
   onSceneImported?: (file: File, encoding?: string) => void;
   handleFileImport: (file: File) => Promise<void>;
 
@@ -51,5 +61,4 @@ export interface DXFViewerLayoutProps extends DxfViewerState {
   onRegionClick?: (regionId: string) => void;
   onMouseMove?: (worldPoint: Point2D, event: React.MouseEvent) => void;
   setOverlayStatus?: (status: PropertyStatus) => void;
-  snapEnabled?: boolean;
 }

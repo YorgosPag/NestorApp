@@ -4,7 +4,9 @@
  */
 
 import type { Point2D } from '../../types/Types';
-import type { EntityModel, AngleMeasurementEntity } from '../../types/Types';
+// ✅ ENTERPRISE FIX: Import AngleMeasurementEntity from entities
+import type { AngleMeasurementEntity } from '../../../types/entities';
+import type { EntityModel } from '../../types/Types';
 import { UI_COLORS } from '../../../config/color-config';
 import { renderStyledText } from '../../../hooks/useTextPreviewStyle';
 
@@ -100,7 +102,8 @@ export function getPerpendicularDirection(from: Point2D, to: Point2D, normalize 
  * Check if entity should be rendered with specific styling
  */
 export function shouldApplySpecialRendering(entity: EntityModel, renderMode: string): boolean {
-  return (renderMode in entity && (entity as Record<string, unknown>)[renderMode] === true);
+  // ✅ ENTERPRISE FIX: Safe property access with type guard
+  return (renderMode in entity && (entity as unknown as Record<string, unknown>)[renderMode] === true);
 }
 
 /**

@@ -8,7 +8,7 @@ import React, { useMemo } from 'react';
 import type { LineSettings } from '../../../../settings-core/types';
 import { getDashArray } from '../../../../settings-core/defaults';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { UI_COLORS } from '../../../../../config/color-config';
+import { UI_COLORS } from '../../../../config/color-config';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface LinePreviewControlProps {

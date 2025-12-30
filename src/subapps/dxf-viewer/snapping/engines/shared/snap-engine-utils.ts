@@ -7,8 +7,8 @@
 const DEBUG_SNAP_ENGINE_UTILS = false;
 
 import type { Point2D } from '../../../rendering/types/Types';
-import type { SnapCandidate, SnapConfig } from '../../types';
-import type { Entity } from '../../../types/entities';
+import type { SnapCandidate, SnapConfig } from '../../extended-types';
+import type { Entity, RectangleEntity } from '../../../types/entities';
 import { GeometricCalculations } from '../../shared/GeometricCalculations';
 
 // Legacy rectangle entity with corner1/corner2 properties
@@ -30,14 +30,16 @@ interface SnapContext {
 export function createSnapCandidate(
   point: Point2D,
   config: SnapConfig,
-  sourceEntity?: Entity
+  sourceEntity?: Entity,
+  distance = 0
 ): SnapCandidate {
   return {
-    position: point,
+    point: point,
     type: config.snapType,
     description: config.displayName,
-    entityId: sourceEntity?.id,
-    priority: config.priority || 0
+    distance: distance,
+    priority: config.priority || 0,
+    entityId: sourceEntity?.id
   };
 }
 
@@ -134,12 +136,12 @@ export function sortCandidatesByDistance(
 ): SnapCandidate[] {
   return candidates.sort((a, b) => {
     const distA = Math.sqrt(
-      (a.position.x - cursorPosition.x) ** 2 + 
-      (a.position.y - cursorPosition.y) ** 2
+      (a.point.x - cursorPosition.x) ** 2 +
+      (a.point.y - cursorPosition.y) ** 2
     );
     const distB = Math.sqrt(
-      (b.position.x - cursorPosition.x) ** 2 + 
-      (b.position.y - cursorPosition.y) ** 2
+      (b.point.x - cursorPosition.x) ** 2 +
+      (b.point.y - cursorPosition.y) ** 2
     );
     return distA - distB;
   });
@@ -149,7 +151,7 @@ export function sortCandidatesByDistance(
  * Shared rectangle corner logic for snap engines
  */
 export function processRectangleSnapping(
-  entity: LegacyRectangleEntity,
+  entity: LegacyRectangleEntity | RectangleEntity,
   pointProcessor: (corner: Point2D, index: number, type: string) => void
 ): void {
   if (entity.corner1 && entity.corner2) {

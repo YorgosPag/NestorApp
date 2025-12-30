@@ -23,7 +23,7 @@ export function useSettingsUpdater<T = Record<string, SettingsValue>>(config: Se
   const { updateSettings, validator, transformer } = config;
 
   // Helper για value transformation και validation
-  const processValue = useCallback((value: SettingsValue, key: string): SettingsValue => {
+  const processValue = useCallback((value: SettingsValue, key: string): SettingsValue | undefined => {
     let processedValue = transformer ? transformer(value, key) : value;
 
     if (validator && !validator(processedValue, key)) {
@@ -175,8 +175,8 @@ export const commonTransformers = {
 export const commonValidators = {
   // Number range validation
   numberRange: (min: number, max: number) => (value: SettingsValue) => {
-    const num = typeof value === 'string' ? parseFloat(value) : value;
-    return !isNaN(num) && num >= min && num <= max;
+    const num = typeof value === 'string' ? parseFloat(value) : (typeof value === 'number' ? value : NaN);
+    return typeof num === 'number' && !isNaN(num) && num >= min && num <= max;
   },
 
   // Hex color validation

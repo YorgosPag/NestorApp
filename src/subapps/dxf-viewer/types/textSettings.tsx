@@ -4,7 +4,7 @@
 export type {
   TextSettings,
   TextTemplate
-} from '../contexts/TextSettingsContext';
+} from '../contexts/TextSettingsContext.tsx';
 
 import { UI_COLORS } from '../config/color-config';
 

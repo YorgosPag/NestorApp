@@ -15,7 +15,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { TestsModal } from '../TestsModal'; // Adjust path to: './components/tests-modal/TestsModal'
+import { TestsModal } from '../../TestsModal'; // Corrected path to TestsModal
 import { useBorderTokens } from '@/hooks/useBorderTokens'; // Enterprise border system
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'; // Enterprise semantic colors
 
@@ -23,7 +23,6 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'; // En
 // npm install react-hot-toast
 import toast, { Toaster } from 'react-hot-toast';
 import { INTERACTIVE_PATTERNS, GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface TestResult {
   testId: string;

@@ -5,8 +5,8 @@ const DEBUG_FLOATING_PANEL_CONTAINER = false;
 
 import React, { useImperativeHandle, forwardRef } from 'react';
 import { useTranslationLazy } from '../../../i18n/hooks/useTranslationLazy';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useBorderTokens } from '../../../hooks/useBorderTokens';
+import { useSemanticColors } from '../../../ui-adapters/react/useSemanticColors';
 import { PanelTabs } from './components/PanelTabs';
 // REMOVED: PropertiesPanel - καρτέλα πλέον αφαιρέθηκε εντελώς
 import { useOverlayManager } from '../state/overlay-manager';
@@ -117,7 +117,9 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
     (window as Window & { _glog?: { t: number } })._glog ??= { t: 0 };
     if (now - ((window as Window & { _glog?: { t: number } })._glog?.t || 0) > 1000) {
 
-      if ((window as Window & { _glog?: { t: number } })._glog) (window as Window & { _glog: { t: number } })._glog.t = now;
+      if ((window as Window & { _glog?: { t: number } })._glog) {
+        ((window as unknown) as Window & { _glog: { t: number } })._glog.t = now;
+      }
     }
   }
 

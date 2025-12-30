@@ -4,7 +4,8 @@
  */
 
 import { BaseEntityRenderer } from './BaseEntityRenderer';
-import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
+import type { EntityModel, RenderOptions } from '../types/Types';
+import type { GripInfo } from '../types/Types';
 import type { Point2D } from '../types/Types';
 import { pointToLineDistance } from './shared/geometry-utils';
 import { extractAngleMeasurementPoints } from './shared';
@@ -128,36 +129,50 @@ export class AngleMeasurementRenderer extends BaseEntityRenderer {
 
   getGrips(entity: EntityModel): GripInfo[] {
     if (entity.type !== 'angle-measurement') return [];
-    
+
     const angleMeasurement = extractAngleMeasurementPoints(entity);
     if (!angleMeasurement) return [];
-    
+
     const { vertex, point1, point2 } = angleMeasurement;
-    
+
     return [
       {
+        id: `${entity.id}-vertex`,
         entityId: entity.id,
-        gripType: 'center',
-        gripIndex: 0,
+        type: 'center',
         position: vertex,
-        state: 'cold'
+        isVisible: true
       },
       {
+        id: `${entity.id}-point1`,
         entityId: entity.id,
-        gripType: 'vertex',
-        gripIndex: 1,
+        type: 'vertex',
         position: point1,
-        state: 'cold'
+        isVisible: true
       },
       {
+        id: `${entity.id}-point2`,
         entityId: entity.id,
-        gripType: 'vertex',
-        gripIndex: 2,
+        type: 'vertex',
         position: point2,
-        state: 'cold'
+        isVisible: true
       }
     ];
   }
 
+  hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
+    if (entity.type !== 'angle-measurement') return false;
+
+    const angleMeasurement = extractAngleMeasurementPoints(entity);
+    if (!angleMeasurement) return false;
+
+    // Simple tolerance-based hit testing για angle measurement
+    const { vertex, point1, point2 } = angleMeasurement;
+    const distance1 = Math.sqrt(Math.pow(point.x - vertex.x, 2) + Math.pow(point.y - vertex.y, 2));
+    const distance2 = Math.sqrt(Math.pow(point.x - point1.x, 2) + Math.pow(point.y - point1.y, 2));
+    const distance3 = Math.sqrt(Math.pow(point.x - point2.x, 2) + Math.pow(point.y - point2.y, 2));
+
+    return distance1 <= tolerance || distance2 <= tolerance || distance3 <= tolerance;
+  }
 
 }

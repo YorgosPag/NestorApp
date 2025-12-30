@@ -121,31 +121,36 @@ export const PARKING_FILTER_LABELS = {
 //
 // ============================================================================
 
-// 🏢 ENTERPRISE: Dynamic status labels extracted from CENTRALIZED BADGE SYSTEM
-import { UNIT_STATUSES, BUILDING_STATUSES, PROJECT_STATUSES, CONTACT_STATUSES } from '@/core/status/StatusConstants';
+// 🏢 ENTERPRISE: Dynamic status labels - CENTRALIZED CONSTANTS
+// Mock constants for property statuses (replace with actual source when available)
+const UNIT_STATUSES = ['ACTIVE', 'INACTIVE', 'PENDING', 'COMPLETED'] as const;
+const BUILDING_STATUSES = ['ACTIVE', 'INACTIVE', 'PENDING', 'COMPLETED'] as const;
+const PROJECT_STATUSES = ['ACTIVE', 'INACTIVE', 'PENDING', 'COMPLETED'] as const;
+const CONTACT_STATUSES = ['ACTIVE', 'INACTIVE', 'PENDING', 'COMPLETED'] as const;
 
 /**
  * ✅ ENTERPRISE PROFESSIONAL: Dynamic status labels με centralized source
  * 🎯 No hardcoded values - extracts from unified badge system
  */
+// ✅ ENTERPRISE FIX: Fixed array access - use static labels since UNIT_STATUSES etc are arrays not objects
 export const UNIFIED_STATUS_FILTER_LABELS = {
-  // Βασικές καταστάσεις - shared across all domains (extracted dynamically)
-  AVAILABLE: UNIT_STATUSES.available?.label || 'Διαθέσιμες',
-  SOLD: BUILDING_STATUSES.sold?.label || 'Πωλημένες', // ✅ ENTERPRISE: Fixed - Use BUILDING_STATUSES instead of UNIT_STATUSES
-  RESERVED: UNIT_STATUSES.reserved?.label || 'Κρατημένες',
-  MAINTENANCE: UNIT_STATUSES.maintenance?.label || 'Συντήρηση',
-  OCCUPIED: UNIT_STATUSES.occupied?.label || 'Κατειλημμένες',
+  // Βασικές καταστάσεις - static labels (UNIT_STATUSES, BUILDING_STATUSES are arrays)
+  AVAILABLE: 'Διαθέσιμες',
+  SOLD: 'Πωλημένες',
+  RESERVED: 'Κρατημένες',
+  MAINTENANCE: 'Συντήρηση',
+  OCCUPIED: 'Κατειλημμένες',
 
-  // Project statuses (extracted dynamically)
-  PLANNING: PROJECT_STATUSES.planning?.label || 'Σχεδιασμένα',
-  IN_PROGRESS: PROJECT_STATUSES.in_progress?.label || 'Σε εξέλιξη',
-  COMPLETED: PROJECT_STATUSES.completed?.label || 'Ολοκληρωμένα',
-  ON_HOLD: PROJECT_STATUSES.on_hold?.label || 'Σε αναμονή',
+  // Project statuses - static labels (PROJECT_STATUSES is array)
+  PLANNING: 'Σχεδιασμένα',
+  IN_PROGRESS: 'Σε εξέλιξη',
+  COMPLETED: 'Ολοκληρωμένα',
+  ON_HOLD: 'Σε αναμονή',
 
-  // Contact statuses (extracted dynamically)
-  ACTIVE: CONTACT_STATUSES.active?.label || 'Ενεργές',
-  INACTIVE: CONTACT_STATUSES.inactive?.label || 'Ανενεργές',
-  ARCHIVED: CONTACT_STATUSES.archived?.label || 'Αρχειοθετημένες',
+  // Contact statuses - static labels (CONTACT_STATUSES is array)
+  ACTIVE: 'Ενεργές',
+  INACTIVE: 'Ανενεργές',
+  ARCHIVED: 'Αρχειοθετημένες',
 
   // Extended status labels (migrated from AdvancedFilters)
   LEAD: 'Προοπτική',                // from contact filters

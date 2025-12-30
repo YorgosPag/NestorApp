@@ -6,7 +6,9 @@
  * για rendering, computation, network, και user interaction performance.
  */
 
-import { performance, PerformanceObserver } from 'perf_hooks';
+// Use browser Performance API instead of Node.js perf_hooks
+declare const performance: Performance;
+declare const PerformanceObserver: typeof window.PerformanceObserver;
 import { GEO_COLORS } from '../config/color-config';
 
 // ============================================================================

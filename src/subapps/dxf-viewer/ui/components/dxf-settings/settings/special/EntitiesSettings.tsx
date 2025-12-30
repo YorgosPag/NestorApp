@@ -3,9 +3,9 @@ import { ACI_PALETTE } from '../../../../../settings/standards/aci';
 import { UI_COLORS } from '../../../../../config/color-config';
 import { Minus, Square, Pen, Hexagon, Ruler, Triangle } from 'lucide-react';
 import { CircleRadiusIcon } from '../../../../toolbar/icons/CircleIcon';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useIconSizes } from '../../../../../../../hooks/useIconSizes';
+import { useBorderTokens } from '../../../../../../../hooks/useBorderTokens';
+import { useSemanticColors } from '../../../../../../../ui-adapters/react/useSemanticColors';
 // ✅ ΝΕΑ UNIFIED HOOKS - ΑΝΤΙΚΑΤΑΣΤΑΣΗ ΤΩΝ ΠΑΛΙΩΝ SPECIFIC CONTEXTS
 import {
   useUnifiedLineCompletion,
@@ -36,11 +36,11 @@ import {
   DXF_SETTINGS_OVERRIDE_LABELS,
   DXF_DRAWING_SIMPLE_LABELS,
   DXF_MEASUREMENT_SIMPLE_LABELS
-} from '@/constants/property-statuses-enterprise';
+} from '../../../../../../../constants/property-statuses-enterprise';
 import { updateDraftSettingsStore } from '../../../../../hooks/useLinePreviewStyle';
 import { updateDraftTextSettingsStore } from '../../../../../hooks/useTextPreviewStyle';
 import { updateDraftGripSettingsStore } from '../../../../../hooks/useGripPreviewStyle';
-import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { INTERACTIVE_PATTERNS } from '../../../../../../../components/ui/effects';
 
 // Default grip settings for LinePreview
 const DEFAULT_GRIP_SETTINGS = {
@@ -228,7 +228,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
   // προωθούνται στις ειδικές ρυθμίσεις για άμεση ενημέρωση
   useEffect(() => {
     if (specificTextSettings.overrideGlobalSettings && globalTextSettings?.settings) {
-      updateTextSettings(globalTextSettings.settings as any); // ✅ ENTERPRISE FIX: Type assertion for updateTextSettings
+      updateTextSettings(globalTextSettings.settings);
     }
   }, [globalTextSettings?.settings, specificTextSettings.overrideGlobalSettings, updateTextSettings]);
 
@@ -339,7 +339,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                     }
                   `}
                 >
-                  <tool.icon size={16} />
+                  {React.createElement(tool.icon as React.ComponentType<{ size: number }>, { size: 16 })}
                 </button>
               );
             }
@@ -358,7 +358,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                     }
                   `}
                 >
-                  <tool.icon size={14} />
+                  {React.createElement(tool.icon as React.ComponentType<{ size: number }>, { size: 14 })}
                 </button>
                 <button
                   className={`
@@ -418,7 +418,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
               type: 'draft',
               label: DXF_SETTINGS_TAB_LABELS.DRAFT,
               color: 'blue-500',
-              badgeColor: `${colors.bg.primary}` // ✅ ENTERPRISE FIX: Template literal syntax
+              badgeColor: colors.bg.primary
             }}
             activeTab={activeLineTab}
             activeSubTab={activeDraftSubTab}
@@ -431,20 +431,20 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
             overrideSettings={{
               line: {
                 checked: draftSettings.overrideGlobalSettings || false,
-                onChange: (checked) => updateDraftSettings({ overrideGlobalSettings: checked } as any), // ✅ ENTERPRISE FIX: Type assertion
+                onChange: (checked) => updateDraftSettings({ overrideGlobalSettings: checked }),
                 label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
                 description: "Χρήση ειδικών ρυθμίσεων γραμμής για προσχεδίαση",
                 statusText: draftSettings.overrideGlobalSettings ? 'Ειδικές Ρυθμίσεις Draft' : 'Γενικές Ρυθμίσεις'
               },
               text: {
                 checked: specificTextSettings.overrideGlobalSettings,
-                onChange: (checked) => updateSpecificTextSettings({ overrideGlobalSettings: checked } as any), // ✅ ENTERPRISE FIX: Type assertion
+                onChange: (checked) => updateSpecificTextSettings({ overrideGlobalSettings: checked }),
                 label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
                 description: "Χρήση ειδικών ρυθμίσεων κειμένου για προσχεδίαση"
               },
               grips: {
                 checked: specificGripSettings.overrideGlobalSettings || false,
-                onChange: (checked) => updateSpecificGripSettings({ overrideGlobalSettings: checked } as any), // ✅ ENTERPRISE FIX: Type assertion
+                onChange: (checked) => updateSpecificGripSettings({ overrideGlobalSettings: checked }),
                 label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
                 description: "Χρήση ειδικών ρυθμίσεων grips για προσχεδίαση",
                 statusText: specificGripSettings.overrideGlobalSettings ? 'Ειδικές Ρυθμίσεις' : 'Γενικές Ρυθμίσεις'
@@ -458,7 +458,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
               type: 'hover',
               label: DXF_SETTINGS_TAB_LABELS.HOVER,
               color: 'yellow-500',
-              badgeColor: `${colors.bg.warning}`
+              badgeColor: colors.bg.warning
             }}
             activeTab={activeLineTab}
             activeSubTab={activeHoverSubTab}
@@ -477,7 +477,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
             overrideSettings={{
               line: {
                 checked: hoverSettings.overrideGlobalSettings || false,
-                onChange: (checked) => updateHoverSettings({ overrideGlobalSettings: checked } as any), // ✅ ENTERPRISE FIX: Type assertion
+                onChange: (checked) => updateHoverSettings({ overrideGlobalSettings: checked }),
                 label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
                 description: "Χρήση ειδικών ρυθμίσεων γραμμής για hover",
                 statusText: hoverSettings.overrideGlobalSettings ? 'Ειδικές Ρυθμίσεις Hover' : 'Γενικές Ρυθμίσεις'
@@ -491,7 +491,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
               type: 'selection',
               label: DXF_SETTINGS_TAB_LABELS.SELECTION,
               color: 'red-500',
-              badgeColor: `${colors.bg.error}`
+              badgeColor: colors.bg.error
             }}
             activeTab={activeLineTab}
             activeSubTab={activeSelectionSubTab}
@@ -510,7 +510,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
             overrideSettings={{
               line: {
                 checked: selectionSettings.overrideGlobalSettings || false,
-                onChange: (checked) => updateSelectionSettings({ overrideGlobalSettings: checked } as any), // ✅ ENTERPRISE FIX: Type assertion
+                onChange: (checked) => updateSelectionSettings({ overrideGlobalSettings: checked }),
                 label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
                 description: "Χρήση ειδικών ρυθμίσεων γραμμής για επιλογή",
                 statusText: selectionSettings.overrideGlobalSettings ? 'Ειδικές Ρυθμίσεις Selection' : 'Γενικές Ρυθμίσεις'
@@ -524,7 +524,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
               type: 'completion',
               label: DXF_SETTINGS_TAB_LABELS.COMPLETION,
               color: 'green-500',
-              badgeColor: `${colors.bg.success}`
+              badgeColor: colors.bg.success
             }}
             activeTab={activeLineTab}
             activeSubTab={activeCompletionSubTab}
@@ -544,7 +544,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
             overrideSettings={{
               line: {
                 checked: completionSettings.overrideGlobalSettings,
-                onChange: (checked) => updateCompletionSettings({ overrideGlobalSettings: checked } as any), // ✅ ENTERPRISE FIX: Type assertion
+                onChange: (checked) => updateCompletionSettings({ overrideGlobalSettings: checked }),
                 label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
                 description: "Χρήση ειδικών ρυθμίσεων γραμμής για ολοκλήρωση",
                 statusText: completionSettings.overrideGlobalSettings ? 'Ειδικές Ρυθμίσεις Completion' : 'Γενικές Ρυθμίσεις'

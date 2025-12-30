@@ -11,7 +11,7 @@
 // ============================================================================
 
 import { hardcodedColorValues } from '../../design-system/tokens/colors';
-import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { COLOR_BRIDGE } from '../../design-system/color-bridge';
 
 /**
  * CSS Variable to Tailwind Mapping

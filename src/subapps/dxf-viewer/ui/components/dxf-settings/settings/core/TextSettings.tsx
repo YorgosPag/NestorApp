@@ -42,19 +42,20 @@
 
 'use client';
 
-import React, { useState } from 'react';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import * as React from 'react';
+import { useState } from 'react';
+import { useIconSizes } from '../../../../../../../hooks/useIconSizes';
+import { useBorderTokens } from '../../../../../../../hooks/useBorderTokens';
+import { useSemanticColors } from '../../../../../../../ui-adapters/react/useSemanticColors';
 import { useTextSettingsFromProvider } from '../../../../../settings-provider';
 import { AccordionSection, useAccordion } from '../shared/AccordionSection';
-import type { TextSettings } from '../../../../contexts/TextSettingsContext';
+import type { TextSettings as TextSettingsType } from '../../../../../contexts/TextSettingsContext';
 import { BaseModal } from '../../../../../components/shared/BaseModal';
 import { useNotifications } from '../../../../../../../providers/NotificationProvider';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { EnterpriseComboBox, type ComboBoxOption } from '../shared/EnterpriseComboBox';
-import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-import { layoutUtilities } from '@/styles/design-tokens';
+import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '../../../../../../../components/ui/effects';
+import { layoutUtilities } from '../../../../../../../styles/design-tokens';
 
 // Simple SVG icons for text
 const DocumentTextIcon = ({ className }: { className?: string }) => (
@@ -138,7 +139,7 @@ const TEXT_STYLE_BUTTONS = [
 
 // Mock components that match the UI of dxf-viewer-kalo
 interface TextStyleButtonsProps {
-  settings: TextSettings;
+  settings: TextSettingsType;
   onToggle: (key: 'isBold' | 'isItalic' | 'isUnderline' | 'isStrikethrough') => void;
 }
 
@@ -168,7 +169,7 @@ function TextStyleButtons({ settings, onToggle }: TextStyleButtonsProps) {
 }
 
 interface ScriptStyleButtonsProps {
-  settings: TextSettings;
+  settings: TextSettingsType;
   onSuperscriptChange: () => void;
   onSubscriptChange: () => void;
 }
@@ -204,6 +205,7 @@ function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }
 }
 
 export function TextSettings() {
+  const iconSizes = useIconSizes();
   const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
   // 🔥 FIX: Use Global Text Settings από provider, ΟΧΙ Preview-specific settings!
@@ -228,7 +230,7 @@ export function TextSettings() {
   // Handlers
 
   const toggleTextStyle = (style: keyof Pick<typeof textSettings, 'isBold' | 'isItalic' | 'isUnderline' | 'isStrikethrough'>) => {
-    updateTextSettings({ [style]: !textSettings[style] } as Partial<TextSettings>); // ✅ ENTERPRISE FIX: Type assertion for settings update
+    updateTextSettings({ [style]: !textSettings[style] });
   };
 
   const handleScriptChange = (scriptType: 'superscript' | 'subscript') => {
@@ -236,27 +238,27 @@ export function TextSettings() {
       updateTextSettings({
         isSuperscript: !textSettings.isSuperscript,
         isSubscript: false
-      } as Partial<TextSettings>); // ✅ ENTERPRISE FIX: Type assertion
+      });
     } else {
       updateTextSettings({
         isSubscript: !textSettings.isSubscript,
         isSuperscript: false
-      } as Partial<TextSettings>); // ✅ ENTERPRISE FIX: Type assertion
+      });
     }
   };
 
   const handleColorChange = (color: string) => {
-    updateTextSettings({ color } as Partial<TextSettings>); // ✅ ENTERPRISE FIX: Type assertion
+    updateTextSettings({ color });
   };
 
   const increaseFontSize = () => {
     const newSize = Math.min(200, textSettings.fontSize + 1);
-    updateTextSettings({ fontSize: newSize } as Partial<TextSettings>); // ✅ ENTERPRISE FIX: Type assertion
+    updateTextSettings({ fontSize: newSize });
   };
 
   const decreaseFontSize = () => {
     const newSize = Math.max(6, textSettings.fontSize - 1);
-    updateTextSettings({ fontSize: newSize } as Partial<TextSettings>); // ✅ ENTERPRISE FIX: Type assertion
+    updateTextSettings({ fontSize: newSize });
   };
 
   // Factory reset handlers
@@ -343,7 +345,7 @@ export function TextSettings() {
             type="checkbox"
             id="text-enabled"
             checked={textSettings.enabled}
-            onChange={(e) => updateTextSettings({ enabled: e.target.checked } as Partial<TextSettings>)}
+            onChange={(e) => updateTextSettings({ enabled: e.target.checked })}
             className={`${iconSizes.sm} text-blue-600 ${colors.bg.hover} ${quick.input} focus:ring-blue-500 focus:ring-2`}
           />
           <label
@@ -379,7 +381,7 @@ export function TextSettings() {
               label={TEXT_LABELS.FONT_FAMILY}
               value={textSettings.fontFamily}
               options={FREE_FONTS}
-              onChange={(fontFamily) => updateTextSettings({ fontFamily } as Partial<TextSettings>)}
+              onChange={(fontFamily) => updateTextSettings({ fontFamily })}
               enableTypeahead={true}
               placeholder={TEXT_LABELS.SEARCH_FONTS}
               buttonClassName="text-sm"
@@ -393,7 +395,7 @@ export function TextSettings() {
                     label={TEXT_LABELS.FONT_SIZE}
                     value={textSettings.fontSize}
                     options={FONT_SIZE_OPTIONS}
-                    onChange={(fontSize) => updateTextSettings({ fontSize } as Partial<TextSettings>)}
+                    onChange={(fontSize) => updateTextSettings({ fontSize })}
                     enableTypeahead={true}
                     placeholder={TEXT_LABELS.SEARCH_SIZE}
                     buttonClassName="text-sm"

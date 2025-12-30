@@ -120,6 +120,9 @@ const config: Config = {
   // 🎲 PROPERTY-BASED TEST SPECIFIC SETTINGS
   testRunner: 'jest-circus/runner', // Better για async property tests
 
+  // ✅ ENTERPRISE FIX: Global timeout για όλα τα test types
+  testTimeout: 180000, // 3 minutes max για visual regression tests
+
   // Special test matching patterns για different test types
   projects: [
     {
@@ -134,7 +137,7 @@ const config: Config = {
         '**/*visual-regression*',
         '**/*.prop.test.ts'
       ],
-      testTimeout: 30000
+      // ✅ ENTERPRISE FIX: testTimeout moved to global level (line 118)
     },
     {
       displayName: 'property-based',
@@ -142,7 +145,7 @@ const config: Config = {
         '**/__tests__/**/*.prop.test.ts',
         '**/*.prop.test.ts'
       ],
-      testTimeout: 120000, // Longer timeout για property tests
+      // ✅ ENTERPRISE FIX: testTimeout moved to global level (line 118)
       // 🎯 Property-based tests may need more time
     },
     {
@@ -151,14 +154,14 @@ const config: Config = {
         '**/__tests__/**/visual-regression.test.ts',
         '**/*visual-regression*.test.ts'
       ],
-      testTimeout: 180000, // 3 minutes για visual comparison tests
+      // ✅ ENTERPRISE FIX: testTimeout moved to global level (line 118)
       setupFilesAfterEnv: ['<rootDir>/test/setupTests.ts'],
       // 🎨 Visual regression tests need more time για image processing
     }
   ],
 
   // Module resolution
-  moduleNameMapping: {
+  moduleNameMapper: {
     // Path mapping για cleaner imports στα tests
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@debug/(.*)$': '<rootDir>/debug/$1',
@@ -176,8 +179,7 @@ const config: Config = {
     'node_modules/(?!(module-that-needs-to-be-transformed)/)'
   ],
 
-  // Performance και timeout settings
-  testTimeout: 60000, // 60s για property-based tests (μπορεί να είναι slower)
+  // Performance settings
   maxWorkers: '50%', // Use half of available cores για CI efficiency
 
   // 🎲 PROPERTY-BASED TEST CONFIGURATION

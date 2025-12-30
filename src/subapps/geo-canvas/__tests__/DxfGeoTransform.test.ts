@@ -3,6 +3,7 @@
  * Enterprise testing για Phase 2 transformation functionality
  */
 
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { DxfGeoTransformService } from '../services/geo-transform/DxfGeoTransform';
 import { ControlPointManager } from '../services/geo-transform/ControlPointManager';
 import { calculateAccuracyMetrics, generateValidationReport } from '../utils/AccuracyValidator';

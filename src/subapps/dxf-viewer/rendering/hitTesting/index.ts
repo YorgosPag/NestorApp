@@ -15,9 +15,10 @@ export {
 
 // Types
 export type {
-  BoundingBox,
-  Point2D
+  BoundingBox
 } from './Bounds';
+
+export type { Point2D } from '../types/Types';
 
 export type {
   HitTestOptions,

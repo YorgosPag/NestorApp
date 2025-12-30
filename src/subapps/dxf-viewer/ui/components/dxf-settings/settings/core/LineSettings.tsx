@@ -65,7 +65,7 @@ import type { LineTemplate as LineSettingsTemplate } from '../../../../../contex
 import type { LineTemplate as LineConstantsTemplate } from '../../../../../contexts/LineConstants';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { useSettingsUpdater, commonValidators } from '../../../../hooks/useSettingsUpdater';
-import { useNotifications } from '../../../../../../../providers/NotificationProvider';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { BaseModal } from '../../../../../components/shared/BaseModal';
 import { EnterpriseComboBox, type ComboBoxOption, type ComboBoxGroupedOptions } from '../shared/EnterpriseComboBox';
 import {
@@ -82,9 +82,9 @@ import {
 import type { LineType, LineCapStyle, LineJoinStyle } from '../../../../../settings-core/types';
 import type { TemplateCategory } from '../../../../../contexts/LineSettingsContext';
 import { AccordionSection, useAccordion } from '../shared/AccordionSection';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useIconSizes } from '../../../../../../../hooks/useIconSizes';
+import { useBorderTokens } from '../../../../../../../hooks/useBorderTokens';
+import { useSemanticColors } from '../../../../../../../ui-adapters/react/useSemanticColors';
 
 // Simple SVG icons
 const SettingsIcon = ({ className }: { className?: string }) => (

@@ -63,7 +63,7 @@ export const SnapIndicator: React.FC<SnapIndicatorProps> = ({
     const { point } = snapResult;
 
     // Determine color
-    const indicatorColor = color || SNAP_VISUAL.COLORS[point.mode] || GEO_COLORS.AUTOCAD_SNAP_COLORS.SNAP_INDICATOR;
+    const indicatorColor = color || SNAP_VISUAL.COLORS[point.mode] || GEO_COLORS.CAD.SNAP_INDICATOR;
     const indicatorSize = size || SNAP_VISUAL.SIZES.ACTIVE;
 
     console.log('🎨 SnapIndicator rendering:', {

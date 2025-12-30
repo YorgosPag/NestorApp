@@ -3,9 +3,8 @@
  * Υπεύθυνο για εύρεση snap points εφαπτόμενων σε circles/arcs
  */
 
-import type { Point2D } from '../../rendering/types/Types';
+import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType } from '../extended-types';
-import type { Entity } from '../../types/entities';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { findCircleBasedSnapCandidates } from './shared/snap-engine-utils';
@@ -16,7 +15,7 @@ export class TangentSnapEngine extends BaseSnapEngine {
     super(ExtendedSnapType.TANGENT);
   }
 
-  initialize(entities: Entity[]): void {
+  initialize(entities: EntityModel[]): void {
 
   }
 

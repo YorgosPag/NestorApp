@@ -20,7 +20,14 @@ import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { GeoCoordinate, GeoControlPoint } from '../types';
-import type { PolygonType, UniversalPolygon } from '@geo-alert/core';
+// TODO: Replace with proper geo-alert core when available
+type PolygonType = 'simple' | 'freehand' | 'complex';
+type UniversalPolygon = {
+  id: string;
+  type: PolygonType;
+  points: Array<[number, number]>;
+  settings: Record<string, unknown>;
+};
 
 // Enterprise Services & Hooks
 import { elevationService } from '../services/map/ElevationService';

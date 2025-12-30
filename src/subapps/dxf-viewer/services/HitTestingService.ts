@@ -12,7 +12,7 @@ import type {
   Viewport,
   EntityModel
 } from '../rendering/types/Types';
-import type { DxfScene, DxfEntityUnion } from '../canvas-v2/dxf-canvas/dxf-types';
+import type { DxfScene, DxfEntityUnion, DxfLine, DxfCircle, DxfPolyline, DxfArc, DxfText } from '../canvas-v2/dxf-canvas/dxf-types';
 
 export interface HitTestResult {
   entityId: string | null;
@@ -150,8 +150,8 @@ export class HitTestingService {
       selected: false,
       layer: entity.layer || 'default',
       color: entity.color,
-      lineType: entityWithLineType.lineType || 'solid',
-      lineWeight: entity.lineWidth,
+      lineType: (entityWithLineType.lineType as "solid" | "dashed" | "dotted" | "dashdot") || 'solid',
+      lineweight: entity.lineWidth,
       ...this.mapEntityGeometry(entity)
     };
 
@@ -162,44 +162,50 @@ export class HitTestingService {
    * ✅ MAP ENTITY GEOMETRY
    * Κεντρικοποιημένη geometry mapping
    */
-  private mapEntityGeometry(entity: DxfEntityUnion): Partial<EntityModel> {
+  // ✅ ENTERPRISE FIX: Fixed return type - use proper types instead of any
+  private mapEntityGeometry(entity: DxfEntityUnion): Record<string, unknown> {
     switch (entity.type) {
-      case 'line':
+      case 'line': {
+        const lineEntity = entity as DxfLine;
         return {
-          start: entity.start,
-          end: entity.end
-        };
-
-      case 'circle':
-        return {
-          center: entity.center,
-          radius: entity.radius
-        };
-
-      case 'polyline': {
-        // Type guard: Polyline entities έχουν vertices property
-        const polyline = entity as typeof entity & { vertices?: Point2D[]; points?: Point2D[] };
-        return {
-          points: polyline.points || polyline.vertices || []
+          start: lineEntity.start,
+          end: lineEntity.end
         };
       }
 
-      case 'arc':
-        // Arc entities ήδη έχουν τα properties στο DxfArc type
+      case 'circle': {
+        const circleEntity = entity as DxfCircle;
         return {
-          center: entity.center,
-          radius: entity.radius,
-          startAngle: entity.startAngle,
-          endAngle: entity.endAngle
+          center: circleEntity.center,
+          radius: circleEntity.radius
         };
+      }
 
-      case 'text':
-        // Text entities ήδη έχουν τα properties στο DxfText type
+      case 'polyline': {
+        const polylineEntity = entity as DxfPolyline;
         return {
-          position: entity.position,
-          text: entity.text,
-          height: entity.height
+          points: polylineEntity.vertices
         };
+      }
+
+      case 'arc': {
+        const arcEntity = entity as DxfArc;
+        return {
+          center: arcEntity.center,
+          radius: arcEntity.radius,
+          startAngle: arcEntity.startAngle,
+          endAngle: arcEntity.endAngle
+        };
+      }
+
+      case 'text': {
+        const textEntity = entity as DxfText;
+        return {
+          position: textEntity.position,
+          text: textEntity.text,
+          height: textEntity.height
+        };
+      }
 
       default:
         return {};

@@ -3,14 +3,14 @@
  * Υπεύθυνο για εύρεση snap points στα κέντρα των entities (circles, rectangles)
  */
 
-import type { Point2D } from '../../rendering/types/Types';
-import { Entity, ExtendedSnapType } from '../extended-types';
+import type { Point2D, EntityModel } from '../../rendering/types/Types';
+import { ExtendedSnapType } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { SpatialFactory } from '../../core/spatial';
 import type { ISpatialIndex, SpatialBounds } from '../../core/spatial';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
-import { findStandardSnapCandidates, StandardSnapCandidate } from './shared/snap-engine-utils';
+import { findStandardSnapCandidates, type StandardSnapCandidate } from './shared/snap-engine-utils';
 
 export class CenterSnapEngine extends BaseSnapEngine {
   private spatialIndex: ISpatialIndex | null = null;
@@ -20,7 +20,7 @@ export class CenterSnapEngine extends BaseSnapEngine {
     super(ExtendedSnapType.CENTER);
   }
 
-  initialize(entities: Entity[]): void {
+  initialize(entities: EntityModel[]): void {
     // ✅ CENTRALIZED: Use base class method for spatial index initialization
     this.spatialIndex = this.initializeSpatialIndex(
       entities,

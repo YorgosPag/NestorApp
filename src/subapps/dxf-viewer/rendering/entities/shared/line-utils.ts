@@ -28,11 +28,12 @@ export function createEdgeGrips(
     };
     
     grips.push({
+      id: `${entityId}-edge-${baseIndex + i}`,
       entityId,
-      gripType: 'edge',
+      type: 'edge',
       gripIndex: baseIndex + i,
       position: midpoint,
-      state: 'cold'
+      isVisible: true
     });
   }
   
@@ -44,11 +45,12 @@ export function createEdgeGrips(
     };
     
     grips.push({
+      id: `${entityId}-edge-${baseIndex + vertices.length - 1}`,
       entityId,
-      gripType: 'edge', 
+      type: 'edge',
       gripIndex: baseIndex + vertices.length - 1,
       position: midpoint,
-      state: 'cold'
+      isVisible: true
     });
   }
   
@@ -271,4 +273,63 @@ function renderLineWithTextCheckInternal(
 
     return { midpoint };
   }
+}
+
+/**
+ * 🔺 EXPORTED VERSION: Render line με έλεγχο για text enabled state
+ * Αν το κείμενο είναι enabled, σχεδιάζει γραμμή με κενό
+ * Αν το κείμενο είναι disabled, σχεδιάζει συνεχόμενη γραμμή
+ *
+ * @param ctx - Canvas rendering context
+ * @param screenStart - Start point in screen coordinates
+ * @param screenEnd - End point in screen coordinates
+ * @param gapSize - Size of gap for text (default: 30px)
+ */
+export function renderLineWithTextCheck(
+  ctx: CanvasRenderingContext2D,
+  screenStart: Point2D,
+  screenEnd: Point2D,
+  gapSize: number = 30
+): void {
+  renderLineWithTextCheckInternal(ctx, screenStart, screenEnd, gapSize);
+}
+
+/**
+ * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΗ CONTINUOUS LINE RENDERING
+ * Σχεδιάζει συνεχόμενη γραμμή χωρίς κενό
+ */
+export function renderContinuousLine(
+  ctx: CanvasRenderingContext2D,
+  screenStart: Point2D,
+  screenEnd: Point2D
+): void {
+  ctx.beginPath();
+  ctx.moveTo(screenStart.x, screenStart.y);
+  ctx.lineTo(screenEnd.x, screenEnd.y);
+  ctx.stroke();
+}
+
+/**
+ * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΗ SPLIT LINE WITH GAP RENDERING
+ * Σχεδιάζει γραμμή με κενό στη μέση για distance text
+ */
+export function renderSplitLineWithGap(
+  ctx: CanvasRenderingContext2D,
+  screenStart: Point2D,
+  screenEnd: Point2D,
+  gapSize: number = 30
+): void {
+  const { gapStart, gapEnd } = calculateSplitLineGap(screenStart, screenEnd, gapSize);
+
+  // Draw first segment
+  ctx.beginPath();
+  ctx.moveTo(screenStart.x, screenStart.y);
+  ctx.lineTo(gapStart.x, gapStart.y);
+  ctx.stroke();
+
+  // Draw second segment
+  ctx.beginPath();
+  ctx.moveTo(gapEnd.x, gapEnd.y);
+  ctx.lineTo(screenEnd.x, screenEnd.y);
+  ctx.stroke();
 }

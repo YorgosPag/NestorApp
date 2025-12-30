@@ -18,7 +18,7 @@ export default function setup() {
   }
 
   // ═══ SET TEST ENVIRONMENT VARIABLES ═══
-  process.env.NODE_ENV = 'test';
+  (process.env as any).NODE_ENV = 'test';
   process.env.VITEST = 'true';
 
   return () => {

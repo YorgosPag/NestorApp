@@ -15,10 +15,10 @@ import {
 import { useRulersGridContext } from "../systems/rulers-grid/RulersGridSystem";
 import { UI_COLORS } from "../config/color-config";
 import { SimpleColorPicker } from "./color";
-import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { INTERACTIVE_PATTERNS } from '../../../components/ui/effects';
+import { useIconSizes } from '../../../hooks/useIconSizes';
+import { useBorderTokens } from '../../../hooks/useBorderTokens';
+import { useSemanticColors } from '../../../hooks/useSemanticColors';
 
 // Force cursor styles for the panel to override canvas cursor settings
 const panelStyles = `
@@ -60,15 +60,17 @@ if (typeof document !== 'undefined') {
 }
 
 function SliderRow({
-  label, value, min, max, step = 1, onChange, disabled = false
+  label, value, min, max, step = 1, onChange, disabled = false, colors, quick
 }: {
-  label: string; 
-  value: number; 
-  min: number; 
-  max: number; 
+  label: string;
+  value: number;
+  min: number;
+  max: number;
   step?: number;
-  onChange: (v: number) => void; 
+  onChange: (v: number) => void;
   disabled?: boolean;
+  colors: any;
+  quick: any;
 }) {
   return (
     <div className="mb-3">
@@ -94,12 +96,13 @@ function SliderRow({
 // ColorPicker function αντικαταστάθηκε με SimpleColorPicker από το κεντρικό σύστημα
 
 function CheckboxRow({
-  label, checked, onChange, disabled = false
+  label, checked, onChange, disabled = false, colors
 }: {
   label: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
   disabled?: boolean;
+  colors: any;
 }) {
   return (
     <div className="mb-3">
@@ -382,6 +385,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               label="Ενεργοποίηση Σταυρονήματος"
               checked={settings.crosshair.enabled}
               onChange={(enabled) => updateCrosshairSettings({ enabled })}
+              colors={colors}
             />
 
             <div className={`mt-2 p-2 bg-blue-900/30 ${getStatusBorder('info')} rounded text-xs text-blue-200`}>
@@ -400,6 +404,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               label="✅ Ενδείξεις Snap (Συνδεδεμένο)"
               checked={settings.behavior.snap_indicator}
               onChange={(snap_indicator) => updateBehaviorSettings({ snap_indicator })}
+              colors={colors}
             />
             <div className="text-xs text-green-400 mb-3 ml-6">
               🔗 Ενεργό: Εμφανίζει κίτρινες ενδείξεις snap στο crosshair
@@ -409,6 +414,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               label="✅ Εμφάνιση Συντεταγμένων (Συνδεδεμένο)"
               checked={settings.behavior.coordinate_display}
               onChange={(coordinate_display) => updateBehaviorSettings({ coordinate_display })}
+              colors={colors}
             />
             <div className="text-xs text-green-400 mb-3 ml-6">
               🔗 Ενεργό: Δείχνει X,Y συντεταγμένες στο status bar
@@ -418,6 +424,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               label="✅ Δυναμική Εισαγωγή (Συνδεδεμένο)"
               checked={settings.behavior.dynamic_input}
               onChange={(dynamic_input) => updateBehaviorSettings({ dynamic_input })}
+              colors={colors}
             />
             <div className="text-xs text-green-400 mb-3 ml-6">
               🔗 Ενεργό: Πεδία εισαγωγής κοντά στον κέρσορα κατά το σχεδιασμό
@@ -427,6 +434,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               label="✅ Cursor Tooltip (Συνδεδεμένο)"
               checked={settings.behavior.cursor_tooltip}
               onChange={(cursor_tooltip) => updateBehaviorSettings({ cursor_tooltip })}
+              colors={colors}
             />
             <div className="text-xs text-green-400 mb-3 ml-6">
               🔗 Ενεργό: Tooltip με πληροφορίες εργαλείου κοντά στον κέρσορα
@@ -441,6 +449,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               label="✅ Χρήση RAF 60fps (Συνδεδεμένο)"
               checked={settings.performance.use_raf}
               onChange={(use_raf) => updatePerformanceSettings({ use_raf })}
+              colors={colors}
             />
             <div className="text-xs text-green-400 mb-3 ml-6">
               🔗 Ενεργό: RequestAnimationFrame για ομαλότερη κίνηση crosshair
@@ -450,6 +459,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               label="✅ Λειτουργία Ακρίβειας (Συνδεδεμένο)"
               checked={settings.performance.precision_mode}
               onChange={(precision_mode) => updatePerformanceSettings({ precision_mode })}
+              colors={colors}
             />
             <div className="text-xs text-green-400 mb-3 ml-6">
               🔗 Ενεργό: Sub-pixel ακρίβεια για crosshair και snap indicators

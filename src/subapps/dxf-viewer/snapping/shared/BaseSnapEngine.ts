@@ -4,7 +4,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { Entity, ExtendedSnapType } from '../extended-types';
+import { ExtendedSnapType, type Entity, type SnapCandidate } from '../extended-types';
 import { GeometricCalculations } from './GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 

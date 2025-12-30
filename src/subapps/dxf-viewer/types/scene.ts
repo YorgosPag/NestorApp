@@ -18,6 +18,9 @@
 // 🔄 RE-EXPORTS FROM CENTRALIZED ENTITY SYSTEM
 // ============================================================================
 
+// ✅ ENTERPRISE FIX: Export EntityRenderer from rendering core
+export type { IEntityRenderer as EntityRenderer } from '../rendering/core/EntityRenderer';
+
 // Core entity types - now from unified source
 export type {
   Entity,

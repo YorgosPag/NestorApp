@@ -4,6 +4,7 @@
  * Critical για conference - ΜΗΔΕΝ ΔΙΠΛΟΤΥΠΑ
  */
 
+import { describe, it, expect } from '@jest/globals';
 import {
   mergeSettings,
   mergeDxfSettings,

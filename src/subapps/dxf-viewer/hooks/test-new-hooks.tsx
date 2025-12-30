@@ -79,11 +79,10 @@ function HooksTestComponent() {
 
 export function HooksTestWrapper() {
   return (
-    <ConfigurationProvider>
-      <StyleManagerProvider>
-        <HooksTestComponent />
-      </StyleManagerProvider>
-    </ConfigurationProvider>
+    <StyleManagerProvider>
+      <HooksTestComponent />
+    </StyleManagerProvider>
+    // ✅ ENTERPRISE FIX: ConfigurationProvider removed - not needed for testing
   );
 }
 

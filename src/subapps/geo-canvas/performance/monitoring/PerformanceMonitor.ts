@@ -173,8 +173,10 @@ export class PerformanceMonitor {
     this.setupPerformanceObservers();
 
     // Set memory baseline
-    if (performance.memory) {
-      this.memoryBaseline = performance.memory.usedJSHeapSize;
+    // ✅ ENTERPRISE FIX: Use type assertion for Chrome-specific Performance.memory
+    const perfWithMemory = performance as any;
+    if (perfWithMemory.memory) {
+      this.memoryBaseline = perfWithMemory.memory.usedJSHeapSize;
     }
 
     // Start frame counting
@@ -315,7 +317,7 @@ export class PerformanceMonitor {
   }
 
   private collectRuntimeMetrics(): PerformanceMetrics['runtime'] {
-    const memory = performance.memory;
+    const memory = (performance as any).memory;
 
     return {
       heapUsed: memory ? Math.round(memory.usedJSHeapSize / 1024 / 1024) : 0,
@@ -396,7 +398,7 @@ export class PerformanceMonitor {
   }
 
   private collectMemoryLeakMetrics(): PerformanceMetrics['memoryLeaks'] {
-    const currentMemory = performance.memory?.usedJSHeapSize || 0;
+    const currentMemory = (performance as any).memory?.usedJSHeapSize || 0;
     const memoryGrowth = currentMemory - this.memoryBaseline;
 
     this.memoryGrowthHistory.push(memoryGrowth);
@@ -469,9 +471,9 @@ export class PerformanceMonitor {
   // ========================================================================
 
   private detectMemoryLeaks(): void {
-    if (!performance.memory) return;
+    if (!(performance as any).memory) return;
 
-    const currentMemory = performance.memory.usedJSHeapSize;
+    const currentMemory = (performance as any).memory.usedJSHeapSize;
     const growthSinceBaseline = currentMemory - this.memoryBaseline;
     const growthMB = growthSinceBaseline / 1024 / 1024;
 

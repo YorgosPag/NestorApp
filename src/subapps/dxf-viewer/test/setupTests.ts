@@ -5,14 +5,14 @@
 
 import { UI_COLORS } from '../config/color-config';
 
-// ✅ ENTERPRISE FIX: Jest type imports for testing environment
+// ✅ ENTERPRISE FIX: Vitest type imports for testing environment
 declare global {
-  const jest: any;
+  const vi: any;
   const beforeEach: (fn: () => void) => void;
   const afterEach: (fn: () => void) => void;
   const expect: any;
 
-  namespace jest {
+  namespace vitest {
     interface Matchers<R> {
       toMatchVisualBaseline(baselinePath: string, options?: any): R;
       toBeWithinVisualThreshold(expected: number, threshold?: number): R;

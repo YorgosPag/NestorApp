@@ -9,13 +9,12 @@ import { DynamicInputField } from './DynamicInputField';
 import { DynamicInputHeader } from './DynamicInputHeader';
 import { DynamicInputFooter } from './DynamicInputFooter';
 import { DynamicInputContainer } from './DynamicInputContainer';
-import { 
+import {
   useDynamicInputKeyboard,
   useDynamicInputPhase,
   useDynamicInputLayout,
   useDynamicInputState,
   useDynamicInputToolReset,
-  useDynamicInputRealtime,
   useDynamicInputAnchoring
 } from '../hooks';
 import { useDynamicInputMultiPoint } from '../hooks/useDynamicInputMultiPoint';

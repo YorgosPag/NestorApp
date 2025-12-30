@@ -124,7 +124,7 @@ export class PolylineRenderer extends BaseEntityRenderer {
     // Use centralized vertex dots rendering
     this.renderVertexDots(vertices);
   }
-  getGrips(entity: Entity): GripInfo[] {
+  getGrips(entity: EntityModel): GripInfo[] {
     if (entity.type !== 'polyline' && entity.type !== 'lwpolyline') return [];
 
     const grips: GripInfo[] = [];
@@ -137,11 +137,12 @@ export class PolylineRenderer extends BaseEntityRenderer {
     // Vertex grips
     vertices.forEach((vertex, index) => {
       grips.push({
+        id: `${entity.id}-vertex-${index}`,
         entityId: entity.id,
-        gripType: 'vertex',
+        type: 'vertex',
         gripIndex: index,
         position: vertex,
-        state: 'cold'
+        isVisible: true
       });
     });
     
@@ -252,5 +253,20 @@ export class PolylineRenderer extends BaseEntityRenderer {
     }
     
     return true;
+  }
+
+  // ✅ ENTERPRISE FIX: Implement abstract hitTest method
+  hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
+    if (entity.type !== 'polyline' && entity.type !== 'lwpolyline') return false;
+
+    // ✅ ENTERPRISE FIX: Safe type casting for entity-specific properties
+    const polylineEntity = entity as any;
+    const vertices = polylineEntity.vertices as Point2D[];
+    const closed = polylineEntity.closed as boolean;
+
+    if (!vertices || vertices.length < 2) return false;
+
+    // Use hitTestLineSegments utility to test all line segments
+    return hitTestLineSegments(point, vertices, tolerance, closed, this.worldToScreen.bind(this));
   }
 }

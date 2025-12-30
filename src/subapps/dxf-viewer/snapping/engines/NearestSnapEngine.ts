@@ -3,9 +3,10 @@
  * Υπεύθυνο για εύρεση του κοντινότερου σημείου σε οποιαδήποτε entity
  */
 
-import type { Point2D } from '../../rendering/types/Types';
-import { Entity, ExtendedSnapType } from '../extended-types';
-import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
+import type { Point2D, EntityModel } from '../../rendering/types/Types';
+import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
+import type { SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
+import { BaseSnapEngine } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
@@ -16,7 +17,7 @@ export class NearestSnapEngine extends BaseSnapEngine {
     super(ExtendedSnapType.NEAREST);
   }
 
-  initialize(entities: Entity[]): void {
+  initialize(entities: EntityModel[]): void {
 
   }
 
@@ -27,7 +28,7 @@ export class NearestSnapEngine extends BaseSnapEngine {
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.NEAREST);
     let closestPoint: Point2D | null = null;
     let closestDistance = Infinity;
-    let closestEntity: Entity | null = null;
+    let closestEntity: EntityModel | null = null;
     
     // Guard against non-iterable entities
     if (!Array.isArray(context.entities)) {
@@ -67,7 +68,7 @@ export class NearestSnapEngine extends BaseSnapEngine {
     return { candidates };
   }
 
-  private getNearestPointOnEntity(entity: Entity, point: Point2D): Point2D | null {
+  private getNearestPointOnEntity(entity: EntityModel, point: Point2D): Point2D | null {
     const entityType = entity.type.toLowerCase();
     
     if (entityType === 'line') {

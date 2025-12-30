@@ -113,9 +113,9 @@ export const useKeyboardShortcuts = ({
         e.preventDefault();
 
         if (isPlus) {
-          zoomManager.zoomIn(lastMouseRef.current || undefined);
+          zoomManager.zoomIn();
         } else {
-          zoomManager.zoomOut(lastMouseRef.current || undefined);
+          zoomManager.zoomOut();
         }
         return;
       }

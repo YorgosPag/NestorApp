@@ -29,6 +29,7 @@ import {
   layoutUtilities,
   colors,
   spacing,
+  typography,
   shadows,
   zIndex
 } from '../../../styles/design-tokens';
@@ -151,7 +152,7 @@ const accuracyStyles: AccuracyStylesType = {
     justifyContent: 'center',
     width: '100%',
     height: '100%',
-    fontSize: spacing.component.gap.sm,
+    fontSize: typography.fontSize.sm,
     fontWeight: 'bold' as const,
     textAlign: 'center' as const,
     pointerEvents: 'none' as const
@@ -257,7 +258,7 @@ const labelStyles: LabelStylesType = {
    * Replaces: canvasUtilities.geoInteractive.radiusLabel()
    */
   radiusLabel: (): CSSProperties => ({
-    fontSize: spacing.component.gap.sm,
+    fontSize: typography.fontSize.sm,
     fontWeight: 'bold' as const,
     color: colors.text.inverse,
     backgroundColor: colors.background.overlay,
@@ -274,7 +275,7 @@ const labelStyles: LabelStylesType = {
    * Replaces: canvasUtilities.geoInteractive.previewRadiusLabel()
    */
   previewLabel: (opacity: number): CSSProperties => ({
-    fontSize: spacing.component.gap.sm,
+    fontSize: typography.fontSize.sm,
     fontWeight: 'bold' as const,
     color: colors.text.inverse,
     backgroundColor: withOpacity(GEO_COLORS.BLACK, opacity * 0.7),
@@ -453,7 +454,7 @@ export const draggablePanelHandle = (isDragging: boolean): CSSProperties => ({
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  fontSize: spacing.component.gap.sm,
+  fontSize: typography.fontSize.sm,
   fontWeight: 500,
   color: colors.text.primary,
   transition: isDragging ? 'none' : 'background-color 0.2s ease-in-out'
@@ -518,17 +519,15 @@ export const draggablePanelTabNavigation = (): CSSProperties => ({
 export const draggablePanelTabButton = (isActive: boolean): CSSProperties => ({
   flex: 1,
   padding: `${spacing.sm} ${spacing.md}`,
-  fontSize: spacing.component.gap.sm,
+  fontSize: typography.fontSize.sm,
   fontWeight: isActive ? 600 : 400,
   color: isActive ? colors.blue[500] : colors.gray[500],
   backgroundColor: isActive ? colors.background.primary : 'transparent',
   border: 'none',
   borderBottom: isActive ? `2px solid ${colors.blue[500]}` : '2px solid transparent',
   cursor: 'pointer',
-  transition: 'all 0.2s ease-in-out',
-  ':hover': {
-    backgroundColor: isActive ? colors.background.primary : colors.gray[100]
-  }
+  transition: 'all 0.2s ease-in-out'
+  // ✅ ENTERPRISE FIX: Removed CSS pseudo-selectors - handled via CSS classes or state
 });
 
 /**
@@ -542,18 +541,8 @@ export const draggablePanelProgressBar = (percentage: number): CSSProperties => 
   backgroundColor: colors.border.secondary,
   borderRadius: spacing.xs,
   overflow: 'hidden',
-  position: 'relative',
-  '::after': {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    height: '100%',
-    width: `${Math.min(100, Math.max(0, percentage))}%`,
-    backgroundColor: colors.blue[500],
-    borderRadius: spacing.xs,
-    transition: 'width 0.3s ease-in-out'
-  }
+  position: 'relative'
+  // ✅ ENTERPRISE FIX: Removed CSS pseudo-elements - progress bar fill should be separate element
 });
 
 // ============================================================================

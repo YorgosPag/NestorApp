@@ -3,8 +3,8 @@
  * Υπεύθυνο για εύρεση snap points στα άκρα των entities
  */
 
-import type { Point2D } from '../../rendering/types/Types';
-import { Entity, ExtendedSnapType } from '../extended-types';
+import type { Point2D, EntityModel } from '../../rendering/types/Types';
+import { ExtendedSnapType } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { SpatialFactory } from '../../core/spatial';
 import type { ISpatialIndex, SpatialBounds } from '../../core/spatial';
@@ -18,7 +18,7 @@ export class EndpointSnapEngine extends BaseSnapEngine {
     super(ExtendedSnapType.ENDPOINT);
   }
 
-  initialize(entities: Entity[]): void {
+  initialize(entities: EntityModel[]): void {
     // ✅ CENTRALIZED: Use base class method for spatial index initialization
     this.spatialIndex = this.initializeSpatialIndex(
       entities,

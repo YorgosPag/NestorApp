@@ -84,9 +84,9 @@ export abstract class BaseEntityRenderer {
     
     // Set grip interaction state for PhaseManager
     phaseState.gripState = {
-      hovered: this.gripInteraction.hovered,
-      active: this.gripInteraction.active,
-      dragging: false // Currently not implementing drag detection
+      hoveredGrip: this.gripInteraction.hovered,
+      selectedGrip: this.gripInteraction.active,
+      dragginGrip: undefined // Currently not implementing drag detection
     };
     
     this.phaseManager.renderPhaseGrips(entity as any, grips, phaseState);

@@ -1,7 +1,7 @@
 // Design tokens για το unified design system
 // Αυτό το αρχείο περιέχει όλες τις τυποποιημένες τιμές για styling
 
-import React from 'react';
+import * as React from 'react';
 
 // ✅ ENTERPRISE FIX: Direct color definitions since core module doesn't exist
 const colors = {
@@ -39,6 +39,21 @@ const colors = {
     "300": "#6ee7b7", // ✅ ENTERPRISE FIX: Added missing 300 shade for design-tokens.ts usage
     "500": "#10b981",
     "600": "#059669"
+  },
+  red: {
+    "300": "#fca5a5",
+    "500": "#ef4444",
+    "600": "#dc2626"
+  },
+  orange: {
+    "300": "#fdba74",
+    "500": "#f97316",
+    "600": "#ea580c"
+  },
+  gray: {
+    "50": "#f9fafb",
+    "100": "#f3f4f6",
+    "500": "#6b7280"
   }
 } as const;
 
@@ -64,6 +79,13 @@ const spacing = {
       md: "0.5rem",   // 8px
       lg: "0.75rem",  // 12px
       xl: "1rem"      // 16px
+    },
+    // ✅ ENTERPRISE FIX: Added gap subcategory for InteractiveMap.styles.ts
+    gap: {
+      xs: "0.25rem",  // 4px
+      sm: "0.5rem",   // 8px
+      md: "1rem",     // 16px
+      lg: "1.5rem"    // 24px
     }
   }
 } as const;

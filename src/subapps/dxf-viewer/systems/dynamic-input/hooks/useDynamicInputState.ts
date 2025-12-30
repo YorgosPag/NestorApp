@@ -11,6 +11,9 @@ import type {
 import { setFieldValue } from '../utils/field-value-utils';
 import type { Point2D, Phase } from '../../../rendering/types/Types';
 
+// Re-export Phase for other modules
+export type { Phase };
+
 export type Field = 'x' | 'y' | 'angle' | 'length' | 'radius' | 'diameter';
 
 interface UseDynamicInputStateProps {

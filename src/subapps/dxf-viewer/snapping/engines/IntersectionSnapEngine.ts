@@ -3,26 +3,28 @@
  * Υπεύθυνο για εύρεση intersection snap points μεταξύ entities
  */
 
-import type { Point2D } from '../../rendering/types/Types';
-import { Entity, ExtendedSnapType } from '../extended-types';
-import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
-import { GeometricCalculations, IntersectionResult } from '../shared/GeometricCalculations';
+import type { Point2D, EntityModel } from '../../rendering/types/Types';
+import { ExtendedSnapType, type SnapCandidate, type Entity } from '../extended-types';
+import type { SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
+import { BaseSnapEngine } from '../shared/BaseSnapEngine';
+import type { IntersectionResult } from '../shared/GeometricCalculations';
+import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { getPolylineSegments } from '../../rendering/entities/shared/geometry-rendering-utils';
 
 // Extended entity interfaces for intersection calculations
-interface PolylineEntity extends Entity {
+interface PolylineEntity extends EntityModel {
   points?: Point2D[];
   vertices?: Point2D[];
   closed?: boolean;
 }
 
-interface CircleEntity extends Entity {
+interface CircleEntity extends EntityModel {
   center: Point2D;
   radius: number;
 }
 
-interface RectangleEntity extends Entity {
+interface RectangleEntity extends EntityModel {
   corner1?: Point2D;
   corner2?: Point2D;
   // Additional rectangle properties as needed
@@ -33,7 +35,7 @@ export class IntersectionSnapEngine extends BaseSnapEngine {
     super(ExtendedSnapType.INTERSECTION);
   }
 
-  initialize(entities: Entity[]): void {
+  initialize(entities: EntityModel[]): void {
     // Δεν χρειάζεται ειδική indexing για intersections
     // Χρησιμοποιούμε on-the-fly calculation με spatial filtering
   }

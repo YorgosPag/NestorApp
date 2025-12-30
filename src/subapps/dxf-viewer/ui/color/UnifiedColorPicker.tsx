@@ -149,8 +149,7 @@ function InlineColorPicker({
       {/* Color Preview */}
       {showPreview && (
         <div
-          className={`${previewSizeClasses} rounded ${quick.muted}`}
-          className={getDynamicBackgroundClass(value)}
+          className={`${previewSizeClasses} rounded ${quick.muted} ${getDynamicBackgroundClass(value)}`}
         />
       )}
 

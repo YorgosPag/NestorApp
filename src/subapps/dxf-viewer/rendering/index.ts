@@ -37,7 +37,20 @@ export { createHitTester, HitTester } from './hitTesting';
 export { getGlobalPathCache, PathCache } from './cache';
 
 // ===== TYPES =====
-export * from './types/Types';
+export type {
+  Point2D,
+  Point3D,
+  ViewTransform,
+  Viewport,
+  EntityModel,
+  RenderOptions,
+  GripInfo
+} from './types/Types';
+
+// ✅ ENTERPRISE FIX: Export EntityRenderer from rendering core
+export type { IEntityRenderer as EntityRenderer } from './core/EntityRenderer';
+
+export type { BoundingBox } from './types/Types';
 
 // ===== LEGACY COMPATIBILITY =====
 // ✅ ΔΙΟΡΑΘΩΣΗ ΔΙΠΛΟΤΥΠΟΥ: LegacyEntityComposite αφαιρέθηκε - δεν χρησιμοποιείται πουθενά

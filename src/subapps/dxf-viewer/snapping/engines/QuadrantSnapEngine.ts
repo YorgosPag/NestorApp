@@ -3,9 +3,8 @@
  * Υπεύθυνο για εύρεση snap points στα quadrant points των circles/arcs
  */
 
-import type { Point2D } from '../../rendering/types/Types';
-import { ExtendedSnapType } from '../extended-types';
-import type { Entity } from '../../types/entities';
+import type { Point2D, EntityModel } from '../../rendering/types/Types';
+import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { findCircleBasedSnapCandidates } from './shared/snap-engine-utils';
@@ -16,7 +15,7 @@ export class QuadrantSnapEngine extends BaseSnapEngine {
     super(ExtendedSnapType.QUADRANT);
   }
 
-  initialize(entities: Entity[]): void {
+  initialize(entities: EntityModel[]): void {
 
   }
 

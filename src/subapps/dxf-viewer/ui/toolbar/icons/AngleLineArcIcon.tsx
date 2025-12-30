@@ -3,7 +3,7 @@
  * Refactored to use AngleIconBase to eliminate duplication
  */
 
-import React from 'react';
+import * as React from 'react';
 import { AngleIconBase } from './shared/AngleIconBase';
 
 interface AngleLineArcIconProps {

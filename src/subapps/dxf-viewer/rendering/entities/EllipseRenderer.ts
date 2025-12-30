@@ -8,7 +8,7 @@ import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
 import { HoverManager } from '../../utils/hover';
 import { renderDotAtPoint, renderDotsAtPoints } from './shared/dot-rendering-utils';
-import { createGripsFromPoints } from './shared/grip-utils';
+import { createGripsFromPoints, createCenterGrip } from './shared/grip-utils';
 import { validateEllipseEntity } from './shared/entity-validation-utils';
 import { applyRenderingTransform } from './shared/geometry-rendering-utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
@@ -124,18 +124,30 @@ export class EllipseRenderer extends BaseEntityRenderer {
     const { center, majorAxis, minorAxis, rotation } = ellipseData;
     
     // Center grip
-    grips.push({
-      entityId: entity.id,
-      gripType: 'center',
-      gripIndex: 0,
-      position: center,
-      state: 'cold'
-    });
+    grips.push(createCenterGrip(entity.id, center, 0));
     
     // Use helper method to calculate grip positions on ellipse
     const { majorPoints, minorPoints } = this.calculateAxisEndpoints(center, majorAxis, minorAxis, rotation);
     
     return createGripsFromPoints(entity.id, [...majorPoints, ...minorPoints]);
+  }
+
+  // ✅ ENTERPRISE FIX: Implement required abstract method
+  hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
+    const ellipseData = validateEllipseEntity(entity);
+    if (!ellipseData) return false;
+
+    const { center, majorAxis, minorAxis } = ellipseData;
+
+    // Simple distance-based hit test to ellipse center
+    const distance = Math.sqrt(
+      Math.pow(point.x - center.x, 2) +
+      Math.pow(point.y - center.y, 2)
+    );
+
+    // Check if point is within ellipse bounds (approximation)
+    const maxRadius = Math.max(majorAxis, minorAxis);
+    return distance <= maxRadius + tolerance;
   }
 
 }

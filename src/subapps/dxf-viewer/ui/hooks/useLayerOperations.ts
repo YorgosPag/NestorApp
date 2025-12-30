@@ -59,8 +59,8 @@ export function useLayerOperations({
   const layerService = useMemo(() => serviceRegistry.get('layer-operations'), []);
   const entityService = useMemo(() => serviceRegistry.get('entity-merge'), []);
 
-  // ✅ Confirmation dialogs
-  const { showConfirmDialog } = useNotifications();
+  // ✅ Confirmation dialogs and notifications
+  const { showConfirmDialog, warning } = useNotifications();
 
   // ===== LAYER OPERATIONS =====
 
@@ -76,11 +76,15 @@ export function useLayerOperations({
     if (!scene || !currentLevelId || !scene.entities) return;
 
     const entityCount = scene.entities.filter(entity => entity.layer === layerName).length;
-    const confirmed = await showConfirmDialog({
-      title: 'Διαγραφή Layer',
-      message: `Θέλετε να διαγράψετε το layer "${layerName}" και ${entityCount} entities;`,
-      type: 'warning'
-    });
+    const confirmed = await showConfirmDialog(
+      `Θέλετε να διαγράψετε το layer "${layerName}" και ${entityCount} entities;`,
+      () => {},
+      () => {},
+      {
+        title: 'Διαγραφή Layer',
+        type: 'warning'
+      }
+    );
     if (!confirmed) return;
 
     const result = layerService.deleteLayer(layerName, scene);
@@ -99,7 +103,7 @@ export function useLayerOperations({
     if (!scene || !currentLevelId) return;
     const result = layerService.renameLayer(oldName, newName, scene);
     if (!result.success && result.message) {
-      notifications.warning(result.message);
+      warning(result.message);
       return;
     }
     if (result.success) {
@@ -111,7 +115,7 @@ export function useLayerOperations({
     if (!scene || !currentLevelId) return;
     const result = layerService.createLayer({ name, color }, scene);
     if (!result.success && result.message) {
-      notifications.warning(result.message);
+      warning(result.message);
       return;
     }
     if (result.success) {
@@ -122,11 +126,15 @@ export function useLayerOperations({
   const handleLayersMerge = async (targetLayerName: string, sourceLayerNames: string[]) => {
     if (!scene || !currentLevelId) return;
 
-    const confirmed = await showConfirmDialog({
-      title: 'Συγχώνευση Layers',
-      message: `Θέλετε να συγχωνεύσετε τα layers [${sourceLayerNames.join(', ')}] στο "${targetLayerName}";`,
-      type: 'info'
-    });
+    const confirmed = await showConfirmDialog(
+      `Θέλετε να συγχωνεύσετε τα layers [${sourceLayerNames.join(', ')}] στο "${targetLayerName}";`,
+      () => {},
+      () => {},
+      {
+        title: 'Συγχώνευση Layers',
+        type: 'info'
+      }
+    );
     if (!confirmed) return;
 
     const result = layerService.mergeLayers(targetLayerName, sourceLayerNames, scene);
@@ -155,11 +163,15 @@ export function useLayerOperations({
     if (!entity) return;
 
     const entityName = entity.name || entity.type || `Entity ${entityId.substring(0, 8)}`;
-    const confirmed = await showConfirmDialog({
-      title: 'Διαγραφή Entity',
-      message: `Θέλετε να διαγράψετε το entity "${entityName}";`,
-      type: 'warning'
-    });
+    const confirmed = await showConfirmDialog(
+      `Θέλετε να διαγράψετε το entity "${entityName}";`,
+      () => {},
+      () => {},
+      {
+        title: 'Διαγραφή Entity',
+        type: 'warning'
+      }
+    );
     if (!confirmed) return;
 
     const updatedScene = {
@@ -201,7 +213,7 @@ export function useLayerOperations({
         name: targetLayerName,
         color: color,
         visible: true,
-        frozen: false
+        locked: false
       };
     }
 
@@ -244,11 +256,15 @@ export function useLayerOperations({
       return e.name || e.type || entityId.substring(0, 8);
     });
 
-    const confirmed = await showConfirmDialog({
-      title: 'Συγχώνευση Entities',
-      message: `Θέλετε να συγχωνεύσετε τα entities [${sourceNames.join(', ')}] στο "${targetEntity.name || targetEntity.type || 'Entity'}";`,
-      type: 'info'
-    });
+    const confirmed = await showConfirmDialog(
+      `Θέλετε να συγχωνεύσετε τα entities [${sourceNames.join(', ')}] στο "${targetEntity.name || targetEntity.type || 'Entity'}";`,
+      () => {},
+      () => {},
+      {
+        title: 'Συγχώνευση Entities',
+        type: 'info'
+      }
+    );
     if (!confirmed) return;
 
     const result = await entityService.mergeEntities({
@@ -268,7 +284,7 @@ export function useLayerOperations({
       }
       setLevelScene(currentLevelId, result.updatedScene);
     } else if (result.message) {
-      notifications.warning(result.message);
+      warning(result.message);
     }
   };
 
@@ -299,11 +315,15 @@ export function useLayerOperations({
   const handleColorGroupsMerge = async (targetColorGroup: string, sourceColorGroups: string[]) => {
     if (!scene || !currentLevelId) return;
 
-    const confirmed = await showConfirmDialog({
-      title: 'Συγχώνευση Color Groups',
-      message: `Θέλετε να συγχωνεύσετε τα color groups [${sourceColorGroups.join(', ')}] στο "${targetColorGroup}";`,
-      type: 'info'
-    });
+    const confirmed = await showConfirmDialog(
+      `Θέλετε να συγχωνεύσετε τα color groups [${sourceColorGroups.join(', ')}] στο "${targetColorGroup}";`,
+      () => {},
+      () => {},
+      {
+        title: 'Συγχώνευση Color Groups',
+        type: 'info'
+      }
+    );
     if (!confirmed) return;
 
     const result = layerService.mergeColorGroups(targetColorGroup, sourceColorGroups, scene);

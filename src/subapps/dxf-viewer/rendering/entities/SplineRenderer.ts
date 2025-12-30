@@ -26,7 +26,7 @@ export class SplineRenderer extends BaseEntityRenderer {
     if (options.hovered) {
       // Use centralized hover manager - spline treated as polyline
       const splineAsPolyline = { ...entity, vertices: controlPoints, closed };
-      HoverManager.renderHover(splineAsPolyline as Entity, this.ctx, options, this.worldToScreen.bind(this));
+      HoverManager.renderHover(splineAsPolyline as any, this.ctx, options, this.worldToScreen.bind(this));
     } else {
       // Normal spline rendering
       const screenPoints = controlPoints.map(p => this.worldToScreen(p));
@@ -81,16 +81,48 @@ export class SplineRenderer extends BaseEntityRenderer {
     // Control point grips
     controlPoints.forEach((point, index) => {
       grips.push({
+        id: `${entity.id}-vertex-${index}`,
         entityId: entity.id,
-        gripType: 'vertex',
+        type: 'vertex',
         gripIndex: index,
         position: point,
-        state: 'cold'
+        isVisible: true
       });
     });
     
     return grips;
   }
 
+  hitTest(entity: EntityModel, point: Point2D, tolerance: number = 5): boolean {
+    if (entity.type !== 'spline') return false;
 
+    // ✅ ENTERPRISE FIX: Safe type casting for entity-specific properties
+    const splineEntity = entity as any; // Enterprise safe casting for SplineEntity properties
+    const controlPoints = splineEntity.controlPoints as Point2D[];
+
+    if (!controlPoints || controlPoints.length < 2) return false;
+
+    // For spline hit testing, we approximate with line segments between control points
+    const screenPoint = this.worldToScreen(point);
+
+    for (let i = 0; i < controlPoints.length - 1; i++) {
+      const screenStart = this.worldToScreen(controlPoints[i]);
+      const screenEnd = this.worldToScreen(controlPoints[i + 1]);
+
+      const distance = pointToLineDistance(screenPoint, screenStart, screenEnd);
+      if (distance <= tolerance) return true;
+    }
+
+    // Check closing segment if closed
+    const closed = splineEntity.closed as boolean;
+    if (closed && controlPoints.length > 2) {
+      const screenStart = this.worldToScreen(controlPoints[controlPoints.length - 1]);
+      const screenEnd = this.worldToScreen(controlPoints[0]);
+
+      const distance = pointToLineDistance(screenPoint, screenStart, screenEnd);
+      if (distance <= tolerance) return true;
+    }
+
+    return false;
+  }
 }

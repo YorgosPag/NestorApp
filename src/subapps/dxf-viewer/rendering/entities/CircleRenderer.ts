@@ -27,7 +27,7 @@ import { UI_COLORS } from '../../config/color-config';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 
 export class CircleRenderer extends BaseEntityRenderer {
-  render(entity: Entity, options: RenderOptions = {}): void {
+  render(entity: EntityModel, options: RenderOptions = {}): void {
     if (entity.type !== 'circle') return;
 
     // ✅ ENTERPRISE: Type-safe entity validation αντί για 'as any'
@@ -142,7 +142,7 @@ export class CircleRenderer extends BaseEntityRenderer {
 
   // ΔΙΑΓΡΑΜΜΕΝΗ FUNCTION: renderCircleYellowDots - αφαιρέθηκε για εξάλειψη κίτρινων grips
 
-  getGrips(entity: Entity): GripInfo[] {
+  getGrips(entity: EntityModel): GripInfo[] {
     if (entity.type !== 'circle') return [];
 
     // ✅ ENTERPRISE: Type-safe entity validation αντί για 'as any'

@@ -451,7 +451,7 @@ export class AdminBoundariesCacheManager {
     const now = Date.now();
     const expiredKeys: string[] = [];
 
-    for (const [key, entry] of this.memoryCache.entries()) {
+    for (const [key, entry] of Array.from(this.memoryCache.entries())) {
       if (now - entry.timestamp > entry.ttl) {
         expiredKeys.push(key);
       }

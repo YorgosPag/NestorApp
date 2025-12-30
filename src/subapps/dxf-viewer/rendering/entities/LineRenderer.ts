@@ -50,6 +50,7 @@ import type { Point2D } from '../types/Types';
 import { HoverManager } from '../../utils/hover';
 import { pointToLineDistance } from './shared/geometry-utils';
 import { hitTestLineSegments, createEdgeGrips, renderSplitLine, renderLineWithTextCheck } from './shared/line-utils';
+import { createVertexGrip } from './shared/grip-utils';
 import { calculateDistance } from './shared/geometry-rendering-utils';
 
 export class LineRenderer extends BaseEntityRenderer {
@@ -133,22 +134,10 @@ export class LineRenderer extends BaseEntityRenderer {
     const grips: GripInfo[] = [];
     
     // Start point grip
-    grips.push({
-      entityId: lineEntity.id,
-      gripType: 'vertex',
-      gripIndex: 0,
-      position: start,
-      state: 'cold'
-    });
-    
+    grips.push(createVertexGrip(lineEntity.id, start, 0));
+
     // End point grip
-    grips.push({
-      entityId: lineEntity.id,
-      gripType: 'vertex',
-      gripIndex: 1,
-      position: end,
-      state: 'cold'
-    });
+    grips.push(createVertexGrip(lineEntity.id, end, 1));
     
     // Use shared utility for edge grip
     const edgeGrips = createEdgeGrips(lineEntity.id, [start, end], false, 2);
@@ -225,5 +214,16 @@ export class LineRenderer extends BaseEntityRenderer {
     this.renderDistanceTextCentralized(worldStart, worldEnd, screenStart, screenEnd);
   }
 
+  // ✅ ENTERPRISE FIX: Implement abstract hitTest method
+  hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
+    if (entity.type !== 'line') return false;
+
+    // Use type guard for safe property access
+    if (!('start' in entity) || !('end' in entity)) return false;
+    const lineEntity = entity as EntityModel & { start: Point2D; end: Point2D };
+
+    const distance = pointToLineDistance(point, lineEntity.start, lineEntity.end);
+    return distance <= tolerance;
+  }
 
 }

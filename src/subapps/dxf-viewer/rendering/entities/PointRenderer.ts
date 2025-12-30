@@ -1,6 +1,7 @@
 import { BaseEntityRenderer } from './BaseEntityRenderer';
-import { EntityModel } from '../../../types/entities';
+import type { EntityModel } from '../types/Types';
 import type { Point2D, GripInfo, RenderOptions } from '../types/Types';
+import { createVertexGrip } from './shared/grip-utils';
 import { UI_COLORS } from '../../config/color-config';
 
 // Extended point entity interface
@@ -41,11 +42,12 @@ export class PointRenderer extends BaseEntityRenderer {
 
     const pointEntity = entity as PointEntity;
     return [{
+      id: `${entity.id}-point`,
       entityId: entity.id,
-      gripType: 'corner',
+      type: 'vertex',
       gripIndex: 0,
       position: pointEntity.position,
-      state: 'cold'
+      isVisible: true
     }];
   }
 

@@ -90,6 +90,7 @@ import { toolStyleStore } from '../stores/ToolStyleStore';
 import { useUnifiedLinePreview } from '../ui/hooks/useUnifiedSpecificSettings';
 import { getDashArray } from '../settings-core/defaults';
 import { modeMap } from '../settings/core/modeMap';
+import type { ViewerMode, StorageMode } from '../settings/core/types';
 
 // ===== RULERS GRID SYNC STORES =====
 // Κεντρικά stores για συγχρονισμό Grid & Rulers settings χωρίς κυκλικές εξαρτήσεις
@@ -161,9 +162,9 @@ export const globalRulerStore = createRulerStore();
 
 // ===== TYPES =====
 
-// 🆕 MERGE: Mode type from ConfigurationProvider
+// ✅ ENTERPRISE FIX: ViewerMode now imported from centralized types
 // 🔧 EXTENDED (2025-10-06): Added draft/hover/selection modes for enterprise CAD standard
-export type ViewerMode = 'normal' | 'draft' | 'hover' | 'selection' | 'completion' | 'preview';
+// ViewerMode type definition moved to ../settings/core/types.ts
 
 // 🆕 MERGE: Specific settings structure (from ConfigurationProvider)
 // 🔧 EXTENDED (2025-10-06): Added draft/hover/selection modes for enterprise CAD standard
@@ -1769,16 +1770,21 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
     // Apply specific settings for current mode (Fixed: preview → draft mapping)
     if (currentMode !== 'normal' && state.specific.line) {
       const mappedMode = modeMap(currentMode);
-      if (state.specific.line[mappedMode]) {
-        settings = { ...settings, ...state.specific.line[mappedMode] };
+      const specificLine = state.specific.line as Record<string, any>;
+      // ✅ ENTERPRISE FIX: Type guard - only access if key exists and mode is not 'normal'
+      if (mappedMode !== 'normal' && mappedMode in specificLine && specificLine[mappedMode]) {
+        settings = { ...settings, ...specificLine[mappedMode] };
       }
     }
 
     // Apply user overrides if enabled (Fixed: preview → draft mapping)
     if (state.overrideEnabled.line && state.overrides.line) {
       const mappedMode = modeMap(currentMode);
-      if (state.overrideEnabled.line[mappedMode] && state.overrides.line[mappedMode]) {
-        settings = { ...settings, ...state.overrides.line[mappedMode] };
+      const overrideEnabled = state.overrideEnabled.line as Record<string, boolean>;
+      const overrideSettings = state.overrides.line as Record<string, any>;
+      // ✅ ENTERPRISE FIX: Type guard - check key exists before access
+      if (mappedMode !== 'normal' && mappedMode in overrideEnabled && mappedMode in overrideSettings && overrideEnabled[mappedMode] && overrideSettings[mappedMode]) {
+        settings = { ...settings, ...overrideSettings[mappedMode] };
       }
     }
 
@@ -1792,16 +1798,21 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
     // Apply specific settings for current mode (Fixed: preview → draft mapping)
     if (currentMode !== 'normal' && state.specific.text) {
       const mappedMode = modeMap(currentMode);
-      if (state.specific.text[mappedMode]) {
-        settings = { ...settings, ...state.specific.text[mappedMode] };
+      const specificText = state.specific.text as Record<string, any>;
+      // ✅ ENTERPRISE FIX: Type guard - only access if key exists and mode is not 'normal'
+      if (mappedMode !== 'normal' && mappedMode in specificText && specificText[mappedMode]) {
+        settings = { ...settings, ...specificText[mappedMode] };
       }
     }
 
     // Apply user overrides if enabled (Fixed: preview → draft mapping)
-    if (state.overrideEnabled.text && state.overrides.text) {
+    if (currentMode !== 'normal' && state.overrideEnabled.text && state.overrides.text) {
       const mappedMode = modeMap(currentMode);
-      if (state.overrideEnabled.text[mappedMode] && state.overrides.text[mappedMode]) {
-        settings = { ...settings, ...state.overrides.text[mappedMode] };
+      const overrideEnabled = state.overrideEnabled.text as Record<string, any>;
+      const overrideSettings = state.overrides.text as Record<string, any>;
+      // ✅ ENTERPRISE FIX: Type guard - check key exists before access
+      if (mappedMode !== 'normal' && mappedMode in overrideEnabled && mappedMode in overrideSettings && overrideEnabled[mappedMode] && overrideSettings[mappedMode]) {
+        settings = { ...settings, ...overrideSettings[mappedMode] };
       }
     }
 
@@ -1815,16 +1826,21 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
     // Apply specific settings for current mode (Fixed: preview → draft mapping)
     if (currentMode !== 'normal' && state.specific.grip) {
       const mappedMode = modeMap(currentMode);
-      if (state.specific.grip[mappedMode]) {
-        settings = { ...settings, ...state.specific.grip[mappedMode] };
+      const specificGrip = state.specific.grip as Record<string, any>;
+      // ✅ ENTERPRISE FIX: Type guard - only access if key exists and mode is not 'normal'
+      if (mappedMode !== 'normal' && mappedMode in specificGrip && specificGrip[mappedMode]) {
+        settings = { ...settings, ...specificGrip[mappedMode] };
       }
     }
 
     // Apply user overrides if enabled (Fixed: preview → draft mapping)
-    if (state.overrideEnabled.grip && state.overrides.grip) {
+    if (currentMode !== 'normal' && state.overrideEnabled.grip && state.overrides.grip) {
       const mappedMode = modeMap(currentMode);
-      if (state.overrideEnabled.grip[mappedMode] && state.overrides.grip[mappedMode]) {
-        settings = { ...settings, ...state.overrides.grip[mappedMode] };
+      const overrideEnabled = state.overrideEnabled.grip as Record<string, boolean>;
+      const overrideSettings = state.overrides.grip as Record<string, any>;
+      // ✅ ENTERPRISE FIX: Type guard - check key exists before access
+      if (mappedMode !== 'normal' && overrideEnabled && overrideSettings && mappedMode in overrideEnabled && mappedMode in overrideSettings && overrideEnabled[mappedMode] && overrideSettings[mappedMode]) {
+        settings = { ...settings, ...overrideSettings[mappedMode] };
       }
     }
 
@@ -2199,7 +2215,9 @@ export function useLineStyles(mode?: ViewerMode) {
   const currentMode = mode || state.mode;
   const mappedMode = modeMap(currentMode);
   const effectiveSettings = getEffectiveLineSettings(currentMode);
-  const isOverridden = state.overrideEnabled.line[mappedMode] || false;
+  // ✅ ENTERPRISE FIX: Safe access for normal mode (normal mode has no overrides)
+  const overrideEnabled = state.overrideEnabled.line as Record<string, boolean>;
+  const isOverridden = currentMode === 'normal' ? false : (overrideEnabled && mappedMode in overrideEnabled && overrideEnabled[mappedMode]) || false;
 
   return {
     settings: effectiveSettings,

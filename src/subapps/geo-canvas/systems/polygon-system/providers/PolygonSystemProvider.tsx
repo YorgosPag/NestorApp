@@ -15,7 +15,7 @@ import type {
   UserRole,
   PolygonSystemState,
   PolygonSystemActions,
-  PolygonSystemContext,
+  PolygonSystemContext as PolygonSystemContextType,
   RoleBasedConfig
 } from '../types/polygon-system.types';
 import { getRoleConfig } from '../utils/polygon-config';
@@ -24,7 +24,7 @@ import { getRoleConfig } from '../utils/polygon-config';
 // CONTEXT CREATION
 // ============================================================================
 
-export const PolygonSystemContext = createContext<PolygonSystemContext | null>(null);
+export const PolygonSystemContext = createContext<PolygonSystemContextType | null>(null);
 
 // ============================================================================
 // STATE MANAGEMENT

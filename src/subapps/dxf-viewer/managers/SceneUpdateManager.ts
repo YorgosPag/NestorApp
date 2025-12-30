@@ -7,7 +7,7 @@ import { dlog, dwarn, derr } from '../debug';
 import { SceneValidator } from './SceneValidator';
 import { SceneStatistics } from './SceneStatistics';
 import type { SceneModel, AnySceneEntity, SceneLayer } from '../types/scene';
-import type { EntityRenderer } from '../types/scene';
+// Note: IEntityRenderer interface removed - using any for renderer type
 
 interface Scene {
   entities: AnySceneEntity[];
@@ -25,7 +25,7 @@ interface SceneUpdateOptions {
 
 export class SceneUpdateManager {
   private currentScene: Scene | null = null;
-  private renderer: EntityRenderer | null = null;
+  private renderer: any | null = null;
   private reactSetScene: ((scene: Scene | null) => void) | null = null;
   private sceneVersion = 0;
   private updateInProgress = false;
@@ -39,7 +39,7 @@ export class SceneUpdateManager {
 
   // ═══ INITIALIZATION ═══
 
-  setRenderer(renderer: EntityRenderer): void {
+  setRenderer(renderer: any): void {
     this.renderer = renderer;
     dlog('🎬 Renderer registered');
   }

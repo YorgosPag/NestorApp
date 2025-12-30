@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { describe, it, expect, jest, beforeAll, afterAll } from '@jest/globals';
 import { GeoCanvasApp } from '../GeoCanvasApp';
 
 // Mock dependencies

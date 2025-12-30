@@ -4,7 +4,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { Entity, ExtendedSnapType } from '../extended-types';
+import { ExtendedSnapType, type Entity, type ProSnapSettings } from '../extended-types';
 import { SnapEngineContext } from '../shared/BaseSnapEngine';
 
 interface Viewport {

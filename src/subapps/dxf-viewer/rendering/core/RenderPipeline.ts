@@ -6,6 +6,9 @@
 import type { IRenderContext } from './IRenderContext';
 import type { EntityModel } from '../types/Types';
 
+// Re-export for external use
+export type { IRenderContext };
+
 export interface RenderPassOptions {
   viewport: { x: number; y: number; width: number; height: number };
   transform: { scale: number; offsetX: number; offsetY: number };

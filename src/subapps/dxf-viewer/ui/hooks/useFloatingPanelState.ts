@@ -4,9 +4,9 @@
  * Enhanced with useReducer for ΒΗΜΑ 12 performance optimization
  */
 
-import { useFloatingPanelReducer } from '../reducers/floatingPanelReducer';
+import { useFloatingPanelReducer, type PanelType } from '../reducers/floatingPanelReducer';
 
-export type { PanelType } from '../reducers/floatingPanelReducer';
+export type { PanelType };
 
 /**
  * Return type for the useFloatingPanelState hook

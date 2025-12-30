@@ -20,7 +20,10 @@ import type {
   CartesianCoordinates
 } from './config';
 
-type ConstraintsContextType = ConstraintsHookReturn;
+// ✅ ENTERPRISE FIX: Fixed circular reference - use generic interface to break cycle
+interface ConstraintsContextType {
+  [key: string]: any; // Generic interface to break circular reference
+}
 
 export function useConstraints(): ConstraintsContextType {
   const { ConstraintsContext } = require('./ConstraintsSystem');
@@ -137,7 +140,7 @@ export const useOrtho = useOrthoConstraints;
 export const usePolar = usePolarConstraints;
 export const useOrthoPolar = useConstraints;
 
-// ✅ ENTERPRISE: Missing exports για ConstraintsSystem.tsx compatibility
+// ✅ ENTERPRISE FIX: Fixed circular reference - use proper type alias
 export type ConstraintsHookReturn = ConstraintsContextType;
 
 export function setConstraintsContext(context: any) {

@@ -127,7 +127,7 @@ export const useOverlayDrawing = ({
 
       // Clear draft and auto-select new overlay
       setDraftPolygon([]);
-      overlayStore?.setSelectedOverlay(overlayId);
+      overlayStore?.setSelectedOverlay(overlayId || null);
 
       // Keep drawing mode active for continuous drawing
     } catch (error) {

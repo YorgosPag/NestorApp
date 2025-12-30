@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 
 // Επεκτεταμένοι τύποι για measurement system
 export type ToolType = 
@@ -19,6 +19,7 @@ export type ToolType =
   | 'circle-best-fit'
   | 'polyline'
   | 'polygon'
+  | 'ellipse'
   | 'move' 
   | 'copy' 
   | 'delete' 
@@ -125,9 +126,42 @@ export const MEASUREMENT_TOOL_CONFIGS: Record<MeasurementTool, MeasurementToolCo
   },
   'measure-perimeter': {
     id: 'measure-perimeter',
-    name: 'Περίμετρος', 
+    name: 'Περίμετρος',
     icon: 'Pentagon',
     description: 'Μέτρηση περιμέτρου σχήματος',
     requiredPoints: 2
+  },
+  // ✅ ENTERPRISE FIX: Add missing angle measurement tool configs
+  'measure-angle-line-arc': {
+    id: 'measure-angle-line-arc',
+    name: 'Γωνία Γραμμή-Τόξο',
+    icon: 'AngleLineArcIcon',
+    shortcut: 'T',
+    description: 'Μέτρηση γωνίας μεταξύ γραμμής και τόξου',
+    requiredPoints: 3
+  },
+  'measure-angle-two-arcs': {
+    id: 'measure-angle-two-arcs',
+    name: 'Γωνία Δύο Τόξων',
+    icon: 'AngleTwoArcsIcon',
+    shortcut: 'T',
+    description: 'Μέτρηση γωνίας μεταξύ δύο τόξων',
+    requiredPoints: 3
+  },
+  'measure-angle-measuregeom': {
+    id: 'measure-angle-measuregeom',
+    name: 'Γωνία MeasureGeom',
+    icon: 'AngleMeasureGeomIcon',
+    shortcut: 'T',
+    description: 'Μέτρηση γωνίας με MEASUREGEOM (χωρίς διάσταση)',
+    requiredPoints: 3
+  },
+  'measure-angle-constraint': {
+    id: 'measure-angle-constraint',
+    name: 'Παραμετρικό Constraint Γωνίας',
+    icon: 'AngleConstraintIcon',
+    shortcut: 'T',
+    description: 'Παραμετρικό angle constraint',
+    requiredPoints: 3
   }
 };

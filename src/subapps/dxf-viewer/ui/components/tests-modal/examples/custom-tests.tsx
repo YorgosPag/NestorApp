@@ -11,7 +11,7 @@
  */
 
 import React, { useState } from 'react';
-import { TestsModal } from '../TestsModal'; // Adjust path to: './components/tests-modal/TestsModal'
+import { TestsModal } from '../../TestsModal'; // Corrected path to TestsModal
 import { useBorderTokens } from '@/hooks/useBorderTokens'; // Enterprise border system
 import type { TestDefinition, NotificationFn } from '../types/tests.types'; // Adjust path accordingly
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';

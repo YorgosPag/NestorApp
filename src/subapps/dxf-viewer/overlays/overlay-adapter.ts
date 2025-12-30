@@ -17,11 +17,18 @@ export function overlaysToRegions(overlays: Overlay[]): Region[] {
         vertices = (ov.polygon as [number, number][]).map(([x, y]) => ({ x, y } as Point2D));
       } else {
         // Flat format: [x1, y1, x2, y2, ...]
-        const flatArray = ov.polygon as number[];
-        vertices = Array.from({ length: flatArray.length / 2 }, (_, i) => ({
-          x: flatArray[i * 2],
-          y: flatArray[i * 2 + 1]
-        } as Point2D));
+        // ✅ ENTERPRISE FIX: Safe type assertion - check if array contains numbers
+        const maybeFlat = ov.polygon as unknown;
+        if (Array.isArray(maybeFlat) && typeof maybeFlat[0] === 'number') {
+          const flatArray = maybeFlat as number[];
+          vertices = Array.from({ length: Math.floor(flatArray.length / 2) }, (_, i) => ({
+            x: flatArray[i * 2],
+            y: flatArray[i * 2 + 1]
+          } as Point2D));
+        } else {
+          console.warn('Invalid polygon format in overlay:', ov.polygon);
+          vertices = [];
+        }
       }
     } else {
       vertices = []; // Empty polygon

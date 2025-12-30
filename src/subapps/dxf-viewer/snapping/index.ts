@@ -5,7 +5,7 @@
 
 // Main engines
 export { ProSnapEngineV2 } from './ProSnapEngineV2'; // Unified snap engine
-import { ProSnapEngineV2, type ProSnapSettings } from './ProSnapEngineV2';
+import type { ProSnapSettings } from './ProSnapEngineV2';
 export { snapSystem } from './pro-snap-engine'; // Global instance for legacy compatibility
 
 // Orchestrator and engines

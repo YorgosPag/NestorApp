@@ -4,9 +4,9 @@
 const DEBUG_ENHANCED_DXF_TOOLBAR = true;
 
 import React from 'react';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization
+import { useIconSizes } from '../../../../hooks/useIconSizes';
+import { useBorderTokens } from '../../../../hooks/useBorderTokens';
+import { useSemanticColors } from '../../../../hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization
 import type { ToolType } from './types';
 import type { Point2D } from '../../rendering/types/Types';
 import { toolGroups, createActionButtons } from './toolDefinitions';
@@ -16,7 +16,7 @@ import { ScaleControls } from './ScaleControls';
 import { ToolButton, ActionButton } from './ToolButton';
 import { ToolbarStatusBar } from './ToolbarStatusBar';
 import { ProSnapToolbar } from '../components/ProSnapToolbar';
-import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { HOVER_BACKGROUND_EFFECTS } from '../../../../components/ui/effects';
 import UploadDxfButton from '../UploadDxfButton';
 import { SimpleProjectDialog } from '../../components/SimpleProjectDialog';
 import type { SceneModel } from '../../types/scene';
@@ -30,7 +30,6 @@ interface EnhancedDXFToolbarProps {
   canUndo: boolean;
   canRedo: boolean;
   snapEnabled: boolean;
-  showLayers?: boolean;
   showCursorSettings?: boolean;
   currentZoom: number;
   commandCount?: number;
@@ -49,7 +48,6 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
   canUndo,
   canRedo,
   snapEnabled,
-  showLayers = false,
   showCursorSettings = false,
   currentZoom,
   commandCount,
@@ -174,21 +172,20 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
   }, [activeTool, onToolChange, onAction]);
 
   // Χρήση του ενοποιημένου snap system
-  const { 
-    enabledModes, 
-    toggleMode, 
-    snapEnabled: contextSnapEnabled, 
-    toggleSnap 
-  } = useProSnapIntegration(snapEnabled);
+  const {
+    enabledModes,
+    toggleMode,
+    snapEnabled: contextSnapEnabled,
+    toggleSnap
+  } = useProSnapIntegration(snapEnabled ?? false);
   
   const actionButtons = createActionButtons({
     canUndo,
     canRedo,
     snapEnabled: contextSnapEnabled,
     showGrid,
-    showLayers,
     autoCrop,
-    showCursorSettings,
+    showCursorSettings: showCursorSettings || false,
     onAction: (action, data) => {
       console.log('🎯 EnhancedDXFToolbar onAction called:', action, data); // DEBUG - shows actual values
       onAction(action, data as string | number | Record<string, unknown>);
@@ -239,7 +236,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
 
           <button
             onClick={() => setShowSimpleDialog(true)}
-            className={`${iconSizes.xl} p-0 ${radius.md} border transition-colors duration-150 flex items-center justify-center ${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.PRIMARY} ${colors.text.inverted} ${getStatusBorder('info')}`}  // ✅ ENTERPRISE: bg-blue-700 → CSS variable
+            className={`${iconSizes.xl} p-0 ${radius.md} border transition-colors duration-150 flex items-center justify-center ${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.PRIMARY} ${colors.text.inverse} ${getStatusBorder('info')}`}  // ✅ ENTERPRISE: bg-blue-700 → CSS variable
             title="Enhanced DXF Import with Project Management"
           >
             🔺
@@ -253,10 +250,10 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
                 <ToolButton
                   key={tool.id}
                   tool={tool}
-                  isActive={activeTool === tool.id || (tool.dropdownOptions && tool.dropdownOptions.some(option => option.id === activeTool))}
+                  isActive={activeTool === tool.id || (tool.dropdownOptions?.some(option => option.id === activeTool) ?? false)}
                   onClick={() => handleToolChange(tool.id)}
                   onDropdownSelect={(toolId) => handleToolChange(toolId as ToolType)}
-                  activeTool={activeTool}
+                  activeTool={activeTool ?? 'select'}
                 />
               ))}
               {groupIndex < toolGroups.length - 1 && (
@@ -307,7 +304,10 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
       <SimpleProjectDialog
         isOpen={showSimpleDialog}
         onClose={() => setShowSimpleDialog(false)}
-        onFileImport={onSceneImported}
+        onFileImport={onSceneImported ? async (file: File, encoding?: string) => {
+          onSceneImported(file, encoding);
+          return Promise.resolve();
+        } : undefined}
       />
     </div>
   );

@@ -24,7 +24,7 @@
  */
 
 import type { SyncDependencies, ToolStylePort, TextStylePort, GripStylePort, GridPort, RulerPort, Unsubscribe } from './ports';
-import type { LineSettings, TextSettings } from '../settings-core/types';
+import type { LineSettings, TextSettings } from '../core/types';
 import type { GripSettings } from '../../types/gripSettings';
 import type { ViewerMode } from '../core/types';
 import { UI_COLORS } from '../../config/color-config';

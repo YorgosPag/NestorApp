@@ -69,9 +69,9 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useIconSizes } from '../../../../../../../hooks/useIconSizes';
+import { useBorderTokens } from '../../../../../../../hooks/useBorderTokens';
+import { useSemanticColors } from '../../../../../../../ui-adapters/react/useSemanticColors';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { layoutUtilities } from '@/styles/design-tokens';
 

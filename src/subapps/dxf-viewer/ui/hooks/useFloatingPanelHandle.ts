@@ -61,19 +61,21 @@ export function useFloatingPanelHandle({
         if (!ent) return;
 
         // Κλειδί 1ου επιπέδου: Color Group (όχι layer name)
-        const layer = scene.layers[ent.layer];
-        if (layer) {
-          const color = layer.color || DEFAULT_LAYER_COLOR;
-          const colorName = `Color ${color}`;
-          next.add(layerKey(colorName)); // Αυτό ταιριάζει με το ColorGroupList
+        if (ent.layer !== undefined && ent.layer !== null) {
+          const layer = scene.layers[ent.layer as string];
+          if (layer) {
+            const color = layer.color || DEFAULT_LAYER_COLOR;
+            const colorName = `Color ${color}`;
+            next.add(layerKey(colorName)); // Αυτό ταιριάζει με το ColorGroupList
+          }
+
+          // Κλειδί 2ου επιπέδου: το Layer μέσα στο Color Group
+          next.add(layerKey(ent.layer as string));
+
+          // Αν έχεις 3ο επίπεδο/υπο-layers:
+          const sub = ('subLayer' in ent ? ent.subLayer : 'groupKey' in ent ? ent.groupKey : undefined);
+          if (sub) next.add(subLayerKey(ent.layer as string, sub as string));
         }
-
-        // Κλειδί 2ου επιπέδου: το Layer μέσα στο Color Group
-        next.add(layerKey(ent.layer as string));
-
-        // Αν έχεις 3ο επίπεδο/υπο-layers:
-        const sub = ('subLayer' in ent ? ent.subLayer : 'groupKey' in ent ? ent.groupKey : undefined);
-        if (sub) next.add(subLayerKey(ent.layer as string, sub));
       });
 
       console.debug('[FPC] expandForSelection ids=', ids, 'expandedKeys=', Array.from(next));

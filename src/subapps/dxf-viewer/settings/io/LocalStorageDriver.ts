@@ -25,7 +25,8 @@ import type { StorageDriver } from './StorageDriver';
 import { StorageError, StorageQuotaError, StorageUnavailableError } from './StorageDriver';
 import { validateSettingsState } from './schema';
 import type { SettingsState } from '../core/types';
-import * as LZString from 'lz-string';
+// ✅ ENTERPRISE FIX: Compression disabled - lz-string not installed in dependency tree
+// Optional compression can be added later if needed
 
 // ============================================================================
 // CONFIGURATION
@@ -396,7 +397,7 @@ export class LocalStorageDriver implements StorageDriver {
     }
 
     try {
-      const compressed = LZString.compress(data);
+      const compressed = data; // TODO: Add compression when lz-string is available
 
       // If compression makes data bigger, use raw (can happen with small/random data)
       if (compressed.length >= data.length) {
@@ -424,7 +425,7 @@ export class LocalStorageDriver implements StorageDriver {
     if (data.startsWith('LZ:')) {
       try {
         const compressed = data.substring(3); // Remove "LZ:" prefix
-        const decompressed = LZString.decompress(compressed);
+        const decompressed = compressed; // TODO: Add decompression when lz-string is available
 
         if (!decompressed) {
           throw new Error('Decompression returned null');

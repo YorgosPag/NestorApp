@@ -35,7 +35,8 @@ export function createDefaultAWSConfig(
     region,
     credentials: {
       accessKey,
-      secretKey
+      secretKey,
+      region  // ✅ ENTERPRISE FIX: Add required region property
     },
     endpoints: getDefaultAWSEndpoints(region),
     features: getDefaultAWSFeatures(),

@@ -12,7 +12,8 @@
  * - Performance monitoring
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+// ✅ ENTERPRISE FIX: Fixed test framework import for proper TypeScript compilation
+import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { ServiceRegistry } from '../ServiceRegistry';
 import type { ServiceName } from '../ServiceRegistry';
 

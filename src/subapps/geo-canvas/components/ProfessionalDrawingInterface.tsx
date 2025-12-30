@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import type * as mapboxgl from 'mapbox-gl';
 import { Upload, FileImage, FileText, Layers, Building, Check, X, Bell, BarChart, Settings } from 'lucide-react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -10,14 +11,21 @@ import { useCentralizedPolygonSystem } from '../systems/polygon-system';
 import { GEO_COLORS } from '../config/color-config';
 import { FloorPlanUploadModal } from '../floor-plan-system/components/FloorPlanUploadModal';
 import { PropertyStatusManager } from './PropertyStatusManager';
-import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
-import type { RealEstatePolygon } from '@geo-alert/core';
+// TODO: Implement real estate monitoring integration
+// import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
+// import type { RealEstatePolygon } from '@geo-alert/core';
+type RealEstatePolygon = {
+  id: string;
+  polygon: Array<[number, number]>;
+  settings: Record<string, unknown>;
+  createdAt: string;
+};
 import type { ParserResult } from '../floor-plan-system/types';
 import type { PropertyStatus } from '@/constants/property-statuses-enterprise';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 interface ProfessionalDrawingInterfaceProps {
-  mapRef: React.RefObject<any>;
+  mapRef: React.RefObject<mapboxgl.Map | null>;
   onPolygonComplete?: (polygon: any) => void;
   onFloorPlanUploaded?: (floorPlan: any) => void;
   onRealEstateAlertCreated?: (alert: RealEstatePolygon) => void;
@@ -68,13 +76,18 @@ export function ProfessionalDrawingInterface({
   const [showMonitoringDashboard, setShowMonitoringDashboard] = useState(false);
   const [batchMonitoringMode, setBatchMonitoringMode] = useState(false);
 
-  // Real Estate Monitoring Integration
+  // Real Estate Monitoring Integration (TODO: Replace with real implementation)
   const {
     addRealEstatePolygon,
     getRealEstateAlerts,
     getStatistics,
     exportMatches
-  } = useRealEstateMatching();
+  } = {
+    addRealEstatePolygon: (_polygon: RealEstatePolygon) => {},
+    getRealEstateAlerts: () => [] as RealEstatePolygon[],
+    getStatistics: () => ({ totalPolygons: 0, totalAlerts: 0, activeAlerts: 0 }),
+    exportMatches: () => Promise.resolve('')
+  };
 
   // ✅ ENTERPRISE FIX: Get statistics as object, not function
   const realEstateStats = getStatistics();

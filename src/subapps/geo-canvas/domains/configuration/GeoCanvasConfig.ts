@@ -18,7 +18,7 @@ import {
   PanelConfiguration,
   LayerConfiguration,
   MeasurementConfiguration
-} from '../../enterprise-types/GeoCanvasTypes';
+} from '../enterprise-types/GeoCanvasTypes';
 
 // ============================================================================
 // 🎯 ENTERPRISE DEFAULT CONFIGURATIONS - SINGLE SOURCE OF TRUTH
@@ -391,14 +391,7 @@ export class GeoCanvasConfigManager {
 // 🔗 DOMAIN EXPORTS - CONFIGURATION
 // ============================================================================
 
-export {
-  DEFAULT_MAP_CONFIG,
-  DEFAULT_TOOL_CONFIGS,
-  DEFAULT_PANEL_CONFIGS,
-  DEFAULT_LAYER_CONFIGS,
-  DEFAULT_MEASUREMENT_CONFIG,
-  DEFAULT_GEO_CANVAS_CONFIG
-};
+// ✅ ENTERPRISE FIX: Exports already declared above, no need to redeclare
 
 export default GeoCanvasConfigManager;
 

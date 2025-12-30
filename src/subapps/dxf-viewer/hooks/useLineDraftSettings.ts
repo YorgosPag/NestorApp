@@ -11,7 +11,7 @@
  * ```
  */
 
-import React from 'react';
+import * as React from 'react';
 import { useEnterpriseDxfSettings } from '../settings-provider';
 import type { LineSettings } from '../settings-core/types';
 

@@ -2,7 +2,7 @@
  * Angle Two Arcs Icon - Δύο τόξα/κύκλοι
  */
 
-import React from 'react';
+import * as React from 'react';
 
 interface AngleTwoArcsIconProps {
   size?: number;

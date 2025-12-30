@@ -63,10 +63,10 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useId, useMemo, useCallback } from 'react';
-import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { HOVER_BACKGROUND_EFFECTS } from '../../../../../../../components/ui/effects';
+import { useIconSizes } from '../../../../../../../hooks/useIconSizes';
+import { useBorderTokens } from '../../../../../../../hooks/useBorderTokens';
+import { useSemanticColors } from '../../../../../../../ui-adapters/react/useSemanticColors';
 import { createPortal } from 'react-dom';
 import { useFloating, autoUpdate, offset, flip, shift, size } from '@floating-ui/react';
 // 🏢 ENTERPRISE: Import FixedSizeList from react-window

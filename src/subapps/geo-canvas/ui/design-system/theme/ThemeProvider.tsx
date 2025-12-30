@@ -1,55 +1,94 @@
 /**
- * THEME PROVIDER & SYSTEM
+ * THEME PROVIDER & SYSTEM - JSX ENABLED
  * Geo-Alert System - Phase 6: Enterprise Theme Management
- *
- * Comprehensive theme system με dark mode, high contrast, και accessibility support.
- * Implements enterprise theme patterns με CSS variables και React Context.
+ * @jsx React.createElement
  */
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { colorTokens } from '@/design-system/tokens/colors';
-import { GEO_COLORS } from '../../config/color-config';
+import * as React from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { UI_COLORS } from '../../../../dxf-viewer/config/color-config';
+import { GEO_COLORS } from '../../../config/color-config';
+import { colors, spacing, typography, shadows, animation, borders } from '../../../../../styles/design-tokens/core';
+import { semanticColors } from '../../../../../styles/design-tokens';
 
-// For now, keep the hardcoded values until we fully migrate to the centralized design system
-// TODO: Replace with centralized tokens from @/design-system/tokens/*
-const colors = {
-  background: {
-    primary: 'hsl(var(--background))',
-    secondary: 'hsl(var(--muted))',
-    tertiary: 'hsl(var(--card))',
-    inverse: 'hsl(var(--foreground))',
-    overlay: GEO_COLORS.UI.OVERLAY_LIGHT,
-    disabled: 'hsl(var(--muted))'
+// ✅ ENTERPRISE: Base theme colors with consistent structure
+const themeColors = {
+  ...colors,
+  primary: colors.blue,
+  semantic: semanticColors || {
+    status: {
+      success: 'hsl(var(--status-success))',
+      info: 'hsl(var(--status-info))',
+      warning: 'hsl(var(--status-warning))',
+      error: 'hsl(var(--status-error))',
+      purple: 'hsl(var(--status-purple))'
+    },
+    propertyStatus: { available: '#22c55e', pending: '#f97316', unavailable: '#ef4444' },
+    buildingStatus: { active: '#3b82f6', inactive: '#6b7280', maintenance: '#f59e0b' },
+    success: {
+      main: colors.green?.[500] || '#22c55e',
+      light: colors.green?.[300] || '#86efac',
+      dark: colors.green?.[600] || '#16a34a'
+    },
+    warning: {
+      main: colors.orange?.[500] || '#f97316',
+      light: colors.orange?.[300] || '#fdba74',
+      dark: colors.orange?.[600] || '#ea580c'
+    },
+    error: {
+      main: colors.red?.[500] || '#ef4444',
+      light: colors.red?.[300] || '#fca5a5',
+      dark: colors.red?.[600] || '#dc2626'
+    },
+    info: {
+      main: colors.blue?.[500] || '#3b82f6',
+      light: colors.blue?.[300] || '#93c5fd',
+      dark: colors.blue?.[600] || '#2563eb'
+    }
   },
-  text: {
-    primary: 'hsl(var(--foreground))',
-    secondary: 'hsl(var(--muted-foreground))',
-    tertiary: 'hsl(var(--muted-foreground))',
-    inverse: 'hsl(var(--background))',
-    disabled: 'hsl(var(--muted-foreground))',
-    link: 'hsl(var(--primary))',
-    linkHover: 'hsl(var(--primary))'
-  },
-  border: {
-    primary: 'hsl(var(--border))',
-    secondary: 'hsl(var(--border))',
-    tertiary: 'hsl(var(--border))',
-    focus: 'hsl(var(--ring))',
-    error: 'hsl(var(--destructive))',
-    success: 'hsl(var(--primary))',
-    warning: 'hsl(var(--secondary))'
+  severity: {
+    critical: {
+      background: '#ef4444',
+      border: '#dc2626',
+      text: '#ffffff',
+      icon: '#ef4444'
+    },
+    high: {
+      background: '#f97316',
+      border: '#ea580c',
+      text: '#ffffff',
+      icon: '#f97316'
+    },
+    medium: {
+      background: '#3b82f6',
+      border: '#2563eb',
+      text: '#ffffff',
+      icon: '#3b82f6'
+    },
+    low: {
+      background: '#22c55e',
+      border: '#16a34a',
+      text: '#ffffff',
+      icon: '#22c55e'
+    },
+    info: {
+      background: '#93c5fd',
+      border: '#3b82f6',
+      text: '#1e293b',
+      icon: '#3b82f6'
+    }
   }
-};
+} as const;
 
-// Temporary placeholders until we fully migrate to centralized tokens
-const typography = {
+// ✅ ENTERPRISE: Using centralized design tokens with fallbacks
+const themeTypography = typography || {
   fontFamily: { body: 'system-ui', heading: 'system-ui' },
   fontSize: { sm: '14px', base: '16px', lg: '18px' }
 };
-const spacing = { xs: '4px', sm: '8px', md: '16px', lg: '24px' };
-const shadows = { sm: GEO_COLORS.UI.SHADOW_SM, md: GEO_COLORS.UI.SHADOW_MD };
-const borderRadius = { sm: '4px', md: '8px', lg: '12px' };
-const animations = { duration: { fast: '150ms', normal: '300ms' } };
+const themeSpacing = spacing || { xs: '4px', sm: '8px', md: '16px', lg: '24px' };
+const themeShadows = shadows || { sm: GEO_COLORS.UI.SHADOW_SM, md: GEO_COLORS.UI.SHADOW_MD };
+const themeBorderRadius = borders?.radius || { sm: '4px', md: '8px', lg: '12px' };
+const themeAnimations = animation || { duration: { fast: '150ms', normal: '300ms' } };
 
 // ============================================================================
 // THEME TYPES
@@ -63,12 +102,12 @@ export interface Theme {
   mode: ThemeMode;
   colorScheme: ColorScheme;
   density: Density;
-  colors: typeof colors;
-  typography: typeof typography;
-  spacing: typeof spacing;
-  shadows: typeof shadows;
-  borderRadius: typeof borderRadius;
-  animations: typeof animations;
+  colors: typeof themeColors;
+  typography: typeof themeTypography;
+  spacing: typeof themeSpacing;
+  shadows: typeof themeShadows;
+  borderRadius: typeof themeBorderRadius;
+  animations: typeof themeAnimations;
   cssVariables: Record<string, string>;
 }
 
@@ -91,7 +130,7 @@ export interface ThemeContextValue {
 // ============================================================================
 
 const darkColors = {
-  ...colors,
+  ...themeColors,
 
   // Override specific colors για dark mode - using CSS variables
   background: {
@@ -99,7 +138,7 @@ const darkColors = {
     secondary: 'hsl(var(--muted))',
     tertiary: 'hsl(var(--card))',
     inverse: 'hsl(var(--foreground))',
-    overlay: GEO_COLORS.UI.OVERLAY_LIGHT,
+    overlay: GEO_COLORS.UI.OVERLAY_DARK,
     disabled: 'hsl(var(--muted))'
   },
 
@@ -125,34 +164,34 @@ const darkColors = {
 
   severity: {
     critical: {
-      background: 'hsl(var(--destructive))',
-      border: 'hsl(var(--destructive))',
-      text: 'hsl(var(--destructive-foreground))',
-      icon: 'hsl(var(--destructive))'
+      background: '#ef4444', // Use hex colors for type consistency
+      border: '#dc2626',
+      text: '#ffffff',
+      icon: '#ef4444'
     },
     high: {
-      background: 'hsl(var(--secondary))',
-      border: 'hsl(var(--secondary))',
-      text: 'hsl(var(--secondary-foreground))',
-      icon: 'hsl(var(--secondary))'
+      background: '#f97316',
+      border: '#ea580c',
+      text: '#ffffff',
+      icon: '#f97316'
     },
     medium: {
-      background: 'hsl(var(--primary))',
-      border: 'hsl(var(--primary))',
-      text: 'hsl(var(--primary-foreground))',
-      icon: 'hsl(var(--primary))'
+      background: '#3b82f6',
+      border: '#2563eb',
+      text: '#ffffff',
+      icon: '#3b82f6'
     },
     low: {
-      background: 'hsl(var(--primary))',
-      border: 'hsl(var(--primary))',
-      text: 'hsl(var(--primary-foreground))',
-      icon: 'hsl(var(--primary))'
+      background: '#22c55e',
+      border: '#16a34a',
+      text: '#ffffff',
+      icon: '#22c55e'
     },
     info: {
-      background: 'hsl(var(--primary))',
-      border: 'hsl(var(--primary))',
-      text: 'hsl(var(--primary-foreground))',
-      icon: 'hsl(var(--primary))'
+      background: '#93c5fd',
+      border: '#3b82f6',
+      text: '#1e293b',
+      icon: '#3b82f6'
     }
   }
 } as const;
@@ -162,7 +201,7 @@ const darkColors = {
 // ============================================================================
 
 const highContrastColors = {
-  ...colors,
+  ...themeColors,
 
   background: {
     primary: 'hsl(var(--background))',
@@ -191,6 +230,39 @@ const highContrastColors = {
     error: 'hsl(var(--destructive))',
     success: 'hsl(var(--primary))',
     warning: 'hsl(var(--secondary))'
+  },
+
+  severity: {
+    critical: {
+      background: '#000000',
+      border: '#ffffff',
+      text: '#ffffff',
+      icon: '#ffffff'
+    },
+    high: {
+      background: '#000000',
+      border: '#ffffff',
+      text: '#ffffff',
+      icon: '#ffffff'
+    },
+    medium: {
+      background: '#000000',
+      border: '#ffffff',
+      text: '#ffffff',
+      icon: '#ffffff'
+    },
+    low: {
+      background: '#000000',
+      border: '#ffffff',
+      text: '#ffffff',
+      icon: '#ffffff'
+    },
+    info: {
+      background: '#000000',
+      border: '#ffffff',
+      text: '#ffffff',
+      icon: '#ffffff'
+    }
   }
 } as const;
 
@@ -226,95 +298,95 @@ const generateCSSVariables = (
   const isDark = mode === 'dark' || (mode === 'auto' && systemPrefersDark);
   const isHighContrast = colorScheme === 'high-contrast';
 
-  let themeColors = colors;
+  let currentThemeColors = themeColors;
   if (isDark && !isHighContrast) {
-    themeColors = darkColors;
+    currentThemeColors = darkColors as unknown as typeof themeColors;
   } else if (isHighContrast) {
-    themeColors = highContrastColors;
+    currentThemeColors = highContrastColors as unknown as typeof themeColors;
   }
 
   const densityConfig = densitySpacing[density];
 
   return {
     // Color variables
-    '--color-primary-50': themeColors.primary[50],
-    '--color-primary-100': themeColors.primary[100],
-    '--color-primary-200': themeColors.primary[200],
-    '--color-primary-300': themeColors.primary[300],
-    '--color-primary-400': themeColors.primary[400],
-    '--color-primary-500': themeColors.primary[500],
-    '--color-primary-600': themeColors.primary[600],
-    '--color-primary-700': themeColors.primary[700],
-    '--color-primary-800': themeColors.primary[800],
-    '--color-primary-900': themeColors.primary[900],
+    '--color-primary-50': currentThemeColors.primary?.[50] || currentThemeColors.blue?.[50] || '#f0f9ff',
+    '--color-primary-100': currentThemeColors.primary?.[100] || currentThemeColors.blue?.[100] || '#e0f2fe',
+    '--color-primary-200': currentThemeColors.primary?.[200] || currentThemeColors.blue?.[200] || '#bae6fd',
+    '--color-primary-300': currentThemeColors.primary?.[300] || currentThemeColors.blue?.[300] || '#7dd3fc',
+    '--color-primary-400': currentThemeColors.primary?.[400] || currentThemeColors.blue?.[400] || '#38bdf8',
+    '--color-primary-500': currentThemeColors.primary?.[500] || currentThemeColors.blue?.[500] || '#0ea5e9',
+    '--color-primary-600': currentThemeColors.primary?.[600] || currentThemeColors.blue?.[600] || '#0284c7',
+    '--color-primary-700': currentThemeColors.primary?.[700] || currentThemeColors.blue?.[700] || '#0369a1',
+    '--color-primary-800': currentThemeColors.primary?.[800] || currentThemeColors.blue?.[800] || '#075985',
+    '--color-primary-900': currentThemeColors.primary?.[900] || currentThemeColors.blue?.[900] || '#0c4a6e',
 
-    '--color-bg-primary': themeColors.background.primary,
-    '--color-bg-secondary': themeColors.background.secondary,
-    '--color-bg-tertiary': themeColors.background.tertiary,
-    '--color-bg-inverse': themeColors.background.inverse,
-    '--color-bg-overlay': themeColors.background.overlay,
-    '--color-bg-disabled': themeColors.background.disabled,
+    '--color-bg-primary': currentThemeColors.background?.primary || '#ffffff',
+    '--color-bg-secondary': currentThemeColors.background?.secondary || '#f8fafc',
+    '--color-bg-tertiary': currentThemeColors.background?.tertiary || '#f1f5f9',
+    '--color-bg-inverse': (currentThemeColors.background as any)?.inverse || currentThemeColors.text?.primary || '#1e293b',
+    '--color-bg-overlay': currentThemeColors.background?.overlay || 'rgba(0, 0, 0, 0.5)',
+    '--color-bg-disabled': (currentThemeColors.background as any)?.disabled || '#f8fafc',
 
-    '--color-text-primary': themeColors.text.primary,
-    '--color-text-secondary': themeColors.text.secondary,
-    '--color-text-tertiary': themeColors.text.tertiary,
-    '--color-text-inverse': themeColors.text.inverse,
-    '--color-text-disabled': themeColors.text.disabled,
-    '--color-text-link': themeColors.text.link,
-    '--color-text-link-hover': themeColors.text.linkHover,
+    '--color-text-primary': currentThemeColors.text?.primary || '#1e293b',
+    '--color-text-secondary': currentThemeColors.text?.secondary || '#64748b',
+    '--color-text-tertiary': currentThemeColors.text?.tertiary || currentThemeColors.text?.muted || '#94a3b8',
+    '--color-text-inverse': currentThemeColors.text?.inverse || '#ffffff',
+    '--color-text-disabled': (currentThemeColors.text as any)?.disabled || currentThemeColors.text?.muted || '#94a3b8',
+    '--color-text-link': currentThemeColors.primary?.[500] || currentThemeColors.blue?.[500] || '#3b82f6',
+    '--color-text-link-hover': currentThemeColors.primary?.[600] || currentThemeColors.blue?.[600] || '#2563eb',
 
-    '--color-border-primary': themeColors.border.primary,
-    '--color-border-secondary': themeColors.border.secondary,
-    '--color-border-tertiary': themeColors.border.tertiary,
-    '--color-border-focus': themeColors.border.focus,
-    '--color-border-error': themeColors.border.error,
-    '--color-border-success': themeColors.border.success,
-    '--color-border-warning': themeColors.border.warning,
+    '--color-border-primary': currentThemeColors.border?.primary || '#e2e8f0',
+    '--color-border-secondary': currentThemeColors.border?.secondary || '#cbd5e1',
+    '--color-border-tertiary': currentThemeColors.border?.tertiary || '#f1f5f9',
+    '--color-border-focus': currentThemeColors.primary?.[500] || currentThemeColors.blue?.[500] || '#3b82f6',
+    '--color-border-error': currentThemeColors.red?.[500] || '#ef4444',
+    '--color-border-success': currentThemeColors.green?.[500] || '#22c55e',
+    '--color-border-warning': currentThemeColors.orange?.[500] || '#f97316',
 
     // Semantic colors
-    '--color-success': themeColors.semantic.success.main,
-    '--color-success-light': themeColors.semantic.success.light,
-    '--color-success-dark': themeColors.semantic.success.dark,
-    '--color-warning': themeColors.semantic.warning.main,
-    '--color-warning-light': themeColors.semantic.warning.light,
-    '--color-warning-dark': themeColors.semantic.warning.dark,
-    '--color-error': themeColors.semantic.error.main,
-    '--color-error-light': themeColors.semantic.error.light,
-    '--color-error-dark': themeColors.semantic.error.dark,
-    '--color-info': themeColors.semantic.info.main,
-    '--color-info-light': themeColors.semantic.info.light,
-    '--color-info-dark': themeColors.semantic.info.dark,
+    '--color-success': (currentThemeColors.semantic as any)?.success?.main || currentThemeColors.green?.[500] || '#22c55e',
+    '--color-success-light': (currentThemeColors.semantic as any)?.success?.light || currentThemeColors.green?.[300] || '#86efac',
+    '--color-success-dark': (currentThemeColors.semantic as any)?.success?.dark || currentThemeColors.green?.[600] || '#16a34a',
+    '--color-warning': (currentThemeColors.semantic as any)?.warning?.main || currentThemeColors.orange?.[500] || '#f97316',
+    '--color-warning-light': (currentThemeColors.semantic as any)?.warning?.light || currentThemeColors.orange?.[300] || '#fdba74',
+    '--color-warning-dark': (currentThemeColors.semantic as any)?.warning?.dark || currentThemeColors.orange?.[600] || '#ea580c',
+    '--color-error': (currentThemeColors.semantic as any)?.error?.main || currentThemeColors.red?.[500] || '#ef4444',
+    '--color-error-light': (currentThemeColors.semantic as any)?.error?.light || currentThemeColors.red?.[300] || '#fca5a5',
+    '--color-error-dark': (currentThemeColors.semantic as any)?.error?.dark || currentThemeColors.red?.[600] || '#dc2626',
+    '--color-info': (currentThemeColors.semantic as any)?.info?.main || currentThemeColors.blue?.[500] || '#3b82f6',
+    '--color-info-light': (currentThemeColors.semantic as any)?.info?.light || currentThemeColors.blue?.[300] || '#93c5fd',
+    '--color-info-dark': (currentThemeColors.semantic as any)?.info?.dark || currentThemeColors.blue?.[600] || '#2563eb',
 
     // Severity colors
-    '--color-severity-critical-bg': themeColors.severity.critical.background,
-    '--color-severity-critical-border': themeColors.severity.critical.border,
-    '--color-severity-critical-text': themeColors.severity.critical.text,
-    '--color-severity-critical-icon': themeColors.severity.critical.icon,
+    '--color-severity-critical-bg': currentThemeColors.severity?.critical?.background || currentThemeColors.red?.[500] || '#ef4444',
+    '--color-severity-critical-border': currentThemeColors.severity?.critical?.border || currentThemeColors.red?.[600] || '#dc2626',
+    '--color-severity-critical-text': currentThemeColors.severity?.critical?.text || currentThemeColors.text?.inverse || '#ffffff',
+    '--color-severity-critical-icon': currentThemeColors.severity?.critical?.icon || currentThemeColors.red?.[500] || '#ef4444',
 
-    '--color-severity-high-bg': themeColors.severity.high.background,
-    '--color-severity-high-border': themeColors.severity.high.border,
-    '--color-severity-high-text': themeColors.severity.high.text,
-    '--color-severity-high-icon': themeColors.severity.high.icon,
+    '--color-severity-high-bg': currentThemeColors.severity?.high?.background || currentThemeColors.orange?.[500] || '#f97316',
+    '--color-severity-high-border': currentThemeColors.severity?.high?.border || currentThemeColors.orange?.[600] || '#ea580c',
+    '--color-severity-high-text': currentThemeColors.severity?.high?.text || currentThemeColors.text?.inverse || '#ffffff',
+    '--color-severity-high-icon': currentThemeColors.severity?.high?.icon || currentThemeColors.orange?.[500] || '#f97316',
 
-    '--color-severity-medium-bg': themeColors.severity.medium.background,
-    '--color-severity-medium-border': themeColors.severity.medium.border,
-    '--color-severity-medium-text': themeColors.severity.medium.text,
-    '--color-severity-medium-icon': themeColors.severity.medium.icon,
+    '--color-severity-medium-bg': currentThemeColors.severity?.medium?.background || currentThemeColors.blue?.[500] || '#3b82f6',
+    '--color-severity-medium-border': currentThemeColors.severity?.medium?.border || currentThemeColors.blue?.[600] || '#2563eb',
+    '--color-severity-medium-text': currentThemeColors.severity?.medium?.text || currentThemeColors.text?.inverse || '#ffffff',
+    '--color-severity-medium-icon': currentThemeColors.severity?.medium?.icon || currentThemeColors.blue?.[500] || '#3b82f6',
 
-    '--color-severity-low-bg': themeColors.severity.low.background,
-    '--color-severity-low-border': themeColors.severity.low.border,
-    '--color-severity-low-text': themeColors.severity.low.text,
-    '--color-severity-low-icon': themeColors.severity.low.icon,
+    '--color-severity-low-bg': currentThemeColors.severity?.low?.background || currentThemeColors.green?.[500] || '#22c55e',
+    '--color-severity-low-border': currentThemeColors.severity?.low?.border || currentThemeColors.green?.[600] || '#16a34a',
+    '--color-severity-low-text': currentThemeColors.severity?.low?.text || currentThemeColors.text?.inverse || '#ffffff',
+    '--color-severity-low-icon': currentThemeColors.severity?.low?.icon || currentThemeColors.green?.[500] || '#22c55e',
 
-    '--color-severity-info-bg': themeColors.severity.info.background,
-    '--color-severity-info-border': themeColors.severity.info.border,
-    '--color-severity-info-text': themeColors.severity.info.text,
-    '--color-severity-info-icon': themeColors.severity.info.icon,
+    '--color-severity-info-bg': currentThemeColors.severity?.info?.background || currentThemeColors.blue?.[300] || '#93c5fd',
+    '--color-severity-info-border': currentThemeColors.severity?.info?.border || currentThemeColors.blue?.[500] || '#3b82f6',
+    '--color-severity-info-text': currentThemeColors.severity?.info?.text || currentThemeColors.text?.primary || '#1e293b',
+    '--color-severity-info-icon': currentThemeColors.severity?.info?.icon || currentThemeColors.blue?.[500] || '#3b82f6',
 
     // Typography
-    '--font-family-sans': typography.fontFamily.sans.join(', '),
-    '--font-family-mono': typography.fontFamily.mono.join(', '),
-    '--font-family-serif': typography.fontFamily.serif.join(', '),
+    '--font-family-sans': (themeTypography as any).fontFamily?.sans?.join?.(', ') || (themeTypography as any).fontFamily?.body || 'system-ui, sans-serif',
+    '--font-family-mono': (themeTypography as any).fontFamily?.mono?.join?.(', ') || 'Monaco, Menlo, monospace',
+    '--font-family-serif': (themeTypography as any).fontFamily?.serif?.join?.(', ') || 'Georgia, serif',
 
     // Spacing (adjusted for density)
     '--spacing-1': `${densityConfig.baseUnit * 0.25 * densityConfig.multiplier}px`,
@@ -331,37 +403,37 @@ const generateCSSVariables = (
     '--spacing-24': `${densityConfig.baseUnit * 6 * densityConfig.multiplier}px`,
 
     // Shadows
-    '--shadow-sm': shadows.sm,
-    '--shadow-base': shadows.base,
-    '--shadow-md': shadows.md,
-    '--shadow-lg': shadows.lg,
-    '--shadow-xl': shadows.xl,
-    '--shadow-2xl': shadows['2xl'],
-    '--shadow-inner': shadows.inner,
-    '--shadow-focus': shadows.focus,
-    '--shadow-card': shadows.card,
-    '--shadow-modal': shadows.modal,
-    '--shadow-dropdown': shadows.dropdown,
+    '--shadow-sm': themeShadows?.sm || '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+    '--shadow-base': (themeShadows as any)?.base || '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+    '--shadow-md': themeShadows?.md || '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+    '--shadow-lg': (themeShadows as any)?.lg || '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+    '--shadow-xl': (themeShadows as any)?.xl || '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+    '--shadow-2xl': (themeShadows as any)?.['2xl'] || '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '--shadow-inner': (themeShadows as any)?.inner || 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.06)',
+    '--shadow-focus': (themeShadows as any)?.focus || '0 0 0 3px rgba(59, 130, 246, 0.5)',
+    '--shadow-card': (themeShadows as any)?.card || themeShadows?.md || '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    '--shadow-modal': (themeShadows as any)?.modal || (themeShadows as any)?.xl || '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+    '--shadow-dropdown': (themeShadows as any)?.dropdown || (themeShadows as any)?.lg || '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
 
     // Border radius
-    '--radius-sm': borderRadius.sm,
-    '--radius-base': borderRadius.base,
-    '--radius-md': borderRadius.md,
-    '--radius-lg': borderRadius.lg,
-    '--radius-xl': borderRadius.xl,
-    '--radius-2xl': borderRadius['2xl'],
-    '--radius-3xl': borderRadius['3xl'],
-    '--radius-full': borderRadius.full,
+    '--radius-sm': themeBorderRadius?.sm || '4px',
+    '--radius-base': (themeBorderRadius as any)?.base || '6px',
+    '--radius-md': themeBorderRadius?.md || '8px',
+    '--radius-lg': themeBorderRadius?.lg || '12px',
+    '--radius-xl': (themeBorderRadius as any)?.xl || '16px',
+    '--radius-2xl': (themeBorderRadius as any)?.['2xl'] || '20px',
+    '--radius-3xl': (themeBorderRadius as any)?.['3xl'] || '24px',
+    '--radius-full': (themeBorderRadius as any)?.full || '9999px',
 
     // Animation
-    '--duration-fast': animations.duration.fast,
-    '--duration-base': animations.duration.base,
-    '--duration-slow': animations.duration.slow,
-    '--duration-slower': animations.duration.slower,
-    '--easing-ease-in': animations.easing.easeIn,
-    '--easing-ease-out': animations.easing.easeOut,
-    '--easing-ease-in-out': animations.easing.easeInOut,
-    '--easing-bounce': animations.easing.bounce,
+    '--duration-fast': (themeAnimations as any)?.duration?.fast || '150ms',
+    '--duration-base': (themeAnimations as any)?.duration?.base || (themeAnimations as any)?.duration?.normal || '300ms',
+    '--duration-slow': (themeAnimations as any)?.duration?.slow || '500ms',
+    '--duration-slower': (themeAnimations as any)?.duration?.slower || '750ms',
+    '--easing-ease-in': (themeAnimations as any)?.easing?.easeIn || 'cubic-bezier(0.4, 0, 1, 1)',
+    '--easing-ease-out': (themeAnimations as any)?.easing?.easeOut || 'cubic-bezier(0, 0, 0.2, 1)',
+    '--easing-ease-in-out': (themeAnimations as any)?.easing?.easeInOut || 'cubic-bezier(0.4, 0, 0.2, 1)',
+    '--easing-bounce': (themeAnimations as any)?.easing?.bounce || 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
 
     // Theme metadata
     '--theme-mode': mode,
@@ -507,12 +579,12 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
     mode,
     colorScheme,
     density,
-    colors: isDark && !isHighContrast ? darkColors : isHighContrast ? highContrastColors : colors,
-    typography,
-    spacing,
-    shadows,
-    borderRadius,
-    animations,
+    colors: (isDark && !isHighContrast ? darkColors : isHighContrast ? highContrastColors : themeColors) as typeof themeColors,
+    typography: themeTypography,
+    spacing: themeSpacing,
+    shadows: themeShadows,
+    borderRadius: themeBorderRadius,
+    animations: themeAnimations,
     cssVariables: generateCSSVariables(mode, colorScheme, density, systemPrefersDark)
   };
 
@@ -592,10 +664,10 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   // RENDER
   // ========================================================================
 
-  return (
-    <ThemeContext.Provider value={contextValue}>
-      {children}
-    </ThemeContext.Provider>
+  return React.createElement(
+    ThemeContext.Provider,
+    { value: contextValue },
+    children
   );
 };
 

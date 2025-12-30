@@ -10,9 +10,8 @@
  */
 
 import React from 'react';
-import { PANEL_COLORS } from '../../config/panel-tokens';
-import { quick } from '../../styles/quick-styles';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useBorderTokens } from '../../../../hooks/useBorderTokens';
+import { useSemanticColors } from '../../../../ui-adapters/react/useSemanticColors';
 
 interface SliderInputProps {
   label: string;
@@ -34,6 +33,7 @@ export function SliderInput({
   className = ''
 }: SliderInputProps) {
   const colors = useSemanticColors();
+  const { quick } = useBorderTokens();
   return (
     <div className={className}>
       <label
@@ -48,7 +48,7 @@ export function SliderInput({
         max={max}
         value={value}
         onChange={(e) => onChange(parseInt(e.target.value))}
-        className={`w-full h-2 rounded-lg appearance-none cursor-pointer slider ${quick.input} ${colors.bg.secondary}`}
+        className={`w-full h-2 rounded-lg appearance-none cursor-pointer slider ${quick.border} ${colors.bg.secondary}`}
       />
     </div>
   );

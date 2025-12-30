@@ -55,16 +55,22 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
         let polygon = data.polygon;
 
         // 🔍 FIX: Normalize polygon format - convert flat array to coordinate pairs
-        if (Array.isArray(polygon) && typeof polygon[0] === 'number') {
-          const nums = polygon as number[];
-          polygon = [];
+        if (Array.isArray(polygon) && polygon.length > 0 && typeof (polygon as any[])[0] === 'number') {
+          const nums = polygon as unknown as number[];
+          const coordPairs: [number, number][] = [];
           for (let i = 0; i < nums.length; i += 2) {
-            polygon.push([nums[i], nums[i + 1]]);
+            coordPairs.push([nums[i], nums[i + 1]]);
           }
+          polygon = coordPairs;
           console.log('🔍 NORMALIZED POLYGON:', { docId: doc.id, original: data.polygon, normalized: polygon });
         }
 
-        overlays[doc.id] = { ...data, id: doc.id, polygon } as Overlay;
+        // ✅ ENTERPRISE FIX: Type-safe overlay creation with proper polygon type
+        overlays[doc.id] = {
+          ...data,
+          id: doc.id,
+          polygon: polygon as [number, number][]
+        } as Overlay;
       });
 
       setState(prev => ({ ...prev, overlays, isLoading: false }));

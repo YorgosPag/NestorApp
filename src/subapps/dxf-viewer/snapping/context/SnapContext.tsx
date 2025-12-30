@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { ExtendedSnapType } from '../extended-types';
-import type { SnapState } from '../types';
+
+// ✅ ENTERPRISE FIX: Define SnapState locally since ../types doesn't exist
+type SnapState = Record<ExtendedSnapType, boolean>;
 
 // ALL_MODES array για αποφυγή enum-to-string issues
 const ALL_MODES: ExtendedSnapType[] = [

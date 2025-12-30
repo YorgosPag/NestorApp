@@ -128,8 +128,7 @@ export class EntityRendererComposite {
 
       const result = hitTestingService.hitTest(point, this.transform, viewport, {
         tolerance,
-        maxResults: 1,
-        targetEntityId: entity.id
+        maxResults: 1
       });
 
       return result.entityId === entity.id;

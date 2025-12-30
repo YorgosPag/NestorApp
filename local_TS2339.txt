@@ -1,0 +1,20 @@
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/TextSettings.tsx(396,77): error TS1005: '}' expected.
+src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/TextSettings.tsx(401,20): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(44,5): error TS1005: '>' expected.
+src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(44,9): error TS1005: ')' expected.
+src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(44,25): error TS1005: '{' expected.
+src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(44,30): error TS1128: Declaration or statement expected.
+src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(45,18): error TS1005: ',' expected.
+src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(45,21): error TS1005: ',' expected.
+src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(46,25): error TS1005: ':' expected.
+src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(47,4): error TS1109: Expression expected.
+src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(48,1): error TS1109: Expression expected.
+src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(58,5): error TS1005: '>' expected.
+src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(58,9): error TS1005: ')' expected.
+src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(58,25): error TS1005: '{' expected.
+src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(58,30): error TS1128: Declaration or statement expected.
+src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(59,18): error TS1005: ',' expected.
+src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(59,21): error TS1005: ',' expected.
+src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(60,25): error TS1005: ':' expected.
+src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(61,4): error TS1109: Expression expected.
+src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(62,1): error TS1109: Expression expected.

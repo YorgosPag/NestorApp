@@ -3,8 +3,8 @@
  * Υπεύθυνο για εύρεση orthogonal snap points (0°, 90°, 180°, 270°)
  */
 
-import type { Point2D } from '../../rendering/types/Types';
-import { Entity, ExtendedSnapType } from '../extended-types';
+import type { Point2D, EntityModel } from '../../rendering/types/Types';
+import { ExtendedSnapType, SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
@@ -16,7 +16,7 @@ export class OrthoSnapEngine extends BaseSnapEngine {
     super(ExtendedSnapType.ORTHO);
   }
 
-  initialize(entities: Entity[]): void {
+  initialize(entities: EntityModel[]): void {
 
   }
 

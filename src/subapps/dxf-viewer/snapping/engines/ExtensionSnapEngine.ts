@@ -3,8 +3,8 @@
  * Υπεύθυνο για εύρεση snap points σε επεκτάσεις γραμμών
  */
 
-import type { Point2D } from '../../rendering/types/Types';
-import { Entity, ExtendedSnapType } from '../extended-types';
+import type { Point2D, EntityModel } from '../../rendering/types/Types';
+import { ExtendedSnapType } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
@@ -19,7 +19,7 @@ export class ExtensionSnapEngine extends BaseSnapEngine {
     super(ExtendedSnapType.EXTENSION);
   }
 
-  initialize(entities: Entity[]): void {
+  initialize(entities: EntityModel[]): void {
 
   }
 
@@ -39,7 +39,7 @@ export class ExtensionSnapEngine extends BaseSnapEngine {
     return { candidates };
   }
 
-  private getExtensionPoints(entity: Entity, cursorPoint: Point2D, maxExtensionDistance: number): Array<{point: Point2D, type: string}> {
+  private getExtensionPoints(entity: EntityModel, cursorPoint: Point2D, maxExtensionDistance: number): Array<{point: Point2D, type: string}> {
     const extensionPoints: Array<{point: Point2D, type: string}> = [];
     const entityType = entity.type.toLowerCase();
     

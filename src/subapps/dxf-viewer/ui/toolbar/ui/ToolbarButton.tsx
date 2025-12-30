@@ -19,10 +19,10 @@
 
 'use client';
 import React from 'react';
-import { BaseButton, type ButtonVariant } from '../../components/shared/BaseButton';
+import { BaseButton, type ButtonVariant } from '../../../components/shared/BaseButton'; // ✅ ENTERPRISE FIX: Correct path to BaseButton
 import { withIconProps } from '../../icons/iconRegistry';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useBorderTokens } from '../../../../../hooks/useBorderTokens';
+import { useSemanticColors } from '../../../../../ui-adapters/react/useSemanticColors';
 
 // Legacy → Enterprise variant mapping
 const VARIANT_MAP: Record<string, ButtonVariant> = {

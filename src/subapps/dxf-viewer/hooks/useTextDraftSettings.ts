@@ -6,7 +6,7 @@
  * Includes override toggle and effective settings computation.
  */
 
-import React from 'react';
+import * as React from 'react';
 import { useEnterpriseDxfSettings } from '../settings-provider';
 import type { TextSettings } from '../settings-core/types';
 

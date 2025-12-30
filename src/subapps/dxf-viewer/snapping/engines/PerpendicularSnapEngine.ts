@@ -3,9 +3,8 @@
  * Υπεύθυνο για εύρεση perpendicular snap points σε γραμμές
  */
 
-import type { Point2D } from '../../rendering/types/Types';
-import { ExtendedSnapType } from '../extended-types';
-import type { Entity } from '../../types/entities';
+import type { Point2D, EntityModel } from '../../rendering/types/Types';
+import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
@@ -18,7 +17,7 @@ export class PerpendicularSnapEngine extends BaseSnapEngine {
     super(ExtendedSnapType.PERPENDICULAR);
   }
 
-  initialize(entities: Entity[]): void {
+  initialize(entities: EntityModel[]): void {
 
   }
 
@@ -38,7 +37,7 @@ export class PerpendicularSnapEngine extends BaseSnapEngine {
     );
   }
 
-  private getPerpendicularPoints(entity: Entity, cursorPoint: Point2D, maxDistance: number): Array<{point: Point2D, type: string}> {
+  private getPerpendicularPoints(entity: EntityModel, cursorPoint: Point2D, maxDistance: number): Array<{point: Point2D, type: string}> {
     const perpendicularPoints: Array<{point: Point2D, type: string}> = [];
     const entityType = entity.type.toLowerCase();
 

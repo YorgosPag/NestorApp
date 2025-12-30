@@ -51,12 +51,12 @@ export const textStyleAdapter: TextStylePort = {
     if (partial.weight !== undefined) updates.fontWeight = partial.weight;
     if (partial.style !== undefined) updates.fontStyle = partial.style;
 
-    textStyleStore.set(updates);
+    textStyleStore.set(updates as any);
   },
 
   onChange(handler) {
     // Subscribe to legacy store changes
-    return textStyleStore.subscribe((state) => {
+    return textStyleStore.subscribe((state: any) => {
       handler({
         font: state.fontFamily,
         size: state.fontSize,

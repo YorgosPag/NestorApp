@@ -3,9 +3,10 @@
  * Υπεύθυνο για εύρεση snap points σε κόμβους (endpoints, vertices, centers)
  */
 
-import type { Point2D } from '../../rendering/types/Types';
-import { Entity, ExtendedSnapType, SnapCandidate } from '../extended-types';
-import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
+import type { Point2D, EntityModel } from '../../rendering/types/Types';
+import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
+import type { SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
+import { BaseSnapEngine } from '../shared/BaseSnapEngine';
 import { SpatialFactory } from '../../core/spatial';
 import type { ISpatialIndex, SpatialBounds } from '../../core/spatial';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
@@ -19,7 +20,7 @@ export class NodeSnapEngine extends BaseSnapEngine {
     super(ExtendedSnapType.NODE);
   }
 
-  initialize(entities: Entity[]): void {
+  initialize(entities: EntityModel[]): void {
     // ✅ CENTRALIZED: Use base class method for spatial index initialization
     this.spatialIndex = this.initializeSpatialIndex(
       entities,
@@ -65,7 +66,7 @@ export class NodeSnapEngine extends BaseSnapEngine {
     return { candidates };
   }
 
-  private getAllNodePoints(entity: Entity): Array<{point: Point2D, type: string}> {
+  private getAllNodePoints(entity: EntityModel): Array<{point: Point2D, type: string}> {
     const nodes: Array<{point: Point2D, type: string}> = [];
     const entityType = entity.type.toLowerCase();
     

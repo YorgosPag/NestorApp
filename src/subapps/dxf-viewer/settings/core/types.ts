@@ -51,7 +51,7 @@ export type EntityType = typeof ENTITY_TYPES[number];
 // LINE SETTINGS
 // ============================================================================
 
-export interface LineSettings {
+export interface LineSettings extends Record<string, unknown> {
   lineWidth: number;        // 0.1 - 10.0 mm
   lineColor: string;        // Hex color (#RRGGBB)
   lineStyle: 'solid' | 'dashed' | 'dotted';
@@ -62,7 +62,7 @@ export interface LineSettings {
 // TEXT SETTINGS
 // ============================================================================
 
-export interface TextSettings {
+export interface TextSettings extends Record<string, unknown> {
   fontSize: number;         // 8 - 72 pt
   fontFamily: string;       // Font name
   fontWeight: 'normal' | 'bold';
@@ -75,7 +75,7 @@ export interface TextSettings {
 // GRIP SETTINGS
 // ============================================================================
 
-export interface GripSettings {
+export interface GripSettings extends Record<string, unknown> {
   size: number;             // 4 - 20 px
   color: string;            // Hex color (#RRGGBB)
   hoverColor: string;       // Hex color (#RRGGBB)

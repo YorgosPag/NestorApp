@@ -8,21 +8,21 @@ import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
 import { HoverManager } from '../../utils/hover';
 import {
-  validateArcEntity,
   renderDotAtPoint,
   createArcGripPattern,
   hitTestArcEntity
 } from './shared';
+import { validateArcEntity } from './shared/entity-validation-utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 
 export class ArcRenderer extends BaseEntityRenderer {
-  private validateArc(entity: Entity) {
+  private validateArc(entity: EntityModel) {
     // 🔺 Χρήση κεντρικοποιημένης validation - μείωση διπλότυπου κώδικα
-    return validateArcEntity(entity);
+    return validateArcEntity(entity as any);
   }
 
   render(entity: EntityModel, options: RenderOptions = {}): void {
-    const arcData = this.validateArc(entity as Entity);
+    const arcData = this.validateArc(entity);
     if (!arcData) return;
     
     // 🔺 Χρήση 3-phase system όπως όλες οι άλλες οντότητες
@@ -112,6 +112,22 @@ export class ArcRenderer extends BaseEntityRenderer {
     
     // 🔺 Χρήση κεντρικοποιημένου arc grip pattern - μείωση διπλότυπου κώδικα
     return createArcGripPattern(entity.id, center, startPoint, endPoint, midPoint);
+  }
+
+  hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
+    const arcData = this.validateArc(entity);
+    if (!arcData) return false;
+
+    // Use centralized arc hit test
+    return hitTestArcEntity(
+      point,
+      arcData.center,
+      arcData.radius,
+      arcData.startAngle,
+      arcData.endAngle,
+      tolerance,
+      this.transform
+    );
   }
 
 }

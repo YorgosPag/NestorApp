@@ -3,9 +3,9 @@
  * Υπεύθυνο για εύρεση snap points κοντά στο cursor χωρίς ειδική γεωμετρική λογική
  */
 
-import type { Point2D } from '../../rendering/types/Types';
+import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType } from '../extended-types';
-import type { Entity, LineEntity, CircleEntity, ArcEntity, PolylineEntity, LWPolylineEntity, RectangleEntity } from '../../types/entities';
+import type { LineEntity, CircleEntity, ArcEntity, PolylineEntity, LWPolylineEntity, RectangleEntity } from '../../types/entities';
 import { isLineEntity, isCircleEntity, isArcEntity, isPolylineEntity, isLWPolylineEntity, isRectangleEntity } from '../../types/entities';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
@@ -17,7 +17,7 @@ export class NearSnapEngine extends BaseSnapEngine {
     super(ExtendedSnapType.NEAR);
   }
 
-  initialize(entities: Entity[]): void {
+  initialize(entities: EntityModel[]): void {
 
   }
 

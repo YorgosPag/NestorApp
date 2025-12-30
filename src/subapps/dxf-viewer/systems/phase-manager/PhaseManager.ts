@@ -252,7 +252,9 @@ export class PhaseManager {
       const previewGrips = entity.previewGripPoints;
       for (let i = 0; i < previewGrips.length; i++) {
         const gripPoint = previewGrips[i];
-        const screenPos = this.worldToScreen(gripPoint);
+        // ✅ ENTERPRISE FIX: Type-safe Point2D extraction
+        const point2D = ('x' in gripPoint && 'y' in gripPoint) ? gripPoint as Point2D : gripPoint as any;
+        const screenPos = this.worldToScreen(point2D);
 
         // Preview grips χρησιμοποιούν το κρύο χρώμα από τις ρυθμίσεις
         this.drawPhaseGrip(screenPos, 'cold', state, undefined);

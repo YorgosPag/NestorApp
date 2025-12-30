@@ -995,6 +995,18 @@ export interface KubernetesTaint {
   effect: 'NoSchedule' | 'PreferNoSchedule' | 'NoExecute';
 }
 
+// ============================================================================
+// ✅ ENTERPRISE FIX: RE-EXPORT STATUS TYPES FOR INFRASTRUCTURE MANAGER
+// ============================================================================
+
+// Re-export status types to avoid circular imports
+export type {
+  InfrastructureStatus,
+  ComponentStatus,
+  StatusMetrics,
+  OverallStatus
+} from './status';
+
 /**
  * Serverless configuration
  */

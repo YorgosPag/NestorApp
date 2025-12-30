@@ -14,7 +14,7 @@ export type {
 export type {
   LineTemplate,
   TemplateCategory
-} from '../contexts/LineSettingsContext';
+} from '../contexts/LineSettingsContext.tsx';
 
 // Default settings που χρησιμοποιούνται από το ConfigurationProvider
 export const DEFAULT_LINE_SETTINGS = {

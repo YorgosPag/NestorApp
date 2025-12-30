@@ -204,17 +204,17 @@ export function validateAndCoerce(
       line: mergeEntitySettings(
         partial.line ?? defaults.line,
         defaults.line as unknown as EntityDefaults
-      ),
+      ) as SettingsStateType['line'],
       text: mergeEntitySettings(
         partial.text ?? defaults.text,
         defaults.text as unknown as EntityDefaults
-      ),
+      ) as SettingsStateType['text'],
       grip: mergeEntitySettings(
         partial.grip ?? defaults.grip,
         defaults.grip as unknown as EntityDefaults
-      ),
+      ) as SettingsStateType['grip'],
       overrideEnabled: partial.overrideEnabled ?? defaults.overrideEnabled
-    };
+    } as SettingsStateType;
   } catch {
     // Complete failure - return defaults
     console.error('[Schema] Coercion failed, using factory defaults');

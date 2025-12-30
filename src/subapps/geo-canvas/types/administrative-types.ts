@@ -8,6 +8,31 @@
  */
 
 // ============================================================================
+// GEOJSON TYPE DEFINITIONS (Enterprise Local Types)
+// ============================================================================
+
+declare global {
+  namespace GeoJSON {
+    interface Geometry {
+      type: string;
+      coordinates?: any;
+      geometries?: Geometry[];
+    }
+
+    interface Feature {
+      type: 'Feature';
+      geometry: Geometry | null;
+      properties: Record<string, any> | null;
+    }
+
+    interface FeatureCollection {
+      type: 'FeatureCollection';
+      features: Feature[];
+    }
+  }
+}
+
+// ============================================================================
 // CORE ADMINISTRATIVE TYPES
 // ============================================================================
 
@@ -194,6 +219,15 @@ export interface AdminSearchResult {
   geometry?: GeoJSON.Geometry;
   bounds?: BoundingBox;
   confidence: number;               // Search relevance (0-1)
+  // ✅ ENTERPRISE FIX: Add simplification property for geometry optimization
+  simplification?: {
+    originalPoints: number;
+    simplifiedPoints: number;
+    tolerance?: number;
+    reductionRatio?: number;
+    optimizationLevel?: 'none' | 'light' | 'medium' | 'heavy';
+    qualityScore?: number;
+  };
 }
 
 /**

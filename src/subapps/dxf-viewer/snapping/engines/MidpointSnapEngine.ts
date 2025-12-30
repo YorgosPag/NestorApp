@@ -6,8 +6,8 @@
 // DEBUG FLAG - Set to false to disable performance-heavy logging
 const DEBUG_MIDPOINT_SNAP_ENGINE = false;
 
-import type { Point2D } from '../../rendering/types/Types';
-import { Entity, ExtendedSnapType } from '../extended-types';
+import type { Point2D, EntityModel } from '../../rendering/types/Types';
+import { ExtendedSnapType } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { SpatialFactory } from '../../core/spatial';
 import type { ISpatialIndex, SpatialBounds } from '../../core/spatial';
@@ -21,7 +21,7 @@ export class MidpointSnapEngine extends BaseSnapEngine {
     super(ExtendedSnapType.MIDPOINT);
   }
 
-  initialize(entities: Entity[]): void {
+  initialize(entities: EntityModel[]): void {
     // ✅ CENTRALIZED: Use base class method for spatial index initialization
     this.spatialIndex = this.initializeSpatialIndex(
       entities,

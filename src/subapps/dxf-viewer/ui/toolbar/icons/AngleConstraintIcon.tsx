@@ -2,7 +2,7 @@
  * Angle Constraint Icon - Παραμετρικό Angle Constraint
  */
 
-import React from 'react';
+import * as React from 'react';
 import { AngleIconBase } from './shared/AngleIconBase';
 
 interface AngleConstraintIconProps {

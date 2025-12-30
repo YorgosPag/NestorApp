@@ -14,7 +14,7 @@ import {
   DXF_MEASUREMENT_TOOL_LABELS,
   DXF_ZOOM_TOOL_LABELS,
   DXF_UTILITY_TOOL_LABELS
-} from '@/constants/property-statuses-enterprise';
+} from '../../../../constants/property-statuses-enterprise';
 import { 
   CircleRadiusIcon, 
   CircleDiameterIcon, 
@@ -30,6 +30,78 @@ import { AngleTwoArcsIcon } from './icons/AngleTwoArcsIcon';
 import { AngleMeasureGeomIcon } from './icons/AngleMeasureGeomIcon';
 import { AngleConstraintIcon } from './icons/AngleConstraintIcon';
 import type { ToolType, ActionDefinition, ToolDefinition } from './types';
+import * as React from 'react';
+
+// ✅ ENTERPRISE FIX: Type adapters για custom icons με SVGProps compatibility
+const AngleIconAdapter: React.ComponentType<React.SVGProps<SVGSVGElement>> = ({
+  width = 16,
+  height = 16,
+  color = 'currentColor',
+  strokeWidth = 1.5,
+  ...props
+}) => (
+  <AngleIcon
+    size={Number(width) || 16}
+    color={color as string}
+    strokeWidth={typeof strokeWidth === 'string' ? parseFloat(strokeWidth) : Number(strokeWidth) || 1.5}
+  />
+);
+
+const AngleLineArcIconAdapter: React.ComponentType<React.SVGProps<SVGSVGElement>> = ({
+  width = 16,
+  height = 16,
+  color = 'currentColor',
+  strokeWidth = 1.5,
+  ...props
+}) => (
+  <AngleLineArcIcon
+    size={Number(width) || 16}
+    color={color as string}
+    strokeWidth={typeof strokeWidth === 'string' ? parseFloat(strokeWidth) : Number(strokeWidth) || 1.5}
+  />
+);
+
+const AngleTwoArcsIconAdapter: React.ComponentType<React.SVGProps<SVGSVGElement>> = ({
+  width = 16,
+  height = 16,
+  color = 'currentColor',
+  strokeWidth = 1.5,
+  ...props
+}) => (
+  <AngleTwoArcsIcon
+    size={Number(width) || 16}
+    color={color as string}
+    strokeWidth={typeof strokeWidth === 'string' ? parseFloat(strokeWidth) : Number(strokeWidth) || 1.5}
+  />
+);
+
+const AngleMeasureGeomIconAdapter: React.ComponentType<React.SVGProps<SVGSVGElement>> = ({
+  width = 16,
+  height = 16,
+  color = 'currentColor',
+  strokeWidth = 1.5,
+  ...props
+}) => (
+  <AngleMeasureGeomIcon
+    size={Number(width) || 16}
+    color={color as string}
+    strokeWidth={typeof strokeWidth === 'string' ? parseFloat(strokeWidth) : Number(strokeWidth) || 1.5}
+  />
+);
+
+const AngleConstraintIconAdapter: React.ComponentType<React.SVGProps<SVGSVGElement>> = ({
+  width = 16,
+  height = 16,
+  color = 'currentColor',
+  strokeWidth = 1.5,
+  ...props
+}) => (
+  <AngleConstraintIcon
+    size={Number(width) || 16}
+    color={color as string}
+    strokeWidth={typeof strokeWidth === 'string' ? parseFloat(strokeWidth) : Number(strokeWidth) || 1.5}
+  />
+);
 
 export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
   {
@@ -83,18 +155,18 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
       // ✅ CENTRALIZED: Using DXF_MEASUREMENT_TOOL_LABELS from central system - ZERO HARDCODED VALUES
       { id: 'measure-distance' as ToolType, icon: Ruler, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_DISTANCE, hotkey: 'D' },
       { id: 'measure-area' as ToolType, icon: Calculator, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_AREA, hotkey: 'A' },
-      { 
-        id: 'measure-angle' as ToolType, 
-        icon: AngleIcon, 
+      {
+        id: 'measure-angle' as ToolType,
+        icon: AngleIconAdapter,
         label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_ANGLE,
         hotkey: 'T',
         dropdownOptions: [
           // ✅ CENTRALIZED: Angle measurement variations - ZERO HARDCODED VALUES
-          { id: 'measure-angle' as ToolType, icon: AngleIcon, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_ANGLE_BASIC },
-          { id: 'measure-angle-line-arc' as ToolType, icon: AngleLineArcIcon, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_ANGLE_LINE_ARC },
-          { id: 'measure-angle-two-arcs' as ToolType, icon: AngleTwoArcsIcon, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_ANGLE_TWO_ARCS },
-          { id: 'measure-angle-measuregeom' as ToolType, icon: AngleMeasureGeomIcon, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_ANGLE_MEASUREGEOM },
-          { id: 'measure-angle-constraint' as ToolType, icon: AngleConstraintIcon, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_ANGLE_CONSTRAINT }
+          { id: 'measure-angle' as ToolType, icon: AngleIconAdapter, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_ANGLE_BASIC },
+          { id: 'measure-angle-line-arc' as ToolType, icon: AngleLineArcIconAdapter, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_ANGLE_LINE_ARC },
+          { id: 'measure-angle-two-arcs' as ToolType, icon: AngleTwoArcsIconAdapter, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_ANGLE_TWO_ARCS },
+          { id: 'measure-angle-measuregeom' as ToolType, icon: AngleMeasureGeomIconAdapter, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_ANGLE_MEASUREGEOM },
+          { id: 'measure-angle-constraint' as ToolType, icon: AngleConstraintIconAdapter, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_ANGLE_CONSTRAINT }
         ]
       },
     ]

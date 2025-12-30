@@ -6,15 +6,16 @@
 // DEBUG FLAG - Set to false to disable performance-heavy logging
 const DEBUG_SNAP_ENGINE_CORE = false;
 
-import {
+import type { Point2D } from '../rendering/types/Types';
+import type {
   ExtendedSnapType,
-  type ProSnapSettings,
+  ProSnapSettings,
   ProSnapResult,
   Entity,
-  Point2D,
-  DEFAULT_PRO_SNAP_SETTINGS,
-  SnapEngineInterface
+  SnapEngineInterface,
+  SnapEngineStats
 } from './extended-types';
+import { DEFAULT_PRO_SNAP_SETTINGS } from './extended-types';
 import { SnapOrchestrator } from './orchestrator/SnapOrchestrator';
 
 interface Viewport {
@@ -90,5 +91,9 @@ export class SnapEngineCore implements SnapEngineInterface {
 
   getViewport(): Viewport | undefined {
     return this.viewport;
+  }
+
+  getStats(): SnapEngineStats {
+    return this.orchestrator.getStats();
   }
 }

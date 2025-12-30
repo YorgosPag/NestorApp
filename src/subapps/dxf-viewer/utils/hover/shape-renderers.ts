@@ -173,12 +173,17 @@ export function renderRectangleHover({ entity, ctx, worldToScreen, options }: Ho
     if (rect.corner1 && rect.corner2) {
       const c1 = rect.corner1;
       const c2 = rect.corner2;
-      vertices = [
-        c1,
-        { x: c2.x, y: c1.y },
-        c2,
-        { x: c1.x, y: c2.y }
-      ];
+      // ✅ ENTERPRISE FIX: Add null safety checks for Point2D properties
+      if (c1 && c2 && typeof c1.x === 'number' && typeof c1.y === 'number' && typeof c2.x === 'number' && typeof c2.y === 'number') {
+        const corner1: Point2D = { x: c1.x, y: c1.y };
+        const corner2: Point2D = { x: c2.x, y: c2.y };
+        vertices = [
+          corner1,
+          { x: corner2.x, y: corner1.y },
+          corner2,
+          { x: corner1.x, y: corner2.y }
+        ];
+      }
     } else {
       // ✅ ENTERPRISE: Fallback to x, y, width, height properties
       vertices = [

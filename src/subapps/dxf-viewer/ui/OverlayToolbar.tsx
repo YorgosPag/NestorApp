@@ -1,8 +1,8 @@
 'use client';
 import React, { useState, useRef } from 'react';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useIconSizes } from '../../../hooks/useIconSizes';
+import { useBorderTokens } from '../../../hooks/useBorderTokens';
+import { useSemanticColors } from '../../../ui-adapters/react/useSemanticColors';
 import { useDraggable } from '../../../hooks/useDraggable';
 // import { Separator } from '../../../components/ui/separator';
 // Προσωρινή λύση - αντικατάσταση με div
@@ -13,10 +13,10 @@ import { MousePointer, Pen, X, Copy, Grid, Square, Circle, Triangle, Edit, Rotat
 import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, type Status, type OverlayKind, type OverlayEditorMode } from '../overlays/types';
 import type { PropertyStatus } from '../../../constants/property-statuses-enterprise';
 import { useUnifiedOverlayCreation } from '../hooks/overlay/useUnifiedOverlayCreation';
-import { toolStyleStore } from '../stores/ToolStyleStore';
+import { toolStyleStore, type ToolStyle } from '../stores/ToolStyleStore';
 import { STATUS_COLORS_MAPPING, BUTTON_STATUS_COLORS, getKindFromLabel } from '../config/color-mapping';
 import { useOverlayStore } from '../overlays/overlay-store';
-import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '../../../components/ui/effects';
 import {
   getStatusColorButtonStyles,
   type ToolbarButtonVariant
@@ -117,9 +117,9 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
 
       // Αποθήκευση του stop callback για double-click handling (async)
       polylineControlPromise?.then((polylineControl) => {
-        if (polylineControl?.stop) {
+        if (polylineControl && 'stop' in polylineControl && typeof polylineControl.stop === 'function') {
           toolStyleStore.setOverlayCompletionCallback(() => {
-            polylineControl.stop();
+            (polylineControl as any).stop();
           });
         }
       });

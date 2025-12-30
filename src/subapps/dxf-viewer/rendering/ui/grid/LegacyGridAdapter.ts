@@ -50,6 +50,8 @@ export class LegacyGridAdapter {
       showMinorGrid: true,
       adaptiveOpacity: true,
       minVisibleSize: 5,
+      majorGridWeight: 2,
+      minorGridWeight: 1,
 
       zIndex: 100
     };

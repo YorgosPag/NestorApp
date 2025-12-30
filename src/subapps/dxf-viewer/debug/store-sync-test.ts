@@ -674,7 +674,7 @@ async function testSubscriptionCleanup(): Promise<TestResult> {
         })
       };
 
-      const { stop } = sync.start(effectiveGetter as EffectiveSettingsGetter);
+      const { stop } = sync.start(effectiveGetter as any as EffectiveSettingsGetter);
 
       const subscriptionsAfterStart = subscriptions;
 

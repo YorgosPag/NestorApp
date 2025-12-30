@@ -21,11 +21,12 @@ export function createGripsFromPoints(
   
   points.forEach((point, index) => {
     grips.push({
+      id: `${entityId}-vertex-${index + startIndex}`,
       entityId,
-      gripType: 'vertex',
+      type: 'vertex',
       gripIndex: index + startIndex,
       position: point,
-      state: 'cold'
+      isVisible: true
     });
   });
   
@@ -37,11 +38,12 @@ export function createGripsFromPoints(
  */
 export function createCenterGrip(entityId: string, center: Point2D, gripIndex: number = 0): GripInfo {
   return {
+    id: `${entityId}-center-${gripIndex}`,
     entityId,
-    gripType: 'center',
+    type: 'center',
     gripIndex,
     position: center,
-    state: 'cold'
+    isVisible: true
   };
 }
 
@@ -50,11 +52,12 @@ export function createCenterGrip(entityId: string, center: Point2D, gripIndex: n
  */
 export function createVertexGrip(entityId: string, position: Point2D, gripIndex: number): GripInfo {
   return {
+    id: `${entityId}-vertex-${gripIndex}`,
     entityId,
-    gripType: 'vertex',
+    type: 'vertex',
     gripIndex,
     position,
-    state: 'cold'
+    isVisible: true
   };
 }
 
@@ -63,11 +66,12 @@ export function createVertexGrip(entityId: string, position: Point2D, gripIndex:
  */
 export function createEdgeGrip(entityId: string, position: Point2D, gripIndex: number): GripInfo {
   return {
+    id: `${entityId}-edge-${gripIndex}`,
     entityId,
-    gripType: 'edge',
+    type: 'edge',
     gripIndex,
     position,
-    state: 'cold'
+    isVisible: true
   };
 }
 

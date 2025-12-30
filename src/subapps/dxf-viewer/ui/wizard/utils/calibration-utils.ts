@@ -5,10 +5,11 @@
 
 import type { Point2D } from '../../../rendering/types/Types';
 
+// ✅ ENTERPRISE FIX: Use strict units type instead of string
 export interface CalibrationData {
   point1: { screen: Point2D, world: Point2D };
   point2: { screen: Point2D, world: Point2D };
-  units: string;
+  units: "mm" | "cm" | "m" | "in" | "ft"; // ✅ ENTERPRISE FIX: Match levels config type
   realDistance: number;
 }
 
@@ -16,7 +17,7 @@ export interface CalibrationData {
  * Create default calibration object - eliminates duplicate code
  */
 export function createDefaultCalibration(
-  units: string,
+  units: "mm" | "cm" | "m" | "in" | "ft", // ✅ ENTERPRISE FIX: Strict units type
   realDistance: number
 ): CalibrationData {
   return {

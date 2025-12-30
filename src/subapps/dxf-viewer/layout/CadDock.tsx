@@ -129,15 +129,15 @@ const CadDock = memo(({ children }: { children?: React.ReactNode }) => {
       e.api.addPanel({
         id: 'snapping',
         title: 'Object Snap',
-        contentComponent: 'snappingView',
+        component: 'snappingView', // ✅ ENTERPRISE FIX: Use 'component' instead of 'contentComponent'
         position: { direction: 'left' },
       });
 
       // 📋 LAYERS PANEL (κάτω από snapping)
       e.api.addPanel({
         id: 'layers',
-        title: 'Layers', 
-        contentComponent: 'layersView',
+        title: 'Layers',
+        component: 'layersView', // ✅ ENTERPRISE FIX: Use 'component' instead of 'contentComponent'
         position: { referencePanel: 'snapping', direction: 'below' },
       });
 
@@ -145,7 +145,7 @@ const CadDock = memo(({ children }: { children?: React.ReactNode }) => {
       e.api.addPanel({
         id: 'properties',
         title: 'Properties',
-        contentComponent: 'propertiesView', 
+        component: 'propertiesView', // ✅ ENTERPRISE FIX: Use 'component' instead of 'contentComponent'
         position: { direction: 'right' },
       });
 
@@ -153,7 +153,7 @@ const CadDock = memo(({ children }: { children?: React.ReactNode }) => {
       e.api.addPanel({
         id: 'history',
         title: 'Commands',
-        contentComponent: 'historyView',
+        component: 'historyView', // ✅ ENTERPRISE FIX: Use 'component' instead of 'contentComponent'
         position: { referencePanel: 'properties', direction: 'below' },
       });
 

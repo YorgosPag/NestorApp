@@ -3,7 +3,7 @@
  * Utilities για bounds calculations και validation
  */
 
-import type { Point2D } from '../../rendering/types/Types';
+import type { Point2D } from '../../../rendering/types/Types';
 import type { DxfScene } from '../../../canvas-v2/dxf-canvas/dxf-types';
 import type { ColorLayer } from '../../../canvas-v2/layer-canvas/layer-types';
 

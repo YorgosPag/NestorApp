@@ -8,6 +8,7 @@ import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
 import { pointToLineDistance } from './shared/geometry-utils';
 import { hitTestLineSegments, createEdgeGrips } from './shared/line-utils';
+import { createVertexGrip } from './shared/grip-utils';
 import { drawVerticesPath } from './shared/geometry-rendering-utils';
 import { getRectangleVertices } from '../../systems/selection/utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
@@ -15,7 +16,7 @@ import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 
 export class RectangleRenderer extends BaseEntityRenderer {
   private getVertices(entity: EntityModel): Point2D[] | null {
-    return getRectangleVertices(entity);
+    return getRectangleVertices(entity as any);
   }
 
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -155,13 +156,7 @@ export class RectangleRenderer extends BaseEntityRenderer {
     
     // Corner grips
     vertices.forEach((vertex, index) => {
-      grips.push({
-        entityId: entity.id,
-        gripType: 'corner',
-        gripIndex: index,
-        position: vertex,
-        state: 'cold'
-      });
+      grips.push(createVertexGrip(entity.id, vertex, index));
     });
     
     // Use shared utility for edge grips (closed rectangle)
@@ -171,5 +166,15 @@ export class RectangleRenderer extends BaseEntityRenderer {
     return grips;
   }
 
+  // ✅ ENTERPRISE FIX: Implement proper hitTest method with tolerance parameter
+  hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
+    if (entity.type !== 'rectangle' && entity.type !== 'rect') return false;
+
+    const vertices = this.getVertices(entity);
+    if (!vertices) return false;
+
+    // Use hitTestLineSegments utility to test all rectangle edges (closed)
+    return hitTestLineSegments(point, vertices, tolerance, true, this.worldToScreen.bind(this));
+  }
 
 }

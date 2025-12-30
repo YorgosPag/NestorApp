@@ -29,7 +29,21 @@
       "Bash(git checkout:*)",
       "Bash(mv:*)",
       "Bash(Get-Content \"C:\\Nestor_Pagonis\\local_3.txt\")",
-      "Bash(Get-Content \"local_TS2339.txt\")"
+      "Bash(Get-Content \"local_TS2339.txt\")",
+      "Bash(npm ls:*)",
+      "Bash(Get-Content \"C:\\Nestor_Pagonis\\src\\subapps\\dxf-viewer\\ui\\components\\dxf-settings\\settings\\core\\TextSettings.tsx\")",
+      "Bash(sed:*)",
+      "Bash(Select-Object -Skip 395 -First 1)",
+      "Bash(Find-Item:*)",
+      "Bash(Get-Content \"C:\\Nestor_Pagonis\\src\\subapps\\dxf-viewer\\rendering\\entities\\RectangleRenderer.ts\")",
+      "Bash(npm run dev:*)",
+      "Bash(Get-Content package.json)",
+      "Bash(powershell:*)",
+      "Read(//c/hooks/**)",
+      "Bash(find:*)",
+      "Bash(for file in AccordionSection.tsx ComboBox.tsx EnterpriseComboBox.tsx)",
+      "Bash(do echo \"=== $file ===\")",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []

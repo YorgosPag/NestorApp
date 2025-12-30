@@ -153,7 +153,8 @@ export function diffLineSettings(
   from: LineSettings,
   to: LineSettings
 ): Partial<LineSettings> | null {
-  return diffSettings(from as Record<string, unknown>, to as Record<string, unknown>) as Partial<LineSettings> | null;
+  // ✅ ENTERPRISE FIX: Fixed type conversion using unknown intermediate step
+  return diffSettings(from as unknown as Record<string, unknown>, to as unknown as Record<string, unknown>) as Partial<LineSettings> | null;
 }
 
 /**
@@ -163,7 +164,8 @@ export function diffTextSettings(
   from: TextSettings,
   to: TextSettings
 ): Partial<TextSettings> | null {
-  return diffSettings(from as Record<string, unknown>, to as Record<string, unknown>) as Partial<TextSettings> | null;
+  // ✅ ENTERPRISE FIX: Fixed type conversion using unknown intermediate step
+  return diffSettings(from as unknown as Record<string, unknown>, to as unknown as Record<string, unknown>) as Partial<TextSettings> | null;
 }
 
 /**
@@ -173,7 +175,8 @@ export function diffGripSettings(
   from: GripSettings,
   to: GripSettings
 ): Partial<GripSettings> | null {
-  return diffSettings(from as Record<string, unknown>, to as Record<string, unknown>) as Partial<GripSettings> | null;
+  // ✅ ENTERPRISE FIX: Fixed type conversion using unknown intermediate step
+  return diffSettings(from as unknown as Record<string, unknown>, to as unknown as Record<string, unknown>) as Partial<GripSettings> | null;
 }
 
 // ============================================================================

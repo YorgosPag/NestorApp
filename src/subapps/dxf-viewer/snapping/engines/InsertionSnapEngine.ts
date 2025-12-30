@@ -3,41 +3,41 @@
  * Υπεύθυνο για εύρεση insertion points σε text entities, blocks, symbols
  */
 
-import type { Point2D } from '../../rendering/types/Types';
-import { Entity, ExtendedSnapType } from '../extended-types';
+import type { Point2D, EntityModel } from '../../rendering/types/Types';
+import { ExtendedSnapType } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 
 // Extended entity interfaces for insertion snap detection
-interface TextEntity extends Entity {
+interface TextEntity extends EntityModel {
   position?: Point2D;
   insertionPoint?: Point2D;
   alignmentPoint?: Point2D;
 }
 
-interface BlockEntity extends Entity {
+interface BlockEntity extends EntityModel {
   position?: Point2D;
   insertionPoint?: Point2D;
 }
 
-interface DimensionEntity extends Entity {
+interface DimensionEntity extends EntityModel {
   defPoint?: Point2D;
   textMidPoint?: Point2D;
 }
 
-interface LeaderEntity extends Entity {
+interface LeaderEntity extends EntityModel {
   vertices?: Point2D[];
 }
 
-interface HatchEntity extends Entity {
+interface HatchEntity extends EntityModel {
   seedPoints?: Point2D[];
 }
 
-interface PointEntity extends Entity {
+interface PointEntity extends EntityModel {
   position?: Point2D;
 }
 
-interface LineEntity extends Entity {
+interface LineEntity extends EntityModel {
   basePoint?: Point2D;
   firstPoint?: Point2D;
 }
@@ -53,7 +53,7 @@ export class InsertionSnapEngine extends BaseSnapEngine {
     super(ExtendedSnapType.INSERTION);
   }
 
-  initialize(entities: Entity[]): void {
+  initialize(entities: EntityModel[]): void {
 
   }
 
@@ -72,7 +72,7 @@ export class InsertionSnapEngine extends BaseSnapEngine {
     return { candidates };
   }
 
-  private getInsertionPoints(entity: Entity): Array<{point: Point2D, type: string}> {
+  private getInsertionPoints(entity: EntityModel): Array<{point: Point2D, type: string}> {
     const insertionPoints: Array<{point: Point2D, type: string}> = [];
     const entityType = entity.type.toLowerCase();
     

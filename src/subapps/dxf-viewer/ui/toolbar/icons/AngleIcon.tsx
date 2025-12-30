@@ -3,7 +3,7 @@
  * Εικονίδιο γωνίας με δύο ευθείες και τόξο
  */
 
-import React from 'react';
+import * as React from 'react';
 import { AngleIconBase } from './shared/AngleIconBase';
 
 interface AngleIconProps {

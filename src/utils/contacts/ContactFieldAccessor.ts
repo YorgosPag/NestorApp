@@ -2,11 +2,23 @@ import type {
   Contact,
   IndividualContact,
   CompanyContact,
-  ServiceContact,
+  ServiceContact
+} from '@/types/contacts';
+import {
   isIndividualContact,
   isCompanyContact,
   isServiceContact
 } from '@/types/contacts';
+
+// Extended contact interface για legacy format support
+interface ExtendedContact extends Contact {
+  contactInfo?: {
+    email?: string;
+    phone?: string;
+  };
+  emailAddress?: string;
+  phoneNumber?: string;
+}
 
 // ============================================================================
 // ENTERPRISE CENTRALIZED CONTACT FIELD ACCESSOR
@@ -54,7 +66,7 @@ export class ContactFieldAccessor {
     }
 
     // 🎯 PRIORITY 3: Nested formats (legacy/extended contact types)
-    const extendedContact = contact as any;
+    const extendedContact = contact as ExtendedContact;
     if (extendedContact.contactInfo?.email && typeof extendedContact.contactInfo.email === 'string') {
       return extendedContact.contactInfo.email.trim();
     }
@@ -91,7 +103,7 @@ export class ContactFieldAccessor {
     }
 
     // 🎯 PRIORITY 3: Nested formats (legacy/extended contact types)
-    const extendedContact = contact as any;
+    const extendedContact = contact as ExtendedContact;
     if (extendedContact.contactInfo?.phone && typeof extendedContact.contactInfo.phone === 'string') {
       return extendedContact.contactInfo.phone.trim();
     }
@@ -131,7 +143,7 @@ export class ContactFieldAccessor {
     }
 
     // 🎯 PRIORITY 3: Extended/legacy website fields
-    const extendedContact = contact as any;
+    const extendedContact = contact as ExtendedContact;
     if (extendedContact.website && typeof extendedContact.website === 'string') {
       return extendedContact.website.trim();
     }
@@ -161,7 +173,7 @@ export class ContactFieldAccessor {
     const parts: string[] = [];
 
     // Try direct address field (common across all contact types)
-    const extendedContact = contact as any;
+    const extendedContact = contact as ExtendedContact;
     if (extendedContact.address && typeof extendedContact.address === 'string') {
       parts.push(extendedContact.address.trim());
     }
@@ -191,7 +203,7 @@ export class ContactFieldAccessor {
    * Helps identify how fields are stored in different contact types
    */
   static debugFieldAccess(contact: Contact): void {
-    const extendedContact = contact as any; // Legacy fields debug only
+    const extendedContact = contact as ExtendedContact; // Legacy fields debug only
 
     console.log('🔍 CONTACT FIELD DEBUG:', {
       contactId: contact.id,

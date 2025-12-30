@@ -7,10 +7,10 @@ import { CalibrationStep } from './wizard/CalibrationStep';
 import { PreviewStep } from './wizard/PreviewStep';
 import { X } from 'lucide-react';
 import { useWizardNavigation } from '../hooks/useWizardNavigation';
-import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
+import { INTERACTIVE_PATTERNS } from '../../../components/ui/effects';
+import { useIconSizes } from '../../../hooks/useIconSizes';
+import { useBorderTokens } from '../../../hooks/useBorderTokens';
+import { useSemanticColors } from '../../../ui-adapters/react/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 
 interface ImportWizardProps {
   isOpen: boolean;
@@ -31,7 +31,7 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
   const renderStep = () => {
     switch (importWizard.step) {
       case 'level':
-        return <LevelSelectionStep />;
+        return <LevelSelectionStep onNext={() => {}} onClose={() => {}} />;
       case 'calibration':
         return <CalibrationStep />;
       case 'preview':

@@ -8,7 +8,7 @@
  */
 
 import React, { useState } from 'react';
-import { TestsModal } from '../TestsModal';
+import { TestsModal } from '../../TestsModal';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 export function BasicUsageExample() {

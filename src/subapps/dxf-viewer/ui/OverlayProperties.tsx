@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useIconSizes } from '../../../hooks/useIconSizes';
+import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useDynamicBackgroundClass } from '../../../components/ui/utils/dynamic-styles';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
@@ -124,11 +124,11 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
         {/* Basic Info */}
         <div className="flex items-center gap-2">
           <div
-            className={`${iconSizes.sm} rounded ${quick.button} ${useDynamicBackgroundClass('', STATUS_COLORS[overlay.status || 'for-sale'] as string)}`}
+            className={`${iconSizes.sm} rounded ${quick.button} ${useDynamicBackgroundClass(STATUS_COLORS[overlay.status || 'for-sale'] as string)}`}
           />
           <CommonBadge
             status="company"
-            customLabel={overlay.id.slice(0, 8)}
+            customLabel={typeof overlay.id === 'string' ? overlay.id.slice(0, 8) : String(overlay.id || '').slice(0, 8)}
             variant="outline"
           />
         </div>
@@ -157,7 +157,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
                 <SelectItem key={status} value={status}>
                   <div className="flex items-center gap-2">
                     <div
-                      className={`${iconSizes.xs} rounded ${useDynamicBackgroundClass('', STATUS_COLORS[status] as string)}`}
+                      className={`${iconSizes.xs} rounded ${useDynamicBackgroundClass(String((STATUS_COLORS as any)[status] || ''))}`}
                     />
                     {STATUS_LABELS[status]}
                   </div>

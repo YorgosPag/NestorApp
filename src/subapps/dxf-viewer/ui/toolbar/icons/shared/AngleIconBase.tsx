@@ -3,7 +3,7 @@
  * Eliminates 158-token duplication between AngleIcon and AngleMeasureGeomIcon
  */
 
-import React from 'react';
+import * as React from 'react';
 
 interface AngleIconBaseProps {
   size?: number;

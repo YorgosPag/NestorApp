@@ -67,6 +67,6 @@ export { SceneUpdateManager } from '../managers/SceneUpdateManager';
 export { SmartBoundsManager } from '../utils/SmartBoundsManager';
 
 // ===== TYPE EXPORTS =====
-export type { Bounds } from '../rendering/types/Types';
+export type { BoundingBox as Bounds } from '../rendering/types/Types';
 export type { DxfScene } from '../canvas-v2/dxf-canvas/dxf-types';
 export type { ColorLayer } from '../canvas-v2/layer-canvas/layer-types';

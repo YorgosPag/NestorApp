@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import type { Point2D as Point } from '../../rendering/types/Types';
+import type { Point2D as Point } from '../../../rendering/types/Types';
 
 interface UseDynamicInputHandlerProps {
   activeTool: string;

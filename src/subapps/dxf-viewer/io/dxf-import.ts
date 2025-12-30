@@ -1,38 +1,38 @@
 import type { Point2D } from '../rendering/types/Types';
-import type { DxfImportResult, SceneModel, SceneBounds, AnySceneEntity } from '../types/scene';
+import type { DxfImportResult, SceneModel, SceneBounds, BaseEntity } from '../types/scene';
 
-// Extended entity interfaces for DXF import processing
-interface LineEntity extends AnySceneEntity {
+// ✅ ENTERPRISE FIX: Extended entity interfaces for DXF import processing
+interface LineEntity extends BaseEntity {
   type: 'line';
   start: Point2D;
   end: Point2D;
 }
 
-interface PolylineEntity extends AnySceneEntity {
+interface PolylineEntity extends BaseEntity {
   type: 'polyline';
   vertices: Point2D[];
 }
 
-interface CircleEntity extends AnySceneEntity {
+interface CircleEntity extends BaseEntity {
   type: 'circle';
   center: Point2D;
   radius: number;
 }
 
-interface ArcEntity extends AnySceneEntity {
+interface ArcEntity extends BaseEntity {
   type: 'arc';
   center: Point2D;
   radius: number;
 }
 
-interface TextEntity extends AnySceneEntity {
+interface TextEntity extends BaseEntity {
   type: 'text';
   position: Point2D;
   text?: string;
   height?: number;
 }
 
-interface BlockEntity extends AnySceneEntity {
+interface BlockEntity extends BaseEntity {
   type: 'block';
   position: Point2D;
 }

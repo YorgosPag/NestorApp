@@ -20,7 +20,7 @@
 const DEBUG_SNAP_ORCHESTRATOR = false;
 
 import type { Point2D } from '../../rendering/types/Types';
-import { Entity, ExtendedSnapType } from '../extended-types';
+import { ExtendedSnapType, type Entity, type SnapEngineStats, type ProSnapSettings, type ProSnapResult, type SnapCandidate } from '../extended-types';
 import { SnapEngineRegistry } from './SnapEngineRegistry';
 import { SnapCandidateProcessor } from './SnapCandidateProcessor';
 import { SnapContextManager } from './SnapContextManager';

@@ -3,7 +3,7 @@
 import React from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import type { Phase } from './hooks/useDynamicInputState';
+import type { Phase } from '../hooks/useDynamicInputState';
 
 interface DynamicInputFooterProps {
   activeTool: string;

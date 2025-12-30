@@ -12,7 +12,7 @@
 // ====================================================================
 
 import { componentSizes, semanticColors } from '../../../styles/design-tokens';
-import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { COLOR_BRIDGE } from '../../../design-system/color-bridge';
 import { PANEL_COLORS } from './panel-tokens';
 
 // ====================================================================

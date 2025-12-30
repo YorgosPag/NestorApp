@@ -168,10 +168,10 @@ export const createGripConsolidatedSettings = (
 };
 
 // Utility για migration από παλιά contexts
-export const migrateFromLegacyContext = <T>(
+export const migrateFromLegacyContext = <T extends Record<string, any>>(
   legacyContextResult: {
-    settings: { overrideGlobalSettings: boolean; [key: string]: T };
-    updateSettings: (updates: Partial<{ overrideGlobalSettings: boolean; [key: string]: Partial<T> }>) => void;
+    settings: { overrideGlobalSettings: boolean } & Record<string, T>;
+    updateSettings: (updates: Partial<{ overrideGlobalSettings: boolean } & Record<string, Partial<T>>>) => void;
     getEffectiveLineSettings?: () => T;
     getEffectiveTextSettings?: () => T;
     getEffectiveGripSettings?: () => T;
@@ -181,7 +181,7 @@ export const migrateFromLegacyContext = <T>(
 ): ConsolidatedSettingsResult<T> => {
   // Helper για migration χωρίς breaking changes
   const migratedSettings: OverrideSettings<T> = {
-    overrideGlobalSettings: legacyContextResult.settings.overrideGlobalSettings,
+    overrideGlobalSettings: legacyContextResult.settings.overrideGlobalSettings as T,
     specificSettings: legacyContextResult.settings[settingsPropertyName]
   };
 
@@ -189,7 +189,7 @@ export const migrateFromLegacyContext = <T>(
     settings: migratedSettings,
     updateSettings: (updates) => {
       // Map το νέο format στο παλιό για backwards compatibility
-      legacyContextResult.updateSettings(updates as Partial<{ [key: string]: Partial<T>; overrideGlobalSettings: boolean; }>);
+      legacyContextResult.updateSettings(updates as Partial<{ overrideGlobalSettings: boolean } & Record<string, Partial<T>>>);
     },
     updateSpecificSettings: (updates) => {
       // Map στο specific property του παλιού context

@@ -1,109 +1,53 @@
- 2  src/subapps/dxf-viewer/hooks/interfaces/useCanvasOperations.ts:48
-     2  src/subapps/dxf-viewer/hooks/test-new-hooks.tsx:82
-     3  src/subapps/dxf-viewer/hooks/useEntityStyles.ts:82
-     2  src/subapps/dxf-viewer/hooks/useKeyboardShortcuts.ts:116
-     1  src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts:130
-     1  src/subapps/dxf-viewer/hooks/useSelectionSystem.ts:22
-     1  src/subapps/dxf-viewer/integration/types.ts:14
-     6  src/subapps/dxf-viewer/io/dxf-import.ts:5
-     3  src/subapps/dxf-viewer/jest.config.ts:137
-     4  src/subapps/dxf-viewer/layout/CadDock.tsx:132
-     1  src/subapps/dxf-viewer/layout/MainContentSection.tsx:173
-     1  src/subapps/dxf-viewer/layout/SidebarSection.tsx:60
-     1  src/subapps/dxf-viewer/managers/SceneUpdateManager.ts:10
-     1  src/subapps/dxf-viewer/overlays/overlay-adapter.ts:20
-     1  src/subapps/dxf-viewer/overlays/overlay-store.tsx:62
-    16  src/subapps/dxf-viewer/providers/DxfSettingsProvider.OLD.tsx:1772
-     8  src/subapps/dxf-viewer/rendering/canvas/core/CanvasSettings.ts:76
-     1  src/subapps/dxf-viewer/rendering/core/EntityRendererComposite.ts:132
-     4  src/subapps/dxf-viewer/rendering/entities/AngleMeasurementRenderer.ts:13
-     3  src/subapps/dxf-viewer/rendering/entities/ArcRenderer.ts:18
-     1  src/subapps/dxf-viewer/rendering/entities/BaseEntityRenderer.ts:87
-     2  src/subapps/dxf-viewer/rendering/entities/CircleRenderer.ts:30
-     2  src/subapps/dxf-viewer/rendering/entities/EllipseRenderer.ts:16
-     4  src/subapps/dxf-viewer/rendering/entities/LineRenderer.ts:52
-     2  src/subapps/dxf-viewer/rendering/entities/PointRenderer.ts:2
-     3  src/subapps/dxf-viewer/rendering/entities/PolylineRenderer.ts:16
-     3  src/subapps/dxf-viewer/rendering/entities/RectangleRenderer.ts:16
-     2  src/subapps/dxf-viewer/rendering/entities/shared/geometry-rendering-utils.ts:7
-     4  src/subapps/dxf-viewer/rendering/entities/shared/grip-utils.ts:28
-     2  src/subapps/dxf-viewer/rendering/entities/shared/line-utils.ts:35
-     3  src/subapps/dxf-viewer/rendering/entities/SplineRenderer.ts:12
-     1  src/subapps/dxf-viewer/rendering/entities/TextRenderer.ts:13
-     1  src/subapps/dxf-viewer/rendering/hitTesting/Bounds.ts:194
-     1  src/subapps/dxf-viewer/rendering/hitTesting/index.ts:19
-     2  src/subapps/dxf-viewer/rendering/index.ts:40
-     1  src/subapps/dxf-viewer/rendering/passes/BackgroundPass.ts:6
-     1  src/subapps/dxf-viewer/rendering/passes/EntityPass.ts:8
-     1  src/subapps/dxf-viewer/rendering/passes/OverlayPass.ts:6
-     1  src/subapps/dxf-viewer/rendering/ui/grid/LegacyGridAdapter.ts:36
-     1  src/subapps/dxf-viewer/services/__tests__/global-setup.ts:21
-     1  src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.test.ts:15
-    28  src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts:10
+ 1  src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.test.ts:16
+    24  src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts:11
      1  src/subapps/dxf-viewer/services/__tests__/setup.ts:7
-     1  src/subapps/dxf-viewer/services/EntityMergeService.ts:106
-     6  src/subapps/dxf-viewer/services/HitTestingService.ts:153
-     1  src/subapps/dxf-viewer/services/index.ts:70
-     3  src/subapps/dxf-viewer/services/LayerOperationsService.ts:208
-     7  src/subapps/dxf-viewer/settings-core/override.ts:52
-     1  src/subapps/dxf-viewer/settings-provider/EnterpriseDxfSettingsProvider.tsx:287
-     3  src/subapps/dxf-viewer/settings/FACTORY_DEFAULTS.ts:218
-     1  src/subapps/dxf-viewer/settings/io/LocalStorageDriver.ts:28
+     2  src/subapps/dxf-viewer/services/LayerOperationsService.ts:418
+     1  src/subapps/dxf-viewer/settings-core/__tests__/override.test.ts:7
+     1  src/subapps/dxf-viewer/settings-core/override.ts:52
+     3  src/subapps/dxf-viewer/settings-provider/EnterpriseDxfSettingsProvider.tsx:260
+     1  src/subapps/dxf-viewer/settings-provider/index.tsx:27
      3  src/subapps/dxf-viewer/settings/io/safeLoad.ts:181
-     1  src/subapps/dxf-viewer/settings/io/safeSave.ts:133
-     3  src/subapps/dxf-viewer/settings/io/schema.ts:204
-     4  src/subapps/dxf-viewer/settings/state/selectors.ts:21
-     3  src/subapps/dxf-viewer/settings/sync/adapters/gripStyleAdapter.ts:64
-     3  src/subapps/dxf-viewer/settings/sync/adapters/textStyleAdapter.ts:54
-     3  src/subapps/dxf-viewer/settings/sync/adapters/toolStyleAdapter.ts:54
-     4  src/subapps/dxf-viewer/settings/sync/storeSync.test.ts:16
-     1  src/subapps/dxf-viewer/settings/sync/storeSync.ts:27
-     5  src/subapps/dxf-viewer/snapping/context/SnapContext.tsx:3
-     3  src/subapps/dxf-viewer/snapping/engines/InsertionSnapEngine.ts:85
-     1  src/subapps/dxf-viewer/snapping/engines/IntersectionSnapEngine.ts:42
-     1  src/subapps/dxf-viewer/snapping/engines/NearestSnapEngine.ts:24
-     1  src/subapps/dxf-viewer/snapping/engines/NearSnapEngine.ts:36
-     4  src/subapps/dxf-viewer/snapping/engines/NodeSnapEngine.ts:128
-     1  src/subapps/dxf-viewer/snapping/engines/OrthoSnapEngine.ts:24
-     1  src/subapps/dxf-viewer/snapping/engines/ParallelSnapEngine.ts:25
-     1  src/subapps/dxf-viewer/snapping/engines/PerpendicularSnapEngine.ts:29
-     1  src/subapps/dxf-viewer/snapping/engines/QuadrantSnapEngine.ts:26
-     3  src/subapps/dxf-viewer/snapping/engines/shared/snap-engine-utils.ts:10
-     2  src/subapps/dxf-viewer/snapping/engines/TangentSnapEngine.ts:26
+     1  src/subapps/dxf-viewer/settings/sync/adapters/gripStyleAdapter.ts:69
+     1  src/subapps/dxf-viewer/settings/sync/adapters/textStyleAdapter.ts:59
+     1  src/subapps/dxf-viewer/settings/sync/adapters/toolStyleAdapter.ts:59
+     6  src/subapps/dxf-viewer/settings/sync/storeSync.test.ts:16
+     2  src/subapps/dxf-viewer/settings/sync/storeSync.ts:74
+     2  src/subapps/dxf-viewer/snapping/context/SnapContext.tsx:47
+     4  src/subapps/dxf-viewer/snapping/engines/CenterSnapEngine.ts:63
+     6  src/subapps/dxf-viewer/snapping/engines/ExtensionSnapEngine.ts:35
+     6  src/subapps/dxf-viewer/snapping/engines/InsertionSnapEngine.ts:45
+    24  src/subapps/dxf-viewer/snapping/engines/IntersectionSnapEngine.ts:96
+    11  src/subapps/dxf-viewer/snapping/engines/NearestSnapEngine.ts:43
+     5  src/subapps/dxf-viewer/snapping/engines/NearSnapEngine.ts:17
+    32  src/subapps/dxf-viewer/snapping/engines/NodeSnapEngine.ts:19
+     4  src/subapps/dxf-viewer/snapping/engines/PerpendicularSnapEngine.ts:17
+     3  src/subapps/dxf-viewer/snapping/engines/QuadrantSnapEngine.ts:15
+     2  src/subapps/dxf-viewer/snapping/engines/shared/snap-engine-utils.ts:15
+     4  src/subapps/dxf-viewer/snapping/engines/TangentSnapEngine.ts:15
      1  src/subapps/dxf-viewer/snapping/hooks/useSnapManager.tsx:61
-     2  src/subapps/dxf-viewer/snapping/index.ts:8
-     6  src/subapps/dxf-viewer/snapping/orchestrator/SnapCandidateProcessor.ts:14
-     3  src/subapps/dxf-viewer/snapping/orchestrator/SnapContextManager.ts:19
-     5  src/subapps/dxf-viewer/snapping/orchestrator/SnapOrchestrator.ts:37
-     2  src/subapps/dxf-viewer/snapping/ProSnapEngineV2.ts:11
-     7  src/subapps/dxf-viewer/snapping/shared/BaseSnapEngine.ts:22
-     2  src/subapps/dxf-viewer/snapping/SnapEngineCore.ts:14
+     3  src/subapps/dxf-viewer/snapping/index.ts:8
+     1  src/subapps/dxf-viewer/snapping/ProSnapEngineV2.ts:133
+     1  src/subapps/dxf-viewer/snapping/SnapEngineCore.ts:97
      5  src/subapps/dxf-viewer/stores/useDxfSettings.ts:63
      1  src/subapps/dxf-viewer/styles/DxfZIndexSystem.styles.ts:394
      2  src/subapps/dxf-viewer/systems/collaboration/CollaborationEngine.ts:266
      3  src/subapps/dxf-viewer/systems/constraints/ConstraintsSystem.tsx:100
      1  src/subapps/dxf-viewer/systems/constraints/useConstraintApplication.ts:67
      3  src/subapps/dxf-viewer/systems/constraints/useConstraintOperations.ts:50
-     2  src/subapps/dxf-viewer/systems/constraints/useConstraints.ts:23
      1  src/subapps/dxf-viewer/systems/cursor/useCentralizedMouseHandlers.ts:68
      1  src/subapps/dxf-viewer/systems/cursor/useCursor.ts:47
      5  src/subapps/dxf-viewer/systems/drawing-orchestrator/DrawingOrchestrator.ts:33
-     1  src/subapps/dxf-viewer/systems/dynamic-input/components/DynamicInputFooter.tsx:6
      7  src/subapps/dxf-viewer/systems/dynamic-input/components/DynamicInputOverlay.tsx:155
-     1  src/subapps/dxf-viewer/systems/dynamic-input/hooks/interfaces.ts:4
-     4  src/subapps/dxf-viewer/systems/dynamic-input/hooks/useDynamicInputAnchoring.ts:4
-     1  src/subapps/dxf-viewer/systems/dynamic-input/hooks/useDynamicInputHandler.ts:2
+     3  src/subapps/dxf-viewer/systems/dynamic-input/hooks/useDynamicInputAnchoring.ts:39
      8  src/subapps/dxf-viewer/systems/dynamic-input/hooks/useDynamicInputKeyboard.ts:199
      1  src/subapps/dxf-viewer/systems/dynamic-input/hooks/useDynamicInputLayout.ts:4
      3  src/subapps/dxf-viewer/systems/dynamic-input/hooks/useDynamicInputPhase.ts:9
      2  src/subapps/dxf-viewer/systems/dynamic-input/hooks/useDynamicInputState.ts:12
-     1  src/subapps/dxf-viewer/systems/dynamic-input/hooks/useDynamicInputToolReset.ts:4
-     4  src/subapps/dxf-viewer/systems/dynamic-input/index.ts:11
-     2  src/subapps/dxf-viewer/systems/dynamic-input/types.ts:10
+     1  src/subapps/dxf-viewer/systems/dynamic-input/index.ts:10
+     1  src/subapps/dxf-viewer/systems/dynamic-input/types.ts:10
      1  src/subapps/dxf-viewer/systems/dynamic-input/types/common-interfaces.ts:7
      7  src/subapps/dxf-viewer/systems/entity-creation/EntityCreationSystem.tsx:30
-     3  src/subapps/dxf-viewer/systems/levels/LevelsSystem.tsx:428
-     1  src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts:255
+     3  src/subapps/dxf-viewer/systems/levels/LevelsSystem.tsx:429
      6  src/subapps/dxf-viewer/systems/rulers-grid/RulersGridSystem.tsx:76
      1  src/subapps/dxf-viewer/systems/rulers-grid/types.ts:8
      1  src/subapps/dxf-viewer/systems/rulers-grid/useRulersGrid.ts:24
@@ -117,9 +61,8 @@
      3  src/subapps/dxf-viewer/systems/toolbars/utils.ts:39
      1  src/subapps/dxf-viewer/systems/tools/ToolStateManager.ts:43
      1  src/subapps/dxf-viewer/systems/zoom/hooks/useZoom.ts:141
-     1  src/subapps/dxf-viewer/systems/zoom/utils/bounds.ts:6
      1  src/subapps/dxf-viewer/test/setupCanvas.ts:144
-     6  src/subapps/dxf-viewer/test/setupTests.ts:10
+     3  src/subapps/dxf-viewer/test/setupTests.ts:11
      3  src/subapps/dxf-viewer/testing/performance-test.ts:44
      2  src/subapps/dxf-viewer/ui/color/EnterpriseColorArea.tsx:25
      1  src/subapps/dxf-viewer/ui/color/EnterpriseColorDialog.tsx:24
@@ -134,58 +77,35 @@
      1  src/subapps/dxf-viewer/ui/components/dxf-settings/controls/LineStyleControl.tsx:66
      1  src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/GripSettings.tsx:6
      6  src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx:142
-    11  src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/TextSettings.tsx:51
+     3  src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/TextSettings.tsx:281
      2  src/subapps/dxf-viewer/ui/components/dxf-settings/settings/shared/EnterpriseComboBox.tsx:312
-    13  src/subapps/dxf-viewer/ui/components/dxf-settings/settings/special/EntitiesSettings.tsx:342
+     4  src/subapps/dxf-viewer/ui/components/dxf-settings/settings/special/EntitiesSettings.tsx:6
      2  src/subapps/dxf-viewer/ui/components/layers/ColorGroupItem.tsx:73
      1  src/subapps/dxf-viewer/ui/components/layers/components/EntityCard.tsx:96
      3  src/subapps/dxf-viewer/ui/components/layers/LayerItem.tsx:294
      1  src/subapps/dxf-viewer/ui/components/LazyLoadWrapper.tsx:75
-     2  src/subapps/dxf-viewer/ui/components/shared/SliderInput.tsx:13
-     6  src/subapps/dxf-viewer/ui/components/shared/SubTabRenderer.tsx:129
-     1  src/subapps/dxf-viewer/ui/components/tests-modal/constants/debugTools.ts:131
-     3  src/subapps/dxf-viewer/ui/components/tests-modal/examples/advanced-usage.tsx:18
-     1  src/subapps/dxf-viewer/ui/components/tests-modal/examples/basic-usage.tsx:11
-     1  src/subapps/dxf-viewer/ui/components/tests-modal/examples/custom-tests.tsx:14
-     5  src/subapps/dxf-viewer/ui/CursorSettingsPanel.tsx:76
-    13  src/subapps/dxf-viewer/ui/DxfViewerComponents.styles.ts:119
-     1  src/subapps/dxf-viewer/ui/FloatingPanelContainer.tsx:120
-     3  src/subapps/dxf-viewer/ui/hooks/useConsolidatedSettings.deprecated.ts:173
-     2  src/subapps/dxf-viewer/ui/hooks/useFloatingPanelHandle.ts:64
-     2  src/subapps/dxf-viewer/ui/hooks/useFloatingPanelState.ts:17
-     9  src/subapps/dxf-viewer/ui/hooks/useLayerOperations.ts:79
-     4  src/subapps/dxf-viewer/ui/hooks/useSettingsUpdater.ts:31
-     1  src/subapps/dxf-viewer/ui/ImportWizard.tsx:34
-     2  src/subapps/dxf-viewer/ui/OverlayProperties.tsx:127
-     2  src/subapps/dxf-viewer/ui/OverlayToolbar.tsx:103
-     4  src/subapps/dxf-viewer/ui/toolbar/EnhancedDXFToolbar.tsx:189
-     6  src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts:88
-     1  src/subapps/dxf-viewer/ui/toolbar/types.ts:94
-     1  src/subapps/dxf-viewer/ui/toolbar/ui/ToolbarButton.tsx:22
-     3  src/subapps/dxf-viewer/ui/wizard/CalibrationStep.tsx:24
-     2  src/subapps/dxf-viewer/utils/dxf-entity-parser.ts:300
-     1  src/subapps/dxf-viewer/utils/dxf-loader.ts:3
-     6  src/subapps/dxf-viewer/utils/hover/shape-renderers.ts:177
-     2  src/subapps/geo-canvas/__tests__/DxfGeoTransform.test.ts:334
-    27  src/subapps/geo-canvas/__tests__/GeoCanvasApp.test.tsx:20
+     1  src/subapps/dxf-viewer/ui/components/shared/SliderInput.tsx:51
+     7  src/subapps/dxf-viewer/ui/components/shared/SubTabRenderer.tsx:31
+     1  src/subapps/dxf-viewer/ui/FloatingPanelContainer.tsx:130
+     2  src/subapps/dxf-viewer/ui/hooks/useConsolidatedSettings.deprecated.ts:184
+     8  src/subapps/dxf-viewer/utils/hover/shape-renderers.ts:177
+     1  src/subapps/geo-canvas/__tests__/DxfGeoTransform.test.ts:6
+     1  src/subapps/geo-canvas/__tests__/GeoCanvasApp.test.tsx:8
      3  src/subapps/geo-canvas/app/GeoCanvasContent.tsx:791
      9  src/subapps/geo-canvas/app/GeoCanvasContent_BROKEN.tsx:106
-    81  src/subapps/geo-canvas/app/GeoCanvasContent_LEGACY_BACKUP.tsx:112
      1  src/subapps/geo-canvas/automation/CICDPipeline.ts:679
      1  src/subapps/geo-canvas/automation/TestingPipeline.ts:933
-   117  src/subapps/geo-canvas/cloud/CloudInfrastructure.ENTERPRISE_BACKUP_20251228_1539.ts:389
-     1  src/subapps/geo-canvas/cloud/enterprise/configs/default-aws.ts:13
-     8  src/subapps/geo-canvas/cloud/enterprise/core/infrastructure-manager.ts:14
-    25  src/subapps/geo-canvas/cloud/enterprise/index.ts:26
-     4  src/subapps/geo-canvas/cloud/enterprise/providers/aws/aws-provider.ts:13
-     4  src/subapps/geo-canvas/cloud/enterprise/providers/azure/azure-provider.ts:13
-     4  src/subapps/geo-canvas/cloud/enterprise/providers/gcp/gcp-provider.ts:13
-     7  src/subapps/geo-canvas/cloud/enterprise/services/alert-service.ts:14
+     1  src/subapps/geo-canvas/cloud/enterprise/configs/default-aws.ts:44
+    15  src/subapps/geo-canvas/cloud/enterprise/core/infrastructure-manager.ts:49
+    15  src/subapps/geo-canvas/cloud/enterprise/index.ts:96
+     9  src/subapps/geo-canvas/cloud/enterprise/providers/aws/aws-provider.ts:64
+     8  src/subapps/geo-canvas/cloud/enterprise/providers/azure/azure-provider.ts:64
+     7  src/subapps/geo-canvas/cloud/enterprise/providers/gcp/gcp-provider.ts:64
+     1  src/subapps/geo-canvas/cloud/enterprise/services/alert-service.ts:14
      1  src/subapps/geo-canvas/cloud/enterprise/utils/resource-calculator.ts:18
      1  src/subapps/geo-canvas/components/AlertManagementPanel.tsx:95
-    16  src/subapps/geo-canvas/components/CitizenDrawingInterface.tsx:178
+    19  src/subapps/geo-canvas/components/CitizenDrawingInterface.tsx:4
      1  src/subapps/geo-canvas/components/CoordinatePicker.tsx:421
-    22  src/subapps/geo-canvas/components/InteractiveMap.styles.ts:154
      8  src/subapps/geo-canvas/components/InteractiveMapContainer.tsx:164
      2  src/subapps/geo-canvas/components/InteractiveMapPresentation.tsx:179
      7  src/subapps/geo-canvas/components/map-layers/AccuracyVisualizationLayer.tsx:133
@@ -193,7 +113,7 @@
      2  src/subapps/geo-canvas/components/map-layers/PolygonLinesLayer.tsx:58
      5  src/subapps/geo-canvas/components/map-layers/PolygonSystemLayers.tsx:117
     11  src/subapps/geo-canvas/components/ProfessionalDrawingInterface.tsx:57
-    18  src/subapps/geo-canvas/components/PropertyStatusManager.tsx:49
+    11  src/subapps/geo-canvas/components/PropertyStatusManager.tsx:49
      8  src/subapps/geo-canvas/components/TechnicalDrawingInterface.tsx:67
      3  src/subapps/geo-canvas/components/TransformationPreview.tsx:448
      1  src/subapps/geo-canvas/deployment/DockerOrchestrator.ts:1238
@@ -207,9 +127,7 @@
      5  src/subapps/geo-canvas/domains - Αντιγραφή/state-management/hooks/useGeoCanvasState.tsx:362
      5  src/subapps/geo-canvas/domains - Αντιγραφή/state-management/useGeoCanvasState.tsx:362
      4  src/subapps/geo-canvas/domains - Αντιγραφή/toolbar-controls/GeoToolbar.tsx:16
-    19  src/subapps/geo-canvas/domains/configuration/GeoCanvasConfig.ts:21
     11  src/subapps/geo-canvas/domains/dialog-modals/GeoDialogSystem.tsx:22
-    22  src/subapps/geo-canvas/domains/enterprise-types/GeoCanvasTypes.ts:295
     13  src/subapps/geo-canvas/domains/event-handlers/GeoEventBus.ts:19
      3  src/subapps/geo-canvas/domains/GeoCanvasContent_ORIGINAL_BACKUP.tsx:790
     14  src/subapps/geo-canvas/domains/index.ts:176
@@ -231,30 +149,46 @@
      1  src/subapps/geo-canvas/floor-plan-system/snapping/engine/SnapEngine.ts:15
      1  src/subapps/geo-canvas/floor-plan-system/snapping/hooks/useSnapEngine.ts:16
      1  src/subapps/geo-canvas/floor-plan-system/snapping/hooks/useSnapPoints.ts:10
-     1  src/subapps/geo-canvas/floor-plan-system/snapping/rendering/SnapIndicator.tsx:66
      2  src/subapps/geo-canvas/floor-plan-system/types/index.ts:19
      1  src/subapps/geo-canvas/floor-plan-system/utils/transformation-calculator.ts:98
      1  src/subapps/geo-canvas/hooks/map/useMapState.ts:112
-     5  src/subapps/geo-canvas/hooks/useAdministrativeBoundaries.ts:245
+    12  src/subapps/geo-canvas/hooks/useAdministrativeBoundaries.ts:288
     15  src/subapps/geo-canvas/index.ts:46
      9  src/subapps/geo-canvas/integrations/AlertNotificationBridge.ts:45
      1  src/subapps/geo-canvas/optimization/MemoryLeakDetector.ts:233
-     6  src/subapps/geo-canvas/performance/monitoring/PerformanceMonitor.ts:176
      1  src/subapps/geo-canvas/performance/PerformanceOptimization.ts:850
-    16  src/subapps/geo-canvas/profiling/PerformanceProfiler.ts:446
+    10  src/subapps/geo-canvas/profiling/PerformanceProfiler.ts:606
      5  src/subapps/geo-canvas/security/SecurityCompliance.ts:373
-    34  src/subapps/geo-canvas/services/administrative-boundaries/AdministrativeBoundaryService.ts:92
-     6  src/subapps/geo-canvas/services/administrative-boundaries/OverpassApiService.ts:687
+     5  src/subapps/geo-canvas/services/administrative-boundaries/AdministrativeBoundaryService.ts:916
+     4  src/subapps/geo-canvas/services/administrative-boundaries/OverpassApiService.ts:775
      3  src/subapps/geo-canvas/services/geo-transform/DxfGeoTransform.ts:18
-     6  src/subapps/geo-canvas/services/spatial/SpatialQueryService.ts:65
+     7  src/subapps/geo-canvas/services/spatial/SpatialQueryService.ts:65
      6  src/subapps/geo-canvas/systems/polygon-system/components/PolygonControls.tsx:162
     10  src/subapps/geo-canvas/systems/polygon-system/providers/PolygonSystemProvider.tsx:18
      1  src/subapps/geo-canvas/systems/polygon-system/utils/legacy-migration.ts:70
+     8  src/subapps/geo-canvas/types/administrative-types.ts:69
     14  src/subapps/geo-canvas/ui/design-system/charts/AdvancedCharts.tsx:12
      7  src/subapps/geo-canvas/ui/design-system/index.tsx:15
     17  src/subapps/geo-canvas/ui/design-system/layout/ResponsiveDashboard.tsx:111
      1  src/subapps/geo-canvas/ui/design-system/performance/PerformanceComponents.styles.ts:13
-    29  src/subapps/geo-canvas/ui/design-system/performance/PerformanceComponents.tsx:22
+    27  src/subapps/geo-canvas/ui/design-system/performance/PerformanceComponents.tsx:205
      7  src/subapps/geo-canvas/ui/design-system/search/SearchSystem.styles.ts:108
      3  src/subapps/geo-canvas/ui/design-system/search/SearchSystem.tsx:407
-    67  src/subapps/geo-canvas/ui/design-system/theme/ThemeProvider.tsx:11
+    45  src/subapps/geo-canvas/ui/design-system/theme/ThemeProvider.tsx:10
+     8  src/types/ContactFormTypes.ts:44
+     1  src/types/contacts/relationships/utils/helpers.ts:113
+     1  src/types/layers.ts:328
+     2  src/types/measurements.ts:6
+     3  src/types/storage/constants.ts:19
+     1  src/utils/accessibility.ts:405
+     1  src/utils/contactForm/contactMapper.ts:65
+     1  src/utils/contactForm/fieldMappers/companyMapper.ts:37
+     3  src/utils/contactForm/fieldMappers/individualMapper.ts:45
+     1  src/utils/contactForm/mappers/company.ts:43
+     1  src/utils/contactForm/mappers/individual.ts:72
+     1  src/utils/contactForm/mappers/service.ts:47
+    27  src/utils/contacts/ContactFieldAccessor.ts:52
+     9  src/utils/contacts/EnterpriseContactSaver.ts:76
+     6  src/utils/form-error-handler.ts:196
+     1  src/utils/validation.ts:4
+PS C:\Nestor_Pagonis> 

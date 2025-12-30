@@ -290,45 +290,7 @@ export interface GeoCanvasConfiguration {
 // 🔗 DOMAIN EXPORTS - ENTERPRISE TYPES
 // ============================================================================
 
-export type {
-  // Core types
-  Coordinates,
-  BoundingBox,
-  ViewportDimensions,
-
-  // Map types
-  MapProvider,
-  MapConfiguration,
-  MapEventData,
-
-  // Tool types
-  ToolType,
-  ToolConfiguration,
-  ToolEventData,
-
-  // Panel types
-  PanelType,
-  PanelConfiguration,
-  PanelEventData,
-
-  // Layer types
-  LayerType,
-  LayerConfiguration,
-  LayerEventData,
-
-  // Measurement types
-  MeasurementResult,
-  MeasurementConfiguration,
-
-  // Event types
-  GeoCanvasEventType,
-  GeoCanvasEvent,
-  GeoCanvasEventHandler,
-  GeoCanvasEventBus,
-
-  // Configuration
-  GeoCanvasConfiguration
-};
+// ✅ ENTERPRISE FIX: All types already exported as interfaces above, no need to re-export
 
 /**
  * 🏢 ENTERPRISE METADATA - TYPES DOMAIN

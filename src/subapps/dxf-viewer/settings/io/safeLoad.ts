@@ -178,7 +178,7 @@ export async function safeLoad(
       // Validation passed - data is fully typed as SettingsState
       return {
         success: true,
-        data: validationResult.data as SettingsState,
+        data: validationResult.data,
         source,
         warnings
       };
@@ -188,11 +188,11 @@ export async function safeLoad(
     console.warn('[safeLoad] Validation failed, attempting to coerce');
     warnings.push('Schema validation failed, data was coerced');
 
-    const coercedData = validateAndCoerce(processedData, FACTORY_DEFAULTS);
+    const coercedData = validateAndCoerce(processedData as any, FACTORY_DEFAULTS);
 
     return {
       success: true,
-      data: coercedData as SettingsState,
+      data: coercedData,
       source: 'coerced',
       warnings
     };

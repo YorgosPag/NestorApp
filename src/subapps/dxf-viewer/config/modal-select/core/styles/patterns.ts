@@ -12,7 +12,7 @@
 // ====================================================================
 
 // Import color systems for consistency
-import { componentSizes, semanticColors } from '@/styles/design-tokens';
+import { componentSizes, semanticColors } from '../../../../../../styles/design-tokens';
 
 // ====================================================================
 // SELECT ITEM PATTERNS

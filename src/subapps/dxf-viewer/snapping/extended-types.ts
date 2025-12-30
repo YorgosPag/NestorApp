@@ -5,6 +5,7 @@
 
 // ✅ ΔΙΟΡΑΘΩΣΗ ΔΙΠΛΟΤΥΠΟΥ: Χρήση unified Point2D από rendering/types/Types.ts
 import type { Point2D } from '../rendering/types/Types';
+export type { Point2D } from '../rendering/types/Types';
 
 // Direct definition αντί για re-export για να αποφύγουμε circular import
 export enum ExtendedSnapType {
@@ -74,6 +75,13 @@ export interface ProSnapResult {
 
 // Per-mode tolerances σε pixels
 export type PerModeTolerance = Partial<Record<ExtendedSnapType, number>>;
+
+export interface SnapConfig {
+  snapType: ExtendedSnapType;
+  displayName: string;
+  priority?: number;
+  tolerance?: number;
+}
 
 export interface ProSnapSettings {
   enabled: boolean;

@@ -3,9 +3,9 @@
  * Main snap engine that orchestrates core functionality, logging, and presets
  */
 
-import {
-  ExtendedSnapType,
-  type ProSnapSettings,
+import { ExtendedSnapType } from './extended-types';
+import type {
+  ProSnapSettings,
   ProSnapResult,
   Entity,
   Point2D,

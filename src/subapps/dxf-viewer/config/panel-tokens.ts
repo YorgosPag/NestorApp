@@ -259,7 +259,10 @@ export const PANEL_COLORS = {
   BORDER_ACCENT: 'blue-400',                    // Static accent borders
 
   // ✅ ENTERPRISE FIX: Missing border colors for DxfViewerComponents.styles
-  BORDER_HEX_LIGHT: '#e5e7eb',                  // Light border hex for dashed borders
+  BORDER_HEX_PRIMARY: '#4b5563',               // Primary border hex (gray-600)
+  BORDER_HEX_SECONDARY: '#6b7280',             // Secondary border hex (gray-500)
+  BORDER_HEX_LIGHT: '#e5e7eb',                 // Light border hex for dashed borders (gray-200)
+  BORDER_HEX_ACCENT: '#60a5fa',                // Accent border hex (blue-400)
 
   // ✅ ENTERPRISE: Status borders από centralized semantic system
   BORDER_INFO: 'blue-400',                      // Static info borders

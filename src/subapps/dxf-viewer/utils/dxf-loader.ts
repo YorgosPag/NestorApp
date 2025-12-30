@@ -1,11 +1,11 @@
 // Mock DXF Loader - Προσωρινή λύση χωρίς dxf-parser
 import type {
-  Point2D,
   SceneModel,
   SceneLayer,
   AnySceneEntity,
   DxfImportResult,
 } from '../types/scene';
+import type { Point2D } from '../rendering/types/Types'; // ✅ ENTERPRISE FIX: Import Point2D from correct location
 
 function genId(prefix = 'e'): string {
   // ✅ ENTERPRISE MIGRATION: Using centralized ID generation

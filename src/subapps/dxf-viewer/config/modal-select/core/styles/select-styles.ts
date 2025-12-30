@@ -12,8 +12,8 @@
 // ====================================================================
 
 // Import color systems for consistency
-import { componentSizes, semanticColors } from '@/styles/design-tokens';
-import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { componentSizes, semanticColors } from '../../../../../../styles/design-tokens';
+import { COLOR_BRIDGE } from '../../../../../../design-system/color-bridge';
 // 🏢 ENTERPRISE: Import centralized panel tokens
 import { PANEL_COLORS } from '../../../panel-tokens';
 

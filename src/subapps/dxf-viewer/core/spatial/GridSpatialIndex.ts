@@ -99,7 +99,9 @@ export class GridSpatialIndex implements ISpatialIndex {
   remove(itemId: string): boolean {
     let removed = false;
 
-    for (const [cellKey, cell] of this.grid.entries()) {
+    for (const cellKey of Array.from(this.grid.keys())) {
+      const cell = this.grid.get(cellKey);
+      if (!cell) continue;
       const itemIndex = cell.items.findIndex(item => item.id === itemId);
       if (itemIndex !== -1) {
         cell.items.splice(itemIndex, 1);

@@ -7,18 +7,37 @@
  * @module services/administrative-boundaries/AdministrativeBoundaryService
  */
 
+// ✅ ENTERPRISE FIX: Define GeoJSON types locally to avoid module dependency
+interface Geometry {
+  type: string;
+  coordinates?: any;
+}
+
+interface Feature {
+  type: 'Feature';
+  properties: Record<string, any> | null;
+  geometry: Geometry | null;
+}
+
+interface FeatureCollection {
+  type: 'FeatureCollection';
+  features: Feature[];
+}
 import { overpassApiService } from './OverpassApiService';
 import { adminBoundariesAnalytics } from '../performance/AdminBoundariesPerformanceAnalytics';
 import { adminBoundariesCache } from '../cache/AdminBoundariesCacheManager';
 import { geometrySimplificationEngine } from '../geometry/GeometrySimplificationEngine';
-import type {
+// ✅ ENTERPRISE FIX: Import enums/constants as values, types as types
+import {
   GreekAdminLevel,
+  MajorGreekRegions,
+  MajorGreekMunicipalities
+} from '../../types/administrative-types';
+import type {
   AdminSearchResult,
   AdminSearchQuery,
   AdvancedSearchFilters,
-  BoundingBox,
-  MajorGreekRegions,
-  MajorGreekMunicipalities
+  BoundingBox
 } from '../../types/administrative-types';
 import type { ViewportContext } from '../geometry/GeometrySimplificationEngine';
 
@@ -33,7 +52,7 @@ import type { ViewportContext } from '../geometry/GeometrySimplificationEngine';
 export class AdministrativeBoundaryService {
 
   private boundaryCache = new Map<string, {
-    data: GeoJSON.Feature | GeoJSON.FeatureCollection;
+    data: Feature | FeatureCollection;
     timestamp: number;
   }>();
 
@@ -257,14 +276,14 @@ export class AdministrativeBoundaryService {
   /**
    * Get municipality boundary με caching
    */
-  async getMunicipalityBoundary(municipalityName: string): Promise<GeoJSON.Feature | null> {
+  async getMunicipalityBoundary(municipalityName: string): Promise<Feature | null> {
     const cacheKey = `municipality:${municipalityName}`;
 
     // Check cache
     const cached = this.boundaryCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.cacheExpiryMs) {
       console.log(`📦 Using cached municipality boundary: ${municipalityName}`);
-      return cached.data as GeoJSON.Feature;
+      return cached.data as Feature;
     }
 
     try {
@@ -291,14 +310,14 @@ export class AdministrativeBoundaryService {
   /**
    * Get region boundary με caching
    */
-  async getRegionBoundary(regionName: string): Promise<GeoJSON.Feature | null> {
+  async getRegionBoundary(regionName: string): Promise<Feature | null> {
     const cacheKey = `region:${regionName}`;
 
     // Check cache
     const cached = this.boundaryCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.cacheExpiryMs) {
       console.log(`📦 Using cached region boundary: ${regionName}`);
-      return cached.data as GeoJSON.Feature;
+      return cached.data as Feature;
     }
 
     try {
@@ -325,14 +344,14 @@ export class AdministrativeBoundaryService {
   /**
    * Get all municipalities σε region
    */
-  async getMunicipalitiesInRegion(regionName: string): Promise<GeoJSON.FeatureCollection | null> {
+  async getMunicipalitiesInRegion(regionName: string): Promise<FeatureCollection | null> {
     const cacheKey = `municipalities:${regionName}`;
 
     // Check cache
     const cached = this.boundaryCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.cacheExpiryMs) {
       console.log(`📦 Using cached municipalities for region: ${regionName}`);
-      return cached.data as GeoJSON.FeatureCollection;
+      return cached.data as FeatureCollection;
     }
 
     try {
@@ -380,14 +399,14 @@ export class AdministrativeBoundaryService {
   /**
    * Get postal code boundary με caching
    */
-  async getPostalCodeBoundary(postalCode: string): Promise<GeoJSON.Feature | null> {
+  async getPostalCodeBoundary(postalCode: string): Promise<Feature | null> {
     const cacheKey = `postal:${postalCode}`;
 
     // Check cache
     const cached = this.boundaryCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.cacheExpiryMs) {
       console.log(`📦 Using cached postal code boundary: ${postalCode}`);
-      return cached.data as GeoJSON.Feature;
+      return cached.data as Feature;
     }
 
     try {
@@ -414,14 +433,14 @@ export class AdministrativeBoundaryService {
   /**
    * Get all postal codes σε specific municipality
    */
-  async getPostalCodesInMunicipality(municipalityName: string): Promise<GeoJSON.FeatureCollection | null> {
+  async getPostalCodesInMunicipality(municipalityName: string): Promise<FeatureCollection | null> {
     const cacheKey = `postal-municipality:${municipalityName}`;
 
     // Check cache
     const cached = this.boundaryCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.cacheExpiryMs) {
       console.log(`📦 Using cached postal codes for municipality: ${municipalityName}`);
-      return cached.data as GeoJSON.FeatureCollection;
+      return cached.data as FeatureCollection;
     }
 
     try {
@@ -448,14 +467,14 @@ export class AdministrativeBoundaryService {
   /**
    * Get postal codes in geographic bounding box
    */
-  async getPostalCodesInBounds(bounds: BoundingBox): Promise<GeoJSON.FeatureCollection | null> {
+  async getPostalCodesInBounds(bounds: BoundingBox): Promise<FeatureCollection | null> {
     const cacheKey = `postal-bounds:${bounds.north}-${bounds.south}-${bounds.east}-${bounds.west}`;
 
     // Check cache
     const cached = this.boundaryCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.cacheExpiryMs) {
       console.log(`📦 Using cached postal codes for bounds`);
-      return cached.data as GeoJSON.FeatureCollection;
+      return cached.data as FeatureCollection;
     }
 
     try {
@@ -811,7 +830,8 @@ export class AdministrativeBoundaryService {
     let validEntries = 0;
     let expiredEntries = 0;
 
-    for (const [key, value] of this.boundaryCache.entries()) {
+    // ✅ ENTERPRISE FIX: Use Array.from to avoid downlevelIteration requirement
+    for (const [key, value] of Array.from(this.boundaryCache.entries())) {
       if (now - value.timestamp < this.cacheExpiryMs) {
         validEntries++;
       } else {
@@ -888,7 +908,7 @@ export class AdministrativeBoundaryService {
   /**
    * Calculate center point από boundary geometry
    */
-  calculateBoundaryCenter(geometry: GeoJSON.Geometry): [number, number] | null {
+  calculateBoundaryCenter(geometry: Geometry): [number, number] | null {
     if (geometry.type === 'Polygon') {
       const coordinates = geometry.coordinates[0]; // First ring
       if (coordinates.length === 0) return null;
@@ -908,7 +928,7 @@ export class AdministrativeBoundaryService {
   /**
    * Simplify boundary geometry για performance
    */
-  simplifyBoundary(geometry: GeoJSON.Geometry, tolerance = 0.001): GeoJSON.Geometry {
+  simplifyBoundary(geometry: Geometry, tolerance = 0.001): Geometry {
     // Simple Douglas-Peucker-style simplification
     if (geometry.type === 'Polygon') {
       const simplified = geometry.coordinates.map(ring =>

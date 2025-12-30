@@ -3,8 +3,8 @@
  * Υπεύθυνο για εύρεση parallel snap points σε σχέση με υπάρχουσες γραμμές
  */
 
-import type { Point2D } from '../../rendering/types/Types';
-import { Entity, ExtendedSnapType } from '../extended-types';
+import type { Point2D, EntityModel } from '../../rendering/types/Types';
+import { ExtendedSnapType, SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
@@ -17,7 +17,7 @@ export class ParallelSnapEngine extends BaseSnapEngine {
     super(ExtendedSnapType.PARALLEL);
   }
 
-  initialize(entities: Entity[]): void {
+  initialize(entities: EntityModel[]): void {
 
   }
 

@@ -90,20 +90,20 @@ export class EntityMergeService {
     const newId = `polyline_${Date.now()}`;
     const mergedEntity = {
       id: newId,
-      type: 'polyline',
+      type: 'lwpolyline' as const,
       layer: targetEntity.layer,
       visible: true,
       vertices: chain,
       closed: samePoint(chain[0], chain[chain.length - 1]),
       name: targetEntity.name || `Merged_${pool.length}_entities`,
       color: targetEntity.color
-    };
+    } as any;
 
     // Remove all old entities and add the new merged one
     const toDelete = new Set([targetEntity.id, ...sourceEntities.map(e => e.id)]);
     const updatedEntities = scene.entities
       .filter(e => !toDelete.has(e.id))
-      .concat(mergedEntity);
+      .concat([mergedEntity]);
     
     const updatedScene = {
       ...scene,

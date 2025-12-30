@@ -81,3 +81,100 @@ export interface PricingTier {
   pricePerHour: number;
   pricePerMonth: number;
 }
+
+// ============================================================================
+// ✅ ENTERPRISE FIX: ADD MISSING PROVIDER-SPECIFIC TYPES
+// ============================================================================
+
+/**
+ * Supported cloud provider names
+ */
+export type SupportedCloudProvider = CloudProvider['name'];
+export type CloudProviderName = CloudProvider['name'];
+
+/**
+ * Provider validation result
+ */
+export interface ProviderValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+/**
+ * Provider connection status
+ */
+export interface ProviderConnectionStatus {
+  connected: boolean;
+  lastChecked: Date;
+  latency?: number;
+  error?: string;
+}
+
+// ============================================================================
+// AWS PROVIDER TYPES
+// ============================================================================
+
+/**
+ * AWS-specific cloud provider configuration
+ */
+export interface AWSCloudProvider extends CloudProvider {
+  name: 'aws';
+  credentials: AWSCredentials;
+  accountId: string;
+}
+
+/**
+ * AWS-specific credentials
+ */
+export interface AWSCredentials extends CloudCredentials {
+  accessKey: string;
+  secretKey: string;
+  region: string;
+  sessionToken?: string;
+}
+
+// ============================================================================
+// AZURE PROVIDER TYPES
+// ============================================================================
+
+/**
+ * Azure-specific cloud provider configuration
+ */
+export interface AzureCloudProvider extends CloudProvider {
+  name: 'azure';
+  credentials: AzureCredentials;
+  subscriptionId: string;
+}
+
+/**
+ * Azure-specific credentials
+ */
+export interface AzureCredentials extends CloudCredentials {
+  tenantId: string;
+  subscriptionId: string;
+  clientId: string;
+  clientSecret: string;
+}
+
+// ============================================================================
+// GCP PROVIDER TYPES
+// ============================================================================
+
+/**
+ * GCP-specific cloud provider configuration
+ */
+export interface GCPCloudProvider extends CloudProvider {
+  name: 'gcp';
+  credentials: GCPCredentials;
+  projectId: string;
+}
+
+/**
+ * GCP-specific credentials
+ */
+export interface GCPCredentials extends CloudCredentials {
+  projectId: string;
+  keyFilename?: string;
+  serviceAccountKey?: any;
+}

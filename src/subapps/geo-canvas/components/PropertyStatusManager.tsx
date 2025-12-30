@@ -73,24 +73,24 @@ export function PropertyStatusManager({
     onLayerVisibilityChange?.(newSelection, true);
   }, [selectedStatuses, onLayerVisibilityChange]);
 
-  // 🏢 ENTERPRISE: Get status color using centralized useSemanticColors system
+  // ✅ ENTERPRISE: Get status color using centralized COLOR_BRIDGE system
   const getStatusColor = useCallback((status: PropertyStatus): string => {
-    // Map PropertyStatus to semantic color patterns
+    // Map PropertyStatus to semantic color patterns via COLOR_BRIDGE
     switch (status) {
       case 'available':
       case 'active':
-        return colors.getStatusColor('active', 'text'); // Green active color
+        return colors.text.success; // Green active color
       case 'sold':
       case 'completed':
-        return colors.getStatusColor('completed', 'text'); // Blue completed color
+        return colors.text.info; // Blue completed color
       case 'reserved':
       case 'pending':
-        return colors.getStatusColor('pending', 'text'); // Yellow pending color
+        return colors.text.warning; // Yellow pending color
       case 'unavailable':
       case 'cancelled':
-        return colors.getStatusColor('cancelled', 'text'); // Red cancelled color
+        return colors.text.error; // Red cancelled color
       default:
-        return colors.getStatusColor('inactive', 'text'); // Gray fallback
+        return colors.text.muted; // Gray fallback
     }
   }, [colors]);
 
@@ -102,7 +102,7 @@ export function PropertyStatusManager({
   // ✅ ENTERPRISE: Return loading state while translations load (AFTER all hooks)
   if (isLoading) {
     return (
-      <div className={`${colors.patterns.card.standard} p-4 ${className}`}>
+      <div className={`${colors.bg.card} p-4 ${className}`}>
         <div className="animate-pulse">
           <div className={`h-6 ${colors.bg.secondary} rounded mb-4`}></div>
           <div className={`h-32 ${colors.bg.secondary} rounded`}></div>
@@ -112,7 +112,7 @@ export function PropertyStatusManager({
   }
 
   return (
-    <div className={`${colors.patterns.card.standard} p-4 ${className}`}>
+    <div className={`${colors.bg.card} p-4 ${className}`}>
       {/* Header */}
       <div className="mb-4">
         <div className="flex items-center justify-between">
@@ -199,7 +199,7 @@ export function PropertyStatusManager({
               return (
                 <div
                   key={status}
-                  className={`flex items-center gap-3 p-2 rounded-md ${quick.card} transition-all ${
+                  className={`flex items-center gap-3 p-2 rounded-md ${colors.border.default} transition-all ${
                     isVisible
                       ? colors.bg.secondary
                       : `${colors.bg.secondary} opacity-60`
@@ -208,7 +208,7 @@ export function PropertyStatusManager({
                   {/* Color Indicator */}
                   <div
                     className={`${iconSizes.sm} rounded border border-white shadow-sm`}
-                    style={layoutUtilities.dxf.colors.backgroundColor(statusColor)}
+                    style={{ backgroundColor: statusColor }}
                   />
 
                   {/* Status Label */}
@@ -236,7 +236,7 @@ export function PropertyStatusManager({
       )}
 
       {/* Statistics */}
-      <div className={`${colors.bg.info} ${quick.card} ${colors.border.info} p-3`}>
+      <div className={`${colors.bg.infoSubtle} ${colors.border.info} p-3`}>
         <div className="flex items-center gap-2 mb-2">
           <Info className={`${iconSizes.sm} ${colors.text.info}`} />
           <span className={`text-sm font-medium ${colors.text.info}`}>{t('propertyStatusManager.statistics.title')}</span>

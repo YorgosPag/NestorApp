@@ -77,13 +77,31 @@ export function useEntityStyles<T extends EntityType>(
   userOverrides?: Partial<EntitySettingsMap[T]>
 ): EntityStylesHookResult<EntitySettingsMap[T]> {
 
-  // Delegate to the appropriate hook from DxfSettingsProvider
+  // ✅ ENTERPRISE FIX: Convert settings objects to EntityStylesHookResult format
   if (entityType === 'line') {
-    return useLineStyles(mode) as EntityStylesHookResult<EntitySettingsMap[T]>;
+    const settings = useLineStyles(mode);
+    return {
+      settings,
+      isOverridden: false,
+      update: () => {},
+      reset: () => {}
+    } as unknown as EntityStylesHookResult<EntitySettingsMap[T]>;
   } else if (entityType === 'text') {
-    return useTextStyles(mode) as EntityStylesHookResult<EntitySettingsMap[T]>;
+    const settings = useTextStyles(mode);
+    return {
+      settings,
+      isOverridden: false,
+      update: () => {},
+      reset: () => {}
+    } as unknown as EntityStylesHookResult<EntitySettingsMap[T]>;
   } else if (entityType === 'grip') {
-    return useGripStyles(mode) as EntityStylesHookResult<EntitySettingsMap[T]>;
+    const settings = useGripStyles(mode);
+    return {
+      settings,
+      isOverridden: false,
+      update: () => {},
+      reset: () => {}
+    } as unknown as EntityStylesHookResult<EntitySettingsMap[T]>;
   }
 
   // Fallback (should never happen)

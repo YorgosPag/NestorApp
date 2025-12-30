@@ -8,7 +8,7 @@ import { Button } from '../../../../../../components/ui/button';
 import { Input } from '../../../../../../components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../../../../components/ui/popover';
 import { Palette } from 'lucide-react';
-import { UI_COLORS } from '../../../../../config/color-config';
+import { UI_COLORS } from '../../../../config/color-config';
 import { ACI_PALETTE } from '../../../../settings/standards/aci';
 import { HOVER_BACKGROUND_EFFECTS, createHoverBorderEffects } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';

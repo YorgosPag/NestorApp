@@ -7,8 +7,8 @@
 export * from './geometry-utils';
 export * from './geometry-rendering-utils';
 export * from './dot-rendering-utils';
+// Export only from line-utils to avoid duplicates
 export * from './line-utils';
-export * from './line-rendering-utils';
 
 // Entity validation
 export * from './entity-validation-utils';

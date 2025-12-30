@@ -191,7 +191,7 @@ export class BoundsCalculator {
     }
 
     // Use control points bounds (conservative)
-    return this.calculatePolylineBounds({ ...entity, vertices: controlPoints }, tolerance);
+    return this.calculatePolylineBounds({ ...entity, points: controlPoints } as any, tolerance);
   }
 
   /**

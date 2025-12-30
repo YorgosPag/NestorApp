@@ -15,7 +15,7 @@ import type { PropertyStatus } from '../../../constants/property-statuses-enterp
 import { BUTTON_STATUS_COLORS } from '../config/color-mapping';
 import { UI_COLORS } from '../config/color-config';
 import { PANEL_COLORS } from '../config/panel-tokens'; // 🏢 ENTERPRISE: Centralized border colors
-import { useBorderTokens } from '@/hooks/useBorderTokens';
+// ✅ ENTERPRISE FIX: useBorderTokens is a React hook and cannot be used in styles file
 
 // 🏢 ENTERPRISE: CSS Custom Properties για κεντρικοποιημένα χρώματα
 const CSS_VARS = {
@@ -39,9 +39,11 @@ const CSS_VARS = {
 } as const;
 
 // 🎯 ENTERPRISE BORDER TOKENS INTEGRATION
-const getBorderTokens = () => {
-  const tokens = useBorderTokens();
-  return tokens.quick;
+// ✅ ENTERPRISE FIX: Hook cannot be called outside React component
+// Export utility function to be used inside components instead
+export const createBorderTokenHelper = () => {
+  // This will be called from within React components that have access to border tokens
+  return (tokens: { quick: Record<string, string> }) => tokens.quick;
 };
 
 // ============================================================================

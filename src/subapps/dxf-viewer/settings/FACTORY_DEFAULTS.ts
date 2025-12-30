@@ -41,7 +41,9 @@ const LINE_DEFAULTS = {
   enabled: true,                // ✅ FIX: Added enabled property (for LinePreview)
   lineWidth: 0.25,              // 0.25mm (ISO 128 standard)
   color: ACI_PALETTE[7] as string,        // White (ACI 7) - ✅ FIX: renamed from lineColor
+  lineColor: ACI_PALETTE[7] as string,    // ✅ ENTERPRISE FIX: Add backward compatibility
   lineType: 'solid' as const,             // ✅ FIX: renamed from lineStyle
+  lineStyle: 'solid' as const,            // ✅ ENTERPRISE FIX: Add backward compatibility
   opacity: 1.0
 };
 
@@ -76,9 +78,10 @@ const TEXT_DEFAULTS = {
   enabled: true,                // ✅ FIX: Added enabled property (for LinePreview)
   fontSize: 12,                 // 12pt (standard CAD text)
   fontFamily: 'Arial',          // Sans-serif (CAD standard)
-  fontWeight: 400,              // ✅ FIX: Changed from 'normal' to 400 (number)
+  fontWeight: 'normal' as const, // ✅ FIX: Back to string type as expected by TextSettings
   fontStyle: 'normal' as const,
   color: ACI_PALETTE[7] as string,        // White (ACI 7) - ✅ FIX: renamed from textColor
+  textColor: ACI_PALETTE[7] as string,    // ✅ ENTERPRISE FIX: Add backward compatibility
   opacity: 1.0
 };
 
@@ -111,6 +114,9 @@ const TEXT_COMPLETION_DEFAULTS = {
 const GRIP_DEFAULTS = {
   enabled: true,                // ✅ FIX: Added enabled property (for LinePreview)
   gripSize: 8,                  // 8px (standard CAD grip) - ✅ FIX: renamed from size
+  size: 8,                      // ✅ ENTERPRISE FIX: Add backward compatibility
+  color: ACI_PALETTE[5] as string,        // ✅ ENTERPRISE FIX: Add backward compatibility
+  hoverColor: ACI_PALETTE[4] as string,   // ✅ ENTERPRISE FIX: Add backward compatibility
   pickBoxSize: 3,               // ✅ FIX: Added pickBoxSize (AutoCAD PICKBOX default: 3 DIP)
   apertureSize: 10,             // ✅ FIX: Added apertureSize (AutoCAD APERTURE default: 10 pixels)
   colors: {                     // ✅ FIX: changed from flat color/hoverColor to nested structure

@@ -51,12 +51,12 @@ export const toolStyleAdapter: ToolStylePort = {
     if (partial.opacity !== undefined) updates.opacity = partial.opacity;
     // TODO: Map dashArray → lineType
 
-    toolStyleStore.set(updates);
+    toolStyleStore.set(updates as any);
   },
 
   onChange(handler) {
     // Subscribe to legacy store changes
-    return toolStyleStore.subscribe((state) => {
+    return toolStyleStore.subscribe((state: any) => {
       handler({
         stroke: state.strokeColor,
         fill: state.fillColor,

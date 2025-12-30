@@ -9,7 +9,7 @@
 // 🏢 ENTERPRISE: Integrated με centralized border token system
 // ============================================================================
 
-import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useBorderTokens } from '../../../hooks/useBorderTokens';
 
 /**
  * 🎨 SOCIAL PLATFORM BRAND COLORS

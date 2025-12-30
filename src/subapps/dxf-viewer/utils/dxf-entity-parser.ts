@@ -297,7 +297,7 @@ export class DxfEntityParser {
       visible: true,
       position: { x, y },
       text: text.trim(),
-      height,
+      fontSize: height, // ✅ ENTERPRISE FIX: Use fontSize instead of height (centralized TextEntity compatibility)
       rotation
     };
   }
@@ -325,7 +325,7 @@ export class DxfEntityParser {
       visible: true,
       position: { x, y },
       text: text.trim(),
-      height,
+      fontSize: height, // ✅ ENTERPRISE FIX: Use fontSize instead of height (centralized TextEntity compatibility)
       rotation
     };
   }

@@ -4,7 +4,7 @@
  * Runs before each test file
  */
 
-import { vi } from 'vitest';
+import { vi, beforeEach, afterEach } from 'vitest';
 
 // ═══ MOCK PERFORMANCE API ═══
 if (typeof performance === 'undefined') {
@@ -34,7 +34,7 @@ if (process.env.SILENT_TESTS === 'true') {
 
 // ═══ RESET TIMERS ═══
 beforeEach(() => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.useFakeTimers();
 });
 
 afterEach(() => {

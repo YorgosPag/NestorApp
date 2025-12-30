@@ -130,7 +130,7 @@ export async function safeSave(
     if (sync) {
       try {
         // Calculate diff (what changed from old to new)
-        const changes = calculateDiff(oldData as SettingsState | null, validationResult.data as SettingsState);
+        const changes = calculateDiff(oldData as SettingsState | null, validationResult.data as unknown as SettingsState);
 
         if (changes) {
           sync.broadcast(changes);

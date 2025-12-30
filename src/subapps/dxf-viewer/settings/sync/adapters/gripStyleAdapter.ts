@@ -61,12 +61,12 @@ export const gripStyleAdapter: GripStylePort = {
       };
     }
 
-    gripStyleStore.set(updates);
+    gripStyleStore.set(updates as any);
   },
 
   onChange(handler) {
     // Subscribe to legacy store changes
-    return gripStyleStore.subscribe((state) => {
+    return gripStyleStore.subscribe((state: any) => {
       handler({
         size: state.gripSize,
         color: state.colors?.cold ?? UI_COLORS.OVERLAY_GRIP_COLD,

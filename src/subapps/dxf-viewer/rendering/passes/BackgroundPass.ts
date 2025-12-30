@@ -191,8 +191,8 @@ export class BackgroundPass implements IRenderPass {
       // Label (rotated text would be better, but simplified for now)
       const worldY = (y - transform.offsetY) / transform.scale;
       context.save();
-      context.translate(rulerHeight / 2, y);
-      context.rotate(-Math.PI / 2);
+      (context as any).translate(rulerHeight / 2, y);
+      (context as any).rotate(-Math.PI / 2);
       context.fillText(worldY.toFixed(0), 0, 0);
       context.restore();
     }

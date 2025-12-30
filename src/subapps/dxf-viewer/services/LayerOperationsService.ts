@@ -189,11 +189,13 @@ export class LayerOperationsService {
       };
     }
     
+    // ✅ ENTERPRISE FIX: Added missing 'locked' property to match SceneLayer interface
     const newLayer = {
       name: name,
       visible: visible,
       color: color,
-      frozen: frozen
+      frozen: frozen,
+      locked: false // Default value for new layers
     };
     
     const updatedScene = {
@@ -413,7 +415,8 @@ export class LayerOperationsService {
     
     const entitiesByLayer: Record<string, number> = {};
     scene.entities.forEach(entity => {
-      entitiesByLayer[entity.layer] = (entitiesByLayer[entity.layer] || 0) + 1;
+      const layerName = entity.layer || 'default';
+      entitiesByLayer[layerName] = (entitiesByLayer[layerName] || 0) + 1;
     });
     
     return {

@@ -133,9 +133,9 @@ export function getDebugTools(showCopyableNotification: NotificationFn): TestDef
                     scale: (window as any).dxfTransform?.scale || 1,
                     offsetX: (window as any).dxfTransform?.offsetX || 0,
                     offsetY: (window as any).dxfTransform?.offsetY || 0
-                  }
-                },
-                React.createElement(CoordinateModule.default)
+                  },
+                  children: React.createElement(CoordinateModule.default)
+                }
               )
             );
 

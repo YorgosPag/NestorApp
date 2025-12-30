@@ -72,39 +72,64 @@ export class CanvasSettings {
         enabled: true,
         visible: true,
         color: UI_COLORS.BRIGHT_GREEN,
+        size: 100,
         lineWidth: 1,
-        length: 20,
-        gap: 5,
+        style: 'solid' as const,
+        useCursorGap: true,
+        centerGapPx: 5,
+        showCenterDot: false,
+        centerDotSize: 2,
         opacity: 1.0,
         zIndex: 1000
       },
       cursor: {
         enabled: true,
         visible: true,
-        shape: 'cross', // ✅ ENTERPRISE: Use valid CursorShape type ('cross' instead of 'crosshair')
+        shape: 'cross' as const, // ✅ ENTERPRISE: Use valid CursorShape type
         size: 16,
         color: UI_COLORS.WHITE,
-        strokeColor: UI_COLORS.BLACK,
-        strokeWidth: 1,
+        lineWidth: 1,
+        style: 'solid' as const,
+        showFill: false,
+        fillColor: UI_COLORS.BLACK,
+        fillOpacity: 0.5,
         opacity: 1.0,
         zIndex: 1001
       },
       snap: {
         enabled: true,
+        visible: true,
         tolerance: 10,
-        types: ['endpoint', 'midpoint', 'intersection'],
         color: UI_COLORS.BRIGHT_YELLOW,
         size: 8,
+        lineWidth: 1,
+        endpointColor: UI_COLORS.BRIGHT_YELLOW,
+        midpointColor: UI_COLORS.BRIGHT_GREEN,
+        centerColor: UI_COLORS.BRIGHT_GREEN,
+        intersectionColor: UI_COLORS.BRIGHT_YELLOW,
+        showTooltip: true,
+        tooltipOffset: 10,
+        highlightColor: UI_COLORS.WHITE,
         opacity: 1.0,
         zIndex: 900
       },
       grid: {
         enabled: true,
         visible: true,
-        spacing: 20,
+        size: 20,
         color: UI_COLORS.LIGHT_GRAY,
+        style: 'lines' as const,
+        lineWidth: 1,
+        majorGridColor: UI_COLORS.LIGHT_GRAY,
+        minorGridColor: UI_COLORS.LIGHT_GRAY,
+        majorInterval: 5,
+        showMajorGrid: true,
+        showMinorGrid: true,
+        adaptiveOpacity: true,
+        minVisibleSize: 2,
+        majorGridWeight: 1.5,
+        minorGridWeight: 0.5,
         opacity: 0.5,
-        pattern: 'lines',
         zIndex: 1
       },
       rulers: {
@@ -116,6 +141,23 @@ export class CanvasSettings {
         fontSize: 12,
         height: 30,
         width: 30,
+        showMajorTicks: true,
+        showMinorTicks: true,
+        majorTickColor: UI_COLORS.DARK_BACKGROUND,
+        minorTickColor: UI_COLORS.MEDIUM_GRAY,
+        majorTickLength: 8,
+        minorTickLength: 4,
+        tickInterval: 10,
+        showLabels: true,
+        showUnits: true,
+        unit: 'mm',
+        unitsFontSize: 10,
+        unitsColor: UI_COLORS.DARK_BACKGROUND,
+        labelPrecision: 2,
+        showBackground: true,
+        borderColor: UI_COLORS.MEDIUM_GRAY,
+        borderWidth: 1,
+        opacity: 1.0,
         zIndex: 100
       },
       selection: {
@@ -224,13 +266,13 @@ export class CanvasSettings {
 
     for (const key of keys) {
       if (current && typeof current === 'object' && key in current) {
-        current = current[key];
+        current = (current as Record<string, unknown>)[key];
       } else {
         return undefined;
       }
     }
 
-    return current;
+    return current as T;
   }
 
   /**
@@ -243,11 +285,11 @@ export class CanvasSettings {
 
     for (let i = 0; i < keys.length - 1; i++) {
       current[keys[i]] = {};
-      current = current[keys[i]];
+      current = current[keys[i]] as Record<string, unknown>;
     }
 
     current[keys[keys.length - 1]] = value;
-    return this.updateSettings(updates);
+    return this.updateSettings(updates as Partial<CanvasRenderSettings>);
   }
 
   /**

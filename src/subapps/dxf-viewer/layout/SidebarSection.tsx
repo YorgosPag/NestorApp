@@ -13,11 +13,12 @@
 
 import React from 'react';
 import type { SceneModel } from '../types/scene';
+import type { ToolType } from '../ui/toolbar/types';
 import { FloatingPanelContainer, type FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import { AutoSaveStatus } from '../ui/components/AutoSaveStatus';
 import { CentralizedAutoSaveStatus } from '../ui/components/CentralizedAutoSaveStatus';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useBorderTokens } from '../../../hooks/useBorderTokens';
+import { useSemanticColors } from '../../../ui-adapters/react/useSemanticColors';
 
 // ✅ ENTERPRISE: Type-safe props interface
 interface SidebarSectionProps {

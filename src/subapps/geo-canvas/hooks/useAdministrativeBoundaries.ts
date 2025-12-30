@@ -12,8 +12,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { administrativeBoundaryService } from '../services/administrative-boundaries/AdministrativeBoundaryService';
 import { searchHistoryService } from '../services/administrative-boundaries/SearchHistoryService';
+import { GreekAdminLevel } from '../types/administrative-types';
 import type {
-  GreekAdminLevel,
   AdminSearchResult,
   AdminSearchQuery,
   AdvancedSearchFilters,

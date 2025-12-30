@@ -4,13 +4,13 @@
  */
 
 // ✅ ENTERPRISE: Updated imports to use centralized entity types
-import type { Entity, LineEntity, CircleEntity, ArcEntity, RectangleEntity } from '../../../types/entities';
+import type { Entity, LineEntity, CircleEntity, ArcEntity, RectangleEntity, EntityModel } from '../../../types/entities';
 import type { Point2D } from '../../types/Types';
 
 /**
  * Validate line entity and extract data
  */
-export function validateLineEntity(entity: Entity): {
+export function validateLineEntity(entity: EntityModel): {
   start: Point2D;
   end: Point2D;
 } | null {
@@ -28,7 +28,7 @@ export function validateLineEntity(entity: Entity): {
 /**
  * Validate circle entity and extract data
  */
-export function validateCircleEntity(entity: Entity): {
+export function validateCircleEntity(entity: EntityModel): {
   center: Point2D;
   radius: number;
 } | null {
@@ -69,7 +69,7 @@ export function validateEllipseEntity(entity: any): {
 /**
  * Validate rectangle entity and extract data
  */
-export function validateRectangleEntity(entity: Entity): {
+export function validateRectangleEntity(entity: EntityModel): {
   topLeft: Point2D;
   width: number;
   height: number;
@@ -90,7 +90,7 @@ export function validateRectangleEntity(entity: Entity): {
 /**
  * Validate arc entity and extract data
  */
-export function validateArcEntity(entity: Entity): {
+export function validateArcEntity(entity: EntityModel): {
   center: Point2D;
   radius: number;
   startAngle: number;
