@@ -11,11 +11,14 @@
 
 import type {
   PricingTier,
-  CloudProvider,
+  CloudProvider
+} from '../types/cloud-providers';
+
+import type {
   ComponentStatus,
   CostMetrics,
   ResourceMetrics
-} from '../types';
+} from '../types/status';
 
 // ============================================================================
 // RESOURCE CALCULATION UTILITIES

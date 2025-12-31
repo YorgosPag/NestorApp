@@ -72,15 +72,16 @@ export class NearestSnapEngine extends BaseSnapEngine {
     const entityType = entity.type.toLowerCase();
     
     if (entityType === 'line') {
-      if (entity.start && entity.end) {
-        return getNearestPointOnLine(point, entity.start, entity.end);
+      if ('start' in entity && 'end' in entity && entity.start && entity.end) {
+        return getNearestPointOnLine(point, entity.start as Point2D, entity.end as Point2D);
       }
     } else if (entityType === 'circle') {
-      if (entity.center && entity.radius) {
-        return this.getNearestPointOnCircle(point, entity.center, entity.radius);
+      if ('center' in entity && 'radius' in entity && entity.center && entity.radius) {
+        return this.getNearestPointOnCircle(point, entity.center as Point2D, entity.radius as number);
       }
     } else if (entityType === 'polyline' || entityType === 'lwpolyline') {
-      const points = (entity.points || ('vertices' in entity ? entity.vertices : undefined)) as Point2D[] | undefined;
+      const polylineEntity = entity;
+      const points = ('vertices' in polylineEntity ? polylineEntity.vertices : undefined) as Point2D[] | undefined;
       if (points && points.length > 1) {
         const isClosed = 'closed' in entity ? Boolean(entity.closed) : false;
         return this.getNearestPointOnPolyline(point, points, isClosed);

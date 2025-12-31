@@ -69,34 +69,52 @@ export class NodeSnapEngine extends BaseSnapEngine {
   private getAllNodePoints(entity: EntityModel): Array<{point: Point2D, type: string}> {
     const nodes: Array<{point: Point2D, type: string}> = [];
     const entityType = entity.type.toLowerCase();
-    
+
+    // ✅ ENTERPRISE PATTERN: Type guards instead of 'as any'
     if (entityType === 'line') {
-      if (entity.start) nodes.push({point: entity.start, type: 'Start'});
-      if (entity.end) nodes.push({point: entity.end, type: 'End'});
-      
+      if ('start' in entity && entity.start) {
+        nodes.push({point: entity.start as Point2D, type: 'Start'});
+      }
+      if ('end' in entity && entity.end) {
+        nodes.push({point: entity.end as Point2D, type: 'End'});
+      }
+
     } else if (entityType === 'circle') {
-      if (entity.center) nodes.push({point: entity.center, type: 'Center'});
-      
+      if ('center' in entity && entity.center) {
+        nodes.push({point: entity.center as Point2D, type: 'Center'});
+      }
+
     } else if (entityType === 'arc') {
-      if (entity.center) nodes.push({point: entity.center, type: 'Center'});
-      
-      // Arc endpoints
-      if (entity.center && entity.radius && entity.startAngle !== undefined && entity.endAngle !== undefined) {
+      if ('center' in entity && entity.center) {
+        nodes.push({point: entity.center as Point2D, type: 'Center'});
+      }
+
+      // Arc endpoints - Type guard pattern για arc properties
+      if ('center' in entity && 'radius' in entity && 'startAngle' in entity && 'endAngle' in entity &&
+          entity.center && typeof entity.radius === 'number' &&
+          typeof entity.startAngle === 'number' && typeof entity.endAngle === 'number') {
+        const center = entity.center as Point2D;
+        const radius = entity.radius as number;
+        const startAngle = entity.startAngle as number;
+        const endAngle = entity.endAngle as number;
+
         const startPoint = {
-          x: entity.center.x + entity.radius * Math.cos(entity.startAngle),
-          y: entity.center.y + entity.radius * Math.sin(entity.startAngle)
+          x: center.x + radius * Math.cos(startAngle),
+          y: center.y + radius * Math.sin(startAngle)
         };
         const endPoint = {
-          x: entity.center.x + entity.radius * Math.cos(entity.endAngle),
-          y: entity.center.y + entity.radius * Math.sin(entity.endAngle)
+          x: center.x + radius * Math.cos(endAngle),
+          y: center.y + radius * Math.sin(endAngle)
         };
         nodes.push({point: startPoint, type: 'Arc Start'});
         nodes.push({point: endPoint, type: 'Arc End'});
       }
-      
+
     } else if (entityType === 'polyline' || entityType === 'lwpolyline') {
-      const points = (entity.points || ('vertices' in entity ? entity.vertices : undefined)) as Point2D[] | undefined;
-      const isClosed = 'closed' in entity ? entity.closed : false;
+      // ✅ ENTERPRISE PATTERN: Type guards αντί για 'as any'
+      const points = ('points' in entity ? entity.points :
+                     'vertices' in entity ? entity.vertices : undefined) as Point2D[] | undefined;
+      const isClosed = ('closed' in entity && typeof entity.closed === 'boolean') ? entity.closed : false;
       
       if (points) {
         // All vertices are nodes
@@ -119,17 +137,23 @@ export class NodeSnapEngine extends BaseSnapEngine {
       }
       
     } else if (entityType === 'rectangle') {
-      const rectEntity = entity as { corner1?: Point2D; corner2?: Point2D };
-      processRectangleSnapping(rectEntity, (corner, index, type) => {
-        nodes.push({point: corner, type});
-      });
-        
-      // Rectangle center
-      const center = {
-        x: (rectEntity.corner1.x + rectEntity.corner2.x) / 2,
-        y: (rectEntity.corner1.y + rectEntity.corner2.y) / 2
-      };
-      nodes.push({point: center, type: 'Center'});
+      // ✅ ENTERPRISE PATTERN: Type guards για rectangle properties
+      if ('corner1' in entity && 'corner2' in entity && entity.corner1 && entity.corner2) {
+        const corner1 = entity.corner1 as Point2D;
+        const corner2 = entity.corner2 as Point2D;
+
+        // Χρήση του centralized rectangle snapping utility
+        processRectangleSnapping({ corner1, corner2 }, (corner, index, type) => {
+          nodes.push({point: corner, type});
+        });
+
+        // Rectangle center
+        const center = {
+          x: (corner1.x + corner2.x) / 2,
+          y: (corner1.y + corner2.y) / 2
+        };
+        nodes.push({point: center, type: 'Center'});
+      }
       
     } else if (entityType === 'point') {
       if ('position' in entity && entity.position) {

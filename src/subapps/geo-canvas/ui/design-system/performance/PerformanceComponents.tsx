@@ -21,11 +21,10 @@ import React, {
 import { Flame, AlertCircle, AlertTriangle, FileText } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useTheme } from '../theme/ThemeProvider';
+import { useTheme } from '@/subapps/geo-canvas/ui/design-system/theme/ThemeProvider';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { GEO_COLORS } from '../../../config/color-config';
-// import styles from './PerformanceComponents.module.css';
 import {
   getVirtualizedTableContainerStyles,
   getVirtualListStyles,
@@ -52,6 +51,44 @@ import {
   getAlertTimestampStyles,
   getDynamicHeaderStyles
 } from './PerformanceComponents.styles';
+
+// Type definitions για admin boundaries metrics
+interface AdminBoundariesMetrics {
+  search: {
+    averageSearchTime: number;
+    searchSuccessRate: number;
+    cacheHitRate: number;
+    totalSearches: number;
+  };
+  overpassApi: {
+    averageResponseTime: number;
+    totalRequests: number;
+    failedRequests: number;
+    dataSize: number;
+  };
+  boundaries: {
+    averageProcessingTime: number;
+    renderingTime: number;
+    processedBoundaries: number;
+    geometryComplexity: number;
+  };
+}
+
+interface AdminBoundariesAlert {
+  id: string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  message: string;
+  suggestion?: string;
+  timestamp: number;
+}
+
+// Temporary analytics object για type compatibility
+const adminBoundariesAnalytics = {
+  startMonitoring: (interval: number) => {},
+  stopMonitoring: () => {},
+  getLatestMetrics: (): AdminBoundariesMetrics | null => null,
+  getAlerts: (): AdminBoundariesAlert[] => []
+};
 
 // ============================================================================
 // VIRTUALIZED LIST COMPONENT
@@ -320,11 +357,11 @@ export const LazyImage: React.FC<LazyImageProps> = memo(({
   return (
     <div
       ref={imgRef}
-      className={`${styles.lazyImageContainer} ${className}`}
+      className={`lazy-image-container ${className}`}
       style={getVirtualizedImageContainerStyles(width, height)}
     >
       {!inView && (
-        <div className={styles.lazyImagePlaceholderText}>
+        <div className="lazy-image-placeholder-text">
           📷
         </div>
       )}
@@ -332,15 +369,15 @@ export const LazyImage: React.FC<LazyImageProps> = memo(({
       {inView && !error && (
         <>
           {!loaded && (
-            <div className={styles.lazyImagePlaceholder}>
+            <div className="lazy-image-placeholder">
               {placeholder ? (
                 <img
                   src={placeholder}
                   alt=""
-                  className={styles.lazyImagePlaceholderImg}
+                  className="lazy-image-placeholder-img"
                 />
               ) : (
-                <div className={styles.lazyImagePlaceholderText}>Loading...</div>
+                <div className="lazy-image-placeholder-text">Loading...</div>
               )}
             </div>
           )}
@@ -349,15 +386,15 @@ export const LazyImage: React.FC<LazyImageProps> = memo(({
             alt={alt}
             onLoad={handleLoad}
             onError={handleError}
-            className={`${styles.lazyImage} ${loaded ? styles.lazyImageFadeIn : ''}`}
+            className={`lazy-image ${loaded ? 'lazy-image-fade-in' : ''}`}
             style={getVirtualizedImageStyles(loaded)}
           />
         </>
       )}
 
       {error && (
-        <div className={styles.lazyImageError}>
-          <div className={styles.lazyImageErrorIcon}>❌</div>
+        <div className="lazy-image-error">
+          <div className="lazy-image-error-icon">❌</div>
           Failed to load
         </div>
       )}
@@ -456,76 +493,40 @@ export const Card: React.FC<CardProps> = memo(({
 }) => {
   const { isDark } = useTheme();
 
-  const getVariantStyles = () => {
+  const getCardVariantClass = () => {
     switch (variant) {
-      case 'elevated':
-        return {
-          backgroundColor: 'var(--color-bg-primary)',
-          boxShadow: 'var(--shadow-card)',
-          border: 'none'
-        };
-      case 'outlined':
-        return {
-          backgroundColor: 'var(--color-bg-primary)',
-          boxShadow: 'none',
-          border: '1px solid var(--color-border-primary)'
-        };
-      case 'filled':
-        return {
-          backgroundColor: 'var(--color-bg-secondary)',
-          boxShadow: 'none',
-          border: 'none'
-        };
-      default:
-        return {};
+      case 'elevated': return 'card-elevated';
+      case 'outlined': return 'card-outlined';
+      case 'filled': return 'card-filled';
+      default: return 'card-default';
     }
   };
 
   return (
     <div
-      className={`card ${className}`}
+      className={`card ${getCardVariantClass()} ${onClick ? 'card-clickable' : ''} ${className}`}
       onClick={onClick}
-      style={{
-        ...getVariantStyles(),
-        borderRadius: '8px',
-        padding: '16px',
-        cursor: onClick ? 'pointer' : 'default'
-      }}
     >
       {/* Header */}
-      <div style={{ marginBottom: '12px' }}>
-        <h3 style={{
-          margin: 0,
-          fontSize: '1.125rem',
-          fontWeight: 600,
-          color: 'var(--color-text-primary)'
-        }}>
+      <div className="card-header">
+        <h3 className="card-title">
           {title}
         </h3>
         {subtitle && (
-          <p style={{
-            margin: '4px 0 0 0',
-            fontSize: '0.875rem',
-            color: 'var(--color-text-secondary)'
-          }}>
+          <p className="card-subtitle">
             {subtitle}
           </p>
         )}
       </div>
 
       {/* Content */}
-      <div style={{ marginBottom: footer ? '12px' : 0 }}>
+      <div className={`card-content ${footer ? 'has-footer' : ''}`}>
         {content}
       </div>
 
       {/* Footer */}
       {footer && (
-        <div style={{
-          paddingTop: '12px',
-          borderTop: '1px solid var(--color-border-secondary)',
-          fontSize: '0.875rem',
-          color: 'var(--color-text-secondary)'
-        }}>
+        <div className="card-footer">
           {footer}
         </div>
       )}
@@ -605,12 +606,7 @@ export const InfiniteScroll = memo(<T,>({
       )}
 
       {!hasMore && items.length > 0 && (
-        <div style={{
-          textAlign: 'center',
-          padding: '16px',
-          fontSize: '0.875rem',
-          color: 'var(--color-text-secondary)'
-        }}>
+        <div className="infinite-scroll-end-message">
           No more items to load
         </div>
       )}
@@ -848,26 +844,21 @@ export const AdminBoundariesPerformancePanel = memo(({
 
   return (
     <div
-      className={`performance-monitor fixed top-4 right-4 w-96 rounded-lg shadow-xl border z-50 max-h-96 overflow-hidden ${className}`}
-      style={{
-        backgroundColor: 'var(--color-bg-primary)',
-        borderColor: 'var(--color-border-primary)',
-        ...getPerformanceMetricsContainerStyles()
-      }}
+      className={`performance-monitor performance-monitor-container ${className}`}
+      style={getPerformanceMetricsContainerStyles()}
     >
       {/* Header */}
       <div
-        className={`flex items-center justify-between p-4 ${getDirectionalBorder('muted', 'bottom')}`}
-        style={getSectionBorderStyles()}
+        className={`performance-monitor-header ${getDirectionalBorder('muted', 'bottom')}`}
+        style={getDynamicHeaderStyles()}
       >
-        <h3 className="font-semibold text-lg flex items-center gap-2">
+        <h3 className={`performance-monitor-title ${getSectionTitleStyles()}`}>
           🏛️ Admin Boundaries Performance
         </h3>
         {onClose && (
           <button
             onClick={onClose}
-            className={`p-1 rounded ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
-            className="metric-label"
+            className={`performance-monitor-close-btn ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
           >
             ✕
           </button>
@@ -880,75 +871,75 @@ export const AdminBoundariesPerformancePanel = memo(({
           <div className="p-4 space-y-4">
             {/* Search Performance */}
             <div className="space-y-2">
-              <h4 className="font-medium text-sm" className="section-title">
+              <h4 className="performance-section-title">
                 🔍 Search Performance
               </h4>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="metric-label text-secondary">Avg Time:</span>
-                  <span className="ml-2 font-mono">{formatTime(metrics.search.averageSearchTime)}</span>
+              <div className="performance-metrics-grid">
+                <div className="performance-metric-item">
+                  <span className="performance-metric-label">Avg Time:</span>
+                  <span className="performance-metric-value">{formatTime(metrics.search.averageSearchTime)}</span>
                 </div>
-                <div>
-                  <span className="metric-label text-secondary">Success Rate:</span>
-                  <span className="ml-2 font-mono">{metrics.search.searchSuccessRate}%</span>
+                <div className="performance-metric-item">
+                  <span className="performance-metric-label">Success Rate:</span>
+                  <span className="performance-metric-value">{metrics.search.searchSuccessRate}%</span>
                 </div>
-                <div>
-                  <span className="metric-label text-secondary">Cache Hit:</span>
-                  <span className="ml-2 font-mono">{metrics.search.cacheHitRate}%</span>
+                <div className="performance-metric-item">
+                  <span className="performance-metric-label">Cache Hit:</span>
+                  <span className="performance-metric-value">{metrics.search.cacheHitRate}%</span>
                 </div>
-                <div>
-                  <span className="metric-label text-secondary">Total:</span>
-                  <span className="ml-2 font-mono">{metrics.search.totalSearches}</span>
+                <div className="performance-metric-item">
+                  <span className="performance-metric-label">Total:</span>
+                  <span className="performance-metric-value">{metrics.search.totalSearches}</span>
                 </div>
               </div>
             </div>
 
             {/* API Performance */}
             <div className="space-y-2">
-              <h4 className="font-medium text-sm" className="section-title">
+              <h4 className="performance-section-title">
                 🌍 Overpass API
               </h4>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="metric-label text-secondary">Response Time:</span>
-                  <span className="ml-2 font-mono">{formatTime(metrics.overpassApi.averageResponseTime)}</span>
+              <div className="performance-metrics-grid">
+                <div className="performance-metric-item">
+                  <span className="performance-metric-label">Response Time:</span>
+                  <span className="performance-metric-value">{formatTime(metrics.overpassApi.averageResponseTime)}</span>
                 </div>
-                <div>
-                  <span className="metric-label text-secondary">Requests:</span>
-                  <span className="ml-2 font-mono">{metrics.overpassApi.totalRequests}</span>
+                <div className="performance-metric-item">
+                  <span className="performance-metric-label">Requests:</span>
+                  <span className="performance-metric-value">{metrics.overpassApi.totalRequests}</span>
                 </div>
-                <div>
-                  <span className="metric-label text-secondary">Failed:</span>
-                  <span className="ml-2 font-mono">{metrics.overpassApi.failedRequests}</span>
+                <div className="performance-metric-item">
+                  <span className="performance-metric-label">Failed:</span>
+                  <span className="performance-metric-value">{metrics.overpassApi.failedRequests}</span>
                 </div>
-                <div>
-                  <span className="metric-label text-secondary">Data Size:</span>
-                  <span className="ml-2 font-mono">{metrics.overpassApi.dataSize}MB</span>
+                <div className="performance-metric-item">
+                  <span className="performance-metric-label">Data Size:</span>
+                  <span className="performance-metric-value">{metrics.overpassApi.dataSize}MB</span>
                 </div>
               </div>
             </div>
 
             {/* Boundary Processing */}
             <div className="space-y-2">
-              <h4 className="font-medium text-sm" className="section-title">
+              <h4 className="performance-section-title">
                 🗺️ Boundary Processing
               </h4>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="metric-label text-secondary">Processing:</span>
-                  <span className="ml-2 font-mono">{formatTime(metrics.boundaries.averageProcessingTime)}</span>
+              <div className="performance-metrics-grid">
+                <div className="performance-metric-item">
+                  <span className="performance-metric-label">Processing:</span>
+                  <span className="performance-metric-value">{formatTime(metrics.boundaries.averageProcessingTime)}</span>
                 </div>
-                <div>
-                  <span className="metric-label text-secondary">Rendering:</span>
-                  <span className="ml-2 font-mono">{formatTime(metrics.boundaries.renderingTime)}</span>
+                <div className="performance-metric-item">
+                  <span className="performance-metric-label">Rendering:</span>
+                  <span className="performance-metric-value">{formatTime(metrics.boundaries.renderingTime)}</span>
                 </div>
-                <div>
-                  <span className="metric-label text-secondary">Processed:</span>
-                  <span className="ml-2 font-mono">{metrics.boundaries.processedBoundaries}</span>
+                <div className="performance-metric-item">
+                  <span className="performance-metric-label">Processed:</span>
+                  <span className="performance-metric-value">{metrics.boundaries.processedBoundaries}</span>
                 </div>
-                <div>
-                  <span className="metric-label text-secondary">Complexity:</span>
-                  <span className="ml-2 font-mono">{Math.round(metrics.boundaries.geometryComplexity)}</span>
+                <div className="performance-metric-item">
+                  <span className="performance-metric-label">Complexity:</span>
+                  <span className="performance-metric-value">{Math.round(metrics.boundaries.geometryComplexity)}</span>
                 </div>
               </div>
             </div>
@@ -957,29 +948,29 @@ export const AdminBoundariesPerformancePanel = memo(({
 
         {/* Alerts */}
         {alerts.length > 0 && (
-          <div className={`${getDirectionalBorder('muted', 'top')}`} style={getSectionBorderStyles(theme.colors.border)}>
-            <div className="p-4">
-              <h4 className="font-medium text-sm mb-3" className="section-title">
+          <div className={`performance-alerts-section ${getDirectionalBorder('muted', 'top')}`} style={getSectionBorderStyles()}>
+            <div className="performance-alerts-container">
+              <h4 className="performance-section-title">
                 🚨 Active Alerts ({alerts.length})
               </h4>
-              <div className="space-y-2 max-h-32 overflow-y-auto">
+              <div className="performance-alerts-list">
                 {alerts.slice(0, 5).map((alert) => (
                   <div
                     key={alert.id}
-                    className="flex items-start gap-2 text-xs p-2 rounded"
-                    style={getAlertItemStyles(getAlertSeverityColor(alert.severity), theme.colors.surfaceHover)}
+                    className="performance-alert-item"
+                    style={getAlertItemStyles(getAlertSeverityColor(alert.severity))}
                   >
                     <span>{getAlertIcon(alert.severity)}</span>
-                    <div className="flex-1">
-                      <div className="font-medium" style={getAlertTitleStyles(getAlertSeverityColor(alert.severity))}>
+                    <div className="performance-alert-content">
+                      <div className="performance-alert-title" style={getAlertTitleStyles(getAlertSeverityColor(alert.severity))}>
                         {alert.message}
                       </div>
                       {alert.suggestion && (
-                        <div className="mt-1" className="metric-label text-secondary">
+                        <div className="performance-alert-suggestion">
                           💡 {alert.suggestion}
                         </div>
                       )}
-                      <div className="text-xs mt-1" style={getAlertTimestampStyles(theme.colors.textTertiary)}>
+                      <div className="performance-alert-timestamp" style={getAlertTimestampStyles()}>
                         {new Date(alert.timestamp).toLocaleTimeString()}
                       </div>
                     </div>
@@ -987,7 +978,7 @@ export const AdminBoundariesPerformancePanel = memo(({
                 ))}
               </div>
               {alerts.length > 5 && (
-                <div className="text-xs text-center mt-2" className="metric-label text-secondary">
+                <div className="performance-alerts-more">
                   +{alerts.length - 5} more alerts
                 </div>
               )}
@@ -997,16 +988,15 @@ export const AdminBoundariesPerformancePanel = memo(({
 
         {/* Status */}
         <div
-          className={`p-3 ${getDirectionalBorder('muted', 'top')} text-center text-xs`}
-          style={getPerformanceMetricsContainerStyles()}
+          className={`performance-monitor-status ${getDirectionalBorder('muted', 'top')}`}
         >
           {isMonitoring ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className={`${iconSizes.xs} ${colors.bg.success} rounded-full animate-pulse`}></span>
+            <span className="performance-monitor-status-active">
+              <span className={`performance-status-indicator ${colors.bg.success}`}></span>
               Monitoring Active • Updates every {refreshInterval / 1000}s
             </span>
           ) : (
-            <span>Monitoring Stopped</span>
+            <span className="performance-monitor-status-inactive">Monitoring Stopped</span>
           )}
         </div>
       </div>

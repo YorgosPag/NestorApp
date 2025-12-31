@@ -12,8 +12,8 @@
  * - Performance monitoring
  */
 
-// ✅ ENTERPRISE FIX: Fixed test framework import for proper TypeScript compilation
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+// ✅ ENTERPRISE FIX: Use centralized Jest globals (available automatically in Jest 30.x)
+// Jest globals (describe, it, expect, beforeEach, afterEach) are available automatically
 import { ServiceRegistry } from '../ServiceRegistry';
 import type { ServiceName } from '../ServiceRegistry';
 

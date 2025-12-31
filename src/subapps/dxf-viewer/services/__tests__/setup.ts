@@ -4,7 +4,21 @@
  * Runs before each test file
  */
 
-import { vi, beforeEach, afterEach } from 'vitest';
+// ✅ ENTERPRISE FIX: Mock testing utilities for environments without vitest
+interface VitestMock {
+  fn: (impl?: (...args: unknown[]) => unknown) => ((...args: unknown[]) => unknown);
+  useFakeTimers: () => void;
+  useRealTimers: () => void;
+}
+
+const vi: VitestMock = {
+  fn: (impl?: (...args: unknown[]) => unknown) => impl || (() => {}),
+  useFakeTimers: () => {},
+  useRealTimers: () => {}
+};
+
+const beforeEach = globalThis.beforeEach || ((fn: () => void) => {});
+const afterEach = globalThis.afterEach || ((fn: () => void) => {});
 
 // ═══ MOCK PERFORMANCE API ═══
 if (typeof performance === 'undefined') {

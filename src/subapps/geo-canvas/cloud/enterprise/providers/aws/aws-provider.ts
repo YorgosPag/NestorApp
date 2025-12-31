@@ -145,6 +145,7 @@ export class AWSProvider {
       return {
         provider: 'aws',
         isConnected: true,
+        connected: true,
         lastChecked: this.lastConnectionCheck,
         latency,
         capabilities: this.getAWSFeatures()
@@ -156,6 +157,7 @@ export class AWSProvider {
       return {
         provider: 'aws',
         isConnected: false,
+        connected: false,
         lastChecked: new Date(),
         error: errorMessage,
         capabilities: this.getAWSFeatures()

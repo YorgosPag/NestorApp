@@ -41,10 +41,10 @@ export function createDefaultAWSConfig(
     endpoints: getDefaultAWSEndpoints(region),
     features: getDefaultAWSFeatures(),
     pricing: getDefaultAWSPricing(),
+    accountId,
     awsSpecific: {
       accountId,
-      role: `arn:aws:iam::${accountId}:role/CloudInfrastructureRole`,
-      externalId: `geo-alert-${Date.now()}`
+      role: undefined  // Optional role ARN
     }
   };
 }

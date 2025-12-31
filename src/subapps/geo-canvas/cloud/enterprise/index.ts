@@ -93,7 +93,7 @@ export type {
   FirewallConfig, FirewallRule, WAFConfig, WAFRule, VPNConfig, VPNEndpoint,
 
   // Network Monitoring
-  NetworkMonitoringConfig, NetworkMetric, FlowLogConfig, PacketCaptureConfig, PacketFilter,
+  NetworkMonitoringConfig, FlowLogConfig, PacketCaptureConfig, PacketFilter,
   LatencyMonitoringConfig, LatencyProbe,
 
   // Traffic Management
@@ -109,7 +109,7 @@ export type {
   // Performance Metrics
   StatusMetrics, AvailabilityMetrics, UptimeMetrics, DowntimeEvent,
   PerformanceMetrics, ResponseTimeMetrics, ThroughputMetrics, LatencyMetrics,
-  ResourceMetrics, UtilizationMetric, StorageMetric, NetworkMetric,
+  ResourceMetrics, UtilizationMetric, StorageMetric, NetworkMetric as StatusNetworkMetric,
   InstanceMetrics, ComponentMetrics,
 
   // Cost Monitoring
@@ -133,6 +133,23 @@ export type {
 // 🔧 IMPLEMENTATION EXPORTS - ENTERPRISE CLOUD PROVIDERS
 // ============================================================================
 
+// Import για internal use
+import { AWSProvider } from './providers/aws/aws-provider';
+import { AzureProvider } from './providers/azure/azure-provider';
+import { GCPProvider } from './providers/gcp/gcp-provider';
+import { InfrastructureManager } from './core/infrastructure-manager';
+import type { InfrastructureConfig } from './types/infrastructure';
+import type { AWSCloudProvider } from './types/cloud-providers';
+import {
+  calculateOptimalInstance,
+  calculateMultiCloudCosts,
+  calculateResourceUtilization,
+  calculateCostOptimizations,
+  calculateScalingRecommendations,
+  calculateRegionalOptimization
+} from './utils/resource-calculator';
+
+// Export providers
 export { AWSProvider } from './providers/aws/aws-provider';
 export { AzureProvider } from './providers/azure/azure-provider';
 export { GCPProvider } from './providers/gcp/gcp-provider';

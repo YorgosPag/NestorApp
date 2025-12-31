@@ -26,6 +26,6 @@ export type {
 } from './core/types';
 
 // Re-export test functions
-export { gridEnterpriseTest } from './grid-enterprise-test';
+export { runGridEnterpriseTests } from './grid-enterprise-test';
 
 // Note: JSX components (panels, UI) are only available in index.tsx

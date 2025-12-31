@@ -44,7 +44,7 @@ interface SnapProviderProps {
 
 export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
   const [snapState, setSnapState] = useState<SnapState>(() => {
-    const initialState: SnapState = {};
+    const initialState = {} as SnapState;
     // Set default enabled snaps - ONLY ENDPOINT by default (exclusive mode)
     ALL_MODES.forEach(type => {
       initialState[type] = (type === ExtendedSnapType.ENDPOINT);
@@ -115,9 +115,9 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
 
   const setExclusiveMode = (mode: ExtendedSnapType) => {
     setSnapState(prev => {
-      const next: SnapState = {};
-      ALL_MODES.forEach(m => { 
-        next[m] = (m === mode); 
+      const next = {} as SnapState;
+      ALL_MODES.forEach(m => {
+        next[m] = (m === mode);
       });
       return next;
     });

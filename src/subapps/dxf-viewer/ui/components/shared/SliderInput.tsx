@@ -48,7 +48,7 @@ export function SliderInput({
         max={max}
         value={value}
         onChange={(e) => onChange(parseInt(e.target.value))}
-        className={`w-full h-2 rounded-lg appearance-none cursor-pointer slider ${quick.border} ${colors.bg.secondary}`}
+        className={`w-full h-2 rounded-lg appearance-none cursor-pointer slider ${quick.input} ${colors.bg.secondary}`}
       />
     </div>
   );

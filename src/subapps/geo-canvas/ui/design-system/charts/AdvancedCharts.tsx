@@ -7,12 +7,60 @@
  */
 
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
-import { useTheme } from '../theme/ThemeProvider';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { chartComponents } from '@/styles/design-tokens';
-// Enterprise Canvas UI Migration - Phase B
-import { canvasUI } from '@/styles/design-tokens/canvas';
 import { GEO_COLORS } from '../../config/color-config';
+
+// ✅ ENTERPRISE FIX: Local chart components styles (missing from design-tokens)
+const chartComponents = {
+  layout: {
+    container: (width: number, height: number) => ({
+      position: 'relative' as const,
+      width: `${width}px`,
+      height: `${height}px`
+    }),
+    interactive: (interactive: boolean) => ({
+      cursor: interactive ? 'pointer' : 'default',
+      userSelect: 'none' as const
+    }),
+    tooltip: {
+      fontWeight: '500',
+      fontSize: '11px'
+    }
+  },
+  title: {
+    container: {
+      marginBottom: '12px',
+      textAlign: 'center' as const
+    },
+    main: {
+      margin: '0',
+      fontSize: '16px',
+      fontWeight: '600'
+    },
+    subtitle: {
+      margin: '4px 0 0 0',
+      fontSize: '12px',
+      opacity: 0.7
+    }
+  }
+};
+
+// ✅ ENTERPRISE FIX: Local canvas UI utilities
+const canvasUI = {
+  charts: {
+    chartElementTransition: (animated: boolean, speed: 'fast' | 'normal' | 'slow') => ({
+      transition: animated ? `all ${speed === 'fast' ? '0.15s' : speed === 'normal' ? '0.3s' : '0.5s'} ease` : undefined
+    }),
+    chartInteraction: (interactive: boolean, animated: boolean, speed: 'fast' | 'normal' | 'slow') => ({
+      cursor: interactive ? 'pointer' : 'default',
+      transition: animated ? `all ${speed === 'fast' ? '0.15s' : speed === 'normal' ? '0.3s' : '0.5s'} ease` : undefined
+    }),
+    chartElementStyle: (animated: boolean, interactive: boolean, speed: 'fast' | 'normal' | 'slow') => ({
+      cursor: interactive ? 'pointer' : 'default',
+      transition: animated ? `all ${speed === 'fast' ? '0.15s' : speed === 'normal' ? '0.3s' : '0.5s'} ease` : undefined
+    })
+  }
+};
 
 // ============================================================================
 // CHART TYPES και INTERFACES
@@ -98,7 +146,7 @@ const getChartColors = (semanticColors: ReturnType<typeof useSemanticColors>) =>
   background: GEO_COLORS.UI.BACKGROUND
 });
 
-const generateColorPalette = (count: number, semanticColors: ReturnType<typeof useSemanticColors>): string[] => {
+const generateColorPalette = (count: number): string[] => {
   const baseColors = GEO_COLORS.CHART;
 
   const colors: string[] = [];
@@ -180,8 +228,7 @@ export const LineChart: React.FC<LineChartProps> = ({
   yAxisMin,
   yAxisMax
 }) => {
-  const { isDark } = useTheme();
-  const [hoveredPoint, setHoveredPoint] = useState<{ point: TimeSeriesPoint; index: number; x: number; y: number } | null>(null);
+  const [hoveredPoint, setHoveredPoint] = useState<{ point: TimeSeriesPoint & { x: number; y: number; index: number }; index: number; x: number; y: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
   const semanticColors = useSemanticColors();
@@ -485,13 +532,12 @@ export const BarChart: React.FC<BarChartProps> = ({
   onDataPointClick,
   onDataPointHover
 }) => {
-  const { isDark } = useTheme();
   const [hoveredBar, setHoveredBar] = useState<{ point: ChartDataPoint; index: number; x: number; y: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
   const semanticColors = useSemanticColors();
   const colors = getChartColors(semanticColors);
-  const chartColors = generateColorPalette(data.length, isDark);
+  const chartColors = generateColorPalette(data.length);
   const padding = 40;
 
   // Calculate bar dimensions
@@ -695,13 +741,12 @@ export const PieChart: React.FC<PieChartProps> = ({
   onDataPointClick,
   onDataPointHover
 }) => {
-  const { isDark } = useTheme();
   const [hoveredSlice, setHoveredSlice] = useState<{ point: ChartDataPoint; index: number; x: number; y: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
   const semanticColors = useSemanticColors();
   const colors = getChartColors(semanticColors);
-  const chartColors = generateColorPalette(data.length, isDark);
+  const chartColors = generateColorPalette(data.length);
 
   const centerX = width / 2;
   const centerY = height / 2;

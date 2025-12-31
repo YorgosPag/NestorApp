@@ -3,13 +3,13 @@
  * Κοινό interface για όλα τα snap engines
  */
 
-import type { Point2D } from '../../rendering/types/Types';
-import { ExtendedSnapType, type Entity, type SnapCandidate } from '../extended-types';
+import type { Point2D, EntityModel } from '../../rendering/types/Types';
+import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { GeometricCalculations } from './GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 
 export interface SnapEngineContext {
-  entities: Entity[];
+  entities: EntityModel[];
   worldRadiusAt: (point: Point2D) => number;
   worldRadiusForType: (point: Point2D, snapType: ExtendedSnapType) => number;
   pixelTolerance: number;
@@ -43,7 +43,7 @@ export abstract class BaseSnapEngine {
     context: SnapEngineContext
   ): SnapEngineResult;
 
-  abstract initialize(entities: Entity[]): void;
+  abstract initialize(entities: EntityModel[]): void;
 
   abstract dispose(): void;
 
@@ -73,11 +73,11 @@ export abstract class BaseSnapEngine {
   }
 
   protected processCandidateLoop<T>(
-    entities: Entity[],
+    entities: EntityModel[],
     context: SnapEngineContext,
     cursorPoint: Point2D,
     priority: number,
-    getPointsFromEntity: (entity: Entity, ...args: unknown[]) => Array<{point: Point2D, type: string}>,
+    getPointsFromEntity: (entity: EntityModel, ...args: unknown[]) => Array<{point: Point2D, type: string}>,
     createDescriptionLabel: (type: string) => string,
     ...extraArgs: unknown[]
   ): SnapCandidate[] {
@@ -130,8 +130,8 @@ export abstract class BaseSnapEngine {
    * @returns Initialized spatial index
    */
   protected initializeSpatialIndex(
-    entities: Entity[],
-    getPoints: (entity: Entity) => Point2D[],
+    entities: EntityModel[],
+    getPoints: (entity: EntityModel) => Point2D[],
     pointType: string
   ): any {
     // Calculate bounds
@@ -172,8 +172,8 @@ export abstract class BaseSnapEngine {
    * @returns Spatial bounds with margin
    */
   protected calculateBoundsFromPoints(
-    entities: Entity[],
-    getPoints: (entity: Entity) => Point2D[]
+    entities: EntityModel[],
+    getPoints: (entity: EntityModel) => Point2D[]
   ): { minX: number; minY: number; maxX: number; maxY: number } {
     if (entities.length === 0) {
       return { minX: -1000, minY: -1000, maxX: 1000, maxY: 1000 };

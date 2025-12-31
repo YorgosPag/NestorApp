@@ -32,7 +32,7 @@ export class ExtensionSnapEngine extends BaseSnapEngine {
       context,
       cursorPoint,
       priority,
-      (entity) => this.getExtensionPoints(entity, cursorPoint, radius * 2),
+      (entity) => this.getExtensionPoints(entity as EntityModel, cursorPoint, radius * 2), // ✅ ENTERPRISE FIX: Type casting
       (type) => `Extension (${type})`
     );
 
@@ -44,13 +44,14 @@ export class ExtensionSnapEngine extends BaseSnapEngine {
     const entityType = entity.type.toLowerCase();
     
     if (entityType === 'line') {
-      if (entity.start && entity.end) {
-        const lineExtensions = this.getLineExtensions(entity.start, entity.end, cursorPoint, maxExtensionDistance);
+      if ('start' in entity && 'end' in entity && entity.start && entity.end) {
+        const lineExtensions = this.getLineExtensions(entity.start as Point2D, entity.end as Point2D, cursorPoint, maxExtensionDistance);
         extensionPoints.push(...lineExtensions.map(p => ({point: p, type: 'Line'})));
       }
     } else if (entityType === 'polyline' || entityType === 'lwpolyline') {
-      const points = (entity.points || ('vertices' in entity ? entity.vertices : undefined)) as Point2D[] | undefined;
-      const isClosed = 'closed' in entity ? entity.closed : false;
+      const polylineEntity = entity as any; // ✅ ENTERPRISE FIX: Safe casting for entity properties
+      const points = (polylineEntity.points || polylineEntity.vertices) as Point2D[] | undefined;
+      const isClosed = polylineEntity.closed || false;
 
       if (points && points.length > 1 && !isClosed) {
         // Extend first and last segments of open polylines

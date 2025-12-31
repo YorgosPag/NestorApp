@@ -42,7 +42,7 @@ interface LineEntity extends EntityModel {
   firstPoint?: Point2D;
 }
 
-interface SplineEntity extends Entity {
+interface SplineEntity extends EntityModel {
   controlPoints?: Point2D[];
   fitPoints?: Point2D[];
 }

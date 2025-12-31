@@ -56,12 +56,13 @@ export const toolStyleAdapter: ToolStylePort = {
 
   onChange(handler) {
     // Subscribe to legacy store changes
-    return toolStyleStore.subscribe((state: any) => {
+    return toolStyleStore.subscribe((state: unknown) => {
+      const typedState = state as { stroke?: string; fill?: string; width?: number; opacity?: number; dashArray?: number[] };
       handler({
-        stroke: state.strokeColor,
-        fill: state.fillColor,
-        width: state.lineWidth,
-        opacity: state.opacity,
+        stroke: typedState.stroke ?? '#000000',
+        fill: typedState.fill ?? 'transparent',
+        width: typedState.width ?? 1,
+        opacity: typedState.opacity ?? 1,
         dashArray: []
       });
     });

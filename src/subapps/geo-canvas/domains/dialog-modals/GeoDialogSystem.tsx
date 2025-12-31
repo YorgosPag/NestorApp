@@ -12,14 +12,83 @@
  */
 
 import React from 'react';
-import {
-  modalOverlay,
-  modalContainer,
-  modalHeader,
-  modalContent,
-  modalFooter,
-  modalCloseButton
-} from '../../../../../styles/design-tokens';
+
+// ✅ ENTERPRISE FIX: Local modal styles (design-tokens module missing)
+const modalStyles = {
+  modalOverlay: (hasOverlay: boolean) => ({
+    position: 'fixed' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: hasOverlay ? 'rgba(0, 0, 0, 0.6)' : 'transparent',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: hasOverlay ? 'auto' as const : 'none' as const
+  }),
+
+  modalContainer: (config: {
+    size: 'small' | 'medium' | 'large' | 'fullscreen';
+    position?: 'center' | 'top' | 'bottom' | 'custom';
+    customPosition?: { x: number; y: number };
+  }) => ({
+    backgroundColor: '#ffffff',
+    borderRadius: '8px',
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+    maxHeight: '90vh',
+    overflow: 'hidden',
+    pointerEvents: 'auto' as const,
+    width: config.size === 'small' ? '400px' :
+           config.size === 'medium' ? '600px' :
+           config.size === 'large' ? '900px' : '100vw',
+    height: config.size === 'fullscreen' ? '100vh' : 'auto'
+  }),
+
+  modalHeader: () => ({
+    padding: '20px 24px 16px',
+    borderBottom: '1px solid #e2e8f0',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  }),
+
+  modalContent: () => ({
+    padding: '20px 24px',
+    maxHeight: 'calc(90vh - 140px)',
+    overflow: 'auto'
+  }),
+
+  modalFooter: () => ({
+    padding: '16px 24px 20px',
+    borderTop: '1px solid #e2e8f0',
+    display: 'flex',
+    gap: '12px',
+    justifyContent: 'flex-end'
+  }),
+
+  modalCloseButton: () => ({
+    background: 'none',
+    border: 'none',
+    fontSize: '18px',
+    cursor: 'pointer',
+    padding: '4px',
+    borderRadius: '4px',
+    color: '#64748b',
+    ':hover': {
+      backgroundColor: '#f1f5f9',
+      color: '#334155'
+    }
+  })
+};
+
+// Local aliases for easier usage
+const modalOverlay = modalStyles.modalOverlay;
+const modalContainer = modalStyles.modalContainer;
+const modalHeader = modalStyles.modalHeader;
+const modalContent = modalStyles.modalContent;
+const modalFooter = modalStyles.modalFooter;
+const modalCloseButton = modalStyles.modalCloseButton;
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPES - DIALOG SYSTEM DOMAIN
@@ -351,8 +420,6 @@ export function useGeoDialogs() {
 // 🔗 DOMAIN EXPORTS - DIALOG SYSTEM
 // ============================================================================
 
-export type { DialogConfig, DialogAction, DialogSystemState, GeoDialogSystemProps };
-export { DEFAULT_DIALOG_CONFIGS, useGeoDialogs };
 export default GeoDialogSystem;
 
 /**

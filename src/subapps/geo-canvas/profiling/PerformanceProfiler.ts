@@ -603,9 +603,9 @@ export class GeoAlertPerformanceProfiler {
         webAssembly: typeof WebAssembly !== 'undefined'
       },
       capabilities: {
-        maxTextureSize: gl ? gl.getParameter(gl.MAX_TEXTURE_SIZE) : 0,
-        maxRenderBufferSize: gl ? gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) : 0,
-        maxViewportDims: gl ? gl.getParameter(gl.MAX_VIEWPORT_DIMS) : [0, 0]
+        maxTextureSize: gl ? (gl as WebGLRenderingContext).getParameter((gl as WebGLRenderingContext).MAX_TEXTURE_SIZE) : 0,
+        maxRenderBufferSize: gl ? (gl as WebGLRenderingContext).getParameter((gl as WebGLRenderingContext).MAX_RENDERBUFFER_SIZE) : 0,
+        maxViewportDims: gl ? (gl as WebGLRenderingContext).getParameter((gl as WebGLRenderingContext).MAX_VIEWPORT_DIMS) : [0, 0]
       }
     };
   }
@@ -691,9 +691,9 @@ export class GeoAlertPerformanceProfiler {
       frameTimes.push(frameTime);
 
       // Update frame rate metrics για active sessions
-      for (const session of this.activeSessions.values()) {
+      Array.from(this.activeSessions.values()).forEach(session => {
         this.updateFrameMetrics(session, frameTime, frameTimes);
-      }
+      });
 
       this.frameMonitor = requestAnimationFrame(monitorFrame);
     };
@@ -775,10 +775,10 @@ export class GeoAlertPerformanceProfiler {
       };
 
       // Add to active sessions
-      for (const session of this.activeSessions.values()) {
+      Array.from(this.activeSessions.values()).forEach(session => {
         session.metrics.network.resources.push(resource);
         this.updateNetworkStats(session, resource);
-      }
+      });
     };
 
     // Process existing resources
@@ -828,10 +828,10 @@ export class GeoAlertPerformanceProfiler {
     const connection = nav.connection;
     if (!connection) return;
 
-    for (const session of this.activeSessions.values()) {
+    Array.from(this.activeSessions.values()).forEach(session => {
       session.metrics.network.bandwidth.effectiveType = connection.effectiveType || 'unknown';
       session.metrics.network.bandwidth.download = (connection.downlink || 0) * 1024 * 1024; // Convert to bytes/s
-    }
+    });
   }
 
   // ========================================================================
@@ -865,7 +865,7 @@ export class GeoAlertPerformanceProfiler {
   private recordInteraction(type: string, event: Event): void {
     const timestamp = performance.now();
 
-    for (const session of this.activeSessions.values()) {
+    Array.from(this.activeSessions.values()).forEach(session => {
       const interaction = session.metrics.userInteraction.interactions;
 
       switch (type) {
@@ -898,7 +898,7 @@ export class GeoAlertPerformanceProfiler {
         children: [],
         metadata: {}
       });
-    }
+    });
   }
 
   // ========================================================================
@@ -912,9 +912,9 @@ export class GeoAlertPerformanceProfiler {
     this.traces.set(trace.id, trace);
 
     // Add to active sessions
-    for (const session of this.activeSessions.values()) {
+    Array.from(this.activeSessions.values()).forEach(session => {
       session.traces.push(trace);
-    }
+    });
 
     // Maintain buffer size
     if (this.traces.size > this.config.sampling.bufferSize) {
@@ -959,9 +959,9 @@ export class GeoAlertPerformanceProfiler {
     if (details) trace.details = { ...trace.details, ...details };
 
     // Add to active sessions
-    for (const session of this.activeSessions.values()) {
+    Array.from(this.activeSessions.values()).forEach(session => {
       session.traces.push({ ...trace });
-    }
+    });
 
     return trace;
   }
@@ -1334,7 +1334,7 @@ export class GeoAlertPerformanceProfiler {
   }
 
   private processPerformanceEntry(entry: PerformanceEntry): void {
-    for (const session of this.activeSessions.values()) {
+    Array.from(this.activeSessions.values()).forEach(session => {
       switch (entry.entryType) {
         case 'paint':
           this.processPaintEntry(session, entry as PerformancePaintTiming);
@@ -1355,7 +1355,7 @@ export class GeoAlertPerformanceProfiler {
           this.processResourceEntry(session, entry as PerformanceResourceTiming);
           break;
       }
-    }
+    });
   }
 
   private processPaintEntry(session: ProfileSession, entry: PerformancePaintTiming): void {
@@ -1619,7 +1619,7 @@ export class GeoAlertPerformanceProfiler {
       sessions.reduce((sum, session) => sum + session.analysis.score.overall, 0) / sessions.length : 0;
 
     const bottleneckTypes = sessions.flatMap(session => session.analysis.bottlenecks.map(b => b.type));
-    const commonBottlenecks = [...new Set(bottleneckTypes)];
+    const commonBottlenecks = Array.from(new Set(bottleneckTypes));
 
     return {
       activeProfiles: sessions.length,

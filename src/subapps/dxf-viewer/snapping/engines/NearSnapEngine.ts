@@ -25,7 +25,7 @@ export class NearSnapEngine extends BaseSnapEngine {
     // Use shared entity-based snap candidate finder to eliminate duplication
     // ✅ ENTERPRISE FIX: Type assertion για compatibility με Entity[] type
     return findEntityBasedSnapCandidates(
-      context.entities as Entity[],
+      context.entities as EntityModel[],
       cursorPoint,
       context,
       {
@@ -37,7 +37,7 @@ export class NearSnapEngine extends BaseSnapEngine {
     );
   }
 
-  private getNearPoints(entity: Entity, cursorPoint: Point2D, radius: number): Array<{point: Point2D, type: string}> {
+  private getNearPoints(entity: EntityModel, cursorPoint: Point2D, radius: number): Array<{point: Point2D, type: string}> {
     const nearPoints: Array<{point: Point2D, type: string}> = [];
 
     if (isLineEntity(entity)) {

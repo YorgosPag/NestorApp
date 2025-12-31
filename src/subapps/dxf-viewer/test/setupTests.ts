@@ -5,9 +5,11 @@
 
 import { UI_COLORS } from '../config/color-config';
 
-// ✅ ENTERPRISE FIX: Vitest type imports for testing environment
+// ✅ ENTERPRISE FIX: Vitest compatibility layer
+import { vi as jest } from 'vitest';
+
 declare global {
-  const vi: any;
+  const vi: typeof jest;
   const beforeEach: (fn: () => void) => void;
   const afterEach: (fn: () => void) => void;
   const expect: any;

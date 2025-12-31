@@ -99,16 +99,20 @@ export interface ProviderValidationResult {
   isValid: boolean;
   errors: string[];
   warnings: string[];
+  provider?: string; // Add missing provider property
 }
 
 /**
  * Provider connection status
  */
 export interface ProviderConnectionStatus {
+  provider: string;
+  isConnected: boolean;
   connected: boolean;
   lastChecked: Date;
   latency?: number;
   error?: string;
+  capabilities?: any;
 }
 
 // ============================================================================
@@ -122,6 +126,10 @@ export interface AWSCloudProvider extends CloudProvider {
   name: 'aws';
   credentials: AWSCredentials;
   accountId: string;
+  awsSpecific: {
+    accountId: string;
+    role?: string;
+  };
 }
 
 /**
@@ -145,6 +153,11 @@ export interface AzureCloudProvider extends CloudProvider {
   name: 'azure';
   credentials: AzureCredentials;
   subscriptionId: string;
+  azureSpecific: {
+    subscriptionId: string;
+    tenantId: string;
+    resourceGroup?: string;
+  };
 }
 
 /**
@@ -168,6 +181,13 @@ export interface GCPCloudProvider extends CloudProvider {
   name: 'gcp';
   credentials: GCPCredentials;
   projectId: string;
+  gcpSpecific: {
+    projectId: string;
+    projectNumber?: string;
+    billingAccountId?: string;
+    region?: string;
+    zone?: string;
+  };
 }
 
 /**

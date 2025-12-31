@@ -66,12 +66,13 @@ export const gripStyleAdapter: GripStylePort = {
 
   onChange(handler) {
     // Subscribe to legacy store changes
-    return gripStyleStore.subscribe((state: any) => {
+    return gripStyleStore.subscribe((state: unknown) => {
+      const typedState = state as { gripSize?: number; colors?: { cold?: string; warm?: string; hot?: string } };
       handler({
-        size: state.gripSize,
-        color: state.colors?.cold ?? UI_COLORS.OVERLAY_GRIP_COLD,
-        hoverColor: state.colors?.warm ?? UI_COLORS.TEST_GRIP_HOVER,
-        selectedColor: state.colors?.hot ?? UI_COLORS.OVERLAY_GRIP_HOT
+        size: typedState.gripSize ?? 8,
+        color: typedState.colors?.cold ?? UI_COLORS.OVERLAY_GRIP_COLD,
+        hoverColor: typedState.colors?.warm ?? UI_COLORS.TEST_GRIP_HOVER,
+        selectedColor: typedState.colors?.hot ?? UI_COLORS.OVERLAY_GRIP_HOT
       });
     });
   }

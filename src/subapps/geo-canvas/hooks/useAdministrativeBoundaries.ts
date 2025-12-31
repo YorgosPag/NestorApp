@@ -21,6 +21,26 @@ import type {
   SearchHistoryEntry
 } from '../types/administrative-types';
 
+// ✅ ENTERPRISE: GeoJSON type declarations for administrative boundaries
+declare global {
+  namespace GeoJSON {
+    interface Feature {
+      type: 'Feature';
+      geometry: Geometry;
+      properties: Record<string, any>;
+      id?: string | number;
+    }
+    interface FeatureCollection {
+      type: 'FeatureCollection';
+      features: Feature[];
+    }
+    interface Geometry {
+      type: string;
+      coordinates?: any;
+    }
+  }
+}
+
 // ============================================================================
 // HOOK TYPES
 // ============================================================================

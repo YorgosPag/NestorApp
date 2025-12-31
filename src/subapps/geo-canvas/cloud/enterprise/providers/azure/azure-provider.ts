@@ -108,8 +108,8 @@ export class AzureProvider {
 
     // Check for Azure-specific fields
     if (this.config.azureSpecific) {
-      if (!this.config.azureSpecific.resourceGroupPrefix) {
-        warnings.push('Azure Resource Group prefix not specified');
+      if (!this.config.azureSpecific.resourceGroup) {
+        warnings.push('Azure Resource Group not specified');
       }
     }
 
@@ -145,6 +145,7 @@ export class AzureProvider {
       return {
         provider: 'azure',
         isConnected: true,
+        connected: true,
         lastChecked: this.lastConnectionCheck,
         latency,
         capabilities: this.getAzureFeatures()
@@ -156,6 +157,7 @@ export class AzureProvider {
       return {
         provider: 'azure',
         isConnected: false,
+        connected: false,
         lastChecked: new Date(),
         error: errorMessage,
         capabilities: this.getAzureFeatures()

@@ -1,7 +1,10 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import type * as mapboxgl from 'mapbox-gl';
+// ✅ ENTERPRISE FIX: Remove mapbox-gl dependency - use local type definition
+interface MapRef {
+  current: unknown | null;
+}
 import { Upload, FileImage, FileText, Layers, Building, Check, X, Bell, BarChart, Settings } from 'lucide-react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -19,15 +22,23 @@ type RealEstatePolygon = {
   polygon: Array<[number, number]>;
   settings: Record<string, unknown>;
   createdAt: string;
+  // ✅ ENTERPRISE FIX: Add properties used in handleBatchRealEstateMonitoring
+  type?: string;
+  alertSettings?: {
+    enabled: boolean;
+    priceRange: { min: number; max: number };
+    propertyTypes: string[];
+    includeExclude: 'include' | 'exclude';
+  };
 };
 import type { ParserResult } from '../floor-plan-system/types';
 import type { PropertyStatus } from '@/constants/property-statuses-enterprise';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 interface ProfessionalDrawingInterfaceProps {
-  mapRef: React.RefObject<mapboxgl.Map | null>;
-  onPolygonComplete?: (polygon: any) => void;
-  onFloorPlanUploaded?: (floorPlan: any) => void;
+  mapRef: React.RefObject<unknown | null>;
+  onPolygonComplete?: (polygon: unknown) => void;
+  onFloorPlanUploaded?: (floorPlan: unknown) => void;
   onRealEstateAlertCreated?: (alert: RealEstatePolygon) => void;
 }
 
@@ -85,7 +96,14 @@ export function ProfessionalDrawingInterface({
   } = {
     addRealEstatePolygon: (_polygon: RealEstatePolygon) => {},
     getRealEstateAlerts: () => [] as RealEstatePolygon[],
-    getStatistics: () => ({ totalPolygons: 0, totalAlerts: 0, activeAlerts: 0 }),
+    getStatistics: () => ({
+      totalPolygons: 0,
+      totalAlerts: 0,
+      activeAlerts: 0,
+      totalMatches: 0,
+      averageConfidence: 0.85,
+      lastCheck: new Date().toISOString()
+    }),
     exportMatches: () => Promise.resolve('')
   };
 
@@ -600,7 +618,7 @@ export function ProfessionalDrawingInterface({
 
             <button
               onClick={() => {
-                exportMatches('CSV');
+                exportMatches();
                 console.log('📊 Professional: Exporting data to CSV');
               }}
               disabled={realEstateStats.totalMatches === 0}

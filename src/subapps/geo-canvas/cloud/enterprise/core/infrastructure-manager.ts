@@ -29,6 +29,13 @@ import type {
   OverallStatus
 } from '../types/infrastructure';
 
+import type {
+  ResponseTimeMetrics,
+  ThroughputMetrics,
+  SecurityStatus,
+  CostStatus
+} from '../types/status';
+
 // ============================================================================
 // CORE INFRASTRUCTURE MANAGER CLASS
 // ============================================================================
@@ -48,7 +55,11 @@ export class InfrastructureManager {
   // Enterprise: Integration με existing Alert Engine
   // TODO: Connect to real alert engine when available
   private alertEngine = {
-    reportAlert: (alert: any) => console.warn('Alert Engine not connected:', alert)
+    reportAlert: (alert: any) => console.warn('Alert Engine not connected:', alert),
+    createAlert: async (type: string, title: string, description: string, severity: string, source: string, metadata?: Record<string, any>) => {
+      console.warn('Alert Engine not connected - createAlert:', { type, title, description, severity, source, metadata });
+    },
+    generateQuickReport: async () => ({ alerts: { active: [] } })
   };
 
   constructor(config: InfrastructureConfig) {
@@ -75,9 +86,8 @@ export class InfrastructureManager {
       console.log('🚀 Initializing Infrastructure Manager...');
 
       // Initialize Alert Engine integration
-      if (!this.alertEngine.isSystemInitialized) {
-        await this.alertEngine.initialize();
-      }
+      // TODO: Add proper alert engine initialization when connected
+      console.log('Alert Engine integration placeholder - ready for connection');
 
       // Initialize all configured providers
       for (const providerConfig of this.config.providers) {
@@ -86,13 +96,7 @@ export class InfrastructureManager {
           providersInitialized++;
 
           // Log successful provider initialization
-          await this.alertEngine.createAlert(
-            'infrastructure-init',
-            `Provider ${providerConfig.name} initialized`,
-            `Successfully initialized ${providerConfig.name} provider για region ${providerConfig.region}`,
-            'low',
-            'infrastructure-manager'
-          );
+          console.log(`✅ Provider ${providerConfig.name} initialized για region ${providerConfig.region}`);
 
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : `Failed to initialize ${providerConfig.name}`;
@@ -143,7 +147,7 @@ export class InfrastructureManager {
    */
   private async initializeProvider(config: CloudProvider): Promise<void> {
     // Store provider configuration
-    this.providers.set(config.name, config);
+    this.providers.set(config.name, config.name);
 
     // Validate provider configuration
     const validation = await this.validateProviderConfig(config);
@@ -244,8 +248,11 @@ export class InfrastructureManager {
   private async getComponentStatuses(): Promise<ComponentStatus[]> {
     const components: ComponentStatus[] = [];
 
-    for (const [providerName, provider] of this.providers) {
+    for (const [providerName, providerId] of Array.from(this.providers.entries())) {
       try {
+        const provider = this.config.providers.find(p => p.name === providerId);
+        if (!provider) continue;
+
         // Simulate component discovery και status checking
         const providerComponents = await this.getProviderComponents(provider);
         components.push(...providerComponents);
@@ -267,9 +274,14 @@ export class InfrastructureManager {
       return {
         health: 'unknown',
         availability: 0,
-        performance: { status: 'unknown', responseTime: 0, throughput: 0 },
-        security: { status: 'unknown', score: 0, lastScan: new Date() },
-        cost: { status: 'unknown', currentSpend: 0, budgetUtilization: 0 }
+        performance: {
+          responseTime: { average: 0, p50: 0, p95: 0, p99: 0, max: 0 },
+          throughput: { requestsPerSecond: 0, requestsPerMinute: 0, requestsPerHour: 0, peakThroughput: 0 },
+          errorRate: 0,
+          saturation: 0
+        },
+        security: this.createSecurityStatus('unknown'),
+        cost: this.createCostStatus([])
       };
     }
 
@@ -294,20 +306,13 @@ export class InfrastructureManager {
       health,
       availability,
       performance: {
-        status: health === 'healthy' ? 'good' : health === 'degraded' ? 'fair' : 'poor',
         responseTime: this.calculateAverageResponseTime(components),
-        throughput: this.calculateTotalThroughput(components)
+        throughput: this.calculateTotalThroughput(components),
+        errorRate: health === 'healthy' ? 0.1 : health === 'degraded' ? 1.5 : 5.0,
+        saturation: health === 'healthy' ? 45 : health === 'degraded' ? 75 : 95
       },
-      security: {
-        status: health === 'critical' ? 'at-risk' : 'secure',
-        score: health === 'healthy' ? 95 : health === 'degraded' ? 75 : 50,
-        lastScan: new Date()
-      },
-      cost: {
-        status: 'on-track',
-        currentSpend: this.calculateCurrentSpend(components),
-        budgetUtilization: 65
-      }
+      security: this.createSecurityStatus(health),
+      cost: this.createCostStatus(components)
     };
   }
 
@@ -397,6 +402,7 @@ export class InfrastructureManager {
       return {
         provider: config.name,
         isConnected: true,
+        connected: true,
         lastChecked: new Date(),
         latency,
         capabilities: config.features
@@ -408,6 +414,7 @@ export class InfrastructureManager {
       return {
         provider: config.name,
         isConnected: false,
+        connected: false,
         lastChecked: new Date(),
         error: errorMessage,
         capabilities: config.features
@@ -554,17 +561,30 @@ export class InfrastructureManager {
    * Calculate average response time
    * Enterprise: Performance metrics calculation
    */
-  private calculateAverageResponseTime(components: ComponentStatus[]): number {
+  private calculateAverageResponseTime(components: ComponentStatus[]): ResponseTimeMetrics {
     const responseTimes = components.map(() => Math.random() * 100 + 50); // 50-150ms
-    return responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length;
+    const average = responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length;
+    return {
+      average,
+      p50: average * 0.8,
+      p95: average * 1.5,
+      p99: average * 2.0,
+      max: average * 2.5
+    };
   }
 
   /**
    * Calculate total throughput
    * Enterprise: Throughput metrics calculation
    */
-  private calculateTotalThroughput(components: ComponentStatus[]): number {
-    return components.length * (Math.random() * 1000 + 500); // 500-1500 requests/second per component
+  private calculateTotalThroughput(components: ComponentStatus[]): ThroughputMetrics {
+    const requestsPerSecond = components.length * (Math.random() * 1000 + 500); // 500-1500 requests/second per component
+    return {
+      requestsPerSecond,
+      requestsPerMinute: requestsPerSecond * 60,
+      requestsPerHour: requestsPerSecond * 3600,
+      peakThroughput: requestsPerSecond * 1.8
+    };
   }
 
   /**
@@ -573,6 +593,94 @@ export class InfrastructureManager {
    */
   private calculateCurrentSpend(components: ComponentStatus[]): number {
     return components.length * (Math.random() * 100 + 50); // $50-150 per component per month
+  }
+
+  /**
+   * Create security status object
+   * Enterprise: Security status construction
+   */
+  private createSecurityStatus(health: 'healthy' | 'degraded' | 'critical' | 'unknown'): SecurityStatus {
+    return {
+      overall: {
+        score: health === 'healthy' ? 95 : health === 'degraded' ? 75 : 50,
+        level: health === 'critical' ? 'high' : 'medium',
+        risks: [],
+        recommendations: [],
+        lastAssessment: new Date()
+      },
+      vulnerabilities: {
+        total: 0,
+        critical: 0,
+        high: 0,
+        medium: 0,
+        low: 0,
+        resolved: 0,
+        newThisWeek: 0,
+        averageResolutionTime: 0
+      },
+      compliance: {
+        frameworks: [],
+        overallScore: 90,
+        gaps: [],
+        audits: []
+      },
+      incidents: [],
+      threats: {
+        riskLevel: health === 'critical' ? 'high' : 'low',
+        activeThreatCount: 0,
+        blockedAttacks: 0,
+        sources: [],
+        indicators: [],
+        lastUpdated: new Date()
+      }
+    };
+  }
+
+  /**
+   * Create cost status object
+   * Enterprise: Cost status construction
+   */
+  private createCostStatus(components: ComponentStatus[]): CostStatus {
+    const currentSpend = this.calculateCurrentSpend(components);
+    return {
+      current: {
+        daily: currentSpend / 30,
+        monthly: currentSpend,
+        quarterly: currentSpend * 3,
+        yearly: currentSpend * 12,
+        currency: 'USD',
+        breakdown: {
+          byProvider: { aws: currentSpend * 0.5, azure: currentSpend * 0.3, gcp: currentSpend * 0.2 },
+          byRegion: { 'us-east-1': currentSpend * 0.4, 'eu-west-1': currentSpend * 0.6 },
+          byService: { compute: currentSpend * 0.4, storage: currentSpend * 0.3, networking: currentSpend * 0.3 },
+          byEnvironment: { production: currentSpend * 0.7, staging: currentSpend * 0.3 },
+          byProject: { 'geo-alert': currentSpend }
+        },
+        trending: 'stable'
+      },
+      forecast: {
+        nextMonth: currentSpend * 1.1,
+        nextQuarter: currentSpend * 3.2,
+        nextYear: currentSpend * 12.5,
+        confidence: 85,
+        factors: ['seasonal growth', 'new features'],
+        period: 'monthly',
+        estimatedCost: currentSpend * 1.1
+      },
+      budget: {
+        allocated: currentSpend * 1.5,
+        used: currentSpend,
+        remaining: currentSpend * 0.5,
+        utilization: 67,
+        status: 'on-track' as const,
+        alerts: []
+      },
+      optimization: {
+        total: 3,
+        suggestions: [],
+        lastUpdated: new Date()
+      }
+    };
   }
 
   /**
@@ -618,40 +726,27 @@ export class InfrastructureManager {
         },
         trending: 'stable'
       },
-      security: {
-        overall: {
-          score: 85,
-          level: 'medium',
-          risks: [],
-          recommendations: [],
-          lastAssessment: new Date()
+      security: [
+        // SecurityRisk[] array - according to RegionStatus interface
+        {
+          id: 'risk-1',
+          type: 'vulnerability' as const,
+          severity: 'medium' as const,
+          description: 'Outdated security patches detected',
+          impact: 'Potential security vulnerabilities in production environment',
+          likelihood: 25,
+          mitigation: 'Apply latest security updates'
         },
-        vulnerabilities: {
-          total: 5,
-          critical: 0,
-          high: 1,
-          medium: 2,
-          low: 2,
-          resolved: 10,
-          newThisWeek: 2,
-          averageResolutionTime: 7
-        },
-        compliance: {
-          frameworks: [],
-          overallScore: 90,
-          gaps: [],
-          audits: []
-        },
-        incidents: [],
-        threats: {
-          riskLevel: 'low',
-          activeThreatCount: 0,
-          blockedAttacks: 25,
-          sources: [],
-          indicators: [],
-          lastUpdated: new Date()
+        {
+          id: 'risk-2',
+          type: 'misconfiguration' as const,
+          severity: 'low' as const,
+          description: 'Non-critical configuration drift',
+          impact: 'Minor security configuration inconsistencies',
+          likelihood: 15,
+          mitigation: 'Review and standardize configurations'
         }
-      },
+      ],
       reliability: {
         sli: {
           availability: 99.5,

@@ -15,16 +15,35 @@
  * @module InteractiveMapContainer
  */
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import * as React from 'react';
+const { useRef, useEffect, useState, useCallback } = React;
 import type { GeoCoordinate, GeoControlPoint } from '../types';
-// TODO: Replace with proper geo-alert core when available
-type PolygonType = 'simple' | 'freehand' | 'complex';
+import { useTranslationLazy } from '../../../i18n/hooks/useTranslationLazy';
+import { useBorderTokens } from '../../../hooks/useBorderTokens';
+import { useSemanticColors } from '../../../ui-adapters/react/useSemanticColors';
+
+// ✅ ENTERPRISE: GeoJSON types for administrative boundaries
+type GeoJSONFeature = {
+  type: 'Feature';
+  geometry: {
+    type: string;
+    coordinates: number[][][] | number[][];
+  };
+  properties: Record<string, unknown>;
+};
+
+type GeoJSONFeatureCollection = {
+  type: 'FeatureCollection';
+  features: GeoJSONFeature[];
+};
+// ✅ ENTERPRISE: Import centralized PolygonType from core
+import type { PolygonType } from '@geo-alert/core/polygon-system/types';
+
+// Local polygon extensions for InteractiveMap compatibility
+type LocalPolygonType = PolygonType | 'freehand' | 'complex';
 type UniversalPolygon = {
   id: string;
-  type: PolygonType;
+  type: LocalPolygonType;
   points: Array<[number, number]>;
   settings: Record<string, unknown>;
 };
@@ -50,7 +69,7 @@ import {
 import { InteractiveMapPresentation } from './InteractiveMapPresentation';
 
 // Configuration
-import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
+import { GEOGRAPHIC_CONFIG } from '../../../config/geographic-config';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
@@ -71,12 +90,12 @@ export interface InteractiveMapContainerProps {
     address?: string;
   } | null;
   enablePolygonDrawing?: boolean;
-  defaultPolygonMode?: PolygonType;
+  defaultPolygonMode?: LocalPolygonType;
   onPolygonCreated?: (polygon: UniversalPolygon) => void;
   onPolygonModified?: (polygon: UniversalPolygon) => void;
   onPolygonDeleted?: (polygonId: string) => void;
   administrativeBoundaries?: {
-    feature: GeoJSON.Feature | GeoJSON.FeatureCollection;
+    feature: GeoJSONFeature | GeoJSONFeatureCollection;
     visible: boolean;
     style?: {
       strokeColor?: string;
@@ -168,7 +187,8 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
   // Helper για freehand mode detection
   const isInFreehandMode = useCallback(() => {
     const currentDrawing = getCurrentDrawing();
-    return systemIsDrawing && currentDrawing && currentDrawing.type === 'freehand';
+    // Enterprise type checking για freehand mode
+    return systemIsDrawing && currentDrawing && (currentDrawing.type as LocalPolygonType) === 'freehand';
   }, [systemIsDrawing, getCurrentDrawing]);
 
   // ========================================================================
@@ -205,7 +225,8 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
       const result = await elevationService.getElevation(lng, lat);
 
       if (result !== null) {
-        mapState.setHoveredCoordinate(prev => {
+        // Enterprise type-safe coordinate update
+        mapState.setHoveredCoordinate((prev: GeoCoordinate | null) => {
           if (!prev) return prev;
 
           const isSameCoordinate =

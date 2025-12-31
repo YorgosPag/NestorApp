@@ -165,6 +165,7 @@ export class GCPProvider {
       return {
         provider: 'gcp',
         isConnected: true,
+        connected: true,
         lastChecked: this.lastConnectionCheck,
         latency,
         capabilities: this.getGCPFeatures()
@@ -176,6 +177,7 @@ export class GCPProvider {
       return {
         provider: 'gcp',
         isConnected: false,
+        connected: false,
         lastChecked: new Date(),
         error: errorMessage,
         capabilities: this.getGCPFeatures()

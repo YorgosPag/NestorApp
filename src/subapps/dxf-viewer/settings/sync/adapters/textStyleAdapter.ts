@@ -56,13 +56,14 @@ export const textStyleAdapter: TextStylePort = {
 
   onChange(handler) {
     // Subscribe to legacy store changes
-    return textStyleStore.subscribe((state: any) => {
+    return textStyleStore.subscribe((state: unknown) => {
+      const typedState = state as { fontSize?: number; fontFamily?: string; color?: string; opacity?: number; fontWeight?: string; fontStyle?: string };
       handler({
-        font: state.fontFamily,
-        size: state.fontSize,
-        color: state.color,
-        weight: state.fontWeight,
-        style: state.fontStyle
+        font: typedState.fontFamily ?? 'Arial',
+        size: typedState.fontSize ?? 12,
+        color: typedState.color ?? '#000000',
+        weight: typedState.fontWeight ?? 'normal',
+        style: typedState.fontStyle ?? 'normal'
       });
     });
   }

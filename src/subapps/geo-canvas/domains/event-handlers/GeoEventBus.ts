@@ -16,7 +16,7 @@ import {
   GeoCanvasEventType,
   GeoCanvasEventHandler,
   GeoCanvasEventBus
-} from '../../enterprise-types/GeoCanvasTypes';
+} from '../enterprise-types/GeoCanvasTypes';
 
 // ============================================================================
 // ⚡ ENTERPRISE EVENT BUS IMPLEMENTATION
@@ -348,13 +348,7 @@ export function debounceEvents<T = any>(
 // ============================================================================
 // 🔗 DOMAIN EXPORTS - EVENT HANDLERS
 // ============================================================================
-
-export {
-  EnterpriseGeoEventBus,
-  GeoEventFactory,
-  throttleEvents,
-  debounceEvents
-};
+// Note: All classes and functions are already exported individually above
 
 // Create singleton instance για global usage
 export const globalGeoEventBus = new EnterpriseGeoEventBus();

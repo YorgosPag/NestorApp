@@ -3,22 +3,33 @@ import type {
   IndividualContact,
   CompanyContact,
   ServiceContact
-} from '@/types/contacts';
+} from '../../types/contacts/contracts';
 import {
   isIndividualContact,
   isCompanyContact,
   isServiceContact
-} from '@/types/contacts';
+} from '../../types/contacts/contracts';
 
 // Extended contact interface για legacy format support
-interface ExtendedContact extends Contact {
+// Intersection type για compatibility με όλα τα existing contact formats
+type ExtendedContact = Contact & {
   contactInfo?: {
     email?: string;
     phone?: string;
+    website?: string;
   };
   emailAddress?: string;
   phoneNumber?: string;
-}
+  telephone?: string; // Legacy phone support
+  website?: string; // Direct website access
+  legacyWebsites?: string[]; // Legacy websites as strings (not WebsiteInfo[])
+  address?: string; // Direct address
+  postalCode?: string;
+  city?: string;
+  email?: string; // Direct email fallback
+  phone?: string; // Direct phone fallback
+  officialWebsite?: string; // Service websites
+};
 
 // ============================================================================
 // ENTERPRISE CENTRALIZED CONTACT FIELD ACCESSOR
@@ -60,18 +71,20 @@ export class ContactFieldAccessor {
       if (email && typeof email === 'string') return email.trim();
     }
 
-    // 🎯 PRIORITY 2: Direct field (Service standard)
-    if (isServiceContact(contact) && contact.email && typeof contact.email === 'string') {
-      return contact.email.trim();
+    // 🎯 PRIORITY 2-4: Extended contact fields (legacy support)
+    const extendedContact = contact as ExtendedContact;
+
+    // Direct email field
+    if (extendedContact.email && typeof extendedContact.email === 'string') {
+      return extendedContact.email.trim();
     }
 
-    // 🎯 PRIORITY 3: Nested formats (legacy/extended contact types)
-    const extendedContact = contact as ExtendedContact;
+    // Nested format
     if (extendedContact.contactInfo?.email && typeof extendedContact.contactInfo.email === 'string') {
       return extendedContact.contactInfo.email.trim();
     }
 
-    // 🎯 PRIORITY 4: Legacy formats
+    // Legacy format
     if (extendedContact.emailAddress && typeof extendedContact.emailAddress === 'string') {
       return extendedContact.emailAddress.trim();
     }
@@ -97,18 +110,20 @@ export class ContactFieldAccessor {
       if (phone && typeof phone === 'string') return phone.trim();
     }
 
-    // 🎯 PRIORITY 2: Direct field (Service standard)
-    if (isServiceContact(contact) && contact.phone && typeof contact.phone === 'string') {
-      return contact.phone.trim();
+    // 🎯 PRIORITY 2-5: Extended contact fields (legacy support)
+    const extendedContact = contact as ExtendedContact;
+
+    // Direct phone field
+    if (extendedContact.phone && typeof extendedContact.phone === 'string') {
+      return extendedContact.phone.trim();
     }
 
-    // 🎯 PRIORITY 3: Nested formats (legacy/extended contact types)
-    const extendedContact = contact as ExtendedContact;
+    // Nested format
     if (extendedContact.contactInfo?.phone && typeof extendedContact.contactInfo.phone === 'string') {
       return extendedContact.contactInfo.phone.trim();
     }
 
-    // 🎯 PRIORITY 4: Legacy formats
+    // Legacy formats
     if (extendedContact.phoneNumber && typeof extendedContact.phoneNumber === 'string') {
       return extendedContact.phoneNumber.trim();
     }
@@ -132,31 +147,32 @@ export class ContactFieldAccessor {
   static getWebsite(contact: Contact): string {
     if (!contact) return '';
 
-    // 🎯 PRIORITY 1: Direct website field (Company/Service)
-    if (isCompanyContact(contact) && contact.website && typeof contact.website === 'string') {
-      return contact.website.trim();
+    // 🎯 PRIORITY 1: Websites array (standard format για Company/Service)
+    if (contact.websites && Array.isArray(contact.websites) && contact.websites.length > 0) {
+      const website = contact.websites[0]?.url;
+      if (website && typeof website === 'string') return website.trim();
     }
 
-    // 🎯 PRIORITY 2: Official website (Service specific)
-    if (isServiceContact(contact) && contact.officialWebsite && typeof contact.officialWebsite === 'string') {
-      return contact.officialWebsite.trim();
-    }
-
-    // 🎯 PRIORITY 3: Extended/legacy website fields
+    // 🎯 PRIORITY 2: Extended contact direct website (legacy support)
     const extendedContact = contact as ExtendedContact;
     if (extendedContact.website && typeof extendedContact.website === 'string') {
       return extendedContact.website.trim();
     }
 
-    // 🎯 PRIORITY 4: Websites array (future-proof)
-    if (extendedContact.websites && Array.isArray(extendedContact.websites) && extendedContact.websites.length > 0) {
-      const website = extendedContact.websites[0];
+    // 🎯 PRIORITY 3: Legacy websites array (fallback)
+    if (extendedContact.legacyWebsites && Array.isArray(extendedContact.legacyWebsites) && extendedContact.legacyWebsites.length > 0) {
+      const website = extendedContact.legacyWebsites[0];
       if (website && typeof website === 'string') return website.trim();
     }
 
-    // 🎯 PRIORITY 5: Nested formats
+    // 🎯 PRIORITY 4: Nested formats
     if (extendedContact.contactInfo?.website && typeof extendedContact.contactInfo.website === 'string') {
       return extendedContact.contactInfo.website.trim();
+    }
+
+    // 🎯 PRIORITY 5: Official website (Service legacy support)
+    if (extendedContact.officialWebsite && typeof extendedContact.officialWebsite === 'string') {
+      return extendedContact.officialWebsite.trim();
     }
 
     return '';
@@ -178,11 +194,17 @@ export class ContactFieldAccessor {
       parts.push(extendedContact.address.trim());
     }
 
-    // Try structured address (Service contact specific)
-    if (isServiceContact(contact) && contact.serviceAddress) {
-      const addr = contact.serviceAddress;
-      if (addr.street) parts.push(addr.street.trim());
-      if (addr.number) parts.push(addr.number.trim());
+    // Try structured address array (standard format για όλα τα contact types)
+    if (contact.addresses && Array.isArray(contact.addresses) && contact.addresses.length > 0) {
+      const addr = contact.addresses[0]; // Παίρνουμε την πρώτη διεύθυνση
+      const addressParts: string[] = [];
+      if (addr.street) addressParts.push(addr.street.trim());
+      if (addr.number) addressParts.push(addr.number.trim());
+      if (addr.city) addressParts.push(addr.city.trim());
+      if (addr.postalCode) addressParts.push(addr.postalCode.trim());
+      if (addressParts.length > 0) {
+        parts.push(addressParts.join(' '));
+      }
     }
 
     // Add postal code and city (extended fields)
@@ -213,10 +235,12 @@ export class ContactFieldAccessor {
       website: ContactFieldAccessor.getWebsite(contact),
       rawEmailsArray: contact.emails,
       rawPhonesArray: contact.phones,
-      rawEmailDirect: isServiceContact(contact) ? contact.email : extendedContact.email,
-      rawPhoneDirect: isServiceContact(contact) ? contact.phone : extendedContact.phone,
-      rawWebsite: isCompanyContact(contact) ? contact.website : extendedContact.website,
-      rawOfficialWebsite: isServiceContact(contact) ? contact.officialWebsite : extendedContact.officialWebsite
+      rawEmailDirect: extendedContact.email,
+      rawPhoneDirect: extendedContact.phone,
+      rawWebsite: extendedContact.website,
+      rawOfficialWebsite: extendedContact.officialWebsite,
+      rawWebsitesArray: contact.websites,
+      rawAddressesArray: contact.addresses
     });
   }
 }
