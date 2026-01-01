@@ -1,82 +1,288 @@
-Γιώργο, καταλαβαίνω ότι το πρόβλημα με τα dropdown menus (Radix UI Select components) εξακολουθεί να υπάρχει, παρόλο που έχουμε δοκιμάσει διάφορα fixes. Από την ανάλυση των logs και την έρευνα, το root cause είναι compatibility issue μεταξύ React 19 (που χρησιμοποιεί το Next.js 15) και ορισμένων Radix UI packages. Συγκεκριμένα, υπάρχει γνωστό bug με το ref handling σε components όπως το Select, όπου το React.ElementRef προκαλεί errors ή event blocking σε React 19.
-Enterprise-Grade Λύση (Επαγγελματική Προσέγγιση)
-Θα το διορθώσουμε με ασφάλεια, χωρίς hacks, ακολουθώντας best practices από μεγάλα frameworks (π.χ. Vercel, Radix). Δεν θα χρησιμοποιήσω any types, inline styles, hard-coded values, ή άναρχα divs. Θα βασιστούμε σε κεντρικοποιημένα συστήματα (package.json για dependencies, globals.css αν χρειάζεται, και codemods για automated fixes). Πρώτα έλεγχος για διπλότυπα – δεν βρήκα, οπότε προχωράμε.
-
-Align όλες τις Radix UI Dependencies (Αποφυγή Version Mismatch)
-Το πρόβλημα συχνά προκύπτει όταν τα @radix-ui packages έχουν διαφορετικές versions (π.χ. react-select με react-popper).
-Στο package.json, βάλε την ίδια version (latest stable: 2.2.6) για όλα τα @radix-ui/*.
-Παράδειγμα αλλαγής στο package.json (χρησιμοποίησε VS Code για edit):text"dependencies": {
-  "@radix-ui/react-accordion": "2.2.6",
-  "@radix-ui/react-alert-dialog": "2.2.6",
-  "@radix-ui/react-aspect-ratio": "2.2.6",
-  "@radix-ui/react-avatar": "2.2.6",
-  "@radix-ui/react-checkbox": "2.2.6",
-  "@radix-ui/react-collapsible": "2.2.6",
-  "@radix-ui/react-context-menu": "2.2.6",
-  "@radix-ui/react-dialog": "2.2.6",
-  "@radix-ui/react-dropdown-menu": "2.2.6",
-  "@radix-ui/react-hover-card": "2.2.6",
-  "@radix-ui/react-label": "2.2.6",
-  "@radix-ui/react-menubar": "2.2.6",
-  "@radix-ui/react-navigation-menu": "2.2.6",
-  "@radix-ui/react-popover": "2.2.6",
-  "@radix-ui/react-portal": "2.2.6",
-  "@radix-ui/react-primitive": "2.2.6",
-  "@radix-ui/react-progress": "2.2.6",
-  "@radix-ui/react-radio-group": "2.2.6",
-  "@radix-ui/react-scroll-area": "2.2.6",
-  "@radix-ui/react-select": "2.2.6",
-  "@radix-ui/react-separator": "2.2.6",
-  "@radix-ui/react-slider": "2.2.6",
-  "@radix-ui/react-slot": "2.2.6",
-  "@radix-ui/react-switch": "2.2.6",
-  "@radix-ui/react-tabs": "2.2.6",
-  "@radix-ui/react-toast": "2.2.6",
-  "@radix-ui/react-toggle": "2.2.6",
-  "@radix-ui/react-toggle-group": "2.2.6",
-  "@radix-ui/react-tooltip": "2.2.6"
-}
-Τρέξε: pnpm install (ή npm/yarn) για να lock τις versions.
-Αυτό εξασφαλίζει consistency, όπως κάνουν εταιρείες σαν Google/Netflix.
-
-Χειροκίνητο Fix για React.ElementRef → React.ComponentRef
-Το React 19 άλλαξε το ref handling. Στα custom UI components (π.χ. src/components/ui/select.tsx), αντικατάστησε React.ElementRef με React.ComponentRef.
-Έλεγχος: Ψάξε για "React.ElementRef" στο project (VS Code: Ctrl+Shift+F, pattern: React.ElementRef).
-Παράδειγμα fix στο select.tsx (αν έχει forwardRef):text// Πριν
-const SelectTrigger = React.forwardRef<React.ElementRef<typeof SelectPrimitive.Trigger>, ...>(
-  // ...
-);
-
-// Μετά
-const SelectTrigger = React.forwardRef<React.ComponentRef<typeof SelectPrimitive.Trigger>, ...>(
-  // ...
-);
-Κάνε το ίδιο σε όλα τα ui components (π.χ. button.tsx, dropdown-menu.tsx, slider.tsx κλπ.). Είναι semantic αλλαγή, δεν σπάει structure.
-Αποθήκευσε και τρέξε pnpm run dev.
-
-Τρέξε το Official React 19 Codemod για Automated Migration
-Εγκατέστησε codemod: npm install -g codemod
-Τρέξε: npx codemod react/19/migration-recipe
-Αυτό διορθώνει αυτόματα refs, rendering, και άλλα breaking changes. (Βάσει React docs, καλύπτει ref issues.)
-Αν είσαι σε TypeScript, update types στο package.json:text"dependencies": {
-  "@types/react": "npm:types-react@rc",
-  "@types/react-dom": "npm:types-react-dom@rc"
-},
-"overrides": {
-  "@types/react": "npm:types-react@rc",
-  "@types/react-dom": "npm:types-react-dom@rc"
-}Τρέξε pnpm install.
-
-Επαλήθευση & Testing
-Μετά τις αλλαγές, restart dev server: Ctrl+C και pnpm run dev.
-Hard refresh browser: Ctrl+Shift+R.
-Δοκίμασε dropdowns σε /, /contacts, /properties.
-Τρέξε το debug script από το log στο console για επιβεβαίωση (το CLICK POINT ANALYSIS).
-Αν δεις errors, στείλε νέο log.
-
-Fallback Αν Δεν Δουλέψει
-Downgrade React σε 18 (για App Router, δυνατό αλλά όχι ιδανικό): Στο package.json βάλε "react": "^18.3.1", "react-dom": "^18.3.1", και ignore peer deps με resolutions/overrides.
-Ή δοκίμασε RC version του Radix: "@radix-ui/react-select": "2.2.7-rc.1766004502650" (αλλά stable first).
-
-
-Αυτή η προσέγγιση ακολουθεί πρωτόκολλο CLAUDE.md: Έρευνα πρώτα (GitHub issues, npm), no duplicates, κεντρικοποιημένα fixes. Αν χρειάζεσαι βοήθεια με specific file, στείλε screenshot/log. Θα δουλέψει – ας το τελειώσουμε!
+22:45:00.754 Running build in Washington, D.C., USA (East) – iad1
+22:45:00.755 Build machine configuration: 2 cores, 8 GB
+22:45:01.050 Cloning github.com/YorgosPag/NestorApp (Branch: main, Commit: 76d8400)
+22:45:04.472 Cloning completed: 3.421s
+22:45:05.272 Restored build cache from previous deployment (2ucN7475crWEBF68rSgfPGynPhbQ)
+22:45:06.829 Warning: Detected "engines": { "node": ">=18.17.0" } in your `package.json` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version
+22:45:06.830 Running "vercel build"
+22:45:07.244 Vercel CLI 50.1.3
+22:45:07.958 Warning: Detected "engines": { "node": ">=18.17.0" } in your `package.json` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version
+22:45:08.008 Detected `pnpm-lock.yaml` version 9 generated by pnpm@10.x with package.json#packageManager pnpm@9.14.0
+22:45:08.042 Installing dependencies...
+22:45:10.056 Scope: all 3 workspace projects
+22:45:10.287 Progress: resolved 1, reused 0, downloaded 0, added 0
+22:45:10.695 [19C[1A6, reused 1, downloaded 5[44D[1B[1AProgress: resolved 10, reused 1, downloaded 9, added 0
+22:45:10.899 [1AProgress: resolved 17, reused 1, downloaded 16, added 0
+22:45:11.253 Downloading next@14.2.35: 0.00 B/20.82 MB
+22:45:11.254 [1ADownloading next@14.2.35: 8.19 kB/20.82 MB
+22:45:11.758 [19C[2A23, reused 1, downloaded 22[46D[2B[20C[2A8, reused 1, downloaded 27[46D[2B[45C[2A8[46D[2B[2ADownloading next@14.2.35: 20.82 MB/20.82 MB, done[0K
+22:45:11.759 Progress: resolved 28, reused 1, downloaded 28, added 0
+22:45:15.137 [20C[1A9[21D[1B[45C[1A9[46D[1B[19C[1A34, reused 1, downloaded 33[46D[1B[45C[1A4[46D[1B[19C[1A50, reused 1, downloaded 49[46D[1B[20C[1A4, reused 1, downloaded 53[46D[1B[19C[1A63, reused 1, downloaded 62[46D[1B[19C[1A77, reused 1, downloaded 76[46D[1B[45C[1A7[46D[1BDownloading maplibre-gl@5.15.0: 0.00 B/8.47 MB
+22:45:15.145 [1ADownloading maplibre-gl@5.15.0: 15.78 kB/8.47 MB
+22:45:15.211 Downloading next@15.5.7: 0.00 B/30.36 MB
+22:45:15.212 [1ADownloading next@15.5.7: 15.78 kB/30.36 MB
+22:45:15.642 [19C[3A82, reused 1, downloaded 81[46D[3B[20C[3A4, reused 1, downloaded 83[46D[3B[3ADownloading maplibre-gl@5.15.0: 8.47 MB/8.47 MB, done[0K
+22:45:15.642 Progress: resolved 84, reused 1, downloaded 83, added 0
+22:45:15.713 [1B[20C[2A5, reused 1, downloaded 84[46D[2B[2ADownloading next@15.5.7: 30.36 MB/30.36 MB, done[0K
+22:45:15.713 Progress: resolved 85, reused 1, downloaded 84, added 0
+22:45:17.858 [45C[1A5[46D[1B[20C[1A7, reused 1, downloaded 86[46D[1B[19C[1A91, reused 1, downloaded 90[46D[1B[45C[1A1[46D[1B[1A WARN  deprecated next@15.5.7: This version has a security vulnerability. Please upgrade to a patched version. See https://nextjs.org/blog/security-update-2025-12-11 for more details.
+22:45:17.860 Progress: resolved 91, reused 1, downloaded 91, added 0
+22:45:18.129 [20C[1A8, reused 1, downloaded 97[46D[1BDownloading firebase@12.7.0: 0.00 B/6.06 MB
+22:45:18.130 [1ADownloading firebase@12.7.0: 15.78 kB/6.06 MB
+22:45:18.258 [2AProgress: resolved 108, reused 1, downloaded 107, added 0
+22:45:18.630 [1B[20C[2A17, reused 1, downloaded 116[48D[2B[2ADownloading firebase@12.7.0: 6.06 MB/6.06 MB, done[0K
+22:45:18.630 Progress: resolved 117, reused 1, downloaded 116, added 0
+22:45:19.337 [20C[1A39, reused 1, downloaded 130[48D[1B[20C[1A81, reused 1, downloaded 172[48D[1B[19C[1A217, reused 1, downloaded 208[48D[1B[20C[1A45, reused 1, downloaded 236[48D[1BDownloading @firebase/firestore@4.9.3: 0.00 B/5.84 MB
+22:45:19.339 [1ADownloading @firebase/firestore@4.9.3: 15.77 kB/5.84 MB
+22:45:19.838 [20C[2A50, reused 1, downloaded 241[48D[2B[21C[2A6, reused 1, downloaded 247[48D[2B[2ADownloading @firebase/firestore@4.9.3: 5.84 MB/5.84 MB, done
+22:45:19.838 Progress: resolved 256, reused 1, downloaded 247, added 0
+22:45:22.147 [20C[1A69, reused 1, downloaded 260[48D[1B[20C[1A85, reused 1, downloaded 276[48D[1B[19C[1A301, reused 1, downloaded 292[48D[1B[20C[1A21, reused 1, downloaded 31[47D[1B[20C[1A52, reused 1, downloaded 343[48D[1B[20C[1A71, reused 1, downloaded 362[48D[1B[20C[1A88, reused 1, downloaded 379[48D[1B[19C[1A400, reused 1, downloaded 391[48D[1B[20C[1A18, reused 1, downloaded 409[48D[1B[21C[1A9, reused 1, downloaded 410[48D[1B[47C[1A1[48D[1BDownloading @napi-rs/canvas-linux-x64-musl@0.1.86: 0.00 B/13.26 MB
+22:45:22.148 [1ADownloading @napi-rs/canvas-linux-x64-musl@0.1.86: 15.77 kB/13.26 MB
+22:45:22.258 [20C[2A29, reused 1, downloaded 420[48D[2BDownloading @napi-rs/canvas-linux-x64-gnu@0.1.86: 0.00 B/13.86 MB
+22:45:22.259 [1ADownloading @napi-rs/canvas-linux-x64-gnu@0.1.86: 15.77 kB/13.86 MB
+22:45:22.650 [20C[3A35, reused 1, downloaded 426[48D[3B[20C[3A41, reused 1, downloaded 433[48D[3B[3ADownloading @napi-rs/canvas-linux-x64-musl@0.1.86: 13.26 MB/13.26 MB, done
+22:45:22.651 Progress: resolved 441, reused 1, downloaded 433, added 0[0K
+22:45:22.759 [1B[2ADownloading @napi-rs/canvas-linux-x64-gnu@0.1.86: 13.86 MB/13.86 MB, done
+22:45:22.759 Progress: resolved 441, reused 1, downloaded 433, added 0[0K
+22:45:23.572 [47C[1A4[48D[1B[20C[1A85, reused 1, downloaded 478[48D[1B[19C[1A507, reused 1, downloaded 497[48D[1B[20C[1A19, reused 1, downloaded 504[48D[1BDownloading @next/swc-linux-x64-gnu@14.2.33: 0.00 B/41.91 MB
+22:45:23.574 [1ADownloading @next/swc-linux-x64-gnu@14.2.33: 15.77 kB/41.91 MB
+22:45:23.830 [20C[2A23, reused 1, downloaded 505[48D[2BDownloading @next/swc-linux-x64-musl@14.2.33: 0.00 B/50.27 MB
+22:45:23.831 [1ADownloading @next/swc-linux-x64-musl@14.2.33: 15.77 kB/50.27 MB
+22:45:23.866 Downloading @swc/core-linux-x64-gnu@1.15.7: 0.00 B/12.36 MB
+22:45:23.867 [1ADownloading @swc/core-linux-x64-gnu@1.15.7: 15.77 kB/12.36 MB
+22:45:23.974 [20C[4A30[22D[4BDownloading @swc/core-linux-x64-musl@1.15.7: 0.00 B/14.50 MB
+22:45:23.974 [1ADownloading @swc/core-linux-x64-musl@1.15.7: 15.77 kB/14.50 MB
+22:45:24.376 [45C[4A37.98 M[52D[4B[46C[3A20.21 M[53D[3B[21C[5A1[22D[5B[5ADownloading @swc/core-linux-x64-gnu@1.15.7: 12.36 MB/12.36 MB, done
+22:45:24.376 Progress: resolved 531, reused 1, downloaded 505, added 0[0K
+22:45:24.376 Downloading @next/swc-linux-x64-gnu@14.2.33: 37.98 MB/41.91 MB[0K
+22:45:24.377 Downloading @next/swc-linux-x64-musl@14.2.33: 20.21 MB/50.27 MB
+22:45:24.474 [1B[4ADownloading @swc/core-linux-x64-musl@1.15.7: 14.50 MB/14.50 MB, done
+22:45:24.475 Progress: resolved 531, reused 1, downloaded 505, added 0[0K
+22:45:24.475 Downloading @next/swc-linux-x64-gnu@14.2.33: 37.98 MB/41.91 MB[0K
+22:45:24.475 Downloading @next/swc-linux-x64-musl@14.2.33: 20.21 MB/50.27 MB
+22:45:24.663 [21C[3A8, reused 1, downloaded 506[48D[3B[3ADownloading @next/swc-linux-x64-gnu@14.2.33: 41.91 MB/41.91 MB, done
+22:45:24.663 Progress: resolved 538, reused 1, downloaded 506, added 0[0K
+22:45:24.944 [1B[2ADownloading @next/swc-linux-x64-musl@14.2.33: 50.27 MB/50.27 MB, done
+22:45:24.944 Progress: resolved 538, reused 1, downloaded 506, added 0[0K
+22:45:27.104 [20C[1A52[22D[1B[20C[1A7[21D[1B[20C[1A90[22D[1B[19C[1A603[22D[1B[47C[1A7[48D[1B[47C[1A8[48D[1B[47C[1A9[48D[1BDownloading @next/swc-linux-x64-gnu@15.5.7: 0.00 B/47.36 MB
+22:45:27.105 [1ADownloading @next/swc-linux-x64-gnu@15.5.7: 15.77 kB/47.36 MB
+22:45:27.112 Downloading @next/swc-linux-x64-musl@15.5.7: 0.00 B/47.31 MB
+22:45:27.113 [1ADownloading @next/swc-linux-x64-musl@15.5.7: 15.77 kB/47.31 MB
+22:45:28.137 [20C[3A10, reused 1, downloaded 516[48D[3B[47C[3A7[48D[3B[44C[2A23.51 M[51D[2B[45C[1A23.02 M[52D[1B[21C[3A3, reused 1, downloaded 524[48D[3B[47C[3A5[48D[3B[3ADownloading @next/swc-linux-x64-gnu@15.5.7: 47.36 MB/47.36 MB, done
+22:45:28.138 Progress: resolved 613, reused 1, downloaded 525, added 0[0K
+22:45:28.141 [1B[2ADownloading @next/swc-linux-x64-musl@15.5.7: 47.31 MB/47.31 MB, done
+22:45:28.142 Progress: resolved 613, reused 1, downloaded 525, added 0[0K
+22:45:28.307 [47C[1A6[48D[1BDownloading @img/sharp-libvips-linuxmusl-x64@1.2.4: 0.00 B/7.65 MB
+22:45:28.308 [1ADownloading @img/sharp-libvips-linuxmusl-x64@1.2.4: 15.77 kB/7.65 MB
+22:45:28.808 [21C[2A8, reused 1, downloaded 531[48D[2B[2ADownloading @img/sharp-libvips-linuxmusl-x64@1.2.4: 7.65 MB/7.65 MB, done
+22:45:28.808 Progress: resolved 618, reused 1, downloaded 531, added 0[0K
+22:45:32.665 [47C[1A2[48D[1B[47C[1A3[48D[1B[20C[1A23, reused 1, downloaded 541[48D[1B[20C[1A64, reused 1, downloaded 583[48D[1B[20C[1A90, reused 1, downloaded 610[48D[1B[19C[1A725, reused 1, downloaded 645[48D[1B[20C[1A66, reused 1, downloaded 686[48D[1B[20C[1A98, reused 1, downloaded 717[48D[1B[19C[1A826, reused 1, downloaded 745[48D[1B[20C[1A39, reused 1, downloaded 757[48D[1B[20C[1A66, reused 1, downloaded 785[48D[1B[20C[1A85, reused 1, downloaded 804[48D[1B[19C[1A908, reused 1, downloaded 827[48D[1B[20C[1A39, reused 1, downloaded 858[48D[1B[20C[1A73, reused 1, downloaded 892[48D[1BDownloading @maplibre/maplibre-gl-style-spec@19.3.3: 0.00 B/13.34 MB
+22:45:32.666 [1ADownloading @maplibre/maplibre-gl-style-spec@19.3.3: 15.77 kB/13.34 MB
+22:45:33.065 [20C[2A86, reused 1, downloaded 905[48D[2B[2AProgress: resolved 1002, reused 1, downloaded 921, added 0
+22:45:33.166 [1B[2ADownloading @maplibre/maplibre-gl-style-spec@19.3.3: 13.34 MB/13.34 MB, done
+22:45:33.166 Progress: resolved 1002, reused 1, downloaded 921, added 0[0K
+22:45:33.470 [21C[1A42, reused 1, downloaded 959[49D[1B[21C[1A69, reused 1, downloaded 973[49D[1BDownloading @img/sharp-libvips-linux-x64@1.2.4: 0.00 B/7.53 MB
+22:45:33.471 [1ADownloading @img/sharp-libvips-linux-x64@1.2.4: 15.77 kB/7.53 MB
+22:45:33.870 [21C[2A88, reused 1, downloaded 992[49D[2B[2AProgress: resolved 1111, reused 1, downloaded 1015, added 0
+22:45:33.971 [1B[2ADownloading @img/sharp-libvips-linux-x64@1.2.4: 7.53 MB/7.53 MB, done
+22:45:33.971 Progress: resolved 1111, reused 1, downloaded 1015, added 0[0K
+22:45:35.908 [21C[1A49, reused 1, downloaded 1054[50D[1B[21C[1A76, reused 1, downloaded 1081[50D[1B[20C[1A217, reused 1, downloaded 1122[50D[1B[21C[1A55, reused 1, downloaded 1160[50D[1B[21C[1A97, reused 1, downloaded 1202[50D[1B[20C[1A329, reused 1, downloaded 1234[50D[1B[21C[1A42, reused 1, downloaded 1241[50D[1B[22C[1A4, reused 1, downloaded 1249[50D[1B[1A WARN  2 deprecated subdependencies found: glob@7.2.3, inflight@1.0.6
+22:45:35.911 Progress: resolved 1344, reused 1, downloaded 1249, added 0
+22:45:37.835 [1APackages: +316 -28[0K
+22:45:37.835 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-------
+22:45:37.835 Progress: resolved 1344, reused 1, downloaded 1249, added 0
+22:45:38.194 [58C[1A1[59D[1B[1AProgress: resolved 1344, reused 1, downloaded 1249, added 35
+22:45:39.001 [58C[1A78[60D[1B[58C[1A96[60D[1B[59C[1A9[60D[1B[1AProgress: resolved 1344, reused 1, downloaded 1249, added 121
+22:45:42.389 [60C[1A2[61D[1B[59C[1A7[60D[1B[60C[1A3[61D[1B[58C[1A231[61D[1B[59C[1A72[61D[1B[60C[1A4[61D[1B[60C[1A6[61D[1B[60C[1A9[61D[1B[59C[1A84[61D[1B[60C[1A5[61D[1B[60C[1A6[61D[1B[60C[1A9[61D[1B[59C[1A95[61D[1B[60C[1A7[61D[1B[60C[1A8[61D[1B[58C[1A307[61D[1B[1AProgress: resolved 1344, reused 1, downloaded 1249, added 316, done
+22:45:42.934 node_modules/.pnpm/@swc+core@1.15.7_@swc+helpers@0.5.18/node_modules/@swc/core: Running postinstall script...
+22:45:42.936 node_modules/.pnpm/core-js@3.47.0/node_modules/core-js: Running postinstall script...
+22:45:42.969 node_modules/.pnpm/esbuild@0.27.2/node_modules/esbuild: Running postinstall script...
+22:45:43.002 node_modules/.pnpm/sharp@0.34.5/node_modules/sharp: Running install script...
+22:45:43.045 [3Anode_modules/.pnpm/core-js@3.47.0/node_modules/core-js: Running postinstall script, done in 108ms
+22:45:43.054 [2B[4Anode_modules/.pnpm/@swc+core@1.15.7_@swc+helpers@0.5.18/node_modules/@swc/core: Running postinstall script, done in 121ms
+22:45:43.134 [3B[2Anode_modules/.pnpm/esbuild@0.27.2/node_modules/esbuild: Running postinstall script, done in 164ms
+22:45:43.230 [1B[1Anode_modules/.pnpm/sharp@0.34.5/node_modules/sharp: Running install script, done in 228ms
+22:45:44.369 src/subapps/dxf-viewer postinstall$ patch-package
+22:45:44.369 └─ Running...
+22:45:44.572 [1A│ patch-package 8.0.1
+22:45:44.572 └─ Running...
+22:45:44.574 [1A│ Applying patches...
+22:45:44.574 └─ Running...
+22:45:44.574 [1A│ No patch files found
+22:45:44.574 └─ Running...
+22:45:44.579 [1A└─ Done in 210ms
+22:45:44.615 . postinstall$ patch-package
+22:45:44.615 └─ Running...
+22:45:44.771 [1A│ patch-package 8.0.1
+22:45:44.771 └─ Running...
+22:45:44.772 [1A│ Applying patches...
+22:45:44.772 └─ Running...
+22:45:44.772 [1A│ No patch files found
+22:45:44.772 └─ Running...
+22:45:44.779 [1A└─ Done in 164ms
+22:45:44.784 
+22:45:44.784 dependencies:
+22:45:44.784 - @radix-ui/react-avatar 1.1.10
+22:45:44.785 + @radix-ui/react-avatar 1.1.11
+22:45:44.785 - @radix-ui/react-label 2.1.7
+22:45:44.785 + @radix-ui/react-label 2.1.8
+22:45:44.785 - @radix-ui/react-progress 1.1.7
+22:45:44.785 + @radix-ui/react-progress 1.1.8
+22:45:44.785 - @radix-ui/react-separator 1.1.7
+22:45:44.789 + @radix-ui/react-separator 1.1.8
+22:45:44.789 - @radix-ui/react-slot 1.2.3
+22:45:44.789 + @radix-ui/react-slot 1.2.4
+22:45:44.789 - @react-aria/color 3.1.2
+22:45:44.789 + @react-aria/color 3.1.3
+22:45:44.789 - @react-aria/dialog 3.5.31
+22:45:44.790 + @react-aria/dialog 3.5.32
+22:45:44.790 - @react-aria/interactions 3.25.6
+22:45:44.790 + @react-aria/interactions 3.26.0
+22:45:44.790 - @react-aria/overlays 3.30.0
+22:45:44.790 + @react-aria/overlays 3.31.0
+22:45:44.790 - @react-stately/color 3.9.2
+22:45:44.790 + @react-stately/color 3.9.3
+22:45:44.790 - firebase 12.4.0
+22:45:44.790 + firebase 12.7.0
+22:45:44.790 - i18next 25.6.0
+22:45:44.790 + i18next 25.7.3
+22:45:44.791 - immer 10.1.3
+22:45:44.791 + immer 10.2.0
+22:45:44.791 - jspdf 3.0.3
+22:45:44.791 + jspdf 3.0.4
+22:45:44.791 - lucide-react 0.263.1
+22:45:44.791 + lucide-react 0.562.0
+22:45:44.791 - maplibre-gl 5.9.0
+22:45:44.791 + maplibre-gl 5.15.0
+22:45:44.791 - next 14.2.33
+22:45:44.793 + next 15.5.7 deprecated
+22:45:44.793 - next-themes 0.3.0
+22:45:44.793 + next-themes 0.4.6
+22:45:44.794 - react 18.3.1
+22:45:44.794 + react 19.2.1
+22:45:44.794 - react-day-picker 8.10.1
+22:45:44.794 + react-day-picker 9.13.0
+22:45:44.794 - react-dom 18.3.1
+22:45:44.794 + react-dom 19.2.1
+22:45:44.794 - react-hook-form 7.65.0
+22:45:44.794 + react-hook-form 7.69.0
+22:45:44.794 - tailwind-merge 3.3.1
+22:45:44.794 + tailwind-merge 3.4.0
+22:45:44.794 - zustand 5.0.8
+22:45:44.795 + zustand 5.0.9
+22:45:44.795 
+22:45:44.795 devDependencies:
+22:45:44.795 - @napi-rs/canvas 0.1.80
+22:45:44.795 + @napi-rs/canvas 0.1.86
+22:45:44.795 + @next/bundle-analyzer 16.1.0
+22:45:44.795 - @playwright/test 1.56.0
+22:45:44.795 + @playwright/test 1.57.0
+22:45:44.795 - @swc/core 1.13.5
+22:45:44.795 + @swc/core 1.15.7 (1.15.8 is available)
+22:45:44.796 - @testing-library/react 16.3.0
+22:45:44.796 + @testing-library/react 16.3.1
+22:45:44.796 - @types/node 20.19.21
+22:45:44.796 + @types/node 20.19.27
+22:45:44.796 - @types/react 18.3.26
+22:45:44.796 + @types/react 18.3.27
+22:45:44.796 - @typescript-eslint/eslint-plugin 8.46.0
+22:45:44.796 + @typescript-eslint/eslint-plugin 8.50.1
+22:45:44.796 - @typescript-eslint/parser 8.46.0
+22:45:44.796 + @typescript-eslint/parser 8.50.1
+22:45:44.796 - autoprefixer 10.4.21
+22:45:44.797 + autoprefixer 10.4.23
+22:45:44.797 - eslint 9.37.0
+22:45:44.797 + eslint 9.39.2
+22:45:44.797 - eslint-plugin-unused-imports 4.2.0
+22:45:44.797 + eslint-plugin-unused-imports 4.3.0
+22:45:44.797 - jsdom 27.0.0
+22:45:44.797 + jsdom 27.3.0
+22:45:44.797 - playwright 1.56.0
+22:45:44.798 + playwright 1.57.0
+22:45:44.798 - tailwindcss 3.4.18
+22:45:44.798 + tailwindcss 3.4.19
+22:45:44.798 - ts-jest 29.4.5
+22:45:44.798 + ts-jest 29.4.6
+22:45:44.798 - typescript-eslint 8.46.0
+22:45:44.798 + typescript-eslint 8.50.1
+22:45:44.800 
+22:45:44.800 Done in 35.1s
+22:45:44.909 Detected Next.js version: 15.5.7
+22:45:44.909 Running "next build"
+22:45:45.673    ▲ Next.js 15.5.7
+22:45:45.674    - Experiments (use with caution):
+22:45:45.674      · optimizePackageImports
+22:45:45.674 
+22:45:45.733    Creating an optimized production build ...
+22:46:56.613 Failed to compile.
+22:46:56.613 
+22:46:56.613 ./src/app/admin/enterprise-migration/page.tsx
+22:46:56.614 Module not found: Can't resolve '@/enterprise-hardcoded-values-elimination'
+22:46:56.614 
+22:46:56.614 https://nextjs.org/docs/messages/module-not-found
+22:46:56.614 
+22:46:56.614 ./src/app/api/floors/enterprise-audit/route.ts
+22:46:56.614 Error: 
+22:46:56.614 
+22:46:56.614 Caused by:
+22:46:56.614     0: Failed to read source code from /vercel/path0/src/app/api/floors/enterprise-audit/route.ts
+22:46:56.614     1: stream did not contain valid UTF-8
+22:46:56.614 
+22:46:56.614 Import trace for requested module:
+22:46:56.614 ./src/app/api/floors/enterprise-audit/route.ts
+22:46:56.614 
+22:46:56.614 ./src/core/configuration/useEnterpriseConfig.ts
+22:46:56.614 Error:   [31mx[0m You're importing a component that needs `useState`. This React Hook only works in a Client Component. To fix, mark the file (or its parent) with the `"use client"` directive.
+22:46:56.614   [31m|[0m
+22:46:56.614   [31m|[0m  Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+22:46:56.614   [31m|[0m
+22:46:56.614 
+22:46:56.614     ,-[[36;1;4m/vercel/path0/src/core/configuration/useEnterpriseConfig.ts[0m:28:1]
+22:46:56.614  [2m25[0m |  * ============================================================================
+22:46:56.614  [2m26[0m |  */
+22:46:56.614  [2m27[0m | 
+22:46:56.615  [2m28[0m | import { useState, useEffect, useCallback, useRef } from 'react';
+22:46:56.615     : [35;1m         ^^^^^^^^[0m
+22:46:56.615  [2m29[0m | import {
+22:46:56.615  [2m30[0m |   CompanyConfiguration,
+22:46:56.615  [2m31[0m |   SystemConfiguration,
+22:46:56.615     `----
+22:46:56.615   [31mx[0m You're importing a component that needs `useEffect`. This React Hook only works in a Client Component. To fix, mark the file (or its parent) with the `"use client"` directive.
+22:46:56.615   [31m|[0m
+22:46:56.615   [31m|[0m  Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+22:46:56.615   [31m|[0m
+22:46:56.615 
+22:46:56.615     ,-[[36;1;4m/vercel/path0/src/core/configuration/useEnterpriseConfig.ts[0m:28:1]
+22:46:56.615  [2m25[0m |  * ============================================================================
+22:46:56.615  [2m26[0m |  */
+22:46:56.615  [2m27[0m | 
+22:46:56.615  [2m28[0m | import { useState, useEffect, useCallback, useRef } from 'react';
+22:46:56.615     : [35;1m                   ^^^^^^^^^[0m
+22:46:56.615  [2m29[0m | import {
+22:46:56.615  [2m30[0m |   CompanyConfiguration,
+22:46:56.615  [2m31[0m |   SystemConfiguration,
+22:46:56.615     `----
+22:46:56.615   [31mx[0m You're importing a component that needs `useRef`. This React Hook only works in a Client Component. To fix, mark the file (or its parent) with the `"use client"` directive.
+22:46:56.615   [31m|[0m
+22:46:56.615   [31m|[0m  Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+22:46:56.615   [31m|[0m
+22:46:56.615 
+22:46:56.615     ,-[[36;1;4m/vercel/path0/src/core/configuration/useEnterpriseConfig.ts[0m:28:1]
+22:46:56.615  [2m25[0m |  * ============================================================================
+22:46:56.615  [2m26[0m |  */
+22:46:56.616  [2m27[0m | 
+22:46:56.616  [2m28[0m | import { useState, useEffect, useCallback, useRef } from 'react';
+22:46:56.616     : [35;1m                                           ^^^^^^[0m
+22:46:56.616  [2m29[0m | import {
+22:46:56.616  [2m30[0m |   CompanyConfiguration,
+22:46:56.616  [2m31[0m |   SystemConfiguration,
+22:46:56.616     `----
+22:46:56.616 
+22:46:56.616 Import trace for requested module:
+22:46:56.616 ./src/core/configuration/useEnterpriseConfig.ts
+22:46:56.616 ./src/core/configuration/index.ts
+22:46:56.616 ./src/app/api/projects/quick-fix/route.ts
+22:46:56.616 
+22:46:56.624 
+22:46:56.626 > Build failed because of webpack errors
+22:46:56.769 Error: Command "next build" exited with 1

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { doc, updateDoc, setDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { EnterpriseConfigurationManager } from '@/core/configuration';
+// Direct import to avoid React hooks re-export from index.ts
+import { EnterpriseConfigurationManager } from '@/core/configuration/enterprise-config-management';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**

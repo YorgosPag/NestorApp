@@ -1,11 +1,11 @@
 /**
- * <â ENTERPRISE DATABASE ARCHITECTURE AUDIT
+ * ENTERPRISE DATABASE ARCHITECTURE AUDIT
  *
- * £šŸ Ÿ£:  »®Á·Â ±½¬»ÅÃ· Ä·Â database architecture ³¹± floors
- * £¤‘¤‘¡: Fortune 500 database audit standards
+ * PURPOSE: Complete analysis of database architecture for floors
+ * STANDARD: Fortune 500 database audit standards
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { collection, getDocs, query, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -21,7 +21,7 @@ interface EnterpriseDatabaseAudit {
     normalizedFloors: {
       exists: boolean;
       documentCount: number;
-      sampleDocuments: any[];
+      sampleDocuments: Record<string, unknown>[];
       idPatterns: {
         enterprise: { count: number; examples: string[] };
         mpakalikoNumeric: { count: number; examples: string[] };
@@ -47,8 +47,8 @@ interface EnterpriseDatabaseAudit {
   };
 }
 
-export async function GET(): Promise<NextResponse<EnterpriseDatabaseAudit>> {
-  console.log('<â ENTERPRISE DATABASE AUDIT: Starting...');
+export async function GET(): Promise<NextResponse<EnterpriseDatabaseAudit | { error: string }>> {
+  console.log('[AUDIT] ENTERPRISE DATABASE AUDIT: Starting...');
 
   try {
     const audit: EnterpriseDatabaseAudit = {
@@ -66,7 +66,7 @@ export async function GET(): Promise<NextResponse<EnterpriseDatabaseAudit>> {
     };
 
     // AUDIT 1: Normalized Floors
-    console.log('=Ê AUDIT 1: Normalized floors collection...');
+    console.log('[AUDIT 1] Checking normalized floors collection...');
     try {
       const floorsSnapshot = await getDocs(query(collection(db, COLLECTIONS.FLOORS), limit(50)));
       audit.collections.normalizedFloors.exists = true;
@@ -95,11 +95,11 @@ export async function GET(): Promise<NextResponse<EnterpriseDatabaseAudit>> {
       }
       console.log(`   Normalized floors: ${audit.collections.normalizedFloors.documentCount} documents`);
     } catch (error) {
-      console.log(`   L Normalized floors error: ${error}`);
+      console.log(`   [ERROR] Normalized floors error: ${error}`);
     }
 
     // AUDIT 2: Subcollections
-    console.log('<× AUDIT 2: Checking subcollections...');
+    console.log('[AUDIT 2] Checking subcollections...');
     try {
       const buildingsSnapshot = await getDocs(query(collection(db, COLLECTIONS.BUILDINGS), limit(10)));
       const buildingsToCheck = buildingsSnapshot.docs.slice(0, 5);
@@ -122,7 +122,7 @@ export async function GET(): Promise<NextResponse<EnterpriseDatabaseAudit>> {
       }
       console.log(`   Subcollection floors: ${audit.collections.subcollectionFloors.totalSubcollectionFloors}`);
     } catch (error) {
-      console.log(`   L Subcollections error: ${error}`);
+      console.log(`   [ERROR] Subcollections error: ${error}`);
     }
 
     // ANALYSIS
@@ -155,25 +155,25 @@ export async function GET(): Promise<NextResponse<EnterpriseDatabaseAudit>> {
 
     // BLOCKERS
     if (audit.collections.normalizedFloors.idPatterns.mpakalikoNumeric.count > 0) {
-      audit.compliance.blockers.push('œ ‘š‘›™šŸ floor IDs detected');
-      audit.recommendations.immediate.push('=¨ Replace ¼À±º¬»¹º¿ floor IDs with enterprise codes');
+      audit.compliance.blockers.push('Legacy floor IDs detected');
+      audit.recommendations.immediate.push('Replace legacy floor IDs with enterprise codes');
     }
 
     if (audit.architecture.currentPattern === 'SUBCOLLECTIONS') {
       audit.compliance.blockers.push('Subcollection architecture prevents efficient querying');
-      audit.recommendations.migration.push('<× MIGRATE floors to normalized collection');
+      audit.recommendations.migration.push('MIGRATE floors to normalized collection');
     }
 
     if (!hasNormalized && !hasSubcollection) {
       audit.compliance.blockers.push('NO FLOORS DATA found');
-      audit.recommendations.immediate.push('=¨ CREATE floors data with enterprise architecture');
+      audit.recommendations.immediate.push('CREATE floors data with enterprise architecture');
     }
 
-    console.log(` AUDIT COMPLETE: ${audit.compliance.level} (${audit.compliance.score}/100)`);
+    console.log(`[AUDIT COMPLETE] ${audit.compliance.level} (${audit.compliance.score}/100)`);
     return NextResponse.json(audit);
 
   } catch (error) {
-    console.error('L ENTERPRISE AUDIT FAILED:', error);
+    console.error('[ERROR] ENTERPRISE AUDIT FAILED:', error);
     return NextResponse.json({ error: 'Audit failed' }, { status: 500 });
   }
 }

@@ -44,8 +44,7 @@ import {
   Activity,
   FileText
 } from 'lucide-react';
-import { ConfigurationHealthCheck } from '@/core/configuration';
-import executeEnterpriseMigration from '@/enterprise-hardcoded-values-elimination';
+import { ConfigurationHealthCheck, MigrationAPI } from '@/core/configuration';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 
@@ -165,7 +164,7 @@ export default function EnterpriseMigrationPage() {
 
       // Execute actual migration
       addLog('Executing actual migration...');
-      await executeEnterpriseMigration();
+      await MigrationAPI.executeMigration({ createBackup: true });
 
       setMigrationState(prev => ({
         ...prev,
