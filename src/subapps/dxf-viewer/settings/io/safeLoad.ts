@@ -176,9 +176,11 @@ export async function safeLoad(
 
     if (validationResult.success) {
       // Validation passed - data is fully typed as SettingsState
+      // NOTE: Zod schema uses .passthrough() so all extra LineSettings/TextSettings properties are preserved
+      // Double cast needed because Zod inferred type has .passthrough() extras that don't exactly match interface
       return {
         success: true,
-        data: validationResult.data,
+        data: validationResult.data as unknown as SettingsState,
         source,
         warnings
       };
@@ -188,11 +190,11 @@ export async function safeLoad(
     console.warn('[safeLoad] Validation failed, attempting to coerce');
     warnings.push('Schema validation failed, data was coerced');
 
-    const coercedData = validateAndCoerce(processedData as any, FACTORY_DEFAULTS);
+    const coercedData = validateAndCoerce(processedData, FACTORY_DEFAULTS as unknown);
 
     return {
       success: true,
-      data: coercedData,
+      data: coercedData as unknown as SettingsState,
       source: 'coerced',
       warnings
     };

@@ -7,7 +7,7 @@ import { PrimitiveContent } from "../primitives";
 import { AlertDialogOverlay } from "./Overlay";
 
 export const AlertDialogContent = React.forwardRef<
-  React.ElementRef<typeof PrimitiveContent>,
+  React.ComponentRef<typeof PrimitiveContent>,
   React.ComponentPropsWithoutRef<typeof PrimitiveContent>
 >(({ className, ...props }, ref) => (
   <AlertDialogPortal>

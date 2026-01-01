@@ -257,8 +257,8 @@ export const VirtualizedTable = memo(<T,>({
     <div className={getVirtualizedTableClass(className)} style={getVirtualizedTableContainerStyles(containerHeight, className)}>
       {/* Header */}
       <div
-        className="table-header"
-        style={{ height: `${headerHeight}px`, display: 'flex', alignItems: 'center' }}
+        className="table-header flex items-center"
+        style={{ height: `${headerHeight}px` }}
       >
         {columns.map((column) => (
           <div

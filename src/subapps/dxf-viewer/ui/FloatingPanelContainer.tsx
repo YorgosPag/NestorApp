@@ -124,8 +124,8 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   }
 
   return (
-    <div className={`w-96 h-full overflow-hidden ${colors.bg.primary} ${quick.card} relative`}>
-      <div className={`${colors.bg.primary} ${quick.card} ${getStatusBorder('default')}`}>
+    <div className={`w-96 h-full flex flex-col ${colors.bg.primary} ${quick.card} relative`}>
+      <div className={`flex-shrink-0 ${colors.bg.primary} ${quick.card} ${getStatusBorder('default')}`}>
         <PanelTabs
           activePanel={activePanel}
           onTabClick={panelNavigation.handleTabClick}
@@ -134,8 +134,8 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
         />
       </div>
 
-      <div className={`w-96 overflow-hidden overflow-y-auto ${colors.bg.primary} ${colors.text.primary} py-4 px-2`} style={{ maxHeight: 'calc(100vh - 240px)' }}>
-        <div className="w-[368px] overflow-hidden">
+      <div className={`flex-1 min-h-0 overflow-y-auto ${colors.bg.primary} ${colors.text.primary} py-4 px-2`}>
+        <div className="w-[368px]">
           {renderPanelContent()}
         </div>
       </div>

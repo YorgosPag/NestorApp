@@ -355,7 +355,7 @@ export function TransformationPreview({
   const renderStatistics = () => (
     <div className={`${colors.bg.primary} rounded-lg p-4 mb-4`}>
       <h3 className={`text-lg font-semibold mb-3 ${colors.text.accent}`}>
-        <BarChart3 className={iconSizes.sm} style={{ display: 'inline-block', marginRight: '8px' }} />
+        <BarChart3 className={`${iconSizes.sm} inline-block mr-2`} />
         Transformation Statistics
       </h3>
 
@@ -495,7 +495,7 @@ export function TransformationPreview({
       {/* Header */}
       <div className={`${colors.bg.primary} rounded-lg p-4`}>
         <h2 className={`text-xl font-bold ${colors.text.accent} mb-2`}>
-          <RefreshCw className={iconSizes.sm} style={{ display: 'inline-block', marginRight: '8px' }} />
+          <RefreshCw className={`${iconSizes.sm} inline-block mr-2`} />
           Transformation Preview
         </h2>
         <p className={`text-sm ${colors.text.muted}`}>

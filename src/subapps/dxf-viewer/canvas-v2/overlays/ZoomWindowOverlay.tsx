@@ -1,8 +1,7 @@
 'use client';
 import React from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-// Enterprise Canvas UI Migration - Phase B
-import { portalComponents } from '@/styles/design-tokens';
+// 🏢 ENTERPRISE: Centralized design tokens for overlay colors
 import { canvasUI } from '@/styles/design-tokens/canvas';
 
 interface ZoomWindowState {
@@ -34,15 +33,14 @@ export default function ZoomWindowOverlay({
   return (
     <div className={`absolute inset-0 pointer-events-none ${className}`}>
       <div
+        className="absolute border-2 border-solid pointer-events-none"
         style={{
-          position: 'absolute',
-          left: left,
-          top: top,
-          width: width,
-          height: height,
-          border: '2px solid rgba(255, 255, 0, 0.8)',
-          backgroundColor: 'rgba(255, 255, 0, 0.1)',
-          pointerEvents: 'none'
+          left,
+          top,
+          width,
+          height,
+          borderColor: canvasUI.overlay.colors.zoom.border,
+          backgroundColor: canvasUI.overlay.colors.zoom.background
         }}
       />
     </div>

@@ -2,8 +2,13 @@
 
 import React from 'react';
 import { Label } from '@/components/ui/label';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface Props {
   label: string;
@@ -11,22 +16,23 @@ interface Props {
   options: string[];
   onChange: (value: string) => void;
   required?: boolean;
+  placeholder?: string;
 }
 
-export function FormRowSelect({ label, value, options, onChange, required }: Props) {
-  const colors = useSemanticColors();
+export function FormRowSelect({ label, value, options, onChange, required, placeholder }: Props) {
   return (
     <div className="space-y-2">
       <Label>{label}{required && ' *'}</Label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`h-10 w-full px-3 rounded-md border border-input ${colors.bg.primary} text-sm ${INTERACTIVE_PATTERNS.FORM_FIELD}`}
-      >
-        {options.map(opt => (
-          <option key={opt} value={opt}>{opt}</option>
-        ))}
-      </select>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger>
+          <SelectValue placeholder={placeholder ?? 'Επιλέξτε...'} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map(opt => (
+            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

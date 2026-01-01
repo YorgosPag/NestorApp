@@ -51,8 +51,9 @@ export function LandingPage() {
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-gray-900 dark:to-blue-950">
       {/* Hero Section */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/10 to-pink-600/10 backdrop-blur-3xl" aria-hidden="true" />
-        
+        {/* 🏢 ENTERPRISE: Decorative overlay with pointer-events-none to prevent click blocking */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/10 to-pink-600/10 backdrop-blur-3xl pointer-events-none" aria-hidden="true" />
+
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
           <header className="text-center mb-12">
             <h1 className={`text-5xl lg:text-6xl font-bold ${colors.text.foreground} mb-6`}>

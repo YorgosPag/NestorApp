@@ -37,8 +37,13 @@ const colors = {
   },
   green: {
     "300": "#6ee7b7", // ✅ ENTERPRISE FIX: Added missing 300 shade for design-tokens.ts usage
-    "500": "#10b981",
+    "400": "#4ade80", // 🏢 ENTERPRISE: Added for snap indicator overlay
+    "500": "#22c55e", // ✅ Updated to match Tailwind standard
     "600": "#059669"
+  },
+  yellow: {
+    "400": "#facc15", // 🏢 ENTERPRISE: Added for zoom window overlay
+    "500": "#eab308"
   },
   red: {
     "300": "#fca5a5",
@@ -470,6 +475,25 @@ export const componentSizes = {
     xl6: 'h-24 w-24',    // 96px - Loading spinners, thumbnails
     xl8: 'h-32 w-32',    // 128px - Large avatars, placeholders
     xl12: 'h-48 w-48',   // 192px - Empty states, splash screens
+
+    // ============================================================================
+    // 🏢 NUMERIC SIZES - FOR LUCIDE-REACT & SVG ICONS (size prop)
+    // ============================================================================
+    // Enterprise-grade numeric values for libraries that require pixel values
+    numeric: {
+      xxs: 8,    // Micro icons
+      xs: 12,    // Tiny icons
+      sm: 16,    // Standard icons (most common)
+      md: 20,    // Medium icons
+      lg: 24,    // Large icons
+      xl: 32,    // Extra large icons
+      '2xl': 40, // Double extra large
+      xl2: 48,   // Card headers
+      xl3: 56,   // Section icons
+      xl4: 64,   // Hero icons
+      xl5: 80,   // Large displays
+      xl6: 96,   // Loading spinners
+    },
   },
   
   // Avatar sizes
@@ -1852,7 +1876,33 @@ export const canvasUI = {
   },
   overlay: {
     backgroundColor: colors.background.overlay,
-    zIndex: zIndex.overlay
+    zIndex: zIndex.overlay,
+    // 🏢 ENTERPRISE: Centralized overlay indicator colors (CAD-standard)
+    colors: {
+      /** Snap indicator - bright green for high visibility (AutoCAD standard) */
+      snap: {
+        border: colors.green["400"],
+        background: colors.green["500"],
+        glow: `0 0 4px ${colors.green["500"]}`
+      },
+      /** Zoom window - yellow for clear distinction (industry standard) */
+      zoom: {
+        border: 'rgba(250, 204, 21, 0.9)', // Yellow with high opacity
+        background: 'rgba(250, 204, 21, 0.1)', // Yellow with low fill
+        borderSolid: colors.yellow["400"]
+      },
+      /** Selection marquee - blue for selection operations */
+      selection: {
+        window: {
+          border: 'rgba(59, 130, 246, 0.8)',   // Blue - left-to-right selection
+          background: 'rgba(59, 130, 246, 0.1)'
+        },
+        crossing: {
+          border: 'rgba(34, 197, 94, 0.8)',    // Green - right-to-left selection
+          background: 'rgba(34, 197, 94, 0.1)'
+        }
+      }
+    }
   },
   controls: {
     padding: spacing.md,
@@ -1954,12 +2004,12 @@ export const canvasUI = {
         top: `${y - 5}px`,
         width: '10px',
         height: '10px',
-        border: `2px solid ${colors.green[500]}`,
+        border: `2px solid ${colors.green["500"]}`,
         borderRadius: '50%',
         backgroundColor: colors.background.primary,
         pointerEvents: 'none',
         zIndex: zIndex.overlay,
-        boxShadow: `0 0 4px ${colors.green[500]}`
+        boxShadow: `0 0 4px ${colors.green["500"]}`
       })
     },
 
@@ -1970,7 +2020,7 @@ export const canvasUI = {
         top: `${Math.min(startY, endY)}px`,
         width: `${Math.abs(endX - startX)}px`,
         height: `${Math.abs(endY - startY)}px`,
-        border: `2px solid ${colors.blue[600]}`,
+        border: `2px solid ${colors.blue["600"]}`,
         backgroundColor: 'rgba(59, 130, 246, 0.05)',
         pointerEvents: 'none',
         zIndex: zIndex.overlay
@@ -2531,13 +2581,13 @@ export const mapControlPointTokens = {
     highlight: {
       zIndex: zIndex.docked + 2,
       transform: 'scale(1.1)',
-      borderColor: colors.blue[600],
-      backgroundColor: colors.blue[300],
+      borderColor: colors.blue["600"],
+      backgroundColor: colors.blue["300"],
       opacity: 1
     },
     complete: {
-      borderColor: colors.green[500],
-      backgroundColor: colors.green[300]
+      borderColor: colors.green["500"],
+      backgroundColor: colors.green["300"]
     }
   },
   getControlPointStyle: (

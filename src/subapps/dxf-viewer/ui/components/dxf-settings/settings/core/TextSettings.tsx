@@ -53,7 +53,14 @@ import type { TextSettings as TextSettingsType } from '../../../../../contexts/T
 import { BaseModal } from '../../../../../components/shared/BaseModal';
 import { useNotifications } from '../../../../../../../providers/NotificationProvider';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
-import { EnterpriseComboBox, type ComboBoxOption } from '../shared/EnterpriseComboBox';
+// 🏢 ADR-001: Radix Select is the ONLY canonical dropdown component
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '../../../../../../../components/ui/effects';
 import { layoutUtilities } from '../../../../../../../styles/design-tokens';
 
@@ -83,8 +90,8 @@ const EyeIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// 🏢 ENTERPRISE: Typed options for EnterpriseComboBox
-const FREE_FONTS: ComboBoxOption<string>[] = [
+// 🏢 ADR-001: Font options for Radix Select
+const FREE_FONTS = [
   { value: 'Arial, sans-serif', label: 'Arial' },
   { value: 'Georgia, serif', label: 'Georgia' },
   { value: 'Times New Roman, serif', label: 'Times New Roman' },
@@ -104,10 +111,11 @@ const FREE_FONTS: ComboBoxOption<string>[] = [
 
 const FONT_SIZES_RAW = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72];
 
-// 🏢 ENTERPRISE: Typed options for Font Size ComboBox
-const FONT_SIZE_OPTIONS: ComboBoxOption<number>[] = FONT_SIZES_RAW.map(size => ({
-  value: size,
-  label: `${size}px`
+// 🏢 ADR-001: Font size options for Radix Select
+const FONT_SIZE_OPTIONS = FONT_SIZES_RAW.map(size => ({
+  value: size.toString(), // Radix Select requires string values
+  label: `${size}px`,
+  numericValue: size
 }));
 
 const TEXT_LABELS = {
@@ -276,9 +284,8 @@ export function TextSettings() {
 
       // Toast notification για επιτυχία
       notifications.success(
-        '🏭 Εργοστασιακές ρυθμίσεις επαναφέρθηκαν!',
+        '🏭 Εργοστασιακές ρυθμίσεις επαναφέρθηκαν! Όλες οι ρυθμίσεις κειμένου επέστρεψαν στα πρότυπα ISO 3098.',
         {
-          description: 'Όλες οι ρυθμίσεις κειμένου επέστρεψαν στα πρότυπα ISO 3098.',
           duration: 5000
         }
       );
@@ -295,9 +302,14 @@ export function TextSettings() {
 
   // Generate preview text style
   const getPreviewStyle = (): React.CSSProperties => {
+    // ✅ ENTERPRISE FIX: Removed duplicate fontSize property
+    const baseFontSize = textSettings.isSuperscript || textSettings.isSubscript
+      ? textSettings.fontSize * 0.75
+      : textSettings.fontSize;
+
     return {
       fontFamily: textSettings.fontFamily,
-      fontSize: `${textSettings.fontSize}px`,
+      fontSize: `${baseFontSize}px`,
       fontWeight: textSettings.isBold ? 'bold' : 'normal',
       fontStyle: textSettings.isItalic ? 'italic' : 'normal',
       textDecoration: [
@@ -306,10 +318,7 @@ export function TextSettings() {
       ].filter(Boolean).join(' ') || 'none',
       color: textSettings.color,
       position: textSettings.isSuperscript || textSettings.isSubscript ? 'relative' : 'static',
-      top: textSettings.isSuperscript ? '-0.5em' : textSettings.isSubscript ? '0.5em' : '0',
-      fontSize: textSettings.isSuperscript || textSettings.isSubscript
-        ? `${textSettings.fontSize * 0.75}px`
-        : `${textSettings.fontSize}px`
+      top: textSettings.isSuperscript ? '-0.5em' : textSettings.isSubscript ? '0.5em' : '0'
     };
   };
 
@@ -326,15 +335,13 @@ export function TextSettings() {
           >
             Επαναφορά
           </button>
-          {resetToFactory && (
-            <button
-              onClick={handleFactoryResetClick}
-              className={`px-3 py-1 text-xs ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded transition-colors font-semibold`}
-              title="Επαναφορά στις εργοστασιακές ρυθμίσεις (ISO 3098)"
-            >
-              🏭 Εργοστασιακές
-            </button>
-          )}
+          <button
+            onClick={handleFactoryResetClick}
+            className={`px-3 py-1 text-xs ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded transition-colors font-semibold`}
+            title="Επαναφορά στις εργοστασιακές ρυθμίσεις (ISO 3098)"
+          >
+            🏭 Εργοστασιακές
+          </button>
         </div>
       </div>
 
@@ -376,31 +383,50 @@ export function TextSettings() {
           className="overflow-visible"
         >
           <div className="space-y-4">
-            {/* 🏢 ENTERPRISE: Font Family ComboBox */}
-            <EnterpriseComboBox
-              label={TEXT_LABELS.FONT_FAMILY}
-              value={textSettings.fontFamily}
-              options={FREE_FONTS}
-              onChange={(fontFamily) => updateTextSettings({ fontFamily })}
-              enableTypeahead={true}
-              placeholder={TEXT_LABELS.SEARCH_FONTS}
-              buttonClassName="text-sm"
-            />
-
-            {/* 🏢 ENTERPRISE: Font Size ComboBox with +/- controls */}
+            {/* 🏢 ADR-001: Radix Select - Font Family */}
             <div className="space-y-2">
+              <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+                {TEXT_LABELS.FONT_FAMILY}
+              </label>
+              <Select
+                value={textSettings.fontFamily}
+                onValueChange={(fontFamily) => updateTextSettings({ fontFamily })}
+              >
+                <SelectTrigger className={`w-full ${colors.bg.secondary}`}>
+                  <SelectValue placeholder={TEXT_LABELS.SEARCH_FONTS} />
+                </SelectTrigger>
+                <SelectContent>
+                  {FREE_FONTS.map((font) => (
+                    <SelectItem key={font.value} value={font.value}>
+                      <span style={{ fontFamily: font.value }}>{font.label}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 🏢 ADR-001: Radix Select - Font Size with +/- controls */}
+            <div className="space-y-2">
+              <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+                {TEXT_LABELS.FONT_SIZE}
+              </label>
               <div className="flex gap-2">
                 <div className="flex-1">
-                  <EnterpriseComboBox
-                    label={TEXT_LABELS.FONT_SIZE}
-                    value={textSettings.fontSize}
-                    options={FONT_SIZE_OPTIONS}
-                    onChange={(fontSize) => updateTextSettings({ fontSize })}
-                    enableTypeahead={true}
-                    placeholder={TEXT_LABELS.SEARCH_SIZE}
-                    buttonClassName="text-sm"
-                    getDisplayValue={(val) => `${val}pt`}
-                  />
+                  <Select
+                    value={textSettings.fontSize.toString()}
+                    onValueChange={(value) => updateTextSettings({ fontSize: parseInt(value, 10) })}
+                  >
+                    <SelectTrigger className={`w-full ${colors.bg.secondary}`}>
+                      <SelectValue placeholder={TEXT_LABELS.SEARCH_SIZE} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FONT_SIZE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Font Size Increase/Decrease Controls */}

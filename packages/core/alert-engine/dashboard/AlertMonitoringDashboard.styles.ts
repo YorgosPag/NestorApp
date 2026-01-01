@@ -457,6 +457,257 @@ export const getSeverityTextStyle = (): CSSProperties => {
   } as const;
 };
 
+// ============================================================================
+// 🏢 DASHBOARD COMPONENTS - ENTERPRISE STYLE OBJECT
+// ============================================================================
+
+/**
+ * 🎯 DASHBOARD COMPONENTS: Complete style object για AlertMonitoringDashboard
+ * Αυτό είναι το centralized style system που αντικαθιστά inline styles
+ */
+export const dashboardComponents = {
+  // ========================================================================
+  // METRICS CARD
+  // ========================================================================
+  metricsCard: {
+    base: {
+      backgroundColor: colors.background.primary,
+      borderRadius: borderRadius.lg,
+      padding: spacing[6],
+      border: `1px solid ${colors.border.primary}`,
+      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+    } as CSSProperties,
+    title: {
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.medium,
+      color: colors.text.secondary,
+      marginBottom: spacing[2],
+    } as CSSProperties,
+    value: {
+      fontSize: typography.fontSize['2xl'],
+      fontWeight: typography.fontWeight.bold,
+      color: colors.text.primary,
+    } as CSSProperties,
+    icon: {
+      fontSize: typography.fontSize.xl,
+    } as CSSProperties,
+    trend: {
+      fontSize: typography.fontSize.xs,
+      marginLeft: spacing[2],
+    } as CSSProperties,
+    subtitle: {
+      fontSize: typography.fontSize.xs,
+      color: colors.text.tertiary,
+      marginTop: spacing[1],
+    } as CSSProperties,
+  },
+
+  // ========================================================================
+  // STATUS BADGE
+  // ========================================================================
+  statusBadge: {
+    base: {
+      padding: `${spacing[1]} ${spacing[2]}`,
+      borderRadius: borderRadius.sm,
+      fontSize: typography.fontSize.xs,
+      fontWeight: typography.fontWeight.medium,
+    } as CSSProperties,
+    variants: {
+      active: {
+        backgroundColor: semanticColors.success,
+        color: colors.text.inverse,
+      } as CSSProperties,
+      suppressed: {
+        backgroundColor: semanticColors.warning,
+        color: colors.text.inverse,
+      } as CSSProperties,
+      disabled: {
+        backgroundColor: colors.gray[400],
+        color: colors.text.inverse,
+      } as CSSProperties,
+      pending: {
+        backgroundColor: semanticColors.info,
+        color: colors.text.inverse,
+      } as CSSProperties,
+    },
+  },
+
+  // ========================================================================
+  // ALERTS LIST
+  // ========================================================================
+  alertsList: {
+    container: {
+      backgroundColor: colors.background.primary,
+      borderRadius: borderRadius.lg,
+      border: `1px solid ${colors.border.primary}`,
+      overflow: 'hidden',
+    } as CSSProperties,
+    header: {
+      padding: spacing[4],
+      borderBottom: `1px solid ${colors.border.primary}`,
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary,
+    } as CSSProperties,
+    scrollArea: {
+      maxHeight: '400px',
+      overflowY: 'auto',
+      padding: spacing[2],
+    } as CSSProperties,
+  },
+
+  // ========================================================================
+  // EVENTS LIST
+  // ========================================================================
+  eventsList: {
+    container: {
+      backgroundColor: colors.background.primary,
+      borderRadius: borderRadius.lg,
+      border: `1px solid ${colors.border.primary}`,
+      overflow: 'hidden',
+    } as CSSProperties,
+    header: {
+      padding: spacing[4],
+      borderBottom: `1px solid ${colors.border.primary}`,
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary,
+    } as CSSProperties,
+    scrollArea: {
+      maxHeight: '300px',
+      overflowY: 'auto',
+      padding: spacing[2],
+    } as CSSProperties,
+    item: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing[3],
+      padding: spacing[3],
+      borderBottom: `1px solid ${colors.border.secondary}`,
+    } as CSSProperties,
+    eventIcon: {
+      fontSize: typography.fontSize.lg,
+      flexShrink: 0,
+    } as CSSProperties,
+    eventText: {
+      flex: 1,
+      fontSize: typography.fontSize.sm,
+      color: colors.text.primary,
+    } as CSSProperties,
+    timestamp: {
+      fontSize: typography.fontSize.xs,
+      color: colors.text.tertiary,
+      flexShrink: 0,
+    } as CSSProperties,
+  },
+
+  // ========================================================================
+  // ALERT CONFIG
+  // ========================================================================
+  alertConfig: {
+    container: {
+      backgroundColor: colors.background.primary,
+      borderRadius: borderRadius.lg,
+      border: `1px solid ${colors.border.primary}`,
+      padding: spacing[4],
+    } as CSSProperties,
+    header: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing[3],
+      marginBottom: spacing[4],
+    } as CSSProperties,
+    title: {
+      fontSize: typography.fontSize.lg,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary,
+    } as CSSProperties,
+    configList: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: spacing[2],
+    } as CSSProperties,
+    configItem: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: spacing[2],
+      backgroundColor: colors.background.secondary,
+      borderRadius: borderRadius.sm,
+      fontSize: typography.fontSize.sm,
+    } as CSSProperties,
+  },
+
+  // ========================================================================
+  // LOADING STATE
+  // ========================================================================
+  loadingState: {
+    container: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '400px',
+      gap: spacing[4],
+    } as CSSProperties,
+    spinner: {
+      fontSize: typography.fontSize['3xl'],
+      animation: `spin ${animations.duration.slow} linear infinite`,
+    } as CSSProperties,
+    text: {
+      fontSize: typography.fontSize.base,
+      color: colors.text.secondary,
+    } as CSSProperties,
+    error: {
+      fontSize: typography.fontSize.sm,
+      color: semanticColors.error,
+      marginTop: spacing[2],
+    } as CSSProperties,
+  },
+
+  // ========================================================================
+  // DASHBOARD LAYOUT
+  // ========================================================================
+  dashboardLayout: {
+    container: {
+      padding: spacing[6],
+      backgroundColor: colors.background.secondary,
+      minHeight: '100vh',
+    } as CSSProperties,
+    header: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: spacing[6],
+    } as CSSProperties,
+    title: {
+      fontSize: typography.fontSize['2xl'],
+      fontWeight: typography.fontWeight.bold,
+      color: colors.text.primary,
+      marginBottom: spacing[1],
+    } as CSSProperties,
+    subtitle: {
+      fontSize: typography.fontSize.sm,
+      color: colors.text.secondary,
+    } as CSSProperties,
+    controls: {
+      display: 'flex',
+      gap: spacing[3],
+    } as CSSProperties,
+    metricsGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+      gap: spacing[4],
+      marginBottom: spacing[6],
+    } as CSSProperties,
+    contentGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+      gap: spacing[6],
+    } as CSSProperties,
+  },
+} as const;
+
 /**
  * ✅ ENTERPRISE STYLING MODULE COMPLETE
  *
@@ -470,6 +721,7 @@ export const getSeverityTextStyle = (): CSSProperties => {
  * ✅ Accessibility compliance (contrast, focus, interaction)
  * ✅ Performance optimization (const assertions, tree-shakable)
  * ✅ Developer experience (JSDoc, clear naming, utility functions)
+ * ✅ dashboardComponents object για full component styling
  *
  * This module eliminates ALL remaining inline styles από το
  * AlertMonitoringDashboard component and establishes enterprise-grade

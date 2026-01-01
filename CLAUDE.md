@@ -84,6 +84,13 @@ SOS. SOS. N.4 ΑΠΑΓΟΡΕΥΕΤΑΙ:
 6. **`any` type** - Η χρήση του `any` είναι **ΑΠΑΓΟΡΕΥΜΕΝΗ**
    - Χρησιμοποίησε: Generics (`<T>`), union types, proper interfaces
 
+7. **ADR-001: Select/Dropdown Components** - **ΤΕΡΜΑΤΙΚΗ ΑΠΑΓΟΡΕΥΣΗ**
+   - ✅ **CANONICAL**: `@/components/ui/select` (Radix Select) - ΜΟΝΑΔΙΚΟ dropdown component
+   - ❌ **ΑΠΑΓΟΡΕΥΕΤΑΙ**: Νέα χρήση του `EnterpriseComboBox` ή οποιουδήποτε άλλου Select
+   - ⚠️ **LEGACY FILES**: Τα 7 αρχεία στο DXF Viewer που χρησιμοποιούν EnterpriseComboBox
+   - 🔄 **MIGRATE ON TOUCH**: Όταν αγγίζεται legacy file → ΥΠΟΧΡΕΩΤΙΚΗ αντικατάσταση με Radix Select
+   - 📍 **Documentation**: `src/subapps/dxf-viewer/docs/centralized_systems.md#adr-001`
+
 ### 🛑 HARD STOP PROTOCOL - ΥΠΟΧΡΕΩΤΙΚΗ ΔΙΑΔΙΚΑΣΙΑ:
 
 **ΠΡΙΝ από κάθε Edit/Write/MultiEdit command:**

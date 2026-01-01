@@ -2,13 +2,20 @@
  * 🏢 ENTERPRISE LINE STYLE CONTROL Component
  * Standalone control για line type selection
  *
- * @version 2.0.0
- * @migration Migrated from Radix Select to EnterpriseComboBox (PR1: Centralized ComboBox)
- * @see src/subapps/dxf-viewer/ui/components/dxf-settings/settings/shared/EnterpriseComboBox.tsx
+ * @version 3.0.0
+ * @migration ADR-001: Migrated from EnterpriseComboBox to Radix Select (canonical component)
+ * @see src/components/ui/select.tsx
+ * @decision 2026-01-01: Radix Select is the ONLY canonical dropdown component
  */
 
 import React from 'react';
-import { EnterpriseComboBox } from '../settings/shared/EnterpriseComboBox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { LineType } from '../../../../settings-core/types';
 import { getDashArray } from '../../../../settings-core/defaults';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -38,39 +45,40 @@ export const LineStyleControl: React.FC<LineStyleControlProps> = ({
   disabled = false,
   showPreview = true,
 }) => {
-  // 🏢 ENTERPRISE: Custom render function για options με preview
-  const renderOption = (option: typeof LINE_TYPE_OPTIONS[0], isSelected: boolean) => (
-    <div className="flex items-center justify-between w-full">
-      <span className="text-sm">{option.label}</span>
-      {showPreview && (
-        <span className={`text-xs font-mono ml-4 ${isSelected ? 'text-blue-400' : colors.text.muted}`}>
-          {option.preview}
-        </span>
-      )}
-    </div>
-  );
-
-  const { getStatusBorder } = useBorderTokens();
+  const { quick } = useBorderTokens();
   const colors = useSemanticColors();
 
   return (
     <div className="space-y-2">
-      {/* 🏢 ENTERPRISE: EnterpriseComboBox with custom rendering */}
-      <EnterpriseComboBox
-        label={label}
+      {/* 🏢 ADR-001: Radix Select - Canonical dropdown component */}
+      {label && (
+        <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+          {label}
+        </label>
+      )}
+      <Select
         value={value}
-        options={LINE_TYPE_OPTIONS}
-        onChange={(newValue) => onChange(newValue as LineType)}
+        onValueChange={(newValue) => onChange(newValue as LineType)}
         disabled={disabled}
-        enableTypeahead={false}
-        renderOption={renderOption}
-        buttonClassName={`${colors.bg.backgroundSecondary} ${getStatusBorder('muted').replace('border ', '')} ${colors.text.secondary}`}
-        listboxClassName={`${colors.bg.backgroundSecondary} ${getStatusBorder('muted').replace('border ', '')}`}
-      />
+      >
+        <SelectTrigger className={`w-full ${colors.bg.secondary}`}>
+          <SelectValue placeholder="Select line style..." />
+        </SelectTrigger>
+        <SelectContent>
+          {LINE_TYPE_OPTIONS.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              <span className="flex items-center gap-2">
+                <span className="font-mono text-xs opacity-70">{option.preview}</span>
+                <span>{option.label}</span>
+              </span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       {/* 🏢 ENTERPRISE: Visual SVG preview (unchanged from original) */}
       {showPreview && (
-        <div className={`h-8 flex items-center justify-center ${colors.bg.secondary} rounded`}>
+        <div className={`h-8 flex items-center justify-center ${colors.bg.secondary} ${quick.rounded}`}>
           <svg width="100%" height="2" className="overflow-visible">
             <line
               x1="10"

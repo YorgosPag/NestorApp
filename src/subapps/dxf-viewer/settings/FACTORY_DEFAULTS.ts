@@ -30,21 +30,36 @@ import { UI_COLORS } from '../config/color-config';
  * ✅ FIX v2: Property name migration (lineColor→color, lineStyle→lineType, textColor→color,
  *            size→gripSize, color/hoverColor→colors{cold,warm,hot,contour})
  * ✅ FIX v3: FontWeight type migration (string→number) - ChatGPT5 fix
+ * ✅ FIX v4: Complete grip colors (add missing cold/warm/hot/contour for selection/completion)
  */
-export const CURRENT_VERSION = 3;
+export const CURRENT_VERSION = 4;
 
 // ============================================================================
 // LINE SETTINGS DEFAULTS
 // ============================================================================
 
 const LINE_DEFAULTS = {
-  enabled: true,                // ✅ FIX: Added enabled property (for LinePreview)
+  enabled: true,
+  lineType: 'solid' as const,
   lineWidth: 0.25,              // 0.25mm (ISO 128 standard)
-  color: ACI_PALETTE[7] as string,        // White (ACI 7) - ✅ FIX: renamed from lineColor
-  lineColor: ACI_PALETTE[7] as string,    // ✅ ENTERPRISE FIX: Add backward compatibility
-  lineType: 'solid' as const,             // ✅ FIX: renamed from lineStyle
-  lineStyle: 'solid' as const,            // ✅ ENTERPRISE FIX: Add backward compatibility
-  opacity: 1.0
+  color: ACI_PALETTE[7] as string,        // White (ACI 7)
+  opacity: 1.0,
+  dashScale: 1.0,
+  dashOffset: 0,
+  lineCap: 'butt' as const,
+  lineJoin: 'miter' as const,
+  breakAtCenter: false,
+  // Hover state
+  hoverColor: UI_COLORS.BRIGHT_YELLOW,
+  hoverType: 'solid' as const,
+  hoverWidth: 0.25,
+  hoverOpacity: 0.8,
+  // Final state
+  finalColor: UI_COLORS.BRIGHT_GREEN,
+  finalType: 'solid' as const,
+  finalWidth: 0.25,
+  finalOpacity: 1.0,
+  activeTemplate: null
 };
 
 const LINE_DRAFT_DEFAULTS = {
@@ -75,14 +90,39 @@ const LINE_COMPLETION_DEFAULTS = {
 // ============================================================================
 
 const TEXT_DEFAULTS = {
-  enabled: true,                // ✅ FIX: Added enabled property (for LinePreview)
-  fontSize: 12,                 // 12pt (standard CAD text)
+  enabled: true,
   fontFamily: 'Arial',          // Sans-serif (CAD standard)
-  fontWeight: 'normal' as const, // ✅ FIX: Back to string type as expected by TextSettings
+  fontSize: 12,                 // 12pt (standard CAD text)
+  fontWeight: 400,              // 100-900 (400 = normal)
   fontStyle: 'normal' as const,
-  color: ACI_PALETTE[7] as string,        // White (ACI 7) - ✅ FIX: renamed from textColor
-  textColor: ACI_PALETTE[7] as string,    // ✅ ENTERPRISE FIX: Add backward compatibility
-  opacity: 1.0
+  color: ACI_PALETTE[7] as string,        // White (ACI 7)
+  opacity: 1.0,
+  letterSpacing: 0,
+  lineHeight: 1.2,
+  textAlign: 'left' as const,
+  textBaseline: 'alphabetic' as const,
+  // Boolean styling
+  isBold: false,
+  isItalic: false,
+  isUnderline: false,
+  isStrikethrough: false,
+  isSuperscript: false,
+  isSubscript: false,
+  // Shadow
+  shadowEnabled: false,
+  shadowOffsetX: 0,
+  shadowOffsetY: 0,
+  shadowBlur: 0,
+  shadowColor: UI_COLORS.BLACK,
+  // Outline
+  strokeEnabled: false,
+  strokeWidth: 1,
+  strokeColor: UI_COLORS.BLACK,
+  // Background
+  backgroundEnabled: false,
+  backgroundColor: UI_COLORS.BLACK,
+  backgroundPadding: 4,
+  activeTemplate: null
 };
 
 const TEXT_DRAFT_DEFAULTS = {
@@ -133,7 +173,8 @@ const GRIP_DEFAULTS = {
   showMidpoints: true,          // ✅ FIX: Added showMidpoints (show midpoint grips)
   showCenters: true,            // ✅ FIX: Added showCenters (show center grips)
   showQuadrants: true,          // ✅ FIX: Added showQuadrants (show quadrant grips)
-  maxGripsPerEntity: 50         // ✅ FIX: Added maxGripsPerEntity (default max grips)
+  maxGripsPerEntity: 50,        // ✅ FIX: Added maxGripsPerEntity (default max grips)
+  showGrips: true               // ✅ FIX: Added showGrips (grip visibility toggle)
 };
 
 const GRIP_DRAFT_DEFAULTS = {
@@ -147,16 +188,22 @@ const GRIP_HOVER_DEFAULTS = {
 };
 
 const GRIP_SELECTION_DEFAULTS = {
-  colors: {                     // ✅ FIX: changed from flat color to nested structure
-    hot: ACI_PALETTE[1] as string         // Red (ACI 1)
+  colors: {                     // ✅ ENTERPRISE FIX: All colors required by GripColorsSchema
+    cold: ACI_PALETTE[5] as string,       // Blue (ACI 5) - unselected
+    warm: ACI_PALETTE[4] as string,       // Cyan (ACI 4) - hover
+    hot: ACI_PALETTE[1] as string,        // Red (ACI 1) - selected
+    contour: UI_COLORS.BLACK              // Black contour
   },
   gripSize: 10,                 // ✅ FIX: renamed from size
   opacity: 1.0
 };
 
 const GRIP_COMPLETION_DEFAULTS = {
-  colors: {                     // ✅ FIX: changed from flat color to nested structure
-    cold: ACI_PALETTE[3] as string        // Green (ACI 3)
+  colors: {                     // ✅ ENTERPRISE FIX: All colors required by GripColorsSchema
+    cold: ACI_PALETTE[3] as string,       // Green (ACI 3) - completion primary
+    warm: ACI_PALETTE[3] as string,       // Green (ACI 3) - completion hover
+    hot: ACI_PALETTE[3] as string,        // Green (ACI 3) - completion selected
+    contour: UI_COLORS.BLACK              // Black contour
   },
   opacity: 1.0
 };

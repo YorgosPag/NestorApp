@@ -153,7 +153,7 @@ const Accordion = AccordionPrimitive.Root
 // ===== ITEM =====
 
 const AccordionItem = React.forwardRef<
-  React.ElementRef<typeof AccordionPrimitive.Item>,
+  React.ComponentRef<typeof AccordionPrimitive.Item>,
   AccordionItemProps
 >(({ className, variant, ...props }, ref) => {
   // 🏢 ENTERPRISE: Use centralized border tokens
@@ -173,7 +173,7 @@ AccordionItem.displayName = "AccordionItem"
 // ===== TRIGGER =====
 
 const AccordionTrigger = React.forwardRef<
-  React.ElementRef<typeof AccordionPrimitive.Trigger>,
+  React.ComponentRef<typeof AccordionPrimitive.Trigger>,
   AccordionTriggerProps
 >(({
   className,
@@ -252,7 +252,7 @@ AccordionTrigger.displayName = AccordionPrimitive.Trigger.displayName
 // ===== CONTENT =====
 
 const AccordionContent = React.forwardRef<
-  React.ElementRef<typeof AccordionPrimitive.Content>,
+  React.ComponentRef<typeof AccordionPrimitive.Content>,
   AccordionContentProps
 >(({ className, children, variant, size, ...props }, ref) => (
   <AccordionPrimitive.Content

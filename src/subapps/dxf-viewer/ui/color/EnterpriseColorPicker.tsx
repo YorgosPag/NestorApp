@@ -211,6 +211,7 @@ interface EyedropperButtonProps {
 
 function EyedropperButton({ onChange, onChangeEnd, disabled }: EyedropperButtonProps) {
   const [isActive, setIsActive] = useState(false);
+  const colors = useSemanticColors();
 
   const handleClick = async () => {
     if (disabled || typeof window === 'undefined' || !('EyeDropper' in window)) {

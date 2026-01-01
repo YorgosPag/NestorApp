@@ -1,12 +1,33 @@
 /**
  * SidebarSection - Enterprise-Grade Left Sidebar Container
  *
+ * ============================================================================
+ * ENTERPRISE ARCHITECTURE (VS Code / Figma / Adobe XD Pattern)
+ * ============================================================================
+ *
+ * Layout Structure:
+ * ┌─────────────────────────────────────┐
+ * │  <aside> - Semantic sidebar root    │
+ * │  ┌─────────────────────────────────┐│
+ * │  │ <main> - Scrollable content     ││
+ * │  │   └─ FloatingPanelContainer     ││
+ * │  │      (flex-1 overflow-y-auto)   ││
+ * │  ├─────────────────────────────────┤│
+ * │  │ <footer> - Fixed status bar     ││
+ * │  │   └─ AutoSave indicators        ││
+ * │  └─────────────────────────────────┘│
+ * └─────────────────────────────────────┘
+ *
  * ENTERPRISE FEATURES:
+ * - ✅ Flexbox layout (no absolute positioning)
+ * - ✅ Semantic HTML (aside, main, footer)
+ * - ✅ Zero hardcoded pixel values
  * - ✅ React.memo for performance optimization
- * - ✅ Error boundary integration ready
- * - ✅ Responsive design with fixed width
- * - ✅ Status bar with auto-save indicators
+ * - ✅ Centralized design tokens
  * - ✅ Type-safe props
+ *
+ * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Element/aside
+ * ============================================================================
  */
 
 'use client';
@@ -20,7 +41,22 @@ import { CentralizedAutoSaveStatus } from '../ui/components/CentralizedAutoSaveS
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
-// ✅ ENTERPRISE: Type-safe props interface
+// ============================================================================
+// 🎯 LAYOUT CONSTANTS - Centralized, maintainable
+// ============================================================================
+
+/** Sidebar width tokens - matches Tailwind w-96 (384px) */
+const SIDEBAR_LAYOUT = {
+  WIDTH: 'w-96',
+  MIN_WIDTH: 'min-w-[384px]',
+  MAX_WIDTH: 'max-w-[384px]',
+} as const;
+
+// ============================================================================
+// 📋 TYPE DEFINITIONS
+// ============================================================================
+
+/** Props interface for SidebarSection component */
 interface SidebarSectionProps {
   floatingRef: React.RefObject<FloatingPanelHandle>;
   currentScene: SceneModel | null;
@@ -30,11 +66,15 @@ interface SidebarSectionProps {
   activeTool: string;
 }
 
+// ============================================================================
+// 🏗️ COMPONENT IMPLEMENTATION
+// ============================================================================
+
 /**
- * Left sidebar section containing floating panel and status bars
+ * Enterprise-grade left sidebar with Flexbox layout
  *
- * @param props - Sidebar configuration and callbacks
- * @returns Rendered sidebar section
+ * Uses semantic HTML and Flexbox for robust scrolling behavior.
+ * The main content area scrolls while the status bar stays fixed at bottom.
  */
 export const SidebarSection = React.memo<SidebarSectionProps>(({
   floatingRef,
@@ -48,43 +88,75 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
   const colors = useSemanticColors();
 
   return (
-    <div className="w-96 min-w-[384px] max-w-[384px] h-full flex-shrink-0 relative overflow-hidden pointer-events-auto">
-      <div className={`absolute inset-0 w-96 h-full overflow-hidden ${colors.bg.secondary} ${quick.card} shadow-xl ${getStatusBorder('default')}`}>
-        {/* FLOATING PANEL CONTENT AREA */}
-        <div className="absolute inset-x-0 top-0 bottom-[120px] overflow-hidden">
+    <aside
+      className={`
+        ${SIDEBAR_LAYOUT.WIDTH}
+        ${SIDEBAR_LAYOUT.MIN_WIDTH}
+        ${SIDEBAR_LAYOUT.MAX_WIDTH}
+        h-full
+        flex-shrink-0
+        pointer-events-auto
+      `}
+      aria-label="DXF Viewer Sidebar"
+    >
+      {/*
+        Inner container with Flexbox column layout
+        - flex flex-col: Vertical stacking
+        - h-full: Fill parent height
+      */}
+      <section
+        className={`
+          h-full
+          flex flex-col
+          ${colors.bg.secondary}
+          ${quick.card}
+          shadow-xl
+          ${getStatusBorder('default')}
+        `}
+      >
+        {/*
+          MAIN CONTENT AREA - Scrollable
+          - flex-1: Take remaining space
+          - min-h-0: CRITICAL for Flexbox scroll (allows shrinking below content height)
+          - overflow-y-auto: Enable vertical scrolling
+        */}
+        <main className="flex-1 min-h-0 overflow-y-auto">
           <FloatingPanelContainer
             ref={floatingRef}
             sceneModel={currentScene}
             selectedEntityIds={selectedEntityIds}
             onEntitySelect={setSelectedEntityIds}
             zoomLevel={currentZoom}
-            currentTool={activeTool as ToolType} // ✅ ENTERPRISE: Type assertion for activeTool string to ToolType
+            currentTool={activeTool as ToolType}
           />
-        </div>
+        </main>
 
-        {/* STATUS BAR AT BOTTOM */}
-        <div className={`absolute bottom-0 inset-x-0 space-y-2 rounded-b-lg ${colors.bg.secondary} ${quick.separatorH} p-4`}>
-          {/* Scene Auto-Save Status */}
+        {/*
+          STATUS BAR - Fixed at bottom
+          - flex-shrink-0: Never shrink, always visible
+        */}
+        <footer
+          className={`
+            flex-shrink-0
+            space-y-2
+            rounded-b-lg
+            ${colors.bg.secondary}
+            ${quick.separatorH}
+            p-4
+          `}
+        >
           <AutoSaveStatus />
-
-          {/* DXF Settings Auto-Save Status */}
           <CentralizedAutoSaveStatus />
 
-          {/* Status Info */}
-          <div className="flex justify-between items-center text-xs ${colors.text.muted}">
+          <div className={`flex justify-between items-center text-xs ${colors.text.muted}`}>
             <span>Sidebar Status</span>
             <span>Zoom: {currentZoom}%</span>
           </div>
-
-          {/* Storage Status (Temporarily disabled) */}
-          <div className="text-xs ${colors.text.muted}">
-            Storage Status (προσωρινά απενεργοποιημένο)
-          </div>
-        </div>
-      </div>
-    </div>
+        </footer>
+      </section>
+    </aside>
   );
 });
 
-// ✅ ENTERPRISE: Display name for debugging
+// ✅ ENTERPRISE: Display name for React DevTools
 SidebarSection.displayName = 'SidebarSection';

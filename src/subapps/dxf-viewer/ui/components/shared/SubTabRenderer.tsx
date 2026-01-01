@@ -80,10 +80,8 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
   showPreview = true
 }) {
   const colors = useSemanticColors();
-  if (activeTab !== config.type) {
-    return null;
-  }
 
+  // 🏢 ENTERPRISE: All hooks MUST be called before any early returns (React Rules of Hooks)
   // Helper για τα colors ανά τύπο - memoized για performance
   const getColoredSettings = React.useCallback((baseSettings: Record<string, unknown>) => {
     switch (config.type) {
@@ -104,10 +102,6 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
   const coloredLineSettings = React.useMemo(() => getColoredSettings(lineSettings), [getColoredSettings, lineSettings]);
   const coloredTextSettings = getColoredSettings(textSettings); // Direct call - no memoization
 
-  // 🐛 DEBUG: Log text settings to console
-  console.log('🔍 [SubTabRenderer] textSettings:', textSettings);
-  console.log('🔍 [SubTabRenderer] coloredTextSettings:', coloredTextSettings);
-
   // Memoized sub-tab options
   const subTabOptions = React.useMemo(() => [
     { id: 'line', label: 'Γραμμή' },
@@ -119,6 +113,11 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
   const handleSubTabChange = React.useCallback((subTabId: string) => {
     onSubTabChange(activeSubTab === subTabId ? null : subTabId);
   }, [onSubTabChange, activeSubTab]);
+
+  // 🏢 ENTERPRISE: Early return AFTER all hooks (React Rules of Hooks compliance)
+  if (activeTab !== config.type) {
+    return null;
+  }
 
   return (
     <div className="p-3 ${colors.bg.secondary} rounded-lg space-y-4">

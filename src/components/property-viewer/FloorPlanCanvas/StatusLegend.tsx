@@ -58,11 +58,8 @@ export function StatusLegend({
             style={interactionUtilities.pointerEvents.none}
           >
             <div
-              className={`${iconSizes.xs} ${quick.input}`}
-              style={{
-                ...chartComponents.legend.indicator.withColor(item.color),
-                borderRadius: '50%'
-              }}
+              className={`${iconSizes.xs} ${quick.input} rounded-full`}
+              style={chartComponents.legend.indicator.withColor(item.color)}
             />
             <span className={`${colors.text.secondary} flex-1`}>{item.label}</span>
             <span className={`${colors.text.muted} font-mono`}>{item.count}</span>

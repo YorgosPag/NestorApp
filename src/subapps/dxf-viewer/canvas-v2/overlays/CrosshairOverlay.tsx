@@ -237,8 +237,7 @@ export default function CrosshairOverlay({
   return (
     <canvas
       ref={canvasRef}
-      className={`${className}`}
-      style={{ zIndex: 1400 }}
+      className={`${className} z-[1400]`}
     />
   );
 }

@@ -6,6 +6,26 @@
 
 ---
 
+## 🏛️ **ARCHITECTURAL DECISIONS (ADRs)**
+
+> **Enterprise Governance**: Επίσημες αρχιτεκτονικές αποφάσεις για UI components
+
+| ADR | Decision | Canonical Import | Status |
+|-----|----------|------------------|--------|
+| **ADR-001** | Select/Dropdown Component | `@/components/ui/select` | ✅ **APPROVED** |
+
+```typescript
+// ✅ ΣΩΣΤΟ - Radix Select (CANONICAL)
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+
+// ❌ ΛΑΘΟΣ - ΜΗΝ χρησιμοποιείς (DEPRECATED)
+// import { EnterpriseComboBox } from '...'; // DEPRECATED - ADR-001
+```
+
+**📍 Full ADR Details**: [centralized_systems.md](../../../src/subapps/dxf-viewer/docs/centralized_systems.md#adr-001)
+
+---
+
 ## 🎨 **DESIGN SYSTEM API**
 
 ### 🏗️ **PRIMARY DESIGN SYSTEM ACCESS**
@@ -165,6 +185,73 @@ const { canvas, transform } = useCanvasContext();
 ---
 
 ## 🖼️ **UI SYSTEMS API**
+
+### 🔽 **SELECT/DROPDOWN (CANONICAL - ADR-001)**
+
+```typescript
+// 🔽 Radix Select - ΜΟΝΑΔΙΚΟ CANONICAL Dropdown Component
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+  SelectSeparator
+} from '@/components/ui/select';
+
+// ✅ Basic Usage
+<Select value={value} onValueChange={setValue}>
+  <SelectTrigger className="w-[180px]">
+    <SelectValue placeholder="Select option..." />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="option1">Option 1</SelectItem>
+    <SelectItem value="option2">Option 2</SelectItem>
+    <SelectItem value="option3">Option 3</SelectItem>
+  </SelectContent>
+</Select>
+
+// ✅ With Groups & Labels
+<Select>
+  <SelectTrigger>
+    <SelectValue placeholder="Select..." />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectGroup>
+      <SelectLabel>Category A</SelectLabel>
+      <SelectItem value="a1">Item A1</SelectItem>
+      <SelectItem value="a2">Item A2</SelectItem>
+    </SelectGroup>
+    <SelectSeparator />
+    <SelectGroup>
+      <SelectLabel>Category B</SelectLabel>
+      <SelectItem value="b1">Item B1</SelectItem>
+    </SelectGroup>
+  </SelectContent>
+</Select>
+
+// ✅ Controlled with Form
+const [selectedValue, setSelectedValue] = useState<string>('');
+<Select value={selectedValue} onValueChange={setSelectedValue}>
+  <SelectTrigger>
+    <SelectValue placeholder="Choose..." />
+  </SelectTrigger>
+  <SelectContent>
+    {options.map(opt => (
+      <SelectItem key={opt.value} value={opt.value}>
+        {opt.label}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+```
+
+**📍 Library**: `@radix-ui/react-select` (3M+ weekly downloads)
+**📍 Documentation**: [Radix Select](https://www.radix-ui.com/primitives/docs/components/select)
+
+---
 
 ### 📸 **PHOTO SYSTEM**
 
@@ -373,6 +460,6 @@ export function useEntityConfiguration(entityType: string, userRole: string) {
 
 > **💡 Pro Tip**: Bookmark this page για instant access στα imports που χρειάζεσαι!
 >
-> **📅 Last Updated**: 2025-12-28
+> **📅 Last Updated**: 2026-01-01
 >
 > **🔄 Coverage**: 17 Enterprise Systems | 100+ API Examples

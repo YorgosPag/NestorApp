@@ -6,7 +6,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { PrimitiveAction } from "../primitives";
 
 export const AlertDialogAction = React.forwardRef<
-  React.ElementRef<typeof PrimitiveAction>,
+  React.ComponentRef<typeof PrimitiveAction>,
   React.ComponentPropsWithoutRef<typeof PrimitiveAction> & { asChild?: boolean }
 >(({ className, asChild = false, ...props }, ref) => {
   const Comp = asChild ? Slot : PrimitiveAction;

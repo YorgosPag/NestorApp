@@ -1,8 +1,7 @@
 'use client';
 import React from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-// Enterprise Canvas UI Migration - Phase B
-import { portalComponents, layoutUtilities } from '@/styles/design-tokens';
+// 🏢 ENTERPRISE: Centralized design tokens for overlay colors
 import { canvasUI } from '@/styles/design-tokens/canvas';
 
 interface SnapResult {
@@ -30,17 +29,16 @@ export default function SnapIndicatorOverlay({
   const { point } = snapResult;
 
   return (
-    <div className={className} style={{ zIndex: 1400 }}>
-      <div style={{
-        position: 'absolute',
-        left: point.x - 4,
-        top: point.y - 4,
-        width: 8,
-        height: 8,
-        border: '2px solid #00ff00',
-        borderRadius: '50%',
-        pointerEvents: 'none'
-      }} />
+    <div className={`${className} z-[1400]`}>
+      <div
+        className="absolute w-2 h-2 border-2 border-solid rounded-full pointer-events-none"
+        style={{
+          left: point.x - 4,
+          top: point.y - 4,
+          borderColor: canvasUI.overlay.colors.snap.border,
+          boxShadow: canvasUI.overlay.colors.snap.glow
+        }}
+      />
     </div>
   );
 }

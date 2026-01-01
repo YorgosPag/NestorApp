@@ -9,6 +9,13 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { highlightSearchTerm } from '@/lib/obligations-utils'; // ✅ Using centralized function
 import { Search, Clock } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTheme } from '../theme/ThemeProvider';
 import { layoutUtilities } from '@/styles/design-tokens';
@@ -453,18 +460,22 @@ const Filter: React.FC<FilterProps> = ({
     switch (config.type) {
       case 'select':
         return (
-          <select
+          <Select
             value={value || ''}
-            onChange={(e) => onChange(e.target.value || null)}
-            className={searchSystemClasses.filter.select}
+            onValueChange={(val) => onChange(val || null)}
           >
-            <option value="">All {config.label}</option>
-            {config.options?.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label} {option.count && `(${option.count})`}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className={searchSystemClasses.filter.select}>
+              <SelectValue placeholder={`All ${config.label}`} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All {config.label}</SelectItem>
+              {config.options?.map(option => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label} {option.count && `(${option.count})`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         );
 
       case 'multiselect':

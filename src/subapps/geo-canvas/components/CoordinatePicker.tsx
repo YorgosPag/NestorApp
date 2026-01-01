@@ -216,7 +216,7 @@ export function CoordinatePicker({
   const renderDxfInputSection = () => (
     <div className={`${colors.bg.primary} ${quick.card} p-4 mb-4`}>
       <h3 className={`text-lg font-semibold mb-3 ${colors.text.accent}`}>
-        <Square className={iconSizes.sm} style={{ display: 'inline-block', marginRight: '8px' }} />
+        <Square className={`${iconSizes.sm} inline-block mr-2`} />
         DXF Coordinates
       </h3>
 
@@ -262,7 +262,7 @@ export function CoordinatePicker({
             onClick={fillFromSelectedPoint}
             className={`text-sm ${colors.bg.info} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-white px-3 py-1 rounded transition-colors`}
           >
-            <Clipboard className={iconSizes.xs} style={{ display: 'inline-block', marginRight: '6px' }} />
+            <Clipboard className={`${iconSizes.xs} inline-block mr-1.5`} />
             Fill από Selected Point
           </button>
         </div>
@@ -274,7 +274,7 @@ export function CoordinatePicker({
     <div className={`${colors.bg.primary} ${quick.card} p-4 mb-4`}>
       <div className="flex items-center justify-between mb-3">
         <h3 className={`text-lg font-semibold ${colors.text.accent}`}>
-          <Globe className={iconSizes.sm} style={{ display: 'inline-block', marginRight: '8px' }} />
+          <Globe className={`${iconSizes.sm} inline-block mr-2`} />
           Geographic Coordinates
         </h3>
         <div className="flex items-center space-x-2">
@@ -372,7 +372,7 @@ export function CoordinatePicker({
   const renderStatusSection = () => (
     <div className={`${colors.bg.primary} ${quick.card} p-4 mb-4`}>
       <h3 className={`text-lg font-semibold mb-3 ${colors.text.accent}`}>
-        <ClipboardList className={iconSizes.sm} style={{ display: 'inline-block', marginRight: '8px' }} />
+        <ClipboardList className={`${iconSizes.sm} inline-block mr-2`} />
         Status
       </h3>
 
@@ -439,7 +439,7 @@ export function CoordinatePicker({
       {/* Header */}
       <div className={`${colors.bg.primary} ${quick.card} p-4`}>
         <h2 className={`text-xl font-bold ${colors.text.accent} mb-2`}>
-          <MapPin className={iconSizes.sm} style={{ display: 'inline-block', marginRight: '8px' }} />
+          <MapPin className={`${iconSizes.sm} inline-block mr-2`} />
           Add Control Point
         </h2>
         <p className={`text-sm ${colors.text.muted}`}>
@@ -476,7 +476,7 @@ export function CoordinatePicker({
       {/* Instructions */}
       <div className={`${colors.bg.info} ${quick.info} p-4`}>
         <h4 className={`font-semibold ${colors.text.accent} mb-2`}>
-          <ClipboardList className={iconSizes.xs} style={{ display: 'inline-block', marginRight: '6px' }} />
+          <ClipboardList className={`${iconSizes.xs} inline-block mr-1.5`} />
           Instructions:
         </h4>
         <ol className={`text-sm ${colors.text.info} space-y-1`}>

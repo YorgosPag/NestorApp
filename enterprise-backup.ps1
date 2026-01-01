@@ -134,11 +134,22 @@ try {
         Write-Host "Removed existing backup file" -ForegroundColor Yellow
     }
 
-    # Create ZIP using .NET compression (MORE RELIABLE than Compress-Archive)
-    Add-Type -AssemblyName System.IO.Compression.FileSystem
-    [System.IO.Compression.ZipFile]::CreateFromDirectory($tempDir, $zipPath, [System.IO.Compression.CompressionLevel]::Optimal, $false)
+    # =========================================================================
+    # ENTERPRISE FIX: Use Compress-Archive instead of CreateFromDirectory
+    # CreateFromDirectory fails on Windows reserved filenames (nul, con, etc.)
+    # Compress-Archive handles these edge cases more gracefully
+    # =========================================================================
 
-    Write-Host "ZIP archive created successfully" -ForegroundColor Green
+    # Get all items in temp directory (handles reserved filenames better)
+    $itemsToCompress = Get-ChildItem -Path $tempDir -Force
+
+    if ($itemsToCompress.Count -gt 0) {
+        Compress-Archive -Path $itemsToCompress.FullName -DestinationPath $zipPath -Force -CompressionLevel Optimal -ErrorAction Stop
+        Write-Host "ZIP archive created successfully" -ForegroundColor Green
+    } else {
+        Write-Host "ERROR: No files to compress!" -ForegroundColor Red
+        exit 1
+    }
 
     # Get ZIP file info
     $zipInfo = Get-Item $zipPath
@@ -150,7 +161,20 @@ try {
 } catch {
     Write-Host "ERROR: Failed to create ZIP archive" -ForegroundColor Red
     Write-Host "$($_.Exception.Message)" -ForegroundColor Red
-    exit 1
+
+    # Fallback: Try tar.gz as alternative
+    Write-Host ""
+    Write-Host "Attempting fallback with tar.gz..." -ForegroundColor Yellow
+    $tarPath = $zipPath -replace '\.zip$', '.tar.gz'
+    try {
+        Push-Location $tempDir
+        tar -cvzf $tarPath *
+        Pop-Location
+        Write-Host "Fallback successful: $tarPath" -ForegroundColor Green
+    } catch {
+        Write-Host "Fallback also failed" -ForegroundColor Red
+        exit 1
+    }
 }
 
 # Step 9: Cleanup temporary directory
@@ -165,11 +189,12 @@ try {
 }
 
 # Step 10: Final verification
+# NOTE: Use -LiteralPath because filename contains [] which are PowerShell wildcards
 Write-Host ""
 Write-Host "Final verification..." -ForegroundColor Cyan
 
-if (Test-Path $zipPath) {
-    $finalSize = [math]::Round((Get-Item $zipPath).Length / 1MB, 1)
+if (Test-Path -LiteralPath $zipPath) {
+    $finalSize = [math]::Round((Get-Item -LiteralPath $zipPath).Length / 1MB, 1)
     if ($finalSize -gt 5) {
         Write-Host "Backup file exists and has reasonable size ($finalSize MB)" -ForegroundColor Green
     } else {

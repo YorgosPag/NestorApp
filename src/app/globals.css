@@ -382,16 +382,9 @@
   border-bottom: none !important;
 }
 
-/* Hide all lucide chevron icons globally */
-.lucide-chevron-down,
-.lucide-chevron-up,
-.lucide-chevron-left,
-.lucide-chevron-right,
-.lucide-arrow-down,
-.lucide-arrow-up {
-  display: none !important;
-  visibility: hidden !important;
-}
+/* 🏢 ENTERPRISE: Lucide icons are managed by design tokens system
+   See: src/hooks/useIconSizes.ts for centralized icon sizing
+   NOTE: Previously had CSS hiding rules here - REMOVED as anti-pattern */
 
 /* =============================================================
    DEBUG PANEL KILLER - FORCE HIDE ALL DEBUG PANELS
@@ -505,6 +498,26 @@ div[style*="z-index: 99999" i] {
   z-index: var(--dropdown-z-index, 75) !important;
 }
 
+/* ✅ ENTERPRISE FIX: Next.js Development Portal - Prevent click event interception
+   This element covers the entire screen in development mode and blocks click events
+   while allowing pointerdown to pass through. This fix ensures dropdowns work correctly.
+   Reference: Bug discovered via elementsFromPoint() showing NEXTJS-PORTAL intercepting clicks */
+nextjs-portal,
+NEXTJS-PORTAL,
+[class*="nextjs"],
+[id*="nextjs"],
+[data-nextjs-dialog],
+[data-nextjs-dialog-overlay],
+[data-nextjs-toast] {
+  pointer-events: none !important;
+}
+
+/* ✅ Allow interaction with content INSIDE Next.js portal (like error messages) */
+nextjs-portal *,
+NEXTJS-PORTAL * {
+  pointer-events: auto;
+}
+
 /* ✅ ENTERPRISE: Force high z-index for Radix Popper wrapper */
 [data-radix-popper-content-wrapper] {
   z-index: var(--dropdown-z-index, 75) !important;
@@ -578,118 +591,16 @@ body {
 }
 
 /* =============================================================
-   HIDE CHEVRON ICONS FROM SELECT COMPONENTS
+   🏢 ENTERPRISE NOTE: CHEVRON/ARROW ICONS
 
-   Hides all ChevronDown arrows from Radix UI Select components
+   Chevron icons are managed by the centralized design tokens system:
+   - Icon sizes: src/hooks/useIconSizes.ts
+   - Design tokens: src/styles/design-tokens.ts
+
+   REMOVED: Previous CSS rules that were hiding chevron icons globally.
+   This was an anti-pattern introduced during centralization work.
+   Components should manage their own icon visibility through props.
    ============================================================= */
-
-/* Hide ChevronDown icon in SelectTrigger */
-[data-radix-select-trigger] > [data-radix-select-icon] {
-  display: none !important;
-}
-
-/* Alternative selector for Radix UI Select icon */
-[data-radix-select-trigger] svg[class*="chevron"] {
-  display: none !important;
-}
-
-/* Hide any lucide-react ChevronDown icons in Select components */
-[data-radix-select-trigger] .lucide-chevron-down {
-  display: none !important;
-}
-
-/* Generic rule to hide all chevron icons in select triggers */
-[data-radix-select-trigger] [data-icon-chevron="true"] {
-  display: none !important;
-}
-
-/* Hide ChevronDown icons specifically from SelectTrigger elements */
-button[role="combobox"] svg.lucide-chevron-down {
-  display: none !important;
-}
-
-/* Alternative approach - hide the icon container */
-button[role="combobox"] > span:last-child {
-  display: none !important;
-}
-
-/* =============================================================
-   ADDITIONAL CHEVRON HIDING RULES - BROADER TARGETING
-   ============================================================= */
-
-/* Hide all chevron icons in any select-related elements */
-[class*="select"] svg[class*="chevron"],
-[class*="Select"] svg[class*="chevron"],
-[data-select] svg[class*="chevron"] {
-  display: none !important;
-}
-
-/* Hide chevrons in any button that might be a dropdown trigger */
-button svg.lucide-chevron-down,
-button .lucide-chevron-down {
-  display: none !important;
-}
-
-/* Target any element with chevron in classname */
-*[class*="chevron-down"] {
-  display: none !important;
-}
-
-/* Hide SVG icons with specific chevron paths */
-svg[data-testid*="chevron"],
-svg[aria-label*="chevron"],
-svg[title*="chevron"] {
-  display: none !important;
-}
-
-/* =============================================================
-   RADICAL APPROACH - HIDE ALL POSSIBLE ARROWS/CHEVRONS
-   ============================================================= */
-
-/* Hide all SVG icons that look like arrows or chevrons */
-svg[class*="arrow"],
-svg[class*="chevron"],
-*[class*="arrow-right"],
-*[class*="arrow-down"],
-*[class*="chevron-right"],
-*[class*="chevron-down"] {
-  display: none !important;
-}
-
-/* Hide CSS pseudo-element arrows in specific contexts */
-*[aria-expanded]::after,
-*[role="button"]::after,
-*[class*="select"]::after,
-*[class*="dropdown"]::after {
-  content: none !important;
-}
-
-/* Target any element inside Σχέσεις Επαφής containers */
-*:contains("Σχέσεις Επαφής") + * svg,
-*:contains("Σχέσεις Επαφής") svg {
-  display: none !important;
-}
-
-/* Hide all lucide icons that could be arrows */
-.lucide-arrow-right,
-.lucide-arrow-down,
-.lucide-arrow-up-right,
-.lucide-chevron-right,
-.lucide-chevron-left,
-.lucide-chevron-up,
-.lucide-triangle-right,
-.lucide-play,
-.lucide-caret-right {
-  display: none !important;
-}
-
-/* Keep all necessary icons visible */
-.lucide-users,
-.lucide-plus,
-.lucide-refresh-cw,
-.lucide-settings {
-  display: block !important;
-}
 
 /* =============================================================
    FIX TEXT WRAPPING ISSUE - NO MORE "ARROWS" FROM BROKEN WORDS

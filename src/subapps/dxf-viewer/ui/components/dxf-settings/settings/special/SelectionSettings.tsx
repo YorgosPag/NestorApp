@@ -242,11 +242,8 @@ export function SelectionSettings() {
                     }`}
                   >
                     <div
-                      className="w-full mb-1"
-                      style={{
-                        height: '2px',
-                        background: getLinePreview(style)
-                      }}
+                      className="w-full mb-1 h-0.5"
+                      style={{ background: getLinePreview(style) }}
                     />
                     <span className="block text-xs">{styleLabels[style]}</span>
                   </button>
@@ -401,11 +398,8 @@ export function SelectionSettings() {
                     }`}
                   >
                     <div
-                      className="w-full mb-1"
-                      style={{
-                        height: '2px',
-                        background: getLinePreview(style)
-                      }}
+                      className="w-full mb-1 h-0.5"
+                      style={{ background: getLinePreview(style) }}
                     />
                     <span className="block text-xs">{styleLabels[style]}</span>
                   </button>

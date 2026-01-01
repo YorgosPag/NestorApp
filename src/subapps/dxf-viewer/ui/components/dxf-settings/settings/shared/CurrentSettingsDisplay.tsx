@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useUnifiedTextPreview } from '../../../../hooks/useUnifiedSpecificSettings';
 import type { LineType } from '../../../../../settings-core/types';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
@@ -58,7 +58,6 @@ export function CurrentSettingsDisplay({
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const [showSettingsDetails, setShowSettingsDetails] = useState(false);
-  const [forceUpdate, setForceUpdate] = useState(0);
 
   // 🔥 ΔΙΟΡΘΩΣΗ: Χρήση του πραγματικού hook για text settings
   const { settings: { textSettings: liveTextSettings } } = useUnifiedTextPreview();
@@ -73,11 +72,7 @@ export function CurrentSettingsDisplay({
   const gripWarmColorBgClass = useDynamicBackgroundClass(gripSettings.colors.warm);
   const gripHotColorBgClass = useDynamicBackgroundClass(gripSettings.colors.hot);
 
-  // 🔥 ΔΙΟΡΘΩΣΗ: Force re-render όταν αλλάζουν τα settings
-  useEffect(() => {
-
-    setForceUpdate(prev => prev + 1);
-  }, [effectiveTextSettings, lineSettings, gripSettings, activeTab]);
+  // 🏢 ENTERPRISE: Component re-renders naturally when props change - no forced updates needed
 
   return (
     <div className={`space-y-3 ${className}`}>

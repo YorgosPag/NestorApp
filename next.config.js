@@ -8,10 +8,17 @@ const nextConfig = {
   // Disable strict mode για λιγότερα re-renders
   reactStrictMode: false,
 
+  // ✅ ENTERPRISE FIX: Disable Next.js dev indicators/overlay that blocks click events
+  devIndicators: false,
+
+  // ✅ NEXT.JS 15: Moved from experimental to root level
+  serverExternalPackages: ['@mapbox/node-pre-gyp'],
+
+  // ✅ NEXT.JS 15: Fix workspace root detection (multiple lockfiles)
+  outputFileTracingRoot: __dirname,
+
   // ⚡ ENTERPRISE PERFORMANCE OPTIMIZATIONS
   experimental: {
-    // Enable App Router optimizations
-    serverComponentsExternalPackages: ['@mapbox/node-pre-gyp'],
     // Memory optimizations
     optimizePackageImports: ['lucide-react', '@heroicons/react'],
   },

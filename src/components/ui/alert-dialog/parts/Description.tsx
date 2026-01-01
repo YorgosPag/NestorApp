@@ -5,7 +5,7 @@ import { descriptionBase } from "../constants";
 import { PrimitiveDescription } from "../primitives";
 
 export const AlertDialogDescription = React.forwardRef<
-  React.ElementRef<typeof PrimitiveDescription>,
+  React.ComponentRef<typeof PrimitiveDescription>,
   React.ComponentPropsWithoutRef<typeof PrimitiveDescription>
 >(({ className, ...props }, ref) => (
   <PrimitiveDescription ref={ref} className={cn(descriptionBase, className)} {...props} />

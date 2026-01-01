@@ -6,6 +6,28 @@
 
 ---
 
+## 🏛️ **ARCHITECTURAL DECISIONS (ADRs)**
+
+> **Enterprise Governance**: Επίσημες αρχιτεκτονικές αποφάσεις που διέπουν την εφαρμογή
+
+| ADR | Decision | Canonical | Deprecated | Status |
+|-----|----------|-----------|------------|--------|
+| **ADR-001** | Select/Dropdown Component | `@/components/ui/select` (Radix) | `EnterpriseComboBox` | ✅ **APPROVED** |
+
+### 📋 **ADR-001: CANONICAL SELECT COMPONENT** (2026-01-01)
+
+**Decision**: Το `Radix Select` (`@/components/ui/select`) είναι το **ΜΟΝΑΔΙΚΟ** canonical dropdown component.
+
+| Rule | Enforcement |
+|------|-------------|
+| **✅ USE** | `@/components/ui/select` για όλα τα dropdowns |
+| **❌ PROHIBITED** | Νέες Select/ComboBox implementations |
+| **⚠️ DEPRECATED** | `EnterpriseComboBox` (DXF Viewer only, temporary) |
+
+**📍 Full Details**: [centralized_systems.md](../src/subapps/dxf-viewer/docs/centralized_systems.md)
+
+---
+
 ## 📊 **ENTERPRISE ARCHITECTURE SUMMARY**
 
 ### 🏆 **ACHIEVEMENT METRICS**

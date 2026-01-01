@@ -19,7 +19,7 @@ import {
 } from "./primitives";
 
 export const DropdownMenuSubTrigger = React.forwardRef<
-  React.ElementRef<typeof PrimitiveSubTrigger>,
+  React.ComponentRef<typeof PrimitiveSubTrigger>,
   React.ComponentPropsWithoutRef<typeof PrimitiveSubTrigger> & { inset?: boolean }
 >(({ className, inset, children, ...props }, ref) => {
   const { quick } = useBorderTokens();
@@ -41,7 +41,7 @@ export const DropdownMenuSubTrigger = React.forwardRef<
 DropdownMenuSubTrigger.displayName = PrimitiveSubTrigger.displayName;
 
 export const DropdownMenuSubContent = React.forwardRef<
-  React.ElementRef<typeof PrimitiveSubContent>,
+  React.ComponentRef<typeof PrimitiveSubContent>,
   React.ComponentPropsWithoutRef<typeof PrimitiveSubContent>
 >(({ className, ...props }, ref) => {
   const { quick } = useBorderTokens();
@@ -60,7 +60,7 @@ export const DropdownMenuSubContent = React.forwardRef<
 DropdownMenuSubContent.displayName = PrimitiveSubContent.displayName;
 
 export const DropdownMenuContent = React.forwardRef<
-  React.ElementRef<typeof PrimitiveContent>,
+  React.ComponentRef<typeof PrimitiveContent>,
   React.ComponentPropsWithoutRef<typeof PrimitiveContent>
 >(({ className, sideOffset = 4, ...props }, ref) => {
   const { quick } = useBorderTokens();
@@ -82,7 +82,7 @@ export const DropdownMenuContent = React.forwardRef<
 DropdownMenuContent.displayName = PrimitiveContent.displayName;
 
 export const DropdownMenuItem = React.forwardRef<
-  React.ElementRef<typeof PrimitiveItem>,
+  React.ComponentRef<typeof PrimitiveItem>,
   React.ComponentPropsWithoutRef<typeof PrimitiveItem> & { inset?: boolean }
 >(({ className, inset, ...props }, ref) => {
   const { quick } = useBorderTokens();
@@ -102,7 +102,7 @@ export const DropdownMenuItem = React.forwardRef<
 DropdownMenuItem.displayName = PrimitiveItem.displayName;
 
 export const DropdownMenuCheckboxItem = React.forwardRef<
-  React.ElementRef<typeof PrimitiveCheckboxItem>,
+  React.ComponentRef<typeof PrimitiveCheckboxItem>,
   React.ComponentPropsWithoutRef<typeof PrimitiveCheckboxItem>
 >(({ className, children, checked, ...props }, ref) => {
   const iconSizes = useIconSizes();
@@ -130,7 +130,7 @@ export const DropdownMenuCheckboxItem = React.forwardRef<
 DropdownMenuCheckboxItem.displayName = PrimitiveCheckboxItem.displayName;
 
 export const DropdownMenuRadioItem = React.forwardRef<
-  React.ElementRef<typeof PrimitiveRadioItem>,
+  React.ComponentRef<typeof PrimitiveRadioItem>,
   React.ComponentPropsWithoutRef<typeof PrimitiveRadioItem>
 >(({ className, children, ...props }, ref) => {
   const iconSizes = useIconSizes();
@@ -157,7 +157,7 @@ export const DropdownMenuRadioItem = React.forwardRef<
 DropdownMenuRadioItem.displayName = PrimitiveRadioItem.displayName;
 
 export const DropdownMenuLabel = React.forwardRef<
-  React.ElementRef<typeof PrimitiveLabel>,
+  React.ComponentRef<typeof PrimitiveLabel>,
   React.ComponentPropsWithoutRef<typeof PrimitiveLabel> & { inset?: boolean }
 >(({ className, inset, ...props }, ref) => (
   <PrimitiveLabel
@@ -169,7 +169,7 @@ export const DropdownMenuLabel = React.forwardRef<
 DropdownMenuLabel.displayName = PrimitiveLabel.displayName;
 
 export const DropdownMenuSeparator = React.forwardRef<
-  React.ElementRef<typeof PrimitiveSeparator>,
+  React.ComponentRef<typeof PrimitiveSeparator>,
   React.ComponentPropsWithoutRef<typeof PrimitiveSeparator>
 >(({ className, ...props }, ref) => (
   <PrimitiveSeparator ref={ref} className={cn("-mx-1 my-1 h-px bg-muted", className)} {...props} />

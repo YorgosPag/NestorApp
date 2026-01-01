@@ -12,14 +12,10 @@ interface DynamicInputContainerProps {
 export function DynamicInputContainer({ position, showInput, children }: DynamicInputContainerProps) {
   return (
     <div
-      className="absolute"
+      className={`absolute z-[1600] -translate-y-full ${showInput ? 'visible pointer-events-auto' : 'invisible pointer-events-none'}`}
       style={{
         left: `${position.x}px`,
-        top: `${position.y}px`,
-        zIndex: 1600,
-        transform: 'translateY(-100%)',
-        visibility: showInput ? 'visible' : 'hidden',
-        pointerEvents: showInput ? 'auto' : 'none'
+        top: `${position.y}px`
       }}
     >
       <div className="bg-transparent text-white p-3 min-w-[220px]">

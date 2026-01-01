@@ -38,6 +38,13 @@ import {
   fixedSidebarPanel
 } from '../components/InteractiveMap.styles';
 import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Globe, AlertCircle, Construction, CheckCircle, RefreshCcw } from 'lucide-react';
 import type { GeoCanvasAppProps } from '../types';
 import type { GeoCoordinate, DxfCoordinate } from '../types';
@@ -634,31 +641,37 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
             <ul className="flex items-center space-x-4 list-none">
               <li className="flex items-center space-x-2">
                 <span className="text-gray-400">{t('toolbar.view')}</span>
-                <select
+                <Select
                   value={activeView}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    // ✅ ENTERPRISE: Type guard instead of 'as any'
+                  onValueChange={(value) => {
                     if (value === 'foundation' || value === 'georeferencing' || value === 'map') {
                       setActiveView(value);
                     }
                   }}
-                  className={`${colors.bg.hover} ${quick.input} px-3 py-1 text-sm`}
                 >
-                  <option value="georeferencing">{t('views.georeferencing')}</option>
-                  <option value="foundation">{t('views.foundation')}</option>
-                  <option disabled>{t('views.mapping')}</option>
-                  <option disabled>Split View ({t('phases.ui')})</option>
-                </select>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="georeferencing">{t('views.georeferencing')}</SelectItem>
+                    <SelectItem value="foundation">{t('views.foundation')}</SelectItem>
+                    <SelectItem value="map" disabled>{t('views.mapping')}</SelectItem>
+                  </SelectContent>
+                </Select>
               </li>
 
               <li className="flex items-center space-x-2">
                 <span className="text-gray-400">{t('toolbar.crs')}</span>
-                <select className={`${colors.bg.hover} ${quick.input} px-3 py-1 text-sm`}>
-                  <option>{t('coordinateSystems.epsg4326')}</option>
-                  <option>{t('coordinateSystems.epsg2100')}</option>
-                  <option>UTM 34N (EPSG:32634)</option>
-                </select>
+                <Select defaultValue="epsg4326">
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="epsg4326">{t('coordinateSystems.epsg4326')}</SelectItem>
+                    <SelectItem value="epsg2100">{t('coordinateSystems.epsg2100')}</SelectItem>
+                    <SelectItem value="utm34n">UTM 34N (EPSG:32634)</SelectItem>
+                  </SelectContent>
+                </Select>
               </li>
             </ul>
           </nav>

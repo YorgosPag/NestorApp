@@ -243,7 +243,8 @@ async function testPreviewToDraftAlias(): Promise<TestResult> {
       const migratedState = migrateFromLegacyProvider(mockLegacyState);
 
       // Check if 'preview' was converted to 'draft'
-      const draftColor = migratedState.line.specific.draft?.lineColor;
+      // MIGRATED: After migration, use 'color' instead of 'lineColor'
+      const draftColor = migratedState.line.specific.draft?.color;
 
       if (draftColor === UI_COLORS.TEST_PREVIEW_RED) {
         return {

@@ -5,7 +5,7 @@ import { titleBase } from "../constants";
 import { PrimitiveTitle } from "../primitives";
 
 export const AlertDialogTitle = React.forwardRef<
-  React.ElementRef<typeof PrimitiveTitle>,
+  React.ComponentRef<typeof PrimitiveTitle>,
   React.ComponentPropsWithoutRef<typeof PrimitiveTitle>
 >(({ className, ...props }, ref) => (
   <PrimitiveTitle ref={ref} className={cn(titleBase, className)} {...props} />

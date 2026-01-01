@@ -1,9 +1,21 @@
 # = -> **ENTERPRISE CENTRALIZED SYSTEMS TABLE**
 
 > **= MAIN DOCUMENTATION**: [centralized_systems.md](./centralized_systems.md)
-> **= -> LAST UPDATED**: 2025-12-26
+> **= -> LAST UPDATED**: 2026-01-01
 > **= -> TOTAL SYSTEMS**: 15 Major Enterprise Systems
 > **= -> TOTAL CODE**: 10,000+ Lines
+
+---
+
+## 🏛️ ARCHITECTURAL DECISIONS (ADRs) - QUICK REFERENCE
+
+| ADR | Decision | Canonical | Deprecated | Date |
+|-----|----------|-----------|------------|------|
+| **ADR-001** | Select/Dropdown Component | `@/components/ui/select` (Radix) | `EnterpriseComboBox` | 2026-01-01 |
+
+> **🚫 PROHIBITION**: Νέα Select/Dropdown implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** εκτός Radix Select.
+>
+> **📍 Full ADR**: [centralized_systems.md](./centralized_systems.md)
 
 ---
 

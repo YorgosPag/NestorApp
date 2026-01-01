@@ -10,7 +10,7 @@ import {
 } from '@/subapps/dxf-viewer/ui/DxfViewerComponents.styles';
 
 const Progress = React.forwardRef<
-  React.ElementRef<typeof ProgressPrimitive.Root>,
+  React.ComponentRef<typeof ProgressPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>
 >(({ className, value, ...props }, ref) => {
   // Enterprise Progress Transform - Single Source of Truth

@@ -57,7 +57,7 @@ import { UI_COLORS } from '../../config/color-config';
  * //         ↑ from specific  ↑ from overrides
  * ```
  */
-export function computeEffective<T extends Record<string, unknown>>(
+export function computeEffective<T extends object>(
   general: T,
   specificByMode: Record<StorageMode, Partial<T>>,
   overridesByMode: Record<StorageMode, Partial<T>>,

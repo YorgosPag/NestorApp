@@ -147,10 +147,9 @@ export function EnterpriseColorSlider({
       <div
         {...trackProps}
         ref={trackRef}
-        className={`relative h-6 rounded ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+        className={`relative h-6 rounded touch-none ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
         style={{
           width,
-          touchAction: 'none',
           ...trackStyle,
         }}
       >

@@ -2,6 +2,38 @@
 Console Error
 
 ## Error Message
-[2026-01-01T11:38:16.900Z]  @firebase/firestore: "Firestore (12.6.0): Uncaught Error in snapshot listener:" "FirebaseError: [code=failed-precondition]: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/pagonis-87766/firestore/indexes?create_composite=ClRwcm9qZWN0cy9wYWdvbmlzLTg3NzY2L2RhdGFiYXNlcy8oZGVmYXVsdCkvY29sbGVjdGlvbkdyb3Vwcy9jb21tdW5pY2F0aW9ucy9pbmRleGVzL18QARoNCglkaXJlY3Rpb24QARoICgR0eXBlEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg"
+React has detected a change in the order of Hooks called by SubTabRenderer. This will lead to bugs and errors if not fixed. For more information, read the Rules of Hooks: https://react.dev/link/rules-of-hooks
+
+   Previous render            Next render
+   ------------------------------------------------------
+1. useMemo                    useMemo
+2. undefined                  useCallback
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+    at SubTabRenderer (src\subapps\dxf-viewer\ui\components\shared\SubTabRenderer.tsx:88:30)
+    at renderToolSettings (src\subapps\dxf-viewer\ui\components\dxf-settings\settings\special\EntitiesSettings.tsx:416:11)
+    at EntitiesSettings (src\subapps\dxf-viewer\ui\components\dxf-settings\settings\special\EntitiesSettings.tsx:610:12)
+    at EntitiesCategory (src\subapps\dxf-viewer\ui\components\dxf-settings\categories\EntitiesCategory.tsx:24:7)
+    at renderCategoryContent (src\subapps\dxf-viewer\ui\components\dxf-settings\panels\SpecificSettingsPanel.tsx:178:16)
+    at SpecificSettingsPanel (src\subapps\dxf-viewer\ui\components\dxf-settings\panels\SpecificSettingsPanel.tsx:225:10)
+    at DxfSettingsPanel (src\subapps\dxf-viewer\ui\components\DxfSettingsPanel.tsx:120:9)
+    at eval (src\subapps\dxf-viewer\ui\components\LazyLoadWrapper.tsx:75:9)
+    at renderPanelContent (src\subapps\dxf-viewer\ui\hooks\usePanelContentRenderer.tsx:114:15)
+    at FloatingPanelContainer (src\subapps\dxf-viewer\ui\FloatingPanelContainer.tsx:139:12)
+    at SidebarSection (src\subapps\dxf-viewer\layout\SidebarSection.tsx:55:11)
+    at eval (src\subapps\dxf-viewer\app\DxfViewerContent.tsx:912:7)
+    at DxfViewerApp (src\subapps\dxf-viewer\DxfViewerApp.tsx:81:33)
+    at DxfViewerPage (src\app\dxf\viewer\page.tsx:88:13)
+
+## Code Frame
+  86 |
+  87 |   // Helper για τα colors ανά τύπο - memoized για performance
+> 88 |   const getColoredSettings = React.useCallback((baseSettings: Record<string, unknown>) => {
+     |                              ^
+  89 |     switch (config.type) {
+  90 |       case 'hover':
+  91 |         return { ...baseSettings, color: UI_COLORS.ORANGE };
 
 Next.js version: 15.5.7 (Webpack)

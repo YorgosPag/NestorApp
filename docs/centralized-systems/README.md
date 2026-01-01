@@ -8,6 +8,18 @@
 
 ---
 
+## 🏛️ **ARCHITECTURAL DECISIONS (ADRs)**
+
+| ADR | Decision | Canonical Component | Deprecated | Date |
+|-----|----------|---------------------|------------|------|
+| **ADR-001** | Select/Dropdown Component | `@/components/ui/select` (Radix) | `EnterpriseComboBox` | 2026-01-01 |
+
+> **🚫 PROHIBITION**: Νέα Select/Dropdown implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** εκτός Radix Select.
+>
+> **📍 Full Details**: [centralized_systems.md](../src/subapps/dxf-viewer/docs/centralized_systems.md)
+
+---
+
 ## 🎯 **NAVIGATION INDEX**
 
 ### 📋 **QUICK ACCESS**
@@ -111,6 +123,6 @@
 
 > **💡 Tip**: Bookmark this page για quick navigation στα centralized systems!
 >
-> **🔄 Last Updated**: 2025-12-28
+> **🔄 Last Updated**: 2026-01-01
 >
 > **👥 Maintainers**: Γιώργος Παγώνης + Claude Code (Anthropic AI)

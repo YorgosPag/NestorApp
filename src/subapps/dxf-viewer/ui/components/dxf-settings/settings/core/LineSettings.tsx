@@ -67,7 +67,16 @@ import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { useSettingsUpdater, commonValidators } from '../../../../hooks/useSettingsUpdater';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { BaseModal } from '../../../../../components/shared/BaseModal';
-import { EnterpriseComboBox, type ComboBoxOption, type ComboBoxGroupedOptions } from '../shared/EnterpriseComboBox';
+// 🏢 ADR-001: Radix Select is the ONLY canonical dropdown component
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   LINE_TYPE_LABELS,
   LINE_CAP_LABELS,
@@ -139,7 +148,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         updateSettings: unifiedHook.updateLineSettings,
         resetToDefaults: unifiedHook.resetToDefaults,
         resetToFactory: () => unifiedHook.resetToDefaults(), // ✅ ENTERPRISE FIX: Use resetToDefaults as factory reset
-        applyTemplate: (template: LineTemplate) => {
+        applyTemplate: (template: LineSettingsTemplate) => {
           // ✅ ENTERPRISE FIX: Use proper nested settings structure from LineSettingsContext
           unifiedHook.updateLineSettings({
             lineType: template.settings.lineType,
@@ -165,7 +174,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         updateSettings: unifiedHook.updateLineSettings,
         resetToDefaults: unifiedHook.resetToDefaults,
         resetToFactory: () => unifiedHook.resetToDefaults(), // ✅ ENTERPRISE FIX: Use resetToDefaults as factory reset
-        applyTemplate: (template: LineTemplate) => {
+        applyTemplate: (template: LineSettingsTemplate) => {
           // ✅ ENTERPRISE FIX: Use proper nested settings structure from LineSettingsContext
           unifiedHook.updateLineSettings({
             lineType: template.settings.lineType,
@@ -188,7 +197,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
       return {
         ...generalLineSettings,
         resetToFactory: () => generalLineSettings.resetToDefaults(), // ✅ ENTERPRISE FIX: Use resetToDefaults as factory reset
-        applyTemplate: (template: LineTemplate) => {
+        applyTemplate: (template: LineSettingsTemplate) => {
           // ✅ ENTERPRISE FIX: Use proper nested settings structure from LineSettingsContext
           generalLineSettings.updateSettings({
             lineType: template.settings.lineType,
@@ -256,11 +265,15 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
       if (template) {
         console.log('🎨 Applying template:', templateName, template);
         // 🏢 ENTERPRISE: Convert LineConstantsTemplate to LineSettingsTemplate format
+        // LineSettings requires 'enabled' property but template.settings doesn't have it
         const lineSettingsTemplate: LineSettingsTemplate = {
           name: template.name,
           category: template.category,
           description: template.description,
-          settings: template.settings
+          settings: {
+            enabled: true, // ✅ ENTERPRISE FIX: Add required 'enabled' property
+            ...template.settings
+          }
         };
         applyTemplate(lineSettingsTemplate);
         updateSettings({ activeTemplate: templateName } as any); // ✅ ENTERPRISE FIX: Type assertion for updateSettings
@@ -274,28 +287,28 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
   // Get current dash pattern for preview
   const currentDashPattern = getCurrentDashPattern();
 
-  // ===== COMBOBOX OPTIONS (Enterprise Pattern) =====
+  // ===== SELECT OPTIONS (ADR-001: Radix Select Pattern) =====
 
   // Line Type Options
-  const lineTypeOptions: ComboBoxOption<LineType>[] = Object.entries(LINE_TYPE_LABELS).map(([value, label]) => ({
+  const lineTypeOptions = Object.entries(LINE_TYPE_LABELS).map(([value, label]) => ({
     value: value as LineType,
     label: label as string
   }));
 
   // Line Cap Options
-  const lineCapOptions: ComboBoxOption<LineCapStyle>[] = Object.entries(LINE_CAP_LABELS).map(([value, label]) => ({
+  const lineCapOptions = Object.entries(LINE_CAP_LABELS).map(([value, label]) => ({
     value: value as LineCapStyle,
     label: label as string
   }));
 
   // Line Join Options
-  const lineJoinOptions: ComboBoxOption<LineJoinStyle>[] = Object.entries(LINE_JOIN_LABELS).map(([value, label]) => ({
+  const lineJoinOptions = Object.entries(LINE_JOIN_LABELS).map(([value, label]) => ({
     value: value as LineJoinStyle,
     label: label as string
   }));
 
-  // Template Options (Grouped by category)
-  const templateGroupedOptions: ComboBoxGroupedOptions<string>[] = [
+  // Template Options (Grouped by category) - ADR-001 Radix SelectGroup pattern
+  const templateGroupedOptions = [
     {
       category: 'engineering',
       categoryLabel: TEMPLATE_LABELS.engineering,
@@ -340,9 +353,8 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
       // Toast notification για επιτυχία
       notifications.success(
-        '🏭 Εργοστασιακές ρυθμίσεις επαναφέρθηκαν!',
+        '🏭 Εργοστασιακές ρυθμίσεις επαναφέρθηκαν! Όλες οι ρυθμίσεις γραμμών επέστρεψαν στα πρότυπα ISO 128 & AutoCAD 2024.',
         {
-          description: 'Όλες οι ρυθμίσεις γραμμών επέστρεψαν στα πρότυπα ISO 128 & AutoCAD 2024.',
           duration: 5000
         }
       );
@@ -373,7 +385,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           >
             Επαναφορά
           </button>
-          {resetToFactory && !contextType && (
+          {!contextType && (
             <button
               onClick={handleFactoryResetClick}
               className={`px-3 py-1 text-xs bg-red-700 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded transition-colors font-semibold`}
@@ -421,15 +433,32 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           disabled={!settings.enabled}
         >
           <div className="space-y-4">
-            {/* 🏢 ENTERPRISE: Template Quick Select - ComboBox */}
-            <EnterpriseComboBox
-              label="Προκαθορισμένα Πρότυπα"
-              value={settings.activeTemplate || ''}
-              groupedOptions={templateGroupedOptions}
-              onChange={handleTemplateSelect}
-              placeholder="Επιλέξτε πρότυπο..."
-              getDisplayValue={(value) => value ? `${value} Template` : 'Επιλέξτε πρότυπο...'}
-            />
+            {/* 🏢 ADR-001: Radix Select - Template Quick Select */}
+            <div className="space-y-2">
+              <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+                Προκαθορισμένα Πρότυπα
+              </label>
+              <Select
+                value={settings.activeTemplate || ''}
+                onValueChange={handleTemplateSelect}
+              >
+                <SelectTrigger className={`w-full ${colors.bg.secondary}`}>
+                  <SelectValue placeholder="Επιλέξτε πρότυπο..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {templateGroupedOptions.map((group) => (
+                    <SelectGroup key={group.category}>
+                      <SelectLabel>{group.categoryLabel}</SelectLabel>
+                      {group.options.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </AccordionSection>
 
@@ -444,13 +473,27 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         >
           <div className="space-y-4">
 
-        {/* 🏢 ENTERPRISE: Line Type - ComboBox */}
-        <EnterpriseComboBox
-          label="Τύπος Γραμμής"
-          value={settings.lineType}
-          options={lineTypeOptions}
-          onChange={(value) => settingsUpdater.updateSetting('lineType', value as LineType)}
-        />
+        {/* 🏢 ADR-001: Radix Select - Line Type */}
+        <div className="space-y-2">
+          <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+            Τύπος Γραμμής
+          </label>
+          <Select
+            value={settings.lineType}
+            onValueChange={(value) => settingsUpdater.updateSetting('lineType', value as LineType)}
+          >
+            <SelectTrigger className={`w-full ${colors.bg.secondary}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {lineTypeOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {/* Line Width */}
         <div className="space-y-2">
@@ -744,21 +787,49 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
             </div>
           )}
 
-          {/* 🏢 ENTERPRISE: Line Cap - ComboBox */}
-          <EnterpriseComboBox
-            label="Άκρα Γραμμής"
-            value={settings.lineCap}
-            options={lineCapOptions}
-            onChange={(value) => settingsUpdater.updateSetting('lineCap', value)}
-          />
+          {/* 🏢 ADR-001: Radix Select - Line Cap */}
+          <div className="space-y-2">
+            <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+              Άκρα Γραμμής
+            </label>
+            <Select
+              value={settings.lineCap}
+              onValueChange={(value) => settingsUpdater.updateSetting('lineCap', value)}
+            >
+              <SelectTrigger className={`w-full ${colors.bg.secondary}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {lineCapOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          {/* 🏢 ENTERPRISE: Line Join - ComboBox */}
-          <EnterpriseComboBox
-            label="Συνδέσεις Γραμμής"
-            value={settings.lineJoin}
-            options={lineJoinOptions}
-            onChange={(value) => settingsUpdater.updateSetting('lineJoin', value)}
-          />
+          {/* 🏢 ADR-001: Radix Select - Line Join */}
+          <div className="space-y-2">
+            <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+              Συνδέσεις Γραμμής
+            </label>
+            <Select
+              value={settings.lineJoin}
+              onValueChange={(value) => settingsUpdater.updateSetting('lineJoin', value)}
+            >
+              <SelectTrigger className={`w-full ${colors.bg.secondary}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {lineJoinOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Dash Offset (only for non-solid lines) */}
           {settings.lineType !== 'solid' && (

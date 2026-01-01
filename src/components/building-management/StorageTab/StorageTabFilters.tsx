@@ -4,9 +4,15 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Search, BarChart3 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { StorageType, StorageStatus } from '@/types/storage';
 import { STORAGE_FILTER_LABELS, STORAGE_STATUS_LABELS, STORAGE_TYPE_LABELS } from '@/constants/property-statuses-enterprise';
 
@@ -28,7 +34,6 @@ export function StorageTabFilters({
     onFilterStatusChange,
 }: StorageTabFiltersProps) {
     const iconSizes = useIconSizes();
-    const colors = useSemanticColors();
     return (
         <Card>
             <CardContent className="p-4">
@@ -43,27 +48,29 @@ export function StorageTabFilters({
                         />
                     </div>
 
-                    <select
-                        value={filterType}
-                        onChange={(e) => onFilterTypeChange(e.target.value as StorageType | 'all')}
-                        className={`h-10 px-3 rounded-md border border-input ${colors.bg.primary} text-sm`}
-                    >
-                        <option value="all">{STORAGE_FILTER_LABELS.ALL_TYPES}</option>
-                        <option value="storage">{STORAGE_TYPE_LABELS.storage}</option>
-                        <option value="parking">{STORAGE_TYPE_LABELS.parking}</option>
-                    </select>
+                    <Select value={filterType} onValueChange={(val) => onFilterTypeChange(val as StorageType | 'all')}>
+                        <SelectTrigger>
+                            <SelectValue placeholder={STORAGE_FILTER_LABELS.ALL_TYPES} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">{STORAGE_FILTER_LABELS.ALL_TYPES}</SelectItem>
+                            <SelectItem value="storage">{STORAGE_TYPE_LABELS.storage}</SelectItem>
+                            <SelectItem value="parking">{STORAGE_TYPE_LABELS.parking}</SelectItem>
+                        </SelectContent>
+                    </Select>
 
-                    <select
-                        value={filterStatus}
-                        onChange={(e) => onFilterStatusChange(e.target.value as StorageStatus | 'all')}
-                        className={`h-10 px-3 rounded-md border border-input ${colors.bg.primary} text-sm`}
-                    >
-                        <option value="all">{STORAGE_FILTER_LABELS.ALL_STATUSES}</option>
-                        <option value="available">{STORAGE_STATUS_LABELS.available}</option>
-                        <option value="sold">{STORAGE_STATUS_LABELS.sold}</option>
-                        <option value="reserved">{STORAGE_STATUS_LABELS.reserved}</option>
-                        <option value="maintenance">{STORAGE_STATUS_LABELS.maintenance}</option>
-                    </select>
+                    <Select value={filterStatus} onValueChange={(val) => onFilterStatusChange(val as StorageStatus | 'all')}>
+                        <SelectTrigger>
+                            <SelectValue placeholder={STORAGE_FILTER_LABELS.ALL_STATUSES} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">{STORAGE_FILTER_LABELS.ALL_STATUSES}</SelectItem>
+                            <SelectItem value="available">{STORAGE_STATUS_LABELS.available}</SelectItem>
+                            <SelectItem value="sold">{STORAGE_STATUS_LABELS.sold}</SelectItem>
+                            <SelectItem value="reserved">{STORAGE_STATUS_LABELS.reserved}</SelectItem>
+                            <SelectItem value="maintenance">{STORAGE_STATUS_LABELS.maintenance}</SelectItem>
+                        </SelectContent>
+                    </Select>
 
                     <Button variant="outline" className="flex items-center gap-2">
                         <BarChart3 className={iconSizes.sm} />

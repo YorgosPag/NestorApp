@@ -36,6 +36,63 @@
 
 ---
 
+## 🏛️ ARCHITECTURAL DECISIONS (ADRs)
+
+### 📋 ADR-001: CANONICAL SELECT/DROPDOWN COMPONENT (2026-01-01)
+
+**Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-01
+
+**Context**:
+Εντοπίστηκαν διπλότυπα dropdown components στην εφαρμογή:
+- `Radix Select` (`src/components/ui/select.tsx`) - 550 αναφορές σε 86 αρχεία (95.5%)
+- `EnterpriseComboBox` (`dxf-viewer/.../EnterpriseComboBox.tsx`) - 26 αναφορές σε 7 αρχεία (4.5%)
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **CANONICAL** | `Radix Select` (`@/components/ui/select`) είναι το ΜΟΝΑΔΙΚΟ canonical dropdown/select component |
+| **DEPRECATED** | `EnterpriseComboBox` είναι legacy / υπό απόσυρση |
+| **PROHIBITION** | ❌ Κάθε νέο dropdown **ΑΠΑΓΟΡΕΥΕΤΑΙ** να υλοποιείται εκτός Radix Select |
+| **EXCEPTION** | Μόνο με ρητή αρχιτεκτονική έγκριση |
+
+**Naming Authority**:
+- `Select` = `@/components/ui/select` (Radix Select)
+- Οποιοδήποτε άλλο Select/ComboBox/Dropdown θεωρείται **VIOLATION**
+
+**Enforcement**:
+- Code review: Reject PRs με νέα Select implementations
+- Lint rule (future): Detect imports από deprecated components
+
+**📋 MIGRATION STRATEGY (Gradual Migration - Decision 2026-01-01)**:
+
+| Rule | Description |
+|------|-------------|
+| **❌ NO NEW USAGE** | Καμία νέα χρήση του EnterpriseComboBox |
+| **✅ MIGRATE ON TOUCH** | Όταν αγγίζεται legacy file → υποχρεωτική αντικατάσταση με Radix Select |
+| **🎯 GOAL** | Πλήρης εξαφάνιση του component χωρίς rush |
+
+**📍 Legacy Files (7 total - migrate when touched)**:
+1. `CrosshairAppearanceSettings.tsx`
+2. `CursorSettings.tsx`
+3. `LayersSettings.tsx`
+4. `SelectionSettings.tsx`
+5. `TextSettings.tsx`
+6. `DimensionSettings.tsx`
+7. `EnterpriseComboBox.tsx` (component itself)
+
+**Consequences**:
+- ✅ Ενιαίο dropdown behavior σε όλη την εφαρμογή
+- ✅ Μειωμένο maintenance burden (Radix team maintains)
+- ✅ Consistent accessibility (WAI-ARIA by default)
+- ✅ 40% faster development (industry benchmark)
+
+**References**:
+- Enterprise Best Practices: [SoftKraft](https://www.softkraft.co/enterprise-design-systems/)
+- Google Material Design, Microsoft Fluent UI, Meta Design Systems Platform
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)
@@ -1754,13 +1811,19 @@ SEARCH_UI.INPUT.FOCUS = 'focus-visible:ring-1 focus-visible:ring-blue-500 focus-
 - ✅ ΜΟΝΟ modular `DxfSettingsPanel` (25+ components)
 - ✅ ΜΟΝΟ `useTabNavigation` hook για tab state
 - ✅ ΜΟΝΟ `LazyComponents.tsx` για lazy loading
-- ✅ ΜΟΝΟ **`EnterpriseComboBox`** (2025-10-09) για dropdown selections 🆕
+- ✅ ΜΟΝΟ **`Radix Select`** για dropdown selections 🏢 **CANONICAL** (2026-01-01)
+  - **Path**: `src/components/ui/select.tsx`
+  - **Library**: `@radix-ui/react-select` (3M+ downloads/week, battle-tested)
+  - **Features**: Portal rendering, Auto-positioning, Animation support
+  - **Accessibility**: WAI-ARIA compliant by default, Screen reader support
+  - **Enterprise**: Industry standard (shadcn/ui), maintained by Radix team
+  - **Usage**: 550 references σε 86 αρχεία (95.5% της εφαρμογής)
+- ⚠️ **`EnterpriseComboBox`** - 🚨 **DEPRECATED** (2026-01-01)
   - **Path**: `ui/components/dxf-settings/settings/shared/EnterpriseComboBox.tsx`
-  - **Features**: React Aria ComboBox, Floating UI positioning, Virtualization (react-window@1.8.10)
-  - **Keyboard Nav**: Typeahead search, Arrow navigation, Home/End, Escape to close
-  - **Accessibility**: WAI-ARIA compliant, Screen reader support, Focus management
-  - **Enterprise**: Zero `as any`, Zero `@ts-ignore`, Full TypeScript safety
-  - **Dependencies**: `react-window@1.8.10` (downgraded from v2.2.0 για type compatibility)
+  - **Status**: Legacy component, υπό απόσυρση
+  - **Reason**: Διπλότυπο functionality με Radix Select
+  - **Migration**: Θα αντικατασταθεί από Radix Select σε μελλοντικό migration
+  - **Temporary Use**: ΜΟΝΟ στο DXF Viewer μέχρι migration
 - ✅ ΜΟΝΟ **`EnterpriseAccordion`** (2025-10-09) για collapsible sections 🆕
   - **Path**: `src/components/ui/accordion.tsx`
   - **Features**: Radix UI primitives, Variants (size/style), RTL support, Reduced motion

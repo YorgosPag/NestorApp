@@ -1,8 +1,7 @@
 'use client';
 import React from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-// Enterprise Canvas UI Migration - Phase B
-import { portalComponents } from '@/styles/design-tokens';
+// 🏢 ENTERPRISE: Centralized design tokens for overlay colors
 import { canvasUI } from '@/styles/design-tokens/canvas';
 
 interface MarqueeState {
@@ -35,18 +34,22 @@ export default function SelectionMarqueeOverlay({
   const width = Math.abs(marquee.end.x - marquee.start.x);
   const height = Math.abs(marquee.end.y - marquee.start.y);
 
+  // 🏢 ENTERPRISE: Use centralized selection colors based on marquee kind
+  const selectionColors = marquee.kind === 'window'
+    ? canvasUI.overlay.colors.selection.window
+    : canvasUI.overlay.colors.selection.crossing;
+
   return (
     <div className={`absolute inset-0 pointer-events-none ${className}`}>
       <div
+        className="absolute border border-dashed pointer-events-none"
         style={{
-          position: 'absolute',
-          left: left,
-          top: top,
-          width: width,
-          height: height,
-          border: '1px dashed rgba(0, 123, 255, 0.8)',
-          backgroundColor: marquee.kind === 'window' ? 'rgba(0, 123, 255, 0.1)' : 'rgba(0, 255, 0, 0.1)',
-          pointerEvents: 'none'
+          left,
+          top,
+          width,
+          height,
+          borderColor: selectionColors.border,
+          backgroundColor: selectionColors.background
         }}
       />
     </div>

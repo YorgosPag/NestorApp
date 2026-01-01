@@ -18,6 +18,13 @@ declare namespace GeoJSON {
 // ✅ ENTERPRISE FIX: Use React.RefObject<any> to avoid mapbox-gl type dependency
 type MapboxMap = any;
 import { MapPin, Hexagon, Hand, Trash2, Check, X, Bell, Home, Search, Building2, Settings } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useTranslationLazy } from '../../../i18n/hooks/useTranslationLazy';
 // import type { RealEstatePolygon } from '@geo-alert/core';
 type RealEstatePolygon = {
@@ -665,19 +672,23 @@ export function CitizenDrawingInterface({
             <label className={`block text-sm font-medium ${colors.text.warning} mb-2`}>
               {t('drawingInterfaces.citizen.realEstateSetup.propertyType')}
             </label>
-            <select
+            <Select
               value={realEstateSettings.propertyTypes[0] || 'apartment'}
-              onChange={(e) => setRealEstateSettings(prev => ({
+              onValueChange={(val) => setRealEstateSettings(prev => ({
                 ...prev,
-                propertyTypes: [e.target.value]
+                propertyTypes: [val]
               }))}
-              className={`w-full px-3 py-2 ${quick.input} text-sm`}
             >
-              <option value="apartment">{t('drawingInterfaces.citizen.realEstateSetup.propertyTypes.apartment')}</option>
-              <option value="house">{t('drawingInterfaces.citizen.realEstateSetup.propertyTypes.house')}</option>
-              <option value="land">{t('drawingInterfaces.citizen.realEstateSetup.propertyTypes.land')}</option>
-              <option value="commercial">{t('drawingInterfaces.citizen.realEstateSetup.propertyTypes.commercial')}</option>
-            </select>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="apartment">{t('drawingInterfaces.citizen.realEstateSetup.propertyTypes.apartment')}</SelectItem>
+                <SelectItem value="house">{t('drawingInterfaces.citizen.realEstateSetup.propertyTypes.house')}</SelectItem>
+                <SelectItem value="land">{t('drawingInterfaces.citizen.realEstateSetup.propertyTypes.land')}</SelectItem>
+                <SelectItem value="commercial">{t('drawingInterfaces.citizen.realEstateSetup.propertyTypes.commercial')}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Action Buttons */}

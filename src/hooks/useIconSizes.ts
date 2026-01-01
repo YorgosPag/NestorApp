@@ -76,6 +76,25 @@ export interface UseIconSizesReturn {
 
   // 🔧 Utility method για dynamic access - ENTERPRISE EXTENDED
   readonly getSize: (size: 'xxs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'xl2' | 'xl3' | 'xl4' | 'xl5' | 'xl6' | 'xl8' | 'xl12') => string;
+
+  // ============================================================================
+  // 🏢 NUMERIC SIZES - FOR LUCIDE-REACT & SVG ICONS (size prop)
+  // ============================================================================
+  /** Numeric pixel values for lucide-react and other SVG libraries */
+  readonly numeric: {
+    readonly xxs: number;
+    readonly xs: number;
+    readonly sm: number;
+    readonly md: number;
+    readonly lg: number;
+    readonly xl: number;
+    readonly '2xl': number;
+    readonly xl2: number;
+    readonly xl3: number;
+    readonly xl4: number;
+    readonly xl5: number;
+    readonly xl6: number;
+  };
 }
 
 // ============================================================================
@@ -126,6 +145,11 @@ export function useIconSizes(): UseIconSizesReturn {
       getSize: (size) => {
         return iconSizes[size];
       },
+
+      // ============================================================================
+      // 🏢 NUMERIC SIZES - FOR LUCIDE-REACT & SVG ICONS
+      // ============================================================================
+      numeric: iconSizes.numeric,
 
     } as const;
   }, []); // Empty dependency - componentSizes είναι σταθερό

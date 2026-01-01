@@ -302,7 +302,7 @@ export function LevelPanel({
                       }));
                     }}>
                       <div className="font-medium">{level.name}</div>
-                      <div className={PANEL_TOKENS.TABS.TAB_LABEL.SIZE} style={{opacity: 0.75}}>
+                      <div className={`${PANEL_TOKENS.TABS.TAB_LABEL.SIZE} opacity-75`}>
                         {hasContent ? `${scene.entities.length} στοιχεία` : 'Κενό επίπεδο'}
                       </div>
                     </div>

@@ -7,7 +7,7 @@ import { cancelExtra } from "../constants";
 import { PrimitiveCancel } from "../primitives";
 
 export const AlertDialogCancel = React.forwardRef<
-  React.ElementRef<typeof PrimitiveCancel>,
+  React.ComponentRef<typeof PrimitiveCancel>,
   React.ComponentPropsWithoutRef<typeof PrimitiveCancel> & { asChild?: boolean }
 >(({ className, asChild = false, ...props }, ref) => {
   const Comp = asChild ? Slot : PrimitiveCancel;

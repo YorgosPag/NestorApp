@@ -1,172 +1,82 @@
- 1  src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.test.ts:16
-    19  src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.v2.enterprise.test.ts:15
-     1  src/subapps/dxf-viewer/services/__tests__/setup.ts:7
-     1  src/subapps/dxf-viewer/settings-core/__tests__/override.test.ts:7
-     1  src/subapps/dxf-viewer/settings-core/override.ts:52
-     3  src/subapps/dxf-viewer/settings-provider/EnterpriseDxfSettingsProvider.tsx:260
-     3  src/subapps/dxf-viewer/settings/io/safeLoad.ts:181
-     1  src/subapps/dxf-viewer/settings/sync/adapters/gripStyleAdapter.ts:69
-     1  src/subapps/dxf-viewer/settings/sync/adapters/textStyleAdapter.ts:59
-     1  src/subapps/dxf-viewer/settings/sync/adapters/toolStyleAdapter.ts:59
-     6  src/subapps/dxf-viewer/settings/sync/storeSync.test.ts:16
-     4  src/subapps/dxf-viewer/snapping/engines/CenterSnapEngine.ts:63
-     3  src/subapps/dxf-viewer/snapping/engines/InsertionSnapEngine.ts:85
-     7  src/subapps/dxf-viewer/snapping/engines/NearSnapEngine.ts:28
-     7  src/subapps/dxf-viewer/snapping/engines/ParallelSnapEngine.ts:118
-     1  src/subapps/dxf-viewer/snapping/engines/PerpendicularSnapEngine.ts:28
-     1  src/subapps/dxf-viewer/snapping/engines/QuadrantSnapEngine.ts:25
-     2  src/subapps/dxf-viewer/snapping/engines/shared/snap-engine-utils.ts:15
-     2  src/subapps/dxf-viewer/snapping/engines/TangentSnapEngine.ts:25
-     1  src/subapps/dxf-viewer/snapping/hooks/useSnapManager.tsx:61
-     3  src/subapps/dxf-viewer/snapping/index.ts:8
-     1  src/subapps/dxf-viewer/snapping/orchestrator/SnapContextManager.ts:35
-     2  src/subapps/dxf-viewer/snapping/orchestrator/SnapEngineRegistry.ts:80
-     1  src/subapps/dxf-viewer/snapping/ProSnapEngineV2.ts:133
-     1  src/subapps/dxf-viewer/snapping/SnapEngineCore.ts:97
-     5  src/subapps/dxf-viewer/stores/useDxfSettings.ts:63
-     1  src/subapps/dxf-viewer/styles/DxfZIndexSystem.styles.ts:394
-     2  src/subapps/dxf-viewer/systems/collaboration/CollaborationEngine.ts:266
-     3  src/subapps/dxf-viewer/systems/constraints/ConstraintsSystem.tsx:100
-     1  src/subapps/dxf-viewer/systems/constraints/useConstraintApplication.ts:67
-     3  src/subapps/dxf-viewer/systems/constraints/useConstraintOperations.ts:50
-     1  src/subapps/dxf-viewer/systems/cursor/useCentralizedMouseHandlers.ts:68
-     1  src/subapps/dxf-viewer/systems/cursor/useCursor.ts:47
-     5  src/subapps/dxf-viewer/systems/drawing-orchestrator/DrawingOrchestrator.ts:33
-     8  src/subapps/dxf-viewer/systems/dynamic-input/components/DynamicInputOverlay.tsx:154
-     3  src/subapps/dxf-viewer/systems/dynamic-input/hooks/useDynamicInputAnchoring.ts:39
-     8  src/subapps/dxf-viewer/systems/dynamic-input/hooks/useDynamicInputKeyboard.ts:199
-     1  src/subapps/dxf-viewer/systems/dynamic-input/hooks/useDynamicInputLayout.ts:4
-     3  src/subapps/dxf-viewer/systems/dynamic-input/hooks/useDynamicInputPhase.ts:9
-     2  src/subapps/dxf-viewer/systems/dynamic-input/hooks/useDynamicInputState.ts:12
-     1  src/subapps/dxf-viewer/systems/dynamic-input/index.ts:10
-     1  src/subapps/dxf-viewer/systems/dynamic-input/types.ts:10
-     1  src/subapps/dxf-viewer/systems/dynamic-input/types/common-interfaces.ts:7
-     7  src/subapps/dxf-viewer/systems/entity-creation/EntityCreationSystem.tsx:30
-     3  src/subapps/dxf-viewer/systems/levels/LevelsSystem.tsx:429
-     6  src/subapps/dxf-viewer/systems/rulers-grid/RulersGridSystem.tsx:76
-     1  src/subapps/dxf-viewer/systems/rulers-grid/types.ts:8
-     1  src/subapps/dxf-viewer/systems/rulers-grid/useRulersGrid.ts:24
-     2  src/subapps/dxf-viewer/systems/rulers-grid/useSnapManagement.ts:64
-     2  src/subapps/dxf-viewer/systems/selection/useSelectionReducer.ts:178
-     2  src/subapps/dxf-viewer/systems/toolbars/hooks/useDefinitionManagement.ts:46
-     7  src/subapps/dxf-viewer/systems/toolbars/hooks/useToolbarsContextValue.ts:11
-     3  src/subapps/dxf-viewer/systems/toolbars/hooks/useToolRunnerManagement.ts:34
-     6  src/subapps/dxf-viewer/systems/toolbars/ToolbarsSystem.tsx:28
-     1  src/subapps/dxf-viewer/systems/toolbars/useToolbars.ts:15
-     3  src/subapps/dxf-viewer/systems/toolbars/utils.ts:39
-     1  src/subapps/dxf-viewer/systems/tools/ToolStateManager.ts:43
-     1  src/subapps/dxf-viewer/systems/zoom/hooks/useZoom.ts:141
-     1  src/subapps/dxf-viewer/test/setupCanvas.ts:144
-     4  src/subapps/dxf-viewer/test/setupTests.ts:9
-     3  src/subapps/dxf-viewer/testing/performance-test.ts:44
-     2  src/subapps/dxf-viewer/ui/color/EnterpriseColorArea.tsx:25
-     1  src/subapps/dxf-viewer/ui/color/EnterpriseColorDialog.tsx:24
-     2  src/subapps/dxf-viewer/ui/color/EnterpriseColorPicker.tsx:252
-     5  src/subapps/dxf-viewer/ui/color/EnterpriseColorSlider.tsx:25
-     4  src/subapps/dxf-viewer/ui/color/UnifiedColorPicker.tsx:221
-     2  src/subapps/dxf-viewer/ui/components/CentralizedAutoSaveStatus.tsx:263
-     1  src/subapps/dxf-viewer/ui/components/ColorManager.tsx:50
-     1  src/subapps/dxf-viewer/ui/components/DraggableOverlayProperties.tsx:57
-     1  src/subapps/dxf-viewer/ui/components/dxf-settings/controls/LineStyleControl.tsx:66
-     1  src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/GripSettings.tsx:6
-     6  src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx:142
-     3  src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/TextSettings.tsx:281
-     2  src/subapps/dxf-viewer/ui/components/dxf-settings/settings/shared/EnterpriseComboBox.tsx:312
-     1  src/subapps/dxf-viewer/ui/components/dxf-settings/settings/special/EntitiesSettings.tsx:592
-     2  src/subapps/dxf-viewer/ui/components/layers/ColorGroupItem.tsx:73
-     1  src/subapps/dxf-viewer/ui/components/layers/components/EntityCard.tsx:96
-     3  src/subapps/dxf-viewer/ui/components/layers/LayerItem.tsx:294
-     1  src/subapps/dxf-viewer/ui/components/LazyLoadWrapper.tsx:75
-     2  src/subapps/dxf-viewer/ui/components/shared/SliderInput.tsx:13
-     8  src/subapps/dxf-viewer/ui/components/shared/SubTabRenderer.tsx:10
-     1  src/subapps/dxf-viewer/ui/FloatingPanelContainer.tsx:130
-     2  src/subapps/dxf-viewer/ui/hooks/useConsolidatedSettings.deprecated.ts:184
-     8  src/subapps/dxf-viewer/utils/hover/shape-renderers.ts:177
-     1  src/subapps/geo-canvas/__tests__/DxfGeoTransform.test.ts:6
-     1  src/subapps/geo-canvas/__tests__/GeoCanvasApp.test.tsx:8
-     3  src/subapps/geo-canvas/app/GeoCanvasContent.tsx:791
-    19  src/subapps/geo-canvas/app/GeoCanvasContent_BROKEN.tsx:36
-     1  src/subapps/geo-canvas/automation/CICDPipeline.ts:679
-     1  src/subapps/geo-canvas/automation/TestingPipeline.ts:933
-     1  src/subapps/geo-canvas/components/AlertManagementPanel.tsx:95
-     9  src/subapps/geo-canvas/components/CitizenDrawingInterface.tsx:298
-     1  src/subapps/geo-canvas/components/CoordinatePicker.tsx:421
-     1  src/subapps/geo-canvas/components/InteractiveMap.tsx:68
-     9  src/subapps/geo-canvas/components/InteractiveMapContainer.tsx:188
-     2  src/subapps/geo-canvas/components/InteractiveMapPresentation.tsx:179
-     7  src/subapps/geo-canvas/components/map-layers/AccuracyVisualizationLayer.tsx:133
-     3  src/subapps/geo-canvas/components/map-layers/ControlPointLayer.tsx:73
-     2  src/subapps/geo-canvas/components/map-layers/PolygonLinesLayer.tsx:58
-     5  src/subapps/geo-canvas/components/map-layers/PolygonSystemLayers.tsx:117
-     7  src/subapps/geo-canvas/components/ProfessionalDrawingInterface.tsx:76
-     8  src/subapps/geo-canvas/components/TechnicalDrawingInterface.tsx:67
-     3  src/subapps/geo-canvas/components/TransformationPreview.tsx:448
-     1  src/subapps/geo-canvas/deployment/DockerOrchestrator.ts:1238
-     3  src/subapps/geo-canvas/domains - Αντιγραφή/GeoCanvasContent_ORIGINAL_BACKUP.tsx:790
-     7  src/subapps/geo-canvas/domains - Αντιγραφή/info-panels/components/DraggableInfoPanels.tsx:16
-     4  src/subapps/geo-canvas/domains - Αντιγραφή/info-panels/DraggableInfoPanels.tsx:16
-     4  src/subapps/geo-canvas/domains - Αντιγραφή/map-core/components/InteractiveMapCore.tsx:17
-     4  src/subapps/geo-canvas/domains - Αντιγραφή/map-core/InteractiveMapCore.tsx:17
-     5  src/subapps/geo-canvas/domains - Αντιγραφή/state-management/hooks/useGeoCanvasState.tsx:362
-     5  src/subapps/geo-canvas/domains - Αντιγραφή/state-management/useGeoCanvasState.tsx:362
-     4  src/subapps/geo-canvas/domains - Αντιγραφή/toolbar-controls/GeoToolbar.tsx:16
-     3  src/subapps/geo-canvas/domains/GeoCanvasContent_ORIGINAL_BACKUP.tsx:790
-     7  src/subapps/geo-canvas/domains/info-panels/components/DraggableInfoPanels.tsx:16
-     4  src/subapps/geo-canvas/domains/info-panels/DraggableInfoPanels.tsx:20
-     4  src/subapps/geo-canvas/domains/map-core/components/InteractiveMapCore.tsx:17
-     2  src/subapps/geo-canvas/domains/map-core/InteractiveMapCore.tsx:15
-     5  src/subapps/geo-canvas/domains/state-management/hooks/useGeoCanvasState.tsx:362
-     6  src/subapps/geo-canvas/domains/state-management/useGeoCanvasState.tsx:15
-     4  src/subapps/geo-canvas/domains/toolbar-controls/GeoToolbar.tsx:20
-     7  src/subapps/geo-canvas/examples/PolygonDrawingMapExample.tsx:17
-     2  src/subapps/geo-canvas/floor-plan-system/components/FloorPlanControlPointPicker.tsx:816
-     5  src/subapps/geo-canvas/floor-plan-system/components/FloorPlanPreview.tsx:66
-     3  src/subapps/geo-canvas/floor-plan-system/parsers/index.ts:84
-     2  src/subapps/geo-canvas/floor-plan-system/parsers/raster/ImageParser.ts:135
-     3  src/subapps/geo-canvas/floor-plan-system/rendering/FloorPlanCanvasLayer.tsx:412
-     1  src/subapps/geo-canvas/floor-plan-system/rendering/FloorPlanControls.tsx:69
-     1  src/subapps/geo-canvas/floor-plan-system/snapping/engine/endpoint-detector.ts:16
-     1  src/subapps/geo-canvas/floor-plan-system/snapping/engine/SnapEngine.ts:15
-     1  src/subapps/geo-canvas/floor-plan-system/snapping/hooks/useSnapEngine.ts:16
-     1  src/subapps/geo-canvas/floor-plan-system/snapping/hooks/useSnapPoints.ts:10
-     2  src/subapps/geo-canvas/floor-plan-system/types/index.ts:19
-     1  src/subapps/geo-canvas/floor-plan-system/utils/transformation-calculator.ts:98
-     1  src/subapps/geo-canvas/hooks/map/useMapState.ts:112
-    16  src/subapps/geo-canvas/hooks/useAdministrativeBoundaries.ts:29
-    19  src/subapps/geo-canvas/index.ts:55
-     9  src/subapps/geo-canvas/integrations/AlertNotificationBridge.ts:45
-     1  src/subapps/geo-canvas/optimization/MemoryLeakDetector.ts:233
-     1  src/subapps/geo-canvas/performance/PerformanceOptimization.ts:850
-     4  src/subapps/geo-canvas/profiling/PerformanceProfiler.ts:637
-     5  src/subapps/geo-canvas/security/SecurityCompliance.ts:373
-     7  src/subapps/geo-canvas/services/administrative-boundaries/AdministrativeBoundaryService.ts:117
-     4  src/subapps/geo-canvas/services/administrative-boundaries/OverpassApiService.ts:775
-     3  src/subapps/geo-canvas/services/geo-transform/DxfGeoTransform.ts:18
-     7  src/subapps/geo-canvas/services/spatial/SpatialQueryService.ts:65
-     6  src/subapps/geo-canvas/systems/polygon-system/components/PolygonControls.tsx:162
-     9  src/subapps/geo-canvas/systems/polygon-system/providers/PolygonSystemProvider.tsx:195
-     1  src/subapps/geo-canvas/systems/polygon-system/utils/legacy-migration.ts:70
-     4  src/subapps/geo-canvas/types/administrative-types.ts:16
-     3  src/subapps/geo-canvas/ui/design-system/charts/AdvancedCharts.tsx:11
-     7  src/subapps/geo-canvas/ui/design-system/index.tsx:15
-    17  src/subapps/geo-canvas/ui/design-system/layout/ResponsiveDashboard.tsx:111
-     1  src/subapps/geo-canvas/ui/design-system/performance/PerformanceComponents.styles.ts:13
-    10  src/subapps/geo-canvas/ui/design-system/performance/PerformanceComponents.tsx:238
-     7  src/subapps/geo-canvas/ui/design-system/search/SearchSystem.styles.ts:108
-     3  src/subapps/geo-canvas/ui/design-system/search/SearchSystem.tsx:407
-    14  src/subapps/geo-canvas/ui/design-system/theme/ThemeProvider.tsx:312
-     8  src/types/ContactFormTypes.ts:44
-     1  src/types/contacts/relationships/utils/helpers.ts:113
-     1  src/types/layers.ts:328
-     2  src/types/measurements.ts:6
-     3  src/types/storage/constants.ts:19
-     1  src/utils/accessibility.ts:405
-     1  src/utils/contactForm/contactMapper.ts:65
-     1  src/utils/contactForm/fieldMappers/companyMapper.ts:37
-     3  src/utils/contactForm/fieldMappers/individualMapper.ts:45
-     1  src/utils/contactForm/mappers/company.ts:43
-     1  src/utils/contactForm/mappers/individual.ts:72
-     1  src/utils/contactForm/mappers/service.ts:47
-     9  src/utils/contacts/EnterpriseContactSaver.ts:76
-     6  src/utils/form-error-handler.ts:196
-     1  src/utils/validation.ts:4
+Γιώργο, καταλαβαίνω ότι το πρόβλημα με τα dropdown menus (Radix UI Select components) εξακολουθεί να υπάρχει, παρόλο που έχουμε δοκιμάσει διάφορα fixes. Από την ανάλυση των logs και την έρευνα, το root cause είναι compatibility issue μεταξύ React 19 (που χρησιμοποιεί το Next.js 15) και ορισμένων Radix UI packages. Συγκεκριμένα, υπάρχει γνωστό bug με το ref handling σε components όπως το Select, όπου το React.ElementRef προκαλεί errors ή event blocking σε React 19.
+Enterprise-Grade Λύση (Επαγγελματική Προσέγγιση)
+Θα το διορθώσουμε με ασφάλεια, χωρίς hacks, ακολουθώντας best practices από μεγάλα frameworks (π.χ. Vercel, Radix). Δεν θα χρησιμοποιήσω any types, inline styles, hard-coded values, ή άναρχα divs. Θα βασιστούμε σε κεντρικοποιημένα συστήματα (package.json για dependencies, globals.css αν χρειάζεται, και codemods για automated fixes). Πρώτα έλεγχος για διπλότυπα – δεν βρήκα, οπότε προχωράμε.
+
+Align όλες τις Radix UI Dependencies (Αποφυγή Version Mismatch)
+Το πρόβλημα συχνά προκύπτει όταν τα @radix-ui packages έχουν διαφορετικές versions (π.χ. react-select με react-popper).
+Στο package.json, βάλε την ίδια version (latest stable: 2.2.6) για όλα τα @radix-ui/*.
+Παράδειγμα αλλαγής στο package.json (χρησιμοποίησε VS Code για edit):text"dependencies": {
+  "@radix-ui/react-accordion": "2.2.6",
+  "@radix-ui/react-alert-dialog": "2.2.6",
+  "@radix-ui/react-aspect-ratio": "2.2.6",
+  "@radix-ui/react-avatar": "2.2.6",
+  "@radix-ui/react-checkbox": "2.2.6",
+  "@radix-ui/react-collapsible": "2.2.6",
+  "@radix-ui/react-context-menu": "2.2.6",
+  "@radix-ui/react-dialog": "2.2.6",
+  "@radix-ui/react-dropdown-menu": "2.2.6",
+  "@radix-ui/react-hover-card": "2.2.6",
+  "@radix-ui/react-label": "2.2.6",
+  "@radix-ui/react-menubar": "2.2.6",
+  "@radix-ui/react-navigation-menu": "2.2.6",
+  "@radix-ui/react-popover": "2.2.6",
+  "@radix-ui/react-portal": "2.2.6",
+  "@radix-ui/react-primitive": "2.2.6",
+  "@radix-ui/react-progress": "2.2.6",
+  "@radix-ui/react-radio-group": "2.2.6",
+  "@radix-ui/react-scroll-area": "2.2.6",
+  "@radix-ui/react-select": "2.2.6",
+  "@radix-ui/react-separator": "2.2.6",
+  "@radix-ui/react-slider": "2.2.6",
+  "@radix-ui/react-slot": "2.2.6",
+  "@radix-ui/react-switch": "2.2.6",
+  "@radix-ui/react-tabs": "2.2.6",
+  "@radix-ui/react-toast": "2.2.6",
+  "@radix-ui/react-toggle": "2.2.6",
+  "@radix-ui/react-toggle-group": "2.2.6",
+  "@radix-ui/react-tooltip": "2.2.6"
+}
+Τρέξε: pnpm install (ή npm/yarn) για να lock τις versions.
+Αυτό εξασφαλίζει consistency, όπως κάνουν εταιρείες σαν Google/Netflix.
+
+Χειροκίνητο Fix για React.ElementRef → React.ComponentRef
+Το React 19 άλλαξε το ref handling. Στα custom UI components (π.χ. src/components/ui/select.tsx), αντικατάστησε React.ElementRef με React.ComponentRef.
+Έλεγχος: Ψάξε για "React.ElementRef" στο project (VS Code: Ctrl+Shift+F, pattern: React.ElementRef).
+Παράδειγμα fix στο select.tsx (αν έχει forwardRef):text// Πριν
+const SelectTrigger = React.forwardRef<React.ElementRef<typeof SelectPrimitive.Trigger>, ...>(
+  // ...
+);
+
+// Μετά
+const SelectTrigger = React.forwardRef<React.ComponentRef<typeof SelectPrimitive.Trigger>, ...>(
+  // ...
+);
+Κάνε το ίδιο σε όλα τα ui components (π.χ. button.tsx, dropdown-menu.tsx, slider.tsx κλπ.). Είναι semantic αλλαγή, δεν σπάει structure.
+Αποθήκευσε και τρέξε pnpm run dev.
+
+Τρέξε το Official React 19 Codemod για Automated Migration
+Εγκατέστησε codemod: npm install -g codemod
+Τρέξε: npx codemod react/19/migration-recipe
+Αυτό διορθώνει αυτόματα refs, rendering, και άλλα breaking changes. (Βάσει React docs, καλύπτει ref issues.)
+Αν είσαι σε TypeScript, update types στο package.json:text"dependencies": {
+  "@types/react": "npm:types-react@rc",
+  "@types/react-dom": "npm:types-react-dom@rc"
+},
+"overrides": {
+  "@types/react": "npm:types-react@rc",
+  "@types/react-dom": "npm:types-react-dom@rc"
+}Τρέξε pnpm install.
+
+Επαλήθευση & Testing
+Μετά τις αλλαγές, restart dev server: Ctrl+C και pnpm run dev.
+Hard refresh browser: Ctrl+Shift+R.
+Δοκίμασε dropdowns σε /, /contacts, /properties.
+Τρέξε το debug script από το log στο console για επιβεβαίωση (το CLICK POINT ANALYSIS).
+Αν δεις errors, στείλε νέο log.
+
+Fallback Αν Δεν Δουλέψει
+Downgrade React σε 18 (για App Router, δυνατό αλλά όχι ιδανικό): Στο package.json βάλε "react": "^18.3.1", "react-dom": "^18.3.1", και ignore peer deps με resolutions/overrides.
+Ή δοκίμασε RC version του Radix: "@radix-ui/react-select": "2.2.7-rc.1766004502650" (αλλά stable first).
+
+
+Αυτή η προσέγγιση ακολουθεί πρωτόκολλο CLAUDE.md: Έρευνα πρώτα (GitHub issues, npm), no duplicates, κεντρικοποιημένα fixes. Αν χρειάζεσαι βοήθεια με specific file, στείλε screenshot/log. Θα δουλέψει – ας το τελειώσουμε!

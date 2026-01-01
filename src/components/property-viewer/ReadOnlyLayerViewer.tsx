@@ -125,11 +125,8 @@ function ReadOnlyLayerItem({
                 <Tooltip>
                   <TooltipTrigger>
                     <div
-                      className={`${iconSizes.xs} flex-shrink-0`}
-                      style={{
-                        ...layoutUtilities.dxf.colors.backgroundColor(categoryInfo.color),
-                        borderRadius: '50%'
-                      }}
+                      className={`${iconSizes.xs} flex-shrink-0 rounded-full`}
+                      style={layoutUtilities.dxf.colors.backgroundColor(categoryInfo.color)}
                     />
                   </TooltipTrigger>
                   <TooltipContent>
@@ -490,11 +487,8 @@ export function ReadOnlyLayerViewer({
                     <SelectItem key={category} value={category}>
                       <div className="flex items-center gap-2">
                         <div
-                          className={`${iconSizes.xs}`}
-                          style={{
-                            ...layoutUtilities.dxf.colors.backgroundColor(getCategoryInfo(category).color),
-                            borderRadius: '50%'
-                          }}
+                          className={`${iconSizes.xs} rounded-full`}
+                          style={layoutUtilities.dxf.colors.backgroundColor(getCategoryInfo(category).color)}
                         />
                         {getCategoryInfo(category).name}
                       </div>
@@ -544,11 +538,8 @@ export function ReadOnlyLayerViewer({
                     {category !== 'other' && getCategoryInfo(category) && (
                       <>
                         <div
-                          className={`${iconSizes.xs}`}
-                          style={{
-                            ...layoutUtilities.dxf.colors.backgroundColor(getCategoryInfo(category).color),
-                            borderRadius: '50%'
-                          }}
+                          className={`${iconSizes.xs} rounded-full`}
+                          style={layoutUtilities.dxf.colors.backgroundColor(getCategoryInfo(category).color)}
                         />
                         {getCategoryInfo(category).name}
                       </>

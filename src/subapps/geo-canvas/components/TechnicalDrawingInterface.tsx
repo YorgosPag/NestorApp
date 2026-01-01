@@ -2,6 +2,13 @@
 
 import React, { useState, useCallback } from 'react';
 import { HardHat, Ruler, FileText, ExternalLink, Settings, Database, AlertTriangle, Bell, Monitor, Zap, X, Home, Building, Sparkles } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
 import { useCentralizedPolygonSystem } from '../systems/polygon-system';
 import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
@@ -405,37 +412,45 @@ export function TechnicalDrawingInterface({
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   {t('drawingInterfaces.technical.automatedAlerts.detectionSensitivity')}
                 </label>
-                <select
+                <Select
                   value={alertConfiguration.sensitivity}
-                  onChange={(e) => setAlertConfiguration(prev => ({
+                  onValueChange={(val) => setAlertConfiguration(prev => ({
                     ...prev,
-                    sensitivity: e.target.value as 'low' | 'medium' | 'high'
+                    sensitivity: val as 'low' | 'medium' | 'high'
                   }))}
-                  className={`w-full px-3 py-2 ${quick.input} text-sm`}
                 >
-                  <option value="high">{t('drawingInterfaces.technical.automatedAlerts.sensitivity.high')}</option>
-                  <option value="medium">{t('drawingInterfaces.technical.automatedAlerts.sensitivity.medium')}</option>
-                  <option value="low">{t('drawingInterfaces.technical.automatedAlerts.sensitivity.low')}</option>
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="high">{t('drawingInterfaces.technical.automatedAlerts.sensitivity.high')}</SelectItem>
+                    <SelectItem value="medium">{t('drawingInterfaces.technical.automatedAlerts.sensitivity.medium')}</SelectItem>
+                    <SelectItem value="low">{t('drawingInterfaces.technical.automatedAlerts.sensitivity.low')}</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   {t('drawingInterfaces.technical.automatedAlerts.monitoringInterval')}
                 </label>
-                <select
-                  value={alertConfiguration.monitoringInterval}
-                  onChange={(e) => setAlertConfiguration(prev => ({
+                <Select
+                  value={String(alertConfiguration.monitoringInterval)}
+                  onValueChange={(val) => setAlertConfiguration(prev => ({
                     ...prev,
-                    monitoringInterval: Number(e.target.value)
+                    monitoringInterval: Number(val)
                   }))}
-                  className={`w-full px-3 py-2 ${quick.input} text-sm`}
                 >
-                  <option value={5}>{t('drawingInterfaces.technical.automatedAlerts.intervals.realtime')}</option>
-                  <option value={15}>{t('drawingInterfaces.technical.automatedAlerts.intervals.frequent')}</option>
-                  <option value={30}>{t('drawingInterfaces.technical.automatedAlerts.intervals.standard')}</option>
-                  <option value={60}>{t('drawingInterfaces.technical.automatedAlerts.intervals.hourly')}</option>
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">{t('drawingInterfaces.technical.automatedAlerts.intervals.realtime')}</SelectItem>
+                    <SelectItem value="15">{t('drawingInterfaces.technical.automatedAlerts.intervals.frequent')}</SelectItem>
+                    <SelectItem value="30">{t('drawingInterfaces.technical.automatedAlerts.intervals.standard')}</SelectItem>
+                    <SelectItem value="60">{t('drawingInterfaces.technical.automatedAlerts.intervals.hourly')}</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

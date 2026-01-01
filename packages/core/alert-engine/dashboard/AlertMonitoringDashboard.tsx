@@ -18,11 +18,11 @@ import { useDashboard } from './useDashboard';
 import { DashboardMetrics, RealTimeEvent } from './DashboardService';
 import {
   colors,
-  dashboardComponents,
   typography,
   spacing,
   animation as animations
 } from '../../../../src/styles/design-tokens';
+import { dashboardComponents } from './AlertMonitoringDashboard.styles';
 import { useSemanticColors } from '../../../../src/hooks/useSemanticColors';
 import { formatDateTime, formatTime } from '../../../../src/lib/intl-utils';
 import {

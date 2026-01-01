@@ -56,6 +56,38 @@ coverage/
 # build & cache
 # env & misc
 
-nul
-*/nul
+# =============================================================================
+# WINDOWS RESERVED FILENAMES - ENTERPRISE PROTECTION
+# These names are reserved by Windows and cause issues with ZIP/backup tools
+# Reference: https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
+# =============================================================================
+# Device names (case-insensitive, with or without extension)
+[Cc][Oo][Nn]
+[Pp][Rr][Nn]
+[Aa][Uu][Xx]
+[Nn][Uu][Ll]
+[Cc][Oo][Mm][0-9]
+[Ll][Pp][Tt][0-9]
+# Also match in subdirectories
+**/[Cc][Oo][Nn]
+**/[Pp][Rr][Nn]
+**/[Aa][Uu][Xx]
+**/[Nn][Uu][Ll]
+**/[Cc][Oo][Mm][0-9]
+**/[Ll][Pp][Tt][0-9]
+# With any extension
+**/[Cc][Oo][Nn].*
+**/[Pp][Rr][Nn].*
+**/[Aa][Uu][Xx].*
+**/[Nn][Uu][Ll].*
+**/[Cc][Oo][Mm][0-9].*
+**/[Ll][Pp][Tt][0-9].*
+
+# =============================================================================
+# BACKUP & TEMPORARY FILES
+# =============================================================================
 *.zip
+*.tar.gz
+*.bak
+*.backup
+BACKUP_SUMMARY.json

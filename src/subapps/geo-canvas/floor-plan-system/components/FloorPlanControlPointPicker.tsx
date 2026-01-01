@@ -416,7 +416,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
         onMouseDown={handleMouseDown}
         style={draggablePanelHandle(isDragging)}
       >
-        <span><MapPin className={iconSizes.sm} style={{ display: 'inline-block', marginRight: '6px' }} />{t('floorPlanControlPoints.title')}</span>
+        <span><MapPin className={`${iconSizes.sm} inline-block mr-1.5`} />{t('floorPlanControlPoints.title')}</span>
         <span style={layoutUtilities.cssVars.helpText.small}>✋ {t('floorPlanControlPoints.dragHandle')}</span>
       </div>
 
@@ -458,12 +458,12 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
             {/* Instructions */}
             <div className={`mb-4 p-3 ${colors.bg.info} ${quick.card} ${getStatusBorder('info')}`}>
               <p className={`text-sm ${colors.text.info}`}>
-                <Info className={iconSizes.xs} style={{ display: 'inline-block', marginRight: '6px' }} />
+                <Info className={`${iconSizes.xs} inline-block mr-1.5`} />
                 {getInstructions()}
               </p>
               {tempFloorPlan && (
                 <p className={`text-xs ${colors.text.info} mt-2`}>
-                  <CheckCircle className={iconSizes.xs} style={{ display: 'inline-block', marginRight: '6px' }} />
+                  <CheckCircle className={`${iconSizes.xs} inline-block mr-1.5`} />
                   Floor plan point selected: ({tempFloorPlan.x.toFixed(2)}, {tempFloorPlan.y.toFixed(2)})
                 </p>
               )}
@@ -596,7 +596,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                 className={`w-full px-4 py-2 ${colors.bg.success} text-white rounded ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors text-sm font-medium`}
                 disabled={!manualInput.dxfX || !manualInput.dxfY || !manualInput.geoLng || !manualInput.geoLat}
               >
-                <CheckCircle className={iconSizes.xs} style={{ display: 'inline-block', marginRight: '6px' }} />
+                <CheckCircle className={`${iconSizes.xs} inline-block mr-1.5`} />
                 {t('floorPlanControlPoints.manualInput.addPoint')}
               </button>
             </div>
@@ -663,12 +663,12 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
             </span>
             {hasMinPoints ? (
               <span className={`text-sm ${colors.text.success} font-medium`}>
-                <CheckCircle className={iconSizes.xs} style={{ display: 'inline-block', marginRight: '6px' }} />
+                <CheckCircle className={`${iconSizes.xs} inline-block mr-1.5`} />
                 {t('floorPlanControlPoints.status.readyForGeoreferencing')}
               </span>
             ) : (
               <span className={`text-sm ${colors.text.warning} font-medium`}>
-                <AlertTriangle className={iconSizes.xs} style={{ display: 'inline-block', marginRight: '6px' }} />
+                <AlertTriangle className={`${iconSizes.xs} inline-block mr-1.5`} />
                 {t('floorPlanControlPoints.status.needMorePoints', {
                   count: 3 - points.length,
                   plural: 3 - points.length !== 1 ? 's' : ''
@@ -826,7 +826,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
         {points.length === 0 && (
           <div className={`text-center py-8 ${colors.text.subtle}`}>
             <div className="mb-2">
-              <MapPin className="text-4xl" style={{ display: 'block', margin: '0 auto' }} />
+              <MapPin className="text-4xl block mx-auto" />
             </div>
             <p className="text-sm">{t('floorPlanControlPoints.list.noPoints')}</p>
             <p className="text-xs mt-1">{t('floorPlanControlPoints.instructions.idle')}</p>

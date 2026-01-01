@@ -6,19 +6,40 @@
 
 ---
 
+## 🏛️ **ARCHITECTURAL DECISIONS**
+
+### 📋 ADR-001: CANONICAL SELECT COMPONENT (2026-01-01)
+
+| Rule | Description |
+|------|-------------|
+| **✅ CANONICAL** | `@/components/ui/select` (Radix Select) - ΜΟΝΑΔΙΚΟ dropdown component |
+| **❌ DEPRECATED** | `EnterpriseComboBox` - Υπό απόσυρση |
+| **🚫 PROHIBITION** | Νέα Select implementations ΑΠΑΓΟΡΕΥΟΝΤΑΙ |
+
+```typescript
+// ✅ ΣΩΣΤΟ - Χρησιμοποίησε Radix Select
+import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select';
+
+// ❌ ΛΑΘΟΣ - ΜΗΝ χρησιμοποιείς EnterpriseComboBox (deprecated)
+// import { EnterpriseComboBox } from '...'; // DEPRECATED
+```
+
+---
+
 ## 📊 **UI SYSTEMS ARCHITECTURE**
 
 ### 🏆 **ENTERPRISE METRICS**
 
 | System | Lines | Files | Status | Key Features |
 |--------|-------|-------|--------|--------------|
+| **Select/Dropdown** | 184 | 1 file | ✅ **CANONICAL** | Radix UI, WAI-ARIA, Battle-tested |
 | **Photo System** | 500+ | Modular config | ✅ **Microsoft Standard** | Media management & display |
 | **Enterprise Headers** | 800+ | 8 modules | ✅ **Complete** | Modular header architecture |
 | **Search System** | 200+ | 5 components | ✅ **Complete** | Unified search experience |
 | **DXF Viewer** | 1,000+ | 7 configs | ✅ **AutoCAD Class** | CAD interface systems |
 | **Icon System** | 150+ | 1 file | ✅ **Standardized** | Icon size management |
 
-**🏆 TOTAL**: **5 systems** | **2,650+ lines** | **Enterprise-grade** | **Accessibility compliant**
+**🏆 TOTAL**: **6 systems** | **2,834+ lines** | **Enterprise-grade** | **Accessibility compliant**
 
 ---
 
@@ -349,7 +370,7 @@ export function EnterpriseUIComponent({ className = '' }: Props) {
 
 ---
 
-> **📅 Last Updated**: 2025-12-28
+> **📅 Last Updated**: 2026-01-01
 >
 > **👥 Authors**: Γιώργος Παγώνης + Claude Code (Anthropic AI)
 >

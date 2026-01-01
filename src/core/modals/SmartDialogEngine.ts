@@ -700,23 +700,25 @@ export const smartDialogEngine = SmartDialogEngine.getInstance();
  * Αυτή η function δημιουργεί πραγματικά React components χρησιμοποιώντας
  * το Smart Dialog Engine configuration system.
  */
+interface SmartDialogProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onSubmit?: () => Promise<void> | void;
+  [key: string]: unknown;
+}
+
 export function createSmartDialog(config: {
   entityType: DialogEntityType;
   operationType: DialogOperationType;
-  props?: any;
-}) {
-  const { entityType, operationType, props: configProps = {} } = config;
+  props?: SmartDialogProps;
+}): React.ReactElement {
+  const { entityType, operationType, props = {} } = config;
 
-  // Return a functional component instead of React element
-  return function SmartDialogComponent(overrideProps: any = {}) {
-    // Merge config props with override props
-    const props = { ...configProps, ...overrideProps };
+  // Generate configuration using Smart Dialog Engine
+  const dialogConfig = smartDialogEngine.createDialogConfiguration(entityType, operationType);
 
-    // Generate configuration using Smart Dialog Engine
-    const dialogConfig = smartDialogEngine.createDialogConfiguration(entityType, operationType);
-
-    // Create and return the actual React component
-    return React.createElement(
+  // Create and return the actual React component
+  return React.createElement(
       Dialog,
       {
         open: props.open,
@@ -779,7 +781,6 @@ export function createSmartDialog(config: {
         ]
       )
     );
-  };
 }
 
 /**

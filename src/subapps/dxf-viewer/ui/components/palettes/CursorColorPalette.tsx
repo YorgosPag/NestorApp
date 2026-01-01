@@ -69,15 +69,13 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
           type="color"
           value={colors[colorKey] as string}
           onChange={(e) => handleColorChange(colorKey, e.target.value)}
-          className={`${iconSizes.xl} rounded border-0 cursor-pointer`}
-          style={{ width: '2rem', height: '1.5rem' }}
+          className={`${iconSizes.xl} w-8 h-6 rounded border-0 cursor-pointer`}
         />
         <input
           type="text"
           value={colors[colorKey] as string}
           onChange={(e) => handleColorChange(colorKey, e.target.value)}
-          className={`px-2 py-1 text-xs ${semanticColors.bg.muted} text-white rounded ${getStatusBorder('muted')}`}
-          style={{ width: '5rem' }}
+          className={`w-20 px-2 py-1 text-xs ${semanticColors.bg.muted} text-white rounded ${getStatusBorder('muted')}`}
           placeholder={UI_COLORS.WHITE}
         />
         {opacityKey && (
@@ -89,10 +87,9 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
               step="0.1"
               value={colors[opacityKey] as number}
               onChange={(e) => handleColorChange(opacityKey, String(parseFloat(e.target.value)))}
-              className=""
-              style={{ width: '4rem' }}
+              className="w-16"
             />
-            <div className={`text-xs ${semanticColors.text.secondary} text-center`} style={{ width: '2rem' }}>
+            <div className={`w-8 text-xs ${semanticColors.text.secondary} text-center`}>
               {Math.round((colors[opacityKey] as number) * 100)}%
             </div>
           </>

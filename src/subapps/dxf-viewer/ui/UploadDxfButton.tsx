@@ -29,16 +29,10 @@ export default function UploadDxfButton({
     <>
       <button
         type="button"
-        className={className}
+        className={`${className} inline-flex items-center justify-center cursor-pointer`}
         onClick={handleButtonClick}
         title={title}
         aria-label={title}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-        }}
       >
         <svg 
           viewBox="0 0 24 24" 

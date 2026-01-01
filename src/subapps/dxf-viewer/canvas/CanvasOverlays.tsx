@@ -133,7 +133,7 @@ export default function CanvasOverlays({
   });
 
   return (
-    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1000 }}>
+    <div className="absolute inset-0 pointer-events-none z-[1000]">
       <CrosshairOverlay
         isActive={crosshairActive}  // Active in layering mode OR when mouse position available
         cursorPosition={crosshairPosition}

@@ -1,26 +1,24 @@
 /**
  * Line Settings Constants
  * Σταθερές για τις ρυθμίσεις γραμμών
+ *
+ * @version 2.0.0 (Enterprise Cleanup)
+ * @migration 2026-01-01: Removed duplicate type definitions - now uses centralized settings-core/types.ts
+ * @see settings-core/types.ts for canonical LineType, LineCapStyle, LineJoinStyle
  */
 
 import { UI_COLORS } from '../config/color-config';
+// ✅ ENTERPRISE: Use centralized types from settings-core (no duplicates!)
+import type { LineType, LineCapStyle, LineJoinStyle } from '../settings-core/types';
 
-// Define missing types
-type LineType = 'solid' | 'dotted' | 'dashed' | 'dash-dot' | 'dash-dot-dot' | 'long-dash' | 'double-dot';
-type LineCapStyle = 'round' | 'square' | 'butt';
-type LineJoinStyle = 'round' | 'bevel' | 'miter';
-
-// Line type labels
-export const LINE_TYPE_LABELS = {
+// ✅ ENTERPRISE: Line type labels aligned with canonical LineType from settings-core/types.ts
+// Canonical types: 'solid' | 'dashed' | 'dotted' | 'dash-dot' | 'dash-dot-dot'
+export const LINE_TYPE_LABELS: Record<LineType, string> = {
   solid: 'Συνεχής',
-  dotted: 'Κουκκίδες',
   dashed: 'Διακεκομμένη',
+  dotted: 'Κουκκίδες',
   'dash-dot': 'Παύλα-Κουκκίδα',
-  'dash-dot-dot': 'Παύλα-Κουκκίδα-Κουκκίδα',
-  'long-dash': 'Μεγάλη Παύλα',
-  'short-dash': 'Μικρή Παύλα',
-  'double-dot': 'Διπλή Κουκκίδα',
-  custom: 'Προσαρμοσμένη'
+  'dash-dot-dot': 'Παύλα-Κουκκίδα-Κουκκίδα'
 } as const;
 
 // Line cap labels
@@ -335,7 +333,8 @@ export const LINE_TEMPLATES: LineTemplate[] = [
     category: 'electrical',
     description: 'Διπλές τελείες για γείωση',
     settings: {
-      lineType: 'double-dot',
+      // ✅ ENTERPRISE FIX: Changed from 'double-dot' to 'dash-dot-dot' (canonical type)
+      lineType: 'dash-dot-dot',
       lineWidth: 1.5,
       color: UI_COLORS.MEASUREMENT_TEXT,
       opacity: 0.85,
@@ -345,11 +344,11 @@ export const LINE_TEMPLATES: LineTemplate[] = [
       lineJoin: 'round',
       breakAtCenter: false,
       hoverColor: UI_COLORS.SNAP_DEFAULT,
-      hoverType: 'double-dot',
+      hoverType: 'dash-dot-dot',
       hoverWidth: 1.8,
       hoverOpacity: 0.9,
       finalColor: UI_COLORS.BRIGHT_GREEN,
-      finalType: 'double-dot',
+      finalType: 'dash-dot-dot',
       finalWidth: 1.6,
       finalOpacity: 0.9,
       activeTemplate: 'electrical'

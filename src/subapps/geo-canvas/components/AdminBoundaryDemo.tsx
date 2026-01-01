@@ -69,7 +69,7 @@ export function AdminBoundaryDemo() {
   return (
     <div className={`p-6 max-w-4xl mx-auto ${colors.bg.primary} ${quick.card} shadow-lg`}>
       <h2 className="text-2xl font-bold mb-6 text-gray-800">
-        <Building2 className={iconSizes.lg} style={{ display: 'inline-block', marginRight: '12px' }} />
+        <Building2 className={`${iconSizes.lg} inline-block mr-3`} />
         Administrative Boundaries Demo
       </h2>
 

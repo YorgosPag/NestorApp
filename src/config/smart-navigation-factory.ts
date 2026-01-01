@@ -76,6 +76,10 @@ const NAVIGATION_LABELS = {
   users: 'Χρήστες',
   keyboard_shortcuts: 'Συντομεύσεις',
 
+  // ✅ ENTERPRISE FIX: Legal Documents menu labels
+  legal_documents: 'Νομικά Έγγραφα',
+  obligations_writing: 'Συγγραφή Υποχρεώσεων',
+
   // Badges
   badge_new: 'ΝΕΟ',
 
@@ -417,9 +421,9 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
             href: "/legal-documents",
             badge: null,
             smartConfig: {
-              priority: 'low',
-              analyticsKey: 'nav_legal',
-              permissions: ['legal_access']
+              priority: 'medium',  // ✅ ENTERPRISE FIX: Increased priority for visibility
+              analyticsKey: 'nav_legal'
+              // ✅ ENTERPRISE FIX: Removed permissions requirement - accessible to all users
             },
             subItems: [
               {

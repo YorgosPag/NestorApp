@@ -120,7 +120,7 @@ export const GeoMapControls: React.FC<GeoMapControlsProps> = ({
           }`}
           aria-pressed={clickMode === 'add_geo'}
         >
-          <MapPin className={iconSizes.sm} style={{ display: 'inline-block', marginRight: '6px' }} />
+          <MapPin className={`${iconSizes.sm} inline-block mr-1.5`} />
           {t('map.controls.pickGeographicPoint')}
         </button>
 

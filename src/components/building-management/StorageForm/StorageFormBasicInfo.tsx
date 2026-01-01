@@ -7,10 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Info } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { StorageUnit, StorageType } from '@/types/storage';
 import { cn } from '@/lib/utils';
 
@@ -31,9 +37,8 @@ export function StorageFormBasicInfo({
 }: StorageFormBasicInfoProps) {
   const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
-  const colors = useSemanticColors();
   const { getStatusBorder } = useBorderTokens();
-  
+
   return (
     <Card>
       <CardHeader>
@@ -67,16 +72,17 @@ export function StorageFormBasicInfo({
 
           <div className="space-y-2">
             <Label>{t('storage.form.status')} *</Label>
-            <select
-              value={formData.status}
-              onChange={(e) => updateField('status', e.target.value)}
-              className={`h-10 w-full px-3 rounded-md border border-input ${colors.bg.primary} text-sm`}
-            >
-              <option value="available">{t('storage.status.available')}</option>
-              <option value="sold">{t('storage.status.sold')}</option>
-              <option value="reserved">{t('storage.status.reserved')}</option>
-              <option value="maintenance">{t('storage.status.maintenance')}</option>
-            </select>
+            <Select value={formData.status} onValueChange={(val) => updateField('status', val)}>
+              <SelectTrigger>
+                <SelectValue placeholder={t('storage.status.available')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="available">{t('storage.status.available')}</SelectItem>
+                <SelectItem value="sold">{t('storage.status.sold')}</SelectItem>
+                <SelectItem value="reserved">{t('storage.status.reserved')}</SelectItem>
+                <SelectItem value="maintenance">{t('storage.status.maintenance')}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

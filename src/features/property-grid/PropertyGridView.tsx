@@ -14,7 +14,7 @@ import { usePropertyGridFilters } from './hooks/usePropertyGridFilters';
 import { PropertyCard } from './components/PropertyCard';
 import { PropertyListItem } from './components/PropertyListItem';
 import { SearchBar } from './components/SearchBar';
-import { TypeSelect } from './components/TypeSelect';
+import { TypeSelect } from '@/components/property-viewer/TypeSelect';
 import { ViewModeToggle } from './components/ViewModeToggle';
 import { AdvancedFiltersPanel } from './components/AdvancedFiltersPanel';
 

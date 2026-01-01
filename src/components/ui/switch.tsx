@@ -8,7 +8,7 @@ import { useIconSizes } from "@/hooks/useIconSizes"
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors"
 
 const Switch = React.forwardRef<
-  React.ElementRef<typeof SwitchPrimitives.Root>,
+  React.ComponentRef<typeof SwitchPrimitives.Root>,
   React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root>
 >(({ className, ...props }, ref) => {
   const iconSizes = useIconSizes()

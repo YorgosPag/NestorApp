@@ -266,19 +266,13 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             <div className={`${iconSizes.lg} flex items-center justify-center relative`}>
               {/* Οριζόντια γραμμή */}
               <div
-                className={`absolute top-1/2 left-1/2 ${iconSizes.xs} transform -translate-x-1/2 -translate-y-1/2`}
-                style={{
-                  ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
-                  height: '1px'
-                }}
+                className={`absolute top-1/2 left-1/2 ${iconSizes.xs} h-px transform -translate-x-1/2 -translate-y-1/2`}
+                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
               {/* Κάθετη γραμμή */}
               <div
-                className={`absolute top-1/2 left-1/2 h-3 transform -translate-x-1/2 -translate-y-1/2`}
-                style={{
-                  ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
-                  width: '1px'
-                }}
+                className={`absolute top-1/2 left-1/2 h-3 w-px transform -translate-x-1/2 -translate-y-1/2`}
+                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
             </div>
             <span className="text-xs mt-1">5%</span>
@@ -294,19 +288,13 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             <div className={`${iconSizes.lg} flex items-center justify-center relative`}>
               {/* Οριζόντια γραμμή */}
               <div
-                className={`absolute top-1/2 left-1/2 ${iconSizes.sm} transform -translate-x-1/2 -translate-y-1/2`}
-                style={{
-                  ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
-                  height: '1px'
-                }}
+                className={`absolute top-1/2 left-1/2 ${iconSizes.sm} h-px transform -translate-x-1/2 -translate-y-1/2`}
+                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
               {/* Κάθετη γραμμή */}
               <div
-                className={`absolute top-1/2 left-1/2 h-4 transform -translate-x-1/2 -translate-y-1/2`}
-                style={{
-                  ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
-                  width: '1px'
-                }}
+                className={`absolute top-1/2 left-1/2 h-4 w-px transform -translate-x-1/2 -translate-y-1/2`}
+                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
             </div>
             <span className="text-xs mt-1">8%</span>
@@ -322,19 +310,13 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             <div className={`${iconSizes.lg} flex items-center justify-center relative`}>
               {/* Οριζόντια γραμμή */}
               <div
-                className={`absolute top-1/2 left-1/2 ${iconSizes.md} transform -translate-x-1/2 -translate-y-1/2`}
-                style={{
-                  ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
-                  height: '1px'
-                }}
+                className={`absolute top-1/2 left-1/2 ${iconSizes.md} h-px transform -translate-x-1/2 -translate-y-1/2`}
+                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
               {/* Κάθετη γραμμή */}
               <div
-                className={`absolute top-1/2 left-1/2 h-5 transform -translate-x-1/2 -translate-y-1/2`}
-                style={{
-                  ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
-                  width: '1px'
-                }}
+                className={`absolute top-1/2 left-1/2 h-5 w-px transform -translate-x-1/2 -translate-y-1/2`}
+                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
             </div>
             <span className="text-xs mt-1">15%</span>
@@ -355,19 +337,13 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               ></div>
               {/* Οριζόντια γραμμή που φτάνει τα άκρα του πλαισίου */}
               <div
-                className="absolute top-1/2 left-0 w-full transform -translate-y-1/2"
-                style={{
-                  ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
-                  height: '1px'
-                }}
+                className="absolute top-1/2 left-0 w-full h-px transform -translate-y-1/2"
+                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
               {/* Κάθετη γραμμή που φτάνει τα άκρα του πλαισίου */}
               <div
-                className="absolute left-1/2 top-0 h-full transform -translate-x-1/2"
-                style={{
-                  ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
-                  width: '1px'
-                }}
+                className="absolute left-1/2 top-0 h-full w-px transform -translate-x-1/2"
+                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
             </div>
             <span className="text-xs mt-1">Full</span>

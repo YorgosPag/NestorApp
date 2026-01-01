@@ -155,6 +155,74 @@ export const migrations: Migration[] = [
         __standards_version: 2
       };
     }
+  },
+
+  // Version 3 → 4: Complete grip colors (add missing cold/warm/hot/contour)
+  // CRITICAL: Enterprise fix for schema validation - all modes need complete colors
+  {
+    version: 4,
+    description: 'Complete grip colors: ensure all modes have cold/warm/hot/contour',
+    migrate: (data: unknown) => {
+      const state = data as any;
+
+      // ✅ ENTERPRISE: Default colors from ACI palette
+      const DEFAULT_COLORS = {
+        cold: '#0000FF',      // Blue (ACI 5)
+        warm: '#00FFFF',      // Cyan (ACI 4)
+        hot: '#FF0000',       // Red (ACI 1)
+        contour: '#000000'    // Black
+      };
+
+      const COMPLETION_COLORS = {
+        cold: '#00FF00',      // Green (ACI 3)
+        warm: '#00FF00',      // Green
+        hot: '#00FF00',       // Green
+        contour: '#000000'    // Black
+      };
+
+      // Helper to complete colors object
+      const completeColors = (colors: any, defaults: any) => {
+        if (!colors || typeof colors !== 'object') {
+          return defaults;
+        }
+        return {
+          cold: colors.cold || defaults.cold,
+          warm: colors.warm || defaults.warm,
+          hot: colors.hot || defaults.hot,
+          contour: colors.contour || defaults.contour
+        };
+      };
+
+      // Fix grip.general.colors
+      if (state.grip?.general?.colors) {
+        state.grip.general.colors = completeColors(state.grip.general.colors, DEFAULT_COLORS);
+      }
+
+      // Fix grip.specific (all modes)
+      if (state.grip?.specific) {
+        Object.keys(state.grip.specific).forEach(mode => {
+          if (state.grip.specific[mode]?.colors) {
+            const defaults = mode === 'completion' ? COMPLETION_COLORS : DEFAULT_COLORS;
+            state.grip.specific[mode].colors = completeColors(state.grip.specific[mode].colors, defaults);
+          }
+        });
+      }
+
+      // Fix grip.overrides (all modes)
+      if (state.grip?.overrides) {
+        Object.keys(state.grip.overrides).forEach(mode => {
+          if (state.grip.overrides[mode]?.colors) {
+            const defaults = mode === 'completion' ? COMPLETION_COLORS : DEFAULT_COLORS;
+            state.grip.overrides[mode].colors = completeColors(state.grip.overrides[mode].colors, defaults);
+          }
+        });
+      }
+
+      return {
+        ...state,
+        __standards_version: 4
+      };
+    }
   }
 ];
 

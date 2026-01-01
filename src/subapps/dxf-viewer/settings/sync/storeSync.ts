@@ -71,7 +71,7 @@ export interface StoreSync {
  */
 function mapLineToToolStyle(line: LineSettings): Parameters<ToolStylePort['apply']>[0] {
   return {
-    stroke: line.lineColor,
+    stroke: line.color, // MIGRATED: lineColor → color (settings-core/types)
     fill: UI_COLORS.TRANSPARENT, // Transparent fill
     width: line.lineWidth,
     opacity: line.opacity,
@@ -86,7 +86,7 @@ function mapTextToTextStyle(text: TextSettings): Parameters<TextStylePort['apply
   return {
     font: text.fontFamily,
     size: text.fontSize,
-    color: text.textColor,
+    color: text.color, // MIGRATED: textColor → color (settings-core/types)
     weight: text.isBold ? 'bold' : 'normal',
     style: text.isItalic ? 'italic' : 'normal'
   };
