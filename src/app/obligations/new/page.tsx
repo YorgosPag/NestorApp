@@ -45,8 +45,8 @@ import Link from "next/link";
 import { CompaniesService } from "@/services/companies.service";
 import { getNavigationCompanyIds } from "@/services/navigation-companies.service";
 import { useCompanyRelationships } from "@/services/relationships/hooks/useEnterpriseRelationships";
-import type { Contact } from "@/types/contacts";
-import type { ProjectStructure } from "@/services/projects/contracts";
+import type { CompanyContact } from "@/types/contacts";
+import type { Project } from "@/types/project";
 
 interface ObligationFormData {
   title: string;
@@ -165,8 +165,8 @@ export default function NewObligationPage() {
   }, []);
 
   // 🏢 ENTERPRISE: State για companies & projects
-  const [companies, setCompanies] = useState<Contact[]>([]);
-  const [projects, setProjects] = useState<ProjectStructure[]>([]);
+  const [companies, setCompanies] = useState<CompanyContact[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loadingCompanies, setLoadingCompanies] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
 
@@ -246,7 +246,7 @@ export default function NewObligationPage() {
         // 🚀 ENTERPRISE RELATIONSHIP ENGINE: Φόρτωση projects μέσω centralized system
         console.log(`🏗️ ENTERPRISE: Loading projects for company ${contactIdForProjects} via Relationship Engine`);
         const projectsData = await companyRelationships.getProjects();
-        setProjects(projectsData);
+        setProjects(projectsData as Project[]);
 
         console.log(`✅ ENTERPRISE: Loaded ${projectsData.length} projects for company ${contactIdForProjects} via Relationship Engine`);
 
@@ -342,10 +342,12 @@ export default function NewObligationPage() {
 
   // 🏢 ENTERPRISE: Transform companies for centralized Select
   const companyOptions = useMemo(() =>
-    companies.map(company => ({
-      id: company.id,
-      name: company.companyName || 'Άγνωστη εταιρεία'
-    })),
+    companies
+      .filter(company => company.id) // Φιλτράρουμε companies χωρίς id
+      .map(company => ({
+        id: company.id as string, // Type assertion αφού φιλτράραμε
+        name: company.companyName || 'Άγνωστη εταιρεία'
+      })),
     [companies]
   );
 
@@ -392,7 +394,7 @@ export default function NewObligationPage() {
       // 🔗 AUTO-FILL: Update project details if available
       projectDetails: {
         ...prev.projectDetails,
-        location: selectedProject?.location || prev.projectDetails.location,
+        location: selectedProject?.city || prev.projectDetails.location,
         address: selectedProject?.address || prev.projectDetails.address
       }
     }));
@@ -562,22 +564,22 @@ export default function NewObligationPage() {
         ...(selectedCompany && {
           companyDetails: {
             name: selectedCompany.companyName || formData.contractorCompany,
-            email: selectedCompany.email,
-            phone: selectedCompany.phone,
-            address: selectedCompany.address,
-            registrationNumber: selectedCompany.taxNumber
+            email: selectedCompany.emails?.[0]?.email || '',
+            phone: selectedCompany.phones?.[0]?.number || '',
+            address: selectedCompany.addresses?.[0]?.street || '',
+            registrationNumber: selectedCompany.vatNumber || ''
           }
         }),
 
         // 🔗 ENTERPRISE: Rich project details (if project selected)
         ...(selectedProject && {
           projectInfo: {
-            description: selectedProject.description,
-            location: selectedProject.location,
-            startDate: selectedProject.startDate,
-            endDate: selectedProject.endDate,
-            projectType: selectedProject.type,
-            budget: selectedProject.budget
+            description: selectedProject.title || '',
+            location: selectedProject.city || '',
+            startDate: selectedProject.startDate ? new Date(selectedProject.startDate) : undefined,
+            endDate: selectedProject.completionDate ? new Date(selectedProject.completionDate) : undefined,
+            projectType: selectedProject.status || '',
+            budget: selectedProject.totalValue
           }
         })
       };

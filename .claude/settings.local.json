@@ -46,7 +46,10 @@
       "Bash(done)",
       "Bash(git commit:*)",
       "Bash(for file in CrosshairAppearanceSettings.tsx CursorSettings.tsx LayersSettings.tsx)",
-      "Bash(Get-Content local_3.txt)"
+      "Bash(Get-Content local_3.txt)",
+      "Bash(pnpm run dev:*)",
+      "Bash(set PORT=3000)",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": []

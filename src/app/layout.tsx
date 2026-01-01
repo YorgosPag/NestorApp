@@ -18,14 +18,10 @@ import { cn } from "@/lib/utils";
 import { I18nProvider } from '@/components/providers/I18nProvider';
 import { NavigationProvider } from '@/components/navigation';
 import { PhotoPreviewProvider } from '@/providers/PhotoPreviewProvider';
-import dynamic from 'next/dynamic';
 import { PerformanceCategory } from '@/core/performance/types/performance.types';
-
-const ClientOnlyPerformanceDashboard = dynamic(
-  () => import('@/core/performance/components/ClientOnlyPerformanceDashboard').then(mod => ({ default: mod.ClientOnlyPerformanceDashboard })),
-  { ssr: false }
-);
+import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/ClientOnlyPerformanceDashboard';
 import { GlobalErrorSetup } from '@/components/GlobalErrorSetup';
+import { MainContentBridge } from './components/MainContentBridge';
 
 const roboto = Roboto({
   subsets: ["latin", "greek"],
@@ -37,12 +33,6 @@ export const metadata: Metadata = {
   title: "Pagonis",
   description: "Μια εφαρμογή για να αποτυπώσετε τις σκέψεις σας, ενισχυμένες με AI.",
 };
-
-// 🌉 Client component for Bridge colors - Dynamic loading
-const MainContent = dynamic(
-  () => import('./components/MainContentBridge').then(mod => mod.MainContentBridge),
-  { ssr: false }
-);
 
 export default function RootLayout({
   children,
@@ -94,9 +84,9 @@ export default function RootLayout({
                         <AppSidebar />
                         <SidebarInset className="flex flex-1 flex-col w-full max-w-full overflow-hidden">
                           <AppHeader />
-                          <MainContent>
+                          <MainContentBridge>
                               {children}
-                          </MainContent>
+                          </MainContentBridge>
                         </SidebarInset>
                       </div>
                         </SidebarProvider>

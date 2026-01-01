@@ -46,7 +46,7 @@ import * as React from 'react';
 import { useState } from 'react';
 import { useIconSizes } from '../../../../../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../../../../../hooks/useBorderTokens';
-import { useSemanticColors } from '../../../../../../../ui-adapters/react/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTextSettingsFromProvider } from '../../../../../settings-provider';
 import { AccordionSection, useAccordion } from '../shared/AccordionSection';
 import type { TextSettings as TextSettingsType } from '../../../../../contexts/TextSettingsContext';

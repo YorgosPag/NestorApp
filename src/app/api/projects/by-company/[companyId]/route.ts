@@ -8,23 +8,26 @@ import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
 
 export const GET = withErrorHandling(async (
   request: NextRequest,
-  { params }: { params: { companyId: string } }
+  { params }: { params: Promise<{ companyId: string }> }
 ) => {
+    // 🚀 Next.js 15: params must be awaited before accessing properties
+    const { companyId } = await params;
+
     // 🎯 PRODUCTION: Reduced API logging για καθαρότερη κονσόλα
-    // console.log(`🏗️ API (Client SDK): Loading projects for companyId: "${params.companyId}"`);
+    // console.log(`🏗️ API (Client SDK): Loading projects for companyId: "${companyId}"`);
 
     try {
       // 🚀 ENTERPRISE CACHING: Check cache first
-      const cachedProjects = CacheHelpers.getCachedProjectsByCompany(params.companyId);
+      const cachedProjects = CacheHelpers.getCachedProjectsByCompany(companyId);
       if (cachedProjects) {
         // 🎯 PRODUCTION: Reduced cache logging
-        // console.log(`⚡ API: CACHE HIT - Returning ${cachedProjects.length} cached projects for company ${params.companyId}`);
+        // console.log(`⚡ API: CACHE HIT - Returning ${cachedProjects.length} cached projects for company ${companyId}`);
         return apiSuccess({
           projects: cachedProjects,
-          companyId: params.companyId,
+          companyId: companyId,
           source: 'cache',
           cached: true
-        }, `Found ${cachedProjects.length} cached projects for company ${params.companyId}`);
+        }, `Found ${cachedProjects.length} cached projects for company ${companyId}`);
       }
 
       // 🎯 PRODUCTION: Reduced verbosity
@@ -33,11 +36,11 @@ export const GET = withErrorHandling(async (
       // 🚀 PERFORMANCE: Skip the debugging "fetch ALL projects" - go directly to specific query
       const projectsQuery = query(
         collection(db, COLLECTIONS.PROJECTS),
-        where('companyId', '==', params.companyId)
+        where('companyId', '==', companyId)
       );
 
       const snapshot = await getDocs(projectsQuery);
-      console.log(`🏗️ API (Client SDK): Found ${snapshot.docs.length} projects for companyId "${params.companyId}"`);
+      console.log(`🏗️ API (Client SDK): Found ${snapshot.docs.length} projects for companyId "${companyId}"`);
 
       const projects = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -45,20 +48,20 @@ export const GET = withErrorHandling(async (
       }));
 
       // 💾 ENTERPRISE CACHING: Store in cache for future requests
-      CacheHelpers.cacheProjectsByCompany(params.companyId, projects);
+      CacheHelpers.cacheProjectsByCompany(companyId, projects);
 
-      console.log(`✅ API: Found ${projects.length} projects for company ${params.companyId} (cached for 3 minutes)`);
+      console.log(`✅ API: Found ${projects.length} projects for company ${companyId} (cached for 3 minutes)`);
 
       return apiSuccess({
         projects,
-        companyId: params.companyId,
+        companyId: companyId,
         source: 'firestore',
         cached: false
-      }, `Found ${projects.length} projects for company ${params.companyId}`);
+      }, `Found ${projects.length} projects for company ${companyId}`);
 
     } catch (error: unknown) {
       console.error('❌ [Projects API] Error details:', {
-        companyId: params.companyId,
+        companyId: companyId,
         error: error instanceof Error ? {
           name: error.name,
           message: error.message,
@@ -72,5 +75,5 @@ export const GET = withErrorHandling(async (
 }, {
   operation: 'loadProjectsByCompany',
   entityType: COLLECTIONS.PROJECTS,
-  entityId: 'params.companyId'
+  entityId: 'companyId'
 });

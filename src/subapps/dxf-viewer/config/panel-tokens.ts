@@ -29,9 +29,9 @@
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS, TRANSITION_PRESETS } from '../../../components/ui/effects';
 
 // 🏢 ENTERPRISE: Import enterprise semantic colors (SINGLE SOURCE OF TRUTH)
-import { tailwindColorMappings } from '../../../ui-adapters/tailwind/colors.adapter';
-import { COLOR_BRIDGE } from '../../../design-system/color-bridge';
-import type { UseSemanticColorsReturn } from '../../../ui-adapters/react/useSemanticColors';
+import { tailwindColorMappings } from '@/ui-adapters/tailwind/colors.adapter';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import type { UseSemanticColorsReturn } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // ENTERPRISE PANEL COLOR FACTORY - ZERO HARDCODED VALUES

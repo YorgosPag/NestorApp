@@ -6,7 +6,7 @@ const DEBUG_FLOATING_PANEL_CONTAINER = false;
 import React, { useImperativeHandle, forwardRef } from 'react';
 import { useTranslationLazy } from '../../../i18n/hooks/useTranslationLazy';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
-import { useSemanticColors } from '../../../ui-adapters/react/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PanelTabs } from './components/PanelTabs';
 // REMOVED: PropertiesPanel - καρτέλα πλέον αφαιρέθηκε εντελώς
 import { useOverlayManager } from '../state/overlay-manager';

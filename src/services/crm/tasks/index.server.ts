@@ -2,6 +2,13 @@
 
 import type { CrmTask } from '@/types/crm';
 
+interface TasksStats {
+  total: number;
+  completed: number;
+  pending: number;
+  overdue: number;
+}
+
 // Sample implementation for server-side - replace with actual server repo later
 class SampleTasksRepository {
   async getAllTasks(): Promise<CrmTask[]> {
@@ -42,7 +49,7 @@ class SampleTasksRepository {
     // Debug logging removed
   }
 
-  async getTasksStats(userId?: string): Promise<any> {
+  async getTasksStats(userId?: string): Promise<TasksStats> {
     return { total: 0, completed: 0, pending: 0, overdue: 0 };
   }
 
@@ -53,14 +60,46 @@ class SampleTasksRepository {
 
 const repo = new SampleTasksRepository();
 
-export const addTask = (taskData: Omit<CrmTask, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderSent'>) => repo.addTask(taskData);
-export const getAllTasks = () => repo.getAllTasks();
-export const getTasksByUser = (userId: string) => repo.getTasksByUser(userId);
-export const getTasksByLead = (leadId: string) => repo.getTasksByLead(leadId);
-export const getTasksByStatus = (status: CrmTask['status']) => repo.getTasksByStatus(status);
-export const getOverdueTasks = () => repo.getOverdueTasks();
-export const updateTask = (id: string, updates: Partial<CrmTask>) => repo.updateTask(id, updates);
-export const deleteTask = (id: string) => repo.deleteTask(id);
-export const deleteAllTasks = () => repo.deleteAllTasks();
-export const completeTask = (id: string, notes = '') => repo.completeTask(id, notes);
-export const getTasksStats = (userId: string | null = null) => repo.getTasksStats(userId);
+export async function addTask(taskData: Omit<CrmTask, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderSent'>): Promise<string> {
+  return repo.addTask(taskData);
+}
+
+export async function getAllTasks(): Promise<CrmTask[]> {
+  return repo.getAllTasks();
+}
+
+export async function getTasksByUser(userId: string): Promise<CrmTask[]> {
+  return repo.getTasksByUser(userId);
+}
+
+export async function getTasksByLead(leadId: string): Promise<CrmTask[]> {
+  return repo.getTasksByLead(leadId);
+}
+
+export async function getTasksByStatus(status: CrmTask['status']): Promise<CrmTask[]> {
+  return repo.getTasksByStatus(status);
+}
+
+export async function getOverdueTasks(): Promise<CrmTask[]> {
+  return repo.getOverdueTasks();
+}
+
+export async function updateTask(id: string, updates: Partial<CrmTask>): Promise<void> {
+  return repo.updateTask(id, updates);
+}
+
+export async function deleteTask(id: string): Promise<void> {
+  return repo.deleteTask(id);
+}
+
+export async function deleteAllTasks(): Promise<void> {
+  return repo.deleteAllTasks();
+}
+
+export async function completeTask(id: string, notes = ''): Promise<void> {
+  return repo.completeTask(id, notes);
+}
+
+export async function getTasksStats(userId: string | null = null): Promise<TasksStats> {
+  return repo.getTasksStats(userId);
+}

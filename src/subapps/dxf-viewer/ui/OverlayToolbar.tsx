@@ -2,7 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { useIconSizes } from '../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
-import { useSemanticColors } from '../../../ui-adapters/react/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useDraggable } from '../../../hooks/useDraggable';
 // import { Separator } from '../../../components/ui/separator';
 // Προσωρινή λύση - αντικατάσταση με div

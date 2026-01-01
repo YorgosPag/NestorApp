@@ -424,7 +424,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
             subItems: [
               {
                 icon: PenTool,
-                href: '/obligations'
+                href: '/obligations/new'
               }
             ]
           },

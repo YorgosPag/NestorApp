@@ -11,7 +11,7 @@
 
 import React from 'react';
 import { useBorderTokens } from '../../../../hooks/useBorderTokens';
-import { useSemanticColors } from '../../../../ui-adapters/react/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface SliderInputProps {
   label: string;

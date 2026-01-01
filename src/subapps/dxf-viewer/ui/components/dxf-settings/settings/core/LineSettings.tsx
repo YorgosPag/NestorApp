@@ -84,7 +84,7 @@ import type { TemplateCategory } from '../../../../../contexts/LineSettingsConte
 import { AccordionSection, useAccordion } from '../shared/AccordionSection';
 import { useIconSizes } from '../../../../../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../../../../../hooks/useBorderTokens';
-import { useSemanticColors } from '../../../../../../../ui-adapters/react/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Simple SVG icons
 const SettingsIcon = ({ className }: { className?: string }) => (

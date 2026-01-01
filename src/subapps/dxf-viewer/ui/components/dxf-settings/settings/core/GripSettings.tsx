@@ -8,7 +8,7 @@ import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '../../../../../../../components/ui/effects';
 import { useIconSizes } from '../../../../../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../../../../../hooks/useBorderTokens';
-import { useSemanticColors } from '../../../../../../../ui-adapters/react/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { CAD_UI_COLORS, UI_COLORS } from '../../../../../config/color-config';
 
 // SVG Icons για τα accordion sections

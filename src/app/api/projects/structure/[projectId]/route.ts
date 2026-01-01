@@ -4,10 +4,12 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { projectId: string } }
+  { params }: { params: Promise<{ projectId: string }> }
 ) {
+  // 🚀 Next.js 15: params must be awaited before accessing properties
+  const { projectId } = await params;
+
   try {
-    const projectId = params.projectId;
     console.log(`🏗️ API: Loading project structure for projectId: ${projectId}`);
 
     // Get project details
@@ -88,7 +90,7 @@ export async function GET(
       {
         success: false,
         error: error instanceof Error ? error.message : 'Άγνωστο σφάλμα',
-        projectId: params.projectId
+        projectId
       },
       { status: 500 }
     );

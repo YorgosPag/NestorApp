@@ -10,7 +10,7 @@ import { useWizardNavigation } from '../hooks/useWizardNavigation';
 import { INTERACTIVE_PATTERNS } from '../../../components/ui/effects';
 import { useIconSizes } from '../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
-import { useSemanticColors } from '../../../ui-adapters/react/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 
 interface ImportWizardProps {
   isOpen: boolean;

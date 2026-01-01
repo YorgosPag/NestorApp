@@ -18,7 +18,7 @@ import { FloatingPanelContainer, type FloatingPanelHandle } from '../ui/Floating
 import { AutoSaveStatus } from '../ui/components/AutoSaveStatus';
 import { CentralizedAutoSaveStatus } from '../ui/components/CentralizedAutoSaveStatus';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
-import { useSemanticColors } from '../../../ui-adapters/react/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ✅ ENTERPRISE: Type-safe props interface
 interface SidebarSectionProps {

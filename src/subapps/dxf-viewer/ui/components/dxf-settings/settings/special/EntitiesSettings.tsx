@@ -5,7 +5,7 @@ import { Minus, Square, Pen, Hexagon, Ruler, Triangle } from 'lucide-react';
 import { CircleRadiusIcon } from '../../../../toolbar/icons/CircleIcon';
 import { useIconSizes } from '../../../../../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../../../../../hooks/useBorderTokens';
-import { useSemanticColors } from '../../../../../../../ui-adapters/react/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // ✅ ΝΕΑ UNIFIED HOOKS - ΑΝΤΙΚΑΤΑΣΤΑΣΗ ΤΩΝ ΠΑΛΙΩΝ SPECIFIC CONTEXTS
 import {
   useUnifiedLineCompletion,

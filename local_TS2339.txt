@@ -1,20 +1,7 @@
-src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/TextSettings.tsx(396,77): error TS1005: '}' expected.
-src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/TextSettings.tsx(401,20): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
-src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(44,5): error TS1005: '>' expected.
-src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(44,9): error TS1005: ')' expected.
-src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(44,25): error TS1005: '{' expected.
-src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(44,30): error TS1128: Declaration or statement expected.
-src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(45,18): error TS1005: ',' expected.
-src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(45,21): error TS1005: ',' expected.
-src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(46,25): error TS1005: ':' expected.
-src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(47,4): error TS1109: Expression expected.
-src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(48,1): error TS1109: Expression expected.
-src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(58,5): error TS1005: '>' expected.
-src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(58,9): error TS1005: ')' expected.
-src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(58,25): error TS1005: '{' expected.
-src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(58,30): error TS1128: Declaration or statement expected.
-src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(59,18): error TS1005: ',' expected.
-src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(59,21): error TS1005: ',' expected.
-src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(60,25): error TS1005: ':' expected.
-src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(61,4): error TS1109: Expression expected.
-src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts(62,1): error TS1109: Expression expected.
+## Error Type
+Console Error
+
+## Error Message
+[2026-01-01T11:38:16.900Z]  @firebase/firestore: "Firestore (12.6.0): Uncaught Error in snapshot listener:" "FirebaseError: [code=failed-precondition]: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/pagonis-87766/firestore/indexes?create_composite=ClRwcm9qZWN0cy9wYWdvbmlzLTg3NzY2L2RhdGFiYXNlcy8oZGVmYXVsdCkvY29sbGVjdGlvbkdyb3Vwcy9jb21tdW5pY2F0aW9ucy9pbmRleGVzL18QARoNCglkaXJlY3Rpb24QARoICgR0eXBlEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg"
+
+Next.js version: 15.5.7 (Webpack)

@@ -7,7 +7,7 @@ import { LinePreview } from '../dxf-settings/settings/shared/LinePreview';
 import { CurrentSettingsDisplay } from '../dxf-settings/settings/shared/CurrentSettingsDisplay';
 import { OverrideToggle } from './OverrideToggle';
 import { INTERACTIVE_PATTERNS } from '../../../ui/effects';
-import { useSemanticColors } from '../../../ui-adapters/react/useSemanticColors';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../../config/color-config';
 
 export type SubTabType = 'draft' | 'completion' | 'hover' | 'selection';
