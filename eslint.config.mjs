@@ -45,7 +45,7 @@ export default defineConfig([
       // Additional strict rules for component architecture
       "@typescript-eslint/no-unused-vars": "error",
       "@typescript-eslint/no-explicit-any": "error",
-      "@typescript-eslint/prefer-const": "error",
+      "prefer-const": "error",
       "@typescript-eslint/no-var-requires": "error",
       "react/prop-types": "off", // We use TypeScript for prop validation
       "react/react-in-jsx-scope": "off", // Not needed in Next.js

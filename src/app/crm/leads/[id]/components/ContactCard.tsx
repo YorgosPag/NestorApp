@@ -8,7 +8,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { Opportunity } from '@/types/crm';
 import { formatDate } from '../utils/dates';
-import { getStatusColor } from '../utils/status';
+import { useStatusColor } from '../utils/status';
 
 interface ContactCardProps {
   lead: Opportunity;
@@ -18,6 +18,7 @@ export function ContactCard({ lead }: ContactCardProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
+  const { getStatusColor } = useStatusColor();
 
   return (
     <div className={`${colors.bg.primary} ${quick.card} shadow p-6`}>

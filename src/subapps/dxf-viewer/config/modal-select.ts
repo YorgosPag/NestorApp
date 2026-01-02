@@ -745,3 +745,91 @@ export function getValidationMessages() {
     maxLength: 'Το κείμενο δεν μπορεί να έχει περισσότερους από {max} χαρακτήρες'
   };
 }
+
+// ====================================================================
+// BUILDING DATA EXPORTS - ENTERPRISE DATABASE POPULATION
+// ====================================================================
+
+/**
+ * Building Features - Centralized building amenities and features
+ */
+export function getBuildingFeatures() {
+  return {
+    autonomous_heating: 'Αυτόνομη Θέρμανση',
+    solar_heating: 'Ηλιακή Θέρμανση',
+    parking_spaces: 'Θέσεις Στάθμευσης',
+    elevator: 'Ανελκυστήρας',
+    balconies_with_view: 'Μπαλκόνια με Θέα',
+    energy_class_a_plus: 'Ενεργειακή Κλάση Α+',
+    shop_windows: 'Βιτρίνες Καταστημάτων',
+    vrv_climate: 'Κλιματισμός VRV',
+    fire_suppression: 'Πυρόσβεση',
+    disability_access: 'Πρόσβαση ΑμεΑ',
+    loading_access: 'Πρόσβαση Φορτηγών',
+    electric_vehicle_charging: 'Φόρτιση Ηλεκτρικών Οχημάτων',
+    security_cameras_24_7: 'Κάμερες Ασφαλείας 24/7',
+    automatic_ventilation: 'Αυτόματος Εξαερισμός',
+    car_wash: 'Πλυντήριο Αυτοκινήτων',
+    access_control: 'Έλεγχος Πρόσβασης',
+    crane_bridge_20_tons: 'Γερανογέφυρα 20 Τόνων',
+    power_supply_1000kw: 'Παροχή Ρεύματος 1000kW',
+    dust_removal_systems: 'Συστήματα Αποκονίωσης',
+    natural_ventilation: 'Φυσικός Αερισμός',
+    gas_fire_suppression: 'Πυρόσβεση Αερίου',
+    automation_systems: 'Συστήματα Αυτοματισμού',
+    high_shelving_12m: 'Ράφια Ύψους 12μ',
+    monitoring_systems: 'Συστήματα Παρακολούθησης',
+    warehouse_climate: 'Κλιματισμός Αποθήκης',
+    loading_ramps: 'Ράμπες Φόρτωσης',
+    rfid_tracking: 'Σύστημα RFID',
+    video_conferencing_all_rooms: 'Τηλεδιάσκεψη σε όλες τις αίθουσες',
+    smart_climate: 'Έξυπνος Κλιματισμός',
+    security_systems: 'Συστήματα Ασφαλείας',
+    high_quality_acoustics: 'Υψηλής Ποιότητας Ακουστική',
+    staff_cafeteria: 'Κυλικείο Προσωπικού',
+    natural_lighting_atrium: 'Φυσικός Φωτισμός Atrium',
+    escalators_all_floors: 'Κυλιόμενες Σκάλες σε όλους τους ορόφους',
+    shop_management_system: 'Σύστημα Διαχείρισης Καταστημάτων',
+    food_court_800_seats: 'Food Court 800 θέσεων',
+    cinema_8_rooms: 'Σινεμά 8 Αιθουσών',
+    playground_300sqm: 'Παιδότοπος 300τ.μ.',
+    parking_guidance_system: 'Σύστημα Καθοδήγησης Στάθμευσης',
+    tesla_vw_charging: 'Φόρτιση Tesla/VW',
+    car_wash_plural: 'Πλυντήρια Αυτοκινήτων',
+    mechanical_security: 'Μηχανική Ασφάλεια',
+    emergency_exits: 'Έξοδοι Κινδύνου'
+  } as const;
+}
+
+/**
+ * Building Descriptions - Centralized building descriptions
+ */
+export function getBuildingDescriptions() {
+  return {
+    luxury_apartments_main: 'Πολυτελή Διαμερίσματα',
+    commercial_building_shops: 'Εμπορικό Κτίριο με Καταστήματα',
+    underground_parking: 'Υπόγειο Πάρκινγκ',
+    main_factory_building: 'Κύριο Εργοστασιακό Κτίριο',
+    warehouse_building: 'Κτίριο Αποθήκευσης',
+    administration_building: 'Κτίριο Διοίκησης',
+    commercial_building_main: 'Κύριο Εμπορικό Κτίριο',
+    parking_tower: 'Πύργος Στάθμευσης'
+  } as const;
+}
+
+/**
+ * Building Technical Terms - Centralized technical terminology
+ */
+export function getBuildingTechnicalTerms() {
+  return {
+    industrial_area_thermi: 'Βιομηχανική Περιοχή Θέρμης',
+    avenue_megalou_alexandrou: 'Λεωφόρος Μεγάλου Αλεξάνδρου',
+    industrial_zone: 'Βιομηχανική Ζώνη',
+    commercial_zone: 'Εμπορική Ζώνη',
+    residential_zone: 'Οικιστική Ζώνη',
+    reinforced_concrete: 'Οπλισμένο Σκυρόδεμα',
+    energy_class_a_plus_label: 'Ενεργειακή Κλάση Α+',
+    energy_class_a_label: 'Ενεργειακή Κλάση Α',
+    seismic_zone_2: 'Σεισμική Ζώνη ΙΙ'
+  } as const;
+}

@@ -139,6 +139,29 @@ export const ContactInfoUtils = {
   validateEmail: (email: string): boolean => {
     const { isValidEmail } = require('@/components/ui/email-sharing/types');
     return isValidEmail(email);
+  },
+
+  /**
+   * Generate sample contacts for testing
+   * @param count Number of contacts to generate
+   */
+  generateSampleContacts: (count: number) => {
+    const greekFirstNames = ['Γιώργος', 'Μαρία', 'Κώστας', 'Ελένη', 'Νίκος', 'Αθηνά', 'Δημήτρης', 'Σοφία'];
+    const greekLastNames = ['Παπαδόπουλος', 'Γεωργίου', 'Νικολάου', 'Ιωάννου', 'Αθανασίου', 'Κωνσταντίνου', 'Αλεξίου', 'Μιχαηλίδης'];
+
+    const contacts = [];
+    for (let i = 0; i < count; i++) {
+      const firstName = greekFirstNames[i % greekFirstNames.length];
+      const lastName = greekLastNames[i % greekLastNames.length];
+      contacts.push({
+        firstName,
+        lastName,
+        fullName: `${firstName} ${lastName}`,
+        phone: ContactInfoUtils.generatePhone('mobile'),
+        email: ContactInfoUtils.generateEmail(firstName, lastName, 'personal')
+      });
+    }
+    return contacts;
   }
 } as const;
 

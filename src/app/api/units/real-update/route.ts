@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { BUILDING_IDS } from '@/config/building-ids-config';
-import { CONTACT_INFO, ContactUtils } from '@/config/contact-info-config';
+import { CONTACT_INFO, ContactInfoUtils } from '@/config/contact-info-config';
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     console.log(`🎯 Found ${soldUnitsToUpdate.length} sold units to update`);
 
     // Step 2: 🏢 ENTERPRISE: Generate contacts με configurable patterns
-    const contacts = ContactUtils.generateSampleContacts(8).map((contact, index) => ({
+    const contacts = ContactInfoUtils.generateSampleContacts(8).map((contact, index) => ({
       id: `real_contact_${index + 1}`,
       name: contact.fullName,
       email: contact.email
