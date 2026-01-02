@@ -62,7 +62,19 @@
       "Bash(powershell.exe -ExecutionPolicy Bypass -File \"C:\\\\Nestor_Pagonis\\\\enterprise-backup.ps1\")",
       "Bash(npx next:*)",
       "Bash(Select-Object -First 100)",
-      "Bash(powershell.exe -Command \"if \\(Test-Path ''C:\\\\Nestor_Pagonis\\\\.next''\\) { Remove-Item -Recurse -Force ''C:\\\\Nestor_Pagonis\\\\.next'' -ErrorAction SilentlyContinue }; cd ''C:\\\\Nestor_Pagonis''; npx next build\")"
+      "Bash(powershell.exe -Command \"if \\(Test-Path ''C:\\\\Nestor_Pagonis\\\\.next''\\) { Remove-Item -Recurse -Force ''C:\\\\Nestor_Pagonis\\\\.next'' -ErrorAction SilentlyContinue }; cd ''C:\\\\Nestor_Pagonis''; npx next build\")",
+      "Bash(powershell.exe -Command \"Stop-Process -Name ''node'' -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2; if \\(Test-Path ''C:\\\\Nestor_Pagonis\\\\.next''\\) { Remove-Item -Recurse -Force ''C:\\\\Nestor_Pagonis\\\\.next'' -ErrorAction SilentlyContinue }; cd ''C:\\\\Nestor_Pagonis''; npx next build\")",
+      "Bash(git diff:*)",
+      "Bash(pnpm list:*)",
+      "Bash(wsl tail:*)",
+      "Bash(powershell.exe -Command \"Get-Content ''C:\\\\Nestor_Pagonis\\\\local_3.txt'' -Tail 300\")",
+      "Bash(powershell.exe -Command \"Get-Content ''C:\\\\Nestor_Pagonis\\\\local_3.txt'' -Head 100\")",
+      "Bash(pnpm test:*)",
+      "Bash(powershell.exe -Command:*)",
+      "Bash(pnpm install:*)",
+      "Bash(node scripts/build-design-tokens.js:*)",
+      "Bash(powershell.exe -Command \"Get-ChildItem ''C:\\\\Users\\\\user\\\\Downloads\\\\BuckUps\\\\Zip_BuckUps-2\\\\'' | Sort-Object LastWriteTime -Descending | Select-Object -First 5 | Format-Table Name, Length, LastWriteTime\")",
+      "Bash(powershell.exe -Command \"Get-ChildItem ''C:\\\\Users\\\\user\\\\Downloads\\\\BuckUps\\\\Zip_BuckUps-2\\\\*20260102*'' | Format-Table Name, Length, LastWriteTime\")"
     ],
     "deny": [],
     "ask": []
