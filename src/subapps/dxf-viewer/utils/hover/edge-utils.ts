@@ -6,7 +6,7 @@
 import { HOVER_CONFIG } from './config';
 import type { Point2D } from '../../rendering/types/Types';
 import { renderEdgeDistanceLabel, calculateEdgeTextPosition } from './text-labeling-utils';
-import { renderStyledText } from '../../hooks/useTextPreviewStyle';
+import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 
 export function renderHoverEdgeWithDistance(
   ctx: CanvasRenderingContext2D,
@@ -42,7 +42,7 @@ export function renderHoverEdgeWithDistance(
 
   // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
   const distanceText = distance.toFixed(2);
-  renderStyledText(ctx, distanceText, 0, 0);
+  renderStyledTextWithOverride(ctx, distanceText, 0, 0);
 
   ctx.restore();
 }

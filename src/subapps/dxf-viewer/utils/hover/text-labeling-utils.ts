@@ -4,7 +4,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { renderStyledText } from '../../hooks/useTextPreviewStyle';
+import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 import { UI_COLORS } from '../../config/color-config';
 
 /**
@@ -84,7 +84,7 @@ export function renderTextAtEdgePosition(
   }
 
   // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
-  renderStyledText(ctx, text, 0, 0);
+  renderStyledTextWithOverride(ctx, text, 0, 0);
   
   ctx.restore();
 }

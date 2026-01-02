@@ -15,7 +15,7 @@
 const DEBUG_PHASE_MANAGER = true; // ✅ ΕΝΕΡΓΟΠΟΙΗΣΗ για testing
 
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
-import { renderStyledText, renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
+import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 import { getGripPreviewStyleWithOverride } from '../../hooks/useGripPreviewStyle';
 import type { Entity } from '../../types/entities';
 import type { GripInfo } from '../../rendering/types/Types';
@@ -73,7 +73,7 @@ function renderMeasurementText(
     const yOffset = screenCenter.y - (measurements.length - 1 - index) * 20;
     const text = `${measurement.label}: ${measurement.value.toFixed(measurement.unit === '°' ? 1 : 2)}${measurement.unit || ''}`;
     // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
-    renderStyledText(ctx, text, screenCenter.x, yOffset);
+    renderStyledTextWithOverride(ctx, text, screenCenter.x, yOffset);
   });
   
   ctx.restore();
@@ -418,7 +418,7 @@ export class PhaseManager {
     
     this.ctx.textAlign = textAlign;
     // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
-    renderStyledText(this.ctx, `Α: ${distance.toFixed(2)}`, measurementX, measurementY);
+    renderStyledTextWithOverride(this.ctx, `Α: ${distance.toFixed(2)}`, measurementX, measurementY);
     this.ctx.restore();
   }
 
@@ -471,16 +471,16 @@ export class PhaseManager {
     this.ctx.textAlign = textAlign;
     
     // Live measurements with Greek characters - χρήση δυναμικού styling
-    renderStyledText(this.ctx, `Ρ: ${newRadius.toFixed(2)}`, measurementX, measurementY - 30);
-    renderStyledText(this.ctx, `Δ: ${(newRadius * 2).toFixed(2)}`, measurementX, measurementY - 10);
+    renderStyledTextWithOverride(this.ctx, `Ρ: ${newRadius.toFixed(2)}`, measurementX, measurementY - 30);
+    renderStyledTextWithOverride(this.ctx, `Δ: ${(newRadius * 2).toFixed(2)}`, measurementX, measurementY - 10);
 
     // Live area
     const area = Math.PI * newRadius * newRadius;
-    renderStyledText(this.ctx, `Ε: ${area.toFixed(2)}`, measurementX, measurementY + 10);
+    renderStyledTextWithOverride(this.ctx, `Ε: ${area.toFixed(2)}`, measurementX, measurementY + 10);
 
     // Live circumference
     const circumference = 2 * Math.PI * newRadius;
-    renderStyledText(this.ctx, `Περ: ${circumference.toFixed(2)}`, measurementX, measurementY + 30);
+    renderStyledTextWithOverride(this.ctx, `Περ: ${circumference.toFixed(2)}`, measurementX, measurementY + 30);
     
     this.ctx.restore();
   }
@@ -581,10 +581,10 @@ export class PhaseManager {
     this.ctx.textBaseline = 'middle';
     
     // Live measurements with Greek characters - χρήση δυναμικού styling
-    renderStyledText(this.ctx, `Π: ${width.toFixed(2)}`, measurementX, measurementY - 30);
-    renderStyledText(this.ctx, `Υ: ${height.toFixed(2)}`, measurementX, measurementY - 10);
-    renderStyledText(this.ctx, `Ε: ${area.toFixed(2)}`, measurementX, measurementY + 10);
-    renderStyledText(this.ctx, `Περ: ${perimeter.toFixed(2)}`, measurementX, measurementY + 30);
+    renderStyledTextWithOverride(this.ctx, `Π: ${width.toFixed(2)}`, measurementX, measurementY - 30);
+    renderStyledTextWithOverride(this.ctx, `Υ: ${height.toFixed(2)}`, measurementX, measurementY - 10);
+    renderStyledTextWithOverride(this.ctx, `Ε: ${area.toFixed(2)}`, measurementX, measurementY + 10);
+    renderStyledTextWithOverride(this.ctx, `Περ: ${perimeter.toFixed(2)}`, measurementX, measurementY + 30);
     
     this.ctx.restore();
   }

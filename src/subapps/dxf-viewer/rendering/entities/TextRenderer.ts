@@ -11,6 +11,16 @@ import { HoverManager } from '../../utils/hover';
 import { UI_COLORS } from '../../config/color-config';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 
+// ENTERPRISE: Import centralized text rendering configuration
+import {
+  TEXT_SIZE_LIMITS,
+  CHARACTER_METRICS,
+  TEXT_FONTS,
+  calculateEffectiveScreenHeight,
+  estimateTextWidth,
+  buildCanvasFont
+} from '../../config/text-rendering-config';
+
 export class TextRenderer extends BaseEntityRenderer {
   /**
    * 🏢 ENTERPRISE: CAD-Standard Text Rendering
@@ -51,16 +61,14 @@ export class TextRenderer extends BaseEntityRenderer {
     } else {
       // 🏢 ENTERPRISE: CAD-accurate text rendering
       const screenPos = this.worldToScreen(position);
-      const screenHeight = textHeight * this.transform.scale;
 
-      // 🏢 ENTERPRISE: Minimum readable size (4px) for zoom-out scenarios
-      const minReadableSize = 4;
-      const effectiveScreenHeight = Math.max(screenHeight, minReadableSize);
+      // 🏢 ENTERPRISE: Use centralized config for size constraints (MIN_READABLE_SIZE: 8px)
+      const effectiveScreenHeight = calculateEffectiveScreenHeight(textHeight, this.transform.scale);
 
       this.ctx.save();
 
       // 🏢 ENTERPRISE: Apply text properties with CAD-standard font construction
-      this.ctx.font = `${effectiveScreenHeight}px ${fontFamily}`;
+      this.ctx.font = buildCanvasFont(effectiveScreenHeight, fontFamily);
       this.ctx.fillStyle = ('color' in entity ? entity.color : undefined) || UI_COLORS.DEFAULT_ENTITY;
       this.ctx.textAlign = alignment;
       this.ctx.textBaseline = 'bottom';
@@ -87,19 +95,21 @@ export class TextRenderer extends BaseEntityRenderer {
    * Priority order (CAD standard):
    * 1. fontSize (canonical property from TextEntity interface)
    * 2. height (legacy/mtext property)
-   * 3. Default 2.5 (AutoCAD standard default text height in drawing units)
+   * 3. DEFAULT_HEIGHT from centralized config (2.5 drawing units)
+   *
+   * @see text-rendering-config.ts - TEXT_SIZE_LIMITS.DEFAULT_HEIGHT
    */
   private extractTextHeight(entity: EntityModel): number {
     // Priority 1: fontSize (canonical)
-    if ('fontSize' in entity && typeof entity.fontSize === 'number' && entity.fontSize > 0) {
+    if ('fontSize' in entity && typeof entity.fontSize === 'number' && entity.fontSize > TEXT_SIZE_LIMITS.MIN_VALID_HEIGHT) {
       return entity.fontSize;
     }
     // Priority 2: height (legacy/backward compatibility)
-    if ('height' in entity && typeof entity.height === 'number' && entity.height > 0) {
+    if ('height' in entity && typeof entity.height === 'number' && entity.height > TEXT_SIZE_LIMITS.MIN_VALID_HEIGHT) {
       return entity.height as number;
     }
-    // Default: CAD standard default text height
-    return 2.5;
+    // Default: CAD standard default text height from centralized config
+    return TEXT_SIZE_LIMITS.DEFAULT_HEIGHT;
   }
 
   /**
@@ -171,8 +181,8 @@ export class TextRenderer extends BaseEntityRenderer {
     const screenPoint = this.worldToScreen(point);
     const screenHeight = textHeight * this.transform.scale;
 
-    // Estimate text width (CAD standard: ~0.6 × height per character for Arial)
-    const estimatedWidth = text.length * screenHeight * 0.6;
+    // 🏢 ENTERPRISE: Use centralized character metrics for width estimation
+    const estimatedWidth = estimateTextWidth(text, screenHeight);
 
     // 🏢 ENTERPRISE: Calculate X offset based on alignment
     let xOffset = 0;

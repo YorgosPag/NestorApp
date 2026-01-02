@@ -8,7 +8,7 @@ import type { Point2D } from '../../types/Types';
 import type { AngleMeasurementEntity } from '../../../types/entities';
 import type { EntityModel } from '../../types/Types';
 import { UI_COLORS } from '../../../config/color-config';
-import { renderStyledText } from '../../../hooks/useTextPreviewStyle';
+import { renderStyledTextWithOverride } from '../../../hooks/useTextPreviewStyle';
 
 /**
  * Extract and validate angle measurement points from entity
@@ -161,7 +161,7 @@ export function renderMeasurementLabel(
   ctx.font = '11px Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  renderStyledText(ctx, text, x, y);
+  renderStyledTextWithOverride(ctx, text, x, y);
   ctx.restore();
 }
 

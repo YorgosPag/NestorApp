@@ -5,7 +5,7 @@
 
 import type { Point2D } from '../../types/Types';
 import type { EntityModel, RenderOptions } from '../../types/Types';
-import { renderStyledText } from '../../../hooks/useTextPreviewStyle';
+import { renderStyledTextWithOverride } from '../../../hooks/useTextPreviewStyle';
 
 /**
  * Render distance text with phase-aware positioning
@@ -30,12 +30,12 @@ export function renderDistanceTextPhaseAware(
     const midX = (screenStart.x + screenEnd.x) / 2;
     const midY = (screenStart.y + screenEnd.y) / 2;
     // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
-    renderStyledText(ctx, label, midX, midY);
+    renderStyledTextWithOverride(ctx, label, midX, midY);
   } else {
     // Offset positioning for measurements - above the line
     const midX = (screenStart.x + screenEnd.x) / 2;
     const midY = (screenStart.y + screenEnd.y) / 2 - 20; // Offset above
     // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
-    renderStyledText(ctx, label, midX, midY);
+    renderStyledTextWithOverride(ctx, label, midX, midY);
   }
 }
