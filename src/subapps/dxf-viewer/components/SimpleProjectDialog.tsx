@@ -80,17 +80,12 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
   const colors = useSemanticColors();
   const typography = useTypography();
 
-  // Enterprise helper για modal container borders
+  // ✅ ENTERPRISE FIX: Only borders, NO background colors
+  // Background is handled by ModalContainer dark-theme variants
   const getModalContainerBorder = (variant: 'default' | 'info' | 'success' | 'warning' | 'error') => {
-    const baseClasses = {
-      default: colors.bg.muted,
-      info: `${colors.bg.infoSubtle}`,
-      success: `${colors.bg.successSubtle}`,
-      warning: `${colors.bg.warningSubtle}`,
-      error: `${colors.bg.errorSubtle}`
-    };
-
-    return `${baseClasses[variant]} ${getStatusBorder(variant)}`;
+    // ✅ REMOVED: Background colors that were overriding dark theme
+    // Now only returns border styling - background comes from ModalContainer
+    return getStatusBorder(variant);
   };
 
   const { setProjectFloorplan, setParkingFloorplan } = useFloorplan();

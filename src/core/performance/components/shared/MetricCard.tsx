@@ -17,10 +17,7 @@ import { TrendingUp, TrendingDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { designSystem } from '@/lib/design-system';
-import {
-  performanceComponents,
-  performanceMonitorUtilities
-} from '@/styles/design-tokens';
+import { performanceMonitorUtilities } from '@/styles/design-tokens';
 import { formatMetricValue, type TrendDirection, type MetricType } from '../utils/performance-utils';
 
 // ============================================================================
@@ -123,17 +120,16 @@ interface TrendIndicatorProps {
 
 /**
  * TrendIndicator - Shows trend direction with color coding.
+ * 🏢 ENTERPRISE: Uses centralized getTrendColorClass (NO inline styles!)
  */
 const TrendIndicator: React.FC<TrendIndicatorProps> = ({
   direction,
   className
 }) => {
-  const color = direction === 'up'
-    ? performanceComponents.performanceMonitor.colors.fps.excellent
-    : performanceComponents.performanceMonitor.colors.fps.poor;
+  const colorClass = performanceMonitorUtilities.getTrendColorClass(direction);
 
   return (
-    <div className={className} style={{ color }}>
+    <div className={cn(className, colorClass)}>
       {direction === 'up' ? <TrendingUp /> : <TrendingDown />}
     </div>
   );

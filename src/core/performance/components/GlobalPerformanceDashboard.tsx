@@ -170,7 +170,6 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
           <OptimizationPanel
             recommendations={status.recommendations}
             onApplyOptimization={async () => true}
-            onApplyAll={async () => controls.applyAllOptimizations()}
           />
         )}
 

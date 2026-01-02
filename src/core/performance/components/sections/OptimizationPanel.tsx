@@ -15,7 +15,7 @@
 import React from 'react';
 import { CheckCircle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { performanceComponents } from '@/styles/design-tokens';
+import { performanceMonitorUtilities } from '@/styles/design-tokens';
 import { migrateLegacyActionButton } from '@/core/actions/SmartActionFactory';
 
 // ============================================================================
@@ -33,8 +33,6 @@ export interface OptimizationPanelProps {
   recommendations: OptimizationRecommendation[];
   /** Callback when applying single optimization */
   onApplyOptimization: (id: string) => Promise<boolean>;
-  /** Callback when applying all optimizations */
-  onApplyAll: () => Promise<void>;
   /** Additional CSS classes */
   className?: string;
 }
@@ -50,16 +48,17 @@ export interface OptimizationPanelProps {
  * <OptimizationPanel
  *   recommendations={recommendations}
  *   onApplyOptimization={handleApply}
- *   onApplyAll={handleApplyAll}
  * />
  */
 export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
   recommendations,
   onApplyOptimization,
-  onApplyAll,
   className
 }) => {
   const iconSizes = useIconSizes();
+
+  // 🏢 ENTERPRISE: Get centralized success state classes (NO inline styles!)
+  const successClasses = performanceMonitorUtilities.getSuccessStateClasses();
 
   // All optimizations applied state
   if (recommendations.length === 0) {
@@ -70,14 +69,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
         aria-label="All optimizations applied"
       >
         <div className="flex items-center gap-performance-sm">
-          <CheckCircle
-            className={iconSizes.sm}
-            style={{ color: performanceComponents.performanceMonitor.colors.fps.excellent }}
-          />
-          <span
-            className="text-performance-xs"
-            style={{ color: performanceComponents.performanceMonitor.colors.fps.excellent }}
-          >
+          <CheckCircle className={`${iconSizes.sm} ${successClasses.icon}`} />
+          <span className={`text-performance-xs ${successClasses.text}`}>
             All optimizations applied!
           </span>
         </div>

@@ -1978,7 +1978,31 @@ export const performanceMonitorUtilities = {
   getActionButtonClasses: (variant: string, fullWidth: boolean) =>
     `${variant === 'primary' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'} ${fullWidth ? 'w-full' : ''}`,
   getChartBarClasses: (value: number) =>
-    value > 70 ? 'bg-green-500' : value > 40 ? 'bg-yellow-500' : 'bg-red-500'
+    value > 70 ? 'bg-green-500' : value > 40 ? 'bg-yellow-500' : 'bg-red-500',
+
+  // 🏢 ENTERPRISE: Trend indicator color classes (NO inline styles!)
+  // @since 2026-01-02 - Added for full centralization compliance
+  getTrendColorClass: (direction: 'up' | 'down'): string =>
+    direction === 'up' ? 'text-green-600' : 'text-red-600',
+
+  // 🏢 ENTERPRISE: Success state classes for performance optimization panel
+  // Returns consistent Tailwind classes instead of inline style={{ color }}
+  getSuccessStateClasses: (): { icon: string; text: string } => ({
+    icon: 'text-green-600',
+    text: 'text-green-600'
+  }),
+
+  // 🏢 ENTERPRISE: Performance grade color classes
+  // Maps performance grades to semantic Tailwind classes
+  getPerformanceGradeClasses: (grade: 'excellent' | 'good' | 'fair' | 'poor'): string => {
+    const gradeClassMap: Record<string, string> = {
+      excellent: 'text-green-600',
+      good: 'text-green-500',
+      fair: 'text-yellow-600',
+      poor: 'text-red-600'
+    };
+    return gradeClassMap[grade] || 'text-muted-foreground';
+  }
 };
 
 // Canvas UI Components
