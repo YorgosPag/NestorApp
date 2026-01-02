@@ -6,10 +6,7 @@ import { CacheProvider } from '@/contexts/CacheProvider';
 import { OptimizedUserRoleProvider } from '@/contexts/OptimizedUserRoleContext';
 import { GeoCanvasContent } from './app/GeoCanvasContent';
 import ErrorBoundary from '@/components/ui/ErrorBoundary/ErrorBoundary';
-import { GlobalPerformanceDashboard } from '@/core/performance/components/GlobalPerformanceDashboard';
-import { PerformanceCategory } from '@/core/performance/types/performance.types';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
+// 🚀 ENTERPRISE: Performance Dashboard is rendered globally in layout.tsx (no duplicate imports needed)
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import type { GeoCanvasAppProps } from './types/components';
@@ -25,8 +22,6 @@ import type { GeoCanvasAppProps } from './types/components';
  * - Future-ready για MapLibre GL JS integration
  */
 export function GeoCanvasApp(props: GeoCanvasAppProps) {
-  const iconSizes = useIconSizes();
-  const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   return (
     <NotificationProvider>
@@ -57,21 +52,7 @@ export function GeoCanvasApp(props: GeoCanvasAppProps) {
               <GeoCanvasContent {...props} />
             </Suspense>
 
-            {/* 🚀 ENTERPRISE PERFORMANCE SYSTEM - GEO-CANVAS MONITORING */}
-            <GlobalPerformanceDashboard
-              position="bottom-left"
-              minimizable={true}
-              defaultMinimized={true}
-              showDetails={false}
-              updateInterval={3000}
-              categories={[
-                PerformanceCategory.RENDERING,
-                PerformanceCategory.MEMORY,
-                PerformanceCategory.CACHE_HIT,
-                PerformanceCategory.APPLICATION
-              ]}
-              theme="dark"
-            />
+            {/* 🚀 ENTERPRISE: Performance Dashboard is rendered globally in layout.tsx */}
 
           </ErrorBoundary>
         </OptimizedUserRoleProvider>

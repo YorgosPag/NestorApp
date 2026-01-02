@@ -1,21 +1,37 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { OverlayProperties } from '../OverlayProperties';
-import { usePrecisionPositioning } from '../../utils/precision-positioning';
 import { useDraggable } from '../../../../hooks/useDraggable';
 import { Card, CardHeader, CardContent } from '../../../../components/ui/card';
 import { Activity, X } from 'lucide-react';
-// Performance monitoring utilities available in main design-tokens
 import { performanceMonitorUtilities } from '@/styles/design-tokens';
-// Enterprise floating panel design tokens integration
+import type { Overlay, UpdateOverlayData } from '../../overlays/types';
+
+// ============================================================================
+// TYPES - Enterprise TypeScript Standards (ZERO any)
+// ============================================================================
 
 interface DraggableOverlayPropertiesProps {
-  overlay: any;
-  onUpdate: (overlayId: string, updates: any) => void;
+  overlay: Overlay;
+  onUpdate: (overlayId: string, updates: UpdateOverlayData) => void;
   onClose: () => void;
 }
+
+// ============================================================================
+// CONSTANTS - Enterprise Design Tokens
+// ============================================================================
+
+const PANEL_DIMENSIONS = {
+  width: 340,
+  height: 500,
+  margin: 30
+} as const;
+
+// ============================================================================
+// COMPONENT - Enterprise Draggable Pattern (Same as GlobalPerformanceDashboard)
+// ============================================================================
 
 export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProps> = ({
   overlay,
@@ -23,67 +39,75 @@ export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProp
   onClose
 }) => {
   const iconSizes = useIconSizes();
-  // CENTRALIZED PRECISION POSITIONING for initial placement
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const { position: initialPosition } = usePrecisionPositioning(containerRef, {
-    targetPoint: { x: 2550, y: 1230 },
-    alignment: 'bottom-right',
-    dependencies: [overlay]
-  });
+
+  // ✅ ENTERPRISE: Hydration safety (same pattern as GlobalPerformanceDashboard)
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // ✅ ENTERPRISE: Calculate initial position on client only
+  const getInitialPosition = () => {
+    if (typeof window === 'undefined') return { x: 100, y: 100 };
+    return {
+      x: window.innerWidth - PANEL_DIMENSIONS.width - PANEL_DIMENSIONS.margin,
+      y: 100
+    };
+  };
 
   // ✅ ENTERPRISE CENTRALIZED DRAGGING SYSTEM
-  const draggable = useDraggable(true, {
-    initialPosition: initialPosition || { x: 0, y: 0 },
-    autoCenter: false, // Use precision positioning instead
-    elementWidth: 320,
-    elementHeight: 400,
+  // Destructure exactly like GlobalPerformanceDashboard
+  const {
+    position,
+    isDragging,
+    elementRef,
+    handleMouseDown
+  } = useDraggable(true, {
+    initialPosition: getInitialPosition(),
+    autoCenter: false,
+    elementWidth: PANEL_DIMENSIONS.width,
+    elementHeight: PANEL_DIMENSIONS.height,
     minPosition: { x: 0, y: 0 },
     maxPosition: {
-      x: window.innerWidth - 320,
-      y: window.innerHeight - 400
+      x: typeof window !== 'undefined' ? window.innerWidth - PANEL_DIMENSIONS.width : 1000,
+      y: typeof window !== 'undefined' ? window.innerHeight - PANEL_DIMENSIONS.height : 400
     }
   });
 
-  // Update position when precision positioning changes
-  React.useEffect(() => {
-    if (initialPosition && !draggable.isDragging) {
-      draggable.setPosition(initialPosition);
-    }
-  }, [initialPosition?.x, initialPosition?.y, draggable.isDragging]);
+  // ✅ ENTERPRISE: Draggable styles with smooth transition (same as GlobalPerformanceDashboard)
+  const draggableStyles = mounted ? {
+    left: position.x,
+    top: position.y,
+    transition: isDragging ? 'none' : 'left 0.2s ease, top 0.2s ease',
+    ...performanceMonitorUtilities.getOverlayContainerStyles()
+  } : undefined;
 
-  // Sync refs for precision positioning compatibility
-  React.useEffect(() => {
-    if (draggable.elementRef.current) {
-      containerRef.current = draggable.elementRef.current;
-    }
-  }, [draggable.elementRef.current]);
+  // ✅ ENTERPRISE: Prevent hydration mismatch
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <Card
-      ref={draggable.elementRef}
-      className={performanceMonitorUtilities.getOverlayContainerClasses()}
-      style={{
-        left: draggable.position?.x || 0,
-        top: draggable.position?.y || 0,
-        ...performanceMonitorUtilities.getOverlayContainerStyles()
-      }}
-      onMouseEnter={(e) => e.stopPropagation()}
-      onMouseLeave={(e) => e.stopPropagation()}
+      ref={elementRef}
+      className={`${performanceMonitorUtilities.getOverlayContainerClasses()} w-[340px] ${isDragging ? 'cursor-grabbing select-none' : ''}`}
+      style={draggableStyles}
     >
       <CardHeader
         className={performanceMonitorUtilities.getOverlayHeaderClasses()}
-        style={performanceMonitorUtilities.getOverlayHeaderStyles()}
-        onMouseDown={draggable.handleMouseDown}
+        onMouseDown={handleMouseDown}
       >
         <div className="flex items-center gap-3 flex-1">
-          <Activity className={iconSizes.sm} style={performanceMonitorUtilities.getOverlayIconStyles('primary')} />
-          <h3 className="text-sm font-semibold" style={performanceMonitorUtilities.getOverlayTitleStyles()}>Overlay Properties</h3>
+          <Activity className={`${iconSizes.sm} text-primary`} />
+          <h3 className="text-sm font-semibold text-foreground">Overlay Properties</h3>
 
+          {/* ✅ ENTERPRISE: Dedicated drag handle */}
           <div
-            className="ml-auto cursor-grab transition-colors text-xs select-none"
-            style={performanceMonitorUtilities.getOverlayIconStyles('secondary')}
+            className="ml-auto cursor-grab transition-colors text-xs select-none text-muted-foreground hover:text-foreground"
             title="Drag to move"
-            onMouseDown={draggable.handleMouseDown}
+            data-drag-handle="true"
+            onMouseDown={handleMouseDown}
           >
             ⋮⋮
           </div>
@@ -91,8 +115,7 @@ export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProp
         <div className="flex items-center gap-1">
           <button
             onClick={onClose}
-            className="p-1 rounded transition-colors"
-            style={performanceMonitorUtilities.getOverlayButtonStyles()}
+            className="p-1 rounded transition-colors hover:bg-muted text-muted-foreground hover:text-foreground"
             title="Hide properties"
           >
             <X className={iconSizes.xs} />
@@ -100,10 +123,7 @@ export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProp
         </div>
       </CardHeader>
 
-      <CardContent
-        className="space-y-4"
-        style={performanceMonitorUtilities.getOverlayContentStyles()}
-      >
+      <CardContent className="space-y-4">
         <OverlayProperties
           overlay={overlay}
           onUpdate={onUpdate}

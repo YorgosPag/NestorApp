@@ -1953,24 +1953,26 @@ export const PerformanceDashboardTokens = {
 };
 
 // Performance Monitor Utilities
+// 🏢 ENTERPRISE: Draggable floating panels - OPAQUE backgrounds (no transparency!)
 export const performanceMonitorUtilities = {
-  getOverlayContainerClasses: () => 'fixed bg-[hsl(var(--bg-primary))] border rounded-lg shadow-lg',
-  getOverlayContainerStyles: () => ({ zIndex: zIndex.modal }),
-  getOverlayHeaderClasses: () => 'flex items-center justify-between p-3 border-b',
-  getOverlayHeaderStyles: () => ({ backgroundColor: colors.background.primary }),
-  getOverlayIconStyles: (type: string) => ({
-    color: type === 'primary' ? colors.primary[500] : colors.text.secondary
-  }),
-  getOverlayTitleStyles: () => ({ color: colors.text.primary }),
+  // ✅ ENTERPRISE FIX: Use bg-card (standard Tailwind) instead of arbitrary bg-[hsl(...)]
+  // This ensures solid, opaque backgrounds for draggable panels
+  // ✅ CRITICAL: pointer-events-auto ensures panels work even when parent has pointer-events-none
+  getOverlayContainerClasses: () => 'fixed bg-card border border-border rounded-lg shadow-lg pointer-events-auto',
+  // ✅ ENTERPRISE FIX: Use higher z-index (1700) to ensure panels are ALWAYS above canvas overlays
+  getOverlayContainerStyles: () => ({ zIndex: zIndex.toast }),  // 1700 - above all canvas elements
+  getOverlayHeaderClasses: () => 'flex items-center justify-between p-3 border-b border-border cursor-grab pointer-events-auto',
+  // ✅ ENTERPRISE FIX: Removed inline backgroundColor - using Tailwind classes for consistency
+  getOverlayHeaderStyles: () => ({}),
+  // ✅ ENTERPRISE FIX: Return empty objects - use Tailwind classes in components for theme-aware colors
+  getOverlayIconStyles: (type: string) => ({}),
+  getOverlayTitleStyles: () => ({}),
   getOverlayButtonStyles: () => ({
     color: colors.text.secondary,
     padding: spacing.xs
   }),
-  getOverlayContentStyles: () => ({
-    padding: spacing.md,
-    maxHeight: '300px',
-    overflow: 'auto'
-  }),
+  // ✅ ENTERPRISE: Content styles - no maxHeight restriction for full content visibility
+  getOverlayContentStyles: () => ({}),
   getMetricValueClasses: (type: string, value: number) =>
     value > 50 ? 'text-green-600' : 'text-red-600',
   getActionButtonClasses: (variant: string, fullWidth: boolean) =>

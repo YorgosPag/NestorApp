@@ -65,7 +65,7 @@ import {
   migrateLegacyActionButton
 } from '@/core/actions/SmartActionFactory';
 
-interface GlobalPerformanceDashboardProps {
+export interface GlobalPerformanceDashboardProps {
   /** Position of the dashboard */
   position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'floating';
   /** Whether dashboard is minimizable */
@@ -181,9 +181,12 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
   const draggableClasses = FloatingStyleUtils?.getPerformanceDashboardClasses?.(isDragging) ??
     `fixed z-modal max-w-[${tokens.dimensions.maxWidth}] min-w-[${tokens.dimensions.minWidth}] bg-card ${getStatusBorder('default')} rounded-md shadow-lg ${isDragging ? 'cursor-grabbing select-none' : 'cursor-auto'}`;
 
+  // ✅ ENTERPRISE FIX: Use left/top positioning (consistent with other draggable panels)
+  // transform: translate() can cause z-index and interaction issues with fixed elements
   const draggableStyles = mounted ? {
-    transform: `translate(${dragPosition.x}px, ${dragPosition.y}px)`,
-    transition: isDragging ? 'none' : 'transform 0.2s ease'
+    left: dragPosition.x,
+    top: dragPosition.y,
+    transition: isDragging ? 'none' : 'left 0.2s ease, top 0.2s ease'
   } : undefined;
 
   // Prevent hydration mismatch - don't render until mounted
@@ -223,14 +226,14 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
         onMouseDown={handleMouseDown}
       >
         <div className="flex items-center gap-3 flex-1">
-          <Activity className={iconSizes.sm} style={performanceMonitorUtilities.getOverlayIconStyles('primary')} />
-          <h3 className="text-sm font-semibold" style={performanceMonitorUtilities.getOverlayTitleStyles()}>Performance Monitor</h3>
+          <Activity className={`${iconSizes.sm} text-primary`} />
+          <h3 className="text-sm font-semibold text-foreground">Performance Monitor</h3>
           <PerformanceGradeBadge grade={status.grade} />
           {/* 🖱️ DEDICATED DRAG HANDLE για εύκολο dragging */}
           <div
-            className="ml-auto cursor-grab transition-colors text-xs select-none"
-            style={performanceMonitorUtilities.getOverlayIconStyles('secondary')}
+            className="ml-auto cursor-grab transition-colors text-xs select-none text-muted-foreground hover:text-foreground"
             title="Drag to move"
+            data-drag-handle="true"
             onMouseDown={handleMouseDown}
           >
             ⋮⋮
@@ -420,46 +423,38 @@ const DxfMetricCard: React.FC<{
  * 🚨 Performance Alerts - Enterprise CSS Classes
  */
 const PerformanceAlerts: React.FC<{
-  alerts: any[];
+  alerts: Array<{ message?: string; name?: string }>;
   onClearAlerts: () => void;
 }> = ({ alerts, onClearAlerts }) => {
   const iconSizes = useIconSizes();
-  const { radius } = useBorderTokens();
+  // ✅ ENTERPRISE: Theme-aware Tailwind classes αντί για hardcoded colors
   return (
-    <div
-      className="rounded-md border p-3"
-      style={{
-        backgroundColor: performanceComponents.performanceMonitor.colors.alerts.background,
-        borderColor: performanceComponents.performanceMonitor.colors.alerts.border,
-        color: performanceComponents.performanceMonitor.colors.alerts.text
-      }}
-    >
+    <div className="rounded-md border border-warning/30 bg-muted p-3 text-foreground">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <AlertTriangle className={iconSizes.xs} style={{ color: performanceComponents.performanceMonitor.colors.alerts.icon }} />
+          <AlertTriangle className={cn(iconSizes.xs, "text-warning")} />
           <span className={cn(
             designSystem.presets.text.caption,
-            "font-medium"
-          )} style={{ color: performanceComponents.performanceMonitor.colors.alerts.icon }}>
+            "font-medium text-warning"
+          )}>
             Performance Alerts
           </span>
         </div>
         <button
           onClick={onClearAlerts}
-          className="text-xs bg-transparent border-none cursor-pointer hover:opacity-80 transition-opacity"
-          style={{ color: performanceComponents.performanceMonitor.colors.alerts.icon }}
+          className="text-xs bg-transparent border-none cursor-pointer text-warning hover:opacity-80 transition-opacity"
         >
           Clear
         </button>
       </div>
       <div className="flex flex-col gap-1">
         {alerts.slice(0, 3).map((alert, index) => (
-          <div key={index} className="text-xs" style={{ color: `${performanceComponents.performanceMonitor.colors.alerts.icon}E6` }}>
+          <div key={index} className="text-xs text-warning/90">
             • {alert.message || alert.name}
           </div>
         ))}
         {alerts.length > 3 && (
-          <div className="text-xs" style={{ color: performanceComponents.performanceMonitor.colors.alerts.icon }}>
+          <div className="text-xs text-warning">
             +{alerts.length - 3} more alerts
           </div>
         )}

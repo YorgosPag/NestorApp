@@ -106,16 +106,13 @@ import { DebugToolbar } from '../debug/DebugToolbar';
 // ✅ PERFORMANCE: Use existing LazyLoadWrapper system για heavy components
 import {
   LazyFullLayoutDebug,
-  LazyGlobalPerformanceDashboard,
   withLazyLoad
 } from '../ui/components/LazyLoadWrapper';
 
 // ⚡ ENTERPRISE: DXF Performance Optimizer (729 γραμμές Enterprise system)
 import { dxfPerformanceOptimizer } from '../performance/DxfPerformanceOptimizer';
 
-// 🚀 ENTERPRISE PERFORMANCE SYSTEM - Centralized monitoring (2025-12-18)
-import { GlobalPerformanceDashboard } from '../../../core/performance/components/GlobalPerformanceDashboard';
-import { PerformanceCategory } from '../../../core/performance/types/performance.types';
+// 🚀 ENTERPRISE: Performance Dashboard is rendered globally in layout.tsx (no duplicate imports needed)
 
 // ✅ PERFORMANCE: Memoize το main component για να αποφύγουμε άχρηστα re-renders
 export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
@@ -993,22 +990,8 @@ Check console for detailed metrics`;
         />
       </React.Suspense>
 
-      {/* ⚡ ENTERPRISE: Lazy-loaded Performance System με Bundle Monitoring */}
-      <LazyGlobalPerformanceDashboard
-        position="top-right"
-        minimizable={true}
-        defaultMinimized={false}
-        showDetails={true}
-        updateInterval={1000}
-        categories={[
-          PerformanceCategory.RENDERING,
-          PerformanceCategory.API_RESPONSE,
-          PerformanceCategory.CACHE_HIT,
-          PerformanceCategory.MEMORY,
-          PerformanceCategory.APPLICATION
-        ]}
-        theme="auto"
-      />
+      {/* ⚡ ENTERPRISE: Performance Dashboard is now rendered globally in layout.tsx
+          Removed duplicate instance to prevent 2 monitors showing on screen */}
       </div>
       </TransformProvider>
     </CanvasProvider>

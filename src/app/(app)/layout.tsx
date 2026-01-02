@@ -18,8 +18,7 @@ import { cn } from "@/lib/utils";
 import { I18nProvider } from '@/components/providers/I18nProvider';
 import { NavigationProvider } from '@/components/navigation';
 import { PhotoPreviewProvider } from '@/providers/PhotoPreviewProvider';
-import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/ClientOnlyPerformanceDashboard';
-import { PerformanceCategory } from '@/core/performance/types/performance.types';
+// 🚀 ENTERPRISE: Performance Dashboard is rendered in root layout.tsx (no duplicate imports needed)
 import { GlobalErrorSetup } from '@/components/GlobalErrorSetup';
 import dynamic from 'next/dynamic';
 
@@ -112,25 +111,7 @@ export default function RootLayout({
                 {/* 🚨 GLOBAL ERROR TRACKER SETUP */}
                 <GlobalErrorSetup />
 
-                {/* 🚀 ENTERPRISE PERFORMANCE SYSTEM - GLOBAL MONITORING */}
-                {typeof window !== 'undefined' && (
-                  <ClientOnlyPerformanceDashboard
-                    position="top-right"
-                    minimizable={true}
-                    defaultMinimized={false}
-                    showDetails={true}
-                    updateInterval={2000}
-                    categories={[
-                      PerformanceCategory.RENDERING,
-                      PerformanceCategory.API_RESPONSE,
-                      PerformanceCategory.CACHE_HIT,
-                      PerformanceCategory.CACHE_MISS,
-                      PerformanceCategory.MEMORY,
-                      PerformanceCategory.NETWORK
-                    ]}
-                    theme="auto"
-                  />
-                )}
+                {/* 🚀 ENTERPRISE: Performance Dashboard is rendered in root layout.tsx (no duplicate needed) */}
 
                 {/* ✅ το κεντρικοποιημένο NotificationProvider (sonner-based) */}
                 </NotificationProvider>

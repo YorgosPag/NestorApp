@@ -1,29 +1,48 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
 import type { ToolType } from '../toolbar/types';
 import type { PropertyStatus } from '../../../../constants/property-statuses-enterprise';
-import { usePrecisionPositioning } from '../../utils/precision-positioning';
 import { useDraggable } from '../../../../hooks/useDraggable';
 import { Card, CardHeader, CardContent } from '../../../../components/ui/card';
 import { Activity, X, Pen, Edit, Copy, RotateCcw, RotateCw, Square, Circle, Triangle, Grid } from 'lucide-react';
-// Performance monitoring utilities available in main design-tokens
 import { performanceMonitorUtilities } from '@/styles/design-tokens';
 import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS } from '../../overlays/types';
 import { useUnifiedOverlayCreation } from '../../hooks/overlay/useUnifiedOverlayCreation';
 import { toolStyleStore } from '../../stores/ToolStyleStore';
-import { STATUS_COLORS_MAPPING, BUTTON_STATUS_COLORS, getKindFromLabel } from '../../config/color-mapping';
+import { STATUS_COLORS_MAPPING, getKindFromLabel } from '../../config/color-mapping';
 import { useOverlayStore } from '../../overlays/overlay-store';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { getStatusColorButtonStyles } from '../DxfViewerComponents.styles';
 
-// Separator component (same as in OverlayToolbar)
-const Separator = ({ orientation, className }: { orientation?: string; className?: string }) => (
-  <div className={className} />
+// ============================================================================
+// CONSTANTS - Enterprise Design Tokens
+// ============================================================================
+
+const TOOLBAR_DIMENSIONS = {
+  width: 300,
+  height: 100,
+  initialX: 450,  // Offset to avoid sidebar (assuming ~400px sidebar)
+  initialY: 150
+} as const;
+
+// ============================================================================
+// SEPARATOR COMPONENT - Semantic HTML
+// ============================================================================
+
+const Separator: React.FC<{ orientation?: 'horizontal' | 'vertical'; className?: string }> = ({
+  orientation = 'horizontal',
+  className
+}) => (
+  <div
+    role="separator"
+    aria-orientation={orientation}
+    className={className}
+  />
 );
 
 interface DraggableOverlayToolbarProps {
@@ -47,8 +66,16 @@ interface DraggableOverlayToolbarProps {
 
 export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (props) => {
   const iconSizes = useIconSizes();
-  const { quick, getStatusBorder, radius } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+
+  // ✅ ENTERPRISE: Hydration safety (same pattern as GlobalPerformanceDashboard)
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // 🎯 OVERLAY CREATION & STORE HOOKS
   const { startOverlayCreation } = useUnifiedOverlayCreation();
   const overlayStore = useOverlayStore();
@@ -135,65 +162,64 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
   }, [props.selectedOverlayId, overlayStore, props.currentStatus, props.currentKind, props.onStatusChange, props.onKindChange]);
 
   // ✅ ENTERPRISE CENTRALIZED DRAGGING SYSTEM
-  const draggable = useDraggable(true, {
-    initialPosition: { x: 20, y: 200 },
-    autoCenter: false, // Use precision positioning instead
-    elementWidth: 300, // Approximate toolbar width
-    elementHeight: 100, // Approximate toolbar height
+  // Destructure exactly like GlobalPerformanceDashboard
+  const {
+    position,
+    isDragging,
+    elementRef,
+    handleMouseDown
+  } = useDraggable(true, {
+    initialPosition: { x: TOOLBAR_DIMENSIONS.initialX, y: TOOLBAR_DIMENSIONS.initialY },
+    autoCenter: false,
+    elementWidth: TOOLBAR_DIMENSIONS.width,
+    elementHeight: TOOLBAR_DIMENSIONS.height,
     minPosition: { x: 0, y: 0 },
     maxPosition: {
-      x: window.innerWidth - 300,
-      y: window.innerHeight - 100
+      x: typeof window !== 'undefined' ? window.innerWidth - TOOLBAR_DIMENSIONS.width : 1000,
+      y: typeof window !== 'undefined' ? window.innerHeight - TOOLBAR_DIMENSIONS.height : 600
     }
   });
 
-  // CENTRALIZED PRECISION POSITIONING for initial placement
-  const { position: initialPosition, hasInitialized } = usePrecisionPositioning(draggable.elementRef, {
-    targetPoint: { x: 20, y: 200 }, // Target coordinates: X=20, Y=200 for left side
-    alignment: 'top-left' // Top-left alignment
-  });
+  // ✅ ENTERPRISE: Draggable styles with smooth transition (same as GlobalPerformanceDashboard)
+  const draggableStyles = mounted ? {
+    left: position.x,
+    top: position.y,
+    transition: isDragging ? 'none' : 'left 0.2s ease, top 0.2s ease',
+    ...performanceMonitorUtilities.getOverlayContainerStyles()
+  } : undefined;
 
-  // Update position when precision positioning changes (initial only)
-  const [hasSetInitialPosition, setHasSetInitialPosition] = React.useState(false);
-
-  React.useEffect(() => {
-    if (hasInitialized && !hasSetInitialPosition && initialPosition) {
-      draggable.setPosition(initialPosition);
-      setHasSetInitialPosition(true);
-    }
-  }, [hasInitialized, hasSetInitialPosition, initialPosition, draggable.setPosition]);
-
-  // Note: Both toolbarRef and draggable.elementRef point to the same Card element
-  // No sync needed as the Card component receives draggable.elementRef directly
+  // ✅ ENTERPRISE: Prevent hydration mismatch
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <Card
-      ref={draggable.elementRef}
-      className={performanceMonitorUtilities.getOverlayContainerClasses()}
-      style={{
-        left: draggable.position?.x || 20,
-        top: draggable.position?.y || 200
-      }}
+      ref={elementRef}
+      className={`${performanceMonitorUtilities.getOverlayContainerClasses()} ${isDragging ? 'cursor-grabbing select-none' : ''}`}
+      style={draggableStyles}
     >
       <CardHeader
         className={performanceMonitorUtilities.getOverlayHeaderClasses()}
-        onMouseDown={draggable.handleMouseDown}
+        onMouseDown={handleMouseDown}
       >
         {/* 🎯 HEADER ROW: Title, Drag Handle, Close */}
         <div className="flex items-center gap-3 flex-1">
-          <Activity className={`${iconSizes.sm} text-blue-500`} />
-          <h3 className={`text-sm font-semibold ${colors.text.primary}`}>Drawing Tools</h3>
+          <Activity className={`${iconSizes.sm} text-primary`} />
+          <h3 className="text-sm font-semibold text-foreground">Drawing Tools</h3>
 
+          {/* ✅ ENTERPRISE: Dedicated drag handle */}
           <div
-            className={`ml-auto cursor-grab transition-colors text-xs select-none ${colors.text.muted} ${colors.text.secondary}`}
+            className="ml-auto cursor-grab transition-colors text-xs select-none text-muted-foreground hover:text-foreground"
             title="Drag to move"
-            onMouseDown={draggable.handleMouseDown}
+            data-drag-handle="true"
+            onMouseDown={handleMouseDown}
           >
             ⋮⋮
           </div>
 
           <button
-            className={`p-1 ${radius.md} transition-colors ${colors.text.muted} ${colors.text.secondary} ${colors.bg.hover} ${colors.bg.primary}`}
+            className="p-1 rounded transition-colors hover:bg-muted text-muted-foreground hover:text-foreground"
             title="Hide toolbar"
           >
             <X className={iconSizes.xs} />
@@ -201,9 +227,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
         </div>
       </CardHeader>
 
-      <CardContent
-        className="space-y-4"
-      >
+      <CardContent className="space-y-4">
         {/* 🎯 TOOLBAR CONTROLS - ΣΚΟΥΡΟ BACKGROUND ΟΠΩΣ ΤΑ ΑΛΛΑ PANELS */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Drawing Modes */}
@@ -232,7 +256,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
 
           {/* Status Palette */}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium ${colors.text.muted}">Status:</span>
+            <span className="text-xs font-medium text-muted-foreground">Status:</span>
             <div className="flex items-center gap-1">
               {(Object.keys(STATUS_COLORS) as Status[]).map(status => (
                 <button
@@ -253,7 +277,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
 
           {/* Kind Selection */}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium ${colors.text.muted}">Τύπος:</span>
+            <span className="text-xs font-medium text-muted-foreground">Τύπος:</span>
             <div className="flex items-center gap-1">
               {(Object.keys(KIND_LABELS) as OverlayKind[]).map(kind => {
                 const Icon = kindIcons[kind];

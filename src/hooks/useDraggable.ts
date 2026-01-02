@@ -159,16 +159,26 @@ export function useDraggable(
   const handleMouseDown = (e: React.MouseEvent) => {
     if (disabled) return;
 
-    // Enterprise Feature: Smart interaction exclusion
-    // Prevent drag when clicking interactive elements
     const target = e.target as HTMLElement;
-    const isInteractiveElement = target.closest(
-      'button, input, select, textarea, a, [role="button"], [tabindex]'
-    );
 
-    if (isInteractiveElement) {
-      return;
+    // ✅ ENTERPRISE FIX: Allow drag from dedicated drag handles even if they're inside buttons
+    // Elements with data-drag-handle="true" or cursor-grab class are always draggable
+    const isDragHandle = target.closest('[data-drag-handle="true"], .cursor-grab');
+
+    if (!isDragHandle) {
+      // Enterprise Feature: Smart interaction exclusion
+      // Prevent drag when clicking interactive elements (only if NOT a drag handle)
+      const isInteractiveElement = target.closest(
+        'button, input, select, textarea, a, [role="button"]'
+      );
+
+      if (isInteractiveElement) {
+        return;
+      }
     }
+
+    // Prevent text selection during drag
+    e.preventDefault();
 
     setIsDragging(true);
     setDragStart({
