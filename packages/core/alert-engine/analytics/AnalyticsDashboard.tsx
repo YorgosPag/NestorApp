@@ -141,6 +141,10 @@ const SimpleChart: React.FC<{
   type: 'line' | 'bar' | 'pie' | 'doughnut';
   height?: number;
 }> = ({ title, data, type, height = 300 }) => {
+  // ✅ ENTERPRISE: Properly call hooks in component scope
+  const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
+
   // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES
   const chartBgClass = useDynamicBackgroundClass('white');
   const titleTextClass = useDynamicTextClass('#000');
@@ -233,6 +237,9 @@ const InsightCard: React.FC<{
   insight: AnalyticsInsight;
   onAction?: (insightId: string) => void;
 }> = ({ insight, onAction }) => {
+  // ✅ ENTERPRISE: Properly call hooks in component scope
+  const { quick } = useBorderTokens();
+
   const getSeverityColor = () => {
     switch (insight.severity) {
       case 'critical': return '#EF4444';
@@ -293,6 +300,9 @@ const RecommendationCard: React.FC<{
   recommendation: AnalyticsRecommendation;
   onImplement?: (recId: string) => void;
 }> = ({ recommendation, onImplement }) => {
+  // ✅ ENTERPRISE: Properly call hooks in component scope
+  const { quick } = useBorderTokens();
+
   const getImpactColor = () => {
     switch (recommendation.impact) {
       case 'critical': return '#EF4444';
@@ -374,6 +384,9 @@ const RecommendationCard: React.FC<{
 // ============================================================================
 
 export const AnalyticsDashboard: React.FC = () => {
+  // ✅ ENTERPRISE: Properly call hooks in component scope
+  const { quick, getStatusBorder } = useBorderTokens();
+
   // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES
   const loadingBgClass = useDynamicBackgroundClass('#F9FAFB');
   const errorTextClass = useDynamicTextClass('#EF4444');

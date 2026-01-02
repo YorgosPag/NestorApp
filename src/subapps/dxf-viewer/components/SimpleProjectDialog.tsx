@@ -15,6 +15,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { useProjectHierarchy, type Building, type Unit } from '../contexts/ProjectHierarchyContext';
 import { useFloorplan } from '../../../contexts/FloorplanContext';
@@ -97,8 +107,14 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
   const [showDxfModal, setShowDxfModal] = useState(false);
   const [currentFloorplanType, setCurrentFloorplanType] = useState<'project' | 'parking' | 'building' | 'storage' | 'unit'>('project');
 
-  // Confirmation toast hook - TEMPORARY FIX: showConfirmDialog not available
-  // const { showConfirmDialog } = useNotifications();
+  // ✅ ENTERPRISE: Controlled AlertDialog state for floorplan replacement confirmation
+  const [showReplaceConfirm, setShowReplaceConfirm] = useState(false);
+  const [pendingImportData, setPendingImportData] = useState<{
+    file: File;
+    encoding: string;
+    type: 'project' | 'parking' | 'building' | 'storage' | 'unit';
+    typeLabel: string;
+  } | null>(null);
 
   // Real DXF parsing for project tabs using the same service as canvas
   const parseDxfForProjectTab = async (file: File, encoding?: string): Promise<SceneModel | null> => {
@@ -269,6 +285,127 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     onClose();
   };
 
+  // ✅ ENTERPRISE: Inner function to perform the actual import (used by both fresh import and confirmed replacement)
+  const performFloorplanImport = async (file: File, encoding: string, type: 'project' | 'parking' | 'building' | 'storage' | 'unit') => {
+    // Use the same mechanism as Upload DXF File button to load to canvas
+    console.log('🔺 SimpleProjectDialog calling onFileImport with file:', {
+      fileName: file.name,
+      hasOnFileImport: !!onFileImport
+    });
+
+    if (onFileImport) {
+      await onFileImport(file);
+      console.log('🔺 SimpleProjectDialog onFileImport completed');
+    } else {
+      console.warn('🔺 SimpleProjectDialog: onFileImport callback not provided!');
+    }
+
+    // Also parse and store for project tab using real DXF parser with encoding
+    const scene = await parseDxfForProjectTab(file, encoding);
+
+    if (scene) {
+      const floorplanData = {
+        projectId: selectedProjectId,
+        buildingId: currentStep === 'building' ? selectedBuildingId : undefined,
+        type,
+        scene,
+        fileName: file.name,
+        timestamp: Date.now(),
+        encoding: encoding // Store the encoding used
+      };
+
+      // Create compatible floorplan data without encoding - ensure proper type matching
+      const projectFloorplanData = {
+        projectId: floorplanData.projectId,
+        buildingId: floorplanData.buildingId,
+        type: floorplanData.type as 'project' | 'parking' | 'building' | 'storage',
+        scene: floorplanData.scene,
+        fileName: floorplanData.fileName,
+        timestamp: floorplanData.timestamp
+      } satisfies FloorplanData;
+
+      // Save to Firestore (persistent storage) - use appropriate service
+      let saved = false;
+      if (currentStep === 'unit' && type === 'unit') {
+        const unitData = {
+          unitId: selectedUnitId,
+          type: 'unit' as const,
+          scene,
+          fileName: file.name,
+          timestamp: Date.now()
+        };
+        saved = await UnitFloorplanService.saveFloorplan(selectedUnitId, unitData);
+      } else if (currentStep === 'building' && (type === 'building' || type === 'storage')) {
+        const buildingData = {
+          buildingId: selectedBuildingId,
+          type: type as 'building' | 'storage',
+          scene,
+          fileName: file.name,
+          timestamp: Date.now()
+        };
+        saved = await BuildingFloorplanService.saveFloorplan(selectedBuildingId, type as 'building' | 'storage', buildingData);
+      } else {
+        saved = await FloorplanService.saveFloorplan(selectedProjectId, type as 'project' | 'parking', projectFloorplanData);
+      }
+
+      if (saved) {
+        // Store in context for immediate access - create context-compatible objects
+        if (type === 'project') {
+          const contextData = {
+            projectId: projectFloorplanData.projectId,
+            type: 'project' as const,
+            scene: projectFloorplanData.scene,
+            fileName: projectFloorplanData.fileName,
+            timestamp: projectFloorplanData.timestamp
+          };
+          setProjectFloorplan(selectedProjectId, contextData);
+        } else if (type === 'parking') {
+          const contextData = {
+            projectId: projectFloorplanData.projectId,
+            type: 'parking' as const,
+            scene: projectFloorplanData.scene,
+            fileName: projectFloorplanData.fileName,
+            timestamp: projectFloorplanData.timestamp
+          };
+          setParkingFloorplan(selectedProjectId, contextData);
+        }
+      } else {
+        console.error(`❌ Failed to save ${type} floorplan to Firestore`);
+      }
+    } else {
+      console.warn('⚠️ Could not parse DXF for project tab - no scene data');
+    }
+
+    // Close modals after processing
+    setShowDxfModal(false);
+    handleClose();
+  };
+
+  // ✅ ENTERPRISE: Handler for confirmed replacement (called from AlertDialog)
+  const handleConfirmedImport = async () => {
+    if (!pendingImportData) return;
+
+    setShowReplaceConfirm(false);
+
+    try {
+      await performFloorplanImport(
+        pendingImportData.file,
+        pendingImportData.encoding,
+        pendingImportData.type
+      );
+    } catch (error) {
+      console.error('❌ Failed to import floorplan after confirmation:', error);
+    } finally {
+      setPendingImportData(null);
+    }
+  };
+
+  // ✅ ENTERPRISE: Handler for cancelled replacement
+  const handleCancelImport = () => {
+    setShowReplaceConfirm(false);
+    setPendingImportData(null);
+  };
+
   // Handle DXF import with encoding from modal
   const handleDxfImportFromModal = async (file: File, encoding: string) => {
     console.log('🔺 SimpleProjectDialog.handleDxfImportFromModal called:', {
@@ -299,7 +436,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         hasExisting = await FloorplanService.hasFloorplan(selectedProjectId, type as 'project' | 'parking');
       }
       
-      // If floorplan exists, show confirmation dialog
+      // ✅ ENTERPRISE: If floorplan exists, show controlled AlertDialog for confirmation
       if (hasExisting) {
         const typeLabels = {
           project: 'Κάτοψη Έργου',
@@ -308,118 +445,24 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           storage: 'Κάτοψη Αποθηκών',
           unit: 'Κάτοψη Μονάδας'
         };
-        
-        // TEMPORARY FIX: Use browser confirm instead of showConfirmDialog
-        const confirmed = confirm(
-          `Αντικατάσταση ${typeLabels[type as keyof typeof typeLabels]}\n\n` +
-          `Υπάρχει ήδη αποθηκευμένη ${typeLabels[type as keyof typeof typeLabels]} για αυτή την εταιρεία.\n\n` +
-          `Η νέα κάτοψη που θα φορτώσετε ενδέχεται να μην ταιριάζει με τα υπάρχοντα layers που έχουν σχεδιαστεί πάνω στην προηγούμενη κάτοψη.\n\n` +
-          `Θέλετε να συνεχίσετε και να αντικαταστήσετε την υπάρχουσα κάτοψη;`
-        );
-        
-        if (!confirmed) {
 
-          return;
-        }
-      }
-      
-      // Use the same mechanism as Upload DXF File button to load to canvas
-      console.log('🔺 SimpleProjectDialog calling onFileImport with file:', {
-        fileName: file.name,
-        hasOnFileImport: !!onFileImport
-      });
-
-      if (onFileImport) {
-        await onFileImport(file);
-        console.log('🔺 SimpleProjectDialog onFileImport completed');
-      } else {
-        console.warn('🔺 SimpleProjectDialog: onFileImport callback not provided!');
-      }
-      
-      // Also parse and store for project tab using real DXF parser with encoding
-      const scene = await parseDxfForProjectTab(file, encoding);
-      
-      if (scene) {
-        const floorplanData = {
-          projectId: selectedProjectId,
-          buildingId: currentStep === 'building' ? selectedBuildingId : undefined,
+        // Store pending data and show confirmation dialog
+        setPendingImportData({
+          file,
+          encoding,
           type,
-          scene,
-          fileName: file.name,
-          timestamp: Date.now(),
-          encoding: encoding // Store the encoding used
-        };
-
-        // Create compatible floorplan data without encoding - ensure proper type matching
-        const projectFloorplanData = {
-          projectId: floorplanData.projectId,
-          buildingId: floorplanData.buildingId,
-          type: floorplanData.type as 'project' | 'parking' | 'building' | 'storage',
-          scene: floorplanData.scene,
-          fileName: floorplanData.fileName,
-          timestamp: floorplanData.timestamp
-        } satisfies FloorplanData;
-
-        // Save to Firestore (persistent storage) - use appropriate service
-        let saved = false;
-        if (currentStep === 'unit' && type === 'unit') {
-          const unitData = {
-            unitId: selectedUnitId,
-            type: 'unit' as const,
-            scene,
-            fileName: file.name,
-            timestamp: Date.now()
-          };
-          saved = await UnitFloorplanService.saveFloorplan(selectedUnitId, unitData);
-        } else if (currentStep === 'building' && (type === 'building' || type === 'storage')) {
-          const buildingData = {
-            buildingId: selectedBuildingId,
-            type: type as 'building' | 'storage',
-            scene,
-            fileName: file.name,
-            timestamp: Date.now()
-          };
-          saved = await BuildingFloorplanService.saveFloorplan(selectedBuildingId, type as 'building' | 'storage', buildingData);
-        } else {
-          saved = await FloorplanService.saveFloorplan(selectedProjectId, type as 'project' | 'parking', projectFloorplanData);
-        }
-        
-        if (saved) {
-
-          // Store in context for immediate access - create context-compatible objects
-          if (type === 'project') {
-            const contextData = {
-              projectId: projectFloorplanData.projectId,
-              type: 'project' as const,
-              scene: projectFloorplanData.scene,
-              fileName: projectFloorplanData.fileName,
-              timestamp: projectFloorplanData.timestamp
-            };
-            setProjectFloorplan(selectedProjectId, contextData);
-          } else if (type === 'parking') {
-            const contextData = {
-              projectId: projectFloorplanData.projectId,
-              type: 'parking' as const,
-              scene: projectFloorplanData.scene,
-              fileName: projectFloorplanData.fileName,
-              timestamp: projectFloorplanData.timestamp
-            };
-            setParkingFloorplan(selectedProjectId, contextData);
-          }
-        } else {
-          console.error(`❌ Failed to save ${type} floorplan to Firestore`);
-        }
-      } else {
-        console.warn('⚠️ Could not parse DXF for project tab - no scene data');
+          typeLabel: typeLabels[type as keyof typeof typeLabels]
+        });
+        setShowReplaceConfirm(true);
+        return; // Wait for user confirmation via AlertDialog
       }
-      
+
+      // ✅ ENTERPRISE: No existing floorplan - proceed directly with import
+      await performFloorplanImport(file, encoding, type);
+
     } catch (error) {
       console.error(`❌ Failed to load ${type} floorplan:`, error);
     }
-    
-    // Close modals after processing
-    setShowDxfModal(false);
-    handleClose();
   };
 
   const handleLoadFloorplan = (type: 'project' | 'parking' | 'building' | 'storage' | 'unit') => {
@@ -818,6 +861,39 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         onClose={() => setShowDxfModal(false)}
         onImport={handleDxfImportFromModal}
       />
+
+      {/* ✅ ENTERPRISE: Floorplan Replacement Confirmation Dialog */}
+      <AlertDialog open={showReplaceConfirm} onOpenChange={setShowReplaceConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Αντικατάσταση {pendingImportData?.typeLabel}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <p>
+                  Υπάρχει ήδη αποθηκευμένη {pendingImportData?.typeLabel} για αυτή την εταιρεία.
+                </p>
+                <p>
+                  Η νέα κάτοψη που θα φορτώσετε ενδέχεται να μην ταιριάζει με τα υπάρχοντα
+                  layers που έχουν σχεδιαστεί πάνω στην προηγούμενη κάτοψη.
+                </p>
+                <p className="font-medium">
+                  Θέλετε να συνεχίσετε και να αντικαταστήσετε την υπάρχουσα κάτοψη;
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelImport}>
+              Ακύρωση
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmedImport}>
+              Αντικατάσταση
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

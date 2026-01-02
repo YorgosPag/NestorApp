@@ -24,7 +24,8 @@ const colors = {
   border: {
     primary: "#e2e8f0",
     secondary: "#cbd5e1",
-    tertiary: "#f3f4f6"
+    tertiary: "#f3f4f6",
+    focus: "#3b82f6" // ✅ ENTERPRISE: Focus border color for AlertConfigurationInterface.styles.ts
   },
   primary: {
     "500": "#3b82f6"
@@ -50,6 +51,13 @@ const colors = {
     "500": "#ef4444",
     "600": "#dc2626"
   },
+  // ✅ ENTERPRISE FIX: Added error color palette (alias of red) for semantic usage
+  error: {
+    "50": "#fef2f2",
+    "300": "#fca5a5",
+    "500": "#ef4444",
+    "600": "#dc2626"
+  },
   orange: {
     "300": "#fdba74",
     "500": "#f97316",
@@ -59,6 +67,34 @@ const colors = {
     "50": "#f9fafb",
     "100": "#f3f4f6",
     "500": "#6b7280"
+  },
+  // ✅ ENTERPRISE: Alert severity colors for AlertMonitoringDashboard.tsx
+  severity: {
+    critical: {
+      background: "#fef2f2",  // red-50
+      icon: "#ef4444",        // red-500
+      border: "#fca5a5"       // red-300
+    },
+    high: {
+      background: "#fff7ed",  // orange-50
+      icon: "#f97316",        // orange-500
+      border: "#fdba74"       // orange-300
+    },
+    medium: {
+      background: "#fffbeb",  // amber-50
+      icon: "#f59e0b",        // amber-500
+      border: "#fcd34d"       // amber-300
+    },
+    low: {
+      background: "#ecfdf5",  // green-50
+      icon: "#22c55e",        // green-500
+      border: "#6ee7b7"       // green-300
+    },
+    info: {
+      background: "#eff6ff",  // blue-50
+      icon: "#3b82f6",        // blue-500
+      border: "#93c5fd"       // blue-300
+    }
   }
 } as const;
 
@@ -126,7 +162,8 @@ const shadows = {
   sm: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
   md: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
   lg: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
-  xl: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+  xl: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+  focus: "0 0 0 3px rgba(59, 130, 246, 0.3)" // ✅ ENTERPRISE: Focus ring shadow for AlertConfigurationInterface.styles.ts
 } as const;
 
 // Animation definitions for compatibility
@@ -315,17 +352,10 @@ export { spacing };
 
 export { typography };
 
-// Legacy borderRadius export for backward compatibility
-export const borderRadius = {
-  none: '0',
-  sm: '0.125rem',    // 2px
-  default: '0.25rem', // 4px
-  md: '0.375rem',    // 6px
-  lg: '0.5rem',      // 8px
-  xl: '0.75rem',     // 12px
-  '2xl': '1rem',     // 16px
-  full: '9999px',    // ✅ ENTERPRISE FIX: για badge.tsx και slider.tsx
-} as const;
+// ✅ ENTERPRISE: borderRadius re-exports coreBorderRadius (Single Source of Truth)
+// This ensures consistency across the entire application
+// See: coreBorderRadius (line ~202) for the canonical definition
+export const borderRadius = coreBorderRadius;
 
 // ============================================================================
 // 🎨 ENTERPRISE BORDER SYSTEM - Main Exports
@@ -377,7 +407,8 @@ export const semanticColors = {
   }
 } as const;
 
-// Z-index scale για layering
+// 🏢 ENTERPRISE Z-INDEX HIERARCHY - Single Source of Truth
+// Synced with design-tokens.json (see ADR-002 in centralized_systems.md)
 export const zIndex = {
   hide: -1,
   auto: 'auto',
@@ -392,6 +423,8 @@ export const zIndex = {
   skipLink: 1600,
   toast: 1700,
   tooltip: 1800,
+  // 🚨 CRITICAL: Use only for system-level overlays (debuggers, error handlers)
+  critical: 2147483647,
 } as const;
 
 // Grid patterns για layout consistency
@@ -848,6 +881,7 @@ export const layoutUtilities = {
     },
 
     // Debug floating panels
+    // 🏢 ENTERPRISE: Uses centralized zIndex.tooltip for debug overlays
     debugFloat: {
       main: {
         position: 'fixed' as const,
@@ -856,7 +890,7 @@ export const layoutUtilities = {
         background: 'rgba(0,0,0,0.8)',
         color: 'white',
         padding: 'var(--spacing-2)',
-        zIndex: 10000,
+        zIndex: zIndex.tooltip, // Enterprise: centralized z-index
         fontSize: '12px',
         borderRadius: 'var(--radius-sm)'
       },
@@ -1069,7 +1103,7 @@ export const layoutUtilities = {
           position: 'absolute' as const,
           left: `${x}px`,
           top: `${y}px`,
-          zIndex: 1000,
+          zIndex: zIndex.dropdown, // Enterprise: centralized z-index
         }),
       },
     },
@@ -1105,9 +1139,10 @@ export const layoutUtilities = {
     },
 
     // Dropdown utilities για settings components
+    // 🏢 ENTERPRISE: Uses centralized zIndex values
     dropdown: {
       content: {
-        zIndex: 9999,
+        zIndex: zIndex.tooltip, // Enterprise: centralized z-index
         position: 'absolute' as const,
         backgroundColor: 'var(--color-background-tertiary)',
         border: '1px solid var(--color-border-secondary)',
@@ -1115,7 +1150,7 @@ export const layoutUtilities = {
         WebkitBackdropFilter: 'none' as const,
       },
       highZIndex: {
-        zIndex: 9999,
+        zIndex: zIndex.tooltip, // Enterprise: centralized z-index
         position: 'absolute' as const,
       },
     },
@@ -1177,6 +1212,7 @@ export const layoutUtilities = {
  * Enterprise-class portal management με z-index hierarchy και positioning
  */
 // Base portal components (kept for compatibility)
+// 🏢 ENTERPRISE: Portal components with centralized z-index
 const portalComponentsBase = {
   overlay: {
     fullscreen: {
@@ -1187,14 +1223,14 @@ const portalComponentsBase = {
       bottom: 0,
       pointerEvents: 'none' as const,
     },
-    backdrop: (zIndex: number = 1000) => ({
+    backdrop: (zIndexValue: number = zIndex.dropdown) => ({
       position: 'fixed' as const,
       top: 0,
       left: 0,
       right: 0,
       bottom: 0,
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      zIndex,
+      zIndex: zIndexValue,
       pointerEvents: 'auto' as const,
     }),
   },
@@ -1227,55 +1263,86 @@ const portalComponentsBase = {
     }),
   },
 
+  // 🏢 ENTERPRISE: Modal z-index uses centralized values
   modal: {
     backdrop: {
-      zIndex: (customZIndex?: number) => customZIndex || 2000,
+      zIndex: (customZIndex?: number) => customZIndex || zIndex.modal,
     },
     content: {
-      zIndex: (customZIndex?: number) => (customZIndex || 2000) + 1,
+      zIndex: (customZIndex?: number) => (customZIndex || zIndex.modal) + 1,
     },
   },
 
-  zIndex: {
-    dropdown: 1000,
-    modal: 2000,
-    tooltip: 3000,
-    critical: 2147483647, // Maximum zIndex
-    overlay: 1400, // Add overlay zIndex
-  }
+  // 🏢 ENTERPRISE: Reference to centralized zIndex (no duplicates!)
+  // All values come from the main zIndex object defined at line ~382
+  // Property name kept as 'zIndex' for backward compatibility
+  zIndex
 } as const;
 
-// Extended portalComponents for dynamic zIndex functions
+// 🏢 ENTERPRISE: Extended portal components with centralized z-index hierarchy
+// All values derived from centralized zIndex object (ADR-002)
 export const portalComponentsExtended = {
   ...portalComponentsBase,
+  // 🏢 ENTERPRISE: Extended dropdown variants for EnterprisePortalSystem
+  dropdown: {
+    ...portalComponentsBase.dropdown,
+    // Base positioned dropdown style - used as default for all variants
+    positioned: {
+      position: 'fixed' as const,
+      zIndex: zIndex.dropdown,
+      backgroundColor: colors.background.primary,
+      borderRadius: '0.5rem',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+      border: `1px solid ${colors.border.primary}`,
+      overflow: 'hidden',
+    },
+    // Relationship dropdown variant (for relationship/entity selectors)
+    relationship: {
+      maxHeight: '300px',
+      overflowY: 'auto' as const,
+    },
+    // Generic selector variant (for form selects, filters)
+    selector: {
+      minWidth: '200px',
+      maxHeight: '400px',
+      overflowY: 'auto' as const,
+    },
+  },
   overlay: {
     ...portalComponentsBase.overlay,
-    base: { zIndex: () => 1300 },
-    fullscreen: { zIndex: () => 1400 },
-    crosshair: { zIndex: () => 1450 },
-    selection: { zIndex: () => 1460 },
-    tooltip: { zIndex: () => 1470 },
-    snap: { zIndex: () => 1480 },
-    search: { zIndex: () => 1490 },
-    searchResults: { zIndex: () => 1500 },
-    controls: { zIndex: () => 1510 },
-    zoom: { zIndex: () => 1520 },
-    calibration: { zIndex: () => 1530 },
-    // ✅ ENTERPRISE FIX: Missing portal properties for TestResultsModal and LayoutMapper
+    // CAD Overlay Hierarchy: Uses zIndex.overlay (1300) as base, with +50 increments
+    base: { zIndex: () => zIndex.overlay },                    // 1300
+    fullscreen: { zIndex: () => zIndex.modal },                // 1400
+    crosshair: { zIndex: () => zIndex.modal + 50 },            // 1450
+    selection: { zIndex: () => zIndex.modal + 60 },            // 1460
+    tooltip: { zIndex: () => zIndex.modal + 70 },              // 1470
+    snap: { zIndex: () => zIndex.modal + 80 },                 // 1480
+    search: { zIndex: () => zIndex.modal + 90 },               // 1490
+    searchResults: { zIndex: () => zIndex.popover },           // 1500
+    controls: { zIndex: () => zIndex.popover + 10 },           // 1510
+    zoom: { zIndex: () => zIndex.popover + 20 },               // 1520
+    calibration: { zIndex: () => zIndex.popover + 30 },        // 1530
+    // ✅ ENTERPRISE FIX: Debug overlays above calibration
     debug: {
-      zIndex: () => 1540,
-      info: { zIndex: () => 1541 },        // Debug info overlay
-      main: { zIndex: () => 1542 },        // Debug main overlay
-      controls: { zIndex: () => 1543 }     // Debug controls overlay
+      zIndex: () => zIndex.popover + 40,                       // 1540
+      info: { zIndex: () => zIndex.popover + 41 },             // 1541
+      main: { zIndex: () => zIndex.popover + 42 },             // 1542
+      controls: { zIndex: () => zIndex.popover + 43 }          // 1543
     },
-    floatingPanel: { zIndex: () => 1550 }
+    floatingPanel: { zIndex: () => zIndex.popover + 50 }       // 1550
   },
   canvas: {
-    fullscreen: { zIndex: () => 1400 },
+    fullscreen: { zIndex: () => zIndex.modal },                // 1400
     layers: {
-      dxf: { zIndex: () => 1200 },
-      layer: { zIndex: () => 1210 }
+      dxf: { zIndex: () => zIndex.banner },                    // 1200
+      layer: { zIndex: () => zIndex.banner + 10 }              // 1210
     }
+  },
+  // 🏢 ENTERPRISE: Positioning utilities for dropdown/portal placement
+  positioning: {
+    dropdownOffset: { top: 4, left: 0, bottom: 4 },
+    tooltipOffset: { top: 8, left: 0, bottom: 8 },
+    modalOffset: { top: 0, left: 0, bottom: 0 }
   }
 };
 
@@ -1363,6 +1430,44 @@ export const interactionUtilities = {
 // ============================================================================
 // ✅ ENTERPRISE FIX: PORTAL COMPONENTS EXPORT
 // ============================================================================
+
+/**
+ * 🏢 ENTERPRISE PHOTO PREVIEW COMPONENTS
+ * Centralized styling for photo preview states
+ */
+export const photoPreviewComponents = {
+  container: {
+    base: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: borderRadius.lg,
+      overflow: 'hidden' as const,
+      transition: 'all 0.2s ease-in-out'
+    },
+    uploading: {
+      opacity: 0.7,
+      cursor: 'wait'
+    },
+    error: {
+      borderColor: colors.error['500'],
+      backgroundColor: colors.error['50']
+    },
+    withPhoto: {
+      border: `2px solid ${colors.primary['500']}`,
+      backgroundColor: colors.background.primary
+    },
+    empty: {
+      border: `2px dashed ${colors.border.primary}`,
+      backgroundColor: colors.background.secondary
+    }
+  },
+  colors: {
+    emptyStateBackground: colors.background.secondary,
+    emptyStateBorder: colors.border.primary,
+    withPhotoBorder: colors.primary['500']
+  }
+} as const;
 
 /**
  * 🏢 ENTERPRISE PORTAL COMPONENTS - MAIN EXPORT
@@ -1503,7 +1608,7 @@ export const canvasUtilities = {
       minHeight: '48px',
       position: 'sticky',
       top: 0,
-      zIndex: 10
+      zIndex: zIndex.docked // Enterprise: centralized z-index
     }),
     mobileSlideContent: (): React.CSSProperties => ({
       flex: '1 1 auto',
@@ -1544,7 +1649,7 @@ export const canvasUtilities = {
       boxShadow: isDragging
         ? '0 8px 25px -5px rgba(0, 0, 0, 0.3)'
         : '0 4px 15px -3px rgba(0, 0, 0, 0.2)',
-      zIndex: 1000,
+      zIndex: zIndex.dropdown, // Enterprise: centralized z-index
       cursor: isDragging ? 'grabbing' : 'auto',
       userSelect: 'none' as const,
       backdropFilter: 'blur(4px)',
@@ -1591,7 +1696,7 @@ export const canvasUtilities = {
       top: `${y}px`,
       transform: 'translate(-50%, -50%)',
       pointerEvents: 'none' as const,
-      zIndex: 9999
+      zIndex: zIndex.tooltip // Enterprise: centralized z-index
     })
 
     /**
@@ -1773,12 +1878,15 @@ export const brandClasses = {
 
 /**
  * 🔧 Helper function να get brand classes dynamically
+ * ✅ ENTERPRISE: No 'any' - uses proper type narrowing
  */
 export const getBrandClass = (category: keyof typeof brandClasses, variant?: string): string => {
   const categoryClasses = brandClasses[category];
 
   if (variant && typeof categoryClasses === 'object' && variant in categoryClasses) {
-    return (categoryClasses as any)[variant];
+    // ✅ ENTERPRISE: Use Record<string, unknown> instead of 'any' for type-safe access
+    const value = (categoryClasses as Record<string, unknown>)[variant];
+    return typeof value === 'string' ? value : '';
   }
 
   return typeof categoryClasses === 'string' ? categoryClasses : '';
@@ -2181,6 +2289,42 @@ export const configurationComponents = {
       borderRadius: borderRadius.full,
       display: 'inline-block',
       marginRight: spacing.sm
+    },
+    // ✅ ENTERPRISE: Missing properties for AlertConfigurationInterface.styles.ts
+    header: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: spacing.sm
+    },
+    icon: {
+      fontSize: typography.fontSize.xl,
+      color: colors.text.secondary
+    },
+    titleContainer: {
+      flex: 1,
+      marginLeft: spacing.sm
+    },
+    title: {
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary,
+      marginBottom: spacing.xs
+    },
+    statusContainer: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing.xs
+    },
+    statusText: {
+      fontSize: typography.fontSize.xs,
+      color: colors.text.secondary
+    },
+    description: {
+      fontSize: typography.fontSize.sm,
+      color: colors.text.secondary,
+      lineHeight: typography.lineHeight.relaxed,
+      marginTop: spacing.sm
     }
   },
   buttons: {
@@ -2254,7 +2398,7 @@ export const configurationComponents = {
       backgroundColor: colors.background.primary,
       color: colors.text.primary,
       minHeight: '100px',
-      resize: 'vertical'
+      resize: 'vertical' as const // ✅ ENTERPRISE: Proper type literal
     },
     select: {
       width: '100%',

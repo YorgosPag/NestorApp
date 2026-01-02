@@ -3,6 +3,9 @@ import { firebaseServer } from '@/lib/firebase-server';
 import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts/helpers';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
+// ✅ ENTERPRISE FIX: Force dynamic rendering to prevent static generation errors
+export const dynamic = 'force-dynamic';
+
 /**
  * 📇 ENTERPRISE CONTACT API ENDPOINT
  *

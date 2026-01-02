@@ -3,20 +3,19 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  getDocs, 
-  query, 
-  where, 
+import {
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  getDocs,
+  query,
+  where,
   orderBy,
   onSnapshot,
-  Timestamp 
+  Timestamp
 } from 'firebase/firestore';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { SYSTEM_LAYERS, DEFAULT_LAYER_STYLES } from '@/types/layers';
 import type {
   Layer,
@@ -45,7 +44,8 @@ export interface UseLayerManagementReturn {
   error: string | null;
   
   // Layer Operations
-  createLayer: (layer: Omit<Layer, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>;
+  // 🏢 ENTERPRISE: floorId, buildingId, createdBy are injected by the hook from options
+  createLayer: (layer: Omit<Layer, 'id' | 'createdAt' | 'updatedAt' | 'floorId' | 'buildingId' | 'createdBy'>) => Promise<string>;
   updateLayer: (layerId: string, updates: Partial<Layer>) => Promise<void>;
   deleteLayer: (layerId: string) => Promise<void>;
   duplicateLayer: (layerId: string) => Promise<string>;
@@ -330,7 +330,8 @@ export function useLayerManagement({
   }, []);
 
   // Layer Operations
-  const createLayer = useCallback(async (layerData: Omit<Layer, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+  // 🏢 ENTERPRISE: floorId, buildingId, createdBy are auto-injected from hook options
+  const createLayer = useCallback(async (layerData: Omit<Layer, 'id' | 'createdAt' | 'updatedAt' | 'floorId' | 'buildingId' | 'createdBy'>): Promise<string> => {
     const now = new Date().toISOString();
     const newLayer: Layer = {
       ...layerData,
@@ -476,9 +477,11 @@ export function useLayerManagement({
       }
       
       // Save groups
+      // 🏢 ENTERPRISE: Destructure to exclude id from update payload (Firestore UpdateData pattern)
       for (const group of state.groups) {
         const groupDoc = doc(db, COLLECTIONS.LAYER_GROUPS, group.id);
-        await updateDoc(groupDoc, group);
+        const { id: _groupId, ...groupUpdateData } = group;
+        await updateDoc(groupDoc, groupUpdateData);
       }
       
     } catch (err) {

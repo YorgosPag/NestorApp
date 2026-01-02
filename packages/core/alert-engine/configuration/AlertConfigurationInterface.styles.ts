@@ -82,18 +82,27 @@ export const getConfigurationCardHoverHandlers = () => ({
   }
 });
 
+// ✅ ENTERPRISE: Type-safe button hover handlers with proper property access
 export const getButtonHoverHandlers = (variant: 'primary' | 'secondary' | 'small' = 'secondary') => {
-  const styles = configurationComponents.buttons[variant];
-  const hoverStyle = styles['&:hover'] || {};
+  const styles = configurationComponents.buttons[variant] as Record<string, unknown>;
+  // Default hover styles based on variant
+  const defaultHoverStyles: Record<string, Record<string, string>> = {
+    primary: { backgroundColor: colors.blue[600] },
+    secondary: { backgroundColor: colors.background.tertiary, borderColor: colors.border.secondary },
+    small: { backgroundColor: colors.background.tertiary }
+  };
+  const hoverStyle = defaultHoverStyles[variant] || {};
 
   return {
     onMouseEnter: (e: React.MouseEvent<HTMLButtonElement>) => {
       Object.assign(e.currentTarget.style, hoverStyle);
     },
     onMouseLeave: (e: React.MouseEvent<HTMLButtonElement>) => {
-      e.currentTarget.style.backgroundColor = styles.backgroundColor;
-      if (styles.borderColor) {
-        e.currentTarget.style.borderColor = styles.borderColor;
+      const bgColor = typeof styles.backgroundColor === 'string' ? styles.backgroundColor : '';
+      e.currentTarget.style.backgroundColor = bgColor;
+      const borderColor = typeof styles.borderColor === 'string' ? styles.borderColor : '';
+      if (borderColor) {
+        e.currentTarget.style.borderColor = borderColor;
       }
     }
   };

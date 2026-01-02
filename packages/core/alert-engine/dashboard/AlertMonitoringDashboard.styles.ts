@@ -65,6 +65,7 @@ interface DashboardStylesType {
  * 🎯 LAYOUT: Κεντρικοποιημένα flex patterns
  * Eliminates repetitive inline flex styling
  */
+// ✅ ENTERPRISE: Using semantic spacing tokens instead of numeric indexes
 const layoutStyles: LayoutStyleCollection = {
   flexBetween: {
     display: 'flex',
@@ -75,26 +76,26 @@ const layoutStyles: LayoutStyleCollection = {
   flexCenter: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing[2]
+    gap: spacing.sm // 8px
   } as const,
 
   flexStart: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing[2],
-    marginBottom: spacing[1]
+    gap: spacing.sm, // 8px
+    marginBottom: spacing.xs // 4px
   } as const,
 
   flexColumn: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing[4]
+    gap: spacing.md // 16px
   } as const,
 
   gridAutoFit: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: spacing[6]
+    gap: spacing.lg // 24px
   } as const,
 
   flexOne: {
@@ -110,10 +111,11 @@ const layoutStyles: LayoutStyleCollection = {
  * 🎯 BUTTONS: Enterprise button variants
  * Professional styling με accessibility compliance
  */
+// ✅ ENTERPRISE: Using semantic spacing tokens
 const buttonBaseStyle: CSSProperties = {
   border: 'none',
   borderRadius: borderRadius.md,
-  padding: `${spacing[2]} ${spacing[4]}`,
+  padding: `${spacing.sm} ${spacing.md}`, // 8px 16px
   cursor: 'pointer',
   fontSize: typography.fontSize.sm,
   fontWeight: typography.fontWeight.medium,
@@ -122,7 +124,7 @@ const buttonBaseStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  gap: spacing[1]
+  gap: spacing.xs // 4px
 } as const;
 
 const buttonStyles: ButtonStyleVariant = {
@@ -143,7 +145,7 @@ const buttonStyles: ButtonStyleVariant = {
 
   success: {
     ...buttonBaseStyle,
-    backgroundColor: semanticColors.success,
+    backgroundColor: semanticColors.status.success, // ✅ ENTERPRISE: Correct path
     color: colors.text.inverse
   } as const
 } as const;
@@ -156,6 +158,7 @@ const buttonStyles: ButtonStyleVariant = {
  * 🎯 MODAL: Professional modal/dialog styling
  * Accessibility-compliant με backdrop, focus management
  */
+// ✅ ENTERPRISE: Using semantic spacing tokens
 const modalStyles: ModalStyleCollection = {
   overlay: {
     position: 'fixed',
@@ -168,13 +171,13 @@ const modalStyles: ModalStyleCollection = {
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
-    padding: spacing[4]
+    padding: spacing.md // 16px
   } as const,
 
   content: {
     backgroundColor: colors.background.primary,
     borderRadius: borderRadius.lg,
-    padding: spacing[6],
+    padding: spacing.lg, // 24px
     maxWidth: '600px',
     width: '90%',
     maxHeight: '80%',
@@ -184,7 +187,7 @@ const modalStyles: ModalStyleCollection = {
   } as const,
 
   header: {
-    margin: `0 0 ${spacing[4]} 0`,
+    margin: `0 0 ${spacing.md} 0`, // 16px
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
     color: colors.text.primary,
@@ -192,17 +195,17 @@ const modalStyles: ModalStyleCollection = {
   } as const,
 
   body: {
-    margin: `0 0 ${spacing[4]} 0`,
+    margin: `0 0 ${spacing.md} 0`, // 16px
     color: colors.text.secondary,
     fontSize: typography.fontSize.base,
     lineHeight: typography.lineHeight.relaxed
   } as const,
 
   footer: {
-    marginTop: spacing[4],
+    marginTop: spacing.md, // 16px
     display: 'flex',
     justifyContent: 'flex-end',
-    gap: spacing[3]
+    gap: spacing.sm // 8px (closest to 12px which would be spacing[3])
   } as const
 } as const;
 
@@ -251,20 +254,20 @@ export const alertItemStyles = {
   } as const,
 
   /**
-   * Alert content text styling
+   * Alert content text styling - ✅ ENTERPRISE: Semantic spacing
    */
   content: {
-    margin: `0 0 ${spacing[1]} ${spacing[4]}`,
+    margin: `0 0 ${spacing.xs} ${spacing.md}`, // 4px 0 0 16px
     fontSize: typography.fontSize.xs,
     color: colors.text.secondary,
     lineHeight: typography.lineHeight.relaxed
   } as const,
 
   /**
-   * Alert timestamp styling
+   * Alert timestamp styling - ✅ ENTERPRISE: Semantic spacing
    */
   timestamp: {
-    marginLeft: spacing[4],
+    marginLeft: spacing.md, // 16px
     fontSize: typography.fontSize.xs,
     color: colors.text.tertiary,
     fontWeight: typography.fontWeight.normal
@@ -285,10 +288,10 @@ export const eventDetailStyles = {
   } as const,
 
   /**
-   * Event detail item
+   * Event detail item - ✅ ENTERPRISE: Semantic spacing
    */
   detailItem: {
-    marginBottom: spacing[1]
+    marginBottom: spacing.xs // 4px
   } as const
 } as const;
 
@@ -325,13 +328,14 @@ export const dashboardStyles: DashboardStylesType = {
  * 🎯 SEVERITY COLOR UTILITY
  * Generates dynamic severity colors based on alert severity
  */
+// ✅ ENTERPRISE: Using correct semanticColors.status.* path
 export const getSeverityDotStyle = (severity: 'critical' | 'high' | 'medium' | 'low' | 'info'): CSSProperties => {
   const severityColorMap = {
-    critical: semanticColors.error,
-    high: semanticColors.warning,
-    medium: semanticColors.warning,
-    low: semanticColors.info,
-    info: semanticColors.info
+    critical: semanticColors.status.error,
+    high: semanticColors.status.warning,
+    medium: semanticColors.status.warning,
+    low: semanticColors.status.info,
+    info: semanticColors.status.info
   } as const;
 
   return {
@@ -344,12 +348,13 @@ export const getSeverityDotStyle = (severity: 'critical' | 'high' | 'medium' | '
  * 🎯 BUTTON HOVER UTILITY
  * Generates hover interaction για buttons
  */
+// ✅ ENTERPRISE: Fixed color paths
 export const getButtonHoverHandlers = (variant: keyof ButtonStyleVariant) => {
   const hoverColorMap = {
     base: colors.gray[100],
-    primary: colors.primary[600],
+    primary: colors.blue[600], // Using blue instead of missing primary[600]
     secondary: colors.gray[50],
-    success: semanticColors.success
+    success: semanticColors.status.success // Correct path
   } as const;
 
   return {
@@ -396,11 +401,12 @@ export const getMetricsCardValueStyle = (status?: 'success' | 'warning' | 'error
     fontWeight: typography.fontWeight.bold,
     color: colors.text.primary
   };
+  // ✅ ENTERPRISE: Use semanticColors.status for proper path access
   const statusColor = (() => {
     switch (status) {
-      case 'success': return semanticColors.success;
-      case 'warning': return semanticColors.warning;
-      case 'error': return semanticColors.error;
+      case 'success': return semanticColors.status.success;
+      case 'warning': return semanticColors.status.warning;
+      case 'error': return semanticColors.status.error;
       default: return colors.text.secondary;
     }
   })();
@@ -415,11 +421,12 @@ export const getMetricsCardValueStyle = (status?: 'success' | 'warning' | 'error
  * Creates dynamic status badge style - ENTERPRISE SEMANTIC APPROACH
  */
 export const getStatusBadgeStyle = (status: string): CSSProperties => {
+  // ✅ ENTERPRISE: Use semanticColors.status for proper path access
   const statusColorMap = {
-    active: semanticColors.success,
-    suppressed: semanticColors.warning,
-    disabled: semanticColors.error,
-    pending: semanticColors.info
+    active: semanticColors.status.success,
+    suppressed: semanticColors.status.warning,
+    disabled: semanticColors.status.error,
+    pending: semanticColors.status.info
   } as Record<string, string>;
 
   return {
@@ -427,7 +434,7 @@ export const getStatusBadgeStyle = (status: string): CSSProperties => {
     borderRadius: '0.25rem',
     fontSize: '0.75rem',
     fontWeight: '500',
-    backgroundColor: statusColorMap[status] || semanticColors.info,
+    backgroundColor: statusColorMap[status] || semanticColors.status.info,
     color: 'hsl(var(--background))'
   } as const;
 };
@@ -469,11 +476,12 @@ export const dashboardComponents = {
   // ========================================================================
   // METRICS CARD
   // ========================================================================
+  // ✅ ENTERPRISE: Use semantic spacing tokens (xs/sm/md/lg/xl)
   metricsCard: {
     base: {
       backgroundColor: colors.background.primary,
       borderRadius: borderRadius.lg,
-      padding: spacing[6],
+      padding: spacing.lg,
       border: `1px solid ${colors.border.primary}`,
       boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
     } as CSSProperties,
@@ -481,7 +489,7 @@ export const dashboardComponents = {
       fontSize: typography.fontSize.sm,
       fontWeight: typography.fontWeight.medium,
       color: colors.text.secondary,
-      marginBottom: spacing[2],
+      marginBottom: spacing.sm,
     } as CSSProperties,
     value: {
       fontSize: typography.fontSize['2xl'],
@@ -493,40 +501,64 @@ export const dashboardComponents = {
     } as CSSProperties,
     trend: {
       fontSize: typography.fontSize.xs,
-      marginLeft: spacing[2],
+      marginLeft: spacing.sm,
     } as CSSProperties,
     subtitle: {
       fontSize: typography.fontSize.xs,
       color: colors.text.tertiary,
-      marginTop: spacing[1],
+      marginTop: spacing.xs,
     } as CSSProperties,
   },
 
   // ========================================================================
   // STATUS BADGE
   // ========================================================================
+  // ✅ ENTERPRISE: Use semantic spacing & semanticColors.status paths
+  // AlertStatus: 'new' | 'acknowledged' | 'investigating' | 'resolved' | 'false_positive'
   statusBadge: {
     base: {
-      padding: `${spacing[1]} ${spacing[2]}`,
+      padding: `${spacing.xs} ${spacing.sm}`,
       borderRadius: borderRadius.sm,
       fontSize: typography.fontSize.xs,
       fontWeight: typography.fontWeight.medium,
     } as CSSProperties,
     variants: {
+      // ✅ ENTERPRISE: Aligned with AlertStatus type from AlertDetectionSystem.ts
+      new: {
+        backgroundColor: semanticColors.status.error,
+        color: colors.text.inverse,
+      } as CSSProperties,
+      acknowledged: {
+        backgroundColor: semanticColors.status.warning,
+        color: colors.text.inverse,
+      } as CSSProperties,
+      investigating: {
+        backgroundColor: semanticColors.status.info,
+        color: colors.text.inverse,
+      } as CSSProperties,
+      resolved: {
+        backgroundColor: semanticColors.status.success,
+        color: colors.text.inverse,
+      } as CSSProperties,
+      false_positive: {
+        backgroundColor: colors.gray['500'],
+        color: colors.text.inverse,
+      } as CSSProperties,
+      // Legacy variants for backward compatibility
       active: {
-        backgroundColor: semanticColors.success,
+        backgroundColor: semanticColors.status.success,
         color: colors.text.inverse,
       } as CSSProperties,
       suppressed: {
-        backgroundColor: semanticColors.warning,
+        backgroundColor: semanticColors.status.warning,
         color: colors.text.inverse,
       } as CSSProperties,
       disabled: {
-        backgroundColor: colors.gray[400],
+        backgroundColor: colors.gray['500'],
         color: colors.text.inverse,
       } as CSSProperties,
       pending: {
-        backgroundColor: semanticColors.info,
+        backgroundColor: semanticColors.status.info,
         color: colors.text.inverse,
       } as CSSProperties,
     },
@@ -535,6 +567,7 @@ export const dashboardComponents = {
   // ========================================================================
   // ALERTS LIST
   // ========================================================================
+  // ✅ ENTERPRISE: Use semantic spacing tokens
   alertsList: {
     container: {
       backgroundColor: colors.background.primary,
@@ -543,7 +576,7 @@ export const dashboardComponents = {
       overflow: 'hidden',
     } as CSSProperties,
     header: {
-      padding: spacing[4],
+      padding: spacing.md,
       borderBottom: `1px solid ${colors.border.primary}`,
       fontSize: typography.fontSize.base,
       fontWeight: typography.fontWeight.semibold,
@@ -552,13 +585,14 @@ export const dashboardComponents = {
     scrollArea: {
       maxHeight: '400px',
       overflowY: 'auto',
-      padding: spacing[2],
+      padding: spacing.sm,
     } as CSSProperties,
   },
 
   // ========================================================================
   // EVENTS LIST
   // ========================================================================
+  // ✅ ENTERPRISE: Use semantic spacing tokens
   eventsList: {
     container: {
       backgroundColor: colors.background.primary,
@@ -567,7 +601,7 @@ export const dashboardComponents = {
       overflow: 'hidden',
     } as CSSProperties,
     header: {
-      padding: spacing[4],
+      padding: spacing.md,
       borderBottom: `1px solid ${colors.border.primary}`,
       fontSize: typography.fontSize.base,
       fontWeight: typography.fontWeight.semibold,
@@ -576,13 +610,13 @@ export const dashboardComponents = {
     scrollArea: {
       maxHeight: '300px',
       overflowY: 'auto',
-      padding: spacing[2],
+      padding: spacing.sm,
     } as CSSProperties,
     item: {
       display: 'flex',
       alignItems: 'center',
-      gap: spacing[3],
-      padding: spacing[3],
+      gap: spacing.component.lg,
+      padding: spacing.component.lg,
       borderBottom: `1px solid ${colors.border.secondary}`,
     } as CSSProperties,
     eventIcon: {
@@ -604,18 +638,19 @@ export const dashboardComponents = {
   // ========================================================================
   // ALERT CONFIG
   // ========================================================================
+  // ✅ ENTERPRISE: Use semantic spacing tokens
   alertConfig: {
     container: {
       backgroundColor: colors.background.primary,
       borderRadius: borderRadius.lg,
       border: `1px solid ${colors.border.primary}`,
-      padding: spacing[4],
+      padding: spacing.md,
     } as CSSProperties,
     header: {
       display: 'flex',
       alignItems: 'center',
-      gap: spacing[3],
-      marginBottom: spacing[4],
+      gap: spacing.component.lg,
+      marginBottom: spacing.md,
     } as CSSProperties,
     title: {
       fontSize: typography.fontSize.lg,
@@ -625,13 +660,13 @@ export const dashboardComponents = {
     configList: {
       display: 'flex',
       flexDirection: 'column',
-      gap: spacing[2],
+      gap: spacing.sm,
     } as CSSProperties,
     configItem: {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      padding: spacing[2],
+      padding: spacing.sm,
       backgroundColor: colors.background.secondary,
       borderRadius: borderRadius.sm,
       fontSize: typography.fontSize.sm,
@@ -641,6 +676,7 @@ export const dashboardComponents = {
   // ========================================================================
   // LOADING STATE
   // ========================================================================
+  // ✅ ENTERPRISE: Use semantic spacing & semanticColors.status paths
   loadingState: {
     container: {
       display: 'flex',
@@ -648,7 +684,7 @@ export const dashboardComponents = {
       alignItems: 'center',
       justifyContent: 'center',
       minHeight: '400px',
-      gap: spacing[4],
+      gap: spacing.md,
     } as CSSProperties,
     spinner: {
       fontSize: typography.fontSize['3xl'],
@@ -660,17 +696,18 @@ export const dashboardComponents = {
     } as CSSProperties,
     error: {
       fontSize: typography.fontSize.sm,
-      color: semanticColors.error,
-      marginTop: spacing[2],
+      color: semanticColors.status.error,
+      marginTop: spacing.sm,
     } as CSSProperties,
   },
 
   // ========================================================================
   // DASHBOARD LAYOUT
   // ========================================================================
+  // ✅ ENTERPRISE: Use semantic spacing tokens
   dashboardLayout: {
     container: {
-      padding: spacing[6],
+      padding: spacing.lg,
       backgroundColor: colors.background.secondary,
       minHeight: '100vh',
     } as CSSProperties,
@@ -678,13 +715,13 @@ export const dashboardComponents = {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
-      marginBottom: spacing[6],
+      marginBottom: spacing.lg,
     } as CSSProperties,
     title: {
       fontSize: typography.fontSize['2xl'],
       fontWeight: typography.fontWeight.bold,
       color: colors.text.primary,
-      marginBottom: spacing[1],
+      marginBottom: spacing.xs,
     } as CSSProperties,
     subtitle: {
       fontSize: typography.fontSize.sm,
@@ -692,18 +729,18 @@ export const dashboardComponents = {
     } as CSSProperties,
     controls: {
       display: 'flex',
-      gap: spacing[3],
+      gap: spacing.component.lg,
     } as CSSProperties,
     metricsGrid: {
       display: 'grid',
       gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-      gap: spacing[4],
-      marginBottom: spacing[6],
+      gap: spacing.md,
+      marginBottom: spacing.lg,
     } as CSSProperties,
     contentGrid: {
       display: 'grid',
       gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-      gap: spacing[6],
+      gap: spacing.lg,
     } as CSSProperties,
   },
 } as const;

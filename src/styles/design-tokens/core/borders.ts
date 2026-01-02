@@ -336,9 +336,11 @@ export const borderUtils = {
 
   /**
    * Get CSS class for border variant
+   * ✅ ENTERPRISE: No 'any' - uses proper type narrowing
    */
   getVariantClass: (variant: keyof typeof borderVariants): string => {
-    const variantConfig = borderVariants[variant] as any;
+    // ✅ ENTERPRISE: Use Record<string, unknown> instead of 'any' for type-safe access
+    const variantConfig = borderVariants[variant] as Record<string, unknown>;
     if ('className' in variantConfig && typeof variantConfig.className === 'string') {
       return variantConfig.className;
     }

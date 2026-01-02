@@ -24,7 +24,7 @@ import {
 } from '../../../../src/styles/design-tokens';
 import { dashboardComponents } from './AlertMonitoringDashboard.styles';
 import { useSemanticColors } from '../../../../src/hooks/useSemanticColors';
-import { formatDateTime, formatTime } from '../../../../src/lib/intl-utils';
+import { formatDateTime } from '../../../../src/lib/intl-utils';
 import {
   dashboardStyles,
   metricsCardStyles,
@@ -153,7 +153,7 @@ const AlertsList: React.FC<{
                 {alert.message}
               </p>
               <time style={alertItemStyles.timestamp}>
-                {formatDateTime(alert.timestamp)}
+                {formatDateTime(alert.detectedAt)}
               </time>
             </div>
           </article>
@@ -167,29 +167,31 @@ const EventsList: React.FC<{
   events: RealTimeEvent[];
   maxItems?: number;
 }> = ({ events, maxItems = 15 }) => {
+  // ✅ ENTERPRISE: Use correct RealTimeEvent type values ('alert' | 'rule' | 'notification' | 'system' | 'user')
   const getEventIcon = (type: RealTimeEvent['type']) => {
     switch (type) {
-      case 'alert_created': return '🚨';
-      case 'alert_acknowledged': return '👁️';
-      case 'alert_resolved': return '✅';
-      case 'system_status': return '⚙️';
-      case 'user_action': return '👤';
+      case 'alert': return '🚨';
+      case 'rule': return '📋';
+      case 'notification': return '🔔';
+      case 'system': return '⚙️';
+      case 'user': return '👤';
       default: return '📝';
     }
   };
 
+  // ✅ ENTERPRISE: Use event.metadata instead of event.data (correct interface property)
   const formatEventMessage = (event: RealTimeEvent) => {
     switch (event.type) {
-      case 'alert_created':
-        return `Νέο alert: ${event.data.title || 'Unknown'}`;
-      case 'alert_acknowledged':
-        return `Alert acknowledged: ${event.data.title || 'Unknown'}`;
-      case 'alert_resolved':
-        return `Alert resolved: ${event.data.title || 'Unknown'}`;
-      case 'system_status':
-        return `System status: ${event.data.status || 'Unknown'}`;
-      case 'user_action':
-        return `User action: ${event.data.action || 'Unknown'}`;
+      case 'alert':
+        return `Alert: ${event.metadata?.alertId || event.message || 'Unknown'}`;
+      case 'rule':
+        return `Rule triggered: ${event.metadata?.ruleId || event.message || 'Unknown'}`;
+      case 'notification':
+        return `Notification: ${event.message || 'Unknown'}`;
+      case 'system':
+        return `System: ${event.message || 'Unknown'}`;
+      case 'user':
+        return `User action: ${event.message || 'Unknown'}`;
       default:
         return event.message || 'Unknown event';
     }
@@ -275,7 +277,8 @@ const LoadingState: React.FC<{ error?: string }> = ({ error }) => {
 // ============================================================================
 
 export const AlertMonitoringDashboard: React.FC = () => {
-  const { metrics, alerts, events, isLoading, error, refreshDashboard } = useDashboard();
+  // ✅ ENTERPRISE: Use correct property names from UseDashboardResult interface
+  const { metrics, recentAlerts, events, isLoading, error, refresh } = useDashboard();
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
 
   const handleAlertClick = useCallback((alert: Alert) => {
@@ -283,7 +286,8 @@ export const AlertMonitoringDashboard: React.FC = () => {
   }, []);
 
   if (isLoading) {
-    return <LoadingState error={error} />;
+    // ✅ ENTERPRISE: Convert Error | null to string | undefined for LoadingState
+    return <LoadingState error={error?.message} />;
   }
 
   return (
@@ -301,7 +305,7 @@ export const AlertMonitoringDashboard: React.FC = () => {
           </div>
           <div style={dashboardComponents.dashboardLayout.controls}>
             <button
-              onClick={refreshDashboard}
+              onClick={refresh}
               style={dashboardStyles.buttons.primary}
               {...getButtonHoverHandlers('primary')}
             >
@@ -319,9 +323,9 @@ export const AlertMonitoringDashboard: React.FC = () => {
             >
               📤 Export
             </button>
-            {metrics?.systemHealth && (
+            {metrics?.system?.status && (
               <span style={metricsCardStyles.systemHealthIndicator}>
-                System Health: {Math.round(metrics.systemHealth * 100)}%
+                System: {metrics.system.status}
               </span>
             )}
           </div>
@@ -331,34 +335,37 @@ export const AlertMonitoringDashboard: React.FC = () => {
       {/* Metrics Grid */}
       <section style={dashboardComponents.dashboardLayout.metricsGrid}>
         <div style={dashboardStyles.layout.gridAutoFit}>
+          {/* ✅ ENTERPRISE: Use correct DashboardMetrics structure */}
           <MetricsCard
             title="Σύνολο Alerts"
-            value={metrics?.totalAlerts || 0}
-            status="info"
+            value={metrics?.alerts?.total || 0}
+            status="success"
             icon="🚨"
             subtitle="Όλα τα ενεργά alerts"
           />
           <MetricsCard
             title="Critical Alerts"
-            value={metrics?.criticalAlerts || 0}
-            status={metrics?.criticalAlerts ? 'error' : 'success'}
+            value={metrics?.alerts?.bySeverity?.critical || 0}
+            status={(metrics?.alerts?.bySeverity?.critical || 0) > 0 ? 'error' : 'success'}
             trend="up"
             icon="🔥"
             subtitle="Απαιτούν άμεση προσοχή"
           />
           <MetricsCard
             title="Response Time"
-            value={metrics?.avgResponseTime ? `${Math.round(metrics.avgResponseTime)}ms` : 'N/A'}
-            status={metrics?.avgResponseTime && metrics.avgResponseTime > 1000 ? 'warning' : 'success'}
+            value={metrics?.system?.performanceMetrics?.responseTime
+              ? `${Math.round(metrics.system.performanceMetrics.responseTime)}ms`
+              : 'N/A'}
+            status={(metrics?.system?.performanceMetrics?.responseTime || 0) > 1000 ? 'warning' : 'success'}
             trend="stable"
             icon="⚡"
             subtitle="Μέσος χρόνος απόκρισης"
           />
           <MetricsCard
-            title="System Health"
-            value={metrics?.systemHealth ? `${Math.round(metrics.systemHealth * 100)}%` : 'N/A'}
-            status={metrics?.systemHealth && metrics.systemHealth > 0.8 ? 'success' : 'warning'}
-            trend={metrics?.systemHealth && metrics.systemHealth > 0.8 ? 'up' : 'down'}
+            title="System Status"
+            value={metrics?.system?.status || 'N/A'}
+            status={metrics?.system?.status === 'healthy' ? 'success' : 'warning'}
+            trend={metrics?.system?.status === 'healthy' ? 'up' : 'down'}
             icon="💚"
             subtitle="Συνολική κατάσταση συστήματος"
           />
@@ -369,14 +376,14 @@ export const AlertMonitoringDashboard: React.FC = () => {
       <section style={dashboardComponents.dashboardLayout.contentGrid}>
         {/* Left Column */}
         <div style={dashboardStyles.layout.flexColumn}>
-          <AlertsList alerts={alerts} onAlertClick={handleAlertClick} />
+          <AlertsList alerts={recentAlerts} onAlertClick={handleAlertClick} />
 
           {/* Alert Configurations */}
           <AlertConfiguration
             config={{
               icon: '🌡️',
               title: 'Temperature Monitoring',
-              color: colors.semantic.warning.main,
+              color: colors.orange['500'], // ✅ ENTERPRISE: Use existing color token
               thresholds: ['> 80°C', '< -10°C'],
               notifications: ['Email', 'SMS', 'Slack']
             }}
@@ -421,7 +428,7 @@ export const AlertMonitoringDashboard: React.FC = () => {
             <div style={eventDetailStyles.detailContainer}>
               <p style={eventDetailStyles.detailItem}>Severity: {selectedAlert.severity}</p>
               <p style={eventDetailStyles.detailItem}>Status: {selectedAlert.status}</p>
-              <time style={eventDetailStyles.detailItem}>Created: {formatDateTime(selectedAlert.timestamp)}</time>
+              <time style={eventDetailStyles.detailItem}>Created: {formatDateTime(selectedAlert.detectedAt)}</time>
             </div>
             <div style={dashboardStyles.modal.footer}>
               <button

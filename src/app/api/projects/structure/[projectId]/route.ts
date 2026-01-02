@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { firebaseServer } from '@/lib/firebase-server';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
+// ✅ ENTERPRISE FIX: Force dynamic rendering to prevent static generation errors
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }

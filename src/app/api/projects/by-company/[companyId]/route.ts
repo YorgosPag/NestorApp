@@ -6,6 +6,10 @@ import { withErrorHandling, apiSuccess } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
 
+// ✅ ENTERPRISE FIX: Force dynamic rendering to prevent static generation errors
+// This API route depends on runtime data (companyId parameter + Firestore queries)
+export const dynamic = 'force-dynamic';
+
 export const GET = withErrorHandling(async (
   request: NextRequest,
   { params }: { params: Promise<{ companyId: string }> }

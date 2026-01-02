@@ -69,9 +69,18 @@ interface AdminLayerManagerProps {
   showSyncStatus?: boolean;
 }
 
-// Helper function for safe LAYER_CATEGORIES access
-const getCategoryInfo = (category: string) => {
-  return LAYER_CATEGORIES[category as keyof typeof LAYER_CATEGORIES] || { color: '#gray', name: category };
+// 🏢 ENTERPRISE: Type-safe LAYER_CATEGORIES access using Object.hasOwn
+const getCategoryInfo = (category: string | undefined): { color: string; name: string } => {
+  const fallback = { color: '#9ca3af', name: 'Unknown' };
+  if (!category) return fallback;
+
+  // Type-safe check using Object.hasOwn (ES2022+, polyfilled in modern TS)
+  if (Object.hasOwn(LAYER_CATEGORIES, category)) {
+    const categoryData = LAYER_CATEGORIES[category as Exclude<keyof typeof LAYER_CATEGORIES, undefined>];
+    return { color: categoryData.color, name: categoryData.name };
+  }
+
+  return { ...fallback, name: category };
 };
 
 interface CreateLayerDialogProps {
@@ -222,6 +231,7 @@ function LayerItem({
   onRename
 }: LayerItemProps) {
   const iconSizes = useIconSizes();
+  const { radius } = useBorderTokens();
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameName, setRenameName] = useState(layer.name);
   

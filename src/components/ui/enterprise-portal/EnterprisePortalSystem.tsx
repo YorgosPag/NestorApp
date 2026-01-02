@@ -43,7 +43,8 @@ export interface EnterprisePortalConfig {
   // Positioning
   triggerElement?: Element | null;
   customPosition?: DropdownPosition;
-  offset?: { x: number; y: number };
+  // 🏢 ENTERPRISE: Offset uses top/left/bottom for consistency with positioning utilities
+  offset?: { top: number; left: number; bottom?: number };
 
   // Behavior
   closeOnClickOutside?: boolean;
@@ -118,7 +119,7 @@ export const useSmartPortalPositioning = (
 
         case 'top-start':
           calculatedPosition = {
-            top: triggerRect.top - (portalRef.current?.offsetHeight || 0) - offset.bottom,
+            top: triggerRect.top - (portalRef.current?.offsetHeight || 0) - (offset.bottom ?? offset.top),
             left: triggerRect.left + offset.left,
             width: triggerRect.width
           };
@@ -138,7 +139,8 @@ export const useSmartPortalPositioning = (
             left: triggerRect.left + offset.left,
             width: triggerRect.width
           } : {
-            top: triggerRect.top - (portalRef.current?.offsetHeight || 200) - offset.bottom,
+            // 🏢 ENTERPRISE: Use nullish coalescing for type safety (offset.bottom is optional)
+            top: triggerRect.top - (portalRef.current?.offsetHeight || 200) - (offset.bottom ?? offset.top),
             left: triggerRect.left + offset.left,
             width: triggerRect.width
           };

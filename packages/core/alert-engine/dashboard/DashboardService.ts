@@ -16,7 +16,7 @@ import {
 import {
   NotificationDispatchEngine,
   notificationDispatchEngine,
-  NotificationStatistics
+  DeliveryStatistics
 } from '../notifications/NotificationDispatchEngine';
 import {
   RulesEngine,
@@ -50,7 +50,7 @@ export interface DashboardMetrics {
     avgExecutionTime: number; // σε ms
     failureRate: number;
   };
-  notifications: NotificationStatistics & {
+  notifications: DeliveryStatistics & {
     queueSize: number;
     avgDeliveryTime: number; // σε δευτερόλεπτα
     channelStats: Record<string, number>;
@@ -261,43 +261,47 @@ export class DashboardService {
   // INDIVIDUAL METRICS COLLECTORS
   // ========================================================================
 
+  // ✅ ENTERPRISE: Fixed method name and type annotations
   private async collectAlertMetrics(): Promise<DashboardMetrics['alerts']> {
-    const alerts = await this.alertDetection.getAllAlerts();
+    const alerts = this.alertDetection.getAlerts({});
     const now = new Date();
     const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    const alertsLast24h = alerts.filter(a => a.timestamp >= last24Hours);
-    const alertsLast7d = alerts.filter(a => a.timestamp >= last7Days);
+    // ✅ ENTERPRISE: Use correct property 'detectedAt' and typed parameters
+    const alertsLast24h = alerts.filter((a: Alert) => a.detectedAt >= last24Hours);
+    const alertsLast7d = alerts.filter((a: Alert) => a.detectedAt >= last7Days);
 
-    // Group by severity
-    const bySeverity = alerts.reduce((acc, alert) => {
+    // ✅ ENTERPRISE: Properly typed reduce accumulators
+    const bySeverity = alerts.reduce((acc: Record<AlertSeverity, number>, alert: Alert) => {
       acc[alert.severity] = (acc[alert.severity] || 0) + 1;
       return acc;
     }, {} as Record<AlertSeverity, number>);
 
-    // Group by status
-    const byStatus = alerts.reduce((acc, alert) => {
+    // ✅ ENTERPRISE: Properly typed reduce accumulators
+    const byStatus = alerts.reduce((acc: Record<AlertStatus, number>, alert: Alert) => {
       acc[alert.status] = (acc[alert.status] || 0) + 1;
       return acc;
     }, {} as Record<AlertStatus, number>);
 
-    // Calculate average resolution time
-    const resolvedAlerts = alerts.filter(a => a.status === 'resolved');
+    // ✅ ENTERPRISE: Properly typed filter and reduce
+    const resolvedAlerts = alerts.filter((a: Alert) => a.status === 'resolved');
     const avgResolutionTime = resolvedAlerts.length > 0
-      ? resolvedAlerts.reduce((sum, alert) => {
+      ? resolvedAlerts.reduce((sum: number, _alert: Alert) => {
           // Mock resolution time calculation (στην πραγματικότητα θα υπάρχει resolvedAt field)
           const resolutionTime = 30; // minutes (mock data)
           return sum + resolutionTime;
         }, 0) / resolvedAlerts.length
       : 0;
 
+    // ✅ ENTERPRISE: Use correct AlertStatus values from AlertDetectionSystem.ts
+    // AlertStatus = 'new' | 'acknowledged' | 'investigating' | 'resolved' | 'false_positive'
     return {
       total: alerts.length,
-      active: byStatus.active || 0,
+      active: byStatus.new || 0, // 'new' is the active status
       resolved: byStatus.resolved || 0,
       acknowledged: byStatus.acknowledged || 0,
-      suppressed: byStatus.suppressed || 0,
+      suppressed: byStatus.investigating || 0, // Map 'investigating' to suppressed for now
       bySeverity: {
         critical: bySeverity.critical || 0,
         high: bySeverity.high || 0,
@@ -306,10 +310,11 @@ export class DashboardService {
         info: bySeverity.info || 0
       },
       byStatus: {
-        active: byStatus.active || 0,
+        new: byStatus.new || 0,
         acknowledged: byStatus.acknowledged || 0,
+        investigating: byStatus.investigating || 0,
         resolved: byStatus.resolved || 0,
-        suppressed: byStatus.suppressed || 0
+        false_positive: byStatus.false_positive || 0
       },
       last24Hours: alertsLast24h.length,
       last7Days: alertsLast7d.length,
@@ -317,8 +322,9 @@ export class DashboardService {
     };
   }
 
+  // ✅ ENTERPRISE: Use correct method name getDeliveryStatistics()
   private async collectNotificationMetrics(): Promise<DashboardMetrics['notifications']> {
-    const baseStats = await this.notificationEngine.getStatistics();
+    const baseStats = this.notificationEngine.getDeliveryStatistics();
 
     // Extended metrics (mock data για development)
     return {
@@ -502,7 +508,8 @@ export class DashboardService {
         acknowledged: 0,
         suppressed: 0,
         bySeverity: { critical: 0, high: 0, medium: 0, low: 0, info: 0 },
-        byStatus: { active: 0, acknowledged: 0, resolved: 0, suppressed: 0 },
+        // ✅ ENTERPRISE: Use correct AlertStatus values
+        byStatus: { new: 0, acknowledged: 0, investigating: 0, resolved: 0, false_positive: 0 },
         last24Hours: 0,
         last7Days: 0,
         avgResolutionTime: 0
