@@ -11,57 +11,15 @@
  * ⚠️ ΑΝ ΑΥΤΟ ΤΟ TEST ΑΠΟΤΥΧΕΙ = Η ΛΕΙΤΟΥΡΓΙΚΟΤΗΤΑ ΣΧΕΔΙΑΣΗΣ ΣΠΑΣΕ!
  *
  * @enterprise-grade
- * @updated 2026-01-02 - Fixed CI/CD React 19 compatibility
+ * @updated 2026-01-02 - Migrated to TestProviders (real providers, no mocked hooks)
  */
 
-// ✅ ENTERPRISE FIX: Mock all hook dependencies BEFORE imports
-// Mock useLevels - required by useUnifiedDrawing
-jest.mock('../systems/levels', () => ({
-  useLevels: () => ({
-    currentLevelId: 'level-1',
-    getLevelScene: jest.fn().mockReturnValue({ entities: [] }),
-    setLevelScene: jest.fn()
-  })
-}));
-
-// Mock usePreviewMode
-jest.mock('../hooks/usePreviewMode', () => ({
-  usePreviewMode: () => ({
-    setMode: jest.fn()
-  })
-}));
-
-// Mock useLineStyles from settings-provider
-jest.mock('../settings-provider', () => ({
-  useLineStyles: jest.fn().mockReturnValue({
-    color: '#FF0000',
-    lineWidth: 2,
-    opacity: 1,
-    lineType: 'solid'
-  })
-}));
-
-// Mock useSnapContext
-jest.mock('../snapping/context/SnapContext', () => ({
-  useSnapContext: () => ({
-    snapEnabled: false,
-    snapToGrid: jest.fn(),
-    getSnapPoint: jest.fn()
-  })
-}));
-
-// Mock geometry utils
-jest.mock('../rendering/entities/shared/geometry-rendering-utils', () => ({
-  calculateDistance: (p1: { x: number; y: number }, p2: { x: number; y: number }) =>
-    Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2))
-}));
-
-// ✅ Now safe to import React testing utilities and hook
 import { renderHook, act } from '@testing-library/react';
 import { useUnifiedDrawing } from '../hooks/drawing/useUnifiedDrawing';
+import { TestProviders } from './utils/TestProviders';
 import type { Point2D } from '../rendering/types/Types';
 
-// ✅ ENTERPRISE FIX: Mock transform for all addPoint calls
+// ✅ ENTERPRISE: Transform helper for coordinate conversion
 const mockTransform = {
   worldToScreen: (point: Point2D) => point,
   screenToWorld: (point: Point2D) => point
@@ -70,7 +28,7 @@ const mockTransform = {
 describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
   describe('✅ Basic Line Drawing', () => {
     it('should draw a line with two clicks', () => {
-      const { result } = renderHook(() => useUnifiedDrawing());
+      const { result } = renderHook(() => useUnifiedDrawing(), { wrapper: TestProviders });
 
       // Start drawing a line
       act(() => {
@@ -94,7 +52,7 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
       let createdEntity: any = null;
 
       // Re-render with entity callback
-      const { result: resultWithCallback } = renderHook(() => useUnifiedDrawing());
+      const { result: resultWithCallback } = renderHook(() => useUnifiedDrawing(), { wrapper: TestProviders });
 
       act(() => {
         resultWithCallback.current.startDrawing('line');
@@ -112,7 +70,7 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
     });
 
     it('should create preview entity during drawing', () => {
-      const { result } = renderHook(() => useUnifiedDrawing());
+      const { result } = renderHook(() => useUnifiedDrawing(), { wrapper: TestProviders });
 
       act(() => {
         result.current.startDrawing('line');
@@ -144,7 +102,7 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
 
   describe('✅ Event Handler Connection', () => {
     it('should have onDrawingHover handler', () => {
-      const { result } = renderHook(() => useUnifiedDrawing());
+      const { result } = renderHook(() => useUnifiedDrawing(), { wrapper: TestProviders });
 
       // The hook should return drawingHandlers with onDrawingHover
       expect(result.current).toBeDefined();
@@ -152,13 +110,13 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
     });
 
     it('should have startDrawing handler', () => {
-      const { result } = renderHook(() => useUnifiedDrawing());
+      const { result } = renderHook(() => useUnifiedDrawing(), { wrapper: TestProviders });
 
       expect(typeof result.current.startDrawing).toBe('function');
     });
 
     it('should have addPoint handler', () => {
-      const { result } = renderHook(() => useUnifiedDrawing());
+      const { result } = renderHook(() => useUnifiedDrawing(), { wrapper: TestProviders });
 
       expect(typeof result.current.addPoint).toBe('function');
     });
@@ -166,7 +124,7 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
 
   describe('✅ State Management', () => {
     it('should initialize with correct default state', () => {
-      const { result } = renderHook(() => useUnifiedDrawing());
+      const { result } = renderHook(() => useUnifiedDrawing(), { wrapper: TestProviders });
 
       expect(result.current.state.isDrawing).toBe(false);
       expect(result.current.state.currentTool).toBe('select');
@@ -175,7 +133,7 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
     });
 
     it('should transition to drawing state when line tool selected', () => {
-      const { result } = renderHook(() => useUnifiedDrawing());
+      const { result } = renderHook(() => useUnifiedDrawing(), { wrapper: TestProviders });
 
       act(() => {
         result.current.startDrawing('line');
@@ -186,7 +144,7 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
     });
 
     it('should reset state after completing line', () => {
-      const { result } = renderHook(() => useUnifiedDrawing());
+      const { result } = renderHook(() => useUnifiedDrawing(), { wrapper: TestProviders });
 
       act(() => {
         result.current.startDrawing('line');
@@ -204,7 +162,7 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
   describe('⚠️ REGRESSION TESTS - Critical Bugs', () => {
     it('🐛 BUG FIX: onDrawingHover must be called during mouse move', () => {
       // This test ensures the bug where onDrawingHover wasn't called is fixed
-      const { result } = renderHook(() => useUnifiedDrawing());
+      const { result } = renderHook(() => useUnifiedDrawing(), { wrapper: TestProviders });
 
       act(() => {
         result.current.startDrawing('line');
@@ -221,7 +179,7 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
 
     it('🐛 BUG FIX: previewEntity must be added to scene for rendering', () => {
       // This test ensures preview entity is created
-      const { result } = renderHook(() => useUnifiedDrawing());
+      const { result } = renderHook(() => useUnifiedDrawing(), { wrapper: TestProviders });
 
       act(() => {
         result.current.startDrawing('line');
@@ -241,7 +199,7 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
 
   describe('✅ Line Properties', () => {
     it('should create line with start and end points', () => {
-      const { result } = renderHook(() => useUnifiedDrawing());
+      const { result } = renderHook(() => useUnifiedDrawing(), { wrapper: TestProviders });
 
       const start: Point2D = { x: 10, y: 20 };
       const end: Point2D = { x: 30, y: 40 };
@@ -261,7 +219,7 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
     });
 
     it('should mark preview entity with preview flag', () => {
-      const { result } = renderHook(() => useUnifiedDrawing());
+      const { result } = renderHook(() => useUnifiedDrawing(), { wrapper: TestProviders });
 
       act(() => {
         result.current.startDrawing('line');
