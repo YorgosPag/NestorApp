@@ -1,13 +1,17 @@
 {
   "category": "STABLE",
-  "shortDescription": "Line Drawing Tests 12/12 PASS - Enterprise Safety Checkpoint",
-  "problem": "4 line-drawing tests failing due to: (1) isDrawing not reset after entity completion, (2) Tests calling multiple functions in single act() block",
+  "shortDescription": "Line Drawing Tests 12/12 PASS + Design Tokens Update",
+  "problem": "4 line-drawing tests failing + design tokens refinements needed",
   "cause": "React state updates are asynchronous - setState from one function not visible to next function within same act() block",
   "filesChanged": [
     "src/subapps/dxf-viewer/hooks/drawing/useUnifiedDrawing.tsx",
     "src/subapps/dxf-viewer/__tests__/line-drawing-functionality.test.ts",
     "src/subapps/dxf-viewer/__tests__/utils/TestProviders.tsx",
     "src/subapps/dxf-viewer/services/__tests__/ServiceRegistry.test.ts",
+    "design-tokens.json",
+    "src/styles/design-tokens.ts",
+    "src/styles/design-tokens/generated/tokens.ts",
+    "src/subapps/dxf-viewer/docs/CENTRALIZED_SYSTEMS.md",
     "pnpm-lock.yaml"
   ],
   "solution": {
@@ -15,7 +19,8 @@
     "phase2": "Fixed tests: Separated act() blocks for each state-changing function call",
     "phase3": "Replaced 'as any' with proper ExtendedLineEntity type",
     "phase4": "Created TestProviders with real providers (no mocked hooks)",
-    "phase5": "React 19 compatibility via pnpm.overrides"
+    "phase5": "React 19 compatibility via pnpm.overrides",
+    "phase6": "Design tokens and documentation updates"
   },
   "testing": {
     "lineDrawingTests": "12/12 PASS",
@@ -25,7 +30,8 @@
   "notes": [
     "Enterprise pattern: Separate act() blocks for React state updates",
     "No mocked hooks - TestProviders uses real providers with test-safe config",
-    "ServiceRegistry 3 failures are minor mock issues, not affecting functionality"
+    "ServiceRegistry 3 failures are minor mock issues, not affecting functionality",
+    "Design tokens centralized and documentation updated"
   ],
   "contributors": {
     "user": "Giorgos Pagonis",
@@ -37,6 +43,10 @@
     "React 19 CI/CD Compatibility"
   ],
   "commits": [
+    {
+      "hash": "f8622a2",
+      "message": "Minor updates: Design tokens, documentation, component fixes"
+    },
     {
       "hash": "710cdfe",
       "message": "ENTERPRISE SAFETY CHECKPOINT: Line Drawing Tests 12/12 PASS"
