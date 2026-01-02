@@ -1,142 +1,84 @@
-/**
- * 📊 ENTERPRISE PERFORMANCE DASHBOARD - UNIFIED FLOATING SYSTEM
- *
- * Συγχωνευμένη έκδοση του αρχικού Performance Monitor με:
- * - Real-time metrics από DXF Viewer
- * - Enterprise unified floating system integration
- * - Κεντρικοποιημένα design tokens (ZERO hardcoded values)
- * - Centralized z-index management
- * - Enterprise draggable behavior
- * - Professional architecture
- *
- * @author Claude (Anthropic AI)
- * @version 4.0.0 - Enterprise Unified Floating System Integration
- * @since 2025-12-18 - Migrated to centralized floating tokens
- */
-
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useDraggable } from '../../../hooks/useDraggable';
-import {
-  Activity,
-  Cpu,
-  MemoryStick,
-  Zap,
-  AlertTriangle,
-  CheckCircle,
-  TrendingUp,
-  TrendingDown,
-  RefreshCcw,
-  Settings,
-  BarChart3,
-  Globe,
-  Database,
-  Brain,
-  Play,
-  Square,
-  Maximize2,
-  Minimize2,
-  X
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+/**
+ * @fileoverview Global Performance Dashboard - Main Orchestrator
+ * @module core/performance/components/GlobalPerformanceDashboard
+ *
+ * Google-style clean orchestrator component that composes section components.
+ * Single responsibility: Layout and state management only.
+ *
+ * @author Claude (Anthropic AI)
+ * @version 6.0.0 - Google-style modular architecture
+ * @since 2026-01-02
+ */
+
+import React, { useState } from 'react';
+import { Activity, Settings } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useEnterprisePerformance } from '../hooks/useEnterprisePerformance';
-import {
-  PerformanceCategory,
-  PerformanceSeverity,
-  PerformanceUnit
-} from '../types/performance.types';
-// 🏢 ENTERPRISE DESIGN SYSTEM - Microsoft/Google Class
-import { designSystem } from '@/lib/design-system';
-import {
-  performanceComponents,
-  performanceMonitorUtilities
-} from '@/styles/design-tokens';
-// 🌊 ENTERPRISE UNIFIED FLOATING SYSTEM
-import { FloatingStyleUtils, PerformanceDashboardTokens } from '@/styles/design-tokens';
-// 🏭 SMART ACTION FACTORY - ZERO DUPLICATES
-import {
-  createSmartAction,
-  createSmartActionGroup,
-  migrateLegacyActionButton
-} from '@/core/actions/SmartActionFactory';
+import { PerformanceCategory } from '../types/performance.types';
+import { FloatingPanel } from '@/components/ui/floating';
+import { FloatingStyleUtils } from '@/styles/design-tokens';
+
+// 🏢 GOOGLE-STYLE MODULAR IMPORTS
+import { PerformanceGradeBadge, PerformanceChart } from './shared';
+import { CurrentMetrics, PerformanceAlerts, QuickActions, OptimizationPanel } from './sections';
+import { getInitialPosition, PANEL_DIMENSIONS } from './utils/performance-utils';
+
+// ============================================================================
+// TYPES
+// ============================================================================
 
 export interface GlobalPerformanceDashboardProps {
-  /** Position of the dashboard */
-  position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'floating';
-  /** Whether dashboard is minimizable */
-  minimizable?: boolean;
-  /** Default minimized state */
-  defaultMinimized?: boolean;
-  /** Show detailed metrics */
+  /** Show detailed metrics including chart */
   showDetails?: boolean;
   /** Update interval in milliseconds */
   updateInterval?: number;
   /** Categories to monitor */
   categories?: PerformanceCategory[];
-  /** Custom styles */
+  /** Additional CSS classes */
   className?: string;
-  /** Theme */
-  theme?: 'light' | 'dark' | 'auto';
 }
 
+// ============================================================================
+// COMPONENT
+// ============================================================================
+
 /**
- * 📊 Main Performance Dashboard Component - DXF Style με Enterprise Design
+ * GlobalPerformanceDashboard - Enterprise performance monitoring panel.
+ *
+ * Google-style architecture:
+ * - Clean orchestrator (this file): ~100 lines
+ * - Reusable components (shared/): ~150 lines
+ * - Section components (sections/): ~200 lines
+ * - Utilities (utils/): ~100 lines
+ *
+ * @example
+ * <GlobalPerformanceDashboard showDetails updateInterval={2000} />
  */
 export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProps> = ({
-  position: dashboardPosition = 'top-right',
-  minimizable = true,
-  defaultMinimized = false,
   showDetails = true,
   updateInterval = 2000,
   categories,
-  className,
-  theme = 'auto'
+  className
 }) => {
   const iconSizes = useIconSizes();
-  const { quick, getStatusBorder, radius } = useBorderTokens();
+  const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
-  const [mounted, setMounted] = useState(false);
+
+  // 🎯 LOCAL STATE
   const [isVisible, setIsVisible] = useState(true);
   const [showOptimizations, setShowOptimizations] = useState(false);
-  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
+  const [, setDismissedAlerts] = useState<Set<string>>(new Set());
 
-  // 🖱️ ENTERPRISE DRAGGABLE SYSTEM - Centralized Hook
-  const {
-    position: dragPosition,
-    isDragging,
-    elementRef,
-    handleMouseDown
-  } = useDraggable(isVisible, {
-    elementWidth: (() => {
-      const tokens = performanceComponents.performanceMonitor;
-      const maxWidth = tokens.dimensions.maxWidth;
-      if (maxWidth.includes('rem')) {
-        return parseInt(maxWidth.replace('rem', '')) * 16; // Convert rem to px
-      }
-      return 400; // Fallback width in px
-    })(),
-    elementHeight: performanceComponents.performanceMonitor.dimensions.estimatedHeight,
-    autoCenter: PerformanceDashboardTokens?.behavior?.autoCenter ?? true
-  });
-
-  // Prevent hydration mismatch
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const {
-    state: { metrics, statistics, alerts, issues, isMonitoring, lastUpdated },
-    actions: { startMonitoring, stopMonitoring }
-  } = useEnterprisePerformance({
+  // 🎯 PERFORMANCE MONITORING HOOK
+  useEnterprisePerformance({
     autoStart: true,
     realTimeUpdates: true,
     updateInterval,
-    categories: categories || [
+    categories: categories ?? [
       PerformanceCategory.RENDERING,
       PerformanceCategory.API_RESPONSE,
       PerformanceCategory.CACHE_HIT,
@@ -144,59 +86,29 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
     ]
   });
 
-  // Mock performance controls (DXF Style)
+  // 🎯 MOCK DATA (TODO: Connect to real performance hook)
+  const status = {
+    grade: 'good',
+    metrics: { fps: 50, memoryUsage: 316.5, renderTime: 0.0, canvasElements: 974 },
+    alerts: [
+      { id: '1', message: 'Memory usage high: 316.5MB > 256MB' },
+      { id: '2', message: 'FPS below threshold: 8 < 30' }
+    ],
+    recommendations: [],
+    history: Array.from({ length: 20 }, (_, i) => ({
+      fps: Math.random() * 40 + 20,
+      timestamp: Date.now() - (20 - i) * 1000
+    }))
+  };
+
+  // 🎯 CONTROLS
   const controls = {
     measurePerformance: () => console.log('Measuring performance...'),
     applyAllOptimizations: () => console.log('Applying optimizations...'),
     clearAlerts: () => setDismissedAlerts(new Set())
   };
 
-  // Mock performance data to match screenshot
-  const mockAlerts = [
-    { id: '1', message: 'Memory usage high: 316.5MB > 256MB' },
-    { id: '2', message: 'FPS below threshold: 8 < 30' }
-  ];
-
-  const mockHistory = Array.from({ length: 20 }, (_, i) => ({
-    fps: Math.random() * 40 + 20,
-    timestamp: Date.now() - (20 - i) * 1000
-  }));
-
-  const status = {
-    grade: 'good',
-    metrics: {
-      fps: 50,
-      memoryUsage: 316.5,
-      renderTime: 0.0,
-      canvasElements: 974
-    },
-    alerts: mockAlerts,
-    recommendations: [],
-    isOptimal: false,
-    history: mockHistory
-  };
-
-  // 📍 ENTERPRISE POSITIONING - Centralized Floating System
-  const tokens = performanceComponents.performanceMonitor;
-  const draggableClasses = FloatingStyleUtils?.getPerformanceDashboardClasses?.(isDragging) ??
-    `fixed z-modal max-w-[${tokens.dimensions.maxWidth}] min-w-[${tokens.dimensions.minWidth}] bg-card ${getStatusBorder('default')} rounded-md shadow-lg ${isDragging ? 'cursor-grabbing select-none' : 'cursor-auto'}`;
-
-  // ✅ ENTERPRISE FIX: Use left/top positioning (consistent with other draggable panels)
-  // transform: translate() can cause z-index and interaction issues with fixed elements
-  const draggableStyles = mounted ? {
-    left: dragPosition.x,
-    top: dragPosition.y,
-    transition: isDragging ? 'none' : 'left 0.2s ease, top 0.2s ease'
-  } : undefined;
-
-  // Prevent hydration mismatch - don't render until mounted
-  if (!mounted) {
-    return null;
-  }
-
-  // DEBUG: Component is rendering
-  console.log('🎯 PERFORMANCE MONITOR: Component is rendering!', { isVisible, mounted });
-
+  // 🎯 HIDDEN STATE: Restore button
   if (!isVisible) {
     return (
       <button
@@ -204,420 +116,70 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
         className={FloatingStyleUtils?.getCornerButtonClasses?.('top-right') ??
           `fixed top-4 right-4 z-modal p-2 ${colors.bg.primary} ${getStatusBorder('default')} rounded-md shadow-lg hover:bg-accent transition-colors`}
         title="Show Performance Dashboard"
+        type="button"
       >
         <Activity className={iconSizes.sm} />
       </button>
     );
   }
 
-  return (
-    <Card
-      ref={elementRef}
-      className={performanceMonitorUtilities.getOverlayContainerClasses()}
-      style={{
-        ...draggableStyles,
-        ...performanceMonitorUtilities.getOverlayContainerStyles()
-      }}
-    >
-      {/* Header - Enterprise Draggable Handle */}
-      <CardHeader
-        className={performanceMonitorUtilities.getOverlayHeaderClasses()}
-        style={performanceMonitorUtilities.getOverlayHeaderStyles()}
-        onMouseDown={handleMouseDown}
+  // 🎯 HEADER ACTIONS
+  const headerActions = (
+    <>
+      <PerformanceGradeBadge grade={status.grade} />
+      <button
+        onClick={() => setShowOptimizations(prev => !prev)}
+        className="p-1 rounded transition-colors hover:bg-muted text-muted-foreground hover:text-foreground"
+        title="Toggle optimizations"
+        type="button"
       >
-        <div className="flex items-center gap-3 flex-1">
-          <Activity className={`${iconSizes.sm} text-primary`} />
-          <h3 className="text-sm font-semibold text-foreground">Performance Monitor</h3>
-          <PerformanceGradeBadge grade={status.grade} />
-          {/* 🖱️ DEDICATED DRAG HANDLE για εύκολο dragging */}
-          <div
-            className="ml-auto cursor-grab transition-colors text-xs select-none text-muted-foreground hover:text-foreground"
-            title="Drag to move"
-            data-drag-handle="true"
-            onMouseDown={handleMouseDown}
-          >
-            ⋮⋮
-          </div>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setShowOptimizations(!showOptimizations)}
-            className="p-1 rounded transition-colors"
-            style={performanceMonitorUtilities.getOverlayButtonStyles()}
-            title="Toggle optimizations"
-          >
-            <Settings className={iconSizes.xs} />
-          </button>
-          <button
-            onClick={() => setIsVisible(false)}
-            className="p-1 rounded transition-colors"
-            style={performanceMonitorUtilities.getOverlayButtonStyles()}
-            title="Hide dashboard"
-          >
-            <X className={iconSizes.xs} />
-          </button>
-        </div>
-      </CardHeader>
+        <Settings className={iconSizes.xs} />
+      </button>
+    </>
+  );
 
-      <CardContent
-        className="space-y-4"
-        style={performanceMonitorUtilities.getOverlayContentStyles()}
-      >
-        {/* Current Metrics - 2x2 Grid όπως στο screenshot */}
+  // 🎯 RENDER
+  return (
+    <FloatingPanel
+      defaultPosition={getInitialPosition()}
+      dimensions={PANEL_DIMENSIONS}
+      onClose={() => setIsVisible(false)}
+      className={className}
+    >
+      <FloatingPanel.Header
+        title="Performance Monitor"
+        icon={<Activity />}
+        actions={headerActions}
+      />
+      <FloatingPanel.Content>
         <CurrentMetrics metrics={status.metrics} />
 
-        {/* Performance Alerts - όπως στο screenshot */}
         {status.alerts.length > 0 && (
-          <PerformanceAlerts alerts={status.alerts} onClearAlerts={controls.clearAlerts} />
+          <PerformanceAlerts
+            alerts={status.alerts}
+            onClearAlerts={controls.clearAlerts}
+          />
         )}
 
-        {/* Quick Actions με Test button - όπως στο screenshot */}
-        <QuickActions controls={controls} recommendations={status.recommendations} />
+        <QuickActions
+          controls={controls}
+          recommendations={status.recommendations}
+        />
 
-        {/* Optimization Panel */}
         {showOptimizations && (
           <OptimizationPanel
             recommendations={status.recommendations}
             onApplyOptimization={async () => true}
-            onApplyAll={async () => await controls.applyAllOptimizations()}
+            onApplyAll={async () => controls.applyAllOptimizations()}
           />
         )}
 
-        {/* Performance History Chart - όπως στο screenshot */}
         {showDetails && status.history.length > 0 && (
           <PerformanceChart history={status.history} />
         )}
-      </CardContent>
-    </Card>
+      </FloatingPanel.Content>
+    </FloatingPanel>
   );
 };
-
-/**
- * 🏆 Performance Grade Badge - Enterprise Design System
- */
-const PerformanceGradeBadge: React.FC<{ grade: string }> = ({ grade }) => {
-  const statusColor = grade === 'good' ? 'success' :
-                     grade === 'warning' ? 'warning' :
-                     grade === 'poor' ? 'error' : 'info';
-
-  return (
-    <span className={designSystem.getStatusBadgeClass(statusColor)}>
-      {grade.toUpperCase()}
-    </span>
-  );
-};
-
-/**
- * 📊 Current Metrics Display - 2x2 Grid Enterprise Layout
- */
-const CurrentMetrics: React.FC<{ metrics: any }> = ({ metrics }) => {
-  const iconSizes = useIconSizes();
-  if (!metrics) {
-    return (
-      <div className={cn(designSystem.presets.text.muted, "text-center p-6")}>
-        <Cpu className={`${iconSizes.xl} mx-auto mb-2 opacity-50`} />
-        Initializing performance monitoring...
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-2 gap-4">
-      {/* FPS */}
-      <DxfMetricCard
-        icon={<Zap />}
-        label="FPS"
-        value={metrics.fps}
-        unit=""
-        type="fps"
-        trend={getTrend(metrics.fps, 60)}
-      />
-
-      {/* Memory */}
-      <DxfMetricCard
-        icon={<MemoryStick />}
-        label="Memory"
-        value={metrics.memoryUsage}
-        unit="MB"
-        type="memory"
-        trend={getTrend(metrics.memoryUsage, 100, true)}
-      />
-
-      {/* Render Time */}
-      <DxfMetricCard
-        icon={<BarChart3 />}
-        label="Render"
-        value={metrics.renderTime}
-        unit="ms"
-        type="render"
-        trend={getTrend(metrics.renderTime, 16.67, true)}
-      />
-
-      {/* Canvas Elements */}
-      <DxfMetricCard
-        icon={<Activity />}
-        label="Elements"
-        value={metrics.canvasElements}
-        unit=""
-        type="elements"
-        trend={null}
-      />
-    </div>
-  );
-};
-
-/**
- * 📈 Metric Card Component - Enterprise Centralized Styles
- */
-const DxfMetricCard: React.FC<{
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  unit: string;
-  type: 'fps' | 'memory' | 'render' | 'elements';
-  trend: 'up' | 'down' | null;
-}> = ({ icon, label, value, unit, type, trend }) => {
-  const iconSizes = useIconSizes();
-  const valueColorClass = performanceMonitorUtilities.getMetricValueClasses(type, value);
-
-  return (
-    <div className={cn(
-      designSystem.presets.card.default,
-      "p-3 space-y-2"
-    )}>
-      <div className="flex items-center justify-between">
-        <span className={designSystem.presets.text.caption}>
-          {label}
-        </span>
-        <div className={cn(iconSizes.sm, valueColorClass)}>
-          {icon}
-        </div>
-      </div>
-      <div className="flex items-center justify-between">
-        <span className={cn("text-lg font-semibold", valueColorClass)}>
-          {typeof value === 'number' ? value.toFixed(value < 10 ? 1 : 0) : value}
-          {unit && (
-            <span className="text-muted-foreground ml-1 text-sm">
-              {unit}
-            </span>
-          )}
-        </span>
-        {trend && (
-          <div
-            className={iconSizes.sm}
-            style={{
-              color: trend === 'up'
-                ? performanceComponents.performanceMonitor.colors.fps.excellent
-                : performanceComponents.performanceMonitor.colors.fps.poor
-            }}
-          >
-            {trend === 'up' ? <TrendingUp /> : <TrendingDown />}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-/**
- * 🚨 Performance Alerts - Enterprise CSS Classes
- */
-const PerformanceAlerts: React.FC<{
-  alerts: Array<{ message?: string; name?: string }>;
-  onClearAlerts: () => void;
-}> = ({ alerts, onClearAlerts }) => {
-  const iconSizes = useIconSizes();
-  // ✅ ENTERPRISE: Theme-aware Tailwind classes αντί για hardcoded colors
-  return (
-    <div className="rounded-md border border-warning/30 bg-muted p-3 text-foreground">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <AlertTriangle className={cn(iconSizes.xs, "text-warning")} />
-          <span className={cn(
-            designSystem.presets.text.caption,
-            "font-medium text-warning"
-          )}>
-            Performance Alerts
-          </span>
-        </div>
-        <button
-          onClick={onClearAlerts}
-          className="text-xs bg-transparent border-none cursor-pointer text-warning hover:opacity-80 transition-opacity"
-        >
-          Clear
-        </button>
-      </div>
-      <div className="flex flex-col gap-1">
-        {alerts.slice(0, 3).map((alert, index) => (
-          <div key={index} className="text-xs text-warning/90">
-            • {alert.message || alert.name}
-          </div>
-        ))}
-        {alerts.length > 3 && (
-          <div className="text-xs text-warning">
-            +{alerts.length - 3} more alerts
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// 🏭 REMOVED: Duplicate ActionButton - Using Smart Action Factory instead
-
-/**
- * ⚡ Quick Actions με Test button - Enterprise CSS Classes
- */
-const QuickActions: React.FC<{
-  controls: any;
-  recommendations: any[];
-}> = ({ controls, recommendations }) => {
-  const iconSizes = useIconSizes();
-  return (
-    <div className="flex flex-col gap-performance-sm">
-      <div className="flex items-center justify-between">
-        <div className="flex gap-performance-sm">
-          {migrateLegacyActionButton(
-            controls.measurePerformance,
-            <RefreshCcw className={iconSizes.xs} />,
-            "Test",
-            "blue",
-            { title: "Measure performance" }
-          )}
-          {recommendations.length > 0 &&
-            migrateLegacyActionButton(
-              controls.applyAllOptimizations,
-              <Zap className={iconSizes.xs} />,
-              "Optimize",
-              "green",
-              { title: "Apply all optimizations" }
-            )
-          }
-        </div>
-        <span className="text-performance-xs text-muted-foreground">
-          {recommendations.length} recommendations
-        </span>
-      </div>
-
-      {/* 📊 DETAILED ANALYTICS BUTTON */}
-      {migrateLegacyActionButton(
-        () => window.open('/admin/performance', '_blank'),
-        <BarChart3 className={iconSizes.xs} />,
-        "Detailed Analytics",
-        "purple",
-        {
-          title: "Open detailed analytics dashboard",
-          fullWidth: true
-        }
-      )}
-    </div>
-  );
-};
-
-/**
- * 💡 Optimization Panel - Enterprise CSS Classes
- */
-const OptimizationPanel: React.FC<{
-  recommendations: any[];
-  onApplyOptimization: (id: string) => Promise<boolean>;
-  onApplyAll: () => Promise<void>;
-}> = ({ recommendations, onApplyOptimization, onApplyAll }) => {
-  const iconSizes = useIconSizes();
-  const { quick, radius } = useBorderTokens();
-  if (recommendations.length === 0) {
-    return (
-      <div className="performance-success rounded border p-performance-sm">
-        <div className="flex items-center gap-performance-sm">
-          <CheckCircle className={iconSizes.sm} style={{ color: performanceComponents.performanceMonitor.colors.fps.excellent }} />
-          <span className="text-performance-xs" style={{ color: performanceComponents.performanceMonitor.colors.fps.excellent }}>
-            All optimizations applied!
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded bg-muted/30 p-performance-sm">
-      <div className="text-performance-xs font-medium text-foreground mb-performance-sm">
-        Optimization Recommendations:
-      </div>
-      <div className="flex flex-col gap-performance-sm max-h-32 overflow-y-auto">
-        {recommendations.map((rec, index) => (
-          <div key={index} className="flex items-center justify-between">
-            <div className="flex-1 mr-performance-sm">
-              <div className="text-performance-xs text-foreground">
-                {rec.description}
-              </div>
-              <div className="text-performance-xs text-muted-foreground">
-                {rec.estimatedImprovement}
-              </div>
-            </div>
-            {migrateLegacyActionButton(
-              () => onApplyOptimization(rec.id),
-              <></>,
-              "Apply",
-              "blue"
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-/**
- * 📈 Performance History Chart - Enterprise CSS Classes
- */
-const PerformanceChart: React.FC<{ history: any[] }> = ({ history }) => {
-  const { radius } = useBorderTokens();
-  const maxFPS = Math.max(...history.map(m => m.fps || 60), 60);
-  const chartData = history.slice(-20); // Last 20 measurements
-
-  return (
-    <div className="rounded bg-muted/30 p-performance-sm">
-      <div className="text-performance-xs font-medium text-foreground mb-performance-sm">
-        FPS History (Last 20s)
-      </div>
-      <div className="flex items-end justify-between h-8 gap-0.5">
-        {chartData.map((metrics, index) => {
-          const value = metrics.fps || 60;
-          const height = (value / maxFPS) * 100;
-          const colorClass = performanceMonitorUtilities.getChartBarClasses(value);
-
-          return (
-            <div
-              key={index}
-              className={`flex-1 rounded-sm ${colorClass}`}
-              style={{
-                height: `${height}%`
-              }}
-              title={`${value.toFixed(0)} FPS`}
-            />
-          );
-        })}
-      </div>
-      <div className="flex justify-between text-performance-xs text-muted-foreground mt-performance-xs">
-        <span>-20s</span>
-        <span>now</span>
-      </div>
-    </div>
-  );
-};
-
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-// ============================================================================
-// UTILITY FUNCTIONS - Now using centralized styling system
-// ============================================================================
-
-function getTrend(current: number, optimal: number, inverted = false): 'up' | 'down' | null {
-  if (!optimal) return null;
-
-  const isGood = inverted ? current < optimal : current > optimal * 0.9;
-  return isGood ? 'up' : 'down';
-}
 
 export default GlobalPerformanceDashboard;
