@@ -62,8 +62,12 @@ export class TextRenderer extends BaseEntityRenderer {
       // 🏢 ENTERPRISE: CAD-accurate text rendering
       const screenPos = this.worldToScreen(position);
 
-      // 🏢 ENTERPRISE: Use centralized config for size constraints (MIN_READABLE_SIZE: 8px)
-      const effectiveScreenHeight = calculateEffectiveScreenHeight(textHeight, this.transform.scale);
+      // 🏢 ENTERPRISE: Get viewport height for annotation scaling
+      const rect = this.ctx.canvas.getBoundingClientRect();
+      const viewportHeight = rect.height;
+
+      // 🏢 ENTERPRISE: Annotation Scaling - text renders larger and proportional to viewport
+      const effectiveScreenHeight = calculateEffectiveScreenHeight(textHeight, this.transform.scale, viewportHeight);
 
       this.ctx.save();
 

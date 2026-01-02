@@ -1,29 +1,34 @@
 {
   "category": "STABLE",
-  "shortDescription": "DXF Entity Converters Modularization",
-  "problem": "DXF entity parser was handling both parsing and conversion logic",
-  "cause": "Single-file architecture mixing parsing and conversion responsibilities",
+  "shortDescription": "Text Rendering Config Centralization",
+  "problem": "Text rendering configuration scattered across multiple files",
+  "cause": "useTextPreviewStyle hook and inline configs in various components",
   "filesChanged": [
-    "src/subapps/dxf-viewer/utils/dxf-entity-converters.ts (NEW - 443 lines)",
-    "src/subapps/dxf-viewer/utils/dxf-converter-helpers.ts (NEW - 214 lines)",
-    "src/subapps/dxf-viewer/utils/dxf-entity-parser.ts (REFACTORED)",
-    "src/subapps/dxf-viewer/utils/dxf-entity-converters.backup.2026-01-02.ts (BACKUP)"
+    "src/subapps/dxf-viewer/config/text-rendering-config.ts (NEW - 346 lines)",
+    "src/subapps/dxf-viewer/hooks/useTextPreviewStyle.ts (REMOVED)",
+    "src/subapps/dxf-viewer/rendering/entities/TextRenderer.ts",
+    "src/subapps/dxf-viewer/rendering/entities/shared/circle-text-utils.ts",
+    "src/subapps/dxf-viewer/rendering/entities/shared/geometry-rendering-utils.ts",
+    "src/subapps/dxf-viewer/rendering/entities/shared/phase-text-utils.ts",
+    "src/subapps/dxf-viewer/systems/phase-manager/PhaseManager.ts",
+    "src/subapps/dxf-viewer/utils/hover/edge-utils.ts",
+    "src/subapps/dxf-viewer/utils/hover/text-labeling-utils.ts"
   ],
   "solution": {
-    "phase1": "Created dxf-entity-converters.ts for centralized entity conversion",
-    "phase2": "Created dxf-converter-helpers.ts for shared utilities",
-    "phase3": "Refactored dxf-entity-parser.ts for cleaner separation",
-    "phase4": "Established Parser -> Converters -> Helpers architecture"
+    "phase1": "Created text-rendering-config.ts for centralized config",
+    "phase2": "Removed useTextPreviewStyle.ts hook",
+    "phase3": "Updated all text rendering components",
+    "phase4": "Integrated config into PhaseManager"
   },
   "testing": {
     "typescriptVerification": "PASS",
-    "netCodeChange": "+937 lines (new modular architecture)"
+    "netCodeChange": "+276 lines (centralized config)"
   },
   "notes": [
-    "New dxf-entity-converters.ts: 443 lines for entity conversion",
-    "New dxf-converter-helpers.ts: 214 lines for utilities",
-    "Parser now focused only on parsing, not conversion",
-    "Clean separation of concerns"
+    "New text-rendering-config.ts: 346 lines centralized config",
+    "All text rendering uses single source of truth",
+    "PhaseManager improved with config integration",
+    "8 files updated to use centralized config"
   ],
   "contributors": {
     "user": "Giorgos Pagonis",
@@ -31,10 +36,14 @@
     "sessionDate": "2026-01-02"
   },
   "relatedBackups": [
-    "DXF Import and Encoding Service Refactoring",
-    "Cleanup and Component Refinements"
+    "DXF Entity Converters Modularization",
+    "DXF Import and Encoding Service Refactoring"
   ],
   "commits": [
+    {
+      "hash": "d79b2e9",
+      "message": "ENTERPRISE SAFETY CHECKPOINT: Text Rendering Config Centralization"
+    },
     {
       "hash": "39dda8a",
       "message": "ENTERPRISE SAFETY CHECKPOINT: DXF Entity Converters Modularization"
@@ -42,10 +51,6 @@
     {
       "hash": "0dad619",
       "message": "ENTERPRISE SAFETY CHECKPOINT: DXF Import & Encoding Service Refactoring"
-    },
-    {
-      "hash": "dacb54b",
-      "message": "ENTERPRISE SAFETY CHECKPOINT: Cleanup & Component Refinements"
     }
   ]
 }

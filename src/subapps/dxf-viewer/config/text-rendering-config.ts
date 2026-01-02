@@ -176,6 +176,60 @@ export const TEXT_HIT_TESTING = {
 } as const;
 
 // ============================================
+// ANNOTATION SCALING (CAD STANDARD)
+// ============================================
+
+/**
+ * 🏢 ENTERPRISE: Annotation Scaling Configuration
+ *
+ * CAD Industry Standard: Text/annotations use different scaling than geometry
+ * to remain readable at all zoom levels.
+ *
+ * RATIONALE:
+ * - In AutoCAD/BricsCAD, annotations have "paper space" scaling
+ * - Text height in drawing units is scaled differently than geometry
+ * - This ensures text remains readable regardless of drawing extent
+ *
+ * @see AutoCAD Annotation Scaling
+ * @see ISO 128 - Technical drawing dimensioning
+ */
+export const ANNOTATION_SCALING = {
+  /**
+   * Minimum text height as ratio of viewport height
+   * 1.5% of viewport = ~12px on 800px viewport
+   * This ensures text is always readable relative to screen
+   */
+  MIN_HEIGHT_VIEWPORT_RATIO: 0.015,
+
+  /**
+   * Annotation scale boost factor
+   * Multiplies text height to make it more prominent
+   * 4.0 = text renders 4x larger than pure geometric scaling
+   * (Increased from 2.0 for better readability in floor plans)
+   */
+  SCALE_BOOST_FACTOR: 4.0,
+
+  /**
+   * Absolute minimum in pixels (fallback)
+   * Never go below this regardless of viewport size
+   */
+  ABSOLUTE_MIN_PIXELS: 10,
+
+  /**
+   * Enable viewport-based dynamic minimum
+   * When true, MIN_HEIGHT_VIEWPORT_RATIO is used
+   * When false, falls back to TEXT_SIZE_LIMITS.MIN_READABLE_SIZE
+   */
+  USE_DYNAMIC_MINIMUM: true,
+
+  /**
+   * Enable annotation scale boost
+   * When true, text is multiplied by SCALE_BOOST_FACTOR
+   */
+  USE_SCALE_BOOST: true,
+} as const;
+
+// ============================================
 // RENDERING BEHAVIOR
 // ============================================
 
@@ -228,6 +282,7 @@ export const TEXT_RENDERING_CONFIG = {
   fonts: TEXT_FONTS,
   hitTesting: TEXT_HIT_TESTING,
   behavior: TEXT_RENDERING_BEHAVIOR,
+  annotationScaling: ANNOTATION_SCALING,
 } as const;
 
 // ============================================
@@ -259,25 +314,54 @@ export type TextFontsConfig = typeof TEXT_FONTS;
 // ============================================
 
 /**
- * Calculate effective screen height with size constraints
+ * 🏢 ENTERPRISE: Calculate dynamic minimum text size based on viewport
  *
- * ENTERPRISE: Applies MIN/MAX size limits based on behavior flags
+ * Uses annotation scaling to ensure text remains readable at all zoom levels.
+ * Returns the larger of: viewport-based minimum or absolute minimum.
+ *
+ * @param viewportHeight - Viewport height in pixels (optional)
+ * @returns Minimum text height in pixels
+ */
+export function calculateDynamicMinimum(viewportHeight?: number): number {
+  if (!ANNOTATION_SCALING.USE_DYNAMIC_MINIMUM || !viewportHeight) {
+    return TEXT_SIZE_LIMITS.MIN_READABLE_SIZE;
+  }
+
+  const viewportBasedMin = viewportHeight * ANNOTATION_SCALING.MIN_HEIGHT_VIEWPORT_RATIO;
+  return Math.max(viewportBasedMin, ANNOTATION_SCALING.ABSOLUTE_MIN_PIXELS);
+}
+
+/**
+ * 🏢 ENTERPRISE: Calculate effective screen height with annotation scaling
+ *
+ * MAJOR FIX: Implements CAD-standard annotation scaling
+ * - Text is boosted by SCALE_BOOST_FACTOR for better visibility
+ * - Minimum size is dynamic based on viewport (not fixed 8px)
+ * - Ensures text remains proportional to drawing at all zoom levels
  *
  * @param textHeight - Text height in drawing units
  * @param scale - Current canvas scale (zoom level)
+ * @param viewportHeight - Optional viewport height for dynamic minimum
  * @returns Effective screen height in pixels
  */
 export function calculateEffectiveScreenHeight(
   textHeight: number,
-  scale: number
+  scale: number,
+  viewportHeight?: number
 ): number {
-  const screenHeight = textHeight * scale;
+  // 🏢 ENTERPRISE: Apply annotation scale boost for better visibility
+  let screenHeight = textHeight * scale;
+
+  if (ANNOTATION_SCALING.USE_SCALE_BOOST) {
+    screenHeight *= ANNOTATION_SCALING.SCALE_BOOST_FACTOR;
+  }
 
   let effectiveHeight = screenHeight;
 
-  // Apply minimum size constraint
+  // 🏢 ENTERPRISE: Apply dynamic minimum based on viewport
   if (TEXT_RENDERING_BEHAVIOR.APPLY_MIN_SIZE) {
-    effectiveHeight = Math.max(effectiveHeight, TEXT_SIZE_LIMITS.MIN_READABLE_SIZE);
+    const dynamicMin = calculateDynamicMinimum(viewportHeight);
+    effectiveHeight = Math.max(effectiveHeight, dynamicMin);
   }
 
   // Apply maximum size constraint
