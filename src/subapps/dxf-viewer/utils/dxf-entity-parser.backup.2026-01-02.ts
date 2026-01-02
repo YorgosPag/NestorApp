@@ -5,7 +5,7 @@ import type { Point2D } from '../rendering/types/Types';
 function parseVerticesFromData(data: Record<string, string>): Point2D[] {
   const vertices: Point2D[] = [];
   let currentVertex: { x?: number; y?: number } = {};
-  
+
   Object.keys(data).forEach(code => {
     if (code === '10') {
       // Add previous vertex if complete
@@ -18,12 +18,12 @@ function parseVerticesFromData(data: Record<string, string>): Point2D[] {
       currentVertex.y = parseFloat(data[code]);
     }
   });
-  
+
   // Add final vertex
   if (currentVertex.x !== undefined && currentVertex.y !== undefined) {
     vertices.push({ x: currentVertex.x, y: currentVertex.y });
   }
-  
+
   return vertices;
 }
 
@@ -39,24 +39,24 @@ export class DxfEntityParser {
     const entityType = lines[startIndex + 1].trim();
     const data: Record<string, string> = {};
     let layer = '0';
-    
+
     let i = startIndex + 2;
     while (i < lines.length - 1) {
       const code = lines[i].trim();
       const value = lines[i + 1].trim();
-      
+
       // Stop at next entity
       if (code === '0') break;
-      
+
       // Store all codes
       if (code === '8') {
         layer = value || '0';
       }
       data[code] = value;
-      
+
       i += 2;
     }
-    
+
     return { type: entityType, layer, data };
   }
 
@@ -64,11 +64,11 @@ export class DxfEntityParser {
   static parseEntities(lines: string[]): EntityData[] {
     const entities: EntityData[] = [];
     let i = 0;
-    
+
     while (i < lines.length - 1) {
       const code = lines[i].trim();
       const value = lines[i + 1].trim();
-      
+
       // Start of entity
       if (code === '0' && ['LINE', 'LWPOLYLINE', 'CIRCLE', 'ARC', 'TEXT', 'INSERT', 'SPLINE', 'ELLIPSE', 'MTEXT', 'MULTILINETEXT', 'DIMENSION', 'HATCH', 'SOLID'].includes(value)) {
 
@@ -90,7 +90,7 @@ export class DxfEntityParser {
         i += 2;
       }
     }
-    
+
     return entities;
   }
 
@@ -107,7 +107,7 @@ export class DxfEntityParser {
   // Convert parsed entity to scene entity
   static convertToSceneEntity(entityData: EntityData, index: number): AnySceneEntity | null {
     const { type, layer, data } = entityData;
-    
+
     switch (type) {
       case 'LINE':
         return DxfEntityParser.convertLine(data, layer, index);
@@ -139,13 +139,13 @@ export class DxfEntityParser {
     const y1 = parseFloat(data['20']);
     const x2 = parseFloat(data['11']);
     const y2 = parseFloat(data['21']);
-    
+
     // Skip if missing coordinates
     if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) {
       console.warn(`⚠️ Skipping LINE ${index}: missing coordinates`, { x1, y1, x2, y2, available: Object.keys(data) });
       return null;
     }
-    
+
     return {
       id: `line_${index}`,
       type: 'line',
@@ -160,16 +160,16 @@ export class DxfEntityParser {
   private static convertLwPolyline(data: Record<string, string>, layer: string, index: number): AnySceneEntity | null {
     const vertices: Point2D[] = [];
     const isClosed = data['70'] === '1';
-    
+
     // Extract vertices using shared helper function
     const parsedVertices = parseVerticesFromData(data);
     vertices.push(...parsedVertices);
-    
+
     if (vertices.length < 2) {
       console.warn(`⚠️ Skipping LWPOLYLINE ${index}: insufficient vertices`, vertices.length);
       return null;
     }
-    
+
     return {
       id: `polyline_${index}`,
       type: 'polyline',
@@ -185,12 +185,12 @@ export class DxfEntityParser {
     const centerX = parseFloat(data['10']);
     const centerY = parseFloat(data['20']);
     const radius = parseFloat(data['40']);
-    
+
     if (isNaN(centerX) || isNaN(centerY) || isNaN(radius) || radius <= 0) {
       console.warn(`⚠️ Skipping CIRCLE ${index}: invalid parameters`, { centerX, centerY, radius });
       return null;
     }
-    
+
     return {
       id: `circle_${index}`,
       type: 'circle',
@@ -208,12 +208,12 @@ export class DxfEntityParser {
     const radius = parseFloat(data['40']);
     const startAngle = parseFloat(data['50']) || 0;
     const endAngle = parseFloat(data['51']) || 360;
-    
+
     if (isNaN(centerX) || isNaN(centerY) || isNaN(radius) || radius <= 0) {
       console.warn(`⚠️ Skipping ARC ${index}: invalid parameters`, { centerX, centerY, radius });
       return null;
     }
-    
+
     return {
       id: `arc_${index}`,
       type: 'arc',
@@ -229,17 +229,17 @@ export class DxfEntityParser {
   // Decode Greek text from DXF encoding
   private static decodeGreekText(text: string): string {
     if (!text) return text;
-    
+
     // Try to detect and fix common Greek encoding issues
     let decoded = text;
-    
+
     // Check for UTF-8 sequences that got mangled
     try {
       // If we have sequences like \u03B1 (α), decode them
       decoded = decoded.replace(/\\u([0-9A-Fa-f]{4})/g, (match, hex) => {
         return String.fromCharCode(parseInt(hex, 16));
       });
-      
+
       // Handle common Windows-1253 to UTF-8 conversion issues
       const greekMappings: { [key: string]: string } = {
         'Ά': 'Ά', 'Έ': 'Έ', 'Ή': 'Ή', 'Ί': 'Ί', 'Ό': 'Ό', 'Ύ': 'Ύ', 'Ώ': 'Ώ',
@@ -253,16 +253,16 @@ export class DxfEntityParser {
         'ο': 'ο', 'π': 'π', 'ρ': 'ρ', 'σ': 'σ', 'τ': 'τ', 'υ': 'υ', 'φ': 'φ',
         'χ': 'χ', 'ψ': 'ψ', 'ω': 'ω', 'ς': 'ς'
       };
-      
+
       // Apply Greek mappings if needed
       for (const [encoded, greek] of Object.entries(greekMappings)) {
         decoded = decoded.replace(new RegExp(encoded, 'g'), greek);
       }
-      
+
     } catch (error) {
       console.warn('Greek text decoding error:', error);
     }
-    
+
     return decoded;
   }
 
@@ -404,16 +404,16 @@ export class DxfEntityParser {
   private static convertSpline(data: Record<string, string>, layer: string, index: number): AnySceneEntity | null {
     const vertices: Point2D[] = [];
     const codes = Object.keys(data).sort((a, b) => parseInt(a) - parseInt(b));
-    
+
     // Extract control points using shared helper function
     const parsedVertices = parseVerticesFromData(data);
     vertices.push(...parsedVertices);
-    
+
     if (vertices.length < 2) {
       console.warn(`⚠️ Skipping SPLINE ${index}: insufficient control points`, vertices.length);
       return null;
     }
-    
+
     return {
       id: `spline_${index}`,
       type: 'polyline',
@@ -431,22 +431,22 @@ export class DxfEntityParser {
     const majorAxisX = parseFloat(data['11']) || 0;
     const majorAxisY = parseFloat(data['21']) || 0;
     const ratio = parseFloat(data['40']) || 1; // Minor to major axis ratio
-    
+
     if (isNaN(centerX) || isNaN(centerY)) {
       console.warn(`⚠️ Skipping ELLIPSE ${index}: invalid center`, { centerX, centerY });
       return null;
     }
-    
+
     // Calculate radius as average of major and minor axes for approximation
     const majorRadius = Math.sqrt(majorAxisX * majorAxisX + majorAxisY * majorAxisY);
     const minorRadius = majorRadius * ratio;
     const approxRadius = (majorRadius + minorRadius) / 2;
-    
+
     if (approxRadius <= 0) {
       console.warn(`⚠️ Skipping ELLIPSE ${index}: invalid radius`, { approxRadius });
       return null;
     }
-    
+
     return {
       id: `ellipse_${index}`,
       type: 'circle',
@@ -462,7 +462,7 @@ export class DxfEntityParser {
     // For DIMENSION entities, we'll create a polyline representing the dimension lines
     const x1 = parseFloat(data['13']) || parseFloat(data['10']); // First definition point
     const y1 = parseFloat(data['23']) || parseFloat(data['20']);
-    const x2 = parseFloat(data['14']) || parseFloat(data['11']); // Second definition point  
+    const x2 = parseFloat(data['14']) || parseFloat(data['11']); // Second definition point
     const y2 = parseFloat(data['24']) || parseFloat(data['21']);
     const x3 = parseFloat(data['15']); // Third definition point (dimension line)
     const y3 = parseFloat(data['25']);
@@ -473,12 +473,12 @@ export class DxfEntityParser {
         { x: x1, y: y1 },
         { x: x2, y: y2 }
       ];
-      
+
       // Add third point if available (dimension line location)
       if (!isNaN(x3) && !isNaN(y3)) {
         vertices.push({ x: x3, y: y3 });
       }
-      
+
       return {
         id: `dimension_${index}`,
         type: 'polyline',
@@ -488,7 +488,7 @@ export class DxfEntityParser {
         closed: false
       };
     }
-    
+
     console.warn(`⚠️ Skipping DIMENSION ${index}: insufficient coordinate data`);
     return null;
   }

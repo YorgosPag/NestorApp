@@ -691,9 +691,9 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                 </Button>
                 <Button
                   onClick={() => handleLoadFloorplan('parking')}
-                  variant="default"
+                  variant="outline"
                   size="default"
-                  className={`${MODAL_DIMENSIONS.BUTTONS.flex} ${colors.bg.success} hover:${colors.bg.success}`}
+                  className={MODAL_DIMENSIONS.BUTTONS.flex}
                 >
                   Κάτοψη Θ.Σ.
                 </Button>
@@ -718,9 +718,9 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                 </Button>
                 <Button
                   onClick={() => handleLoadFloorplan('storage')}
-                  variant="default"
+                  variant="outline"
                   size="default"
-                  className={`${MODAL_DIMENSIONS.BUTTONS.flex} ${colors.bg.success} hover:${colors.bg.success}`}
+                  className={MODAL_DIMENSIONS.BUTTONS.flex}
                 >
                   Κάτοψη Αποθηκών
                 </Button>
@@ -791,7 +791,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   onClick={() => handleLoadFloorplan('unit')}
                   variant="default"
                   size="default"
-                  className={`${MODAL_DIMENSIONS.BUTTONS.flex} ${colors.bg.warning} hover:${colors.bg.warning}`}
+                  className={MODAL_DIMENSIONS.BUTTONS.flex}
                 >
                   Κάτοψη Μονάδας
                 </Button>
@@ -806,6 +806,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           <DialogFooter className={MODAL_FLEX_PATTERNS.ROW.between}>
             <Button
               variant="outline"
+              size="default"
               onClick={currentStep === 'company' ? handleClose : handleBack}
             >
               {currentStep === 'company' ? 'Ακύρωση' : '← Προηγούμενο'}
@@ -813,6 +814,8 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
             {currentStep === 'company' && (
               <Button
+                variant="default"
+                size="default"
                 onClick={handleNext}
                 disabled={!selectedCompanyId}
               >
@@ -822,6 +825,8 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
             {currentStep === 'project' && (
               <Button
+                variant="default"
+                size="default"
                 onClick={handleNext}
                 disabled={!selectedProjectId}
               >
@@ -831,6 +836,8 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
             {currentStep === 'building' && (
               <Button
+                variant="default"
+                size="default"
                 onClick={handleNext}
                 disabled={!selectedBuildingId}
               >
@@ -840,6 +847,8 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
             {currentStep === 'unit' && (
               <Button
+                variant="default"
+                size="default"
                 onClick={() => console.log('Ready for unit floorplan selection:', selectedUnitId)}
                 disabled={!selectedUnitId}
               >

@@ -6,43 +6,66 @@
 import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
+import type { TextEntity } from '../../types/entities';
 import { HoverManager } from '../../utils/hover';
 import { UI_COLORS } from '../../config/color-config';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 
 export class TextRenderer extends BaseEntityRenderer {
+  /**
+   * 🏢 ENTERPRISE: CAD-Standard Text Rendering
+   *
+   * Follows AutoCAD/BricsCAD text rendering specifications:
+   * - Uses fontSize property (DXF code 40) for text height
+   * - Supports alignment (DXF code 72): left, center, right
+   * - Supports fontFamily for custom fonts
+   * - Supports rotation (DXF code 50)
+   *
+   * @param entity - Text or MText entity to render
+   * @param options - Render options (hover, selection, etc.)
+   */
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (entity.type !== 'text' && entity.type !== 'mtext') return;
 
-    // ✅ ENTERPRISE FIX: Use type guards for safe property access
+    // ✅ ENTERPRISE: Type guards for safe property access
     if (!('position' in entity) || !('text' in entity)) return;
     const position = entity.position as Point2D;
     const text = entity.text as string;
-    const height = ('height' in entity) ? entity.height as number : 12;
+
+    // 🏢 ENTERPRISE FIX: Use fontSize (canonical) with fallback to height for backward compatibility
+    // Priority: fontSize → height → default 2.5 (CAD standard default text height)
+    const textHeight = this.extractTextHeight(entity);
     const rotation = ('rotation' in entity) ? entity.rotation as number : 0;
-    
+    const alignment = this.extractAlignment(entity);
+    const fontFamily = ('fontFamily' in entity) ? entity.fontFamily as string : 'Arial';
+
     if (!position || !text) return;
-    
+
     // Setup style
     this.setupStyle(entity, options);
-    
+
     if (options.hovered) {
-      // Use centralized hover manager
-      HoverManager.renderHover(entity as any, this.ctx, options, this.worldToScreen.bind(this));
+      // 🏢 ENTERPRISE: Use centralized hover manager with proper type assertion
+      // We've already verified entity.type is 'text' or 'mtext' at the start of this method
+      HoverManager.renderHover(entity as TextEntity, this.ctx, options, this.worldToScreen.bind(this));
     } else {
-      // Normal text rendering
+      // 🏢 ENTERPRISE: CAD-accurate text rendering
       const screenPos = this.worldToScreen(position);
-      const screenHeight = height * this.transform.scale;
-      
+      const screenHeight = textHeight * this.transform.scale;
+
+      // 🏢 ENTERPRISE: Minimum readable size (4px) for zoom-out scenarios
+      const minReadableSize = 4;
+      const effectiveScreenHeight = Math.max(screenHeight, minReadableSize);
+
       this.ctx.save();
-      
-      // Apply text properties
-      this.ctx.font = `${screenHeight}px Arial`;
+
+      // 🏢 ENTERPRISE: Apply text properties with CAD-standard font construction
+      this.ctx.font = `${effectiveScreenHeight}px ${fontFamily}`;
       this.ctx.fillStyle = ('color' in entity ? entity.color : undefined) || UI_COLORS.DEFAULT_ENTITY;
-      this.ctx.textAlign = 'left';
+      this.ctx.textAlign = alignment;
       this.ctx.textBaseline = 'bottom';
-      
-      // Apply rotation if needed
+
+      // Apply rotation if needed (CAD rotation: counterclockwise from X-axis)
       if (rotation !== 0) {
         this.ctx.translate(screenPos.x, screenPos.y);
         this.ctx.rotate((rotation * Math.PI) / 180);
@@ -50,12 +73,50 @@ export class TextRenderer extends BaseEntityRenderer {
       } else {
         renderStyledTextWithOverride(this.ctx, text, screenPos.x, screenPos.y);
       }
-      
+
       this.ctx.restore();
     }
-    
+
     // Use centralized finalization
     this.finalizeRendering(entity, options);
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Extract text height with proper fallback chain
+   *
+   * Priority order (CAD standard):
+   * 1. fontSize (canonical property from TextEntity interface)
+   * 2. height (legacy/mtext property)
+   * 3. Default 2.5 (AutoCAD standard default text height in drawing units)
+   */
+  private extractTextHeight(entity: EntityModel): number {
+    // Priority 1: fontSize (canonical)
+    if ('fontSize' in entity && typeof entity.fontSize === 'number' && entity.fontSize > 0) {
+      return entity.fontSize;
+    }
+    // Priority 2: height (legacy/backward compatibility)
+    if ('height' in entity && typeof entity.height === 'number' && entity.height > 0) {
+      return entity.height as number;
+    }
+    // Default: CAD standard default text height
+    return 2.5;
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Extract text alignment with proper type conversion
+   *
+   * Maps DXF horizontal alignment (code 72) to CanvasTextAlign:
+   * - 0 = Left (default)
+   * - 1 = Center
+   * - 2 = Right
+   */
+  private extractAlignment(entity: EntityModel): CanvasTextAlign {
+    if ('alignment' in entity) {
+      const align = entity.alignment as string;
+      if (align === 'center') return 'center';
+      if (align === 'right') return 'right';
+    }
+    return 'left';
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
@@ -84,28 +145,45 @@ export class TextRenderer extends BaseEntityRenderer {
     return grips;
   }
 
+  /**
+   * 🏢 ENTERPRISE: CAD-Standard Text Hit Testing
+   *
+   * Uses accurate bounding box calculation based on:
+   * - Text height from fontSize property
+   * - Alignment for proper X offset
+   * - Character width estimation (0.6 × height for proportional fonts)
+   */
   hitTest(entity: EntityModel, point: Point2D, tolerance: number = 5): boolean {
     if (entity.type !== 'text' && entity.type !== 'mtext') return false;
 
-    // ✅ ENTERPRISE FIX: Use type guard for safe property access
+    // ✅ ENTERPRISE: Type guard for safe property access
     if (!('position' in entity) || !('text' in entity)) return false;
 
     const position = entity.position as Point2D;
     const text = entity.text as string;
-    const height = ('height' in entity) ? entity.height as number : 12;
+    const textHeight = this.extractTextHeight(entity);
+    const alignment = this.extractAlignment(entity);
 
     if (!position || !text) return false;
 
-    // For text hit testing, we create a bounding box around the text
+    // 🏢 ENTERPRISE: CAD-accurate hit testing with alignment support
     const screenPos = this.worldToScreen(position);
     const screenPoint = this.worldToScreen(point);
-    const screenHeight = height * this.transform.scale;
+    const screenHeight = textHeight * this.transform.scale;
 
-    // Estimate text width (rough approximation)
-    const estimatedWidth = text.length * screenHeight * 0.6; // Rough character width estimation
+    // Estimate text width (CAD standard: ~0.6 × height per character for Arial)
+    const estimatedWidth = text.length * screenHeight * 0.6;
+
+    // 🏢 ENTERPRISE: Calculate X offset based on alignment
+    let xOffset = 0;
+    if (alignment === 'center') {
+      xOffset = -estimatedWidth / 2;
+    } else if (alignment === 'right') {
+      xOffset = -estimatedWidth;
+    }
 
     // Check if point is within text bounding box
-    const dx = screenPoint.x - screenPos.x;
+    const dx = screenPoint.x - (screenPos.x + xOffset);
     const dy = screenPoint.y - screenPos.y;
 
     return dx >= -tolerance &&

@@ -158,6 +158,7 @@ export const MainContentSection = React.memo<MainContentSectionProps>(({
           scene={currentScene || {} as SceneModel}
           handleTransformChange={wrappedHandleTransformChange}
           handleFileImport={handleFileImportWithEncoding}
+          onSceneImported={handleFileImportWithEncoding}
           transform={canvasTransform}
           onTransformChange={wrappedHandleTransformChange}
           onRegionClick={handleRegionClick}

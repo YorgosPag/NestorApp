@@ -1,39 +1,26 @@
-// src/subapps/dxf-viewer/pipeline/useDxfPipeline.ts
+/**
+ * DXF Pipeline Hook - Advanced DXF Import with Destination Support
+ *
+ * 🏢 ENTERPRISE: Uses centralized DXF import utilities from dxf-import.ts
+ * Single source of truth for DXF import result processing.
+ *
+ * @see io/dxf-import.ts for centralized utilities
+ */
 'use client';
+
 import { useState } from 'react';
-import { dxfImportService } from '../io/dxf-import';
+import {
+  dxfImportService,
+  processDxfImportResult
+} from '../io/dxf-import';
 import type { SceneModel, DxfImportResult } from '../types/scene';
-// ✅ ΔΙΟΡΑΘΩΣΗ: Inline utility function αντί για διαγραμμένο canvas-core
 import { useLevels } from '../systems/levels';
 import { useProjectHierarchy } from '../contexts/ProjectHierarchyContext';
-import type { 
-  DxfDestination, 
-  DxfProcessingOptions, 
-  ProcessedDxfResult,
-  DestinationStorage 
+import type {
+  DxfDestination,
+  DxfProcessingOptions,
+  ProcessedDxfResult
 } from './types';
-
-// ✅ INLINE DXF IMPORT UTILITIES - Αντικατάσταση διαγραμμένου canvas-core
-const createDxfImportUtils = () => ({
-  processImportResult: (result: DxfImportResult, onSuccess?: (scene: SceneModel) => void, onError?: (error: string) => void): SceneModel | null => {
-    if (result.success && result.scene) {
-      onSuccess?.(result.scene);
-      return result.scene;
-    } else {
-      const errorMsg = result.error || 'Import failed - unknown reason';
-      console.error('❌ DXF import failed:', errorMsg);
-      onError?.(errorMsg);
-      return null;
-    }
-  },
-
-  handleImportError: (err: unknown, onError?: (error: string) => void) => {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-    console.error('⛔ Exception during DXF import:', err);
-    onError?.(errorMessage);
-    return null;
-  }
-});
 
 export function useDxfPipeline() {
   const lm = (() => {
@@ -60,23 +47,23 @@ export function useDxfPipeline() {
       // Χρήση πραγματικού worker-based importer
       const result = await dxfImportService.importDxfFile(file);
       setLastResult(result);
-      
-      const dxfUtils = createDxfImportUtils();
-      const scene = dxfUtils.processImportResult(result);
-      
+
+      // 🏢 ENTERPRISE: Use centralized utility from dxf-import.ts
+      const scene = processDxfImportResult(result);
+
       if (!scene) {
         return null;
       }
 
       // Αποθήκευση σκηνής στο Level Manager
       if (lm && lm.currentLevelId && result.scene) {
-        // ✅ ENTERPRISE: Null safety for SceneModel assignment - ensure scene is not null
+        // ✅ ENTERPRISE: Null safety for SceneModel assignment
         if (result.scene !== null) {
           lm.setLevelScene(lm.currentLevelId, result.scene);
         }
       }
 
-      // ✅ ENTERPRISE: Ensure null return instead of undefined for function signature compliance
+      // ✅ ENTERPRISE: Ensure null return instead of undefined
       return (result.scene ?? null) as SceneModel | null;
     } catch (error) {
       console.error('💥 Σφάλμα κατά την εισαγωγή DXF:', error);
@@ -103,9 +90,9 @@ export function useDxfPipeline() {
     try {
       // Standard DXF parsing
       const result = await dxfImportService.importDxfFile(file);
-      
-      const dxfUtils = createDxfImportUtils();
-      const scene = dxfUtils.processImportResult(result);
+
+      // 🏢 ENTERPRISE: Use centralized utility from dxf-import.ts
+      const scene = processDxfImportResult(result);
 
       if (!scene) {
         return {
