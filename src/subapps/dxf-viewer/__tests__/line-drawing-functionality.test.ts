@@ -49,24 +49,16 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
 
       // Second click - end point (should complete the line)
       const endPoint: Point2D = { x: 200, y: 200 };
-      let createdEntity: any = null;
 
-      // Re-render with entity callback
-      const { result: resultWithCallback } = renderHook(() => useUnifiedDrawing(), { wrapper: TestProviders });
-
+      // ✅ ENTERPRISE FIX: Use same hook instance and separate act() blocks
+      // Each act() block allows React state to update before next operation
       act(() => {
-        resultWithCallback.current.startDrawing('line');
-        resultWithCallback.current.addPoint(startPoint, mockTransform);
-      });
-
-      // The line should complete on second point
-      act(() => {
-        resultWithCallback.current.addPoint(endPoint, mockTransform);
+        result.current.addPoint(endPoint, mockTransform);
       });
 
       // After second point, drawing should be complete
-      expect(resultWithCallback.current.state.isDrawing).toBe(false);
-      expect(resultWithCallback.current.state.tempPoints).toHaveLength(0);
+      expect(result.current.state.isDrawing).toBe(false);
+      expect(result.current.state.tempPoints).toHaveLength(0);
     });
 
     it('should create preview entity during drawing', () => {
@@ -146,9 +138,16 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
     it('should reset state after completing line', () => {
       const { result } = renderHook(() => useUnifiedDrawing(), { wrapper: TestProviders });
 
+      // ✅ ENTERPRISE FIX: Separate act() blocks for each state update
       act(() => {
         result.current.startDrawing('line');
+      });
+
+      act(() => {
         result.current.addPoint({ x: 0, y: 0 }, mockTransform);
+      });
+
+      act(() => {
         result.current.addPoint({ x: 100, y: 100 }, mockTransform);
       });
 
@@ -164,8 +163,12 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
       // This test ensures the bug where onDrawingHover wasn't called is fixed
       const { result } = renderHook(() => useUnifiedDrawing(), { wrapper: TestProviders });
 
+      // ✅ ENTERPRISE FIX: Separate act() blocks for each state update
       act(() => {
         result.current.startDrawing('line');
+      });
+
+      act(() => {
         result.current.addPoint({ x: 0, y: 0 }, mockTransform);
       });
 
