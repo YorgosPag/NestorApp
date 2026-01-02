@@ -9,8 +9,54 @@
  * 4. Η γραμμή προστίθεται στο scene
  *
  * ⚠️ ΑΝ ΑΥΤΟ ΤΟ TEST ΑΠΟΤΥΧΕΙ = Η ΛΕΙΤΟΥΡΓΙΚΟΤΗΤΑ ΣΧΕΔΙΑΣΗΣ ΣΠΑΣΕ!
+ *
+ * @enterprise-grade
+ * @updated 2026-01-02 - Fixed CI/CD React 19 compatibility
  */
 
+// ✅ ENTERPRISE FIX: Mock all hook dependencies BEFORE imports
+// Mock useLevels - required by useUnifiedDrawing
+jest.mock('../systems/levels', () => ({
+  useLevels: () => ({
+    currentLevelId: 'level-1',
+    getLevelScene: jest.fn().mockReturnValue({ entities: [] }),
+    setLevelScene: jest.fn()
+  })
+}));
+
+// Mock usePreviewMode
+jest.mock('../hooks/usePreviewMode', () => ({
+  usePreviewMode: () => ({
+    setMode: jest.fn()
+  })
+}));
+
+// Mock useLineStyles from settings-provider
+jest.mock('../settings-provider', () => ({
+  useLineStyles: jest.fn().mockReturnValue({
+    color: '#FF0000',
+    lineWidth: 2,
+    opacity: 1,
+    lineType: 'solid'
+  })
+}));
+
+// Mock useSnapContext
+jest.mock('../snapping/context/SnapContext', () => ({
+  useSnapContext: () => ({
+    snapEnabled: false,
+    snapToGrid: jest.fn(),
+    getSnapPoint: jest.fn()
+  })
+}));
+
+// Mock geometry utils
+jest.mock('../rendering/entities/shared/geometry-rendering-utils', () => ({
+  calculateDistance: (p1: { x: number; y: number }, p2: { x: number; y: number }) =>
+    Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2))
+}));
+
+// ✅ Now safe to import React testing utilities and hook
 import { renderHook, act } from '@testing-library/react';
 import { useUnifiedDrawing } from '../hooks/drawing/useUnifiedDrawing';
 import type { Point2D } from '../rendering/types/Types';

@@ -172,5 +172,11 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.39.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "react": "^19.2.1",
+      "react-dom": "^19.2.1"
+    }
   }
 }

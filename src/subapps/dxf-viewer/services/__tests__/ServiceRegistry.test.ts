@@ -10,10 +10,80 @@
  * - Type safety
  * - Error handling
  * - Performance monitoring
+ *
+ * @enterprise-grade
+ * @updated 2026-01-02 - Fixed CI/CD compatibility issues
  */
 
-// ✅ ENTERPRISE FIX: Use centralized Jest globals (available automatically in Jest 30.x)
-// Jest globals (describe, it, expect, beforeEach, afterEach) are available automatically
+// ✅ ENTERPRISE FIX: Mock all service dependencies BEFORE importing ServiceRegistry
+// This prevents module resolution errors in CI environment
+
+// Mock FitToViewService
+jest.mock('../FitToViewService', () => ({
+  FitToViewService: {
+    calculateFitToViewTransform: jest.fn().mockReturnValue({ scale: 1, offsetX: 0, offsetY: 0 })
+  }
+}));
+
+// Mock HitTestingService
+jest.mock('../HitTestingService', () => ({
+  HitTestingService: jest.fn().mockImplementation(() => ({
+    hitTest: jest.fn().mockReturnValue(null)
+  }))
+}));
+
+// Mock CanvasBoundsService
+jest.mock('../CanvasBoundsService', () => ({
+  canvasBoundsService: {
+    getBounds: jest.fn().mockReturnValue({ x: 0, y: 0, width: 800, height: 600 }),
+    updateBounds: jest.fn()
+  }
+}));
+
+// Mock LayerOperationsService
+jest.mock('../LayerOperationsService', () => ({
+  LayerOperationsService: jest.fn().mockImplementation(() => ({
+    getVisibleLayers: jest.fn().mockReturnValue([])
+  }))
+}));
+
+// Mock EntityMergeService
+jest.mock('../EntityMergeService', () => ({
+  EntityMergeService: jest.fn().mockImplementation(() => ({
+    merge: jest.fn()
+  }))
+}));
+
+// Mock DxfFirestoreService
+jest.mock('../dxf-firestore.service', () => ({
+  DxfFirestoreService: {
+    save: jest.fn(),
+    load: jest.fn()
+  }
+}));
+
+// Mock DxfImportService
+jest.mock('../../io/dxf-import', () => ({
+  DxfImportService: jest.fn().mockImplementation(() => ({
+    import: jest.fn()
+  }))
+}));
+
+// Mock SceneUpdateManager
+jest.mock('../../managers/SceneUpdateManager', () => ({
+  SceneUpdateManager: jest.fn().mockImplementation(() => ({
+    update: jest.fn()
+  }))
+}));
+
+// Mock SmartBoundsManager
+jest.mock('../../utils/SmartBoundsManager', () => ({
+  SmartBoundsManager: jest.fn().mockImplementation(() => ({
+    calculate: jest.fn()
+  }))
+}));
+
+// ✅ Now safe to import ServiceRegistry (all deps are mocked)
 import { ServiceRegistry } from '../ServiceRegistry';
 import type { ServiceName } from '../ServiceRegistry';
 
@@ -21,6 +91,10 @@ describe('ServiceRegistry', () => {
   let registry: ServiceRegistry;
 
   beforeEach(() => {
+    // ✅ ENTERPRISE: Clear singleton instance before each test for isolation
+    // @ts-expect-error - Accessing private static for test reset
+    ServiceRegistry.instance = undefined;
+
     // Get fresh registry instance
     registry = ServiceRegistry.getInstance();
   });
