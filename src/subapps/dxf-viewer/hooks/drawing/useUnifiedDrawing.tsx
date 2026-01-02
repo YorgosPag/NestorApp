@@ -450,11 +450,16 @@ export function useUnifiedDrawing() {
 
       setMode('normal');
 
-      // FIXED: Reset temp points for continuous drawing
+      // ✅ ENTERPRISE FIX: Reset state completely after entity completion
+      // Bug fix: isDrawing must be set to false when entity is complete
       setState(prev => ({
         ...prev,
+        isDrawing: false,
         tempPoints: [],
-        previewEntity: null
+        previewEntity: null,
+        currentPoints: [],
+        snapPoint: null,
+        snapType: null
       }));
     } else {
       // Create a partial preview after adding the point

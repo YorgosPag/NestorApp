@@ -15,7 +15,7 @@
  */
 
 import { renderHook, act } from '@testing-library/react';
-import { useUnifiedDrawing } from '../hooks/drawing/useUnifiedDrawing';
+import { useUnifiedDrawing, type ExtendedLineEntity } from '../hooks/drawing/useUnifiedDrawing';
 import { TestProviders } from './utils/TestProviders';
 import type { Point2D } from '../rendering/types/Types';
 
@@ -94,7 +94,7 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
       if (result.current.state.previewEntity) {
         expect(result.current.state.previewEntity.type).toBe('line');
         // Preview entity should have the preview flag
-        const previewEntity = result.current.state.previewEntity as any;
+        const previewEntity = result.current.state.previewEntity as ExtendedLineEntity;
         expect(previewEntity.preview).toBe(true);
       }
     });
@@ -181,10 +181,18 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
       // This test ensures preview entity is created
       const { result } = renderHook(() => useUnifiedDrawing(), { wrapper: TestProviders });
 
+      // ✅ ENTERPRISE FIX: Separate act() blocks for each state update
+      // React state updates are asynchronous, so we need separate act() calls
       act(() => {
         result.current.startDrawing('line');
+      });
+
+      act(() => {
         result.current.addPoint({ x: 10, y: 10 }, mockTransform);
-        result.current.updatePreview({ x: 100, y: 100 }, mockTransform); // ✅ ENTERPRISE FIX: Use mockTransform instead of invalid scale object
+      });
+
+      act(() => {
+        result.current.updatePreview({ x: 100, y: 100 }, mockTransform);
       });
 
       // Preview entity MUST exist for rendering
@@ -204,13 +212,20 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
       const start: Point2D = { x: 10, y: 20 };
       const end: Point2D = { x: 30, y: 40 };
 
+      // ✅ ENTERPRISE FIX: Separate act() blocks for each state update
       act(() => {
         result.current.startDrawing('line');
-        result.current.addPoint(start, mockTransform);
-        result.current.updatePreview(end, mockTransform); // ✅ ENTERPRISE FIX: Use mockTransform instead of invalid scale object
       });
 
-      const previewEntity = result.current.state.previewEntity as any;
+      act(() => {
+        result.current.addPoint(start, mockTransform);
+      });
+
+      act(() => {
+        result.current.updatePreview(end, mockTransform);
+      });
+
+      const previewEntity = result.current.state.previewEntity as ExtendedLineEntity | null;
 
       if (previewEntity && previewEntity.type === 'line') {
         expect(previewEntity.start).toEqual(start);
@@ -221,13 +236,20 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
     it('should mark preview entity with preview flag', () => {
       const { result } = renderHook(() => useUnifiedDrawing(), { wrapper: TestProviders });
 
+      // ✅ ENTERPRISE FIX: Separate act() blocks for each state update
       act(() => {
         result.current.startDrawing('line');
-        result.current.addPoint({ x: 0, y: 0 }, mockTransform);
-        result.current.updatePreview({ x: 50, y: 50 }, mockTransform); // ✅ ENTERPRISE FIX: Use mockTransform instead of invalid scale object
       });
 
-      const previewEntity = result.current.state.previewEntity as any;
+      act(() => {
+        result.current.addPoint({ x: 0, y: 0 }, mockTransform);
+      });
+
+      act(() => {
+        result.current.updatePreview({ x: 50, y: 50 }, mockTransform);
+      });
+
+      const previewEntity = result.current.state.previewEntity as ExtendedLineEntity | null;
       expect(previewEntity?.preview).toBe(true);
     });
   });
