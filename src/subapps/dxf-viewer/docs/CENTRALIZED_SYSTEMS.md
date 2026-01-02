@@ -93,6 +93,73 @@
 
 ---
 
+### 📋 ADR-002: ENTERPRISE Z-INDEX HIERARCHY (2026-01-02)
+
+**Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-02
+
+**Context**:
+Εντοπίστηκαν πολλαπλές πηγές αλήθειας για z-index values:
+- `globals.css`: `--dropdown-z-index: 75` (conflicting value)
+- `design-tokens.ts`: `zIndex.dropdown = 1000`
+- Components: hardcoded `!z-[99999]`, `!z-[9999]` (inline overrides)
+
+Αυτή η ασυνέπεια προκαλούσε bugs - τα dropdown menus δεν άνοιγαν.
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **SINGLE SOURCE OF TRUTH** | `design-tokens.json` → `zIndex` section |
+| **BUILD-TIME GENERATION** | `build-design-tokens.js` generates CSS variables |
+| **CSS VARIABLES** | All components use `var(--z-index-*)` |
+| **PROHIBITION** | ❌ Hardcoded z-index values (e.g., `z-[9999]`) **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** |
+
+**Enterprise Z-Index Hierarchy** (from `design-tokens.json`):
+
+| Layer | Value | CSS Variable | Use Case |
+|-------|-------|--------------|----------|
+| base | 0 | `--z-index-base` | Base content |
+| docked | 10 | `--z-index-docked` | Panels, sidebars |
+| dropdown | 1000 | `--z-index-dropdown` | Dropdowns, selects, menus |
+| sticky | 1100 | `--z-index-sticky` | Sticky headers |
+| banner | 1200 | `--z-index-banner` | Notification banners |
+| overlay | 1300 | `--z-index-overlay` | Overlays, backdrops |
+| modal | 1400 | `--z-index-modal` | Modal dialogs |
+| popover | 1500 | `--z-index-popover` | Floating cards |
+| skipLink | 1600 | `--z-index-skipLink` | Accessibility links |
+| toast | 1700 | `--z-index-toast` | Toast notifications |
+| tooltip | 1800 | `--z-index-tooltip` | Tooltips |
+| critical | 2147483647 | `--z-index-critical` | System overlays only |
+
+**Architecture Flow**:
+```
+design-tokens.json → build-design-tokens.js → variables.css → Components via var(--z-index-*)
+```
+
+**Implementation Pattern** (SelectContent example):
+```tsx
+// ✅ ENTERPRISE: Use CSS variable
+<SelectContent className="[z-index:var(--z-index-dropdown)]">
+
+// ❌ PROHIBITED: Hardcoded z-index
+<SelectContent className="!z-[9999]">
+```
+
+**Consequences**:
+- ✅ Single source of truth for all z-index values
+- ✅ No more `!important` wars
+- ✅ Consistent layering across all UI components
+- ✅ Easy maintenance (change in one place)
+
+**Files Modified**:
+- `design-tokens.json` - Added z-index section
+- `scripts/build-design-tokens.js` - Added zIndex type support
+- `src/app/globals.css` - Removed hardcoded `--dropdown-z-index: 75`
+- `src/components/ui/select.tsx` - Using `var(--z-index-dropdown)`
+- `src/styles/design-tokens.ts` - Updated default values to 1000
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

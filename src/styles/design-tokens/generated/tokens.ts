@@ -106,6 +106,18 @@ export interface DesignTokens {
   borderRadius_lg: string;
   borderRadius_xl: string;
   borderRadius_full: string;
+  zIndex_base: string;
+  zIndex_docked: string;
+  zIndex_dropdown: string;
+  zIndex_sticky: string;
+  zIndex_banner: string;
+  zIndex_overlay: string;
+  zIndex_modal: string;
+  zIndex_popover: string;
+  zIndex_skipLink: string;
+  zIndex_toast: string;
+  zIndex_tooltip: string;
+  zIndex_critical: string;
 }
 
 export const designTokens: DesignTokens = {
@@ -209,6 +221,18 @@ export const designTokens: DesignTokens = {
   borderRadius_lg: 'var(--border-radius-lg)',
   borderRadius_xl: 'var(--border-radius-xl)',
   borderRadius_full: 'var(--border-radius-full)',
+  zIndex_base: 'var(--z-index-base)',
+  zIndex_docked: 'var(--z-index-docked)',
+  zIndex_dropdown: 'var(--z-index-dropdown)',
+  zIndex_sticky: 'var(--z-index-sticky)',
+  zIndex_banner: 'var(--z-index-banner)',
+  zIndex_overlay: 'var(--z-index-overlay)',
+  zIndex_modal: 'var(--z-index-modal)',
+  zIndex_popover: 'var(--z-index-popover)',
+  zIndex_skipLink: 'var(--z-index-skip-link)',
+  zIndex_toast: 'var(--z-index-toast)',
+  zIndex_tooltip: 'var(--z-index-tooltip)',
+  zIndex_critical: 'var(--z-index-critical)',
 };
 
 export default designTokens;

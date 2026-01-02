@@ -109,6 +109,18 @@
   --border-radius-lg: 8px;
   --border-radius-xl: 12px;
   --border-radius-full: 9999px;
+  --z-index-base: 0;
+  --z-index-docked: 10;
+  --z-index-dropdown: 1000;
+  --z-index-sticky: 1100;
+  --z-index-banner: 1200;
+  --z-index-overlay: 1300;
+  --z-index-modal: 1400;
+  --z-index-popover: 1500;
+  --z-index-skip-link: 1600;
+  --z-index-toast: 1700;
+  --z-index-tooltip: 1800;
+  --z-index-critical: 2147483647;
 }
 
 /* 🏢 ENTERPRISE UTILITY CLASSES - Auto-Generated */

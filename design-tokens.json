@@ -184,5 +184,20 @@
     "lg": { "value": "8", "type": "borderRadius" },
     "xl": { "value": "12", "type": "borderRadius" },
     "full": { "value": "9999", "type": "borderRadius" }
+  },
+  "zIndex": {
+    "_description": "🏢 ENTERPRISE Z-INDEX HIERARCHY - Single Source of Truth",
+    "base": { "value": "0", "type": "zIndex", "description": "Base content layer" },
+    "docked": { "value": "10", "type": "zIndex", "description": "Docked panels, sidebars" },
+    "dropdown": { "value": "1000", "type": "zIndex", "description": "Dropdowns, selects, menus" },
+    "sticky": { "value": "1100", "type": "zIndex", "description": "Sticky headers, toolbars" },
+    "banner": { "value": "1200", "type": "zIndex", "description": "Notification banners" },
+    "overlay": { "value": "1300", "type": "zIndex", "description": "Overlays, backdrops" },
+    "modal": { "value": "1400", "type": "zIndex", "description": "Modal dialogs" },
+    "popover": { "value": "1500", "type": "zIndex", "description": "Popovers, floating cards" },
+    "skipLink": { "value": "1600", "type": "zIndex", "description": "Accessibility skip links" },
+    "toast": { "value": "1700", "type": "zIndex", "description": "Toast notifications" },
+    "tooltip": { "value": "1800", "type": "zIndex", "description": "Tooltips - highest UI layer" },
+    "critical": { "value": "2147483647", "type": "zIndex", "description": "Critical system overlays only" }
   }
 }

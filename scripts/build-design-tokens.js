@@ -91,6 +91,10 @@ function formatCSSValue(value, type) {
   if (type === 'duration') {
     return value;
   }
+  // 🏢 ENTERPRISE: z-index values are unitless integers
+  if (type === 'zIndex') {
+    return value;
+  }
   return value;
 }
 

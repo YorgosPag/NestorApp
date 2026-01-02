@@ -75,10 +75,10 @@
     --sidebar-ring: 222.2 47.4% 11.2%;
 
     /* ✅ ENTERPRISE: Dropdown positioning variables (NO MORE INLINE STYLES) */
+    /* 🏢 NOTE: z-index comes from design-tokens.json via var(--z-index-dropdown) */
     --dropdown-top: 0px;
     --dropdown-left: 0px;
     --dropdown-width: 0px;
-    --dropdown-z-index: 75;
   }
 
   .dark {
@@ -142,10 +142,10 @@
     --sidebar-ring: 210 40% 98%;
 
     /* ✅ ENTERPRISE: Dropdown positioning variables - Dark Mode (same values) */
+    /* 🏢 NOTE: z-index comes from design-tokens.json via var(--z-index-dropdown) */
     --dropdown-top: 0px;
     --dropdown-left: 0px;
     --dropdown-width: 0px;
-    --dropdown-z-index: 75;
   }
 }
 
@@ -478,7 +478,7 @@ div[style*="z-index: 99999" i] {
 
 /* ✅ ENTERPRISE: Force high z-index for Radix Select Content using centralized system */
 [data-radix-select-content] {
-  z-index: var(--dropdown-z-index, 75) !important;
+  z-index: var(--z-index-dropdown);
   min-width: 320px !important;
   width: 320px !important;
   max-width: 400px !important;
@@ -489,13 +489,13 @@ div[style*="z-index: 99999" i] {
 [data-radix-select-content],
 .radix-select-content,
 [data-state="open"][data-radix-select-content] {
-  z-index: var(--dropdown-z-index, 75) !important;
+  z-index: var(--z-index-dropdown);
   position: fixed !important;
 }
 
 /* ✅ ENTERPRISE: Extra protection for Select Portal containers */
 [data-radix-portal] {
-  z-index: var(--dropdown-z-index, 75) !important;
+  z-index: var(--z-index-dropdown);
 }
 
 /* ✅ ENTERPRISE FIX: Next.js Development Portal - Prevent click event interception
@@ -520,7 +520,7 @@ NEXTJS-PORTAL * {
 
 /* ✅ ENTERPRISE: Force high z-index for Radix Popper wrapper */
 [data-radix-popper-content-wrapper] {
-  z-index: var(--dropdown-z-index, 75) !important;
+  z-index: var(--z-index-dropdown);
 }
 
 /* Force width for Radix Select Viewport */
@@ -566,13 +566,13 @@ NEXTJS-PORTAL * {
 
 /* ✅ ENTERPRISE: Use centralized modal z-index (NO HARDCODED VALUES) */
 [data-custom-relationship-select="true"] {
-  z-index: var(--dropdown-z-index, 75) !important;
+  z-index: var(--z-index-dropdown);
   position: fixed !important;
 }
 
 /* ✅ ENTERPRISE: Ensure no parent containers interfere with portal dropdowns */
 [data-custom-dropdown-portal="true"] {
-  z-index: var(--dropdown-z-index, 75) !important;
+  z-index: var(--z-index-dropdown);
   position: fixed !important;
   isolation: isolate !important;
   transform: none !important;
@@ -587,7 +587,7 @@ body {
 /* ✅ ENTERPRISE: Force portal dropdowns to always be on top using centralized system */
 [data-custom-relationship-select="true"],
 [data-custom-dropdown-portal="true"] {
-  z-index: var(--dropdown-z-index, 75) !important; /* Centralized z-index variable */
+  z-index: var(--z-index-dropdown); /* 🏢 ENTERPRISE: From design-tokens.json */
 }
 
 /* =============================================================

@@ -673,15 +673,18 @@ export const layoutUtilities = {
   },
 
   // ✅ ENTERPRISE: Centralized dropdown positioning system (NO MORE INLINE STYLES)
+  // 🏢 Z-INDEX VALUES: Use CSS variables from design-tokens.json (--z-index-dropdown = 1000)
   dropdown: {
     // CSS Variables-based positioning (NO inline styles)
-    setCSSPositioning: (position: { top: number; left: number; width: number }, zIndex: number = 75) => {
+    // NOTE: z-index parameter kept for legacy compatibility but defaults to enterprise value
+    setCSSPositioning: (position: { top: number; left: number; width: number }, zIndexValue: number = 1000) => {
       if (typeof document !== 'undefined') {
         const root = document.documentElement;
         root.style.setProperty('--dropdown-top', `${position.top}px`);
         root.style.setProperty('--dropdown-left', `${position.left}px`);
         root.style.setProperty('--dropdown-width', `${position.width}px`);
-        root.style.setProperty('--dropdown-z-index', `${zIndex}`);
+        // 🏢 ENTERPRISE: Prefer CSS variable, fallback to parameter
+        root.style.setProperty('--dropdown-z-index', `${zIndexValue}`);
       }
     },
 
@@ -700,12 +703,13 @@ export const layoutUtilities = {
     },
 
     // Legacy support - ΘΑ ΔΙΑΓΡΑΦΕΙ σε επόμενη φάση
-    portal: (position: { top: number; left: number; width: number }, zIndex: number = 75) => ({
+    // 🏢 ENTERPRISE: Default z-index updated to 1000 (from design-tokens.json)
+    portal: (position: { top: number; left: number; width: number }, zIndexValue: number = 1000) => ({
       position: 'fixed' as const,
       top: `${position.top}px`,
       left: `${position.left}px`,
       width: `${position.width}px`,
-      zIndex,
+      zIndex: zIndexValue,
       // ⚠️ DEPRECATED: Χρησιμοποίησε setCSSPositioning + getDropdownClasses
     }),
   },

@@ -669,7 +669,7 @@ export default function NewObligationPage() {
                           placeholder={loadingCompanies ? "Φόρτωση εταιρειών..." : "Επιλέξτε εταιρεία"}
                         />
                       </SelectTrigger>
-                      <SelectContent className="max-h-80 !z-[9999] relative">
+                      <SelectContent className="max-h-80">
                         {companyOptions.map((company) => (
                           <SelectItem key={company.id} value={company.id}>
                             {company.name}
@@ -697,7 +697,7 @@ export default function NewObligationPage() {
                           }
                         />
                       </SelectTrigger>
-                      <SelectContent className="max-h-80 !z-[9999] relative">
+                      <SelectContent className="max-h-80">
                         {projectOptions.map((project) => (
                           <SelectItem key={project.id} value={project.id}>
                             {project.name}
