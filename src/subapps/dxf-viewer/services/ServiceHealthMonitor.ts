@@ -455,12 +455,4 @@ if (typeof window !== 'undefined') {
     stats: () => serviceHealthMonitor.getStats(),
     log: () => logHealthStatus()
   };
-
-  console.log('🏥 Service Health Monitor loaded!');
-  console.log('Run in console:');
-  console.log('  serviceHealth.start() - Start monitoring');
-  console.log('  serviceHealth.stop() - Stop monitoring');
-  console.log('  serviceHealth.check() - Check all services');
-  console.log('  serviceHealth.report() - Get last report');
-  console.log('  serviceHealth.log() - Pretty print status');
 }

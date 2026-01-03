@@ -243,7 +243,8 @@ export function convertText(
   const x = parseFloat(data['10']);
   const y = parseFloat(data['20']);
   let text = data['1'] || '';
-  const height = parseFloat(data['40']) || 1;
+  const rawHeight = data['40'];
+  const height = parseFloat(rawHeight) || 1;
   const rotation = parseFloat(data['50']) || 0;
 
   // Extract horizontal alignment (DXF code 72)
@@ -291,7 +292,8 @@ export function convertMText(
   const x = parseFloat(data['10']);
   const y = parseFloat(data['20']);
   let text = data['1'] || data['3'] || ''; // MTEXT can use code 1 or 3
-  const height = parseFloat(data['40']) || 1;
+  const rawHeight = data['40'];
+  const height = parseFloat(rawHeight) || 1;
   const rotation = parseFloat(data['50']) || 0;
 
   // Extract attachment point (DXF code 71) for alignment

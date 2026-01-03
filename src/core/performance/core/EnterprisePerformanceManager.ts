@@ -68,8 +68,6 @@ export class EnterprisePerformanceManager {
     this.optimization = this.getDefaultOptimizationSettings();
     this.initializePerformanceAPI();
     this.startCleanupScheduler();
-
-    console.log('🚀 Enterprise Performance Manager initialized');
   }
 
   // ⚙️ CORE LIFECYCLE METHODS
@@ -141,8 +139,6 @@ export class EnterprisePerformanceManager {
     this.checkThresholds(fullMetric);
     this.notifySubscribers(fullMetric);
 
-    console.log(`📈 Recorded ${fullMetric.category} metric: ${fullMetric.name} = ${fullMetric.value}${fullMetric.unit}`);
-
     return fullMetric.id;
   }
 
@@ -196,8 +192,6 @@ export class EnterprisePerformanceManager {
     };
 
     this.subscriptions.set(subscriptionId, fullSubscription);
-
-    console.log(`📡 Performance subscription created: ${subscriptionId}`);
     return subscriptionId;
   }
 
@@ -205,11 +199,7 @@ export class EnterprisePerformanceManager {
    * 📡 Unsubscribe from performance updates
    */
   public unsubscribe(subscriptionId: string): boolean {
-    const deleted = this.subscriptions.delete(subscriptionId);
-    if (deleted) {
-      console.log(`📡 Performance subscription removed: ${subscriptionId}`);
-    }
-    return deleted;
+    return this.subscriptions.delete(subscriptionId);
   }
 
   // ⚙️ CONFIGURATION MANAGEMENT

@@ -154,8 +154,6 @@ export class DxfPerformanceOptimizer {
 
     // Enable automatic optimizations
     this.enableAutoOptimizations();
-
-    console.log('⚡ DXF Performance Optimizer initialized');
   }
 
   /**
@@ -533,11 +531,9 @@ export class DxfPerformanceOptimizer {
     this.lastOptimizationTime = Date.now();
 
     try {
-      console.log(`⚡ Applying optimization: ${action.description}`);
       await action.action();
-      console.log(`✅ Optimization applied successfully: ${action.id}`);
-    } catch (error) {
-      console.error(`❌ Optimization failed: ${action.id}`, error);
+    } catch {
+      // Silent optimization failure
     } finally {
       this.isOptimizing = false;
     }
@@ -549,7 +545,6 @@ export class DxfPerformanceOptimizer {
   private triggerGarbageCollection(): void {
     if (typeof window !== 'undefined' && (window as any).gc) {
       (window as any).gc();
-      console.log('🗑️ Garbage collection triggered');
     }
   }
 
@@ -567,8 +562,6 @@ export class DxfPerformanceOptimizer {
         detail: { enableBuffering: true, enableRAF: true }
       }));
     }
-
-    console.log('🎨 Canvas rendering optimized');
   }
 
   /**
@@ -583,8 +576,6 @@ export class DxfPerformanceOptimizer {
         detail: { enableCulling: true }
       }));
     }
-
-    console.log('👁️ Viewport culling enabled');
   }
 
   /**
@@ -600,12 +591,10 @@ export class DxfPerformanceOptimizer {
     for (const chunk of criticalChunks) {
       try {
         await fetch(chunk, { mode: 'no-cors' });
-      } catch (error) {
+      } catch {
         // Ignore errors
       }
     }
-
-    console.log('📦 Critical chunks preloaded');
   }
 
   /**
@@ -614,8 +603,7 @@ export class DxfPerformanceOptimizer {
   private optimizeCaching(): void {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
-        .then(() => console.log('💾 Service Worker registered'))
-        .catch(() => console.log('💾 Service Worker registration failed'));
+        .catch(() => { /* Silent failure */ });
     }
   }
 

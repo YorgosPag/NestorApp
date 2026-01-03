@@ -33,7 +33,6 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
 
   // 🛠️ DEVELOPMENT BYPASS: Allow access in development mode
   if (process.env.NODE_ENV === 'development') {
-    console.log('🛠️ DEVELOPMENT MODE: Bypassing authentication for Geo-Canvas System');
     return <>{children}</>;
   }
 

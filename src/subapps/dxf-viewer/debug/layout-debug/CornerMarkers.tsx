@@ -29,13 +29,6 @@ export default function CornerMarkers() {
       ];
 
       setPositions(corners);
-
-      // 🎯 DEBUG: Εκτύπωση ακριβών συντεταγμένων
-      console.log('🔧 CORNER MARKERS POSITIONS:');
-      console.log('  - Viewport:', vw, 'x', vh);
-      corners.forEach(corner => {
-        console.log(`  - ${corner.corner}: (${corner.x}, ${corner.y})`);
-      });
     };
 
     updatePositions();

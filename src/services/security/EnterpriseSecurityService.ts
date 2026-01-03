@@ -360,7 +360,6 @@ export class EnterpriseSecurityService {
   async initialize(firestore: any): Promise<void> {
     this.db = firestore;
     this.initialized = true;
-    console.log('🔒 EnterpriseSecurityService initialized');
   }
 
   /**

@@ -79,32 +79,18 @@ export class GridRenderer implements UIRenderer {
   ): void {
     const startTime = performance.now();
 
-    console.log('🔍 GRID RENDERER DEBUG:', {
-      enabled: settings.enabled,
-      visible: settings.visible,
-      color: settings.color,
-      size: settings.size,
-      minVisibleSize: settings.minVisibleSize,
-      transform: transform
-    });
-
     if (!settings.enabled || !settings.visible) {
-      console.log('❌ GRID SKIPPED:', { enabled: settings.enabled, visible: settings.visible });
       return;
     }
 
     // Calculate grid size in pixels
     const gridSizePixels = settings.size * transform.scale;
 
-    console.log('📏 GRID SIZE:', { gridSizePixels, minVisibleSize: settings.minVisibleSize });
-
     // Skip rendering if grid is too small
     if (gridSizePixels < settings.minVisibleSize) {
-      console.log('❌ GRID TOO SMALL:', { gridSizePixels, minVisibleSize: settings.minVisibleSize });
       return;
     }
 
-    console.log('✅ GRID RENDERING STARTED');
     ctx.save();
 
     // Apply adaptive opacity based on zoom
@@ -182,17 +168,6 @@ export class GridRenderer implements UIRenderer {
     const originScreenX = screenOrigin.x;
     const startX = (originScreenX % gridSize);
 
-    // 🔍 DEBUG: Log grid calculation
-    console.log('🟢 GRID X-axis (using world 0,0):', {
-      worldOrigin,
-      screenOrigin,
-      'transform.scale': transform.scale,
-      gridSize,
-      startX,
-      'First line at': startX,
-      'Second line at': startX + gridSize
-    });
-
     for (let x = startX; x <= viewport.width; x += gridSize) {
       ctx.moveTo(x, 0);
       ctx.lineTo(x, viewport.height);
@@ -202,18 +177,6 @@ export class GridRenderer implements UIRenderer {
     // screenOrigin already calculated above from world (0,0)
     const originScreenY = screenOrigin.y;
     const startY = (originScreenY % gridSize);
-
-    // 🔍 DEBUG: Log EXACT values for comparison with Rulers
-    console.log('🟢 GRID Y-axis (using world 0,0):', {
-      worldOrigin,
-      screenOrigin,
-      'transform.offsetY': transform.offsetY,
-      gridSize,
-      startY,
-      'First line Y': startY,
-      'Second line Y': startY + gridSize,
-      'Third line Y': startY + gridSize * 2
-    });
 
     for (let y = startY; y <= viewport.height; y += gridSize) {
       ctx.moveTo(0, y);

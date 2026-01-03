@@ -81,19 +81,16 @@ export function useStorageSave(
 
     // ✅ ENTERPRISE: Skip save if settings haven't actually changed
     if (settingsHashRef.current === settingsHash) {
-      console.log('[Enterprise Storage] Settings unchanged (hash match), skipping auto-save');
       return;
     }
 
     // First render - initialize hash but don't save
     if (settingsHashRef.current === '') {
-      console.log('[Enterprise Storage] First render, initializing settings hash');
       settingsHashRef.current = settingsHash;
       return;
     }
 
     // Settings changed - update hash and schedule save
-    console.log('[Enterprise Storage] Settings changed, scheduling auto-save');
     settingsHashRef.current = settingsHash;
 
     // ✅ ENTERPRISE: Debounce saves to avoid excessive writes
@@ -102,7 +99,6 @@ export function useStorageSave(
     }
 
     saveTimeoutRef.current = setTimeout(() => {
-      console.log('[Enterprise Storage] Auto-saving settings...');
       onSaveStart();
 
       // Parse hash back to settings (we know it's valid JSON)
@@ -111,16 +107,13 @@ export function useStorageSave(
       safeSave(driver, settingsToSave, 'settings_state')
         .then(result => {
           if (result.success) {
-            console.log('[Enterprise Storage] Settings saved successfully');
             onSaveSuccess();
           } else {
             const error = 'error' in result ? result.error : 'Unknown error';
-            console.error('[Enterprise Storage] Save failed:', error);
 
             // ✅ ENTERPRISE: ChatGPT5 solution - Handle no-space gracefully
             const errorStr = String(error).toLowerCase();
             if (errorStr.includes('file_error_no_space') || errorStr.includes('no space')) {
-              console.warn('[Enterprise Storage] Disk full - switching to memory mode');
               onSaveError('STORAGE_OFFLINE'); // Special error code for UI
             } else {
               onSaveError(error);
@@ -128,12 +121,10 @@ export function useStorageSave(
           }
         })
         .catch(err => {
-          console.error('[Enterprise Storage] Save exception:', err);
           const errorStr = String(err).toLowerCase();
 
           // ✅ ENTERPRISE: ChatGPT5 solution - Handle no-space exceptions
           if (errorStr.includes('file_error_no_space') || errorStr.includes('no space')) {
-            console.warn('[Enterprise Storage] Disk full - switching to memory mode');
             onSaveError('STORAGE_OFFLINE'); // Special error code for UI
           } else {
             onSaveError(String(err));

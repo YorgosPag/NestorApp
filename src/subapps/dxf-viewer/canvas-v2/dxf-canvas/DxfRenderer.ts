@@ -72,13 +72,6 @@ export class DxfRenderer {
     // Clear canvas
     CanvasUtils.clearCanvas(this.ctx, this.canvas, 'transparent');
 
-    console.log('🔧 DxfRenderer.render called:', {
-      hasScene: !!scene,
-      entityCount: scene?.entities?.length || 0,
-      transform,
-      viewport
-    });
-
     // 🎨 DEBUG: Draw DxfCanvas origin marker (ORANGE) - TOP + LEFT half
     // ✅ CORRECT: Calculate screen position of ACTUAL world (0,0) using CoordinateTransforms
     const worldOrigin = { x: 0, y: 0 };
@@ -87,13 +80,6 @@ export class DxfRenderer {
     const originX = px(screenOrigin.x);
     const originY = px(screenOrigin.y);
 
-    // 🔍 DEBUG: Log values to compare with rulers
-    console.log('🟠 DxfRenderer origin marker:', {
-      worldOrigin,
-      screenOrigin,
-      transform: { scale: transform.scale, offsetX: transform.offsetX, offsetY: transform.offsetY },
-      calculated: { originX, originY }
-    });
     this.ctx.save();
     this.ctx.strokeStyle = UI_COLORS.DRAWING_HIGHLIGHT; // ✅ CENTRALIZED: Orange highlight για DXF origin marker
     this.ctx.lineWidth = 3;
@@ -125,8 +111,6 @@ export class DxfRenderer {
     // Render all entities
     for (const entity of scene.entities) {
       if (!entity.visible) continue;
-
-      // ✅ ΑΝΤΙΚΑΤΑΣΤΑΣΗ: Χρήση composite αντί για switch statement
       this.renderEntityUnified(entity, transform, viewport, options);
     }
 
@@ -216,10 +200,12 @@ export class DxfRenderer {
 
       case 'text':
         // Text entities ήδη έχουν τα properties στο DxfText type
+        // ✅ ENTERPRISE FIX: Map height → fontSize for TextRenderer compatibility
         return {
           position: entity.position,
           text: entity.text,
-          height: entity.height
+          height: entity.height,
+          fontSize: entity.height  // TextRenderer uses fontSize as canonical property
         };
 
       default:

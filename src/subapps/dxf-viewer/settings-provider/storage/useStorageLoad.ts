@@ -54,11 +54,9 @@ export function useStorageLoad(
 
     // ✅ ENTERPRISE: Skip if already loaded with same driver
     if (hasLoadedRef.current && lastDriverKeyRef.current === driverKey) {
-      console.log('[Enterprise Storage] Skip reload - already loaded with driver:', driverKey);
       return;
     }
 
-    console.log('[Enterprise Storage] Loading settings from storage with driver:', driverKey);
     lastDriverKeyRef.current = driverKey;
 
     // Try to load from enterprise storage first
@@ -66,22 +64,16 @@ export function useStorageLoad(
       .then(enterpriseData => {
         // Check if this is enterprise format or legacy
         if (isLegacyFormat(enterpriseData)) {
-          console.log('[Enterprise Storage] Detected legacy format, migrating...');
-
           // Migrate legacy → enterprise
           const migratedData = migrateFromLegacyProvider(enterpriseData);
 
-          console.log('[Enterprise Storage] Legacy migration complete:', getMigrationInfo(enterpriseData));
-
           // Save migrated data immediately (one-time migration)
           safeSave(driver, migratedData, 'settings_state')
-            .then(() => console.log('[Enterprise Storage] Migrated data saved'))
-            .catch(err => console.warn('[Enterprise Storage] Failed to save migrated data:', err));
+            .catch(() => { /* Silent failure */ });
 
           onLoadSuccess(migratedData);
         } else {
           // Already enterprise format
-          console.log('[Enterprise Storage] Settings loaded successfully (enterprise format)');
           onLoadSuccess(enterpriseData);
         }
 

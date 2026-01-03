@@ -26,37 +26,14 @@ const chunkArray = <T>(arr: T[], size: number): T[][] => {
 export class FirestoreProjectsRepository implements IProjectsRepository {
 
   async getProjectsByCompanyId(companyId: string): Promise<Project[]> {
-    console.log(`🏗️ FirestoreProjectsRepository: Loading projects for companyId: "${companyId}"`);
-
     return await safeDbOperation(async (database) => {
-      // Using Firestore admin SDK methods correctly
       const projectsCollection = database.collection(PROJECTS_COLLECTION);
-
-      // First, let's see ALL projects to understand the data structure
-      console.log(`🔍 DEBUG: Fetching ALL projects to see available companyIds...`);
-      const allSnapshot = await projectsCollection.get();
-      console.log(`🔍 DEBUG: Total projects in Firestore: ${allSnapshot.docs.length}`);
-
-      allSnapshot.docs.forEach(doc => {
-        const data = doc.data();
-        // TEMP DEBUG για Γιώργο: Εμφάνιση όλων των projects και των company IDs τους
-        console.log(`🔍 DEBUG: Project ID=${doc.id}, companyId="${data.companyId}", company="${data.company}", name="${data.name}"`);
-      });
-
-      // Now do the specific query
       const snapshot = await projectsCollection.where('companyId', '==', companyId).get();
-      console.log(`🏗️ FirestoreProjectsRepository: Found ${snapshot.docs.length} projects for companyId "${companyId}"`);
 
       const projects: Project[] = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       } as Project));
-
-      console.log(`🏗️ FirestoreProjectsRepository: Projects:`, projects.map(p => ({
-        id: p.id,
-        name: p.name,
-        company: p.company
-      })));
 
       return projects;
     }, []);

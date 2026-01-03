@@ -77,28 +77,21 @@ export class NavigationApiService {
 
       const projectsResult = await projectsResponse.json();
       if (!projectsResult.success || !projectsResult.data?.projects) {
-        console.log(`📊 No projects found for company ${companyId}`);
         return [];
       }
-
-      console.log(`📊 Found ${projectsResult.data.projects.length} projects for company ${companyId}`);
 
       // For each project, load buildings and floors using enterprise normalized structure
       const projectsWithBuildings = await Promise.all(
         projectsResult.data.projects.map(async (project: NavigationProject) => {
           try {
-            console.log(`🏗️ Loading buildings for project: ${project.id} (${project.name})`);
 
             // Load buildings for this project
             const buildingsResponse = await fetch(`/api/buildings?projectId=${project.id}`);
             const buildingsResult = await buildingsResponse.json();
 
             if (!buildingsResult.success) {
-              console.warn(`⚠️ No buildings found for project ${project.id}`);
               return { ...project, buildings: [], companyId };
             }
-
-            console.log(`🏛️ Found ${buildingsResult.buildings.length} buildings for project ${project.id}`);
 
             // For each building, load floors from normalized floors collection
             const buildingsWithFloors = await Promise.all(
@@ -114,7 +107,6 @@ export class NavigationApiService {
 
                   // Extract floors from correct API structure (data.floors)
                   const floors = floorsResult.data?.floors || floorsResult.floors || [];
-                  console.log(`🏗️ Building ${building.id}: Found ${floors.length} floors`);
 
                   // For each floor, load units
                   const floorsWithUnits = await Promise.all(
@@ -160,14 +152,11 @@ export class NavigationApiService {
               })
             );
 
-            const projectWithBuildings = {
+            return {
               ...project,
               buildings: buildingsWithFloors,
               companyId
             };
-
-            console.log(`✅ Project ${project.name}: ${buildingsWithFloors.length} buildings loaded`);
-            return projectWithBuildings;
 
           } catch (error) {
             console.warn(`Failed to load buildings for project ${project.id}:`, error);
@@ -176,7 +165,6 @@ export class NavigationApiService {
         })
       );
 
-      console.log(`🎯 Company ${companyId}: Loaded ${projectsWithBuildings.length} projects with full hierarchy`);
       return projectsWithBuildings;
 
     } catch (error) {
@@ -192,7 +180,6 @@ export class NavigationApiService {
   static clearCompaniesCache(): void {
     NavigationApiService.companiesCache.data = null;
     NavigationApiService.companiesCache.timestamp = 0;
-    console.log('🏢 NavigationApiService: Companies cache cleared');
   }
 
   /**

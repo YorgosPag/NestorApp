@@ -61,12 +61,7 @@ export function TransformProvider({
 
   // ✅ CENTRALIZED UPDATE: Κεντρικό σημείο για όλες τις transform αλλαγές
   const setTransform = useCallback((newTransform: ViewTransform) => {
-    console.log('🎯 TransformContext.setTransform called:', newTransform);
-
-    setTransformState(prev => {
-      console.log('📊 TransformContext state update:', { prev, newTransform });
-      return newTransform;
-    });
+    setTransformState(newTransform);
 
     // ✅ LEGACY SUPPORT: Ενημέρωση window.dxfTransform για backward compatibility
     // (Θα αφαιρεθεί σταδιακά καθώς όλα μεταβούν σε Context)
@@ -85,7 +80,6 @@ export function TransformProvider({
   // ✅ EXPOSE setTransform: Κάλεσε το callback για να δώσεις access στον parent
   React.useEffect(() => {
     if (onTransformReady) {
-      console.log('🔗 TransformContext: Exposing setTransform to parent');
       onTransformReady(setTransform);
     }
   }, [onTransformReady, setTransform]);
@@ -113,11 +107,6 @@ export function TransformProvider({
     setTransform,
     updateTransform
   }), [transform, setTransform, updateTransform]);
-
-  // 🔍 DEBUG: Log κάθε φορά που το value αλλάζει
-  React.useEffect(() => {
-    console.log('🔄 TransformContext value changed:', value.transform);
-  }, [value]);
 
   return (
     <TransformContext.Provider value={value}>

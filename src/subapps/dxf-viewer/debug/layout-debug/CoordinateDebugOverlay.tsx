@@ -27,12 +27,9 @@ if (!window.globalCoordinateCopy) {
     const now = Date.now();
     const uniqueId = Math.random().toString(36).substr(2, 5);
 
-    console.log('⚡ GLOBAL COPY:', key, uniqueId, '@', now);
-
     // Get fresh mouse position
     const mouseEvent = (window as any).lastMouseEvent;
     if (!mouseEvent) {
-      console.warn('❌ No mouse event available');
       return;
     }
 
@@ -42,7 +39,6 @@ if (!window.globalCoordinateCopy) {
     // Calculate canvas coordinates
     const canvas = document.querySelector('.dxf-canvas') as HTMLCanvasElement;
     if (!canvas) {
-      console.warn('❌ No canvas found');
       return;
     }
 
@@ -103,11 +99,9 @@ if (!window.globalCoordinateCopy) {
         textArea.select();
         document.execCommand('copy');
         document.body.removeChild(textArea);
-      } catch (e) {
-        console.error('Clipboard failed:', e);
+      } catch {
+        // Silent clipboard failure
       }
-
-      console.log('✅ GLOBAL COPY SUCCESS:', text);
     }
   };
 }
@@ -115,8 +109,6 @@ if (!window.globalCoordinateCopy) {
 export default function CoordinateDebugOverlay({ className = '' }: CoordinateDebugOverlayProps) {
   // ✅ ENTERPRISE ARCHITECTURE: Use Context for transform (Single Source of Truth)
   const contextTransform = useTransformValue();
-
-  console.log('🔍 CoordinateDebugOverlay render:', contextTransform);
 
   const [mouseScreen, setMouseScreen] = useState<Point2D>({ x: 0, y: 0 });
   const [mouseWorld, setMouseWorld] = useState<Point2D>({ x: 0, y: 0 });
@@ -141,31 +133,13 @@ export default function CoordinateDebugOverlay({ className = '' }: CoordinateDeb
 
     // ✅ ENHANCED GLOBAL MOUSE TRACKING
     const enhancedMouseMove = (e: MouseEvent) => {
-      // Αποθηκεύω το event με timestamp για debug
+      // Αποθηκεύω το event με timestamp
       (window as any).lastMouseEvent = e;
       (window as any).lastMouseUpdate = Date.now();
-
-      // Debug log 1% των moves
-      if (Math.random() < 0.01) {
-        console.log('🐭 MOUSE UPDATE:', {
-          clientX: e.clientX,
-          clientY: e.clientY,
-          timestamp: Date.now()
-        });
-      }
     };
 
     // ⚡ SIMPLE HANDLER - Καλεί την εξωτερική global function
     const handleKeyPress = (e: KeyboardEvent) => {
-      // 🔧 DEBUG: Log όλα τα key events για debugging
-      console.log('🔍 KEY EVENT DEBUG:', {
-        key: e.key,
-        ctrlKey: e.ctrlKey,
-        shiftKey: e.shiftKey,
-        altKey: e.altKey,
-        metaKey: e.metaKey
-      });
-
       // 🔥 SIMPLE F-KEY SHORTCUTS - Δεν συγκρούονται με browser
       const key = e.key;
       let copyKey = null;
@@ -176,8 +150,6 @@ export default function CoordinateDebugOverlay({ className = '' }: CoordinateDeb
       else if (key === 'F4') copyKey = 't'; // F4 = Transform
 
       if (copyKey) {
-        console.log('⚡ F-KEY SHORTCUT TRIGGERED:', { key, copyKey });
-
         // 🔥 AGGRESSIVE PREVENTION: Σταματάω ΑΜΕΣΑ το event
         e.preventDefault();
         e.stopPropagation();
@@ -224,15 +196,6 @@ export default function CoordinateDebugOverlay({ className = '' }: CoordinateDeb
         // Ενημέρωση και currentValues και state
         currentValues.current.mouseWorld = worldPos;
         setMouseWorld(worldPos);
-
-        // ✅ DEBUG: Log για να δω αν ενημερώνονται τα values
-        if (Math.random() < 0.01) { // Log 1% των moves για να μη σπαμάρουμε
-          console.log('🐭 MOUSE MOVE UPDATE:', {
-            screen: currentValues.current.mouseScreen,
-            world: currentValues.current.mouseWorld,
-            transform: currentValues.current.transform
-          });
-        }
       }
     };
 

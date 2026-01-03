@@ -251,11 +251,6 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
         offsetY: viewport.height - RULER_HEIGHT  // viewport height - 30px (ruler height)
       };
 
-      console.log('🎯 DxfCanvas: Setting initial transform for world (0,0) at ruler corner', {
-        viewport,
-        transform: initialTransform
-      });
-
       onTransformChange(initialTransform);
     }
   }, [viewport.width, viewport.height]); // Run when viewport is established
@@ -273,12 +268,10 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
       hitTesting.updateScene(scene);
 
       // 1️⃣ RENDER SCENE FIRST
-      console.log('🎨 DxfCanvas: 1️⃣ Rendering SCENE...');
       renderer.render(scene, transform, viewport, renderOptions);
 
       // 2️⃣ RENDER GRID (after scene, so it's on top)
       if (gridRendererRef.current && gridSettings?.enabled) {
-        console.log('🎨 DxfCanvas: 2️⃣ Rendering GRID...', { enabled: gridSettings.enabled, visible: gridSettings.visible });
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext('2d');
         if (canvas && ctx) {
@@ -291,13 +284,11 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
           };
           const context = createUIRenderContext(ctx, viewport, uiTransform);
           gridRendererRef.current.render(context, viewport, gridSettings as any);
-          console.log('✅ DxfCanvas: GRID rendered successfully');
         }
       }
 
       // 3️⃣ RENDER RULERS (after grid, so it's on top of grid)
       if (rulerRendererRef.current && rulerSettings?.enabled) {
-        console.log('🎨 DxfCanvas: 3️⃣ Rendering RULERS...', { enabled: rulerSettings.enabled, visible: rulerSettings.visible });
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext('2d');
         if (canvas && ctx) {
@@ -310,7 +301,6 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
           };
           const context = createUIRenderContext(ctx, viewport, uiTransform);
           rulerRendererRef.current.render(context, viewport, rulerSettings as any);
-          console.log('✅ DxfCanvas: RULERS rendered successfully');
         }
       }
     } catch (error) {

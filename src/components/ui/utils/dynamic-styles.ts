@@ -36,9 +36,8 @@ import { useMemo } from 'react';
 export const getDynamicBackgroundClass = (color?: string, opacity?: number): string => {
   if (!color) return '';
 
-  // Validate color format
+  // Validate color format - silently return empty for invalid colors
   if (!isValidColor(color)) {
-    console.warn(`Invalid color provided to getDynamicBackgroundClass: ${color}`);
     return '';
   }
 

@@ -116,9 +116,6 @@ import { dxfPerformanceOptimizer } from '../performance/DxfPerformanceOptimizer'
 
 // ✅ PERFORMANCE: Memoize το main component για να αποφύγουμε άχρηστα re-renders
 export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
-  // 🔍 DEBUG: Component mounting verification
-  console.log('🔍 DxfViewerContent: Component mounting/re-rendering');
-
   const floatingRef = React.useRef<FloatingPanelHandle>(null);
   const state = useDxfViewerState();
   const notifications = useNotifications();
@@ -135,8 +132,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
 
   // ⚡ ENTERPRISE: Initialize DXF Performance Optimizer
   React.useEffect(() => {
-    console.log('🔍 DxfPerformanceOptimizer: Starting initialization useEffect v2');
-
     // 🎯 LIGHTHOUSE OPTIMIZATION: Target 7.0s → <2.5s LCP
     dxfPerformanceOptimizer.updateConfig({
       rendering: {
@@ -174,11 +169,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     // 🚀 ENTERPRISE: Enable critical optimizations immediately
     dxfPerformanceOptimizer.applyOptimizationById('canvas_buffer');
     dxfPerformanceOptimizer.applyOptimizationById('viewport_culling');
-
-    // ⚡ PERFORMANCE: Direct imports - no preloading needed
-    console.log('🚀 Direct imports loaded for optimal performance');
-
-    console.log('⚡ DXF Performance Optimizer: ACTIVATED - Targeting 7.0s→<2.5s LCP');
 
     return () => {
       // Cleanup όταν component unmounts
@@ -282,10 +272,8 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const { updateGripSettings } = useGripContext();
 
   // 🧪 WRAP handleAction to intercept run-tests action
-  const wrappedHandleAction = React.useCallback((action: string, data?: any) => {
-    console.log('🧪 wrappedHandleAction called:', { action, data });
+  const wrappedHandleAction = React.useCallback((action: string, data?: unknown) => {
     if (action === 'run-tests') {
-      console.log('🧪 Tests button clicked - opening tests modal');
       setTestsModalOpen(true);
       return;
     }
@@ -336,8 +324,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // 🎯 KEYBOARD SHORTCUTS
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      console.log('🎯 KEY EVENT:', { key: event.key, ctrlKey: event.ctrlKey, keyCode: event.keyCode });
-
       // 🎯 Multiple ways to detect Ctrl+F2
       const isCtrlF2 = (event.key === 'F2' && event.ctrlKey) ||
                        (event.keyCode === 113 && event.ctrlKey) ||
@@ -346,12 +332,10 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       if (isCtrlF2) {
         event.preventDefault();
         event.stopPropagation();
-        console.log('🎯 Ctrl+F2 SHORTCUT: LAYERING WORKFLOW TEST TRIGGERED');
 
         // Direct call to window function
         if (window.runLayeringWorkflowTest) {
           window.runLayeringWorkflowTest().then((result) => {
-            console.log('📊 LAYERING WORKFLOW RESULT:', result);
             const successSteps = result.steps.filter((s) => s.status === 'success').length;
             const totalSteps = result.steps.length;
             const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
@@ -362,7 +346,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           import('../debug/layering-workflow-test').then(module => {
             const runLayeringWorkflowTest = module.runLayeringWorkflowTest;
             runLayeringWorkflowTest().then((result) => {
-              console.log('📊 LAYERING WORKFLOW RESULT:', result);
               const successSteps = result.steps.filter((s) => s.status === 'success').length;
               const totalSteps = result.steps.length;
               const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
@@ -376,10 +359,8 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       // 🎯 Alternative: F12 shortcut (less likely to conflict)
       if (event.key === 'F12') {
         event.preventDefault();
-        console.log('🎯 F12 SHORTCUT: LAYERING WORKFLOW TEST TRIGGERED');
         if (window.runLayeringWorkflowTest) {
           window.runLayeringWorkflowTest().then((result) => {
-            console.log('📊 LAYERING WORKFLOW RESULT:', result);
             const successSteps = result.steps.filter((s) => s.status === 'success').length;
             const totalSteps = result.steps.length;
             const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
@@ -394,12 +375,10 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       if (isF3) {
         event.preventDefault();
         event.stopPropagation();
-        console.log('🎯 F3 SHORTCUT: CURSOR-CROSSHAIR ALIGNMENT TEST TRIGGERED');
 
         import('../debug/enterprise-cursor-crosshair-test').then(module => {
           const { runEnterpriseMouseCrosshairTests, startEnterpriseInteractiveTest } = module.default;
 
-          console.log('🔍 Running enterprise cursor-crosshair alignment tests...');
           const results = runEnterpriseMouseCrosshairTests();
 
           const summary = `Enterprise Test: ${results.overallStatus}
@@ -410,12 +389,10 @@ Min Pass Rate: ${(results.minPassRate * 100).toFixed(1)}%
 
 Check console for detailed metrics`;
 
-          console.log('🎮 Starting enterprise interactive test - Move mouse over canvas, press ESC to stop');
           startEnterpriseInteractiveTest();
 
           showCopyableNotification(summary, results.overallStatus === 'PASS' ? 'success' : 'warning');
-        }).catch(error => {
-          console.error('Failed to load enterprise cursor-crosshair test:', error);
+        }).catch(() => {
           showCopyableNotification('Failed to load enterprise cursor-crosshair test module', 'error');
         });
         return;
@@ -490,7 +467,6 @@ Check console for detailed metrics`;
 
   // ✅ STABLE CALLBACK: Κάνω το onTransformReady stable με useCallback
   const handleTransformReady = React.useCallback((setTransform: (t: ViewTransform) => void) => {
-    console.log('🔗 DxfViewerContent: Received setTransform from Context');
     contextSetTransformRef.current = setTransform;
   }, []);
 
@@ -502,28 +478,20 @@ Check console for detailed metrics`;
       offsetY: transform.offsetY || 0,
     };
 
-    console.log('🔄 wrappedHandleTransformChange called:', normalizedTransform);
-
     // Update the canvas transform state for OverlayLayer
     setCanvasTransform(normalizedTransform);
 
     // ✅ UPDATE CONTEXT: Ενημέρωση του Transform Context (Single Source of Truth)
     if (contextSetTransformRef.current) {
-      console.log('🎯 Updating Context via ref:', normalizedTransform);
       contextSetTransformRef.current(normalizedTransform);
-    } else {
-      console.warn('⚠️ Context setTransform not ready yet!');
     }
   }, [setCanvasTransform]);
 
   // 🏠 PAN TO WORLD ORIGIN (0,0) - Function for DebugToolbar
   const panToWorldOrigin = React.useCallback(() => {
-    console.log('🏠 PAN TO ORIGIN (0,0) TRIGGERED');
-
     // Get canvas element to determine viewport size
     const canvasElement = document.querySelector('[data-canvas-type="dxf"]') as HTMLCanvasElement;
     if (!canvasElement) {
-      console.error('❌ Canvas element not found');
       showCopyableNotification('Canvas not found', 'error');
       return;
     }
@@ -653,12 +621,6 @@ Check console for detailed metrics`;
 
   // Wrapper για το handleFileImport που υποστηρίζει encoding
   const handleFileImportWithEncoding = async (file: File, encoding?: string) => {
-    console.log('📋 DxfViewerContent.handleFileImportWithEncoding called:', {
-      fileName: file.name,
-      encoding,
-      currentLevelId: levelManager.currentLevelId
-    });
-
     try {
       // 🔺 USE EXISTING LEVEL instead of creating new one
       // Check if we have a current level to use
@@ -804,9 +766,7 @@ Check console for detailed metrics`;
   // ✅ ΧΡΗΣΗ ΥΠΑΡΧΟΝΤΟΣ EVENT SYSTEM: Listen for layering activation from LevelPanel
   React.useEffect(() => {
     // 🔧 PHASE 3: Use EventBus instead of window.addEventListener
-    const cleanup = eventBus.on('level-panel:layering-activate', ({ levelId }) => {
-      console.log('🎯 Level panel activated layering for level:', levelId);
-
+    const cleanup = eventBus.on('level-panel:layering-activate', () => {
       // ✅ ΔΙΟΡΘΩΣΗ: Ensure layers are always shown (not toggled)
       if (!showLayers) {
         handleAction('toggle-layers');

@@ -438,7 +438,7 @@ export const getEntityBounds = (entity: Entity): { minX: number; minY: number; m
 export type AnySceneEntity = Entity; // ✅ UNIFIED: Now alias to main Entity type
 
 // ✅ ENTERPRISE: Legacy compatibility aliases
-export type EntityModel = BaseEntity; // ✅ LEGACY: For rendering system compatibility
+export type EntityModel = Entity; // ✅ FIX: Use full Entity type to preserve fontSize, position, text, etc.
 
 export interface SceneLayer {
   name: string;

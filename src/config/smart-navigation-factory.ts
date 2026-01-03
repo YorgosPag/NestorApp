@@ -789,10 +789,8 @@ export function debugNavigationFactory(): void {
   }
 }
 
-// Development debug (μόνο στο development)
-if (process.env.NODE_ENV === 'development') {
-  debugNavigationFactory();
-}
+// Development debug - disabled to reduce console noise
+// Call debugNavigationFactory() manually if needed
 
 // ====================================================================
 // 🏢 ENTERPRISE EXPORTS & TYPE SAFETY

@@ -82,16 +82,4 @@ export default {
   userPermissions
 };
 
-// ============================================================================
-// 🎯 DEVELOPMENT DEBUG (Development Environment Only)
-// ============================================================================
-
-if (process.env.NODE_ENV === 'development') {
-  console.group('🏭 Navigation Smart Factory - Production Check');
-  console.log('📋 Main Menu Items:', mainMenuItems.length);
-  console.log('🔧 Tools Menu Items:', toolsMenuItems.length);
-  console.log('⚙️ Settings Menu Items:', settingsMenuItem.length);
-  console.log('🌍 Environment:', environment);
-  console.log('🔑 User Permissions:', userPermissions.length);
-  console.groupEnd();
-}
+// Development debug - disabled to reduce console noise

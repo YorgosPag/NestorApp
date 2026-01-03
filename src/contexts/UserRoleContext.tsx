@@ -90,7 +90,6 @@ export function UserRoleProvider({ children }: { children: React.ReactNode }) {
         try {
           await securityService.initialize(db);
           setSecurityServiceInitialized(true);
-          console.log('🔒 EnterpriseSecurityService initialized successfully');
         } catch (error) {
           console.error('❌ Failed to initialize EnterpriseSecurityService:', error);
         }
@@ -105,12 +104,6 @@ export function UserRoleProvider({ children }: { children: React.ReactNode }) {
   // ==========================================================================
 
   useEffect(() => {
-    console.log('🔄 UserRoleContext: Firebase user state changed', {
-      firebaseUserId: firebaseUser?.uid,
-      email: firebaseUser?.email,
-      securityServiceReady: securityServiceInitialized
-    });
-
     const determineUserRole = async () => {
       if (firebaseUser && securityServiceInitialized) {
         try {
@@ -129,13 +122,6 @@ export function UserRoleProvider({ children }: { children: React.ReactNode }) {
             displayName: firebaseUser.displayName
           };
 
-          console.log('✅ UserRoleContext: Enterprise role determined', {
-            uid: legacyUser.uid,
-            email: legacyUser.email,
-            role: legacyUser.role,
-            method: 'EnterpriseSecurityService'
-          });
-
           setUser(legacyUser);
         } catch (error) {
           console.error('❌ Failed to determine user role via EnterpriseSecurityService:', error);
@@ -153,11 +139,7 @@ export function UserRoleProvider({ children }: { children: React.ReactNode }) {
           setUser(fallbackUser);
         }
       } else if (!firebaseUser) {
-        console.log('🔄 UserRoleContext: No Firebase user, setting to null');
         setUser(null);
-      } else if (!securityServiceInitialized) {
-        console.log('🔄 UserRoleContext: Waiting for security service initialization...');
-        // Keep loading state until security service is ready
       }
 
       // Update loading state

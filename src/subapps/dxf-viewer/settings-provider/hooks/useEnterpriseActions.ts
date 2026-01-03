@@ -92,14 +92,12 @@ function createUpdateSettings<T extends Partial<LineSettings | TextSettings | Gr
       const mode = ENTERPRISE_CONSTANTS.DEFAULT_VIEWER_MODE as StorageMode;
       const updates = modeOrUpdates as T;
       const layer = ENTERPRISE_CONSTANTS.DEFAULT_LAYER;
-      console.log(`[Enterprise Actions] ${entityName} (OLD API):`, { updates });
       dispatch({ type: actionType, payload: { mode, updates, layer } } as EnterpriseAction);
     } else {
       // NEW API: updateSettings(mode, updates, layer)
       const mode = modeOrUpdates as StorageMode;
       const updates = updatesParam!;
       const layer = layerParam || ENTERPRISE_CONSTANTS.DEFAULT_LAYER;
-      console.log(`[Enterprise Actions] ${entityName} (NEW API):`, { mode, updates, layer });
       dispatch({ type: actionType, payload: { mode, updates, layer } } as EnterpriseAction);
     }
   };

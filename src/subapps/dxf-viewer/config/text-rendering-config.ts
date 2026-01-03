@@ -204,10 +204,14 @@ export const ANNOTATION_SCALING = {
   /**
    * Annotation scale boost factor
    * Multiplies text height to make it more prominent
-   * 4.0 = text renders 4x larger than pure geometric scaling
-   * (Increased from 2.0 for better readability in floor plans)
+   * 100.0 = text renders proportionally to geometry
+   * (Increased from 4.0 - was too small, dynamicMin always dominated)
+   *
+   * CALCULATION: For fontSize=0.132m at scale=5:
+   * - With 4.0:   0.132 × 5 × 4   = 2.6px (< dynamicMin ~15px) ❌
+   * - With 100.0: 0.132 × 5 × 100 = 66px (> dynamicMin ~15px) ✅
    */
-  SCALE_BOOST_FACTOR: 4.0,
+  SCALE_BOOST_FACTOR: 100.0,
 
   /**
    * Absolute minimum in pixels (fallback)

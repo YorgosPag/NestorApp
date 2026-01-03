@@ -185,18 +185,6 @@ export class RulerRenderer implements UIRenderer {
     const originScreenX = screenOrigin.x;
     const startX = (originScreenX % step);
 
-    // 🔍 DEBUG: Log ruler calculation
-    console.log('📏 RULER X-axis (using world 0,0):', {
-      worldOrigin,
-      screenOrigin,
-      'transform.scale': transform.scale,
-      'tickInterval': settings.tickInterval,
-      step,
-      startX,
-      'First tick at': startX,
-      'Second tick at': startX + step
-    });
-
     // Text styling
     ctx.fillStyle = settings.textColor;
     ctx.font = `${settings.fontSize}px Arial`;
@@ -277,18 +265,6 @@ export class RulerRenderer implements UIRenderer {
     const startY = (originScreenY % step);
 
     const minY = COORDINATE_LAYOUT.MARGINS.top; // 30px - for labels only
-
-    // 🔍 DEBUG: Log EXACT values for comparison with Grid
-    console.log('🔴 RULER Y-axis (using world 0,0):', {
-      worldOrigin,
-      screenOrigin,
-      'transform.scale': transform.scale,
-      'tickInterval': settings.tickInterval,
-      step,
-      startY,
-      'First tick at': startY,
-      'Second tick at': startY + step
-    });
 
     // Text styling
     ctx.fillStyle = settings.textColor;

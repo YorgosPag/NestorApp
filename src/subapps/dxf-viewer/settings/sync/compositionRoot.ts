@@ -53,11 +53,8 @@ export function createSyncDependencies(options?: {
 }): SyncDependencies | undefined {
   // ===== FEATURE FLAG =====
   if (options?.enableSync === false) {
-    console.info('[CompositionRoot] Store sync is DISABLED (feature flag off)');
     return undefined;
   }
-
-  console.info('[CompositionRoot] Creating sync dependencies');
 
   const ports = options?.ports ?? {};
 
@@ -73,14 +70,6 @@ export function createSyncDependencies(options?: {
     grid: ports.grid !== false ? gridAdapter : undefined,
     ruler: ports.ruler !== false ? rulerAdapter : undefined
   };
-
-  console.info('[CompositionRoot] Sync dependencies created', {
-    hasToolStyle: !!deps.toolStyle,
-    hasTextStyle: !!deps.textStyle,
-    hasGripStyle: !!deps.gripStyle,
-    hasGrid: !!deps.grid,
-    hasRuler: !!deps.ruler
-  });
 
   return deps;
 }

@@ -30,8 +30,6 @@ import { useZoom } from '../../systems/zoom';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 // ✅ ENTERPRISE MIGRATION: Using ServiceRegistry
 import { serviceRegistry } from '../../services';
-// 🎯 DEBUG: Import canvas alignment tester
-import { CanvasAlignmentTester } from '../../debug/canvas-alignment-test';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
 
@@ -268,19 +266,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   const selectedOverlay = overlayStore.getSelectedOverlay();
 
-  // 🔍 DEBUG: Log overlay rendering state
-  React.useEffect(() => {
-    console.log('🎨 CANVAS OVERLAY RENDERING STATE:', {
-      currentLevelId: levelManager.currentLevelId,
-      currentOverlaysCount: currentOverlays.length,
-      selectedOverlay: selectedOverlay ? {
-        id: selectedOverlay.id,
-        levelId: selectedOverlay.levelId,
-        hasPolygon: !!selectedOverlay.polygon
-      } : null,
-      allOverlaysInStore: Object.keys(overlayStore.overlays).length
-    });
-  }, [levelManager.currentLevelId, currentOverlays.length, selectedOverlay?.id, overlayStore.overlays]);
 
   // === CONVERT OVERLAYS TO CANVAS V2 FORMAT ===
   const convertToColorLayers = (overlays: any[]): ColorLayer[] => {
@@ -366,34 +351,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                           activeTool === 'polygon' || activeTool === 'circle' ||
                           activeTool === 'rectangle'; // ✅ Removed 'arc' - not in ToolType union
     if (isDrawingTool && drawingHandlersRef.current?.startDrawing) {
-      console.log('🎯 Auto-starting drawing for tool:', activeTool);
       // 🎯 TYPE-SAFE: activeTool is already narrowed to drawing tools by if statement
       drawingHandlersRef.current.startDrawing(activeTool);
     }
   }, [activeTool]);
-
-  // 🔍 DEBUG - Check current overlays and colorLayers (LIMITED to prevent infinite re-render)
-  React.useEffect(() => {
-    // Only log if we actually have overlays or if it's been a while
-    if (currentOverlays.length > 0 || colorLayers.length > 0) {
-      // console.log('🔍 CanvasSection Overlays State:', {
-      //   overlaysCount: currentOverlays.length,
-      //   colorLayersCount: colorLayers.length,
-      //   currentLevelId: levelManager.currentLevelId,
-      //   sampleOverlay: currentOverlays.length > 0 ? {
-      //     id: currentOverlays[0].id,
-      //     hasPolygon: !!currentOverlays[0].polygon,
-      //     polygonLength: currentOverlays[0].polygon?.length
-      //   } : null,
-      //   sampleColorLayer: colorLayers.length > 0 ? {
-      //     id: colorLayers[0].id,
-      //     name: colorLayers[0].name,
-      //     color: colorLayers[0].color,
-      //     polygonsCount: colorLayers[0].polygons?.length
-      //   } : null
-      // });
-    }
-  }, [currentOverlays.length, levelManager.currentLevelId]); // Dependency only on counts, not objects - removed colorLayers to prevent infinite loop
 
   // === CONVERT SCENE TO CANVAS V2 FORMAT ===
   const dxfScene: DxfScene | null = props.currentScene ? {
@@ -433,9 +394,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
             return { ...base, type: 'arc' as const, center: arcEntity.center, radius: arcEntity.radius, startAngle: arcEntity.startAngle, endAngle: arcEntity.endAngle } as DxfEntityUnion;
           }
           case 'text': {
-            // Type guard: Entity με type 'text' έχει position, text, height, rotation
-            const textEntity = entity as typeof entity & { position: Point2D; text: string; height: number; rotation?: number };
-            return { ...base, type: 'text' as const, position: textEntity.position, text: textEntity.text, height: textEntity.height, rotation: textEntity.rotation } as DxfEntityUnion;
+            // Type guard: Entity με type 'text' έχει position, text, fontSize (canonical), rotation
+            // ✅ ENTERPRISE FIX: Use fontSize (canonical) from SceneEntity, map to height for DxfText
+            const textEntity = entity as typeof entity & { position: Point2D; text: string; fontSize?: number; height?: number; rotation?: number };
+            const textHeight = textEntity.fontSize || textEntity.height || 2.5; // fontSize is canonical, height is fallback
+            return { ...base, type: 'text' as const, position: textEntity.position, text: textEntity.text, height: textHeight, rotation: textEntity.rotation } as DxfEntityUnion;
           }
           default:
             console.warn('🔍 Unsupported entity type for DxfCanvas:', entity.type);
@@ -566,56 +529,29 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   };
 
   const handleCanvasClick = (point: Point2D) => {
-    console.log('🔍 Canvas Click:', {
-      overlayMode,
-      activeTool,
-      point,
-      transform,
-      draftPolygonLength: draftPolygon.length
-    });
-
     // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Route click to unified drawing system for drawing tools
     const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' || activeTool === 'polygon'
       || activeTool === 'rectangle' || activeTool === 'circle'; // ✅ Removed 'arc' - not in ToolType union
 
     if (isDrawingTool && drawingHandlersRef.current) {
-      // ✅ UNIFIED DRAWING ENGINE: Route click to centralized drawing system
-      console.log('🎨 Routing click to unified drawing system (drawing tool):', {
-        activeTool,
-        point
-      });
-
       // 🔥 FIX: Use ONLY dxfCanvasRef for drawing tools (NOT overlayCanvasRef!)
       // Drawing tools (Line/Circle/Rectangle) draw on DxfCanvas
       // Color layers draw on LayerCanvas (overlayCanvasRef)
       const canvasElement = dxfCanvasRef.current?.getCanvas?.();
       if (!canvasElement) {
-        console.error('❌ DXF Canvas element not found - cannot draw!');
         return;
       }
 
       const viewport = { width: canvasElement.clientWidth, height: canvasElement.clientHeight };
-      console.log('🔥 VIEWPORT:', {
-        canvasClientWidth: canvasElement.clientWidth,
-        canvasClientHeight: canvasElement.clientHeight,
-        viewport,
-        viewportWidth: viewport.width,
-        viewportHeight: viewport.height
-      });
-      console.log('🔥 screenToWorld INPUT:', { point, transform, viewport });
       const worldPoint = CoordinateTransforms.screenToWorld(point, transform, viewport);
-      console.log('🔥 screenToWorld OUTPUT:', { worldPoint });
 
-      console.log('🔥 About to call onDrawingPoint:', { worldPoint, drawingHandlers: !!drawingHandlersRef.current, onDrawingPoint: !!drawingHandlersRef.current?.onDrawingPoint });
       // Call the centralized drawing handler - USE REF!
       drawingHandlersRef.current.onDrawingPoint(worldPoint);
-      console.log('✅ onDrawingPoint called successfully');
       return;
     }
 
     // ✅ OVERLAY MODE: Use legacy overlay system with draftPolygon
     if (overlayMode === 'draw') {
-      console.log('🎨 Legacy overlay mode - using draftPolygon:', { overlayMode, point });
       // 🔧 Use UNIFIED CoordinateTransforms για consistency
       const canvas = dxfCanvasRef.current || overlayCanvasRef.current;
       if (!canvas) return;
@@ -752,41 +688,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [draftPolygon, finishDrawing]);
 
-  // 🎯 CANVAS ALIGNMENT TEST: Auto-test when layering is activated
-  React.useEffect(() => {
-    if (activeTool === 'layering' && showDxfCanvas && showLayerCanvas) {
-      // Delay να φορτώσουν τα canvas πρώτα
-      const testTimeout = setTimeout(() => {
-        console.log('🎯 LAYERING ACTIVATED - RUNNING CANVAS ALIGNMENT TEST');
-
-        const alignmentResult = CanvasAlignmentTester.testCanvasAlignment();
-        const zIndexResult = CanvasAlignmentTester.testCanvasZIndex();
-        const greenBorder = CanvasAlignmentTester.findGreenBorder();
-
-        console.log('🎯 LAYERING CANVAS TESTS COMPLETED:', {
-          alignment: alignmentResult,
-          zIndex: zIndexResult,
-          greenBorderFound: !!greenBorder,
-          greenBorderElement: greenBorder
-        });
-
-        // 🔍 EXTRA DEBUG: Manual z-index check
-        const dxfCanvasEl = document.querySelector('canvas[data-canvas-type="dxf"]');
-        const layerCanvasEl = document.querySelector('canvas[data-canvas-type="layer"]');
-        // Manual z-index check disabled for performance
-
-        if (!alignmentResult.isAligned) {
-          console.warn('⚠️ CANVAS MISALIGNMENT DETECTED DURING LAYERING!', alignmentResult.differences);
-        }
-
-        if (!zIndexResult.isCorrectOrder) {
-          console.warn('⚠️ INCORRECT CANVAS Z-INDEX ORDER DURING LAYERING!', zIndexResult);
-        }
-      }, 1000); // 1 second delay για να φορτώσουν τα canvas
-
-      return () => clearTimeout(testTimeout);
-    }
-  }, [activeTool, showDxfCanvas, showLayerCanvas]);
 
   // ❌ REMOVED: Duplicate zoom handlers - now using centralized zoomSystem.handleKeyboardZoom()
   // All keyboard zoom is handled through the unified system in the keyboard event handler above

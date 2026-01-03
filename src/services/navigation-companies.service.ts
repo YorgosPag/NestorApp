@@ -135,10 +135,6 @@ export class NavigationCompaniesService {
       cache.data = contactIds;
       cache.timestamp = now;
 
-      // 🎯 PRODUCTION: Μόνο summary log αντί για verbose details
-      if (contactIds.length > 0) {
-        console.log(`🧭 Navigation: ${contactIds.length} companies cached`);
-      }
       return contactIds;
     } catch (error) {
       console.error('❌ Error fetching navigation company IDs:', error);
