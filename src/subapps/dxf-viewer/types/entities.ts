@@ -157,6 +157,7 @@ export interface TextEntity extends BaseEntity {
   position: Point2D;
   text: string;
   fontSize?: number;
+  height?: number;           // 🏢 ENTERPRISE: DXF text height (alias for fontSize, used by converters)
   fontFamily?: string;
   alignment?: 'left' | 'center' | 'right';
   rotation?: number;

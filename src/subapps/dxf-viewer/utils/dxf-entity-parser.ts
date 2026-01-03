@@ -78,11 +78,47 @@ export interface DxfHeaderData {
   insunits: number;
   /** $DIMSCALE - Overall dimension scale factor */
   dimscale: number;
+  /** $DIMTXT - Default dimension text height (ΚΡΙΣΙΜΟ για σωστά dim sizes!) */
+  dimtxt: number;
   /** $CANNOSCALEVALUE - Current annotation scale value */
   annoScale: number;
   /** $MEASUREMENT - Drawing units (0=English, 1=Metric) */
   measurement: number;
 }
+
+// ============================================================================
+// 🏢 ENTERPRISE: DIMSTYLE DATA TYPE (2026-01-03)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: DXF Dimension Style Data
+ *
+ * Parsed values from DIMSTYLE table entries in TABLES section.
+ * Contains the actual text height for dimensions (DIMTXT - code 140).
+ *
+ * ╔══════════════════════════════════════════════════════════════════════════╗
+ * ║ ΚΡΙΣΙΜΟ: Το DIMTXT είναι η ΠΡΑΓΜΑΤΙΚΗ τιμή του text height              ║
+ * ║ για τα dimensions. Το code 140 στο DIMENSION entity είναι optional       ║
+ * ║ override, αλλά συνήθως είναι 0 ή λείπει!                                ║
+ * ╚══════════════════════════════════════════════════════════════════════════╝
+ */
+export interface DimStyleEntry {
+  /** Style name (code 2) - e.g., "Standard", "ISO-25", "Annotative" */
+  name: string;
+  /** DIMTXT - Text height for dimensions (code 140) */
+  dimtxt: number;
+  /** DIMSCALE - Dimension scale factor for this style (code 40) */
+  dimscale: number;
+  /** DIMTFAC - Tolerance text height factor (code 146) */
+  dimtfac: number;
+  /** DIMASZ - Arrow size (code 41) - useful for proportional sizing */
+  dimasz: number;
+}
+
+/**
+ * 🏢 ENTERPRISE: Map of DIMSTYLE names to their properties
+ */
+export type DimStyleMap = Record<string, DimStyleEntry>;
 
 /**
  * 🏢 ENTERPRISE: INSUNITS to scale factor mapping
@@ -141,6 +177,7 @@ export class DxfEntityParser {
     const header: DxfHeaderData = {
       insunits: 4,      // Default: mm
       dimscale: 1,      // Default: no scaling
+      dimtxt: 2.5,      // Default: AutoCAD Standard DIMTXT (mm)
       annoScale: 1,     // Default: 1:1
       measurement: 1    // Default: Metric
     };
@@ -184,6 +221,12 @@ export class DxfEntityParser {
             header.dimscale = parseFloat(value) || 1;
           }
           break;
+        case '$DIMTXT':
+          // 🏢 ENTERPRISE: Parse default dimension text height (ΚΡΙΣΙΜΟ!)
+          if (code === '40') {
+            header.dimtxt = parseFloat(value) || 2.5;
+          }
+          break;
         case '$CANNOSCALEVALUE':
           if (code === '40') {
             header.annoScale = parseFloat(value) || 1;
@@ -202,11 +245,162 @@ export class DxfEntityParser {
       insunits: header.insunits,
       insunitsName: DxfEntityParser.getUnitsName(header.insunits),
       dimscale: header.dimscale,
+      dimtxt: header.dimtxt,  // 🏢 ENTERPRISE: Show DIMTXT for debugging
       annoScale: header.annoScale,
       measurement: header.measurement === 1 ? 'Metric' : 'English'
     });
 
     return header;
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Parse DIMSTYLE table from TABLES section (2026-01-03)
+   *
+   * ╔══════════════════════════════════════════════════════════════════════════╗
+   * ║ CRITICAL: Αυτή η function εξάγει τα πραγματικά DIMTXT values!           ║
+   * ║                                                                          ║
+   * ║ DXF Structure:                                                           ║
+   * ║   SECTION                                                                ║
+   * ║   2 TABLES                                                               ║
+   * ║   ...                                                                    ║
+   * ║   0 TABLE                                                                ║
+   * ║   2 DIMSTYLE                                                             ║
+   * ║   ...                                                                    ║
+   * ║   0 DIMSTYLE                                                             ║
+   * ║   2 Standard          ← Style name                                       ║
+   * ║   140 2.5             ← DIMTXT (text height)                             ║
+   * ║   40 1.0              ← DIMSCALE                                         ║
+   * ║   41 2.5              ← DIMASZ (arrow size)                              ║
+   * ║   ...                                                                    ║
+   * ║   0 ENDTAB                                                               ║
+   * ║                                                                          ║
+   * ║ Χωρίς αυτό το parsing, τα dimensions χρησιμοποιούν fallback τιμές       ║
+   * ║ που δεν ταιριάζουν με το πραγματικό σχέδιο!                              ║
+   * ╚══════════════════════════════════════════════════════════════════════════╝
+   *
+   * @param lines - All lines from DXF file
+   * @returns Map of style names to their dimension properties
+   */
+  static parseDimStyles(lines: string[]): DimStyleMap {
+    const dimStyles: DimStyleMap = {};
+
+    // Default DIMSTYLE as fallback (AutoCAD "Standard" defaults)
+    const DEFAULT_DIMSTYLE: DimStyleEntry = {
+      name: 'Standard',
+      dimtxt: 2.5,      // Default text height (mm)
+      dimscale: 1.0,    // No scaling
+      dimtfac: 1.0,     // Tolerance factor
+      dimasz: 2.5       // Arrow size
+    };
+    dimStyles['Standard'] = DEFAULT_DIMSTYLE;
+
+    // State machine for parsing
+    let inTables = false;
+    let inDimStyleTable = false;
+    let inDimStyleEntry = false;
+    let currentStyle: Partial<DimStyleEntry> = {};
+
+    for (let i = 0; i < lines.length - 1; i += 2) {
+      const code = lines[i].trim();
+      const value = lines[i + 1]?.trim() || '';
+
+      // Track TABLES section
+      if (code === '2' && value === 'TABLES') {
+        inTables = true;
+        continue;
+      }
+
+      // Exit TABLES section
+      if (code === '0' && value === 'ENDSEC' && inTables) {
+        break;
+      }
+
+      if (!inTables) continue;
+
+      // Detect DIMSTYLE table start
+      if (code === '2' && value === 'DIMSTYLE' && !inDimStyleTable) {
+        inDimStyleTable = true;
+        continue;
+      }
+
+      // Detect DIMSTYLE table end
+      if (code === '0' && value === 'ENDTAB' && inDimStyleTable) {
+        // Save last entry if exists
+        if (inDimStyleEntry && currentStyle.name) {
+          dimStyles[currentStyle.name] = {
+            name: currentStyle.name,
+            dimtxt: currentStyle.dimtxt ?? DEFAULT_DIMSTYLE.dimtxt,
+            dimscale: currentStyle.dimscale ?? DEFAULT_DIMSTYLE.dimscale,
+            dimtfac: currentStyle.dimtfac ?? DEFAULT_DIMSTYLE.dimtfac,
+            dimasz: currentStyle.dimasz ?? DEFAULT_DIMSTYLE.dimasz
+          };
+        }
+        inDimStyleTable = false;
+        inDimStyleEntry = false;
+        continue;
+      }
+
+      if (!inDimStyleTable) continue;
+
+      // Detect individual DIMSTYLE entry start
+      if (code === '0' && value === 'DIMSTYLE') {
+        // Save previous entry if exists
+        if (inDimStyleEntry && currentStyle.name) {
+          dimStyles[currentStyle.name] = {
+            name: currentStyle.name,
+            dimtxt: currentStyle.dimtxt ?? DEFAULT_DIMSTYLE.dimtxt,
+            dimscale: currentStyle.dimscale ?? DEFAULT_DIMSTYLE.dimscale,
+            dimtfac: currentStyle.dimtfac ?? DEFAULT_DIMSTYLE.dimtfac,
+            dimasz: currentStyle.dimasz ?? DEFAULT_DIMSTYLE.dimasz
+          };
+        }
+        // Start new entry
+        currentStyle = {};
+        inDimStyleEntry = true;
+        continue;
+      }
+
+      if (!inDimStyleEntry) continue;
+
+      // Parse DIMSTYLE properties
+      switch (code) {
+        case '2':
+          // Style name
+          currentStyle.name = value;
+          break;
+        case '140':
+          // DIMTXT - Text height (CRITICAL!)
+          currentStyle.dimtxt = parseFloat(value) || DEFAULT_DIMSTYLE.dimtxt;
+          break;
+        case '40':
+          // DIMSCALE - Overall dimension scale
+          currentStyle.dimscale = parseFloat(value) || DEFAULT_DIMSTYLE.dimscale;
+          break;
+        case '41':
+          // DIMASZ - Arrow size
+          currentStyle.dimasz = parseFloat(value) || DEFAULT_DIMSTYLE.dimasz;
+          break;
+        case '146':
+          // DIMTFAC - Tolerance text factor
+          currentStyle.dimtfac = parseFloat(value) || DEFAULT_DIMSTYLE.dimtfac;
+          break;
+      }
+    }
+
+    // Log parsed DIMSTYLES for debugging
+    const styleCount = Object.keys(dimStyles).length;
+    if (styleCount > 1) {
+      console.log('📏 DXF DIMSTYLES parsed:', {
+        count: styleCount,
+        styles: Object.entries(dimStyles).map(([name, style]) => ({
+          name,
+          dimtxt: style.dimtxt,
+          dimscale: style.dimscale
+        }))
+      });
+    }
+
+    return dimStyles;
   }
 
   /**
@@ -325,11 +519,29 @@ export class DxfEntityParser {
    *
    * Routes to centralized converters in dxf-entity-converters.ts.
    *
+   * ╔══════════════════════════════════════════════════════════════════════════╗
+   * ║ 🏢 ENTERPRISE DIMSTYLE SUPPORT (2026-01-03)                              ║
+   * ║                                                                          ║
+   * ║ Δέχεται:                                                                 ║
+   * ║ - header: DXF HEADER data (DIMSCALE, INSUNITS)                          ║
+   * ║ - dimStyles: Parsed DIMSTYLE entries με πραγματικά DIMTXT values        ║
+   * ║                                                                          ║
+   * ║ Τα dimStyles παρέχουν το ΠΡΑΓΜΑΤΙΚΟ text height για dimensions,         ║
+   * ║ αντί για fallback τιμές.                                                ║
+   * ╚══════════════════════════════════════════════════════════════════════════╝
+   *
    * @param entityData - Parsed entity data
    * @param index - Entity index for unique ID
+   * @param header - Optional DXF header data for DIMSCALE normalization
+   * @param dimStyles - Optional parsed DIMSTYLE map with real DIMTXT values
    * @returns Converted scene entity or null
    */
-  static convertToSceneEntity(entityData: EntityData, index: number): AnySceneEntity | null {
-    return convertEntityToScene(entityData, index);
+  static convertToSceneEntity(
+    entityData: EntityData,
+    index: number,
+    header?: DxfHeaderData,
+    dimStyles?: DimStyleMap
+  ): AnySceneEntity | null {
+    return convertEntityToScene(entityData, index, header, dimStyles);
   }
 }

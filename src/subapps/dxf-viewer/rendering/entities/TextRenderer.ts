@@ -112,19 +112,29 @@ export class TextRenderer extends BaseEntityRenderer {
 
   /**
    * Extract text height with fallback
-   * Priority: height → fontSize → default 12 (like old backup)
+   * Priority: height → fontSize → default 2.5 (AutoCAD Standard DIMTXT)
+   *
+   * ╔══════════════════════════════════════════════════════════════════════════╗
+   * ║ 🏢 ENTERPRISE FIX (2026-01-03): Removed 0.1 threshold                    ║
+   * ║                                                                          ║
+   * ║ ΠΡΙΝ: height > 0.1 → fallback 12 (λάθος!)                               ║
+   * ║ Αυτό έκανε dims με μικρό height (0.18) να πέφτουν σε 12 = ΤΕΡΑΣΤΙΑ!     ║
+   * ║                                                                          ║
+   * ║ ΤΩΡΑ: height > 0 → χρησιμοποιεί την πραγματική τιμή                     ║
+   * ║ Fallback: 2.5 (AutoCAD Standard default, όχι arbitrary 12)              ║
+   * ╚══════════════════════════════════════════════════════════════════════════╝
    */
   private extractTextHeight(entity: EntityModel): number {
-    // Priority 1: height (direct from entity)
-    if ('height' in entity && typeof entity.height === 'number' && entity.height > 0.1) {
+    // Priority 1: height (direct from entity - from DXF parsing)
+    if ('height' in entity && typeof entity.height === 'number' && entity.height > 0) {
       return entity.height as number;
     }
     // Priority 2: fontSize (alternative property name)
-    if ('fontSize' in entity && typeof entity.fontSize === 'number' && entity.fontSize > 0.1) {
+    if ('fontSize' in entity && typeof entity.fontSize === 'number' && entity.fontSize > 0) {
       return entity.fontSize;
     }
-    // Default: 12 (like old backup, not 2.5)
-    return 12;
+    // Default: 2.5 (AutoCAD Standard DIMTXT default)
+    return 2.5;
   }
 
   getGrips(entity: EntityModel): GripInfo[] {

@@ -1,5 +1,5 @@
 import type { SceneModel, AnySceneEntity, SceneLayer } from '../types/scene';
-import { DxfEntityParser, type EntityData, type DxfHeaderData } from './dxf-entity-parser';
+import { DxfEntityParser, type EntityData, type DxfHeaderData, type DimStyleMap } from './dxf-entity-parser';
 import { getLayerColor, DEFAULT_LAYER_COLOR } from '../config/color-config';
 
 export class DxfSceneBuilder {
@@ -12,6 +12,17 @@ export class DxfSceneBuilder {
     // ║ This is critical for correct text/dimension rendering across DXF files║
     // ╚════════════════════════════════════════════════════════════════════════╝
     const header = DxfEntityParser.parseHeader(lines);
+
+    // ╔════════════════════════════════════════════════════════════════════════╗
+    // ║ 🏢 ENTERPRISE DIMSTYLE PARSING (2026-01-03)                            ║
+    // ║                                                                        ║
+    // ║ Parse DIMSTYLE table from TABLES section για ΠΡΑΓΜΑΤΙΚΑ DIMTXT values║
+    // ║ Αυτό είναι ΚΡΙΣΙΜΟ για σωστό dimension text sizing!                   ║
+    // ║                                                                        ║
+    // ║ Χωρίς αυτό: Fallback σε 2.5mm → λάθος μεγέθη σε πολλά DXF             ║
+    // ║ Με αυτό: Χρησιμοποιεί το πραγματικό DIMTXT από το style              ║
+    // ╚════════════════════════════════════════════════════════════════════════╝
+    const dimStyles = DxfEntityParser.parseDimStyles(lines);
 
     const entities: AnySceneEntity[] = [];
     const layers: Record<string, SceneLayer> = {};
@@ -27,18 +38,22 @@ export class DxfSceneBuilder {
     // Parse entities using state machine
     const parsedEntities = DxfEntityParser.parseEntities(lines);
 
-    // Convert to scene entities
+    // ╔════════════════════════════════════════════════════════════════════════╗
+    // ║ 🏢 ENTERPRISE DIMSTYLE SUPPORT (2026-01-03)                            ║
+    // ║                                                                        ║
+    // ║ Περνάμε ΤΟΣΟ το header ΟΣΟ ΚΑΙ τα dimStyles:                          ║
+    // ║ - header: DIMSCALE, INSUNITS για global scaling                       ║
+    // ║ - dimStyles: ΠΡΑΓΜΑΤΙΚΑ DIMTXT values από TABLES section              ║
+    // ║                                                                        ║
+    // ║ Αυτό εξασφαλίζει ΣΩΣΤΑ dimension text sizes σε όλα τα DXF!            ║
+    // ╚════════════════════════════════════════════════════════════════════════╝
+    // Convert to scene entities with header AND dimStyles
     parsedEntities.forEach((entityData, index) => {
-      const entity = DxfEntityParser.convertToSceneEntity(entityData, index);
+      const entity = DxfEntityParser.convertToSceneEntity(entityData, index, header, dimStyles);
       if (entity) {
         // Register layer first
         DxfSceneBuilder.registerLayer(layers, (entity.layer as string) || 'default');
         entities.push(entity);
-        
-        // Debug first 3 entities
-        if (entities.length <= 3) {
-
-        }
       }
     });
 

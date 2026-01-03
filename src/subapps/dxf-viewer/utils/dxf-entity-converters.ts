@@ -10,6 +10,17 @@
  * - TEXT, MTEXT (annotations)
  * - SPLINE, DIMENSION (complex)
  *
+ * ╔══════════════════════════════════════════════════════════════════════════╗
+ * ║ 🏢 ENTERPRISE DIMSCALE SUPPORT (2026-01-03)                              ║
+ * ║                                                                          ║
+ * ║ Υποστηρίζει σωστό scaling για DIMENSION text heights:                   ║
+ * ║ - DIMSCALE ($DIMSCALE από HEADER) - Overall dimension scale factor      ║
+ * ║ - INSUNITS ($INSUNITS) - Drawing units (mm, m, inches, etc.)            ║
+ * ║                                                                          ║
+ * ║ Formula: effectiveHeight = DIMTXT / DIMSCALE                            ║
+ * ║ Αυτό εξασφαλίζει consistent text sizes ανεξάρτητα από το DXF source.   ║
+ * ╚══════════════════════════════════════════════════════════════════════════╝
+ *
  * @see dxf-converter-helpers.ts - Types and helper functions
  * @see dxf-entity-parser.ts - Parsing orchestrator
  * @see AutoCAD DXF Reference for entity codes
@@ -17,6 +28,7 @@
 
 import type { AnySceneEntity } from '../types/scene';
 import type { Point2D } from '../rendering/types/Types';
+import type { DxfHeaderData, DimStyleMap, DimStyleEntry } from './dxf-entity-parser';
 
 // 🏢 ENTERPRISE: Import centralized helpers
 import {
@@ -31,6 +43,22 @@ import {
 
 // Re-export types for backward compatibility
 export type { EntityData, TextAlignment, EntityConverter } from './dxf-converter-helpers';
+
+// ============================================================================
+// 🏢 ENTERPRISE: DEFAULT HEADER VALUES
+// ============================================================================
+
+/**
+ * Default header values when no header is provided
+ * Based on AutoCAD defaults for metric drawings
+ */
+const DEFAULT_HEADER: DxfHeaderData = {
+  insunits: 4,      // mm (default)
+  dimscale: 1,      // No scaling
+  dimtxt: 2.5,      // AutoCAD Standard DIMTXT default (mm)
+  annoScale: 1,     // 1:1
+  measurement: 1    // Metric
+};
 
 // ============================================================================
 // 🏢 ENTERPRISE: GEOMETRY CONVERTERS
@@ -391,23 +419,49 @@ export function convertSpline(
 /**
  * 🏢 ENTERPRISE: Convert DIMENSION entity to TEXT with proper rotation
  *
+ * ╔══════════════════════════════════════════════════════════════════════════╗
+ * ║ 🏢 ENTERPRISE DIMSTYLE SUPPORT (2026-01-03)                              ║
+ * ║                                                                          ║
+ * ║ ΚΡΙΣΙΜΗ ΑΛΛΑΓΗ: Χρησιμοποιεί τα parsed DIMSTYLE entries!                ║
+ * ║                                                                          ║
+ * ║ Προτεραιότητα text height:                                               ║
+ * ║ 1. Entity override (code 140 αν ≠ 0)                                     ║
+ * ║ 2. DIMSTYLE entry (dimStyles[styleName].dimtxt)                          ║
+ * ║ 3. Fallback (2.5mm - AutoCAD Standard default)                           ║
+ * ║                                                                          ║
+ * ║ Το DIMSTYLE name βρίσκεται στο code 3 του DIMENSION entity.             ║
+ * ╚══════════════════════════════════════════════════════════════════════════╝
+ *
  * DXF Codes:
+ * - 3: Dimension style name (references DIMSTYLE table)
  * - 13, 23: First definition point (start of dimension)
  * - 14, 24: Second definition point (end of dimension)
  * - 11, 21: Middle point of dimension line (text position)
  * - 1: Dimension text override (custom text)
  * - 42: Actual measurement value
+ * - 140: DIMTXT override (usually 0 = use style)
  * - 50: Rotation of dimension text
  * - 53: Rotation of dimension extension line
  *
  * ΚΡΙΣΙΜΟ: Τα DIMENSION entities πρέπει να γίνουν TEXT με rotation
  * ώστε να ακολουθούν τη διεύθυνση της γραμμής διάστασης.
+ *
+ * @param data - Raw DXF entity data
+ * @param layer - Layer name
+ * @param index - Entity index for ID generation
+ * @param header - Optional DXF header data for DIMSCALE normalization
+ * @param dimStyles - Optional parsed DIMSTYLE map with real DIMTXT values
  */
 export function convertDimension(
   data: Record<string, string>,
   layer: string,
-  index: number
+  index: number,
+  header?: DxfHeaderData,
+  dimStyles?: DimStyleMap
 ): AnySceneEntity | null {
+  // Use provided header or defaults
+  const h = header || DEFAULT_HEADER;
+
   // Definition points (start and end of dimension)
   const x1 = parseFloat(data['13']) || parseFloat(data['10']);
   const y1 = parseFloat(data['23']) || parseFloat(data['20']);
@@ -426,8 +480,73 @@ export function convertDimension(
   const textRotation = parseFloat(data['50']) || 0; // Text rotation
   const lineRotation = parseFloat(data['53']) || 0; // Extension line rotation
 
-  // Text height from DIMTXT (code 140) or default
-  const textHeight = parseFloat(data['140']) || 0.18;
+  // ╔════════════════════════════════════════════════════════════════════════╗
+  // ║ 🏢 ENTERPRISE: DIMSTYLE-aware text height calculation (2026-01-03)     ║
+  // ║                                                                        ║
+  // ║ Priority order:                                                        ║
+  // ║ 1. Entity code 140 (if non-zero = explicit override)                   ║
+  // ║ 2. DIMSTYLE entry dimtxt (from parsed TABLES section)                  ║
+  // ║ 3. Header $DIMTXT (global default from HEADER)                         ║
+  // ║ 4. Fallback 0.18 (common architectural DXF default)                    ║
+  // ║                                                                        ║
+  // ║ Formula: effectiveHeight = DIMTXT * DIMSCALE (AutoCAD spec!)           ║
+  // ║ ΣΗΜΑΝΤΙΚΟ: Πολλαπλασιασμός, ΟΧΙ διαίρεση!                              ║
+  // ╚════════════════════════════════════════════════════════════════════════╝
+
+  // Get style name from entity (code 3)
+  const styleName = data['3'] || 'Standard';
+
+  // Get entity override (code 140) - 0 means "use style"
+  const entityDimtxt = parseFloat(data['140']) || 0;
+
+  // Determine base text height from appropriate source
+  let baseDimtxt: number;
+  let heightSource: string;
+
+  if (entityDimtxt > 0) {
+    // Priority 1: Entity has explicit override
+    baseDimtxt = entityDimtxt;
+    heightSource = 'entity-override';
+  } else if (dimStyles && dimStyles[styleName]) {
+    // Priority 2: Use DIMSTYLE entry
+    baseDimtxt = dimStyles[styleName].dimtxt;
+    heightSource = `dimstyle:${styleName}`;
+  } else if (dimStyles && dimStyles['Standard']) {
+    // Priority 2b: Use "Standard" style as fallback
+    baseDimtxt = dimStyles['Standard'].dimtxt;
+    heightSource = 'dimstyle:Standard';
+  } else if (h.dimtxt > 0) {
+    // Priority 3: Use $DIMTXT from HEADER
+    baseDimtxt = h.dimtxt;
+    heightSource = 'header-$DIMTXT';
+  } else {
+    // Priority 4: Hardcoded fallback (common architectural default)
+    baseDimtxt = 0.18;
+    heightSource = 'fallback';
+  }
+
+  // Get DIMSCALE from header (overall scale factor)
+  const dimscale = h.dimscale > 0 ? h.dimscale : 1;
+
+  // ╔════════════════════════════════════════════════════════════════════════╗
+  // ║ 🔧 FIX: DIMTXT * DIMSCALE (not divide!)                                ║
+  // ║ AutoCAD: effective height = DIMTXT * DIMSCALE                          ║
+  // ║ Σε scaled drawings (1:50), dims πρέπει να είναι μεγαλύτερα            ║
+  // ╚════════════════════════════════════════════════════════════════════════╝
+  const textHeight = baseDimtxt * dimscale;
+
+  // 🔧 DEBUG LOG: Uncomment to diagnose dimension height issues
+  console.log('📐 DIM HEIGHT CALC:', {
+    entityId: `dimension_${index}`,
+    code140: data['140'] || '(none)',
+    styleName,
+    dimStyleTxt: dimStyles?.[styleName]?.dimtxt || '(no style)',
+    headerDimtxt: h.dimtxt,
+    baseDimtxt,
+    dimscale,
+    heightSource,
+    finalHeight: textHeight
+  });
 
   if (!isNaN(x1) && !isNaN(y1) && !isNaN(x2) && !isNaN(y2)) {
     // Calculate text content
@@ -500,13 +619,28 @@ export function convertDimension(
  * Routes entity types to appropriate converter functions.
  * Single point of entry for all entity conversions.
  *
+ * ╔══════════════════════════════════════════════════════════════════════════╗
+ * ║ 🏢 ENTERPRISE DIMSTYLE SUPPORT (2026-01-03)                              ║
+ * ║                                                                          ║
+ * ║ Δέχεται:                                                                 ║
+ * ║ - header: DXF HEADER data (DIMSCALE, INSUNITS)                          ║
+ * ║ - dimStyles: Parsed DIMSTYLE entries με πραγματικά DIMTXT values        ║
+ * ║                                                                          ║
+ * ║ Τα dimStyles περνάνε στο convertDimension για σωστό text sizing.        ║
+ * ║ Backward compatible: Αν δεν δοθούν, χρησιμοποιεί defaults.              ║
+ * ╚══════════════════════════════════════════════════════════════════════════╝
+ *
  * @param entityData - Parsed entity data from DxfEntityParser
  * @param index - Entity index for unique ID generation
+ * @param header - Optional DXF header data for DIMSCALE normalization
+ * @param dimStyles - Optional parsed DIMSTYLE map with real DIMTXT values
  * @returns Converted scene entity or null
  */
 export function convertEntityToScene(
   entityData: EntityData,
-  index: number
+  index: number,
+  header?: DxfHeaderData,
+  dimStyles?: DimStyleMap
 ): AnySceneEntity | null {
   const { type, layer, data } = entityData;
 
@@ -529,7 +663,8 @@ export function convertEntityToScene(
     case 'SPLINE':
       return convertSpline(data, layer, index);
     case 'DIMENSION':
-      return convertDimension(data, layer, index);
+      // 🏢 ENTERPRISE: Pass header AND dimStyles for proper text sizing
+      return convertDimension(data, layer, index, header, dimStyles);
     default:
       return null;
   }
