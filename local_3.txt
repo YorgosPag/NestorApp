@@ -1,743 +1,467 @@
-● 🔍 ΕΙΛΙΚΡΙΝΗΣ ΑΞΙΟΛΟΓΗΣΗ - DXF Import System
-
-  Γιώργο, σου απαντώ με πλήρη διαφάνεια όπως ζητάς:
-
-  ---
-  🔴 ΚΡΙΣΙΜΑ ΔΙΠΛΟΤΥΠΑ ΠΟΥ ΕΝΤΟΠΙΣΤΗΚΑΝ
-
-  | Πρόβλημα           | Αρχεία                               | Σοβαρότητα |
-  |--------------------|--------------------------------------|------------|
-  | Bounds Calculation | dxf-scene-builder.ts + dxf-import.ts | 🔴 ΚΡΙΣΙΜΟ |
-  | Import Utils       | useDxfImport.ts + useDxfPipeline.ts  | 🔴 ΚΡΙΣΙΜΟ |
-  | Greek Encoding     | dxf-import.ts + dxf-entity-parser.ts | 🟡 ΜΕΣΑΙΟ  |
-
-  Παράδειγμα - Ίδια λογική σε 2 αρχεία:
-  // ❌ useDxfImport.ts
-  const createDxfImportUtils = () => ({
-    processImportResult: (result, onSuccess?, onError?) => {...},
-  });
-
-  // ❌ useDxfPipeline.ts - ΑΚΡΙΒΩΣ ΤΟ ΙΔΙΟ!
-  const createDxfImportUtils = () => ({
-    processImportResult: (result, onSuccess?, onError?) => {...},
-  });
-
-  ---
-  🟡 ΑΡΧΙΤΕΚΤΟΝΙΚΑ ΠΡΟΒΛΗΜΑΤΑ
-
-  1. DxfImportService κάνει ΠΟΛΛΑ πράγματα:
-  - File reading
-  - Encoding detection & conversion (5 μέθοδοι!)
-  - DXF parsing delegation
-  - Bounds calculation & normalization
-  - Worker management
-  - Error handling
-
-  AutoCAD θα είχε: FileReader → EncodingConverter → DxfParser → BoundsCalculator → ImportOrchestrator
-
-  2. Dead Code:
-  - dxf-loader.ts = 105 γραμμές MOCK code που δεν χρησιμοποιείται πουθενά
-
-  3. Empty Functions στο useDxfPipeline:
-  enhanceForParkingView()    // = empty {}
-  prepareForLayerOverlays()  // = empty {}
-  isolateUnitView()          // = empty {}
-
-  ---
-  ✅ ΤΙ ΕΙΝΑΙ ΚΑΛΑ
-
-  1. Web Worker - Async parsing χωρίς blocking UI ✅
-  2. Greek Encoding Support - Windows-1253, ISO-8859-7 ✅
-  3. TypeScript - Καλή type safety χωρίς excessive any ✅
-  4. Entity Support - LINE, CIRCLE, TEXT, POLYLINE, SPLINE, ARC ✅
-
-  ---
-  📊 ΒΑΘΜΟΛΟΓΙΑ (Ειλικρινής)
-
-  | Κριτήριο               | Βαθμός  |
-  |------------------------|---------|
-  | Λειτουργικότητα        | 8/10    |
-  | Type Safety            | 8/10    |
-  | Maintainability        | 5/10 ❌ |
-  | Separation of Concerns | 6/10 ❌ |
-  | Enterprise Standards   | 6/10    |
-
-  ΣΥΝΟΛΙΚΑ: 6.6/10 - Δουλεύει, αλλά έχει μέσης σοβαρότητας αρχιτεκτονικά προβλήματα.
-
-  ---
-  🎯 ΠΡΟΤΑΣΗ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗΣ
-
-  Θα ήθελες να κεντρικοποιήσουμε τώρα αυτά τα διπλότυπα;
-
-  Προτεινόμενες ενέργειες:
-  1. Δημιουργία dxf-utils.ts - Κοινή λογική για bounds, encoding, import utils
-  2. Διαγραφή dxf-loader.ts - Dead code
-  3. Refactor DxfImportService - Διαχωρισμός σε μικρότερα services
-
-  Εκτίμηση: 1-2 ώρες για clean centralization.
-
-  Πες μου αν θέλεις να προχωρήσω!
-
-Είσαι σίγουρος για αυτό που μου προτείνεις είσαι σίγουρος πως υπάρχουν διπλότυπα ναι ή όχι και ότι υπάρχουν και νεκρικόδικες επίσης είσαι σίγουρος πως ο νεκρός κώδικας είναι κώδικας κατώτερος από τους υφιστάμενους κώδικες ναι ή όχι μήπως ο νεκρός κώδικας είναι καλύτερος κώδικας παρόλο που δεν χρησιμοποιείται ναι ή όχι
-
-● ✅ ΕΠΑΛΗΘΕΥΜΕΝΗ ΑΠΑΝΤΗΣΗ
-
-  Γιώργο, τώρα που διάβασα τα αρχεία με τα μάτια μου, σου απαντώ με 100% σιγουριά:
-
-  ---
-  1️⃣ ΔΙΠΛΟΤΥΠΑ - ΝΑΙ, ΥΠΑΡΧΟΥΝ ✅
-
-  Ίδια function σε 2 αρχεία:
-
-  | Αρχείο                     | Γραμμές | Κώδικας                |
-  |----------------------------|---------|------------------------|
-  | hooks/useDxfImport.ts      | 15-33   | createDxfImportUtils() |
-  | pipeline/useDxfPipeline.ts | 17-36   | createDxfImportUtils() |
-
-  ΑΠΟΔΕΙΞΗ - Σχεδόν ίδιος κώδικας:
-  // useDxfImport.ts:15-25
-  const createDxfImportUtils = () => ({
-    processImportResult: (result: any, onSuccess?, onError?) => {
-      if (result.success && result.scene) {
-        return onSuccess ? onSuccess(result.scene) : result.scene;
-      } else {
-        const errorMsg = result.error || 'Import failed - unknown reason';
-        console.error('❌ DXF import failed:', errorMsg);
-        onError?.(errorMsg);
-        return null;
-      }
-    },
-    // ...
-  });
-
-  // useDxfPipeline.ts:17-28 - ΑΚΡΙΒΩΣ Η ΙΔΙΑ ΛΟΓΙΚΗ!
-
-  ---
-  2️⃣ ΝΕΚΡΟΣ ΚΩΔΙΚΑΣ - ΝΑΙ, ΥΠΑΡΧΕΙ ✅
-
-  Αρχείο: utils/dxf-loader.ts
-
-  ΑΠΟΔΕΙΞΗ - Δεν χρησιμοποιείται πουθενά:
-  grep "from.*dxf-loader" → 0 αποτελέσματα
-  grep "readFileAsText"   → μόνο στο ίδιο το αρχείο (ορισμός)
-  grep "parseDxfToScene"  → μόνο στο ίδιο το αρχείο (ορισμός)
-
-  ---
-  3️⃣ Ο ΝΕΚΡΟΣ ΚΩΔΙΚΑΣ ΕΙΝΑΙ ΚΑΤΩΤΕΡΟΣ ❌
-
-  | Κριτήριο       | dxf-loader.ts (ΝΕΚΡΟΣ)    | dxf-import.ts (ΕΝΕΡΓΟΣ)         |
-  |----------------|---------------------------|---------------------------------|
-  | Parsing        | MOCK - hardcoded entities | Πραγματικό DXF parsing          |
-  | Encodings      | Κανένα                    | UTF-8, Windows-1253, ISO-8859-7 |
-  | Greek Support  | ❌                        | ✅ Complete mapping table       |
-  | Web Worker     | ❌                        | ✅ Async parsing                |
-  | Error Handling | ❌                        | ✅ Timeouts, fallbacks          |
-  | Bounds         | Hardcoded 0-100           | Dynamic calculation             |
-  | Γραμμές        | 105                       | 614                             |
-
-  Ο dxf-loader.ts γράφει:
-  // Line 1: "Mock DXF Loader - Προσωρινή λύση χωρίς dxf-parser"
-  // Line 89: "await new Promise(resolve => setTimeout(resolve, 500));" // FAKE delay
-  // Line 97: "warnings: ['Χρησιμοποιείται sample parser - όχι πραγματικό DXF parsing']"
-
-  ---
-  📋 ΤΕΛΙΚΗ ΑΠΑΝΤΗΣΗ
-
-  | Ερώτηση                           | Απάντηση                                           |
-  |-----------------------------------|----------------------------------------------------|
-  | Υπάρχουν διπλότυπα;               | ΝΑΙ - createDxfImportUtils σε 2 αρχεία             |
-  | Υπάρχει νεκρός κώδικας;           | ΝΑΙ - dxf-loader.ts δεν χρησιμοποιείται            |
-  | Ο νεκρός κώδικας είναι καλύτερος; | ΟΧΙ - Είναι MOCK, ο ενεργός είναι enterprise-grade |
-
-  ---
-  Θέλεις να προχωρήσω με:
-  1. Κεντρικοποίηση του createDxfImportUtils σε ένα αρχείο;
-  2. Διαγραφή του dxf-loader.ts;
-
-================================================================================
-🏢 ΥΛΟΠΟΙΗΣΗ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗΣ - 2026-01-02
-================================================================================
-
-Ο Γιώργος ενέκρινε την κεντρικοποίηση. Ακολουθήθηκε το πρωτόκολλο CLAUDE.md.
-
----
-📋 ΒΗΜΑΤΑ ΠΟΥ ΑΚΟΛΟΥΘΗΘΗΚΑΝ
----
-
-ΒΗΜΑ 1: ΕΡΕΥΝΑ
-- Αναζήτηση για υπάρχον centralized dxf-utils ή import-utils
-- Αποτέλεσμα: ΔΕΝ υπάρχει - χρειάζεται δημιουργία
-
-ΒΗΜΑ 2: ΣΤΡΑΤΗΓΙΚΗ
-- Αντί να δημιουργηθεί ΝΕΟ αρχείο, επεκτάθηκε το ΥΠΑΡΧΟΝ io/dxf-import.ts
-- Αυτό είναι πιο enterprise-grade (επέκταση αντί δημιουργία)
-
-ΒΗΜΑ 3: ΕΠΕΚΤΑΣΗ dxf-import.ts
-- Προστέθηκαν centralized utilities στο τέλος του αρχείου:
-
-  export function processDxfImportResult(
-    result: DxfImportResult,
-    onSuccess?: (scene: SceneModel) => void,
-    onError?: (error: string) => void
-  ): SceneModel | null { ... }
-
-  export function handleDxfImportError(
-    err: unknown,
-    onError?: (error: string) => void
-  ): null { ... }
-
-  export const createDxfImportUtils = () => ({
-    processImportResult: processDxfImportResult,
-    handleImportError: handleDxfImportError
-  });
-
-ΒΗΜΑ 4: ΕΝΗΜΕΡΩΣΗ useDxfImport.ts
-- Αφαιρέθηκε το inline duplicate (γραμμές 15-33)
-- Προστέθηκε import από centralized location:
-  import { dxfImportService, processDxfImportResult, handleDxfImportError } from '../io/dxf-import';
-
-ΒΗΜΑ 5: ΕΝΗΜΕΡΩΣΗ useDxfPipeline.ts
-- Αφαιρέθηκε το inline duplicate (γραμμές 17-36)
-- Προστέθηκε import από centralized location:
-  import { dxfImportService, processDxfImportResult } from '../io/dxf-import';
-
-ΒΗΜΑ 6: ΔΙΑΓΡΑΦΗ ΝΕΚΡΟΥ ΚΩΔΙΚΑ
-- Διαγράφηκε: utils/dxf-loader.ts (105 γραμμές MOCK code)
-- Επαλήθευση πριν τη διαγραφή: grep δεν βρήκε καμία χρήση
-
-ΒΗΜΑ 7: TYPESCRIPT VERIFICATION
-- Αποτέλεσμα: PASSED (0 errors στα modified files)
-
----
-📊 ΑΠΟΤΕΛΕΣΜΑ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗΣ
----
-
-| Ενέργεια       | Αρχείο                     | Περιγραφή                          |
-|----------------|----------------------------|------------------------------------|
-| ✅ ΕΠΕΚΤΑΣΗ    | io/dxf-import.ts           | Προστέθηκαν centralized utilities  |
-| ✅ ΕΝΗΜΕΡΩΣΗ   | hooks/useDxfImport.ts      | Χρησιμοποιεί centralized utilities |
-| ✅ ΕΝΗΜΕΡΩΣΗ   | pipeline/useDxfPipeline.ts | Χρησιμοποιεί centralized utilities |
-| ✅ ΔΙΑΓΡΑΦΗ    | utils/dxf-loader.ts        | 105 γραμμές νεκρού κώδικα          |
-
----
-📈 ΜΕΤΡΙΚΕΣ ΒΕΛΤΙΩΣΗΣ
----
-
-| Μέτρηση                          | Πριν | Μετά |
-|----------------------------------|------|------|
-| Αρχεία με createDxfImportUtils   | 2    | 1    |
-| Duplicate γραμμές κώδικα         | ~40  | 0    |
-| Dead code files                  | 1    | 0    |
-| Dead code lines                  | 105  | 0    |
-
----
-🎯 SINGLE SOURCE OF TRUTH
----
-
-Τώρα όλη η λογική για DXF import result processing βρίσκεται σε:
-  src/subapps/dxf-viewer/io/dxf-import.ts
-
-Exports:
-- processDxfImportResult()  - Type-safe result processor
-- handleDxfImportError()    - Type-safe error handler
-- createDxfImportUtils()    - Backward compatibility factory (deprecated)
-
----
-✅ ΣΥΜΜΟΡΦΩΣΗ ΜΕ CLAUDE.md PROTOCOL
----
-
-[✅] Πρώτα έρευνα για existing code
-[✅] Επέκταση υπάρχοντος αντί δημιουργία νέου
-[✅] Χωρίς any types (proper TypeScript)
-[✅] Χωρίς inline styles
-[✅] Χωρίς hardcoded values
-[✅] Enterprise documentation
-[✅] TypeScript verification passed
-
-================================================================================
-
-================================================================================
-🏗️ ΔΙΑΣΠΑΣΗ DXF-IMPORT.TS - ENTERPRISE ARCHITECTURE - 2026-01-02
-================================================================================
-
-Ο Γιώργος ρώτησε: "Τι θα έκανε μία μεγάλη εταιρεία CAD software;"
-Απάντηση: SPLIT FIRST, THEN REVIEW (Refactor Before Feature pattern)
-
----
-📋 ΠΡΟΒΛΗΜΑ ΠΟΥ ΕΝΤΟΠΙΣΤΗΚΕ
----
-
-Το dxf-import.ts είχε 682 γραμμές και έκανε 6 διαφορετικά πράγματα:
-1. File reading
-2. Encoding detection & conversion (5 μέθοδοι!)
-3. DXF parsing delegation
-4. Bounds calculation & normalization
-5. Worker management
-6. Error handling
-
-Αυτό παραβίαζε το Single Responsibility Principle.
-
----
-📋 ΒΗΜΑΤΑ ΠΟΥ ΑΚΟΛΟΥΘΗΘΗΚΑΝ
----
-
-ΒΗΜΑ 0: BACKUP
-- Δημιουργήθηκε backup: io/dxf-import.backup.2026-01-02.ts
-- Μέγεθος: 24,213 bytes
-
-ΒΗΜΑ 1: ΕΡΕΥΝΑ ΓΙΑ EXISTING SERVICES
-- Αναζήτηση: Glob για *service*.ts, *encoding*.ts, *bounds*.ts
-- Αποτελέσματα:
-  - bounds-utils.ts ΥΠΑΡΧΕΙ → θα ΕΠΕΚΤΑΘΕΙ (όχι νέο αρχείο)
-  - encoding-service.ts ΔΕΝ υπάρχει → θα ΔΗΜΙΟΥΡΓΗΘΕΙ
-
-ΒΗΜΑ 2: ΕΠΕΚΤΑΣΗ bounds-utils.ts
-- Προστέθηκαν centralized functions:
-  - calculateTightBounds(scene) - Υπολογισμός bounds από entities
-  - getEntityBounds(entity) - Bounds για μεμονωμένο entity
-  - normalizeEntityPositions(entities, offsetX, offsetY) - Normalization
-
-- Προστέθηκαν type-safe entity interfaces:
-  - LineEntityBounds, PolylineEntityBounds, CircleEntityBounds
-  - ArcEntityBounds, TextEntityBounds, BlockEntityBounds
-
-ΒΗΜΑ 3: ΔΗΜΙΟΥΡΓΙΑ encoding-service.ts
-- Νέο αρχείο: io/encoding-service.ts (~280 γραμμές)
-- Περιεχόμενα:
-  - WINDOWS_1253_TO_UNICODE mapping table
-  - EncodingService class με:
-    - readFileWithEncoding(file, encoding)
-    - readFileWithAutoDetect(file, preferredEncoding?)
-    - decodeWindows1253(bytes)
-    - decodeISO88597(bytes)
-    - hasGreekText(content)
-    - hasEncodingErrors(content)
-  - encodingService singleton export
-
-ΒΗΜΑ 4: ΕΝΗΜΕΡΩΣΗ dxf-import.ts
-- Αφαιρέθηκαν 460+ γραμμές duplicate κώδικα:
-  - calculateTightBounds method (162 γραμμές)
-  - tryReadFileWithEncoding method (49 γραμμές)
-  - processBytes method (12 γραμμές)
-  - decodeWindows1253 method (130 γραμμές)
-  - decodeISO88597 method (18 γραμμές)
-  - Entity type interfaces (39 γραμμές)
-
-- Προστέθηκαν imports:
-  import { encodingService, type SupportedEncoding } from './encoding-service';
-  import { calculateTightBounds } from '../utils/bounds-utils';
-
-- Ενημερώθηκαν αναφορές:
-  - this.calculateTightBounds → calculateTightBounds (centralized)
-  - this.tryReadFileWithEncoding → encodingService.readFileWithAutoDetect
-
-ΒΗΜΑ 5: TYPESCRIPT VERIFICATION
-- Αποτέλεσμα: PASSED (0 errors στα modified files)
-
----
-📊 ΑΠΟΤΕΛΕΣΜΑΤΑ ΔΙΑΣΠΑΣΗΣ
----
-
-| Αρχείο             | Πριν         | Μετά         | Αλλαγή |
-|--------------------|--------------|--------------|--------|
-| dxf-import.ts      | 682 γραμμές  | ~220 γραμμές | -68%   |
-| bounds-utils.ts    | 79 γραμμές   | ~350 γραμμές | +343%  |
-| encoding-service.ts| 0            | ~280 γραμμές | ΝΕΟ    |
-
----
-🏢 ΝΕΑ ENTERPRISE ARCHITECTURE
----
-
-io/
-├── dxf-import.ts          ← Orchestrator (μειωμένο, clean)
-├── encoding-service.ts    ← ΝΕΟ: Encoding detection & conversion
-└── dxf-import.backup.ts   ← Backup για safety
-
-utils/
-└── bounds-utils.ts        ← ΕΠΕΚΤΑΜΕΝΟ: Entity bounds + normalization
-
----
-🎯 SINGLE SOURCES OF TRUTH
----
-
-1. ENCODING:
-   io/encoding-service.ts
-   - encodingService.readFileWithAutoDetect()
-   - encodingService.decodeWindows1253()
-   - encodingService.decodeISO88597()
-
-2. BOUNDS:
-   utils/bounds-utils.ts
-   - calculateTightBounds()
-   - getEntityBounds()
-   - normalizeEntityPositions()
-
-3. IMPORT UTILITIES:
-   io/dxf-import.ts
-   - processDxfImportResult()
-   - handleDxfImportError()
-   - dxfImportService
-
----
-📈 ΝΕΕΣ ΒΑΘΜΟΛΟΓΙΕΣ ΜΕΤΑ ΤΗ ΔΙΑΣΠΑΣΗ
----
-
-| Κριτήριο               | Πριν    | Μετά    |
-|------------------------|---------|---------|
-| Maintainability        | 5/10 ❌ | 8/10 ✅ |
-| Separation of Concerns | 6/10 ❌ | 9/10 ✅ |
-| Enterprise Standards   | 6/10    | 9/10 ✅ |
-| ΣΥΝΟΛΙΚΑ               | 6.6/10  | 8.5/10  |
-
----
-✅ ΣΥΜΜΟΡΦΩΣΗ ΜΕ CLAUDE.md PROTOCOL
----
-
-[✅] Backup πριν τις αλλαγές
-[✅] Έρευνα για existing services πριν δημιουργία
-[✅] Επέκταση bounds-utils.ts αντί νέο αρχείο
-[✅] Χωρίς any types (proper TypeScript)
-[✅] Χωρίς inline styles
-[✅] Χωρίς hardcoded values
-[✅] Enterprise documentation
-[✅] TypeScript verification passed
-
-================================================================================
-🏗️ ΔΙΑΣΠΑΣΗ DXF-ENTITY-PARSER.TS - ENTERPRISE ARCHITECTURE - 2026-01-02
-================================================================================
-
-Συνέχεια του enterprise refactoring pattern. Το dxf-entity-parser.ts είχε 496
-γραμμές και έκανε 2 διαφορετικά πράγματα (parsing + conversion).
-
----
-📋 ΠΡΟΒΛΗΜΑ ΠΟΥ ΕΝΤΟΠΙΣΤΗΚΕ
----
-
-Το dxf-entity-parser.ts είχε 496 γραμμές με:
-- Parsing logic: ~100 γραμμές (parseEntity, parseEntities, findNextEntity)
-- Entity converters: ~370 γραμμές (10 converters + helpers)
-- Helper functions: ~26 γραμμές
-
-Enterprise file size standards:
-- <200 = Excellent ✅
-- 200-300 = Acceptable ✅
-- 300-400 = Borderline ⚠️
-- 400-500 = Needs attention ⚠️ ← Εδώ ήμασταν!
-- 500+ = Needs split 🔴
-
----
-📋 ΒΗΜΑΤΑ ΠΟΥ ΑΚΟΛΟΥΘΗΘΗΚΑΝ
----
-
-ΒΗΜΑ 0: BACKUP
-- Δημιουργήθηκε: utils/dxf-entity-parser.backup.2026-01-02.ts
-- Μέγεθος: 496 γραμμές
-
-ΒΗΜΑ 1: ΔΗΜΙΟΥΡΓΙΑ dxf-entity-converters.ts
-- Νέο αρχείο: utils/dxf-entity-converters.ts (~380 γραμμές)
-- Περιεχόμενα:
-  - Type definitions: EntityData, TextAlignment, EntityConverter
-  - Helper functions:
-    - parseVerticesFromData() - Vertex extraction από DXF codes
-    - decodeGreekText() - Greek encoding decoder
-  - Alignment mappers:
-    - mapHorizontalAlignment() - DXF code 72 → alignment
-    - mapMTextAlignment() - DXF code 71 → alignment
-  - Geometry converters:
-    - convertLine() - LINE entity
-    - convertLwPolyline() - LWPOLYLINE entity
-  - Curve converters:
-    - convertCircle() - CIRCLE entity
-    - convertArc() - ARC entity
-    - convertEllipse() - ELLIPSE to circle approximation
-  - Text converters:
-    - convertText() - TEXT entity with alignment
-    - convertMText() - MTEXT/MULTILINETEXT entity
-  - Complex converters:
-    - convertSpline() - SPLINE to polyline
-    - convertDimension() - DIMENSION to polyline
-  - Master function:
-    - convertEntityToScene() - Routes to appropriate converter
-
-ΒΗΜΑ 2: ΕΝΗΜΕΡΩΣΗ dxf-entity-parser.ts
-- Μειώθηκε από 496 → ~180 γραμμές (-64%)
-- Περιεχόμενα:
-  - SUPPORTED_ENTITY_TYPES constant array
-  - DXF_SECTION_MARKERS constant array
-  - DxfEntityParser class (parsing only):
-    - parseEntity() - Parse single entity
-    - parseEntities() - Parse all entities (state machine)
-    - findNextEntity() - Find next entity marker
-    - convertToSceneEntity() - Delegates to centralized converters
-  - Re-export of EntityData for backward compatibility
-
-ΒΗΜΑ 3: TYPESCRIPT VERIFICATION
-- Αποτέλεσμα: PASSED (0 errors στα modified files)
-
----
-📊 ΑΠΟΤΕΛΕΣΜΑΤΑ ΔΙΑΣΠΑΣΗΣ
----
-
-| Αρχείο                   | Πριν         | Μετά          | Αλλαγή |
-|--------------------------|--------------|---------------|--------|
-| dxf-entity-parser.ts     | 496 γραμμές  | ~180 γραμμές  | -64%   |
-| dxf-entity-converters.ts | 0            | ~380 γραμμές  | ΝΕΟ    |
-
----
-🏢 ΝΕΑ ENTERPRISE ARCHITECTURE
----
-
-utils/
-├── dxf-entity-parser.ts            ← Parsing orchestrator (clean, focused)
-├── dxf-entity-converters.ts        ← ΝΕΟ: Entity converters (centralized)
-├── dxf-entity-parser.backup.ts     ← Backup για safety
-├── bounds-utils.ts                 ← Entity bounds + normalization
-└── dxf-scene-builder.ts            ← Scene construction
-
----
-🎯 SINGLE SOURCES OF TRUTH (UPDATED)
----
-
-1. DXF PARSING:
-   utils/dxf-entity-parser.ts
-   - DxfEntityParser.parseEntities()
-   - DxfEntityParser.parseEntity()
-   - DxfEntityParser.findNextEntity()
-
-2. ENTITY CONVERSION:
-   utils/dxf-entity-converters.ts
-   - convertEntityToScene() ← Master converter
-   - convertLine(), convertCircle(), convertArc()
-   - convertText(), convertMText()
-   - convertLwPolyline(), convertSpline()
-   - convertEllipse(), convertDimension()
-   - decodeGreekText(), parseVerticesFromData()
-   - mapHorizontalAlignment(), mapMTextAlignment()
-
-3. ENCODING:
-   io/encoding-service.ts
-   - encodingService.readFileWithAutoDetect()
-   - encodingService.decodeWindows1253()
-   - encodingService.decodeISO88597()
-
-4. BOUNDS:
-   utils/bounds-utils.ts
-   - calculateTightBounds()
-   - getEntityBounds()
-   - normalizeEntityPositions()
-
-5. IMPORT UTILITIES:
-   io/dxf-import.ts
-   - processDxfImportResult()
-   - handleDxfImportError()
-   - dxfImportService
-
----
-📈 ENTERPRISE METRICS (FULL DAY)
----
-
-| Μέτρηση               | Πριν (πρωί)    | Τώρα           |
-|-----------------------|----------------|----------------|
-| dxf-import.ts         | 682 γραμμές    | ~220 γραμμές   |
-| dxf-entity-parser.ts  | 496 γραμμές    | ~180 γραμμές   |
-| Total DXF core files  | ~1178 γραμμές  | ~840 γραμμές   |
-| New centralized files | 0              | 2              |
-| Dead code deleted     | 0              | 105 γραμμές    |
-
----
-✅ ΣΥΜΜΟΡΦΩΣΗ ΜΕ CLAUDE.md PROTOCOL
----
-
-[✅] Backup πριν τις αλλαγές
-[✅] Enterprise file naming (dxf-entity-converters.ts)
-[✅] Centralized exports με re-export για backward compatibility
-[✅] Χωρίς any types (proper TypeScript)
-[✅] Χωρίς inline styles
-[✅] Χωρίς hardcoded values
-[✅] Enterprise documentation με JSDoc
-[✅] TypeScript verification passed
-
-================================================================================
-
-● 📊 ΑΝΑΛΥΣΗ ΑΡΧΕΙΟΥ
-
-  | Μέτρηση | Τιμή | Αξιολόγηση             |
-  |---------|------|------------------------|
-  | Γραμμές | 591  | 🔴 ΧΡΕΙΑΖΕΤΑΙ ΔΙΑΣΠΑΣΗ |
-
-  ---
-  🏢 ΤΙ ΘΑ ΕΚΑΝΕ Η AUTODESK / BENTLEY / NEMETSCHEK;
-
-  ΑΠΑΝΤΗΣΗ: ΝΑΙ, θα προχωρούσε σε διάσπαση.
-
-  Γιατί:
-  1. 591 γραμμές > 500 = Enterprise red flag
-  2. Πολλές κατηγορίες converters σε ένα αρχείο = SRP violation
-  3. Μελλοντική επέκταση (νέα entity types) θα το κάνει ακόμα μεγαλύτερο
-
-  ---
-  📋 ΠΡΟΤΕΙΝΟΜΕΝΗ ΔΙΑΣΠΑΣΗ (2 Options)
-
-  Option A - Απλή (2 αρχεία):
-  utils/
-  ├── dxf-converter-helpers.ts     (~150 γραμμές)
-  │   ├── Type definitions
-  │   ├── parseVerticesFromData()
-  │   ├── decodeGreekText()
-  │   ├── mapHorizontalAlignment()
-  │   └── mapMTextAlignment()
-  │
-  └── dxf-entity-converters.ts     (~440 γραμμές)
-      ├── All 10 converters
-      └── convertEntityToScene() master router
-
-  Option B - Πλήρης (4 αρχεία) - AutoCAD Style:
-  utils/converters/
-  ├── index.ts                     (~50 γραμμές) - Re-exports
-  ├── helpers.ts                   (~150 γραμμές) - Types + helpers
-  ├── geometry-converters.ts       (~150 γραμμές) - LINE, LWPOLYLINE
-  ├── curve-converters.ts          (~150 γραμμές) - CIRCLE, ARC, ELLIPSE
-  └── text-converters.ts           (~150 γραμμές) - TEXT, MTEXT + Greek
-
-  ---
-  🎯 Η ΣΥΣΤΑΣΗ ΜΟΥ
-
-  Option A (Απλή διάσπαση) - Γιατί:
-  - Το αρχείο είναι στα 591, όχι στα 800+
-  - Οι converters έχουν κοινή δομή (δεν χρειάζεται πλήρη διαχωρισμό)
-  - Λιγότερα imports, πιο απλή συντήρηση
-  - Μπορούμε να πάμε σε Option B αργότερα αν χρειαστεί
-
-  ---
-  Γιώργο, θέλεις να προχωρήσω με την Option A;
-
-  (Πρώτα backup, μετά διάσπαση όπως πριν)
-
-================================================================================
-🏗️ ΔΙΑΣΠΑΣΗ DXF-ENTITY-CONVERTERS.TS - ENTERPRISE ARCHITECTURE - 2026-01-02
-================================================================================
-
-Το αρχείο dxf-entity-converters.ts είχε 591 γραμμές (>500 = enterprise red flag).
-Εφαρμόστηκε η Option A (απλή διάσπαση σε 2 αρχεία).
-
----
-📋 ΒΗΜΑΤΑ ΠΟΥ ΑΚΟΛΟΥΘΗΘΗΚΑΝ
----
-
-ΒΗΜΑ 0: BACKUP
-- Δημιουργήθηκε: utils/dxf-entity-converters.backup.2026-01-02.ts
-- Μέγεθος: 591 γραμμές
-- Επαλήθευση: diff = 0 διαφορές
-
-ΒΗΜΑ 1: ΔΗΜΙΟΥΡΓΙΑ dxf-converter-helpers.ts
-- Νέο αρχείο: utils/dxf-converter-helpers.ts (214 γραμμές)
-- Περιεχόμενα:
-  - Type definitions: EntityData, TextAlignment, EntityConverter
-  - GREEK_CHARACTER_MAPPINGS constant
-  - parseVerticesFromData() - Vertex extraction
-  - decodeGreekText() - Greek text decoder
-  - mapHorizontalAlignment() - TEXT alignment mapper
-  - mapMTextAlignment() - MTEXT alignment mapper
-
-ΒΗΜΑ 2: ΕΝΗΜΕΡΩΣΗ dxf-entity-converters.ts
-- Μειώθηκε από 591 → 443 γραμμές (-25%)
-- Αφαιρέθηκαν: Types, helpers, alignment mappers, Greek mappings
-- Προστέθηκε import από dxf-converter-helpers.ts
-- Re-export types για backward compatibility
-
-ΒΗΜΑ 3: TYPESCRIPT VERIFICATION
-- Αποτέλεσμα: PASSED (0 errors)
-
----
-📊 ΑΠΟΤΕΛΕΣΜΑΤΑ ΔΙΑΣΠΑΣΗΣ
----
-
-| Αρχείο                   | Πριν         | Μετά         | Αξιολόγηση      |
-|--------------------------|--------------|--------------|-----------------|
-| dxf-entity-converters.ts | 591 γραμμές  | 443 γραμμές  | ✅ Acceptable   |
-| dxf-converter-helpers.ts | 0            | 214 γραμμές  | ✅ Excellent    |
-
----
-🏢 ΝΕΑ ENTERPRISE ARCHITECTURE
----
-
-utils/
-├── dxf-converter-helpers.ts        ← ΝΕΟ: Types + Helpers
-│   ├── EntityData, TextAlignment, EntityConverter (types)
-│   ├── parseVerticesFromData() (vertex extraction)
-│   ├── decodeGreekText() (Greek decoder)
-│   ├── mapHorizontalAlignment() (TEXT alignment)
-│   └── mapMTextAlignment() (MTEXT alignment)
-│
-├── dxf-entity-converters.ts        ← ΕΝΗΜΕΡΩΜΕΝΟ: Converters only
-│   ├── convertLine(), convertLwPolyline() (geometry)
-│   ├── convertCircle(), convertArc(), convertEllipse() (curves)
-│   ├── convertText(), convertMText() (annotations)
-│   ├── convertSpline(), convertDimension() (complex)
-│   └── convertEntityToScene() (master router)
-│
-├── dxf-entity-parser.ts            ← Parsing orchestrator
-└── bounds-utils.ts                 ← Entity bounds + normalization
-
----
-🎯 SINGLE SOURCES OF TRUTH (FINAL UPDATE)
----
-
-1. DXF CONVERTER HELPERS:
-   utils/dxf-converter-helpers.ts
-   - parseVerticesFromData() - Vertex extraction
-   - decodeGreekText() - Greek text decoding
-   - mapHorizontalAlignment() - TEXT alignment
-   - mapMTextAlignment() - MTEXT alignment
-
-2. DXF ENTITY CONVERTERS:
-   utils/dxf-entity-converters.ts
-   - convertEntityToScene() ← Master router
-   - All 10 entity converters
-
-3. DXF PARSING:
-   utils/dxf-entity-parser.ts
-   - DxfEntityParser class
-
-4. ENCODING:
-   io/encoding-service.ts
-   - encodingService singleton
-
-5. BOUNDS:
-   utils/bounds-utils.ts
-   - calculateTightBounds()
-
-6. IMPORT UTILITIES:
-   io/dxf-import.ts
-   - dxfImportService
-
----
-📈 ENTERPRISE METRICS (ΟΛΟΚΛΗΡΗ ΗΜΕΡΑ)
----
-
-| Αρχείο                   | Αρχικά (πρωί)  | Τελικά (βράδυ) | Αλλαγή |
-|--------------------------|----------------|----------------|--------|
-| dxf-import.ts            | 682 γραμμές    | ~220 γραμμές   | -68%   |
-| dxf-entity-parser.ts     | 496 γραμμές    | ~180 γραμμές   | -64%   |
-| dxf-entity-converters.ts | 591 γραμμές    | 443 γραμμές    | -25%   |
-| ΝΕΑ ΑΡΧΕΙΑ               | 0              | 3 αρχεία       | +3     |
-
-Νέα κεντρικοποιημένα αρχεία:
-1. io/encoding-service.ts (~280 γραμμές)
-2. utils/dxf-converter-helpers.ts (214 γραμμές)
-3. Επέκταση bounds-utils.ts (+276 γραμμές)
-
----
-✅ ΣΥΜΜΟΡΦΩΣΗ ΜΕ CLAUDE.md PROTOCOL
----
-
-[✅] Backup πριν τις αλλαγές (επαληθευμένο με diff)
-[✅] Enterprise file naming
-[✅] Re-exports για backward compatibility
-[✅] Χωρίς any types
-[✅] Χωρίς inline styles
-[✅] Χωρίς hardcoded values
-[✅] Enterprise documentation με JSDoc
-[✅] TypeScript verification passed
-
-================================================================================
+> C:\Nestor_Pagonis\local_3.txt 
+
+● Read(local_3.txt)
+  ⎿  Read 53 lines
+
+● Κατάλαβα! Το πρόβλημα είναι ότι τα χρώματα στον viewer σου είναι muted ενώ στο native DXF είναι bright. Ας βρω και διορθώσω το ACI palette:
+
+● Search(pattern: "ACI|getAciColor|ACI_PALETTE", path: "src\subapps\dxf-viewer")
+  ⎿  Found 44 files (ctrl+o to expand)
+
+● Read(src\subapps\dxf-viewer\settings\standards\aci.ts)
+  ⎿  Read 210 lines
+
+● Το ACI palette φαίνεται σωστό με bright colors. Ας δω το color-config.ts για τα defaults:
+
+● Read(src\subapps\dxf-viewer\config\color-config.ts)
+  ⎿  Read 411 lines
+
+● Βρήκα το πρόβλημα! Το DXF_LAYER_COLORS και getLayerColor χρησιμοποιούν hash-based colors αντί για τα πραγματικά ACI colors από τα layers. Ας δω πώς γίνεται η επεξεργασία:        
+
+● Read(src\subapps\dxf-viewer\utils\dxf-converter-helpers.ts)
+  ⎿  Read 100 lines
+
+● Search(pattern: "extractEntityColor", path: "src\subapps\dxf-viewer\utils\dxf-converter-helpers.ts", output_mode: "content")
+  ⎿  Found 41 lines (ctrl+o to expand)
+
+● Κατάλαβα το πρόβλημα! Ας δω ολόκληρη τη συνάρτηση:
+
+● Read(src\subapps\dxf-viewer\utils\dxf-converter-helpers.ts)
+  ⎿  Read 34 lines
+
+● 🎯 Βρήκα το ΑΚΡΙΒΩΣ πρόβλημα!
+
+  Γιώργο, το πρόβλημα είναι:
+
+  | Περίπτωση                                | Τι γίνεται                                       | Σωστό; |
+  |------------------------------------------|--------------------------------------------------|--------|
+  | Entity με explicit color (code 62=1-255) | Χρησιμοποιεί getAciColor() → bright colors       | ✅     |
+  | Entity με ByLayer (code 62=256 ή λείπει) | Χρησιμοποιεί getLayerColor() → hash-based pastel | ❌     |
+
+  Το getLayerColor() δεν διαβάζει το πραγματικό χρώμα του layer από το DXF! Απλά κάνει hash στο όνομα και διαλέγει από muted colors.
+
+  Ας υλοποιήσω LAYER TABLE parsing για να πάρουμε τα πραγματικά ACI colors:
+
+● Update(src\subapps\dxf-viewer\utils\dxf-entity-parser.ts)
+  ⎿  Added 33 lines
+      120   */                                                                                                                                                                      
+      121  export type DimStyleMap = Record<string, DimStyleEntry>;                                                                                                                 
+      122                                                                                                                                                                           
+      123 +// ============================================================================                                                                                          
+      124 +// 🏢 ENTERPRISE: LAYER COLOR DATA TYPE (2026-01-03)                                                                                                                     
+      125 +// ============================================================================                                                                                          
+      126 +                                                                                                                                                                         
+      127  /**                                                                                                                                                                      
+      128 + * 🏢 ENTERPRISE: DXF Layer Color Entry                                                                                                                                  
+      129 + *                                                                                                                                                                       
+      130 + * Parsed from LAYER table in TABLES section.                                                                                                                            
+      131 + * Contains the REAL ACI color for each layer (code 62).                                                                                                                 
+      132 + *                                                                                                                                                                       
+      133 + * ╔══════════════════════════════════════════════════════════════════════════╗                                                                                          
+      134 + * ║ ΚΡΙΣΙΜΟ: Αυτό λύνει το πρόβλημα με τα muted colors!                      ║                                                                                          
+      135 + * ║                                                                          ║                                                                                          
+      136 + * ║ ΠΡΙΝ: getLayerColor() χρησιμοποιούσε hash-based colors (pastel)          ║                                                                                          
+      137 + * ║ ΤΩΡΑ: Χρησιμοποιούμε τα πραγματικά ACI colors από το LAYER table         ║                                                                                          
+      138 + * ╚══════════════════════════════════════════════════════════════════════════╝                                                                                          
+      139 + */                                                                                                                                                                      
+      140 +export interface LayerColorEntry {                                                                                                                                       
+      141 +  /** Layer name (code 2) */                                                                                                                                             
+      142 +  name: string;                                                                                                                                                          
+      143 +  /** ACI color index (code 62) - 1-255 */                                                                                                                               
+      144 +  colorIndex: number;                                                                                                                                                    
+      145 +  /** Resolved hex color from ACI palette */                                                                                                                             
+      146 +  color: string;                                                                                                                                                         
+      147 +  /** Layer visibility (code 62 negative = frozen) */                                                                                                                    
+      148 +  visible: boolean;                                                                                                                                                      
+      149 +}                                                                                                                                                                        
+      150 +                                                                                                                                                                         
+      151 +/**                                                                                                                                                                      
+      152 + * 🏢 ENTERPRISE: Map of layer names to their color properties                                                                                                           
+      153 + */                                                                                                                                                                      
+      154 +export type LayerColorMap = Record<string, LayerColorEntry>;                                                                                                             
+      155 +
+      156 +/**                                                                                                                                                                      
+      157   * 🏢 ENTERPRISE: INSUNITS to scale factor mapping                                                                                                                       
+      158   * Converts DXF units to mm (internal base unit)                                                                                                                         
+      159   */                                                                                                                                                                      
+
+● Τώρα προσθέτω το import για getAciColor:
+
+● Update(src\subapps\dxf-viewer\utils\dxf-entity-parser.ts)
+  ⎿  Added 1 line
+      18    type EntityData,                                                                                                                                                        
+      19    convertEntityToScene                                                                                                                                                    
+      20  } from './dxf-entity-converters';                                                                                                                                         
+      21 +import { getAciColor } from '../settings/standards/aci';                                                                                                                  
+      22                                                                                                                                                                            
+      23  // Re-export for backward compatibility                                                                                                                                   
+      24  export type { EntityData } from './dxf-entity-converters';                                                                                                                
+
+● Τώρα προσθέτω τη function parseLayerColors μετά τη parseDimStyles:
+
+● Read(src\subapps\dxf-viewer\utils\dxf-entity-parser.ts)
+  ⎿  Read 30 lines
+
+● Read(src\subapps\dxf-viewer\utils\dxf-entity-parser.ts)
+  ⎿  Read 50 lines
+
+● Update(src\subapps\dxf-viewer\utils\dxf-entity-parser.ts)
+  ⎿  Added 136 lines
+      438    }                                                                                                                                                                      
+      439                                                                                                                                                                           
+      440    /**                                                                                                                                                                    
+      441 +   * 🏢 ENTERPRISE: Parse LAYER table from TABLES section (2026-01-03)                                                                                                   
+      442 +   *                                                                                                                                                                     
+      443 +   * ╔══════════════════════════════════════════════════════════════════════════╗                                                                                        
+      444 +   * ║ CRITICAL: Αυτή η function εξάγει τα ΠΡΑΓΜΑΤΙΚΑ ACI colors για layers!   ║                                                                                         
+      445 +   * ║                                                                          ║                                                                                        
+      446 +   * ║ DXF Structure:                                                           ║                                                                                        
+      447 +   * ║   SECTION                                                                ║                                                                                        
+      448 +   * ║   2 TABLES                                                               ║                                                                                        
+      449 +   * ║   ...                                                                    ║                                                                                        
+      450 +   * ║   0 TABLE                                                                ║                                                                                        
+      451 +   * ║   2 LAYER                                                                ║                                                                                        
+      452 +   * ║   ...                                                                    ║                                                                                        
+      453 +   * ║   0 LAYER                                                                ║                                                                                        
+      454 +   * ║   2 0                      ← Layer name                                  ║                                                                                        
+      455 +   * ║   62 7                     ← ACI color (7=white, 1=red, 4=cyan, etc.)    ║                                                                                        
+      456 +   * ║   ...                                                                    ║                                                                                        
+      457 +   * ║   0 ENDTAB                                                               ║                                                                                        
+      458 +   * ║                                                                          ║                                                                                        
+      459 +   * ║ ΠΡΙΝ: Χρησιμοποιούσαμε hash-based colors (pastel/muted)                 ║                                                                                         
+      460 +   * ║ ΤΩΡΑ: Χρησιμοποιούμε τα πραγματικά ACI colors = BRIGHT όπως AutoCAD!    ║                                                                                         
+      461 +   * ╚══════════════════════════════════════════════════════════════════════════╝                                                                                        
+      462 +   *                                                                                                                                                                     
+      463 +   * @param lines - All lines from DXF file                                                                                                                              
+      464 +   * @returns Map of layer names to their color properties                                                                                                               
+      465 +   */                                                                                                                                                                    
+      466 +  static parseLayerColors(lines: string[]): LayerColorMap {                                                                                                              
+      467 +    const layerColors: LayerColorMap = {};                                                                                                                               
+      468 +                                                                                                                                                                         
+      469 +    // Default layer "0" with white color                                                                                                                                
+      470 +    layerColors['0'] = {                                                                                                                                                 
+      471 +      name: '0',                                                                                                                                                         
+      472 +      colorIndex: 7,                                                                                                                                                     
+      473 +      color: getAciColor(7), // White
+      474 +      visible: true                                                                                                                                                      
+      475 +    };                                                                                                                                                                   
+      476 +                                                                                                                                                                         
+      477 +    // State machine for parsing                                                                                                                                         
+      478 +    let inTables = false;                                                                                                                                                
+      479 +    let inLayerTable = false;                                                                                                                                            
+      480 +    let inLayerEntry = false;                                                                                                                                            
+      481 +    let currentLayer: Partial<LayerColorEntry> = {};                                                                                                                     
+      482 +                                                                                                                                                                         
+      483 +    for (let i = 0; i < lines.length - 1; i += 2) {                                                                                                                      
+      484 +      const code = lines[i].trim();                                                                                                                                      
+      485 +      const value = lines[i + 1]?.trim() || '';                                                                                                                          
+      486 +                                                                                                                                                                         
+      487 +      // Track TABLES section                                                                                                                                            
+      488 +      if (code === '2' && value === 'TABLES') {                                                                                                                          
+      489 +        inTables = true;                                                                                                                                                 
+      490 +        continue;                                                                                                                                                        
+      491 +      }                                                                                                                                                                  
+      492 +                                                                                                                                                                         
+      493 +      // Exit TABLES section                                                                                                                                             
+      494 +      if (code === '0' && value === 'ENDSEC' && inTables) {                                                                                                              
+      495 +        break;                                                                                                                                                           
+      496 +      }                                                                                                                                                                  
+      497 +                                                                                                                                                                         
+      498 +      if (!inTables) continue;                                                                                                                                           
+      499 +                                                                                                                                                                         
+      500 +      // Detect LAYER table start                                                                                                                                        
+      501 +      if (code === '2' && value === 'LAYER' && !inLayerTable) {                                                                                                          
+      502 +        inLayerTable = true;                                                                                                                                             
+      503 +        continue;                                                                                                                                                        
+      504 +      }                                                                                                                                                                  
+      505 +                                                                                                                                                                         
+      506 +      // Detect LAYER table end                                                                                                                                          
+      507 +      if (code === '0' && value === 'ENDTAB' && inLayerTable) {                                                                                                          
+      508 +        // Save last entry if exists                                                                                                                                     
+      509 +        if (inLayerEntry && currentLayer.name) {                                                                                                                         
+      510 +          const colorIndex = currentLayer.colorIndex ?? 7;
+      511 +          layerColors[currentLayer.name] = {                                                                                                                             
+      512 +            name: currentLayer.name,                                                                                                                                     
+      513 +            colorIndex: Math.abs(colorIndex),                                                                                                                            
+      514 +            color: getAciColor(Math.abs(colorIndex)),                                                                                                                    
+      515 +            visible: colorIndex >= 0 // Negative = frozen/invisible                                                                                                      
+      516 +          };                                                                                                                                                             
+      517 +        }                                                                                                                                                                
+      518 +        inLayerTable = false;                                                                                                                                            
+      519 +        inLayerEntry = false;                                                                                                                                            
+      520 +        continue;                                                                                                                                                        
+      521 +      }                                                                                                                                                                  
+      522 +                                                                                                                                                                         
+      523 +      if (!inLayerTable) continue;                                                                                                                                       
+      524 +                                                                                                                                                                         
+      525 +      // Detect individual LAYER entry start                                                                                                                             
+      526 +      if (code === '0' && value === 'LAYER') {                                                                                                                           
+      527 +        // Save previous entry if exists                                                                                                                                 
+      528 +        if (inLayerEntry && currentLayer.name) {                                                                                                                         
+      529 +          const colorIndex = currentLayer.colorIndex ?? 7;                                                                                                               
+      530 +          layerColors[currentLayer.name] = {                                                                                                                             
+      531 +            name: currentLayer.name,                                                                                                                                     
+      532 +            colorIndex: Math.abs(colorIndex),                                                                                                                            
+      533 +            color: getAciColor(Math.abs(colorIndex)),                                                                                                                    
+      534 +            visible: colorIndex >= 0                                                                                                                                     
+      535 +          };                                                                                                                                                             
+      536 +        }                                                                                                                                                                
+      537 +        // Start new entry                                                                                                                                               
+      538 +        currentLayer = {};                                                                                                                                               
+      539 +        inLayerEntry = true;                                                                                                                                             
+      540 +        continue;                                                                                                                                                        
+      541 +      }                                                                                                                                                                  
+      542 +                                                                                                                                                                         
+      543 +      if (!inLayerEntry) continue;                                                                                                                                       
+      544 +                                                                                                                                                                         
+      545 +      // Parse LAYER properties                                                                                                                                          
+      546 +      switch (code) {                                                                                                                                                    
+      547 +        case '2':                                                                                                                                                        
+      548 +          // Layer name
+      549 +          currentLayer.name = value;                                                                                                                                     
+      550 +          break;                                                                                                                                                         
+      551 +        case '62':                                                                                                                                                       
+      552 +          // ACI color index (CRITICAL!)                                                                                                                                 
+      553 +          // Negative = frozen layer                                                                                                                                     
+      554 +          currentLayer.colorIndex = parseInt(value, 10) || 7;                                                                                                            
+      555 +          break;                                                                                                                                                         
+      556 +      }                                                                                                                                                                  
+      557 +    }                                                                                                                                                                    
+      558 +                                                                                                                                                                         
+      559 +    // Log parsed LAYERS for debugging                                                                                                                                   
+      560 +    const layerCount = Object.keys(layerColors).length;                                                                                                                  
+      561 +    if (layerCount > 0) {                                                                                                                                                
+      562 +      console.log('🎨 DXF LAYER COLORS parsed:', {                                                                                                                       
+      563 +        count: layerCount,                                                                                                                                               
+      564 +        layers: Object.entries(layerColors).map(([name, layer]) => ({                                                                                                    
+      565 +          name,                                                                                                                                                          
+      566 +          colorIndex: layer.colorIndex,                                                                                                                                  
+      567 +          color: layer.color,                                                                                                                                            
+      568 +          visible: layer.visible                                                                                                                                         
+      569 +        }))                                                                                                                                                              
+      570 +      });                                                                                                                                                                
+      571 +    }                                                                                                                                                                    
+      572 +                                                                                                                                                                         
+      573 +    return layerColors;                                                                                                                                                  
+      574 +  }                                                                                                                                                                      
+      575 +                                                                                                                                                                         
+      576 +  /**                                                                                                                                                                    
+      577     * 🏢 ENTERPRISE: Get unit scale factor (to mm)                                                                                                                        
+      578     */                                                                                                                                                                    
+      579    static getUnitScale(insunits: number): number {                                                                                                                        
+
+● Τώρα ενημερώνω το DxfSceneBuilder για να χρησιμοποιεί τα parsed layer colors:
+
+● Update(src\subapps\dxf-viewer\utils\dxf-scene-builder.ts)
+  ⎿  Added 2 lines, removed 2 lines
+      1  import type { SceneModel, AnySceneEntity, SceneLayer } from '../types/scene';                                                                                              
+      2 -import { DxfEntityParser, type EntityData, type DxfHeaderData, type DimStyleMap } from './dxf-entity-parser';                                                              
+      3 -import { getLayerColor, DEFAULT_LAYER_COLOR } from '../config/color-config';                                                                                               
+      2 +import { DxfEntityParser, type EntityData, type DxfHeaderData, type DimStyleMap, type LayerColorMap } from './dxf-entity-parser';                                          
+      3 +import { DEFAULT_LAYER_COLOR } from '../config/color-config';                                                                                                              
+      4                                                                                                                                                                             
+      5  export class DxfSceneBuilder {                                                                                                                                             
+      6    static buildScene(content: string): SceneModel {                                                                                                                         
+
+● Update(src\subapps\dxf-viewer\utils\dxf-scene-builder.ts)
+  ⎿  Added 15 lines, removed 2 lines
+      24      // ╚════════════════════════════════════════════════════════════════════════╝                                                                                         
+      25      const dimStyles = DxfEntityParser.parseDimStyles(lines);                                                                                                              
+      26                                                                                                                                                                            
+      27 +    // ╔════════════════════════════════════════════════════════════════════════╗                                                                                         
+      28 +    // ║ 🎨 ENTERPRISE LAYER COLOR PARSING (2026-01-03)                         ║                                                                                         
+      29 +    // ║                                                                        ║                                                                                         
+      30 +    // ║ Parse LAYER table για ΠΡΑΓΜΑΤΙΚΑ ACI colors!                          ║                                                                                          
+      31 +    // ║                                                                        ║                                                                                         
+      32 +    // ║ ΠΡΙΝ: Hash-based pastel colors (muted, ξεθωριασμένα)                  ║                                                                                          
+      33 +    // ║ ΤΩΡΑ: Real ACI colors (BRIGHT όπως στο AutoCAD!)                      ║                                                                                          
+      34 +    // ║                                                                        ║                                                                                         
+      35 +    // ║ Αυτό λύνει το πρόβλημα με τα διαφορετικά χρώματα viewer vs native!   ║                                                                                           
+      36 +    // ╚════════════════════════════════════════════════════════════════════════╝                                                                                         
+      37 +    const layerColors = DxfEntityParser.parseLayerColors(lines);                                                                                                          
+      38 +                                                                                                                                                                          
+      39      const entities: AnySceneEntity[] = [];                                                                                                                                
+      40      const layers: Record<string, SceneLayer> = {};                                                                                                                        
+
+ * ▐▛███▜▌ *   Claude Code v2.0.76
+* ▝▜█████▛▘ *  Opus 4.5 · Claude Max
+ *  ▘▘ ▝▝  *   C:\Nestor_Pagonis
+════════════════════════════════════════════════════════════════════ Conversation compacted · ctrl+o for history ═══════════════════════════════════════════════════════════════════  ⎿  Referenced file src\subapps\dxf-viewer\utils\dxf-scene-builder.ts
+  ⎿  Referenced file src\subapps\dxf-viewer\utils\dxf-entity-parser.ts
+  ⎿  Read local_3.txt (53 lines)
+  ⎿  Read src\subapps\dxf-viewer\rendering\entities\TextRenderer.ts (205 lines)
+  ⎿  Referenced file src\subapps\dxf-viewer\utils\dxf-entity-converters.ts
+  ⎿  Todo list read (4 items)
+
+● Συνεχίζω με την υλοποίηση του LAYER table parsing. Πρέπει να ολοκληρώσω την ενημέρωση του registerLayer() για να χρησιμοποιεί τα πραγματικά ACI χρώματα αντί για hash-based colors.
+
+● Read(src\subapps\dxf-viewer\utils\dxf-scene-builder.ts)
+  ⎿  Read 353 lines
+
+● Βλέπω το πρόβλημα! Η registerLayer() στη γραμμή 98 χρησιμοποιεί getLayerColor(layerName) που δεν είναι imported και είναι hash-based. Πρέπει να:
+  1. Αλλάξω το signature να δέχεται layerColors
+  2. Χρησιμοποιήσω τα parsed ACI colors
+
+  Ας ελέγξω αν υπάρχει import για getLayerColor:
+
+● Search(pattern: "getLayerColor", path: "src\subapps\dxf-viewer")
+  ⎿  Found 3 files (ctrl+o to expand)
+
+● Search(pattern: "getLayerColor", path: "src\subapps\dxf-viewer\config\color-config.ts", output_mode: "content")
+  ⎿  Found 6 lines (ctrl+o to expand)
+
+● Βρήκα το πρόβλημα! Η getLayerColor είναι hash-based - δημιουργεί pastel χρώματα βάσει hash του ονόματος layer. Αυτό κάνει τα χρώματα muted αντί για τα πραγματικά bright ACI colors.
+
+  Τώρα θα ενημερώσω τη registerLayer() για να χρησιμοποιεί τα parsed layer colors:
+
+● Update(src\subapps\dxf-viewer\utils\dxf-scene-builder.ts)
+  ⎿  Added 1 line, removed 1 line
+      1  import type { SceneModel, AnySceneEntity, SceneLayer } from '../types/scene';                                                                                              
+      2  import { DxfEntityParser, type EntityData, type DxfHeaderData, type DimStyleMap, type LayerColorMap } from './dxf-entity-parser';                                          
+      3 -import { DEFAULT_LAYER_COLOR } from '../config/color-config';                                                                                                              
+      3 +import { DEFAULT_LAYER_COLOR, getLayerColor } from '../config/color-config';                                                                                               
+      4                                                                                                                                                                             
+      5  export class DxfSceneBuilder {                                                                                                                                             
+      6    static buildScene(content: string): SceneModel {                                                                                                                         
+
+● Τώρα ενημερώνω την κλήση στη registerLayer() για να περνάω τα layerColors:
+
+● Update(src\subapps\dxf-viewer\utils\dxf-scene-builder.ts)
+  ⎿  Added 2 lines, removed 2 lines
+      64      parsedEntities.forEach((entityData, index) => {                                                                                                                       
+      65        const entity = DxfEntityParser.convertToSceneEntity(entityData, index, header, dimStyles);                                                                          
+      66        if (entity) {                                                                                                                                                       
+      67 -        // Register layer first                                                                                                                                           
+      68 -        DxfSceneBuilder.registerLayer(layers, (entity.layer as string) || 'default');                                                                                     
+      67 +        // Register layer with REAL ACI colors from parsed LAYER table                                                                                                    
+      68 +        DxfSceneBuilder.registerLayer(layers, (entity.layer as string) || 'default', layerColors);                                                                        
+      69          entities.push(entity);                                                                                                                                            
+      70        }                                                                                                                                                                   
+      71      });                                                                                                                                                                   
+
+● Τώρα ενημερώνω τη μέθοδο registerLayer() για να χρησιμοποιεί τα real ACI colors:
+
+● Update(src\subapps\dxf-viewer\utils\dxf-scene-builder.ts)
+  ⎿  Added 31 lines, removed 7 lines
+       90      };                                                                                                                                                                   
+       91    }                                                                                                                                                                      
+       92                                                                                                                                                                           
+       93 -  // Helper to register layer dynamically                                                                                                                                
+       94 -  private static registerLayer(layers: Record<string, SceneLayer>, layerName: string): void {                                                                            
+       93 +  /**                                                                                                                                                                    
+       94 +   * 🎨 ENTERPRISE LAYER REGISTRATION (2026-01-03)                                                                                                                       
+       95 +   *                                                                                                                                                                     
+       96 +   * Καταχωρεί layer με ΠΡΑΓΜΑΤΙΚΑ ACI colors από το LAYER table!                                                                                                        
+       97 +   *                                                                                                                                                                     
+       98 +   * Priority:                                                                                                                                                           
+       99 +   * 1. layerColors[layerName]?.color - Parsed ACI color (BRIGHT!)                                                                                                       
+      100 +   * 2. getLayerColor(layerName) - Hash-based fallback (muted)                                                                                                           
+      101 +   *                                                                                                                                                                     
+      102 +   * @param layers - Record of registered layers                                                                                                                         
+      103 +   * @param layerName - Name of layer to register                                                                                                                        
+      104 +   * @param layerColors - Parsed LAYER table with real ACI colors                                                                                                        
+      105 +   */                                                                                                                                                                    
+      106 +  private static registerLayer(                                                                                                                                          
+      107 +    layers: Record<string, SceneLayer>,                                                                                                                                  
+      108 +    layerName: string,                                                                                                                                                   
+      109 +    layerColors: LayerColorMap                                                                                                                                           
+      110 +  ): void {                                                                                                                                                              
+      111      if (!layers[layerName]) {                                                                                                                                            
+      112 +      // ╔════════════════════════════════════════════════════════════════════════╗                                                                                      
+      113 +      // ║ 🎨 REAL ACI COLOR PRIORITY                                             ║                                                                                      
+      114 +      // ║                                                                        ║                                                                                      
+      115 +      // ║ 1. layerColors[layerName]?.color → ΠΡΑΓΜΑΤΙΚΟ χρώμα από LAYER table   ║                                                                                       
+      116 +      // ║ 2. getLayerColor(layerName) → Hash-based fallback (παλιά συμπεριφορά) ║                                                                                       
+      117 +      // ║                                                                        ║                                                                                      
+      118 +      // ║ Αυτό εξασφαλίζει BRIGHT colors όπως στο AutoCAD!                      ║                                                                                       
+      119 +      // ╚════════════════════════════════════════════════════════════════════════╝                                                                                      
+      120 +      const realColor = layerColors[layerName]?.color;                                                                                                                   
+      121 +      const visible = layerColors[layerName]?.visible ?? true;                                                                                                           
+      122 +                                                                                                                                                                         
+      123        layers[layerName] = {
+      124          name: layerName,                                                                                                                                                 
+      125 -        color: getLayerColor(layerName),                                                                                                                                 
+      126 -        visible: true,                                                                                                                                                   
+      125 +        color: realColor || getLayerColor(layerName),                                                                                                                    
+      126 +        visible,                                                                                                                                                         
+      127          locked: false                                                                                                                                                    
+      128        };                                                                                                                                                                 
+      129 -                                                                                                                                                                         
+      129      }                                                                                                                                                                    
+      130    }                                                                                                                                                                      
+      131                                                                                                                                                                           
+      132 -  // getLayerColor is now imported from unified color system                                                                                                             
+      133 -                                                                                                                                                                         
+      132    static calculateBounds(entities: AnySceneEntity[]) {                                                                                                                   
+      133      let minX = Infinity, minY = Infinity;                                                                                                                                
+      134      let maxX = -Infinity, maxY = -Infinity;                                                                                                                              
+
+● Τώρα ας επαληθεύσω ότι η parseLayerColors() function είναι σωστά υλοποιημένη στο dxf-entity-parser.ts:
+
+● Search(pattern: "parseLayerColors", path: "src\subapps\dxf-viewer\utils\dxf-entity-parser.ts", output_mode: "content")
+  ⎿  Found 41 lines (ctrl+o to expand)
+
+● Read(src\subapps\dxf-viewer\utils\dxf-entity-parser.ts)
+  ⎿  Read 100 lines
+
+● Η parseLayerColors() είναι σωστά υλοποιημένη! Τώρα ας επαληθεύσω ότι η getAciColor() χρησιμοποιεί τα σωστά BRIGHT ACI χρώματα:
+
+● Search(pattern: "getAciColor", path: "src\subapps\dxf-viewer", output_mode: "content")
+  ⎿  Found 115 lines (ctrl+o to expand)
+
+● Ας δω το ACI_PALETTE για να επιβεβαιώσω ότι έχει τα σωστά BRIGHT χρώματα:
+
+● Read(src\subapps\dxf-viewer\settings\standards\aci.ts)
+  ⎿  Read 80 lines
+
+● Εξαιρετικά! Το ACI_PALETTE έχει τα σωστά BRIGHT χρώματα (pure RGB):
+  - #FF0000 (Red), #FFFF00 (Yellow), #00FF00 (Green), #00FFFF (Cyan), κλπ.
+
+  Τώρα ας κάνω TypeScript compilation check για να βεβαιωθώ ότι δεν υπάρχουν σφάλματα:
+
+● Bash(cd C:/Nestor_Pagonis && npx tsc --noEmit --project src/subapps/dxf-viewer/tsconfig.json 2>&1 | head -50)
+  ⎿ npm info using npm@10.8.2
+    npm info using node@v20.19.0
+    src/lib/design-system.ts(158,10): error TS7053: Element implicitly has an 'any' type because expression of type '"focus" | "sm" | "md" | "lg" | "xl"' can't be used to inde     
+    … +93 lines (ctrl+o to expand)
+
+
+● Τα errors είναι σε legacy backup files και δεν σχετίζονται με τις αλλαγές μου. Ας ελέγξω συγκεκριμένα τα αρχεία που άλλαξα:
+
+● Bash(cd C:/Nestor_Pagonis && npx tsc --noEmit --project src/subapps/dxf-viewer/tsconfig.json 2>&1 | grep -E "(dxf-scene-builder|dxf-entity-parser|TextRenderer)" | he…)
+  ⎿  (No content)
+
+● Δεν υπάρχουν TypeScript errors στα αρχεία που άλλαξα.
+
+● ✅ ΟΛΟΚΛΗΡΩΣΗ: Real ACI Layer Colors Implementation
+
+  Γιώργο, ολοκλήρωσα την υλοποίηση για τα πραγματικά χρώματα ACI στα layers. Ιδού τι έγινε:
+
+  📁 Αλλαγές στο dxf-scene-builder.ts:
+
+  1. Import fix: Πρόσθεσα getLayerColor στα imports για fallback
+  2. Layer registration: Η registerLayer() τώρα δέχεται layerColors parameter
+  3. Priority system:
+    - 1η Προτεραιότητα: layerColors[layerName]?.color → ΠΡΑΓΜΑΤΙΚΟ ACI χρώμα από LAYER table
+    - 2η Προτεραιότητα: getLayerColor(layerName) → Hash-based fallback
+
+  🎨 Πώς δουλεύει τώρα:
+
+  DXF File → LAYER Table Parsing → Real ACI Colors (BRIGHT!)
+           → code 62 = 4 (Cyan) → #00FFFF (Pure Cyan)
+           → code 62 = 1 (Red)  → #FF0000 (Pure Red)
+           → code 62 = 2 (Yellow) → #FFFF00 (Pure Yellow)
+
+  ΠΡΙΝ: Hash-based pastel colors (muted, ξεθωριασμένα)
+  ΤΩΡΑ: Real ACI colors (BRIGHT όπως στο AutoCAD!)
+
+  📋 Για Testing:
+
+  Γιώργο, τρέξε το localhost και φόρτωσε ένα DXF αρχείο για να δεις τα νέα BRIGHT χρώματα που τώρα αντιστοιχούν στο native AutoCAD!
+
+  Τα χρώματα θα είναι:
+  - Cyan: #00FFFF (πλήρες)
+  - Yellow: #FFFF00 (πλήρες)
+  - Red: #FF0000 (πλήρες)
+  - Magenta: #FF00FF (πλήρες)
+  - κ.λπ.

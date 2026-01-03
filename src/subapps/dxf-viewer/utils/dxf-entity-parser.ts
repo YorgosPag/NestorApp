@@ -18,6 +18,7 @@ import {
   type EntityData,
   convertEntityToScene
 } from './dxf-entity-converters';
+import { getAciColor } from '../settings/standards/aci';
 
 // Re-export for backward compatibility
 export type { EntityData } from './dxf-entity-converters';
@@ -119,6 +120,39 @@ export interface DimStyleEntry {
  * 🏢 ENTERPRISE: Map of DIMSTYLE names to their properties
  */
 export type DimStyleMap = Record<string, DimStyleEntry>;
+
+// ============================================================================
+// 🏢 ENTERPRISE: LAYER COLOR DATA TYPE (2026-01-03)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: DXF Layer Color Entry
+ *
+ * Parsed from LAYER table in TABLES section.
+ * Contains the REAL ACI color for each layer (code 62).
+ *
+ * ╔══════════════════════════════════════════════════════════════════════════╗
+ * ║ ΚΡΙΣΙΜΟ: Αυτό λύνει το πρόβλημα με τα muted colors!                      ║
+ * ║                                                                          ║
+ * ║ ΠΡΙΝ: getLayerColor() χρησιμοποιούσε hash-based colors (pastel)          ║
+ * ║ ΤΩΡΑ: Χρησιμοποιούμε τα πραγματικά ACI colors από το LAYER table         ║
+ * ╚══════════════════════════════════════════════════════════════════════════╝
+ */
+export interface LayerColorEntry {
+  /** Layer name (code 2) */
+  name: string;
+  /** ACI color index (code 62) - 1-255 */
+  colorIndex: number;
+  /** Resolved hex color from ACI palette */
+  color: string;
+  /** Layer visibility (code 62 negative = frozen) */
+  visible: boolean;
+}
+
+/**
+ * 🏢 ENTERPRISE: Map of layer names to their color properties
+ */
+export type LayerColorMap = Record<string, LayerColorEntry>;
 
 /**
  * 🏢 ENTERPRISE: INSUNITS to scale factor mapping
@@ -401,6 +435,179 @@ export class DxfEntityParser {
     }
 
     return dimStyles;
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Parse LAYER table from TABLES section (2026-01-03)
+   *
+   * ╔══════════════════════════════════════════════════════════════════════════╗
+   * ║ CRITICAL: Αυτή η function εξάγει τα ΠΡΑΓΜΑΤΙΚΑ ACI colors για layers!   ║
+   * ║                                                                          ║
+   * ║ DXF Structure:                                                           ║
+   * ║   SECTION                                                                ║
+   * ║   2 TABLES                                                               ║
+   * ║   ...                                                                    ║
+   * ║   0 TABLE                                                                ║
+   * ║   2 LAYER                                                                ║
+   * ║   ...                                                                    ║
+   * ║   0 LAYER                                                                ║
+   * ║   2 0                      ← Layer name                                  ║
+   * ║   62 7                     ← ACI color (7=white, 1=red, 4=cyan, etc.)    ║
+   * ║   ...                                                                    ║
+   * ║   0 ENDTAB                                                               ║
+   * ║                                                                          ║
+   * ║ ΠΡΙΝ: Χρησιμοποιούσαμε hash-based colors (pastel/muted)                 ║
+   * ║ ΤΩΡΑ: Χρησιμοποιούμε τα πραγματικά ACI colors = BRIGHT όπως AutoCAD!    ║
+   * ╚══════════════════════════════════════════════════════════════════════════╝
+   *
+   * @param lines - All lines from DXF file
+   * @returns Map of layer names to their color properties
+   */
+  static parseLayerColors(lines: string[]): LayerColorMap {
+    const layerColors: LayerColorMap = {};
+
+    // Default layer "0" with white color
+    layerColors['0'] = {
+      name: '0',
+      colorIndex: 7,
+      color: getAciColor(7), // White
+      visible: true
+    };
+
+    // ╔════════════════════════════════════════════════════════════════════════╗
+    // ║ 🔧 IMPROVED DXF PARSING (2026-01-03)                                   ║
+    // ║                                                                        ║
+    // ║ DXF Structure:                                                         ║
+    // ║   0 SECTION → 2 TABLES → 0 TABLE → 2 LAYER → ...entries...            ║
+    // ║                                                                        ║
+    // ║ Το parsing πρέπει να:                                                  ║
+    // ║ 1. Βρει SECTION με όνομα TABLES                                       ║
+    // ║ 2. Μέσα στο TABLES, βρει TABLE με όνομα LAYER                         ║
+    // ║ 3. Διαβάσει κάθε LAYER entry (code 0=LAYER, 2=name, 62=color)         ║
+    // ╚════════════════════════════════════════════════════════════════════════╝
+
+    // State machine for parsing
+    let inTablesSection = false;
+    let inLayerTable = false;
+    let inLayerEntry = false;
+    let currentLayer: Partial<LayerColorEntry> = {};
+    let prevCode = '';
+    let prevValue = '';
+
+    for (let i = 0; i < lines.length - 1; i += 2) {
+      const code = lines[i].trim();
+      const value = lines[i + 1]?.trim() || '';
+
+      // Track SECTION start (0=SECTION, then 2=sectionName)
+      if (prevCode === '0' && prevValue === 'SECTION' && code === '2' && value === 'TABLES') {
+        inTablesSection = true;
+        prevCode = code;
+        prevValue = value;
+        continue;
+      }
+
+      // Exit TABLES section
+      if (code === '0' && value === 'ENDSEC' && inTablesSection) {
+        break;
+      }
+
+      if (!inTablesSection) {
+        prevCode = code;
+        prevValue = value;
+        continue;
+      }
+
+      // Detect LAYER table start (0=TABLE, then 2=LAYER)
+      if (prevCode === '0' && prevValue === 'TABLE' && code === '2' && value === 'LAYER') {
+        inLayerTable = true;
+        prevCode = code;
+        prevValue = value;
+        continue;
+      }
+
+      // Detect LAYER table end
+      if (code === '0' && value === 'ENDTAB' && inLayerTable) {
+        // Save last entry if exists
+        if (inLayerEntry && currentLayer.name) {
+          const colorIndex = currentLayer.colorIndex ?? 7;
+          layerColors[currentLayer.name] = {
+            name: currentLayer.name,
+            colorIndex: Math.abs(colorIndex),
+            color: getAciColor(Math.abs(colorIndex)),
+            visible: colorIndex >= 0 // Negative = frozen/invisible
+          };
+        }
+        inLayerTable = false;
+        inLayerEntry = false;
+        prevCode = code;
+        prevValue = value;
+        continue;
+      }
+
+      if (!inLayerTable) {
+        prevCode = code;
+        prevValue = value;
+        continue;
+      }
+
+      // Detect individual LAYER entry start
+      if (code === '0' && value === 'LAYER') {
+        // Save previous entry if exists
+        if (inLayerEntry && currentLayer.name) {
+          const colorIndex = currentLayer.colorIndex ?? 7;
+          layerColors[currentLayer.name] = {
+            name: currentLayer.name,
+            colorIndex: Math.abs(colorIndex),
+            color: getAciColor(Math.abs(colorIndex)),
+            visible: colorIndex >= 0
+          };
+        }
+        // Start new entry
+        currentLayer = {};
+        inLayerEntry = true;
+        prevCode = code;
+        prevValue = value;
+        continue;
+      }
+
+      if (!inLayerEntry) {
+        prevCode = code;
+        prevValue = value;
+        continue;
+      }
+
+      // Parse LAYER properties
+      switch (code) {
+        case '2':
+          // Layer name
+          currentLayer.name = value;
+          break;
+        case '62':
+          // ACI color index (CRITICAL!)
+          // Negative = frozen layer
+          currentLayer.colorIndex = parseInt(value, 10) || 7;
+          break;
+      }
+
+      prevCode = code;
+      prevValue = value;
+    }
+
+    // Log parsed LAYERS for debugging
+    const layerCount = Object.keys(layerColors).length;
+    if (layerCount > 0) {
+      console.log('🎨 DXF LAYER COLORS parsed:', {
+        count: layerCount,
+        layers: Object.entries(layerColors).map(([name, layer]) => ({
+          name,
+          colorIndex: layer.colorIndex,
+          color: layer.color,
+          visible: layer.visible
+        }))
+      });
+    }
+
+    return layerColors;
   }
 
   /**

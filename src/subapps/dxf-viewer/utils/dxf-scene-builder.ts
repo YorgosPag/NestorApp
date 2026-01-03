@@ -1,6 +1,7 @@
 import type { SceneModel, AnySceneEntity, SceneLayer } from '../types/scene';
-import { DxfEntityParser, type EntityData, type DxfHeaderData, type DimStyleMap } from './dxf-entity-parser';
-import { getLayerColor, DEFAULT_LAYER_COLOR } from '../config/color-config';
+import { DxfEntityParser, type EntityData, type DxfHeaderData, type DimStyleMap, type LayerColorMap } from './dxf-entity-parser';
+import { DEFAULT_LAYER_COLOR, getLayerColor } from '../config/color-config';
+import { getAciColor } from '../settings/standards/aci';
 
 export class DxfSceneBuilder {
   static buildScene(content: string): SceneModel {
@@ -24,13 +25,26 @@ export class DxfSceneBuilder {
     // ╚════════════════════════════════════════════════════════════════════════╝
     const dimStyles = DxfEntityParser.parseDimStyles(lines);
 
+    // ╔════════════════════════════════════════════════════════════════════════╗
+    // ║ 🎨 ENTERPRISE LAYER COLOR PARSING (2026-01-03)                         ║
+    // ║                                                                        ║
+    // ║ Parse LAYER table για ΠΡΑΓΜΑΤΙΚΑ ACI colors!                          ║
+    // ║                                                                        ║
+    // ║ ΠΡΙΝ: Hash-based pastel colors (muted, ξεθωριασμένα)                  ║
+    // ║ ΤΩΡΑ: Real ACI colors (BRIGHT όπως στο AutoCAD!)                      ║
+    // ║                                                                        ║
+    // ║ Αυτό λύνει το πρόβλημα με τα διαφορετικά χρώματα viewer vs native!   ║
+    // ╚════════════════════════════════════════════════════════════════════════╝
+    const layerColors = DxfEntityParser.parseLayerColors(lines);
+
     const entities: AnySceneEntity[] = [];
     const layers: Record<string, SceneLayer> = {};
 
-    // Add default layer
+    // Add default layer with real ACI color
+    const defaultLayerColor = layerColors['0']?.color || DEFAULT_LAYER_COLOR;
     layers['0'] = {
       name: '0',
-      color: DEFAULT_LAYER_COLOR,
+      color: defaultLayerColor,
       visible: true,
       locked: false
     };
@@ -48,13 +62,70 @@ export class DxfSceneBuilder {
     // ║ Αυτό εξασφαλίζει ΣΩΣΤΑ dimension text sizes σε όλα τα DXF!            ║
     // ╚════════════════════════════════════════════════════════════════════════╝
     // Convert to scene entities with header AND dimStyles
+    let byLayerColorCount = 0;
+    let explicitColorCount = 0;
+
     parsedEntities.forEach((entityData, index) => {
       const entity = DxfEntityParser.convertToSceneEntity(entityData, index, header, dimStyles);
       if (entity) {
-        // Register layer first
-        DxfSceneBuilder.registerLayer(layers, (entity.layer as string) || 'default');
+        const layerName = (entity.layer as string) || 'default';
+
+        // Register layer with REAL ACI colors from parsed LAYER table
+        DxfSceneBuilder.registerLayer(layers, layerName, layerColors);
+
+        // ╔════════════════════════════════════════════════════════════════════════╗
+        // ║ 🎨 BYLAYER COLOR RESOLUTION (2026-01-03)                               ║
+        // ║                                                                        ║
+        // ║ ΚΡΙΣΙΜΟ: Αν το entity δεν έχει explicit color (ByLayer),              ║
+        // ║ εφάρμοσε το ΠΡΑΓΜΑΤΙΚΟ χρώμα του layer!                               ║
+        // ║                                                                        ║
+        // ║ Priority:                                                              ║
+        // ║ 1. layerColors[layerName] - Parsed from LAYER table                   ║
+        // ║ 2. COLOR_X pattern - Extract ACI from layer name (e.g. COLOR_43)      ║
+        // ║ 3. getLayerColor() - Hash-based fallback                              ║
+        // ╚════════════════════════════════════════════════════════════════════════╝
+        const entityColor = (entity as { color?: string }).color;
+        // Check if entity has NO color (undefined, null, or empty string = ByLayer)
+        if (!entityColor) {
+          // Try 1: Get from parsed LAYER table
+          let resolvedColor = layerColors[layerName]?.color;
+
+          // Try 2: Extract ACI from layer name pattern COLOR_X (e.g. COLOR_43 → ACI 43)
+          if (!resolvedColor) {
+            const colorMatch = layerName.match(/^COLOR_(\d+)$/i);
+            if (colorMatch) {
+              const aciIndex = parseInt(colorMatch[1], 10);
+              if (aciIndex >= 1 && aciIndex <= 255) {
+                resolvedColor = getAciColor(aciIndex);
+              }
+            }
+          }
+
+          if (resolvedColor) {
+            // Mutate entity to add layer color
+            (entity as { color?: string }).color = resolvedColor;
+            byLayerColorCount++;
+          }
+        } else {
+          explicitColorCount++;
+        }
+
         entities.push(entity);
       }
+    });
+
+    // Debug: Log color assignment summary with sample colors
+    const sampleLayers = Object.entries(layers).slice(0, 10).map(([name, layer]) => ({
+      name,
+      color: layer.color
+    }));
+    console.log('🎨 COLOR ASSIGNMENT SUMMARY:', {
+      totalEntities: entities.length,
+      byLayerColors: byLayerColorCount,
+      explicitColors: explicitColorCount,
+      layersFound: Object.keys(layerColors).length,
+      registeredLayers: Object.keys(layers).length,
+      sampleLayers
     });
 
     // Calculate bounds
@@ -77,20 +148,62 @@ export class DxfSceneBuilder {
     };
   }
 
-  // Helper to register layer dynamically
-  private static registerLayer(layers: Record<string, SceneLayer>, layerName: string): void {
+  /**
+   * 🎨 ENTERPRISE LAYER REGISTRATION (2026-01-03)
+   *
+   * Καταχωρεί layer με ΠΡΑΓΜΑΤΙΚΑ ACI colors!
+   *
+   * Priority:
+   * 1. layerColors[layerName] - Parsed from LAYER table
+   * 2. COLOR_X pattern - Extract ACI from layer name (e.g. COLOR_43)
+   * 3. getLayerColor(layerName) - Hash-based fallback (muted)
+   *
+   * @param layers - Record of registered layers
+   * @param layerName - Name of layer to register
+   * @param layerColors - Parsed LAYER table with real ACI colors
+   */
+  private static registerLayer(
+    layers: Record<string, SceneLayer>,
+    layerName: string,
+    layerColors: LayerColorMap
+  ): void {
     if (!layers[layerName]) {
+      // ╔════════════════════════════════════════════════════════════════════════╗
+      // ║ 🎨 REAL ACI COLOR PRIORITY                                             ║
+      // ║                                                                        ║
+      // ║ 1. layerColors[layerName] → Parsed from LAYER table                   ║
+      // ║ 2. COLOR_X pattern → Extract ACI from name (e.g. COLOR_43 → ACI 43)   ║
+      // ║ 3. getLayerColor() → Hash-based fallback                               ║
+      // ╚════════════════════════════════════════════════════════════════════════╝
+
+      // Try 1: Get from parsed LAYER table
+      let resolvedColor = layerColors[layerName]?.color;
+      const visible = layerColors[layerName]?.visible ?? true;
+
+      // Try 2: Extract ACI from layer name pattern COLOR_X (e.g. COLOR_43 → ACI 43)
+      if (!resolvedColor) {
+        const colorMatch = layerName.match(/^COLOR_(\d+)$/i);
+        if (colorMatch) {
+          const aciIndex = parseInt(colorMatch[1], 10);
+          if (aciIndex >= 1 && aciIndex <= 255) {
+            resolvedColor = getAciColor(aciIndex);
+          }
+        }
+      }
+
+      // Try 3: Hash-based fallback
+      if (!resolvedColor) {
+        resolvedColor = getLayerColor(layerName);
+      }
+
       layers[layerName] = {
         name: layerName,
-        color: getLayerColor(layerName),
-        visible: true,
+        color: resolvedColor,
+        visible,
         locked: false
       };
-
     }
   }
-
-  // getLayerColor is now imported from unified color system
 
   static calculateBounds(entities: AnySceneEntity[]) {
     let minX = Infinity, minY = Infinity;
