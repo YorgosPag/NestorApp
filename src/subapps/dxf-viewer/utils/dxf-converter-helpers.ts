@@ -17,6 +17,9 @@
 import type { AnySceneEntity } from '../types/scene';
 import type { Point2D } from '../rendering/types/Types';
 
+// 🏢 ENTERPRISE: Import ACI color system for DXF color extraction
+import { getAciColor } from '../settings/standards/aci';
+
 // ============================================================================
 // 🏢 ENTERPRISE: TYPE DEFINITIONS
 // ============================================================================
@@ -211,4 +214,56 @@ export function mapMTextAlignment(attachmentPoint: number): TextAlignment {
     default:
       return 'left';
   }
+}
+
+// ============================================================================
+// 🏢 ENTERPRISE: COLOR EXTRACTION (DXF GROUP CODE 62)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Extract entity color from DXF data
+ *
+ * DXF Color System (Group Code 62):
+ * - 0 = ByBlock (inherits from containing block)
+ * - 1-255 = ACI (AutoCAD Color Index)
+ * - 256 = ByLayer (inherits from layer color)
+ *
+ * @see AutoCAD DXF Reference: Common Entity Properties
+ * @see settings/standards/aci.ts - ACI color palette
+ *
+ * @param data - Raw DXF group codes
+ * @returns Hex color string or undefined (for ByBlock/ByLayer)
+ */
+export function extractEntityColor(data: Record<string, string>): string | undefined {
+  const colorCode = data['62'];
+
+  if (!colorCode) {
+    // No color specified - will use default
+    return undefined;
+  }
+
+  const colorIndex = parseInt(colorCode, 10);
+
+  if (isNaN(colorIndex)) {
+    return undefined;
+  }
+
+  // Handle special cases
+  if (colorIndex === 0) {
+    // ByBlock - return undefined, renderer will use default
+    return undefined;
+  }
+
+  if (colorIndex === 256) {
+    // ByLayer - return undefined, should be resolved from layer
+    return undefined;
+  }
+
+  // Valid ACI index (1-255)
+  if (colorIndex >= 1 && colorIndex <= 255) {
+    return getAciColor(colorIndex);
+  }
+
+  // Invalid index - return undefined
+  return undefined;
 }

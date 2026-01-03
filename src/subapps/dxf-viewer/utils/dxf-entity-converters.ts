@@ -25,7 +25,8 @@ import {
   parseVerticesFromData,
   decodeGreekText,
   mapHorizontalAlignment,
-  mapMTextAlignment
+  mapMTextAlignment,
+  extractEntityColor
 } from './dxf-converter-helpers';
 
 // Re-export types for backward compatibility
@@ -59,13 +60,17 @@ export function convertLine(
     return null;
   }
 
+  // 🏢 ENTERPRISE: Extract ACI color from DXF code 62
+  const color = extractEntityColor(data);
+
   return {
     id: `line_${index}`,
     type: 'line',
     layer,
     visible: true,
     start: { x: x1, y: y1 },
-    end: { x: x2, y: y2 }
+    end: { x: x2, y: y2 },
+    ...(color && { color })
   };
 }
 
@@ -89,13 +94,17 @@ export function convertLwPolyline(
     return null;
   }
 
+  // 🏢 ENTERPRISE: Extract ACI color from DXF code 62
+  const color = extractEntityColor(data);
+
   return {
     id: `polyline_${index}`,
     type: 'polyline',
     layer,
     visible: true,
     vertices,
-    closed: isClosed
+    closed: isClosed,
+    ...(color && { color })
   };
 }
 
@@ -126,13 +135,17 @@ export function convertCircle(
     return null;
   }
 
+  // 🏢 ENTERPRISE: Extract ACI color from DXF code 62
+  const color = extractEntityColor(data);
+
   return {
     id: `circle_${index}`,
     type: 'circle',
     layer,
     visible: true,
     center: { x: centerX, y: centerY },
-    radius
+    radius,
+    ...(color && { color })
   };
 }
 
@@ -163,6 +176,9 @@ export function convertArc(
     return null;
   }
 
+  // 🏢 ENTERPRISE: Extract ACI color from DXF code 62
+  const color = extractEntityColor(data);
+
   return {
     id: `arc_${index}`,
     type: 'arc',
@@ -171,7 +187,8 @@ export function convertArc(
     center: { x: centerX, y: centerY },
     radius,
     startAngle,
-    endAngle
+    endAngle,
+    ...(color && { color })
   };
 }
 
@@ -209,13 +226,17 @@ export function convertEllipse(
     return null;
   }
 
+  // 🏢 ENTERPRISE: Extract ACI color from DXF code 62
+  const color = extractEntityColor(data);
+
   return {
     id: `ellipse_${index}`,
     type: 'circle',
     layer,
     visible: true,
     center: { x: centerX, y: centerY },
-    radius: approxRadius
+    radius: approxRadius,
+    ...(color && { color })
   };
 }
 
@@ -259,6 +280,9 @@ export function convertText(
   // Decode Greek text using centralized helper
   text = decodeGreekText(text);
 
+  // 🏢 ENTERPRISE: Extract ACI color from DXF code 62
+  const color = extractEntityColor(data);
+
   return {
     id: `text_${index}`,
     type: 'text',
@@ -268,7 +292,8 @@ export function convertText(
     text: text.trim(),
     fontSize: height,
     rotation,
-    alignment
+    alignment,
+    ...(color && { color })
   };
 }
 
@@ -308,6 +333,9 @@ export function convertMText(
   // Decode Greek text using centralized helper
   text = decodeGreekText(text);
 
+  // 🏢 ENTERPRISE: Extract ACI color from DXF code 62
+  const color = extractEntityColor(data);
+
   return {
     id: `mtext_${index}`,
     type: 'text',
@@ -317,7 +345,8 @@ export function convertMText(
     text: text.trim(),
     fontSize: height,
     rotation,
-    alignment
+    alignment,
+    ...(color && { color })
   };
 }
 
@@ -343,13 +372,17 @@ export function convertSpline(
     return null;
   }
 
+  // 🏢 ENTERPRISE: Extract ACI color from DXF code 62
+  const color = extractEntityColor(data);
+
   return {
     id: `spline_${index}`,
     type: 'polyline',
     layer,
     visible: true,
     vertices,
-    closed: false
+    closed: false,
+    ...(color && { color })
   };
 }
 
@@ -385,13 +418,17 @@ export function convertDimension(
       vertices.push({ x: x3, y: y3 });
     }
 
+    // 🏢 ENTERPRISE: Extract ACI color from DXF code 62
+    const color = extractEntityColor(data);
+
     return {
       id: `dimension_${index}`,
       type: 'polyline',
       layer,
       visible: true,
       vertices,
-      closed: false
+      closed: false,
+      ...(color && { color })
     };
   }
 
