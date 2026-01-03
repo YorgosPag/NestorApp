@@ -239,6 +239,88 @@ import { FloatingPanel } from '@/components/ui/floating';
 
 ---
 
+### 📋 ADR-004: CANVAS THEME SYSTEM (2026-01-03)
+
+**Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-03
+
+**Context**:
+Εντοπίστηκαν πολλαπλές πηγές αλήθειας για canvas background colors:
+- `color-config.ts`: `CANVAS_BACKGROUND: '#000000'`
+- `panel-tokens.ts`: `CANVAS_BACKGROUND: colors.bg.hover` (ΔΙΠΛΟΤΥΠΟ - διαφορετική τιμή!)
+- Πολλαπλά αρχεία με hardcoded `backgroundColor: 'transparent'`
+
+Αυτή η ασυνέπεια προκαλούσε:
+- Χρώματα DXF που δεν ταιριάζουν με AutoCAD
+- "Πέπλο" πάνω στα χρώματα λόγω λάθος background
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **SINGLE SOURCE OF TRUTH** | `CANVAS_THEME` object στο `config/color-config.ts` |
+| **LAYER HIERARCHY** | Κάθε canvas layer έχει καθορισμένο background |
+| **PROHIBITION** | ❌ Hardcoded canvas backgrounds **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** |
+| **AUTOCAD STANDARD** | Main DXF canvas = Pure black (#000000) |
+
+**Canvas Layer Hierarchy** (from `CANVAS_THEME`):
+
+| Layer | Background | Constant | Use Case |
+|-------|------------|----------|----------|
+| **DxfCanvasCore** | `#000000` | `CANVAS_THEME.DXF_CANVAS` | Main DXF entity rendering (AutoCAD standard) |
+| **LayerCanvas** | `transparent` | `CANVAS_THEME.LAYER_CANVAS` | Color overlays (sees DXF below) |
+| **Overlays** | `transparent` | `CANVAS_THEME.OVERLAY` | Crosshair, grips, selection |
+| **Containers** | `transparent` | `CANVAS_THEME.CONTAINER` | Parent div containers |
+
+**Implementation Pattern**:
+```typescript
+// ✅ ENTERPRISE: Use centralized CANVAS_THEME
+import { CANVAS_THEME } from '../../config/color-config';
+backgroundColor: CANVAS_THEME.DXF_CANVAS
+
+// ❌ PROHIBITED: Hardcoded values
+backgroundColor: '#000000'
+backgroundColor: 'transparent'
+```
+
+**Files Modified**:
+- `config/color-config.ts` - Added `CANVAS_THEME` object with full documentation
+- `config/panel-tokens.ts` - Removed duplicate `CANVAS_BACKGROUND` (ADR violation)
+- `src/styles/design-tokens.ts` - **CRITICAL FIX**: Removed hidden `backgroundColor: 'transparent'` from `dxfCanvasWithTools()` function that was overriding everything
+- `canvas/DxfCanvasCore.tsx` - Using `CANVAS_THEME.DXF_CANVAS`
+- `canvas-v2/dxf-canvas/DxfCanvas.tsx` - **CRITICAL FIX**: Added `backgroundColor: CANVAS_THEME.DXF_CANVAS` to style object (this is the actual canvas used in production)
+- `canvas-v2/layer-canvas/LayerCanvas.tsx` - Using `CANVAS_THEME.LAYER_CANVAS`
+- `rendering/canvas/core/CanvasSettings.ts` - Using `CANVAS_THEME.CONTAINER`
+- `debug/CursorSnapAlignmentDebugOverlay.ts` - Using `CANVAS_THEME.OVERLAY`
+
+**Root Cause Analysis**:
+Το πραγματικό πρόβλημα ήταν κρυμμένο στο `src/styles/design-tokens.ts`:
+```typescript
+// BEFORE (HIDDEN DUPLICATE):
+dxfCanvasWithTools: () => ({
+  ...
+  backgroundColor: 'transparent' // ❌ This was overriding CANVAS_THEME!
+})
+```
+Αυτό επέτρεπε το γκρι parent container (`bg-background = #1e293b`) να φαίνεται μέσα από το transparent canvas, δημιουργώντας το "πέπλο" στα χρώματα.
+
+**Alternative Themes** (for future use):
+```typescript
+CANVAS_THEME.THEMES.AUTOCAD_CLASSIC  // '#000000' (current)
+CANVAS_THEME.THEMES.AUTOCAD_DARK     // '#1a1a1a'
+CANVAS_THEME.THEMES.SOLIDWORKS       // '#2d3748'
+CANVAS_THEME.THEMES.BLENDER          // '#232323'
+CANVAS_THEME.THEMES.LIGHT            // '#ffffff' (print preview)
+```
+
+**Consequences**:
+- ✅ Single source of truth for all canvas backgrounds
+- ✅ AutoCAD-accurate color rendering (pure black = maximum contrast)
+- ✅ No more "πέπλο" effect on DXF colors
+- ✅ Clear layer hierarchy documentation
+- ✅ Future theme support ready
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

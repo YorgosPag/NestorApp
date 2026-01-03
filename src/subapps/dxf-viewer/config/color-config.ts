@@ -14,6 +14,7 @@ const UI_COLORS_BASE = {
   // UI Background Colors για fallbacks
   DARK_BACKGROUND: '#333333',
   DARKER: '#222222', // ✅ ENTERPRISE: Even darker background for UI elements
+  CANVAS_BACKGROUND: '#000000', // ✅ ENTERPRISE: Pure black like AutoCAD for maximum color contrast
   LIGHT_GRAY: '#cccccc',
   MEDIUM_GRAY: '#888888',
   LIGHT_GRAY_ALT: '#bbbbbb',
@@ -377,6 +378,89 @@ export const UI_COLORS = {
   CAD_UI_COLORS,
   LEGACY_COLORS
 } as const;
+
+// ============================================================================
+// CANVAS THEME SYSTEM - Enterprise Canvas Background Management (ADR-002)
+// ============================================================================
+//
+// 🏢 ENTERPRISE STANDARD: Single Source of Truth για Canvas Backgrounds
+// 📍 LOCATION: Αυτό είναι το ΜΟΝΑΔΙΚΟ σημείο ορισμού canvas backgrounds
+// 🚫 PROHIBITION: ΜΗΝ ορίζετε canvas backgrounds αλλού (π.χ. panel-tokens.ts)
+//
+// ΙΕΡΑΡΧΙΑ CANVAS LAYERS:
+// ┌────────────────────────────────────────────────────────────────┐
+// │ Layer 5: Overlays (crosshair, grips, selection) - TRANSPARENT │
+// │ Layer 4: UI Elements (rulers, toolbars) - TRANSPARENT         │
+// │ Layer 3: LayerCanvas (color overlays) - TRANSPARENT           │
+// │ Layer 2: DxfCanvasCore (DXF entities) - PURE BLACK #000000    │
+// │ Layer 1: Container (parent div) - TRANSPARENT                 │
+// └────────────────────────────────────────────────────────────────┘
+//
+// ============================================================================
+
+/**
+ * 🎨 CANVAS_THEME - Enterprise Canvas Background Configuration
+ *
+ * Single source of truth για όλα τα canvas backgrounds.
+ * Βασισμένο σε AutoCAD/SolidWorks/Blender industry standards.
+ *
+ * @example
+ * // ✅ ΣΩΣΤΟ - Χρήση κεντρικοποιημένης σταθεράς
+ * style={{ backgroundColor: CANVAS_THEME.DXF_CANVAS }}
+ *
+ * // ❌ ΛΑΘΟΣ - Hardcoded τιμή
+ * style={{ backgroundColor: '#000000' }}
+ * style={{ backgroundColor: 'transparent' }}
+ */
+export const CANVAS_THEME = {
+  /**
+   * 🖤 DXF_CANVAS - Main DXF rendering canvas
+   * Pure black για maximum color contrast (AutoCAD standard)
+   * Χρησιμοποιείται στο: DxfCanvasCore.tsx, canvas-v2/DxfCanvas.tsx
+   */
+  DXF_CANVAS: '#000000' as const,
+
+  /**
+   * 🔲 LAYER_CANVAS - Color overlay layer
+   * Transparent για να φαίνεται το DXF κάτω
+   * Χρησιμοποιείται στο: LayerCanvas.tsx
+   */
+  LAYER_CANVAS: 'transparent' as const,
+
+  /**
+   * 🔲 OVERLAY - UI overlays (crosshair, grips, selection)
+   * Transparent για να μην καλύπτουν το content
+   * Χρησιμοποιείται στο: CrosshairOverlay, SelectionOverlay, etc.
+   */
+  OVERLAY: 'transparent' as const,
+
+  /**
+   * 🔲 CONTAINER - Parent container divs
+   * Transparent - δεν πρέπει να έχουν χρώμα
+   * Χρησιμοποιείται στο: CanvasSection.tsx, canvas-stack
+   */
+  CONTAINER: 'transparent' as const,
+
+  /**
+   * 🎨 Alternative themes για μελλοντική χρήση
+   */
+  THEMES: {
+    /** AutoCAD Classic - Pure black */
+    AUTOCAD_CLASSIC: '#000000',
+    /** AutoCAD Dark Gray */
+    AUTOCAD_DARK: '#1a1a1a',
+    /** SolidWorks style - Dark blue-gray */
+    SOLIDWORKS: '#2d3748',
+    /** Blender style - Dark gray */
+    BLENDER: '#232323',
+    /** Light theme - For print preview */
+    LIGHT: '#ffffff',
+  },
+} as const;
+
+// Type exports για TypeScript safety
+export type CanvasThemeKey = keyof typeof CANVAS_THEME;
+export type CanvasThemeValue = typeof CANVAS_THEME[CanvasThemeKey];
 
 // ============================================================================
 // UI GRADIENTS SYSTEM - Enterprise Color Picker Gradients

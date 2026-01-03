@@ -230,8 +230,27 @@ export abstract class BaseEntityRenderer {
   }
 
   // New phase-based style setup
+  // ╔════════════════════════════════════════════════════════════════════════╗
+  // ║ 🎨 AUTOCAD-LIKE CANVAS STATE RESET (2026-01-03)                        ║
+  // ║                                                                        ║
+  // ║ ΚΡΙΣΙΜΟ: Πλήρες reset του canvas state σε κάθε entity!                ║
+  // ║ Αυτό αποτρέπει "πέπλο" και αλλοιωμένα χρώματα.                        ║
+  // ║                                                                        ║
+  // ║ Fixes:                                                                 ║
+  // ║ - globalAlpha = 1 (χωρίς transparency)                                ║
+  // ║ - globalCompositeOperation = 'source-over' (normal blending)          ║
+  // ║ - setLineDash([]) (solid lines)                                       ║
+  // ║ - lineCap = 'butt', lineJoin = 'miter' (standard CAD)                ║
+  // ╚════════════════════════════════════════════════════════════════════════╝
   protected setupStyle(entity: EntityModel, options: RenderOptions = {}): void {
     this.ctx.save();
+
+    // 🎯 CRITICAL: Full canvas state reset for AutoCAD-like colors
+    this.ctx.globalAlpha = 1.0;
+    this.ctx.globalCompositeOperation = 'source-over';
+    this.ctx.setLineDash([]);
+    this.ctx.lineCap = 'butt';
+    this.ctx.lineJoin = 'miter';
 
     // Determine current phase and apply appropriate styling
     const phaseState = this.phaseManager.determinePhase(entity as any, options);
@@ -241,9 +260,13 @@ export abstract class BaseEntityRenderer {
   protected applyEntityStyle(entity: EntityModel): void {
     // Apply authentic entity style (color from layer/entity)
     this.ctx.strokeStyle = entity.color || CAD_UI_COLORS.entity.default;
-    this.ctx.lineWidth = 1;
+    this.ctx.fillStyle = entity.color || CAD_UI_COLORS.entity.default;
+    // 🎯 AUTOCAD FIX: lineWidth >= 1 prevents sub-pixel color distortion
+    this.ctx.lineWidth = Math.max(1, (entity as { lineWidth?: number }).lineWidth || 1);
     // Keep solid line for authentic style
     this.ctx.setLineDash([]);
+    // 🎯 CRITICAL: Ensure full opacity for authentic colors
+    this.ctx.globalAlpha = 1.0;
   }
 
   protected cleanupStyle(): void {

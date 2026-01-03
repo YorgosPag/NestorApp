@@ -28,6 +28,8 @@ import { RulerRenderer } from '../../rendering/ui/ruler/RulerRenderer';
 import { createUIRenderContext, DEFAULT_UI_TRANSFORM } from '../../rendering/ui/core/UIRenderContext';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
+// ✅ ADR-002: Centralized canvas theme
+import { CANVAS_THEME } from '../../config/color-config';
 
 // ✅ MOVED OUTSIDE COMPONENT - Prevents re-render loop
 const DEFAULT_RENDER_OPTIONS: DxfRenderOptions = {
@@ -167,11 +169,11 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
   // ✅ SNAP RESULTS: Get snap detection results from mouse handlers (Step 4)
   const { snapResults } = mouseHandlers;
 
-  // Canvas config
+  // Canvas config - ✅ ADR-002: Centralized canvas theme
   const canvasConfig: CanvasConfig = {
     devicePixelRatio: window.devicePixelRatio || 1,
     enableHiDPI: true,
-    backgroundColor: 'transparent'
+    backgroundColor: CANVAS_THEME.CONTAINER
   };
 
   // Initialize renderer
@@ -383,7 +385,10 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
       ref={canvasRef}
       className={`dxf-canvas ${className}`}
       {...props} // 🎯 SPREAD: Περνάω τα extra props (data-canvas-type κ.λπ.)
-      style={canvasUI.positioning.layers.dxfCanvasWithTools(activeTool, crosshairSettings?.enabled)}
+      style={{
+        ...canvasUI.positioning.layers.dxfCanvasWithTools(activeTool, crosshairSettings?.enabled),
+        backgroundColor: CANVAS_THEME.DXF_CANVAS // ✅ ADR-004: Centralized canvas background
+      }}
       onMouseDown={(e) => mouseHandlers.handleMouseDown(e)}
       onMouseMove={(e) => mouseHandlers.handleMouseMove(e)}
       onMouseUp={mouseHandlers.handleMouseUp}

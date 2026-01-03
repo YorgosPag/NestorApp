@@ -2097,9 +2097,9 @@ export const canvasUI = {
                 activeTool === 'draw' ? 'crosshair' :
                 crosshairEnabled ? 'crosshair' : 'default',
         touchAction: 'none', // Prevent browser touch gestures
-        userSelect: 'none' as const,
-        // DXF specific styling
-        backgroundColor: 'transparent' // Allow layers to show through
+        userSelect: 'none' as const
+        // ❌ REMOVED: backgroundColor - ADR-004 requires CANVAS_THEME from color-config.ts
+        // 📍 Background is now set separately using CANVAS_THEME.DXF_CANVAS
       })
     },
 

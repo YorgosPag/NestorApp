@@ -12,10 +12,14 @@
 | ADR | Decision | Canonical | Deprecated | Date |
 |-----|----------|-----------|------------|------|
 | **ADR-001** | Select/Dropdown Component | `@/components/ui/select` (Radix) | `EnterpriseComboBox` | 2026-01-01 |
+| **ADR-002** | Z-Index Hierarchy | `design-tokens.json` → CSS variables | Hardcoded z-index | 2026-01-02 |
+| **ADR-003** | Floating Panel System | `FloatingPanel` compound component | Duplicate draggable code | 2026-01-02 |
+| **ADR-004** | Canvas Theme System | `CANVAS_THEME` (color-config.ts) | Hardcoded backgrounds | 2026-01-03 |
 
 > **🚫 PROHIBITION**: Νέα Select/Dropdown implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** εκτός Radix Select.
+> **🚫 PROHIBITION**: Hardcoded canvas backgrounds **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `CANVAS_THEME`.
 >
-> **📍 Full ADR**: [centralized_systems.md](./centralized_systems.md)
+> **📍 Full ADRs**: [centralized_systems.md](./centralized_systems.md)
 
 ---
 

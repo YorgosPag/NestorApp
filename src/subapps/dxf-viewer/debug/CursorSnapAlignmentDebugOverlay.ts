@@ -11,7 +11,7 @@
 import type { Point2D } from '../rendering/types/Types';
 import type { CanvasConfig } from '../rendering/types/Types';
 import { CanvasUtils } from '../rendering/canvas/utils/CanvasUtils';
-import { UI_COLORS } from '../config/color-config';
+import { UI_COLORS, CANVAS_THEME } from '../config/color-config';
 
 interface AlignmentDebugState {
   enabled: boolean;
@@ -90,10 +90,11 @@ class CursorSnapAlignmentDebugger {
 
     // ✅ ENTERPRISE FIX: Apply same HiDPI setup as DxfCanvas/LayerCanvas
     // This ensures cursor/crosshair markers align with rendered UI elements
+    // ✅ ADR-002: Using centralized CANVAS_THEME for overlay background
     const canvasConfig: CanvasConfig = {
       devicePixelRatio: window.devicePixelRatio || 1,
       enableHiDPI: true,
-      backgroundColor: 'transparent'
+      backgroundColor: CANVAS_THEME.OVERLAY
     };
 
     // Setup canvas with same HiDPI scaling (AFTER inserting to DOM)

@@ -3,7 +3,7 @@
  * ✅ ΦΑΣΗ 7: Centralized settings για όλα τα canvas instances
  */
 
-import { UI_COLORS } from '../../../config/color-config';
+import { UI_COLORS, CANVAS_THEME } from '../../../config/color-config';
 
 import type { CrosshairSettings } from '../../ui/crosshair/CrosshairTypes';
 import type { UICursorSettings } from '../../ui/cursor/CursorTypes';
@@ -179,11 +179,11 @@ export class CanvasSettings {
         }
       },
 
-      // Canvas settings
+      // Canvas settings - ✅ ADR-002: Centralized canvas theme
       enableHiDPI: true,
       devicePixelRatio: window.devicePixelRatio || 1,
       imageSmoothingEnabled: true,
-      backgroundColor: 'transparent',
+      backgroundColor: CANVAS_THEME.CONTAINER,
 
       // Performance settings
       enableBatching: true,

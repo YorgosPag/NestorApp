@@ -35,6 +35,8 @@ import type { CanvasEventSystem } from '../../rendering/canvas/core/CanvasEventS
 import type { CanvasSettings } from '../../rendering/canvas/core/CanvasSettings';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
+// ✅ ADR-002: Centralized canvas theme
+import { CANVAS_THEME } from '../../config/color-config';
 
 // ✅ ΦΑΣΗ 7: Event system κεντρικοποιημένο στο rendering/canvas/core/CanvasEventSystem
 import { canvasEventBus, CANVAS_EVENTS, subscribeToTransformChanges } from '../../rendering/canvas/core/CanvasEventSystem';
@@ -222,11 +224,11 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
   const [eventSystem, setEventSystem] = useState<CanvasEventSystem | null>(null);
   const [canvasSettings, setCanvasSettings] = useState<CanvasSettings | null>(null);
 
-  // Canvas config
+  // Canvas config - ✅ ADR-002: Using centralized CANVAS_THEME
   const canvasConfig: CanvasConfig = {
     devicePixelRatio: window.devicePixelRatio || 1,
     enableHiDPI: true,
-    backgroundColor: 'transparent'
+    backgroundColor: CANVAS_THEME.LAYER_CANVAS
   };
 
   // ✅ ΦΑΣΗ 7: Initialize unified canvas system and renderer
@@ -249,14 +251,14 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
         setEventSystem(unifiedSystem.eventSystem);
         setCanvasSettings(unifiedSystem.settings);
 
-        // Register layer canvas with unified system
+        // Register layer canvas with unified system - ✅ ADR-002: Centralized theme
         const instance = unifiedSystem.manager.registerCanvas(
           'layer-canvas',
           'layer',
           canvas,
           {
             enableHiDPI: true,
-            backgroundColor: 'transparent',
+            backgroundColor: CANVAS_THEME.LAYER_CANVAS,
             devicePixelRatio: window.devicePixelRatio || 1,
             imageSmoothingEnabled: true
           },

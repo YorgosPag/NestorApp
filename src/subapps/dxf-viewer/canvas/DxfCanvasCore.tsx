@@ -18,7 +18,7 @@ import { layoutUtilities } from '@/styles/design-tokens';
 import { getDxfCanvasCoreStyles } from '../ui/DxfViewerComponents.styles';
 import type { EntityRenderer as EntityRendererType } from '../utils/entity-renderer';
 // ✅ ENTERPRISE: Import centralized colors
-import { UI_COLORS, withOpacity } from '../config/color-config';
+import { UI_COLORS, withOpacity, CANVAS_THEME } from '../config/color-config';
 
 // ✅ ENTERPRISE FIX: Import extracted modules (some modules integrated)
 import { createCanvasRenderer, type CanvasRenderer } from './engine/createCanvasRenderer';
@@ -691,7 +691,7 @@ export const DxfCanvasCore = forwardRef<DxfCanvasImperativeAPI, Props>(({
         onMouseUp?.(e);
       }}
       onWheel={onWheel}
-      style={getDxfCanvasCoreStyles(withOpacity(UI_COLORS.BRIGHT_GREEN, 0.8))} /* ✅ CENTRALIZED: Green με 80% opacity */
+      style={getDxfCanvasCoreStyles(CANVAS_THEME.DXF_CANVAS)} /* ✅ ADR-002: Centralized canvas background */
     />
   );
 });

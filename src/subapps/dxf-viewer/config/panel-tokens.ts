@@ -121,10 +121,12 @@ export function createPanelTokens(
     COLORS: panelColors,
 
     // Background tokens for panel containers
+    // 🚫 ADR-002: CANVAS_BACKGROUND ΑΦΑΙΡΕΘΗΚΕ - Χρησιμοποιήστε CANVAS_THEME από color-config.ts
+    // 📍 Single source of truth: import { CANVAS_THEME } from './color-config'
     BACKGROUND: {
       MAIN_CONTAINER: colors.bg.primary,              // Dynamic main containers
       VIEW_CONTAINER: colors.bg.secondary,            // Dynamic view containers
-      CANVAS_BACKGROUND: colors.bg.hover,             // Dynamic canvas areas
+      // ❌ REMOVED: CANVAS_BACKGROUND - Use CANVAS_THEME.DXF_CANVAS instead
       HEADER_BACKGROUND: colors.bg.primary,           // Dynamic headers
       CONTENT_BACKGROUND: colors.bg.secondary,        // Dynamic content areas
       SIDEBAR_BACKGROUND: colors.bg.hover,            // Dynamic sidebars
