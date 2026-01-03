@@ -18,6 +18,11 @@ interface CrosshairOverlayProps {
   mouseWorld?: Point2D | null;  // 🎯 ChatGPT-5 fix - για world coordinates
   viewport?: Viewport;
   transform?: ViewTransform;
+  /** ✅ ENTERPRISE: Ruler margins για να μην σχεδιάζεται το crosshair πάνω στους rulers */
+  rulerMargins?: {
+    left: number;
+    top: number;
+  };
 }
 
 export default function CrosshairOverlay({
@@ -26,7 +31,8 @@ export default function CrosshairOverlay({
   cursorPosition = null,
   mouseWorld = null,  // 🎯 ChatGPT-5 fix
   viewport = { width: 0, height: 0 },
-  transform
+  transform,
+  rulerMargins = { left: 30, top: 30 } // ✅ ENTERPRISE: Default ruler margins
 }: CrosshairOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [settings, setSettings] = useState<CursorSettings>(getCursorSettings());
@@ -235,56 +241,59 @@ export default function CrosshairOverlay({
       ctx.miterLimit = 10;
     }
 
+    // ✅ ENTERPRISE: Μην σχεδιάζεις crosshair αν ο κέρσορας είναι πάνω στους rulers
+    if (mouseX < rulerMargins.left || mouseY < rulerMargins.top) {
+      return;
+    }
+
     // Only draw crosshair lines if size_percent > 0
     if (sizePercent > 0) {
       // Calculate crosshair extent based on size_percent
       let crosshairHalfWidth, crosshairHalfHeight;
-      
+
       if (sizePercent === 100) {
         // Full-screen mode: crosshair extends to viewport edges from cursor position
-        crosshairHalfWidth = Math.max(mouseX, vp.width - mouseX);
-        crosshairHalfHeight = Math.max(mouseY, vp.height - mouseY);
+        // ✅ ENTERPRISE: Περιορισμένο στην περιοχή του canvas (όχι στους rulers)
+        crosshairHalfWidth = Math.max(mouseX - rulerMargins.left, vp.width - mouseX);
+        crosshairHalfHeight = Math.max(mouseY - rulerMargins.top, vp.height - mouseY);
       } else {
         // Normal percentage mode
         crosshairHalfWidth = (vp.width / 2) * (sizePercent / 100);
         crosshairHalfHeight = (vp.height / 2) * (sizePercent / 100);
       }
-      
+
 
       // Draw horizontal crosshair lines (with gap for pickbox)
+      // ✅ ENTERPRISE: Σεβασμός ruler margins
       ctx.beginPath();
-      // Left side - από mouseX-crosshairHalfWidth έως centerGap
-      const leftStart = Math.max(0, mouseX - crosshairHalfWidth);
+      // Left side - ξεκινά από ruler margin, όχι από 0
+      const leftStart = Math.max(rulerMargins.left, mouseX - crosshairHalfWidth);
       const leftEnd = mouseX - centerGap;
-      console.log('🔹 [CrosshairOverlay] Horizontal Left:', { leftStart, leftEnd, mouseX, mouseY, centerGap });
       if (leftEnd > leftStart) {
         ctx.moveTo(leftStart, mouseY);
         ctx.lineTo(leftEnd, mouseY);
-        console.log('✏️ [CrosshairOverlay] Drawing left horizontal line');
       }
 
       // Right side - από centerGap έως mouseX+crosshairHalfWidth
       const rightStart = mouseX + centerGap;
       const rightEnd = Math.min(vp.width, mouseX + crosshairHalfWidth);
-      console.log('🔹 [CrosshairOverlay] Horizontal Right:', { rightStart, rightEnd, mouseX });
       if (rightStart < rightEnd) {
         ctx.moveTo(rightStart, mouseY);
         ctx.lineTo(rightEnd, mouseY);
-        console.log('✏️ [CrosshairOverlay] Drawing right horizontal line');
       }
       ctx.stroke();
-      console.log('🎨 [CrosshairOverlay] Horizontal lines stroked');
 
       // Draw vertical crosshair lines (with gap for pickbox)
+      // ✅ ENTERPRISE: Σεβασμός ruler margins
       ctx.beginPath();
-      // Top side - από mouseY-crosshairHalfHeight έως centerGap
-      const topStart = Math.max(0, mouseY - crosshairHalfHeight);
+      // Top side - ξεκινά από ruler margin, όχι από 0
+      const topStart = Math.max(rulerMargins.top, mouseY - crosshairHalfHeight);
       const topEnd = mouseY - centerGap;
       if (topEnd > topStart) {
         ctx.moveTo(mouseX, topStart);
         ctx.lineTo(mouseX, topEnd);
       }
-      
+
       // Bottom side - από centerGap έως mouseY+crosshairHalfHeight
       const bottomStart = mouseY + centerGap;
       const bottomEnd = Math.min(vp.height, mouseY + crosshairHalfHeight);
@@ -293,7 +302,6 @@ export default function CrosshairOverlay({
         ctx.lineTo(mouseX, bottomEnd);
       }
       ctx.stroke();
-      console.log('✅ [CrosshairOverlay] Crosshair lines drawn successfully');
     }
 
     // === CURSOR RENDERING (από Cursor Settings) ===

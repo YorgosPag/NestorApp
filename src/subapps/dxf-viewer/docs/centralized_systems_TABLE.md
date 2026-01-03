@@ -1,9 +1,9 @@
 # = -> **ENTERPRISE CENTRALIZED SYSTEMS TABLE**
 
 > **= MAIN DOCUMENTATION**: [centralized_systems.md](./centralized_systems.md)
-> **= -> LAST UPDATED**: 2026-01-01
-> **= -> TOTAL SYSTEMS**: 15 Major Enterprise Systems
-> **= -> TOTAL CODE**: 10,000+ Lines
+> **= -> LAST UPDATED**: 2026-01-03
+> **= -> TOTAL SYSTEMS**: 16 Major Enterprise Systems
+> **= -> TOTAL CODE**: 12,300+ Lines
 
 ---
 
@@ -15,10 +15,13 @@
 | **ADR-002** | Z-Index Hierarchy | `design-tokens.json` → CSS variables | Hardcoded z-index | 2026-01-02 |
 | **ADR-003** | Floating Panel System | `FloatingPanel` compound component | Duplicate draggable code | 2026-01-02 |
 | **ADR-004** | Canvas Theme System 🏢 | `design-tokens.json` → CSS vars → `CANVAS_THEME` | Hardcoded backgrounds | 2026-01-03 |
+| **ADR-005** | Line Drawing System 🏢 | `useUnifiedDrawing` + `LineRenderer` | Διάσπαρτο drawing code | 2026-01-03 |
 
 > **🚫 PROHIBITION**: Νέα Select/Dropdown implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** εκτός Radix Select.
 > **🚫 PROHIBITION**: Hardcoded canvas backgrounds **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `CANVAS_THEME`.
+> **🚫 PROHIBITION**: Νέα drawing implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `useUnifiedDrawing`.
 > **🏢 WORLD-CLASS**: ADR-004 χρησιμοποιεί CSS Variables για runtime theme switching (Figma/AutoCAD level).
+> **🏢 ENTERPRISE**: ADR-005 - 2,300+ lines centralized drawing system με 3-phase rendering.
 >
 > **📍 Full ADRs**: [centralized_systems.md](./centralized_systems.md)
 
@@ -45,6 +48,7 @@
 | **=
  Icon System** | `src/hooks/useIconSizes.ts` | 150+ | Design System |  Standardized | Consistent icon sizing | `import { useIconSizes } from '@/hooks'` | Icon size management |
 | **< -> Panel Design Tokens** | `src/subapps/dxf-viewer/config/panel-tokens.ts` | 600+ | DXF Specific |  Enterprise | DXF panel design system | `import { PANEL_TOKENS } from '@/subapps/dxf-viewer/config'` | CAD panel styling |
+| **🎨 Line Drawing System** | `src/subapps/dxf-viewer/hooks/drawing/` | 2,300+ | Drawing Engine | 🏢 **ENTERPRISE** | 10 tools, 3-phase rendering, snap integration | `import { useUnifiedDrawing } from '@/subapps/dxf-viewer/hooks/drawing'` | **ADR-005: Zero duplication** |
 
 | **🏭 Smart Factory - Tabs** | `src/config/unified-tabs-factory.ts` | 548 | Smart Factory |  **ENTERPRISE** | Dynamic tab generation, 6+ entity types | `import { createTabsConfig } from '@/config/unified-tabs-factory'` | **64% code reduction (1500→548 lines)** |
 | **🏭 Smart Factory - Navigation** | `src/config/smart-navigation-factory.ts` | 814 | Smart Factory |  **ENTERPRISE** | Dynamic menu generation, permissions | `import { createNavigationConfig } from '@/config/smart-navigation-factory'` | **80% code reduction (191→smart generation)** |
@@ -62,7 +66,7 @@
 | **Business Logic** | 2 systems | 2,900+ lines |  **Production** | < -> **Medium** |
 | **Infrastructure** | 4 systems | 1,620+ lines |  **Stable** | =' **Foundation** |
 | **🏭 Smart Factories** | 2 systems | 1,362+ lines |  **ENTERPRISE** | 🏭 **Strategic** |
-| **TOTAL** | **17 systems** | **11,362+ lines** | **< -> Fortune 500** | **= -> Enterprise** |
+| **TOTAL** | **18 systems** | **13,662+ lines** | **< -> Fortune 500** | **= -> Enterprise** |
 
 ### < -> **BY COMPLEXITY**
 
@@ -219,6 +223,29 @@ import { usePolygonStyles } from '@/hooks/usePolygonStyles';
 const { drawingMode, coordinates, tools } = usePolygonSystem();
 ```
 
+### 🎨 **LINE DRAWING SYSTEM** (ADR-005)
+
+```typescript
+// 🎨 DXF Line Drawing - Enterprise 3-Phase Rendering
+import { useUnifiedDrawing } from '@/subapps/dxf-viewer/hooks/drawing/useUnifiedDrawing';
+import { useDrawingHandlers } from '@/subapps/dxf-viewer/hooks/drawing/useDrawingHandlers';
+import { LineRenderer } from '@/subapps/dxf-viewer/rendering/entities/LineRenderer';
+
+// 🏢 Enterprise Usage - Master Drawing Hook
+const {
+  activeTool,          // Current tool: 'line', 'polyline', etc.
+  isDrawing,           // Drawing state
+  previewLine,         // Preview coordinates
+  completedLines,      // Finalized entities
+  startDrawing,        // Mouse down handler
+  continueDrawing,     // Mouse move handler
+  completeDrawing,     // Mouse up/click handler
+} = useUnifiedDrawing({ transform, viewport, onEntityCreate });
+
+// 🎯 10 Drawing Tools: line, polyline, rectangle, circle, arc,
+//    ellipse, spline, text, dimension, hatch
+```
+
 ---
 
 ## < -> **ENTERPRISE QUALITY METRICS**
@@ -227,7 +254,7 @@ const { drawingMode, coordinates, tools } = usePolygonSystem();
 
 | Quality Standard | Status | Systems Compliant | Notes |
 |-----------------|--------|-------------------|-------|
-| **Zero `any` Types** |  **100%** | All 15 systems | Full TypeScript compliance |
+| **Zero `any` Types** |  **100%** | All 16 systems | Full TypeScript compliance |
 | **Zero Inline Styles** |  **100%** | All UI systems | Centralized styling |
 | **Zero Hardcoded Values** |  ✅ **100%** | Most systems | **🎉 Zero hardcoded instances - complete migration** |
 | **Semantic HTML** |  **100%** | All UI components | Accessibility compliant |

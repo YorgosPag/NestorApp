@@ -17,6 +17,11 @@ interface CrosshairOverlayProps {
   cursorPosition?: Point2D | null;
   mouseWorld?: Point2D | null;
   viewport?: Viewport;
+  /** ✅ ENTERPRISE: Ruler margins για να μην σχεδιάζεται το crosshair πάνω στους rulers */
+  rulerMargins?: {
+    left: number;
+    top: number;
+  };
 }
 
 export default function CrosshairOverlay({
@@ -25,6 +30,7 @@ export default function CrosshairOverlay({
   cursorPosition = null,
   mouseWorld = null,
   viewport = { width: 0, height: 0 },
+  rulerMargins = { left: 30, top: 30 }, // ✅ ENTERPRISE: Default ruler margins
 }: CrosshairOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [settings, setSettings] = useState<CursorSettings>(getCursorSettings());
@@ -77,8 +83,9 @@ export default function CrosshairOverlay({
     isActive: boolean;
     pos: {x: number; y: number} | null;
     vp: {width: number; height: number};
+    margins: {left: number; top: number}; // ✅ ENTERPRISE: Ruler margins
   }) => {
-    const { isActive, pos, vp } = opts;
+    const { isActive, pos, vp, margins } = opts;
 
     const canvas = canvasRef.current;
     if (!canvas || !isActive || !pos) return;
@@ -123,22 +130,27 @@ export default function CrosshairOverlay({
     ctx.lineCap = 'square';
     ctx.globalAlpha = activeSettings.opacity || 1.0;
 
+    // ✅ ENTERPRISE: Μην σχεδιάζεις crosshair αν ο κέρσορας είναι πάνω στους rulers
+    if (mouseX < margins.left || mouseY < margins.top) {
+      return;
+    }
+
     // Only draw if size > 0
     if (sizePercent > 0) {
       let actualHalfWidth, actualHalfHeight;
 
       if (sizePercent === 100) {
-        // Full-screen mode
-        actualHalfWidth = Math.max(mouseX, vp.width - mouseX);
-        actualHalfHeight = Math.max(mouseY, vp.height - mouseY);
+        // Full-screen mode - περιορισμένο στην περιοχή του canvas
+        actualHalfWidth = Math.max(mouseX - margins.left, vp.width - mouseX);
+        actualHalfHeight = Math.max(mouseY - margins.top, vp.height - mouseY);
       } else {
         actualHalfWidth = crosshairHalfWidth;
         actualHalfHeight = crosshairHalfHeight;
       }
 
-      // Draw horizontal lines
+      // Draw horizontal lines - ✅ ENTERPRISE: Σεβασμός ruler margins
       ctx.beginPath();
-      const leftStart = Math.max(0, mouseX - actualHalfWidth);
+      const leftStart = Math.max(margins.left, mouseX - actualHalfWidth); // Ξεκινά από ruler margin
       const leftEnd = mouseX - centerGap;
       if (leftEnd > leftStart) {
         ctx.moveTo(leftStart, mouseY);
@@ -153,9 +165,9 @@ export default function CrosshairOverlay({
       }
       ctx.stroke();
 
-      // Draw vertical lines
+      // Draw vertical lines - ✅ ENTERPRISE: Σεβασμός ruler margins
       ctx.beginPath();
-      const topStart = Math.max(0, mouseY - actualHalfHeight);
+      const topStart = Math.max(margins.top, mouseY - actualHalfHeight); // Ξεκινά από ruler margin
       const topEnd = mouseY - centerGap;
       if (topEnd > topStart) {
         ctx.moveTo(mouseX, topStart);
@@ -201,7 +213,8 @@ export default function CrosshairOverlay({
     const renderArgs = {
       isActive,
       pos: cursorPosition,
-      vp: validViewport
+      vp: validViewport,
+      margins: rulerMargins // ✅ ENTERPRISE: Περνάμε τα ruler margins
     };
 
     if (rafRef.current) {
@@ -231,7 +244,8 @@ export default function CrosshairOverlay({
     settings.performance.use_raf,
     validViewport.width,
     validViewport.height,
-    renderCrosshair
+    renderCrosshair,
+    rulerMargins // ✅ ENTERPRISE: Dependency για ruler margins
   ]);
 
   return (

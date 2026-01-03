@@ -208,6 +208,7 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
     onEntitySelect: handleLayerSelection,
     onMouseMove,
     onWheelZoom,
+    onCanvasClick, // 🎯 FIX: Pass onCanvasClick για drawing tools!
     hitTestCallback: layerHitTestCallback, // 🚀 Enable layer hit testing
     // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ MARQUEE SELECTION
     colorLayers: layers,

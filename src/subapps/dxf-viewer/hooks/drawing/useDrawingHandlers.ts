@@ -116,10 +116,14 @@ export function useDrawingHandlers(
 
   // Drawing handlers
   const onDrawingPoint = useCallback((p: Pt) => {
+    console.log('🟢 onDrawingPoint CALLED!', { point: p });
 
     const snappedPoint = applySnap(p);
+    console.log('🟢 snappedPoint:', snappedPoint);
     const transformUtils = canvasOps.getTransformUtils();
+    console.log('🟢 transformUtils:', !!transformUtils);
     addPoint(snappedPoint, transformUtils);
+    console.log('🟢 addPoint called');
 
   }, [addPoint, canvasOps, applySnap]);
 

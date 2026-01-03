@@ -348,9 +348,15 @@ export function useUnifiedDrawing() {
   }, []);
 
   const addPoint = useCallback((worldPoint: Point2D, transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D }) => {
+    console.log('🔵 addPoint CALLED!', { worldPoint, currentTool: state.currentTool, isDrawing: state.isDrawing });
 
-    if (!state.isDrawing) {
-
+    // ✅ FIX RACE CONDITION: Έλεγχος βάσει currentTool αντί για isDrawing
+    // Το isDrawing είναι async (setState) και μπορεί να μην έχει ενημερωθεί ακόμα
+    // Το currentTool είναι πιο αξιόπιστο καθώς ενημερώνεται μαζί με το state
+    const isDrawingTool = state.currentTool && state.currentTool !== 'select';
+    console.log('🔵 isDrawingTool check:', { isDrawingTool, currentTool: state.currentTool });
+    if (!isDrawingTool) {
+      console.log('❌ addPoint returning early - not a drawing tool');
       return;
     }
 
@@ -493,7 +499,9 @@ export function useUnifiedDrawing() {
   }, [state, createEntityFromTool, currentLevelId, getLevelScene, setLevelScene, setMode, lineCompletionStyles]);
 
   const updatePreview = useCallback((mousePoint: Point2D, transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D }) => {
-    if (!state.isDrawing) {
+    // ✅ FIX RACE CONDITION: Έλεγχος βάσει currentTool αντί για isDrawing
+    const isDrawingTool = state.currentTool && state.currentTool !== 'select';
+    if (!isDrawingTool) {
       return;
     }
 

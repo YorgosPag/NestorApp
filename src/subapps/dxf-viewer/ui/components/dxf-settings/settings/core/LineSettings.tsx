@@ -58,7 +58,7 @@
 
 import React, { useState } from 'react';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
-import { useLineSettingsFromProvider } from '../../../../../settings-provider';
+import { useLineSettingsFromProvider, useEnterpriseDxfSettings } from '../../../../../settings-provider';
 // ✅ ΑΝΤΙΚΑΤΑΣΤΑΣΗ ΜΕ UNIFIED HOOKS
 import { useUnifiedLinePreview, useUnifiedLineCompletion } from '../../../../hooks/useUnifiedSpecificSettings';
 import type { LineTemplate as LineSettingsTemplate } from '../../../../../contexts/LineSettingsContext';
@@ -134,6 +134,8 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
   // 🔺 ΔΙΟΡΘΩΣΗ: Χρήση unified hooks όπως σε TextSettings και GripSettings
   const generalLineSettings = useLineSettingsFromProvider();
   const notifications = useNotifications();
+  // ✅ ENTERPRISE: Πρόσβαση στο context για ενημέρωση completion settings
+  const enterpriseContext = useEnterpriseDxfSettings();
 
   // Καθορίζουμε το active context
   const activeContext = contextType || 'general';
@@ -527,7 +529,13 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα</label>
           <ColorDialogTrigger
             value={settings.color}
-            onChange={(color: string) => settingsUpdater.updateSetting('color', color)}
+            onChange={(color: string) => {
+              // ✅ ENTERPRISE: Update general settings (current behavior)
+              settingsUpdater.updateSetting('color', color);
+              // ✅ ENTERPRISE: Sync to completion settings για σχεδίαση γραμμών
+              // Αυτό διασφαλίζει ότι η σχεδιαζόμενη γραμμή χρησιμοποιεί το επιλεγμένο χρώμα
+              enterpriseContext.updateSpecificLineSettings('completion', { color });
+            }}
             label={settings.color}
             title="Επιλογή Χρώματος Γραμμής"
             alpha={false}

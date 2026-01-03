@@ -532,16 +532,22 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   };
 
   const handleCanvasClick = (point: Point2D) => {
+    console.log('🎯 handleCanvasClick CALLED!', { point, activeTool });
+
     // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Route click to unified drawing system for drawing tools
     const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' || activeTool === 'polygon'
       || activeTool === 'rectangle' || activeTool === 'circle'; // ✅ Removed 'arc' - not in ToolType union
+
+    console.log('🎯 isDrawingTool:', isDrawingTool, 'drawingHandlersRef.current:', !!drawingHandlersRef.current);
 
     if (isDrawingTool && drawingHandlersRef.current) {
       // 🔥 FIX: Use ONLY dxfCanvasRef for drawing tools (NOT overlayCanvasRef!)
       // Drawing tools (Line/Circle/Rectangle) draw on DxfCanvas
       // Color layers draw on LayerCanvas (overlayCanvasRef)
       const canvasElement = dxfCanvasRef.current?.getCanvas?.();
+      console.log('🎯 canvasElement:', !!canvasElement, 'dxfCanvasRef.current:', !!dxfCanvasRef.current);
       if (!canvasElement) {
+        console.log('❌ canvasElement is null - returning early!');
         return;
       }
 
@@ -795,6 +801,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               }}
               data-canvas-type="dxf" // 🎯 DEBUG: Identifier για alignment test
               className="absolute inset-0 w-full h-full z-10" // 🎯 Z-INDEX FIX: DxfCanvas FOREGROUND (z-10) - ΠΑΝΩ από LayerCanvas!
+              onCanvasClick={handleCanvasClick} // 🎯 FIX: Connect canvas clicks για drawing tools!
               onTransformChange={(newTransform) => {
                 setTransform(newTransform); // ✅ SYNC: Κοινό transform state για DxfCanvas
                 zoomSystem.setTransform(newTransform);

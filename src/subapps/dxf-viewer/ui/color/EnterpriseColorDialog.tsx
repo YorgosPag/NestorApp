@@ -17,7 +17,7 @@
 
 'use client';
 
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useDialog } from '@react-aria/dialog';
 import { useOverlay, usePreventScroll } from '@react-aria/overlays';
@@ -28,6 +28,60 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+// ✅ ENTERPRISE: Custom hook για draggable functionality
+function useDraggable(initialPosition = { x: 0, y: 0 }) {
+  const [position, setPosition] = useState(initialPosition);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const positionStartRef = useRef({ x: 0, y: 0 });
+  // ✅ FIX: Store initial position in ref to avoid recreating resetPosition
+  const initialPositionRef = useRef(initialPosition);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // Only drag from header area (check if target or parent has data-drag-handle)
+    const target = e.target as HTMLElement;
+    if (!target.closest('[data-drag-handle]')) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+    positionStartRef.current = { ...position };
+  }, [position]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const dx = e.clientX - dragStartRef.current.x;
+      const dy = e.clientY - dragStartRef.current.y;
+      setPosition({
+        x: positionStartRef.current.x + dx,
+        y: positionStartRef.current.y + dy
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
+  // ✅ FIX: Stable resetPosition function using useCallback
+  const resetPosition = useCallback(() => {
+    setPosition(initialPositionRef.current);
+  }, []);
+
+  return { position, isDragging, handleMouseDown, resetPosition };
+}
 
 /**
  * Enterprise Color Dialog Component
@@ -55,36 +109,58 @@ export function EnterpriseColorDialog({
   ...pickerProps
 }: EnterpriseColorDialogProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
-  const [tempValue, setTempValue] = React.useState(value);
+  // ✅ FIX: Store original value for Cancel functionality
+  const [originalValue, setOriginalValue] = React.useState(value);
   const { quick, getStatusBorder, getDirectionalBorder, radius } = useBorderTokens();
   const colors = useSemanticColors();
 
-  // Update temp value when external value changes
+  // ✅ ENTERPRISE: Draggable functionality
+  const { position, isDragging, handleMouseDown, resetPosition } = useDraggable({ x: 0, y: 0 });
+
+  // ✅ FIX: Store original value when dialog opens
   React.useEffect(() => {
     if (isOpen) {
-      setTempValue(value);
+      setOriginalValue(value);
+      resetPosition(); // Reset position when reopening
     }
-  }, [value, isOpen]);
+  }, [isOpen, resetPosition]); // ✅ FIX: Remove value from deps to avoid loop
 
-  // Handle apply
+  // ✅ ENTERPRISE: Stop propagation και prevent default για να μην περνάνε τα events στον canvas
+  const handleContainerEvents = useCallback((e: React.MouseEvent | React.PointerEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+  }, []);
+
+  // ✅ ENTERPRISE: Handle events that should NOT prevent default (like color selection)
+  const handleDialogEvents = useCallback((e: React.MouseEvent | React.PointerEvent) => {
+    e.stopPropagation();
+    // Don't prevent default - allow clicks inside dialog
+  }, []);
+
+  // ✅ FIX: Handle live color change (updates preview immediately)
+  const handleColorChange = useCallback((newColor: string) => {
+    onChange(newColor); // Update immediately for live preview
+  }, [onChange]);
+
+  // Handle apply (just close, color is already applied)
   const handleApply = useCallback(() => {
-    onChange(tempValue);
-    onChangeEnd?.(tempValue);
+    onChangeEnd?.(value);
     onClose();
-  }, [tempValue, onChange, onChangeEnd, onClose]);
+  }, [value, onChangeEnd, onClose]);
 
-  // Handle cancel
+  // Handle cancel - restore original color
   const handleCancel = useCallback(() => {
-    setTempValue(value); // Reset to original
+    onChange(originalValue); // Restore original color
     onClose();
-  }, [value, onClose]);
+  }, [originalValue, onChange, onClose]);
 
   // Overlay props (backdrop + escape)
-  const { overlayProps, underlayProps } = useOverlay(
+  // ✅ FIX: isDismissable: false - το dialog κλείνει ΜΟΝΟ με το X button ή Cancel
+  const { overlayProps } = useOverlay(
     {
       isOpen,
       onClose: handleCancel,
-      isDismissable: true,
+      isDismissable: false, // ✅ FIX: Δεν κλείνει με κλικ εκτός
       shouldCloseOnBlur: false,
     },
     overlayRef
@@ -99,34 +175,59 @@ export function EnterpriseColorDialog({
   if (!isOpen) return null;
 
   // Render via portal
+  // ✅ FIX: Use maximum z-index (2147483647) to be above canvas crosshair overlays
   return typeof window !== 'undefined'
     ? createPortal(
-        <div className="fixed inset-0 z-[9998] flex items-center justify-center">
-          {/* Backdrop */}
+        <div
+          className="fixed inset-0 flex items-center justify-center"
+          style={{
+            zIndex: 2147483646, // Just below max to allow stacking
+            cursor: 'default',
+            pointerEvents: 'none' // ✅ FIX: Container doesn't capture events, only dialog does
+          }}
+        >
+          {/* Backdrop - ✅ FIX: No click handlers, just visual overlay */}
           <div
-            {...underlayProps}
             className="absolute inset-0 bg-black bg-opacity-50"
+            style={{ pointerEvents: 'none' }}
           />
 
-          {/* Dialog */}
+          {/* Dialog - ✅ ENTERPRISE: Draggable + Cursor fix + Max z-index */}
           <FocusScope contain restoreFocus autoFocus>
             <div
               {...overlayProps}
               {...dialogProps}
               ref={overlayRef}
-              className={`relative z-[9999] ${colors.bg.accent} ${getStatusBorder('default')} ${quick.card} shadow-2xl max-h-[90vh] overflow-y-auto max-w-[400px]`}
+              onMouseDown={(e) => {
+                handleMouseDown(e);
+                handleDialogEvents(e);
+              }}
+              onClick={handleDialogEvents}
+              onPointerDown={handleDialogEvents}
+              onMouseMove={handleDialogEvents}
+              style={{
+                transform: `translate(${position.x}px, ${position.y}px)`,
+                cursor: isDragging ? 'grabbing' : 'default',
+                zIndex: 2147483647, // Maximum z-index - above everything
+                pointerEvents: 'auto',
+                isolation: 'isolate' // Create new stacking context
+              }}
+              className={`relative ${colors.bg.accent} ${getStatusBorder('default')} ${quick.card} shadow-2xl max-h-[90vh] overflow-y-auto max-w-[400px] select-none`}
             >
-              {/* Header */}
-              <div className={`flex items-center justify-between p-4 ${getDirectionalBorder('muted', 'bottom')}`}>
+              {/* Header - ✅ ENTERPRISE: Draggable handle */}
+              <div
+                data-drag-handle
+                className={`flex items-center justify-between p-4 ${getDirectionalBorder('muted', 'bottom')} cursor-grab active:cursor-grabbing`}
+              >
                 <h2
                   {...titleProps}
-                  className="text-lg font-medium text-white"
+                  className="text-lg font-medium text-white pointer-events-none"
                 >
                   {title}
                 </h2>
                 <button
                   onClick={handleCancel}
-                  className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} transition-colors`}
+                  className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} transition-colors cursor-pointer`}
                   aria-label="Close"
                 >
                   <svg
@@ -147,12 +248,12 @@ export function EnterpriseColorDialog({
                 </button>
               </div>
 
-              {/* Content */}
-              <div className="p-0">
+              {/* Content - ✅ FIX: Ensure pointer events work */}
+              <div className="p-0" style={{ cursor: 'default', pointerEvents: 'auto' }}>
                 <EnterpriseColorPicker
                   {...pickerProps}
-                  value={tempValue}
-                  onChange={setTempValue}
+                  value={value}
+                  onChange={handleColorChange}
                   className="border-0"
                 />
               </div>
@@ -162,13 +263,13 @@ export function EnterpriseColorDialog({
                 <div className={`flex gap-2 p-4 ${getDirectionalBorder('muted', 'top')}`}>
                   <button
                     onClick={handleCancel}
-                    className={`flex-1 px-4 py-2 ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.inverted} rounded transition-colors`}
+                    className={`flex-1 px-4 py-2 ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.inverted} rounded transition-colors cursor-pointer`}
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleApply}
-                    className={`flex-1 px-4 py-2 ${colors.bg.primary} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white rounded transition-colors`}
+                    className={`flex-1 px-4 py-2 ${colors.bg.primary} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white rounded transition-colors cursor-pointer`}
                   >
                     Apply
                   </button>

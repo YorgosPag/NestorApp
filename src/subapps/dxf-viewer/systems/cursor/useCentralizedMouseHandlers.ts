@@ -355,6 +355,13 @@ export function useCentralizedMouseHandlers({
     }
 
     // 🎯 DRAWING TOOLS: Call onCanvasClick if provided (for drawing tools like Line, Circle, etc.)
+    console.log('🔴 DEBUG onCanvasClick check:', {
+      hasOnCanvasClick: !!onCanvasClick,
+      isSelecting: cursor.isSelecting,
+      isPanning: panState.isPanning,
+      hasPosition: !!cursor.position,
+      position: cursor.position
+    });
     if (onCanvasClick && !cursor.isSelecting && !panState.isPanning && cursor.position) {
       console.log('✅ Calling onCanvasClick with:', cursor.position);
       onCanvasClick(cursor.position);

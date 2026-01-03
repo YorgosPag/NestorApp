@@ -330,6 +330,125 @@ backgroundColor: '#000000'
 
 ---
 
+### 📋 ADR-005: LINE DRAWING SYSTEM (2026-01-03) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-03
+
+**🏢 ENTERPRISE LEVEL**: **9.5/10** - AutoCAD/SolidWorks Standards
+
+**Context**:
+Το DXF Viewer χρειάζεται πλήρες σύστημα δημιουργίας γραμμών με:
+- Drawing tools (line, rectangle, circle, polyline, polygon)
+- 3-phase rendering (preview → completion → normal)
+- Snap system integration
+- Settings integration (colors, styles, measurements)
+
+**Decision - CENTRALIZED ARCHITECTURE**:
+
+| Rule | Description |
+|------|-------------|
+| **SINGLE DRAWING HOOK** | `useUnifiedDrawing` - όλα τα drawing tools |
+| **SINGLE EVENT HANDLER** | `useDrawingHandlers` - όλα τα mouse events |
+| **SINGLE ORCHESTRATOR** | `DrawingOrchestrator` - workflow coordination |
+| **SINGLE RENDERER** | `LineRenderer` / `PolylineRenderer` - entity rendering |
+| **PROHIBITION** | ❌ Νέα drawing implementations εκτός αυτών **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** |
+
+**🏗️ Architecture Components**:
+
+| Component | Location | Lines | Role |
+|-----------|----------|-------|------|
+| `useUnifiedDrawing` | `hooks/drawing/useUnifiedDrawing.tsx` | 760 | Master drawing hook για όλα τα tools |
+| `useDrawingHandlers` | `hooks/drawing/useDrawingHandlers.ts` | 182 | Mouse event handlers με snap |
+| `DrawingOrchestrator` | `systems/drawing-orchestrator/` | 150 | Workflow coordinator |
+| `EntityCreationSystem` | `systems/entity-creation/` | 87+141 | High-level entity creation API + config |
+| `LineRenderer` | `rendering/entities/LineRenderer.ts` | 229 | 3-phase line rendering (ISO 128) |
+| `PolylineRenderer` | `rendering/entities/PolylineRenderer.ts` | 170+ | Polyline/polygon rendering |
+| `line-utils.ts` | `rendering/entities/shared/` | 300+ | Shared utilities (hit test, grips, geometry) |
+| `ToolStateManager` | `systems/tools/ToolStateManager.ts` | 251 | Tool lifecycle management |
+| `PhaseManager` | `systems/phase-manager/` | 200+ | 3-phase rendering (preview/normal/interactive) |
+| **TOTAL** | | **2,300+** | |
+
+**Supported Drawing Tools**:
+
+| Tool | Points | Entity Created |
+|------|--------|----------------|
+| `line` | 2 | LineEntity |
+| `rectangle` | 2 | PolylineEntity (closed) |
+| `circle` | 2 | CircleEntity |
+| `circle-diameter` | 2 | CircleEntity |
+| `circle-2p-diameter` | 2 | CircleEntity |
+| `polyline` | ∞ | PolylineEntity |
+| `polygon` | ∞ | PolylineEntity (closed) |
+| `measure-distance` | 2 | LineEntity με measurement flag |
+| `measure-angle` | 3+ | Measurement entity |
+| `measure-area` | ∞ | PolylineEntity με area flag |
+
+**3-Phase Rendering System**:
+
+| Phase | Style | Measurements | Use Case |
+|-------|-------|--------------|----------|
+| **Preview** | Blue dashed | ✅ Distance/angle | During drawing |
+| **Completion** | Green solid | ✅ Final measurements | Just completed |
+| **Normal** | White solid | ❌ None | Saved entity |
+| **Interactive** | Hover: dashed, Selected: solid | ✅ When selected | User interaction |
+
+**Workflow Diagram**:
+```
+User clicks "Line" → ToolStateManager.setTool('line')
+    ↓
+useDrawingHandlers.startDrawing('line')
+    ↓
+useUnifiedDrawing.startDrawing('line') → Drawing mode activated
+    ↓
+Click 1 → addPoint(p1) → tempPoints = [p1]
+    ↓
+Mouse Move → updatePreview() → LineRenderer.render(preview, 'preview')
+    ↓
+Click 2 → addPoint(p2) → createEntityFromTool() → LineEntity created
+    ↓
+Scene updated → DxfCanvas.render() → LineRenderer.render(entity, 'normal')
+```
+
+**Implementation Pattern**:
+```typescript
+// ✅ ENTERPRISE: Use centralized hooks
+import { useUnifiedDrawing } from '@/subapps/dxf-viewer/hooks/drawing/useUnifiedDrawing';
+import { useDrawingHandlers } from '@/subapps/dxf-viewer/hooks/drawing/useDrawingHandlers';
+
+// In component:
+const drawing = useUnifiedDrawing();
+const handlers = useDrawingHandlers();
+
+// Start drawing
+drawing.startDrawing('line');
+
+// Handle canvas click
+handlers.onDrawingPoint(worldPoint);
+
+// ❌ PROHIBITED: Creating new drawing logic
+// Χρησιμοποιήστε ΜΟΝΟ τα centralized hooks!
+```
+
+**Documentation Suite** (13+ αρχεία):
+- `docs/LINE_DRAWING_SYSTEM.md` - 2,000+ γραμμές comprehensive docs
+- `docs/features/line-drawing/README.md` - Overview
+- `docs/features/line-drawing/architecture.md` - Architecture details
+- `docs/features/line-drawing/configuration.md` - Settings guide
+- `docs/features/line-drawing/implementation.md` - Implementation guide
+- `docs/features/line-drawing/testing.md` - Testing guide
+- + 6 more modular docs
+
+**Consequences**:
+- ✅ Single source of truth για drawing logic (~2,300 lines)
+- ✅ Zero code duplication - όλα τα tools χρησιμοποιούν ίδιο system
+- ✅ 3-phase rendering για professional UX
+- ✅ Snap system integration (endpoint, midpoint, intersection, grid)
+- ✅ Settings integration (colors, styles από DxfSettingsProvider)
+- ✅ Comprehensive testing suite
+- ✅ 13+ documentation files
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)
