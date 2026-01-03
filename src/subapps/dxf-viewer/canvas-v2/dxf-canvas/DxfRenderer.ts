@@ -199,13 +199,15 @@ export class DxfRenderer {
         };
 
       case 'text':
-        // Text entities ήδη έχουν τα properties στο DxfText type
-        // ✅ ENTERPRISE FIX: Map height → fontSize for TextRenderer compatibility
+        // ╔════════════════════════════════════════════════════════════════════╗
+        // ║ ⚠️ VERIFIED WORKING (2026-01-03) - ΜΗΝ ΑΛΛΑΞΕΤΕ!                   ║
+        // ║ Απλό pass-through του height - ΟΧΙ fontSize mapping!              ║
+        // ║ Ο TextRenderer χειρίζεται τα πάντα σωστά.                         ║
+        // ╚════════════════════════════════════════════════════════════════════╝
         return {
           position: entity.position,
           text: entity.text,
-          height: entity.height,
-          fontSize: entity.height  // TextRenderer uses fontSize as canonical property
+          height: entity.height
         };
 
       default:

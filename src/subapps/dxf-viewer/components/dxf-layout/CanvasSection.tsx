@@ -394,10 +394,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
             return { ...base, type: 'arc' as const, center: arcEntity.center, radius: arcEntity.radius, startAngle: arcEntity.startAngle, endAngle: arcEntity.endAngle } as DxfEntityUnion;
           }
           case 'text': {
-            // Type guard: Entity με type 'text' έχει position, text, fontSize (canonical), rotation
-            // ✅ ENTERPRISE FIX: Use fontSize (canonical) from SceneEntity, map to height for DxfText
+            // ╔════════════════════════════════════════════════════════════════════╗
+            // ║ ⚠️ VERIFIED WORKING (2026-01-03) - ΜΗΝ ΑΛΛΑΞΕΤΕ!                   ║
+            // ║ height || fontSize || 12 είναι η ΣΩΣΤΗ σειρά προτεραιότητας       ║
+            // ║ ΜΗΝ αλλάξετε σε fontSize || height - ΧΑΛΑΕΙ τα κείμενα!           ║
+            // ╚════════════════════════════════════════════════════════════════════╝
             const textEntity = entity as typeof entity & { position: Point2D; text: string; fontSize?: number; height?: number; rotation?: number };
-            const textHeight = textEntity.fontSize || textEntity.height || 2.5; // fontSize is canonical, height is fallback
+            const textHeight = textEntity.height || textEntity.fontSize || 12;
             return { ...base, type: 'text' as const, position: textEntity.position, text: textEntity.text, height: textHeight, rotation: textEntity.rotation } as DxfEntityUnion;
           }
           default:
