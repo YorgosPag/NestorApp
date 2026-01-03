@@ -118,6 +118,15 @@ export interface DesignTokens {
   zIndex_toast: string;
   zIndex_tooltip: string;
   zIndex_critical: string;
+  canvas_background_dxf: string;
+  canvas_background_layer: string;
+  canvas_background_overlay: string;
+  canvas_background_container: string;
+  canvas_themes_autocad_classic: string;
+  canvas_themes_autocad_dark: string;
+  canvas_themes_solidworks: string;
+  canvas_themes_blender: string;
+  canvas_themes_light: string;
 }
 
 export const designTokens: DesignTokens = {
@@ -233,6 +242,15 @@ export const designTokens: DesignTokens = {
   zIndex_toast: 'var(--z-index-toast)',
   zIndex_tooltip: 'var(--z-index-tooltip)',
   zIndex_critical: 'var(--z-index-critical)',
+  canvas_background_dxf: 'var(--canvas-background-dxf)',
+  canvas_background_layer: 'var(--canvas-background-layer)',
+  canvas_background_overlay: 'var(--canvas-background-overlay)',
+  canvas_background_container: 'var(--canvas-background-container)',
+  canvas_themes_autocad_classic: 'var(--canvas-themes-autocad-classic)',
+  canvas_themes_autocad_dark: 'var(--canvas-themes-autocad-dark)',
+  canvas_themes_solidworks: 'var(--canvas-themes-solidworks)',
+  canvas_themes_blender: 'var(--canvas-themes-blender)',
+  canvas_themes_light: 'var(--canvas-themes-light)',
 };
 
 export default designTokens;

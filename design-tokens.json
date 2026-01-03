@@ -199,5 +199,39 @@
     "toast": { "value": "1700", "type": "zIndex", "description": "Toast notifications" },
     "tooltip": { "value": "1800", "type": "zIndex", "description": "Tooltips - highest UI layer" },
     "critical": { "value": "2147483647", "type": "zIndex", "description": "Critical system overlays only" }
+  },
+  "canvas": {
+    "_description": "🎨 ENTERPRISE CANVAS THEME - ADR-004 Single Source of Truth for DXF Viewer Canvas",
+    "_reference": "Based on AutoCAD, SolidWorks, Blender industry standards",
+    "background": {
+      "dxf": {
+        "value": "#000000",
+        "type": "color",
+        "description": "Main DXF canvas - Pure black (AutoCAD standard) for maximum color contrast"
+      },
+      "layer": {
+        "value": "transparent",
+        "type": "color",
+        "description": "Layer overlay canvas - Transparent to show DXF content below"
+      },
+      "overlay": {
+        "value": "transparent",
+        "type": "color",
+        "description": "UI overlays (crosshair, grips, selection) - Transparent"
+      },
+      "container": {
+        "value": "transparent",
+        "type": "color",
+        "description": "Parent container divs - Must be transparent"
+      }
+    },
+    "themes": {
+      "_description": "Alternative canvas themes for user preferences",
+      "autocad-classic": { "value": "#000000", "type": "color", "description": "AutoCAD Classic - Pure black" },
+      "autocad-dark": { "value": "#1a1a1a", "type": "color", "description": "AutoCAD Dark Gray" },
+      "solidworks": { "value": "#2d3748", "type": "color", "description": "SolidWorks style - Dark blue-gray" },
+      "blender": { "value": "#232323", "type": "color", "description": "Blender style - Dark gray" },
+      "light": { "value": "#ffffff", "type": "color", "description": "Light theme - For print preview" }
+    }
   }
 }

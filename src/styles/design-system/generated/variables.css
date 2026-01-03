@@ -121,6 +121,15 @@
   --z-index-toast: 1700;
   --z-index-tooltip: 1800;
   --z-index-critical: 2147483647;
+  --canvas-background-dxf: #000000;
+  --canvas-background-layer: transparent;
+  --canvas-background-overlay: transparent;
+  --canvas-background-container: transparent;
+  --canvas-themes-autocad-classic: #000000;
+  --canvas-themes-autocad-dark: #1a1a1a;
+  --canvas-themes-solidworks: #2d3748;
+  --canvas-themes-blender: #232323;
+  --canvas-themes-light: #ffffff;
 }
 
 /* 🏢 ENTERPRISE UTILITY CLASSES - Auto-Generated */

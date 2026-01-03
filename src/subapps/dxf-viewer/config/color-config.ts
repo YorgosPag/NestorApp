@@ -380,12 +380,23 @@ export const UI_COLORS = {
 } as const;
 
 // ============================================================================
-// CANVAS THEME SYSTEM - Enterprise Canvas Background Management (ADR-002)
+// CANVAS THEME SYSTEM - Enterprise Canvas Background Management (ADR-004)
 // ============================================================================
 //
-// 🏢 ENTERPRISE STANDARD: Single Source of Truth για Canvas Backgrounds
-// 📍 LOCATION: Αυτό είναι το ΜΟΝΑΔΙΚΟ σημείο ορισμού canvas backgrounds
+// 🏢 WORLD-CLASS ENTERPRISE STANDARD (Figma/AutoCAD/Blender Level)
+// 📍 SOURCE: design-tokens.json → build-design-tokens.js → CSS Variables
 // 🚫 PROHIBITION: ΜΗΝ ορίζετε canvas backgrounds αλλού (π.χ. panel-tokens.ts)
+//
+// ΑΡΧΙΤΕΚΤΟΝΙΚΗ:
+// ┌──────────────────────────────────────────────────────────────────────────┐
+// │ design-tokens.json → build-design-tokens.js → variables.css → Runtime   │
+// │                                                                          │
+// │ 🎯 CSS Variables enable:                                                 │
+// │    ✅ Runtime theme switching                                            │
+// │    ✅ User preferences (dark/light/custom)                               │
+// │    ✅ DevTools live editing                                              │
+// │    ✅ Zero-rebuild theme changes                                         │
+// └──────────────────────────────────────────────────────────────────────────┘
 //
 // ΙΕΡΑΡΧΙΑ CANVAS LAYERS:
 // ┌────────────────────────────────────────────────────────────────┐
@@ -401,60 +412,62 @@ export const UI_COLORS = {
 /**
  * 🎨 CANVAS_THEME - Enterprise Canvas Background Configuration
  *
- * Single source of truth για όλα τα canvas backgrounds.
- * Βασισμένο σε AutoCAD/SolidWorks/Blender industry standards.
+ * 🏢 WORLD-CLASS IMPLEMENTATION:
+ * Χρησιμοποιεί CSS Variables από design-tokens.json για runtime flexibility.
+ * Ακολουθεί τα standards της Figma, AutoCAD, Blender.
  *
  * @example
- * // ✅ ΣΩΣΤΟ - Χρήση κεντρικοποιημένης σταθεράς
+ * // ✅ ΣΩΣΤΟ - Χρήση CSS Variable μέσω CANVAS_THEME
  * style={{ backgroundColor: CANVAS_THEME.DXF_CANVAS }}
+ * // Result: backgroundColor: 'var(--canvas-background-dxf)'
  *
  * // ❌ ΛΑΘΟΣ - Hardcoded τιμή
  * style={{ backgroundColor: '#000000' }}
- * style={{ backgroundColor: 'transparent' }}
  */
 export const CANVAS_THEME = {
   /**
    * 🖤 DXF_CANVAS - Main DXF rendering canvas
-   * Pure black για maximum color contrast (AutoCAD standard)
+   * CSS Variable: --canvas-background-dxf (#000000)
    * Χρησιμοποιείται στο: DxfCanvasCore.tsx, canvas-v2/DxfCanvas.tsx
    */
-  DXF_CANVAS: '#000000' as const,
+  DXF_CANVAS: 'var(--canvas-background-dxf)' as const,
 
   /**
    * 🔲 LAYER_CANVAS - Color overlay layer
-   * Transparent για να φαίνεται το DXF κάτω
+   * CSS Variable: --canvas-background-layer (transparent)
    * Χρησιμοποιείται στο: LayerCanvas.tsx
    */
-  LAYER_CANVAS: 'transparent' as const,
+  LAYER_CANVAS: 'var(--canvas-background-layer)' as const,
 
   /**
    * 🔲 OVERLAY - UI overlays (crosshair, grips, selection)
-   * Transparent για να μην καλύπτουν το content
+   * CSS Variable: --canvas-background-overlay (transparent)
    * Χρησιμοποιείται στο: CrosshairOverlay, SelectionOverlay, etc.
    */
-  OVERLAY: 'transparent' as const,
+  OVERLAY: 'var(--canvas-background-overlay)' as const,
 
   /**
    * 🔲 CONTAINER - Parent container divs
-   * Transparent - δεν πρέπει να έχουν χρώμα
+   * CSS Variable: --canvas-background-container (transparent)
    * Χρησιμοποιείται στο: CanvasSection.tsx, canvas-stack
    */
-  CONTAINER: 'transparent' as const,
+  CONTAINER: 'var(--canvas-background-container)' as const,
 
   /**
-   * 🎨 Alternative themes για μελλοντική χρήση
+   * 🎨 Alternative themes - CSS Variables για runtime switching
+   * Χρήση: document.documentElement.style.setProperty('--canvas-background-dxf', CANVAS_THEME.THEMES.BLENDER)
    */
   THEMES: {
     /** AutoCAD Classic - Pure black */
-    AUTOCAD_CLASSIC: '#000000',
+    AUTOCAD_CLASSIC: 'var(--canvas-themes-autocad-classic)' as const,
     /** AutoCAD Dark Gray */
-    AUTOCAD_DARK: '#1a1a1a',
+    AUTOCAD_DARK: 'var(--canvas-themes-autocad-dark)' as const,
     /** SolidWorks style - Dark blue-gray */
-    SOLIDWORKS: '#2d3748',
+    SOLIDWORKS: 'var(--canvas-themes-solidworks)' as const,
     /** Blender style - Dark gray */
-    BLENDER: '#232323',
+    BLENDER: 'var(--canvas-themes-blender)' as const,
     /** Light theme - For print preview */
-    LIGHT: '#ffffff',
+    LIGHT: 'var(--canvas-themes-light)' as const,
   },
 } as const;
 
