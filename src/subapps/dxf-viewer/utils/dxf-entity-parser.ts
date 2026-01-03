@@ -64,6 +64,55 @@ const DXF_SECTION_MARKERS = [
 ] as const;
 
 // ============================================================================
+// 🏢 ENTERPRISE: DXF HEADER DATA TYPE
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: DXF Header Data
+ *
+ * Parsed values from HEADER section that affect entity interpretation.
+ * Critical for correct text/dimension scaling.
+ */
+export interface DxfHeaderData {
+  /** $INSUNITS - Drawing units (0=Unitless, 1=Inches, 2=Feet, 4=mm, 5=cm, 6=m) */
+  insunits: number;
+  /** $DIMSCALE - Overall dimension scale factor */
+  dimscale: number;
+  /** $CANNOSCALEVALUE - Current annotation scale value */
+  annoScale: number;
+  /** $MEASUREMENT - Drawing units (0=English, 1=Metric) */
+  measurement: number;
+}
+
+/**
+ * 🏢 ENTERPRISE: INSUNITS to scale factor mapping
+ * Converts DXF units to mm (internal base unit)
+ */
+const INSUNITS_TO_MM: Record<number, number> = {
+  0: 1,       // Unitless - assume mm
+  1: 25.4,    // Inches → mm
+  2: 304.8,   // Feet → mm
+  3: 1609344, // Miles → mm
+  4: 1,       // Millimeters → mm (base)
+  5: 10,      // Centimeters → mm
+  6: 1000,    // Meters → mm
+  7: 1000000, // Kilometers → mm
+  8: 0.0000254, // Microinches → mm
+  9: 0.0254,  // Mils → mm
+  10: 914.4,  // Yards → mm
+  11: 1e-7,   // Angstroms → mm
+  12: 1e-6,   // Nanometers → mm
+  13: 0.001,  // Microns → mm
+  14: 100,    // Decimeters → mm
+  15: 10000,  // Decameters → mm
+  16: 100000, // Hectometers → mm
+  17: 1852000, // Gigameters → mm (nautical mile)
+  18: 1.496e14, // Astronomical units → mm
+  19: 9.461e18, // Light years → mm
+  20: 3.086e19, // Parsecs → mm
+};
+
+// ============================================================================
 // 🏢 ENTERPRISE: DXF ENTITY PARSER CLASS
 // ============================================================================
 
@@ -72,8 +121,112 @@ const DXF_SECTION_MARKERS = [
  *
  * Static class for parsing DXF file content into scene entities.
  * Uses state machine pattern for robust parsing.
+ *
+ * Now includes HEADER parsing for proper unit/scale handling.
  */
 export class DxfEntityParser {
+  /**
+   * 🏢 ENTERPRISE: Parse HEADER section
+   *
+   * Extracts critical variables that affect entity interpretation:
+   * - $INSUNITS - Drawing units
+   * - $DIMSCALE - Dimension scale factor
+   * - $CANNOSCALEVALUE - Annotation scale
+   * - $MEASUREMENT - Metric vs English
+   *
+   * @param lines - All lines from DXF file
+   * @returns Parsed header data with defaults
+   */
+  static parseHeader(lines: string[]): DxfHeaderData {
+    const header: DxfHeaderData = {
+      insunits: 4,      // Default: mm
+      dimscale: 1,      // Default: no scaling
+      annoScale: 1,     // Default: 1:1
+      measurement: 1    // Default: Metric
+    };
+
+    // Find HEADER section
+    let inHeader = false;
+    let currentVariable = '';
+
+    for (let i = 0; i < lines.length - 1; i += 2) {
+      const code = lines[i].trim();
+      const value = lines[i + 1]?.trim() || '';
+
+      // Detect HEADER section start
+      if (code === '2' && value === 'HEADER') {
+        inHeader = true;
+        continue;
+      }
+
+      // Detect HEADER section end
+      if (code === '0' && value === 'ENDSEC' && inHeader) {
+        break;
+      }
+
+      if (!inHeader) continue;
+
+      // Variable name marker (group code 9)
+      if (code === '9') {
+        currentVariable = value;
+        continue;
+      }
+
+      // Parse variable values based on current variable
+      switch (currentVariable) {
+        case '$INSUNITS':
+          if (code === '70') {
+            header.insunits = parseInt(value) || 4;
+          }
+          break;
+        case '$DIMSCALE':
+          if (code === '40') {
+            header.dimscale = parseFloat(value) || 1;
+          }
+          break;
+        case '$CANNOSCALEVALUE':
+          if (code === '40') {
+            header.annoScale = parseFloat(value) || 1;
+          }
+          break;
+        case '$MEASUREMENT':
+          if (code === '70') {
+            header.measurement = parseInt(value) || 1;
+          }
+          break;
+      }
+    }
+
+    // Log parsed header for debugging
+    console.log('📋 DXF HEADER parsed:', {
+      insunits: header.insunits,
+      insunitsName: DxfEntityParser.getUnitsName(header.insunits),
+      dimscale: header.dimscale,
+      annoScale: header.annoScale,
+      measurement: header.measurement === 1 ? 'Metric' : 'English'
+    });
+
+    return header;
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Get unit scale factor (to mm)
+   */
+  static getUnitScale(insunits: number): number {
+    return INSUNITS_TO_MM[insunits] ?? 1;
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Get unit name for logging
+   */
+  static getUnitsName(insunits: number): string {
+    const names: Record<number, string> = {
+      0: 'Unitless', 1: 'Inches', 2: 'Feet', 4: 'Millimeters',
+      5: 'Centimeters', 6: 'Meters', 7: 'Kilometers'
+    };
+    return names[insunits] || `Unknown (${insunits})`;
+  }
+
   /**
    * 🏢 ENTERPRISE: Parse single entity from DXF lines
    *

@@ -275,20 +275,15 @@ export class PhaseManager {
 
   /**
    * Apply normal phase styling
+   * ✅ FIXED: Use entity.color with WHITE fallback (like working backup)
    */
   private applyNormalStyle(entity: Entity): void {
-    const generalStyle = getLinePreviewStyleWithOverride();
-
-    if (generalStyle.enabled) {
-      this.ctx.lineWidth = generalStyle.lineWidth;
-      this.ctx.setLineDash([]);
-      // ✅ ENTERPRISE FIX: Use entity.color if available, fallback to generalStyle
-      // This enables DXF entities to display their original AutoCAD colors (ACI)
-      this.ctx.strokeStyle = entity.color || generalStyle.strokeColor;
-      this.ctx.globalAlpha = generalStyle.opacity;
-    } else {
-      this.ctx.globalAlpha = 0;
-    }
+    // ✅ ENTERPRISE FIX: Always render with full opacity
+    this.ctx.lineWidth = 1;
+    this.ctx.setLineDash([]);
+    // ✅ Use entity.color if available, fallback to WHITE (not dark colors!)
+    this.ctx.strokeStyle = entity.color || '#FFFFFF';
+    this.ctx.globalAlpha = 1.0; // Always full opacity
   }
 
   /**

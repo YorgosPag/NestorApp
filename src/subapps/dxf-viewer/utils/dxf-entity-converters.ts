@@ -291,6 +291,7 @@ export function convertText(
     position: { x, y },
     text: text.trim(),
     fontSize: height,
+    height: height, // 🔧 ALSO ADD height property
     rotation,
     alignment,
     ...(color && { color })
@@ -344,6 +345,7 @@ export function convertMText(
     position: { x, y },
     text: text.trim(),
     fontSize: height,
+    height: height, // 🔧 ALSO ADD height property
     rotation,
     alignment,
     ...(color && { color })
@@ -387,47 +389,99 @@ export function convertSpline(
 }
 
 /**
- * 🏢 ENTERPRISE: Convert DIMENSION entity to polyline
+ * 🏢 ENTERPRISE: Convert DIMENSION entity to TEXT with proper rotation
  *
  * DXF Codes:
- * - 13, 23: First definition point
- * - 14, 24: Second definition point
- * - 15, 25: Third definition point (dimension line)
- * - Fallback to 10, 20, 11, 21 if above not present
+ * - 13, 23: First definition point (start of dimension)
+ * - 14, 24: Second definition point (end of dimension)
+ * - 11, 21: Middle point of dimension line (text position)
+ * - 1: Dimension text override (custom text)
+ * - 42: Actual measurement value
+ * - 50: Rotation of dimension text
+ * - 53: Rotation of dimension extension line
+ *
+ * ΚΡΙΣΙΜΟ: Τα DIMENSION entities πρέπει να γίνουν TEXT με rotation
+ * ώστε να ακολουθούν τη διεύθυνση της γραμμής διάστασης.
  */
 export function convertDimension(
   data: Record<string, string>,
   layer: string,
   index: number
 ): AnySceneEntity | null {
+  // Definition points (start and end of dimension)
   const x1 = parseFloat(data['13']) || parseFloat(data['10']);
   const y1 = parseFloat(data['23']) || parseFloat(data['20']);
   const x2 = parseFloat(data['14']) || parseFloat(data['11']);
   const y2 = parseFloat(data['24']) || parseFloat(data['21']);
-  const x3 = parseFloat(data['15']);
-  const y3 = parseFloat(data['25']);
+
+  // Middle point (text position) - DXF code 11, 21
+  const textX = parseFloat(data['11']);
+  const textY = parseFloat(data['21']);
+
+  // Dimension text and measurement
+  const customText = data['1'] || ''; // Custom text override
+  const measurement = parseFloat(data['42']); // Actual measurement value
+
+  // Rotation angles
+  const textRotation = parseFloat(data['50']) || 0; // Text rotation
+  const lineRotation = parseFloat(data['53']) || 0; // Extension line rotation
+
+  // Text height from DIMTXT (code 140) or default
+  const textHeight = parseFloat(data['140']) || 0.18;
 
   if (!isNaN(x1) && !isNaN(y1) && !isNaN(x2) && !isNaN(y2)) {
-    const vertices: Point2D[] = [
-      { x: x1, y: y1 },
-      { x: x2, y: y2 }
-    ];
-
-    // Add third point if available
-    if (!isNaN(x3) && !isNaN(y3)) {
-      vertices.push({ x: x3, y: y3 });
+    // Calculate text content
+    let dimensionText = customText;
+    if (!dimensionText && !isNaN(measurement)) {
+      // Format measurement value with 2 decimal places
+      dimensionText = measurement.toFixed(2);
     }
+    if (!dimensionText) {
+      // Calculate distance as fallback
+      const distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+      dimensionText = distance.toFixed(2);
+    }
+
+    // ╔════════════════════════════════════════════════════════════════════════╗
+    // ║ 🔧 DIMENSION ROTATION CALCULATION (2026-01-03)                         ║
+    // ║ Υπολογίζει τη γωνία του κειμένου από τη διεύθυνση της γραμμής         ║
+    // ╚════════════════════════════════════════════════════════════════════════╝
+    let rotation = textRotation;
+
+    // If no explicit text rotation, calculate from dimension line direction
+    if (textRotation === 0 && lineRotation === 0) {
+      // Calculate angle from definition points
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      rotation = Math.atan2(dy, dx) * (180 / Math.PI);
+
+      // Normalize to keep text readable (not upside down)
+      // Text should be readable from bottom-left to top-right
+      if (rotation > 90) rotation -= 180;
+      if (rotation < -90) rotation += 180;
+    } else if (lineRotation !== 0) {
+      rotation = lineRotation;
+    }
+
+    // Calculate text position (middle of dimension line or use explicit position)
+    let posX = !isNaN(textX) ? textX : (x1 + x2) / 2;
+    let posY = !isNaN(textY) ? textY : (y1 + y2) / 2;
 
     // 🏢 ENTERPRISE: Extract ACI color from DXF code 62
     const color = extractEntityColor(data);
 
+    // Return as TEXT entity with rotation
     return {
       id: `dimension_${index}`,
-      type: 'polyline',
+      type: 'text',
       layer,
       visible: true,
-      vertices,
-      closed: false,
+      position: { x: posX, y: posY },
+      text: dimensionText,
+      fontSize: textHeight,
+      height: textHeight,
+      rotation: rotation,
+      alignment: 'center',
       ...(color && { color })
     };
   }

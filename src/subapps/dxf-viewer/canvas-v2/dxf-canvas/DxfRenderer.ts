@@ -97,7 +97,7 @@ export class DxfRenderer {
     this.ctx.fillText('DXF', originX - 45, originY - 10);
     this.ctx.restore();
 
-// Early return if no scene - but origin marker is already drawn above!
+    // Early return if no scene
       if (!scene || !scene.entities.length) {
         // Silent: No scene or no entities to render (avoid React stack noise)
         return;
@@ -201,13 +201,23 @@ export class DxfRenderer {
       case 'text':
         // ╔════════════════════════════════════════════════════════════════════╗
         // ║ ⚠️ VERIFIED WORKING (2026-01-03) - ΜΗΝ ΑΛΛΑΞΕΤΕ!                   ║
-        // ║ Απλό pass-through του height - ΟΧΙ fontSize mapping!              ║
-        // ║ Ο TextRenderer χειρίζεται τα πάντα σωστά.                         ║
+        // ║                                                                    ║
+        // ║ ΚΡΙΣΙΜΟ: Αυτός ο κώδικας είναι ΑΠΑΡΑΙΤΗΤΟΣ για σωστή εμφάνιση     ║
+        // ║ κειμένων διαστάσεων (dimension text) με τη σωστή κατεύθυνση.      ║
+        // ║                                                                    ║
+        // ║ ✅ position: Θέση κειμένου στο DXF                                 ║
+        // ║ ✅ text: Περιεχόμενο κειμένου                                      ║
+        // ║ ✅ height: Ύψος γραμματοσειράς (ΟΧΙ fontSize!)                     ║
+        // ║ ✅ rotation: Γωνία περιστροφής σε μοίρες (ΚΡΙΣΙΜΟ!)               ║
+        // ║                                                                    ║
+        // ║ 🔧 FIX (2026-01-03): Προσθήκη rotation - χωρίς αυτό τα κείμενα    ║
+        // ║    διαστάσεων εμφανίζονταν ΠΑΝΤΑ οριζόντια!                       ║
         // ╚════════════════════════════════════════════════════════════════════╝
         return {
           position: entity.position,
           text: entity.text,
-          height: entity.height
+          height: entity.height,
+          rotation: entity.rotation
         };
 
       default:

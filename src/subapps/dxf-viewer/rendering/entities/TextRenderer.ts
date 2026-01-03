@@ -8,17 +8,21 @@
  * ║  Αυτός ο κώδικας ΛΕΙΤΟΥΡΓΕΙ ΣΩΣΤΑ μετά από πολλές δοκιμές.              ║
  * ║                                                                          ║
  * ║  ✅ VERIFIED WORKING: 2026-01-03                                         ║
- * ║  ✅ Τα κείμενα εμφανίζονται με σωστό μέγεθος και χρώμα                   ║
- * ║  ✅ Βασισμένο στο working backup (08-09-2025)                            ║
+ * ║  ✅ Τα κείμενα κλιμακώνονται με το zoom (screenHeight = height × scale) ║
+ * ║  ✅ Τα κείμενα διαστάσεων ακολουθούν τη σωστή κατεύθυνση (rotation)     ║
  * ║                                                                          ║
  * ║  ΚΡΙΣΙΜΟ: Η απλή προσέγγιση (height × scale) είναι η ΣΩΣΤΗ!             ║
  * ║  ΜΗΝ προσθέσετε:                                                         ║
  * ║  - SCALE_BOOST_FACTOR                                                    ║
- * ║  - calculateEffectiveScreenHeight()                                      ║
+ * ║  - MIN/MAX clamping (κάνει τα κείμενα σταθερά!)                         ║
  * ║  - Annotation scaling                                                    ║
- * ║  - Dynamic minimums                                                      ║
  * ║                                                                          ║
- * ║  Αυτά ΧΑΛΑΣΑΝ τη λειτουργικότητα στο παρελθόν!                          ║
+ * ║  📐 ROTATION FIX (2026-01-03):                                           ║
+ * ║  Το rotation για dimension text λειτουργεί ΣΩΣΤΑ!                        ║
+ * ║  - DXF: Counter-clockwise (CCW), 0° = +X                                 ║
+ * ║  - Canvas: Clockwise (CW) με Y-flip                                      ║
+ * ║  - Λύση: Αντιστροφή γωνίας (-rotation) λόγω Y-flip                      ║
+ * ║  ΜΗΝ ΑΛΛΑΞΕΤΕ τον υπολογισμό rotation!                                  ║
  * ╚══════════════════════════════════════════════════════════════════════════╝
  */
 
@@ -56,7 +60,12 @@ export class TextRenderer extends BaseEntityRenderer {
     if (options.hovered) {
       HoverManager.renderHover(entity as TextEntity, this.ctx, options, this.worldToScreen.bind(this));
     } else {
-      // ✅ SIMPLIFIED: Direct calculation like old backup
+      // ╔════════════════════════════════════════════════════════════════════════╗
+      // ║ ✅ ZOOM-RESPONSIVE TEXT (2026-01-03)                                   ║
+      // ║ Τα κείμενα κλιμακώνονται με το zoom όπως όλες οι άλλες οντότητες.     ║
+      // ║ Χρησιμοποιεί: screenHeight = worldHeight × scale                       ║
+      // ║ Έτσι τα κείμενα διαστάσεων ακολουθούν τις γραμμές τους.               ║
+      // ╚════════════════════════════════════════════════════════════════════════╝
       const screenPos = this.worldToScreen(position);
       const screenHeight = height * this.transform.scale;
 
@@ -69,9 +78,26 @@ export class TextRenderer extends BaseEntityRenderer {
       this.ctx.textBaseline = 'bottom';
 
       // Apply rotation if needed
-      if (rotation !== 0) {
+      // ╔════════════════════════════════════════════════════════════════════════╗
+      // ║ 🔧 DXF ROTATION FIX v3 (2026-01-03)                                    ║
+      // ║ Βάσει έρευνας: ezdxf, FreeCAD, libdxfrw                               ║
+      // ║                                                                        ║
+      // ║ DXF: Counter-clockwise (CCW), 0° = +X direction                       ║
+      // ║ Canvas: Clockwise (CW) - positive angles rotate clockwise             ║
+      // ║ worldToScreen: Y-flip (screenY = height - worldY)                     ║
+      // ║                                                                        ║
+      // ║ ΚΡΙΣΙΜΟ: Λόγω Y-flip, πρέπει να ΑΝΤΙΣΤΡΕΨΟΥΜΕ τη γωνία!              ║
+      // ║ DXF CCW 90° → Canvas -90° (ή 270°)                                    ║
+      // ╚════════════════════════════════════════════════════════════════════════╝
+      // Normalize rotation angle (DXF μπορεί να έχει -360, -315, κλπ)
+      let normalizedRotation = rotation % 360;
+      if (normalizedRotation < 0) normalizedRotation += 360;
+
+      if (normalizedRotation !== 0) {
         this.ctx.translate(screenPos.x, screenPos.y);
-        this.ctx.rotate((rotation * Math.PI) / 180);
+        // ΑΝΤΙΣΤΡΟΦΗ γωνίας λόγω Y-flip στο worldToScreen
+        // DXF CCW → Canvas CW με αντιστροφή
+        this.ctx.rotate((-normalizedRotation * Math.PI) / 180);
         this.ctx.fillText(text, 0, 0);
       } else {
         this.ctx.fillText(text, screenPos.x, screenPos.y);

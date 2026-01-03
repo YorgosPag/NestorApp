@@ -700,6 +700,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       {/* Left Sidebar - REMOVED - FloatingPanelContainer handles this */}
 
       {/* Main Canvas Area */}
+      {/* ╔════════════════════════════════════════════════════════════════════════╗
+          ║ ⚠️ CRITICAL FIX (2026-01-03) - Canvas container backgrounds           ║
+          ║ ΜΗΝ ΠΡΟΣΘΕΤΕΤΕ bg-muted ή PANEL_COLORS.BG_SECONDARY εδώ!              ║
+          ║ Αυτά δημιουργούν "πέπλο" που καλύπτει τα χρώματα DXF οντοτήτων.       ║
+          ║ Το transparent background επιτρέπει σωστή απεικόνιση canvas.          ║
+          ╚════════════════════════════════════════════════════════════════════════╝ */}
       <div className="flex-1 relative">
         {/* DEBUG BUTTONS MOVED TO HEADER */}
 
@@ -743,8 +749,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                   props.onMouseMove(point, mockEvent);
                 }
               }}
-              className="absolute inset-0 w-full h-full"
-              style={canvasUI.positioning.layers.canvasOverlayWithPointerControl(activeTool)}
+              className="absolute inset-0 w-full h-full z-0" // 🎯 Z-INDEX FIX: LayerCanvas BACKGROUND (z-0)
+              style={canvasUI.positioning.layers.layerCanvasWithTools(activeTool, crosshairSettings.enabled)}
             />
           )}
 
@@ -757,8 +763,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               viewport={viewport} // ✅ CENTRALIZED: Pass centralized viewport
               activeTool={activeTool} // 🔥 ΚΡΙΣΙΜΟ: Pass activeTool για pan cursor
               colorLayers={colorLayers} // ✅ FIX: Pass color layers για fit to view bounds
-              crosshairSettings={crosshairSettings} // ✅ CONNECT TO EXISTING CURSOR SYSTEM
-              gridSettings={gridSettings} // ✅ FIX: Enable grid rendering in DxfCanvas
+              crosshairSettings={crosshairSettings} // ✅ RESTORED: Crosshair enabled
+              gridSettings={gridSettings} // ✅ RESTORED: Grid enabled
               rulerSettings={{
                 // 🛡️ NULL GUARD: Ensure rulers are always enabled, even if context is temporarily undefined
                 enabled: (globalRulerSettings?.horizontal?.enabled && globalRulerSettings?.vertical?.enabled) ?? true,
@@ -788,7 +794,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                 borderWidth: 1
               }}
               data-canvas-type="dxf" // 🎯 DEBUG: Identifier για alignment test
-              className="absolute inset-0 w-full h-full z-0" // 🎯 Z-INDEX: DxfCanvas κάτω (z-0)
+              className="absolute inset-0 w-full h-full z-10" // 🎯 Z-INDEX FIX: DxfCanvas FOREGROUND (z-10) - ΠΑΝΩ από LayerCanvas!
               onTransformChange={(newTransform) => {
                 setTransform(newTransform); // ✅ SYNC: Κοινό transform state για DxfCanvas
                 zoomSystem.setTransform(newTransform);
