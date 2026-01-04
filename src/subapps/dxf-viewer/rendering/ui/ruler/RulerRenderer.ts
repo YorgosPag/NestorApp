@@ -63,6 +63,9 @@ export class RulerRenderer implements UIRenderer {
       'vertical',
       'left'
     );
+
+    // ✅ CAD-GRADE: Render corner box where rulers meet (AutoCAD/Revit/Blender standard)
+    this.renderCornerBox(context.ctx, viewport, rulerSettings);
   }
 
   /**
@@ -79,6 +82,9 @@ export class RulerRenderer implements UIRenderer {
     // Render both rulers for legacy compatibility
     this.renderRuler(ctx, viewport, settings, transform, 'horizontal', 'bottom');
     this.renderRuler(ctx, viewport, settings, transform, 'vertical', 'left');
+
+    // ✅ CAD-GRADE: Render corner box where rulers meet
+    this.renderCornerBox(ctx, viewport, settings);
   }
 
   /**
@@ -162,6 +168,68 @@ export class RulerRenderer implements UIRenderer {
       ctx.lineWidth = settings.borderWidth;
       ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
     }
+  }
+
+  /**
+   * ✅ CAD-GRADE: Corner Box - Industry Standard (AutoCAD/Revit/Blender/Figma)
+   * Renders the square at the intersection of horizontal and vertical rulers
+   * This prevents visual overlap and provides origin indicator
+   */
+  private renderCornerBox(
+    ctx: CanvasRenderingContext2D,
+    viewport: Viewport,
+    settings: RulerSettings
+  ): void {
+    if (!settings.enabled || !settings.visible) return;
+
+    const verticalRulerWidth = settings.width;
+    const horizontalRulerHeight = settings.height;
+
+    // Corner box position: bottom-left where rulers meet
+    const cornerRect = {
+      x: 0,
+      y: viewport.height - horizontalRulerHeight,
+      width: verticalRulerWidth,
+      height: horizontalRulerHeight
+    };
+
+    ctx.save();
+
+    // Background - same as rulers for visual consistency
+    ctx.fillStyle = settings.backgroundColor;
+    ctx.fillRect(cornerRect.x, cornerRect.y, cornerRect.width, cornerRect.height);
+
+    // Border - matches ruler borders
+    if (settings.borderWidth > 0) {
+      ctx.strokeStyle = settings.borderColor;
+      ctx.lineWidth = settings.borderWidth;
+      ctx.strokeRect(cornerRect.x, cornerRect.y, cornerRect.width, cornerRect.height);
+    }
+
+    // ✅ CAD-GRADE: Origin indicator (small crosshair or icon)
+    // Draw a subtle origin marker in the center of the corner box
+    const centerX = cornerRect.x + cornerRect.width / 2;
+    const centerY = cornerRect.y + cornerRect.height / 2;
+    const markerSize = Math.min(cornerRect.width, cornerRect.height) * 0.3;
+
+    ctx.strokeStyle = settings.textColor || settings.color;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.6;
+
+    // Horizontal line of origin marker
+    ctx.beginPath();
+    ctx.moveTo(centerX - markerSize, centerY);
+    ctx.lineTo(centerX + markerSize, centerY);
+    ctx.stroke();
+
+    // Vertical line of origin marker
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY - markerSize);
+    ctx.lineTo(centerX, centerY + markerSize);
+    ctx.stroke();
+
+    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   /**

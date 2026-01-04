@@ -545,6 +545,83 @@ const screenPos = worldToScreen(worldPos, transform);
 
 ---
 
+### 📋 ADR-008: CSS→CANVAS COORDINATE CONTRACT (2026-01-04) - 🏢 CAD-GRADE
+
+**Status**: ✅ **APPROVED & IMPLEMENTED** | **Decision Date**: 2026-01-04
+
+**🏢 ENTERPRISE LEVEL**: **10/10** - Industry Standard (AutoCAD/Figma/Blender)
+
+**Context**:
+Το CrosshairOverlay είχε coordinate mismatch: το crosshair δεν ευθυγραμμιζόταν με το mouse cursor.
+
+**Πρόβλημα**:
+- Mouse events δίνουν CSS pixels (viewport space)
+- Canvas drawing γίνεται σε canvas logical coordinates
+- Χωρίς proper mapping → drift που αυξάνεται μακριά από το origin
+
+**Συμπτώματα**:
+- Crosshair εξαφανίζεται νωρίτερα από τα ruler boundaries
+- Drift σε Y axis (πάνω/κάτω ασύμμετρα)
+- Blurry lines (half-pixel rendering)
+
+**Decision - CSS→Canvas Coordinate Contract**:
+
+```typescript
+// ✅ MANDATORY FORMULA - Industry Standard
+const rect = canvas.getBoundingClientRect();
+const scaleX = canvas.width / rect.width;
+const scaleY = canvas.height / rect.height;
+
+const canvasX = (e.clientX - rect.left) * scaleX;
+const canvasY = (e.clientY - rect.top) * scaleY;
+```
+
+**Αυτός ο τύπος**:
+- ✅ Ακυρώνει DPR mismatches
+- ✅ Ακυρώνει CSS transforms/zoom
+- ✅ Δουλεύει σε resize
+- ✅ Industry standard (AutoCAD, Figma, Blender)
+
+**Implementation Changes**:
+
+| Component | Change |
+|-----------|--------|
+| `CrosshairOverlay.tsx` | Internal mouse tracking (removed props) |
+| `CrosshairOverlay.tsx` | ResizeObserver for canvas sizing |
+| `CrosshairOverlay.tsx` | CSS→Canvas scale mapping |
+| `CanvasSection.tsx` | `cursor: 'none'` ALWAYS |
+| `DxfCanvas.tsx` | LegacyCursorAdapter REMOVED |
+
+**Reusable Pattern**:
+```typescript
+function cssPointToCanvas(e: MouseEvent, canvas: HTMLCanvasElement) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - rect.left) * (canvas.width / rect.width),
+    y: (e.clientY - rect.top) * (canvas.height / rect.height),
+  };
+}
+```
+
+**Consequences**:
+- ✅ Crosshair = 1:1 με mouse cursor
+- ✅ Pixel-perfect alignment (+0.5 για crisp lines)
+- ✅ Rulers συμπεριφέρονται σωστά
+- ✅ Πάνω/κάτω συμμετρικά
+- ✅ Καμία "μαγική" margin τιμή
+
+**❌ ΑΠΑΓΟΡΕΥΕΤΑΙ μετά το ADR**:
+- ⛔ `getBoundingClientRect` χωρίς scale
+- ⛔ Passing mouse coords από parent (prop drilling)
+- ⛔ Viewport-based math για canvas drawing
+- ⛔ Magic number fixes (+2px, -5px, 32)
+
+**References**:
+- micro-ADR: CSS→Canvas Coordinate Contract (GPT-5 analysis)
+- CAD Industry Standard: Mouse-to-Canvas coordinate transformation
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)
