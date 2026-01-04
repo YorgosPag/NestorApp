@@ -17,7 +17,7 @@ export interface RenderOptions {
 
 const renderScene = (ctx: CanvasRenderingContext2D, scene: SceneModel, transform: ViewTransform, options?: RenderOptions) => {};
 
-const createTransformHelpers = (transformRef: any, canvas: HTMLCanvasElement) => ({
+const createTransformHelpers = (transformRef: { current: ViewTransform }, canvas: HTMLCanvasElement) => ({
   worldToScreen: (point: Point2D, transform?: ViewTransform): Point2D => {
     const t = transform || transformRef.current;
     return {
@@ -44,7 +44,8 @@ const createTransformHelpers = (transformRef: any, canvas: HTMLCanvasElement) =>
   },
   getRulerOffsetCss: () => 0
 });
-import { calculateUnifiedBounds, type Bounds as UnifiedBounds } from '../../utils/bounds-utils';
+// ✅ ADR-010: Import FitToViewService for centralized fit-to-view operations
+import { FitToViewService } from '../../services/FitToViewService';
 // Old rulers-grid import removed - using new RulersGridSystem instead
 import { EntityRenderer } from '../../utils/entity-renderer';
 import type { GripSettings } from '../../types/gripSettings';
@@ -80,7 +81,7 @@ export interface CanvasRenderer {
   renderSceneImmediate: (s: SceneModel, opts?: RenderOptions) => void;
   clear: () => void;
   clearCanvas: () => void;
-  fitToView: (s: SceneModel, mode?: string, overlayEntities?: any[]) => void;
+  fitToView: (s: SceneModel, mode?: string, overlayEntities?: unknown[]) => void;
   getTransform: () => ViewTransform;
   getCanvas: () => HTMLCanvasElement;
   getCoordinateManager: () => {
@@ -206,34 +207,30 @@ export function createCanvasRenderer(args: CreateCanvasRendererArgs): CanvasRend
     renderSceneImmediate: renderSceneInternal,
     clear: clearCanvasHelper,
     clearCanvas: () => realRenderer.clear(),
-    fitToView: (scene: SceneModel, mode: string = 'fitFullAnchorBL', overlayEntities: any[] = []) => {
-      // 🎯 ΣΤΑΘΕΡΟΤΗΤΑ: Union bounds από DXF + Overlays
-      const unifiedBounds = calculateUnifiedBounds(scene?.bounds || null, overlayEntities);
-      if (!unifiedBounds) return;
+    fitToView: (scene: SceneModel, _mode: string = 'fitFullAnchorBL', _overlayEntities: unknown[] = []) => {
+      // ✅ ADR-010: ACL Pattern - Use FitToViewService.calculateFitToViewFromBounds
+      // This uses the scene's pre-calculated bounds directly, avoiding type conversion issues
 
-      // Guard: handle empty scene bounds (avoid fallback to -1000, +1000)
-      const bounds = normalizeEmptyBounds(unifiedBounds);
-      
+      // Guard: No scene or no bounds
+      if (!scene?.bounds) return;
+
+      // Guard: handle empty scene bounds
+      const bounds = normalizeEmptyBounds(scene.bounds);
+
       const rect = canvas.getBoundingClientRect();
-      const { left, right, top, bottom } = MARGINS;
-      const padding = 8;
-      const availW = rect.width - left - right - padding;
-      const availH = rect.height - top - bottom - padding;
-      const bw = bounds.max.x - bounds.min.x;
-      const bh = bounds.max.y - bounds.min.y;
-      
-      if (bw <= 0 || bh <= 0) return;
-      
-      const scaleByHeight = availH / bh;
-      const scaleByWidth = availW / bw;
-      const scale = Math.min(scaleByHeight, scaleByWidth);
-      const offsetX = -bounds.min.x;
-      const offsetY = -bounds.min.y;
-      const ε = 0.98;
-      
-      currentTransform = { scale: scale * ε, offsetX, offsetY };
-      currentTransformRef.current = currentTransform;
-      renderSceneInternal(scene);
+      const viewport = { width: rect.width, height: rect.height };
+
+      const result = FitToViewService.calculateFitToViewFromBounds(
+        bounds,
+        viewport,
+        { padding: 0.1, alignToOrigin: false }
+      );
+
+      if (result.success && result.transform) {
+        currentTransform = result.transform;
+        currentTransformRef.current = currentTransform;
+        renderSceneInternal(scene);
+      }
     },
     getCanvas: () => canvas,
     getTransform: () => currentTransformRef.current,

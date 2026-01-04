@@ -271,7 +271,9 @@ export default function RulerCornerBox({
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
-    // DropdownMenu will handle the open state
+    e.stopPropagation();
+    // 🏢 FIX (2026-01-04): Right-click MUST open the menu as per ADR-009 documentation
+    setIsMenuOpen(true);
   }, []);
 
   // ===== TOOLTIP CONTENT =====

@@ -2,13 +2,18 @@
  * FIT TO VIEW SERVICE
  * Κεντρικοποιημένη υπηρεσία για όλες τις fitToView operations
  * ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Αντικαθιστά 80+ διάσπαρτες implementations
+ *
+ * @see ADR-010: Bounds Consolidation (2026-01-04)
  */
 
 import type { ViewTransform, Viewport, Point2D } from '../rendering/types/Types';
 import type { ColorLayer } from '../canvas-v2/layer-canvas/layer-types';
 import type { DxfScene } from '../canvas-v2/dxf-canvas/dxf-types';
-import { calculateUnifiedBounds, type Bounds } from '../utils/bounds-utils';
+// ✅ ADR-010: Use canonical createCombinedBounds (type-safe, no 'any')
+import { createCombinedBounds, type Bounds } from '../utils/bounds-utils';
 import { ColorLayerUtils } from '../utils/ColorLayerUtils';
+// 🏢 ENTERPRISE: Use centralized constants from transform-config
+import { FIT_TO_VIEW_DEFAULTS } from '../config/transform-config';
 
 interface FitToViewOptions {
   padding?: number; // Default: 0.1 (10% padding)
@@ -35,17 +40,16 @@ export class FitToViewService {
     viewport: Viewport,
     options: FitToViewOptions = {}
   ): FitToViewResult {
+    // 🏢 ENTERPRISE: Use centralized defaults from transform-config
     const {
-      padding = 0.1,
-      maxScale = 20,
-      minScale = 0.1,
-      alignToOrigin = false
+      padding = FIT_TO_VIEW_DEFAULTS.PADDING_PERCENTAGE,
+      maxScale = FIT_TO_VIEW_DEFAULTS.MAX_SCALE,
+      minScale = FIT_TO_VIEW_DEFAULTS.MIN_SCALE,
+      alignToOrigin = FIT_TO_VIEW_DEFAULTS.ALIGN_TO_ORIGIN
     } = options;
 
-    // Υπολογισμός unified bounds
-    const sceneBounds = scene?.bounds || null;
-    const overlayEntities = ColorLayerUtils.toOverlayEntities(colorLayers);
-    const unifiedBounds = calculateUnifiedBounds(sceneBounds, overlayEntities);
+    // ✅ ADR-010: Use canonical createCombinedBounds (type-safe, no intermediate conversion)
+    const unifiedBounds = createCombinedBounds(scene, colorLayers);
 
     if (!unifiedBounds) {
       return {
@@ -109,31 +113,25 @@ export class FitToViewService {
     let offsetX: number, offsetY: number;
 
     if (alignToOrigin) {
-      // 🎯 ENTERPRISE FIT-TO-VIEW: Position world (0,0) at bottom-left corner (ruler intersection)
+      // 🏢 ENTERPRISE FIT-TO-VIEW: Position bounds.min at bottom-left corner (with padding)
       //
-      // ✅ ARCHITECTURAL FIX: offsetX/offsetY are SCREEN OFFSETS (pixels), not world!
+      // ✅ FIX (2026-01-04): Previous logic set offsets to 0, which only works if
+      // the drawing starts near world (0,0). For drawings with arbitrary bounds
+      // (e.g., min: {x: 1000, y: 500}), the content would be off-screen!
       //
-      // NEW Formula for worldToScreen:
-      //   screenX = left + worldX * scale + offsetX
-      //   screenY = (height - top) - worldY * scale + offsetY
+      // NEW LOGIC: Position the content so bounds.min appears at the bottom-left
+      // corner of the viewport (with padding), ensuring ALL content is visible.
       //
-      // Goal: Place world (0,0) at screen (left, height - bottom)
-      // (This is the ruler intersection point)
-      //
-      // For worldX=0, worldY=0, we want:
-      //   screenX = left  (80px - vertical ruler edge)
-      //   screenY = height - bottom  (height - 30px)
-      //
-      // Solving:
-      //   left = left + 0 + offsetX  →  offsetX = 0 ✅
-      //   height - bottom = (height - top) - 0 + offsetY
-      //   height - 30 = height - 30 + offsetY  →  offsetY = 0 ✅
-      //
-      // So with screen offsets, alignToOrigin is STILL offsetX=0, offsetY=0!
-      // The margins are already baked into the worldToScreen formula!
+      // Formula: screenX = worldX * scale + offsetX
+      // We want bounds.min.x to appear at screen position (paddingX, paddingY)
+      // So: paddingX = bounds.min.x * scale + offsetX
+      // Therefore: offsetX = paddingX - bounds.min.x * scale
 
-      offsetX = 0;
-      offsetY = 0;
+      const paddingX = viewport.width * safePadding / 2;
+      const paddingY = viewport.height * safePadding / 2;
+
+      offsetX = paddingX - unifiedBounds.min.x * scale;
+      offsetY = paddingY - unifiedBounds.min.y * scale;
     } else {
       // Κεντράρισμα (παλιά συμπεριφορά)
       const centerX = (unifiedBounds.min.x + unifiedBounds.max.x) / 2;
@@ -207,11 +205,12 @@ export class FitToViewService {
     viewport: Viewport,
     options: FitToViewOptions = {}
   ): FitToViewResult {
+    // 🏢 ENTERPRISE: Use centralized defaults from transform-config
     const {
-      padding = 0.1,
-      maxScale = 20,
-      minScale = 0.1,
-      alignToOrigin = false
+      padding = FIT_TO_VIEW_DEFAULTS.PADDING_PERCENTAGE,
+      maxScale = FIT_TO_VIEW_DEFAULTS.MAX_SCALE,
+      minScale = FIT_TO_VIEW_DEFAULTS.MIN_SCALE,
+      alignToOrigin = FIT_TO_VIEW_DEFAULTS.ALIGN_TO_ORIGIN
     } = options;
 
     if (viewport.width <= 0 || viewport.height <= 0) {
@@ -267,11 +266,18 @@ export class FitToViewService {
     let offsetX: number, offsetY: number;
 
     if (alignToOrigin) {
-      // 🎯 ENTERPRISE FIT-TO-VIEW: Position world (0,0) at bottom-left corner
-      // ✅ ARCHITECTURAL FIX: offsetX/offsetY are SCREEN OFFSETS (pixels), not world!
-      // See calculateFitToViewTransform above for detailed explanation
-      offsetX = 0;
-      offsetY = 0;
+      // 🏢 ENTERPRISE FIT-TO-VIEW: Position bounds.min at bottom-left corner (with padding)
+      //
+      // ✅ FIX (2026-01-04): Position content so bounds.min appears at the bottom-left
+      // corner of the viewport (with padding), ensuring ALL content is visible.
+      //
+      // See calculateFitToViewTransform above for detailed explanation.
+
+      const paddingX = viewport.width * safePadding / 2;
+      const paddingY = viewport.height * safePadding / 2;
+
+      offsetX = paddingX - bounds.min.x * scale;
+      offsetY = paddingY - bounds.min.y * scale;
     } else {
       // Κεντράρισμα (παλιά συμπεριφορά)
       const centerX = (bounds.min.x + bounds.max.x) / 2;

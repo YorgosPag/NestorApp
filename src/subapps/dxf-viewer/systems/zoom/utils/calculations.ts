@@ -7,6 +7,8 @@ import type { Point2D, ViewTransform } from '../../../rendering/types/Types';
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση κεντρικής υπηρεσίας αντί για διπλότυπη fit logic
 import { FitToViewService } from '../../../services/FitToViewService';
 import { CoordinateTransforms } from '../../../rendering/core/CoordinateTransforms';
+// 🏢 ENTERPRISE: Use centralized constants
+import { ZOOM_FACTORS, TRANSFORM_SCALE_LIMITS } from '../../../config/transform-config';
 
 // === TRANSFORM CALCULATIONS ===
 
@@ -32,9 +34,9 @@ import { CoordinateTransforms } from '../../../rendering/core/CoordinateTransfor
 export function calculateFitTransform(
   bounds: { min: Point2D; max: Point2D },
   viewport: { width: number; height: number },
-  padding: number = 100,
-  maxScale: number = 200,
-  minScale: number = 0.01,
+  padding: number = ZOOM_FACTORS.FIT_PADDING,
+  maxScale: number = TRANSFORM_SCALE_LIMITS.MAX_SCALE,
+  minScale: number = TRANSFORM_SCALE_LIMITS.MIN_SCALE,
   alignToOrigin: boolean = false
 ): ViewTransform {
   // 🛡️ GUARD: Validate viewport before calculations
@@ -74,11 +76,12 @@ export function calculateFitTransform(
 
 /**
  * Υπολογισμός bounds normalization (bottom-left to origin)
+ * 🏢 ENTERPRISE: Uses centralized ZOOM_FACTORS.FIT_PADDING as default
  */
 export function calculateNormalizedTransform(
   bounds: { min: Point2D; max: Point2D },
   viewport: { width: number; height: number },
-  padding: number = 100
+  padding: number = ZOOM_FACTORS.FIT_PADDING
 ): ViewTransform {
   const fitTransform = calculateFitTransform(bounds, viewport, padding);
 

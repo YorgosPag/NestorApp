@@ -120,11 +120,35 @@ export const ZOOM_FACTORS = {
   BUTTON_OUT: 0.8,
 
   // === SPECIAL ===
-  /** Fit-to-view padding in pixels */
+  /** Fit-to-view padding in pixels (for calculations.ts wrapper) */
   FIT_PADDING: 100,
 
   /** Minimum window size for window zoom */
   WINDOW_MIN_SIZE: 10,
+} as const;
+
+// ============================================
+// FIT-TO-VIEW DEFAULTS
+// ============================================
+
+/**
+ * 🏢 ENTERPRISE: Fit-to-view configuration
+ *
+ * Centralized defaults for FitToViewService.
+ * These are the fallback values when options are not provided.
+ */
+export const FIT_TO_VIEW_DEFAULTS = {
+  /** Default padding as percentage (10% = 0.1) */
+  PADDING_PERCENTAGE: 0.1,
+
+  /** Maximum scale for fit-to-view operations */
+  MAX_SCALE: 20,
+
+  /** Minimum scale for fit-to-view operations */
+  MIN_SCALE: 0.1,
+
+  /** Default alignToOrigin setting */
+  ALIGN_TO_ORIGIN: false,
 } as const;
 
 // ============================================
@@ -304,6 +328,7 @@ export const TRANSFORM_CONFIG = {
   viewport: VIEWPORT_DEFAULTS,
   keys: TRANSFORM_KEYS,
   history: TRANSFORM_HISTORY,
+  fitToView: FIT_TO_VIEW_DEFAULTS,
 } as const;
 
 // ============================================
