@@ -1,0 +1,202 @@
+/**
+ * 🏢 ENTERPRISE: RulerCornerBox CSS Module
+ * CAD-GRADE Corner Box styling (AutoCAD/Revit/Blender standard)
+ *
+ * @see ADR-009: Corner Box Feature Implementation
+ * @see centralized_systems.md
+ */
+
+/* ===== BASE CONTAINER ===== */
+.cornerBox {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+  z-index: 100;
+  /* Background inherited from ruler settings */
+}
+
+/* ===== HOVER STATE ===== */
+.cornerBox:hover {
+  filter: brightness(1.2);
+}
+
+.cornerBox:hover .zoomLevel {
+  opacity: 1;
+}
+
+/* ===== ACTIVE/PRESSED STATE ===== */
+.cornerBox:active {
+  transform: scale(0.95);
+}
+
+/* ===== FOCUS STATE (Accessibility) ===== */
+.cornerBox:focus-visible {
+  outline: 2px solid var(--color-primary, #3b82f6);
+  outline-offset: -2px;
+}
+
+/* ===== CONTENT LAYOUT ===== */
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+}
+
+/* ===== ORIGIN MARKER (Crosshair Icon) ===== */
+.originMarker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+.cornerBox:hover .originMarker {
+  opacity: 1;
+}
+
+/* SVG Icon styling */
+.originMarker svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ===== ZOOM LEVEL DISPLAY ===== */
+.zoomLevel {
+  font-size: 9px;
+  font-weight: 500;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  opacity: 0.8;
+  transition: opacity 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-align: center;
+  line-height: 1;
+}
+
+/* ===== DROPDOWN MENU STYLES ===== */
+.menuContent {
+  min-width: 180px;
+  padding: 4px;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+
+.menuItem:hover {
+  background-color: var(--color-muted, rgba(255, 255, 255, 0.1));
+}
+
+.menuItemIcon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+}
+
+.menuItemLabel {
+  flex: 1;
+  font-size: 13px;
+}
+
+.menuItemShortcut {
+  font-size: 11px;
+  opacity: 0.5;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+}
+
+/* ===== MENU SECTIONS ===== */
+.menuSection {
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.5;
+  margin-top: 4px;
+}
+
+.menuSeparator {
+  height: 1px;
+  margin: 4px 0;
+  background-color: var(--color-border, rgba(255, 255, 255, 0.1));
+}
+
+/* ===== ZOOM PRESETS GRID ===== */
+.zoomPresets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+}
+
+.zoomPresetButton {
+  padding: 6px 8px;
+  font-size: 12px;
+  text-align: center;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  background-color: var(--color-muted, rgba(255, 255, 255, 0.05));
+}
+
+.zoomPresetButton:hover {
+  background-color: var(--color-accent, rgba(59, 130, 246, 0.3));
+}
+
+.zoomPresetButton.active {
+  background-color: var(--color-primary, #3b82f6);
+  color: white;
+}
+
+/* ===== TOOLTIP CONTENT ===== */
+.tooltipContent {
+  font-size: 12px;
+  line-height: 1.4;
+  max-width: 200px;
+}
+
+.tooltipLine {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.tooltipKey {
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.tooltipAction {
+  opacity: 0.9;
+}
+
+/* ===== SCREEN READER ONLY ===== */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

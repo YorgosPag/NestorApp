@@ -622,6 +622,111 @@ function cssPointToCanvas(e: MouseEvent, canvas: HTMLCanvasElement) {
 
 ---
 
+### 📋 ADR-009: RULER CORNER BOX INTERACTIVE COMPONENT (2026-01-04) - 🏢 CAD-GRADE
+
+**Status**: ✅ **APPROVED & IMPLEMENTED** | **Decision Date**: 2026-01-04
+
+**🏢 ENTERPRISE LEVEL**: **10/10** - Industry Standard (AutoCAD/Revit/Blender/Figma)
+
+**Context**:
+Στη διασταύρωση του vertical ruler (αριστερά) και του horizontal ruler (κάτω) υπάρχει ένα κενό τετράγωνο.
+Τα επαγγελματικά CAD προγράμματα χρησιμοποιούν αυτό το τετράγωνο ως διαδραστικό "Corner Box" με zoom λειτουργίες.
+
+**Πρόβλημα**:
+- Visual overlap όπου συναντώνται οι rulers
+- Χαμένος χώρος που θα μπορούσε να χρησιμοποιηθεί για zoom controls
+- Δεν υπάρχει origin indicator
+
+**Decision - Interactive RulerCornerBox**:
+
+| Feature | Implementation |
+|---------|----------------|
+| **Single Click** | Zoom to Fit (όλα τα entities) |
+| **Double Click** | Zoom 100% (1:1 scale) |
+| **Ctrl+Click** | Zoom Previous (history) |
+| **Right Click** | Context Menu με zoom options |
+| **Scroll Wheel** | Quick zoom in/out |
+| **Keyboard** | F=Fit, 0=100%, +/- zoom, P=Previous |
+| **Hover** | Tooltip με instructions |
+| **Accessibility** | WCAG 2.1 AA compliant |
+
+**Implementation Files**:
+
+| File | Purpose |
+|------|---------|
+| `canvas-v2/overlays/RulerCornerBox.tsx` | Interactive React component |
+| `canvas-v2/overlays/RulerCornerBox.module.css` | CSS Module styling |
+| `rendering/ui/ruler/RulerRenderer.ts` | Canvas rendering (static) |
+| `components/dxf-layout/CanvasSection.tsx` | Integration point |
+
+**Centralized Systems Used**:
+
+| System | Usage |
+|--------|-------|
+| `@/components/ui/tooltip` | Radix Tooltip for instructions |
+| `@/components/ui/dropdown-menu` | Radix DropdownMenu for context menu |
+| `useZoom` hook | Centralized zoom functionality |
+| `createCombinedBounds` | DXF + layers bounds calculation |
+| CSS Modules | No inline styles (CLAUDE.md compliant) |
+
+**Component Architecture**:
+```
+RulerCornerBox (React)
+├── TooltipProvider (Radix)
+│   └── DropdownMenu (Radix)
+│       ├── TooltipTrigger
+│       │   └── Button (interactive corner box)
+│       └── DropdownMenuContent
+│           ├── Zoom to Fit
+│           ├── Zoom 100%
+│           ├── Zoom In/Out
+│           ├── Previous View
+│           └── Zoom Presets (25%-400%)
+└── OriginMarkerIcon (SVG crosshair)
+```
+
+**Props Interface**:
+```typescript
+interface RulerCornerBoxProps {
+  rulerWidth: number;        // From RulerSettings
+  rulerHeight: number;       // From RulerSettings
+  currentScale: number;      // From transform.scale
+  backgroundColor: string;   // From GlobalRulerStore
+  textColor: string;         // From GlobalRulerStore
+  onZoomToFit: () => void;   // From useZoom
+  onZoom100: () => void;     // From useZoom
+  onZoomIn: () => void;      // From useZoom
+  onZoomOut: () => void;     // From useZoom
+  onZoomPrevious: () => void;// From useZoom
+  onZoomToScale: (scale: number) => void;
+  onWheelZoom?: (delta: number) => void;
+  viewport: { width: number; height: number };
+}
+```
+
+**Consequences**:
+- ✅ Professional CAD-grade UI (matches AutoCAD/Revit)
+- ✅ No visual overlap at ruler intersection
+- ✅ Quick access to common zoom operations
+- ✅ Keyboard accessibility (F, 0, +, -, P)
+- ✅ Full WCAG 2.1 AA compliance
+- ✅ Reuses existing centralized systems (no duplicates)
+- ✅ CSS Modules (no inline styles)
+- ✅ TypeScript strict mode (no `any`)
+
+**❌ ΑΠΑΓΟΡΕΥΕΤΑΙ μετά το ADR**:
+- ⛔ New zoom controls outside centralized useZoom hook
+- ⛔ Duplicate CornerBox implementations
+- ⛔ Inline styles in corner box components
+- ⛔ Custom dropdown/tooltip (use Radix)
+
+**References**:
+- Industry Standard: AutoCAD, Revit, Blender corner box patterns
+- ADR-008: CSS→Canvas Coordinate Contract (consistent coordinate handling)
+- ADR-001: Radix Select/Dropdown (reused patterns)
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

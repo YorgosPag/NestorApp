@@ -32,6 +32,8 @@ import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'
 import { serviceRegistry } from '../../services';
 // ✅ ADR-006 FIX: Import CrosshairOverlay για crosshair rendering
 import CrosshairOverlay from '../../canvas-v2/overlays/CrosshairOverlay';
+// ✅ ADR-009: Import RulerCornerBox for interactive corner box (AutoCAD/Revit standard)
+import RulerCornerBox from '../../canvas-v2/overlays/RulerCornerBox';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
 
@@ -852,6 +854,36 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
             }}
             className="absolute left-0 right-0 top-0 z-20 pointer-events-none"
             style={{ height: `calc(100% - ${rulerSettings.height ?? 30}px)` }}
+          />
+
+          {/* ✅ ADR-009: RulerCornerBox - Interactive corner box at ruler intersection */}
+          {/* 🏢 CAD-GRADE: Industry standard (AutoCAD/Revit/Blender) corner box with zoom controls */}
+          <RulerCornerBox
+            rulerWidth={rulerSettings.width ?? 30}
+            rulerHeight={rulerSettings.height ?? 30}
+            currentScale={transform.scale}
+            backgroundColor={globalRulerSettings.horizontal.backgroundColor}
+            textColor={globalRulerSettings.horizontal.textColor}
+            onZoomToFit={() => {
+              // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Use existing createCombinedBounds for unified bounds
+              const combinedBounds = createCombinedBounds(dxfScene, colorLayers);
+              if (combinedBounds && viewport.width > 0 && viewport.height > 0) {
+                zoomSystem.zoomToFit(combinedBounds, viewport, true);
+              }
+            }}
+            onZoom100={() => zoomSystem.zoomTo100()}
+            onZoomIn={() => zoomSystem.zoomIn()}
+            onZoomOut={() => zoomSystem.zoomOut()}
+            onZoomPrevious={() => zoomSystem.zoomPrevious()}
+            onZoomToScale={(scale) => zoomSystem.zoomToScale(scale)}
+            onWheelZoom={(delta) => {
+              // Convert delta to zoom direction and use cursor-centered zoom
+              if (mouseCss) {
+                zoomSystem.handleWheelZoom(delta, mouseCss);
+              }
+            }}
+            viewport={viewport}
+            className="z-30"
           />
         </div>
       </div>
