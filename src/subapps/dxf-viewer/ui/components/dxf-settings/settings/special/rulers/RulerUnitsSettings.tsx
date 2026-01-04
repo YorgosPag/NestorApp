@@ -9,6 +9,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../../../../../config/color-config';
+// 🏢 ENTERPRISE: Centralized Switch component (Radix)
+import { Switch } from '@/components/ui/switch';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -150,33 +152,22 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
         </div>
       </div>
 
-      {/* Units Visibility Toggle */}
+      {/* 🏢 ENTERPRISE: Units Visibility Toggle - Using centralized Switch component */}
       <div className={`p-2 ${colors.bg.hover} rounded space-y-2`}>
-        <div className="text-sm text-white">
-          <div className="font-medium">Εμφάνιση Μονάδων</div>
-          <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη μονάδων μέτρησης στους χάρακες</div>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleUnitsVisibilityChange(true)}
-            className={`flex-1 p-2 rounded text-xs border transition-colors ${
-              unitsVisible
-                ? `${colors.bg.info} ${getStatusBorder('info')}`
-                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
-            }`}
-          >
-            Ενεργό
-          </button>
-          <button
-            onClick={() => handleUnitsVisibilityChange(false)}
-            className={`flex-1 p-2 rounded text-xs border transition-colors ${
-              !unitsVisible
-                ? `${colors.bg.info} ${getStatusBorder('info')}`
-                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
-            }`}
-          >
-            Ανενεργό
-          </button>
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-white">
+            <div className="font-medium">Εμφάνιση Μονάδων</div>
+            <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη μονάδων μέτρησης στους χάρακες</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs ${colors.text.muted}`}>
+              {unitsVisible ? 'Ενεργό' : 'Ανενεργό'}
+            </span>
+            <Switch
+              checked={unitsVisible}
+              onCheckedChange={handleUnitsVisibilityChange}
+            />
+          </div>
         </div>
       </div>
 

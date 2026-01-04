@@ -4,12 +4,12 @@
 // STATUS: ACTIVE - Phase 3 Step 3.3b1
 // PURPOSE: Ruler background settings UI (color, opacity, width, visibility)
 
-import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS, withOpacity } from '../../../../../../config/color-config';
+// 🏢 ENTERPRISE: Centralized Color Picker (same as GridSettings, CrosshairSettings, etc.)
+import { ColorDialogTrigger } from '../../../../../color/EnterpriseColorDialog';
+// 🏢 ENTERPRISE: Centralized Switch component (Radix)
+import { Switch } from '@/components/ui/switch';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -47,8 +47,6 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
   // ============================================================================
   // HOOKS
   // ============================================================================
-  const iconSizes = useIconSizes();
-  const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
 
   const {
@@ -68,16 +66,18 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
   // Ruler background color state (για εύκολο syncing με color picker)
   const [rulerBackgroundColor, setRulerBackgroundColor] = useState<string>(UI_COLORS.WHITE);
 
-  // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES (CLAUDE.md compliant)
-  const rulerBgClass = useDynamicBackgroundClass(rulerBackgroundColor);
-
   // Sync local state with ruler settings
   useEffect(() => {
     setBackgroundVisible(rulerSettings?.horizontal?.showBackground ?? true);
 
-    // Extract color from backgroundColor (може να είναι rgba)
+    // Extract color from backgroundColor
     const bgColor = rulerSettings.horizontal.backgroundColor;
-    if (bgColor.includes('rgba')) {
+
+    // 🏢 ENTERPRISE: Handle different color formats
+    if (bgColor.includes('var(') || bgColor.includes('hsl(var')) {
+      // CSS variable format - use default white
+      setRulerBackgroundColor(UI_COLORS.WHITE);
+    } else if (bgColor.includes('rgba')) {
       // Extract hex from rgba
       const match = bgColor.match(/rgba\((\d+),\s*(\d+),\s*(\d+)/);
       if (match) {
@@ -85,9 +85,15 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
         const g = parseInt(match[2]).toString(16).padStart(2, '0');
         const b = parseInt(match[3]).toString(16).padStart(2, '0');
         setRulerBackgroundColor(`#${r}${g}${b}`);
+      } else {
+        setRulerBackgroundColor(UI_COLORS.WHITE);
       }
-    } else {
+    } else if (bgColor.startsWith('#') && (bgColor.length === 7 || bgColor.length === 4)) {
+      // Valid hex color
       setRulerBackgroundColor(bgColor);
+    } else {
+      // Unknown format - use default
+      setRulerBackgroundColor(UI_COLORS.WHITE);
     }
   }, [rulerSettings]);
 
@@ -153,60 +159,42 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Background Visibility Toggle */}
+      {/* 🏢 ENTERPRISE: Background Visibility Toggle - Using centralized Switch component */}
       <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
-        <div className="text-sm text-white">
-          <div className="font-medium">Εμφάνιση Φόντου</div>
-          <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη του φόντου των χαράκων</div>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleBackgroundVisibilityChange(true)}
-            className={`flex-1 p-2 rounded text-xs transition-colors ${
-              backgroundVisible
-                ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
-            }`}
-          >
-            Ενεργό
-          </button>
-          <button
-            onClick={() => handleBackgroundVisibilityChange(false)}
-            className={`flex-1 p-2 rounded text-xs transition-colors ${
-              !backgroundVisible
-                ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
-            }`}
-          >
-            Ανενεργό
-          </button>
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-white">
+            <div className="font-medium">Εμφάνιση Φόντου</div>
+            <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη του φόντου των χαράκων</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs ${colors.text.muted}`}>
+              {backgroundVisible ? 'Ενεργό' : 'Ανενεργό'}
+            </span>
+            <Switch
+              checked={backgroundVisible}
+              onCheckedChange={handleBackgroundVisibilityChange}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Ruler Background Color */}
+      {/* Ruler Background Color - 🏢 ENTERPRISE: Using centralized ColorDialogTrigger */}
       <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
         <div className="text-sm text-white">
           <div className="font-medium">Χρώμα Φόντου</div>
           <div className={`font-normal ${colors.text.muted}`}>Χρώμα φόντου του χάρακα</div>
         </div>
-        <div className="flex items-center gap-2">
-          <div
-            className={`${iconSizes.md} rounded ${getStatusBorder('default')} ${rulerBgClass}`}
-          />
-          <input
-            type="color"
-            value={rulerBackgroundColor}
-            onChange={(e) => handleRulerBackgroundColorChange(e.target.value)}
-            className={`${iconSizes.lg} h-6 rounded border-0 cursor-pointer`}
-          />
-          <input
-            type="text"
-            value={rulerBackgroundColor}
-            onChange={(e) => handleRulerBackgroundColorChange(e.target.value)}
-            className={`w-20 px-2 py-1 text-xs ${colors.bg.muted} text-white rounded ${quick.input}`}
-            placeholder={UI_COLORS.WHITE}
-          />
-        </div>
+        <ColorDialogTrigger
+          value={rulerBackgroundColor}
+          onChange={handleRulerBackgroundColorChange}
+          label={rulerBackgroundColor}
+          title="Επιλογή Χρώματος Φόντου Χάρακα"
+          alpha={false}
+          modes={['hex', 'rgb', 'hsl']}
+          palettes={['dxf', 'semantic', 'material']}
+          recent={true}
+          eyedropper={true}
+        />
       </div>
 
       {/* Ruler Opacity */}
@@ -267,33 +255,22 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
         </div>
       </div>
 
-      {/* Ruler Lines Visibility Toggle */}
+      {/* 🏢 ENTERPRISE: Ruler Lines Visibility Toggle - Using centralized Switch component */}
       <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
-        <div className="text-sm text-white">
-          <div className="font-medium">Εμφάνιση Γραμμών</div>
-          <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη γραμμών μέτρησης στους χάρακες</div>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleRulerUnitsEnabledChange(true)}
-            className={`flex-1 p-2 rounded text-xs transition-colors ${
-              rulerSettings.horizontal.showMinorTicks
-                ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
-            }`}
-          >
-            Ενεργό
-          </button>
-          <button
-            onClick={() => handleRulerUnitsEnabledChange(false)}
-            className={`flex-1 p-2 rounded text-xs transition-colors ${
-              !rulerSettings.horizontal.showMinorTicks
-                ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
-            }`}
-          >
-            Ανενεργό
-          </button>
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-white">
+            <div className="font-medium">Εμφάνιση Γραμμών</div>
+            <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη γραμμών μέτρησης στους χάρακες</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs ${colors.text.muted}`}>
+              {rulerSettings.horizontal.showMinorTicks ? 'Ενεργό' : 'Ανενεργό'}
+            </span>
+            <Switch
+              checked={rulerSettings.horizontal.showMinorTicks}
+              onCheckedChange={handleRulerUnitsEnabledChange}
+            />
+          </div>
         </div>
       </div>
     </div>

@@ -18,12 +18,13 @@ import { useRulersGridContext } from '../../../../../systems/rulers-grid/RulersG
 import { useTabNavigation } from '../../hooks/useTabNavigation';
 // 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/etc.)
 import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
-// 🏢 ENTERPRISE: Lucide icons for tabs (replacing emojis 📏 and 📐)
-import { Equal, Minus } from 'lucide-react';
+// 🏢 ENTERPRISE: Lucide icons for tabs and style options
+import { Equal, Minus, Grid3X3, Circle, Plus } from 'lucide-react';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
-import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized Switch component (Radix)
+import { Switch } from '@/components/ui/switch';
 
 export interface GridSettingsProps {
   className?: string;
@@ -112,6 +113,33 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
   // TAB CONFIGURATION - 🏢 ENTERPRISE: Using centralized TabDefinition interface
   // ============================================================================
 
+  // 🏢 ENTERPRISE: Grid style options as tabs (Γραμμές/Τελείες/Σταυροί)
+  const gridStyleTabs: TabDefinition[] = [
+    {
+      id: 'lines',
+      label: 'Γραμμές',
+      icon: Minus, // 🏢 ENTERPRISE: Lucide icon for lines
+      content: null,
+    },
+    {
+      id: 'dots',
+      label: 'Τελείες',
+      icon: Circle, // 🏢 ENTERPRISE: Lucide icon for dots
+      content: null,
+    },
+    {
+      id: 'crosses',
+      label: 'Σταυροί',
+      icon: Plus, // 🏢 ENTERPRISE: Lucide icon for crosses
+      content: null,
+    },
+  ];
+
+  // 🏢 ENTERPRISE: Handle grid style change via tabs
+  const handleGridStyleTabChange = (tabId: string) => {
+    handleGridStyleChange(tabId as 'lines' | 'dots' | 'crosses');
+  };
+
   const gridLinesTabs: TabDefinition[] = [
     {
       id: 'major',
@@ -122,7 +150,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
     {
       id: 'minor',
       label: 'Δευτερεύουσες Γραμμές',
-      icon: Minus, // 🏢 ENTERPRISE: Lucide icon replacing 📐 emoji
+      icon: Grid3X3, // 🏢 ENTERPRISE: Lucide icon replacing 📐 emoji
       content: null, // Content rendered separately below
     },
   ];
@@ -138,33 +166,22 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Grid Visibility Toggle */}
+      {/* 🏢 ENTERPRISE: Grid Visibility Toggle - Using centralized Switch component */}
       <div className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
-        <div className="text-sm text-white">
-          <div className="font-medium">Εμφάνιση Πλέγματος</div>
-          <div className="font-normal ${colors.text.muted}">Εμφάνιση/απόκρυψη του πλέγματος</div>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleGridVisibilityChange(true)}
-            className={`flex-1 p-2 ${quick.button} text-xs transition-colors ${
-              gridSettings.visual.enabled
-                ? `${colors.bg.info} ${getStatusBorder('info')}`
-                : `${colors.bg.muted} \${INTERACTIVE_PATTERNS.PRIMARY_HOVER} \${getStatusBorder('default')}`
-            }`}
-          >
-            Ενεργό
-          </button>
-          <button
-            onClick={() => handleGridVisibilityChange(false)}
-            className={`flex-1 p-2 ${quick.button} text-xs transition-colors ${
-              !gridSettings.visual.enabled
-                ? `${colors.bg.info} ${getStatusBorder('info')}`
-                : `${colors.bg.muted} \${INTERACTIVE_PATTERNS.PRIMARY_HOVER} \${getStatusBorder('default')}`
-            }`}
-          >
-            Ανενεργό
-          </button>
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-white">
+            <div className="font-medium">Εμφάνιση Πλέγματος</div>
+            <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη του πλέγματος</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs ${colors.text.muted}`}>
+              {gridSettings.visual.enabled ? 'Ενεργό' : 'Ανενεργό'}
+            </span>
+            <Switch
+              checked={gridSettings.visual.enabled}
+              onCheckedChange={handleGridVisibilityChange}
+            />
+          </div>
         </div>
       </div>
 
@@ -172,7 +189,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
       <div className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
         <div className="text-sm text-white">
           <div className="font-medium">Μέγεθος Πλέγματος</div>
-          <div className="font-normal ${colors.text.muted}">Απόσταση μεταξύ γραμμών πλέγματος (ΚΟΙΝΟ για όλες)</div>
+          <div className={`font-normal ${colors.text.muted}`}>Απόσταση μεταξύ γραμμών πλέγματος (ΚΟΙΝΟ για όλες)</div>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -190,44 +207,19 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
         </div>
       </div>
 
-      {/* Grid Style Selector (ΚΟΙΝΟ για όλα) */}
+      {/* 🏢 ENTERPRISE: Grid Style Selector - Using centralized TabsOnlyTriggers */}
       <div className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
         <div className="text-sm text-white">
           <div className="font-medium">Στυλ Πλέγματος</div>
-          <div className="font-normal ${colors.text.muted}">Τύπος εμφάνισης γραμμών πλέγματος</div>
+          <div className={`font-normal ${colors.text.muted}`}>Τύπος εμφάνισης γραμμών πλέγματος</div>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleGridStyleChange('lines')}
-            className={`flex-1 p-2 ${quick.button} text-xs transition-colors ${
-              gridSettings.visual.style === 'lines'
-                ? `${colors.bg.info} ${getStatusBorder('info')}`
-                : `${colors.bg.muted} \${INTERACTIVE_PATTERNS.PRIMARY_HOVER} \${getStatusBorder('default')}`
-            }`}
-          >
-            ─ Γραμμές
-          </button>
-          <button
-            onClick={() => handleGridStyleChange('dots')}
-            className={`flex-1 p-2 ${quick.button} text-xs transition-colors ${
-              gridSettings.visual.style === 'dots'
-                ? `${colors.bg.info} ${getStatusBorder('info')}`
-                : `${colors.bg.muted} \${INTERACTIVE_PATTERNS.PRIMARY_HOVER} \${getStatusBorder('default')}`
-            }`}
-          >
-            • Τελείες
-          </button>
-          <button
-            onClick={() => handleGridStyleChange('crosses')}
-            className={`flex-1 p-2 ${quick.button} text-xs transition-colors ${
-              gridSettings.visual.style === 'crosses'
-                ? `${colors.bg.info} ${getStatusBorder('info')}`
-                : `${colors.bg.muted} \${INTERACTIVE_PATTERNS.PRIMARY_HOVER} \${getStatusBorder('default')}`
-            }`}
-          >
-            + Σταυροί
-          </button>
-        </div>
+        <TabsOnlyTriggers
+          tabs={gridStyleTabs}
+          value={gridSettings.visual.style}
+          onTabChange={handleGridStyleTabChange}
+          theme="dark"
+          alwaysShowLabels={true}
+        />
       </div>
 
       {/* 🏢 ENTERPRISE: Grid Lines Sub-tabs - Using centralized TabsOnlyTriggers */}
@@ -247,8 +239,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
           <div className="space-y-4">
             {/* Major Grid Color */}
             <div className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
-              <label className="block text-sm font-medium ${colors.text.secondary}">Χρώμα Κύριων Γραμμών</label>
-              <div className="text-xs ${colors.text.muted} mb-2">Χρώμα των κύριων γραμμών πλέγματος</div>
+              <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Κύριων Γραμμών</label>
+              <div className={`text-xs ${colors.text.muted} mb-2`}>Χρώμα των κύριων γραμμών πλέγματος</div>
               <ColorDialogTrigger
                 value={gridSettings.visual.majorGridColor}
                 onChange={handleMajorGridColorChange}
@@ -266,7 +258,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             <div className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
               <div className="text-sm text-white">
                 <div className="font-medium">Πάχος Κύριων Γραμμών</div>
-                <div className="font-normal ${colors.text.muted}">Πάχος των κύριων γραμμών πλέγματος</div>
+                <div className={`font-normal ${colors.text.muted}`}>Πάχος των κύριων γραμμών πλέγματος</div>
               </div>
               <div className="flex items-center gap-2">
                 <input
@@ -289,8 +281,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
           <div className="space-y-4">
             {/* Minor Grid Color */}
             <div className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
-              <label className="block text-sm font-medium ${colors.text.secondary}">Χρώμα Δευτερευουσών Γραμμών</label>
-              <div className="text-xs ${colors.text.muted} mb-2">Χρώμα των δευτερευουσών γραμμών πλέγματος</div>
+              <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Δευτερευουσών Γραμμών</label>
+              <div className={`text-xs ${colors.text.muted} mb-2`}>Χρώμα των δευτερευουσών γραμμών πλέγματος</div>
               <ColorDialogTrigger
                 value={gridSettings.visual.minorGridColor}
                 onChange={handleMinorGridColorChange}
@@ -308,7 +300,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             <div className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
               <div className="text-sm text-white">
                 <div className="font-medium">Πάχος Δευτερευουσών Γραμμών</div>
-                <div className="font-normal ${colors.text.muted}">Πάχος των δευτερευουσών γραμμών πλέγματος</div>
+                <div className={`font-normal ${colors.text.muted}`}>Πάχος των δευτερευουσών γραμμών πλέγματος</div>
               </div>
               <div className="flex items-center gap-2">
                 <input

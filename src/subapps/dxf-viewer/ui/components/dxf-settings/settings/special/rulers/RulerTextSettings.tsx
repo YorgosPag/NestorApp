@@ -15,11 +15,11 @@
 import React, { useState, useEffect } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useRulersGridContext } from '../../../../../../systems/rulers-grid/RulersGridSystem';
-import { UnifiedColorPicker } from '../../../../../color';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../../../../../config/color-config';
+// 🏢 ENTERPRISE: Centralized Switch component (Radix)
+import { Switch } from '@/components/ui/switch';
 
 export interface RulerTextSettingsProps {
   className?: string;
@@ -147,33 +147,22 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
         </div>
       </div>
 
-      {/* Text Visibility Toggle */}
+      {/* 🏢 ENTERPRISE: Text Visibility Toggle - Using centralized Switch component */}
       <div className={`p-2 ${colors.bg.hover} ${radius.md} space-y-2`}>
-        <div className="text-sm text-white">
-          <div className="font-medium">Εμφάνιση Κειμένων</div>
-          <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη αριθμών και κειμένων στους χάρακες</div>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleTextVisibilityChange(true)}
-            className={`flex-1 p-2 ${radius.md} text-xs border transition-colors ${
-              textVisible
-                ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
-            }`}
-          >
-            Ενεργό
-          </button>
-          <button
-            onClick={() => handleTextVisibilityChange(false)}
-            className={`flex-1 p-2 ${radius.md} text-xs border transition-colors ${
-              !textVisible
-                ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
-            }`}
-          >
-            Ανενεργό
-          </button>
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-white">
+            <div className="font-medium">Εμφάνιση Κειμένων</div>
+            <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη αριθμών και κειμένων στους χάρακες</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs ${colors.text.muted}`}>
+              {textVisible ? 'Ενεργό' : 'Ανενεργό'}
+            </span>
+            <Switch
+              checked={textVisible}
+              onCheckedChange={handleTextVisibilityChange}
+            />
+          </div>
         </div>
       </div>
     </div>

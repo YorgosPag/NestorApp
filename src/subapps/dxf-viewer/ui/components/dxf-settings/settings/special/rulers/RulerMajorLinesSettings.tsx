@@ -43,10 +43,10 @@
 import React from 'react';
 import { useRulersGridContext } from '../../../../../../systems/rulers-grid/RulersGridSystem';
 import { ColorDialogTrigger } from '../../../../../color/EnterpriseColorDialog';
-import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { UI_COLORS, withOpacity } from '../../../../../../config/color-config';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized Switch component (Radix)
+import { Switch } from '@/components/ui/switch';
 
 export interface RulerMajorLinesSettingsProps {
   className?: string;
@@ -69,7 +69,6 @@ export interface RulerMajorLinesSettingsProps {
  * Extracted from: RulerLinesSettings.tsx lines 200-319
  */
 export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = ({ className = '' }) => {
-  const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   // ============================================================================
   // HOOKS
@@ -145,33 +144,22 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Major Lines Visibility Toggle */}
+      {/* 🏢 ENTERPRISE: Major Lines Visibility Toggle - Using centralized Switch component */}
       <div className={`p-2 ${colors.bg.hover} rounded space-y-2`}>
-        <div className="text-sm text-white">
-          <div className="font-medium">Εμφάνιση Κύριων Γραμμών</div>
-          <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη των κύριων γραμμών χάρακα</div>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleMajorTicksVisibilityChange(true)}
-            className={`flex-1 p-2 rounded text-xs border transition-colors ${
-              rulerSettings.horizontal.showMajorTicks
-                ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
-            }`}
-          >
-            Ενεργό
-          </button>
-          <button
-            onClick={() => handleMajorTicksVisibilityChange(false)}
-            className={`flex-1 p-2 rounded text-xs border transition-colors ${
-              !rulerSettings.horizontal.showMajorTicks
-                ? `bg-blue-600 ${getStatusBorder('info')}`
-                : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
-            }`}
-          >
-            Ανενεργό
-          </button>
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-white">
+            <div className="font-medium">Εμφάνιση Κύριων Γραμμών</div>
+            <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη των κύριων γραμμών χάρακα</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs ${colors.text.muted}`}>
+              {rulerSettings.horizontal.showMajorTicks ? 'Ενεργό' : 'Ανενεργό'}
+            </span>
+            <Switch
+              checked={rulerSettings.horizontal.showMajorTicks}
+              onCheckedChange={handleMajorTicksVisibilityChange}
+            />
+          </div>
         </div>
       </div>
 
