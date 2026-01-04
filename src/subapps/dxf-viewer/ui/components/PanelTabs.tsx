@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import { BarChart, Construction, Map, Settings, type LucideIcon } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BarChart, Construction, Map, Settings } from 'lucide-react';
 import { useTranslation } from '../../../../i18n';
-import { PANEL_TOKENS, PanelTokenUtils } from '../../config/panel-tokens';
-// 🏢 ENTERPRISE: Import from Single Source of Truth
+// 🏢 ENTERPRISE: Use centralized TabsOnlyTriggers (same as Contacts, ΓΕΜΗ tabs)
+import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
+// 🏢 ENTERPRISE: Import from Single Source of Truth (ADR-010)
 import type { FloatingPanelType } from '../../types/panel-types';
 
 // 🏢 ENTERPRISE: Re-export for backwards compatibility
@@ -13,84 +13,69 @@ export type { FloatingPanelType };
 /** @deprecated Use FloatingPanelType instead */
 export type PanelType = FloatingPanelType;
 
-// 🏢 ENTERPRISE: Proper TypeScript interface with LucideIcon (NO any!)
-interface TabDefinition {
-  id: PanelType;
-  label: string;
-  icon: LucideIcon;
-}
-
 interface PanelTabsProps {
-  activePanel: PanelType;
-  onTabClick: (panel: PanelType) => void;
-  disabledPanels: Partial<Record<PanelType, boolean>>;
+  activePanel: FloatingPanelType;
+  onTabClick: (panel: FloatingPanelType) => void;
+  disabledPanels: Partial<Record<FloatingPanelType, boolean>>;
   isCollapsed: boolean;
 }
 
 /**
- * 🏢 ENTERPRISE: PanelTabs - Migrated to Centralized Radix Tabs System
+ * 🏢 ENTERPRISE: PanelTabs - Floating Panel Navigation
  *
- * Uses @radix-ui/react-tabs via @/components/ui/tabs for:
- * - Accessibility (ARIA roles, keyboard navigation)
- * - Controlled state management
- * - Theme-aware styling
+ * Uses centralized TabsOnlyTriggers component (same as Contacts/ΓΕΜΗ tabs)
+ * Uses FloatingPanelType from types/panel-types.ts (Single Source of Truth - ADR-010)
  *
- * @see src/components/ui/tabs.tsx - Centralized Radix Tabs components
+ * @see @/components/ui/navigation/TabsComponents.tsx - Centralized tabs system
+ * @see types/panel-types.ts - Centralized panel type definitions
  */
 export function PanelTabs({ activePanel, onTabClick, disabledPanels, isCollapsed }: PanelTabsProps) {
   const { t } = useTranslation('dxf-viewer');
 
-  // 🏢 ENTERPRISE: Tab definitions with proper LucideIcon type
-  const topRowTabs: TabDefinition[] = [
-    { id: 'levels', label: t('panels.levels.title'), icon: BarChart },
-    { id: 'hierarchy', label: t('panels.hierarchy.title'), icon: Construction },
+  // 🏢 ENTERPRISE: Create tabs in TabDefinition format (same as GenericFormTabRenderer)
+  const tabs: TabDefinition[] = [
+    {
+      id: 'levels',
+      label: isCollapsed ? '' : t('panels.levels.title'),
+      icon: BarChart,
+      content: null, // Content is rendered by parent
+      disabled: disabledPanels['levels'],
+    },
+    {
+      id: 'hierarchy',
+      label: isCollapsed ? '' : t('panels.hierarchy.title'),
+      icon: Construction,
+      content: null,
+      disabled: disabledPanels['hierarchy'],
+    },
+    {
+      id: 'overlay',
+      label: isCollapsed ? '' : t('panels.overlay.title'),
+      icon: Map,
+      content: null,
+      disabled: disabledPanels['overlay'],
+    },
+    {
+      id: 'colors',
+      label: isCollapsed ? '' : 'Ρυθμίσεις DXF',
+      icon: Settings,
+      content: null,
+      disabled: disabledPanels['colors'],
+    },
   ];
 
-  const bottomRowTabs: TabDefinition[] = [
-    { id: 'overlay', label: t('panels.overlay.title'), icon: Map },
-    { id: 'colors', label: 'Ρυθμίσεις DXF', icon: Settings },
-  ];
-
-  // 🏢 ENTERPRISE: Handler για Radix onValueChange
-  const handleValueChange = (value: string) => {
-    onTabClick(value as PanelType);
+  // 🏢 ENTERPRISE: Handle tab change - convert string to FloatingPanelType
+  const handleTabChange = (tabId: string) => {
+    onTabClick(tabId as FloatingPanelType);
   };
-
-  // 🏢 ENTERPRISE: Get tab classes from centralized PanelTokenUtils
-  const getTabClass = (tabId: PanelType) => {
-    const disabled = disabledPanels[tabId];
-    const isActive = activePanel === tabId;
-    return PanelTokenUtils.getTabButtonClasses(isActive, disabled);
-  };
-
-  // 🏢 ENTERPRISE: Render tab row using Radix TabsList
-  const renderTabRow = (tabs: TabDefinition[]) => (
-    <TabsList className={PANEL_TOKENS.TABS.TAB_ROW.BASE}>
-      {tabs.map((tab) => {
-        const IconComponent = tab.icon;
-        return (
-          <TabsTrigger
-            key={tab.id}
-            value={tab.id}
-            disabled={disabledPanels[tab.id]}
-            className={getTabClass(tab.id)}
-          >
-            <IconComponent className={PANEL_TOKENS.TABS.TAB_ICON.SIZE} />
-            {!isCollapsed && <span className={PANEL_TOKENS.TABS.TAB_LABEL.SIZE}>{tab.label}</span>}
-          </TabsTrigger>
-        );
-      })}
-    </TabsList>
-  );
 
   return (
-    <Tabs
+    <TabsOnlyTriggers
+      tabs={tabs}
       value={activePanel}
-      onValueChange={handleValueChange}
-      className={`${PANEL_TOKENS.TABS.CONTAINER.BASE} ${PANEL_TOKENS.TABS.CONTAINER.BORDER}`}
-    >
-      {renderTabRow(topRowTabs)}
-      {renderTabRow(bottomRowTabs)}
-    </Tabs>
+      onTabChange={handleTabChange}
+      theme="dark"
+      alwaysShowLabels={!isCollapsed}
+    />
   );
 }

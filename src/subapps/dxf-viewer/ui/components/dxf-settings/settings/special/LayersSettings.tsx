@@ -6,6 +6,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Palette, Pencil, RotateCcw, Construction, Layers } from 'lucide-react';
+// 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/etc.)
+import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
 
 interface LayersSettingsProps {
   // Για μελλοντική επέκταση μπορούμε να προσθέσουμε props
@@ -35,6 +37,32 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
     bgClass: useDynamicBackgroundClass(preset.color),
     bgWithOpacityClass: useDynamicBackgroundClass(preset.color, 0.5)
   }));
+
+  // ============================================================================
+  // TAB CONFIGURATION - 🏢 ENTERPRISE: Using centralized TabDefinition interface
+  // ============================================================================
+
+  type LayerTab = 'outlines' | 'fills';
+
+  const layerTabs: TabDefinition[] = [
+    {
+      id: 'outlines',
+      label: 'Περιγράμματα',
+      icon: Pencil, // 🏢 ENTERPRISE: Lucide icon
+      content: null, // Content rendered separately below
+    },
+    {
+      id: 'fills',
+      label: 'Γεμίσματα',
+      icon: Palette, // 🏢 ENTERPRISE: Lucide icon
+      content: null, // Content rendered separately below
+    },
+  ];
+
+  // 🏢 ENTERPRISE: Handle tab change - convert string to LayerTab
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId as LayerTab);
+  };
 
   return (
     <section className={`p-4 ${colors.bg.primary} ${colors.text.primary}`}>
@@ -73,32 +101,15 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
         </div>
       </div>
 
-      {/* Tabs Navigation */}
+      {/* 🏢 ENTERPRISE: Tabs Navigation - Using centralized TabsOnlyTriggers */}
       <div className="mb-4">
-        <div className={`flex gap-1 ${colors.bg.secondary} p-1 ${radius.lg}`}>
-          <button
-            onClick={() => setActiveTab('outlines')}
-            className={`flex-1 px-3 py-2 text-xs font-medium ${radius.md} transition-colors duration-150 flex items-center justify-center gap-1.5 ${
-              activeTab === 'outlines'
-                ? `${colors.bg.info} ${colors.text.inverted}`
-                : `${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
-            }`}
-          >
-            <Pencil className="w-3.5 h-3.5" />
-            <span>Περιγράμματα</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('fills')}
-            className={`flex-1 px-3 py-2 text-xs font-medium ${radius.md} transition-colors duration-150 flex items-center justify-center gap-1.5 ${
-              activeTab === 'fills'
-                ? `${colors.bg.info} ${colors.text.inverted}`
-                : `${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
-            }`}
-          >
-            <Palette className="w-3.5 h-3.5" />
-            <span>Γεμίσματα</span>
-          </button>
-        </div>
+        <TabsOnlyTriggers
+          tabs={layerTabs}
+          value={activeTab}
+          onTabChange={handleTabChange}
+          theme="dark"
+          alwaysShowLabels={true}
+        />
       </div>
 
       {/* Tab Content */}

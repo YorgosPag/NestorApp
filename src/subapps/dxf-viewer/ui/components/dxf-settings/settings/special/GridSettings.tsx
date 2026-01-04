@@ -16,7 +16,10 @@
 import React from 'react';
 import { useRulersGridContext } from '../../../../../systems/rulers-grid/RulersGridSystem';
 import { useTabNavigation } from '../../hooks/useTabNavigation';
-import { TabNavigation } from '../../shared/TabNavigation';
+// 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/etc.)
+import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
+// 🏢 ENTERPRISE: Lucide icons for tabs (replacing emojis 📏 and 📐)
+import { Equal, Minus } from 'lucide-react';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -106,13 +109,28 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
   };
 
   // ============================================================================
-  // TAB CONFIGURATION
+  // TAB CONFIGURATION - 🏢 ENTERPRISE: Using centralized TabDefinition interface
   // ============================================================================
 
-  const gridLinesTabs = [
-    { id: 'major' as const, label: '📏 Κύριες Γραμμές' },
-    { id: 'minor' as const, label: '📐 Δευτερεύουσες Γραμμές' }
+  const gridLinesTabs: TabDefinition[] = [
+    {
+      id: 'major',
+      label: 'Κύριες Γραμμές',
+      icon: Equal, // 🏢 ENTERPRISE: Lucide icon replacing 📏 emoji
+      content: null, // Content rendered separately below
+    },
+    {
+      id: 'minor',
+      label: 'Δευτερεύουσες Γραμμές',
+      icon: Minus, // 🏢 ENTERPRISE: Lucide icon replacing 📐 emoji
+      content: null, // Content rendered separately below
+    },
   ];
+
+  // 🏢 ENTERPRISE: Handle tab change - convert string to GridLinesTab
+  const handleGridLinesTabChange = (tabId: string) => {
+    setActiveGridLinesTab(tabId as GridLinesTab);
+  };
 
   // ============================================================================
   // RENDER
@@ -212,14 +230,17 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
         </div>
       </div>
 
-      {/* Grid Lines Sub-tabs (Κύριες/Δευτερεύουσες) */}
+      {/* 🏢 ENTERPRISE: Grid Lines Sub-tabs - Using centralized TabsOnlyTriggers */}
       <div className={`${quick.separatorH} pt-4`}>
-        <TabNavigation
-          tabs={gridLinesTabs}
-          activeTab={activeGridLinesTab}
-          onTabChange={setActiveGridLinesTab}
-          className="mb-4"
-        />
+        <div className="mb-4">
+          <TabsOnlyTriggers
+            tabs={gridLinesTabs}
+            value={activeGridLinesTab}
+            onTabChange={handleGridLinesTabChange}
+            theme="dark"
+            alwaysShowLabels={true}
+          />
+        </div>
 
         {/* Major Lines Tab Content */}
         {activeGridLinesTab === 'major' ? (

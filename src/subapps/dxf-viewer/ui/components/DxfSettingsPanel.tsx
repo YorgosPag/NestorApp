@@ -1,6 +1,10 @@
 'use client';
 
-import { PANEL_TOKENS, PanelTokenUtils } from '../../config/panel-tokens';
+import { PANEL_TOKENS } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs)
+import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
+// 🏢 ENTERPRISE: Lucide icons for tabs
+import { Settings, SlidersHorizontal } from 'lucide-react';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -91,25 +95,37 @@ export function DxfSettingsPanel({ className = '' }: DxfSettingsPanelProps) {
   // RENDER
   // ============================================================================
 
+  // 🏢 ENTERPRISE: Tabs definition using centralized TabDefinition interface
+  const mainTabs: TabDefinition[] = [
+    {
+      id: 'general',
+      label: 'Γενικές Ρυθμίσεις',
+      icon: Settings,
+      content: null, // Content rendered separately below
+    },
+    {
+      id: 'specific',
+      label: 'Ειδικές Ρυθμίσεις',
+      icon: SlidersHorizontal,
+      content: null, // Content rendered separately below
+    },
+  ];
+
+  // 🏢 ENTERPRISE: Handle tab change - convert string to MainTab
+  const handleTabChange = (tabId: string) => {
+    setActiveMainTab(tabId as MainTab);
+  };
+
   return (
     <div className={`${PANEL_TOKENS.DXF_SETTINGS.CONTAINER.BASE} ${className}`}>
-      {/* Main Tabs - General/Specific */}
-      <div className={PANEL_TOKENS.DXF_SETTINGS.TAB_NAVIGATION.CONTAINER}>
-        <nav className={PANEL_TOKENS.DXF_SETTINGS.TAB_NAVIGATION.NAV}>
-          <button
-            onClick={() => setActiveMainTab('general')}
-            className={PanelTokenUtils.getDxfSettingsTabClasses(activeMainTab === 'general')}
-          >
-            Γενικές Ρυθμίσεις
-          </button>
-          <button
-            onClick={() => setActiveMainTab('specific')}
-            className={PanelTokenUtils.getDxfSettingsTabClasses(activeMainTab === 'specific')}
-          >
-            Ειδικές Ρυθμίσεις
-          </button>
-        </nav>
-      </div>
+      {/* 🏢 ENTERPRISE: Main Tabs - Using centralized TabsOnlyTriggers (same as Contacts/ΓΕΜΗ/PanelTabs) */}
+      <TabsOnlyTriggers
+        tabs={mainTabs}
+        value={activeMainTab}
+        onTabChange={handleTabChange}
+        theme="dark"
+        alwaysShowLabels={true}
+      />
 
       {/* Content based on active main tab */}
       {activeMainTab === 'general' && (

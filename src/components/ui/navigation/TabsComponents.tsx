@@ -153,34 +153,51 @@ export function LightTabs(props: TabsContainerProps) {
 interface TabsOnlyTriggersProps {
   tabs: TabDefinition[];
   defaultTab?: string;
+  /** 🏢 ENTERPRISE: Controlled mode - if provided, component is controlled */
+  value?: string;
   selectedItems?: string[];
   selectionMessage?: string;
   theme?: ThemeVariant;
   className?: string;
   onTabChange?: (tabId: string) => void;
   children?: React.ReactNode;
+  /** 🏢 ENTERPRISE: Always show labels (override responsive hiding) */
+  alwaysShowLabels?: boolean;
 }
 
 /**
  * Tabs component that centralizes ONLY the tab triggers
  * without applying any wrapper styling to content.
  * Perfect for cases where existing content layout must be preserved.
+ *
+ * 🏢 ENTERPRISE: Supports both controlled and uncontrolled modes:
+ * - Controlled: Pass `value` prop (component uses external state)
+ * - Uncontrolled: Don't pass `value` (component manages internal state)
  */
 export function TabsOnlyTriggers({
   tabs,
   defaultTab,
+  value,
   selectedItems = [],
   selectionMessage,
   theme = 'default',
   className,
   onTabChange,
-  children
+  children,
+  alwaysShowLabels = false
 }: TabsOnlyTriggersProps) {
   const iconSizes = useIconSizes();
-  const [activeTab, setActiveTab] = useState(defaultTab || tabs[0]?.id);
+  // 🏢 ENTERPRISE: Support controlled mode - use value prop if provided
+  const [internalActiveTab, setInternalActiveTab] = useState(defaultTab || tabs[0]?.id);
+
+  // Controlled vs Uncontrolled: Use value prop if provided, otherwise internal state
+  const activeTab = value !== undefined ? value : internalActiveTab;
 
   const handleTabChange = (tabId: string) => {
-    setActiveTab(tabId);
+    // Only update internal state in uncontrolled mode
+    if (value === undefined) {
+      setInternalActiveTab(tabId);
+    }
     onTabChange?.(tabId);
   };
 
@@ -209,7 +226,7 @@ export function TabsOnlyTriggers({
               className={themeConfig?.tabTrigger}
             >
               {React.createElement(tab.icon, { className: iconSizes.sm })}
-              <span className="hidden sm:inline">{tab.label}</span>
+              <span className={alwaysShowLabels ? '' : 'hidden sm:inline'}>{tab.label}</span>
             </TabsTrigger>
           ))}
         </TabsList>

@@ -5,6 +5,8 @@ import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Lucide icons replacing emojis
+import { ClipboardList, Minus, Type } from 'lucide-react';
 
 interface LineSettings {
   lineType: LineType;
@@ -84,7 +86,7 @@ export function CurrentSettingsDisplay({
           className={`rounded ${getStatusBorder('default')} ${colors.text.info} focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-primary`}
         />
         <div className="flex items-center gap-2">
-          <span>📋</span>
+          <ClipboardList className="w-4 h-4" />
           <span className={`text-sm font-medium ${colors.text.info}`}>Τρέχουσες Ρυθμίσεις</span>
         </div>
       </label>
@@ -93,8 +95,9 @@ export function CurrentSettingsDisplay({
         <div className={`${colors.bg.primary} rounded-lg ${getStatusBorder('default')} p-3`}>
           {activeTab === 'lines' && (
             <div>
-              <div className={`px-3 py-2 ${colors.bg.secondary} font-medium ${colors.text.info} text-sm rounded-t-lg mb-3`}>
-                📏 Γραμμή
+              <div className={`px-3 py-2 ${colors.bg.secondary} font-medium ${colors.text.info} text-sm rounded-t-lg mb-3 flex items-center gap-2`}>
+                <Minus className="w-4 h-4" />
+                <span>Γραμμή</span>
               </div>
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between">
@@ -140,8 +143,9 @@ export function CurrentSettingsDisplay({
 
           {activeTab === 'text' && (
             <div>
-              <div className={`px-3 py-2 ${colors.bg.secondary} font-medium ${colors.text.success} text-sm rounded-t-lg mb-3`}>
-                📝 Κείμενο
+              <div className={`px-3 py-2 ${colors.bg.secondary} font-medium ${colors.text.success} text-sm rounded-t-lg mb-3 flex items-center gap-2`}>
+                <Type className="w-4 h-4" />
+                <span>Κείμενο</span>
               </div>
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between">

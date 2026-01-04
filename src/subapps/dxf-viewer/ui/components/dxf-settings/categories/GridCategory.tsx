@@ -15,7 +15,10 @@
 
 import React from 'react';
 import { useTabNavigation } from '../hooks/useTabNavigation';
-import { TabNavigation } from '../shared/TabNavigation';
+// 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/DxfSettingsPanel/etc.)
+import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
+// 🏢 ENTERPRISE: Lucide icons for tabs (replacing emojis 📋 and 📏)
+import { Grid3X3, Ruler } from 'lucide-react';
 import { GridSettings } from '../settings/special/GridSettings';
 import { RulersSettings } from '../settings/special/RulersSettings';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -86,13 +89,28 @@ export const GridCategory: React.FC<GridCategoryProps> = ({
   const { activeTab, setActiveTab } = useTabNavigation<GridMainTab>(defaultTab);
 
   // ============================================================================
-  // TAB CONFIGURATION
+  // TAB CONFIGURATION - 🏢 ENTERPRISE: Using centralized TabDefinition interface
   // ============================================================================
 
-  const tabs = [
-    { id: 'grid' as const, label: '📋 Πλέγμα (Grid)' },
-    { id: 'rulers' as const, label: '📏 Χάρακες (Rulers)' }
+  const gridTabs: TabDefinition[] = [
+    {
+      id: 'grid',
+      label: 'Πλέγμα (Grid)',
+      icon: Grid3X3, // 🏢 ENTERPRISE: Lucide icon replacing 📋 emoji
+      content: null, // Content rendered separately below
+    },
+    {
+      id: 'rulers',
+      label: 'Χάρακες (Rulers)',
+      icon: Ruler, // 🏢 ENTERPRISE: Lucide icon replacing 📏 emoji
+      content: null, // Content rendered separately below
+    },
   ];
+
+  // 🏢 ENTERPRISE: Handle tab change - convert string to GridMainTab
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId as GridMainTab);
+  };
 
   // ============================================================================
   // RENDER TAB CONTENT
@@ -115,13 +133,14 @@ export const GridCategory: React.FC<GridCategoryProps> = ({
 
   return (
     <div className={className}>
-      {/* Tab Navigation */}
+      {/* 🏢 ENTERPRISE: Tab Navigation - Using centralized TabsOnlyTriggers */}
       <div className={`${getDirectionalBorder('default', 'bottom')} mb-4`}>
-        <TabNavigation
-          tabs={tabs}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          className="px-2 pb-2"
+        <TabsOnlyTriggers
+          tabs={gridTabs}
+          value={activeTab}
+          onTabChange={handleTabChange}
+          theme="dark"
+          alwaysShowLabels={true}
         />
       </div>
 

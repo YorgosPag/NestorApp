@@ -2068,7 +2068,8 @@ export const canvasUI = {
         height: '100%',
         zIndex: zIndex.overlay,
         pointerEvents: activeTool === 'select' || activeTool === 'layering' ? 'auto' : 'none',
-        cursor: activeTool === 'select' ? 'pointer' : activeTool === 'pan' ? 'grab' : 'default'
+        // 🏢 FIX (2026-01-04): Select tool uses 'none' cursor - crosshair overlay is the only cursor
+        cursor: activeTool === 'pan' ? 'grab' : 'none'
       }),
       layerCanvasWithTools: (activeTool?: string, crosshairEnabled?: boolean): React.CSSProperties => ({
         position: 'absolute',
@@ -2077,12 +2078,11 @@ export const canvasUI = {
         height: '100%',
         zIndex: zIndex.base,
         pointerEvents: 'auto', // Layer canvas always captures events
-        // ✅ ENTERPRISE: Όταν είναι enabled το crosshair overlay, κρύβουμε τον CSS cursor
+        // 🏢 FIX (2026-01-04): Select tool uses 'none' cursor - crosshair overlay is the only cursor
         // Το σταυρόνημα εμφανίζεται μόνο από το CrosshairOverlay component
         cursor: activeTool === 'pan' ? 'grab' :
                 activeTool === 'zoom' ? 'zoom-in' :
-                activeTool === 'select' ? 'pointer' :
-                crosshairEnabled ? 'none' : 'default', // ✅ FIX: 'none' αντί 'crosshair'
+                'none', // ✅ CAD-GRADE: Always hide CSS cursor, crosshair is the only cursor
         touchAction: 'none', // Prevent browser touch gestures
         userSelect: 'none' as const
       }),
@@ -2093,12 +2093,11 @@ export const canvasUI = {
         height: '100%',
         zIndex: zIndex.docked, // Higher than layer canvas for DXF content
         pointerEvents: 'auto', // DXF canvas captures events for drawing
-        // ✅ ENTERPRISE: Όταν είναι enabled το crosshair overlay, κρύβουμε τον CSS cursor
+        // 🏢 FIX (2026-01-04): Select tool uses 'none' cursor - crosshair overlay is the only cursor
         // Το σταυρόνημα εμφανίζεται μόνο από το CrosshairOverlay component
         cursor: activeTool === 'pan' ? 'grab' :
                 activeTool === 'zoom' ? 'zoom-in' :
-                activeTool === 'select' ? 'pointer' :
-                crosshairEnabled ? 'none' : 'default', // ✅ FIX: 'none' αντί 'crosshair'
+                'none', // ✅ CAD-GRADE: Always hide CSS cursor, crosshair is the only cursor
         touchAction: 'none', // Prevent browser touch gestures
         userSelect: 'none' as const
         // ❌ REMOVED: backgroundColor - ADR-004 requires CANVAS_THEME from color-config.ts

@@ -15,7 +15,10 @@
 
 import React, { Suspense } from 'react';
 import { useTabNavigation } from '../hooks/useTabNavigation';
-import { TabNavigation } from '../shared/TabNavigation';
+// 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/DxfSettingsPanel/SelectionSettings/GeneralSettingsPanel)
+import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
+// 🏢 ENTERPRISE: Lucide icons for tabs
+import { Crosshair, MousePointer2 } from 'lucide-react';
 import { CrosshairSettings } from '../settings/special/CrosshairSettings';
 import { CursorSettings } from '../settings/special/CursorSettings';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -86,13 +89,28 @@ export const CursorCategory: React.FC<CursorCategoryProps> = ({
   const { activeTab, setActiveTab } = useTabNavigation<CursorSubTab>(defaultTab);
 
   // ============================================================================
-  // TAB CONFIGURATION
+  // TAB CONFIGURATION - 🏢 ENTERPRISE: Using centralized TabDefinition interface
   // ============================================================================
 
-  const tabs = [
-    { id: 'crosshair' as const, label: 'Ρυθμίσεις Σταυρονήματος' },
-    { id: 'cursor' as const, label: 'Ρυθμίσεις Κέρσορα' }
+  const cursorTabs: TabDefinition[] = [
+    {
+      id: 'crosshair',
+      label: 'Ρυθμίσεις Σταυρονήματος',
+      icon: Crosshair,
+      content: null, // Content rendered separately below
+    },
+    {
+      id: 'cursor',
+      label: 'Ρυθμίσεις Κέρσορα',
+      icon: MousePointer2,
+      content: null, // Content rendered separately below
+    },
   ];
+
+  // 🏢 ENTERPRISE: Handle tab change - convert string to CursorSubTab
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId as CursorSubTab);
+  };
 
   // ============================================================================
   // RENDER TAB CONTENT
@@ -115,13 +133,14 @@ export const CursorCategory: React.FC<CursorCategoryProps> = ({
 
   return (
     <div className={className}>
-      {/* Tab Navigation */}
+      {/* 🏢 ENTERPRISE: Tab Navigation - Using centralized TabsOnlyTriggers */}
       <div className={`${getDirectionalBorder('default', 'bottom')} mb-4`}>
-        <TabNavigation
-          tabs={tabs}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          className="px-2 pb-2"
+        <TabsOnlyTriggers
+          tabs={cursorTabs}
+          value={activeTab}
+          onTabChange={handleTabChange}
+          theme="dark"
+          alwaysShowLabels={true}
         />
       </div>
 

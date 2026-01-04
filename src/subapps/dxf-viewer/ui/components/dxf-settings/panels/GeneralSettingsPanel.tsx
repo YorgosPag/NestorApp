@@ -51,7 +51,10 @@
 import React, { Suspense } from 'react';
 import { useTabNavigation } from '../hooks/useTabNavigation';
 import { PANEL_TOKENS } from '../../../../config/panel-tokens';
-import { TabNavigation } from '../shared/TabNavigation';
+// 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/DxfSettingsPanel/SelectionSettings)
+import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
+// 🏢 ENTERPRISE: Lucide icons for tabs
+import { Minus, Type, GripVertical } from 'lucide-react';
 import { LazyLinesTab, LazyTextTab, LazyGripsTab } from '../LazyComponents';
 import { LinePreview } from '../settings/shared/LinePreview';
 import { CurrentSettingsDisplay } from '../settings/shared/CurrentSettingsDisplay';
@@ -154,14 +157,34 @@ export const GeneralSettingsPanel: React.FC<GeneralSettingsPanelProps> = ({
   });
 
   // ============================================================================
-  // TAB CONFIGURATION
+  // TAB CONFIGURATION - 🏢 ENTERPRISE: Using centralized TabDefinition interface
   // ============================================================================
 
-  const tabs = [
-    { id: 'lines' as const, label: 'Γραμμές' },
-    { id: 'text' as const, label: 'Κείμενο' },
-    { id: 'grips' as const, label: 'Grips' },
+  const generalTabs: TabDefinition[] = [
+    {
+      id: 'lines',
+      label: 'Γραμμές',
+      icon: Minus,
+      content: null, // Content rendered separately below
+    },
+    {
+      id: 'text',
+      label: 'Κείμενο',
+      icon: Type,
+      content: null, // Content rendered separately below
+    },
+    {
+      id: 'grips',
+      label: 'Grips',
+      icon: GripVertical,
+      content: null, // Content rendered separately below
+    },
   ];
+
+  // 🏢 ENTERPRISE: Handle tab change - convert string to GeneralTab
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId as GeneralTab);
+  };
 
   // ============================================================================
   // RENDER TAB CONTENT (Lazy Loaded)
@@ -210,13 +233,14 @@ export const GeneralSettingsPanel: React.FC<GeneralSettingsPanelProps> = ({
         />
       </div>
 
-      {/* Tab Navigation */}
+      {/* 🏢 ENTERPRISE: Tab Navigation - Using centralized TabsOnlyTriggers */}
       <div className={PANEL_TOKENS.GENERAL_SETTINGS.TAB_NAVIGATION.CONTAINER}>
-        <TabNavigation
-          tabs={tabs}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          className="px-2 pb-2"
+        <TabsOnlyTriggers
+          tabs={generalTabs}
+          value={activeTab}
+          onTabChange={handleTabChange}
+          theme="dark"
+          alwaysShowLabels={true}
         />
       </div>
 

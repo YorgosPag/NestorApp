@@ -17,7 +17,10 @@
 
 import React from 'react';
 import { useTabNavigation } from '../../hooks/useTabNavigation';
-import { TabNavigation } from '../../shared/TabNavigation';
+// 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/etc.)
+import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
+// 🏢 ENTERPRISE: Lucide icons for tabs (replacing emojis 📦, 📏, 📝, 📐)
+import { Square, AlignJustify, Type, Ruler } from 'lucide-react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { RulerBackgroundSettings } from './rulers/RulerBackgroundSettings';
 import { RulerLinesSettings } from './rulers/RulerLinesSettings';
@@ -92,15 +95,40 @@ export const RulersSettings: React.FC<RulersSettingsProps> = ({
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
 
   // ============================================================================
-  // TAB CONFIGURATION
+  // TAB CONFIGURATION - 🏢 ENTERPRISE: Using centralized TabDefinition interface
   // ============================================================================
 
-  const tabs = [
-    { id: 'background' as const, label: '📦 Φόντο' },
-    { id: 'lines' as const, label: '📏 Γραμμές' },
-    { id: 'text' as const, label: '📝 Κείμενα' },
-    { id: 'units' as const, label: '📐 Μονάδες' }
+  const rulerTabs: TabDefinition[] = [
+    {
+      id: 'background',
+      label: 'Φόντο',
+      icon: Square, // 🏢 ENTERPRISE: Lucide icon replacing 📦 emoji
+      content: null, // Content rendered separately below
+    },
+    {
+      id: 'lines',
+      label: 'Γραμμές',
+      icon: AlignJustify, // 🏢 ENTERPRISE: Lucide icon replacing 📏 emoji
+      content: null, // Content rendered separately below
+    },
+    {
+      id: 'text',
+      label: 'Κείμενα',
+      icon: Type, // 🏢 ENTERPRISE: Lucide icon replacing 📝 emoji
+      content: null, // Content rendered separately below
+    },
+    {
+      id: 'units',
+      label: 'Μονάδες',
+      icon: Ruler, // 🏢 ENTERPRISE: Lucide icon replacing 📐 emoji
+      content: null, // Content rendered separately below
+    },
   ];
+
+  // 🏢 ENTERPRISE: Handle tab change - convert string to RulerSubTab
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId as RulerSubTab);
+  };
 
   // ============================================================================
   // RENDER TAB CONTENT
@@ -127,13 +155,14 @@ export const RulersSettings: React.FC<RulersSettingsProps> = ({
 
   return (
     <div className={className}>
-      {/* Tab Navigation */}
+      {/* 🏢 ENTERPRISE: Tab Navigation - Using centralized TabsOnlyTriggers */}
       <div className={`${getDirectionalBorder('muted', 'bottom')} mb-4`}>
-        <TabNavigation
-          tabs={tabs}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          className="px-2 pb-2"
+        <TabsOnlyTriggers
+          tabs={rulerTabs}
+          value={activeTab}
+          onTabChange={handleTabChange}
+          theme="dark"
+          alwaysShowLabels={true}
         />
       </div>
 

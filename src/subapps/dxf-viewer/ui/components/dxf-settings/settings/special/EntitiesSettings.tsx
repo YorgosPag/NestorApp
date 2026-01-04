@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ACI_PALETTE } from '../../../../../settings/standards/aci';
 import { UI_COLORS } from '../../../../../config/color-config';
-import { Minus, Square, Pen, Hexagon, Ruler, Triangle, Wrench } from 'lucide-react';
+import { Minus, Square, Pen, Hexagon, Ruler, Triangle, Wrench, PenLine, CheckCircle2, Mouse, SquareDashedMousePointer } from 'lucide-react';
+// 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/etc.)
+import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
 import { CircleRadiusIcon } from '../../../../toolbar/icons/CircleIcon';
 import { useIconSizes } from '../../../../../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../../../../../hooks/useBorderTokens';
@@ -267,6 +269,71 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
     { id: 'measure-angle', label: DXF_MEASUREMENT_SIMPLE_LABELS.ANGLE, icon: Triangle, hotkey: 'ANG' }
   ];
 
+  // ============================================================================
+  // TAB CONFIGURATION - 🏢 ENTERPRISE: Using centralized TabDefinition interface
+  // ============================================================================
+
+  type SpecificTab = 'drawing' | 'measurements';
+
+  const specificTabs: TabDefinition[] = [
+    {
+      id: 'drawing',
+      label: DXF_SETTINGS_TAB_LABELS.DRAWING,
+      icon: Pen, // 🏢 ENTERPRISE: Lucide icon
+      content: null, // Content rendered separately below
+    },
+    {
+      id: 'measurements',
+      label: DXF_SETTINGS_TAB_LABELS.MEASUREMENTS,
+      icon: Ruler, // 🏢 ENTERPRISE: Lucide icon
+      content: null, // Content rendered separately below
+    },
+  ];
+
+  // 🏢 ENTERPRISE: Handle tab change - convert string to SpecificTab
+  const handleSpecificTabChange = (tabId: string) => {
+    setActiveSpecificTab(tabId as SpecificTab);
+    setSelectedTool(null);
+  };
+
+  // ============================================================================
+  // LINE TOOL TABS CONFIGURATION - 🏢 ENTERPRISE: Using centralized TabDefinition interface
+  // ============================================================================
+
+  type LineToolTab = 'draft' | 'completion' | 'hover' | 'selection';
+
+  const lineToolTabs: TabDefinition[] = [
+    {
+      id: 'draft',
+      label: DXF_SETTINGS_TAB_LABELS.DRAFT,
+      icon: PenLine, // 🏢 ENTERPRISE: Lucide icon for Προσχεδίαση
+      content: null,
+    },
+    {
+      id: 'completion',
+      label: DXF_SETTINGS_TAB_LABELS.COMPLETION,
+      icon: CheckCircle2, // 🏢 ENTERPRISE: Lucide icon for Ολοκλήρωση
+      content: null,
+    },
+    {
+      id: 'hover',
+      label: DXF_SETTINGS_TAB_LABELS.HOVER,
+      icon: Mouse, // 🏢 ENTERPRISE: Lucide icon for Hover
+      content: null,
+    },
+    {
+      id: 'selection',
+      label: DXF_SETTINGS_TAB_LABELS.SELECTION,
+      icon: SquareDashedMousePointer, // 🏢 ENTERPRISE: Lucide icon for Επιλογή
+      content: null,
+    },
+  ];
+
+  // 🏢 ENTERPRISE: Handle line tool tab change - toggle behavior (click again to close)
+  const handleLineToolTabChange = (tabId: string) => {
+    setActiveLineTab(activeLineTab === tabId ? null : tabId);
+  };
+
   // Removed updateGripSettings mock function - now using context
 
   // Mock template functions
@@ -390,26 +457,15 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
     if (selectedTool === 'line') {
       return (
         <div className={`mb-6 p-4 ${colors.bg.secondary} ${quick.card}`}>
-          {/* Καρτέλες για Line Tool σε δύο σειρές */}
-          <div className="grid grid-cols-2 gap-2 mb-4">
-            {[
-              { id: 'draft', label: DXF_SETTINGS_TAB_LABELS.DRAFT },
-              { id: 'completion', label: DXF_SETTINGS_TAB_LABELS.COMPLETION },
-              { id: 'hover', label: DXF_SETTINGS_TAB_LABELS.HOVER },
-              { id: 'selection', label: DXF_SETTINGS_TAB_LABELS.SELECTION }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveLineTab(activeLineTab === tab.id ? null : tab.id)}
-                className={`py-2 px-3 text-sm font-medium ${quick.button} transition-colors ${
-                  activeLineTab === tab.id
-                    ? `${colors.bg.primary} ${colors.text.inverted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                    : `${colors.bg.muted} ${colors.text.primary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          {/* 🏢 ENTERPRISE: Καρτέλες για Line Tool - Using centralized TabsOnlyTriggers */}
+          <div className="mb-4">
+            <TabsOnlyTriggers
+              tabs={lineToolTabs}
+              value={activeLineTab || ''}
+              onTabChange={handleLineToolTabChange}
+              theme="dark"
+              alwaysShowLabels={true}
+            />
           </div>
 
           {/* Περιεχόμενο για Προσχεδίαση με υποκαρτέλες */}
@@ -582,27 +638,15 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
 
       {/* Entity-Specific Settings - Tools and specialized functions */}
       <div>
-          {/* Tabs για Ειδικές Ρυθμίσεις */}
-          <div className={`flex space-x-1 ${colors.bg.secondary} ${quick.card} p-1 mb-4`}>
-            {[
-              { id: 'drawing', label: DXF_SETTINGS_TAB_LABELS.DRAWING },
-              { id: 'measurements', label: DXF_SETTINGS_TAB_LABELS.MEASUREMENTS }
-            ].map((subTab) => (
-              <button
-                key={subTab.id}
-                onClick={() => {
-                  setActiveSpecificTab(subTab.id);
-                  setSelectedTool(null);
-                }}
-                className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
-                  activeSpecificTab === subTab.id
-                    ? `${colors.bg.primary} ${colors.text.inverted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                    : `${colors.bg.muted} ${colors.text.primary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
-                }`}
-              >
-                {subTab.label}
-              </button>
-            ))}
+          {/* 🏢 ENTERPRISE: Tabs για Ειδικές Ρυθμίσεις - Using centralized TabsOnlyTriggers */}
+          <div className="mb-4">
+            <TabsOnlyTriggers
+              tabs={specificTabs}
+              value={activeSpecificTab}
+              onTabChange={handleSpecificTabChange}
+              theme="dark"
+              alwaysShowLabels={true}
+            />
           </div>
 
           {/* Toolbar Icons - ανάλογα με την ενεργή υποκαρτέλα */}

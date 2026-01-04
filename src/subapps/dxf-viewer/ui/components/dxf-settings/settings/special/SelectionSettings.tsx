@@ -3,9 +3,11 @@ import { useCursorSettings } from '../../../../../systems/cursor';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { UI_COLORS } from '../../../../../config/color-config';
-import { RotateCcw, Square, SquareDashed } from 'lucide-react'; // ✅ ENTERPRISE: Lucide icons αντί για emojis
+import { RotateCcw, Square, SquareDashed } from 'lucide-react';
+// 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/DxfSettingsPanel)
+import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
 
 export function SelectionSettings() {
   const [activeSelectionTab, setActiveSelectionTab] = useState<'window' | 'crossing'>('window');
@@ -15,8 +17,11 @@ export function SelectionSettings() {
   const { getStatusBorder, getElementBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
 
+  // 🏢 ENTERPRISE: Type-safe selection field value type
+  type SelectionFieldValue = string | number | 'solid' | 'dashed' | 'dotted' | 'dash-dot';
+
   // Real handlers που συνδέονται με το CursorSystem
-  const handleWindowSelectionChange = (field: string, value: any) => {
+  const handleWindowSelectionChange = (field: string, value: SelectionFieldValue) => {
     updateSettings({
       selection: {
         ...settings.selection,
@@ -25,7 +30,7 @@ export function SelectionSettings() {
     });
   };
 
-  const handleCrossingSelectionChange = (field: string, value: any) => {
+  const handleCrossingSelectionChange = (field: string, value: SelectionFieldValue) => {
     updateSettings({
       selection: {
         ...settings.selection,
@@ -57,32 +62,41 @@ export function SelectionSettings() {
     });
   };
 
+  // 🏢 ENTERPRISE: Selection tab type
+  type SelectionTab = 'window' | 'crossing';
+
+  // 🏢 ENTERPRISE: Tabs definition using centralized TabDefinition interface
+  const selectionTabs: TabDefinition[] = [
+    {
+      id: 'window',
+      label: 'Window Selection',
+      icon: Square,
+      content: null, // Content rendered separately below
+    },
+    {
+      id: 'crossing',
+      label: 'Crossing Selection',
+      icon: SquareDashed,
+      content: null, // Content rendered separately below
+    },
+  ];
+
+  // 🏢 ENTERPRISE: Handle tab change - convert string to SelectionTab
+  const handleTabChange = (tabId: string) => {
+    setActiveSelectionTab(tabId as SelectionTab);
+  };
+
   return (
     <div className={`p-4 ${colors.bg.primary} ${colors.text.primary}`}>
-      {/* Sub-navigation tabs */}
-      <div className={`flex gap-1 mb-4 pb-2 ${getDirectionalBorder('default', 'bottom')}`}>
-        <button
-          onClick={() => setActiveSelectionTab('window')}
-          className={`px-3 py-2 text-xs rounded-t transition-colors flex items-center gap-2 ${
-            activeSelectionTab === 'window'
-              ? `${colors.bg.card} ${colors.text.primary} ${getDirectionalBorder('info', 'bottom')}`
-              : `${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.text.muted}`
-          }`}
-        >
-          <Square className="w-3 h-3 text-blue-500" />
-          <span>Window Selection</span>
-        </button>
-        <button
-          onClick={() => setActiveSelectionTab('crossing')}
-          className={`px-3 py-2 text-xs rounded-t transition-colors flex items-center gap-2 ${
-            activeSelectionTab === 'crossing'
-              ? `${colors.bg.card} ${colors.text.primary} ${getDirectionalBorder('info', 'bottom')}`
-              : `${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.text.muted}`
-          }`}
-        >
-          <SquareDashed className="w-3 h-3 text-green-500" />
-          <span>Crossing Selection</span>
-        </button>
+      {/* 🏢 ENTERPRISE: Selection Tabs - Using centralized TabsOnlyTriggers */}
+      <div className="mb-4">
+        <TabsOnlyTriggers
+          tabs={selectionTabs}
+          value={activeSelectionTab}
+          onTabChange={handleTabChange}
+          theme="dark"
+          alwaysShowLabels={true}
+        />
       </div>
 
       {/* TEMPORARY DEBUG BUTTON */}

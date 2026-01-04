@@ -9,6 +9,10 @@ import { OverrideToggle } from './OverrideToggle';
 import { INTERACTIVE_PATTERNS } from '../../../ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../../config/color-config';
+// 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/etc.)
+import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
+// 🏢 ENTERPRISE: Lucide icons for sub-tabs
+import { Minus, Type, GripVertical } from 'lucide-react';
 
 export type SubTabType = 'draft' | 'completion' | 'hover' | 'selection';
 export type SubTabContent = 'line' | 'text' | 'grips';
@@ -102,14 +106,32 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
   const coloredLineSettings = React.useMemo(() => getColoredSettings(lineSettings), [getColoredSettings, lineSettings]);
   const coloredTextSettings = getColoredSettings(textSettings); // Direct call - no memoization
 
-  // Memoized sub-tab options
-  const subTabOptions = React.useMemo(() => [
-    { id: 'line', label: 'Γραμμή' },
-    { id: 'text', label: 'Κείμενο' },
-    { id: 'grips', label: 'Grips' }
+  // ============================================================================
+  // SUB-TAB CONFIGURATION - 🏢 ENTERPRISE: Using centralized TabDefinition interface
+  // ============================================================================
+
+  const subTabOptions: TabDefinition[] = React.useMemo(() => [
+    {
+      id: 'line',
+      label: 'Γραμμή',
+      icon: Minus, // 🏢 ENTERPRISE: Lucide icon
+      content: null,
+    },
+    {
+      id: 'text',
+      label: 'Κείμενο',
+      icon: Type, // 🏢 ENTERPRISE: Lucide icon
+      content: null,
+    },
+    {
+      id: 'grips',
+      label: 'Grips',
+      icon: GripVertical, // 🏢 ENTERPRISE: Lucide icon
+      content: null,
+    }
   ], []);
 
-  // Memoized handlers
+  // 🏢 ENTERPRISE: Handle sub-tab change - toggle behavior (click again to close)
   const handleSubTabChange = React.useCallback((subTabId: string) => {
     onSubTabChange(activeSubTab === subTabId ? null : subTabId);
   }, [onSubTabChange, activeSubTab]);
@@ -143,22 +165,14 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
         </>
       )}
 
-      {/* Sub-tabs Navigation */}
-      <div className="grid grid-cols-3 gap-1">
-        {subTabOptions.map((subTab) => (
-          <button
-            key={subTab.id}
-            onClick={() => handleSubTabChange(subTab.id)}
-            className={`py-2 px-3 text-sm font-medium rounded-md transition-colors ${
-              activeSubTab === subTab.id
-                ? `bg-blue-600 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                : `${colors.bg.muted} text-white ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
-            }`}
-          >
-            {subTab.label}
-          </button>
-        ))}
-      </div>
+      {/* 🏢 ENTERPRISE: Sub-tabs Navigation - Using centralized TabsOnlyTriggers */}
+      <TabsOnlyTriggers
+        tabs={subTabOptions}
+        value={activeSubTab || ''}
+        onTabChange={handleSubTabChange}
+        theme="dark"
+        alwaysShowLabels={true}
+      />
 
       {/* Line Sub-tab Content */}
       {activeSubTab === 'line' && (

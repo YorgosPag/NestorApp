@@ -16,7 +16,10 @@
 
 import React from 'react';
 import { useTabNavigation } from '../../../hooks/useTabNavigation';
-import { TabNavigation } from '../../../shared/TabNavigation';
+// 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/etc.)
+import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
+// 🏢 ENTERPRISE: Lucide icons for tabs (replacing emojis 📏 and 📐)
+import { Equal, Minus } from 'lucide-react';
 import { RulerMajorLinesSettings } from './RulerMajorLinesSettings';
 import { RulerMinorLinesSettings } from './RulerMinorLinesSettings';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -64,13 +67,28 @@ export const RulerLinesSettings: React.FC<RulerLinesSettingsProps> = ({ classNam
   const colors = useSemanticColors();
 
   // ============================================================================
-  // TAB CONFIGURATION
+  // TAB CONFIGURATION - 🏢 ENTERPRISE: Using centralized TabDefinition interface
   // ============================================================================
 
-  const linesTabs = [
-    { id: 'major' as const, label: '📏 Κύριες Γραμμές' },
-    { id: 'minor' as const, label: '📐 Δευτερεύουσες Γραμμές' }
+  const linesTabs: TabDefinition[] = [
+    {
+      id: 'major',
+      label: 'Κύριες Γραμμές',
+      icon: Equal, // 🏢 ENTERPRISE: Lucide icon replacing 📏 emoji
+      content: null, // Content rendered separately below
+    },
+    {
+      id: 'minor',
+      label: 'Δευτερεύουσες Γραμμές',
+      icon: Minus, // 🏢 ENTERPRISE: Lucide icon replacing 📐 emoji
+      content: null, // Content rendered separately below
+    },
   ];
+
+  // 🏢 ENTERPRISE: Handle tab change - convert string to LinesTab
+  const handleTabChange = (tabId: string) => {
+    setActiveLinesTab(tabId as LinesTab);
+  };
 
   // ============================================================================
   // RENDER TAB CONTENT
@@ -93,12 +111,14 @@ export const RulerLinesSettings: React.FC<RulerLinesSettingsProps> = ({ classNam
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Lines Sub-tabs */}
-      <div className={`flex gap-1 p-1 ${colors.bg.primary} rounded`}>
-        <TabNavigation
+      {/* 🏢 ENTERPRISE: Lines Sub-tabs - Using centralized TabsOnlyTriggers */}
+      <div className={`p-1 ${colors.bg.primary} rounded`}>
+        <TabsOnlyTriggers
           tabs={linesTabs}
-          activeTab={activeLinesTab}
-          onTabChange={setActiveLinesTab}
+          value={activeLinesTab}
+          onTabChange={handleTabChange}
+          theme="dark"
+          alwaysShowLabels={true}
         />
       </div>
 

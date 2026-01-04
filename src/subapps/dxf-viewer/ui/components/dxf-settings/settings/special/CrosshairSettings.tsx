@@ -19,7 +19,10 @@ import { useCursorSettings } from '../../../../../systems/cursor';
 import { DEFAULT_CURSOR_SETTINGS } from '../../../../../systems/cursor/config';
 import type { CursorColors } from '../../../palettes/CursorColorPalette';
 import { useTabNavigation } from '../../hooks/useTabNavigation';
-import { TabNavigation } from '../../shared/TabNavigation';
+// 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/DxfSettingsPanel/etc.)
+import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
+// 🏢 ENTERPRISE: Lucide icons for tabs (replacing emojis 🎨 and ⚙️)
+import { Palette, Settings2 } from 'lucide-react';
 import { CrosshairAppearanceSettings } from './CrosshairAppearanceSettings';
 import { CrosshairBehaviorSettings } from './CrosshairBehaviorSettings';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -156,13 +159,28 @@ export const CrosshairSettings: React.FC<CrosshairSettingsProps> = ({ className 
   };
 
   // ============================================================================
-  // TAB CONFIGURATION
+  // TAB CONFIGURATION - 🏢 ENTERPRISE: Using centralized TabDefinition interface
   // ============================================================================
 
-  const tabs = [
-    { id: 'appearance' as const, label: '🎨 Εμφάνιση' },
-    { id: 'behavior' as const, label: '⚙️ Συμπεριφορά' }
+  const crosshairTabs: TabDefinition[] = [
+    {
+      id: 'appearance',
+      label: 'Εμφάνιση',
+      icon: Palette, // 🏢 ENTERPRISE: Lucide icon replacing 🎨 emoji
+      content: null, // Content rendered separately below
+    },
+    {
+      id: 'behavior',
+      label: 'Συμπεριφορά',
+      icon: Settings2, // 🏢 ENTERPRISE: Lucide icon replacing ⚙️ emoji
+      content: null, // Content rendered separately below
+    },
   ];
+
+  // 🏢 ENTERPRISE: Handle tab change - convert string to CrosshairTab
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId as CrosshairTab);
+  };
 
   // ============================================================================
   // RENDER TAB CONTENT
@@ -200,9 +218,15 @@ export const CrosshairSettings: React.FC<CrosshairSettingsProps> = ({ className 
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Sub-tabs */}
-      <div className={`flex gap-1 p-1 ${colors.bg.primary} rounded`}>
-        <TabNavigation tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+      {/* 🏢 ENTERPRISE: Sub-tabs - Using centralized TabsOnlyTriggers */}
+      <div className={`p-1 ${colors.bg.primary} rounded`}>
+        <TabsOnlyTriggers
+          tabs={crosshairTabs}
+          value={activeTab}
+          onTabChange={handleTabChange}
+          theme="dark"
+          alwaysShowLabels={true}
+        />
       </div>
 
       {/* Tab Content */}
