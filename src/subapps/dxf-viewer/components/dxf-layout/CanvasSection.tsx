@@ -30,6 +30,8 @@ import { useZoom } from '../../systems/zoom';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 // ✅ ENTERPRISE MIGRATION: Using ServiceRegistry
 import { serviceRegistry } from '../../services';
+// ✅ ADR-006 FIX: Import CrosshairOverlay για crosshair rendering
+import CrosshairOverlay from '../../canvas-v2/overlays/CrosshairOverlay';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
 
@@ -715,7 +717,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       <div className="flex-1 relative">
         {/* DEBUG BUTTONS MOVED TO HEADER */}
 
-        <div className="canvas-stack relative w-full h-full overflow-hidden">
+        <div
+          className="canvas-stack relative w-full h-full overflow-hidden"
+          style={{ cursor: 'none' }} // ✅ ADR-008 CAD-GRADE: ALWAYS hide CSS cursor - crosshair is the only cursor
+        >
           {/* 🔺 CANVAS V2: Layer Canvas - Background Overlays (Semi-transparent colored layers) */}
           {showLayerCanvas && (
             <LayerCanvas
@@ -820,6 +825,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                   props.onMouseMove(worldPos, mockEvent);
                 }
 
+                // ✅ ADR-006 FIX: Update mouseCss/mouseWorld για CrosshairOverlay
+                setMouseCss(screenPos);
+                setMouseWorld(worldPos);
+
                 // 🎯 FIX: Call onDrawingHover για preview phase rendering
                 const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' || activeTool === 'polygon'
                   || activeTool === 'rectangle' || activeTool === 'circle';
@@ -828,9 +837,22 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                   drawingHandlersRef.current.onDrawingHover(worldPos);
                 }
               }}
-              onCanvasClick={handleCanvasClick} // 🔥 FIX: Connect canvas clicks για drawing tools!
             />
           )}
+
+          {/* ✅ ADR-008: CrosshairOverlay - INTERNAL mouse tracking for pixel-perfect alignment */}
+          {/* 🏢 CAD-GRADE: CrosshairOverlay tracks mouse position internally AND gets size from layout */}
+          <CrosshairOverlay
+            isActive={crosshairSettings.enabled}
+            // ✅ ADR-008: REMOVED viewport prop - canvas gets actual size from layout via ResizeObserver
+            rulerMargins={{
+              left: rulerSettings.width ?? 30,
+              top: 0,
+              bottom: 0
+            }}
+            className="absolute left-0 right-0 top-0 z-20 pointer-events-none"
+            style={{ height: `calc(100% - ${rulerSettings.height ?? 30}px)` }}
+          />
         </div>
       </div>
 

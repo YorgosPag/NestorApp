@@ -25,9 +25,8 @@ export {
   type UICategory
 } from './core/UIRendererComposite';
 
-// === CROSSHAIR RENDERING ===
-export { CrosshairRenderer } from './crosshair/CrosshairRenderer';
-export { LegacyCrosshairAdapter } from './crosshair/LegacyCrosshairAdapter';
+// === CROSSHAIR TYPES (ADR-006: Renderers removed, types kept) ===
+// ✅ CrosshairRenderer & LegacyCrosshairAdapter DELETED - Crosshair now in CrosshairOverlay component
 export type {
   CrosshairSettings,
   CrosshairRenderData,

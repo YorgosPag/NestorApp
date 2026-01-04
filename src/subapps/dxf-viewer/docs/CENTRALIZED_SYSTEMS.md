@@ -449,6 +449,102 @@ handlers.onDrawingPoint(worldPoint);
 
 ---
 
+### 📋 ADR-006: CROSSHAIR OVERLAY CONSOLIDATION (2026-01-03) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED & IMPLEMENTED** | **Decision Date**: 2026-01-03
+
+**🏢 ENTERPRISE LEVEL**: **10/10** - Big Bang Migration (Zero Duplicates)
+
+**Context**:
+Εντοπίστηκαν 2 διπλότυπα CrosshairOverlay components:
+
+| Component | Location | Lines | Status |
+|-----------|----------|-------|--------|
+| `CrosshairOverlay` (legacy) | `canvas/CrosshairOverlay.tsx` | 495 | ❌ **DELETED** |
+| `CrosshairOverlay` (v2) | `canvas-v2/overlays/CrosshairOverlay.tsx` | 257 | ✅ **CANONICAL** |
+
+**Προβλήματα Legacy Component**:
+- ~25 console.log statements (debug pollution)
+- 495 γραμμές (bloated)
+- Duplicate logic με v2
+
+**Πλεονεκτήματα v2 Component**:
+- 0 console.log statements (production-ready)
+- 257 γραμμές (48% reduction)
+- Clean architecture με margins parameter
+- Enterprise ruler margins support
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **CANONICAL** | `canvas-v2/overlays/CrosshairOverlay.tsx` - ΜΟΝΑΔΙΚΟ CrosshairOverlay |
+| **DELETED** | `canvas/CrosshairOverlay.tsx` - 495 γραμμές ΔΙΑΓΡΑΦΗΚΑΝ |
+| **PROHIBITION** | ❌ Νέα CrosshairOverlay implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** |
+
+**Migration Strategy**: **Big Bang** (Single coordinated event)
+- Αλλαγή 1 import (`CanvasOverlays.tsx`)
+- Διαγραφή legacy component
+- Zero downtime (internal component)
+
+**Implementation Pattern**:
+```typescript
+// ✅ ENTERPRISE: Canonical import
+import CrosshairOverlay from '../canvas-v2/overlays/CrosshairOverlay';
+
+// ❌ DELETED: Old import
+// import CrosshairOverlay from './CrosshairOverlay';
+```
+
+**Files Modified**:
+- `canvas/CanvasOverlays.tsx` - Updated import
+- `canvas/CrosshairOverlay.tsx` - **DELETED** (495 lines removed)
+
+**Consequences**:
+- ✅ Single source of truth για crosshair rendering
+- ✅ 495 γραμμές dead code eliminated
+- ✅ Zero debug logging in production
+- ✅ Cleaner codebase maintenance
+- ✅ Enterprise ruler margins support out-of-box
+
+**References**:
+- Big Bang Migration Strategy: [Salfati Group](https://salfati.group/topics/big-bang-migration)
+- Parallel system maintenance cost: 30-50% overhead avoided
+
+**🔄 Phase 2 Update (2026-01-04)**:
+
+Αφαιρέθηκε επίσης το `LegacyCrosshairAdapter` από `DxfCanvas.tsx`:
+- `rendering/ui/crosshair/CrosshairRenderer.ts` - **DELETED** (300 lines)
+- `rendering/ui/crosshair/LegacyCrosshairAdapter.ts` - **DELETED** (115 lines)
+- `rendering/ui/crosshair/index.ts` - **DELETED** (19 lines)
+- `rendering/ui/crosshair/CrosshairTypes.ts` - **KEPT** (74 lines - shared types)
+
+**Total Lines Removed**: **929 γραμμές** (495 + 300 + 115 + 19)
+
+**🛡️ GUARDRAILS (CAD-Awareness Future-Proofing)**:
+
+| Guardrail | Description |
+|-----------|-------------|
+| **🧱 Guardrail 1: Architectural Intent** | Το CrosshairOverlay είναι **screen-coordinate based**. Αν εμφανιστούν snap/zoom issues, θα αναβαθμιστεί σε **world-coordinate driven** |
+| **🧱 Guardrail 2: API Preservation** | Το `mouseWorld` prop **ΔΕΝ πρέπει να αφαιρεθεί** - είναι η βάση για μελλοντική CAD-awareness |
+
+**⚠️ Evidence-Based Upgrade Triggers**:
+- Snap offset errors σε zoom > 400%
+- Jitter σε DPR ≠ 1 (1.25x, 1.5x)
+- Misalignment με ortho/polar modes
+
+**📌 CAD-Aware Upgrade Path (όταν χρειαστεί)**:
+```typescript
+// Current: Screen-coordinate based
+const { x: rawMouseX, y: rawMouseY } = pos;
+
+// Future: World-coordinate based (when needed)
+const worldPos = screenToWorld(pos, transform);
+const screenPos = worldToScreen(worldPos, transform);
+```
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

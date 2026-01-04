@@ -11,11 +11,11 @@ import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Mouse handlers τώρα από το centralized system
 import { useCentralizedMouseHandlers } from '../../systems/cursor/useCentralizedMouseHandlers';
 import { useCursor } from '../../systems/cursor/CursorSystem';
-import { LegacyCrosshairAdapter } from '../../rendering/ui/crosshair/LegacyCrosshairAdapter';
-import { LegacyCursorAdapter } from '../../rendering/ui/cursor/LegacyCursorAdapter';
+// ✅ ADR-006: LegacyCrosshairAdapter REMOVED - Crosshair now rendered by CrosshairOverlay component
+// ✅ ADR-007: LegacyCursorAdapter REMOVED - Only CrosshairOverlay renders cursor now
 import { SelectionRenderer } from '../layer-canvas/selection/SelectionRenderer';
 import type { ViewTransform, Viewport, Point2D, CanvasConfig } from '../../rendering/types/Types';
-import type { CrosshairSettings } from '../../rendering/ui/crosshair/CrosshairTypes';
+// ✅ ADR-006: CrosshairSettings type inlined - legacy import removed
 import { getCursorSettings } from '../../systems/cursor/config';
 import type { DxfScene, DxfRenderOptions } from './dxf-types';
 // ✅ ENTERPRISE MIGRATION: Using ServiceRegistry for all services
@@ -43,7 +43,7 @@ interface DxfCanvasProps {
   scene: DxfScene | null;
   transform: ViewTransform;
   viewport?: Viewport; // ✅ CENTRALIZED: Optional viewport prop (if not provided, will calculate internally)
-  crosshairSettings?: CrosshairSettings; // ✅ ADD: Connect to existing cursor system
+  crosshairSettings?: { enabled?: boolean }; // ✅ ADR-006: Simplified - only enabled flag needed for cursor style
   gridSettings?: GridSettings; // ✅ ADD: Grid UI rendering
   rulerSettings?: RulerSettings; // ✅ ADD: Ruler UI rendering
   renderOptions?: DxfRenderOptions;
@@ -84,8 +84,8 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<DxfRenderer | null>(null);
-  const crosshairRendererRef = useRef<LegacyCrosshairAdapter | null>(null);
-  const cursorRendererRef = useRef<LegacyCursorAdapter | null>(null);
+  // ✅ ADR-006: crosshairRendererRef REMOVED - Crosshair now in CrosshairOverlay
+  // ✅ ADR-007: cursorRendererRef REMOVED - Only CrosshairOverlay renders cursor now
   const selectionRendererRef = useRef<SelectionRenderer | null>(null);
   // ✅ ADD: Grid and Ruler renderer refs για independent UI
   const gridRendererRef = useRef<GridRenderer | null>(null);
@@ -187,8 +187,8 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
       // ✅ INITIALIZE UI RENDERERS - Using centralized UI system
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        crosshairRendererRef.current = new LegacyCrosshairAdapter(ctx);
-        cursorRendererRef.current = new LegacyCursorAdapter(ctx);
+        // ✅ ADR-006: LegacyCrosshairAdapter initialization REMOVED
+        // ✅ ADR-007: LegacyCursorAdapter initialization REMOVED - Only CrosshairOverlay renders cursor
         selectionRendererRef.current = new SelectionRenderer(ctx);
         // ✅ ADD: Initialize Grid and Ruler renderers για independent UI
         gridRendererRef.current = new GridRenderer();
@@ -312,21 +312,20 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
 
   // 🚀 SEPARATE UI RENDERING - Independent of scene rendering for better performance
   useEffect(() => {
-    const crosshairRenderer = crosshairRendererRef.current;
-    const cursorRenderer = cursorRendererRef.current;
+    // ✅ ADR-006: crosshairRenderer REMOVED - Now rendered by CrosshairOverlay component
+    // ✅ ADR-007: cursorRenderer REMOVED - Only CrosshairOverlay renders cursor now
     const selectionRenderer = selectionRendererRef.current;
 
     if (!viewport.width || !viewport.height) return;
 
     try {
       // Use centralized cursor position from CursorSystem
-      const centralizedPosition = cursor.position;
       const cursorSystemSettings = getCursorSettings();
 
       // 🔥 PAN TOOL: Skip UI rendering in pan mode
       const isPanToolActive = activeTool === 'pan';
 
-      // ✅ RENDER SELECTION BOX FIRST (behind crosshair/cursor) - disable in pan mode
+      // ✅ RENDER SELECTION BOX FIRST (behind cursor) - disable in pan mode
       if (selectionRenderer && !isPanToolActive && cursor.isSelecting && cursor.selectionStart && cursor.selectionCurrent) {
         const selectionBox = {
           startPoint: cursor.selectionStart,
@@ -341,38 +340,20 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
         );
       }
 
-      // ✅ RENDER CROSSHAIR (middle layer) - disable in pan mode
-      if (crosshairRenderer && !isPanToolActive && crosshairSettings?.enabled && centralizedPosition) {
-        crosshairRenderer.renderWithGap(
-          centralizedPosition,
-          viewport,
-          crosshairSettings,
-          10, // gap size για pickbox
-          transform // ✅ FIX: Pass actual transform for correct alignment
-        );
-      }
-
-      // ✅ RENDER CURSOR (top layer) - disable in pan mode
-      if (cursorRenderer && !isPanToolActive && centralizedPosition) {
-        cursorRenderer.render(
-          centralizedPosition,
-          viewport,
-          cursorSystemSettings, // ✅ ΧΡΗΣΗ ΥΠΑΡΧΟΝΤΟΣ SYSTEM - όχι hardcoded values!
-          transform // ✅ FIX: Pass actual transform for correct alignment
-        );
-      }
+      // ✅ ADR-006: CROSSHAIR RENDERING REMOVED - Now in CrosshairOverlay (canvas-v2/overlays/)
+      // ✅ ADR-007: CURSOR RENDERING REMOVED - Only CrosshairOverlay renders cursor now
+      // CrosshairOverlay is the ONLY cursor renderer (no more χεράκι/hand cursor from LegacyCursorAdapter)
     } catch (error) {
       console.error('Failed to render UI elements:', error);
     }
   }, [
-    cursor.position?.x,
-    cursor.position?.y,
     cursor.isSelecting,
     cursor.selectionStart?.x,
     cursor.selectionStart?.y,
     cursor.selectionCurrent?.x,
     cursor.selectionCurrent?.y,
-    crosshairSettings,
+    // ✅ ADR-006: crosshairSettings removed from deps - no longer used for rendering
+    // ✅ ADR-007: cursor.position removed from deps - no longer used for cursor rendering
     activeTool,
     viewport
   ]);

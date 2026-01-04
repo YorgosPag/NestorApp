@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect } from 'react';
-import CrosshairOverlay from './CrosshairOverlay';
+// ✅ ENTERPRISE: Canonical CrosshairOverlay from canvas-v2 (ADR-002: CrosshairOverlay Consolidation)
+import CrosshairOverlay from '../canvas-v2/overlays/CrosshairOverlay';
 // ✅ ENTERPRISE FIX: Updated import paths to canvas-v2/overlays
 import ZoomWindowOverlay from '../canvas-v2/overlays/ZoomWindowOverlay';
 import SelectionMarqueeOverlay from '../canvas-v2/overlays/SelectionMarqueeOverlay';
@@ -136,8 +137,7 @@ export default function CanvasOverlays({
     <div className="absolute inset-0 pointer-events-none z-[1000]">
       <CrosshairOverlay
         isActive={crosshairActive}  // Active in layering mode OR when mouse position available
-        cursorPosition={crosshairPosition}
-        mouseWorld={mouseWorldCalculated}
+        // ✅ ADR-008: REMOVED cursorPosition/mouseWorld - now tracked internally for pixel-perfect alignment
         viewport={{ width: canvasRect?.width ?? 1920, height: canvasRect?.height ?? 1080 }}
         className="absolute inset-0"
       />
