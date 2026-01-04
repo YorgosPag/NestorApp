@@ -131,8 +131,8 @@ export function EnterpriseColorField({
         placeholder={UI_COLORS.BLACK}
         className={`
           flex-1 px-3 py-2 ${colors.bg.secondary} ${quick.input}
-          text-sm text-white font-mono
-          focus:outline-none focus:ring-2 focus:ring-blue-500
+          text-sm ${colors.text.primary} font-mono
+          focus:outline-none focus:ring-2 ${colors.ring.info}
           disabled:opacity-50 disabled:cursor-not-allowed
           ${error ? getStatusBorder('error').replace('border ', '') : ''}
         `}
@@ -156,7 +156,7 @@ export function EnterpriseColorField({
       <div className="grid grid-cols-4 gap-2">
         {/* Red */}
         <div>
-          <label className="text-xs ${colors.text.muted}">{labels.red || 'R'}</label>
+          <label className={`text-xs ${colors.text.muted}`}>{labels.red || 'R'}</label>
           <input
             type="number"
             min="0"
@@ -165,13 +165,13 @@ export function EnterpriseColorField({
             onChange={(e) => handleComponentChange('r', parseInt(e.target.value) || 0)}
             disabled={disabled}
             readOnly={readOnly}
-            className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm text-white`}
+            className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
           />
         </div>
 
         {/* Green */}
         <div>
-          <label className="text-xs ${colors.text.muted}">{labels.green || 'G'}</label>
+          <label className={`text-xs ${colors.text.muted}`}>{labels.green || 'G'}</label>
           <input
             type="number"
             min="0"
@@ -180,13 +180,13 @@ export function EnterpriseColorField({
             onChange={(e) => handleComponentChange('g', parseInt(e.target.value) || 0)}
             disabled={disabled}
             readOnly={readOnly}
-            className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm text-white`}
+            className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
           />
         </div>
 
         {/* Blue */}
         <div>
-          <label className="text-xs ${colors.text.muted}">{labels.blue || 'B'}</label>
+          <label className={`text-xs ${colors.text.muted}`}>{labels.blue || 'B'}</label>
           <input
             type="number"
             min="0"
@@ -195,14 +195,14 @@ export function EnterpriseColorField({
             onChange={(e) => handleComponentChange('b', parseInt(e.target.value) || 0)}
             disabled={disabled}
             readOnly={readOnly}
-            className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm text-white`}
+            className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
           />
         </div>
 
         {/* Alpha */}
         {alpha && (
           <div>
-            <label className="text-xs ${colors.text.muted}">{labels.alpha || 'A'}</label>
+            <label className={`text-xs ${colors.text.muted}`}>{labels.alpha || 'A'}</label>
             <input
               type="number"
               min="0"
@@ -212,7 +212,7 @@ export function EnterpriseColorField({
               onChange={(e) => handleComponentChange('a', parseFloat(e.target.value) || 0)}
               disabled={disabled}
               readOnly={readOnly}
-              className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm text-white`}
+              className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
             />
           </div>
         )}
@@ -238,7 +238,7 @@ export function EnterpriseColorField({
       <div className="grid grid-cols-4 gap-2">
         {/* Hue */}
         <div>
-          <label className="text-xs ${colors.text.muted}">{labels.hue || 'H'}</label>
+          <label className={`text-xs ${colors.text.muted}`}>{labels.hue || 'H'}</label>
           <input
             type="number"
             min="0"
@@ -247,13 +247,13 @@ export function EnterpriseColorField({
             onChange={(e) => handleComponentChange('h', parseInt(e.target.value) || 0)}
             disabled={disabled}
             readOnly={readOnly}
-            className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm text-white`}
+            className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
           />
         </div>
 
         {/* Saturation */}
         <div>
-          <label className="text-xs ${colors.text.muted}">{labels.saturation || 'S'}</label>
+          <label className={`text-xs ${colors.text.muted}`}>{labels.saturation || 'S'}</label>
           <input
             type="number"
             min="0"
@@ -262,13 +262,13 @@ export function EnterpriseColorField({
             onChange={(e) => handleComponentChange('s', parseInt(e.target.value) || 0)}
             disabled={disabled}
             readOnly={readOnly}
-            className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm text-white`}
+            className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
           />
         </div>
 
         {/* Lightness */}
         <div>
-          <label className="text-xs ${colors.text.muted}">{labels.lightness || 'L'}</label>
+          <label className={`text-xs ${colors.text.muted}`}>{labels.lightness || 'L'}</label>
           <input
             type="number"
             min="0"
@@ -277,14 +277,14 @@ export function EnterpriseColorField({
             onChange={(e) => handleComponentChange('l', parseInt(e.target.value) || 0)}
             disabled={disabled}
             readOnly={readOnly}
-            className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm text-white`}
+            className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
           />
         </div>
 
         {/* Alpha */}
         {alpha && (
           <div>
-            <label className="text-xs ${colors.text.muted}">{labels.alpha || 'A'}</label>
+            <label className={`text-xs ${colors.text.muted}`}>{labels.alpha || 'A'}</label>
             <input
               type="number"
               min="0"
@@ -294,7 +294,7 @@ export function EnterpriseColorField({
               onChange={(e) => handleComponentChange('a', parseFloat(e.target.value) || 0)}
               disabled={disabled}
               readOnly={readOnly}
-              className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm text-white`}
+              className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
             />
           </div>
         )}
@@ -305,7 +305,7 @@ export function EnterpriseColorField({
   return (
     <div className={`space-y-2 ${className}`}>
       {renderField()}
-      {error && <div className="text-xs text-red-400">{error}</div>}
+      {error && <div className={`text-xs ${colors.text.error}`}>{error}</div>}
     </div>
   );
 }

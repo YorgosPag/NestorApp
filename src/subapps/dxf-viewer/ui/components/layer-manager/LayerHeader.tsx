@@ -11,12 +11,12 @@ export function LayerHeader({ isConnected, onAddLayer, onSettings }: LayerHeader
 
   return (
     <div className="flex items-center justify-between">
-      <h3 className="text-sm font-medium text-white flex items-center gap-2">
+      <h3 className={`text-sm font-medium ${colors.text.primary} flex items-center gap-2`}>
         <Layers className={iconSizes.sm} />
         Layer Manager
         <div className="flex items-center gap-1">
-          <div 
-            className={`${iconSizes.xs} rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
+          <div
+            className={`${iconSizes.xs} rounded-full ${isConnected ? colors.bg.success : colors.bg.error}`}
             title={isConnected ? "Συνδεδεμένο - Real-time sync ενεργό" : "Αποσυνδεδεμένο"}
           />
         </div>

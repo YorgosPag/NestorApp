@@ -145,7 +145,7 @@ export function EnterpriseColorPicker({
                 className={`
                   px-3 py-1 text-xs font-medium transition-colors
                   ${currentMode === mode
-                    ? `text-blue-400 ${getDirectionalBorder('info', 'bottom')}`
+                    ? `${colors.text.info} ${getDirectionalBorder('info', 'bottom')}`
                     : `${colors.text.muted} ${HOVER_TEXT_EFFECTS.GRAY_LIGHT}`
                   }
                 `}
@@ -249,7 +249,7 @@ function EyedropperButton({ onChange, onChangeEnd, disabled }: EyedropperButtonP
         text-sm font-medium
         transition-colors
         ${isActive
-          ? 'bg-blue-600 text-white'
+          ? `${colors.bg.info} ${colors.text.primary}`
           : `${colors.bg.secondary} ${colors.text.muted} ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`
         }
         disabled:opacity-50 disabled:cursor-not-allowed

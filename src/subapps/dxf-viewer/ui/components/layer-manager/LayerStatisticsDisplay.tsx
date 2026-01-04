@@ -11,17 +11,17 @@ export function LayerStatisticsDisplay({
   return (
     <>
       {/* Layer Statistics */}
-      <div className="flex justify-between text-xs ${colors.text.muted}">
+      <div className={`flex justify-between text-xs ${colors.text.muted}`}>
         <span>Σύνολο: {statistics.totalLayers}</span>
         <span>Ορατά: {statistics.visibleLayers}</span>
         <span>Στοιχεία: {statistics.totalElements}</span>
       </div>
-      
+
       {/* Sync Status Info */}
-      <div className="text-xs ${colors.text.muted}">
+      <div className={`text-xs ${colors.text.muted}`}>
         <div className="flex justify-between items-center">
           <span>Sync Status:</span>
-          <span className={isConnected ? 'text-green-400' : 'text-red-400'}>
+          <span className={isConnected ? colors.text.success : colors.text.error}>
             {isConnected ? 'Συνδεδεμένο' : 'Αποσυνδεδεμένο'}
           </span>
         </div>
@@ -31,7 +31,7 @@ export function LayerStatisticsDisplay({
         </div>
       </div>
 
-      <div className="h-px ${colors.bg.muted}"></div>
+      <div className={`h-px ${colors.bg.muted}`}></div>
     </>
   );
 }

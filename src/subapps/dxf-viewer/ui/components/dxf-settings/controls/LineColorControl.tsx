@@ -74,7 +74,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium ${colors.text.muted}">
+      <label className={`text-sm font-medium ${colors.text.muted}`}>
         {label}
       </label>
 
@@ -90,7 +90,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
               <div
                 className={`${iconSizes.md} rounded ${getStatusBorder('muted')} ${valueBgClass}`}
               />
-              <span className="${colors.text.secondary} flex-1 text-left">
+              <span className={`${colors.text.secondary} flex-1 text-left`}>
                 {showHex ? value.toUpperCase() : 'Select Color'}
               </span>
               <Palette className={`${iconSizes.sm} ${colors.text.muted}`} />
@@ -101,7 +101,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
             <div className="space-y-3">
               {/* Preset colors grid */}
               <div>
-                <p className="text-xs ${colors.text.muted} mb-2">AutoCAD Colors</p>
+                <p className={`text-xs ${colors.text.muted} mb-2`}>AutoCAD Colors</p>
                 <div className="grid grid-cols-5 gap-1">
                   {presetColorClasses.map(({ color, bgClass }) => (
                     <button
@@ -123,7 +123,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
 
               {/* Custom color input */}
               <div>
-                <p className="text-xs ${colors.text.muted} mb-2">Custom Color</p>
+                <p className={`text-xs ${colors.text.muted} mb-2`}>Custom Color</p>
                 <div className="flex gap-2">
                   <Input
                     type="color"

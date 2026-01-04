@@ -19,6 +19,7 @@ import { INTERACTIVE_PATTERNS } from '../../../components/ui/effects';
 import { useIconSizes } from '../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useSemanticColors } from '../../../hooks/useSemanticColors';
+import { Checkbox } from '@/components/ui/checkbox';  // ✅ ENTERPRISE: Centralized Radix Checkbox
 
 // Force cursor styles for the panel to override canvas cursor settings
 const panelStyles = `
@@ -102,15 +103,14 @@ function CheckboxRow({
   checked: boolean;
   onChange: (checked: boolean) => void;
   disabled?: boolean;
-  colors: any;
+  colors: ReturnType<typeof useSemanticColors>;  // ✅ ENTERPRISE: Proper type instead of any
 }) {
   return (
     <div className="mb-3">
       <label className="flex items-center cursor-pointer">
-        <input
-          type="checkbox"
+        <Checkbox
           checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
+          onCheckedChange={(checkedState) => onChange(checkedState === true)}
           disabled={disabled}
           className="mr-2"
         />
@@ -388,7 +388,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               colors={colors}
             />
 
-            <div className={`mt-2 p-2 bg-blue-900/30 ${getStatusBorder('info')} rounded text-xs text-blue-200`}>
+            <div className={`mt-2 p-2 ${colors.bg.info} ${getStatusBorder('info')} rounded text-xs ${colors.text.info}`}>
               💡 Μέγεθος, χρώμα και πάχος ρυθμίζονται από τις Ρυθμίσεις DXF
             </div>
           </div>
@@ -406,7 +406,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               onChange={(snap_indicator) => updateBehaviorSettings({ snap_indicator })}
               colors={colors}
             />
-            <div className="text-xs text-green-400 mb-3 ml-6">
+            <div className={`text-xs ${colors.text.success} mb-3 ml-6`}>
               🔗 Ενεργό: Εμφανίζει κίτρινες ενδείξεις snap στο crosshair
             </div>
 
@@ -416,7 +416,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               onChange={(coordinate_display) => updateBehaviorSettings({ coordinate_display })}
               colors={colors}
             />
-            <div className="text-xs text-green-400 mb-3 ml-6">
+            <div className={`text-xs ${colors.text.success} mb-3 ml-6`}>
               🔗 Ενεργό: Δείχνει X,Y συντεταγμένες στο status bar
             </div>
 
@@ -426,7 +426,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               onChange={(dynamic_input) => updateBehaviorSettings({ dynamic_input })}
               colors={colors}
             />
-            <div className="text-xs text-green-400 mb-3 ml-6">
+            <div className={`text-xs ${colors.text.success} mb-3 ml-6`}>
               🔗 Ενεργό: Πεδία εισαγωγής κοντά στον κέρσορα κατά το σχεδιασμό
             </div>
 
@@ -436,7 +436,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               onChange={(cursor_tooltip) => updateBehaviorSettings({ cursor_tooltip })}
               colors={colors}
             />
-            <div className="text-xs text-green-400 mb-3 ml-6">
+            <div className={`text-xs ${colors.text.success} mb-3 ml-6`}>
               🔗 Ενεργό: Tooltip με πληροφορίες εργαλείου κοντά στον κέρσορα
             </div>
           </div>
@@ -451,7 +451,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               onChange={(use_raf) => updatePerformanceSettings({ use_raf })}
               colors={colors}
             />
-            <div className="text-xs text-green-400 mb-3 ml-6">
+            <div className={`text-xs ${colors.text.success} mb-3 ml-6`}>
               🔗 Ενεργό: RequestAnimationFrame για ομαλότερη κίνηση crosshair
             </div>
 
@@ -461,12 +461,12 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               onChange={(precision_mode) => updatePerformanceSettings({ precision_mode })}
               colors={colors}
             />
-            <div className="text-xs text-green-400 mb-3 ml-6">
+            <div className={`text-xs ${colors.text.success} mb-3 ml-6`}>
               🔗 Ενεργό: Sub-pixel ακρίβεια για crosshair και snap indicators
             </div>
             {settings.performance.precision_mode && (
-              <div className={`mb-3 ml-6 p-2 bg-blue-900/30 ${getStatusBorder('info')} rounded text-xs text-blue-200 flex items-center gap-2`}>
-                <div className={`${iconSizes.xs} bg-blue-400 ${quick.button} animate-pulse`}></div>
+              <div className={`mb-3 ml-6 p-2 ${colors.bg.info} ${getStatusBorder('info')} rounded text-xs ${colors.text.info} flex items-center gap-2`}>
+                <div className={`${iconSizes.xs} ${colors.bg.info} ${quick.button} animate-pulse`}></div>
                 <span>PRECISION MODE ΕΝΕΡΓΟ - 4 δεκαδικά ψηφία</span>
               </div>
             )}

@@ -221,7 +221,7 @@ export function EnterpriseColorDialog({
               >
                 <h2
                   {...titleProps}
-                  className="text-lg font-medium text-white pointer-events-none"
+                  className={`text-lg font-medium ${colors.text.primary} pointer-events-none`}
                 >
                   {title}
                 </h2>
@@ -269,7 +269,7 @@ export function EnterpriseColorDialog({
                   </button>
                   <button
                     onClick={handleApply}
-                    className={`flex-1 px-4 py-2 ${colors.bg.primary} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white rounded transition-colors cursor-pointer`}
+                    className={`flex-1 px-4 py-2 ${colors.bg.primary} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${colors.text.primary} rounded transition-colors cursor-pointer`}
                   >
                     Apply
                   </button>
@@ -298,6 +298,8 @@ export function ColorDialogTrigger({
   const [isOpen, setIsOpen] = React.useState(false);
   const { quick, getStatusBorder, radius } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🔧 FIX: Hook must be called at top-level, not inside JSX
+  const dynamicBgClass = useDynamicBackgroundClass(value);
 
   return (
     <>
@@ -312,7 +314,7 @@ export function ColorDialogTrigger({
         `}
       >
         <div
-          className={`w-6 h-6 ${radius.md} ${getStatusBorder('default')} ${useDynamicBackgroundClass(value)}`}
+          className={`w-6 h-6 ${radius.md} ${getStatusBorder('default')} ${dynamicBgClass}`}
         />
         <span className={`text-sm ${colors.text.secondary}`}>{label}</span>
       </button>

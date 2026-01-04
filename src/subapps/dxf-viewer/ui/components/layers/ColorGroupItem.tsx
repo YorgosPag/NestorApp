@@ -137,7 +137,7 @@ export function ColorGroupItem({
       {/* Color Group Header */}
       <div 
         className={`flex items-center justify-between p-2 ${colors.bg.muted} ${getStatusBorder('info')} rounded cursor-pointer ${INTERACTIVE_PATTERNS.PURPLE_HOVER} transition-colors ${
-          selectedColorGroupsForMerge.has(colorName) ? 'ring-2 ring-blue-400 bg-blue-900 bg-opacity-30' : ''
+          selectedColorGroupsForMerge.has(colorName) ? `ring-2 ${colors.ring.info} ${colors.bg.selection}` : ''
         }`}
         onClick={handleGroupClick}
         title="Κλικ για επιλογή όλων των entities, Ctrl+Κλικ για multi-selection"
@@ -146,7 +146,7 @@ export function ColorGroupItem({
           {/* Expand/Collapse Arrow */}
           <button
             onClick={handleExpandToggle}
-            className={`p-1 text-purple-300 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
+            className={`p-1 ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
             title={isExpanded ? "Σύμπτυξη" : "Ανάπτυξη"}
           >
             {isExpanded ? (
@@ -173,12 +173,12 @@ export function ColorGroupItem({
               onChange={(e) => setEditingColorGroupName(e.target.value)}
               onKeyDown={handleNameKeyDown}
               onBlur={handleNameBlur}
-              className={`${colors.bg.hover} text-purple-200 text-sm font-medium px-1 rounded ${getStatusBorder('info')} focus:outline-none focus:ring-1 focus:ring-purple-400 min-w-0 flex-1`}
+              className={`${colors.bg.hover} ${colors.text.muted} text-sm font-medium px-1 rounded ${getStatusBorder('info')} focus:outline-none ${colors.interactive.focus.ring} min-w-0 flex-1`}
               autoFocus
             />
           ) : (
             <span 
-              className="text-sm font-medium text-purple-200 truncate cursor-pointer"
+              className={`text-sm font-medium ${colors.text.muted} truncate cursor-pointer`}
               title="Double-click για μετονομασία"
               onDoubleClick={handleNameDoubleClick}
             >
@@ -215,7 +215,7 @@ export function ColorGroupItem({
           {/* Delete Button */}
           <button
             onClick={handleDeleteClick}
-            className={`p-1 text-red-600 ${HOVER_TEXT_EFFECTS.RED}`}
+            className={`p-1 ${colors.text.error} ${HOVER_TEXT_EFFECTS.RED}`}
             title="Διαγραφή Color Group"
           >
             <Trash2 className={iconSizes.sm} />

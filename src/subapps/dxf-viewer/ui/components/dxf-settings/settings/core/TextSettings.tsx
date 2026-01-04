@@ -61,6 +61,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+// 🏢 ENTERPRISE: Centralized Checkbox component (Radix)
+import { Checkbox } from '@/components/ui/checkbox';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '../../../../../../../components/ui/effects';
 import { layoutUtilities } from '../../../../../../../styles/design-tokens';
 
@@ -192,7 +194,7 @@ function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }
         onClick={onSuperscriptChange}
         className={`px-3 py-1 text-sm ${quick.button} transition-colors ${
           settings.isSuperscript
-            ? `${colors.bg.success} ${getStatusBorder('success')} text-white`
+            ? `${colors.bg.success} ${getStatusBorder('success')} ${colors.text.inverted}`
             : `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${getStatusBorder('muted')} ${colors.text.muted}`
         }`}
       >
@@ -202,7 +204,7 @@ function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }
         onClick={onSubscriptChange}
         className={`px-3 py-1 text-sm ${quick.button} transition-colors ${
           settings.isSubscript
-            ? `${colors.bg.success} ${getStatusBorder('success')} text-white`
+            ? `${colors.bg.success} ${getStatusBorder('success')} ${colors.text.inverted}`
             : `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${getStatusBorder('muted')} ${colors.text.muted}`
         }`}
       >
@@ -345,19 +347,17 @@ export function TextSettings() {
         </div>
       </div>
 
-      {/* Enable/Disable Text Display */}
+      {/* 🏢 ENTERPRISE: Enable/Disable Text Display - Centralized Radix Checkbox */}
       <div className="space-y-2">
         <div className={`flex items-center gap-3 p-3 ${colors.bg.secondary} ${quick.card} ${getDirectionalBorder('info', 'left')}`}>
-          <input
-            type="checkbox"
+          <Checkbox
             id="text-enabled"
             checked={textSettings.enabled}
-            onChange={(e) => updateTextSettings({ enabled: e.target.checked })}
-            className={`${iconSizes.sm} text-blue-600 ${colors.bg.hover} ${quick.input} focus:ring-blue-500 focus:ring-2`}
+            onCheckedChange={(checked) => updateTextSettings({ enabled: checked === true })}
           />
           <label
             htmlFor="text-enabled"
-            className={`text-sm font-medium ${textSettings.enabled ? colors.text.primary : colors.text.muted}`}
+            className={`text-sm font-medium cursor-pointer ${textSettings.enabled ? colors.text.primary : colors.text.muted}`}
           >
             Εμφάνιση κειμένου απόστασης
           </label>
@@ -575,9 +575,9 @@ export function TextSettings() {
         zIndex={10000}
       >
         <div className="space-y-4">
-          {/* Warning Message */}
-          <div className={`${colors.bg.error} bg-opacity-20 ${getDirectionalBorder('error', 'left')} p-4 ${quick.card}`}>
-            <p className="text-red-200 font-semibold mb-2">
+          {/* 🏢 ENTERPRISE: Warning Message - Using semantic colors */}
+          <div className={`${colors.bg.errorSubtle} ${getDirectionalBorder('error', 'left')} p-4 ${quick.card}`}>
+            <p className={`${colors.text.error} font-semibold mb-2`}>
               ⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!
             </p>
           </div>
@@ -592,29 +592,29 @@ export function TextSettings() {
             </ul>
           </div>
 
-          {/* Reset Info */}
-          <div className={`${colors.bg.info} bg-opacity-20 ${getDirectionalBorder('info', 'left')} p-4 ${quick.card}`}>
-            <p className="text-blue-200 text-sm">
+          {/* 🏢 ENTERPRISE: Reset Info - Using semantic colors */}
+          <div className={`${colors.bg.infoSubtle} ${getDirectionalBorder('info', 'left')} p-4 ${quick.card}`}>
+            <p className={`${colors.text.info} text-sm`}>
               <strong>Επαναφορά:</strong> Οι ρυθμίσεις θα επανέλθουν στα πρότυπα ISO 3098
             </p>
           </div>
 
           {/* Confirmation Question */}
-          <p className="text-white font-medium text-center pt-2">
+          <p className={`${colors.text.primary} font-medium text-center pt-2`}>
             Είστε σίγουροι ότι θέλετε να συνεχίσετε;
           </p>
 
-          {/* Action Buttons */}
+          {/* 🏢 ENTERPRISE: Action Buttons - Using semantic colors */}
           <div className={`flex gap-3 justify-end pt-4 ${quick.separator}`}>
             <button
               onClick={handleFactoryResetCancel}
-              className={`px-4 py-2 text-sm ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white rounded transition-colors`}
+              className={`px-4 py-2 text-sm ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.primary} rounded transition-colors`}
             >
               Ακύρωση
             </button>
             <button
               onClick={handleFactoryResetConfirm}
-              className={`px-4 py-2 text-sm ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-white rounded transition-colors font-semibold`}
+              className={`px-4 py-2 text-sm ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.primary} rounded transition-colors font-semibold`}
             >
               🏭 Επαναφορά Εργοστασιακών
             </button>

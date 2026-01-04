@@ -117,8 +117,9 @@ export function SelectionSettings() {
       {/* Tab Content */}
       {activeSelectionTab === 'window' ? (
         <div className="space-y-4">
+          {/* 🏢 ENTERPRISE: Icon color using semantic tokens */}
           <h4 className={`text-sm font-medium ${colors.text.primary} mb-3 flex items-center gap-2`}>
-            <Square className="w-4 h-4 text-blue-500" />
+            <Square className={`w-4 h-4 ${colors.text.info}`} />
             <span>Window Selection Settings</span>
           </h4>
           <div className={`text-xs ${colors.text.muted} mb-4`}>
@@ -276,8 +277,9 @@ export function SelectionSettings() {
         </div>
       ) : (
         <div className="space-y-4">
+          {/* 🏢 ENTERPRISE: Icon color using semantic tokens */}
           <h4 className={`text-sm font-medium ${colors.text.primary} mb-3 flex items-center gap-2`}>
-            <SquareDashed className="w-4 h-4 text-green-500" />
+            <SquareDashed className={`w-4 h-4 ${colors.text.success}`} />
             <span>Crossing Selection Settings</span>
           </h4>
           <div className={`text-xs ${colors.text.muted} mb-4`}>

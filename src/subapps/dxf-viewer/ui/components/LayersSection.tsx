@@ -8,6 +8,7 @@
 import React from 'react';
 import { Layers } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { SceneModel } from '../../types/scene';
 import { ColorPickerModal } from './layers/components/ColorPickerModal';
 import { MergePanel } from './layers/components/MergePanel';
@@ -70,6 +71,7 @@ export function LayersSection({
   onExpandChange = () => {} // ✅ ENTERPRISE: Default no-op function for optional prop
 }: LayersSectionProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   // Use custom hooks for state management
   const state = useLayersState(scene);
@@ -106,11 +108,11 @@ export function LayersSection({
   if (!scene || Object.keys(scene.layers).length === 0) {
     return (
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-gray-400 flex items-center gap-2">
+        <h3 className={`text-sm font-medium ${colors.text.muted} flex items-center gap-2`}>
           <Layers className={iconSizes.sm} />
           Δεν υπάρχουν layers
         </h3>
-        <div className="text-center py-4 text-gray-500 text-xs">
+        <div className={`text-center py-4 ${colors.text.tertiary} text-xs`}>
           Τα layers θα εμφανιστούν μετά την εισαγωγή DXF
         </div>
       </div>

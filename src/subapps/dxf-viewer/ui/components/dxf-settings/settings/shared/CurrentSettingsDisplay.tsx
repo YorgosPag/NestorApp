@@ -7,6 +7,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Lucide icons replacing emojis
 import { ClipboardList, Minus, Type } from 'lucide-react';
+// 🏢 ENTERPRISE: Centralized Checkbox component (Radix)
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface LineSettings {
   lineType: LineType;
@@ -57,7 +59,7 @@ export function CurrentSettingsDisplay({
   gripSettings,
   className = ''
 }: CurrentSettingsDisplayProps) {
-  const { getStatusBorder } = useBorderTokens();
+  const { getStatusBorder, radius } = useBorderTokens();  // ✅ ENTERPRISE: Added radius
   const colors = useSemanticColors();
   const [showSettingsDetails, setShowSettingsDetails] = useState(false);
 
@@ -78,21 +80,21 @@ export function CurrentSettingsDisplay({
 
   return (
     <div className={`space-y-3 ${className}`}>
-      <label className={`flex items-center gap-3 cursor-pointer p-2 rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK}`}>
-        <input
-          type="checkbox"
+      {/* 🏢 ENTERPRISE: Centralized Radix Checkbox */}
+      <div className={`flex items-center gap-3 p-2 ${radius.lg} transition-colors ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK}`}>
+        <Checkbox
+          id="show-settings-details"
           checked={showSettingsDetails}
-          onChange={(e) => setShowSettingsDetails(e.target.checked)}
-          className={`rounded ${getStatusBorder('default')} ${colors.text.info} focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-primary`}
+          onCheckedChange={(checked) => setShowSettingsDetails(checked === true)}
         />
-        <div className="flex items-center gap-2">
+        <label htmlFor="show-settings-details" className="flex items-center gap-2 cursor-pointer">
           <ClipboardList className="w-4 h-4" />
           <span className={`text-sm font-medium ${colors.text.info}`}>Τρέχουσες Ρυθμίσεις</span>
-        </div>
-      </label>
+        </label>
+      </div>
 
       {showSettingsDetails && (
-        <div className={`${colors.bg.primary} rounded-lg ${getStatusBorder('default')} p-3`}>
+        <div className={`${colors.bg.primary} ${radius.lg} ${getStatusBorder('default')} p-3`}>
           {activeTab === 'lines' && (
             <div>
               <div className={`px-3 py-2 ${colors.bg.secondary} font-medium ${colors.text.info} text-sm rounded-t-lg mb-3 flex items-center gap-2`}>

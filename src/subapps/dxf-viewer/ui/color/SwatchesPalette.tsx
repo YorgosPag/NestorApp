@@ -164,6 +164,7 @@ function ColorSwatchButton({
   size,
 }: ColorSwatchButtonProps) {
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors(); // 🔧 FIX: Missing colors definition
 
   const handleClick = useCallback(() => {
     onChange(color);
@@ -187,8 +188,8 @@ function ColorSwatchButton({
       className={`
         rounded border transition-all
         ${COMPLEX_HOVER_EFFECTS.SCALE_AND_SHADOW}
-        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900
-        ${isSelected ? `${getStatusBorder('info')} ring-2 ring-blue-500` : getStatusBorder('muted')}
+        focus:outline-none ${colors.interactive.focus.ring} focus:ring-offset-2 ring-offset-background
+        ${isSelected ? `${getStatusBorder('info')} ring-2 ${colors.ring.info}` : getStatusBorder('muted')}
       `}
       style={layoutUtilities.dxf.swatch.square(size, color)}
       title={name}

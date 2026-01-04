@@ -13,6 +13,7 @@ import {
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { AnimatedSpinner } from './modal/ModalLoadingStates';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { Checkbox } from '@/components/ui/checkbox';  // ✅ ENTERPRISE: Centralized Radix Checkbox
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { useProjectHierarchy } from '../contexts/ProjectHierarchyContext';
 import { useDxfPipeline } from '../pipeline/useDxfPipeline';
@@ -222,11 +223,9 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                     <label className={`${colors.text.primary} font-medium`}>Process Layers</label>
                     <p className={`${colors.text.muted} text-sm`}>Create status layers for property management</p>
                   </div>
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={processingOptions.processLayers}
-                    onChange={(e) => setProcessingOptions(prev => ({ ...prev, processLayers: e.target.checked }))}
-                    className={`${iconSizes.md} ${colors.text.info} ${colors.bg.hover} ${quick.checkbox} focus:ring-hsl(var(--border-info))`}
+                    onCheckedChange={(checked) => setProcessingOptions(prev => ({ ...prev, processLayers: checked === true }))}
                   />
                 </div>
 
@@ -235,11 +234,9 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                     <label className={`${colors.text.primary} font-medium`}>Preserve Grid</label>
                     <p className={`${colors.text.muted} text-sm`}>Keep grid lines in the final view</p>
                   </div>
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={processingOptions.preserveGrid}
-                    onChange={(e) => setProcessingOptions(prev => ({ ...prev, preserveGrid: e.target.checked }))}
-                    className={`${iconSizes.md} ${colors.text.info} ${colors.bg.hover} ${quick.checkbox} focus:ring-hsl(var(--border-info))`}
+                    onCheckedChange={(checked) => setProcessingOptions(prev => ({ ...prev, preserveGrid: checked === true }))}
                   />
                 </div>
 
@@ -248,11 +245,9 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                     <label className={`${colors.text.primary} font-medium`}>Preserve Rulers</label>
                     <p className={`${colors.text.muted} text-sm`}>Keep measurement rulers</p>
                   </div>
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={processingOptions.preserveRulers}
-                    onChange={(e) => setProcessingOptions(prev => ({ ...prev, preserveRulers: e.target.checked }))}
-                    className={`${iconSizes.md} ${colors.text.info} ${colors.bg.hover} ${quick.checkbox} focus:ring-hsl(var(--border-info))`}
+                    onCheckedChange={(checked) => setProcessingOptions(prev => ({ ...prev, preserveRulers: checked === true }))}
                   />
                 </div>
 
@@ -261,11 +256,9 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                     <label className={`${colors.text.primary} font-medium`}>Auto Scale</label>
                     <p className={`${colors.text.muted} text-sm`}>Automatically scale to fit destination</p>
                   </div>
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={processingOptions.autoScale}
-                    onChange={(e) => setProcessingOptions(prev => ({ ...prev, autoScale: e.target.checked }))}
-                    className={`${iconSizes.md} ${colors.text.info} ${colors.bg.hover} ${quick.checkbox} focus:ring-hsl(var(--border-info))`}
+                    onCheckedChange={(checked) => setProcessingOptions(prev => ({ ...prev, autoScale: checked === true }))}
                   />
                 </div>
               </div>

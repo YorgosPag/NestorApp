@@ -7,6 +7,8 @@
 import React from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// ⚠️ NOTE: Native checkbox χρησιμοποιείται λόγω React 19 + Radix UI compatibility issue
+// Το Radix Checkbox προκαλεί infinite loop σε React 19 (setRef bug)
 
 /**
  * Props for the OverrideToggle component
@@ -81,14 +83,14 @@ export const OverrideToggle = React.memo<OverrideToggleProps>(function OverrideT
             checked={checked}
             onChange={handleChange}
             disabled={disabled}
-            className={`rounded ${getStatusBorder('muted')} text-blue-600 focus:ring-blue-500 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed`}
+            className={`rounded ${getStatusBorder('muted')} ${colors.text.info} focus:ring-2 ${colors.interactive.focus.ring} disabled:opacity-50 disabled:cursor-not-allowed`}
           />
           <div className="flex flex-col">
-            <span className="text-sm ${colors.text.muted} font-medium">
+            <span className={`text-sm ${colors.text.muted} font-medium`}>
               {label}
             </span>
             {description && (
-              <span className="text-xs ${colors.text.muted} mt-1">
+              <span className={`text-xs ${colors.text.muted} mt-1`}>
                 {description}
               </span>
             )}
@@ -100,7 +102,7 @@ export const OverrideToggle = React.memo<OverrideToggleProps>(function OverrideT
         <div className="ml-3">
           <span className={`px-2 py-1 rounded text-xs font-medium ${
             checked
-              ? `bg-orange-900/50 text-orange-300 ${quick.warning}`
+              ? `${colors.bg.warningSubtle} ${colors.text.warning} ${quick.warning}`
               : `${colors.bg.hover} ${colors.text.muted} ${getStatusBorder('muted')}`
           }`}>
             {statusText || (checked ? 'Ενεργό' : 'Ανενεργό')}

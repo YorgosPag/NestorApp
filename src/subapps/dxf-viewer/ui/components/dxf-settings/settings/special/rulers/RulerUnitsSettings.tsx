@@ -11,6 +11,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../../../../../config/color-config';
 // 🏢 ENTERPRISE: Centralized Switch component (Radix)
 import { Switch } from '@/components/ui/switch';
+// 🏢 ENTERPRISE: Dynamic background/border classes (ZERO inline styles)
+import { useDynamicBackgroundClass, useDynamicBorderClass } from '@/components/ui/utils/dynamic-styles';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -56,6 +58,13 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
     state: { rulers: rulerSettings },
     updateRulerSettings
   } = useRulersGridContext();
+
+  // 🏢 ENTERPRISE: Compute preview color for units (ZERO inline styles)
+  const unitsPreviewColor = rulerSettings?.horizontal?.unitsColor ||
+    rulerSettings?.horizontal?.textColor ||
+    UI_COLORS.WHITE;
+  const unitsBgClass = useDynamicBackgroundClass(unitsPreviewColor);
+  const unitsBorderClass = useDynamicBorderClass(unitsPreviewColor);
 
   // ============================================================================
   // LOCAL STATE
@@ -131,7 +140,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
     <div className={`space-y-4 ${className}`}>
       {/* Ruler Units */}
       <div className={`p-2 ${colors.bg.hover} rounded space-y-2`}>
-        <div className="text-sm text-white">
+        <div className={`text-sm ${colors.text.primary}`}>
           <div className="font-medium">Μονάδες Μέτρησης</div>
           <div className={`font-normal ${colors.text.muted}`}>Μονάδα μέτρησης στους χάρακες</div>
         </div>
@@ -155,7 +164,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
       {/* 🏢 ENTERPRISE: Units Visibility Toggle - Using centralized Switch component */}
       <div className={`p-2 ${colors.bg.hover} rounded space-y-2`}>
         <div className="flex items-center justify-between">
-          <div className="text-sm text-white">
+          <div className={`text-sm ${colors.text.primary}`}>
             <div className="font-medium">Εμφάνιση Μονάδων</div>
             <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη μονάδων μέτρησης στους χάρακες</div>
           </div>
@@ -173,7 +182,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
 
       {/* Units Font Size */}
       <div className={`p-2 ${colors.bg.hover} rounded space-y-2`}>
-        <div className="text-sm text-white">
+        <div className={`text-sm ${colors.text.primary}`}>
           <div className="font-medium">Μέγεθος Μονάδων</div>
           <div className={`font-normal ${colors.text.muted}`}>Μέγεθος των μονάδων μέτρησης στους χάρακες</div>
         </div>
@@ -187,7 +196,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
             onChange={(e) => handleRulerUnitsFontSizeChange(parseInt(e.target.value))}
             className="flex-1"
           />
-          <div className={`w-12 text-xs ${colors.bg.muted} text-white rounded px-2 py-1 text-center`}>
+          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} rounded px-2 py-1 text-center`}>
             {rulerSettings.horizontal.unitsFontSize || 10}px
           </div>
         </div>
@@ -195,25 +204,13 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
 
       {/* Units Color */}
       <div className={`p-2 ${colors.bg.hover} rounded space-y-2`}>
-        <div className="text-sm text-white">
+        <div className={`text-sm ${colors.text.primary}`}>
           <div className="font-medium">Χρώμα Μονάδων</div>
           <div className={`font-normal ${colors.text.muted}`}>Χρώμα των μονάδων μέτρησης στους χάρακες</div>
         </div>
         <div className="flex items-center gap-2">
           <div
-            className={`${iconSizes.lg} rounded border`}
-            style={{
-              backgroundColor: getPreviewBackground(
-                rulerSettings.horizontal.unitsColor ||
-                rulerSettings.horizontal.textColor ||
-                UI_COLORS.WHITE
-              ),
-              borderColor: getPreviewColor(
-                rulerSettings.horizontal.unitsColor ||
-                rulerSettings.horizontal.textColor ||
-                UI_COLORS.WHITE
-              )
-            }}
+            className={`${iconSizes.lg} rounded ${unitsBgClass} ${unitsBorderClass}`}
           />
           <input
             type="color"
@@ -233,7 +230,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
               UI_COLORS.WHITE
             }
             onChange={(e) => handleUnitsColorChange(e.target.value)}
-            className={`w-20 px-2 py-1 text-xs ${colors.bg.muted} text-white rounded ${getStatusBorder('muted')}`}
+            className={`w-20 px-2 py-1 text-xs ${colors.bg.muted} ${colors.text.primary} rounded ${getStatusBorder('muted')}`}
             placeholder={UI_COLORS.WHITE}
           />
         </div>

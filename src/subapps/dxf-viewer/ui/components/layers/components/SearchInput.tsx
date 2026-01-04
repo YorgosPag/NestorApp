@@ -23,7 +23,7 @@ export const SearchInput = ({ searchTerm, onSearchChange, className }: DxfSearch
       debounceMs={200}
       className={cn(
         `${quick.muted} ${colors.bg.primary} ${colors.text.primary} placeholder-gray-400`,
-        `focus:ring-2 focus:ring-blue-500 ${getFocusBorder('input')}`,
+        `${colors.interactive.focus.ring} ${getFocusBorder('input')}`,
         "text-sm",
         className
       )}

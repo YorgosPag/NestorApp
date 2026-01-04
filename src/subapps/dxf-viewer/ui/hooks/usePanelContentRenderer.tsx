@@ -119,7 +119,7 @@ export function usePanelContentRenderer({
 
       default:
         return (
-          <div className="text-gray-400 text-center py-8">
+          <div className={`${colors.text.muted} text-center py-8`}>
             <p>Επιλέξτε ένα panel από τις καρτέλες</p>
           </div>
         );

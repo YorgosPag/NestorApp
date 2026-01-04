@@ -80,6 +80,52 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
   } = useRulersGridContext();
 
   // ============================================================================
+  // HELPER FUNCTIONS (must be before handlers that use them)
+  // ============================================================================
+
+  // 🏢 ENTERPRISE: Extract opacity from various color formats
+  const getOpacityFromColor = (color: string): number => {
+    if (color.includes('rgba')) {
+      const match = color.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([^)]+)\)/);
+      return match ? parseFloat(match[1]) : 1.0;
+    }
+    // Handle hex+alpha format (#RRGGBBAA)
+    if (color.startsWith('#') && color.length === 9) {
+      const alphaHex = color.slice(7, 9);
+      return parseInt(alphaHex, 16) / 255;
+    }
+    return 1.0;
+  };
+
+  // 🏢 ENTERPRISE: Extract base color (without alpha) from various formats
+  const getBaseColor = (color: string): string => {
+    if (color.includes('rgba')) {
+      const match = color.match(/rgba\((\d+),\s*(\d+),\s*(\d+)/);
+      if (match) {
+        const r = parseInt(match[1]).toString(16).padStart(2, '0');
+        const g = parseInt(match[2]).toString(16).padStart(2, '0');
+        const b = parseInt(match[3]).toString(16).padStart(2, '0');
+        return `#${r}${g}${b}`;
+      }
+    }
+    // Handle hex+alpha format (#RRGGBBAA)
+    if (color.startsWith('#') && color.length === 9) {
+      return color.slice(0, 7);
+    }
+    return color;
+  };
+
+  // Helper function to get color for preview icon (handles rgba)
+  const getPreviewColor = (color: string): string => {
+    return getBaseColor(color);
+  };
+
+  // Helper function to get preview background for divs (preserves rgba)
+  const getPreviewBackground = (color: string): string => {
+    return color;
+  };
+
+  // ============================================================================
   // HANDLERS
   // ============================================================================
 
@@ -98,8 +144,9 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
   };
 
   const handleMajorTickOpacityChange = (opacity: number) => {
-    // Use centralized withOpacity function instead of manual rgba construction
-    const baseColor = rulerSettings.horizontal.majorTickColor || UI_COLORS.WHITE;
+    // 🏢 ENTERPRISE FIX: Extract base color (without alpha) before applying new opacity
+    const currentColor = rulerSettings.horizontal.majorTickColor || UI_COLORS.WHITE;
+    const baseColor = getBaseColor(currentColor);
     const colorWithOpacity = withOpacity(baseColor, opacity);
 
     updateRulerSettings({
@@ -116,29 +163,6 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
   };
 
   // ============================================================================
-  // HELPER FUNCTIONS
-  // ============================================================================
-
-  // Helper function to get color for preview icon (handles rgba)
-  const getPreviewColor = (color: string): string => {
-    if (color.includes('rgba')) {
-      const match = color.match(/rgba\((\d+),\s*(\d+),\s*(\d+)/);
-      if (match) {
-        const r = parseInt(match[1]).toString(16).padStart(2, '0');
-        const g = parseInt(match[2]).toString(16).padStart(2, '0');
-        const b = parseInt(match[3]).toString(16).padStart(2, '0');
-        return `#${r}${g}${b}`;
-      }
-    }
-    return color;
-  };
-
-  // Helper function to get preview background for divs (preserves rgba)
-  const getPreviewBackground = (color: string): string => {
-    return color;
-  };
-
-  // ============================================================================
   // RENDER
   // ============================================================================
 
@@ -147,7 +171,7 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
       {/* 🏢 ENTERPRISE: Major Lines Visibility Toggle - Using centralized Switch component */}
       <div className={`p-2 ${colors.bg.hover} rounded space-y-2`}>
         <div className="flex items-center justify-between">
-          <div className="text-sm text-white">
+          <div className={`text-sm ${colors.text.primary}`}>
             <div className="font-medium">Εμφάνιση Κύριων Γραμμών</div>
             <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη των κύριων γραμμών χάρακα</div>
           </div>
@@ -165,7 +189,7 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
 
       {/* Major Lines Opacity */}
       <div className={`p-2 ${colors.bg.hover} rounded space-y-2`}>
-        <div className="text-sm text-white">
+        <div className={`text-sm ${colors.text.primary}`}>
           <div className="font-medium">Διαφάνεια Κύριων Γραμμών</div>
           <div className={`font-normal ${colors.text.muted}`}>Επίπεδο διαφάνειας των κύριων γραμμών χάρακα</div>
         </div>
@@ -175,26 +199,12 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
             min="0.1"
             max="1"
             step="0.1"
-            value={(() => {
-              const tickColor = rulerSettings.horizontal.majorTickColor;
-              if (tickColor.includes('rgba')) {
-                const match = tickColor.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([^)]+)\)/);
-                return match ? parseFloat(match[1]) : 1.0;
-              }
-              return 1.0;
-            })()}
+            value={getOpacityFromColor(rulerSettings.horizontal.majorTickColor)}
             onChange={(e) => handleMajorTickOpacityChange(parseFloat(e.target.value))}
             className="flex-1"
           />
-          <div className={`w-12 text-xs ${colors.bg.muted} text-white rounded px-2 py-1 text-center`}>
-            {Math.round(((() => {
-              const tickColor = rulerSettings.horizontal.majorTickColor;
-              if (tickColor.includes('rgba')) {
-                const match = tickColor.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([^)]+)\)/);
-                return match ? parseFloat(match[1]) : 1.0;
-              }
-              return 1.0;
-            })()) * 100)}%
+          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} rounded px-2 py-1 text-center`}>
+            {Math.round(getOpacityFromColor(rulerSettings.horizontal.majorTickColor) * 100)}%
           </div>
         </div>
       </div>
@@ -204,9 +214,9 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
         <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Κύριων Γραμμών</label>
         <div className={`text-xs ${colors.text.muted} mb-2`}>Χρώμα κύριων γραμμών (ticks) χαράκων</div>
         <ColorDialogTrigger
-          value={rulerSettings.horizontal.majorTickColor}
+          value={getBaseColor(rulerSettings.horizontal.majorTickColor)}
           onChange={handleMajorTickColorChange}
-          label={rulerSettings.horizontal.majorTickColor}
+          label={getBaseColor(rulerSettings.horizontal.majorTickColor)}
           title="Επιλογή Χρώματος Κύριων Γραμμών Χάρακα"
           alpha={false}
           modes={['hex', 'rgb', 'hsl']}
@@ -218,7 +228,7 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
 
       {/* Major Lines Thickness */}
       <div className={`p-2 ${colors.bg.hover} rounded space-y-2`}>
-        <div className="text-sm text-white">
+        <div className={`text-sm ${colors.text.primary}`}>
           <div className="font-medium">Πάχος Κύριων Γραμμών</div>
           <div className={`font-normal ${colors.text.muted}`}>Πάχος των κύριων γραμμών του χάρακα</div>
         </div>
@@ -232,7 +242,7 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
             onChange={(e) => handleMajorTickThicknessChange(parseFloat(e.target.value))}
             className="flex-1"
           />
-          <div className={`w-12 text-xs ${colors.bg.muted} text-white rounded px-2 py-1 text-center`}>
+          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} rounded px-2 py-1 text-center`}>
             {rulerSettings.horizontal.majorTickLength / 10}px
           </div>
         </div>

@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';  // ✅ ENTERPRISE: Centralized Radix Checkbox
 
 // 🔺 FIXED SNAPPING PANEL με ProSnapToolbar
 const SnappingView = memo(() => {
@@ -57,17 +58,17 @@ const LayersView = memo(() => {
     <h3 className={`text-sm font-semibold mb-2 ${colors.text.muted}`}>Layers</h3>
     <div className="space-y-1">
       <div className="flex items-center gap-2 text-sm">
-        <input type="checkbox" defaultChecked className={iconSizes.xs} />
+        <Checkbox defaultChecked />
         <span className={`${iconSizes.xs} ${colors.bg.error} rounded`}></span>
         <span>0 - Default</span>
       </div>
       <div className="flex items-center gap-2 text-sm">
-        <input type="checkbox" defaultChecked className={iconSizes.xs} />
+        <Checkbox defaultChecked />
         <span className={`${iconSizes.xs} ${colors.bg.info} rounded`}></span>
         <span>Geometry</span>
       </div>
       <div className="flex items-center gap-2 text-sm">
-        <input type="checkbox" defaultChecked className={iconSizes.xs} />
+        <Checkbox defaultChecked />
         <span className={`${iconSizes.xs} ${colors.bg.success} rounded`}></span>
         <span>Dimensions</span>
       </div>

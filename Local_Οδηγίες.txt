@@ -31,10 +31,14 @@ SOS...ΑΝ ΒΡΕΙΣ ΔΙΠΛΟΤΥΠΑ ΣΤΑΜΑΤΑΣ ΜΕΣΩΣ ΚΑΙ ΜΕ
 Ακολουθώ το αυστηρό πρωτόκολλο με μηδενική ανοχή:
 
   1. 🚫 ZERO HARDCODED VALUES - Όλα μέσω κεντρικοποιημένων συστημάτων
-  2. 🚫 ZERO DUPLICATES - Χρήση μόνο existing centralized systems    
-  3. 🚫 ZERO INLINE STYLES - Μόνο CSS classes από hooks
-  4. 🔍 MANDATORY PRE-CHECK - Έλεγχος centralized systems πριν από κάθε αλλαγή
-  5. Systematic centralization με αυστηρό Fortune 500 πρωτόκολλο
+  2. 🚫 ZERO any VALUES
+  3. ΟΧΙ υπερβολική ή άναρχη χρήση <div>
+  4. ΟΧΙ nested <div> χωρίς semantic δομή
+  5. ΟΧΙ components που αποτελούνται μόνο από διαδοχικά <div>
+  6. 🚫 ZERO DUPLICATES - Χρήση μόνο existing centralized systems    
+  7. 🚫 ZERO INLINE STYLES - Μόνο CSS classes από hooks
+  8. 🔍 MANDATORY PRE-CHECK - Έλεγχος centralized systems πριν από κάθε αλλαγή
+  9. Systematic centralization με αυστηρό Fortune 500 πρωτόκολλο
 
 
 Θέλω να μελετήσεις πιο από τα διπλότυπα χρησιμοποιείται περισσότερο και να μου δώσεις απάντηση 

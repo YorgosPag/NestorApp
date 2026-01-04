@@ -212,9 +212,14 @@ const getSizeStyles = (iconSizes: ReturnType<typeof useIconSizes>): Record<Accor
   }
 });
 
-const getVariantStyles = (getBorder: ReturnType<typeof useBorderTokens>['getElementBorder'], colors: ReturnType<typeof useSemanticColors>): Record<AccordionVariant, { container: string; header: string }> => ({
+// ✅ ENTERPRISE: Added radius parameter for centralized border-radius
+const getVariantStyles = (
+  getBorder: ReturnType<typeof useBorderTokens>['getElementBorder'],
+  colors: ReturnType<typeof useSemanticColors>,
+  radius: ReturnType<typeof useBorderTokens>['radius']
+): Record<AccordionVariant, { container: string; header: string }> => ({
   default: {
-    container: `${getBorder('card', 'default')} rounded-lg`,
+    container: `${getBorder('card', 'default')} ${radius.lg}`,
     header: `${colors.bg.secondary} ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`
   },
   ghost: {
@@ -222,7 +227,7 @@ const getVariantStyles = (getBorder: ReturnType<typeof useBorderTokens>['getElem
     header: `bg-transparent ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK_ALPHA}`
   },
   bordered: {
-    container: `${getBorder('card', 'focus')} rounded-lg shadow-lg`,
+    container: `${getBorder('card', 'focus')} ${radius.lg} shadow-lg`,
     header: `${colors.bg.secondary} ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`
   }
 });
@@ -266,7 +271,7 @@ export const AccordionSection = memo(function AccordionSection({
   reducedMotion = false
 }: AccordionSectionProps) {
   const iconSizes = useIconSizes();
-  const { getElementBorder, getStatusBorder, getDirectionalBorder } = useBorderTokens();
+  const { getElementBorder, getStatusBorder, getDirectionalBorder, radius } = useBorderTokens();  // ✅ ENTERPRISE: Added radius
   const colors = useSemanticColors();
 
   // ===== STATE (Controlled/Uncontrolled Hybrid) =====
@@ -412,7 +417,7 @@ export const AccordionSection = memo(function AccordionSection({
 
   const styles = useMemo(() => ({
     size: getSizeStyles(iconSizes)[size],
-    variant: getVariantStyles(getElementBorder, colors)[variant],
+    variant: getVariantStyles(getElementBorder, colors, radius)[variant],
     density: densityStyles[density]
   }), [size, variant, density, iconSizes, getElementBorder]);
 
@@ -480,7 +485,7 @@ export const AccordionSection = memo(function AccordionSection({
           }}
           className={`w-full ${styles.size.header} flex items-center justify-between ${
             styles.variant.header
-          } transition-colors text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 ${
+          } transition-colors text-left focus:outline-none ${colors.interactive.focus.ring} focus:ring-offset-2 ring-offset-background ${
             disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
           } ${headerClassName}`}
           style={shouldAnimate ? undefined : { transition: 'none' }}
@@ -497,13 +502,13 @@ export const AccordionSection = memo(function AccordionSection({
             )}
 
             {/* Title */}
-            <span className="font-medium text-white">
+            <span className={`font-medium ${colors.text.primary}`}>
               {title}
             </span>
 
-            {/* Badge */}
+            {/* 🏢 ENTERPRISE: Badge - Using semantic info color */}
             {badge && (
-              <span className="px-2 py-1 text-xs bg-blue-600 text-white rounded-full">
+              <span className={`px-2 py-1 text-xs ${colors.bg.info} ${colors.text.inverted} ${radius.full}`}>
                 {badge}
               </span>
             )}
@@ -534,9 +539,9 @@ export const AccordionSection = memo(function AccordionSection({
           <div
             className={`${styles.size.content} ${colors.bg.secondary} ${getDirectionalBorder('default', 'top')} overflow-visible ${contentClassName}`}
           >
-            {/* Error Message */}
+            {/* 🏢 ENTERPRISE: Error Message - Using semantic error colors */}
             {error && typeof error === 'string' && (
-              <div className={`mb-4 p-3 bg-red-900/20 ${getStatusBorder('error')} rounded text-red-200 text-sm`}>
+              <div className={`mb-4 p-3 ${colors.bg.errorLight} ${getStatusBorder('error')} rounded ${colors.text.error} text-sm`}>
                 {error}
               </div>
             )}

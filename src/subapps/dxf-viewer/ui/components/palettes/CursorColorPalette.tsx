@@ -53,7 +53,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
     opacityKey?: keyof CursorColors;
   }) => (
     <div className={`p-2 ${semanticColors.bg.secondary} rounded space-y-2`}>
-      <div className="text-sm text-white">
+      <div className={`text-sm ${semanticColors.text.primary}`}>
         <div className="font-medium">{label}</div>
         <div className={`font-normal ${semanticColors.text.muted}`}>{description.charAt(0).toUpperCase() + description.slice(1)}</div>
       </div>
@@ -75,7 +75,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
           type="text"
           value={colors[colorKey] as string}
           onChange={(e) => handleColorChange(colorKey, e.target.value)}
-          className={`w-20 px-2 py-1 text-xs ${semanticColors.bg.muted} text-white rounded ${getStatusBorder('muted')}`}
+          className={`w-20 px-2 py-1 text-xs ${semanticColors.bg.muted} ${semanticColors.text.primary} rounded ${getStatusBorder('muted')}`}
           placeholder={UI_COLORS.WHITE}
         />
         {opacityKey && (
@@ -110,7 +110,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
     color: string;
   }) => (
     <div className={`p-2 ${semanticColors.bg.secondary} rounded space-y-2`}>
-      <div className="text-sm text-white">
+      <div className={`text-sm ${semanticColors.text.primary}`}>
         <div className="font-medium">{label}</div>
         <div className={`font-normal ${semanticColors.text.muted}`}>{description}</div>
       </div>

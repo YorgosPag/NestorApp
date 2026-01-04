@@ -44,7 +44,7 @@ const LinePreviewControlComponent: React.FC<LinePreviewControlProps> = ({
   return (
     <div className="space-y-2">
       {label && (
-        <label className="text-sm font-medium ${colors.text.secondary}">
+        <label className={`text-sm font-medium ${colors.text.secondary}`}>
           {label}
         </label>
       )}
@@ -89,14 +89,14 @@ const LinePreviewControlComponent: React.FC<LinePreviewControlProps> = ({
             />
           </svg>
         ) : (
-          <div className="${colors.text.muted} text-sm italic">
+          <div className={`${colors.text.muted} text-sm italic`}>
             Γραμμή απενεργοποιημένη
           </div>
         )}
       </div>
 
       {/* Info text */}
-      <div className="flex items-center justify-between text-xs ${colors.text.muted}">
+      <div className={`flex items-center justify-between text-xs ${colors.text.muted}`}>
         <span>{settings.enabled !== false ? (settings.lineType || 'solid') : 'Απενεργοποιημένη'}</span>
         <span>{(settings.lineWidth || 0.25).toFixed(2)}mm</span>
         <span>{settings.color || UI_COLORS.WHITE}</span>

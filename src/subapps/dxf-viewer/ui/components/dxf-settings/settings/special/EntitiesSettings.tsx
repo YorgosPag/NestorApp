@@ -401,7 +401,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                     ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
                     flex items-center justify-center
                     ${isSelected
-                      ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white ${getStatusBorder('info')}`
+                      ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${getStatusBorder('info')}`
                       : `${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.text.secondary} ${getStatusBorder('default')}`
                     }
                   `}
@@ -420,7 +420,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                     h-8 w-7 p-0 ${quick.button} border-r-0 transition-colors duration-150
                     flex items-center justify-center
                     ${isSelected
-                      ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white ${getStatusBorder('info')}`
+                      ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${getStatusBorder('info')}`
                       : `${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.text.secondary} ${getStatusBorder('default')}`
                     }
                   `}
@@ -432,7 +432,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                     h-8 w-4 p-0 ${quick.button} transition-colors duration-150
                     flex items-center justify-center
                     ${isSelected
-                      ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white ${getStatusBorder('info')}`
+                      ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${getStatusBorder('info')}`
                       : `${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.text.secondary} ${getStatusBorder('default')}`
                     }
                   `}

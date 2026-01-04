@@ -76,7 +76,7 @@ export const LineStyleControl: React.FC<LineStyleControlProps> = ({
         </SelectContent>
       </Select>
 
-      {/* 🏢 ENTERPRISE: Visual SVG preview (unchanged from original) */}
+      {/* 🏢 ENTERPRISE: Visual SVG preview - Using semantic colors */}
       {showPreview && (
         <div className={`h-8 flex items-center justify-center ${colors.bg.secondary} ${quick.rounded}`}>
           <svg width="100%" height="2" className="overflow-visible">
@@ -88,7 +88,7 @@ export const LineStyleControl: React.FC<LineStyleControlProps> = ({
               stroke="currentColor"
               strokeWidth="2"
               strokeDasharray={getDashArrayForSvg(value)}
-              className="text-blue-500"
+              className={colors.text.info}
             />
           </svg>
         </div>

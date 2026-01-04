@@ -169,7 +169,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
       {/* 🏢 ENTERPRISE: Grid Visibility Toggle - Using centralized Switch component */}
       <div className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
         <div className="flex items-center justify-between">
-          <div className="text-sm text-white">
+          <div className={`text-sm ${colors.text.primary}`}>
             <div className="font-medium">Εμφάνιση Πλέγματος</div>
             <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη του πλέγματος</div>
           </div>
@@ -187,7 +187,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
 
       {/* Grid Size (ΚΟΙΝΟ για όλα) */}
       <div className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
-        <div className="text-sm text-white">
+        <div className={`text-sm ${colors.text.primary}`}>
           <div className="font-medium">Μέγεθος Πλέγματος</div>
           <div className={`font-normal ${colors.text.muted}`}>Απόσταση μεταξύ γραμμών πλέγματος (ΚΟΙΝΟ για όλες)</div>
         </div>
@@ -201,7 +201,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             onChange={(e) => handleGridSizeChange(parseFloat(e.target.value))}
             className="flex-1"
           />
-          <div className={`w-12 text-xs ${colors.bg.muted} text-white ${quick.button} px-2 py-1 text-center`}>
+          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} ${quick.button} px-2 py-1 text-center`}>
             {gridSettings.visual.step}
           </div>
         </div>
@@ -209,7 +209,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
 
       {/* 🏢 ENTERPRISE: Grid Style Selector - Using centralized TabsOnlyTriggers */}
       <div className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
-        <div className="text-sm text-white">
+        <div className={`text-sm ${colors.text.primary}`}>
           <div className="font-medium">Στυλ Πλέγματος</div>
           <div className={`font-normal ${colors.text.muted}`}>Τύπος εμφάνισης γραμμών πλέγματος</div>
         </div>
@@ -256,7 +256,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
 
             {/* Major Grid Line Weight */}
             <div className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
-              <div className="text-sm text-white">
+              <div className={`text-sm ${colors.text.primary}`}>
                 <div className="font-medium">Πάχος Κύριων Γραμμών</div>
                 <div className={`font-normal ${colors.text.muted}`}>Πάχος των κύριων γραμμών πλέγματος</div>
               </div>
@@ -270,7 +270,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
                   onChange={(e) => handleMajorGridWeightChange(parseFloat(e.target.value))}
                   className="flex-1"
                 />
-                <div className={`w-12 text-xs ${colors.bg.muted} text-white ${quick.button} px-2 py-1 text-center`}>
+                <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} ${quick.button} px-2 py-1 text-center`}>
                   {gridSettings.visual.majorGridWeight}
                 </div>
               </div>
@@ -298,7 +298,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
 
             {/* Minor Grid Line Weight */}
             <div className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
-              <div className="text-sm text-white">
+              <div className={`text-sm ${colors.text.primary}`}>
                 <div className="font-medium">Πάχος Δευτερευουσών Γραμμών</div>
                 <div className={`font-normal ${colors.text.muted}`}>Πάχος των δευτερευουσών γραμμών πλέγματος</div>
               </div>
@@ -312,7 +312,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
                   onChange={(e) => handleMinorGridWeightChange(parseFloat(e.target.value))}
                   className="flex-1"
                 />
-                <div className={`w-12 text-xs ${colors.bg.muted} text-white ${quick.button} px-2 py-1 text-center`}>
+                <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} ${quick.button} px-2 py-1 text-center`}>
                   {gridSettings.visual.minorGridWeight}
                 </div>
               </div>

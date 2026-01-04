@@ -15,7 +15,7 @@ export const LayersHeader = ({ scene }: LayersHeaderProps) => {
   const colors = useSemanticColors();
   return (
     <div className="flex items-center justify-between">
-      <h3 className="text-sm font-medium text-green-400 flex items-center gap-2">
+      <h3 className={`text-sm font-medium ${colors.text.success} flex items-center gap-2`}>
         <Layers className={iconSizes.sm} />
         DXF Layers ({Object.keys(scene?.layers || {}).length})
       </h3>

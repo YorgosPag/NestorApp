@@ -13,11 +13,11 @@ export const CanvasSettings: React.FC<CanvasSettingsProps> = ({ className }) => 
   const colors = useSemanticColors();
 
   return (
-    <div className={`${colors.bg.primary} text-white ${className}`}>
+    <div className={`${colors.bg.primary} ${colors.text.primary} ${className}`}>
       <div className="p-4">
         {/* Header */}
         <div className={`${getDirectionalBorder('default', 'bottom')} pb-3 mb-4`}>
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+          <h2 className={`text-lg font-semibold ${colors.text.primary} flex items-center gap-2`}>
             🖼️ Ρυθμίσεις Καμβά
           </h2>
           <p className={`text-xs ${colors.text.muted} mt-1`}>

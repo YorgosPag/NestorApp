@@ -203,7 +203,7 @@ export function LayerItem({
       <div 
         className={`flex items-center justify-between p-2 rounded cursor-pointer transition-all ${getDirectionalBorder('muted', 'left')} ${
           layer.visible ? `${colors.bg.secondary} ${HOVER_BACKGROUND_EFFECTS.LIGHT}` : `${colors.bg.primary} opacity-60`
-        } ${selectedLayersForMerge.has(layerName) ? 'ring-2 ring-blue-400 bg-blue-900 bg-opacity-30' : ''}`}
+        } ${selectedLayersForMerge.has(layerName) ? `ring-2 ${colors.ring.info} ${colors.bg.selection}` : ''}`}
         onClick={handleLayerClick}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -240,12 +240,12 @@ export function LayerItem({
               onChange={(e) => setEditingName(e.target.value)}
               onKeyDown={handleNameKeyDown}
               onBlur={handleNameBlur}
-              className={`${colors.bg.secondary} text-white text-sm px-1 rounded border ${getStatusBorder('info')} focus:outline-none focus:ring-1 focus:ring-blue-400`}
+              className={`${colors.bg.secondary} ${colors.text.primary} text-sm px-1 rounded border ${getStatusBorder('info')} focus:outline-none ${colors.interactive.focus.ring}`}
               autoFocus
             />
           ) : (
-            <span 
-              className="text-sm text-white truncate cursor-pointer"
+            <span
+              className={`text-sm ${colors.text.primary} truncate cursor-pointer`}
               title={layerName}
               onDoubleClick={handleNameDoubleClick}
             >

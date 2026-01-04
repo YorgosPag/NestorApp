@@ -88,9 +88,18 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
       } else {
         setRulerBackgroundColor(UI_COLORS.WHITE);
       }
-    } else if (bgColor.startsWith('#') && (bgColor.length === 7 || bgColor.length === 4)) {
-      // Valid hex color
-      setRulerBackgroundColor(bgColor);
+    } else if (bgColor.startsWith('#')) {
+      // 🏢 ENTERPRISE FIX: Handle hex colors with or without alpha
+      // #RGB (4), #RRGGBB (7), #RRGGBBAA (9)
+      if (bgColor.length === 9) {
+        // Hex with alpha - extract RGB part only
+        setRulerBackgroundColor(bgColor.slice(0, 7));
+      } else if (bgColor.length === 7 || bgColor.length === 4) {
+        // Valid hex color without alpha
+        setRulerBackgroundColor(bgColor);
+      } else {
+        setRulerBackgroundColor(UI_COLORS.WHITE);
+      }
     } else {
       // Unknown format - use default
       setRulerBackgroundColor(UI_COLORS.WHITE);
@@ -162,7 +171,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
       {/* 🏢 ENTERPRISE: Background Visibility Toggle - Using centralized Switch component */}
       <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
         <div className="flex items-center justify-between">
-          <div className="text-sm text-white">
+          <div className={`text-sm ${colors.text.primary}`}>
             <div className="font-medium">Εμφάνιση Φόντου</div>
             <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη του φόντου των χαράκων</div>
           </div>
@@ -180,7 +189,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
 
       {/* Ruler Background Color - 🏢 ENTERPRISE: Using centralized ColorDialogTrigger */}
       <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
-        <div className="text-sm text-white">
+        <div className={`text-sm ${colors.text.primary}`}>
           <div className="font-medium">Χρώμα Φόντου</div>
           <div className={`font-normal ${colors.text.muted}`}>Χρώμα φόντου του χάρακα</div>
         </div>
@@ -199,7 +208,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
 
       {/* Ruler Opacity */}
       <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
-        <div className="text-sm text-white">
+        <div className={`text-sm ${colors.text.primary}`}>
           <div className="font-medium">Διαφάνεια</div>
           <div className={`font-normal ${colors.text.muted}`}>Επίπεδο διαφάνειας των χαράκων</div>
         </div>
@@ -220,7 +229,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
             onChange={(e) => handleRulerOpacityChange(parseFloat(e.target.value))}
             className="flex-1"
           />
-          <div className={`w-12 text-xs ${colors.bg.muted} text-white rounded px-2 py-1 text-center`}>
+          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} rounded px-2 py-1 text-center`}>
             {Math.round(((() => {
               const bgColor = rulerSettings.horizontal.backgroundColor;
               if (bgColor.includes('rgba')) {
@@ -235,7 +244,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
 
       {/* Ruler Width */}
       <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
-        <div className="text-sm text-white">
+        <div className={`text-sm ${colors.text.primary}`}>
           <div className="font-medium">Πλάτος Χάρακα</div>
           <div className={`font-normal ${colors.text.muted}`}>Πλάτος του χάρακα σε pixels</div>
         </div>
@@ -249,7 +258,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
             onChange={(e) => handleRulerWidthChange(parseInt(e.target.value))}
             className="flex-1"
           />
-          <div className={`w-12 text-xs ${colors.bg.muted} text-white rounded px-2 py-1 text-center`}>
+          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} rounded px-2 py-1 text-center`}>
             {rulerSettings.horizontal.height}px
           </div>
         </div>
@@ -258,7 +267,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
       {/* 🏢 ENTERPRISE: Ruler Lines Visibility Toggle - Using centralized Switch component */}
       <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
         <div className="flex items-center justify-between">
-          <div className="text-sm text-white">
+          <div className={`text-sm ${colors.text.primary}`}>
             <div className="font-medium">Εμφάνιση Γραμμών</div>
             <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη γραμμών μέτρησης στους χάρακες</div>
           </div>

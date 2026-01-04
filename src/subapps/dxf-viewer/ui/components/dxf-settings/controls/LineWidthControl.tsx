@@ -74,13 +74,12 @@ export const LineWidthControl: React.FC<LineWidthControlProps> = ({
         className="w-full"
       />
 
-      {/* Visual preview bar */}
+      {/* 🏢 ENTERPRISE: Visual preview bar - Using semantic colors */}
       <div className={`h-2 ${colors.bg.secondary} rounded overflow-hidden`}>
         <div
-          className="h-full bg-blue-500 transition-all duration-150"
+          className={`h-full ${colors.bg.info} transition-all duration-150 ${disabled ? 'opacity-50' : 'opacity-100'}`}
           style={{
-            width: `${((localValue - min) / (max - min)) * 100}%`,
-            opacity: disabled ? 0.5 : 1
+            width: `${((localValue - min) / (max - min)) * 100}%`
           }}
         />
       </div>

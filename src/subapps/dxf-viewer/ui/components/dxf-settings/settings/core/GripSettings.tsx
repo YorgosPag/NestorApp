@@ -10,6 +10,8 @@ import { useIconSizes } from '../../../../../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../../../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { CAD_UI_COLORS, UI_COLORS } from '../../../../../config/color-config';
+// 🏢 ENTERPRISE: Centralized Checkbox component (Radix)
+import { Checkbox } from '@/components/ui/checkbox';
 
 // SVG Icons για τα accordion sections
 const CogIcon = ({ className }: { className?: string }) => (
@@ -39,7 +41,7 @@ const AdjustmentsIcon = ({ className }: { className?: string }) => (
 
 export function GripSettings() {
   const iconSizes = useIconSizes();
-  const { quick, getStatusBorder } = useBorderTokens();
+  const { quick, getStatusBorder, radius } = useBorderTokens();  // ✅ ENTERPRISE: Added radius for centralized border-radius
   const colors = useSemanticColors();
   // 🎯 ΔΙΟΡΘΩΣΗ: Χρήση unified hook αντί για γενικό για override λειτουργικότητα
   const { settings: { gripSettings }, updateGripSettings, resetToDefaults } = useUnifiedGripPreview();
@@ -71,23 +73,23 @@ export function GripSettings() {
 
       {/* Enable/Disable Grips */}
       <div className="space-y-2">
-        <div className={`flex items-center gap-3 p-3 ${colors.bg.secondary} rounded-md ${getStatusBorder('info')}`}>
-          <input
-            type="checkbox"
+        <div className={`flex items-center gap-3 p-3 ${colors.bg.secondary} ${radius.md} ${getStatusBorder('info')}`}>
+          {/* 🏢 ENTERPRISE: Centralized Radix Checkbox */}
+          <Checkbox
             id="grips-enabled"
             checked={gripSettings.enabled}
-            onChange={(e) => updateSettings({ enabled: e.target.checked })}
-            className={`${iconSizes.sm} text-blue-600 ${colors.bg.hover} ${quick.input} focus:ring-blue-500 focus:ring-2`}
+            onCheckedChange={(checked) => updateSettings({ enabled: checked === true })}
           />
           <label
             htmlFor="grips-enabled"
-            className={`text-sm font-medium ${gripSettings.enabled ? colors.text.primary : colors.text.muted}`}
+            className={`text-sm font-medium cursor-pointer ${gripSettings.enabled ? colors.text.primary : colors.text.muted}`}
           >
             Εμφάνιση Grips
           </label>
         </div>
+        {/* 🏢 ENTERPRISE: Warning message - Using semantic colors */}
         {!gripSettings.enabled && (
-          <div className={`text-xs text-yellow-400 bg-yellow-900 bg-opacity-20 p-2 rounded ${getStatusBorder('warning')}`}>
+          <div className={`text-xs ${colors.text.warning} ${colors.bg.warningSubtle} p-2 rounded ${getStatusBorder('warning')}`}>
             ⚠️ Τα grips είναι απενεργοποιημένα και δεν θα εμφανίζονται
           </div>
         )}
@@ -108,7 +110,7 @@ export function GripSettings() {
 
           {/* Grip Size */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium ${colors.text.secondary}">
+            <label className={`block text-sm font-medium ${colors.text.secondary}`}>
               Μέγεθος Grips: {gripSettings.gripSize || 8}px
             </label>
             <div className="flex items-center space-x-3">
@@ -119,7 +121,7 @@ export function GripSettings() {
                 step="1"
                 value={gripSettings.gripSize || 8}
                 onChange={(e) => updateSettings({ gripSize: parseInt(e.target.value) })}
-                className={`flex-1 h-2 ${colors.bg.muted} rounded-lg appearance-none cursor-pointer`}
+                className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
               />
               <input
                 type="number"
@@ -135,7 +137,7 @@ export function GripSettings() {
 
           {/* Opacity */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium ${colors.text.secondary}">
+            <label className={`block text-sm font-medium ${colors.text.secondary}`}>
               Διαφάνεια: {Math.round(gripSettings.opacity * 100)}%
             </label>
             <div className="flex items-center space-x-3">
@@ -146,7 +148,7 @@ export function GripSettings() {
                 step="0.1"
                 value={gripSettings.opacity}
                 onChange={(e) => updateSettings({ opacity: parseFloat(e.target.value) })}
-                className={`flex-1 h-2 ${colors.bg.muted} rounded-lg appearance-none cursor-pointer`}
+                className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
               />
               <input
                 type="number"
@@ -175,7 +177,7 @@ export function GripSettings() {
 
             {/* Cold Color */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium ${colors.text.secondary}">Χρώμα Cold</label>
+              <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Cold</label>
               <ColorDialogTrigger
                 value={gripSettings.colors.cold || CAD_UI_COLORS.grips.cold}
                 onChange={(color) => updateSettings({ colors: { ...gripSettings.colors, cold: color } })}
@@ -191,7 +193,7 @@ export function GripSettings() {
 
             {/* Warm Color */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium ${colors.text.secondary}">Χρώμα Warm (Hover)</label>
+              <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Warm (Hover)</label>
               <ColorDialogTrigger
                 value={gripSettings.colors.warm || CAD_UI_COLORS.grips.warm}
                 onChange={(color) => updateSettings({ colors: { ...gripSettings.colors, warm: color } })}
@@ -207,7 +209,7 @@ export function GripSettings() {
 
             {/* Hot Color */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium ${colors.text.secondary}">Χρώμα Hot (Επιλεγμένα)</label>
+              <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Hot (Επιλεγμένα)</label>
               <ColorDialogTrigger
                 value={gripSettings.colors.hot || CAD_UI_COLORS.grips.hot}
                 onChange={(color) => updateSettings({ colors: { ...gripSettings.colors, hot: color } })}
@@ -223,7 +225,7 @@ export function GripSettings() {
 
             {/* Contour Color */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium ${colors.text.secondary}">Χρώμα Περιγράμματος</label>
+              <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Περιγράμματος</label>
               <ColorDialogTrigger
                 value={gripSettings.colors.contour}
                 onChange={(color) => updateSettings({ colors: { ...gripSettings.colors, contour: color } })}
@@ -250,35 +252,33 @@ export function GripSettings() {
         >
           <div className="space-y-2">
 
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
+            {/* 🏢 ENTERPRISE: Centralized Radix Checkboxes */}
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="show-midpoints"
                 checked={gripSettings.showMidpoints}
-                onChange={(e) => updateSettings({ showMidpoints: e.target.checked })}
-                className={`${quick.checkbox} text-blue-600 focus:ring-blue-500 focus:ring-2`}
+                onCheckedChange={(checked) => updateSettings({ showMidpoints: checked === true })}
               />
-              <span className="text-sm ${colors.text.secondary}">Εμφάνιση Midpoints</span>
-            </label>
+              <label htmlFor="show-midpoints" className={`text-sm cursor-pointer ${colors.text.secondary}`}>Εμφάνιση Midpoints</label>
+            </div>
 
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="show-centers"
                 checked={gripSettings.showCenters}
-                onChange={(e) => updateSettings({ showCenters: e.target.checked })}
-                className={`${quick.checkbox} text-blue-600 focus:ring-blue-500 focus:ring-2`}
+                onCheckedChange={(checked) => updateSettings({ showCenters: checked === true })}
               />
-              <span className="text-sm ${colors.text.secondary}">Εμφάνιση Centers</span>
-            </label>
+              <label htmlFor="show-centers" className={`text-sm cursor-pointer ${colors.text.secondary}`}>Εμφάνιση Centers</label>
+            </div>
 
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="show-quadrants"
                 checked={gripSettings.showQuadrants}
-                onChange={(e) => updateSettings({ showQuadrants: e.target.checked })}
-                className={`${quick.checkbox} text-blue-600 focus:ring-blue-500 focus:ring-2`}
+                onCheckedChange={(checked) => updateSettings({ showQuadrants: checked === true })}
               />
-              <span className="text-sm ${colors.text.secondary}">Εμφάνιση Quadrants</span>
-            </label>
+              <label htmlFor="show-quadrants" className={`text-sm cursor-pointer ${colors.text.secondary}`}>Εμφάνιση Quadrants</label>
+            </div>
           </div>
         </AccordionSection>
 
@@ -295,7 +295,7 @@ export function GripSettings() {
 
             {/* Pick Box Size */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium ${colors.text.secondary}">
+              <label className={`block text-sm font-medium ${colors.text.secondary}`}>
                 Μέγεθος Pick Box: {gripSettings.pickBoxSize || 3}px
               </label>
               <div className="flex items-center space-x-3">
@@ -306,7 +306,7 @@ export function GripSettings() {
                   step="1"
                   value={gripSettings.pickBoxSize || 3}
                   onChange={(e) => updateSettings({ pickBoxSize: parseInt(e.target.value) })}
-                  className={`flex-1 h-2 ${colors.bg.muted} rounded-lg appearance-none cursor-pointer`}
+                  className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
                 />
                 <input
                   type="number"
@@ -322,7 +322,7 @@ export function GripSettings() {
 
             {/* Aperture Size */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium ${colors.text.secondary}">
+              <label className={`block text-sm font-medium ${colors.text.secondary}`}>
                 Μέγεθος Aperture: {gripSettings.apertureSize || 16}px
               </label>
               <div className="flex items-center space-x-3">
@@ -333,7 +333,7 @@ export function GripSettings() {
                   step="2"
                   value={gripSettings.apertureSize || 16}
                   onChange={(e) => updateSettings({ apertureSize: parseInt(e.target.value) })}
-                  className={`flex-1 h-2 ${colors.bg.muted} rounded-lg appearance-none cursor-pointer`}
+                  className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
                 />
                 <input
                   type="number"
@@ -349,7 +349,7 @@ export function GripSettings() {
 
             {/* Max Grips */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium ${colors.text.secondary}">
+              <label className={`block text-sm font-medium ${colors.text.secondary}`}>
                 Μέγιστα Grips ανά Οντότητα: {gripSettings.maxGripsPerEntity || 50}
               </label>
               <div className="flex items-center space-x-3">
@@ -360,7 +360,7 @@ export function GripSettings() {
                   step="10"
                   value={gripSettings.maxGripsPerEntity || 50}
                   onChange={(e) => updateSettings({ maxGripsPerEntity: parseInt(e.target.value) })}
-                  className={`flex-1 h-2 ${colors.bg.muted} rounded-lg appearance-none cursor-pointer`}
+                  className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
                 />
                 <input
                   type="number"
@@ -374,61 +374,58 @@ export function GripSettings() {
               </div>
             </div>
 
-            {/* Advanced Options */}
+            {/* 🏢 ENTERPRISE: Advanced Options - Centralized Radix Checkboxes */}
             <div className="space-y-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="show-aperture"
                   checked={gripSettings.showAperture}
-                  onChange={(e) => updateSettings({ showAperture: e.target.checked })}
-                  className={`${quick.checkbox} text-blue-600 focus:ring-blue-500 focus:ring-2`}
+                  onCheckedChange={(checked) => updateSettings({ showAperture: checked === true })}
                 />
-                <span className="text-sm ${colors.text.secondary}">Εμφάνιση Aperture</span>
-              </label>
+                <label htmlFor="show-aperture" className={`text-sm cursor-pointer ${colors.text.secondary}`}>Εμφάνιση Aperture</label>
+              </div>
 
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="multi-grip-edit"
                   checked={gripSettings.multiGripEdit}
-                  onChange={(e) => updateSettings({ multiGripEdit: e.target.checked })}
-                  className={`${quick.checkbox} text-blue-600 focus:ring-blue-500 focus:ring-2`}
+                  onCheckedChange={(checked) => updateSettings({ multiGripEdit: checked === true })}
                 />
-                <span className="text-sm ${colors.text.secondary}">Multi-Grip Επεξεργασία</span>
-              </label>
+                <label htmlFor="multi-grip-edit" className={`text-sm cursor-pointer ${colors.text.secondary}`}>Multi-Grip Επεξεργασία</label>
+              </div>
 
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="snap-to-grips"
                   checked={gripSettings.snapToGrips}
-                  onChange={(e) => updateSettings({ snapToGrips: e.target.checked })}
-                  className={`${quick.checkbox} text-blue-600 focus:ring-blue-500 focus:ring-2`}
+                  onCheckedChange={(checked) => updateSettings({ snapToGrips: checked === true })}
                 />
-                <span className="text-sm ${colors.text.secondary}">Snap σε Grips</span>
-              </label>
+                <label htmlFor="snap-to-grips" className={`text-sm cursor-pointer ${colors.text.secondary}`}>Snap σε Grips</label>
+              </div>
             </div>
 
-            {/* Quick Presets */}
+            {/* 🏢 ENTERPRISE: Quick Presets - Using semantic colors */}
             <div className={`space-y-2 pt-4 ${quick.separator}`}>
-              <h5 className="text-sm font-medium ${colors.text.muted}">Γρήγορα Presets</h5>
+              <h5 className={`text-sm font-medium ${colors.text.muted}`}>Γρήγορα Presets</h5>
               <div className="flex space-x-2">
-            <button
-              onClick={() => updateSettings({ gripSize: 5, pickBoxSize: 2, apertureSize: 10 })}
-              className={`px-3 py-1 text-xs ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white rounded transition-colors`}
-            >
-              Μικρό
-            </button>
-            <button
-              onClick={() => updateSettings({ gripSize: 8, pickBoxSize: 3, apertureSize: 16 })}
-              className="px-3 py-1 text-xs bg-blue-700 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white rounded transition-colors"
-            >
-              Κανονικό
-            </button>
-            <button
-              onClick={() => updateSettings({ gripSize: 12, pickBoxSize: 5, apertureSize: 24 })}
-              className={`px-3 py-1 text-xs ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white rounded transition-colors`}
-            >
-              Μεγάλο
-              </button>
+                <button
+                  onClick={() => updateSettings({ gripSize: 5, pickBoxSize: 2, apertureSize: 10 })}
+                  className={`px-3 py-1 text-xs ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} rounded transition-colors`}
+                >
+                  Μικρό
+                </button>
+                <button
+                  onClick={() => updateSettings({ gripSize: 8, pickBoxSize: 3, apertureSize: 16 })}
+                  className={`px-3 py-1 text-xs ${colors.bg.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} rounded transition-colors`}
+                >
+                  Κανονικό
+                </button>
+                <button
+                  onClick={() => updateSettings({ gripSize: 12, pickBoxSize: 5, apertureSize: 24 })}
+                  className={`px-3 py-1 text-xs ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} rounded transition-colors`}
+                >
+                  Μεγάλο
+                </button>
               </div>
             </div>
           </div>

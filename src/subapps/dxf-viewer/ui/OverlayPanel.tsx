@@ -5,6 +5,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Square, Eye, EyeOff, Palette, MousePointer2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';  // ✅ ENTERPRISE: Centralized Radix Checkbox
 import { useOverlayManager } from '../state/overlay-manager';
 import type { RegionStatus } from '../types/overlay';
 import { STATUS_COLORS_MAPPING, getStatusColors } from '../config/color-mapping';
@@ -58,12 +59,12 @@ export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onS
       {/* Show/Hide Controls */}
       <div className="space-y-2">
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" defaultChecked className="rounded" />
+          <Checkbox defaultChecked />
           <Eye className={iconSizes.sm} />
           <span className={`${semanticColors.text.tertiary}`}>Εμφάνιση Χερουλιών</span>
         </label>
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" defaultChecked className="rounded" />
+          <Checkbox defaultChecked />
           <Palette className={iconSizes.sm} />
           <span className={`${semanticColors.text.tertiary}`}>Εμφάνιση Ετικετών</span>
         </label>
@@ -99,13 +100,13 @@ export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onS
 
       {/* Instructions */}
       <div className={PANEL_TOKENS.OVERLAY_PANEL.INFO_SECTION.BASE}>
-        <div className="text-xs text-gray-300">
+        <div className={`text-xs ${semanticColors.text.muted}`}>
           • Κλικ για επιλογή περιοχών
         </div>
-        <div className="text-xs text-gray-300">
+        <div className={`text-xs ${semanticColors.text.muted}`}>
           • Δεξί κλικ κατά τη σχεδίαση για τέλος
         </div>
-        <div className="text-xs text-gray-300">
+        <div className={`text-xs ${semanticColors.text.muted}`}>
           • Σύρετε χερούλια για επεξεργασία
         </div>
       </div>

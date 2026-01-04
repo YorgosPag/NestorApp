@@ -8,6 +8,7 @@ import React from 'react';
 import type { TabType } from '../types/tests.types';
 import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface TestTabsProps {
   activeTab: TabType;
@@ -16,6 +17,7 @@ interface TestTabsProps {
 
 export const TestTabs: React.FC<TestTabsProps> = ({ activeTab, onTabChange }) => {
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   return (
     <div className={`flex ${getDirectionalBorder('muted', 'bottom')} px-4`}>
@@ -23,8 +25,8 @@ export const TestTabs: React.FC<TestTabsProps> = ({ activeTab, onTabChange }) =>
         onClick={() => onTabChange('automated')}
         className={`px-4 py-3 text-sm font-medium transition-colors relative ${
           activeTab === 'automated'
-            ? `text-purple-400 ${getDirectionalBorder('info', 'bottom')}`
-            : `text-gray-400 ${HOVER_TEXT_EFFECTS.BLUE_LIGHT}`
+            ? `${colors.text.accent} ${getDirectionalBorder('info', 'bottom')}`
+            : `${colors.text.muted} ${HOVER_TEXT_EFFECTS.BLUE_LIGHT}`
         }`}
       >
         📋 Automated Tests
@@ -33,8 +35,8 @@ export const TestTabs: React.FC<TestTabsProps> = ({ activeTab, onTabChange }) =>
         onClick={() => onTabChange('unit')}
         className={`px-4 py-3 text-sm font-medium transition-colors relative ${
           activeTab === 'unit'
-            ? `text-purple-400 ${getDirectionalBorder('info', 'bottom')}`
-            : `text-gray-400 ${HOVER_TEXT_EFFECTS.BLUE_LIGHT}`
+            ? `${colors.text.accent} ${getDirectionalBorder('info', 'bottom')}`
+            : `${colors.text.muted} ${HOVER_TEXT_EFFECTS.BLUE_LIGHT}`
         }`}
       >
         🧪 Unit & E2E Tests
@@ -43,8 +45,8 @@ export const TestTabs: React.FC<TestTabsProps> = ({ activeTab, onTabChange }) =>
         onClick={() => onTabChange('standalone')}
         className={`px-4 py-3 text-sm font-medium transition-colors relative ${
           activeTab === 'standalone'
-            ? `text-purple-400 ${getDirectionalBorder('info', 'bottom')}`
-            : `text-gray-400 ${HOVER_TEXT_EFFECTS.BLUE_LIGHT}`
+            ? `${colors.text.accent} ${getDirectionalBorder('info', 'bottom')}`
+            : `${colors.text.muted} ${HOVER_TEXT_EFFECTS.BLUE_LIGHT}`
         }`}
       >
         📊 Standalone Tests

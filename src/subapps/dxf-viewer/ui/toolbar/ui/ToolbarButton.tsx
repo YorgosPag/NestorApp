@@ -67,9 +67,9 @@ export default function ToolbarButton({
 
   // 🎨 ENTERPRISE: Custom styling for success/danger variants
   const customVariantClass = variant === 'success'
-    ? `${colors.bg.success} ${getStatusBorder('success')} text-green-100 hover:${colors.bg.successHover}`
+    ? `${colors.bg.success} ${getStatusBorder('success')} ${colors.text.success} hover:${colors.bg.successHover}`
     : variant === 'danger'
-    ? `${colors.bg.danger} ${getStatusBorder('error')} text-red-100 hover:${colors.bg.dangerHover}`
+    ? `${colors.bg.danger} ${getStatusBorder('error')} ${colors.text.error} hover:${colors.bg.dangerHover}`
     : '';
 
   return (

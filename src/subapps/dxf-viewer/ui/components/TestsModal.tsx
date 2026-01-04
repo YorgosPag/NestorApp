@@ -84,7 +84,7 @@ export const TestsModal: React.FC<TestsModalProps> = ({
           onMouseDown={draggable.handleMouseDown}
         >
           <div className="flex items-center gap-2">
-            <FlaskConical className={`${iconSizes.lg} text-purple-400`} />
+            <FlaskConical className={`${iconSizes.lg} ${colors.text.accent}`} />
             <h2 className={`text-xl font-bold ${colors.text.primary}`}>DXF Viewer Tests</h2>
             <span className={`text-xs ${colors.text.tertiary} ml-2`}>↔️ Drag to move</span>
           </div>

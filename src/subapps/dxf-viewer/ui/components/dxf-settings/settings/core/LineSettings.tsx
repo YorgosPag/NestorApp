@@ -94,6 +94,8 @@ import { AccordionSection, useAccordion } from '../shared/AccordionSection';
 import { useIconSizes } from '../../../../../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../../../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized Checkbox component (Radix)
+import { Checkbox } from '@/components/ui/checkbox';
 
 // Simple SVG icons
 const SettingsIcon = ({ className }: { className?: string }) => (
@@ -129,7 +131,7 @@ const SwatchIcon = ({ className }: { className?: string }) => (
 
 export function LineSettings({ contextType }: { contextType?: 'preview' | 'completion' }) {
   const iconSizes = useIconSizes();
-  const { quick, getStatusBorder } = useBorderTokens();
+  const { quick, getStatusBorder, radius } = useBorderTokens();  // ✅ ENTERPRISE: Added radius for centralized border-radius
   const colors = useSemanticColors();
   // 🔺 ΔΙΟΡΘΩΣΗ: Χρήση unified hooks όπως σε TextSettings και GripSettings
   const generalLineSettings = useLineSettingsFromProvider();
@@ -387,10 +389,11 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           >
             Επαναφορά
           </button>
+          {/* 🏢 ENTERPRISE: Factory Reset Button - Using semantic danger color */}
           {!contextType && (
             <button
               onClick={handleFactoryResetClick}
-              className={`px-3 py-1 text-xs bg-red-700 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded transition-colors font-semibold`}
+              className={`px-3 py-1 text-xs ${colors.bg.danger} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded transition-colors font-semibold`}
               title="Επαναφορά στις εργοστασιακές ρυθμίσεις (ISO 128 & AutoCAD 2024)"
             >
               🏭 Εργοστασιακές
@@ -399,25 +402,24 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         </div>
       </div>
 
-      {/* Enable/Disable Line Display - ΠΆΝΤΑ ΕΜΦΑΝΈΣ για όλα τα contexts */}
+      {/* 🏢 ENTERPRISE: Enable/Disable Line Display - Centralized Radix Checkbox */}
       <div className="space-y-2">
-        <div className={`flex items-center gap-3 p-3 ${colors.bg.secondary} rounded-md ${getStatusBorder('success')}`}>
-          <input
-            type="checkbox"
+        <div className={`flex items-center gap-3 p-3 ${colors.bg.secondary} ${radius.md} ${getStatusBorder('success')}`}>
+          <Checkbox
             id="line-enabled"
             checked={settings.enabled}
-            onChange={settingsUpdater.createCheckboxHandler('enabled')}
-            className={`${iconSizes.sm} text-green-600 ${colors.bg.hover} ${quick.input} focus:ring-green-500 focus:ring-2`}
+            onCheckedChange={(checked) => settingsUpdater.updateSetting('enabled', checked === true)}
           />
           <label
             htmlFor="line-enabled"
-            className={`text-sm font-medium ${settings.enabled ? colors.text.primary : colors.text.muted}`}
+            className={`text-sm font-medium cursor-pointer ${settings.enabled ? colors.text.primary : colors.text.muted}`}
           >
             Εμφάνιση γραμμής
           </label>
         </div>
+        {/* 🏢 ENTERPRISE: Warning message - Using semantic colors */}
         {!settings.enabled && (
-          <div className={`text-xs text-yellow-400 bg-yellow-900 bg-opacity-20 p-2 rounded ${getStatusBorder('warning')}`}>
+          <div className={`text-xs ${colors.text.warning} ${colors.bg.warningSubtle} p-2 rounded ${getStatusBorder('warning')}`}>
             ⚠️ Οι γραμμές είναι απενεργοποιημένες και δεν θα εμφανίζονται στην προσχεδίαση
           </div>
         )}
@@ -510,7 +512,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.lineWidth}
               onChange={settingsUpdater.createNumberInputHandler('lineWidth', { parseType: 'float' })}
-              className={`flex-1 h-2 ${colors.bg.muted} rounded-lg appearance-none cursor-pointer`}
+              className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
             />
             <input
               type="number"
@@ -548,7 +550,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Opacity */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium ${colors.text.secondary}">
+          <label className={`block text-sm font-medium ${colors.text.secondary}`}>
             Διαφάνεια: {Math.round(settings.opacity * 100)}%
           </label>
           <div className="flex items-center space-x-3">
@@ -559,7 +561,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.opacity}
               onChange={settingsUpdater.createNumberInputHandler('opacity', { parseType: 'float' })}
-              className={`flex-1 h-2 ${colors.bg.muted} rounded-lg appearance-none cursor-pointer`}
+              className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
             />
             <input
               type="number"
@@ -573,18 +575,17 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           </div>
         </div>
 
-        {/* Line Break for Text */}
+        {/* 🏢 ENTERPRISE: Line Break for Text - Centralized Radix Checkbox */}
         <div className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="break-at-center"
               checked={settings.breakAtCenter || false}
-              onChange={settingsUpdater.createCheckboxHandler('breakAtCenter')}
-              className={`${quick.input} text-blue-600 focus:ring-blue-500 focus:ring-2`}
+              onCheckedChange={(checked) => settingsUpdater.updateSetting('breakAtCenter', checked === true)}
             />
-            <span className="text-sm ${colors.text.secondary}">Σπάσιμο γραμμής για κείμενο</span>
-          </label>
-          <p className="text-xs ${colors.text.muted} pl-6">
+            <label htmlFor="break-at-center" className={`text-sm cursor-pointer ${colors.text.secondary}`}>Σπάσιμο γραμμής για κείμενο</label>
+          </div>
+          <p className={`text-xs ${colors.text.muted} pl-6`}>
             Η γραμμή θα σπάσει στη μέση για να χωράει το κείμενο
           </p>
         </div>
@@ -604,7 +605,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Hover Color - 🏢 ENTERPRISE Color System */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium ${colors.text.secondary}">Χρώμα Hover</label>
+          <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Hover</label>
           <ColorDialogTrigger
             value={settings.hoverColor}
             onChange={settingsUpdater.createColorHandler('hoverColor')}
@@ -620,7 +621,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Hover Width */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium ${colors.text.secondary}">
+          <label className={`block text-sm font-medium ${colors.text.secondary}`}>
             Πάχος Hover: {settings.hoverWidth}px
           </label>
           <div className="flex items-center space-x-3">
@@ -631,7 +632,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.hoverWidth}
               onChange={settingsUpdater.createNumberInputHandler('hoverWidth', { parseType: 'float' })}
-              className={`flex-1 h-2 ${colors.bg.muted} rounded-lg appearance-none cursor-pointer`}
+              className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
             />
             <input
               type="number"
@@ -647,7 +648,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Hover Opacity */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium ${colors.text.secondary}">
+          <label className={`block text-sm font-medium ${colors.text.secondary}`}>
             Διαφάνεια Hover: {Math.round(settings.hoverOpacity * 100)}%
           </label>
           <div className="flex items-center space-x-3">
@@ -658,7 +659,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.hoverOpacity}
               onChange={settingsUpdater.createNumberInputHandler('hoverOpacity', { parseType: 'float' })}
-              className={`flex-1 h-2 ${colors.bg.muted} rounded-lg appearance-none cursor-pointer`}
+              className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
             />
             <input
               type="number"
@@ -687,7 +688,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Final Color - 🏢 ENTERPRISE Color System */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium ${colors.text.secondary}">Τελικό Χρώμα</label>
+          <label className={`block text-sm font-medium ${colors.text.secondary}`}>Τελικό Χρώμα</label>
           <ColorDialogTrigger
             value={settings.finalColor}
             onChange={settingsUpdater.createColorHandler('finalColor')}
@@ -703,7 +704,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Final Width */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium ${colors.text.secondary}">
+          <label className={`block text-sm font-medium ${colors.text.secondary}`}>
             Τελικό Πάχος: {settings.finalWidth}px
           </label>
           <div className="flex items-center space-x-3">
@@ -714,7 +715,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.finalWidth}
               onChange={settingsUpdater.createNumberInputHandler('finalWidth', { parseType: 'float' })}
-              className={`flex-1 h-2 ${colors.bg.muted} rounded-lg appearance-none cursor-pointer`}
+              className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
             />
             <input
               type="number"
@@ -730,7 +731,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Final Opacity */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium ${colors.text.secondary}">
+          <label className={`block text-sm font-medium ${colors.text.secondary}`}>
             Τελική Διαφάνεια: {Math.round(settings.finalOpacity * 100)}%
           </label>
           <div className="flex items-center space-x-3">
@@ -741,7 +742,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.finalOpacity}
               onChange={settingsUpdater.createNumberInputHandler('finalOpacity', { parseType: 'float' })}
-              className={`flex-1 h-2 ${colors.bg.muted} rounded-lg appearance-none cursor-pointer`}
+              className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
             />
             <input
               type="number"
@@ -769,7 +770,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           {/* Dash Scale (only for non-solid lines) */}
           {settings.lineType !== 'solid' && (
             <div className="space-y-2">
-              <label className="block text-sm font-medium ${colors.text.secondary}">
+              <label className={`block text-sm font-medium ${colors.text.secondary}`}>
                 Κλίμακα Διακοπών: {settings.dashScale}
               </label>
               <div className="flex items-center space-x-3">
@@ -780,7 +781,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step={DASH_SCALE_RANGE.step}
                   value={settings.dashScale}
                   onChange={settingsUpdater.createNumberInputHandler('dashScale', { parseType: 'float' })}
-                  className={`flex-1 h-2 ${colors.bg.muted} rounded-lg appearance-none cursor-pointer`}
+                  className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
                 />
                 <input
                   type="number"
@@ -842,7 +843,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           {/* Dash Offset (only for non-solid lines) */}
           {settings.lineType !== 'solid' && (
             <div className="space-y-2">
-              <label className="block text-sm font-medium ${colors.text.secondary}">
+              <label className={`block text-sm font-medium ${colors.text.secondary}`}>
                 Μετατόπιση Διακοπών: {settings.dashOffset}px
               </label>
               <div className="flex items-center space-x-3">
@@ -853,7 +854,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step={DASH_OFFSET_RANGE.step}
                   value={settings.dashOffset}
                   onChange={settingsUpdater.createNumberInputHandler('dashOffset', { parseType: 'float' })}
-                  className={`flex-1 h-2 ${colors.bg.muted} rounded-lg appearance-none cursor-pointer`}
+                  className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
                 />
                 <input
                   type="number"
@@ -882,46 +883,46 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         zIndex={10000}
       >
         <div className="space-y-4">
-          {/* Warning Message */}
-          <div className={`bg-red-900 bg-opacity-20 ${getStatusBorder('error')} p-4 rounded`}>
-            <p className="text-red-200 font-semibold mb-2">
+          {/* 🏢 ENTERPRISE: Warning Message - Using semantic error colors */}
+          <div className={`${colors.bg.errorSubtle} ${getStatusBorder('error')} p-4 rounded`}>
+            <p className={`${colors.text.error} font-semibold mb-2`}>
               ⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!
             </p>
           </div>
 
           {/* Loss List */}
           <div className="space-y-2">
-            <p className="${colors.text.muted} font-medium">Θα χάσετε:</p>
-            <ul className="list-disc list-inside space-y-1 ${colors.text.muted} text-sm">
+            <p className={`${colors.text.muted} font-medium`}>Θα χάσετε:</p>
+            <ul className={`list-disc list-inside space-y-1 ${colors.text.muted} text-sm`}>
               <li>Όλες τις προσαρμοσμένες ρυθμίσεις γραμμών</li>
               <li>Όλα τα templates που έχετε επιλέξει</li>
               <li>Όλες τις αλλαγές που έχετε κάνει</li>
             </ul>
           </div>
 
-          {/* Reset Info */}
-          <div className={`bg-blue-900 bg-opacity-20 ${getStatusBorder('info')} p-4 rounded`}>
-            <p className="text-blue-200 text-sm">
+          {/* 🏢 ENTERPRISE: Reset Info - Using semantic info colors */}
+          <div className={`${colors.bg.infoSubtle} ${getStatusBorder('info')} p-4 rounded`}>
+            <p className={`${colors.text.info} text-sm`}>
               <strong>Επαναφορά:</strong> Οι ρυθμίσεις θα επανέλθουν στα πρότυπα ISO 128 & AutoCAD 2024
             </p>
           </div>
 
           {/* Confirmation Question */}
-          <p className="text-white font-medium text-center pt-2">
+          <p className={`${colors.text.primary} font-medium text-center pt-2`}>
             Είστε σίγουροι ότι θέλετε να συνεχίσετε;
           </p>
 
-          {/* Action Buttons */}
+          {/* 🏢 ENTERPRISE: Action Buttons - Using semantic colors */}
           <div className={`flex gap-3 justify-end pt-4 ${quick.separator}`}>
             <button
               onClick={handleFactoryResetCancel}
-              className={`px-4 py-2 text-sm ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHTER} text-white rounded transition-colors`}
+              className={`px-4 py-2 text-sm ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHTER} ${colors.text.inverted} rounded transition-colors`}
             >
               Ακύρωση
             </button>
             <button
               onClick={handleFactoryResetConfirm}
-              className={`px-4 py-2 text-sm bg-red-700 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-white rounded transition-colors font-semibold`}
+              className={`px-4 py-2 text-sm ${colors.bg.danger} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded transition-colors font-semibold`}
             >
               🏭 Επαναφορά Εργοστασιακών
             </button>

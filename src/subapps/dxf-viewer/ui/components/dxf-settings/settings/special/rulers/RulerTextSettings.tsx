@@ -20,6 +20,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../../../../../config/color-config';
 // 🏢 ENTERPRISE: Centralized Switch component (Radix)
 import { Switch } from '@/components/ui/switch';
+// 🏢 ENTERPRISE: Dynamic background class (ZERO inline styles)
+import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 
 export interface RulerTextSettingsProps {
   className?: string;
@@ -52,6 +54,9 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
     state: { rulers: rulerSettings },
     updateRulerSettings
   } = useRulersGridContext();
+
+  // 🏢 ENTERPRISE: Dynamic background class (ZERO inline styles)
+  const textColorBgClass = useDynamicBackgroundClass(rulerSettings?.horizontal?.textColor ?? UI_COLORS.WHITE);
 
   // ============================================================================
   // LOCAL STATE
@@ -100,14 +105,13 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
     <div className={`space-y-4 ${className}`}>
       {/* Ruler Text Color */}
       <div className={`p-2 ${colors.bg.hover} ${radius.md} space-y-2`}>
-        <div className="text-sm text-white">
+        <div className={`text-sm ${colors.text.primary}`}>
           <div className="font-medium">Χρώμα Κειμένων</div>
           <div className={`font-normal ${colors.text.muted}`}>Χρώμα αριθμών και κειμένων χαράκων</div>
         </div>
         <div className="flex items-center gap-2">
           <div
-            className={`${iconSizes.lg} ${radius.md} ${getStatusBorder('default')}`}
-            style={{ backgroundColor: rulerSettings.horizontal.textColor }}
+            className={`${iconSizes.lg} ${radius.md} ${getStatusBorder('default')} ${textColorBgClass}`}
           />
           <input
             type="color"
@@ -119,7 +123,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
             type="text"
             value={rulerSettings.horizontal.textColor}
             onChange={(e) => handleRulerTextColorChange(e.target.value)}
-            className={`px-2 py-1 text-xs ${colors.bg.muted} text-white ${radius.md} ${getStatusBorder('default')} w-20`}
+            className={`px-2 py-1 text-xs ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${getStatusBorder('default')} w-20`}
             placeholder={UI_COLORS.WHITE}
           />
         </div>
@@ -127,7 +131,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
 
       {/* Font Size */}
       <div className={`p-2 ${colors.bg.hover} ${radius.md} space-y-2`}>
-        <div className="text-sm text-white">
+        <div className={`text-sm ${colors.text.primary}`}>
           <div className="font-medium">Μέγεθος Κειμένου</div>
           <div className={`font-normal ${colors.text.muted}`}>Μέγεθος των αριθμών στους χάρακες</div>
         </div>
@@ -141,7 +145,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
             onChange={(e) => handleRulerFontSizeChange(parseInt(e.target.value))}
             className="flex-1"
           />
-          <div className={`text-xs ${colors.bg.muted} text-white ${radius.md} px-2 py-1 text-center w-12`}>
+          <div className={`text-xs ${colors.bg.muted} ${colors.text.primary} ${radius.md} px-2 py-1 text-center w-12`}>
             {rulerSettings.horizontal.fontSize}px
           </div>
         </div>
@@ -150,7 +154,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
       {/* 🏢 ENTERPRISE: Text Visibility Toggle - Using centralized Switch component */}
       <div className={`p-2 ${colors.bg.hover} ${radius.md} space-y-2`}>
         <div className="flex items-center justify-between">
-          <div className="text-sm text-white">
+          <div className={`text-sm ${colors.text.primary}`}>
             <div className="font-medium">Εμφάνιση Κειμένων</div>
             <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη αριθμών και κειμένων στους χάρακες</div>
           </div>

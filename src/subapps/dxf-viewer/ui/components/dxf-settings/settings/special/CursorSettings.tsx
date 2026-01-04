@@ -77,15 +77,15 @@ export function CursorSettings() {
 
       {/* CURSOR SETTINGS SECTION */}
       <div className="space-y-4">
-        <div className={`text-lg font-medium text-white ${getDirectionalBorder('muted', 'bottom')} pb-2`}>
+        <div className={`text-lg font-medium ${colors.text.primary} ${getDirectionalBorder('muted', 'bottom')} pb-2`}>
           Ρυθμίσεις Κέρσορα
         </div>
         <div className="space-y-4">
           {/* Cursor Shape */}
-          <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
-            <div className="text-sm text-white">
+          <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
+            <div className={`text-sm ${colors.text.primary}`}>
               <div className="font-medium">Σχήμα Κέρσορα</div>
-              <div className="font-normal ${colors.text.muted}">Επιλογή μεταξύ κύκλου και τετραγώνου</div>
+              <div className={`font-normal ${colors.text.muted}`}>Επιλογή μεταξύ κύκλου και τετραγώνου</div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -120,9 +120,9 @@ export function CursorSettings() {
           </div>
 
           {/* Cursor Color */}
-          <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
-            <label className="block text-sm font-medium ${colors.text.secondary}">Χρώμα Κέρσορα</label>
-            <div className="text-xs ${colors.text.muted} mb-2">Χρώμα περιγράμματος κέρσορα</div>
+          <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
+            <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Κέρσορα</label>
+            <div className={`text-xs ${colors.text.muted} mb-2`}>Χρώμα περιγράμματος κέρσορα</div>
             <ColorDialogTrigger
               value={settings.cursor.color}
               onChange={handleCursorColorChange}
@@ -137,10 +137,10 @@ export function CursorSettings() {
           </div>
 
           {/* Cursor Line Style */}
-          <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
-            <div className="text-sm text-white">
+          <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
+            <div className={`text-sm ${colors.text.primary}`}>
               <div className="font-medium">Είδος Γραμμής</div>
-              <div className="font-normal ${colors.text.muted}">Στυλ περιγράμματος κέρσορα</div>
+              <div className={`font-normal ${colors.text.muted}`}>Στυλ περιγράμματος κέρσορα</div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -205,10 +205,10 @@ export function CursorSettings() {
           </div>
 
           {/* Cursor Line Width */}
-          <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
-            <div className="text-sm text-white">
+          <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
+            <div className={`text-sm ${colors.text.primary}`}>
               <div className="font-medium">Πάχος Γραμμής Κέρσορα</div>
-              <div className="font-normal ${colors.text.muted}">Πάχος περιγράμματος σε pixels</div>
+              <div className={`font-normal ${colors.text.muted}`}>Πάχος περιγράμματος σε pixels</div>
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -220,7 +220,7 @@ export function CursorSettings() {
                 onChange={(e) => handleCursorLineWidthChange(parseFloat(e.target.value))}
                 className="flex-1"
               />
-              <div className={`${iconSizes.xs} text-xs ${colors.bg.muted} text-white rounded px-2 py-1 text-center`}>{settings.cursor.line_width || 1}px</div>
+              <div className={`${iconSizes.xs} text-xs ${colors.bg.muted} ${colors.text.primary} rounded px-2 py-1 text-center`}>{settings.cursor.line_width || 1}px</div>
             </div>
             <div className="flex gap-1">
               {[1, 1.5, 2, 3, 4, 5].map(width => (
@@ -244,10 +244,10 @@ export function CursorSettings() {
           </div>
 
           {/* Cursor Size */}
-          <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
-            <div className="text-sm text-white">
+          <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
+            <div className={`text-sm ${colors.text.primary}`}>
               <div className="font-medium">Μέγεθος Κέρσορα</div>
-              <div className="font-normal ${colors.text.muted}">Διάμετρος/πλευρά σε pixels</div>
+              <div className={`font-normal ${colors.text.muted}`}>Διάμετρος/πλευρά σε pixels</div>
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -259,7 +259,7 @@ export function CursorSettings() {
                 onChange={(e) => handleCursorSizeChange(parseInt(e.target.value))}
                 className="flex-1"
               />
-              <div className={`${iconSizes.xs} text-xs ${colors.bg.muted} text-white rounded px-2 py-1 text-center`}>{settings.cursor.size}px</div>
+              <div className={`${iconSizes.xs} text-xs ${colors.bg.muted} ${colors.text.primary} rounded px-2 py-1 text-center`}>{settings.cursor.size}px</div>
             </div>
             <div className="flex gap-1">
               {[5, 10, 15, 25, 50].map(size => (
@@ -283,10 +283,10 @@ export function CursorSettings() {
           </div>
 
           {/* Cursor Opacity */}
-          <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
-            <div className="text-sm text-white">
+          <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
+            <div className={`text-sm ${colors.text.primary}`}>
               <div className="font-medium">Διαφάνεια Κέρσορα</div>
-              <div className="font-normal ${colors.text.muted}">Επίπεδο διαφάνειας του κέρσορα</div>
+              <div className={`font-normal ${colors.text.muted}`}>Επίπεδο διαφάνειας του κέρσορα</div>
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -298,15 +298,15 @@ export function CursorSettings() {
                 onChange={(e) => handleCursorOpacityChange(parseFloat(e.target.value))}
                 className="flex-1"
               />
-              <div className={`${iconSizes.xs} text-xs ${colors.bg.muted} text-white rounded px-2 py-1 text-center`}>{Math.round(settings.cursor.opacity * 100)}%</div>
+              <div className={`${iconSizes.xs} text-xs ${colors.bg.muted} ${colors.text.primary} rounded px-2 py-1 text-center`}>{Math.round(settings.cursor.opacity * 100)}%</div>
             </div>
           </div>
 
           {/* Show/Hide Cursor */}
-          <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
-            <div className="text-sm text-white">
+          <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
+            <div className={`text-sm ${colors.text.primary}`}>
               <div className="font-medium">Εμφάνιση Κέρσορα</div>
-              <div className="font-normal ${colors.text.muted}">Εμφάνιση/απόκρυψη κύκλου κέρσορα</div>
+              <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη κύκλου κέρσορα</div>
             </div>
             <div className="flex gap-2">
               <button

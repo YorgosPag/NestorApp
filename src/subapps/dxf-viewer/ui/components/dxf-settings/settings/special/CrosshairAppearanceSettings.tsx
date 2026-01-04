@@ -107,9 +107,9 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Crosshair Color */}
-      <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
-        <label className="block text-sm font-medium ${colors.text.secondary}">Χρώμα Σταυρονήματος</label>
-        <div className="text-xs ${colors.text.muted} mb-2">Χρώμα γραμμών σταυρώνυματος</div>
+      <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
+        <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Σταυρονήματος</label>
+        <div className={`text-xs ${colors.text.muted} mb-2`}>Χρώμα γραμμών σταυρώνυματος</div>
         <ColorDialogTrigger
           value={cursorColors.crosshairColor}
           onChange={(color) => onCursorColorsChange({ ...cursorColors, crosshairColor: color })}
@@ -124,10 +124,10 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
       </div>
 
       {/* Line Style */}
-      <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
-        <div className="text-sm text-white">
+      <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
+        <div className={`text-sm ${colors.text.primary}`}>
           <div className="font-medium">Τύπος Γραμμής</div>
-          <div className="font-normal ${colors.text.muted}">Στυλ απόδοσης γραμμών</div>
+          <div className={`font-normal ${colors.text.muted}`}>Στυλ απόδοσης γραμμών</div>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <button
@@ -192,10 +192,10 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
       </div>
 
       {/* Line Width */}
-      <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
-        <div className="text-sm text-white">
+      <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
+        <div className={`text-sm ${colors.text.primary}`}>
           <div className="font-medium">Πάχος Γραμμής</div>
-          <div className="font-normal ${colors.text.muted}">Πάχος σε pixels</div>
+          <div className={`font-normal ${colors.text.muted}`}>Πάχος σε pixels</div>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -207,7 +207,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             onChange={(e) => updateSettings({ crosshair: { ...settings.crosshair, line_width: parseFloat(e.target.value) } })}
             className="flex-1"
           />
-          <div className="w-12 text-xs ${colors.bg.muted} text-white rounded px-2 py-1 text-center">{settings.crosshair.line_width}px</div>
+          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} rounded px-2 py-1 text-center`}>{settings.crosshair.line_width}px</div>
         </div>
         <div className="flex gap-1">
           {[1, 1.5, 2, 3, 4, 5].map(width => (
@@ -231,10 +231,10 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
       </div>
 
       {/* Size/Type */}
-      <div className="p-2 ${colors.bg.secondary} rounded space-y-2">
-        <div className="text-sm text-white">
+      <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
+        <div className={`text-sm ${colors.text.primary}`}>
           <div className="font-medium">Μέγεθος Σταυρονήματος</div>
-          <div className="font-normal ${colors.text.muted}">Επέκταση από το κέντρο</div>
+          <div className={`font-normal ${colors.text.muted}`}>Επέκταση από το κέντρο</div>
         </div>
         <div className="grid grid-cols-5 gap-1">
           <button

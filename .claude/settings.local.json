@@ -97,7 +97,8 @@
       "WebFetch(domain:ezdxf.readthedocs.io)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\n🔒 ENTERPRISE SAFETY CHECKPOINT: Code Cleanup & Text Rendering Documentation\n\n## Changes Summary:\n- Removed dead code and unused imports across 31 files \\(-478 lines\\)\n- Added comprehensive text-rendering documentation \\(+304 lines\\)\n- Cleaned up DXF Viewer components for improved maintainability\n- Streamlined navigation services and context providers\n\n## Files Affected:\n- Core services: navigation, companies, security, performance\n- DXF Viewer: canvas, rendering, settings, hooks\n- New: docs/systems/text-rendering.md\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "WebFetch(domain:github.com)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npm view:*)"
     ],
     "deny": [],
     "ask": []

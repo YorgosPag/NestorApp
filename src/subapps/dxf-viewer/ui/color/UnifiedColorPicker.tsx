@@ -210,6 +210,7 @@ function ModalColorPicker({
 }: UnifiedColorPickerProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors(); // 🔧 FIX: Missing colors definition
   const [isOpen, setIsOpen] = useState(false);
 
   const handleClose = useCallback(() => {

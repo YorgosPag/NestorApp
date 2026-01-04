@@ -10,6 +10,7 @@ import React, { Suspense, lazy, ComponentType } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import ErrorBoundary from '@/components/ui/ErrorBoundary/ErrorBoundary';
 
 interface LazyLoadWrapperProps {
@@ -24,10 +25,11 @@ interface LazyLoadWrapperProps {
  */
 const DefaultFallback = () => {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   return (
     <div className="flex items-center justify-center p-8">
-      <Loader2 className={`${iconSizes.lg} animate-spin text-gray-400`} />
-      <span className="ml-2 text-sm text-gray-400">Loading component...</span>
+      <Loader2 className={`${iconSizes.lg} animate-spin ${colors.text.muted}`} />
+      <span className={`ml-2 text-sm ${colors.text.muted}`}>Loading component...</span>
     </div>
   );
 };

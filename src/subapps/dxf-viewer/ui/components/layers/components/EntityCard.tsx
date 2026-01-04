@@ -63,10 +63,10 @@ export const EntityCard = ({
       tabIndex={0}
       data-entity-id={entity.id}
       data-entity-selected={isSelected || undefined}
-      className={`ml-12 flex items-center justify-between rounded cursor-pointer transition-all ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} focus:outline-none focus:ring-2 focus:ring-green-400 ${
-        isSelected ? `p-2.5 bg-blue-600/20 ${getDirectionalBorder('info', 'left')} rounded` : 'p-1.5'
-      } ${selectedEntitiesForMerge.has(entity.id) ? 'ring-2 ring-blue-400 bg-blue-900 bg-opacity-30' : ''} ${
-        isFocused ? 'ring-2 ring-green-400' : ''
+      className={`ml-12 flex items-center justify-between rounded cursor-pointer transition-all ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} focus:outline-none ${colors.interactive.focus.ring} ${
+        isSelected ? `p-2.5 ${colors.bg.selection} ${getDirectionalBorder('info', 'left')} rounded` : 'p-1.5'
+      } ${selectedEntitiesForMerge.has(entity.id) ? `ring-2 ${colors.ring.info} ${colors.bg.selection}` : ''} ${
+        isFocused ? `ring-2 ${colors.ring.success}` : ''
       }`}
       onKeyDown={(e) => onEntityKeyDown(e, layerEntities)}
       onFocus={() => onSetFocusedEntityId(entity.id)}
@@ -92,8 +92,7 @@ export const EntityCard = ({
             }}
             className={`rounded-full ${getStatusBorder('muted')} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${
               isSelected ? iconSizes.xs : iconSizes.xs
-            }`}
-            className={getDynamicBackgroundClass(entity.color || layer.color)}
+            } ${getDynamicBackgroundClass(entity.color || layer.color)}`}
             title="Αλλαγή χρώματος entity"
           />
         </div>
@@ -123,7 +122,7 @@ export const EntityCard = ({
               onSetEditingEntity(null);
               onSetEditingEntityName('');
             }}
-            className={`${colors.bg.hover} text-white rounded ${getStatusBorder('info')} focus:outline-none focus:ring-1 focus:ring-blue-400 ${
+            className={`${colors.bg.hover} ${colors.text.primary} rounded ${getStatusBorder('info')} focus:outline-none ${colors.interactive.focus.ring} ${
               isSelected ? 'text-sm px-1' : 'text-xs px-0.5'
             }`}
             autoFocus
@@ -131,8 +130,8 @@ export const EntityCard = ({
         ) : (
           <span 
             className={`truncate cursor-pointer ${
-              isSelected 
-                ? 'text-sm text-yellow-200 font-medium' 
+              isSelected
+                ? `text-sm ${colors.text.warning} font-medium`
                 : `text-xs ${colors.text.secondary}`
             }`}
             title={entity.name || `${entity.type} #${entity.id.substring(0, 8)}...`}
@@ -186,7 +185,7 @@ export const EntityCard = ({
             e.stopPropagation(); 
             onEntityDelete?.(entity.id); 
           }}
-          className={`text-red-600 ${HOVER_TEXT_EFFECTS.RED} ${
+          className={`${colors.text.error} ${HOVER_TEXT_EFFECTS.RED} ${
             isSelected ? 'p-1' : 'p-0.5'
           }`}
           title="Διαγραφή"
@@ -196,7 +195,7 @@ export const EntityCard = ({
         
         {/* Selection indicator */}
         {isSelected && (
-          <span className={`text-yellow-400 ${
+          <span className={`${colors.text.warning} ${
             isSelected ? 'text-sm' : 'text-xs'
           }`}>★</span>
         )}

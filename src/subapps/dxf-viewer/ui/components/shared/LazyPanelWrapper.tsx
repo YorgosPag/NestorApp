@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '../../../components/modal/ModalLoadingStates';
 
 /**
@@ -48,14 +49,15 @@ export const LazyPanelWrapper = React.memo<LazyPanelWrapperProps>(function LazyP
   loadingText = 'Φόρτωση...',
   className = ''
 }) {
+  const colors = useSemanticColors();
   const loadingSpinner = React.useMemo(() => (
     <div className={`flex items-center justify-center p-8 ${className}`}>
       <div className="flex flex-col items-center space-y-3">
         <AnimatedSpinner size="medium" />
-        <span className="text-sm text-gray-400">{loadingText}</span>
+        <span className={`text-sm ${colors.text.muted}`}>{loadingText}</span>
       </div>
     </div>
-  ), [loadingText, className]);
+  ), [loadingText, className, colors.text.muted]);
 
   return (
     <React.Suspense fallback={loadingSpinner}>
