@@ -53,7 +53,7 @@ export default function CadStatusBar({
           grid.toggle();
 
           break;
-        case 'F12':
+        case 'F11':
           e.preventDefault();
           dynInput.toggle();
 
@@ -116,10 +116,10 @@ export default function CadStatusBar({
         fkey="F10"
         description="Polar Tracking - Track along polar angles"
       />
-      <StatusButton 
-        label="DYN" 
-        toggle={dynInput} 
-        fkey="F12"
+      <StatusButton
+        label="DYN"
+        toggle={dynInput}
+        fkey="F11"
         description="Dynamic Input - Show coordinates near cursor"
       />
 

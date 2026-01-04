@@ -5,10 +5,11 @@
  */
 
 import { useTranslationLazy } from '../../../../i18n/hooks/useTranslationLazy';
-import type { PanelType } from './useFloatingPanelState';
+// 🏢 ENTERPRISE: Import from Single Source of Truth
+import type { FloatingPanelType } from '../../types/panel-types';
 
 interface UsePanelDescriptionParams {
-  activePanel: PanelType;
+  activePanel: FloatingPanelType;
   visibleRegions: unknown[];
   zoomLevel: number;
 }
@@ -44,10 +45,8 @@ export function usePanelDescription({
       case 'hierarchy':
         return t('panels.hierarchy.description');
 
-      case 'layers':
-        return t('panels.layers.description');
-
-      // canvas case removed - functionality moved to colors panel
+      // 🏢 ENTERPRISE: 'layers' case removed - not in FloatingPanelType
+      // See types/panel-types.ts for valid panel types
 
       case 'colors':
         return 'Ρυθμίσεις DXF - Γραμμές, Χρώματα, Κείμενο, Grips και Εμφάνιση';

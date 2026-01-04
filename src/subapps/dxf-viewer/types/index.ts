@@ -201,7 +201,11 @@ export interface Command {
 
 export type ViewMode = 'hidden' | 'normal' | 'fullscreen';
 export type Status = 'idle' | 'loading' | 'success' | 'error';
-export type PanelType = 'layers' | 'properties' | 'blocks' | 'styles' | 'variables';
+
+// 🏢 ENTERPRISE: Re-export PanelType from Single Source of Truth
+// See types/panel-types.ts for authoritative definitions
+export type { FloatingPanelType, PanelType } from './panel-types';
+
 export interface DxfViewerAppProps {
   className?: string;
 }

@@ -6,8 +6,19 @@
  */
 
 import React from 'react';
+// 🏢 ENTERPRISE: Import from Single Source of Truth
+import {
+  type FloatingPanelType,
+  DEFAULT_PANEL,
+} from '../../types/panel-types';
 
-export type PanelType = 'overlay' | 'levels' | 'hierarchy' | 'layers' | 'colors';
+// 🏢 ENTERPRISE: Re-export for backwards compatibility
+export type { FloatingPanelType };
+
+/**
+ * @deprecated Use FloatingPanelType instead. Alias for backwards compatibility.
+ */
+export type PanelType = FloatingPanelType;
 
 export interface FloatingPanelState {
   activePanel: PanelType;
@@ -24,7 +35,7 @@ export type FloatingPanelAction =
   | { type: 'RESET_TO_DEFAULTS' };
 
 export const initialFloatingPanelState: FloatingPanelState = {
-  activePanel: 'levels',
+  activePanel: DEFAULT_PANEL,
   expandedKeys: new Set<string>(),
 };
 

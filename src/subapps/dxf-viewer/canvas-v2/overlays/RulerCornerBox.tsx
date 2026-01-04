@@ -305,68 +305,82 @@ export default function RulerCornerBox({
 
   // ===== RENDER =====
 
+  // 🏢 FIX (2026-01-04): Use ref to position menu relative to button
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
   return (
     <TooltipProvider delayDuration={500}>
-      {/* 🏢 FIX (2026-01-04): Menu opens ONLY on right-click, not left-click */}
+      {/* 🏢 FIX (2026-01-04): Simplified structure - Tooltip wraps button directly */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            ref={buttonRef}
+            type="button"
+            className={cn(styles.cornerBox, className)}
+            style={{
+              left: 0,
+              bottom: 0,
+              width: rulerWidth,
+              height: rulerHeight,
+              backgroundColor,
+              color: textColor,
+            }}
+            onClick={handleClick}
+            onContextMenu={handleContextMenu}
+            onWheel={handleWheel}
+            onKeyDown={handleKeyDown}
+            aria-label={`Zoom controls. Current zoom: ${zoomPercent}%. Click to fit, double-click for 100%, right-click for menu.`}
+            aria-haspopup="menu"
+            aria-expanded={isMenuOpen}
+            tabIndex={0}
+          >
+            <div className={styles.content}>
+              <span className={styles.originMarker}>
+                <OriginMarkerIcon color={textColor} />
+              </span>
+              <span className={styles.zoomLevel} aria-live="polite">
+                {zoomDisplay}
+              </span>
+            </div>
+            <span className={styles.srOnly}>
+              Corner box zoom controls
+            </span>
+          </button>
+        </TooltipTrigger>
+
+        <TooltipContent side="right" sideOffset={8}>
+          {tooltipContent}
+        </TooltipContent>
+      </Tooltip>
+
+      {/* 🏢 FIX (2026-01-04): DropdownMenu SEPARATE from Tooltip - no nesting conflict */}
       <DropdownMenu
         open={isMenuOpen}
         onOpenChange={(open) => {
-          // Only allow CLOSING from Radix - OPENING is controlled by handleContextMenu
           if (!open) setIsMenuOpen(false);
         }}
       >
-        {/* 🏢 FIX (2026-01-04): DropdownMenuTrigger wraps the button so menu positions correctly */}
+        {/* Hidden trigger - menu positioned via CSS */}
         <DropdownMenuTrigger asChild>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                className={cn(styles.cornerBox, className)}
-                style={{
-                  left: 0,
-                  bottom: 0,
-                  width: rulerWidth,
-                  height: rulerHeight,
-                  backgroundColor,
-                  color: textColor,
-                }}
-                onClick={handleClick}
-                onContextMenu={handleContextMenu}
-                onWheel={handleWheel}
-                onKeyDown={handleKeyDown}
-                aria-label={`Zoom controls. Current zoom: ${zoomPercent}%. Click to fit, double-click for 100%, right-click for menu.`}
-                aria-haspopup="menu"
-                aria-expanded={isMenuOpen}
-                tabIndex={0}
-              >
-                <div className={styles.content}>
-                  <span className={styles.originMarker}>
-                    <OriginMarkerIcon color={textColor} />
-                  </span>
-                  <span className={styles.zoomLevel} aria-live="polite">
-                    {zoomDisplay}
-                  </span>
-                </div>
-                <span className={styles.srOnly}>
-                  Corner box zoom controls
-                </span>
-              </button>
-            </TooltipTrigger>
-
-            <TooltipContent side="right" sideOffset={8}>
-              {tooltipContent}
-            </TooltipContent>
-          </Tooltip>
+          <span
+            className={styles.hiddenTrigger}
+            style={{
+              position: 'absolute',
+              left: rulerWidth,
+              bottom: rulerHeight,
+              width: 1,
+              height: 1,
+              pointerEvents: 'none',
+            }}
+          />
         </DropdownMenuTrigger>
 
         {/* ===== CONTEXT MENU ===== */}
-        {/* 🏢 FIX (2026-01-04): Menu position - bottom-left of menu at top-right of corner box */}
         <DropdownMenuContent
           className={styles.menuContent}
           side="top"
           align="start"
           sideOffset={4}
-          alignOffset={rulerWidth}
         >
           {/* Primary Actions */}
           <DropdownMenuItem

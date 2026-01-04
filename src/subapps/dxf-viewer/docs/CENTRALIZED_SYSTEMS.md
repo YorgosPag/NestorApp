@@ -727,6 +727,88 @@ interface RulerCornerBoxProps {
 
 ---
 
+### 📋 ADR-010: FLOATING PANEL TYPE CENTRALIZATION (2026-01-04) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED & IMPLEMENTED** | **Decision Date**: 2026-01-04
+
+**🏢 ENTERPRISE LEVEL**: **10/10** - Single Source of Truth Pattern
+
+**Context**:
+Εντοπίστηκαν **3 διπλότυπα ορισμοί** του `PanelType` στο codebase:
+1. `floatingPanelReducer.ts`: `'overlay' | 'levels' | 'hierarchy' | 'layers' | 'colors'`
+2. `types/index.ts`: `'layers' | 'properties' | 'blocks' | 'styles' | 'variables'` (legacy, unused)
+3. `PanelTabs.tsx`: `'overlay' | 'levels' | 'hierarchy' | 'colors'` (local definition)
+
+**Πρόβλημα**:
+- Ασυνεπή types μεταξύ components
+- `'layers'` στον ορισμό αλλά δεν εμφανίζεται στο UI
+- Δυσκολία maintenance με πολλαπλούς ορισμούς
+- Παραβίαση του DRY principle
+
+**Decision - Single Source of Truth**:
+
+| Rule | Description |
+|------|-------------|
+| **CANONICAL** | `types/panel-types.ts` είναι το ΜΟΝΑΔΙΚΟ source of truth |
+| **PRIMARY TYPE** | `FloatingPanelType = 'levels' \| 'hierarchy' \| 'overlay' \| 'colors'` |
+| **DEPRECATED** | `PanelType` alias maintained για backwards compatibility |
+| **PROHIBITION** | ❌ Νέοι ορισμοί PanelType σε άλλα αρχεία **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** |
+
+**Implementation Files**:
+
+| File | Purpose |
+|------|---------|
+| `types/panel-types.ts` | **Single Source of Truth** - Enterprise panel type definitions |
+| `ui/reducers/floatingPanelReducer.ts` | Re-exports from panel-types.ts |
+| `ui/components/PanelTabs.tsx` | Uses FloatingPanelType, Radix Tabs integration |
+| `ui/hooks/usePanelDescription.ts` | Uses FloatingPanelType |
+| `ui/hooks/useFloatingPanelHandle.ts` | Uses FloatingPanelType, SideTab deprecated |
+| `ui/hooks/usePanelContentRenderer.tsx` | Uses FloatingPanelType |
+
+**Type Architecture**:
+```typescript
+// types/panel-types.ts - SINGLE SOURCE OF TRUTH
+
+// Primary type for UI-visible panels
+export type FloatingPanelType = 'levels' | 'hierarchy' | 'overlay' | 'colors';
+
+// Backwards compatibility alias
+export type PanelType = FloatingPanelType;
+
+// Type guard for runtime validation
+export function isFloatingPanelType(value: unknown): value is FloatingPanelType;
+
+// All valid panel types as array
+export const FLOATING_PANEL_TYPES: readonly FloatingPanelType[];
+
+// Panel metadata for UI generation
+export const PANEL_METADATA: Record<FloatingPanelType, PanelMetadata>;
+
+// Default panel on load
+export const DEFAULT_PANEL: FloatingPanelType = 'levels';
+```
+
+**Consequences**:
+- ✅ Single Source of Truth for all panel types
+- ✅ Type-safe panel navigation
+- ✅ No duplicate definitions
+- ✅ Backwards compatibility via re-exports
+- ✅ Runtime validation via type guards
+- ✅ UI generation via PANEL_METADATA
+
+**❌ ΑΠΑΓΟΡΕΥΕΤΑΙ μετά το ADR**:
+- ⛔ New `PanelType` definitions outside `panel-types.ts`
+- ⛔ Hardcoded panel type strings without import
+- ⛔ Local type definitions in components
+- ⛔ Adding new panel types without updating `panel-types.ts`
+
+**References**:
+- Enterprise Pattern: Single Source of Truth (SSoT)
+- ADR-003: Floating Panel Compound Component System
+- Industry Standard: Google/Microsoft/Meta type centralization
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

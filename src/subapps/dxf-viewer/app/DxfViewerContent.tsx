@@ -356,8 +356,8 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
         return;
       }
 
-      // 🎯 Alternative: F12 shortcut (less likely to conflict)
-      if (event.key === 'F12') {
+      // 🎯 Alternative: Ctrl+Shift+T shortcut (F12 reserved for DevTools)
+      if (event.ctrlKey && event.shiftKey && event.key === 'T') {
         event.preventDefault();
         if (window.runLayeringWorkflowTest) {
           window.runLayeringWorkflowTest().then((result) => {

@@ -7,9 +7,13 @@
 import { useMemo } from 'react';
 import type { SceneModel } from '../../types/scene';
 import { DEFAULT_LAYER_COLOR } from '../../config/color-config';
-import type { PanelType } from './useFloatingPanelState';
+// 🏢 ENTERPRISE: Import from Single Source of Truth
+import type { FloatingPanelType } from '../../types/panel-types';
 
-export type SideTab = 'levels' | 'hierarchy' | 'overlay' | 'layers';
+/**
+ * @deprecated Use FloatingPanelType instead
+ */
+export type SideTab = FloatingPanelType;
 
 export interface FloatingPanelHandle {
   showTab: (t: SideTab) => void;
@@ -19,7 +23,7 @@ export interface FloatingPanelHandle {
 
 interface UseFloatingPanelHandleParams {
   expandedKeys: Set<string>;
-  setActivePanel: (panel: PanelType) => void;
+  setActivePanel: (panel: FloatingPanelType) => void;
   setExpandedKeys: (keys: Set<string>) => void;
 }
 
@@ -35,14 +39,8 @@ export function useFloatingPanelHandle({
 
   return useMemo(() => ({
     showTab: (t: SideTab) => {
-      // Map SideTab to PanelType
-      const panelMap: Record<SideTab, PanelType> = {
-        'levels': 'levels',
-        'hierarchy': 'hierarchy',
-        'overlay': 'overlay',
-        'layers': 'layers'
-      };
-      setActivePanel(panelMap[t]);
+      // 🏢 ENTERPRISE: SideTab is now FloatingPanelType - direct assignment
+      setActivePanel(t);
     },
 
     expandForSelection: (ids, scene) => {

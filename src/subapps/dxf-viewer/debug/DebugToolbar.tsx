@@ -51,7 +51,7 @@ export const DebugToolbar: React.FC<DebugToolbarProps> = ({
 }) => {
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
-  // Keyboard shortcuts for testing (F2, F3, F12)
+  // Keyboard shortcuts for testing (F2, F3, Ctrl+Shift+T)
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       console.log('🎯 DEBUG KEY EVENT:', { key: event.key, ctrlKey: event.ctrlKey, keyCode: event.keyCode });
@@ -91,10 +91,10 @@ export const DebugToolbar: React.FC<DebugToolbarProps> = ({
         return;
       }
 
-      // 🎯 F12: Layering Workflow Test (alternative shortcut)
-      if (event.key === 'F12') {
+      // 🎯 Ctrl+Shift+T: Layering Workflow Test (F12 reserved for DevTools)
+      if (event.ctrlKey && event.shiftKey && event.key === 'T') {
         event.preventDefault();
-        console.log('🎯 F12 SHORTCUT: LAYERING WORKFLOW TEST TRIGGERED');
+        console.log('🎯 Ctrl+Shift+T SHORTCUT: LAYERING WORKFLOW TEST TRIGGERED');
         if ((window as any).runLayeringWorkflowTest) {
           (window as any).runLayeringWorkflowTest().then((result: any) => {
             console.log('📊 LAYERING WORKFLOW RESULT:', result);

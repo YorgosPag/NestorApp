@@ -103,9 +103,8 @@ export function usePanelContentRenderer({
           </div>
         );
 
-      case 'layers':
-        // REMOVED: LayerManagementPanel - now uses unified overlay system
-        return null;
+      // 🏢 ENTERPRISE: 'layers' case removed - not in FloatingPanelType
+      // See types/panel-types.ts for valid panel types
 
       case 'colors':
         return (
