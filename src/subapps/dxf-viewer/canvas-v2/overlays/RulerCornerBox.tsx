@@ -307,10 +307,18 @@ export default function RulerCornerBox({
 
   return (
     <TooltipProvider delayDuration={500}>
-      <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DropdownMenuTrigger asChild>
+      {/* 🏢 FIX (2026-01-04): Menu opens ONLY on right-click, not left-click */}
+      <DropdownMenu
+        open={isMenuOpen}
+        onOpenChange={(open) => {
+          // Only allow CLOSING from Radix - OPENING is controlled by handleContextMenu
+          if (!open) setIsMenuOpen(false);
+        }}
+      >
+        {/* 🏢 FIX (2026-01-04): DropdownMenuTrigger wraps the button so menu positions correctly */}
+        <DropdownMenuTrigger asChild>
+          <Tooltip>
+            <TooltipTrigger asChild>
               <button
                 type="button"
                 className={cn(styles.cornerBox, className)}
@@ -343,20 +351,22 @@ export default function RulerCornerBox({
                   Corner box zoom controls
                 </span>
               </button>
-            </DropdownMenuTrigger>
-          </TooltipTrigger>
+            </TooltipTrigger>
 
-          <TooltipContent side="right" sideOffset={8}>
-            {tooltipContent}
-          </TooltipContent>
-        </Tooltip>
+            <TooltipContent side="right" sideOffset={8}>
+              {tooltipContent}
+            </TooltipContent>
+          </Tooltip>
+        </DropdownMenuTrigger>
 
         {/* ===== CONTEXT MENU ===== */}
+        {/* 🏢 FIX (2026-01-04): Menu position - bottom-left of menu at top-right of corner box */}
         <DropdownMenuContent
           className={styles.menuContent}
+          side="top"
           align="start"
-          side="right"
           sideOffset={4}
+          alignOffset={rulerWidth}
         >
           {/* Primary Actions */}
           <DropdownMenuItem

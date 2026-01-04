@@ -5,6 +5,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { UI_COLORS } from '../../../../../config/color-config';
+import { RotateCcw, Square, SquareDashed } from 'lucide-react'; // ✅ ENTERPRISE: Lucide icons αντί για emojis
 
 export function SelectionSettings() {
   const [activeSelectionTab, setActiveSelectionTab] = useState<'window' | 'crossing'>('window');
@@ -57,40 +58,44 @@ export function SelectionSettings() {
   };
 
   return (
-    <div className={`p-4 ${colors.bg.primary}`}>
+    <div className={`p-4 ${colors.bg.primary} ${colors.text.primary}`}>
       {/* Sub-navigation tabs */}
       <div className={`flex gap-1 mb-4 pb-2 ${getDirectionalBorder('default', 'bottom')}`}>
         <button
           onClick={() => setActiveSelectionTab('window')}
-          className={`px-3 py-2 text-xs rounded-t transition-colors ${
+          className={`px-3 py-2 text-xs rounded-t transition-colors flex items-center gap-2 ${
             activeSelectionTab === 'window'
-              ? `${colors.bg.primary} ${colors.text.inverted} ${getDirectionalBorder('info', 'bottom')}`
-              : `${colors.bg.secondary} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.secondary}`
+              ? `${colors.bg.card} ${colors.text.primary} ${getDirectionalBorder('info', 'bottom')}`
+              : `${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.text.muted}`
           }`}
         >
-          🔵 Window Selection
+          <Square className="w-3 h-3 text-blue-500" />
+          <span>Window Selection</span>
         </button>
         <button
           onClick={() => setActiveSelectionTab('crossing')}
-          className={`px-3 py-2 text-xs rounded-t transition-colors ${
+          className={`px-3 py-2 text-xs rounded-t transition-colors flex items-center gap-2 ${
             activeSelectionTab === 'crossing'
-              ? `${colors.bg.primary} ${colors.text.inverted} ${getDirectionalBorder('info', 'bottom')}`
-              : `${colors.bg.secondary} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.secondary}`
+              ? `${colors.bg.card} ${colors.text.primary} ${getDirectionalBorder('info', 'bottom')}`
+              : `${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.text.muted}`
           }`}
         >
-          🟢 Crossing Selection
+          <SquareDashed className="w-3 h-3 text-green-500" />
+          <span>Crossing Selection</span>
         </button>
       </div>
 
       {/* TEMPORARY DEBUG BUTTON */}
-      <div className={`mb-4 p-2 ${colors.bg.error} rounded`}>
+      {/* ✅ ENTERPRISE: Κεντρικοποιημένα colors και Lucide icon */}
+      <div className={`mb-4 p-3 ${colors.bg.secondary} ${getStatusBorder('warning')} rounded`}>
         <button
           onClick={handleResetSelectionSettings}
-          className={`w-full px-3 py-2 text-xs ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded`}
+          className={`w-full px-3 py-2 text-xs flex items-center justify-center gap-2 ${colors.bg.card} ${colors.text.primary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${getStatusBorder('default')} rounded transition-colors`}
         >
-          🔄 Reset Selection Settings (DEBUG)
+          <RotateCcw className="w-4 h-4" />
+          <span>Reset Selection Settings (DEBUG)</span>
         </button>
-        <div className={`text-xs ${colors.text.tertiary} mt-1`}>
+        <div className={`text-xs ${colors.text.muted} mt-2`}>
           Κάνει reset όλες τις ρυθμίσεις για να λειτουργήσουν τα νέα borderStyle
         </div>
       </div>
@@ -98,7 +103,10 @@ export function SelectionSettings() {
       {/* Tab Content */}
       {activeSelectionTab === 'window' ? (
         <div className="space-y-4">
-          <h4 className={`text-sm font-medium ${colors.text.primary} mb-3`}>🔵 Window Selection Settings</h4>
+          <h4 className={`text-sm font-medium ${colors.text.primary} mb-3 flex items-center gap-2`}>
+            <Square className="w-4 h-4 text-blue-500" />
+            <span>Window Selection Settings</span>
+          </h4>
           <div className={`text-xs ${colors.text.muted} mb-4`}>
             Ρυθμίσεις για το μπλε κουτί επιλογής (αριστερά προς δεξιά)
           </div>
@@ -254,7 +262,10 @@ export function SelectionSettings() {
         </div>
       ) : (
         <div className="space-y-4">
-          <h4 className={`text-sm font-medium ${colors.text.primary} mb-3`}>🟢 Crossing Selection Settings</h4>
+          <h4 className={`text-sm font-medium ${colors.text.primary} mb-3 flex items-center gap-2`}>
+            <SquareDashed className="w-4 h-4 text-green-500" />
+            <span>Crossing Selection Settings</span>
+          </h4>
           <div className={`text-xs ${colors.text.muted} mb-4`}>
             Ρυθμίσεις για το πράσινο κουτί επιλογής (δεξιά προς αριστερά)
           </div>

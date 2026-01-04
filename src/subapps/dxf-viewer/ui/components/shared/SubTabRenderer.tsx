@@ -120,7 +120,7 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
   }
 
   return (
-    <div className="p-3 ${colors.bg.secondary} rounded-lg space-y-4">
+    <div className={`p-3 ${colors.bg.secondary} rounded-lg space-y-4`}>
       {/* Preview Section */}
       {showPreview && (
         <>
@@ -175,10 +175,10 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
             />
           )}
 
-          <div className="p-3 ${colors.bg.primary} rounded space-y-3">
+          <div className={`p-3 ${colors.bg.primary} rounded space-y-3`}>
             {overrideSettings?.line ? null : (
               <div className="flex items-center justify-between">
-                <div className="text-sm text-white font-medium">
+                <div className={`text-sm ${colors.text.primary} font-medium`}>
                   Ρυθμίσεις Γραμμής {config.label}
                 </div>
                 <span className={`text-xs ${config.badgeColor} px-2 py-1 rounded`}>
@@ -204,8 +204,8 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
             />
           )}
 
-          <div className="p-3 ${colors.bg.primary} rounded space-y-3">
-            <div className="text-sm text-white font-medium">
+          <div className={`p-3 ${colors.bg.primary} rounded space-y-3`}>
+            <div className={`text-sm ${colors.text.primary} font-medium`}>
               Ρυθμίσεις Κειμένου {config.label}
             </div>
             <TextSettingsComponent />
@@ -228,7 +228,9 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
             />
           )}
 
-          <GripSettingsComponent />
+          <div className={`p-3 ${colors.bg.primary} rounded space-y-3`}>
+            <GripSettingsComponent />
+          </div>
         </div>
       )}
     </div>

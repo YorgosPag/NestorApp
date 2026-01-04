@@ -76,30 +76,83 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // 🏢 ENTERPRISE: Provide zoom system to context
   const canvasContext = useCanvasContext();
   // ✅ CENTRALIZED VIEWPORT: Update viewport από canvas dimensions
+  // 🏢 FIX (2026-01-04): Use ResizeObserver for reliable viewport tracking
   React.useEffect(() => {
+    let resizeObserver: ResizeObserver | null = null;
+
     const updateViewport = () => {
-      // Use DxfCanvas ref as primary (LayerCanvas should have same dimensions)
-      const canvas = dxfCanvasRef.current || overlayCanvasRef.current;
+      // 🏢 FIX: dxfCanvasRef.current is NOT HTMLCanvasElement - it has getCanvas() method!
+      // Try to get the actual canvas element from DxfCanvas component ref
+      const dxfCanvas = dxfCanvasRef.current?.getCanvas?.();
+      const layerCanvas = overlayCanvasRef.current;
+
+      // Use DxfCanvas as primary (has the actual canvas element)
+      const canvas = dxfCanvas || layerCanvas;
+
       if (canvas && canvas instanceof HTMLCanvasElement) {
         const rect = canvas.getBoundingClientRect();
         // Only update if dimensions are valid (not 0x0)
         if (rect.width > 0 && rect.height > 0) {
           setViewport({ width: rect.width, height: rect.height });
+          console.log('✅ [Viewport] Updated:', rect.width, 'x', rect.height);
         }
       }
     };
 
-    // Initial update with delay to ensure canvas is mounted
-    const timer = setTimeout(updateViewport, 100);
+    // 🏢 ENTERPRISE: Use ResizeObserver for precise dimension tracking
+    const setupObserver = () => {
+      const dxfCanvas = dxfCanvasRef.current?.getCanvas?.();
+      const layerCanvas = overlayCanvasRef.current;
+      const canvas = dxfCanvas || layerCanvas;
 
-    // Update on resize
+      if (canvas && canvas instanceof HTMLCanvasElement) {
+        resizeObserver = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            const { width, height } = entry.contentRect;
+            if (width > 0 && height > 0) {
+              setViewport({ width, height });
+            }
+          }
+        });
+        resizeObserver.observe(canvas);
+
+        // Initial update
+        updateViewport();
+      }
+    };
+
+    // 🏢 ENTERPRISE: Retry mechanism for canvas mount timing
+    let retryCount = 0;
+    const maxRetries = 10;
+
+    const trySetupObserver = () => {
+      const dxfCanvas = dxfCanvasRef.current?.getCanvas?.();
+      const layerCanvas = overlayCanvasRef.current;
+
+      if (dxfCanvas || layerCanvas) {
+        setupObserver();
+      } else if (retryCount < maxRetries) {
+        retryCount++;
+        setTimeout(trySetupObserver, 100); // Retry every 100ms
+      } else {
+        console.warn('⚠️ [Viewport] Canvas not available after', maxRetries, 'retries');
+      }
+    };
+
+    // Initial setup with delay to ensure canvas is mounted
+    const timer = setTimeout(trySetupObserver, 100);
+
+    // Fallback: Also listen for window resize
     window.addEventListener('resize', updateViewport);
 
     return () => {
       clearTimeout(timer);
       window.removeEventListener('resize', updateViewport);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
     };
-  }, [dxfCanvasRef.current, overlayCanvasRef.current]);
+  }, []); // 🏢 FIX: Empty deps - setup once, ResizeObserver handles updates
 
   // ✅ AUTO FIT TO VIEW: Trigger existing fit-to-view event after canvas mount
   // ⚠️ DISABLED: Αφαιρέθηκε γιατί προκαλούσε issues με origin marker visibility
@@ -642,7 +695,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   React.useEffect(() => {
     const handleFitToView = (e: CustomEvent) => {
       // 🚀 USE COMBINED BOUNDS - DXF + overlays
-      const combinedBounds = createCombinedBounds(dxfScene, colorLayers);
+      // 🏢 FIX (2026-01-04): forceRecalculate=true includes dynamically drawn entities
+      const combinedBounds = createCombinedBounds(dxfScene, colorLayers, true);
 
       if (combinedBounds) {
         const viewport = e.detail?.viewport || { width: 800, height: 600 };
@@ -866,9 +920,19 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
             textColor={globalRulerSettings.horizontal.textColor}
             onZoomToFit={() => {
               // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Use existing createCombinedBounds for unified bounds
-              const combinedBounds = createCombinedBounds(dxfScene, colorLayers);
+              // 🏢 FIX (2026-01-04): forceRecalculate=true includes dynamically drawn entities
+              const combinedBounds = createCombinedBounds(dxfScene, colorLayers, true);
+
+              // 🔍 DEBUG: Log bounds and entities (remove after fixing)
+              console.log('🎯 [ZoomToFit] dxfScene entities:', dxfScene?.entities?.length, dxfScene?.entities);
+              console.log('🎯 [ZoomToFit] combinedBounds:', combinedBounds);
+              console.log('🎯 [ZoomToFit] viewport:', viewport);
+
               if (combinedBounds && viewport.width > 0 && viewport.height > 0) {
-                zoomSystem.zoomToFit(combinedBounds, viewport, true);
+                const result = zoomSystem.zoomToFit(combinedBounds, viewport, true);
+                console.log('🎯 [ZoomToFit] result:', result);
+              } else {
+                console.warn('🚨 [ZoomToFit] Invalid bounds or viewport!', { combinedBounds, viewport });
               }
             }}
             onZoom100={() => zoomSystem.zoomTo100()}

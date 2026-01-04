@@ -62,14 +62,24 @@ export function createBoundsFromPoints(points: Point2D[]): { min: Point2D; max: 
 
 /**
  * Δημιουργία bounds από DXF scene
+ *
+ * @param scene - The DXF scene to calculate bounds for
+ * @param forceRecalculate - If true, ignores cached scene.bounds and calculates from entities.
+ *                          Use this when new entities have been added dynamically (e.g., drawing tool)
+ *                          Default: false (uses cached bounds for performance)
  */
-export function createBoundsFromDxfScene(scene: DxfScene | null): { min: Point2D; max: Point2D } | null {
+export function createBoundsFromDxfScene(
+  scene: DxfScene | null,
+  forceRecalculate: boolean = false
+): { min: Point2D; max: Point2D } | null {
   if (!scene || !scene.entities || scene.entities.length === 0) {
     return null;
   }
 
-  // Use scene bounds if available
-  if (scene.bounds) {
+  // Use scene bounds if available AND not forcing recalculation
+  // 🏢 FIX (2026-01-04): forceRecalculate allows Zoom-to-Fit to include
+  // dynamically added entities (e.g., lines drawn with drawing tool)
+  if (scene.bounds && !forceRecalculate) {
     return scene.bounds;
   }
 
@@ -79,33 +89,53 @@ export function createBoundsFromDxfScene(scene: DxfScene | null): { min: Point2D
   for (const entity of scene.entities) {
     switch (entity.type) {
       case 'line':
-        allPoints.push(entity.start, entity.end);
+        // 🛡️ GUARD: Ensure start/end exist and have valid coordinates
+        if (entity.start && entity.end &&
+            isFinite(entity.start.x) && isFinite(entity.start.y) &&
+            isFinite(entity.end.x) && isFinite(entity.end.y)) {
+          allPoints.push(entity.start, entity.end);
+        }
         break;
       case 'circle':
-        // Add circle bounding box points
-        allPoints.push(
-          { x: entity.center.x - entity.radius, y: entity.center.y - entity.radius },
-          { x: entity.center.x + entity.radius, y: entity.center.y + entity.radius }
-        );
+        // 🛡️ GUARD: Ensure center/radius exist
+        if (entity.center && isFinite(entity.radius) &&
+            isFinite(entity.center.x) && isFinite(entity.center.y)) {
+          allPoints.push(
+            { x: entity.center.x - entity.radius, y: entity.center.y - entity.radius },
+            { x: entity.center.x + entity.radius, y: entity.center.y + entity.radius }
+          );
+        }
         break;
       case 'arc':
-        // Add arc bounding box points (simplified)
-        allPoints.push(
-          { x: entity.center.x - entity.radius, y: entity.center.y - entity.radius },
-          { x: entity.center.x + entity.radius, y: entity.center.y + entity.radius }
-        );
+        // 🛡️ GUARD: Ensure center/radius exist
+        if (entity.center && isFinite(entity.radius) &&
+            isFinite(entity.center.x) && isFinite(entity.center.y)) {
+          allPoints.push(
+            { x: entity.center.x - entity.radius, y: entity.center.y - entity.radius },
+            { x: entity.center.x + entity.radius, y: entity.center.y + entity.radius }
+          );
+        }
         break;
       case 'polyline':
-        allPoints.push(...entity.vertices);
+        // 🛡️ GUARD: Ensure vertices exist and are valid
+        if (entity.vertices && Array.isArray(entity.vertices)) {
+          const validVertices = entity.vertices.filter(
+            v => v && isFinite(v.x) && isFinite(v.y)
+          );
+          allPoints.push(...validVertices);
+        }
         break;
       case 'text':
-        allPoints.push(entity.position);
-        // Add approximate text bounds
-        const textWidth = entity.text.length * entity.height * 0.6;
-        allPoints.push({
-          x: entity.position.x + textWidth,
-          y: entity.position.y + entity.height
-        });
+        // 🛡️ GUARD: Ensure position exists
+        if (entity.position && isFinite(entity.position.x) && isFinite(entity.position.y)) {
+          allPoints.push(entity.position);
+          // Add approximate text bounds
+          const textWidth = (entity.text?.length || 1) * (entity.height || 12) * 0.6;
+          allPoints.push({
+            x: entity.position.x + textWidth,
+            y: entity.position.y + (entity.height || 12)
+          });
+        }
         break;
     }
   }
@@ -138,12 +168,19 @@ export function createBoundsFromLayers(layers: ColorLayer[]): { min: Point2D; ma
 
 /**
  * Δημιουργία combined bounds από DXF scene και layers
+ *
+ * @param dxfScene - The DXF scene
+ * @param layers - Color layers
+ * @param forceRecalculate - If true, recalculates bounds from entities instead of using cached scene.bounds.
+ *                          Use for Zoom-to-Fit when dynamically added entities need to be included.
+ *                          Default: false
  */
 export function createCombinedBounds(
   dxfScene: DxfScene | null,
-  layers: ColorLayer[]
+  layers: ColorLayer[],
+  forceRecalculate: boolean = false
 ): { min: Point2D; max: Point2D } | null {
-  const dxfBounds = createBoundsFromDxfScene(dxfScene);
+  const dxfBounds = createBoundsFromDxfScene(dxfScene, forceRecalculate);
   const layerBounds = createBoundsFromLayers(layers);
 
   if (!dxfBounds && !layerBounds) return null;

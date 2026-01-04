@@ -8,7 +8,7 @@ import type { Point2D, ViewTransform } from '../../../rendering/types/Types';
 import { FitToViewService } from '../../../services/FitToViewService';
 import { CoordinateTransforms } from '../../../rendering/core/CoordinateTransforms';
 // 🏢 ENTERPRISE: Use centralized constants
-import { ZOOM_FACTORS, TRANSFORM_SCALE_LIMITS } from '../../../config/transform-config';
+import { ZOOM_FACTORS, TRANSFORM_SCALE_LIMITS, FIT_TO_VIEW_DEFAULTS } from '../../../config/transform-config';
 
 // === TRANSFORM CALCULATIONS ===
 
@@ -45,9 +45,10 @@ export function calculateFitTransform(
     return { scale: 1, offsetX: 0, offsetY: 0 };
   }
 
-  // Convert padding pixels to percentage for FitToViewService
-  // 🛡️ GUARD: Ensure paddingPercentage is finite
-  const paddingPercentage = Math.max(padding * 2, viewport.width * 0.1) / viewport.width;
+  // 🏢 FIX (2026-01-04): Use centralized padding from FIT_TO_VIEW_DEFAULTS
+  // Previous formula created excessive padding for small viewports (25% for 800px)
+  // Now uses consistent 10% padding regardless of viewport size
+  const paddingPercentage = FIT_TO_VIEW_DEFAULTS.PADDING_PERCENTAGE;
 
   if (!isFinite(paddingPercentage)) {
     console.error('🚨 calculateFitTransform: Invalid paddingPercentage!');

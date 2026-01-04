@@ -5,6 +5,7 @@ import { ENHANCED_STATUS_LABELS as PROPERTY_STATUS_LABELS, ENHANCED_STATUS_COLOR
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { Palette, Pencil, RotateCcw, Construction, Layers } from 'lucide-react';
 
 interface LayersSettingsProps {
   // Για μελλοντική επέκταση μπορούμε να προσθέσουμε props
@@ -36,16 +37,17 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
   }));
 
   return (
-    <div className="p-4">
+    <section className={`p-4 ${colors.bg.primary} ${colors.text.primary}`}>
       {/* Header */}
-      <div className={`${getDirectionalBorder('muted', 'bottom')} pb-3 mb-4`}>
+      <header className={`${getDirectionalBorder('muted', 'bottom')} pb-3 mb-4`}>
         <h2 className={`text-lg font-semibold ${colors.text.primary} flex items-center gap-2`}>
-          🎨 Ρυθμίσεις Layers
+          <Layers className="w-5 h-5" />
+          <span>Ρυθμίσεις Layers</span>
         </h2>
         <p className={`text-xs ${colors.text.muted} mt-1`}>
           Χρώματα και εμφάνιση επιπέδων σχεδίασης
         </p>
-      </div>
+      </header>
 
       {/* Layer Preview */}
       <div className={`mb-4 p-2 ${colors.bg.secondary} rounded space-y-2`}>
@@ -53,7 +55,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
           <div className="font-medium">Προεπισκόπηση Layer</div>
           <div className={`font-normal ${colors.text.muted}`}>Δείτε πώς θα φαίνονται τα layers</div>
         </div>
-        <div className={`p-2 ${colors.bg.tertiary} ${quick.card} ${getStatusBorder('muted')} flex justify-center`}>
+        <div className={`p-2 ${colors.bg.muted} ${quick.card} ${getStatusBorder('muted')} flex justify-center`}>
           <div className="flex gap-1">
             {presetClasses.map((preset, index) => (
               <div
@@ -76,23 +78,25 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
         <div className={`flex gap-1 ${colors.bg.secondary} p-1 ${radius.lg}`}>
           <button
             onClick={() => setActiveTab('outlines')}
-            className={`flex-1 px-3 py-2 text-xs font-medium ${radius.md} transition-colors duration-150 ${
+            className={`flex-1 px-3 py-2 text-xs font-medium ${radius.md} transition-colors duration-150 flex items-center justify-center gap-1.5 ${
               activeTab === 'outlines'
                 ? `${colors.bg.info} ${colors.text.inverted}`
                 : `${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
             }`}
           >
-            ✏️ Περιγράμματα
+            <Pencil className="w-3.5 h-3.5" />
+            <span>Περιγράμματα</span>
           </button>
           <button
             onClick={() => setActiveTab('fills')}
-            className={`flex-1 px-3 py-2 text-xs font-medium ${radius.md} transition-colors duration-150 ${
+            className={`flex-1 px-3 py-2 text-xs font-medium ${radius.md} transition-colors duration-150 flex items-center justify-center gap-1.5 ${
               activeTab === 'fills'
                 ? `${colors.bg.info} ${colors.text.inverted}`
                 : `${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
             }`}
           >
-            🎨 Γεμίσματα
+            <Palette className="w-3.5 h-3.5" />
+            <span>Γεμίσματα</span>
           </button>
         </div>
       </div>
@@ -201,19 +205,23 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
         )}
 
         {/* Reset Button */}
-        <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
-          <div className="text-sm text-white">
+        <article className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
+          <div className={`text-sm ${colors.text.primary}`}>
             <div className="font-medium">Επαναφορά</div>
             <div className={`font-normal ${colors.text.muted}`}>Επαναφορά στις προεπιλεγμένες ρυθμίσεις</div>
           </div>
-          <button className={`w-full px-3 py-2 text-xs ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-white rounded transition-colors`}>
-            🔄 Επαναφορά Ρυθμίσεων Layers
+          <button className={`w-full px-3 py-2 text-xs flex items-center justify-center gap-2 ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded transition-colors`}>
+            <RotateCcw className="w-4 h-4" />
+            <span>Επαναφορά Ρυθμίσεων Layers</span>
           </button>
-        </div>
+        </article>
 
         {/* Coming Soon Features */}
-        <div className={`p-2 ${colors.bg.tertiary} ${quick.card} ${getStatusBorder('muted')}`}>
-          <div className="text-sm text-white font-medium mb-2">🚧 Σύντομα Διαθέσιμο</div>
+        <aside className={`p-2 ${colors.bg.secondary} ${quick.card} ${getStatusBorder('muted')}`}>
+          <div className={`text-sm ${colors.text.primary} font-medium mb-2 flex items-center gap-2`}>
+            <Construction className="w-4 h-4" />
+            <span>Σύντομα Διαθέσιμο</span>
+          </div>
           <ul className={`text-xs ${colors.text.muted} space-y-1`}>
             <li>• Χρώματα γεμίσματος layers</li>
             <li>• Ρυθμίσεις πάχους γραμμών</li>
@@ -221,8 +229,8 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
             <li>• Εξατομικευμένες παλέτες χρωμάτων</li>
             <li>• Import/Export προφίλ χρωμάτων</li>
           </ul>
-        </div>
+        </aside>
       </div>
-    </div>
+    </section>
   );
 };

@@ -98,11 +98,11 @@ export function CurrentSettingsDisplay({
               </div>
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between">
-                  <span className="${colors.text.muted}">Τύπος:</span>
+                  <span className={`${colors.text.muted}`}>Τύπος:</span>
                   <span className={`${colors.text.primary} font-mono`}>{lineSettings.lineType}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="${colors.text.muted}">Χρώμα:</span>
+                  <span className={`${colors.text.muted}`}>Χρώμα:</span>
                   <span className={`${colors.text.primary} font-mono flex items-center gap-2`}>
                     {lineSettings.color}
                     <div
@@ -111,27 +111,27 @@ export function CurrentSettingsDisplay({
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="${colors.text.muted}">Πάχος:</span>
+                  <span className={`${colors.text.muted}`}>Πάχος:</span>
                   <span className={`${colors.text.primary} font-mono`}>{lineSettings.lineWidth}px</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="${colors.text.muted}">Διαφάνεια:</span>
+                  <span className={`${colors.text.muted}`}>Διαφάνεια:</span>
                   <span className={`${colors.text.primary} font-mono`}>{Math.round(lineSettings.opacity * 100)}%</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="${colors.text.muted}">Κλίμακα:</span>
+                  <span className={`${colors.text.muted}`}>Κλίμακα:</span>
                   <span className={`${colors.text.primary} font-mono`}>{lineSettings.dashScale || 1.0}x</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="${colors.text.muted}">Μετατόπιση:</span>
+                  <span className={`${colors.text.muted}`}>Μετατόπιση:</span>
                   <span className={`${colors.text.primary} font-mono`}>{lineSettings.dashOffset || 0}px</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="${colors.text.muted}">Άκρα:</span>
+                  <span className={`${colors.text.muted}`}>Άκρα:</span>
                   <span className={`${colors.text.primary} font-mono`}>{lineSettings.lineCap || 'butt'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="${colors.text.muted}">Συνδέσεις:</span>
+                  <span className={`${colors.text.muted}`}>Συνδέσεις:</span>
                   <span className={`${colors.text.primary} font-mono`}>{lineSettings.lineJoin || 'miter'}</span>
                 </div>
               </div>
@@ -140,12 +140,12 @@ export function CurrentSettingsDisplay({
 
           {activeTab === 'text' && (
             <div>
-              <div className={`px-3 py-2 ${colors.bg.secondary} font-medium text-green-400 text-sm rounded-t-lg mb-3`}>
+              <div className={`px-3 py-2 ${colors.bg.secondary} font-medium ${colors.text.success} text-sm rounded-t-lg mb-3`}>
                 📝 Κείμενο
               </div>
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between">
-                  <span className="${colors.text.muted}">Χρώμα:</span>
+                  <span className={`${colors.text.muted}`}>Χρώμα:</span>
                   <span className={`${colors.text.primary} font-mono flex items-center gap-2`}>
                     {effectiveTextSettings.color}
                     <div
@@ -154,26 +154,26 @@ export function CurrentSettingsDisplay({
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="${colors.text.muted}">Μέγεθος:</span>
+                  <span className={`${colors.text.muted}`}>Μέγεθος:</span>
                   <span className={`${colors.text.primary} font-mono`}>{effectiveTextSettings.fontSize}px</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="${colors.text.muted}">Γραμματοσειρά:</span>
-                  <span className="text-white font-mono truncate">{effectiveTextSettings.fontFamily}</span>
+                  <span className={`${colors.text.muted}`}>Γραμματοσειρά:</span>
+                  <span className={`${colors.text.primary} font-mono truncate`}>{effectiveTextSettings.fontFamily}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="${colors.text.muted}">Στυλ:</span>
+                  <span className={`${colors.text.muted}`}>Στυλ:</span>
                   <span className={`${colors.text.primary} font-mono`}>
                     {effectiveTextSettings.isBold && 'Β'}{effectiveTextSettings.isItalic && 'Ι'}{effectiveTextSettings.isUnderline && 'Υ'}
                     {!effectiveTextSettings.isBold && !effectiveTextSettings.isItalic && !effectiveTextSettings.isUnderline && 'Κανονικό'}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="${colors.text.muted}">Εκθέτης:</span>
+                  <span className={`${colors.text.muted}`}>Εκθέτης:</span>
                   <span className={`${colors.text.primary} font-mono`}>{effectiveTextSettings.isSuperscript ? 'Ναι' : 'Όχι'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="${colors.text.muted}">Δείκτης:</span>
+                  <span className={`${colors.text.muted}`}>Δείκτης:</span>
                   <span className={`${colors.text.primary} font-mono`}>{effectiveTextSettings.isSubscript ? 'Ναι' : 'Όχι'}</span>
                 </div>
               </div>
@@ -182,28 +182,28 @@ export function CurrentSettingsDisplay({
 
           {activeTab === 'grips' && (
             <div>
-              <div className={`px-3 py-2 ${colors.bg.secondary} font-medium text-yellow-400 text-sm rounded-t-lg mb-3`}>
+              <div className={`px-3 py-2 ${colors.bg.secondary} font-medium ${colors.text.warning} text-sm rounded-t-lg mb-3`}>
                 🔺 Grips
               </div>
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between">
-                  <span className="${colors.text.muted}">Ενεργά:</span>
+                  <span className={`${colors.text.muted}`}>Ενεργά:</span>
                   <span className={`${colors.text.primary} font-mono`}>{gripSettings.showGrips ? 'Ναι' : 'Όχι'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="${colors.text.muted}">Μέγεθος:</span>
+                  <span className={`${colors.text.muted}`}>Μέγεθος:</span>
                   <span className={`${colors.text.primary} font-mono`}>{gripSettings.gripSize}px</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="${colors.text.muted}">Σχήμα:</span>
+                  <span className={`${colors.text.muted}`}>Σχήμα:</span>
                   <span className={`${colors.text.primary} font-mono`}>{gripSettings.gripShape === 'square' ? 'Τετράγωνο' : 'Κύκλος'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="${colors.text.muted}">Γέμισμα:</span>
+                  <span className={`${colors.text.muted}`}>Γέμισμα:</span>
                   <span className={`${colors.text.primary} font-mono`}>{gripSettings.showFill ? 'Ναι' : 'Όχι'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="${colors.text.muted}">Χρώμα Cold:</span>
+                  <span className={`${colors.text.muted}`}>Χρώμα Cold:</span>
                   <span className={`${colors.text.primary} font-mono flex items-center gap-2`}>
                     {gripSettings.colors.cold}
                     <div
@@ -212,7 +212,7 @@ export function CurrentSettingsDisplay({
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="${colors.text.muted}">Χρώμα Warm:</span>
+                  <span className={`${colors.text.muted}`}>Χρώμα Warm:</span>
                   <span className={`${colors.text.primary} font-mono flex items-center gap-2`}>
                     {gripSettings.colors.warm}
                     <div

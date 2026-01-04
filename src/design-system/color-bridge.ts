@@ -33,7 +33,7 @@ export const COLOR_BRIDGE = {
     // ✅ ENTERPRISE MISSING MAPPINGS - Required by DXF-Viewer components
     muted: 'bg-muted',             // Muted backgrounds
     skeleton: 'bg-muted',          // Loading skeleton backgrounds
-    tertiary: 'bg-slate-100',      // Tertiary backgrounds
+    tertiary: 'bg-muted/70',         // Tertiary backgrounds (theme-aware, slightly transparent)
     elevated: 'bg-card',           // Elevated surfaces
     selection: 'bg-accent',        // Selected states
     backgroundSecondary: 'bg-muted', // Secondary background surfaces
@@ -44,25 +44,25 @@ export const COLOR_BRIDGE = {
     hover: 'bg-accent',            // Hover state → --accent
     active: 'bg-accent/80',        // Active state → --accent with opacity
 
-    // Status colors
-    success: 'bg-green-50',        // Success background
-    error: 'bg-red-50',            // Error background
-    warning: 'bg-yellow-50',       // Warning background
-    info: 'bg-blue-50',            // Info background
+    // Status colors - ✅ ENTERPRISE FIX: Use CSS variables for theme support
+    success: 'bg-[hsl(var(--bg-success))]',        // Success background (theme-aware)
+    error: 'bg-[hsl(var(--bg-error))]',            // Error background (theme-aware)
+    warning: 'bg-[hsl(var(--bg-warning))]',        // Warning background (theme-aware)
+    info: 'bg-[hsl(var(--bg-info))]',              // Info background (theme-aware)
 
-    // ✅ ENTERPRISE MISSING STATUS VARIANTS
-    danger: 'bg-red-50',           // Danger background (alias for error)
-    successHover: 'bg-green-100',  // Success hover state
-    dangerHover: 'bg-red-100',     // Danger hover state
+    // ✅ ENTERPRISE MISSING STATUS VARIANTS - Use CSS variables for theme support
+    danger: 'bg-[hsl(var(--bg-error))]',           // Danger background (alias for error, theme-aware)
+    successHover: 'bg-[hsl(var(--bg-success))]/80',  // Success hover state
+    dangerHover: 'bg-[hsl(var(--bg-error))]/80',     // Danger hover state
 
-    // Subtle variants
-    successSubtle: 'bg-green-50',  // Soft success
-    errorSubtle: 'bg-red-50',      // Soft error
-    infoSubtle: 'bg-blue-50',      // Soft info
-    neutralSubtle: 'bg-muted',     // Soft neutral
-    warningSubtle: 'bg-yellow-50', // Soft warning
-    errorLight: 'bg-red-100',      // Light error background
-    warningLight: 'bg-yellow-100', // Light warning background
+    // Subtle variants - ✅ ENTERPRISE FIX: Use CSS variables for theme support
+    successSubtle: 'bg-[hsl(var(--bg-success))]/50',  // Soft success
+    errorSubtle: 'bg-[hsl(var(--bg-error))]/50',      // Soft error
+    infoSubtle: 'bg-[hsl(var(--bg-info))]/50',        // Soft info
+    neutralSubtle: 'bg-muted',                         // Soft neutral
+    warningSubtle: 'bg-[hsl(var(--bg-warning))]/50',  // Soft warning
+    errorLight: 'bg-[hsl(var(--bg-error))]/30',       // Light error background
+    warningLight: 'bg-[hsl(var(--bg-warning))]/30',   // Light warning background
 
     // Special backgrounds
     light: 'bg-card',              // ✅ ENTERPRISE: Light surface (was white, now beautiful blue)

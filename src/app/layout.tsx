@@ -65,7 +65,7 @@ export default function RootLayout({
       <body className={cn("font-sans overflow-x-hidden", roboto.variable)}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
+          defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
           storageKey="theme-preference"

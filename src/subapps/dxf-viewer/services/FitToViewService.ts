@@ -49,7 +49,9 @@ export class FitToViewService {
     } = options;
 
     // ✅ ADR-010: Use canonical createCombinedBounds (type-safe, no intermediate conversion)
-    const unifiedBounds = createCombinedBounds(scene, colorLayers);
+    // 🏢 FIX (2026-01-04): forceRecalculate=true ensures dynamically added entities
+    // (e.g., lines drawn with drawing tool) are included in bounds calculation
+    const unifiedBounds = createCombinedBounds(scene, colorLayers, true);
 
     if (!unifiedBounds) {
       return {

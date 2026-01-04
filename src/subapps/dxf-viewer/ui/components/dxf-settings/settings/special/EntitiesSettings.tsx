@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ACI_PALETTE } from '../../../../../settings/standards/aci';
 import { UI_COLORS } from '../../../../../config/color-config';
-import { Minus, Square, Pen, Hexagon, Ruler, Triangle } from 'lucide-react';
+import { Minus, Square, Pen, Hexagon, Ruler, Triangle, Wrench } from 'lucide-react';
 import { CircleRadiusIcon } from '../../../../toolbar/icons/CircleIcon';
 import { useIconSizes } from '../../../../../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../../../../../hooks/useBorderTokens';
@@ -389,7 +389,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
     // Ειδική λογική για το line tool (πλήρης από dxf-viewer-kalo)
     if (selectedTool === 'line') {
       return (
-        <div className={`mb-6 p-4 ${colors.bg.tertiary} ${quick.card}`}>
+        <div className={`mb-6 p-4 ${colors.bg.secondary} ${quick.card}`}>
           {/* Καρτέλες για Line Tool σε δύο σειρές */}
           <div className="grid grid-cols-2 gap-2 mb-4">
             {[
@@ -403,8 +403,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                 onClick={() => setActiveLineTab(activeLineTab === tab.id ? null : tab.id)}
                 className={`py-2 px-3 text-sm font-medium ${quick.button} transition-colors ${
                   activeLineTab === tab.id
-                    ? `${colors.bg.primary} text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                    : `${colors.bg.muted} text-white ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+                    ? `${colors.bg.primary} ${colors.text.inverted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                    : `${colors.bg.muted} ${colors.text.primary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
                 }`}
               >
                 {tab.label}
@@ -557,13 +557,15 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
 
     // Για όλα τα άλλα εργαλεία - κενό container
     return (
-      <div className={`mb-6 p-4 ${colors.bg.tertiary} ${quick.card}`}>
-        <h3 className="text-lg font-semibold text-white mb-4">
+      <div className={`mb-6 p-4 ${colors.bg.secondary} ${quick.card}`}>
+        <h3 className={`text-lg font-semibold ${colors.text.primary} mb-4`}>
           Ρυθμίσεις {selectedTool}
         </h3>
         <div className={`text-center py-8 ${colors.text.muted}`}>
-          <div className="text-4xl mb-4">🔧</div>
-          <h3 className="text-lg font-medium mb-2">Ρυθμίσεις Εργαλείου</h3>
+          <div className="mb-4 flex justify-center">
+            <Wrench className="w-10 h-10" />
+          </div>
+          <h3 className={`text-lg font-medium mb-2 ${colors.text.primary}`}>Ρυθμίσεις Εργαλείου</h3>
           <p className={`text-sm ${colors.text.muted}`}>
             Οι ρυθμίσεις για αυτό το εργαλείο θα προστεθούν σύντομα
           </p>
@@ -594,8 +596,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                 }}
                 className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
                   activeSpecificTab === subTab.id
-                    ? `${colors.bg.primary} text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                    : `${colors.bg.muted} text-white ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+                    ? `${colors.bg.primary} ${colors.text.inverted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                    : `${colors.bg.muted} ${colors.text.primary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
                 }`}
               >
                 {subTab.label}
@@ -614,8 +616,10 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
             {/* Κενό χώρο - οι ρυθμίσεις θα εμφανίζονται μόνο όταν επιλέγεται εργαλείο */}
             {!selectedTool && (
               <div className={`text-center py-8 ${colors.text.muted}`}>
-                <div className="text-4xl mb-4">🎨</div>
-                <h3 className="text-lg font-medium mb-2">Επιλέξτε Εργαλείο</h3>
+                <div className="mb-4 flex justify-center">
+                  <Pen className="w-10 h-10" />
+                </div>
+                <h3 className={`text-lg font-medium mb-2 ${colors.text.primary}`}>Επιλέξτε Εργαλείο</h3>
                 <p className={`text-sm ${colors.text.muted}`}>
                   Κάντε κλικ σε ένα εργαλείο για να δείτε τις ρυθμίσεις του
                 </p>
