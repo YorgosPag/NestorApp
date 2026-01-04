@@ -44,6 +44,7 @@
 
 import * as React from 'react';
 import { useState } from 'react';
+import { Factory, RotateCcw } from 'lucide-react';  // 🏢 ENTERPRISE: Centralized Lucide icons
 import { useIconSizes } from '../../../../../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../../../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -63,6 +64,8 @@ import {
 } from '@/components/ui/select';
 // 🏢 ENTERPRISE: Centralized Checkbox component (Radix)
 import { Checkbox } from '@/components/ui/checkbox';
+// 🏢 ENTERPRISE: Centralized Button component (Radix)
+import { Button } from '@/components/ui/button';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '../../../../../../../components/ui/effects';
 import { layoutUtilities } from '../../../../../../../styles/design-tokens';
 
@@ -214,9 +217,9 @@ function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }
   );
 }
 
-export function TextSettings() {
+export function TextSettings({ contextType }: { contextType?: 'preview' | 'completion' }) {
   const iconSizes = useIconSizes();
-  const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
+  const { quick, getStatusBorder, getDirectionalBorder, getElementBorder, radius } = useBorderTokens();  // ✅ ENTERPRISE: Added getElementBorder, radius
   const colors = useSemanticColors();
   // 🔥 FIX: Use Global Text Settings από provider, ΟΧΙ Preview-specific settings!
   // Το useUnifiedTextPreview() ενημερώνει localStorage 'dxf-text-preview-settings' (WRONG!)
@@ -324,32 +327,50 @@ export function TextSettings() {
     };
   };
 
-  return (
-    <div className="space-y-4 p-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+  // 🏢 ENTERPRISE: Conditional wrapper detection
+  // When contextType exists (preview/completion), component is embedded in SubTabRenderer
+  // → No wrapper needed (parent provides styling)
+  // When contextType is undefined (general), component is standalone
+  // → Semantic <section> wrapper with spacing
+  const isEmbedded = Boolean(contextType);
+
+  // 🏢 ENTERPRISE: Content rendered once, wrapper applied conditionally (DRY principle)
+  const settingsContent = (
+    <>
+      {/* Header - Semantic <header> element */}
+      {/* 🏢 ENTERPRISE: flex-col layout για να φαίνονται πλήρως τα κείμενα των κουμπιών */}
+      <header className="flex flex-col gap-2">
         <h3 className={`text-lg font-medium ${colors.text.primary}`}>Ρυθμίσεις Κειμένου</h3>
-        <div className="flex gap-2">
-          <button
+        <nav className="flex gap-2" aria-label="Ενέργειες ρυθμίσεων κειμένου">
+          {/* 🏢 ENTERPRISE: Centralized Button component (variant="secondary") + Lucide icon */}
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={resetToDefaults}
-            className={`px-3 py-1 text-xs ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} rounded transition-colors`}
             title="Επαναφορά στις προεπιλεγμένες ρυθμίσεις"
+            className="flex items-center gap-1"
           >
+            <RotateCcw className={iconSizes.xs} />
             Επαναφορά
-          </button>
-          <button
+          </Button>
+          {/* 🏢 ENTERPRISE: Centralized Button component (variant="destructive") + Lucide icon */}
+          <Button
+            variant="destructive"
+            size="sm"
             onClick={handleFactoryResetClick}
-            className={`px-3 py-1 text-xs ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded transition-colors font-semibold`}
             title="Επαναφορά στις εργοστασιακές ρυθμίσεις (ISO 3098)"
+            className="flex items-center gap-1"
           >
-            🏭 Εργοστασιακές
-          </button>
-        </div>
-      </div>
+            <Factory className={iconSizes.xs} />
+            Εργοστασιακές
+          </Button>
+        </nav>
+      </header>
 
       {/* 🏢 ENTERPRISE: Enable/Disable Text Display - Centralized Radix Checkbox */}
-      <div className="space-y-2">
-        <div className={`flex items-center gap-3 p-3 ${colors.bg.secondary} ${quick.card} ${getDirectionalBorder('info', 'left')}`}>
+      {/* 🏢 ADR-011: Using same styling as AccordionSection for visual consistency */}
+      <fieldset className="space-y-2">
+        <div className={`flex items-center gap-3 p-3 ${colors.bg.secondary} ${getElementBorder('card', 'default')} ${radius.lg}`}>
           <Checkbox
             id="text-enabled"
             checked={textSettings.enabled}
@@ -363,11 +384,11 @@ export function TextSettings() {
           </label>
         </div>
         {!textSettings.enabled && (
-          <div className={`text-xs ${colors.text.warning} ${colors.bg.warning} bg-opacity-20 p-2 ${quick.card} ${getStatusBorder('warning')}`}>
+          <aside className={`text-xs ${colors.text.warning} ${colors.bg.warningSubtle} p-2 ${radius.md} ${getStatusBorder('warning')}`} role="alert">
             ⚠️ Το κείμενο απόστασης είναι απενεργοποιημένο και δεν θα εμφανίζεται στην προσχεδίαση
-          </div>
+          </aside>
         )}
-      </div>
+      </fieldset>
 
       {/* ACCORDION SECTIONS */}
       <div className={`space-y-4 ${!textSettings.enabled ? 'opacity-50 pointer-events-none' : ''}`}>
@@ -564,8 +585,23 @@ export function TextSettings() {
         </AccordionSection>
 
       </div> {/* Κλείσιμο accordion wrapper */}
+    </>
+  );
 
-      {/* 🆕 ENTERPRISE FACTORY RESET CONFIRMATION MODAL */}
+  // 🏢 ENTERPRISE: Conditional wrapper pattern (ADR-011 compliance)
+  // - Embedded (contextType exists): Fragment renders content directly in parent's container
+  // - Standalone (no contextType): Semantic <section> wrapper with spacing
+  return (
+    <>
+      {isEmbedded ? (
+        settingsContent
+      ) : (
+        <section className="space-y-4 p-4" aria-label="Ρυθμίσεις Κειμένου">
+          {settingsContent}
+        </section>
+      )}
+
+      {/* 🆕 ENTERPRISE FACTORY RESET CONFIRMATION MODAL - Always rendered (portal) */}
       <BaseModal
         isOpen={showFactoryResetModal}
         onClose={handleFactoryResetCancel}
@@ -574,30 +610,30 @@ export function TextSettings() {
         closeOnBackdrop={false}
         zIndex={10000}
       >
-        <div className="space-y-4">
+        <article className="space-y-4">
           {/* 🏢 ENTERPRISE: Warning Message - Using semantic colors */}
-          <div className={`${colors.bg.errorSubtle} ${getDirectionalBorder('error', 'left')} p-4 ${quick.card}`}>
+          <aside className={`${colors.bg.errorSubtle} ${getStatusBorder('error')} p-4 ${radius.md}`} role="alert">
             <p className={`${colors.text.error} font-semibold mb-2`}>
               ⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!
             </p>
-          </div>
+          </aside>
 
           {/* Loss List */}
-          <div className="space-y-2">
+          <section className="space-y-2">
             <p className={`${colors.text.muted} font-medium`}>Θα χάσετε:</p>
             <ul className={`list-disc list-inside space-y-1 ${colors.text.muted} text-sm`}>
               <li>Όλες τις προσαρμοσμένες ρυθμίσεις κειμένου</li>
               <li>Όλα τα templates που έχετε επιλέξει</li>
               <li>Όλες τις αλλαγές που έχετε κάνει</li>
             </ul>
-          </div>
+          </section>
 
           {/* 🏢 ENTERPRISE: Reset Info - Using semantic colors */}
-          <div className={`${colors.bg.infoSubtle} ${getDirectionalBorder('info', 'left')} p-4 ${quick.card}`}>
+          <aside className={`${colors.bg.infoSubtle} ${getStatusBorder('info')} p-4 ${radius.md}`} role="note">
             <p className={`${colors.text.info} text-sm`}>
               <strong>Επαναφορά:</strong> Οι ρυθμίσεις θα επανέλθουν στα πρότυπα ISO 3098
             </p>
-          </div>
+          </aside>
 
           {/* Confirmation Question */}
           <p className={`${colors.text.primary} font-medium text-center pt-2`}>
@@ -605,7 +641,7 @@ export function TextSettings() {
           </p>
 
           {/* 🏢 ENTERPRISE: Action Buttons - Using semantic colors */}
-          <div className={`flex gap-3 justify-end pt-4 ${quick.separator}`}>
+          <footer className={`flex gap-3 justify-end pt-4 ${quick.separator}`}>
             <button
               onClick={handleFactoryResetCancel}
               className={`px-4 py-2 text-sm ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.primary} rounded transition-colors`}
@@ -614,14 +650,14 @@ export function TextSettings() {
             </button>
             <button
               onClick={handleFactoryResetConfirm}
-              className={`px-4 py-2 text-sm ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.primary} rounded transition-colors font-semibold`}
+              className={`px-4 py-2 text-sm ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.primary} rounded transition-colors font-semibold flex items-center gap-1`}
             >
-              🏭 Επαναφορά Εργοστασιακών
+              <Factory className={iconSizes.xs} />
+              Επαναφορά Εργοστασιακών
             </button>
-          </div>
-        </div>
+          </footer>
+        </article>
       </BaseModal>
-
-    </div>
+    </>
   );
 }

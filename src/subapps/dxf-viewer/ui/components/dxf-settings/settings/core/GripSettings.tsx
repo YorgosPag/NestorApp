@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import { Factory, RotateCcw } from 'lucide-react';  // 🏢 ENTERPRISE: Centralized Lucide icons
 import { useUnifiedGripPreview } from '../../../../hooks/useUnifiedSpecificSettings';
 import { AccordionSection, useAccordion } from '../shared/AccordionSection';
 import type { GripSettings } from '../../../../../settings-core/types';
@@ -12,6 +13,10 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { CAD_UI_COLORS, UI_COLORS } from '../../../../../config/color-config';
 // 🏢 ENTERPRISE: Centralized Checkbox component (Radix)
 import { Checkbox } from '@/components/ui/checkbox';
+// 🏢 ENTERPRISE: Centralized Button component (Radix)
+import { Button } from '@/components/ui/button';
+import { BaseModal } from '../../../../../components/shared/BaseModal';
+import { useNotifications } from '@/providers/NotificationProvider';
 
 // SVG Icons για τα accordion sections
 const CogIcon = ({ className }: { className?: string }) => (
@@ -39,15 +44,19 @@ const AdjustmentsIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export function GripSettings() {
+export function GripSettings({ contextType }: { contextType?: 'preview' | 'completion' }) {
   const iconSizes = useIconSizes();
-  const { quick, getStatusBorder, radius } = useBorderTokens();  // ✅ ENTERPRISE: Added radius for centralized border-radius
+  const { quick, getStatusBorder, getElementBorder, radius } = useBorderTokens();  // ✅ ENTERPRISE: Added getElementBorder, radius
   const colors = useSemanticColors();
+  const notifications = useNotifications();  // 🏢 ENTERPRISE: Centralized notifications
   // 🎯 ΔΙΟΡΘΩΣΗ: Χρήση unified hook αντί για γενικό για override λειτουργικότητα
   const { settings: { gripSettings }, updateGripSettings, resetToDefaults } = useUnifiedGripPreview();
 
   // ✅ HOOKS FIRST: All hooks must be called before any conditional returns (React Rules of Hooks)
   const { toggleSection, isOpen } = useAccordion('basic');
+
+  // 🏢 ENTERPRISE: Local state for Factory Reset modal
+  const [showFactoryResetModal, setShowFactoryResetModal] = useState(false);
 
   // ✅ ΠΡΑΓΜΑΤΙΚΗ ΔΙΟΡΘΩΣΗ: Απλό fallback αν gripSettings είναι null/undefined ή δεν έχουν τις απαραίτητες properties
   if (!gripSettings || typeof gripSettings.gripSize === 'undefined') {
@@ -58,22 +67,79 @@ export function GripSettings() {
     updateGripSettings(updates);
   };
 
-  return (
-    <div className="space-y-6 p-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h3 className={`text-lg font-medium ${colors.text.primary}`}>Ρυθμίσεις Grips</h3>
-        <button
-          onClick={resetToDefaults}
-          className={`px-3 py-1 text-xs ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} rounded transition-colors`}
-        >
-          Επαναφορά
-        </button>
-      </div>
+  // 🏢 ENTERPRISE: Factory Reset Handlers
+  const handleFactoryResetClick = () => {
+    setShowFactoryResetModal(true);
+  };
 
-      {/* Enable/Disable Grips */}
-      <div className="space-y-2">
-        <div className={`flex items-center gap-3 p-3 ${colors.bg.secondary} ${radius.md} ${getStatusBorder('info')}`}>
+  const handleFactoryResetConfirm = () => {
+    resetToDefaults();
+    console.log('🏭 [GripSettings] Factory reset confirmed - resetting to CAD defaults');
+
+    // Close modal
+    setShowFactoryResetModal(false);
+
+    // Toast notification για επιτυχία
+    notifications.success(
+      '🏭 Εργοστασιακές ρυθμίσεις επαναφέρθηκαν! Όλες οι ρυθμίσεις grips επέστρεψαν στα πρότυπα CAD.',
+      {
+        duration: 5000
+      }
+    );
+  };
+
+  const handleFactoryResetCancel = () => {
+    console.log('🏭 [GripSettings] Factory reset cancelled by user');
+    setShowFactoryResetModal(false);
+
+    // Toast notification για ακύρωση
+    notifications.info('❌ Ακυρώθηκε η επαναφορά εργοστασιακών ρυθμίσεων');
+  };
+
+  // 🏢 ENTERPRISE: Conditional wrapper detection
+  // When contextType exists (preview/completion), component is embedded in SubTabRenderer
+  // → No wrapper needed (parent provides styling)
+  // When contextType is undefined (general), component is standalone
+  // → Semantic <section> wrapper with spacing
+  const isEmbedded = Boolean(contextType);
+
+  // 🏢 ENTERPRISE: Content rendered once, wrapper applied conditionally (DRY principle)
+  const settingsContent = (
+    <>
+      {/* Header - Semantic <header> element */}
+      {/* 🏢 ENTERPRISE: flex-col layout για να φαίνονται πλήρως τα κείμενα των κουμπιών */}
+      <header className="flex flex-col gap-2">
+        <h3 className={`text-lg font-medium ${colors.text.primary}`}>Ρυθμίσεις Grips</h3>
+        <nav className="flex gap-2" aria-label="Ενέργειες ρυθμίσεων grips">
+          {/* 🏢 ENTERPRISE: Centralized Button component (variant="secondary") + Lucide icon */}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={resetToDefaults}
+            title="Επαναφορά στις προεπιλεγμένες ρυθμίσεις"
+            className="flex items-center gap-1"
+          >
+            <RotateCcw className={iconSizes.xs} />
+            Επαναφορά
+          </Button>
+          {/* 🏢 ENTERPRISE: Centralized Button component (variant="destructive") + Lucide icon */}
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleFactoryResetClick}
+            title="Επαναφορά στις εργοστασιακές ρυθμίσεις (CAD Standards)"
+            className="flex items-center gap-1"
+          >
+            <Factory className={iconSizes.xs} />
+            Εργοστασιακές
+          </Button>
+        </nav>
+      </header>
+
+      {/* 🏢 ENTERPRISE: Enable/Disable Grips - Centralized Radix Checkbox */}
+      {/* 🏢 ADR-011: Using same styling as AccordionSection for visual consistency */}
+      <fieldset className="space-y-2">
+        <div className={`flex items-center gap-3 p-3 ${colors.bg.secondary} ${getElementBorder('card', 'default')} ${radius.lg}`}>
           {/* 🏢 ENTERPRISE: Centralized Radix Checkbox */}
           <Checkbox
             id="grips-enabled"
@@ -89,11 +155,11 @@ export function GripSettings() {
         </div>
         {/* 🏢 ENTERPRISE: Warning message - Using semantic colors */}
         {!gripSettings.enabled && (
-          <div className={`text-xs ${colors.text.warning} ${colors.bg.warningSubtle} p-2 rounded ${getStatusBorder('warning')}`}>
+          <aside className={`text-xs ${colors.text.warning} ${colors.bg.warningSubtle} p-2 ${radius.md} ${getStatusBorder('warning')}`} role="alert">
             ⚠️ Τα grips είναι απενεργοποιημένα και δεν θα εμφανίζονται
-          </div>
+          </aside>
         )}
-      </div>
+      </fieldset>
 
       {/* ACCORDION SECTIONS */}
       <div className="space-y-3">
@@ -431,7 +497,80 @@ export function GripSettings() {
           </div>
         </AccordionSection>
       </div>
-    </div>
+    </>
+  );
+
+  // 🏢 ENTERPRISE: Conditional wrapper pattern (ADR-011 compliance)
+  // - Embedded (contextType exists): Fragment renders content directly in parent's container
+  // - Standalone (no contextType): Semantic <section> wrapper with spacing
+  return (
+    <>
+      {isEmbedded ? (
+        settingsContent
+      ) : (
+        <section className="space-y-6 p-4" aria-label="Ρυθμίσεις Grips">
+          {settingsContent}
+        </section>
+      )}
+
+      {/* 🆕 ENTERPRISE FACTORY RESET CONFIRMATION MODAL - Always rendered (portal) */}
+      <BaseModal
+        isOpen={showFactoryResetModal}
+        onClose={handleFactoryResetCancel}
+        title="⚠️ Επαναφορά Εργοστασιακών Ρυθμίσεων"
+        size="md"
+        closeOnBackdrop={false}
+        zIndex={10000}
+      >
+        <article className="space-y-4">
+          {/* 🏢 ENTERPRISE: Warning Message - Using semantic error colors */}
+          <aside className={`${colors.bg.errorSubtle} ${getStatusBorder('error')} p-4 rounded`} role="alert">
+            <p className={`${colors.text.error} font-semibold mb-2`}>
+              ⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!
+            </p>
+          </aside>
+
+          {/* Loss List */}
+          <section className="space-y-2">
+            <p className={`${colors.text.muted} font-medium`}>Θα χάσετε:</p>
+            <ul className={`list-disc list-inside space-y-1 ${colors.text.muted} text-sm`}>
+              <li>Όλες τις προσαρμοσμένες ρυθμίσεις grips</li>
+              <li>Όλα τα χρώματα που έχετε επιλέξει</li>
+              <li>Όλες τις αλλαγές που έχετε κάνει</li>
+            </ul>
+          </section>
+
+          {/* 🏢 ENTERPRISE: Reset Info - Using semantic info colors */}
+          <aside className={`${colors.bg.infoSubtle} ${getStatusBorder('info')} p-4 rounded`} role="note">
+            <p className={`${colors.text.info} text-sm`}>
+              <strong>Επαναφορά:</strong> Οι ρυθμίσεις θα επανέλθουν στα πρότυπα CAD (AutoCAD/BricsCAD)
+            </p>
+          </aside>
+
+          {/* Confirmation Question */}
+          <p className={`${colors.text.primary} font-medium text-center pt-2`}>
+            Είστε σίγουροι ότι θέλετε να συνεχίσετε;
+          </p>
+
+          {/* 🏢 ENTERPRISE: Action Buttons - Using semantic colors */}
+          <footer className={`flex gap-3 justify-end pt-4 ${quick.separator}`}>
+            <button
+              onClick={handleFactoryResetCancel}
+              className={`px-4 py-2 text-sm ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} rounded transition-colors`}
+            >
+              Ακύρωση
+            </button>
+            <button
+              onClick={handleFactoryResetConfirm}
+              className={`px-4 py-2 text-sm ${colors.bg.danger} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded transition-colors font-semibold flex items-center gap-1`}
+            >
+              <Factory className={iconSizes.xs} />
+              Επαναφορά Εργοστασιακών
+            </button>
+          </footer>
+        </article>
+      </BaseModal>
+    </>
   );
 }
 

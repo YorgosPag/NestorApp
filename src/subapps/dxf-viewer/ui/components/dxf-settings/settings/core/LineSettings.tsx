@@ -57,6 +57,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Factory, RotateCcw } from 'lucide-react';  // 🏢 ENTERPRISE: Centralized Lucide icons
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useLineSettingsFromProvider, useEnterpriseDxfSettings } from '../../../../../settings-provider';
 // ✅ ΑΝΤΙΚΑΤΑΣΤΑΣΗ ΜΕ UNIFIED HOOKS
@@ -96,6 +97,8 @@ import { useBorderTokens } from '../../../../../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized Checkbox component (Radix)
 import { Checkbox } from '@/components/ui/checkbox';
+// 🏢 ENTERPRISE: Centralized Button component (Radix)
+import { Button } from '@/components/ui/button';
 
 // Simple SVG icons
 const SettingsIcon = ({ className }: { className?: string }) => (
@@ -131,7 +134,7 @@ const SwatchIcon = ({ className }: { className?: string }) => (
 
 export function LineSettings({ contextType }: { contextType?: 'preview' | 'completion' }) {
   const iconSizes = useIconSizes();
-  const { quick, getStatusBorder, radius } = useBorderTokens();  // ✅ ENTERPRISE: Added radius for centralized border-radius
+  const { quick, getStatusBorder, getElementBorder, radius } = useBorderTokens();  // ✅ ENTERPRISE: Added getElementBorder for consistent styling
   const colors = useSemanticColors();
   // 🔺 ΔΙΟΡΘΩΣΗ: Χρήση unified hooks όπως σε TextSettings και GripSettings
   const generalLineSettings = useLineSettingsFromProvider();
@@ -376,35 +379,50 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
   // Accordion state management
   const { toggleSection, isOpen } = useAccordion('basic');
 
-  return (
-    <div className="space-y-4 p-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+  // 🏢 ENTERPRISE: Conditional wrapper detection
+  // When contextType exists (preview/completion), component is embedded in SubTabRenderer
+  // → No wrapper needed (parent provides styling)
+  // When contextType is undefined (general), component is standalone
+  // → Semantic <section> wrapper with spacing
+  const isEmbedded = Boolean(contextType);
+
+  // 🏢 ENTERPRISE: Content rendered once, wrapper applied conditionally (DRY principle)
+  const settingsContent = (
+    <>
+      {/* Header - Semantic <header> element */}
+      {/* 🏢 ENTERPRISE: flex-col layout για να φαίνονται πλήρως τα κείμενα των κουμπιών */}
+      <header className="flex flex-col gap-2">
         <h3 className={`text-lg font-medium ${colors.text.primary}`}>Ρυθμίσεις Γραμμών</h3>
-        <div className="flex gap-2">
-          <button
+        <nav className="flex gap-2" aria-label="Ενέργειες ρυθμίσεων">
+          {/* 🏢 ENTERPRISE: Centralized Button component (variant="secondary") + Lucide icon */}
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={resetToDefaults}
-            className={`px-3 py-1 text-xs ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHTER} ${colors.text.inverted} rounded transition-colors`}
             title="Επαναφορά στις προεπιλεγμένες ρυθμίσεις"
+            className="flex items-center gap-1"
           >
+            <RotateCcw className={iconSizes.xs} />
             Επαναφορά
-          </button>
-          {/* 🏢 ENTERPRISE: Factory Reset Button - Using semantic danger color */}
-          {!contextType && (
-            <button
-              onClick={handleFactoryResetClick}
-              className={`px-3 py-1 text-xs ${colors.bg.danger} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded transition-colors font-semibold`}
-              title="Επαναφορά στις εργοστασιακές ρυθμίσεις (ISO 128 & AutoCAD 2024)"
-            >
-              🏭 Εργοστασιακές
-            </button>
-          )}
-        </div>
-      </div>
+          </Button>
+          {/* 🏢 ENTERPRISE: Centralized Button component (variant="destructive") + Lucide icon */}
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleFactoryResetClick}
+            title="Επαναφορά στις εργοστασιακές ρυθμίσεις (ISO 128 & AutoCAD 2024)"
+            className="flex items-center gap-1"
+          >
+            <Factory className={iconSizes.xs} />
+            Εργοστασιακές
+          </Button>
+        </nav>
+      </header>
 
       {/* 🏢 ENTERPRISE: Enable/Disable Line Display - Centralized Radix Checkbox */}
-      <div className="space-y-2">
-        <div className={`flex items-center gap-3 p-3 ${colors.bg.secondary} ${radius.md} ${getStatusBorder('success')}`}>
+      {/* 🏢 ADR-011: Using same styling as AccordionSection for visual consistency */}
+      <fieldset className="space-y-2">
+        <div className={`flex items-center gap-3 p-3 ${colors.bg.secondary} ${getElementBorder('card', 'default')} ${radius.lg}`}>
           <Checkbox
             id="line-enabled"
             checked={settings.enabled}
@@ -419,11 +437,11 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         </div>
         {/* 🏢 ENTERPRISE: Warning message - Using semantic colors */}
         {!settings.enabled && (
-          <div className={`text-xs ${colors.text.warning} ${colors.bg.warningSubtle} p-2 rounded ${getStatusBorder('warning')}`}>
+          <aside className={`text-xs ${colors.text.warning} ${colors.bg.warningSubtle} p-2 ${radius.md} ${getStatusBorder('warning')}`} role="alert">
             ⚠️ Οι γραμμές είναι απενεργοποιημένες και δεν θα εμφανίζονται στην προσχεδίαση
-          </div>
+          </aside>
         )}
-      </div>
+      </fieldset>
 
       {/* ACCORDION SECTIONS */}
       <div className={`space-y-4 ${!settings.enabled ? 'opacity-50 pointer-events-none' : ''}`}>
@@ -872,8 +890,23 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         </AccordionSection>
 
       </div>
+    </>
+  );
 
-      {/* 🆕 ENTERPRISE FACTORY RESET CONFIRMATION MODAL */}
+  // 🏢 ENTERPRISE: Conditional wrapper pattern (ADR-011 compliance)
+  // - Embedded (contextType exists): Fragment renders content directly in parent's container
+  // - Standalone (no contextType): Semantic <section> wrapper with spacing
+  return (
+    <>
+      {isEmbedded ? (
+        settingsContent
+      ) : (
+        <section className="space-y-4 p-4" aria-label="Ρυθμίσεις Γραμμών">
+          {settingsContent}
+        </section>
+      )}
+
+      {/* 🆕 ENTERPRISE FACTORY RESET CONFIRMATION MODAL - Always rendered (portal) */}
       <BaseModal
         isOpen={showFactoryResetModal}
         onClose={handleFactoryResetCancel}
@@ -882,30 +915,30 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         closeOnBackdrop={false}
         zIndex={10000}
       >
-        <div className="space-y-4">
+        <article className="space-y-4">
           {/* 🏢 ENTERPRISE: Warning Message - Using semantic error colors */}
-          <div className={`${colors.bg.errorSubtle} ${getStatusBorder('error')} p-4 rounded`}>
+          <aside className={`${colors.bg.errorSubtle} ${getStatusBorder('error')} p-4 rounded`} role="alert">
             <p className={`${colors.text.error} font-semibold mb-2`}>
               ⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!
             </p>
-          </div>
+          </aside>
 
           {/* Loss List */}
-          <div className="space-y-2">
+          <section className="space-y-2">
             <p className={`${colors.text.muted} font-medium`}>Θα χάσετε:</p>
             <ul className={`list-disc list-inside space-y-1 ${colors.text.muted} text-sm`}>
               <li>Όλες τις προσαρμοσμένες ρυθμίσεις γραμμών</li>
               <li>Όλα τα templates που έχετε επιλέξει</li>
               <li>Όλες τις αλλαγές που έχετε κάνει</li>
             </ul>
-          </div>
+          </section>
 
           {/* 🏢 ENTERPRISE: Reset Info - Using semantic info colors */}
-          <div className={`${colors.bg.infoSubtle} ${getStatusBorder('info')} p-4 rounded`}>
+          <aside className={`${colors.bg.infoSubtle} ${getStatusBorder('info')} p-4 rounded`} role="note">
             <p className={`${colors.text.info} text-sm`}>
               <strong>Επαναφορά:</strong> Οι ρυθμίσεις θα επανέλθουν στα πρότυπα ISO 128 & AutoCAD 2024
             </p>
-          </div>
+          </aside>
 
           {/* Confirmation Question */}
           <p className={`${colors.text.primary} font-medium text-center pt-2`}>
@@ -913,7 +946,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           </p>
 
           {/* 🏢 ENTERPRISE: Action Buttons - Using semantic colors */}
-          <div className={`flex gap-3 justify-end pt-4 ${quick.separator}`}>
+          <footer className={`flex gap-3 justify-end pt-4 ${quick.separator}`}>
             <button
               onClick={handleFactoryResetCancel}
               className={`px-4 py-2 text-sm ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHTER} ${colors.text.inverted} rounded transition-colors`}
@@ -922,14 +955,15 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
             </button>
             <button
               onClick={handleFactoryResetConfirm}
-              className={`px-4 py-2 text-sm ${colors.bg.danger} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded transition-colors font-semibold`}
+              className={`px-4 py-2 text-sm ${colors.bg.danger} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded transition-colors font-semibold flex items-center gap-1`}
             >
-              🏭 Επαναφορά Εργοστασιακών
+              <Factory className={iconSizes.xs} />
+              Επαναφορά Εργοστασιακών
             </button>
-          </div>
-        </div>
+          </footer>
+        </article>
       </BaseModal>
-    </div>
+    </>
   );
 }
 

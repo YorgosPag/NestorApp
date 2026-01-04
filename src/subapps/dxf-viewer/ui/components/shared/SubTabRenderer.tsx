@@ -174,9 +174,10 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
         alwaysShowLabels={true}
       />
 
-      {/* Line Sub-tab Content */}
+      {/* Line Sub-tab Content - 🏢 ENTERPRISE: Removed redundant wrapper (ADR-011) */}
+      {/* LineSettingsComponent now handles its own layout via conditional wrapper */}
       {activeSubTab === 'line' && (
-        <div className="space-y-4">
+        <section className="space-y-4" aria-label={`Ρυθμίσεις Γραμμής ${config.label}`}>
           {overrideSettings?.line && (
             <OverrideToggle
               checked={overrideSettings.line.checked}
@@ -188,26 +189,15 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
               className={`border-l-4 border-${config.color}`}
             />
           )}
-
-          <div className={`p-3 ${colors.bg.primary} rounded space-y-3`}>
-            {overrideSettings?.line ? null : (
-              <div className="flex items-center justify-between">
-                <div className={`text-sm ${colors.text.primary} font-medium`}>
-                  Ρυθμίσεις Γραμμής {config.label}
-                </div>
-                <span className={`text-xs ${config.badgeColor} px-2 py-1 rounded`}>
-                  {config.label}
-                </span>
-              </div>
-            )}
-            <LineSettingsComponent contextType={contextType} />
-          </div>
-        </div>
+          {/* 🏢 ENTERPRISE: LineSettingsComponent renders directly without extra wrapper */}
+          <LineSettingsComponent contextType={contextType} />
+        </section>
       )}
 
-      {/* Text Sub-tab Content */}
+      {/* Text Sub-tab Content - 🏢 ENTERPRISE: Removed redundant wrapper (ADR-011) */}
+      {/* TextSettingsComponent now handles its own layout via conditional wrapper */}
       {activeSubTab === 'text' && (
-        <div className="space-y-4">
+        <section className="space-y-4" aria-label={`Ρυθμίσεις Κειμένου ${config.label}`}>
           {overrideSettings?.text && (
             <OverrideToggle
               checked={overrideSettings.text.checked}
@@ -217,19 +207,15 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
               className={`border-l-4 border-${config.color}`}
             />
           )}
-
-          <div className={`p-3 ${colors.bg.primary} rounded space-y-3`}>
-            <div className={`text-sm ${colors.text.primary} font-medium`}>
-              Ρυθμίσεις Κειμένου {config.label}
-            </div>
-            <TextSettingsComponent />
-          </div>
-        </div>
+          {/* 🏢 ENTERPRISE: TextSettingsComponent renders directly without extra wrapper */}
+          <TextSettingsComponent contextType={contextType} />
+        </section>
       )}
 
-      {/* Grips Sub-tab Content */}
+      {/* Grips Sub-tab Content - 🏢 ENTERPRISE: Removed redundant wrapper (ADR-011) */}
+      {/* GripSettingsComponent now handles its own layout via conditional wrapper */}
       {activeSubTab === 'grips' && (
-        <div className="space-y-4">
+        <section className="space-y-4" aria-label={`Ρυθμίσεις Grips ${config.label}`}>
           {overrideSettings?.grips && (
             <OverrideToggle
               checked={overrideSettings.grips.checked}
@@ -241,11 +227,9 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
               className={`border-l-4 border-${config.color}`}
             />
           )}
-
-          <div className={`p-3 ${colors.bg.primary} rounded space-y-3`}>
-            <GripSettingsComponent />
-          </div>
-        </div>
+          {/* 🏢 ENTERPRISE: GripSettingsComponent renders directly without extra wrapper */}
+          <GripSettingsComponent contextType={contextType} />
+        </section>
       )}
     </div>
   );
