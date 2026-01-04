@@ -105,11 +105,11 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
   // ============================================================================
 
   return (
-    <div className={`space-y-4 ${className}`}>
-      {/* Crosshair Color */}
-      <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
-        <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Σταυρονήματος</label>
-        <div className={`text-xs ${colors.text.muted} mb-2`}>Χρώμα γραμμών σταυρώνυματος</div>
+    <article className={`space-y-4 ${className}`}>
+      {/* Crosshair Color - 🏢 ENTERPRISE: Semantic section */}
+      <section className={`p-2 ${colors.bg.secondary} ${radius.lg} space-y-2`}>
+        <h4 className={`text-sm font-medium ${colors.text.secondary}`}>Χρώμα Σταυρονήματος</h4>
+        <p className={`text-xs ${colors.text.muted} mb-2`}>Χρώμα γραμμών σταυρώνυματος</p>
         <ColorDialogTrigger
           value={cursorColors.crosshairColor}
           onChange={(color) => onCursorColorsChange({ ...cursorColors, crosshairColor: color })}
@@ -121,14 +121,12 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           recent={true}
           eyedropper={true}
         />
-      </div>
+      </section>
 
-      {/* Line Style */}
-      <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
-        <div className={`text-sm ${colors.text.primary}`}>
-          <div className="font-medium">Τύπος Γραμμής</div>
-          <div className={`font-normal ${colors.text.muted}`}>Στυλ απόδοσης γραμμών</div>
-        </div>
+      {/* Line Style - 🏢 ENTERPRISE: Semantic section */}
+      <section className={`p-2 ${colors.bg.secondary} ${radius.lg} space-y-2`}>
+        <h4 className={`text-sm font-medium ${colors.text.primary}`}>Τύπος Γραμμής</h4>
+        <p className={`text-xs ${colors.text.muted}`}>Στυλ απόδοσης γραμμών</p>
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => {
@@ -189,14 +187,12 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             <span className="block mt-1">Παύλα-Τελεία</span>
           </button>
         </div>
-      </div>
+      </section>
 
-      {/* Line Width */}
-      <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
-        <div className={`text-sm ${colors.text.primary}`}>
-          <div className="font-medium">Πάχος Γραμμής</div>
-          <div className={`font-normal ${colors.text.muted}`}>Πάχος σε pixels</div>
-        </div>
+      {/* Line Width - 🏢 ENTERPRISE: Semantic section */}
+      <section className={`p-2 ${colors.bg.secondary} ${radius.lg} space-y-2`}>
+        <h4 className={`text-sm font-medium ${colors.text.primary}`}>Πάχος Γραμμής</h4>
+        <p className={`text-xs ${colors.text.muted}`}>Πάχος σε pixels</p>
         <div className="flex items-center gap-2">
           <input
             type="range"
@@ -207,14 +203,14 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             onChange={(e) => updateSettings({ crosshair: { ...settings.crosshair, line_width: parseFloat(e.target.value) } })}
             className="flex-1"
           />
-          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} rounded px-2 py-1 text-center`}>{settings.crosshair.line_width}px</div>
+          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} ${radius.md} px-2 py-1 text-center`}>{settings.crosshair.line_width}px</div>
         </div>
         <div className="flex gap-1">
           {[1, 1.5, 2, 3, 4, 5].map(width => (
             <button
               key={width}
               onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_width: width } })}
-              className={`flex-1 p-1 rounded text-xs transition-colors ${
+              className={`flex-1 p-1 ${radius.md} text-xs transition-colors ${
                 settings.crosshair.line_width === width
                   ? `${colors.bg.primary} border ${getStatusBorder('info')}`
                   : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border ${getStatusBorder('default')}`
@@ -228,14 +224,12 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             </button>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* Size/Type */}
-      <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
-        <div className={`text-sm ${colors.text.primary}`}>
-          <div className="font-medium">Μέγεθος Σταυρονήματος</div>
-          <div className={`font-normal ${colors.text.muted}`}>Επέκταση από το κέντρο</div>
-        </div>
+      {/* Size/Type - 🏢 ENTERPRISE: Semantic section */}
+      <section className={`p-2 ${colors.bg.secondary} ${radius.lg} space-y-2`}>
+        <h4 className={`text-sm font-medium ${colors.text.primary}`}>Μέγεθος Σταυρονήματος</h4>
+        <p className={`text-xs ${colors.text.muted}`}>Επέκταση από το κέντρο</p>
         <div className="grid grid-cols-5 gap-1">
           <button
             onClick={() => {
@@ -349,8 +343,8 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             <span className="text-xs mt-1">Full</span>
           </button>
         </div>
-      </div>
-    </div>
+      </section>
+    </article>
   );
 };
 

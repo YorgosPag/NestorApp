@@ -177,7 +177,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
 
       {ADVANCED_MODES.length > 0 && (
         <>
-          <div className="w-px h-6 ${colors.bg.muted}" />
+          <div className={`w-px h-6 ${colors.bg.muted}`} />
           <button
             onClick={handleToggleAdvanced}
             className={`${iconSizes.xl} ${radius.md} border transition-all duration-150 flex items-center justify-center ${
@@ -190,7 +190,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
         </>
       )}
 
-      <div className="w-px h-6 ${colors.bg.muted}" />
+      <div className={`w-px h-6 ${colors.bg.muted}`} />
       <button
         onClick={handleQuickEnable}
         className={`${iconSizes.xl} ${radius.md} border transition-all duration-150 flex items-center justify-center ${colors.text.muted} ${HOVER_TEXT_EFFECTS.WHITE} ${colors.bg.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`}

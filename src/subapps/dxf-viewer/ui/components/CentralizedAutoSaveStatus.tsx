@@ -180,7 +180,7 @@ export function CentralizedAutoSaveStatus() {
         </h3>
 
         {settings.lastSaved && settings.saveStatus === 'saved' && (
-          <time className="text-xs ${colors.text.muted} mt-1" style={centralizedAutoSaveStatusStyles.statusMessage.secondary}>
+          <time className={`text-xs ${colors.text.muted} mt-1`} style={centralizedAutoSaveStatusStyles.statusMessage.secondary}>
             Τελευταία: {formatLastSaveTime(settings.lastSaved)}
           </time>
         )}

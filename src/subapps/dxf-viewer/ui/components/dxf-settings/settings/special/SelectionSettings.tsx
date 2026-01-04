@@ -88,16 +88,15 @@ export function SelectionSettings() {
 
   return (
     <div className={`p-4 ${colors.bg.primary} ${colors.text.primary}`}>
-      {/* 🏢 ENTERPRISE: Selection Tabs - Using centralized TabsOnlyTriggers */}
-      <div className="mb-4">
-        <TabsOnlyTriggers
-          tabs={selectionTabs}
-          value={activeSelectionTab}
-          onTabChange={handleTabChange}
-          theme="dark"
-          alwaysShowLabels={true}
-        />
-      </div>
+      {/* 🏢 ENTERPRISE: Selection Tabs - className moved directly to component (ADR-003) */}
+      <TabsOnlyTriggers
+        tabs={selectionTabs}
+        value={activeSelectionTab}
+        onTabChange={handleTabChange}
+        theme="dark"
+        alwaysShowLabels={true}
+        className="mb-4"
+      />
 
       {/* TEMPORARY DEBUG BUTTON */}
       {/* ✅ ENTERPRISE: Κεντρικοποιημένα colors και Lucide icon */}

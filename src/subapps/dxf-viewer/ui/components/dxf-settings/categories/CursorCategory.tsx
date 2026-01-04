@@ -132,9 +132,9 @@ export const CursorCategory: React.FC<CursorCategoryProps> = ({
   // ============================================================================
 
   return (
-    <div className={className}>
+    <section className={className}>
       {/* 🏢 ENTERPRISE: Tab Navigation - Using centralized TabsOnlyTriggers */}
-      <div className={`${getDirectionalBorder('default', 'bottom')} mb-4`}>
+      <nav className={`${getDirectionalBorder('default', 'bottom')} mb-4`}>
         <TabsOnlyTriggers
           tabs={cursorTabs}
           value={activeTab}
@@ -142,13 +142,13 @@ export const CursorCategory: React.FC<CursorCategoryProps> = ({
           theme="dark"
           alwaysShowLabels={true}
         />
-      </div>
+      </nav>
 
-      {/* Tab Content */}
+      {/* Tab Content - 🏢 ENTERPRISE: Semantic section child */}
       <div className="px-4">
         {renderTabContent()}
       </div>
-    </div>
+    </section>
   );
 };
 

@@ -135,7 +135,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
   }, [applyZoom]);
 
   return (
-    <div className="flex items-center gap-1 ${colors.bg.backgroundSecondary} rounded px-2 py-1">
+    <div className={`flex items-center gap-1 ${colors.bg.backgroundSecondary} rounded px-2 py-1`}>
       <button
         onClick={handleZoomOutClick}
         className={`h-6 w-6 p-0 ${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
@@ -157,7 +157,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
         placeholder="100"
       />
       
-      <span className="text-xs ${colors.text.muted}">%</span>
+      <span className={`text-xs ${colors.text.muted}`}>%</span>
       
       <button
         onClick={handleZoomInClick}

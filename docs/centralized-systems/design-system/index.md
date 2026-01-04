@@ -215,7 +215,31 @@ export function MyComponent() {
 
 ---
 
-> **📅 Last Updated**: 2026-01-01
+## 🏛️ **ARCHITECTURAL DECISIONS (ADRs)**
+
+### 📋 **ADR-UI-001: Visual Primitive Ownership & Semantic Tokens**
+
+**Status**: ✅ **APPROVED** | **Date**: 2026-01-04
+
+**Περίληψη**:
+Τα `quick.*` tokens (π.χ. `quick.card`, `quick.input`) είναι επίσημα **Semantic Design Tokens**, όχι convenience helpers.
+
+**Βασικοί Κανόνες**:
+
+| Rule | Description |
+|------|-------------|
+| ✅ **ΕΠΙΤΡΕΠΕΤΑΙ** | Χρήση `quick.*` tokens, hooks (`useBorderTokens`, `useSemanticColors`) |
+| ❌ **ΑΠΑΓΟΡΕΥΕΤΑΙ** | Άμεση χρήση `border-*`, `rounded-*`, `shadow-*` σε components |
+
+**Implementation Neutrality**:
+- Τρέχουσα υλοποίηση: Tailwind utility strings
+- Μελλοντική επιλογή: CSS variables (χωρίς αλλαγές σε components)
+
+**🔗 Full Document**: [ADR-UI-001.md](../../../src/subapps/dxf-viewer/docs/ADR-UI-001.md)
+
+---
+
+> **📅 Last Updated**: 2026-01-04
 >
 > **👥 Authors**: Γιώργος Παγώνης + Claude Code (Anthropic AI)
 >

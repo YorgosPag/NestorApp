@@ -46,17 +46,18 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium ${colors.text.primary} mb-2">
+      {/* ✅ ENTERPRISE: Semantic header + fix broken template string (ADR-003) */}
+      <header>
+        <h3 className={`text-lg font-medium ${colors.text.primary} mb-2`}>
           Επιλέξτε Επίπεδο για Εισαγωγή DXF
         </h3>
         <p className={`text-sm ${colors.text.muted} mb-6`}>
           Επιλέξτε ένα υπάρχον επίπεδο ή δημιουργήστε ένα νέο. Κάθε επίπεδο μπορεί να περιέχει πολλές κατόψεις.
         </p>
-      </div>
+      </header>
 
       <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
-        <h4 className="text-sm font-medium ${colors.text.tertiary}">Υπάρχοντα Επίπεδα</h4>
+        <h4 className={`text-sm font-medium ${colors.text.tertiary}`}>Υπάρχοντα Επίπεδα</h4>
         {levels.map((level) => (
           <label
             key={level.id}
@@ -77,7 +78,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
             <div className="flex items-center flex-1">
               <Building2 className={`${iconSizes.sm} ${colors.text.muted} mr-2`} />
               <div>
-                <div className="${colors.text.primary} font-medium">{level.name}</div>
+                <div className={`${colors.text.primary} font-medium`}>{level.name}</div>
                 {level.isDefault && (
                   <div className={`text-xs ${colors.text.info}`}>Προεπιλεγμένο Επίπεδο</div>
                 )}
@@ -88,7 +89,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
       </div>
 
       <div className="space-y-3">
-        <h4 className="text-sm font-medium ${colors.text.tertiary}">Ή Δημιουργήστε Νέο Επίπεδο</h4>
+        <h4 className={`text-sm font-medium ${colors.text.tertiary}`}>Ή Δημιουργήστε Νέο Επίπεδο</h4>
         
         {!showNewLevelForm ? (
           <button
@@ -100,7 +101,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
             }`}
           >
             <Plus className={`${iconSizes.sm} ${colors.text.muted} mr-2`} />
-            <span className="${colors.text.tertiary}">Δημιουργία Νέου Επιπέδου</span>
+            <span className={`${colors.text.tertiary}`}>Δημιουργία Νέου Επιπέδου</span>
           </button>
         ) : (
           <div className={`${quick.card} p-3`}>

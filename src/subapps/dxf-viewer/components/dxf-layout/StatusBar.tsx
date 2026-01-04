@@ -92,7 +92,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             status="company"
             customLabel={`✏️ Drawing ${activeTool}...${drawingState.currentPoints.length > 0 ? ` (${drawingState.currentPoints.length} points)` : ''}`}
             variant="secondary"
-            className="${colors.bg.warning} ${colors.text.inverted}"
+            className={`${colors.bg.warning} ${colors.text.inverted}`}
           />
         )}
         
@@ -101,7 +101,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             status="company"
             customLabel="📏 Ruler active"
             variant="secondary"
-            className="${colors.bg.accent} ${colors.text.inverted}"
+            className={`${colors.bg.accent} ${colors.text.inverted}`}
           />
         )}
         
@@ -110,7 +110,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             status="company"
             customLabel="🔹 Zoom Window"
             variant="secondary"
-            className="${colors.bg.warning} ${colors.text.inverted}"
+            className={`${colors.bg.warning} ${colors.text.inverted}`}
           />
         )}
         

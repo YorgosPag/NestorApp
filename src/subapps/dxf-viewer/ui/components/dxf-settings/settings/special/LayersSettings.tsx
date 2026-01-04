@@ -101,16 +101,15 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
         </div>
       </div>
 
-      {/* 🏢 ENTERPRISE: Tabs Navigation - Using centralized TabsOnlyTriggers */}
-      <div className="mb-4">
-        <TabsOnlyTriggers
-          tabs={layerTabs}
-          value={activeTab}
-          onTabChange={handleTabChange}
-          theme="dark"
-          alwaysShowLabels={true}
-        />
-      </div>
+      {/* 🏢 ENTERPRISE: Tabs Navigation - className moved directly to component (ADR-003) */}
+      <TabsOnlyTriggers
+        tabs={layerTabs}
+        value={activeTab}
+        onTabChange={handleTabChange}
+        theme="dark"
+        alwaysShowLabels={true}
+        className="mb-4"
+      />
 
       {/* Tab Content */}
       <div className="space-y-4">

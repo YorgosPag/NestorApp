@@ -27,7 +27,8 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
 
   return (
     <>
-      <div>
+      {/* ✅ ENTERPRISE: Χρήση semantic <section> αντί κενού <div> (ADR-003) */}
+      <section>
         <h3 className={`text-sm font-semibold ${colors.text.muted} uppercase tracking-wide mb-3`}>
           📊 Standalone Test Scripts
         </h3>
@@ -87,13 +88,14 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
             </div>
           </button>
         </div>
-      </div>
+      </section>
 
-      <div className={`${colors.bg.warning} ${quick.info} p-4`}>
-        <div className={`text-xs ${colors.text.warning}`}>
+      {/* ✅ ENTERPRISE: Χρήση semantic <aside> για info box (ADR-003) */}
+      <aside className={`${colors.bg.warning} ${quick.info} p-4`}>
+        <p className={`text-xs ${colors.text.warning}`}>
           <strong>⚠️ Work in Progress:</strong> Some standalone tests need refactoring to export runnable functions. Check console for status.
-        </div>
-      </div>
+        </p>
+      </aside>
     </>
   );
 };

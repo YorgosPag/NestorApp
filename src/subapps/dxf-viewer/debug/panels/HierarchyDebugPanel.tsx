@@ -37,7 +37,7 @@ export function HierarchyDebugPanel() {
   if (loading) {
     return (
       <div className={`${colors.bg.secondary} p-4 rounded-lg ${getStatusBorder('muted')}`}>
-        <h3 className="text-white text-lg font-semibold mb-2 flex items-center space-x-2">
+        <h3 className="text-white text-lg font-semibold mb-2 flex items-center gap-2">
           <CraneIcon className={`${iconSizes.md} ${colors.text.warning}`} />
           <span>{t('panels.hierarchy.projectHierarchy')}</span>
         </h3>
@@ -63,7 +63,7 @@ export function HierarchyDebugPanel() {
 
   return (
     <div className={`${colors.bg.secondary} p-4 rounded-lg ${getStatusBorder('muted')}`}>
-      <h3 className="text-white text-lg font-semibold mb-4 flex items-center space-x-2">
+      <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
         <CraneIcon className={`${iconSizes.md} ${colors.text.warning}`} />
         <span>{t('panels.hierarchy.projectHierarchy')}</span>
       </h3>
@@ -98,22 +98,21 @@ export function HierarchyDebugPanel() {
       {/* Selected Company Info */}
       {selectedCompany && (
         <div className={`mb-4 pl-4 ${getDirectionalBorder('warning', 'left')}`}>
-          <h4 className="${colors.text.warning} font-medium mb-2">
-            <div className="flex items-center space-x-2">
-              <Building className={iconSizes.sm} />
-              <span>{selectedCompany.companyName}</span>
-            </div>
+          {/* ✅ ADR-003: Removed nested div - h4 is now directly flex */}
+          <h4 className={`${colors.text.warning} font-medium mb-2 flex items-center gap-2`}>
+            <Building className={iconSizes.sm} />
+            <span>{selectedCompany.companyName}</span>
           </h4>
-          <div className="text-xs ${colors.text.muted} mb-2">
+          <div className={`text-xs ${colors.text.muted} mb-2`}>
             {selectedCompany.vatNumber && <div>ΑΦΜ: {selectedCompany.vatNumber}</div>}
             {selectedCompany.legalForm && <div>{selectedCompany.legalForm}</div>}
           </div>
-          
+
           {/* Projects for Selected Company */}
           <div className="mb-3">
-            <h5 className="${colors.text.secondary} text-sm font-medium mb-2">{t('panels.hierarchy.projects')} ({projects.length})</h5>
+            <h5 className={`${colors.text.secondary} text-sm font-medium mb-2`}>{t('panels.hierarchy.projects')} ({projects.length})</h5>
             {projects.length === 0 ? (
-              <p className="${colors.text.muted} text-xs">{t('panels.hierarchy.noProjects')}</p>
+              <p className={`${colors.text.muted} text-xs`}>{t('panels.hierarchy.noProjects')}</p>
             ) : (
               <div className="space-y-1">
                 {projects.map(project => (
@@ -141,17 +140,16 @@ export function HierarchyDebugPanel() {
       {/* Selected Project Info */}
       {selectedProject && (
         <div className={`mb-4 pl-4 ${getDirectionalBorder('info', 'left')}`}>
-          <h4 className="${colors.text.info} font-medium mb-2">
-            <div className="flex items-center space-x-2">
-              <Building2 className={iconSizes.sm} />
-              <span>{selectedProject.name}</span>
-            </div>
+          {/* ✅ ADR-003: Removed nested div - h4 is now directly flex */}
+          <h4 className={`${colors.text.info} font-medium mb-2 flex items-center gap-2`}>
+            <Building2 className={iconSizes.sm} />
+            <span>{selectedProject.name}</span>
           </h4>
-          
+
           {/* Buildings */}
           {selectedProject.buildings.length > 0 && (
             <div className="mb-3">
-              <h5 className="${colors.text.secondary} text-sm font-medium mb-1">{t('panels.hierarchy.buildings')}</h5>
+              <h5 className={`${colors.text.secondary} text-sm font-medium mb-1`}>{t('panels.hierarchy.buildings')}</h5>
               <div className="space-y-1">
                 {selectedProject.buildings.map(building => (
                   <button
@@ -175,7 +173,7 @@ export function HierarchyDebugPanel() {
 
           {/* Parking */}
           {selectedProject.parkingSpots && selectedProject.parkingSpots.length > 0 && (
-            <div className="text-sm ${colors.text.muted} flex items-center space-x-2">
+            <div className={`text-sm ${colors.text.muted} flex items-center gap-2`}>
               <ParkingCircle className={iconSizes.sm} />
               <span>{t('panels.hierarchy.parkingSpots', { count: selectedProject.parkingSpots.length })}</span>
             </div>
@@ -186,17 +184,16 @@ export function HierarchyDebugPanel() {
       {/* Selected Building Info */}
       {selectedBuilding && (
         <div className={`mb-4 pl-8 ${getDirectionalBorder('success', 'left')}`}>
-          <h4 className="${colors.text.success} font-medium mb-2">
-            <div className="flex items-center space-x-2">
-              <Building2 className={iconSizes.sm} />
-              <span>{selectedBuilding.name}</span>
-            </div>
+          {/* ✅ ADR-003: Removed nested div - h4 is now directly flex */}
+          <h4 className={`${colors.text.success} font-medium mb-2 flex items-center gap-2`}>
+            <Building2 className={iconSizes.sm} />
+            <span>{selectedBuilding.name}</span>
           </h4>
-          
+
           {/* Floors */}
           {selectedBuilding.floors.length > 0 && (
             <div className="mb-3">
-              <h5 className="${colors.text.tertiary} text-sm font-medium mb-1">{t('panels.hierarchy.floors')}</h5>
+              <h5 className={`${colors.text.tertiary} text-sm font-medium mb-1`}>{t('panels.hierarchy.floors')}</h5>
               <div className="space-y-1">
                 {selectedBuilding.floors.map(floor => (
                   <button
@@ -220,7 +217,7 @@ export function HierarchyDebugPanel() {
 
           {/* Storage Areas */}
           {selectedBuilding.storageAreas && selectedBuilding.storageAreas.length > 0 && (
-            <div className="text-sm ${colors.text.muted} flex items-center space-x-2">
+            <div className={`text-sm ${colors.text.muted} flex items-center gap-2`}>
               <Package className={iconSizes.sm} />
               <span>{t('panels.hierarchy.storageAreas', { count: selectedBuilding.storageAreas.length })}</span>
             </div>
@@ -231,16 +228,15 @@ export function HierarchyDebugPanel() {
       {/* Selected Floor Info */}
       {selectedFloor && (
         <div className={`mb-4 pl-12 ${getDirectionalBorder('info', 'left')}`}>
-          <h4 className="${colors.text.accent} font-medium mb-2">
-            <div className="flex items-center space-x-2">
-              <Home className={iconSizes.sm} />
-              <span>{selectedFloor.name}</span>
-            </div>
+          {/* ✅ ADR-003: Removed nested div - h4 is now directly flex */}
+          <h4 className={`${colors.text.info} font-medium mb-2 flex items-center gap-2`}>
+            <Home className={iconSizes.sm} />
+            <span>{selectedFloor.name}</span>
           </h4>
           <div className="text-sm space-y-1">
             {Array.isArray(selectedFloor.units) ? selectedFloor.units.map(unit => (
-              <div key={unit.id} className="${colors.text.muted} flex justify-between">
-                <span className="flex items-center space-x-1">
+              <div key={unit.id} className={`${colors.text.muted} flex justify-between`}>
+                <span className="flex items-center gap-1">
                   <Home className={iconSizes.xs} />
                   <span>{unit.name}</span>
                 </span>
@@ -255,7 +251,7 @@ export function HierarchyDebugPanel() {
                 </span>
               </div>
             )) : (
-              <div className="${colors.text.disabled} text-xs">Δεν υπάρχουν διαθέσιμα units</div>
+              <div className={`${colors.text.disabled} text-xs`}>Δεν υπάρχουν διαθέσιμα units</div>
             )}
           </div>
         </div>
@@ -263,13 +259,14 @@ export function HierarchyDebugPanel() {
 
       {/* Available Destinations */}
       <div className={`mt-6 pt-4 ${getDirectionalBorder('muted', 'top')}`}>
-        <h4 className="${colors.text.tertiary} font-medium mb-2 flex items-center space-x-2">
+        {/* ✅ ADR-003: h4 with flex - clean semantic structure */}
+        <h4 className={`${colors.text.tertiary} font-medium mb-2 flex items-center gap-2`}>
           <Target className={`${iconSizes.sm} ${colors.text.info}`} />
           <span>{t('panels.hierarchy.availableDestinations')} ({destinations.length})</span>
         </h4>
         <div className="max-h-32 overflow-y-auto text-xs space-y-1">
           {destinations.map(dest => (
-            <div key={dest.id} className="${colors.text.muted} flex justify-between">
+            <div key={dest.id} className={`${colors.text.muted} flex justify-between`}>
               <span>{dest.label}</span>
               <span className={`px-1 rounded ${
                 dest.type === 'project' ? colors.bg.info :

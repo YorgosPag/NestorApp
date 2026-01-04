@@ -134,10 +134,9 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
         />
       </div>
 
+      {/* ✅ ENTERPRISE: Αφαίρεση περιττού hardcoded w-[368px] wrapper (ADR-003 Container Nesting) */}
       <div className={`flex-1 min-h-0 overflow-y-auto ${colors.bg.primary} ${colors.text.primary} py-4 px-2`}>
-        <div className="w-[368px]">
-          {renderPanelContent()}
-        </div>
+        {renderPanelContent()}
       </div>
 
       {/* STATUS BAR ΜΕΤΑΚΙΝΗΘΗΚΕ ΣΤΟ ΑΡΙΣΤΕΡΟ CONTAINER */}

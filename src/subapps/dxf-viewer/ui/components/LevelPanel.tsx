@@ -258,12 +258,11 @@ export function LevelPanel({
         selectedEntityIds={selectedEntityIds} 
       />
       
-      <div className="flex items-center justify-between">
-        <h3 className={PANEL_TOKENS.LEVEL_PANEL.HEADER.TEXT}>
-          <Building2 className={PANEL_TOKENS.LEVEL_PANEL.HEADER.ICON} />
-          Επίπεδα Έργου
-        </h3>
-      </div>
+      {/* ✅ ENTERPRISE: Αφαίρεση περιττού wrapper - justify-between χωρίς νόημα με 1 child (ADR-003) */}
+      <h3 className={PANEL_TOKENS.LEVEL_PANEL.HEADER.TEXT}>
+        <Building2 className={PANEL_TOKENS.LEVEL_PANEL.HEADER.ICON} />
+        Επίπεδα Έργου
+      </h3>
 
       {Array.isArray(levels) && levels.length > 0 ? (
         <div className={PANEL_TOKENS.LEVEL_PANEL.CONTAINER.SECTION}>

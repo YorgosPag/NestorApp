@@ -985,6 +985,60 @@ import { Checkbox } from '@/components/ui/checkbox';
 
 ---
 
+### 📋 ADR-UI-001: VISUAL PRIMITIVE OWNERSHIP & SEMANTIC TOKENS (2026-01-04) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-04
+
+**Context**:
+Εντοπίστηκε γνωστική σύγχυση σχετικά με την "ιδιοκτησία" των visual primitives:
+- Υπάρχουν `design tokens` (coreBorderRadius, borderColors, borderWidth)
+- Υπάρχουν `quick.*` shortcuts (quick.card, quick.input, quick.button)
+- Υπάρχουν Tailwind utility classes
+- **ΔΕΝ υπήρχε** ξεκάθαρη απόφαση για το ποιο είναι το canonical API
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **SEMANTIC TOKENS** | Τα `quick.*` είναι επίσημα **Semantic Design Tokens**, ΟΧΙ convenience helpers |
+| **OWNERSHIP** | `useBorderTokens.ts` είναι ο **owner** όλων των visual primitives (borders, radius, shadows) |
+| **API** | Components χρησιμοποιούν `quick.*` ή hooks (`useBorderTokens`, `useSemanticColors`) |
+| **PROHIBITION** | ❌ Άμεση χρήση `border-*`, `rounded-*`, `shadow-*` σε components **ΑΠΑΓΟΡΕΥΕΤΑΙ** |
+
+**Implementation Neutrality**:
+```
+Τρέχουσα υλοποίηση: Tailwind utility strings
+Μελλοντική επιλογή: CSS variables (χωρίς αλλαγές σε components)
+```
+
+**Component Pattern**:
+```tsx
+// ✅ ENTERPRISE: Use semantic tokens
+<div className={`p-4 ${quick.card}`}>
+
+// ✅ ENTERPRISE: Use hooks
+const { getStatusBorder } = useBorderTokens();
+<div className={`p-4 ${getStatusBorder('success')}`}>
+
+// ❌ PROHIBITED: Direct Tailwind classes
+<div className="p-4 border border-gray-200 rounded-lg">
+```
+
+**Consequences**:
+- ✅ Ξεκάθαρο ownership των visual primitives
+- ✅ Future-proof: Δυνατότητα migration σε CSS variables
+- ✅ Νέοι developers καταλαβαίνουν αμέσως το API
+- ✅ Single Source of Truth για borders/radius/shadows
+
+**Full Documentation**:
+- 📄 **[ADR-UI-001.md](./ADR-UI-001.md)** - Complete ADR document
+
+**References**:
+- Enterprise Pattern: Autodesk, Adobe, Bentley Systems
+- ADR Format: Michael Nygard's Architecture Decision Records
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

@@ -41,14 +41,15 @@ export function CalibrationStep() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium ${colors.text.primary} mb-2">
+      {/* ✅ ENTERPRISE: Αφαίρεση περιττού wrapper + fix broken template string (ADR-003) */}
+      <header>
+        <h3 className={`text-lg font-medium ${colors.text.primary} mb-2`}>
           Βαθμονόμηση Κλίμακας & Μονάδων
         </h3>
         <p className={`text-sm ${colors.text.muted} mb-6`}>
           Ορίστε τις μονάδες και προαιρετικά βαθμονομήστε την κλίμακα χρησιμοποιώντας γνωστές μετρήσεις από το DXF αρχείο σας.
         </p>
-      </div>
+      </header>
 
       {/* Units Selection */}
       <div className="space-y-3">
@@ -90,7 +91,7 @@ export function CalibrationStep() {
             className="mt-1 mr-3"
           />
           <div>
-            <div className="${colors.text.primary} font-medium">Παράλειψη Βαθμονόμησης (Προτεινόμενο)</div>
+            <div className={`${colors.text.primary} font-medium`}>Παράλειψη Βαθμονόμησης (Προτεινόμενο)</div>
             <p className={`text-sm ${colors.text.muted} mt-1`}>
               Χρήση εγγενών μονάδων και κλίμακας του DXF αρχείου. Καλύτερο για τις περισσότερες αρχιτεκτονικές κατόψεις.
             </p>
@@ -111,7 +112,7 @@ export function CalibrationStep() {
             className="mt-1 mr-3"
           />
           <div>
-            <div className="${colors.text.primary} font-medium">Βαθμονόμηση 2 Σημείων</div>
+            <div className={`${colors.text.primary} font-medium`}>Βαθμονόμηση 2 Σημείων</div>
             <p className={`text-sm ${colors.text.muted} mt-1`}>
               Ορισμός κλίμακας μετρώντας μια γνωστή απόσταση στο σχέδιο.
             </p>

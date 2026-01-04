@@ -204,7 +204,7 @@ export function HierarchicalDestinationSelector({
   return (
     <div>
       <h3 className={`text-lg font-medium ${colors.text.primary} mb-2`}>{getStepTitle()}</h3>
-      <p className="${colors.text.muted} mb-6">{getStepDescription()}</p>
+      <p className={`${colors.text.muted} mb-6`}>{getStepDescription()}</p>
 
       {/* Breadcrumb */}
       <div className="flex items-center space-x-2 mb-6 text-sm">
@@ -229,7 +229,7 @@ export function HierarchicalDestinationSelector({
               <Folder className={iconSizes.sm} />
               <span>{selectedProject.name}</span>
             </button>
-            {selectedBuilding && <span className="${colors.text.muted}">→</span>}
+            {selectedBuilding && <span className={`${colors.text.muted}`}>→</span>}
           </>
         )}
         {selectedBuilding && (
@@ -294,7 +294,7 @@ export function HierarchicalDestinationSelector({
                       <div className="flex items-center space-x-2">
                         <Folder className={`${iconSizes.sm} ${colors.text.info}`} />
                         <span>{project.name}</span>
-                        <span className="${colors.text.muted} text-xs">({project.buildings.length} κτίρια)</span>
+                        <span className={`${colors.text.muted} text-xs`}>({project.buildings.length} κτίρια)</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -343,7 +343,7 @@ export function HierarchicalDestinationSelector({
                     <Home className={`${iconSizes.lg} ${colors.text.info}`} />
                     <div>
                       <div className={`${colors.text.primary} font-medium`}>{floor.name}</div>
-                      <div className="${colors.text.muted} text-sm">
+                      <div className={`${colors.text.muted} text-sm`}>
                         {floor.units.length} μονάδες
                       </div>
                     </div>
@@ -373,7 +373,7 @@ export function HierarchicalDestinationSelector({
                   })}
                   <div>
                     <div className={`${colors.text.primary} font-medium`}>{dest.label}</div>
-                    <div className="${colors.text.muted} text-sm capitalize">{dest.type}</div>
+                    <div className={`${colors.text.muted} text-sm capitalize`}>{dest.type}</div>
                   </div>
                 </div>
               </button>

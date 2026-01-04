@@ -98,7 +98,8 @@
       "Bash(git commit -m \"$\\(cat <<''EOF''\n🔒 ENTERPRISE SAFETY CHECKPOINT: Code Cleanup & Text Rendering Documentation\n\n## Changes Summary:\n- Removed dead code and unused imports across 31 files \\(-478 lines\\)\n- Added comprehensive text-rendering documentation \\(+304 lines\\)\n- Cleaned up DXF Viewer components for improved maintainability\n- Streamlined navigation services and context providers\n\n## Files Affected:\n- Core services: navigation, companies, security, performance\n- DXF Viewer: canvas, rendering, settings, hooks\n- New: docs/systems/text-rendering.md\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "WebFetch(domain:github.com)",
       "Bash(ls:*)",
-      "Bash(npm view:*)"
+      "Bash(npm view:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\n🔒 ENTERPRISE SAFETY CHECKPOINT: UI Components, Settings & ADR-UI-001\n\n📋 Changes Summary \\(29 files\\):\n- ADR-UI-001: Visual Primitive Ownership & Semantic Tokens \\(NEW\\)\n- Settings components refactoring \\(6 files\\)\n- UI components updates \\(LevelPanel, StatusBar, ProSnapToolbar, etc.\\)\n- Tests modal tabs improvements \\(3 files\\)\n- Wizard steps updates \\(3 files\\)\n- Documentation updates \\(CENTRALIZED_SYSTEMS.md, design-system/index.md\\)\n- HierarchyDebugPanel restructuring\n\n🎯 Key Improvements:\n- Established semantic token ownership via ADR-UI-001\n- Refactored settings components for consistency\n- Updated centralized systems documentation\n- Improved test modal components\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ],
     "deny": [],
     "ask": []

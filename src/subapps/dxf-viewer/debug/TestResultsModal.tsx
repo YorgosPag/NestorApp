@@ -319,7 +319,7 @@ const SummaryTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
                 </div>
                 <span className={`text-xs ${colors.text.muted}`}>{test.duration.toFixed(0)}ms</span>
               </div>
-              <p className="text-xs ${colors.text.tertiary} leading-relaxed">{test.summary}</p>
+              <p className={`text-xs ${colors.text.tertiary} leading-relaxed`}>{test.summary}</p>
             </div>
           );
         })}

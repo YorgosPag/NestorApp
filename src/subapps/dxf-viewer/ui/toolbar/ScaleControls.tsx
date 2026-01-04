@@ -95,9 +95,9 @@ export const ScaleControls: React.FC<ScaleControlsProps> = ({
   }, [applyScale]);
 
   return (
-    <div className="flex items-center gap-1 ${colors.bg.primary} rounded px-2 py-1">
+    <div className={`flex items-center gap-1 ${colors.bg.primary} rounded px-2 py-1`}>
       <Scale className={`${iconSizes.xs} ${colors.text.muted}`} />
-      <span className="text-xs ${colors.text.muted}">1:</span>
+      <span className={`text-xs ${colors.text.muted}`}>1:</span>
       
       <input
         ref={inputRef}

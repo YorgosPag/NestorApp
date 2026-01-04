@@ -32,7 +32,8 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
 
   return (
     <>
-      <div>
+      {/* ✅ ENTERPRISE: Αφαίρεση περιττού κενού wrapper (ADR-003 Container Nesting) */}
+      <section>
         <h3 className={`text-sm font-semibold ${colors.text.muted} uppercase tracking-wide mb-3`}>
           📋 Automated Test Suite
         </h3>
@@ -78,10 +79,11 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
             />
           ))}
         </div>
-      </div>
+      </section>
 
       {/* Group 2: Individual Debug Tools */}
-      <div>
+      {/* ✅ ENTERPRISE: Χρήση semantic <section> αντί κενού <div> (ADR-003) */}
+      <section>
         <h3 className={`text-sm font-semibold ${colors.text.muted} uppercase tracking-wide mb-3`}>
           🛠️ Individual Debug Tools (Manual)
         </h3>
@@ -96,7 +98,7 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
             />
           ))}
         </div>
-      </div>
+      </section>
     </>
   );
 };

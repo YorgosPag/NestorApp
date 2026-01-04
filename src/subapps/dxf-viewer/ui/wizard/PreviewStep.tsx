@@ -28,14 +28,15 @@ export function PreviewStep() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium ${colors.text.primary} mb-2">
+      {/* ✅ ENTERPRISE: Semantic header + fix broken template string (ADR-003) */}
+      <header>
+        <h3 className={`text-lg font-medium ${colors.text.primary} mb-2`}>
           Έτοιμο για Εισαγωγή
         </h3>
         <p className={`text-sm ${colors.text.muted} mb-6`}>
           Ελέγξτε τις ρυθμίσεις εισαγωγής και κάντε κλικ στο Εισαγωγή για να προσθέσετε το DXF αρχείο στο έργο σας.
         </p>
-      </div>
+      </header>
 
       {/* File Information */}
       <div className={`${colors.bg.secondary} rounded-lg p-4`}>
@@ -46,17 +47,17 @@ export function PreviewStep() {
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className={colors.text.muted}>Αρχείο:</span>
-            <span className="${colors.text.primary} font-medium">{importWizard.file?.name}</span>
+            <span className={`${colors.text.primary} font-medium`}>{importWizard.file?.name}</span>
           </div>
           <div className="flex justify-between">
             <span className={colors.text.muted}>Μέγεθος:</span>
-            <span className="${colors.text.primary} font-medium">
+            <span className={`${colors.text.primary} font-medium`}>
               {importWizard.file ? formatFileSize(importWizard.file.size) : 'Άγνωστο'}
             </span>
           </div>
           <div className="flex justify-between">
             <span className={colors.text.muted}>Τύπος:</span>
-            <span className="${colors.text.primary} font-medium">AutoCAD DXF</span>
+            <span className={`${colors.text.primary} font-medium`}>AutoCAD DXF</span>
           </div>
         </div>
       </div>
@@ -70,13 +71,13 @@ export function PreviewStep() {
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className={colors.text.muted}>Επίπεδο Προορισμού:</span>
-            <span className="${colors.text.primary} font-medium">
+            <span className={`${colors.text.primary} font-medium`}>
               {selectedLevel?.name || importWizard.newLevelName || 'Άγνωστο'}
             </span>
           </div>
           <div className="flex justify-between">
             <span className={colors.text.muted}>Ενέργεια:</span>
-            <span className="${colors.text.primary} font-medium">
+            <span className={`${colors.text.primary} font-medium`}>
               {selectedLevel ? 'Προσθήκη σε υπάρχον επίπεδο' : 'Δημιουργία νέου επιπέδου'}
             </span>
           </div>
@@ -92,17 +93,17 @@ export function PreviewStep() {
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className={colors.text.muted}>Μονάδες:</span>
-            <span className="${colors.text.primary} font-medium">
+            <span className={`${colors.text.primary} font-medium`}>
               {importWizard.calibration?.units || 'χιλιοστά'}
             </span>
           </div>
           <div className="flex justify-between">
             <span className={colors.text.muted}>Κλίμακα:</span>
-            <span className="${colors.text.primary} font-medium">Εγγενής (1:1)</span>
+            <span className={`${colors.text.primary} font-medium`}>Εγγενής (1:1)</span>
           </div>
           <div className="flex justify-between">
             <span className={colors.text.muted}>Βαθμονόμηση:</span>
-            <span className="${colors.text.primary} font-medium">
+            <span className={`${colors.text.primary} font-medium`}>
               {importWizard.calibration ? 'Εφαρμοσμένη' : 'Καμία'}
             </span>
           </div>

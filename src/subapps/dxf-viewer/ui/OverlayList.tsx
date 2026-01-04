@@ -154,7 +154,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                       <div className="text-sm font-medium truncate">
                         {STATUS_LABELS[overlay.status || 'for-sale']} {KIND_LABELS[overlay.kind]}
                       </div>
-                      <div className="text-xs ${colors.text.muted}truncate">
+                      <div className={`text-xs ${colors.text.muted} truncate`}>
                         {overlay.label || `Overlay ${overlay.id.slice(0, 6)}`}
                       </div>
                     </div>

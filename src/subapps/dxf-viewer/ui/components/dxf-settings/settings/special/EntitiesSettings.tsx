@@ -457,16 +457,15 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
     if (selectedTool === 'line') {
       return (
         <div className={`mb-6 p-4 ${colors.bg.secondary} ${quick.card}`}>
-          {/* 🏢 ENTERPRISE: Καρτέλες για Line Tool - Using centralized TabsOnlyTriggers */}
-          <div className="mb-4">
-            <TabsOnlyTriggers
-              tabs={lineToolTabs}
-              value={activeLineTab || ''}
-              onTabChange={handleLineToolTabChange}
-              theme="dark"
-              alwaysShowLabels={true}
-            />
-          </div>
+          {/* 🏢 ENTERPRISE: Καρτέλες για Line Tool - className moved directly to component (ADR-003) */}
+          <TabsOnlyTriggers
+            tabs={lineToolTabs}
+            value={activeLineTab || ''}
+            onTabChange={handleLineToolTabChange}
+            theme="dark"
+            alwaysShowLabels={true}
+            className="mb-4"
+          />
 
           {/* Περιεχόμενο για Προσχεδίαση με υποκαρτέλες */}
           <SubTabRenderer
@@ -632,45 +631,34 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
 
   return (
     <div className="p-4 space-y-6">
-      {/* Removed duplicate tabs - EntitiesSettings shows only entity-specific settings */}
+      {/* ✅ ADR-003: Removed empty wrapper div - content flows directly */}
 
-      {/* Removed duplicate General Settings section - these belong in the General Settings tab */}
+      {/* 🏢 ENTERPRISE: Tabs για Ειδικές Ρυθμίσεις - className moved directly to component */}
+      <TabsOnlyTriggers
+        tabs={specificTabs}
+        value={activeSpecificTab}
+        onTabChange={handleSpecificTabChange}
+        theme="dark"
+        alwaysShowLabels={true}
+        className="mb-4"
+      />
 
-      {/* Entity-Specific Settings - Tools and specialized functions */}
-      <div>
-          {/* 🏢 ENTERPRISE: Tabs για Ειδικές Ρυθμίσεις - Using centralized TabsOnlyTriggers */}
-          <div className="mb-4">
-            <TabsOnlyTriggers
-              tabs={specificTabs}
-              value={activeSpecificTab}
-              onTabChange={handleSpecificTabChange}
-              theme="dark"
-              alwaysShowLabels={true}
-            />
-          </div>
+      {/* Toolbar Icons - ανάλογα με την ενεργή υποκαρτέλα */}
+      {renderToolbarIcons()}
 
-          {/* Toolbar Icons - ανάλογα με την ενεργή υποκαρτέλα */}
-          {renderToolbarIcons()}
+      {/* Tool-specific Settings Container */}
+      {renderToolSettings()}
 
-          {/* Tool-specific Settings Container */}
-          {renderToolSettings()}
-
-          {/* Κενές καρτέλες - περιεχόμενο θα προστεθεί μέσω των tool containers */}
-          <div className="min-h-[50px]">
-            {/* Κενό χώρο - οι ρυθμίσεις θα εμφανίζονται μόνο όταν επιλέγεται εργαλείο */}
-            {!selectedTool && (
-              <div className={`text-center py-8 ${colors.text.muted}`}>
-                <div className="mb-4 flex justify-center">
-                  <Pen className="w-10 h-10" />
-                </div>
-                <h3 className={`text-lg font-medium mb-2 ${colors.text.primary}`}>Επιλέξτε Εργαλείο</h3>
-                <p className={`text-sm ${colors.text.muted}`}>
-                  Κάντε κλικ σε ένα εργαλείο για να δείτε τις ρυθμίσεις του
-                </p>
-              </div>
-            )}
-          </div>
+      {/* Empty state - shown only when no tool selected */}
+      {!selectedTool && (
+        <div className={`text-center py-8 ${colors.text.muted}`}>
+          <Pen className={`${iconSizes.xl} mx-auto mb-4`} />
+          <h3 className={`text-lg font-medium mb-2 ${colors.text.primary}`}>Επιλέξτε Εργαλείο</h3>
+          <p className={`text-sm ${colors.text.muted}`}>
+            Κάντε κλικ σε ένα εργαλείο για να δείτε τις ρυθμίσεις του
+          </p>
         </div>
+      )}
     </div>
   );
 };

@@ -35,8 +35,9 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
 
   return (
     <>
-      <div>
-        <h3 className="text-sm font-semibold ${colors.text.muted} uppercase tracking-wide mb-3">
+      {/* ✅ ENTERPRISE: Χρήση semantic <section> αντί κενού <div> (ADR-003) */}
+      <section>
+        <h3 className={`text-sm font-semibold ${colors.text.muted} uppercase tracking-wide mb-3`}>
           🧪 Unit Tests (Vitest/Jest)
         </h3>
 
@@ -63,8 +64,8 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-medium ${colors.text.primary} text-sm leading-tight">⚡ Run Vitest Tests</div>
-              <div className="text-xs ${colors.text.muted} mt-1">Property-based + ServiceRegistry tests</div>
+              <div className={`font-medium ${colors.text.primary} text-sm leading-tight`}>⚡ Run Vitest Tests</div>
+              <div className={`text-xs ${colors.text.muted} mt-1`}>Property-based + ServiceRegistry tests</div>
             </div>
           </button>
 
@@ -90,15 +91,16 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-medium ${colors.text.primary} text-sm leading-tight">⚡ Run Jest Tests</div>
-              <div className="text-xs ${colors.text.muted} mt-1">Visual regression + cursor alignment tests</div>
+              <div className={`font-medium ${colors.text.primary} text-sm leading-tight`}>⚡ Run Jest Tests</div>
+              <div className={`text-xs ${colors.text.muted} mt-1`}>Visual regression + cursor alignment tests</div>
             </div>
           </button>
         </div>
-      </div>
+      </section>
 
-      <div>
-        <h3 className="text-sm font-semibold ${colors.text.muted} uppercase tracking-wide mb-3">
+      {/* ✅ ENTERPRISE: Χρήση semantic <section> αντί κενού <div> (ADR-003) */}
+      <section>
+        <h3 className={`text-sm font-semibold ${colors.text.muted} uppercase tracking-wide mb-3`}>
           🎭 E2E Tests (Playwright)
         </h3>
 
@@ -123,17 +125,18 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-medium ${colors.text.primary} text-sm leading-tight">🎭 Run Playwright Cross-Browser Tests</div>
-            <div className="text-xs ${colors.text.muted} mt-1">Visual regression across Chromium/Firefox/WebKit (2-3 min)</div>
+            <div className={`font-medium ${colors.text.primary} text-sm leading-tight`}>🎭 Run Playwright Cross-Browser Tests</div>
+            <div className={`text-xs ${colors.text.muted} mt-1`}>Visual regression across Chromium/Firefox/WebKit (2-3 min)</div>
           </div>
         </button>
-      </div>
+      </section>
 
-      <div className={`${colors.bg.info} ${quick.info} p-4 ${getStatusBorder('info')}`}>
-        <div className={`text-xs ${colors.text.info}`}>
+      {/* ✅ ENTERPRISE: Χρήση semantic <aside> για info box (ADR-003) */}
+      <aside className={`${colors.bg.info} ${quick.info} p-4 ${getStatusBorder('info')}`}>
+        <p className={`text-xs ${colors.text.info}`}>
           <strong>Note:</strong> Unit & E2E tests run server-side via API endpoints. Check server logs for detailed output.
-        </div>
-      </div>
+        </p>
+      </aside>
     </>
   );
 };

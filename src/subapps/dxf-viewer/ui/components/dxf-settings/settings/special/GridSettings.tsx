@@ -165,13 +165,13 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
   // ============================================================================
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <article className={`space-y-4 ${className}`}>
       {/* 🏢 ENTERPRISE: Grid Visibility Toggle - Using centralized Switch component */}
-      <div className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
+      <section className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
         <div className="flex items-center justify-between">
-          <div className={`text-sm ${colors.text.primary}`}>
-            <div className="font-medium">Εμφάνιση Πλέγματος</div>
-            <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη του πλέγματος</div>
+          <div>
+            <h4 className={`text-sm font-medium ${colors.text.primary}`}>Εμφάνιση Πλέγματος</h4>
+            <p className={`text-xs ${colors.text.muted}`}>Εμφάνιση/απόκρυψη του πλέγματος</p>
           </div>
           <div className="flex items-center gap-2">
             <span className={`text-xs ${colors.text.muted}`}>
@@ -183,14 +183,12 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             />
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Grid Size (ΚΟΙΝΟ για όλα) */}
-      <div className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
-        <div className={`text-sm ${colors.text.primary}`}>
-          <div className="font-medium">Μέγεθος Πλέγματος</div>
-          <div className={`font-normal ${colors.text.muted}`}>Απόσταση μεταξύ γραμμών πλέγματος (ΚΟΙΝΟ για όλες)</div>
-        </div>
+      {/* Grid Size (ΚΟΙΝΟ για όλα) - 🏢 ENTERPRISE: Semantic section */}
+      <section className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
+        <h4 className={`text-sm font-medium ${colors.text.primary}`}>Μέγεθος Πλέγματος</h4>
+        <p className={`text-xs ${colors.text.muted}`}>Απόσταση μεταξύ γραμμών πλέγματος (ΚΟΙΝΟ για όλες)</p>
         <div className="flex items-center gap-2">
           <input
             type="range"
@@ -205,14 +203,12 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             {gridSettings.visual.step}
           </div>
         </div>
-      </div>
+      </section>
 
       {/* 🏢 ENTERPRISE: Grid Style Selector - Using centralized TabsOnlyTriggers */}
-      <div className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
-        <div className={`text-sm ${colors.text.primary}`}>
-          <div className="font-medium">Στυλ Πλέγματος</div>
-          <div className={`font-normal ${colors.text.muted}`}>Τύπος εμφάνισης γραμμών πλέγματος</div>
-        </div>
+      <section className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
+        <h4 className={`text-sm font-medium ${colors.text.primary}`}>Στυλ Πλέγματος</h4>
+        <p className={`text-xs ${colors.text.muted}`}>Τύπος εμφάνισης γραμμών πλέγματος</p>
         <TabsOnlyTriggers
           tabs={gridStyleTabs}
           value={gridSettings.visual.style}
@@ -220,19 +216,18 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
           theme="dark"
           alwaysShowLabels={true}
         />
-      </div>
+      </section>
 
-      {/* 🏢 ENTERPRISE: Grid Lines Sub-tabs - Using centralized TabsOnlyTriggers */}
-      <div className={`${quick.separatorH} pt-4`}>
-        <div className="mb-4">
-          <TabsOnlyTriggers
-            tabs={gridLinesTabs}
-            value={activeGridLinesTab}
-            onTabChange={handleGridLinesTabChange}
-            theme="dark"
-            alwaysShowLabels={true}
-          />
-        </div>
+      {/* 🏢 ENTERPRISE: Grid Lines Sub-tabs - className moved directly to component (ADR-003) */}
+      <nav className={`${quick.separatorH} pt-4`}>
+        <TabsOnlyTriggers
+          tabs={gridLinesTabs}
+          value={activeGridLinesTab}
+          onTabChange={handleGridLinesTabChange}
+          theme="dark"
+          alwaysShowLabels={true}
+          className="mb-4"
+        />
 
         {/* Major Lines Tab Content */}
         {activeGridLinesTab === 'major' ? (
@@ -319,8 +314,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </nav>
+    </article>
   );
 };
 
