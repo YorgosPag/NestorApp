@@ -81,8 +81,8 @@ export function ConfirmationToast({
           onClick={onConfirm}
           className={`px-4 py-2 text-sm font-medium rounded-md transition-colors focus:outline-none ${colors.interactive.focus.ring} ${
             destructive
-              ? `${colors.bg.error} ${HOVER_BACKGROUND_EFFECTS.RED_DARKER} text-white`
-              : `${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.BLUE_DARKER} text-white`
+              ? `${colors.bg.error} ${HOVER_BACKGROUND_EFFECTS.RED_DARKER} ${colors.text.primary}`
+              : `${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.BLUE_DARKER} ${colors.text.primary}`
           }`}
         >
           {confirmText}

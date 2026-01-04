@@ -43,10 +43,10 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
           disabled={testState.runningTests.has('run-all-tests')}
           className={`w-full px-6 py-4 text-lg font-bold rounded-lg shadow-lg transition-all mb-3 ${
             testState.runningTests.has('run-all-tests')
-              ? 'bg-yellow-500 ${colors.text.inverted}cursor-wait animate-pulse'
+              ? `${colors.bg.warning} ${colors.text.inverted} cursor-wait animate-pulse`
               : testState.completedTests.has('run-all-tests')
-              ? `bg-green-600 ${colors.text.inverted}${HOVER_BACKGROUND_EFFECTS.SUCCESS_BUTTON}`
-              : `bg-gradient-to-r from-purple-600 to-pink-600 ${colors.text.inverted}${GRADIENT_HOVER_EFFECTS.PURPLE_PINK_BUTTON}`
+              ? `${colors.bg.success} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_BUTTON}`
+              : `bg-gradient-to-r from-purple-600 to-pink-600 ${colors.text.inverted} ${GRADIENT_HOVER_EFFECTS.PURPLE_PINK_BUTTON}`
           }`}
         >
           {testState.runningTests.has('run-all-tests') ? (

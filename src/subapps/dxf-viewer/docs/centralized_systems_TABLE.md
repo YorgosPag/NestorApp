@@ -1,9 +1,10 @@
 # = -> **ENTERPRISE CENTRALIZED SYSTEMS TABLE**
 
 > **= MAIN DOCUMENTATION**: [centralized_systems.md](./centralized_systems.md)
-> **= -> LAST UPDATED**: 2026-01-03
-> **= -> TOTAL SYSTEMS**: 16 Major Enterprise Systems
-> **= -> TOTAL CODE**: 12,300+ Lines
+> **= -> LAST UPDATED**: 2026-01-04
+> **= -> TOTAL SYSTEMS**: 17 Major Enterprise Systems (incl. FloatingPanel UI Styling)
+> **= -> TOTAL CODE**: 12,500+ Lines
+> **= -> TOTAL ADRs**: 11 Architectural Decision Records
 
 ---
 
@@ -16,12 +17,19 @@
 | **ADR-003** | Floating Panel System | `FloatingPanel` compound component | Duplicate draggable code | 2026-01-02 |
 | **ADR-004** | Canvas Theme System 🏢 | `design-tokens.json` → CSS vars → `CANVAS_THEME` | Hardcoded backgrounds | 2026-01-03 |
 | **ADR-005** | Line Drawing System 🏢 | `useUnifiedDrawing` + `LineRenderer` | Διάσπαρτο drawing code | 2026-01-03 |
+| **ADR-006** | Crosshair Overlay 🏢 | `canvas-v2/overlays/CrosshairOverlay.tsx` | Legacy CrosshairOverlay | 2026-01-03 |
+| **ADR-008** | CSS→Canvas Coordinates 🏢 | `CanvasCoordinatesManager` | Hardcoded transforms | 2026-01-04 |
+| **ADR-009** | Ruler Corner Box 🏢 | `RulerCornerBox` interactive | Static corner | 2026-01-04 |
+| **ADR-010** | Panel Type Centralization | `types/panel-types.ts` | Διάσπαρτοι ορισμοί | 2026-01-04 |
+| **ADR-011** | FloatingPanel UI Styling 🏢 | `useSemanticColors` + `useBorderTokens` | Hardcoded Tailwind colors | 2026-01-04 |
 
 > **🚫 PROHIBITION**: Νέα Select/Dropdown implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** εκτός Radix Select.
 > **🚫 PROHIBITION**: Hardcoded canvas backgrounds **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `CANVAS_THEME`.
 > **🚫 PROHIBITION**: Νέα drawing implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `useUnifiedDrawing`.
+> **🚫 PROHIBITION**: Hardcoded Tailwind colors (bg-gray-*, rounded-lg) **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε hooks.
 > **🏢 WORLD-CLASS**: ADR-004 χρησιμοποιεί CSS Variables για runtime theme switching (Figma/AutoCAD level).
 > **🏢 ENTERPRISE**: ADR-005 - 2,300+ lines centralized drawing system με 3-phase rendering.
+> **🏢 ENTERPRISE**: ADR-011 - 47 files, 100% centralized styling, zero hardcoded values.
 >
 > **📍 Full ADRs**: [centralized_systems.md](./centralized_systems.md)
 
@@ -49,6 +57,7 @@
  Icon System** | `src/hooks/useIconSizes.ts` | 150+ | Design System |  Standardized | Consistent icon sizing | `import { useIconSizes } from '@/hooks'` | Icon size management |
 | **< -> Panel Design Tokens** | `src/subapps/dxf-viewer/config/panel-tokens.ts` | 600+ | DXF Specific |  Enterprise | DXF panel design system | `import { PANEL_TOKENS } from '@/subapps/dxf-viewer/config'` | CAD panel styling |
 | **🎨 Line Drawing System** | `src/subapps/dxf-viewer/hooks/drawing/` | 2,300+ | Drawing Engine | 🏢 **ENTERPRISE** | 10 tools, 3-phase rendering, snap integration | `import { useUnifiedDrawing } from '@/subapps/dxf-viewer/hooks/drawing'` | **ADR-005: Zero duplication** |
+| **🎨 FloatingPanel UI Styling** | `ui/components/dxf-settings/` | 47 files | UI Styling | 🏢 **ENTERPRISE** | Zero hardcoded, 100% hooks | `useSemanticColors()` + `useBorderTokens()` | **ADR-011: 100% centralized** |
 
 | **🏭 Smart Factory - Tabs** | `src/config/unified-tabs-factory.ts` | 548 | Smart Factory |  **ENTERPRISE** | Dynamic tab generation, 6+ entity types | `import { createTabsConfig } from '@/config/unified-tabs-factory'` | **64% code reduction (1500→548 lines)** |
 | **🏭 Smart Factory - Navigation** | `src/config/smart-navigation-factory.ts` | 814 | Smart Factory |  **ENTERPRISE** | Dynamic menu generation, permissions | `import { createNavigationConfig } from '@/config/smart-navigation-factory'` | **80% code reduction (191→smart generation)** |

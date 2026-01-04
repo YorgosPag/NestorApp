@@ -170,7 +170,7 @@ function InlineColorPicker({
           onChange={handleTextChange}
           disabled={disabled}
           placeholder={UI_COLORS.WHITE}
-          className={`px-2 py-1 ${colors.bg.hover} ${quick.muted} rounded text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
+          className={`px-2 py-1 ${colors.bg.hover} ${quick.muted} rounded ${colors.text.primary} text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
           style={{ width: '6rem' }}
         />
       )}

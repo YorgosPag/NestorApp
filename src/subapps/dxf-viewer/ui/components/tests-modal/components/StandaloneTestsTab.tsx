@@ -55,7 +55,7 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-white text-sm leading-tight">🔄 Coordinate Reversibility</div>
+              <div className={`font-medium ${colors.text.primary} text-sm leading-tight`}>🔄 Coordinate Reversibility</div>
               <div className={`text-xs ${colors.text.muted} mt-1`}>Tests screenToWorld(worldToScreen(p)) == p</div>
             </div>
           </button>
@@ -82,7 +82,7 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-white text-sm leading-tight">📐 Grid Workflow Test</div>
+              <div className={`font-medium ${colors.text.primary} text-sm leading-tight`}>📐 Grid Workflow Test</div>
               <div className={`text-xs ${colors.text.muted} mt-1`}>CAD QA standards (5 categories)</div>
             </div>
           </button>

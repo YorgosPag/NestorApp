@@ -71,7 +71,7 @@ const SnapButton: React.FC<SnapButtonProps> = ({ mode, enabled, onClick, compact
         ${radius.md} border transition-all duration-150 font-medium
         flex items-center justify-center
         ${enabled
-          ? `${colors.bg.primary} ${getStatusBorder('info')} text-white shadow-md ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
+          ? `${colors.bg.primary} ${getStatusBorder('info')} ${colors.text.primary} shadow-md ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
           : `${colors.bg.secondary} ${getStatusBorder('default')} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
         }
       `}
@@ -154,7 +154,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
       <button
         onClick={handleMasterToggle}
         className={`px-3 py-1 ${radius.md} text-sm font-bold transition-colors border flex items-center gap-1 ${
-          snapEnabled ? `${colors.bg.primary} text-white ${getStatusBorder('info')} shadow-md` : `${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
+          snapEnabled ? `${colors.bg.primary} ${colors.text.primary} ${getStatusBorder('info')} shadow-md` : `${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
         }`}
         title="Ενεργοποίηση/Απενεργοποίηση Object Snap (F3)"
       >
@@ -181,7 +181,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
           <button
             onClick={handleToggleAdvanced}
             className={`${iconSizes.xl} ${radius.md} border transition-all duration-150 flex items-center justify-center ${
-              showAdvanced || advancedEnabledCount > 0 ? `${colors.bg.muted} ${getStatusBorder('subtle')} text-white` : `${colors.bg.secondary} ${getStatusBorder('default')} ${colors.text.muted} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
+              showAdvanced || advancedEnabledCount > 0 ? `${colors.bg.muted} ${getStatusBorder('subtle')} ${colors.text.primary}` : `${colors.bg.secondary} ${getStatusBorder('default')} ${colors.text.muted} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
             }`}
             title={`${showAdvanced ? 'Απόκρυψη' : 'Εμφάνιση'} προχωρημένων λειτουργιών`}
           >

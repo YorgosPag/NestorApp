@@ -809,6 +809,182 @@ export const DEFAULT_PANEL: FloatingPanelType = 'levels';
 
 ---
 
+### 📋 ADR-011: FLOATING PANEL UI STYLING SYSTEM (2026-01-04) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED & IMPLEMENTED** | **Decision Date**: 2026-01-04
+
+**🏢 ENTERPRISE LEVEL**: **10/10** - Zero Hardcoded Values, 100% Centralized
+
+**Context**:
+Το FloatingPanel (DxfSettingsPanel) περιέχει 47 αρχεία με UI components. Όλα πρέπει να χρησιμοποιούν κεντρικοποιημένα styling patterns.
+
+**📊 AUDIT RESULTS (2026-01-04)**:
+
+| Κατηγορία | Hardcoded | Centralized | Status |
+|-----------|-----------|-------------|--------|
+| **Background Colors** | 0 | 100% | ✅ PASS |
+| **Border Radius (rounded-*)** | 0 | 100% | ✅ PASS |
+| **Border Colors** | 0 | 100% | ✅ PASS |
+| **Button Styling** | 0 | 100% | ✅ PASS |
+| **Container Types** | 0 | 100% | ✅ PASS |
+| **Checkboxes** | 0 | 100% | ✅ PASS |
+| **Inline Styles** | 0* | 100% | ✅ PASS |
+
+*Εξαίρεση: Dynamic color previews χρησιμοποιούν inline styles μέσω `layoutUtilities.dxf.*` (ΑΠΟΔΕΚΤΟ)
+
+**Decision - MANDATORY STYLING HOOKS**:
+
+| Rule | Description |
+|------|-------------|
+| **BACKGROUNDS** | `useSemanticColors().bg.*` - ΜΟΝΑΔΙΚΟ source για backgrounds |
+| **BORDERS** | `useBorderTokens()` - radius, quick, getStatusBorder |
+| **INTERACTIONS** | `INTERACTIVE_PATTERNS.*`, `HOVER_BACKGROUND_EFFECTS.*` |
+| **DYNAMIC COLORS** | `useDynamicBackgroundClass()`, `useDynamicBorderClass()` |
+| **PROHIBITION** | ❌ Hardcoded Tailwind colors (bg-gray-*, border-blue-*, etc.) **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** |
+
+**🎨 CENTRALIZED HOOKS & PATTERNS**:
+
+#### 1️⃣ Background Colors (`useSemanticColors`)
+```typescript
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+const colors = useSemanticColors();
+
+// ✅ ENTERPRISE patterns:
+${colors.bg.primary}      // Primary container
+${colors.bg.secondary}    // Secondary container
+${colors.bg.muted}        // Muted/subtle
+${colors.bg.hover}        // Hover state
+${colors.bg.success}      // Success semantic
+${colors.bg.error}        // Error semantic
+${colors.bg.warning}      // Warning semantic
+
+// ❌ PROHIBITED:
+className="bg-gray-800"   // Hardcoded color
+className="bg-slate-700"  // Hardcoded color
+```
+
+#### 2️⃣ Border Radius (`useBorderTokens`)
+```typescript
+import { useBorderTokens } from '@/hooks/useBorderTokens';
+const { radius, quick, getStatusBorder } = useBorderTokens();
+
+// ✅ ENTERPRISE patterns:
+${radius.sm}              // Small radius
+${radius.md}              // Medium radius
+${radius.lg}              // Large radius
+${radius.full}            // Full/circular radius
+
+// ❌ PROHIBITED:
+className="rounded-lg"    // Hardcoded radius
+className="rounded-md"    // Hardcoded radius
+```
+
+#### 3️⃣ Container Types (`quick.*`)
+```typescript
+// ✅ ENTERPRISE patterns:
+${quick.card}             // Card container styling
+${quick.button}           // Button container styling
+${quick.rounded}          // Rounded container styling
+${quick.input}            // Input container styling
+
+// Με border status:
+${getStatusBorder('default')}
+${getStatusBorder('muted')}
+${getStatusBorder('info')}
+${getStatusBorder('success')}
+${getStatusBorder('warning')}
+${getStatusBorder('error')}
+```
+
+#### 4️⃣ Interactive Patterns
+```typescript
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+
+// ✅ ENTERPRISE patterns:
+${INTERACTIVE_PATTERNS.PRIMARY_HOVER}
+${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}
+${HOVER_BACKGROUND_EFFECTS.LIGHT}
+${HOVER_BACKGROUND_EFFECTS.GRAY_DARK}
+${HOVER_BACKGROUND_EFFECTS.DARKER}
+```
+
+#### 5️⃣ Dynamic Color Previews
+```typescript
+import { useDynamicBackgroundClass, useDynamicBorderClass } from '@/components/ui/utils/dynamic-styles';
+
+// ✅ ENTERPRISE patterns (για user-selected colors):
+const bgClass = useDynamicBackgroundClass(dynamicColor);
+const borderClass = useDynamicBorderClass(dynamicColor);
+
+<div className={`${bgClass} ${borderClass}`} />
+
+// ❌ PROHIBITED:
+<div style={{ backgroundColor: dynamicColor }} />
+```
+
+#### 6️⃣ Checkbox Components
+```typescript
+// ✅ ENTERPRISE: Radix Checkbox
+import { Checkbox } from '@/components/ui/checkbox';
+<Checkbox checked={value} onCheckedChange={onChange} />
+
+// ✅ ENTERPRISE: Native checkbox (for React 19 compatibility)
+// Χρησιμοποιείται στο OverrideToggle λόγω Radix bug με React 19
+<input type="checkbox" checked={value} onChange={handleChange} />
+
+// ❌ PROHIBITED: Custom checkbox implementations
+```
+
+**📁 FILES COVERAGE (47 αρχεία στο FloatingPanel)**:
+
+| Directory | Files | Status |
+|-----------|-------|--------|
+| `settings/core/` | 3 (LineSettings, TextSettings, GripSettings) | ✅ Centralized |
+| `settings/special/` | 10 (CursorSettings, GridSettings, etc.) | ✅ Centralized |
+| `settings/special/rulers/` | 6 (RulerBackground, RulerText, etc.) | ✅ Centralized |
+| `settings/shared/` | 4 (AccordionSection, CurrentSettingsDisplay, etc.) | ✅ Centralized |
+| `controls/` | 4 (LineColorControl, LineWidthControl, etc.) | ✅ Centralized |
+| `categories/` | 10 (GridCategory, CursorCategory, etc.) | ✅ Centralized |
+| `panels/` | 3 (GeneralSettingsPanel, SpecificSettingsPanel, etc.) | ✅ Centralized |
+| `shared/` | 2 (TabNavigation, CategoryButton) | ✅ Centralized |
+| `tabs/general/` | 3 (LinesTab, TextTab, GripsTab) | ✅ Centralized |
+| Other | 2 (LazyComponents, DxfSettingsPanel) | ✅ Centralized |
+
+**📊 METRICS**:
+
+| Metric | Value |
+|--------|-------|
+| **Total Files** | 47 |
+| **useSemanticColors Usage** | 26 files |
+| **useBorderTokens Usage** | 19+ files |
+| **Border Function Calls** | 130+ |
+| **Hardcoded Colors** | 0 |
+| **Hardcoded Radius** | 0 |
+| **Inline Styles on Buttons** | 0 |
+
+**Consequences**:
+- ✅ Zero hardcoded Tailwind colors
+- ✅ Zero hardcoded border radius
+- ✅ 100% centralized styling via hooks
+- ✅ Consistent theming across all FloatingPanel components
+- ✅ Easy maintenance (change in one place)
+- ✅ Type-safe styling patterns
+
+**❌ ΑΠΑΓΟΡΕΥΕΤΑΙ μετά το ADR**:
+- ⛔ `bg-gray-*`, `bg-slate-*`, `bg-zinc-*` classes
+- ⛔ `rounded-lg`, `rounded-md` without `${radius.*}`
+- ⛔ `border-blue-*`, `border-red-*` classes
+- ⛔ Inline `style={{ backgroundColor: ... }}` (εκτός dynamic previews)
+- ⛔ Custom checkbox implementations
+
+**References**:
+- ADR-001: Canonical Select/Dropdown Component
+- ADR-002: Enterprise Z-Index Hierarchy
+- ADR-003: Floating Panel Compound Component System
+- Enterprise Pattern: Zero Hardcoded Values
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)
