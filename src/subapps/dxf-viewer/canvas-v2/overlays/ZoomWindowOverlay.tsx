@@ -3,6 +3,8 @@ import React from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 // 🏢 ENTERPRISE: Centralized design tokens for overlay colors
 import { canvasUI } from '@/styles/design-tokens/canvas';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 interface ZoomWindowState {
   isActive: boolean;
@@ -31,9 +33,9 @@ export default function ZoomWindowOverlay({
   const height = Math.abs(currentPoint.y - startPoint.y);
 
   return (
-    <div className={`absolute inset-0 pointer-events-none ${className}`}>
+    <div className={`absolute inset-0 ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${className}`}>
       <div
-        className="absolute border-2 border-solid pointer-events-none"
+        className="absolute border-2 border-solid ${PANEL_LAYOUT.POINTER_EVENTS.NONE}"
         style={{
           left,
           top,

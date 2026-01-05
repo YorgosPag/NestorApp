@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { Play, CheckCircle2 } from 'lucide-react';
+import { Play, CheckCircle2, Loader2, BarChart3, RefreshCw, Triangle, AlertTriangle } from 'lucide-react';
 import type { TestState, StandaloneTestHandlers } from '../types/tests.types';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -30,8 +30,8 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
     <>
       {/* ✅ ENTERPRISE: Χρήση semantic <section> αντί κενού <div> (ADR-003) */}
       <section>
-        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
-          📊 Standalone Test Scripts
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+          <BarChart3 className={iconSizes.sm} /> Standalone Test Scripts
         </h3>
 
         <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.MD}`}>
@@ -39,9 +39,9 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
           <button
             onClick={standaloneTests.handleRunCoordinateReversibility}
             disabled={testState.runningTests.has('coordinate-reversibility')}
-            className={`flex items-start ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} ${quick.card} transition-all text-left ${
+            className={`flex items-start ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} ${quick.card} ${PANEL_LAYOUT.TRANSITION.ALL} text-left ${
               testState.runningTests.has('coordinate-reversibility')
-                ? `${colors.bg.warning} cursor-wait`
+                ? `${colors.bg.warning} ${PANEL_LAYOUT.CURSOR.WAIT}`
                 : testState.completedTests.has('coordinate-reversibility')
                 ? `${colors.bg.success} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_HOVER}`
                 : `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.GRAY_BUTTON} ${HOVER_BORDER_EFFECTS.GRAY}`
@@ -49,7 +49,7 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
           >
             <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
               {testState.runningTests.has('coordinate-reversibility') ? (
-                <div className="animate-spin text-base">⏳</div>
+                <Loader2 className={`${iconSizes.md} ${colors.text.warning} animate-spin`} />
               ) : testState.completedTests.has('coordinate-reversibility') ? (
                 <CheckCircle2 className={`${iconSizes.md} ${colors.text.success}`} />
               ) : (
@@ -57,7 +57,7 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight`}>🔄 Coordinate Reversibility</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight flex items-center ${PANEL_LAYOUT.GAP.XS}`}><RefreshCw className={iconSizes.sm} /> Coordinate Reversibility</div>
               <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Tests screenToWorld(worldToScreen(p)) == p</div>
             </div>
           </button>
@@ -66,9 +66,9 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
           <button
             onClick={standaloneTests.handleRunGridWorkflow}
             disabled={testState.runningTests.has('grid-workflow')}
-            className={`flex items-start ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} ${quick.card} transition-all text-left ${
+            className={`flex items-start ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} ${quick.card} ${PANEL_LAYOUT.TRANSITION.ALL} text-left ${
               testState.runningTests.has('grid-workflow')
-                ? `${colors.bg.warning} cursor-wait`
+                ? `${colors.bg.warning} ${PANEL_LAYOUT.CURSOR.WAIT}`
                 : testState.completedTests.has('grid-workflow')
                 ? `${colors.bg.success} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_HOVER}`
                 : `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.GRAY_BUTTON} ${HOVER_BORDER_EFFECTS.GRAY}`
@@ -76,7 +76,7 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
           >
             <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
               {testState.runningTests.has('grid-workflow') ? (
-                <div className="animate-spin text-base">⏳</div>
+                <Loader2 className={`${iconSizes.md} ${colors.text.warning} animate-spin`} />
               ) : testState.completedTests.has('grid-workflow') ? (
                 <CheckCircle2 className={`${iconSizes.md} ${colors.text.success}`} />
               ) : (
@@ -84,7 +84,7 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight`}>📐 Grid Workflow Test</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight flex items-center ${PANEL_LAYOUT.GAP.XS}`}><Triangle className={iconSizes.sm} /> Grid Workflow Test</div>
               <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>CAD QA standards (5 categories)</div>
             </div>
           </button>
@@ -93,8 +93,9 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
 
       {/* ✅ ENTERPRISE: Χρήση semantic <aside> για info box (ADR-003) */}
       <aside className={`${colors.bg.warning} ${quick.info} ${PANEL_LAYOUT.SPACING.LG}`}>
-        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.warning}`}>
-          <strong>⚠️ Work in Progress:</strong> Some standalone tests need refactoring to export runnable functions. Check console for status.
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.warning} flex items-start ${PANEL_LAYOUT.GAP.SM}`}>
+          <AlertTriangle className={`${iconSizes.sm} flex-shrink-0 mt-0.5`} />
+          <span><strong>Work in Progress:</strong> Some standalone tests need refactoring to export runnable functions. Check console for status.</span>
         </p>
       </aside>
     </>

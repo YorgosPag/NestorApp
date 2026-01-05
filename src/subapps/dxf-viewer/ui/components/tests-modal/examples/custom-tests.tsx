@@ -8,6 +8,8 @@
  *
  * NOTE: This is a DOCUMENTATION file, not meant to be compiled.
  * Copy this code to your project and adjust the import paths.
+ *
+ * 🏢 ENTERPRISE: Uses Lucide icons instead of emoji (centralized icon system)
  */
 
 import React, { useState } from 'react';
@@ -17,6 +19,13 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'; // En
 import { PANEL_LAYOUT } from '../../../../config/panel-tokens'; // 🏢 ENTERPRISE: Centralized typography tokens
 import type { TestDefinition, NotificationFn } from '../types/tests.types'; // Adjust path accordingly
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import {
+  Globe,
+  HeartPulse,
+  Zap,
+  FileCheck,
+  FlaskConical
+} from 'lucide-react';
 
 /**
  * Example 1: Simple Custom Test
@@ -26,8 +35,9 @@ import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 export function createBrowserCompatibilityTest(notify: NotificationFn): TestDefinition {
   return {
     id: 'browser-compatibility',
-    name: '🌐 Browser Compatibility Check',
+    name: 'Browser Compatibility Check',
     description: 'Validates that the browser supports all required features',
+    icon: Globe,
     action: async () => {
       notify('🟢 Running browser compatibility check...', 'info');
 
@@ -70,8 +80,9 @@ export function createBrowserCompatibilityTest(notify: NotificationFn): TestDefi
 export function createApiHealthCheck(notify: NotificationFn, apiUrl: string): TestDefinition {
   return {
     id: 'api-health-check',
-    name: '🏥 API Health Check',
+    name: 'API Health Check',
     description: 'Validates that the backend API is online and responding',
+    icon: HeartPulse,
     action: async () => {
       notify('🟢 Checking API health...', 'info');
 
@@ -120,8 +131,9 @@ export function createApiHealthCheck(notify: NotificationFn, apiUrl: string): Te
 export function createPerformanceTest(notify: NotificationFn): TestDefinition {
   return {
     id: 'performance-benchmark',
-    name: '⚡ Performance Benchmark',
+    name: 'Performance Benchmark',
     description: 'Measures canvas rendering performance',
+    icon: Zap,
     action: async () => {
       notify('🟢 Running performance benchmark...', 'info');
 
@@ -172,12 +184,13 @@ export function createPerformanceTest(notify: NotificationFn): TestDefinition {
  */
 export function createDxfValidationTest(
   notify: NotificationFn,
-  getDxfData: () => any | null
+  getDxfData: () => unknown | null
 ): TestDefinition {
   return {
     id: 'dxf-validation',
-    name: '📐 DXF File Validation',
+    name: 'DXF File Validation',
     description: 'Validates the loaded DXF file structure',
+    icon: FileCheck,
     action: async () => {
       notify('🟢 Validating DXF file...', 'info');
 
@@ -270,9 +283,9 @@ export function CustomTestsExample() {
 
       <button
         onClick={() => setIsTestsOpen(true)}
-        className={`px-4 py-2 ${colors.bg.purpleButton} ${colors.text.WHITE} rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.PURPLE_BUTTON}`}
+        className={`px-4 py-2 ${colors.bg.purpleButton} ${colors.text.WHITE} rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.PURPLE_BUTTON} flex items-center gap-2`}
       >
-        🧪 Run Tests
+        <FlaskConical className="w-4 h-4" /> Run Tests
       </button>
 
       <TestsModal
@@ -354,24 +367,27 @@ export function CustomTestsExample() {
 /**
  * Test Structure Template:
  *
+ * import { Target } from 'lucide-react';
+ *
  * export function createMyCustomTest(notify: NotificationFn, ...dependencies): TestDefinition {
  *   return {
  *     id: 'my-custom-test',           // Unique ID (kebab-case)
- *     name: '🎯 My Custom Test',      // Display name (with emoji)
+ *     name: 'My Custom Test',         // Display name (no emoji - use icon property)
  *     description: 'What this test does', // Short description
+ *     icon: Target,                   // 🏢 ENTERPRISE: Lucide icon component
  *     action: async () => {
  *       // 1. Start notification
- *       notify('🟢 Test starting...', 'info');
+ *       notify('Test starting...', 'info');
  *
  *       try {
  *         // 2. Test logic
  *         const result = await runTestLogic();
  *
  *         // 3. Success notification
- *         notify('✅ Test passed!', 'success');
+ *         notify('Test passed!', 'success');
  *       } catch (error) {
  *         // 4. Error notification
- *         notify(`❌ Test failed: ${error.message}`, 'error');
+ *         notify(`Test failed: ${error.message}`, 'error');
  *       }
  *     }
  *   };
@@ -383,7 +399,7 @@ export function CustomTestsExample() {
  *
  * 1. **Always use try-catch** - Handle errors gracefully
  * 2. **Provide detailed feedback** - Include metrics, durations, status
- * 3. **Use emojis** - Makes tests easier to identify visually
+ * 3. **Use Lucide icons** - Add icon property with Lucide component (centralized system)
  * 4. **Keep tests fast** - Aim for < 2 seconds execution time
  * 5. **Test one thing** - Each test should have a single purpose
  * 6. **Use meaningful IDs** - kebab-case, descriptive

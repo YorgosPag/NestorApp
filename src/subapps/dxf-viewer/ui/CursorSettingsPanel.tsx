@@ -89,7 +89,7 @@ function SliderRow({
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         disabled={disabled}
-        className={`w-full h-2 ${colors.bg.hover} ${quick.input} appearance-none cursor-pointer slider`}
+        className={`w-full h-2 ${colors.bg.hover} ${quick.input} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER} slider`}
       />
     </div>
   );
@@ -109,7 +109,7 @@ function CheckboxRow({
 }) {
   return (
     <div className={PANEL_LAYOUT.MARGIN.BOTTOM_MD}>
-      <label className="flex items-center cursor-pointer">
+      <label className={`flex items-center ${PANEL_LAYOUT.CURSOR.POINTER}`}>
         <Checkbox
           checked={checked}
           onCheckedChange={(checkedState) => onChange(checkedState === true)}
@@ -351,7 +351,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
   const panelContent = (
     <div
       ref={panelRef}
-      className={`cursor-settings-panel fixed ${colors.bg.primary} ${colors.text.primary}${quick.card} shadow-2xl ${getStatusBorder('default')} select-none pointer-events-auto`}
+      className={`cursor-settings-panel fixed ${colors.bg.primary} ${colors.text.primary}${quick.card} shadow-2xl ${getStatusBorder('default')} ${PANEL_LAYOUT.SELECT.NONE} ${PANEL_LAYOUT.POINTER_EVENTS.AUTO}`}
       style={{
         left: position.x,
         top: position.y,

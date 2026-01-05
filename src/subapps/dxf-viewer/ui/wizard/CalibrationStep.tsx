@@ -66,7 +66,7 @@ export function CalibrationStep() {
             <button
               key={unit.value}
               onClick={() => handleUnitsChange(unit.value as typeof units)}
-              className={`${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} transition-colors ${
+              className={`${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                 units === unit.value
                   ? `${getStatusBorder('info')} ${colors.bg.info} ${colors.text.info}`
                   : `${quick.button} ${colors.text.tertiary} ${HOVER_BORDER_EFFECTS.MUTED}`
@@ -83,7 +83,7 @@ export function CalibrationStep() {
         <legend className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.tertiary}`}>Βαθμονόμηση</legend>
 
         {/* Skip Calibration Option */}
-        <label className={`flex items-start ${PANEL_LAYOUT.SPACING.MD} ${quick.card} cursor-pointer ${HOVER_BORDER_EFFECTS.MUTED} transition-colors`}>
+        <label className={`flex items-start ${PANEL_LAYOUT.SPACING.MD} ${quick.card} ${PANEL_LAYOUT.CURSOR.POINTER} ${HOVER_BORDER_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}>
           <input
             type="radio"
             name="calibration"
@@ -104,7 +104,7 @@ export function CalibrationStep() {
         </label>
 
         {/* Manual Calibration Option */}
-        <label className={`flex items-start ${PANEL_LAYOUT.SPACING.MD} ${quick.card} cursor-pointer ${HOVER_BORDER_EFFECTS.MUTED} transition-colors`}>
+        <label className={`flex items-start ${PANEL_LAYOUT.SPACING.MD} ${quick.card} ${PANEL_LAYOUT.CURSOR.POINTER} ${HOVER_BORDER_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}>
           <input
             type="radio"
             name="calibration"

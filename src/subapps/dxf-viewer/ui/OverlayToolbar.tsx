@@ -157,7 +157,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
     <div
       ref={elementRef}
       style={draggableStyles}
-      className={`${disableFloating ? 'relative' : 'fixed'} flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} flex-wrap shadow-xl select-none pointer-events-auto`}
+      className={`${disableFloating ? 'relative' : 'fixed'} flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} flex-wrap shadow-xl ${PANEL_LAYOUT.SELECT.NONE} ${PANEL_LAYOUT.POINTER_EVENTS.AUTO}`}
       onMouseEnter={(e) => e.stopPropagation()}
       onMouseMove={(e) => e.stopPropagation()}
       onMouseLeave={(e) => e.stopPropagation()}
@@ -166,7 +166,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
       {!disableFloating && (
         <div
           onMouseDown={handleMouseDown}
-          className={`cursor-grab active:cursor-grabbing ${PANEL_LAYOUT.SPACING.XS} ${colors.bg.hover} ${radius.md}`}
+          className={`${PANEL_LAYOUT.CURSOR.GRAB} active:${PANEL_LAYOUT.CURSOR.GRABBING} ${PANEL_LAYOUT.SPACING.XS} ${colors.bg.hover} ${radius.md}`}
           title="Drag to move toolbar"
         >
           <div className={`${iconSizes.xs} ${iconSizes.sm} ${colors.bg.active} ${quick.button}`}></div>
@@ -180,7 +180,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
             onClick={() => handleModeChange(btnMode)}
             title={`${label} (${key})`}
             className={`
-              ${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.SPACING.HORIZONTAL_SM} ${quick.button} transition-colors duration-150
+              ${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.SPACING.HORIZONTAL_SM} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
               flex items-center justify-center ${PANEL_LAYOUT.GAP.XS}
               ${mode === btnMode
                 ? `${colors.bg.info} ${colors.text.inverted} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
@@ -205,7 +205,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
               key={status}
               onClick={() => onStatusChange(status)}
               title={STATUS_LABELS[status]}
-              className={`${iconSizes.lg} ${quick.button} ${quick.card} transition-all duration-150`}
+              className={`${iconSizes.lg} ${quick.button} ${quick.card} ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['150']}`}
               style={getStatusColorButtonStyles(
                 status as PropertyStatus,
                 currentStatus === status
@@ -229,7 +229,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
                 onClick={() => onKindChange(kind)}
                 title={KIND_LABELS[kind]}
                 className={`
-                  ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} transition-colors duration-150
+                  ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
                   flex items-center justify-center
                   ${currentKind === kind
                     ? `${colors.bg.info} ${colors.text.inverted} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
@@ -253,10 +253,10 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           disabled={!selectedOverlayId}
           title="Αντιγραφή (D)"
           className={`
-            ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} transition-colors duration-150
+            ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
             flex items-center justify-center
             ${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')}
-            disabled:opacity-50 disabled:cursor-not-allowed
+            disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
           `}
         >
           <Copy className={iconSizes.sm} />
@@ -267,10 +267,10 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           disabled={!selectedOverlayId}
           title="Διαγραφή (Del)"
           className={`
-            ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} transition-colors duration-150
+            ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
             flex items-center justify-center
             ${colors.bg.secondary} ${colors.text.error} ${getStatusBorder('default')}
-            disabled:opacity-50 disabled:cursor-not-allowed
+            disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
           `}
         >
           <X className={iconSizes.sm} />
@@ -286,10 +286,10 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           disabled={!canUndo}
           title="Αναίρεση (Ctrl+Z)"
           className={`
-            ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} transition-colors duration-150
+            ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
             flex items-center justify-center
             ${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')}
-            disabled:opacity-50 disabled:cursor-not-allowed
+            disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
           `}
         >
           <RotateCcw className={iconSizes.sm} />
@@ -299,10 +299,10 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           disabled={!canRedo}
           title="Επανάληψη (Ctrl+Y)"
           className={`
-            ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} transition-colors duration-150
+            ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
             flex items-center justify-center
             ${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')}
-            disabled:opacity-50 disabled:cursor-not-allowed
+            disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
           `}
         >
           <RotateCw className={iconSizes.sm} />

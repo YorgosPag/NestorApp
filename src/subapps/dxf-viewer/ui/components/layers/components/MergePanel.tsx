@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { GitMerge } from 'lucide-react';
+import { GitMerge, Lightbulb } from 'lucide-react';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { PANEL_TOKENS } from '../../../../config/panel-tokens';
@@ -83,8 +83,8 @@ export const MergePanel = ({
         </div>
       )}
       
-      <div className={PANEL_TOKENS.MERGE_PANEL.FOOTER_TEXT.BASE}>
-        💡 Tip: Ctrl+Click για multi-selection
+      <div className={`${PANEL_TOKENS.MERGE_PANEL.FOOTER_TEXT.BASE} flex items-center gap-1`}>
+        <Lightbulb className={iconSizes.xs} /> Tip: Ctrl+Click για multi-selection
       </div>
     </div>
   );

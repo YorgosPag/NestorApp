@@ -57,12 +57,12 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
         </p>
       </header>
 
-      <section className={`${PANEL_LAYOUT.SPACING.GAP_MD} ${PANEL_LAYOUT.MAX_HEIGHT.MD} overflow-y-auto ${PANEL_LAYOUT.PADDING.RIGHT_SM}`}>
+      <section className={`${PANEL_LAYOUT.SPACING.GAP_MD} ${PANEL_LAYOUT.MAX_HEIGHT.MD} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO} ${PANEL_LAYOUT.PADDING.RIGHT_SM}`}>
         <h4 className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.tertiary}`}>Υπάρχοντα Επίπεδα</h4>
         {levels.map((level) => (
           <label
             key={level.id}
-            className={`flex items-center ${PANEL_LAYOUT.SPACING.MD} cursor-pointer transition-colors ${
+            className={`flex items-center ${PANEL_LAYOUT.SPACING.MD} ${PANEL_LAYOUT.CURSOR.POINTER} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
               importWizard.selectedLevelId === level.id
                 ? `${getStatusBorder('info')} ${colors.bg.selection}`
                 : `${quick.card} ${HOVER_BORDER_EFFECTS.MUTED}`
@@ -95,7 +95,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
         {!showNewLevelForm ? (
           <button
             onClick={handleCreateNewLevel}
-            className={`flex items-center ${PANEL_LAYOUT.SPACING.MD} w-full text-left transition-colors ${
+            className={`flex items-center ${PANEL_LAYOUT.SPACING.MD} w-full text-left ${PANEL_LAYOUT.TRANSITION.COLORS} ${
               !importWizard.selectedLevelId && importWizard.newLevelName
                 ? `${getStatusBorder('info')} ${colors.bg.selection}`
                 : `${quick.dashed} ${HOVER_BORDER_EFFECTS.MUTED}`
@@ -131,7 +131,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
                 setSelectedLevel(levels[0]?.id || undefined, undefined);
                 setNewLevelName('');
               }}
-              className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${colors.text.muted} ${HOVER_TEXT_EFFECTS.WHITE} transition-colors`}
+              className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${colors.text.muted} ${HOVER_TEXT_EFFECTS.WHITE} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
             >
               Ακύρωση
             </button>

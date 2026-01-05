@@ -202,12 +202,12 @@ export function LayerItem({
   return (
     <>
       <div
-        className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.SM} rounded cursor-pointer transition-all ${getDirectionalBorder('muted', 'left')} ${
-          layer.visible ? `${colors.bg.secondary} ${HOVER_BACKGROUND_EFFECTS.LIGHT}` : `${colors.bg.primary} opacity-60`
+        className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.CURSOR.POINTER} ${PANEL_LAYOUT.TRANSITION.ALL} ${getDirectionalBorder('muted', 'left')} ${
+          layer.visible ? `${colors.bg.secondary} ${HOVER_BACKGROUND_EFFECTS.LIGHT}` : `${colors.bg.primary} ${PANEL_LAYOUT.OPACITY['60']}`
         } ${selectedLayersForMerge.has(layerName) ? `ring-2 ${colors.ring.info} ${colors.bg.selection}` : ''}`}
         onClick={handleLayerClick}
       >
-        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} flex-1 min-w-0`}>
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} flex-1 ${PANEL_LAYOUT.MIN_WIDTH['0']}`}>
           {/* Expand/Collapse Arrow for entities */}
           {entityCount > 0 && (
             <button
@@ -246,7 +246,7 @@ export function LayerItem({
             />
           ) : (
             <span
-              className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary} truncate cursor-pointer`}
+              className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary} truncate ${PANEL_LAYOUT.CURSOR.POINTER}`}
               title={layerName}
               onDoubleClick={handleNameDoubleClick}
             >

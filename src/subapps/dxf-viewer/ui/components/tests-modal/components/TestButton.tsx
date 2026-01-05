@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { Play, CheckCircle2 } from 'lucide-react';
+import { Play, CheckCircle2, Loader2, type LucideIcon } from 'lucide-react';
 import { INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -18,6 +18,8 @@ interface TestButtonProps {
     name: string;
     description: string;
     action: () => Promise<void>;
+    /** 🏢 ENTERPRISE: Lucide icon component for the test */
+    icon?: LucideIcon;
   };
   isRunning: boolean;
   isCompleted: boolean;
@@ -38,9 +40,9 @@ export const TestButton: React.FC<TestButtonProps> = ({
     <button
       onClick={() => onRun(test.id, test.action)}
       disabled={isRunning}
-      className={`flex items-start ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} rounded-lg border transition-all text-left w-full ${
+      className={`flex items-start ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} rounded-lg border ${PANEL_LAYOUT.TRANSITION.ALL} text-left w-full ${
         isRunning
-          ? `${colors.bg.warning} ${useBorderTokens().getStatusBorder('warning')} cursor-wait`
+          ? `${colors.bg.warning} ${useBorderTokens().getStatusBorder('warning')} ${PANEL_LAYOUT.CURSOR.WAIT}`
           : isCompleted
           ? `${colors.bg.success} ${useBorderTokens().getStatusBorder('success')} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`
           : `${colors.bg.hover} ${getStatusBorder('muted')} ${HOVER_BORDER_EFFECTS.GRAY} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
@@ -48,9 +50,11 @@ export const TestButton: React.FC<TestButtonProps> = ({
     >
       <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
         {isRunning ? (
-          <div className="animate-spin text-base">⏳</div>
+          <Loader2 className={`${iconSizes.md} ${colors.text.warning} animate-spin`} />
         ) : isCompleted ? (
           <CheckCircle2 className={`${iconSizes.md} ${colors.text.success}`} />
+        ) : test.icon ? (
+          <test.icon className={`${iconSizes.md} ${colors.text.muted}`} />
         ) : (
           <Play className={`${iconSizes.md} ${colors.text.muted}`} />
         )}

@@ -13,7 +13,7 @@
 
 import { componentSizes, semanticColors } from '../../../styles/design-tokens';
 import { COLOR_BRIDGE } from '../../../design-system/color-bridge';
-import { PANEL_COLORS } from './panel-tokens';
+import { PANEL_COLORS, PANEL_LAYOUT } from './panel-tokens';
 
 // ====================================================================
 // MODULAR SYSTEM RE-EXPORTS - BACKWARD COMPATIBILITY
@@ -486,7 +486,7 @@ export function buildSelectTriggerClass(config: {
   let baseClass = MODAL_SELECT_STYLES[theme].trigger;
 
   if (disabled) {
-    baseClass += ' opacity-50 cursor-not-allowed pointer-events-none';
+    baseClass += ` ${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`;
   }
 
   if (error) {

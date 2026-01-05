@@ -70,7 +70,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
           type="color"
           value={colors[colorKey] as string}
           onChange={(e) => handleColorChange(colorKey, e.target.value)}
-          className={`${iconSizes.xl} ${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} border-0 cursor-pointer`}
+          className={`${iconSizes.xl} ${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} border-0 ${PANEL_LAYOUT.CURSOR.POINTER}`}
         />
         <input
           type="text"

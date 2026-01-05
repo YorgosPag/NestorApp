@@ -56,7 +56,7 @@ const LinePreviewControlComponent: React.FC<LinePreviewControlProps> = ({
         style={{ height }}
       >
         {settings.enabled !== false ? (
-          <svg width="100%" height="100%" className="overflow-visible">
+          <svg width="100%" height="100%" className={PANEL_LAYOUT.OVERFLOW.VISIBLE}>
             {/* Main line */}
             <line
               x1="10%"

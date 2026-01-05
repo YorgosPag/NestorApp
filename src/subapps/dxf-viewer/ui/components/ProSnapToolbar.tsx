@@ -70,7 +70,7 @@ const SnapButton: React.FC<SnapButtonProps> = ({ mode, enabled, onClick, compact
       title={tooltip}
       className={`
         ${compact ? `${PANEL_LAYOUT.HEIGHT.LG} ${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS}` : `${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}
-        ${radius.md} border transition-all duration-150 ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}
+        ${radius.md} border ${PANEL_LAYOUT.TRANSITION.ALL} duration-150 ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}
         flex items-center justify-center
         ${enabled
           ? `${colors.bg.primary} ${getStatusBorder('info')} ${colors.text.primary} shadow-md ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
@@ -78,7 +78,7 @@ const SnapButton: React.FC<SnapButtonProps> = ({ mode, enabled, onClick, compact
         }
       `}
     >
-      <span className="select-none truncate">{label}</span>
+      <span className={`${PANEL_LAYOUT.SELECT.NONE} truncate`}>{label}</span>
     </button>
   );
 };
@@ -155,7 +155,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
     <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.primary} ${quick.card} ${className}`}>
       <button
         onClick={handleMasterToggle}
-        className={`${PANEL_LAYOUT.SPACING.COMPACT} ${radius.md} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} transition-colors border flex items-center ${PANEL_LAYOUT.GAP.XS} ${
+        className={`${PANEL_LAYOUT.SPACING.COMPACT} ${radius.md} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${PANEL_LAYOUT.TRANSITION.COLORS} border flex items-center ${PANEL_LAYOUT.GAP.XS} ${
           snapEnabled ? `${colors.bg.primary} ${colors.text.primary} ${getStatusBorder('info')} shadow-md` : `${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
         }`}
         title="Ενεργοποίηση/Απενεργοποίηση Object Snap (F3)"
@@ -182,7 +182,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
           <div className={`w-px ${PANEL_LAYOUT.HEIGHT.LG} ${colors.bg.muted}`} />
           <button
             onClick={handleToggleAdvanced}
-            className={`${iconSizes.xl} ${radius.md} border transition-all duration-150 flex items-center justify-center ${
+            className={`${iconSizes.xl} ${radius.md} border ${PANEL_LAYOUT.TRANSITION.ALL} duration-150 flex items-center justify-center ${
               showAdvanced || advancedEnabledCount > 0 ? `${colors.bg.muted} ${getStatusBorder('subtle')} ${colors.text.primary}` : `${colors.bg.secondary} ${getStatusBorder('default')} ${colors.text.muted} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
             }`}
             title={`${showAdvanced ? 'Απόκρυψη' : 'Εμφάνιση'} προχωρημένων λειτουργιών`}
@@ -195,7 +195,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
       <div className={`w-px ${PANEL_LAYOUT.HEIGHT.LG} ${colors.bg.muted}`} />
       <button
         onClick={handleQuickEnable}
-        className={`${iconSizes.xl} ${radius.md} border transition-all duration-150 flex items-center justify-center ${colors.text.muted} ${HOVER_TEXT_EFFECTS.WHITE} ${colors.bg.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`}
+        className={`${iconSizes.xl} ${radius.md} border ${PANEL_LAYOUT.TRANSITION.ALL} duration-150 flex items-center justify-center ${colors.text.muted} ${HOVER_TEXT_EFFECTS.WHITE} ${colors.bg.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`}
         title="Ενεργοποίηση βασικών λειτουργιών"
       >
         <Settings size={14} />

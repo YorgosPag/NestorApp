@@ -1,9 +1,24 @@
 'use client';
 
 import React from 'react';
+import {
+  FlaskConical,
+  Target,
+  RefreshCw,
+  Search,
+  Building2,
+  Ruler,
+  Crosshair,
+  Triangle,
+  Eye,
+  EyeOff,
+  Home,
+  Circle
+} from 'lucide-react';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { SceneModel } from '../types/scene';
 import type { ToolType } from '../ui/toolbar/types';
 import { runAllTests, formatReportForCopy, type UnifiedTestReport } from './unified-test-runner';
@@ -52,6 +67,7 @@ export const DebugToolbar: React.FC<DebugToolbarProps> = ({
 }) => {
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
+  const iconSizes = useIconSizes();  // 🏢 ENTERPRISE: Centralized icon sizing
   // Keyboard shortcuts for testing (F2, F3, Ctrl+Shift+T)
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -183,9 +199,9 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to run all tests', 'error');
           }
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} bg-gradient-to-r from-purple-600 to-pink-600 ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.GRADIENT_PURPLE_PINK}`}
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} bg-gradient-to-r from-purple-600 to-pink-600 ${colors.text.inverted} ${PANEL_LAYOUT.TRANSITION.ALL} ${HOVER_BACKGROUND_EFFECTS.GRADIENT_PURPLE_PINK}`}
       >
-        🧪 Run All Tests
+        <FlaskConical className={iconSizes.xs} /> Run All Tests
       </button>
 
       {/* Canvas Alignment Test Button */}
@@ -228,9 +244,9 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load test module', 'error');
           });
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.warning} ${colors.text.BLACK} transition-all ${HOVER_BACKGROUND_EFFECTS.WARNING_BUTTON}`}
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.warning} ${colors.text.BLACK} ${PANEL_LAYOUT.TRANSITION.ALL} ${HOVER_BACKGROUND_EFFECTS.WARNING_BUTTON}`}
       >
-        🎯 Canvas Test
+        <Target className={iconSizes.xs} /> Canvas Test
       </button>
 
       {/* Layering Workflow Test Button */}
@@ -255,9 +271,9 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load workflow test module', 'error');
           });
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.success} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.SUCCESS_BUTTON}`}
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.success} ${colors.text.inverted} ${PANEL_LAYOUT.TRANSITION.ALL} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_BUTTON}`}
       >
-        🔄 Layering Test (Ctrl+F2)
+        <RefreshCw className={iconSizes.xs} /> Layering Test (Ctrl+F2)
       </button>
 
       {/* DOM Inspector Button */}
@@ -290,9 +306,9 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load DOM inspector', 'error');
           });
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.info} ${colors.text.inverted} ${PANEL_LAYOUT.TRANSITION.ALL} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
       >
-        🔍 DOM Inspector
+        <Search className={iconSizes.xs} /> DOM Inspector
       </button>
 
       {/* Enterprise Cursor Test Button */}
@@ -323,9 +339,9 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load enterprise cursor-crosshair test module', 'error');
           });
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.info} ${colors.text.inverted} ${PANEL_LAYOUT.TRANSITION.ALL} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
       >
-        🏢 Enterprise Test (F3)
+        <Building2 className={iconSizes.xs} /> Enterprise Test (F3)
       </button>
 
       {/* Origin Markers Debug Button */}
@@ -352,9 +368,9 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load origin markers debug module', 'error');
           });
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.warning} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.WARNING_BUTTON}`}
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.warning} ${colors.text.inverted} ${PANEL_LAYOUT.TRANSITION.ALL} ${HOVER_BACKGROUND_EFFECTS.WARNING_BUTTON}`}
       >
-        🎯 Origin (0,0)
+        <Target className={iconSizes.xs} /> Origin (0,0)
       </button>
 
       {/* Ruler Debug Button */}
@@ -381,9 +397,9 @@ Check console for detailed metrics`;
             console.log(diagnostics);
           });
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.info} ${colors.text.inverted} ${PANEL_LAYOUT.TRANSITION.ALL} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
       >
-        📏 Rulers
+        <Ruler className={iconSizes.xs} /> Rulers
       </button>
 
       {/* Calibration Toggle Button */}
@@ -394,13 +410,13 @@ Check console for detailed metrics`;
           const status = showCalibration ? 'DISABLED' : 'ENABLED';
           showCopyableNotification(`Calibration panel ${status} ✅`, 'info');
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} transition-all ${
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${PANEL_LAYOUT.TRANSITION.ALL} ${
           showCalibration
             ? `${colors.bg.info} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.CYAN}`
             : `${colors.bg.hover} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
         }`}
       >
-        🎯 Calibration {showCalibration ? 'ON' : 'OFF'}
+        <Crosshair className={iconSizes.xs} /> Calibration {showCalibration ? 'ON' : 'OFF'}
       </button>
 
       {/* Cursor-Snap Alignment Debug Button */}
@@ -424,9 +440,9 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load alignment debug module', 'error');
           });
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.info} ${colors.text.inverted} ${PANEL_LAYOUT.TRANSITION.ALL} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
       >
-        🎯 Alignment
+        <Target className={iconSizes.xs} /> Alignment
       </button>
 
       {/* Grid Enterprise Test Button */}
@@ -461,13 +477,13 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load grid test module', 'error');
           });
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} transition-all ${
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${PANEL_LAYOUT.TRANSITION.ALL} ${
           showGrid
             ? `${colors.bg.success} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.SUCCESS}`
             : `${colors.bg.hover} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
         }`}
       >
-        {showGrid ? '📐 Grid TEST' : '📐 Grid TEST'}
+        <Triangle className={iconSizes.xs} /> Grid TEST
       </button>
 
       {/* Canvas Visibility Toggle Buttons */}
@@ -476,13 +492,13 @@ Check console for detailed metrics`;
           setDxfCanvasVisible(!dxfCanvasVisible);
           console.log('🎯 DxfCanvas visibility toggled:', !dxfCanvasVisible);
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} transition-all ${
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${PANEL_LAYOUT.TRANSITION.ALL} ${
           dxfCanvasVisible
             ? `${colors.bg.success} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.SUCCESS}`
             : `${colors.bg.error} ${colors.text.WHITE} ${HOVER_BACKGROUND_EFFECTS.DESTRUCTIVE}`
         }`}
       >
-        {dxfCanvasVisible ? '🟢 DXF ON' : '🔴 DXF OFF'}
+        {dxfCanvasVisible ? <><Eye className={iconSizes.xs} /> DXF ON</> : <><EyeOff className={iconSizes.xs} /> DXF OFF</>}
       </button>
 
       <button
@@ -490,21 +506,21 @@ Check console for detailed metrics`;
           setLayerCanvasVisible(!layerCanvasVisible);
           console.log('🎯 LayerCanvas visibility toggled:', !layerCanvasVisible);
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} transition-all ${
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${PANEL_LAYOUT.TRANSITION.ALL} ${
           layerCanvasVisible
             ? `${colors.bg.info} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
             : `${colors.bg.error} ${colors.text.WHITE} ${HOVER_BACKGROUND_EFFECTS.DESTRUCTIVE}`
         }`}
       >
-        {layerCanvasVisible ? '🔵 LAYER ON' : '🔴 LAYER OFF'}
+        {layerCanvasVisible ? <><Eye className={iconSizes.xs} /> LAYER ON</> : <><EyeOff className={iconSizes.xs} /> LAYER OFF</>}
       </button>
 
       {/* Pan to Origin (0,0) Button */}
       <button
         onClick={panToWorldOrigin}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.info} ${colors.text.inverted} ${PANEL_LAYOUT.TRANSITION.ALL} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
       >
-        🏠 Pan to (0,0)
+        <Home className={iconSizes.xs} /> Pan to (0,0)
       </button>
 
       <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.hover} ${colors.text.WHITE} ${PANEL_LAYOUT.SPACING.COMPACT} ${quick.button}`}>

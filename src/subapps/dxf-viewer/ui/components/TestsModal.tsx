@@ -11,7 +11,7 @@
  */
 
 import React from 'react';
-import { X, FlaskConical } from 'lucide-react';
+import { X, FlaskConical, Lightbulb } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -81,7 +81,7 @@ export const TestsModal: React.FC<TestsModalProps> = ({
       >
         {/* Header - Draggable */}
         <header
-          className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.LG} ${getDirectionalBorder('muted', 'bottom')} cursor-grab active:cursor-grabbing`}
+          className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.LG} ${getDirectionalBorder('muted', 'bottom')} ${PANEL_LAYOUT.CURSOR.GRAB} active:${PANEL_LAYOUT.CURSOR.GRABBING}`}
           onMouseDown={draggable.handleMouseDown}
         >
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
@@ -91,7 +91,7 @@ export const TestsModal: React.FC<TestsModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className={`${PANEL_LAYOUT.SPACING.XS} rounded transition-colors ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
+            className={`${PANEL_LAYOUT.SPACING.XS} rounded ${PANEL_LAYOUT.TRANSITION.COLORS} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
           >
             <X className={`${iconSizes.lg} ${colors.text.muted}`} />
           </button>
@@ -104,7 +104,7 @@ export const TestsModal: React.FC<TestsModalProps> = ({
         />
 
         {/* Content */}
-        <div className={`flex-1 overflow-y-auto ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.SPACING.GAP_LG}`}>
+        <div className={`flex-1 ${PANEL_LAYOUT.OVERFLOW.Y_AUTO} ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.SPACING.GAP_LG}`}>
           {/* TAB 1: Automated Tests */}
           {testState.activeTab === 'automated' && (
             <AutomatedTestsTab
@@ -135,8 +135,8 @@ export const TestsModal: React.FC<TestsModalProps> = ({
 
         {/* Footer */}
         <footer className={`${PANEL_LAYOUT.SPACING.LG} ${getDirectionalBorder('muted', 'top')} ${colors.bg.muted}`}>
-          <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} text-center`}>
-            💡 Tip: Τα tests εκτελούνται ασύγχρονα. Έλεγξε το console για λεπτομέρειες.
+          <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} text-center flex items-center justify-center ${PANEL_LAYOUT.GAP.SM}`}>
+            <Lightbulb className={iconSizes.sm} /> Tip: Τα tests εκτελούνται ασύγχρονα. Έλεγξε το console για λεπτομέρειες.
           </p>
         </footer>
       </div>

@@ -80,7 +80,7 @@ export const OverrideToggle = React.memo<OverrideToggleProps>(function OverrideT
   // 🏢 ENTERPRISE: Using PANEL_LAYOUT for consistent spacing - ZERO HARDCODED VALUES
   return (
     <div className={`${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${PANEL_LAYOUT.CONTAINER.BORDER_RADIUS} ${className}`}>
-      <label className={`flex items-start ${PANEL_LAYOUT.GAP.SM} cursor-pointer`}>
+      <label className={`flex items-start ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.CURSOR.POINTER}`}>
         {/* ✅ ENTERPRISE: Centralized Radix Checkbox - Single Source of Truth */}
         <Checkbox
           checked={checked}

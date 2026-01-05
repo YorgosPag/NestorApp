@@ -151,7 +151,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
           />
           <label
             htmlFor="grips-enabled"
-            className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} cursor-pointer ${gripSettings.enabled ? colors.text.primary : colors.text.muted}`}
+            className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.CURSOR.POINTER} ${gripSettings.enabled ? colors.text.primary : colors.text.muted}`}
           >
             Εμφάνιση Grips
           </label>
@@ -190,7 +190,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                 step="1"
                 value={gripSettings.gripSize || 8}
                 onChange={(e) => updateSettings({ gripSize: parseInt(e.target.value) })}
-                className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+                className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER}`}
               />
               <input
                 type="number"
@@ -217,7 +217,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                 step="0.1"
                 value={gripSettings.opacity}
                 onChange={(e) => updateSettings({ opacity: parseFloat(e.target.value) })}
-                className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+                className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER}`}
               />
               <input
                 type="number"
@@ -328,7 +328,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                 checked={gripSettings.showMidpoints}
                 onCheckedChange={(checked) => updateSettings({ showMidpoints: checked === true })}
               />
-              <label htmlFor="show-midpoints" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} cursor-pointer ${colors.text.secondary}`}>Εμφάνιση Midpoints</label>
+              <label htmlFor="show-midpoints" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.CURSOR.POINTER} ${colors.text.secondary}`}>Εμφάνιση Midpoints</label>
             </div>
 
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
@@ -337,7 +337,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                 checked={gripSettings.showCenters}
                 onCheckedChange={(checked) => updateSettings({ showCenters: checked === true })}
               />
-              <label htmlFor="show-centers" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} cursor-pointer ${colors.text.secondary}`}>Εμφάνιση Centers</label>
+              <label htmlFor="show-centers" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.CURSOR.POINTER} ${colors.text.secondary}`}>Εμφάνιση Centers</label>
             </div>
 
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
@@ -346,7 +346,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                 checked={gripSettings.showQuadrants}
                 onCheckedChange={(checked) => updateSettings({ showQuadrants: checked === true })}
               />
-              <label htmlFor="show-quadrants" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} cursor-pointer ${colors.text.secondary}`}>Εμφάνιση Quadrants</label>
+              <label htmlFor="show-quadrants" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.CURSOR.POINTER} ${colors.text.secondary}`}>Εμφάνιση Quadrants</label>
             </div>
           </div>
         </AccordionSection>
@@ -375,7 +375,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step="1"
                   value={gripSettings.pickBoxSize || 3}
                   onChange={(e) => updateSettings({ pickBoxSize: parseInt(e.target.value) })}
-                  className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+                  className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER}`}
                 />
                 <input
                   type="number"
@@ -402,7 +402,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step="2"
                   value={gripSettings.apertureSize || 16}
                   onChange={(e) => updateSettings({ apertureSize: parseInt(e.target.value) })}
-                  className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+                  className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER}`}
                 />
                 <input
                   type="number"
@@ -429,7 +429,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step="10"
                   value={gripSettings.maxGripsPerEntity || 50}
                   onChange={(e) => updateSettings({ maxGripsPerEntity: parseInt(e.target.value) })}
-                  className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+                  className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER}`}
                 />
                 <input
                   type="number"
@@ -451,7 +451,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                   checked={gripSettings.showAperture}
                   onCheckedChange={(checked) => updateSettings({ showAperture: checked === true })}
                 />
-                <label htmlFor="show-aperture" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} cursor-pointer ${colors.text.secondary}`}>Εμφάνιση Aperture</label>
+                <label htmlFor="show-aperture" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.CURSOR.POINTER} ${colors.text.secondary}`}>Εμφάνιση Aperture</label>
               </div>
 
               <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
@@ -460,7 +460,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                   checked={gripSettings.multiGripEdit}
                   onCheckedChange={(checked) => updateSettings({ multiGripEdit: checked === true })}
                 />
-                <label htmlFor="multi-grip-edit" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} cursor-pointer ${colors.text.secondary}`}>Multi-Grip Επεξεργασία</label>
+                <label htmlFor="multi-grip-edit" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.CURSOR.POINTER} ${colors.text.secondary}`}>Multi-Grip Επεξεργασία</label>
               </div>
 
               <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
@@ -469,7 +469,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                   checked={gripSettings.snapToGrips}
                   onCheckedChange={(checked) => updateSettings({ snapToGrips: checked === true })}
                 />
-                <label htmlFor="snap-to-grips" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} cursor-pointer ${colors.text.secondary}`}>Snap σε Grips</label>
+                <label htmlFor="snap-to-grips" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.CURSOR.POINTER} ${colors.text.secondary}`}>Snap σε Grips</label>
               </div>
             </div>
 
@@ -479,19 +479,19 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
               <div className={`flex ${PANEL_LAYOUT.SPACING.GAP_H_SM}`}>
                 <button
                   onClick={() => updateSettings({ gripSize: 5, pickBoxSize: 2, apertureSize: 10 })}
-                  className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors`}
+                  className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
                 >
                   Μικρό
                 </button>
                 <button
                   onClick={() => updateSettings({ gripSize: 8, pickBoxSize: 3, apertureSize: 16 })}
-                  className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.bg.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors`}
+                  className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.bg.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
                 >
                   Κανονικό
                 </button>
                 <button
                   onClick={() => updateSettings({ gripSize: 12, pickBoxSize: 5, apertureSize: 24 })}
-                  className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors`}
+                  className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
                 >
                   Μεγάλο
                 </button>
@@ -562,13 +562,13 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
           <footer className={`flex ${PANEL_LAYOUT.GAP.MD} justify-end ${PANEL_LAYOUT.PADDING.TOP_LG}${quick.separator}`}>
             <button
               onClick={handleFactoryResetCancel}
-              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors`}
+              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
             >
               Ακύρωση
             </button>
             <button
               onClick={handleFactoryResetConfirm}
-              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.danger} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} flex items-center ${PANEL_LAYOUT.GAP.XS}`}
+              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.danger} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} flex items-center ${PANEL_LAYOUT.GAP.XS}`}
             >
               <Factory className={iconSizes.xs} />
               Επαναφορά Εργοστασιακών

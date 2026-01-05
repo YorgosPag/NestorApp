@@ -863,7 +863,7 @@ Check console for detailed metrics`;
       >
       <section
         className={`flex h-full ${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.GAP.SM} ${colors.bg.primary} ${
-          activeTool === 'layering' ? 'pointer-events-none' : 'pointer-events-auto'
+          activeTool === 'layering' ? PANEL_LAYOUT.POINTER_EVENTS.NONE : PANEL_LAYOUT.POINTER_EVENTS.AUTO
         }`}
       >
       {/* ✅ PHASE 5: Sidebar Section */}

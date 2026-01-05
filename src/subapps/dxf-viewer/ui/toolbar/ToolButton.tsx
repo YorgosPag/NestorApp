@@ -74,14 +74,14 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
         disabled={disabled}
         title={`${tool.label} (${tool.hotkey})`}
         className={`
-          ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} rounded-md transition-colors duration-150
+          ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} rounded-md ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
           flex items-center justify-center
           ${
             isActive
               ? `${colors.bg.info} ${colors.text.inverse} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
               : `${colors.bg.hover} ${colors.text.secondary} ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
           }
-          ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+          ${disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : ''}
         `}
       >
         {IconComponent ? <IconComponent className={`${iconSizes.md} text-current`} /> : <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>{tool.label?.charAt(0) || '?'}</span>}
@@ -97,14 +97,14 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
           disabled={disabled}
           title={`${tool.label} (${tool.hotkey})`}
           className={`
-            ${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.WIDTH.BUTTON_MD} ${PANEL_LAYOUT.SPACING.NONE} rounded-l-md transition-colors duration-150
+            ${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.WIDTH.BUTTON_MD} ${PANEL_LAYOUT.SPACING.NONE} rounded-l-md ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
             flex items-center justify-center
             ${
               isActive
                 ? `${colors.bg.info} ${colors.text.inverse} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
                 : `${colors.bg.hover} ${colors.text.secondary} ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
             }
-            ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+            ${disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : ''}
           `}
         >
           {IconComponent ? <IconComponent className={`${iconSizes.md} text-current`} /> : <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>{tool.label?.charAt(0) || '?'}</span>}
@@ -114,14 +114,14 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
           disabled={disabled}
           title="Περισσότερες επιλογές"
           className={`
-            ${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.WIDTH.XS} ${PANEL_LAYOUT.SPACING.NONE} rounded-r-md transition-colors duration-150
+            ${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.WIDTH.XS} ${PANEL_LAYOUT.SPACING.NONE} rounded-r-md ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
             flex items-center justify-center
             ${
               isActive
                 ? `${colors.bg.info} ${colors.text.inverse} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
                 : `${colors.bg.hover} ${colors.text.secondary} ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
             }
-            ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+            ${disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : ''}
           `}
         >
           <ChevronDown className={`${iconSizes.xs} text-current`} />
@@ -165,13 +165,13 @@ export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
       title={action.hotkey ? `${action.label} (${action.hotkey})` : action.label}
       disabled={action.disabled ?? false}
       className={`
-        ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} rounded-md transition-colors duration-150
+        ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} rounded-md ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
         flex items-center justify-center
         ${
           action.active
             ? `${colors.bg.info} ${colors.text.inverse} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
             : action.disabled
-            ? `${colors.bg.secondary} ${colors.text.muted} ${getElementBorder('button', 'default')} cursor-not-allowed`
+            ? `${colors.bg.secondary} ${colors.text.muted} ${getElementBorder('button', 'default')} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}`
             : `${colors.bg.hover} ${colors.text.secondary} ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
         }
       `}

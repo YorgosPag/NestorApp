@@ -137,7 +137,7 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
       </div>
 
       {/* ✅ ENTERPRISE: Centralized spacing from PANEL_LAYOUT (ADR-003) */}
-      <div className={`flex-1 min-h-0 overflow-y-auto ${colors.bg.primary} ${colors.text.primary} ${PANEL_LAYOUT.CONTAINER.PADDING}`}>
+      <div className={`flex-1 min-h-0 ${PANEL_LAYOUT.OVERFLOW.Y_AUTO} ${colors.bg.primary} ${colors.text.primary} ${PANEL_LAYOUT.CONTAINER.PADDING}`}>
         {renderPanelContent()}
       </div>
 

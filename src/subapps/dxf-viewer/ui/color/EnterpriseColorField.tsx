@@ -135,7 +135,7 @@ export function EnterpriseColorField({
           flex-1 ${PANEL_LAYOUT.INPUT.PADDING} ${colors.bg.secondary} ${quick.input}
           ${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${colors.text.primary} font-mono
           ${PANEL_LAYOUT.INPUT.FOCUS} focus:ring-2 ${colors.ring.info}
-          disabled:opacity-50 disabled:cursor-not-allowed
+          disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
           ${error ? getStatusBorder('error').replace('border ', '') : ''}
         `}
       />

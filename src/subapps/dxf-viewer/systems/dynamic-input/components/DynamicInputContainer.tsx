@@ -14,7 +14,7 @@ interface DynamicInputContainerProps {
 export function DynamicInputContainer({ position, showInput, children }: DynamicInputContainerProps) {
   return (
     <div
-      className={`absolute -translate-y-full ${showInput ? 'visible pointer-events-auto' : 'invisible pointer-events-none'}`}
+      className={`absolute -translate-y-full ${showInput ? `visible ${PANEL_LAYOUT.POINTER_EVENTS.AUTO}` : `invisible ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}`}
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,

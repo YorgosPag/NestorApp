@@ -137,7 +137,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 
       {/* Modal Container */}
       <div
-        className="fixed inset-0 overflow-y-auto"
+        className={`fixed inset-0 ${PANEL_LAYOUT.OVERFLOW.Y_AUTO}`}
         style={{ zIndex: portalComponents.modal.content.zIndex(zIndex) }}
       >
         <div className={`flex items-center justify-center min-h-full ${PANEL_LAYOUT.SPACING.LG} text-center ${PANEL_LAYOUT.SPACING.SM_NONE}`}>
@@ -145,15 +145,15 @@ export const BaseModal: React.FC<BaseModalProps> = ({
           <div
             ref={modalRef}
             className={`
-              relative inline-block w-full 
+              relative inline-block w-full
               ${sizeClasses[size]}
-              ${colors.bg.accent} 
-              ${getStatusBorder('muted')} 
-              rounded-lg 
-              shadow-2xl 
-              text-left 
-              transform 
-              transition-all 
+              ${colors.bg.accent}
+              ${getStatusBorder('muted')}
+              rounded-lg
+              shadow-2xl
+              text-left
+              transform
+              ${PANEL_LAYOUT.TRANSITION.ALL}
               sm:align-middle
               ${className}
             `}

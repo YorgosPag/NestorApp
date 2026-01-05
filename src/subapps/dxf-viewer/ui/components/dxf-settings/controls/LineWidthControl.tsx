@@ -77,7 +77,7 @@ export const LineWidthControl: React.FC<LineWidthControlProps> = ({
       />
 
       {/* 🏢 ENTERPRISE: Visual preview bar - Using semantic colors */}
-      <div className={`h-2 ${colors.bg.secondary} rounded overflow-hidden`}>
+      <div className={`h-2 ${colors.bg.secondary} rounded ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`}>
         <div
           className={`h-full ${colors.bg.info} transition-all duration-150 ${disabled ? 'opacity-50' : 'opacity-100'}`}
           style={{

@@ -109,7 +109,7 @@ export const ScaleControls: React.FC<ScaleControlsProps> = ({
         onKeyPress={handleKeyPress}
         onFocus={handleInputFocus}
         onBlur={handleInputBlur}
-        className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_X} ${PANEL_LAYOUT.PADDING.VERTICAL_NONE} ${colors.bg.tertiary} ${getStatusBorder('muted')} rounded ${colors.text.inverted} ${PANEL_LAYOUT.TYPOGRAPHY.XS} text-center ${getFocusBorder('input')} focus:outline-none transition-colors select-all`}
+        className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_X} ${PANEL_LAYOUT.PADDING.VERTICAL_NONE} ${colors.bg.tertiary} ${getStatusBorder('muted')} rounded ${colors.text.inverted} ${PANEL_LAYOUT.TYPOGRAPHY.XS} text-center ${getFocusBorder('input')} focus:outline-none ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.SELECT.ALL}`}
         title="Drawing scale (1:100 means 1 unit = 100 real units) - Press Enter or click away to apply"
         placeholder="100"
       />

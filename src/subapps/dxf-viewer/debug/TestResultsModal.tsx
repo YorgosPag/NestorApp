@@ -168,7 +168,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${PANEL_LAYOUT.TYPOGRAPHY['2XL']} ${PANEL_LAYOUT.LEADING.NONE} ${iconSizes.xl2} flex items-center justify-center ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${HOVER_BACKGROUND_EFFECTS.GRAY_BUTTON} transition-colors`}
+            className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${PANEL_LAYOUT.TYPOGRAPHY['2XL']} ${PANEL_LAYOUT.LEADING.NONE} ${iconSizes.xl2} flex items-center justify-center ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${HOVER_BACKGROUND_EFFECTS.GRAY_BUTTON} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
           >
             ✕
           </button>
@@ -198,7 +198,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
           <div className={`flex ${PANEL_LAYOUT.GAP.SM}`} style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}>
             <button
               onClick={handleCopy}
-              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.ROUNDED.DEFAULT} transition-all ${
+              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.TRANSITION.ALL} ${
                 copied
                   ? `${colors.bg.success} ${colors.text.WHITE}`
                   : `${colors.bg.info} ${colors.text.WHITE} ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT}`
@@ -209,7 +209,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
             </button>
             <button
               onClick={handleDownload}
-              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${colors.bg.info} ${colors.text.WHITE} ${HOVER_BACKGROUND_EFFECTS.PURPLE_LIGHT} transition-all`}
+              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${colors.bg.info} ${colors.text.WHITE} ${HOVER_BACKGROUND_EFFECTS.PURPLE_LIGHT} ${PANEL_LAYOUT.TRANSITION.ALL}`}
               style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}
             >
               Λήψη JSON
@@ -224,7 +224,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
               console.log('Summary tab clicked');
               setActiveTab('summary');
             }}
-            className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} rounded-t transition-all ${getTabBorder('summary')}`}
+            className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} rounded-t ${PANEL_LAYOUT.TRANSITION.ALL} ${getTabBorder('summary')}`}
             style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}
           >
             Περίληψη
@@ -234,7 +234,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
               console.log('Details tab clicked');
               setActiveTab('details');
             }}
-            className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} rounded-t transition-all ${getTabBorder('details')}`}
+            className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} rounded-t ${PANEL_LAYOUT.TRANSITION.ALL} ${getTabBorder('details')}`}
             style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}
           >
             Λεπτομέρειες
@@ -244,7 +244,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
               console.log('Raw tab clicked');
               setActiveTab('raw');
             }}
-            className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} rounded-t transition-all ${getTabBorder('raw')}`}
+            className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} rounded-t ${PANEL_LAYOUT.TRANSITION.ALL} ${getTabBorder('raw')}`}
             style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}
           >
             Ακατέργαστη Έξοδος
@@ -252,7 +252,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
         </nav>
 
         {/* CONTENT */}
-        <main className={`flex-1 overflow-y-auto ${colors.bg.secondary} ${PANEL_LAYOUT.SPACING.XXL} ${PANEL_LAYOUT.SPACING.LG}`}>
+        <main className={`flex-1 ${PANEL_LAYOUT.OVERFLOW.Y_AUTO} ${colors.bg.secondary} ${PANEL_LAYOUT.SPACING.XXL} ${PANEL_LAYOUT.SPACING.LG}`}>
           {activeTab === 'summary' && <SummaryTab report={report} />}
           {activeTab === 'details' && <DetailsTab report={report} />}
           {activeTab === 'raw' && <RawTab formattedReport={formattedReport} />}
@@ -265,7 +265,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${colors.bg.hover} ${colors.text.WHITE} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL} transition-all`}
+            className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${colors.bg.hover} ${colors.text.WHITE} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL} ${PANEL_LAYOUT.TRANSITION.ALL}`}
           >
             Κλείσιμο
           </button>
@@ -379,7 +379,7 @@ const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
                 console.log(`🔽 Toggling test ${index}: ${test.name}`);
                 toggleExpand(index);
               }}
-              className={`w-full ${PANEL_LAYOUT.SPACING.COMFORTABLE} flex items-center justify-between ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK} transition-colors`}
+              className={`w-full ${PANEL_LAYOUT.SPACING.COMFORTABLE} flex items-center justify-between ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
               style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}
             >
               <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD}`}>
@@ -400,7 +400,7 @@ const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
                   {test.details && (
                     <div>
                       <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.disabled}`}>Λεπτομέρειες:</span>
-                      <pre className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.tertiary} ${PANEL_LAYOUT.MARGIN.TOP_XS} ${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} overflow-x-auto`}>
+                      <pre className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.tertiary} ${PANEL_LAYOUT.MARGIN.TOP_XS} ${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.OVERFLOW.X_AUTO}`}>
                         {JSON.stringify(test.details, null, 2)}
                       </pre>
                     </div>
@@ -428,7 +428,7 @@ const RawTab: React.FC<{ formattedReport: string }> = ({ formattedReport }) => {
 
   return (
     <div className={PANEL_LAYOUT.HEIGHT.FULL}>
-      <pre className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.tertiary} font-mono whitespace-pre-wrap break-words ${PANEL_LAYOUT.SPACING.LG} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.HEIGHT.FULL} overflow-y-auto`}>
+      <pre className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.tertiary} font-mono whitespace-pre-wrap break-words ${PANEL_LAYOUT.SPACING.LG} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.HEIGHT.FULL} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO}`}>
         {formattedReport}
       </pre>
     </div>

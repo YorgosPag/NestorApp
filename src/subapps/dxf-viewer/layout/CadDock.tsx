@@ -184,7 +184,7 @@ const CadDock = memo(({ children }: { children?: React.ReactNode }) => {
       />
       
       {/* Main content area */}
-      <div className="absolute inset-0 pointer-events-none">
+      <div className={`absolute inset-0 ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}>
         {children}
       </div>
     </div>

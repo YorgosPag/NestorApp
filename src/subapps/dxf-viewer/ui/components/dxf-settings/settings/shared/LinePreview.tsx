@@ -368,7 +368,7 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
         {/* 🔥 FIX: Render μόνο αν textSettings.enabled === true */}
         {textSettings.enabled && (
           <div
-            className={`absolute ${PANEL_LAYOUT.TYPOGRAPHY.XS} font-mono pointer-events-none`}
+            className={`absolute ${PANEL_LAYOUT.TYPOGRAPHY.XS} font-mono ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
             style={{
               color: textSettings.color,
               fontSize: `${textSettings.fontSize}px`,

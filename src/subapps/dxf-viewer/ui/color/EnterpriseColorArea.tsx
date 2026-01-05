@@ -130,7 +130,7 @@ export function EnterpriseColorArea({
     <div
       {...colorAreaProps}
       ref={containerRef}
-      className={`relative rounded-lg overflow-hidden ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-crosshair'} ${className}`}
+      className={`relative rounded-lg ${PANEL_LAYOUT.OVERFLOW.HIDDEN} ${disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : PANEL_LAYOUT.CURSOR.CROSSHAIR} ${className}`}
       style={canvasUI.colorPicker.colorPickerArea(String(size))}
     >
       {/* Color gradient background */}
@@ -147,7 +147,7 @@ export function EnterpriseColorArea({
           absolute ${iconSizes.md} rounded-full border border-white shadow-lg
           transform -translate-x-1/2 -translate-y-1/2
           ${isFocusVisible ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
-          ${disabled ? 'pointer-events-none' : ''}
+          ${disabled ? PANEL_LAYOUT.POINTER_EVENTS.NONE : ''}
         `}
         style={canvasUI.colorPicker.colorPickerThumb(
           thumbPosition,

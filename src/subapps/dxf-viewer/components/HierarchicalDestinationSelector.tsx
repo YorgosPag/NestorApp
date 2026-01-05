@@ -255,7 +255,7 @@ export function HierarchicalDestinationSelector({
         )}
       </nav>
 
-      <section className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.MAX_HEIGHT.XL} overflow-y-auto`}>
+      <section className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.MAX_HEIGHT.XL} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO}`}>
         {/* Company Selection */}
         {currentStep === 'company' && (
           <>
@@ -340,7 +340,7 @@ export function HierarchicalDestinationSelector({
                 <button
                   key={floor.id}
                   onClick={() => handleFloorSelect(floor.id)}
-                  className={`w-full text-left ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.ROUNDED.LG} ${getStatusBorder('muted')} ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
+                  className={`w-full text-left ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.ROUNDED.LG} ${getStatusBorder('muted')} ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
                 >
                   <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
                     <Home className={`${iconSizes.lg} ${colors.text.info}`} />
@@ -364,7 +364,7 @@ export function HierarchicalDestinationSelector({
               <button
                 key={dest.id}
                 onClick={() => handleFinalDestinationSelect(dest)}
-                className={`w-full text-left ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.ROUNDED.LG} border transition-colors ${
+                className={`w-full text-left ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.ROUNDED.LG} border ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                   selectedDestination?.id === dest.id
                     ? `${useBorderTokens().getStatusBorder('info')} ${colors.bg.selection}`
                     : `${getStatusBorder('muted')} ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED}`

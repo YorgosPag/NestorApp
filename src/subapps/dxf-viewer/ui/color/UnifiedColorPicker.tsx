@@ -161,7 +161,7 @@ function InlineColorPicker({
         value={value}
         onChange={handleColorChange}
         disabled={disabled}
-        className={`${colorInputSizeClasses} ${colors.bg.hover} ${quick.muted} rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
+        className={`${colorInputSizeClasses} ${colors.bg.hover} ${quick.muted} rounded ${PANEL_LAYOUT.CURSOR.POINTER} disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}`}
       />
 
       {/* Text Input */}

@@ -105,7 +105,7 @@ export function SelectionSettings() {
       <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${getStatusBorder('warning')} ${PANEL_LAYOUT.ROUNDED.DEFAULT}`}>
         <button
           onClick={handleResetSelectionSettings}
-          className={`w-full ${PANEL_LAYOUT.BUTTON.PADDING} ${PANEL_LAYOUT.TYPOGRAPHY.XS} flex items-center justify-center ${PANEL_LAYOUT.GAP.SM} ${colors.bg.card} ${colors.text.primary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${getStatusBorder('default')} ${PANEL_LAYOUT.ROUNDED.DEFAULT} transition-colors`}
+          className={`w-full ${PANEL_LAYOUT.BUTTON.PADDING} ${PANEL_LAYOUT.TYPOGRAPHY.XS} flex items-center justify-center ${PANEL_LAYOUT.GAP.SM} ${colors.bg.card} ${colors.text.primary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${getStatusBorder('default')} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
         >
           <RotateCcw className={PANEL_LAYOUT.ICON.REGULAR} />
           <span>Reset Selection Settings (DEBUG)</span>
@@ -259,7 +259,7 @@ export function SelectionSettings() {
                   <button
                     key={style}
                     onClick={() => handleWindowSelectionChange('borderStyle', style)}
-                    className={`${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
+                    className={`${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                       isSelected
                         ? `${colors.bg.primary} ${getStatusBorder('info')}`
                         : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getElementBorder('button', 'default')}`
@@ -419,7 +419,7 @@ export function SelectionSettings() {
                   <button
                     key={style}
                     onClick={() => handleCrossingSelectionChange('borderStyle', style)}
-                    className={`${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
+                    className={`${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                       isSelected
                         ? `${colors.bg.primary} ${getStatusBorder('info')}`
                         : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getElementBorder('button', 'default')}`

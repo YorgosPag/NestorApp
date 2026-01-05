@@ -81,7 +81,7 @@ export const LineStyleControl: React.FC<LineStyleControlProps> = ({
       {/* 🏢 ENTERPRISE: Visual SVG preview - Using semantic colors */}
       {showPreview && (
         <div className={`h-8 flex items-center justify-center ${colors.bg.secondary} ${quick.rounded}`}>
-          <svg width="100%" height="2" className="overflow-visible">
+          <svg width="100%" height="2" className={PANEL_LAYOUT.OVERFLOW.VISIBLE}>
             <line
               x1="10"
               y1="1"

@@ -49,7 +49,7 @@ export function SliderInput({
         max={max}
         value={value}
         onChange={(e) => onChange(parseInt(e.target.value))}
-        className={`w-full ${PANEL_LAYOUT.HEIGHT.SM} rounded-lg appearance-none cursor-pointer slider ${quick.input} ${colors.bg.secondary}`}
+        className={`${PANEL_LAYOUT.WIDTH.FULL} ${PANEL_LAYOUT.HEIGHT.SM} ${PANEL_LAYOUT.ROUNDED.LG} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER} slider ${quick.input} ${colors.bg.secondary}`}
       />
     </div>
   );

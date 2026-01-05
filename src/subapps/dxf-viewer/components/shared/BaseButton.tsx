@@ -95,7 +95,7 @@ export const BaseButton = forwardRef<HTMLButtonElement, BaseButtonProps>(
     const iconSizes = useIconSizes();
     const borderTokens = useBorderTokens();
     const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
-    const baseClasses = `inline-flex items-center justify-center ${borderTokens.radius.md} border transition-colors duration-150 ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} focus:outline-none focus:ring-2 focus:${borderTokens.getStatusBorder('info')} focus:ring-offset-2`;
+    const baseClasses = `inline-flex items-center justify-center ${borderTokens.radius.md} border ${PANEL_LAYOUT.TRANSITION.COLORS} duration-150 ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} focus:outline-none focus:ring-2 focus:${borderTokens.getStatusBorder('info')} focus:ring-offset-2`;
 
     const variantStyles = getVariantStyles(borderTokens, colors);
     const activeVariantStyles = getActiveVariantStyles(borderTokens, colors);
@@ -103,9 +103,9 @@ export const BaseButton = forwardRef<HTMLButtonElement, BaseButtonProps>(
     const sizeClass = sizeStyles[size];
     const iconSizeClass = getIconSizeStyles(iconSizes)[size];
     
-    const disabledClass = disabled ? 'opacity-50 cursor-not-allowed' : '';
+    const disabledClass = disabled ? `opacity-50 ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : '';
     const widthClass = fullWidth ? 'w-full' : '';
-    const loadingClass = isLoading ? 'opacity-75 cursor-wait' : '';
+    const loadingClass = isLoading ? `opacity-75 ${PANEL_LAYOUT.CURSOR.WAIT}` : '';
     
     const finalTitle = title || (hotkey ? `${children} (${hotkey})` : undefined);
     

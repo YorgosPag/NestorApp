@@ -91,7 +91,7 @@ export function CurrentSettingsDisplay({
           checked={showSettingsDetails}
           onCheckedChange={(checked) => setShowSettingsDetails(checked === true)}
         />
-        <label htmlFor="show-settings-details" className={`flex items-center ${PANEL_LAYOUT.GAP.SM} cursor-pointer`}>
+        <label htmlFor="show-settings-details" className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.CURSOR.POINTER}`}>
           <ClipboardList className={iconSizes.sm} />
           <span className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.info}`}>Τρέχουσες Ρυθμίσεις</span>
         </label>

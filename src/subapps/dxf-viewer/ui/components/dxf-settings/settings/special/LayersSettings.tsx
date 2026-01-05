@@ -91,7 +91,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
               <div
                 key={preset.name}
                 className={`
-                  border ${quick.card} cursor-pointer transition-transform ${iconSizes.lg}
+                  border ${quick.card} ${PANEL_LAYOUT.CURSOR.POINTER} ${PANEL_LAYOUT.TRANSITION.TRANSFORM} ${iconSizes.lg}
                   ${CORE_HOVER_TRANSFORMS.SCALE_UP}
                   ${preset.borderClass}
                   ${activeTab === 'fills' ? preset.bgWithOpacityClass : ''}
@@ -125,7 +125,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                   <button
                     key={preset.name}
                     onClick={() => setSelectedPreset(index)}
-                    className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} transition-colors ${
+                    className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                       selectedPreset === index
                         ? `${colors.bg.info} ${getStatusBorder('info')}`
                         : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -147,8 +147,8 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                   <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Εμφάνιση Περιγραμμάτων</div>
                   <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Ενεργοποίηση/Απενεργοποίηση των περιγραμμάτων</div>
                 </div>
-                <div className={`relative inline-flex ${iconSizes.lg} ${iconSizes.xl3} flex-shrink-0 cursor-pointer ${radius.full} border border-transparent ${colors.bg.success}`}>
-                  <span className={`pointer-events-none inline-block ${iconSizes.sm} ${radius.full} ${colors.bg.primary} shadow transition ${PANEL_LAYOUT.DURATION['200']} ease-in-out transform translate-x-5`} />
+                <div className={`relative inline-flex ${iconSizes.lg} ${iconSizes.xl3} flex-shrink-0 ${PANEL_LAYOUT.CURSOR.POINTER} ${radius.full} border border-transparent ${colors.bg.success}`}>
+                  <span className={`${PANEL_LAYOUT.POINTER_EVENTS.NONE} inline-block ${iconSizes.sm} ${radius.full} ${colors.bg.primary} shadow transition ${PANEL_LAYOUT.DURATION['200']} ease-in-out transform translate-x-5`} />
                 </div>
               </div>
             </div>
@@ -165,7 +165,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                   <button
                     key={preset.name}
                     onClick={() => setSelectedPreset(index)}
-                    className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} transition-colors ${
+                    className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                       selectedPreset === index
                         ? `${colors.bg.info} ${getStatusBorder('info')}`
                         : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -208,8 +208,8 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                   <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Εμφάνιση Γεμισμάτων</div>
                   <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Ενεργοποίηση/Απενεργοποίηση των γεμισμάτων</div>
                 </div>
-                <div className={`relative inline-flex ${iconSizes.lg} ${iconSizes.xl3} flex-shrink-0 cursor-pointer ${radius.full} border border-transparent ${colors.bg.success}`}>
-                  <span className={`pointer-events-none inline-block ${iconSizes.sm} ${radius.full} ${colors.bg.primary} shadow transition ${PANEL_LAYOUT.DURATION['200']} ease-in-out transform translate-x-5`} />
+                <div className={`relative inline-flex ${iconSizes.lg} ${iconSizes.xl3} flex-shrink-0 ${PANEL_LAYOUT.CURSOR.POINTER} ${radius.full} border border-transparent ${colors.bg.success}`}>
+                  <span className={`${PANEL_LAYOUT.POINTER_EVENTS.NONE} inline-block ${iconSizes.sm} ${radius.full} ${colors.bg.primary} shadow transition ${PANEL_LAYOUT.DURATION['200']} ease-in-out transform translate-x-5`} />
                 </div>
               </div>
             </div>
@@ -222,7 +222,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
             <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Επαναφορά</div>
             <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Επαναφορά στις προεπιλεγμένες ρυθμίσεις</div>
           </div>
-          <button className={`w-full ${PANEL_LAYOUT.BUTTON.PADDING} ${PANEL_LAYOUT.TYPOGRAPHY.XS} flex items-center justify-center ${PANEL_LAYOUT.GAP.SM} ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded transition-colors`}>
+          <button className={`w-full ${PANEL_LAYOUT.BUTTON.PADDING} ${PANEL_LAYOUT.TYPOGRAPHY.XS} flex items-center justify-center ${PANEL_LAYOUT.GAP.SM} ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded ${PANEL_LAYOUT.TRANSITION.COLORS}`}>
             <RotateCcw className={iconSizes.sm} />
             <span>Επαναφορά Ρυθμίσεων Layers</span>
           </button>

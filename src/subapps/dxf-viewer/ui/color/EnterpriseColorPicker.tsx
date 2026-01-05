@@ -102,7 +102,7 @@ export function EnterpriseColorPicker({
 
   return (
     <div
-      className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${PANEL_LAYOUT.SPACING.LG} ${colors.bg.primary} border ${getStatusBorder('muted')} ${quick.card} ${disabled ? 'opacity-50 pointer-events-none' : ''} ${className}`}
+      className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${PANEL_LAYOUT.SPACING.LG} ${colors.bg.primary} border ${getStatusBorder('muted')} ${quick.card} ${disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}` : ''} ${className}`}
     >
       {/* === COLOR AREA + HUE SLIDER === */}
       <div className={PANEL_LAYOUT.SPACING.GAP_MD}>
@@ -144,7 +144,7 @@ export function EnterpriseColorPicker({
                 onClick={() => handleModeChange(mode)}
                 disabled={disabled || readOnly}
                 className={`
-                  ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} transition-colors
+                  ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TRANSITION.COLORS}
                   ${currentMode === mode
                     ? `${colors.text.info} ${getDirectionalBorder('info', 'bottom')}`
                     : `${colors.text.muted} ${HOVER_TEXT_EFFECTS.GRAY_LIGHT}`
@@ -248,12 +248,12 @@ function EyedropperButton({ onChange, onChangeEnd, disabled }: EyedropperButtonP
         w-full ${PANEL_LAYOUT.BUTTON.PADDING_LG} rounded
         flex items-center justify-center ${PANEL_LAYOUT.GAP.SM}
         ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}
-        transition-colors
+        ${PANEL_LAYOUT.TRANSITION.COLORS}
         ${isActive
           ? `${colors.bg.info} ${colors.text.primary}`
           : `${colors.bg.secondary} ${colors.text.muted} ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`
         }
-        disabled:opacity-50 disabled:cursor-not-allowed
+        disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
       `}
     >
       <svg

@@ -6,6 +6,7 @@
 
 'use client';
 import React, { useState, useRef } from 'react';
+import { Lightbulb } from 'lucide-react';
 import { CoordinateTransforms } from '../rendering/core/CoordinateTransforms';
 import type { Point2D, Viewport } from '../rendering/types/Types';
 import type { SceneModel } from '../types/scene';
@@ -179,7 +180,7 @@ export default function CoordinateCalibrationOverlay({
           </article>
 
           <aside className={`${colors.bg.info} ${PANEL_LAYOUT.SPACING.SM} rounded ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>
-            <div className={`${colors.text.infoLight} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>💡 Συμβουλές:</div>
+            <div className={`${colors.text.infoLight} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS} flex items-center ${PANEL_LAYOUT.GAP.XS}`}><Lightbulb className={iconSizes.xs} /> Συμβουλές:</div>
             <ul className={`${colors.text.infoLighter} ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
               <li>• Round-trip σφάλμα &lt; 0.5px</li>
               <li>• Δοκιμάστε σε διαφορετικά zoom</li>

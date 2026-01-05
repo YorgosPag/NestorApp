@@ -433,7 +433,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           />
           <label
             htmlFor="line-enabled"
-            className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} cursor-pointer ${settings.enabled ? colors.text.primary : colors.text.muted}`}
+            className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.CURSOR.POINTER} ${settings.enabled ? colors.text.primary : colors.text.muted}`}
           >
             Εμφάνιση γραμμής
           </label>
@@ -447,7 +447,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
       </fieldset>
 
       {/* ACCORDION SECTIONS */}
-      <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${!settings.enabled ? `${PANEL_LAYOUT.OPACITY['50']} pointer-events-none` : ''}`}>
+      <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${!settings.enabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}` : ''}`}>
 
         {/* 1. ΠΡΌΤΥΠΑ & ΕΡΓΑΛΕΊΑ */}
         <AccordionSection
@@ -533,7 +533,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.lineWidth}
               onChange={settingsUpdater.createNumberInputHandler('lineWidth', { parseType: 'float' })}
-              className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+              className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER}`}
             />
             <input
               type="number"
@@ -582,7 +582,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.opacity}
               onChange={settingsUpdater.createNumberInputHandler('opacity', { parseType: 'float' })}
-              className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+              className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER}`}
             />
             <input
               type="number"
@@ -604,7 +604,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               checked={settings.breakAtCenter || false}
               onCheckedChange={(checked) => settingsUpdater.updateSetting('breakAtCenter', checked === true)}
             />
-            <label htmlFor="break-at-center" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} cursor-pointer ${colors.text.secondary}`}>Σπάσιμο γραμμής για κείμενο</label>
+            <label htmlFor="break-at-center" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.CURSOR.POINTER} ${colors.text.secondary}`}>Σπάσιμο γραμμής για κείμενο</label>
           </div>
           <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
             Η γραμμή θα σπάσει στη μέση για να χωράει το κείμενο
@@ -653,7 +653,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.hoverWidth}
               onChange={settingsUpdater.createNumberInputHandler('hoverWidth', { parseType: 'float' })}
-              className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+              className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER}`}
             />
             <input
               type="number"
@@ -680,7 +680,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.hoverOpacity}
               onChange={settingsUpdater.createNumberInputHandler('hoverOpacity', { parseType: 'float' })}
-              className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+              className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER}`}
             />
             <input
               type="number"
@@ -736,7 +736,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.finalWidth}
               onChange={settingsUpdater.createNumberInputHandler('finalWidth', { parseType: 'float' })}
-              className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+              className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER}`}
             />
             <input
               type="number"
@@ -763,7 +763,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.finalOpacity}
               onChange={settingsUpdater.createNumberInputHandler('finalOpacity', { parseType: 'float' })}
-              className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+              className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER}`}
             />
             <input
               type="number"
@@ -802,7 +802,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step={DASH_SCALE_RANGE.step}
                   value={settings.dashScale}
                   onChange={settingsUpdater.createNumberInputHandler('dashScale', { parseType: 'float' })}
-                  className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+                  className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER}`}
                 />
                 <input
                   type="number"
@@ -875,7 +875,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step={DASH_OFFSET_RANGE.step}
                   value={settings.dashOffset}
                   onChange={settingsUpdater.createNumberInputHandler('dashOffset', { parseType: 'float' })}
-                  className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+                  className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER}`}
                 />
                 <input
                   type="number"
@@ -955,13 +955,13 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           <footer className={`flex ${PANEL_LAYOUT.GAP.MD} justify-end ${PANEL_LAYOUT.PADDING.TOP_LG}${quick.separator}`}>
             <button
               onClick={handleFactoryResetCancel}
-              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHTER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors`}
+              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHTER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
             >
               Ακύρωση
             </button>
             <button
               onClick={handleFactoryResetConfirm}
-              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.danger} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} flex items-center ${PANEL_LAYOUT.GAP.XS}`}
+              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.danger} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} flex items-center ${PANEL_LAYOUT.GAP.XS}`}
             >
               <Factory className={iconSizes.xs} />
               Επαναφορά Εργοστασιακών

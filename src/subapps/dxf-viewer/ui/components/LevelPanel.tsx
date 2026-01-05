@@ -292,7 +292,7 @@ export function LevelPanel({
                       />
                     </div>
                   ) : (
-                    <div className="flex-1 cursor-pointer" onClick={() => {
+                    <div className={`flex-1 ${PANEL_LAYOUT.CURSOR.POINTER}`} onClick={() => {
                       setCurrentLevel(level.id);
                       if (currentTool !== 'grip-edit' && onToolChange) onToolChange('grip-edit');
                       // ✅ FIX (ChatGPT-5): ONLY one activation path - via event (removed direct call to handleLayeringActivation)
@@ -301,7 +301,7 @@ export function LevelPanel({
                       }));
                     }}>
                       <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{level.name}</div>
-                      <div className={`${PANEL_TOKENS.TABS.TAB_LABEL.SIZE} opacity-75`}>
+                      <div className={`${PANEL_TOKENS.TABS.TAB_LABEL.SIZE} ${PANEL_LAYOUT.OPACITY['75']}`}>
                         {hasContent ? `${scene.entities.length} στοιχεία` : 'Κενό επίπεδο'}
                       </div>
                     </div>

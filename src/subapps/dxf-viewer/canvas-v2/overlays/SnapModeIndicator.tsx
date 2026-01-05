@@ -28,7 +28,7 @@ export default function SnapModeIndicator({
   if (!snapResult || !mouseCss) return null;
 
   return (
-    <div className={`absolute inset-0 pointer-events-none ${className}`}>
+    <div className={`absolute inset-0 ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${className}`}>
       <div
         className={`absolute ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.warning} ${colors.bg.overlay} ${PANEL_LAYOUT.SPACING.COMPACT_XS} rounded`}
         style={{

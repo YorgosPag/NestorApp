@@ -455,6 +455,19 @@ export const PANEL_LAYOUT = {
   },
 
   // ============================================================================
+  // 🎯 SNAP INDICATOR TOKENS - CAD snap point visual feedback (ADR-013)
+  // ============================================================================
+  // Purpose: Visual indicator for snap points (endpoints, midpoints, etc.)
+  // Usage: SnapIndicatorOverlay.tsx
+  // Enterprise: Centralized snap indicator dimensions for consistency
+  // ============================================================================
+  SNAP_INDICATOR: {
+    SIZE: 'w-2 h-2',              // 8px x 8px - Snap dot dimensions
+    BORDER: 'border-2',           // 2px border width
+    OFFSET_PX: 4,                 // Half of size for centering (8/2 = 4)
+  },
+
+  // ============================================================================
   // 🎯 CROSSHAIR PREVIEW SIZES - Visual preview element tokens (ADR-012)
   // ============================================================================
   // Purpose: Represent crosshair size percentages in settings UI
@@ -622,6 +635,184 @@ export const PANEL_LAYOUT = {
     '30': 'z-30',                        // 30 - High elevation
     '40': 'z-40',                        // 40 - Very high elevation
     '50': 'z-50',                        // 50 - Highest elevation
+  },
+
+  // ============================================================================
+  // 👆 CURSOR - Cursor tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  CURSOR: {
+    DEFAULT: 'cursor-default',           // Default arrow cursor
+    POINTER: 'cursor-pointer',           // Clickable elements
+    MOVE: 'cursor-move',                 // Draggable elements
+    GRAB: 'cursor-grab',                 // Grabbable elements
+    GRABBING: 'cursor-grabbing',         // Currently grabbing
+    NOT_ALLOWED: 'cursor-not-allowed',   // Disabled/forbidden actions
+    WAIT: 'cursor-wait',                 // Loading states
+    CROSSHAIR: 'cursor-crosshair',       // Precision selection (CAD)
+    TEXT: 'cursor-text',                 // Text input areas
+    NONE: 'cursor-none',                 // Hidden cursor (custom cursors)
+    HELP: 'cursor-help',                 // Help tooltips
+    ZOOM_IN: 'cursor-zoom-in',           // Zoom in areas
+    ZOOM_OUT: 'cursor-zoom-out',         // Zoom out areas
+    COL_RESIZE: 'cursor-col-resize',     // Column resize
+    ROW_RESIZE: 'cursor-row-resize',     // Row resize
+    NS_RESIZE: 'cursor-ns-resize',       // North-South resize
+    EW_RESIZE: 'cursor-ew-resize',       // East-West resize
+    NESW_RESIZE: 'cursor-nesw-resize',   // NE-SW diagonal resize
+    NWSE_RESIZE: 'cursor-nwse-resize',   // NW-SE diagonal resize
+  },
+
+  // ============================================================================
+  // 📦 OVERFLOW - Overflow tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  OVERFLOW: {
+    AUTO: 'overflow-auto',               // Auto scrollbars
+    HIDDEN: 'overflow-hidden',           // Hide overflow
+    VISIBLE: 'overflow-visible',         // Show overflow
+    SCROLL: 'overflow-scroll',           // Always show scrollbars
+    X_AUTO: 'overflow-x-auto',           // Horizontal auto scroll
+    X_HIDDEN: 'overflow-x-hidden',       // Hide horizontal overflow
+    Y_AUTO: 'overflow-y-auto',           // Vertical auto scroll
+    Y_HIDDEN: 'overflow-y-hidden',       // Hide vertical overflow
+    Y_SCROLL: 'overflow-y-scroll',       // Vertical always scroll
+  },
+
+  // ============================================================================
+  // 🖱️ POINTER_EVENTS - Pointer event tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  POINTER_EVENTS: {
+    NONE: 'pointer-events-none',         // Disable pointer events (pass-through)
+    AUTO: 'pointer-events-auto',         // Enable pointer events (default)
+  },
+
+  // ============================================================================
+  // 📝 SELECT - User select tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  SELECT: {
+    NONE: 'select-none',                 // Disable text selection
+    TEXT: 'select-text',                 // Enable text selection
+    ALL: 'select-all',                   // Select all on click
+    AUTO: 'select-auto',                 // Default selection behavior
+  },
+
+  // ============================================================================
+  // 🔄 RESIZE - Resize tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  RESIZE: {
+    NONE: 'resize-none',                 // No resize allowed
+    BOTH: 'resize',                      // Resize in both directions
+    X: 'resize-x',                       // Horizontal resize only
+    Y: 'resize-y',                       // Vertical resize only
+  },
+
+  // ============================================================================
+  // ↔️ TRANSLATE - Transform translate tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  TRANSLATE: {
+    X_0: 'translate-x-0',                // No horizontal translation
+    X_HALF: 'translate-x-1/2',           // 50% horizontal translation
+    X_FULL: 'translate-x-full',          // 100% horizontal translation
+    X_HALF_NEG: '-translate-x-1/2',      // -50% horizontal translation (centering)
+    X_FULL_NEG: '-translate-x-full',     // -100% horizontal translation
+    Y_0: 'translate-y-0',                // No vertical translation
+    Y_HALF: 'translate-y-1/2',           // 50% vertical translation
+    Y_FULL: 'translate-y-full',          // 100% vertical translation
+    Y_HALF_NEG: '-translate-y-1/2',      // -50% vertical translation (centering)
+    Y_FULL_NEG: '-translate-y-full',     // -100% vertical translation
+  },
+
+  // ============================================================================
+  // 🔍 SCALE - Transform scale tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  SCALE: {
+    '0': 'scale-0',                      // Invisible (0%)
+    '50': 'scale-50',                    // Half size (50%)
+    '75': 'scale-75',                    // 3/4 size (75%)
+    '90': 'scale-90',                    // Slightly smaller (90%)
+    '95': 'scale-95',                    // Almost full (95%)
+    '100': 'scale-100',                  // Full size (100%)
+    '105': 'scale-105',                  // Slightly larger (105%)
+    '110': 'scale-110',                  // Larger (110%)
+    '125': 'scale-125',                  // Much larger (125%)
+    '150': 'scale-150',                  // Very large (150%)
+    HOVER_105: 'hover:scale-105',        // Scale on hover (common pattern)
+    HOVER_110: 'hover:scale-110',        // Larger scale on hover
+  },
+
+  // ============================================================================
+  // 🔄 ROTATE - Transform rotate tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  ROTATE: {
+    '0': 'rotate-0',                     // No rotation
+    '45': 'rotate-45',                   // 45 degrees
+    '90': 'rotate-90',                   // 90 degrees
+    '180': 'rotate-180',                 // 180 degrees
+    '270': '-rotate-90',                 // 270 degrees (or -90)
+    NEG_45: '-rotate-45',                // -45 degrees
+    NEG_90: '-rotate-90',                // -90 degrees
+    NEG_180: '-rotate-180',              // -180 degrees
+  },
+
+  // ============================================================================
+  // 🎬 TRANSITION - Transition property tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  // NOTE: For complex transitions, use TRANSITION_PRESETS from @/components/ui/effects
+  TRANSITION: {
+    NONE: 'transition-none',             // No transition
+    ALL: 'transition-all',               // Transition all properties
+    DEFAULT: 'transition',               // Default (colors, bg, border, etc.)
+    COLORS: 'transition-colors',         // Color transitions only
+    OPACITY: 'transition-opacity',       // Opacity transitions only
+    SHADOW: 'transition-shadow',         // Box shadow transitions
+    TRANSFORM: 'transition-transform',   // Transform transitions only
+  },
+
+  // ============================================================================
+  // 🖼️ INSET - Inset positioning tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  INSET: {
+    '0': 'inset-0',                      // All sides 0 (full coverage)
+    X_0: 'inset-x-0',                    // Left and right 0
+    Y_0: 'inset-y-0',                    // Top and bottom 0
+    AUTO: 'inset-auto',                  // Auto positioning
+  },
+
+  // ============================================================================
+  // 📐 MIN_WIDTH - Minimum width tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  MIN_WIDTH: {
+    '0': 'min-w-0',                      // Reset minimum width (flex truncation)
+    FULL: 'min-w-full',                  // 100% minimum width
+    MIN: 'min-w-min',                    // Min-content
+    MAX: 'min-w-max',                    // Max-content
+    FIT: 'min-w-fit',                    // Fit-content
+  },
+
+  // ============================================================================
+  // 📏 MIN_HEIGHT - Minimum height tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  MIN_HEIGHT: {
+    '0': 'min-h-0',                      // Reset minimum height
+    FULL: 'min-h-full',                  // 100% minimum height
+    SCREEN: 'min-h-screen',              // Viewport height
+    MIN: 'min-h-min',                    // Min-content
+    MAX: 'min-h-max',                    // Max-content
+    FIT: 'min-h-fit',                    // Fit-content
+  },
+
+  // ============================================================================
+  // 📐 MAX_WIDTH - Maximum width tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  MAX_WIDTH: {
+    NONE: 'max-w-none',                  // No maximum
+    XS: 'max-w-xs',                      // 320px
+    SM: 'max-w-sm',                      // 384px
+    MD: 'max-w-md',                      // 448px
+    LG: 'max-w-lg',                      // 512px
+    XL: 'max-w-xl',                      // 576px
+    '2XL': 'max-w-2xl',                  // 672px
+    FULL: 'max-w-full',                  // 100%
+    SCREEN: 'max-w-screen-xl',           // Screen breakpoint
   },
 } as const;
 

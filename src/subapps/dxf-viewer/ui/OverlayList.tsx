@@ -131,7 +131,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                   <article
                     key={overlay.id}
                     ref={isSelected ? selectedCardRef : null}
-                    className={`flex items-center ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.SPACING.SM} rounded transition-colors cursor-pointer w-full overflow-hidden ${
+                    className={`flex items-center ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.CURSOR.POINTER} ${PANEL_LAYOUT.WIDTH.FULL} ${PANEL_LAYOUT.OVERFLOW.HIDDEN} ${
                       isSelected ? `${colors.bg.info}/50 ${getStatusBorder('info')}` : `${colors.bg.primary}/50 ${quick.card} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
                     }`}
                     onClick={() => onSelect(overlay.id === selectedOverlayId ? null : overlay.id)}
@@ -151,7 +151,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                         return getOverlayBgClass(status);
                       })()}`}
                     />
-                    <div className="flex-1 min-w-0 overflow-hidden">
+                    <div className={`flex-1 ${PANEL_LAYOUT.MIN_WIDTH['0']} ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`}>
                       <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} truncate`}>
                         {STATUS_LABELS[overlay.status || 'for-sale']} {KIND_LABELS[overlay.kind]}
                       </div>

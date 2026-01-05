@@ -134,7 +134,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             onClick={() => {
               updateSettings({ crosshair: { ...settings.crosshair, line_style: 'solid' } });
             }}
-            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
+            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
               (settings.crosshair.line_style || 'solid') === 'solid'
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -148,7 +148,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_style: 'dashed' } })}
-            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
+            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
               (settings.crosshair.line_style || 'solid') === 'dashed'
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -162,7 +162,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_style: 'dotted' } })}
-            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
+            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
               (settings.crosshair.line_style || 'solid') === 'dotted'
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -176,7 +176,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_style: 'dash-dot' } })}
-            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
+            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
               (settings.crosshair.line_style || 'solid') === 'dash-dot'
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -212,7 +212,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             <button
               key={width}
               onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_width: width } })}
-              className={`flex-1 ${PANEL_LAYOUT.SPACING.XS} ${radius.md} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
+              className={`flex-1 ${PANEL_LAYOUT.SPACING.XS} ${radius.md} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                 settings.crosshair.line_width === width
                   ? `${colors.bg.primary} border ${getStatusBorder('info')}`
                   : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border ${getStatusBorder('default')}`
@@ -237,7 +237,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             onClick={() => {
               updateSettings({ crosshair: { ...settings.crosshair, size_percent: 0 } });
             }}
-            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors relative flex flex-col items-center ${
+            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 0
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -253,7 +253,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, size_percent: 5 } })}
-            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors relative flex flex-col items-center ${
+            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 5
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -275,7 +275,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, size_percent: 8 } })}
-            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors relative flex flex-col items-center ${
+            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 8
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -297,7 +297,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, size_percent: 15 } })}
-            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors relative flex flex-col items-center ${
+            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 15
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -319,7 +319,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, size_percent: 100 } })}
-            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors relative flex flex-col items-center ${
+            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 100
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`

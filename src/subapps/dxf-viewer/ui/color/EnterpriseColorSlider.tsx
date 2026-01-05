@@ -149,7 +149,7 @@ export function EnterpriseColorSlider({
       <div
         {...trackProps}
         ref={trackRef}
-        className={`relative h-6 rounded touch-none ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+        className={`relative h-6 rounded touch-none ${disabled ? 'opacity-50 cursor-not-allowed' : PANEL_LAYOUT.CURSOR.POINTER}`}
         style={{
           width,
           ...trackStyle,
@@ -175,7 +175,7 @@ export function EnterpriseColorSlider({
             absolute w-5 h-5 top-1/2 rounded-full border border-white shadow-lg
             transform -translate-x-1/2 -translate-y-1/2
             ${isFocusVisible ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
-            ${disabled ? 'pointer-events-none' : ''}
+            ${disabled ? PANEL_LAYOUT.POINTER_EVENTS.NONE : ''}
           `}
           style={{
             left: `${thumbPosition}%`,

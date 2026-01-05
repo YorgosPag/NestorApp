@@ -19,6 +19,8 @@ import { getDxfCanvasCoreStyles } from '../ui/DxfViewerComponents.styles';
 import type { EntityRenderer as EntityRendererType } from '../utils/entity-renderer';
 // ✅ ENTERPRISE: Import centralized colors
 import { UI_COLORS, withOpacity, CANVAS_THEME } from '../config/color-config';
+// ✅ ENTERPRISE: Import GripSettings type (replaces any) + DEFAULT for fallback
+import { type GripSettings, DEFAULT_GRIP_SETTINGS } from '../types/gripSettings';
 
 // ✅ ENTERPRISE FIX: Import extracted modules (some modules integrated)
 import { createCanvasRenderer, type CanvasRenderer } from './engine/createCanvasRenderer';
@@ -79,7 +81,7 @@ interface Props {
   onDrawingHover?: (point: Point2D | null) => void;
   onDrawingCancel?: () => void;
   onDrawingDoubleClick?: () => void;
-  gripSettings?: any; // TODO: Type proper GripSettings
+  gripSettings?: GripSettings; // ✅ ENTERPRISE: Proper type (was any)
 }
 
 export const DxfCanvasCore = forwardRef<DxfCanvasImperativeAPI, Props>(({
@@ -287,11 +289,13 @@ export const DxfCanvasCore = forwardRef<DxfCanvasImperativeAPI, Props>(({
 
     entityRendererRef.current = new EntityRenderer(ctx);
     // ✅ Αρχικοποίηση με γενικές ρυθμίσεις - θα ενημερωθεί στο scene useEffect
-    entityRendererRef.current.setGripSettings(gripSettings);
+    // ✅ ENTERPRISE: Use DEFAULT_GRIP_SETTINGS as fallback for optional prop
+    const effectiveGripSettings = gripSettings ?? DEFAULT_GRIP_SETTINGS;
+    entityRendererRef.current.setGripSettings(effectiveGripSettings);
 
     const renderer = createCanvasRenderer({
       canvas,
-      gripSettings,
+      gripSettings: effectiveGripSettings,
       entityRenderer: entityRendererRef.current,
       initialTransform: { scale: 1, offsetX: 0, offsetY: 0 },
       alwaysShowCoarseGrid,
@@ -434,8 +438,9 @@ export const DxfCanvasCore = forwardRef<DxfCanvasImperativeAPI, Props>(({
     // ✅ Ενημέρωση grip settings ανάλογα με την παρουσία preview entity
     if (entityRendererRef.current && scene) {
       const hasPreviewEntity = scene.entities?.some(entity => ('preview' in entity && entity.preview === true));
-      const effectiveGripSettings = hasPreviewEntity ? getEffectiveGripSettings() : gripSettings;
-      entityRendererRef.current.setGripSettings(effectiveGripSettings);
+      // ✅ ENTERPRISE: Use DEFAULT_GRIP_SETTINGS as fallback for optional prop
+      const resolvedGripSettings = hasPreviewEntity ? getEffectiveGripSettings() : (gripSettings ?? DEFAULT_GRIP_SETTINGS);
+      entityRendererRef.current.setGripSettings(resolvedGripSettings);
     }
 
     if (rendererRef.current && scene) {

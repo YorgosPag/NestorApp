@@ -64,7 +64,7 @@ export const EntityCard = ({
       tabIndex={0}
       data-entity-id={entity.id}
       data-entity-selected={isSelected || undefined}
-      className={`${PANEL_LAYOUT.MARGIN.LEFT_3XL} flex items-center justify-between rounded cursor-pointer transition-all ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} focus:outline-none ${colors.interactive.focus.ring} ${
+      className={`${PANEL_LAYOUT.MARGIN.LEFT_3XL} flex items-center justify-between rounded ${PANEL_LAYOUT.CURSOR.POINTER} ${PANEL_LAYOUT.TRANSITION.ALL} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} focus:outline-none ${colors.interactive.focus.ring} ${
         isSelected ? `${PANEL_LAYOUT.SPACING.SM} ${colors.bg.selection} ${getDirectionalBorder('info', 'left')} rounded` : PANEL_LAYOUT.SPACING.XS
       } ${selectedEntitiesForMerge.has(entity.id) ? `ring-2 ${colors.ring.info} ${colors.bg.selection}` : ''} ${
         isFocused ? `ring-2 ${colors.ring.success}` : ''
@@ -130,7 +130,7 @@ export const EntityCard = ({
           />
         ) : (
           <span
-            className={`truncate cursor-pointer ${
+            className={`truncate ${PANEL_LAYOUT.CURSOR.POINTER} ${
               isSelected
                 ? `${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.warning} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`
                 : `${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.secondary}`

@@ -170,7 +170,7 @@ function TextStyleButtons({ settings, onToggle }: TextStyleButtonsProps) {
           key={style.key}
           onClick={() => onToggle(style.key)}
           title={style.title}
-          className={`${iconSizes.xl} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} transition-colors ${
+          className={`${iconSizes.xl} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
             settings[style.key]
               ? `${colors.bg.success} ${getStatusBorder('success')} ${colors.text.inverted}`
               : `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${quick.button} ${colors.text.muted}`
@@ -198,7 +198,7 @@ function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }
     <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
       <button
         onClick={onSuperscriptChange}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${quick.button} transition-colors ${
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
           settings.isSuperscript
             ? `${colors.bg.success} ${getStatusBorder('success')} ${colors.text.inverted}`
             : `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${getStatusBorder('muted')} ${colors.text.muted}`
@@ -208,7 +208,7 @@ function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }
       </button>
       <button
         onClick={onSubscriptChange}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${quick.button} transition-colors ${
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
           settings.isSubscript
             ? `${colors.bg.success} ${getStatusBorder('success')} ${colors.text.inverted}`
             : `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${getStatusBorder('muted')} ${colors.text.muted}`
@@ -382,7 +382,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           />
           <label
             htmlFor="text-enabled"
-            className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} cursor-pointer ${textSettings.enabled ? colors.text.primary : colors.text.muted}`}
+            className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.CURSOR.POINTER} ${textSettings.enabled ? colors.text.primary : colors.text.muted}`}
           >
             Εμφάνιση κειμένου απόστασης
           </label>
@@ -396,7 +396,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
       </fieldset>
 
       {/* ACCORDION SECTIONS */}
-      <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${!textSettings.enabled ? 'opacity-50 pointer-events-none' : ''}`}>
+      <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${!textSettings.enabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}` : ''}`}>
 
         {/* 1. ΒΑΣΙΚΕΣ ΡΥΘΜΙΣΕΙΣ ΚΕΙΜΕΝΟΥ */}
         <AccordionSection
@@ -460,7 +460,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
                   {/* Increase Font Size - Big A with up arrow */}
                   <button
                     onClick={increaseFontSize}
-                    className={`w-10 h-9 ${colors.bg.hover} ${quick.button} ${colors.text.primary} ${HOVER_BACKGROUND_EFFECTS.DARKER} transition-colors flex items-center justify-center`}
+                    className={`w-10 h-9 ${colors.bg.hover} ${quick.button} ${colors.text.primary} ${HOVER_BACKGROUND_EFFECTS.DARKER} ${PANEL_LAYOUT.TRANSITION.COLORS} flex items-center justify-center`}
                     title="Αύξηση μεγέθους γραμματοσειράς"
                   >
                     <div className="flex items-center">
@@ -474,7 +474,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
                   {/* Decrease Font Size - Small A with down arrow */}
                   <button
                     onClick={decreaseFontSize}
-                    className={`w-10 h-9 ${colors.bg.hover} ${quick.button} ${colors.text.primary} ${HOVER_BACKGROUND_EFFECTS.DARKER} transition-colors flex items-center justify-center`}
+                    className={`w-10 h-9 ${colors.bg.hover} ${quick.button} ${colors.text.primary} ${HOVER_BACKGROUND_EFFECTS.DARKER} ${PANEL_LAYOUT.TRANSITION.COLORS} flex items-center justify-center`}
                     title="Μείωση μεγέθους γραμματοσειράς"
                   >
                     <div className="flex items-center">
@@ -654,13 +654,13 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           <footer className={`flex ${PANEL_LAYOUT.GAP.MD} justify-end ${PANEL_LAYOUT.PADDING.TOP_LG} ${quick.separator}`}>
             <button
               onClick={handleFactoryResetCancel}
-              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.primary} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors`}
+              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.primary} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
             >
               Ακύρωση
             </button>
             <button
               onClick={handleFactoryResetConfirm}
-              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.primary} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} flex items-center ${PANEL_LAYOUT.GAP.XS}`}
+              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.primary} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} flex items-center ${PANEL_LAYOUT.GAP.XS}`}
             >
               <Factory className={iconSizes.xs} />
               Επαναφορά Εργοστασιακών

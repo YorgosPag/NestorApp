@@ -36,6 +36,8 @@ import CrosshairOverlay from '../../canvas-v2/overlays/CrosshairOverlay';
 import RulerCornerBox from '../../canvas-v2/overlays/RulerCornerBox';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
+// 🏢 ENTERPRISE: Centralized spacing tokens (ADR-013)
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 /**
  * Renders the main canvas area, including the renderer and floating panels.
@@ -906,7 +908,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               top: 0,
               bottom: 0
             }}
-            className="absolute left-0 right-0 top-0 z-20 pointer-events-none"
+            className={`absolute left-0 right-0 top-0 z-20 ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
             style={{ height: `calc(100% - ${rulerSettings.height ?? 30}px)` }}
           />
 

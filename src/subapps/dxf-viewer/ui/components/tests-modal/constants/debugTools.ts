@@ -3,18 +3,28 @@
  *
  * Περιέχει όλα τα debug tool definitions για το TestsModal
  * Factory function που δέχεται το showCopyableNotification callback και React/ReactDOM
+ *
+ * 🏢 ENTERPRISE: Uses Lucide icons instead of emoji (centralized icon system)
  */
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import type { TestDefinition, NotificationFn } from '../types/tests.types';
+import {
+  Triangle,
+  Target,
+  Ruler,
+  Crosshair,
+  Move
+} from 'lucide-react';
 
 export function getDebugTools(showCopyableNotification: NotificationFn): TestDefinition[] {
   return [
     {
       id: 'corner-markers-toggle',
-      name: '📐 Toggle Corner Markers',
+      name: 'Toggle Corner Markers',
       description: 'Κόκκινες γωνίες + περιμετρικές γραμμές + info panel',
+      icon: Triangle,
       action: async () => {
         try {
           const existingDebug = document.getElementById('full-layout-debug');
@@ -50,8 +60,9 @@ export function getDebugTools(showCopyableNotification: NotificationFn): TestDef
     },
     {
       id: 'origin-markers-toggle',
-      name: '🎯 Toggle Origin (0,0) Markers',
+      name: 'Toggle Origin (0,0) Markers',
       description: 'Εναλλαγή δεικτών προέλευσης',
+      icon: Target,
       action: async () => {
         const module = await import('../../../../debug/OriginMarkersDebugOverlay');
         const { originMarkersDebug } = module;
@@ -70,8 +81,9 @@ export function getDebugTools(showCopyableNotification: NotificationFn): TestDef
     },
     {
       id: 'ruler-debug-toggle',
-      name: '📏 Toggle Ruler Debug',
+      name: 'Toggle Ruler Debug',
       description: 'Εναλλαγή αποσφαλμάτωσης χαράκων',
+      icon: Ruler,
       action: async () => {
         const module = await import('../../../../debug/RulerDebugOverlay');
         const { rulerDebugOverlay } = module;
@@ -91,8 +103,9 @@ export function getDebugTools(showCopyableNotification: NotificationFn): TestDef
     },
     {
       id: 'alignment-debug-toggle',
-      name: '🎯 Toggle Cursor-Snap Alignment',
+      name: 'Toggle Cursor-Snap Alignment',
       description: 'Εναλλαγή debug alignment overlay',
+      icon: Crosshair,
       action: async () => {
         const module = await import('../../../../debug/CursorSnapAlignmentDebugOverlay');
         const { cursorSnapAlignmentDebug } = module;
@@ -107,8 +120,9 @@ export function getDebugTools(showCopyableNotification: NotificationFn): TestDef
     },
     {
       id: 'live-coordinates-toggle',
-      name: '🎯 Toggle Live Coordinates',
+      name: 'Toggle Live Coordinates',
       description: 'Live συντεταγμένες + κόκκινο crosshair με κίτρινη βουλίτσα',
+      icon: Move,
       action: async () => {
         try {
           const existingCoords = document.getElementById('live-coords-debug');

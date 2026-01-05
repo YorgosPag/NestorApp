@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { Play, CheckCircle2 } from 'lucide-react';
+import { Play, CheckCircle2, Loader2, FlaskConical, Zap, Drama } from 'lucide-react';
 import type { TestState, ApiTestHandlers } from '../types/tests.types';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -38,8 +38,8 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
     <>
       {/* ✅ ENTERPRISE: Χρήση semantic <section> αντί κενού <div> (ADR-003) */}
       <section>
-        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
-          🧪 Unit Tests (Vitest/Jest)
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+          <FlaskConical className={iconSizes.sm} /> Unit Tests (Vitest/Jest)
         </h3>
 
         <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.MD}`}>
@@ -47,9 +47,9 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
           <button
             onClick={apiTests.handleRunVitest}
             disabled={testState.runningTests.has('run-vitest')}
-            className={`flex items-start ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} ${quick.card} transition-all text-left ${
+            className={`flex items-start ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} ${quick.card} ${PANEL_LAYOUT.TRANSITION.ALL} text-left ${
               testState.runningTests.has('run-vitest')
-                ? `${colors.bg.warning} ${colors.bg.warning} ${getTestButtonBorder('run-vitest')} cursor-wait`
+                ? `${colors.bg.warning} ${colors.bg.warning} ${getTestButtonBorder('run-vitest')} ${PANEL_LAYOUT.CURSOR.WAIT}`
                 : testState.completedTests.has('run-vitest')
                 ? `${colors.bg.success} ${colors.bg.success} ${getTestButtonBorder('run-vitest')} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_SUBTLE}`
                 : `${colors.bg.secondary} ${colors.bg.hover} ${getTestButtonBorder('run-vitest')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
@@ -57,7 +57,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
           >
             <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
               {testState.runningTests.has('run-vitest') ? (
-                <div className="animate-spin text-base">⏳</div>
+                <Loader2 className={`${iconSizes.md} ${colors.text.warning} animate-spin`} />
               ) : testState.completedTests.has('run-vitest') ? (
                 <CheckCircle2 className={`${iconSizes.md} ${colors.text.success}`} />
               ) : (
@@ -65,7 +65,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight`}>⚡ Run Vitest Tests</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight flex items-center ${PANEL_LAYOUT.GAP.XS}`}><Zap className={iconSizes.sm} /> Run Vitest Tests</div>
               <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Property-based + ServiceRegistry tests</div>
             </div>
           </button>
@@ -74,9 +74,9 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
           <button
             onClick={apiTests.handleRunJest}
             disabled={testState.runningTests.has('run-jest')}
-            className={`flex items-start ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} ${quick.card} transition-all text-left ${
+            className={`flex items-start ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} ${quick.card} ${PANEL_LAYOUT.TRANSITION.ALL} text-left ${
               testState.runningTests.has('run-jest')
-                ? `${colors.bg.warning} ${colors.bg.warning} ${getTestButtonBorder('run-jest')} cursor-wait`
+                ? `${colors.bg.warning} ${colors.bg.warning} ${getTestButtonBorder('run-jest')} ${PANEL_LAYOUT.CURSOR.WAIT}`
                 : testState.completedTests.has('run-jest')
                 ? `${colors.bg.success} ${colors.bg.success} ${getTestButtonBorder('run-jest')} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_SUBTLE}`
                 : `${colors.bg.secondary} ${colors.bg.hover} ${getTestButtonBorder('run-jest')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
@@ -84,7 +84,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
           >
             <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
               {testState.runningTests.has('run-jest') ? (
-                <div className="animate-spin text-base">⏳</div>
+                <Loader2 className={`${iconSizes.md} ${colors.text.warning} animate-spin`} />
               ) : testState.completedTests.has('run-jest') ? (
                 <CheckCircle2 className={`${iconSizes.md} ${colors.text.success}`} />
               ) : (
@@ -92,7 +92,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight`}>⚡ Run Jest Tests</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight flex items-center ${PANEL_LAYOUT.GAP.XS}`}><Zap className={iconSizes.sm} /> Run Jest Tests</div>
               <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Visual regression + cursor alignment tests</div>
             </div>
           </button>
@@ -101,16 +101,16 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
 
       {/* ✅ ENTERPRISE: Χρήση semantic <section> αντί κενού <div> (ADR-003) */}
       <section>
-        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
-          🎭 E2E Tests (Playwright)
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+          <Drama className={iconSizes.sm} /> E2E Tests (Playwright)
         </h3>
 
         <button
           onClick={apiTests.handleRunPlaywright}
           disabled={testState.runningTests.has('run-playwright')}
-          className={`flex items-start ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} ${radius.lg} transition-all text-left w-full ${
+          className={`flex items-start ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} ${radius.lg} ${PANEL_LAYOUT.TRANSITION.ALL} text-left w-full ${
             testState.runningTests.has('run-playwright')
-              ? `${colors.bg.warning} ${colors.bg.warning} ${getTestButtonBorder('run-playwright')} cursor-wait`
+              ? `${colors.bg.warning} ${colors.bg.warning} ${getTestButtonBorder('run-playwright')} ${PANEL_LAYOUT.CURSOR.WAIT}`
               : testState.completedTests.has('run-playwright')
               ? `${colors.bg.success} ${colors.bg.success} ${getTestButtonBorder('run-playwright')} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_SUBTLE}`
               : `${colors.bg.secondary} ${colors.bg.hover} ${getTestButtonBorder('run-playwright')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
@@ -118,7 +118,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
         >
           <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
             {testState.runningTests.has('run-playwright') ? (
-              <div className="animate-spin text-base">⏳</div>
+              <Loader2 className={`${iconSizes.md} ${colors.text.warning} animate-spin`} />
             ) : testState.completedTests.has('run-playwright') ? (
               <CheckCircle2 className={`${iconSizes.md} ${colors.text.success}`} />
             ) : (
@@ -126,7 +126,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight`}>🎭 Run Playwright Cross-Browser Tests</div>
+            <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight flex items-center ${PANEL_LAYOUT.GAP.XS}`}><Drama className={iconSizes.sm} /> Run Playwright Cross-Browser Tests</div>
             <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Visual regression across Chromium/Firefox/WebKit (2-3 min)</div>
           </div>
         </button>

@@ -214,22 +214,22 @@ export function EnterpriseColorDialog({
                 pointerEvents: 'auto',
                 isolation: 'isolate' // Create new stacking context
               }}
-              className={`relative ${colors.bg.accent} ${getStatusBorder('default')} ${quick.card} shadow-2xl max-h-[90vh] overflow-y-auto max-w-[400px] select-none`}
+              className={`relative ${colors.bg.accent} ${getStatusBorder('default')} ${quick.card} shadow-2xl max-h-[90vh] ${PANEL_LAYOUT.OVERFLOW.Y_AUTO} max-w-[400px] ${PANEL_LAYOUT.SELECT.NONE}`}
             >
               {/* Header - ✅ ENTERPRISE: Draggable handle */}
               <div
                 data-drag-handle
-                className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.LG} ${getDirectionalBorder('muted', 'bottom')} cursor-grab active:cursor-grabbing`}
+                className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.LG} ${getDirectionalBorder('muted', 'bottom')} ${PANEL_LAYOUT.CURSOR.GRAB} active:${PANEL_LAYOUT.CURSOR.GRABBING}`}
               >
                 <h2
                   {...titleProps}
-                  className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} pointer-events-none`}
+                  className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
                 >
                   {title}
                 </h2>
                 <button
                   onClick={handleCancel}
-                  className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} transition-colors cursor-pointer`}
+                  className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.CURSOR.POINTER}`}
                   aria-label="Close"
                 >
                   <svg
@@ -265,13 +265,13 @@ export function EnterpriseColorDialog({
                 <div className={`flex ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.LG} ${getDirectionalBorder('muted', 'top')}`}>
                   <button
                     onClick={handleCancel}
-                    className={`flex-1 ${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.inverted} rounded transition-colors cursor-pointer`}
+                    className={`flex-1 ${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.inverted} rounded ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.CURSOR.POINTER}`}
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleApply}
-                    className={`flex-1 ${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.primary} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${colors.text.primary} rounded transition-colors cursor-pointer`}
+                    className={`flex-1 ${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.primary} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${colors.text.primary} rounded ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.CURSOR.POINTER}`}
                   >
                     Apply
                   </button>
@@ -311,8 +311,8 @@ export function ColorDialogTrigger({
         disabled={disabled}
         className={`
           flex items-center ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER}
-          ${colors.text.inverted} ${quick.button} ${getStatusBorder('default')} transition-colors
-          disabled:opacity-50 disabled:cursor-not-allowed
+          ${colors.text.inverted} ${quick.button} ${getStatusBorder('default')} ${PANEL_LAYOUT.TRANSITION.COLORS}
+          disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
         `}
       >
         <div

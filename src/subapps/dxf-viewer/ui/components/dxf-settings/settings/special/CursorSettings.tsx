@@ -72,7 +72,7 @@ export function CursorSettings() {
   };
 
   return (
-    <article className={`${PANEL_LAYOUT.CONTAINER.PADDING} ${PANEL_LAYOUT.SPACING.GAP_LG} ${PANEL_LAYOUT.MAX_HEIGHT.XL} overflow-y-auto`}>
+    <article className={`${PANEL_LAYOUT.CONTAINER.PADDING} ${PANEL_LAYOUT.SPACING.GAP_LG} ${PANEL_LAYOUT.MAX_HEIGHT.XL} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO}`}>
       {/* 🏢 ENTERPRISE: Semantic header για section */}
       <header className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${getDirectionalBorder('muted', 'bottom')} ${PANEL_LAYOUT.PADDING.BOTTOM_SM}`}>
         Ρυθμίσεις Κέρσορα
@@ -85,7 +85,7 @@ export function CursorSettings() {
         <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.SM}`}>
               <button
                 onClick={() => handleCursorShapeChange('circle')}
-                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
+                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                   settings.cursor.shape === 'circle'
                     ? `${colors.bg.primary} ${getStatusBorder('info')}`
                     : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -99,7 +99,7 @@ export function CursorSettings() {
               </button>
               <button
                 onClick={() => handleCursorShapeChange('square')}
-                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
+                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                   settings.cursor.shape === 'square'
                     ? `${colors.bg.primary} ${getStatusBorder('info')}`
                     : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -138,7 +138,7 @@ export function CursorSettings() {
         <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.SM}`}>
               <button
                 onClick={() => handleCursorLineStyleChange('solid')}
-                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
+                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                   settings.cursor.line_style === 'solid'
                     ? `${colors.bg.primary} ${getStatusBorder('info')}`
                     : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -152,7 +152,7 @@ export function CursorSettings() {
               </button>
               <button
                 onClick={() => handleCursorLineStyleChange('dashed')}
-                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
+                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                   settings.cursor.line_style === 'dashed'
                     ? `${colors.bg.primary} ${getStatusBorder('info')}`
                     : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -168,7 +168,7 @@ export function CursorSettings() {
             <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.MARGIN.TOP_SM}`}>
               <button
                 onClick={() => handleCursorLineStyleChange('dotted')}
-                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
+                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                   settings.cursor.line_style === 'dotted'
                     ? `${colors.bg.primary} ${getStatusBorder('info')}`
                     : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -182,7 +182,7 @@ export function CursorSettings() {
               </button>
               <button
                 onClick={() => handleCursorLineStyleChange('dash-dot')}
-                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
+                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                   settings.cursor.line_style === 'dash-dot'
                     ? `${colors.bg.primary} ${getStatusBorder('info')}`
                     : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -218,7 +218,7 @@ export function CursorSettings() {
             <button
               key={width}
               onClick={() => handleCursorLineWidthChange(width)}
-              className={`flex-1 ${PANEL_LAYOUT.SPACING.XS} ${radius.md} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
+              className={`flex-1 ${PANEL_LAYOUT.SPACING.XS} ${radius.md} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                 (settings.cursor.line_width || 1) === width
                   ? `${colors.bg.primary} ${getStatusBorder('info')}`
                   : `${colors.bg.muted} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
@@ -255,7 +255,7 @@ export function CursorSettings() {
                 <button
                   key={size}
                   onClick={() => handleCursorSizeChange(size)}
-                  className={`flex-1 ${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
+                  className={`flex-1 ${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                     settings.cursor.size === size
                       ? `${getStatusBorder('info')} ${colors.bg.primary}`
                       : `${getStatusBorder('default')} ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
@@ -296,7 +296,7 @@ export function CursorSettings() {
             <div className={`flex ${PANEL_LAYOUT.GAP.SM}`}>
               <button
                 onClick={() => handleCursorEnabledChange(true)}
-                className={`flex-1 ${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
+                className={`flex-1 ${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                   settings.cursor.enabled
                     ? `${colors.bg.primary} ${getStatusBorder('info')}`
                     : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -306,7 +306,7 @@ export function CursorSettings() {
               </button>
               <button
                 onClick={() => handleCursorEnabledChange(false)}
-                className={`flex-1 ${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
+                className={`flex-1 ${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                   !settings.cursor.enabled
                     ? `${colors.bg.primary} ${getStatusBorder('info')}`
                     : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`

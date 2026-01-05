@@ -399,7 +399,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                   onClick={() => handleToolClick(tool.id)}
                   title={`${tool.label} (${tool.hotkey})`}
                   className={`
-                    ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} transition-colors duration-150
+                    ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} duration-150
                     flex items-center justify-center
                     ${isSelected
                       ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${getStatusBorder('info')}`
@@ -418,7 +418,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                   onClick={() => handleToolClick(tool.id)}
                   title={`${tool.label} (${tool.hotkey})`}
                   className={`
-                    ${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.WIDTH.BUTTON_MD} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} border-r-0 transition-colors duration-150
+                    ${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.WIDTH.BUTTON_MD} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} border-r-0 ${PANEL_LAYOUT.TRANSITION.COLORS} duration-150
                     flex items-center justify-center
                     ${isSelected
                       ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${getStatusBorder('info')}`
@@ -430,7 +430,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                 </button>
                 <button
                   className={`
-                    ${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.WIDTH.INDICATOR_MD} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} transition-colors duration-150
+                    ${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.WIDTH.INDICATOR_MD} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} duration-150
                     flex items-center justify-center
                     ${isSelected
                       ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${getStatusBorder('info')}`

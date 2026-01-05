@@ -222,7 +222,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
               UI_COLORS.WHITE
             )}
             onChange={(e) => handleUnitsColorChange(e.target.value)}
-            className={`${iconSizes.xl} h-6 rounded border-0 cursor-pointer`}
+            className={`${iconSizes.xl} h-6 rounded border-0 ${PANEL_LAYOUT.CURSOR.POINTER}`}
           />
           <input
             type="text"

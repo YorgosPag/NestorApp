@@ -74,7 +74,7 @@ export function ConfirmationToast({
       <div className={`flex ${PANEL_LAYOUT.GAP.SM} justify-end ${PANEL_LAYOUT.PADDING.TOP_SM} ${quick.separatorH}`}>
         <button
           onClick={onCancel}
-          className={`${PANEL_LAYOUT.BUTTON.PADDING} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary} ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT} rounded-md transition-colors focus:outline-none ${colors.interactive.focus.ring}`}
+          className={`${PANEL_LAYOUT.BUTTON.PADDING} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary} ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT} rounded-md ${PANEL_LAYOUT.TRANSITION.COLORS} focus:outline-none ${colors.interactive.focus.ring}`}
         >
           {cancelText}
         </button>

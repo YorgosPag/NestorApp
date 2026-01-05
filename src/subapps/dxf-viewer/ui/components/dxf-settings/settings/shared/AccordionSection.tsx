@@ -490,8 +490,8 @@ export const AccordionSection = memo(function AccordionSection({
           }}
           className={`w-full ${styles.size.header} flex items-center justify-between ${
             styles.variant.header
-          } transition-colors text-left focus:outline-none ${colors.interactive.focus.ring} focus:ring-offset-2 ring-offset-background ${
-            disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+          } ${PANEL_LAYOUT.TRANSITION.COLORS} text-left focus:outline-none ${colors.interactive.focus.ring} focus:ring-offset-2 ring-offset-background ${
+            disabled ? 'opacity-50 cursor-not-allowed' : PANEL_LAYOUT.CURSOR.POINTER
           } ${headerClassName}`}
           style={shouldAnimate ? undefined : { transition: 'none' }}
         >
@@ -533,8 +533,8 @@ export const AccordionSection = memo(function AccordionSection({
           role="region"
           aria-labelledby={headerId}
           aria-hidden={!isOpen}
-          className={`overflow-hidden ${
-            shouldAnimate ? 'transition-all duration-200 ease-in-out' : ''
+          className={`${PANEL_LAYOUT.OVERFLOW.HIDDEN} ${
+            shouldAnimate ? `${PANEL_LAYOUT.TRANSITION.ALL} duration-200 ease-in-out` : ''
           }`}
           style={{
             // 🐛 FIX: Don't set inline height here - managed by useEffect animation
@@ -542,7 +542,7 @@ export const AccordionSection = memo(function AccordionSection({
           }}
         >
           <div
-            className={`${styles.size.content} ${colors.bg.secondary} ${getDirectionalBorder('default', 'top')} overflow-visible ${contentClassName}`}
+            className={`${styles.size.content} ${colors.bg.secondary} ${getDirectionalBorder('default', 'top')} ${PANEL_LAYOUT.OVERFLOW.VISIBLE} ${contentClassName}`}
           >
             {/* 🏢 ENTERPRISE: Error Message - Using semantic error colors + centralized spacing + typography */}
             {error && typeof error === 'string' && (

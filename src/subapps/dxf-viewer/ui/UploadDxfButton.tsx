@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import DxfImportModal from '../components/DxfImportModal';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../config/panel-tokens';
 
 interface Props {
   className?: string;
@@ -29,7 +31,7 @@ export default function UploadDxfButton({
     <>
       <button
         type="button"
-        className={`${className} inline-flex items-center justify-center cursor-pointer`}
+        className={`${className} inline-flex items-center justify-center ${PANEL_LAYOUT.CURSOR.POINTER}`}
         onClick={handleButtonClick}
         title={title}
         aria-label={title}

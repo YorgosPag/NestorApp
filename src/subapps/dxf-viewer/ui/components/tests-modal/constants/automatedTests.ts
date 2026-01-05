@@ -3,16 +3,31 @@
  *
  * Περιέχει όλα τα automated test definitions για το TestsModal
  * Factory function που δέχεται το showCopyableNotification callback
+ *
+ * 🏢 ENTERPRISE: Uses Lucide icons instead of emoji (centralized icon system)
  */
 
 import type { TestDefinition, NotificationFn } from '../types/tests.types';
+import {
+  Pencil,
+  Target,
+  RefreshCw,
+  Search,
+  Building2,
+  Triangle,
+  Ruler,
+  Eye,
+  Info,
+  Server
+} from 'lucide-react';
 
 export function getAutomatedTests(showCopyableNotification: NotificationFn): TestDefinition[] {
   return [
     {
       id: 'line-drawing',
-      name: '✏️ Line Drawing Test',
+      name: 'Line Drawing Test',
       description: 'Έλεγχος λειτουργίας σχεδίασης γραμμών',
+      icon: Pencil,
       action: async () => {
         try {
           const response = await fetch('/api/validate-line-drawing');
@@ -38,8 +53,9 @@ export function getAutomatedTests(showCopyableNotification: NotificationFn): Tes
     },
     {
       id: 'canvas-alignment',
-      name: '🎯 Canvas Alignment Test',
+      name: 'Canvas Alignment Test',
       description: 'Έλεγχος ευθυγράμμισης canvas και z-index',
+      icon: Target,
       action: async () => {
         const module = await import('../../../../debug/canvas-alignment-test');
         const { CanvasAlignmentTester } = module;
@@ -52,8 +68,9 @@ export function getAutomatedTests(showCopyableNotification: NotificationFn): Tes
     },
     {
       id: 'layering-workflow',
-      name: '🔄 Layering Workflow Test',
+      name: 'Layering Workflow Test',
       description: 'Έλεγχος ροής εργασίας layering (Ctrl+F2)',
+      icon: RefreshCw,
       action: async () => {
         const module = await import('../../../../debug/layering-workflow-test');
         const result = await module.runLayeringWorkflowTest();
@@ -64,8 +81,9 @@ export function getAutomatedTests(showCopyableNotification: NotificationFn): Tes
     },
     {
       id: 'dom-inspector',
-      name: '🔍 DOM Inspector Test',
+      name: 'DOM Inspector Test',
       description: 'Επιθεώρηση δομής DOM',
+      icon: Search,
       action: async () => {
         const module = await import('../../../../debug/dom-inspector');
         const { inspectDOMElements, findFloatingPanelAdvanced, showDetailedDOMInfo } = module;
@@ -78,8 +96,9 @@ export function getAutomatedTests(showCopyableNotification: NotificationFn): Tes
     },
     {
       id: 'enterprise-cursor',
-      name: '🏢 Enterprise Cursor Test',
+      name: 'Enterprise Cursor Test',
       description: 'Enterprise cursor-crosshair alignment (F3)',
+      icon: Building2,
       action: async () => {
         const module = await import('../../../../debug/enterprise-cursor-crosshair-test');
         const { runEnterpriseMouseCrosshairTests, startEnterpriseInteractiveTest } = module.default;
@@ -91,8 +110,9 @@ export function getAutomatedTests(showCopyableNotification: NotificationFn): Tes
     },
     {
       id: 'grid-enterprise',
-      name: '📐 Grid Enterprise Test',
+      name: 'Grid Enterprise Test',
       description: 'Enterprise grid testing (CAD standards)',
+      icon: Triangle,
       action: async () => {
         const module = await import('../../../../debug/grid-enterprise-test');
         const { runGridEnterpriseTests } = module;
@@ -103,8 +123,9 @@ export function getAutomatedTests(showCopyableNotification: NotificationFn): Tes
     },
     {
       id: 'origin-markers',
-      name: '🎯 Origin Markers Test',
+      name: 'Origin Markers Test',
       description: 'Έλεγχος δεικτών προέλευσης (0,0)',
+      icon: Target,
       action: async () => {
         const module = await import('../../../../debug/OriginMarkersDebugOverlay');
         const { originMarkersDebug } = module;
@@ -115,8 +136,9 @@ export function getAutomatedTests(showCopyableNotification: NotificationFn): Tes
     },
     {
       id: 'ruler-debug',
-      name: '📏 Ruler Debug Test',
+      name: 'Ruler Debug Test',
       description: 'Αποσφαλμάτωση χαράκων',
+      icon: Ruler,
       action: async () => {
         const module = await import('../../../../debug/RulerDebugOverlay');
         const { rulerDebugOverlay } = module;
@@ -127,8 +149,9 @@ export function getAutomatedTests(showCopyableNotification: NotificationFn): Tes
     },
     {
       id: 'canvas-visibility',
-      name: '👁️ Canvas Visibility Test',
+      name: 'Canvas Visibility Test',
       description: 'Έλεγχος ορατότητας canvas',
+      icon: Eye,
       action: async () => {
         const dxfCanvas = document.querySelector('canvas[data-canvas-type="dxf"]') as HTMLCanvasElement;
         const layerCanvas = document.querySelector('canvas[data-canvas-type="layer"]') as HTMLCanvasElement;
@@ -140,8 +163,9 @@ export function getAutomatedTests(showCopyableNotification: NotificationFn): Tes
     },
     {
       id: 'system-info',
-      name: 'ℹ️ System Info Test',
+      name: 'System Info Test',
       description: 'Πληροφορίες συστήματος',
+      icon: Info,
       action: async () => {
         const browser = navigator.userAgent.match(/Chrome|Firefox|Safari|Edge/)?.[0] || 'Unknown';
         const viewport = `${window.innerWidth}×${window.innerHeight}`;
@@ -151,8 +175,9 @@ export function getAutomatedTests(showCopyableNotification: NotificationFn): Tes
     },
     {
       id: 'store-sync',
-      name: '🏢 Store Sync Test',
+      name: 'Store Sync Test',
       description: 'Ports & Adapters Architecture validation (Hexagonal)',
+      icon: Server,
       action: async () => {
         const module = await import('../../../../debug/store-sync-test');
         const { runStoreSyncTests } = module;

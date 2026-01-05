@@ -5,6 +5,8 @@
  * Single source of truth for interfaces
  */
 
+import type { LucideIcon } from 'lucide-react';
+
 export type TabType = 'automated' | 'unit' | 'standalone';
 
 export type NotificationFn = (message: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
@@ -14,6 +16,8 @@ export interface TestDefinition {
   name: string;
   description: string;
   action: () => Promise<void>;
+  /** 🏢 ENTERPRISE: Lucide icon component for the test */
+  icon?: LucideIcon;
 }
 
 export interface TestState {

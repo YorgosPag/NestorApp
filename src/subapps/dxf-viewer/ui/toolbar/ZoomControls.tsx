@@ -140,7 +140,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
     <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS} ${colors.bg.backgroundSecondary} rounded ${PANEL_LAYOUT.SPACING.COMPACT}`}>
       <button
         onClick={handleZoomOutClick}
-        className={`${PANEL_LAYOUT.BUTTON.HEIGHT_SM} ${PANEL_LAYOUT.WIDTH.BUTTON_SM} ${PANEL_LAYOUT.SPACING.NONE} ${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
+        className={`${PANEL_LAYOUT.BUTTON.HEIGHT_SM} ${PANEL_LAYOUT.WIDTH.BUTTON_SM} ${PANEL_LAYOUT.SPACING.NONE} ${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
         title={`Zoom Out (-${ZOOM_STEP_PERCENTAGE}%) - Πληκτρολόγιο: -`}
       >
         <Minus className={iconSizes.xs} />
@@ -154,7 +154,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
         onKeyPress={handleKeyPress}
         onFocus={handleInputFocus}
         onBlur={handleInputBlur}
-        className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_X} ${PANEL_LAYOUT.PADDING.VERTICAL_NONE} ${colors.bg.secondary} ${getStatusBorder('muted')} rounded ${colors.text.inverted} ${PANEL_LAYOUT.TYPOGRAPHY.XS} text-center ${getFocusBorder('input')} focus:outline-none transition-colors select-all`}
+        className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_X} ${PANEL_LAYOUT.PADDING.VERTICAL_NONE} ${colors.bg.secondary} ${getStatusBorder('muted')} rounded ${colors.text.inverted} ${PANEL_LAYOUT.TYPOGRAPHY.XS} text-center ${getFocusBorder('input')} focus:outline-none ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.SELECT.ALL}`}
         title="Zoom percentage (1-99999%, δεκαδικά με . ή ,) - Press Enter or click away to apply"
         placeholder="100"
       />
@@ -163,7 +163,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
       
       <button
         onClick={handleZoomInClick}
-        className={`${PANEL_LAYOUT.BUTTON.HEIGHT_SM} ${PANEL_LAYOUT.WIDTH.BUTTON_SM} ${PANEL_LAYOUT.SPACING.NONE} ${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
+        className={`${PANEL_LAYOUT.BUTTON.HEIGHT_SM} ${PANEL_LAYOUT.WIDTH.BUTTON_SM} ${PANEL_LAYOUT.SPACING.NONE} ${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
         title={`Zoom In (+${ZOOM_STEP_PERCENTAGE}%) - Πληκτρολόγιο: +`}
       >
         <Plus className={iconSizes.xs} />
