@@ -53,7 +53,7 @@ export const AnimatedSpinner: React.FC<LoadingSpinnerProps> = ({
   const sizeClass = MODAL_DIMENSIONS.ICONS[size];
 
   return (
-    <Loader2 className={`${sizeClass} animate-spin ${getModalIconColor('info')} ${className}`} />
+    <Loader2 className={`${sizeClass} ${PANEL_LAYOUT.ANIMATE.SPIN} ${getModalIconColor('info')} ${className}`} />
   );
 };
 
@@ -245,7 +245,7 @@ export const ModalLoadingOverlay: React.FC<LoadingOverlayProps> = ({
   if (!isVisible) return null;
 
   return (
-    <div className={`absolute inset-0 flex items-center justify-center ${colors.bg.modalBackdrop} rounded-lg ${PANEL_LAYOUT.Z_INDEX['50']} ${className}`}>
+    <div className={`absolute ${PANEL_LAYOUT.INSET['0']} flex items-center justify-center ${colors.bg.modalBackdrop} ${PANEL_LAYOUT.ROUNDED.LG} ${PANEL_LAYOUT.Z_INDEX['50']} ${className}`}>
       <div className={MODAL_FLEX_PATTERNS.COLUMN.centerWithGap}>
         <AnimatedSpinner size="large" />
         <span className={`${typography.label.sm} ${colors.text.inverted}`}>

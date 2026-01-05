@@ -57,7 +57,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
           >
             <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
               {testState.runningTests.has('run-vitest') ? (
-                <Loader2 className={`${iconSizes.md} ${colors.text.warning} animate-spin`} />
+                <Loader2 className={`${iconSizes.md} ${colors.text.warning} ${PANEL_LAYOUT.ANIMATE.SPIN}`} />
               ) : testState.completedTests.has('run-vitest') ? (
                 <CheckCircle2 className={`${iconSizes.md} ${colors.text.success}`} />
               ) : (
@@ -84,7 +84,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
           >
             <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
               {testState.runningTests.has('run-jest') ? (
-                <Loader2 className={`${iconSizes.md} ${colors.text.warning} animate-spin`} />
+                <Loader2 className={`${iconSizes.md} ${colors.text.warning} ${PANEL_LAYOUT.ANIMATE.SPIN}`} />
               ) : testState.completedTests.has('run-jest') ? (
                 <CheckCircle2 className={`${iconSizes.md} ${colors.text.success}`} />
               ) : (
@@ -118,7 +118,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
         >
           <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
             {testState.runningTests.has('run-playwright') ? (
-              <Loader2 className={`${iconSizes.md} ${colors.text.warning} animate-spin`} />
+              <Loader2 className={`${iconSizes.md} ${colors.text.warning} ${PANEL_LAYOUT.ANIMATE.SPIN}`} />
             ) : testState.completedTests.has('run-playwright') ? (
               <CheckCircle2 className={`${iconSizes.md} ${colors.text.success}`} />
             ) : (

@@ -54,8 +54,8 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
   };
 
   return (
-    <div className={`fixed inset-0 ${colors.bg.modalBackdrop} flex items-center justify-center ${PANEL_LAYOUT.Z_INDEX['50']}`}>
-      <div className={`${colors.bg.secondary} ${PANEL_LAYOUT.CONTAINER.BORDER_RADIUS} shadow-xl ${quick.muted} w-full max-w-2xl max-h-[90vh] flex flex-col`}>
+    <div className={`fixed ${PANEL_LAYOUT.INSET['0']} ${colors.bg.modalBackdrop} flex items-center justify-center ${PANEL_LAYOUT.Z_INDEX['50']}`}>
+      <div className={`${colors.bg.secondary} ${PANEL_LAYOUT.CONTAINER.BORDER_RADIUS} ${PANEL_LAYOUT.SHADOW.XL} ${quick.muted} w-full max-w-2xl ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.MODAL_MAX_HEIGHT} flex flex-col`}>
         
         {/* Header */}
         <header className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.MD} ${getDirectionalBorder('muted', 'bottom')}`}>

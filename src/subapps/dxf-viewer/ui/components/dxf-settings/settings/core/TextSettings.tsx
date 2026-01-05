@@ -460,7 +460,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
                   {/* Increase Font Size - Big A with up arrow */}
                   <button
                     onClick={increaseFontSize}
-                    className={`w-10 h-9 ${colors.bg.hover} ${quick.button} ${colors.text.primary} ${HOVER_BACKGROUND_EFFECTS.DARKER} ${PANEL_LAYOUT.TRANSITION.COLORS} flex items-center justify-center`}
+                    className={`${PANEL_LAYOUT.ICON.BUTTON_SM} ${colors.bg.hover} ${quick.button} ${colors.text.primary} ${HOVER_BACKGROUND_EFFECTS.DARKER} ${PANEL_LAYOUT.TRANSITION.COLORS} flex items-center justify-center`}
                     title="Αύξηση μεγέθους γραμματοσειράς"
                   >
                     <div className="flex items-center">
@@ -474,7 +474,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
                   {/* Decrease Font Size - Small A with down arrow */}
                   <button
                     onClick={decreaseFontSize}
-                    className={`w-10 h-9 ${colors.bg.hover} ${quick.button} ${colors.text.primary} ${HOVER_BACKGROUND_EFFECTS.DARKER} ${PANEL_LAYOUT.TRANSITION.COLORS} flex items-center justify-center`}
+                    className={`${PANEL_LAYOUT.ICON.BUTTON_SM} ${colors.bg.hover} ${quick.button} ${colors.text.primary} ${HOVER_BACKGROUND_EFFECTS.DARKER} ${PANEL_LAYOUT.TRANSITION.COLORS} flex items-center justify-center`}
                     title="Μείωση μεγέθους γραμματοσειράς"
                   >
                     <div className="flex items-center">

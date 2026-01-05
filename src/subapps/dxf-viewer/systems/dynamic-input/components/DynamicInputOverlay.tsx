@@ -3,7 +3,7 @@
 import React, { useEffect, useCallback } from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
+import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { useCursor } from '../../cursor';
 import { CADFeedback } from '../../../utils/feedback-utils';
 import { DynamicInputField } from './DynamicInputField';

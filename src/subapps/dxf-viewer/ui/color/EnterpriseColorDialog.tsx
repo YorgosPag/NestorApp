@@ -181,7 +181,7 @@ export function EnterpriseColorDialog({
   return typeof window !== 'undefined'
     ? createPortal(
         <div
-          className="fixed inset-0 flex items-center justify-center"
+          className={`fixed ${PANEL_LAYOUT.INSET['0']} flex items-center justify-center`}
           style={{
             zIndex: 2147483646, // Just below max to allow stacking
             cursor: 'default',
@@ -190,7 +190,7 @@ export function EnterpriseColorDialog({
         >
           {/* Backdrop - ✅ FIX: No click handlers, just visual overlay */}
           <div
-            className={`absolute inset-0 ${colors.bg.modalBackdrop}`}
+            className={`absolute ${PANEL_LAYOUT.INSET['0']} ${colors.bg.modalBackdrop}`}
             style={{ pointerEvents: 'none' }}
           />
 
@@ -214,7 +214,7 @@ export function EnterpriseColorDialog({
                 pointerEvents: 'auto',
                 isolation: 'isolate' // Create new stacking context
               }}
-              className={`relative ${colors.bg.accent} ${getStatusBorder('default')} ${quick.card} shadow-2xl max-h-[90vh] ${PANEL_LAYOUT.OVERFLOW.Y_AUTO} max-w-[400px] ${PANEL_LAYOUT.SELECT.NONE}`}
+              className={`relative ${colors.bg.accent} ${getStatusBorder('default')} ${quick.card} ${PANEL_LAYOUT.SHADOW['2XL']} ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.MODAL_MAX_HEIGHT} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO} ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.PANEL_MAX_WIDTH_LG} ${PANEL_LAYOUT.SELECT.NONE}`}
             >
               {/* Header - ✅ ENTERPRISE: Draggable handle */}
               <div
@@ -316,7 +316,7 @@ export function ColorDialogTrigger({
         `}
       >
         <div
-          className={`w-6 h-6 ${radius.md} ${getStatusBorder('default')} ${dynamicBgClass}`}
+          className={`${PANEL_LAYOUT.ICON.SWATCH} ${radius.md} ${getStatusBorder('default')} ${dynamicBgClass}`}
         />
         <span className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.secondary}`}>{label}</span>
       </button>

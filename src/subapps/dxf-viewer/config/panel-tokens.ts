@@ -251,14 +251,16 @@ export const PANEL_LAYOUT = {
   // 📐 HEIGHT - Fixed height tokens
   HEIGHT: {
     // Core heights
+    DIVIDER: 'h-0.5',                  // 2px  - Thin divider lines
     XS: 'h-1',                         // 4px  - Progress bar, dividers
     SM: 'h-2',                         // 8px  - Small height (snap indicators)
     MD: 'h-4',                         // 16px - Medium height
     LG: 'h-6',                         // 24px - Large height
+    INPUT_SM: 'h-7',                   // 28px - Small inputs
     XL: 'h-8',                         // 32px - Extra large height
     XXL: 'h-9',                        // 36px - Button groups
     ICON_LG: 'h-10',                   // 40px - Large icons (empty states)
-    INPUT_SM: 'h-7',                   // 28px - Small inputs
+    PREVIEW: 'h-12',                   // 48px - Preview containers
 
     // Full height utilities
     FULL: 'h-full',                    // 100% height
@@ -435,7 +437,9 @@ export const PANEL_LAYOUT = {
     SMALL: 'w-3 h-3',                  // Small icons (clear buttons)
     REGULAR: 'w-4 h-4',                // Regular icons (buttons, tabs)
     LARGE: 'w-5 h-5',                  // Large icons (headers)
+    SWATCH: 'w-6 h-6',                 // Color swatches (color picker)
     LOADING: 'w-4 h-4',                // Loading spinner size
+    BUTTON_SM: 'w-10 h-9',             // Small icon buttons (40x36px)
   },
 
   // 🏢 INTERACTIVE - Interactive element patterns
@@ -542,7 +546,20 @@ export const PANEL_LAYOUT = {
     LG: 'rounded-lg',                    // 8px - Large rounding
     XL: 'rounded-xl',                    // 12px - Extra large rounding
     '2XL': 'rounded-2xl',                // 16px - Very large rounding
+    '3XL': 'rounded-3xl',                // 24px - Extra extra large rounding
     FULL: 'rounded-full',                // Full circular rounding
+    // Directional variants - Top
+    TOP_LG: 'rounded-t-lg',              // Top corners only (8px)
+    TOP_MD: 'rounded-t-md',              // Top corners only (6px)
+    TOP: 'rounded-t',                    // Top corners only (4px)
+    // Directional variants - Bottom
+    BOTTOM_LG: 'rounded-b-lg',           // Bottom corners only (8px)
+    BOTTOM_MD: 'rounded-b-md',           // Bottom corners only (6px)
+    BOTTOM: 'rounded-b',                 // Bottom corners only (4px)
+    // Directional variants - Left
+    LEFT_MD: 'rounded-l-md',             // Left corners only (6px)
+    // Directional variants - Right
+    RIGHT_MD: 'rounded-r-md',            // Right corners only (6px)
   },
 
   // ============================================================================
@@ -836,6 +853,188 @@ export const PANEL_LAYOUT = {
     '2XL': 'max-w-2xl',                  // 672px
     FULL: 'max-w-full',                  // 100%
     SCREEN: 'max-w-screen-xl',           // Screen breakpoint
+  },
+
+  // ============================================================================
+  // 🎨 CAD_COLORS - AutoCAD Standard Colors (ENTERPRISE 2026-01-05)
+  // Single source of truth for all CAD-related color constants
+  // ============================================================================
+  CAD_COLORS: {
+    // Line colors (Factory defaults)
+    LINE_DEFAULT: '#FFFFFF',             // Pure white - default line color
+    LINE_HOVER: '#FFFF00',               // Pure yellow - hover state
+    LINE_SELECTED: '#00FF00',            // Pure green - selected state
+    LINE_ERROR: '#FF0000',               // Pure red - error/warning
+    LINE_INFO: '#0000FF',                // Pure blue - info/secondary selection
+    // Grip colors (AutoCAD standard)
+    GRIP_COLD: '#0000FF',                // Blue - unselected grips
+    GRIP_WARM: '#FF69B4',                // Hot Pink - hover grips
+    GRIP_HOT: '#FF0000',                 // Red - selected grips
+    // Text colors
+    TEXT_DEFAULT: '#000000',             // Black - default text on light bg
+    TEXT_INVERTED: '#FFFFFF',            // White - text on dark bg
+    // Drawing colors
+    DRAWING_WHITE: '#FFFFFF',            // Pure white for drawings
+    DRAWING_BLACK: '#000000',            // Pure black for drawings
+    // Transparent
+    TRANSPARENT: 'transparent',          // Transparent color
+  },
+
+  // ============================================================================
+  // 📐 LAYOUT_DIMENSIONS - Fixed dimensions for UI components (ENTERPRISE 2026-01-05)
+  // Centralizes arbitrary Tailwind values like [384px], [90vh], etc.
+  // ============================================================================
+  LAYOUT_DIMENSIONS: {
+    // Sidebar dimensions
+    SIDEBAR_WIDTH: 'w-[384px]',          // Standard sidebar width
+    SIDEBAR_MIN_WIDTH: 'min-w-[384px]',  // Minimum sidebar width
+    SIDEBAR_MAX_WIDTH: 'max-w-[384px]',  // Maximum sidebar width
+    // Modal dimensions
+    MODAL_MAX_HEIGHT: 'max-h-[90vh]',    // Standard modal max height
+    MODAL_MIN_HEIGHT: 'min-h-[850px]',   // Settings panel min height
+    // Panel dimensions
+    PANEL_WIDTH_SM: 'w-[220px]',         // Small panel (dynamic input)
+    PANEL_WIDTH_MD: 'w-[340px]',         // Medium panel (properties)
+    PANEL_WIDTH_LG: 'w-[400px]',         // Large panel (color dialog)
+    // Min-width variants
+    PANEL_MIN_WIDTH_SM: 'min-w-[220px]', // Small panel minimum width
+    // Max-width variants
+    PANEL_MAX_WIDTH_LG: 'max-w-[400px]', // Large panel maximum width (dialogs)
+    // Dropdown dimensions
+    DROPDOWN_MIN_WIDTH: 'min-w-[150px]', // Standard dropdown min width
+    // Text sizes (arbitrary)
+    TEXT_TINY: 'text-[10px]',            // Very small text (badges, hints)
+  },
+
+  // ============================================================================
+  // ⏱️ TIMING - Animation and timeout constants (ENTERPRISE 2026-01-05)
+  // Single source of truth for all timing-related values
+  // ============================================================================
+  TIMING: {
+    // Debounce intervals (milliseconds)
+    DEBOUNCE_INPUT: 150,                 // User input debounce
+    DEBOUNCE_SCROLL: 100,                // Scroll event debounce
+    DEBOUNCE_RESIZE: 200,                // Window resize debounce
+    // Animation durations
+    ANIMATION_FAST: 150,                 // Fast transitions
+    ANIMATION_DEFAULT: 300,              // Standard animations
+    ANIMATION_SLOW: 500,                 // Slow/emphasis animations
+    // Toast/notification durations
+    TOAST_SHORT: 2000,                   // Quick notifications
+    TOAST_DEFAULT: 3000,                 // Standard notifications
+    TOAST_LONG: 5000,                    // Important notifications
+    // Auto-save intervals
+    AUTO_SAVE_INTERVAL: 30000,           // 30 seconds
+    // Cursor tooltip delay
+    TOOLTIP_DELAY: 500,                  // Tooltip show delay
+  },
+
+  // ============================================================================
+  // 🎭 ANIMATE - Animation tokens (ENTERPRISE 2026-01-05)
+  // Centralizes all animate-* Tailwind classes
+  // ============================================================================
+  ANIMATE: {
+    SPIN: 'animate-spin',                // Continuous rotation
+    PING: 'animate-ping',                // Ping/pulse effect
+    PULSE: 'animate-pulse',              // Gentle pulse
+    BOUNCE: 'animate-bounce',            // Bouncing animation
+    NONE: 'animate-none',                // No animation
+  },
+
+  // ============================================================================
+  // 💍 RING - Focus ring tokens (ENTERPRISE 2026-01-05)
+  // Centralizes all ring-* focus styles
+  // ============================================================================
+  RING: {
+    // Ring widths
+    NONE: 'ring-0',                      // No ring
+    DEFAULT: 'ring',                     // Default ring (3px)
+    '1': 'ring-1',                       // 1px ring
+    '2': 'ring-2',                       // 2px ring
+    '4': 'ring-4',                       // 4px ring
+    // Ring colors (focus states)
+    FOCUS_BLUE: 'ring-blue-500',         // Blue focus ring
+    FOCUS_RED: 'ring-red-500',           // Red/error focus ring
+    FOCUS_GREEN: 'ring-green-500',       // Green/success focus ring
+    // Ring offsets
+    OFFSET_1: 'ring-offset-1',           // 1px offset
+    OFFSET_2: 'ring-offset-2',           // 2px offset
+    // Combined focus ring patterns (common combinations)
+    FOCUS_INFO: 'ring-2 ring-blue-500 ring-offset-2',    // Standard info focus
+    FOCUS_ERROR: 'ring-2 ring-red-500 ring-offset-2',    // Error focus
+    FOCUS_SUCCESS: 'ring-2 ring-green-500 ring-offset-2', // Success focus
+  },
+
+  // ============================================================================
+  // 🎢 EASING - Transition timing functions (ENTERPRISE 2026-01-05)
+  // Centralizes all ease-* Tailwind classes
+  // ============================================================================
+  EASING: {
+    LINEAR: 'ease-linear',               // Linear timing (no acceleration)
+    IN: 'ease-in',                       // Accelerate at start
+    OUT: 'ease-out',                     // Decelerate at end
+    IN_OUT: 'ease-in-out',               // Smooth start and end
+  },
+
+  // ============================================================================
+  // 🔄 TRANSFORM - Transform tokens (ENTERPRISE 2026-01-05)
+  // Centralizes all transform utilities
+  // ============================================================================
+  TRANSFORM: {
+    // Centering transforms
+    CENTER: 'transform -translate-x-1/2 -translate-y-1/2',  // Center absolutely positioned elements
+    CENTER_X: 'transform -translate-x-1/2',                  // Center horizontally
+    CENTER_Y: 'transform -translate-y-1/2',                  // Center vertically
+    // Toggle/switch transforms
+    TOGGLE_ON: 'translate-x-5',                              // Toggle switch ON position
+    TOGGLE_OFF: 'translate-x-0',                             // Toggle switch OFF position
+    // Rotation
+    ROTATE_0: 'rotate-0',                                    // No rotation
+    ROTATE_90: 'rotate-90',                                  // 90 degrees
+    ROTATE_180: 'rotate-180',                                // 180 degrees (accordion arrows)
+    ROTATE_270: 'rotate-270',                                // 270 degrees
+    // Scale
+    SCALE_100: 'scale-100',                                  // Normal scale
+    SCALE_105: 'scale-105',                                  // Subtle hover scale
+    SCALE_110: 'scale-110',                                  // Emphasized hover scale
+    SCALE_95: 'scale-95',                                    // Pressed state
+  },
+
+  // ============================================================================
+  // 📊 GRID - Grid layout tokens (ENTERPRISE 2026-01-05)
+  // Centralizes all grid-cols-* patterns
+  // ============================================================================
+  GRID: {
+    COLS_1: 'grid-cols-1',               // Single column
+    COLS_2: 'grid-cols-2',               // Two columns
+    COLS_3: 'grid-cols-3',               // Three columns
+    COLS_4: 'grid-cols-4',               // Four columns
+    COLS_5: 'grid-cols-5',               // Five columns
+    COLS_6: 'grid-cols-6',               // Six columns
+    // Responsive variants
+    MD_COLS_2: 'md:grid-cols-2',         // 2 cols on medium screens
+    MD_COLS_3: 'md:grid-cols-3',         // 3 cols on medium screens
+  },
+
+  // ============================================================================
+  // 📐 FLEX_UTILS - Flexbox utility tokens (ENTERPRISE 2026-01-05)
+  // Critical utilities for proper flexbox behavior
+  // ============================================================================
+  FLEX_UTILS: {
+    ALLOW_SHRINK: 'min-w-0',             // Allows flex items to shrink below content width
+    ALLOW_SCROLL: 'min-h-0',             // Enables overflow scrolling in flex containers
+    FLEX_1_MIN_0: 'flex-1 min-w-0',      // Common pattern: flex-grow with shrink
+  },
+
+  // ============================================================================
+  // ✂️ TEXT_OVERFLOW - Text overflow tokens (ENTERPRISE 2026-01-05)
+  // Centralizes text truncation patterns
+  // ============================================================================
+  TEXT_OVERFLOW: {
+    TRUNCATE: 'truncate',                // Single line truncation with ellipsis
+    LINE_CLAMP_1: 'line-clamp-1',        // Clamp to 1 line
+    LINE_CLAMP_2: 'line-clamp-2',        // Clamp to 2 lines
+    LINE_CLAMP_3: 'line-clamp-3',        // Clamp to 3 lines
   },
 } as const;
 

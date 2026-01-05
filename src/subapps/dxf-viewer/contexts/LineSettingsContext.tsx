@@ -3,8 +3,19 @@
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { LINE_TYPE_LABELS, LINE_CAP_LABELS, LINE_JOIN_LABELS } from './LineConstants';
 import { getDashArray } from '../settings-core/defaults';
+// ===== ΚΕΝΤΡΙΚΟ AUTO-SAVE ΣΎΣΤΗΜΑ =====
+import { useLineSettingsFromProvider } from '../settings-provider';
+// ===== OVERRIDE GUARD SYSTEM =====
+import { guardGlobalAccess } from '../../../utils/overrideGuard';
+// ===== CENTRALIZED COLORS =====
+import { UI_COLORS } from '../config/color-config';
+import { PANEL_LAYOUT } from '../config/panel-tokens';
+// ✅ ΔΙΟΡΑΘΩΣΗ ΔΙΠΛΟΤΥΠΩΝ: Use unified types από settings-core
+import type { LineType, LineCapStyle, LineJoinStyle, LineSettings } from '../settings-core/types';
+
 // ===== ΝΕΑ UNIFIED PROVIDERS (για internal use) =====
 // Mock missing ConfigurationProvider
+// ✅ ENTERPRISE: Using PANEL_LAYOUT.CAD_COLORS tokens (centralized color system)
 const useViewerConfig = () => ({
   enableAutoSave: true,
   autoSaveDelay: 1000,
@@ -14,29 +25,20 @@ const useViewerConfig = () => ({
         general: {
           lineType: 'solid' as const,
           lineWidth: 1,
-          color: '#000000',
+          color: PANEL_LAYOUT.CAD_COLORS.TEXT_DEFAULT,  // ✅ Centralized: '#000000'
           opacity: 1,
           dashScale: 1,
           dashOffset: 0,
           lineCap: 'round' as const,
           lineJoin: 'round' as const,
-          hoverColor: '#ff0000',
-          selectedColor: '#0000ff'
+          hoverColor: PANEL_LAYOUT.CAD_COLORS.LINE_ERROR,  // ✅ Centralized: '#FF0000'
+          selectedColor: PANEL_LAYOUT.CAD_COLORS.LINE_INFO  // ✅ Centralized: '#0000FF'
         }
       }
     }
   },
-  updateEntityConfig: (category: any, updates: any) => {}
+  updateEntityConfig: (_category: string, _updates: Record<string, unknown>) => {}
 });
-// ===== ΚΕΝΤΡΙΚΟ AUTO-SAVE ΣΎΣΤΗΜΑ =====
-import { useLineSettingsFromProvider } from '../settings-provider';
-// ===== OVERRIDE GUARD SYSTEM =====
-import { guardGlobalAccess } from '../../../utils/overrideGuard';
-// ===== CENTRALIZED COLORS =====
-import { UI_COLORS } from '../config/color-config';
-
-// ✅ ΔΙΟΡΑΘΩΣΗ ΔΙΠΛΟΤΥΠΩΝ: Use unified types από settings-core
-import type { LineType, LineCapStyle, LineJoinStyle, LineSettings } from '../settings-core/types';
 
 export interface LineTemplate {
   name: string;
@@ -84,18 +86,18 @@ const factorySettings: LineSettings = {
   enabled: true,               // Factory: γραμμές ενεργοποιημένες
   lineType: 'solid',           // ✅ ISO 128: Continuous line (factory standard)
   lineWidth: 0.18,             // ✅ ISO 128: Minimum factory line weight (0.18mm)
-  color: '#FFFFFF',            // ✅ Factory: Pure white (#FFFFFF)
+  color: PANEL_LAYOUT.CAD_COLORS.LINE_DEFAULT,  // ✅ Factory: Pure white (centralized token)
   opacity: 1.0,                // ✅ Factory: Full opacity
   dashScale: 1.0,              // ✅ Factory: Standard dash scale
   dashOffset: 0,               // ✅ Factory: No offset
   lineCap: 'butt',             // ✅ Factory: Butt caps (CAD standard)
   lineJoin: 'miter',           // ✅ Factory: Miter joins (CAD standard)
   breakAtCenter: false,        // ✅ Factory: No break at center
-  hoverColor: '#FFFF00',       // ✅ Factory: Pure yellow (#FFFF00)
+  hoverColor: PANEL_LAYOUT.CAD_COLORS.LINE_HOVER,  // ✅ Factory: Pure yellow (centralized token)
   hoverType: 'solid',          // ✅ Factory: Solid hover
   hoverWidth: 0.25,            // ✅ Factory: Standard ISO 128 weight
   hoverOpacity: 1.0,           // ✅ Factory: Full opacity
-  finalColor: '#00FF00',       // ✅ Factory: Pure green (#00FF00)
+  finalColor: PANEL_LAYOUT.CAD_COLORS.LINE_SELECTED,  // ✅ Factory: Pure green (centralized token)
   finalType: 'solid',          // ✅ Factory: Solid final
   finalWidth: 0.25,            // ✅ Factory: Standard ISO 128 weight
   finalOpacity: 1.0,           // ✅ Factory: Full opacity
@@ -247,7 +249,7 @@ export function LineSettingsProvider({ children }: { children: React.ReactNode }
   }, [settings.lineType, settings.dashScale]);
 
   const value: LineSettingsContextType = {
-    settings: settings as any,
+    settings: settings as LineSettings, // ✅ ENTERPRISE: Proper type assertion (not `any`)
     updateSettings,
     resetToDefaults,
     resetToFactory,

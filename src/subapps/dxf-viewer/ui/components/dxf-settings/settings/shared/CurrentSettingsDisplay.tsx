@@ -101,7 +101,7 @@ export function CurrentSettingsDisplay({
         <div className={`${colors.bg.primary} ${radius.lg} ${getStatusBorder('default')} ${PANEL_LAYOUT.SPACING.MD}`}>
           {activeTab === 'lines' && (
             <div>
-              <div className={`${PANEL_LAYOUT.SPACING.STANDARD} ${colors.bg.secondary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.info} ${PANEL_LAYOUT.TYPOGRAPHY.SM} rounded-t-lg ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+              <div className={`${PANEL_LAYOUT.SPACING.STANDARD} ${colors.bg.secondary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.info} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.ROUNDED.TOP_LG} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <Minus className={iconSizes.sm} />
                 <span>Γραμμή</span>
               </div>
@@ -149,7 +149,7 @@ export function CurrentSettingsDisplay({
 
           {activeTab === 'text' && (
             <div>
-              <div className={`${PANEL_LAYOUT.SPACING.STANDARD} ${colors.bg.secondary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.success} ${PANEL_LAYOUT.TYPOGRAPHY.SM} rounded-t-lg ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+              <div className={`${PANEL_LAYOUT.SPACING.STANDARD} ${colors.bg.secondary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.success} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.ROUNDED.TOP_LG} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <Type className={iconSizes.sm} />
                 <span>Κείμενο</span>
               </div>
@@ -192,7 +192,7 @@ export function CurrentSettingsDisplay({
 
           {activeTab === 'grips' && (
             <div>
-              <div className={`${PANEL_LAYOUT.SPACING.STANDARD} ${colors.bg.secondary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.warning} ${PANEL_LAYOUT.TYPOGRAPHY.SM} rounded-t-lg ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
+              <div className={`${PANEL_LAYOUT.SPACING.STANDARD} ${colors.bg.secondary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.warning} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.ROUNDED.TOP_LG} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
                 🔺 Grips
               </div>
               <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>

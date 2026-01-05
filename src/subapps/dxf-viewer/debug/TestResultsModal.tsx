@@ -146,17 +146,17 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 flex items-center justify-center ${colors.bg.modalBackdropDark}`}
+      className={`fixed ${PANEL_LAYOUT.INSET['0']} flex items-center justify-center ${colors.bg.modalBackdropDark}`}
       style={canvasUI.positioning.floatingPanel.testModal.backdrop}
       onClick={onClose}
     >
       <div
-        className={`relative ${colors.bg.secondary} rounded-lg shadow-2xl flex flex-col ${getStatusBorder('default')}`}
+        className={`relative ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.LG} ${PANEL_LAYOUT.SHADOW['2XL']} flex flex-col ${getStatusBorder('default')}`}
         style={canvasUI.positioning.floatingPanel.testModal.content}
         onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER */}
-        <header className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.XXL} ${PANEL_LAYOUT.PADDING.TOP_LG} ${PANEL_LAYOUT.PADDING.BOTTOM_LG} ${colors.bg.secondary} rounded-t-lg ${getStatusBorder('default')} ${getDirectionalBorder('default', 'bottom')}`}>
+        <header className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.XXL} ${PANEL_LAYOUT.PADDING.TOP_LG} ${PANEL_LAYOUT.PADDING.BOTTOM_LG} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.TOP_LG} ${getStatusBorder('default')} ${getDirectionalBorder('default', 'bottom')}`}>
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD}`}>
             <span className={PANEL_LAYOUT.TYPOGRAPHY['2XL']}>🧪</span>
             <div>
@@ -224,7 +224,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
               console.log('Summary tab clicked');
               setActiveTab('summary');
             }}
-            className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} rounded-t ${PANEL_LAYOUT.TRANSITION.ALL} ${getTabBorder('summary')}`}
+            className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.ROUNDED.TOP} ${PANEL_LAYOUT.TRANSITION.ALL} ${getTabBorder('summary')}`}
             style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}
           >
             Περίληψη
@@ -234,7 +234,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
               console.log('Details tab clicked');
               setActiveTab('details');
             }}
-            className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} rounded-t ${PANEL_LAYOUT.TRANSITION.ALL} ${getTabBorder('details')}`}
+            className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.ROUNDED.TOP} ${PANEL_LAYOUT.TRANSITION.ALL} ${getTabBorder('details')}`}
             style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}
           >
             Λεπτομέρειες
@@ -244,7 +244,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
               console.log('Raw tab clicked');
               setActiveTab('raw');
             }}
-            className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} rounded-t ${PANEL_LAYOUT.TRANSITION.ALL} ${getTabBorder('raw')}`}
+            className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.ROUNDED.TOP} ${PANEL_LAYOUT.TRANSITION.ALL} ${getTabBorder('raw')}`}
             style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}
           >
             Ακατέργαστη Έξοδος
@@ -259,7 +259,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
         </main>
 
         {/* FOOTER */}
-        <footer className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.XXL} ${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} rounded-b-lg ${getStatusBorder('default')} ${getDirectionalBorder('default', 'top')}`}>
+        <footer className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.XXL} ${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.BOTTOM_LG} ${getStatusBorder('default')} ${getDirectionalBorder('default', 'top')}`}>
           <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.disabled}`}>
             🖥️ Viewport: {report.systemInfo.viewport.width}×{report.systemInfo.viewport.height}
           </div>

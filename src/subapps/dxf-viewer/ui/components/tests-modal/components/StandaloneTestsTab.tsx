@@ -49,7 +49,7 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
           >
             <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
               {testState.runningTests.has('coordinate-reversibility') ? (
-                <Loader2 className={`${iconSizes.md} ${colors.text.warning} animate-spin`} />
+                <Loader2 className={`${iconSizes.md} ${colors.text.warning} ${PANEL_LAYOUT.ANIMATE.SPIN}`} />
               ) : testState.completedTests.has('coordinate-reversibility') ? (
                 <CheckCircle2 className={`${iconSizes.md} ${colors.text.success}`} />
               ) : (
@@ -76,7 +76,7 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
           >
             <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
               {testState.runningTests.has('grid-workflow') ? (
-                <Loader2 className={`${iconSizes.md} ${colors.text.warning} animate-spin`} />
+                <Loader2 className={`${iconSizes.md} ${colors.text.warning} ${PANEL_LAYOUT.ANIMATE.SPIN}`} />
               ) : testState.completedTests.has('grid-workflow') ? (
                 <CheckCircle2 className={`${iconSizes.md} ${colors.text.success}`} />
               ) : (

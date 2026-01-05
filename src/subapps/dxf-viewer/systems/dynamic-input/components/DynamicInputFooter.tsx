@@ -3,7 +3,7 @@
 import React from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
+import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import type { Phase } from '../hooks/useDynamicInputState';
 
 interface DynamicInputFooterProps {

@@ -36,7 +36,7 @@ export default function SnapIndicatorOverlay({
     <div className={className} style={{ zIndex: portalComponents.overlay.snap.zIndex() }}>
       {/* 🏢 ENTERPRISE: Centralized snap indicator tokens (ADR-013) */}
       <div
-        className={`absolute ${PANEL_LAYOUT.SNAP_INDICATOR.SIZE} ${PANEL_LAYOUT.SNAP_INDICATOR.BORDER} border-solid rounded-full ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
+        className={`absolute ${PANEL_LAYOUT.SNAP_INDICATOR.SIZE} ${PANEL_LAYOUT.SNAP_INDICATOR.BORDER} border-solid ${PANEL_LAYOUT.ROUNDED.FULL} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
         style={{
           left: point.x - PANEL_LAYOUT.SNAP_INDICATOR.OFFSET_PX,
           top: point.y - PANEL_LAYOUT.SNAP_INDICATOR.OFFSET_PX,

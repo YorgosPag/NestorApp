@@ -40,7 +40,7 @@ export const TestButton: React.FC<TestButtonProps> = ({
     <button
       onClick={() => onRun(test.id, test.action)}
       disabled={isRunning}
-      className={`flex items-start ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} rounded-lg border ${PANEL_LAYOUT.TRANSITION.ALL} text-left w-full ${
+      className={`flex items-start ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} ${PANEL_LAYOUT.ROUNDED.LG} border ${PANEL_LAYOUT.TRANSITION.ALL} text-left w-full ${
         isRunning
           ? `${colors.bg.warning} ${useBorderTokens().getStatusBorder('warning')} ${PANEL_LAYOUT.CURSOR.WAIT}`
           : isCompleted
@@ -50,7 +50,7 @@ export const TestButton: React.FC<TestButtonProps> = ({
     >
       <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
         {isRunning ? (
-          <Loader2 className={`${iconSizes.md} ${colors.text.warning} animate-spin`} />
+          <Loader2 className={`${iconSizes.md} ${colors.text.warning} ${PANEL_LAYOUT.ANIMATE.SPIN}`} />
         ) : isCompleted ? (
           <CheckCircle2 className={`${iconSizes.md} ${colors.text.success}`} />
         ) : test.icon ? (

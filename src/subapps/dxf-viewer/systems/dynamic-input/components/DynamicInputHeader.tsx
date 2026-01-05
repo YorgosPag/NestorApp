@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
+import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 
 interface DynamicInputHeaderProps {
   activeTool: string;

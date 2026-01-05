@@ -30,7 +30,7 @@ const LAYOUT_MAPPER_STYLES = {
 
   // Debug overlay container
   DEBUG_OVERLAY: {
-    CONTAINER: `fixed inset-0 ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`,
+    CONTAINER: `fixed ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`,
   },
 
   // Measurement box for each element

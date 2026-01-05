@@ -82,7 +82,7 @@ export function AutoSaveStatus() {
           {getStatusIcon()}
         </div>
         {autoSaveStatus.lastSaveTime && (
-          <div className={`${colors.text.tertiary} text-[10px] ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
+          <div className={`${colors.text.tertiary} ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.TEXT_TINY} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
             Last saved: {formatLastSaveTime(autoSaveStatus.lastSaveTime)}
           </div>
         )}
@@ -96,7 +96,7 @@ export function AutoSaveStatus() {
 
             }
           }}
-          className={`${PANEL_LAYOUT.SPACING.COMPACT} text-[10px] ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL} ${quick.button}`}
+          className={`${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.TEXT_TINY} ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL} ${quick.button}`}
           title="Trigger manual save"
         >
           💾 Save

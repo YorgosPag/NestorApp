@@ -154,7 +154,7 @@ ChevronDownIcon.displayName = 'ChevronDownIcon';
 
 const LoadingSpinner = memo(({ className }: { className?: string }) => (
   <svg
-    className={`${className} animate-spin`}
+    className={`${className} ${PANEL_LAYOUT.ANIMATE.SPIN}`}
     fill="none"
     viewBox="0 0 24 24"
     aria-hidden="true"
@@ -231,7 +231,7 @@ const getVariantStyles = (
     header: `bg-transparent ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK_ALPHA}`
   },
   bordered: {
-    container: `${getBorder('card', 'focus')} ${radius.lg} shadow-lg`,
+    container: `${getBorder('card', 'focus')} ${radius.lg} ${PANEL_LAYOUT.SHADOW.LG}`,
     header: `${colors.bg.secondary} ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`
   }
 });
@@ -534,7 +534,7 @@ export const AccordionSection = memo(function AccordionSection({
           aria-labelledby={headerId}
           aria-hidden={!isOpen}
           className={`${PANEL_LAYOUT.OVERFLOW.HIDDEN} ${
-            shouldAnimate ? `${PANEL_LAYOUT.TRANSITION.ALL} duration-200 ease-in-out` : ''
+            shouldAnimate ? `${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['200']} ease-in-out` : ''
           }`}
           style={{
             // 🐛 FIX: Don't set inline height here - managed by useEffect animation

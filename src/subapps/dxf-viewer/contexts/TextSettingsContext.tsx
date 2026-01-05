@@ -1,6 +1,15 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+// ===== ΚΕΝΤΡΙΚΟ AUTO-SAVE ΣΎΣΤΗΜΑ =====
+import { useTextSettingsFromProvider } from '../settings-provider';
+// ===== OVERRIDE GUARD SYSTEM =====
+import { guardGlobalAccess } from '../../../utils/overrideGuard';
+// ===== CENTRALIZED COLORS =====
+import { UI_COLORS } from '../config/color-config';
+// ===== CENTRALIZED PANEL TOKENS =====
+import { PANEL_LAYOUT } from '../config/panel-tokens';
+
 // ===== ΝΕΑ UNIFIED PROVIDERS (για internal use) =====
 // Mock missing ConfigurationProvider
 const useViewerConfig = () => ({
@@ -12,20 +21,14 @@ const useViewerConfig = () => ({
         general: {
           fontSize: 12,
           fontFamily: 'Arial',
-          color: '#000000',
+          color: PANEL_LAYOUT.CAD_COLORS.TEXT_DEFAULT, // ✅ ENTERPRISE: Centralized CAD color token
           opacity: 1
         }
       }
     }
   },
-  updateEntityConfig: (category: any, updates: any) => {}
+  updateEntityConfig: (category: string, updates: Record<string, unknown>) => {}
 });
-// ===== ΚΕΝΤΡΙΚΟ AUTO-SAVE ΣΎΣΤΗΜΑ =====
-import { useTextSettingsFromProvider } from '../settings-provider';
-// ===== OVERRIDE GUARD SYSTEM =====
-import { guardGlobalAccess } from '../../../utils/overrideGuard';
-// ===== CENTRALIZED COLORS =====
-import { UI_COLORS } from '../config/color-config';
 
 // Text Settings Interface
 export interface TextSettings {
@@ -229,7 +232,7 @@ export function TextSettingsProvider({ children }: { children: React.ReactNode }
   }, [settings, updateSettings]);
 
   const value: TextSettingsContextType = {
-    settings: settings as any,
+    settings: settings as TextSettings, // ✅ ENTERPRISE: Proper type assertion (not `any`)
     updateSettings,
     resetToDefaults,
     applyTemplate

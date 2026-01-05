@@ -24,7 +24,7 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
   const { quick, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
   return (
-  <div className={`fixed inset-0 ${PANEL_LAYOUT.Z_INDEX['50']} ${colors.bg.accent} flex flex-col`}>
+  <div className={`fixed ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.Z_INDEX['50']} ${colors.bg.accent} flex flex-col`}>
     <ToolbarSection
       {...props}
       overlayMode={"draw" as OverlayEditorMode}

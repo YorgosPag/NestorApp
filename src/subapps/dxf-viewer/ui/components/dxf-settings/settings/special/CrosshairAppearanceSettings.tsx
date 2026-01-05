@@ -328,7 +328,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             <div className={`${iconSizes.lg} flex items-center justify-center relative`}>
               {/* Εξωτερικό πλαίσιο */}
               <div
-                className="absolute inset-0 border"
+                className={`absolute ${PANEL_LAYOUT.INSET['0']} border`}
                 style={layoutUtilities.dxf.colors.borderColor(cursorColors.crosshairColor)}
               ></div>
               {/* Οριζόντια γραμμή που φτάνει τα άκρα του πλαισίου */}

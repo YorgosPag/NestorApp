@@ -877,7 +877,7 @@ Check console for detailed metrics`;
       />
 
       {/* 🚀 LCP OPTIMIZATION: Lazy-loaded Main Content Section */}
-      <React.Suspense fallback={<div className={`flex-1 ${colors.bg.skeleton} animate-pulse`} />}>
+      <React.Suspense fallback={<div className={`flex-1 ${colors.bg.skeleton} ${PANEL_LAYOUT.ANIMATE.PULSE}`} />}>
         <MainContentSection
         state={wrappedState}
         currentScene={currentScene}
@@ -913,7 +913,7 @@ Check console for detailed metrics`;
       </React.Suspense>
 
       {/* 🚀 LCP OPTIMIZATION: Lazy-loaded Floating Panels Section */}
-      <React.Suspense fallback={<div className={`${PANEL_LAYOUT.WIDTH.PANEL_SM} ${colors.bg.skeleton} animate-pulse`} />}>
+      <React.Suspense fallback={<div className={`${PANEL_LAYOUT.WIDTH.PANEL_SM} ${colors.bg.skeleton} ${PANEL_LAYOUT.ANIMATE.PULSE}`} />}>
         <FloatingPanelsSection
         colorMenu={colorMenu}
         currentScene={currentScene}

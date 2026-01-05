@@ -17,7 +17,7 @@ export function LayerHeader({ isConnected, onAddLayer, onSettings }: LayerHeader
         Layer Manager
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
           <div
-            className={`${iconSizes.xs} rounded-full ${isConnected ? colors.bg.success : colors.bg.error}`}
+            className={`${iconSizes.xs} ${PANEL_LAYOUT.ROUNDED.FULL} ${isConnected ? colors.bg.success : colors.bg.error}`}
             title={isConnected ? "Συνδεδεμένο - Real-time sync ενεργό" : "Αποσυνδεδεμένο"}
           />
         </div>

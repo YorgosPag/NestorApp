@@ -31,7 +31,7 @@ const DefaultFallback = () => {
   const colors = useSemanticColors();
   return (
     <aside className={`flex items-center justify-center ${PANEL_LAYOUT.SPACING.XXXL}`}>
-      <Loader2 className={`${iconSizes.lg} animate-spin ${colors.text.muted}`} />
+      <Loader2 className={`${iconSizes.lg} ${PANEL_LAYOUT.ANIMATE.SPIN} ${colors.text.muted}`} />
       <span className={`${PANEL_LAYOUT.MARGIN.LEFT_SM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted}`}>Loading component...</span>
     </aside>
   );
@@ -44,7 +44,7 @@ const LazyLoadErrorFallback = (error: Error, _errorInfo: React.ErrorInfo, retry:
   const { getStatusBorder } = useBorderTokens();
 
   return (
-    <article className={`${PANEL_LAYOUT.SPACING.LG} ${getStatusBorder('error')} bg-destructive/10 rounded-lg`}>
+    <article className={`${PANEL_LAYOUT.SPACING.LG} ${getStatusBorder('error')} bg-destructive/10 ${PANEL_LAYOUT.ROUNDED.LG}`}>
       <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} text-destructive ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
         Component Loading Error
       </h3>

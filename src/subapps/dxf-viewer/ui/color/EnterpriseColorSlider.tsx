@@ -149,7 +149,7 @@ export function EnterpriseColorSlider({
       <div
         {...trackProps}
         ref={trackRef}
-        className={`relative h-6 rounded touch-none ${disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : PANEL_LAYOUT.CURSOR.POINTER}`}
+        className={`relative ${PANEL_LAYOUT.HEIGHT.LG} ${PANEL_LAYOUT.ROUNDED.DEFAULT} touch-none ${disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : PANEL_LAYOUT.CURSOR.POINTER}`}
         style={{
           width,
           ...trackStyle,
@@ -158,7 +158,7 @@ export function EnterpriseColorSlider({
         {/* Checkered background for alpha */}
         {channel === 'alpha' && (
           <div
-            className="absolute inset-0 rounded"
+            className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.ROUNDED.DEFAULT}`}
             style={{
               backgroundImage: UI_GRADIENTS.ALPHA_CHECKERBOARD,
               backgroundSize: '8px 8px',
@@ -172,7 +172,7 @@ export function EnterpriseColorSlider({
           {...thumbProps}
           {...focusProps}
           className={`
-            absolute w-5 h-5 ${PANEL_LAYOUT.POSITION.TOP_HALF} rounded-full border border-white shadow-lg
+            absolute ${PANEL_LAYOUT.ICON.LARGE} ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.ROUNDED.FULL} border border-white ${PANEL_LAYOUT.SHADOW.LG}
             transform -translate-x-1/2 -translate-y-1/2
             ${isFocusVisible ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
             ${disabled ? PANEL_LAYOUT.POINTER_EVENTS.NONE : ''}

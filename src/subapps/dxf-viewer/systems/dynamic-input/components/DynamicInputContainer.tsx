@@ -1,7 +1,7 @@
 'use client';
 
 import React, { ReactNode } from 'react';
-import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
+import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { portalComponents } from '@/styles/design-tokens';  // ✅ ENTERPRISE: Centralized z-index hierarchy
 import type { Point2D } from '../../../rendering/types/Types';
 
@@ -21,7 +21,7 @@ export function DynamicInputContainer({ position, showInput, children }: Dynamic
         zIndex: portalComponents.overlay.controls.zIndex() + 90  // ✅ ENTERPRISE: Centralized z-index (1600)
       }}
     >
-      <div className={`bg-transparent ${PANEL_LAYOUT.SPACING.MD} min-w-[220px]`}>
+      <div className={`bg-transparent ${PANEL_LAYOUT.SPACING.MD} ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.PANEL_MIN_WIDTH_SM}`}>
         {children}
       </div>
     </div>

@@ -351,7 +351,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
   const panelContent = (
     <div
       ref={panelRef}
-      className={`cursor-settings-panel fixed ${colors.bg.primary} ${colors.text.primary}${quick.card} shadow-2xl ${getStatusBorder('default')} ${PANEL_LAYOUT.SELECT.NONE} ${PANEL_LAYOUT.POINTER_EVENTS.AUTO}`}
+      className={`cursor-settings-panel fixed ${colors.bg.primary} ${colors.text.primary}${quick.card} ${PANEL_LAYOUT.SHADOW['2XL']} ${getStatusBorder('default')} ${PANEL_LAYOUT.SELECT.NONE} ${PANEL_LAYOUT.POINTER_EVENTS.AUTO}`}
       style={{
         left: position.x,
         top: position.y,
@@ -468,7 +468,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
             </div>
             {settings.performance.precision_mode && (
               <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.info} ${getStatusBorder('info')} rounded ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.info} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-                <div className={`${iconSizes.xs} ${colors.bg.info} ${quick.button} animate-pulse`}></div>
+                <div className={`${iconSizes.xs} ${colors.bg.info} ${quick.button} ${PANEL_LAYOUT.ANIMATE.PULSE}`}></div>
                 <span>PRECISION MODE ΕΝΕΡΓΟ - 4 δεκαδικα ψηφια</span>
               </div>
             )}

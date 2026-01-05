@@ -165,7 +165,7 @@ export function CentralizedAutoSaveStatus() {
     <section
       className={`
         flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.STANDARD}
-        ${colors.bg.tertiary}/50 rounded-md border
+        ${colors.bg.tertiary}/50 ${PANEL_LAYOUT.ROUNDED.MD} border
         ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['200']} relative
         ${getStatusColor()}
       `}

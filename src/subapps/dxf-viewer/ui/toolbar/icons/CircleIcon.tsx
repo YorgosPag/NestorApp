@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 
 export type CircleVariant = 
   | 'radius'

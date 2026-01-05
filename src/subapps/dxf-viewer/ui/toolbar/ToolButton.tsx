@@ -74,7 +74,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
         disabled={disabled}
         title={`${tool.label} (${tool.hotkey})`}
         className={`
-          ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} rounded-md ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
+          ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.ROUNDED.MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
           flex items-center justify-center
           ${
             isActive
@@ -97,7 +97,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
           disabled={disabled}
           title={`${tool.label} (${tool.hotkey})`}
           className={`
-            ${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.WIDTH.BUTTON_MD} ${PANEL_LAYOUT.SPACING.NONE} rounded-l-md ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
+            ${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.WIDTH.BUTTON_MD} ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.ROUNDED.LEFT_MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
             flex items-center justify-center
             ${
               isActive
@@ -114,7 +114,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
           disabled={disabled}
           title="Περισσότερες επιλογές"
           className={`
-            ${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.WIDTH.XS} ${PANEL_LAYOUT.SPACING.NONE} rounded-r-md ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
+            ${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.WIDTH.XS} ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.ROUNDED.RIGHT_MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
             flex items-center justify-center
             ${
               isActive
@@ -129,14 +129,14 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
       </div>
 
       {showDropdown && (
-        <nav className={`absolute ${PANEL_LAYOUT.POSITION.TOP_FULL} ${PANEL_LAYOUT.POSITION.LEFT_0} ${PANEL_LAYOUT.MARGIN.TOP_XS} ${colors.bg.secondary} rounded-md shadow-lg ${PANEL_LAYOUT.Z_INDEX['50']} min-w-[150px] ${getStatusBorder('default')}`}>
+        <nav className={`absolute ${PANEL_LAYOUT.POSITION.TOP_FULL} ${PANEL_LAYOUT.POSITION.LEFT_0} ${PANEL_LAYOUT.MARGIN.TOP_XS} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.MD} ${PANEL_LAYOUT.SHADOW.LG} ${PANEL_LAYOUT.Z_INDEX['50']} ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.DROPDOWN_MIN_WIDTH} ${getStatusBorder('default')}`}>
           {tool.dropdownOptions!.map((option) => {
             const OptionIcon = option.icon;
             return (
               <button
                 key={option.id}
                 onClick={() => handleDropdownItemClick(option.id)}
-                className={`w-full ${PANEL_LAYOUT.BUTTON.PADDING} text-left ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.secondary} flex items-center ${PANEL_LAYOUT.GAP.SM} first:rounded-t-md last:rounded-b-md ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+                className={`w-full ${PANEL_LAYOUT.BUTTON.PADDING} text-left ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.secondary} flex items-center ${PANEL_LAYOUT.GAP.SM} first:${PANEL_LAYOUT.ROUNDED.TOP_MD} last:${PANEL_LAYOUT.ROUNDED.BOTTOM_MD} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               >
                 {OptionIcon && <OptionIcon className={iconSizes.sm} />}
                 {option.label}
@@ -165,7 +165,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
       title={action.hotkey ? `${action.label} (${action.hotkey})` : action.label}
       disabled={action.disabled ?? false}
       className={`
-        ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} rounded-md ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
+        ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.ROUNDED.MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
         flex items-center justify-center
         ${
           action.active

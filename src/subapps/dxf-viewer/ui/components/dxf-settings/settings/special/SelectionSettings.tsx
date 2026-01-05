@@ -266,7 +266,7 @@ export function SelectionSettings() {
                     }`}
                   >
                     <div
-                      className={`w-full ${PANEL_LAYOUT.MARGIN.BOTTOM_XS} h-0.5`}
+                      className={`${PANEL_LAYOUT.WIDTH.FULL} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS} ${PANEL_LAYOUT.HEIGHT.DIVIDER}`}
                       style={{ background: getLinePreview(style) }}
                     />
                     <span className={`block ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{styleLabels[style]}</span>
@@ -426,7 +426,7 @@ export function SelectionSettings() {
                     }`}
                   >
                     <div
-                      className={`w-full ${PANEL_LAYOUT.MARGIN.BOTTOM_XS} h-0.5`}
+                      className={`${PANEL_LAYOUT.WIDTH.FULL} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS} ${PANEL_LAYOUT.HEIGHT.DIVIDER}`}
                       style={{ background: getLinePreview(style) }}
                     />
                     <span className={`block ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{styleLabels[style]}</span>

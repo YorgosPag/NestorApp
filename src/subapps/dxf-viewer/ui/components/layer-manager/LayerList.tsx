@@ -39,14 +39,14 @@ export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerLi
   return (
     <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.MAX_HEIGHT.LG} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO}`}>
       {layers.map(layer => (
-        <div key={layer.id} className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${getStatusBorder('muted')}`}>
+        <div key={layer.id} className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${getStatusBorder('muted')}`}>
           <div className="flex items-center justify-between">
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} flex-1`}>
-              <div className={`${PANEL_LAYOUT.ICON.SMALL} rounded-full ${getCategoryColor(layer.category)}`} />
+              <div className={`${PANEL_LAYOUT.ICON.SMALL} ${PANEL_LAYOUT.ROUNDED.FULL} ${getCategoryColor(layer.category)}`} />
               
               <span className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>{layer.name}</span>
 
-              <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${colors.bg.tertiary} ${PANEL_LAYOUT.PADDING.BADGE} rounded`}>
+              <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${colors.bg.tertiary} ${PANEL_LAYOUT.PADDING.BADGE} ${PANEL_LAYOUT.ROUNDED.DEFAULT}`}>
                 {layer.elements}
               </span>
             </div>

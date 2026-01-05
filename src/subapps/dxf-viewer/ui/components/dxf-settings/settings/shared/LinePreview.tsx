@@ -95,8 +95,8 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
   return (
     <div className={`${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.XXL} ${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
       {/* Live Preview με πραγματικές ρυθμίσεις - ΠΛΗΡΗΣ ΠΡΟΕΠΙΣΚΟΠΗΣΗ GRIPS */}
-      <div className="relative h-12 flex items-center">
-        <svg width="100%" height="100%" className="absolute inset-0">
+      <div className={`relative ${PANEL_LAYOUT.HEIGHT.PREVIEW} flex items-center`}>
+        <svg width="100%" height="100%" className={`absolute ${PANEL_LAYOUT.INSET['0']}`}>
           {/* 🆕 ΕΛΕΓΧΟΣ: Σχεδιάζουμε γραμμές ΜΟΝΟ αν enabled = true */}
           {lineSettings.enabled && lineSettings.breakAtCenter ? (
             // Σπασμένη γραμμή - δυναμικό κενό βάσει μεγέθους κειμένου

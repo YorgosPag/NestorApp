@@ -15,6 +15,7 @@ import { Activity } from 'lucide-react';
 import { FloatingPanel } from '@/components/ui/floating';
 import { OverlayProperties } from '../OverlayProperties';
 import type { Overlay, UpdateOverlayData } from '../../overlays/types';
+import { PANEL_LAYOUT } from '../../config/panel-tokens'; // 🏢 ENTERPRISE: Centralized tokens
 
 // ============================================================================
 // TYPES - Enterprise TypeScript Standards (ZERO any)
@@ -66,7 +67,7 @@ export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProp
       defaultPosition={getInitialPosition()}
       dimensions={PANEL_DIMENSIONS}
       onClose={onClose}
-      className="w-[340px]"
+      className={PANEL_LAYOUT.LAYOUT_DIMENSIONS.PANEL_WIDTH_MD}
     >
       <FloatingPanel.Header
         title="Overlay Properties"

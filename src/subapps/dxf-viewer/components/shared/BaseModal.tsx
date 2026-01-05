@@ -137,7 +137,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 
       {/* Modal Container */}
       <div
-        className={`fixed inset-0 ${PANEL_LAYOUT.OVERFLOW.Y_AUTO}`}
+        className={`fixed ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO}`}
         style={{ zIndex: portalComponents.modal.content.zIndex(zIndex) }}
       >
         <div className={`flex items-center justify-center min-h-full ${PANEL_LAYOUT.SPACING.LG} text-center ${PANEL_LAYOUT.SPACING.SM_NONE}`}>
@@ -149,8 +149,8 @@ export const BaseModal: React.FC<BaseModalProps> = ({
               ${sizeClasses[size]}
               ${colors.bg.accent}
               ${getStatusBorder('muted')}
-              rounded-lg
-              shadow-2xl
+              ${PANEL_LAYOUT.ROUNDED.LG}
+              ${PANEL_LAYOUT.SHADOW['2XL']}
               text-left
               transform
               ${PANEL_LAYOUT.TRANSITION.ALL}
@@ -193,7 +193,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 
             {/* Footer */}
             {footer && (
-              <div className={`${PANEL_LAYOUT.BUTTON.PADDING} ${getDirectionalBorder('muted', 'top')} ${colors.bg.secondary} rounded-b-lg`}>
+              <div className={`${PANEL_LAYOUT.BUTTON.PADDING} ${getDirectionalBorder('muted', 'top')} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.BOTTOM_LG}`}>
                 {footer}
               </div>
             )}

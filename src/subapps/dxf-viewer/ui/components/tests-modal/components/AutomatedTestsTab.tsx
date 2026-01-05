@@ -45,9 +45,9 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
         <button
           onClick={handleRunAllTests}
           disabled={testState.runningTests.has('run-all-tests')}
-          className={`w-full ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} rounded-lg shadow-lg ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${
+          className={`w-full ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${PANEL_LAYOUT.ROUNDED.LG} ${PANEL_LAYOUT.SHADOW.LG} ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${
             testState.runningTests.has('run-all-tests')
-              ? `${colors.bg.warning} ${colors.text.inverted} ${PANEL_LAYOUT.CURSOR.WAIT} animate-pulse`
+              ? `${colors.bg.warning} ${colors.text.inverted} ${PANEL_LAYOUT.CURSOR.WAIT} ${PANEL_LAYOUT.ANIMATE.PULSE}`
               : testState.completedTests.has('run-all-tests')
               ? `${colors.bg.success} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_BUTTON}`
               : `bg-gradient-to-r from-purple-600 to-pink-600 ${colors.text.inverted} ${GRADIENT_HOVER_EFFECTS.PURPLE_PINK_BUTTON}`
@@ -55,7 +55,7 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
         >
           {testState.runningTests.has('run-all-tests') ? (
             <span className={`flex items-center justify-center ${PANEL_LAYOUT.GAP.SM}`}>
-              <Loader2 className={`${iconSizes.lg} animate-spin`} />
+              <Loader2 className={`${iconSizes.lg} ${PANEL_LAYOUT.ANIMATE.SPIN}`} />
               Running All Automated Tests...
             </span>
           ) : testState.completedTests.has('run-all-tests') ? (

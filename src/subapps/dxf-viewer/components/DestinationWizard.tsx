@@ -148,8 +148,8 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
   };
 
   return (
-    <div className={`fixed inset-0 ${colors.bg.modalBackdrop} flex items-center justify-center ${PANEL_LAYOUT.Z_INDEX['50']}`}>
-      <div className={`${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.LG} ${PANEL_LAYOUT.SHADOW.XL} max-w-2xl w-full ${PANEL_LAYOUT.MARGIN.X_LG} max-h-[90vh] ${PANEL_LAYOUT.OVERFLOW.Y_AUTO}`}>
+    <div className={`fixed ${PANEL_LAYOUT.INSET['0']} ${colors.bg.modalBackdrop} flex items-center justify-center ${PANEL_LAYOUT.Z_INDEX['50']}`}>
+      <div className={`${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.LG} ${PANEL_LAYOUT.SHADOW.XL} max-w-2xl w-full ${PANEL_LAYOUT.MARGIN.X_LG} ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.MODAL_MAX_HEIGHT} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO}`}>
         
         {/* Header */}
         <header className={`flex justify-between items-center ${PANEL_LAYOUT.SPACING.XXL} ${getDirectionalBorder('default', 'bottom')}`}>

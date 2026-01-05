@@ -87,6 +87,8 @@ import { usePreviewMode } from '../usePreviewMode';
 // import { useEntityStyles } from '../useEntityStyles';
 // 🆕 MERGE: Χρησιμοποιούμε το νέο useLineStyles από DxfSettingsProvider
 import { useLineStyles } from '../../settings-provider';
+// 🏢 ENTERPRISE: Import centralized CAD colors - ADR-014 color token migration
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 export type DrawingTool = 'select' | 'line' | 'rectangle' | 'circle' | 'circle-diameter' | 'circle-2p-diameter' | 'polyline' | 'polygon' | 'measure-distance' | 'measure-area' | 'measure-angle';
 
@@ -272,7 +274,8 @@ export function useUnifiedDrawing() {
               visible: true,
               layer: '0',
               // ✅ ENTERPRISE FIX: Add required BaseEntity properties
-              color: '#ffffff',
+              // 🏢 ENTERPRISE: Use centralized CAD color token - ADR-014
+              color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
               lineweight: 1,
               opacity: 1.0,
               lineType: 'solid' as const
@@ -472,7 +475,8 @@ export function useUnifiedDrawing() {
             visible: true,
             layer: '0',
             // ✅ ENTERPRISE FIX: Add required BaseEntity properties
-            color: '#ffffff',
+            // 🏢 ENTERPRISE: Use centralized CAD color token - ADR-014
+            color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
             lineweight: 1,
             opacity: 1.0,
             lineType: 'solid' as const

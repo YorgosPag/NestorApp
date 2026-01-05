@@ -46,11 +46,11 @@ import { PANEL_LAYOUT } from '../config/panel-tokens';  // ✅ ENTERPRISE: Centr
 // 🎯 LAYOUT CONSTANTS - Centralized, maintainable
 // ============================================================================
 
-/** Sidebar width tokens - matches Tailwind w-96 (384px) */
+/** Sidebar width tokens - uses PANEL_LAYOUT.LAYOUT_DIMENSIONS (ENTERPRISE) */
 const SIDEBAR_LAYOUT = {
-  WIDTH: 'w-96',
-  MIN_WIDTH: 'min-w-[384px]',
-  MAX_WIDTH: 'max-w-[384px]',
+  WIDTH: PANEL_LAYOUT.WIDTH.PANEL_LG,                        // w-96 (384px)
+  MIN_WIDTH: PANEL_LAYOUT.LAYOUT_DIMENSIONS.SIDEBAR_MIN_WIDTH, // min-w-[384px]
+  MAX_WIDTH: PANEL_LAYOUT.LAYOUT_DIMENSIONS.SIDEBAR_MAX_WIDTH, // max-w-[384px]
 } as const;
 
 // ============================================================================
@@ -111,7 +111,7 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
           flex flex-col
           ${colors.bg.secondary}
           ${quick.card}
-          shadow-xl
+          ${PANEL_LAYOUT.SHADOW.XL}
           ${getStatusBorder('default')}
         `}
       >
@@ -140,7 +140,7 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
           className={`
             flex-shrink-0
             ${PANEL_LAYOUT.SPACING.GAP_SM}
-            rounded-b-lg
+            ${PANEL_LAYOUT.ROUNDED.BOTTOM_LG}
             ${colors.bg.secondary}
             ${quick.separatorH}
             ${PANEL_LAYOUT.SPACING.LG}

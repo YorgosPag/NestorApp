@@ -130,12 +130,12 @@ export function EnterpriseColorArea({
     <div
       {...colorAreaProps}
       ref={containerRef}
-      className={`relative rounded-lg ${PANEL_LAYOUT.OVERFLOW.HIDDEN} ${disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : PANEL_LAYOUT.CURSOR.CROSSHAIR} ${className}`}
+      className={`relative ${PANEL_LAYOUT.ROUNDED.LG} ${PANEL_LAYOUT.OVERFLOW.HIDDEN} ${disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : PANEL_LAYOUT.CURSOR.CROSSHAIR} ${className}`}
       style={canvasUI.colorPicker.colorPickerArea(String(size))}
     >
       {/* Color gradient background */}
       <div
-        className="absolute inset-0"
+        className={`absolute ${PANEL_LAYOUT.INSET['0']}`}
         style={gradientStyle}
       />
 
@@ -144,7 +144,7 @@ export function EnterpriseColorArea({
         {...thumbProps}
         {...focusProps}
         className={`
-          absolute ${iconSizes.md} rounded-full border border-white shadow-lg
+          absolute ${iconSizes.md} ${PANEL_LAYOUT.ROUNDED.FULL} border border-white ${PANEL_LAYOUT.SHADOW.LG}
           transform -translate-x-1/2 -translate-y-1/2
           ${isFocusVisible ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
           ${disabled ? PANEL_LAYOUT.POINTER_EVENTS.NONE : ''}

@@ -64,8 +64,8 @@ export const EntityCard = ({
       tabIndex={0}
       data-entity-id={entity.id}
       data-entity-selected={isSelected || undefined}
-      className={`${PANEL_LAYOUT.MARGIN.LEFT_3XL} flex items-center justify-between rounded ${PANEL_LAYOUT.CURSOR.POINTER} ${PANEL_LAYOUT.TRANSITION.ALL} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} focus:outline-none ${colors.interactive.focus.ring} ${
-        isSelected ? `${PANEL_LAYOUT.SPACING.SM} ${colors.bg.selection} ${getDirectionalBorder('info', 'left')} rounded` : PANEL_LAYOUT.SPACING.XS
+      className={`${PANEL_LAYOUT.MARGIN.LEFT_3XL} flex items-center justify-between ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.CURSOR.POINTER} ${PANEL_LAYOUT.TRANSITION.ALL} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} focus:outline-none ${colors.interactive.focus.ring} ${
+        isSelected ? `${PANEL_LAYOUT.SPACING.SM} ${colors.bg.selection} ${getDirectionalBorder('info', 'left')} ${PANEL_LAYOUT.ROUNDED.DEFAULT}` : PANEL_LAYOUT.SPACING.XS
       } ${selectedEntitiesForMerge.has(entity.id) ? `ring-2 ${colors.ring.info} ${colors.bg.selection}` : ''} ${
         isFocused ? `ring-2 ${colors.ring.success}` : ''
       }`}
@@ -91,7 +91,7 @@ export const EntityCard = ({
               e.stopPropagation();
               onSetColorPickerEntity(showEntityColorPicker ? null : entity.id);
             }}
-            className={`rounded-full ${getStatusBorder('muted')} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${
+            className={`${PANEL_LAYOUT.ROUNDED.FULL} ${getStatusBorder('muted')} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${
               isSelected ? iconSizes.xs : iconSizes.xs
             } ${getDynamicBackgroundClass(entity.color || layer.color)}`}
             title="Αλλαγή χρώματος entity"
@@ -123,7 +123,7 @@ export const EntityCard = ({
               onSetEditingEntity(null);
               onSetEditingEntityName('');
             }}
-            className={`${colors.bg.hover} ${colors.text.primary} rounded ${getStatusBorder('info')} focus:outline-none ${colors.interactive.focus.ring} ${
+            className={`${colors.bg.hover} ${colors.text.primary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${getStatusBorder('info')} focus:outline-none ${colors.interactive.focus.ring} ${
               isSelected ? `${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS}` : `${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.SPACING.HORIZONTAL_HALF}`
             }`}
             autoFocus
