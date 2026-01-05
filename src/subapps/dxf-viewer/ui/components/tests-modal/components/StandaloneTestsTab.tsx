@@ -30,11 +30,11 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
     <>
       {/* ✅ ENTERPRISE: Χρήση semantic <section> αντί κενού <div> (ADR-003) */}
       <section>
-        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase ${PANEL_LAYOUT.TRACKING.WIDE} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <BarChart3 className={iconSizes.sm} /> Standalone Test Scripts
         </h3>
 
-        <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.MD}`}>
+        <div className={`grid ${PANEL_LAYOUT.GRID.COLS_2} ${PANEL_LAYOUT.GAP.MD}`}>
           {/* Coordinate Reversibility */}
           <button
             onClick={standaloneTests.handleRunCoordinateReversibility}
@@ -47,7 +47,7 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
                 : `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.GRAY_BUTTON} ${HOVER_BORDER_EFFECTS.GRAY}`
             }`}
           >
-            <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
+            <div className={`${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
               {testState.runningTests.has('coordinate-reversibility') ? (
                 <Loader2 className={`${iconSizes.md} ${colors.text.warning} ${PANEL_LAYOUT.ANIMATE.SPIN}`} />
               ) : testState.completedTests.has('coordinate-reversibility') ? (
@@ -56,8 +56,8 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
                 <Play className={`${iconSizes.md} ${colors.text.muted}`} />
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight flex items-center ${PANEL_LAYOUT.GAP.XS}`}><RefreshCw className={iconSizes.sm} /> Coordinate Reversibility</div>
+            <div className={PANEL_LAYOUT.FLEX_UTILS.FLEX_1_MIN_0}>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.LEADING.TIGHT} flex items-center ${PANEL_LAYOUT.GAP.XS}`}><RefreshCw className={iconSizes.sm} /> Coordinate Reversibility</div>
               <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Tests screenToWorld(worldToScreen(p)) == p</div>
             </div>
           </button>
@@ -74,7 +74,7 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
                 : `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.GRAY_BUTTON} ${HOVER_BORDER_EFFECTS.GRAY}`
             }`}
           >
-            <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
+            <div className={`${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
               {testState.runningTests.has('grid-workflow') ? (
                 <Loader2 className={`${iconSizes.md} ${colors.text.warning} ${PANEL_LAYOUT.ANIMATE.SPIN}`} />
               ) : testState.completedTests.has('grid-workflow') ? (
@@ -83,8 +83,8 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
                 <Play className={`${iconSizes.md} ${colors.text.muted}`} />
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight flex items-center ${PANEL_LAYOUT.GAP.XS}`}><Triangle className={iconSizes.sm} /> Grid Workflow Test</div>
+            <div className={PANEL_LAYOUT.FLEX_UTILS.FLEX_1_MIN_0}>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.LEADING.TIGHT} flex items-center ${PANEL_LAYOUT.GAP.XS}`}><Triangle className={iconSizes.sm} /> Grid Workflow Test</div>
               <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>CAD QA standards (5 categories)</div>
             </div>
           </button>
@@ -94,7 +94,7 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
       {/* ✅ ENTERPRISE: Χρήση semantic <aside> για info box (ADR-003) */}
       <aside className={`${colors.bg.warning} ${quick.info} ${PANEL_LAYOUT.SPACING.LG}`}>
         <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.warning} flex items-start ${PANEL_LAYOUT.GAP.SM}`}>
-          <AlertTriangle className={`${iconSizes.sm} flex-shrink-0 mt-0.5`} />
+          <AlertTriangle className={`${iconSizes.sm} ${PANEL_LAYOUT.FLEX_SHRINK.NONE} mt-0.5`} />
           <span><strong>Work in Progress:</strong> Some standalone tests need refactoring to export runnable functions. Check console for status.</span>
         </p>
       </aside>

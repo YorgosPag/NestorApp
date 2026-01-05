@@ -55,7 +55,7 @@ export function CalibrationStep() {
       {/* Units Selection */}
       <fieldset className={PANEL_LAYOUT.SPACING.GAP_MD}>
         <legend className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.tertiary}`}>Μονάδες</legend>
-        <nav className={`grid grid-cols-5 ${PANEL_LAYOUT.GAP.SM}`} role="group" aria-label="Επιλογή μονάδων">
+        <nav className={`grid ${PANEL_LAYOUT.GRID.COLS_5} ${PANEL_LAYOUT.GAP.SM}`} role="group" aria-label="Επιλογή μονάδων">
           {[
             { value: 'mm', label: 'χιλιοστά' },
             { value: 'cm', label: 'εκατοστά' },

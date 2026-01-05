@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { dxfPerformanceOptimizer, type PerformanceMetrics, type PerformanceAlert, type OptimizationAction } from '../../performance/DxfPerformanceOptimizer';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 export interface UsePerformanceOptimizationOptions {
   /** Enable automatic optimizations */
@@ -153,7 +154,7 @@ export function usePerformanceOptimization(
 
     if (success) {
       // Update status after optimization
-      setTimeout(updateStatus, 500);
+      setTimeout(updateStatus, PANEL_LAYOUT.TIMING.ELEMENT_REMOVE);
       console.log(`✅ Optimization applied: ${actionId}`);
     } else {
       console.warn(`❌ Failed to apply optimization: ${actionId}`);
@@ -171,7 +172,7 @@ export function usePerformanceOptimization(
     for (const recommendation of currentStatus.recommendations) {
       await applyOptimization(recommendation.id);
       // Small delay between optimizations
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, PANEL_LAYOUT.TIMING.STATE_TRANSITION));
     }
 
     console.log('✅ All optimizations applied');

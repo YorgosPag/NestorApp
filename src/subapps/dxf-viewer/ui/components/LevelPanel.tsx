@@ -278,7 +278,7 @@ export function LevelPanel({
                 key={level.id}
                 className={PanelTokenUtils.getLevelCardClasses(currentLevelId === level.id)}
               >
-                <div className="flex items-center justify-between min-w-0">
+                <div className={`flex items-center justify-between ${PANEL_LAYOUT.FLEX_UTILS.ALLOW_SHRINK}`}>
                   {isEditing ? (
                     <div className="flex-1">
                       <input
@@ -292,22 +292,27 @@ export function LevelPanel({
                       />
                     </div>
                   ) : (
-                    <div className={`flex-1 ${PANEL_LAYOUT.CURSOR.POINTER}`} onClick={() => {
-                      setCurrentLevel(level.id);
-                      if (currentTool !== 'grip-edit' && onToolChange) onToolChange('grip-edit');
-                      // ✅ FIX (ChatGPT-5): ONLY one activation path - via event (removed direct call to handleLayeringActivation)
-                      window.dispatchEvent(new CustomEvent('level-panel:layering-activate', {
-                        detail: { levelId: level.id, origin: 'card' }
-                      }));
-                    }}>
+                    <button
+                      type="button"
+                      className={`flex-1 ${PANEL_LAYOUT.CURSOR.POINTER} text-left bg-transparent border-none`}
+                      onClick={() => {
+                        setCurrentLevel(level.id);
+                        if (currentTool !== 'grip-edit' && onToolChange) onToolChange('grip-edit');
+                        // ✅ FIX (ChatGPT-5): ONLY one activation path - via event (removed direct call to handleLayeringActivation)
+                        window.dispatchEvent(new CustomEvent('level-panel:layering-activate', {
+                          detail: { levelId: level.id, origin: 'card' }
+                        }));
+                      }}
+                      aria-label={`Επιλογή επιπέδου ${level.name}`}
+                    >
                       <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{level.name}</div>
                       <div className={`${PANEL_TOKENS.TABS.TAB_LABEL.SIZE} ${PANEL_LAYOUT.OPACITY['75']}`}>
                         {hasContent ? `${scene.entities.length} στοιχεία` : 'Κενό επίπεδο'}
                       </div>
-                    </div>
+                    </button>
                   )}
                   
-                  <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS} flex-shrink-0 ${PANEL_LAYOUT.MARGIN.LEFT_SM}`}>
+                  <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${PANEL_LAYOUT.MARGIN.LEFT_SM}`}>
                     <button
                         onClick={(e) => {
                           e.stopPropagation();

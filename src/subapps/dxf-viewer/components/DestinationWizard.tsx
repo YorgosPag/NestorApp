@@ -267,7 +267,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
 
           {/* Step 3: Processing */}
           {currentStep === 'processing' && (
-            <div className="text-center">
+            <div className={PANEL_LAYOUT.TEXT_ALIGN.CENTER}>
               <AnimatedSpinner size="large" className={`mx-auto ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`} />
               <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
                 Επεξεργασία κάτοψης...
@@ -280,7 +280,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
 
           {/* Step 4: Complete */}
           {currentStep === 'complete' && (
-            <div className="text-center">
+            <div className={PANEL_LAYOUT.TEXT_ALIGN.CENTER}>
               <div className={`${iconSizes['2xl']} ${colors.bg.success} ${PANEL_LAYOUT.ROUNDED.FULL} flex items-center justify-center mx-auto ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
                 <svg className={`${iconSizes.lg} ${colors.text.primary}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

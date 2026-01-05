@@ -120,7 +120,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
             {/* Preset Outline Colors */}
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
               <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>Χρώματα Περιγραμμάτων</div>
-              <div className={`grid grid-cols-5 ${PANEL_LAYOUT.GAP.SM}`}>
+              <div className={`grid ${PANEL_LAYOUT.GRID.COLS_5} ${PANEL_LAYOUT.GAP.SM}`}>
                 {presetClasses.map((preset, index) => (
                   <button
                     key={preset.name}
@@ -134,7 +134,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                     <div
                       className={`w-full ${iconSizes.lg} ${quick.card} ${getStatusBorder('subtle')} ${preset.bgClass}`}
                     />
-                    <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.TOP_XS} truncate`}>{preset.name}</div>
+                    <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.TOP_XS} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>{preset.name}</div>
                   </button>
                 ))}
               </div>
@@ -147,8 +147,8 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                   <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Εμφάνιση Περιγραμμάτων</div>
                   <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Ενεργοποίηση/Απενεργοποίηση των περιγραμμάτων</div>
                 </div>
-                <div className={`relative inline-flex ${iconSizes.lg} ${iconSizes.xl3} flex-shrink-0 ${PANEL_LAYOUT.CURSOR.POINTER} ${radius.full} border border-transparent ${colors.bg.success}`}>
-                  <span className={`${PANEL_LAYOUT.POINTER_EVENTS.NONE} inline-block ${iconSizes.sm} ${radius.full} ${colors.bg.primary} shadow transition ${PANEL_LAYOUT.DURATION['200']} ease-in-out transform translate-x-5`} />
+                <div className={`relative inline-flex ${iconSizes.lg} ${iconSizes.xl3} ${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${PANEL_LAYOUT.CURSOR.POINTER} ${radius.full} border border-transparent ${colors.bg.success}`}>
+                  <span className={`${PANEL_LAYOUT.POINTER_EVENTS.NONE} inline-block ${iconSizes.sm} ${radius.full} ${colors.bg.primary} shadow transition ${PANEL_LAYOUT.DURATION['200']} ${PANEL_LAYOUT.EASING.IN_OUT} transform ${PANEL_LAYOUT.TRANSFORM.TOGGLE_ON}`} />
                 </div>
               </div>
             </div>
@@ -160,7 +160,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
             {/* Preset Fill Colors */}
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
               <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>Χρώματα Γεμισμάτων</div>
-              <div className={`grid grid-cols-5 ${PANEL_LAYOUT.GAP.SM}`}>
+              <div className={`grid ${PANEL_LAYOUT.GRID.COLS_5} ${PANEL_LAYOUT.GAP.SM}`}>
                 {presetClasses.map((preset, index) => (
                   <button
                     key={preset.name}
@@ -174,7 +174,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                     <div
                       className={`w-full ${iconSizes.lg} ${quick.card} ${getStatusBorder('subtle')} ${preset.bgClass}`}
                     />
-                    <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.TOP_XS} truncate`}>{preset.name}</div>
+                    <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.TOP_XS} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>{preset.name}</div>
                   </button>
                 ))}
               </div>
@@ -208,8 +208,8 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                   <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Εμφάνιση Γεμισμάτων</div>
                   <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Ενεργοποίηση/Απενεργοποίηση των γεμισμάτων</div>
                 </div>
-                <div className={`relative inline-flex ${iconSizes.lg} ${iconSizes.xl3} flex-shrink-0 ${PANEL_LAYOUT.CURSOR.POINTER} ${radius.full} border border-transparent ${colors.bg.success}`}>
-                  <span className={`${PANEL_LAYOUT.POINTER_EVENTS.NONE} inline-block ${iconSizes.sm} ${radius.full} ${colors.bg.primary} shadow transition ${PANEL_LAYOUT.DURATION['200']} ease-in-out transform translate-x-5`} />
+                <div className={`relative inline-flex ${iconSizes.lg} ${iconSizes.xl3} ${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${PANEL_LAYOUT.CURSOR.POINTER} ${radius.full} border border-transparent ${colors.bg.success}`}>
+                  <span className={`${PANEL_LAYOUT.POINTER_EVENTS.NONE} inline-block ${iconSizes.sm} ${radius.full} ${colors.bg.primary} shadow transition ${PANEL_LAYOUT.DURATION['200']} ${PANEL_LAYOUT.EASING.IN_OUT} transform ${PANEL_LAYOUT.TRANSFORM.TOGGLE_ON}`} />
                 </div>
               </div>
             </div>

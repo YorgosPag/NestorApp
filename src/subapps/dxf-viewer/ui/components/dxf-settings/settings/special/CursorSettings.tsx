@@ -82,7 +82,7 @@ export function CursorSettings() {
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>Σχήμα Κέρσορα</h4>
         <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Επιλογή μεταξύ κύκλου και τετραγώνου</p>
-        <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.SM}`}>
+        <div className={`grid ${PANEL_LAYOUT.GRID.COLS_2} ${PANEL_LAYOUT.GAP.SM}`}>
               <button
                 onClick={() => handleCursorShapeChange('circle')}
                 className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
@@ -135,7 +135,7 @@ export function CursorSettings() {
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>Είδος Γραμμής</h4>
         <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Στυλ περιγράμματος κέρσορα</p>
-        <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.SM}`}>
+        <div className={`grid ${PANEL_LAYOUT.GRID.COLS_2} ${PANEL_LAYOUT.GAP.SM}`}>
               <button
                 onClick={() => handleCursorLineStyleChange('solid')}
                 className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
@@ -165,7 +165,7 @@ export function CursorSettings() {
                 <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Διακεκομμένη</span>
               </button>
             </div>
-            <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.MARGIN.TOP_SM}`}>
+            <div className={`grid ${PANEL_LAYOUT.GRID.COLS_2} ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.MARGIN.TOP_SM}`}>
               <button
                 onClick={() => handleCursorLineStyleChange('dotted')}
                 className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
@@ -211,7 +211,7 @@ export function CursorSettings() {
             onChange={(e) => handleCursorLineWidthChange(parseFloat(e.target.value))}
             className="flex-1"
           />
-          <div className={`${iconSizes.xs} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>{settings.cursor.line_width || 1}px</div>
+          <div className={`${iconSizes.xs} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>{settings.cursor.line_width || 1}px</div>
         </div>
         <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
           {[1, 1.5, 2, 3, 4, 5].map(width => (
@@ -248,7 +248,7 @@ export function CursorSettings() {
                 onChange={(e) => handleCursorSizeChange(parseInt(e.target.value))}
                 className="flex-1"
               />
-              <div className={`${iconSizes.xs} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>{settings.cursor.size}px</div>
+              <div className={`${iconSizes.xs} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>{settings.cursor.size}px</div>
             </div>
             <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
               {[5, 10, 15, 25, 50].map(size => (
@@ -285,7 +285,7 @@ export function CursorSettings() {
                 onChange={(e) => handleCursorOpacityChange(parseFloat(e.target.value))}
                 className="flex-1"
               />
-              <div className={`${iconSizes.xs} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>{Math.round(settings.cursor.opacity * 100)}%</div>
+              <div className={`${iconSizes.xs} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>{Math.round(settings.cursor.opacity * 100)}%</div>
         </div>
       </section>
 

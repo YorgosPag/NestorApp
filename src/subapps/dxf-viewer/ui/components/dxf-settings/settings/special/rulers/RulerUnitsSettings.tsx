@@ -144,9 +144,9 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
           <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Μονάδες Μέτρησης</div>
-          <div className={`font-normal ${colors.text.muted}`}>Μονάδα μέτρησης στους χάρακες</div>
+          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Μονάδα μέτρησης στους χάρακες</div>
         </div>
-        <div className={`grid grid-cols-3 ${PANEL_LAYOUT.GAP.SM}`}>
+        <div className={`grid ${PANEL_LAYOUT.GRID.COLS_3} ${PANEL_LAYOUT.GAP.SM}`}>
           {(['mm', 'cm', 'm'] as const).map((unit) => (
             <button
               key={unit}
@@ -168,7 +168,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
         <div className="flex items-center justify-between">
           <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
             <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Εμφάνιση Μονάδων</div>
-            <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη μονάδων μέτρησης στους χάρακες</div>
+            <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Εμφάνιση/απόκρυψη μονάδων μέτρησης στους χάρακες</div>
           </div>
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
@@ -186,7 +186,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
           <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Μέγεθος Μονάδων</div>
-          <div className={`font-normal ${colors.text.muted}`}>Μέγεθος των μονάδων μέτρησης στους χάρακες</div>
+          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Μέγεθος των μονάδων μέτρησης στους χάρακες</div>
         </div>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <input
@@ -208,7 +208,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
           <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Χρώμα Μονάδων</div>
-          <div className={`font-normal ${colors.text.muted}`}>Χρώμα των μονάδων μέτρησης στους χάρακες</div>
+          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Χρώμα των μονάδων μέτρησης στους χάρακες</div>
         </div>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <div

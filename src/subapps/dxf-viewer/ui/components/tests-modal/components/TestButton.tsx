@@ -48,7 +48,7 @@ export const TestButton: React.FC<TestButtonProps> = ({
           : `${colors.bg.hover} ${getStatusBorder('muted')} ${HOVER_BORDER_EFFECTS.GRAY} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
       }`}
     >
-      <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
+      <div className={`${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
         {isRunning ? (
           <Loader2 className={`${iconSizes.md} ${colors.text.warning} ${PANEL_LAYOUT.ANIMATE.SPIN}`} />
         ) : isCompleted ? (
@@ -59,8 +59,8 @@ export const TestButton: React.FC<TestButtonProps> = ({
           <Play className={`${iconSizes.md} ${colors.text.muted}`} />
         )}
       </div>
-      <div className="flex-1 min-w-0">
-        <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight`}>{test.name}</div>
+      <div className={PANEL_LAYOUT.FLEX_UTILS.FLEX_1_MIN_0}>
+        <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.LEADING.TIGHT}`}>{test.name}</div>
         <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS} line-clamp-2`}>{test.description}</div>
       </div>
     </button>

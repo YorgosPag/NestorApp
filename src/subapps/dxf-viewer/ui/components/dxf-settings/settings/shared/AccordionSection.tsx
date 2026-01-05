@@ -440,8 +440,8 @@ export const AccordionSection = memo(function AccordionSection({
     }
     return (
       <div
-        className={`flex-shrink-0 ${colors.text.muted} ${PANEL_LAYOUT.TRANSITION.TRANSFORM} ${PANEL_LAYOUT.DURATION['200']} ${
-          isOpen && !reducedMotion ? 'rotate-180' : ''
+        className={`${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${colors.text.muted} ${PANEL_LAYOUT.TRANSITION.TRANSFORM} ${PANEL_LAYOUT.DURATION['200']} ${
+          isOpen && !reducedMotion ? PANEL_LAYOUT.TRANSFORM.ROTATE_180 : ''
         }`}
         style={shouldAnimate ? undefined : { transition: 'none' }}
       >
@@ -501,7 +501,7 @@ export const AccordionSection = memo(function AccordionSection({
 
             {/* Icon */}
             {icon && (
-              <div className={`flex-shrink-0 ${colors.text.muted}`}>
+              <div className={`${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${colors.text.muted}`}>
                 {icon}
               </div>
             )}
@@ -534,7 +534,7 @@ export const AccordionSection = memo(function AccordionSection({
           aria-labelledby={headerId}
           aria-hidden={!isOpen}
           className={`${PANEL_LAYOUT.OVERFLOW.HIDDEN} ${
-            shouldAnimate ? `${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['200']} ease-in-out` : ''
+            shouldAnimate ? `${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['200']} ${PANEL_LAYOUT.EASING.IN_OUT}` : ''
           }`}
           style={{
             // 🐛 FIX: Don't set inline height here - managed by useEffect animation

@@ -155,7 +155,7 @@ export function EnterpriseColorField({
     };
 
     return (
-      <div className={`grid grid-cols-4 ${PANEL_LAYOUT.GAP.SM}`}>
+      <div className={`grid ${PANEL_LAYOUT.GRID.COLS_4} ${PANEL_LAYOUT.GAP.SM}`}>
         {/* Red */}
         <div>
           <label className={`${PANEL_LAYOUT.ALERT.TEXT_SIZE} ${colors.text.muted}`}>{labels.red || 'R'}</label>
@@ -237,7 +237,7 @@ export function EnterpriseColorField({
     };
 
     return (
-      <div className={`grid grid-cols-4 ${PANEL_LAYOUT.GAP.SM}`}>
+      <div className={`grid ${PANEL_LAYOUT.GRID.COLS_4} ${PANEL_LAYOUT.GAP.SM}`}>
         {/* Hue */}
         <div>
           <label className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{labels.hue || 'H'}</label>

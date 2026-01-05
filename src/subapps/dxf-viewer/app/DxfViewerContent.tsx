@@ -607,7 +607,7 @@ Check console for detailed metrics`;
       if (elem) {
         elem.style.transition = 'opacity 0.5s';
         elem.style.opacity = '0';
-        setTimeout(() => elem.remove(), 500);
+        setTimeout(() => elem.remove(), PANEL_LAYOUT.TIMING.ELEMENT_REMOVE);
       }
     }, 6000);
 

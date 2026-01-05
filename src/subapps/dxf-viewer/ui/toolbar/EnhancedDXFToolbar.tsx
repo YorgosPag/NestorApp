@@ -279,7 +279,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
           ))}
         </div>
 
-        <div className="flex-shrink-0">
+        <div className={PANEL_LAYOUT.FLEX_SHRINK.NONE}>
           <div className={`w-px ${colors.bg.active} ${PANEL_LAYOUT.MARGIN.X_SM} ${PANEL_LAYOUT.MARGIN.Y_XS}`} />
           <ProSnapToolbar
             enabledModes={enabledModes}
@@ -287,7 +287,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
             snapEnabled={contextSnapEnabled}
             onToggleSnap={toggleSnap}
             compact={true}
-            className="flex-shrink-0"
+            className={PANEL_LAYOUT.FLEX_SHRINK.NONE}
           />
         </div>
       </div>

@@ -37,7 +37,7 @@ export function WizardProgress({
                 {stepNum}
               </div>
               {stepLabels[stepNum - 1] && (
-                <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS} text-center ${PANEL_LAYOUT.WIDTH.MD} truncate`}>
+                <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS} text-center ${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>
                   {stepLabels[stepNum - 1]}
                 </div>
               )}

@@ -181,7 +181,7 @@ export function HierarchicalDestinationSelector({
 
   if (loading) {
     return (
-      <section className={`text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
+      <section className={`${PANEL_LAYOUT.TEXT_ALIGN.CENTER} ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
         <AnimatedSpinner size="large" className={`mx-auto ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`} />
         <p className={`${colors.text.muted}`}>Φόρτωση δεδομένων...</p>
       </section>
@@ -190,7 +190,7 @@ export function HierarchicalDestinationSelector({
 
   if (error) {
     return (
-      <section className={`text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
+      <section className={`${PANEL_LAYOUT.TEXT_ALIGN.CENTER} ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
         <p className={`${colors.text.error} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>Σφάλμα: {error}</p>
         <button
           onClick={loadCompanies}
@@ -260,7 +260,7 @@ export function HierarchicalDestinationSelector({
         {currentStep === 'company' && (
           <>
             {companies.length === 0 ? (
-              <p className={`${colors.text.muted} text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
+              <p className={`${colors.text.muted} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER} ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
                 Δεν βρέθηκαν εταιρείες στο σύστημα.
               </p>
             ) : (
@@ -283,7 +283,7 @@ export function HierarchicalDestinationSelector({
           <fieldset className={PANEL_LAYOUT.SPACING.GAP_MD}>
             <label className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Επιλέξτε Έργο</label>
             {projects.length === 0 ? (
-              <p className={`${colors.text.muted} text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.LG} ${getStatusBorder('muted')}`}>
+              <p className={`${colors.text.muted} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER} ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.LG} ${getStatusBorder('muted')}`}>
                 Δεν βρέθηκαν έργα για την επιλεγμένη εταιρεία.
               </p>
             ) : (
@@ -311,7 +311,7 @@ export function HierarchicalDestinationSelector({
         {currentStep === 'building' && selectedProject && (
           <>
             {selectedProject.buildings.length === 0 ? (
-              <div className={`${colors.text.muted} text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
+              <div className={`${colors.text.muted} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER} ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
                 Δεν βρέθηκαν κτίρια για το επιλεγμένο έργο.
               </div>
             ) : (
@@ -332,7 +332,7 @@ export function HierarchicalDestinationSelector({
         {currentStep === 'floor' && selectedBuilding && (
           <>
             {selectedBuilding.floors.length === 0 ? (
-              <div className={`${colors.text.muted} text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
+              <div className={`${colors.text.muted} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER} ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
                 Δεν βρέθηκαν όροφοι για το επιλεγμένο κτίριο.
               </div>
             ) : (
@@ -340,7 +340,7 @@ export function HierarchicalDestinationSelector({
                 <button
                   key={floor.id}
                   onClick={() => handleFloorSelect(floor.id)}
-                  className={`w-full text-left ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.ROUNDED.LG} ${getStatusBorder('muted')} ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
+                  className={`w-full ${PANEL_LAYOUT.TEXT_ALIGN.LEFT} ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.ROUNDED.LG} ${getStatusBorder('muted')} ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
                 >
                   <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
                     <Home className={`${iconSizes.lg} ${colors.text.info}`} />
@@ -364,7 +364,7 @@ export function HierarchicalDestinationSelector({
               <button
                 key={dest.id}
                 onClick={() => handleFinalDestinationSelect(dest)}
-                className={`w-full text-left ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.ROUNDED.LG} border ${PANEL_LAYOUT.TRANSITION.COLORS} ${
+                className={`w-full ${PANEL_LAYOUT.TEXT_ALIGN.LEFT} ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.ROUNDED.LG} border ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                   selectedDestination?.id === dest.id
                     ? `${useBorderTokens().getStatusBorder('info')} ${colors.bg.selection}`
                     : `${getStatusBorder('muted')} ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED}`

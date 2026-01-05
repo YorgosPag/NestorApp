@@ -135,14 +135,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         setupObserver();
       } else if (retryCount < maxRetries) {
         retryCount++;
-        setTimeout(trySetupObserver, 100); // Retry every 100ms
+        setTimeout(trySetupObserver, PANEL_LAYOUT.TIMING.OBSERVER_RETRY); // Retry every 100ms
       } else {
         console.warn('⚠️ [Viewport] Canvas not available after', maxRetries, 'retries');
       }
     };
 
     // Initial setup with delay to ensure canvas is mounted
-    const timer = setTimeout(trySetupObserver, 100);
+    const timer = setTimeout(trySetupObserver, PANEL_LAYOUT.TIMING.OBSERVER_RETRY);
 
     // Fallback: Also listen for window resize
     window.addEventListener('resize', updateViewport);

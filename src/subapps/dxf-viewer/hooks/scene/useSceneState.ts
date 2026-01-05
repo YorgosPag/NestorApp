@@ -13,6 +13,7 @@ import { useLevels } from '../../systems/levels';
 // ✅ ΦΑΣΗ 7: useDxfImport μεταφέρθηκε στο hooks/ folder
 import { useDxfImport } from '../useDxfImport';
 import { useNotifications } from '../../../../providers/NotificationProvider';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 export function useSceneState() {
   const canvasOps = useCanvasOperations();
@@ -118,7 +119,7 @@ export function useSceneState() {
 
         setLevelScene(targetLevelId, scene);
         // Scene rendering is handled by Canvas V2 system
-        setTimeout(() => canvasOps.fitToView(), 200);
+        setTimeout(() => canvasOps.fitToView(), PANEL_LAYOUT.TIMING.FIT_TO_VIEW_DELAY);
       } else {
         console.error('❌ DXF import returned null scene');
         const errorMessage = importError ? `DXF Import Error: ${importError}` : 'Failed to import DXF file. Please check the file format and try again.';

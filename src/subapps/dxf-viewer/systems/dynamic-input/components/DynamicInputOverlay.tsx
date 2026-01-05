@@ -353,7 +353,7 @@ export default function DynamicInputOverlay({
                   setActiveField('y');
                 } else {
                   // Επιστροφή στο X αν το Y είναι κλειδωμένο
-                  setTimeout(() => xInputRef.current?.focus(), 10);
+                  setTimeout(() => xInputRef.current?.focus(), PANEL_LAYOUT.TIMING.FOCUS_DELAY);
                 }
               }}
               inputRef={yInputRef}
@@ -385,7 +385,7 @@ export default function DynamicInputOverlay({
                 if (fieldUnlocked.angle) {
                   setActiveField('angle');
                 } else {
-                  setTimeout(() => yInputRef.current?.focus(), 10);
+                  setTimeout(() => yInputRef.current?.focus(), PANEL_LAYOUT.TIMING.FOCUS_DELAY);
                 }
               }}
               inputRef={angleInputRef}
@@ -454,7 +454,7 @@ export default function DynamicInputOverlay({
                 if (fieldUnlocked.radius) {
                   setActiveField('radius');
                 } else {
-                  setTimeout(() => xInputRef.current?.focus(), 10);
+                  setTimeout(() => xInputRef.current?.focus(), PANEL_LAYOUT.TIMING.FOCUS_DELAY);
                 }
               }}
               inputRef={radiusInputRef}
@@ -487,7 +487,7 @@ export default function DynamicInputOverlay({
                 if (fieldUnlocked.diameter) {
                   setActiveField('diameter');
                 } else {
-                  setTimeout(() => xInputRef.current?.focus(), 10);
+                  setTimeout(() => xInputRef.current?.focus(), PANEL_LAYOUT.TIMING.FOCUS_DELAY);
                 }
               }}
               inputRef={diameterInputRef}

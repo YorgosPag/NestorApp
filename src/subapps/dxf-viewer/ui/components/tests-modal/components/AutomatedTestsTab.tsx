@@ -36,7 +36,7 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
     <>
       {/* ✅ ENTERPRISE: Αφαίρεση περιττού κενού wrapper (ADR-003 Container Nesting) */}
       <section>
-        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase ${PANEL_LAYOUT.TRACKING.WIDE} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <ClipboardList className={iconSizes.sm} />
           Automated Test Suite
         </h3>
@@ -72,7 +72,7 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
         </button>
 
         {/* Individual Test Buttons */}
-        <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.MD}`}>
+        <div className={`grid ${PANEL_LAYOUT.GRID.COLS_2} ${PANEL_LAYOUT.GAP.MD}`}>
           {runAllTestsGroup.map(test => (
             <TestButton
               key={test.id}
@@ -88,11 +88,11 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
       {/* Group 2: Individual Debug Tools */}
       {/* ✅ ENTERPRISE: Χρήση semantic <section> αντί κενού <div> (ADR-003) */}
       <section>
-        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase ${PANEL_LAYOUT.TRACKING.WIDE} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <Wrench className={iconSizes.sm} />
           Individual Debug Tools (Manual)
         </h3>
-        <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.MD}`}>
+        <div className={`grid ${PANEL_LAYOUT.GRID.COLS_2} ${PANEL_LAYOUT.GAP.MD}`}>
           {individualToolsGroup.map(test => (
             <TestButton
               key={test.id}

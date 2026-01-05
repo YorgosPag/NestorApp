@@ -145,8 +145,8 @@ export function EnterpriseColorArea({
         {...focusProps}
         className={`
           absolute ${iconSizes.md} ${PANEL_LAYOUT.ROUNDED.FULL} border border-white ${PANEL_LAYOUT.SHADOW.LG}
-          transform -translate-x-1/2 -translate-y-1/2
-          ${isFocusVisible ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
+          ${PANEL_LAYOUT.TRANSFORM.CENTER}
+          ${isFocusVisible ? PANEL_LAYOUT.RING.FOCUS_INFO : ''}
           ${disabled ? PANEL_LAYOUT.POINTER_EVENTS.NONE : ''}
         `}
         style={canvasUI.colorPicker.colorPickerThumb(

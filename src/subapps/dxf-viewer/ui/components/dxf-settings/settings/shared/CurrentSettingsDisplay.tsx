@@ -169,7 +169,7 @@ export function CurrentSettingsDisplay({
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>Γραμματοσειρά:</span>
-                  <span className={`${colors.text.primary} font-mono truncate`}>{effectiveTextSettings.fontFamily}</span>
+                  <span className={`${colors.text.primary} font-mono ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>{effectiveTextSettings.fontFamily}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>Στυλ:</span>

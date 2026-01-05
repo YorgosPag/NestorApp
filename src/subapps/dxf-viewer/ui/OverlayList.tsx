@@ -113,7 +113,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
         </div>
       </CardHeader>
       
-      <CardContent className={`${PANEL_LAYOUT.SPACING.NONE} flex-1 min-h-0`}>
+      <CardContent className={`${PANEL_LAYOUT.SPACING.NONE} flex-1 ${PANEL_LAYOUT.FLEX_UTILS.ALLOW_SCROLL}`}>
         <ScrollArea className="h-full">
           <div className={`${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
             {filteredOverlays.length === 0 ? (
@@ -146,20 +146,20 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                     </Button>
 
                     <div
-                      className={`${iconSizes.xs} rounded ${quick.button} flex-shrink-0 ${(() => {
+                      className={`${iconSizes.xs} rounded ${quick.button} ${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${(() => {
                         const status: PropertyStatus = overlay.status ?? 'for-sale';
                         return getOverlayBgClass(status);
                       })()}`}
                     />
                     <div className={`flex-1 ${PANEL_LAYOUT.MIN_WIDTH['0']} ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`}>
-                      <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} truncate`}>
+                      <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>
                         {STATUS_LABELS[overlay.status || 'for-sale']} {KIND_LABELS[overlay.kind]}
                       </div>
-                      <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} truncate`}>
+                      <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>
                         {overlay.label || `Overlay ${overlay.id.slice(0, 6)}`}
                       </div>
                     </div>
-                    <nav className={`flex items-center ${PANEL_LAYOUT.GAP.HALF} flex-shrink-0`}>
+                    <nav className={`flex items-center ${PANEL_LAYOUT.GAP.HALF} ${PANEL_LAYOUT.FLEX_SHRINK.NONE}`}>
                       <Button
                         variant="ghost"
                         size="sm"

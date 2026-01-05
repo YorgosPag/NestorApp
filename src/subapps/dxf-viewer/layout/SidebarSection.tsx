@@ -121,7 +121,7 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
           - min-h-0: CRITICAL for Flexbox scroll (allows shrinking below content height)
           - overflow-y-auto: Enable vertical scrolling
         */}
-        <main className={`flex-1 min-h-0 ${PANEL_LAYOUT.OVERFLOW.Y_AUTO}`}>
+        <main className={`flex-1 ${PANEL_LAYOUT.FLEX_UTILS.ALLOW_SCROLL} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO}`}>
           <FloatingPanelContainer
             ref={floatingRef}
             sceneModel={currentScene}

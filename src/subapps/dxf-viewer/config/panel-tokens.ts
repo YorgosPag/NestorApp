@@ -908,25 +908,59 @@ export const PANEL_LAYOUT = {
 
   // ============================================================================
   // ⏱️ TIMING - Animation and timeout constants (ENTERPRISE 2026-01-05)
-  // Single source of truth for all timing-related values
+  // Single source of truth for ALL setTimeout/setInterval values
   // ============================================================================
   TIMING: {
-    // Debounce intervals (milliseconds)
-    DEBOUNCE_INPUT: 150,                 // User input debounce
+    // ─────────────────────────────────────────────────────────────────────────
+    // MICRO DELAYS (10-50ms) - Focus/DOM updates
+    // ─────────────────────────────────────────────────────────────────────────
+    FOCUS_DELAY: 10,                     // Focus after DOM update (DynamicInputOverlay)
+    TOOL_TRANSITION: 50,                 // Tool state transition (ToolStateManager)
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // DEBOUNCE INTERVALS (100-200ms)
+    // ─────────────────────────────────────────────────────────────────────────
     DEBOUNCE_SCROLL: 100,                // Scroll event debounce
+    OBSERVER_RETRY: 100,                 // Canvas observer setup retry (CanvasSection)
+    CURSOR_THROTTLE: 100,                // Collaboration cursor throttle
+    DEBOUNCE_INPUT: 150,                 // User input debounce
     DEBOUNCE_RESIZE: 200,                // Window resize debounce
-    // Animation durations
+    STATE_TRANSITION: 200,               // State transition delay (useSceneState fitToView)
+    FIT_TO_VIEW_DELAY: 200,              // Fit-to-view after scene load
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ANIMATION DURATIONS (150-500ms)
+    // ─────────────────────────────────────────────────────────────────────────
     ANIMATION_FAST: 150,                 // Fast transitions
     ANIMATION_DEFAULT: 300,              // Standard animations
+    DOUBLE_CLICK_WINDOW: 300,            // Double-click detection window (RulerCornerBox)
     ANIMATION_SLOW: 500,                 // Slow/emphasis animations
-    // Toast/notification durations
-    TOAST_SHORT: 2000,                   // Quick notifications
-    TOAST_DEFAULT: 3000,                 // Standard notifications
-    TOAST_LONG: 5000,                    // Important notifications
-    // Auto-save intervals
-    AUTO_SAVE_INTERVAL: 30000,           // 30 seconds
-    // Cursor tooltip delay
+    ELEMENT_REMOVE: 500,                 // Element removal after feedback (DxfViewerContent)
     TOOLTIP_DELAY: 500,                  // Tooltip show delay
+    AUTOSAVE_DEBOUNCE: 500,              // Auto-save debounce (useStorageSave)
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // MEDIUM INTERVALS (1000-2000ms)
+    // ─────────────────────────────────────────────────────────────────────────
+    MEASURE_INTERVAL: 1000,              // Layout measurement (LayoutMapper)
+    PERFORMANCE_MONITOR: 1000,           // Performance monitoring interval
+    PAGE_RELOAD: 1500,                   // Page reload after storage action (StorageStatus)
+    TOAST_SHORT: 2000,                   // Quick notifications
+    COPY_FEEDBACK_RESET: 2000,           // Clipboard copy feedback reset (TestResultsModal)
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // LONG INTERVALS (3000-60000ms)
+    // ─────────────────────────────────────────────────────────────────────────
+    TOAST_DEFAULT: 3000,                 // Standard notifications
+    SAVE_STATUS_RESET: 3000,             // Save status reset to idle
+    TOAST_LONG: 5000,                    // Important notifications
+    PRESENCE_HEARTBEAT: 5000,            // Collaboration presence heartbeat
+    SERVICE_INIT_TIMEOUT: 5000,          // Service initialization timeout
+    AUTO_SAVE_INTERVAL: 30000,           // Auto-save interval (30 seconds)
+    HEALTH_CHECK: 30000,                 // Service health check interval
+    TEST_TIMEOUT: 30000,                 // Test runner timeout
+    QUOTA_CHECK: 60000,                  // Storage quota check interval
+    IMPORT_TIMEOUT: 60000,               // DXF import timeout (1 minute)
   },
 
   // ============================================================================
@@ -1035,6 +1069,53 @@ export const PANEL_LAYOUT = {
     LINE_CLAMP_1: 'line-clamp-1',        // Clamp to 1 line
     LINE_CLAMP_2: 'line-clamp-2',        // Clamp to 2 lines
     LINE_CLAMP_3: 'line-clamp-3',        // Clamp to 3 lines
+  },
+
+  // ============================================================================
+  // 📍 TEXT_ALIGN - Text alignment tokens (ENTERPRISE 2026-01-05)
+  // Centralizes all text-center, text-left, text-right patterns
+  // ============================================================================
+  TEXT_ALIGN: {
+    LEFT: 'text-left',                   // Left alignment
+    CENTER: 'text-center',               // Center alignment
+    RIGHT: 'text-right',                 // Right alignment
+    JUSTIFY: 'text-justify',             // Justified text
+  },
+
+  // ============================================================================
+  // 🔄 FLEX_SHRINK - Flex shrink tokens (ENTERPRISE 2026-01-05)
+  // Centralizes flex-shrink patterns for consistent flex behavior
+  // ============================================================================
+  FLEX_SHRINK: {
+    NONE: 'flex-shrink-0',               // Prevent shrinking (icons, fixed elements)
+    DEFAULT: 'flex-shrink',              // Allow default shrinking
+  },
+
+  // ============================================================================
+  // ↕️ SPACE - Space between children tokens (ENTERPRISE 2026-01-05)
+  // Centralizes space-y-* and space-x-* patterns
+  // ============================================================================
+  SPACE: {
+    Y_1: 'space-y-1',                    // 4px vertical spacing
+    Y_2: 'space-y-2',                    // 8px vertical spacing
+    Y_3: 'space-y-3',                    // 12px vertical spacing
+    Y_4: 'space-y-4',                    // 16px vertical spacing
+    Y_6: 'space-y-6',                    // 24px vertical spacing
+    X_1: 'space-x-1',                    // 4px horizontal spacing
+    X_2: 'space-x-2',                    // 8px horizontal spacing
+    X_3: 'space-x-3',                    // 12px horizontal spacing
+    X_4: 'space-x-4',                    // 16px horizontal spacing
+  },
+
+  // ============================================================================
+  // 📏 BORDER_WIDTH - Border width tokens (ENTERPRISE 2026-01-05)
+  // Centralizes border-0, border, border-2 patterns
+  // ============================================================================
+  BORDER_WIDTH: {
+    NONE: 'border-0',                    // No border (reset)
+    DEFAULT: 'border',                   // 1px border
+    '2': 'border-2',                     // 2px border
+    '4': 'border-4',                     // 4px border
   },
 } as const;
 
@@ -1291,6 +1372,9 @@ export const SPECIFIC_SETTINGS_TOKENS = {
     COMING_SOON: `${PANEL_COLORS.BG_SECONDARY} ${PANEL_COLORS.TEXT_DISABLED} border ${PANEL_COLORS.BORDER_SECONDARY} cursor-not-allowed opacity-50`,
     INACTIVE: `${PANEL_COLORS.BG_SECONDARY} hover:${PANEL_COLORS.BG_HOVER} ${PANEL_COLORS.TEXT_SECONDARY} border ${PANEL_COLORS.BORDER_SECONDARY}`,
   },
+
+  // 🏢 ENTERPRISE: Content wrapper για consistent padding με GeneralSettingsPanel
+  CONTENT_WRAPPER: PANEL_LAYOUT.CONTAINER.PADDING,
 
   COMING_SOON_BADGE: {
     BASE: `absolute -top-1 -right-1 w-3 h-3 ${PANEL_COLORS.ACTIVE_BG} rounded-full text-[8px] flex items-center justify-center ${PANEL_COLORS.ACTIVE_TEXT} font-bold`,

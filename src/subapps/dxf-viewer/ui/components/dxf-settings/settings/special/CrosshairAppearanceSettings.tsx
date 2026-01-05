@@ -129,7 +129,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Τύπος Γραμμής</h4>
         <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Στυλ απόδοσης γραμμών</p>
-        <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.SM}`}>
+        <div className={`grid ${PANEL_LAYOUT.GRID.COLS_2} ${PANEL_LAYOUT.GAP.SM}`}>
           <button
             onClick={() => {
               updateSettings({ crosshair: { ...settings.crosshair, line_style: 'solid' } });
@@ -232,7 +232,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Μέγεθος Σταυρονήματος</h4>
         <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Επέκταση από το κέντρο</p>
-        <div className={`grid grid-cols-5 ${PANEL_LAYOUT.GAP.XS}`}>
+        <div className={`grid ${PANEL_LAYOUT.GRID.COLS_5} ${PANEL_LAYOUT.GAP.XS}`}>
           <button
             onClick={() => {
               updateSettings({ crosshair: { ...settings.crosshair, size_percent: 0 } });
@@ -262,12 +262,12 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             <div className={`${iconSizes.lg} flex items-center justify-center relative`}>
               {/* Οριζόντια γραμμή */}
               <div
-                className={`absolute ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.POSITION.LEFT_HALF} ${iconSizes.xs} h-px transform -translate-x-1/2 -translate-y-1/2`}
+                className={`absolute ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.POSITION.LEFT_HALF} ${iconSizes.xs} h-px ${PANEL_LAYOUT.TRANSFORM.CENTER}`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
               {/* Κάθετη γραμμή - 🏢 ENTERPRISE: Centralized preview size token */}
               <div
-                className={`absolute ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.POSITION.LEFT_HALF} ${PANEL_LAYOUT.CROSSHAIR_PREVIEW.SIZE_5_PERCENT} w-px transform -translate-x-1/2 -translate-y-1/2`}
+                className={`absolute ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.POSITION.LEFT_HALF} ${PANEL_LAYOUT.CROSSHAIR_PREVIEW.SIZE_5_PERCENT} w-px ${PANEL_LAYOUT.TRANSFORM.CENTER}`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
             </div>
@@ -284,12 +284,12 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             <div className={`${iconSizes.lg} flex items-center justify-center relative`}>
               {/* Οριζόντια γραμμή */}
               <div
-                className={`absolute ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.POSITION.LEFT_HALF} ${iconSizes.sm} h-px transform -translate-x-1/2 -translate-y-1/2`}
+                className={`absolute ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.POSITION.LEFT_HALF} ${iconSizes.sm} h-px ${PANEL_LAYOUT.TRANSFORM.CENTER}`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
               {/* Κάθετη γραμμή - 🏢 ENTERPRISE: Centralized preview size token */}
               <div
-                className={`absolute ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.POSITION.LEFT_HALF} ${PANEL_LAYOUT.CROSSHAIR_PREVIEW.SIZE_8_PERCENT} w-px transform -translate-x-1/2 -translate-y-1/2`}
+                className={`absolute ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.POSITION.LEFT_HALF} ${PANEL_LAYOUT.CROSSHAIR_PREVIEW.SIZE_8_PERCENT} w-px ${PANEL_LAYOUT.TRANSFORM.CENTER}`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
             </div>
@@ -306,12 +306,12 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             <div className={`${iconSizes.lg} flex items-center justify-center relative`}>
               {/* Οριζόντια γραμμή */}
               <div
-                className={`absolute ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.POSITION.LEFT_HALF} ${iconSizes.md} h-px transform -translate-x-1/2 -translate-y-1/2`}
+                className={`absolute ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.POSITION.LEFT_HALF} ${iconSizes.md} h-px ${PANEL_LAYOUT.TRANSFORM.CENTER}`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
               {/* Κάθετη γραμμή - 🏢 ENTERPRISE: Centralized preview size token */}
               <div
-                className={`absolute ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.POSITION.LEFT_HALF} ${PANEL_LAYOUT.CROSSHAIR_PREVIEW.SIZE_15_PERCENT} w-px transform -translate-x-1/2 -translate-y-1/2`}
+                className={`absolute ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.POSITION.LEFT_HALF} ${PANEL_LAYOUT.CROSSHAIR_PREVIEW.SIZE_15_PERCENT} w-px ${PANEL_LAYOUT.TRANSFORM.CENTER}`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
             </div>
@@ -333,12 +333,12 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               ></div>
               {/* Οριζόντια γραμμή που φτάνει τα άκρα του πλαισίου */}
               <div
-                className={`absolute ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.POSITION.LEFT_0} w-full h-px transform -translate-y-1/2`}
+                className={`absolute ${PANEL_LAYOUT.POSITION.TOP_HALF} ${PANEL_LAYOUT.POSITION.LEFT_0} w-full h-px ${PANEL_LAYOUT.TRANSFORM.CENTER_Y}`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
               {/* Κάθετη γραμμή που φτάνει τα άκρα του πλαισίου */}
               <div
-                className={`absolute ${PANEL_LAYOUT.POSITION.LEFT_HALF} ${PANEL_LAYOUT.POSITION.TOP_0} h-full w-px transform -translate-x-1/2`}
+                className={`absolute ${PANEL_LAYOUT.POSITION.LEFT_HALF} ${PANEL_LAYOUT.POSITION.TOP_0} h-full w-px ${PANEL_LAYOUT.TRANSFORM.CENTER_X}`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
             </div>

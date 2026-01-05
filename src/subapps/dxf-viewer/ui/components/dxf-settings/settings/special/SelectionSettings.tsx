@@ -159,7 +159,7 @@ export function SelectionSettings() {
                 onChange={(e) => handleWindowSelectionChange('fillOpacity', parseFloat(e.target.value))}
                 className="flex-1"
               />
-              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
+              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>
                 {Math.round(settings.selection.window.fillOpacity * 100)}%
               </div>
             </div>
@@ -197,7 +197,7 @@ export function SelectionSettings() {
                 onChange={(e) => handleWindowSelectionChange('borderOpacity', parseFloat(e.target.value))}
                 className="flex-1"
               />
-              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
+              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>
                 {Math.round(settings.selection.window.borderOpacity * 100)}%
               </div>
             </div>
@@ -219,7 +219,7 @@ export function SelectionSettings() {
                 onChange={(e) => handleWindowSelectionChange('borderWidth', parseInt(e.target.value))}
                 className="flex-1"
               />
-              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
+              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>
                 {settings.selection.window.borderWidth}px
               </div>
             </div>
@@ -231,7 +231,7 @@ export function SelectionSettings() {
               <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Είδος Περιγράμματος</div>
               <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Τύπος γραμμής περιγράμματος</div>
             </div>
-            <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.SM}`}>
+            <div className={`grid ${PANEL_LAYOUT.GRID.COLS_2} ${PANEL_LAYOUT.GAP.SM}`}>
               {(['solid', 'dashed', 'dotted', 'dash-dot'] as const).map((style) => {
                 const isSelected = settings.selection.window.borderStyle === style;
                 const styleLabels = {
@@ -319,7 +319,7 @@ export function SelectionSettings() {
                 onChange={(e) => handleCrossingSelectionChange('fillOpacity', parseFloat(e.target.value))}
                 className="flex-1"
               />
-              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
+              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>
                 {Math.round(settings.selection.crossing.fillOpacity * 100)}%
               </div>
             </div>
@@ -357,7 +357,7 @@ export function SelectionSettings() {
                 onChange={(e) => handleCrossingSelectionChange('borderOpacity', parseFloat(e.target.value))}
                 className="flex-1"
               />
-              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
+              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>
                 {Math.round(settings.selection.crossing.borderOpacity * 100)}%
               </div>
             </div>
@@ -379,7 +379,7 @@ export function SelectionSettings() {
                 onChange={(e) => handleCrossingSelectionChange('borderWidth', parseInt(e.target.value))}
                 className="flex-1"
               />
-              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
+              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>
                 {settings.selection.crossing.borderWidth}px
               </div>
             </div>
@@ -391,7 +391,7 @@ export function SelectionSettings() {
               <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Είδος Περιγράμματος</div>
               <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Τύπος γραμμής περιγράμματος</div>
             </div>
-            <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.SM}`}>
+            <div className={`grid ${PANEL_LAYOUT.GRID.COLS_2} ${PANEL_LAYOUT.GAP.SM}`}>
               {(['solid', 'dashed', 'dotted', 'dash-dot'] as const).map((style) => {
                 const isSelected = settings.selection.crossing.borderStyle === style;
                 const styleLabels = {

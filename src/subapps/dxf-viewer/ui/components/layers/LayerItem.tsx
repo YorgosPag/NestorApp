@@ -246,7 +246,7 @@ export function LayerItem({
             />
           ) : (
             <span
-              className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary} truncate ${PANEL_LAYOUT.CURSOR.POINTER}`}
+              className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE} ${PANEL_LAYOUT.CURSOR.POINTER}`}
               title={layerName}
               onDoubleClick={handleNameDoubleClick}
             >

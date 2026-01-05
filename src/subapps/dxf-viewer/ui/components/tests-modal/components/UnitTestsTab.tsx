@@ -38,11 +38,11 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
     <>
       {/* ✅ ENTERPRISE: Χρήση semantic <section> αντί κενού <div> (ADR-003) */}
       <section>
-        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase ${PANEL_LAYOUT.TRACKING.WIDE} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <FlaskConical className={iconSizes.sm} /> Unit Tests (Vitest/Jest)
         </h3>
 
-        <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.MD}`}>
+        <div className={`grid ${PANEL_LAYOUT.GRID.COLS_2} ${PANEL_LAYOUT.GAP.MD}`}>
           {/* Vitest Button */}
           <button
             onClick={apiTests.handleRunVitest}
@@ -55,7 +55,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
                 : `${colors.bg.secondary} ${colors.bg.hover} ${getTestButtonBorder('run-vitest')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
             }`}
           >
-            <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
+            <div className={`${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
               {testState.runningTests.has('run-vitest') ? (
                 <Loader2 className={`${iconSizes.md} ${colors.text.warning} ${PANEL_LAYOUT.ANIMATE.SPIN}`} />
               ) : testState.completedTests.has('run-vitest') ? (
@@ -64,8 +64,8 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
                 <Play className={`${iconSizes.md} ${colors.text.muted}`} />
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight flex items-center ${PANEL_LAYOUT.GAP.XS}`}><Zap className={iconSizes.sm} /> Run Vitest Tests</div>
+            <div className={PANEL_LAYOUT.FLEX_UTILS.FLEX_1_MIN_0}>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.LEADING.TIGHT} flex items-center ${PANEL_LAYOUT.GAP.XS}`}><Zap className={iconSizes.sm} /> Run Vitest Tests</div>
               <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Property-based + ServiceRegistry tests</div>
             </div>
           </button>
@@ -82,7 +82,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
                 : `${colors.bg.secondary} ${colors.bg.hover} ${getTestButtonBorder('run-jest')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
             }`}
           >
-            <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
+            <div className={`${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
               {testState.runningTests.has('run-jest') ? (
                 <Loader2 className={`${iconSizes.md} ${colors.text.warning} ${PANEL_LAYOUT.ANIMATE.SPIN}`} />
               ) : testState.completedTests.has('run-jest') ? (
@@ -91,8 +91,8 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
                 <Play className={`${iconSizes.md} ${colors.text.muted}`} />
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight flex items-center ${PANEL_LAYOUT.GAP.XS}`}><Zap className={iconSizes.sm} /> Run Jest Tests</div>
+            <div className={PANEL_LAYOUT.FLEX_UTILS.FLEX_1_MIN_0}>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.LEADING.TIGHT} flex items-center ${PANEL_LAYOUT.GAP.XS}`}><Zap className={iconSizes.sm} /> Run Jest Tests</div>
               <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Visual regression + cursor alignment tests</div>
             </div>
           </button>
@@ -101,7 +101,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
 
       {/* ✅ ENTERPRISE: Χρήση semantic <section> αντί κενού <div> (ADR-003) */}
       <section>
-        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase ${PANEL_LAYOUT.TRACKING.WIDE} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <Drama className={iconSizes.sm} /> E2E Tests (Playwright)
         </h3>
 
@@ -116,7 +116,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
               : `${colors.bg.secondary} ${colors.bg.hover} ${getTestButtonBorder('run-playwright')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
           }`}
         >
-          <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
+          <div className={`${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
             {testState.runningTests.has('run-playwright') ? (
               <Loader2 className={`${iconSizes.md} ${colors.text.warning} ${PANEL_LAYOUT.ANIMATE.SPIN}`} />
             ) : testState.completedTests.has('run-playwright') ? (
@@ -125,8 +125,8 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
               <Play className={`${iconSizes.md} ${colors.text.muted}`} />
             )}
           </div>
-          <div className="flex-1 min-w-0">
-            <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight flex items-center ${PANEL_LAYOUT.GAP.XS}`}><Drama className={iconSizes.sm} /> Run Playwright Cross-Browser Tests</div>
+          <div className={PANEL_LAYOUT.FLEX_UTILS.FLEX_1_MIN_0}>
+            <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.LEADING.TIGHT} flex items-center ${PANEL_LAYOUT.GAP.XS}`}><Drama className={iconSizes.sm} /> Run Playwright Cross-Browser Tests</div>
             <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Visual regression across Chromium/Firefox/WebKit (2-3 min)</div>
           </div>
         </button>

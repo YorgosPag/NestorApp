@@ -173,12 +173,12 @@ export function CentralizedAutoSaveStatus() {
       {...getStatusContainerProps()}
     >
       {/* Status Icon */}
-      <div className="flex-shrink-0" style={centralizedAutoSaveStatusStyles.statusIcon}>
+      <div className={PANEL_LAYOUT.FLEX_SHRINK.NONE} style={centralizedAutoSaveStatusStyles.statusIcon}>
         {getStatusIcon()}
       </div>
 
       {/* Status Message */}
-      <article className="flex-1 min-w-0">
+      <article className={PANEL_LAYOUT.FLEX_UTILS.FLEX_1_MIN_0}>
         <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${getStatusColor().split(' ')[0]}`} style={centralizedAutoSaveStatusStyles.statusMessage.primary}>
           {getStatusMessage()}
         </h3>

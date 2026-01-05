@@ -214,7 +214,7 @@ export const SpecificSettingsPanel: React.FC<SpecificSettingsPanelProps> = ({
         ))}
       </nav>
 
-      {/* Category Content */}
+      {/* Category Content - 🏢 ENTERPRISE: Using centralized CONTENT_WRAPPER token for consistent padding */}
       <Suspense
         fallback={
           <div className={PANEL_TOKENS.SPECIFIC_SETTINGS.FALLBACK_CONTENT.BASE}>
@@ -222,7 +222,9 @@ export const SpecificSettingsPanel: React.FC<SpecificSettingsPanelProps> = ({
           </div>
         }
       >
-        {renderCategoryContent()}
+        <div className={PANEL_TOKENS.SPECIFIC_SETTINGS.CONTENT_WRAPPER}>
+          {renderCategoryContent()}
+        </div>
       </Suspense>
     </div>
   );

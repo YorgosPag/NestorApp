@@ -41,7 +41,7 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
   };
 
   return (
-    <div className="flex-shrink-0">
+    <div className={PANEL_LAYOUT.FLEX_SHRINK.NONE}>
       <div className={PANEL_LAYOUT.SPACING.SM}>
         <EnhancedDXFToolbar
           activeTool={dxfProps.activeTool}

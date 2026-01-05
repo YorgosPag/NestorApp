@@ -83,7 +83,7 @@ export const EntityCard = ({
         }
       }}
     >
-      <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} flex-1 min-w-0`}>
+      <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.FLEX_UTILS.FLEX_1_MIN_0}`}>
         {/* Entity Color Picker */}
         <div className="relative">
           <button
@@ -130,7 +130,7 @@ export const EntityCard = ({
           />
         ) : (
           <span
-            className={`truncate ${PANEL_LAYOUT.CURSOR.POINTER} ${
+            className={`${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE} ${PANEL_LAYOUT.CURSOR.POINTER} ${
               isSelected
                 ? `${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.warning} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`
                 : `${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.secondary}`

@@ -146,10 +146,8 @@ export const GridCategory: React.FC<GridCategoryProps> = ({
         />
       </div>
 
-      {/* Tab Content - 🏢 ENTERPRISE: Centralized spacing */}
-      <div className={PANEL_LAYOUT.CONTAINER.PADDING}>
-        {renderTabContent()}
-      </div>
+      {/* Tab Content - 🏢 ENTERPRISE: Padding now handled by SpecificSettingsPanel.CONTENT_WRAPPER */}
+      {renderTabContent()}
     </div>
   );
 };

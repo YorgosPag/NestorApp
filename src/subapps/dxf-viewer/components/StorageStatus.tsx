@@ -46,7 +46,7 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
       setIsClearing(true);
       await StorageManager.clearAllStorage();
       notifications.success('✅ Storage καθαρίστηκε! Ανανεώνω τη σελίδα...');
-      setTimeout(() => window.location.reload(), 1500);
+      setTimeout(() => window.location.reload(), PANEL_LAYOUT.TIMING.PAGE_RELOAD);
     } catch (error) {
       console.error('Error clearing storage:', error);
       notifications.error('❌ Σφάλμα κατά τον καθαρισμό storage.');

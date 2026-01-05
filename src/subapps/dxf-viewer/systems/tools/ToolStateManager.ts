@@ -4,6 +4,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import type { ToolType } from '../../ui/toolbar/types';
 import type { DrawingTool } from '../../hooks/drawing/useUnifiedDrawing';
 
@@ -180,7 +181,7 @@ export function useToolStateManager({
     onToolChange?.(newTool, oldTool);
     
     // Brief transition state
-    setTimeout(() => setIsTransitioning(false), 50);
+    setTimeout(() => setIsTransitioning(false), PANEL_LAYOUT.TIMING.TOOL_TRANSITION);
     
     return true;
   }, [activeTool, canTransitionTo, recordTransition, onToolChange]);

@@ -37,7 +37,7 @@ export function ConfirmationToast({
     <div className={`flex flex-col ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.LG} max-w-md ${colors.bg.primary} ${PANEL_LAYOUT.ROUNDED.LG} ${PANEL_LAYOUT.SHADOW.LG} ${quick.card}`}>
       <div className={`flex items-start ${PANEL_LAYOUT.GAP.MD}`}>
         {/* Icon */}
-        <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
+        <div className={`${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
           {destructive ? (
             <div className={`${iconSizes.xl} ${colors.bg.muted} ${PANEL_LAYOUT.ROUNDED.FULL} flex items-center justify-center`}>
               <Trash2 className={`${iconSizes.sm} ${colors.text.error}`} />
@@ -50,18 +50,18 @@ export function ConfirmationToast({
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-w-0">
+        <div className={PANEL_LAYOUT.FLEX_UTILS.FLEX_1_MIN_0}>
           <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
             {title}
           </h4>
-          <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.secondary} whitespace-pre-line leading-relaxed`}>
+          <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.secondary} whitespace-pre-line ${PANEL_LAYOUT.LEADING.RELAXED}`}>
             {message}
           </p>
           
           {/* Irreversible Warning */}
           {irreversible && (
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.MARGIN.TOP_MD} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${quick.warning}`}>
-              <AlertTriangle className={`${iconSizes.sm} ${colors.text.warning} flex-shrink-0`} />
+              <AlertTriangle className={`${iconSizes.sm} ${colors.text.warning} ${PANEL_LAYOUT.FLEX_SHRINK.NONE}`} />
               <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.warning} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>
                 ⚠️ Αυτή η ενέργεια δεν μπορεί να αναιρεθεί!
               </span>

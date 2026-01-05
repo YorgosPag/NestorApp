@@ -242,7 +242,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
           disabled={false}
           badge={4}
         >
-          <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.LG}`}>
+          <div className={`grid ${PANEL_LAYOUT.GRID.COLS_2} ${PANEL_LAYOUT.GAP.LG}`}>
 
             {/* Cold Color */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>

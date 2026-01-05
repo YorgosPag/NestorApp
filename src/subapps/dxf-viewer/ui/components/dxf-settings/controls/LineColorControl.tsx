@@ -104,7 +104,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
               {/* Preset colors grid */}
               <div>
                 <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>AutoCAD Colors</p>
-                <div className={`grid grid-cols-5 ${PANEL_LAYOUT.GAP.XS}`}>
+                <div className={`grid ${PANEL_LAYOUT.GRID.COLS_5} ${PANEL_LAYOUT.GAP.XS}`}>
                   {presetColorClasses.map(({ color, bgClass }) => (
                     <button
                       key={color}
@@ -112,7 +112,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
                       className={`
                         ${iconSizes.xl2} rounded border ${PANEL_LAYOUT.TRANSITION.ALL}
                         ${tempColor === color
-                          ? `${getStatusBorder('info').replace('border ', '')} scale-110`
+                          ? `${getStatusBorder('info').replace('border ', '')} ${PANEL_LAYOUT.TRANSFORM.SCALE_110}`
                           : `${getStatusBorder('muted').replace('border ', '')} ${hoverBorderEffects.GRAY}`
                         }
                         ${bgClass}

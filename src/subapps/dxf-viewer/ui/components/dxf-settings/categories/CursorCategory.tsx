@@ -146,10 +146,8 @@ export const CursorCategory: React.FC<CursorCategoryProps> = ({
         />
       </nav>
 
-      {/* Tab Content - 🏢 ENTERPRISE: Centralized spacing */}
-      <div className={PANEL_LAYOUT.CONTAINER.PADDING}>
-        {renderTabContent()}
-      </div>
+      {/* Tab Content - 🏢 ENTERPRISE: Padding now handled by SpecificSettingsPanel.CONTENT_WRAPPER */}
+      {renderTabContent()}
     </section>
   );
 };

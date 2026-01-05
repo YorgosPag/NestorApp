@@ -78,7 +78,7 @@ const SnapButton: React.FC<SnapButtonProps> = ({ mode, enabled, onClick, compact
         }
       `}
     >
-      <span className={`${PANEL_LAYOUT.SELECT.NONE} truncate`}>{label}</span>
+      <span className={`${PANEL_LAYOUT.SELECT.NONE} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>{label}</span>
     </button>
   );
 };

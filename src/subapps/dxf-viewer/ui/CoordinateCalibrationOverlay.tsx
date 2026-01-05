@@ -158,7 +158,12 @@ export default function CoordinateCalibrationOverlay({
               <span className={`${colors.text.cyanLight} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD}`}>🎯 Τεστ Κλικ:</span>
               <button onClick={() => setClickTests([])} className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.bg.error} ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_HOVER} ${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} rounded`}>Καθαρισμός</button>
             </div>
-            <div className={`${PANEL_LAYOUT.SPACING.SM} ${quick.input} ${PANEL_LAYOUT.CURSOR.CROSSHAIR} ${PANEL_LAYOUT.POINTER_EVENTS.AUTO} ${getElementBorder('input', 'focus')}`} onClick={handleCalibrationClick}>
+            <button
+              type="button"
+              className={`w-full ${PANEL_LAYOUT.SPACING.SM} ${quick.input} ${PANEL_LAYOUT.CURSOR.CROSSHAIR} ${PANEL_LAYOUT.POINTER_EVENTS.AUTO} ${getElementBorder('input', 'focus')} text-left`}
+              onClick={handleCalibrationClick}
+              aria-label="Περιοχή τεστ ακρίβειας συντεταγμένων"
+            >
               <div className={`text-center ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.cyanLight} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Κλικ εδώ για τεστ ακρίβειας</div>
               <div className={`${PANEL_LAYOUT.MAX_HEIGHT.XS} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO} ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
                 {clickTests.length === 0 ? (
@@ -176,7 +181,7 @@ export default function CoordinateCalibrationOverlay({
                   ))
                 )}
               </div>
-            </div>
+            </button>
           </article>
 
           <aside className={`${colors.bg.info} ${PANEL_LAYOUT.SPACING.SM} rounded ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>

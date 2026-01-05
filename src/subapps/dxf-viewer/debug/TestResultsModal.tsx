@@ -122,7 +122,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
     try {
       await navigator.clipboard.writeText(formattedReport);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), PANEL_LAYOUT.TIMING.COPY_FEEDBACK_RESET);
     } catch (error) {
       console.error('Failed to copy to clipboard:', error);
     }
@@ -295,7 +295,7 @@ const SummaryTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
 
   return (
     <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
-      <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.LG}`}>
+      <div className={`grid ${PANEL_LAYOUT.GRID.COLS_2} ${PANEL_LAYOUT.GAP.LG}`}>
         {report.tests.map((test, index) => {
           const statusColor = getTestStatusBorder(test.status as 'success' | 'error' | 'warning' | 'info');
 

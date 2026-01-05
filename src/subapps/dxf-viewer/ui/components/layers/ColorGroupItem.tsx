@@ -184,7 +184,7 @@ export function ColorGroupItem({
             />
           ) : (
             <span
-              className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted} truncate ${PANEL_LAYOUT.CURSOR.POINTER}`}
+              className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE} ${PANEL_LAYOUT.CURSOR.POINTER}`}
               title="Double-click για μετονομασία"
               onDoubleClick={handleNameDoubleClick}
             >

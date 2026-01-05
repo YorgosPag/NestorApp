@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { useSceneManager, type SceneManagerState } from './useSceneManager';
 import { DxfFirestoreService } from '../../services/dxf-firestore.service';
 import type { SceneModel } from '../../types/scene';
@@ -65,7 +66,7 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
         }
         
         // Reset status after delay
-        setTimeout(() => setSaveStatus('idle'), 3000);
+        setTimeout(() => setSaveStatus('idle'), PANEL_LAYOUT.TIMING.SAVE_STATUS_RESET);
       }, AUTO_SAVE_DELAY);
     }
   }, [sceneManager, autoSaveEnabled, currentFileName]);

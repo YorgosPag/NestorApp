@@ -56,7 +56,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
     <div className={`${PANEL_LAYOUT.SPACING.SM} ${semanticColors.bg.secondary} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
       <div className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${semanticColors.text.primary}`}>
         <div className={PANEL_LAYOUT.TAB.FONT_WEIGHT}>{label}</div>
-        <div className={`font-normal ${semanticColors.text.muted}`}>{description.charAt(0).toUpperCase() + description.slice(1)}</div>
+        <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${semanticColors.text.muted}`}>{description.charAt(0).toUpperCase() + description.slice(1)}</div>
       </div>
       <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
         <div
@@ -113,9 +113,9 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
     <div className={`${PANEL_LAYOUT.SPACING.SM} ${semanticColors.bg.secondary} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
       <div className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${semanticColors.text.primary}`}>
         <div className={PANEL_LAYOUT.TAB.FONT_WEIGHT}>{label}</div>
-        <div className={`font-normal ${semanticColors.text.muted}`}>{description}</div>
+        <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${semanticColors.text.muted}`}>{description}</div>
       </div>
-      <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.SM}`}>
+      <div className={`grid ${PANEL_LAYOUT.GRID.COLS_2} ${PANEL_LAYOUT.GAP.SM}`}>
         {(['solid', 'dashed', 'dotted', 'dash-dot'] as const).map((style) => {
           const isSelected = colors[styleKey] === style;
           const styleLabels = {
