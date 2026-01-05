@@ -111,6 +111,8 @@ export class GridRenderer implements UIRenderer {
       case 'crosses':
         this.renderGridCrosses(ctx, viewport, settings, transform);
         break;
+      default:
+        console.warn('⚠️ GridRenderer: Unknown style:', settings.style);
     }
 
 
@@ -188,7 +190,7 @@ export class GridRenderer implements UIRenderer {
 
   /**
    * Render grid as dots
-   * ✅ UNIFIED WITH COORDINATETRANSFORMS: Use INVERTED offsetY
+   * ✅ ENTERPRISE FIX (2026-01-05): Proper dot sizing - minimum 2-3px radius
    */
   private renderGridDots(
     ctx: CanvasRenderingContext2D,
@@ -197,28 +199,42 @@ export class GridRenderer implements UIRenderer {
     transform: { scale: number; offsetX: number; offsetY: number }
   ): void {
     const gridSize = settings.size * transform.scale;
-    const minorDotSize = Math.max(1, settings.minorGridWeight);
-    const majorDotSize = Math.max(1, settings.majorGridWeight);
 
-    // ✅ CORRECT: Use world (0,0) as reference
+    // 🏢 ENTERPRISE DOT SIZING:
+    // Fixed pixel size - does NOT scale with zoom (like lines and crosses)
+    // Uses gridWeight settings for consistency with other grid styles
+    const minorDotSize = Math.max(2, settings.minorGridWeight * 1.5); // Based on line weight
+    const majorDotSize = Math.max(3, settings.majorGridWeight * 1.5); // Based on line weight
+
+    // Calculate grid origin in screen coordinates
     const { CoordinateTransforms: CT } = require('../../core/CoordinateTransforms');
     const worldOrigin = { x: 0, y: 0 };
     const screenOrigin = CT.worldToScreen(worldOrigin, transform, viewport);
-    const startX = (screenOrigin.x % gridSize);
-    const startY = (screenOrigin.y % gridSize);
+    const startX = screenOrigin.x % gridSize;
+    const startY = screenOrigin.y % gridSize;
 
-    for (let x = startX; x <= viewport.width; x += gridSize) {
-      for (let y = startY; y <= viewport.height; y += gridSize) {
-        // Check if this should be a major dot
-        const isMajorX = ((x - startX) / gridSize) % settings.majorInterval === 0;
-        const isMajorY = ((y - startY) / gridSize) % settings.majorInterval === 0;
+    // Ensure start positions are positive
+    const adjustedStartX = startX < 0 ? startX + gridSize : startX;
+    const adjustedStartY = startY < 0 ? startY + gridSize : startY;
+
+    // Render dots at grid intersections
+    // ✅ ENTERPRISE FIX: Using ellipse() instead of arc() due to browser/GPU compatibility
+    // arc() has rendering bugs on some GPU drivers, ellipse() uses different rendering path
+    for (let x = adjustedStartX; x <= viewport.width; x += gridSize) {
+      for (let y = adjustedStartY; y <= viewport.height; y += gridSize) {
+        // Check if this should be a major dot - use Math.round for floating point precision
+        const gridIndexX = Math.round((x - adjustedStartX) / gridSize);
+        const gridIndexY = Math.round((y - adjustedStartY) / gridSize);
+        const isMajorX = gridIndexX % settings.majorInterval === 0;
+        const isMajorY = gridIndexY % settings.majorInterval === 0;
         const isMajor = isMajorX && isMajorY;
 
         if ((isMajor && settings.showMajorGrid) || (!isMajor && settings.showMinorGrid)) {
+          const dotSize = isMajor ? majorDotSize : minorDotSize;
           ctx.fillStyle = isMajor ? settings.majorGridColor : settings.minorGridColor;
-
           ctx.beginPath();
-          ctx.arc(x, y, isMajor ? majorDotSize : minorDotSize, 0, Math.PI * 2);
+          // ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle)
+          ctx.ellipse(x, y, dotSize, dotSize, 0, 0, Math.PI * 2);
           ctx.fill();
         }
       }

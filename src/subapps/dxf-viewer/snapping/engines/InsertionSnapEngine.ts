@@ -7,44 +7,50 @@ import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
+// 🏢 ENTERPRISE: Import centralized entity types
+import type {
+  TextEntity,
+  BlockEntity,
+  DimensionEntity,
+  PointEntity,
+  SplineEntity,
+  BaseEntity
+} from '../../types/entities';
 
-// Extended entity interfaces for insertion snap detection
-interface TextEntity extends EntityModel {
+/**
+ * 🏢 ENTERPRISE: Extended entity interfaces for insertion snap detection
+ * These extend BaseEntity for entities not yet in centralized types
+ */
+interface InsertionTextEntity extends BaseEntity {
   position?: Point2D;
   insertionPoint?: Point2D;
   alignmentPoint?: Point2D;
 }
 
-interface BlockEntity extends EntityModel {
+interface InsertionBlockEntity extends BaseEntity {
   position?: Point2D;
   insertionPoint?: Point2D;
 }
 
-interface DimensionEntity extends EntityModel {
+interface InsertionDimensionEntity extends BaseEntity {
   defPoint?: Point2D;
   textMidPoint?: Point2D;
 }
 
-interface LeaderEntity extends EntityModel {
+interface LeaderEntity extends BaseEntity {
+  type: 'leader';
   vertices?: Point2D[];
 }
 
-interface HatchEntity extends EntityModel {
+interface HatchEntity extends BaseEntity {
+  type: 'hatch';
   seedPoints?: Point2D[];
 }
 
-interface PointEntity extends EntityModel {
-  position?: Point2D;
-}
-
-interface LineEntity extends EntityModel {
+interface XLineEntity extends BaseEntity {
+  type: 'xline' | 'ray';
   basePoint?: Point2D;
   firstPoint?: Point2D;
-}
-
-interface SplineEntity extends EntityModel {
-  controlPoints?: Point2D[];
-  fitPoints?: Point2D[];
 }
 
 export class InsertionSnapEngine extends BaseSnapEngine {
@@ -75,100 +81,92 @@ export class InsertionSnapEngine extends BaseSnapEngine {
   private getInsertionPoints(entity: EntityModel): Array<{point: Point2D, type: string}> {
     const insertionPoints: Array<{point: Point2D, type: string}> = [];
     const entityType = entity.type.toLowerCase();
-    
+
     if (entityType === 'text' || entityType === 'mtext') {
-      const textEntity = entity as TextEntity;
-      
-      // Text insertion point (base point)
-      if (textEntity.position || textEntity.insertionPoint) {
-        const insertionPoint = textEntity.position || textEntity.insertionPoint;
+      const textEntity = entity as InsertionTextEntity;
+
+      // 🏢 ENTERPRISE: Proper type guard for Point2D | undefined
+      const insertionPoint = textEntity.position ?? textEntity.insertionPoint;
+      if (insertionPoint) {
         insertionPoints.push({point: insertionPoint, type: 'Text Base'});
       }
-      
+
       // Text alignment points if available
       if (textEntity.alignmentPoint) {
         insertionPoints.push({point: textEntity.alignmentPoint, type: 'Text Alignment'});
       }
-      
+
     } else if (entityType === 'insert' || entityType === 'block') {
-      const blockEntity = entity as BlockEntity;
-      
-      // Block insertion point
-      if (blockEntity.position || blockEntity.insertionPoint) {
-        const insertionPoint = blockEntity.position || blockEntity.insertionPoint;
+      const blockEntity = entity as InsertionBlockEntity;
+
+      // 🏢 ENTERPRISE: Proper type guard for Point2D | undefined
+      const insertionPoint = blockEntity.position ?? blockEntity.insertionPoint;
+      if (insertionPoint) {
         insertionPoints.push({point: insertionPoint, type: 'Block Insert'});
       }
-      
+
     } else if (entityType === 'dimension') {
-      const dimEntity = entity as DimensionEntity;
-      
+      const dimEntity = entity as InsertionDimensionEntity;
+
       // Dimension definition points
       if (dimEntity.defPoint) {
         insertionPoints.push({point: dimEntity.defPoint, type: 'Dimension Point'});
       }
-      
+
       if (dimEntity.textMidPoint) {
         insertionPoints.push({point: dimEntity.textMidPoint, type: 'Dimension Text'});
       }
-      
+
     } else if (entityType === 'leader') {
       const leaderEntity = entity as LeaderEntity;
-      
+
       // Leader vertices
       if (leaderEntity.vertices) {
         leaderEntity.vertices.forEach((vertex: Point2D, index: number) => {
           insertionPoints.push({
-            point: vertex, 
+            point: vertex,
             type: index === 0 ? 'Leader Start' : `Leader Point ${index + 1}`
           });
         });
       }
-      
+
     } else if (entityType === 'hatch') {
       const hatchEntity = entity as HatchEntity;
-      
+
       // Hatch seed points
       if (hatchEntity.seedPoints) {
         hatchEntity.seedPoints.forEach((seedPoint: Point2D, index: number) => {
           insertionPoints.push({point: seedPoint, type: `Hatch Seed ${index + 1}`});
         });
       }
-      
+
     } else if (entityType === 'point') {
       const pointEntity = entity as PointEntity;
-      
-      // Point position
-      if (pointEntity.position) {
-        insertionPoints.push({point: pointEntity.position, type: 'Point'});
-      }
-      
+
+      // Point position (PointEntity has required position)
+      insertionPoints.push({point: pointEntity.position, type: 'Point'});
+
     } else if (entityType === 'xline' || entityType === 'ray') {
-      const lineEntity = entity as LineEntity;
-      
-      // Construction line base point
-      if (lineEntity.basePoint || lineEntity.firstPoint) {
-        const basePoint = lineEntity.basePoint || lineEntity.firstPoint;
+      const lineEntity = entity as XLineEntity;
+
+      // 🏢 ENTERPRISE: Proper type guard for Point2D | undefined
+      const basePoint = lineEntity.basePoint ?? lineEntity.firstPoint;
+      if (basePoint) {
         insertionPoints.push({point: basePoint, type: 'Base Point'});
       }
-      
+
     } else if (entityType === 'spline') {
       const splineEntity = entity as SplineEntity;
-      
-      // Spline control points
-      if (splineEntity.controlPoints) {
-        splineEntity.controlPoints.forEach((controlPoint: Point2D, index: number) => {
-          insertionPoints.push({point: controlPoint, type: `Control Point ${index + 1}`});
-        });
-      }
-      
-      // Spline fit points
-      if (splineEntity.fitPoints) {
-        splineEntity.fitPoints.forEach((fitPoint: Point2D, index: number) => {
-          insertionPoints.push({point: fitPoint, type: `Fit Point ${index + 1}`});
-        });
-      }
+
+      // Spline control points (SplineEntity has required controlPoints)
+      splineEntity.controlPoints.forEach((controlPoint: Point2D, index: number) => {
+        insertionPoints.push({point: controlPoint, type: `Control Point ${index + 1}`});
+      });
+
+      // Spline fit points (optional)
+      // Note: SplineEntity in entities.ts doesn't have fitPoints, skip this for type safety
     }
-    
+
     return insertionPoints;
   }
 

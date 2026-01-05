@@ -11,23 +11,32 @@ import type { IntersectionResult } from '../shared/GeometricCalculations';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { getPolylineSegments } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ENTERPRISE: Import centralized entity types
+import type {
+  PolylineEntity,
+  CircleEntity,
+  RectangleEntity,
+  BaseEntity
+} from '../../types/entities';
 
-// Extended entity interfaces for intersection calculations
-interface PolylineEntity extends EntityModel {
+/**
+ * 🏢 ENTERPRISE: Extended interfaces for intersection-specific properties
+ * These extend BaseEntity for snap-specific needs
+ */
+interface IntersectionPolylineEntity extends BaseEntity {
   points?: Point2D[];
   vertices?: Point2D[];
   closed?: boolean;
 }
 
-interface CircleEntity extends EntityModel {
+interface IntersectionCircleEntity extends BaseEntity {
   center: Point2D;
   radius: number;
 }
 
-interface RectangleEntity extends EntityModel {
+interface IntersectionRectangleEntity extends BaseEntity {
   corner1?: Point2D;
   corner2?: Point2D;
-  // Additional rectangle properties as needed
 }
 
 export class IntersectionSnapEngine extends BaseSnapEngine {
@@ -315,6 +324,7 @@ export class IntersectionSnapEngine extends BaseSnapEngine {
   private rectangleLineIntersection(rectangle: Entity, line: Entity): IntersectionResult[] {
     if (!line.start || !line.end) return [];
 
+    // 🏢 ENTERPRISE: Use centralized RectangleEntity type
     const rectLines = GeometricCalculations.getRectangleLines(rectangle as RectangleEntity);
     const intersections: IntersectionResult[] = [];
     

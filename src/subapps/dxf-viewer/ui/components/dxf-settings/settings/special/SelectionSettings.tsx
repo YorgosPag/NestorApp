@@ -89,7 +89,7 @@ export function SelectionSettings() {
   };
 
   return (
-    <div className={`${PANEL_LAYOUT.CONTAINER.PADDING} ${colors.bg.primary} ${colors.text.primary}`}>
+    <div className={`${colors.bg.primary} ${colors.text.primary}`}>
       {/* 🏢 ENTERPRISE: Selection Tabs - className moved directly to component (ADR-003) */}
       <TabsOnlyTriggers
         tabs={selectionTabs}

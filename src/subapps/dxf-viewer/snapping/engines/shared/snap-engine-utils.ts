@@ -8,7 +8,7 @@ const DEBUG_SNAP_ENGINE_UTILS = false;
 
 import type { Point2D } from '../../../rendering/types/Types';
 import type { SnapCandidate, SnapConfig } from '../../extended-types';
-import type { Entity, RectangleEntity } from '../../../types/entities';
+import type { Entity, RectangleEntity, CircleEntity, ArcEntity } from '../../../types/entities';
 import { GeometricCalculations } from '../../shared/GeometricCalculations';
 
 // Legacy rectangle entity with corner1/corner2 properties
@@ -266,16 +266,32 @@ export function findStandardSnapCandidates(
 }
 
 /**
+ * 🏢 ENTERPRISE: Result type for snap candidate functions
+ */
+export interface SnapCandidateResult {
+  candidates: SnapCandidate[];
+  hasResults: boolean;
+}
+
+/**
+ * 🏢 ENTERPRISE: Extended snap context with radius
+ */
+interface ExtendedSnapContext extends SnapContext {
+  snapRadius?: number;
+  excludeEntityId?: string;
+}
+
+/**
  * Find entity-based snap candidates for snap engines
  */
 export function findEntityBasedSnapCandidates(
   entities: Entity[],
   cursorPoint: Point2D,
-  context: any,
-  config: any,
+  context: ExtendedSnapContext,
+  config: SnapConfig,
   pointsGenerator: (entity: Entity, cursorPoint: Point2D, radius: number) => Point2D[]
-): any {
-  const candidates: any[] = [];
+): SnapCandidateResult {
+  const candidates: SnapCandidate[] = [];
   const filteredEntities = filterValidEntities(entities);
 
   for (const entity of filteredEntities) {
@@ -300,18 +316,31 @@ export function findEntityBasedSnapCandidates(
 export function findCircleBasedSnapCandidates(
   entities: Entity[],
   cursorPoint: Point2D,
-  context: any,
-  config: any,
+  context: ExtendedSnapContext,
+  config: SnapConfig,
   pointsGenerator: (center: Point2D, radius: number, entity: Entity) => Point2D[]
-): any {
-  const candidates: any[] = [];
+): SnapCandidateResult {
+  const candidates: SnapCandidate[] = [];
   const filteredEntities = filterValidEntities(entities);
 
   for (const entity of filteredEntities) {
-    // Handle circle and arc entities
-    if (entity.type === 'circle' || entity.type === 'arc') {
-      const center = (entity as any).center;
-      const radius = (entity as any).radius;
+    // 🏢 ENTERPRISE: Handle circle and arc entities with proper type guards
+    if (entity.type === 'circle') {
+      const circleEntity = entity as CircleEntity;
+      const { center, radius } = circleEntity;
+
+      if (center && radius) {
+        const points = pointsGenerator(center, radius, entity);
+
+        for (const point of points) {
+          if (isWithinTolerance(cursorPoint, point, context.snapRadius || 20)) {
+            candidates.push(createSnapCandidate(point, config, entity));
+          }
+        }
+      }
+    } else if (entity.type === 'arc') {
+      const arcEntity = entity as ArcEntity;
+      const { center, radius } = arcEntity;
 
       if (center && radius) {
         const points = pointsGenerator(center, radius, entity);

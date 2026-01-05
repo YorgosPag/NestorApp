@@ -4,13 +4,12 @@
  */
 
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
-import { ExtendedSnapType } from '../extended-types';
+import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { SpatialFactory } from '../../core/spatial';
 import type { ISpatialIndex, SpatialBounds } from '../../core/spatial';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
-import { findStandardSnapCandidates, type StandardSnapCandidate } from './shared/snap-engine-utils';
 
 export class CenterSnapEngine extends BaseSnapEngine {
   private spatialIndex: ISpatialIndex | null = null;
@@ -37,7 +36,7 @@ export class CenterSnapEngine extends BaseSnapEngine {
       return { candidates: [] };
     }
 
-    const candidates: StandardSnapCandidate[] = [];
+    const candidates: SnapCandidate[] = [];
     const priority = 3; // After endpoints, midpoints, intersections
 
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.CENTER);

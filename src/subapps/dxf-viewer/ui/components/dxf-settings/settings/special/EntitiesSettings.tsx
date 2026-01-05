@@ -457,7 +457,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
     // Ειδική λογική για το line tool (πλήρης από dxf-viewer-kalo)
     if (selectedTool === 'line') {
       return (
-        <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.LG} ${colors.bg.secondary} ${quick.card}`}>
+        <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.CONTAINER.INNER_PADDING} ${colors.bg.secondary} ${quick.card}`}>
           {/* 🏢 ENTERPRISE: Καρτέλες για Line Tool - className moved directly to component (ADR-003) */}
           <TabsOnlyTriggers
             tabs={lineToolTabs}
@@ -613,7 +613,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
 
     // Για όλα τα άλλα εργαλεία - κενό container
     return (
-      <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.LG} ${colors.bg.secondary} ${quick.card}`}>
+      <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.CONTAINER.INNER_PADDING} ${colors.bg.secondary} ${quick.card}`}>
         <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
           Ρυθμίσεις {selectedTool}
         </h3>
@@ -631,7 +631,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
   };
 
   return (
-    <div className={`${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.SPACING.GAP_XL}`}>
+    <div className={PANEL_LAYOUT.SPACING.GAP_XL}>
       {/* ✅ ADR-003: Removed empty wrapper div - content flows directly */}
 
       {/* 🏢 ENTERPRISE: Tabs για Ειδικές Ρυθμίσεις - className moved directly to component */}

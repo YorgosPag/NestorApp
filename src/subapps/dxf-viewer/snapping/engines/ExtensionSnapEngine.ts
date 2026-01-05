@@ -4,6 +4,7 @@
  */
 
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
+import type { PolylineEntity, LWPolylineEntity } from '../../types/entities';
 import { ExtendedSnapType } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
@@ -49,8 +50,9 @@ export class ExtensionSnapEngine extends BaseSnapEngine {
         extensionPoints.push(...lineExtensions.map(p => ({point: p, type: 'Line'})));
       }
     } else if (entityType === 'polyline' || entityType === 'lwpolyline') {
-      const polylineEntity = entity as any; // ✅ ENTERPRISE FIX: Safe casting for entity properties
-      const points = (polylineEntity.points || polylineEntity.vertices) as Point2D[] | undefined;
+      // 🏢 ENTERPRISE: Proper type guard for polyline entities
+      const polylineEntity = entity as PolylineEntity | LWPolylineEntity;
+      const points = polylineEntity.vertices;
       const isClosed = polylineEntity.closed || false;
 
       if (points && points.length > 1 && !isClosed) {

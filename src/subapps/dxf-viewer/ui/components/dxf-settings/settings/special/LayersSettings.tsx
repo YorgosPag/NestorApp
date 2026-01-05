@@ -67,7 +67,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
   };
 
   return (
-    <section className={`${PANEL_LAYOUT.CONTAINER.PADDING} ${colors.bg.primary} ${colors.text.primary}`}>
+    <section className={`${colors.bg.primary} ${colors.text.primary}`}>
       {/* Header */}
       <header className={`${getDirectionalBorder('muted', 'bottom')} ${PANEL_LAYOUT.PADDING.BOTTOM_SM} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
         <h2 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.primary} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>

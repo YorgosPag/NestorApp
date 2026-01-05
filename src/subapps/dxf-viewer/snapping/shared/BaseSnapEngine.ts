@@ -7,6 +7,7 @@ import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { GeometricCalculations } from './GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+import { SpatialFactory, type ISpatialIndex } from '../../core/spatial';
 
 export interface SnapEngineContext {
   entities: EntityModel[];
@@ -133,12 +134,11 @@ export abstract class BaseSnapEngine {
     entities: EntityModel[],
     getPoints: (entity: EntityModel) => Point2D[],
     pointType: string
-  ): any {
+  ): ISpatialIndex {
     // Calculate bounds
     const bounds = this.calculateBoundsFromPoints(entities, getPoints);
 
-    // Create spatial index
-    const { SpatialFactory } = require('../../core/spatial');
+    // 🏢 ENTERPRISE: Use imported SpatialFactory (no require)
     const spatialIndex = SpatialFactory.forSnapping(bounds);
 
     // Build index

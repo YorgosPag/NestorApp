@@ -168,10 +168,8 @@ export const RulersSettings: React.FC<RulersSettingsProps> = ({
         />
       </div>
 
-      {/* Tab Content - 🏢 ENTERPRISE: Centralized spacing */}
-      <div className={PANEL_LAYOUT.CONTAINER.PADDING}>
-        {renderTabContent()}
-      </div>
+      {/* Tab Content - 🏢 ENTERPRISE: Padding handled by parent SpecificSettingsPanel.CONTENT_WRAPPER */}
+      {renderTabContent()}
     </div>
   );
 };

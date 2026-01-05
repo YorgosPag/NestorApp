@@ -7,7 +7,7 @@
 const DEBUG_MIDPOINT_SNAP_ENGINE = false;
 
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
-import { ExtendedSnapType } from '../extended-types';
+import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { SpatialFactory } from '../../core/spatial';
 import type { ISpatialIndex, SpatialBounds } from '../../core/spatial';
@@ -35,7 +35,7 @@ export class MidpointSnapEngine extends BaseSnapEngine {
       return { candidates: [] };
     }
 
-    const candidates: any[] = [];
+    const candidates: SnapCandidate[] = [];
     const priority = 1; // Second priority after endpoints
 
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.MIDPOINT);

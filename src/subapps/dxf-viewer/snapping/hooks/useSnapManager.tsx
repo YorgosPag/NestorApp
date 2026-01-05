@@ -22,6 +22,26 @@ interface EntityDebugInfo {
   fullEntity: Entity;
 }
 
+/**
+ * 🏢 ENTERPRISE: Canvas wrapper interface for components that wrap HTMLCanvasElement
+ * Some canvas components expose getCanvas() method to access the underlying element
+ */
+interface CanvasWrapper {
+  getCanvas?: () => HTMLCanvasElement;
+}
+
+/**
+ * 🏢 ENTERPRISE: Type guard for canvas wrapper detection
+ */
+function isCanvasWrapper(element: unknown): element is CanvasWrapper {
+  return (
+    element !== null &&
+    typeof element === 'object' &&
+    'getCanvas' in element &&
+    typeof (element as CanvasWrapper).getCanvas === 'function'
+  );
+}
+
 interface UseSnapManagerOptions {
   scene?: SceneModel | null;
   overlayEntities?: Entity[]; // 🔺 NEW: Include overlay entities for unified snapping
@@ -87,7 +107,10 @@ export const useSnapManager = (
       // Create viewport from canvas (with proper HTMLCanvasElement access)
       if (canvasRef.current) {
         try {
-          const canvasElement = (canvasRef.current as any)?.getCanvas?.() || canvasRef.current;
+          // 🏢 ENTERPRISE: Use type guard instead of 'as any'
+          const canvasElement = isCanvasWrapper(canvasRef.current) && canvasRef.current.getCanvas
+            ? canvasRef.current.getCanvas()
+            : canvasRef.current;
           
           if (canvasElement && typeof canvasElement.getContext === 'function') {
             const transform = canvasElement.getContext('2d')?.getTransform();

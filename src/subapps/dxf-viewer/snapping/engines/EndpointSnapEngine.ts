@@ -4,7 +4,7 @@
  */
 
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
-import { ExtendedSnapType } from '../extended-types';
+import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { SpatialFactory } from '../../core/spatial';
 import type { ISpatialIndex, SpatialBounds } from '../../core/spatial';
@@ -32,7 +32,7 @@ export class EndpointSnapEngine extends BaseSnapEngine {
       return { candidates: [] };
     }
 
-    const candidates: any[] = [];
+    const candidates: SnapCandidate[] = [];
     const priority = 0; // Highest priority for endpoints
 
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.ENDPOINT);
