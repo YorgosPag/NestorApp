@@ -111,7 +111,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
       {/* Header - Semantic <header> element */}
       {/* 🏢 ENTERPRISE: flex-col layout για να φαίνονται πλήρως τα κείμενα των κουμπιών */}
       <header className={`flex flex-col ${PANEL_LAYOUT.GAP.SM}`}>
-        <h3 className={`text-lg font-medium ${colors.text.primary}`}>Ρυθμίσεις Grips</h3>
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Ρυθμίσεις Grips</h3>
         <nav className={`flex ${PANEL_LAYOUT.GAP.SM}`} aria-label="Ενέργειες ρυθμίσεων grips">
           {/* 🏢 ENTERPRISE: Centralized Button component (variant="secondary") + Lucide icon */}
           <Button
@@ -151,7 +151,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
           />
           <label
             htmlFor="grips-enabled"
-            className={`text-sm font-medium cursor-pointer ${gripSettings.enabled ? colors.text.primary : colors.text.muted}`}
+            className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} cursor-pointer ${gripSettings.enabled ? colors.text.primary : colors.text.muted}`}
           >
             Εμφάνιση Grips
           </label>
@@ -179,7 +179,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
 
           {/* Grip Size */}
           <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-            <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+            <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
               Μέγεθος Grips: {gripSettings.gripSize || 8}px
             </label>
             <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
@@ -206,7 +206,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
 
           {/* Opacity */}
           <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-            <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+            <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
               Διαφάνεια: {Math.round(gripSettings.opacity * 100)}%
             </label>
             <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
@@ -246,7 +246,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
 
             {/* Cold Color */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Cold</label>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Cold</label>
               <ColorDialogTrigger
                 value={gripSettings.colors.cold || CAD_UI_COLORS.grips.cold}
                 onChange={(color) => updateSettings({ colors: { ...gripSettings.colors, cold: color } })}
@@ -262,7 +262,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
 
             {/* Warm Color */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Warm (Hover)</label>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Warm (Hover)</label>
               <ColorDialogTrigger
                 value={gripSettings.colors.warm || CAD_UI_COLORS.grips.warm}
                 onChange={(color) => updateSettings({ colors: { ...gripSettings.colors, warm: color } })}
@@ -278,7 +278,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
 
             {/* Hot Color */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Hot (Επιλεγμένα)</label>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Hot (Επιλεγμένα)</label>
               <ColorDialogTrigger
                 value={gripSettings.colors.hot || CAD_UI_COLORS.grips.hot}
                 onChange={(color) => updateSettings({ colors: { ...gripSettings.colors, hot: color } })}
@@ -294,7 +294,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
 
             {/* Contour Color */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Περιγράμματος</label>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Περιγράμματος</label>
               <ColorDialogTrigger
                 value={gripSettings.colors.contour}
                 onChange={(color) => updateSettings({ colors: { ...gripSettings.colors, contour: color } })}
@@ -328,7 +328,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                 checked={gripSettings.showMidpoints}
                 onCheckedChange={(checked) => updateSettings({ showMidpoints: checked === true })}
               />
-              <label htmlFor="show-midpoints" className={`text-sm cursor-pointer ${colors.text.secondary}`}>Εμφάνιση Midpoints</label>
+              <label htmlFor="show-midpoints" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} cursor-pointer ${colors.text.secondary}`}>Εμφάνιση Midpoints</label>
             </div>
 
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
@@ -337,7 +337,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                 checked={gripSettings.showCenters}
                 onCheckedChange={(checked) => updateSettings({ showCenters: checked === true })}
               />
-              <label htmlFor="show-centers" className={`text-sm cursor-pointer ${colors.text.secondary}`}>Εμφάνιση Centers</label>
+              <label htmlFor="show-centers" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} cursor-pointer ${colors.text.secondary}`}>Εμφάνιση Centers</label>
             </div>
 
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
@@ -346,7 +346,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                 checked={gripSettings.showQuadrants}
                 onCheckedChange={(checked) => updateSettings({ showQuadrants: checked === true })}
               />
-              <label htmlFor="show-quadrants" className={`text-sm cursor-pointer ${colors.text.secondary}`}>Εμφάνιση Quadrants</label>
+              <label htmlFor="show-quadrants" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} cursor-pointer ${colors.text.secondary}`}>Εμφάνιση Quadrants</label>
             </div>
           </div>
         </AccordionSection>
@@ -364,7 +364,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
 
             {/* Pick Box Size */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
                 Μέγεθος Pick Box: {gripSettings.pickBoxSize || 3}px
               </label>
               <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
@@ -391,7 +391,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
 
             {/* Aperture Size */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
                 Μέγεθος Aperture: {gripSettings.apertureSize || 16}px
               </label>
               <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
@@ -418,7 +418,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
 
             {/* Max Grips */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
                 Μέγιστα Grips ανά Οντότητα: {gripSettings.maxGripsPerEntity || 50}
               </label>
               <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
@@ -451,7 +451,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                   checked={gripSettings.showAperture}
                   onCheckedChange={(checked) => updateSettings({ showAperture: checked === true })}
                 />
-                <label htmlFor="show-aperture" className={`text-sm cursor-pointer ${colors.text.secondary}`}>Εμφάνιση Aperture</label>
+                <label htmlFor="show-aperture" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} cursor-pointer ${colors.text.secondary}`}>Εμφάνιση Aperture</label>
               </div>
 
               <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
@@ -460,7 +460,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                   checked={gripSettings.multiGripEdit}
                   onCheckedChange={(checked) => updateSettings({ multiGripEdit: checked === true })}
                 />
-                <label htmlFor="multi-grip-edit" className={`text-sm cursor-pointer ${colors.text.secondary}`}>Multi-Grip Επεξεργασία</label>
+                <label htmlFor="multi-grip-edit" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} cursor-pointer ${colors.text.secondary}`}>Multi-Grip Επεξεργασία</label>
               </div>
 
               <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
@@ -469,13 +469,13 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                   checked={gripSettings.snapToGrips}
                   onCheckedChange={(checked) => updateSettings({ snapToGrips: checked === true })}
                 />
-                <label htmlFor="snap-to-grips" className={`text-sm cursor-pointer ${colors.text.secondary}`}>Snap σε Grips</label>
+                <label htmlFor="snap-to-grips" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} cursor-pointer ${colors.text.secondary}`}>Snap σε Grips</label>
               </div>
             </div>
 
             {/* 🏢 ENTERPRISE: Quick Presets - Using semantic colors */}
             <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.PADDING.TOP_LG}${quick.separator}`}>
-              <h5 className={`text-sm font-medium ${colors.text.muted}`}>Γρήγορα Presets</h5>
+              <h5 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>Γρήγορα Presets</h5>
               <div className={`flex ${PANEL_LAYOUT.SPACING.GAP_H_SM}`}>
                 <button
                   onClick={() => updateSettings({ gripSize: 5, pickBoxSize: 2, apertureSize: 10 })}
@@ -530,15 +530,15 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
           {/* 🏢 ENTERPRISE: Warning Message - Using semantic error colors */}
           {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.ALERT.PADDING_LG */}
           <aside className={`${colors.bg.errorSubtle} ${getStatusBorder('error')} ${PANEL_LAYOUT.ALERT.PADDING_LG} ${PANEL_LAYOUT.ALERT.BORDER_RADIUS}`} role="alert">
-            <p className={`${colors.text.error} font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
+            <p className={`${colors.text.error} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
               ⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!
             </p>
           </aside>
 
           {/* Loss List */}
           <section className={PANEL_LAYOUT.SPACING.GAP_SM}>
-            <p className={`${colors.text.muted} font-medium`}>Θα χάσετε:</p>
-            <ul className={`list-disc list-inside ${PANEL_LAYOUT.SPACING.GAP_XS} ${colors.text.muted} text-sm`}>
+            <p className={`${colors.text.muted} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>Θα χάσετε:</p>
+            <ul className={`list-disc list-inside ${PANEL_LAYOUT.SPACING.GAP_XS} ${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
               <li>Όλες τις προσαρμοσμένες ρυθμίσεις grips</li>
               <li>Όλα τα χρώματα που έχετε επιλέξει</li>
               <li>Όλες τις αλλαγές που έχετε κάνει</li>
@@ -548,13 +548,13 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
           {/* 🏢 ENTERPRISE: Reset Info - Using semantic info colors */}
           {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.ALERT.PADDING_LG */}
           <aside className={`${colors.bg.infoSubtle} ${getStatusBorder('info')} ${PANEL_LAYOUT.ALERT.PADDING_LG} ${PANEL_LAYOUT.ALERT.BORDER_RADIUS}`} role="note">
-            <p className={`${colors.text.info} text-sm`}>
+            <p className={`${colors.text.info} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
               <strong>Επαναφορά:</strong> Οι ρυθμίσεις θα επανέλθουν στα πρότυπα CAD (AutoCAD/BricsCAD)
             </p>
           </aside>
 
           {/* Confirmation Question */}
-          <p className={`${colors.text.primary} font-medium text-center ${PANEL_LAYOUT.PADDING.TOP_SM}`}>
+          <p className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} text-center ${PANEL_LAYOUT.PADDING.TOP_SM}`}>
             Είστε σίγουροι ότι θέλετε να συνεχίσετε;
           </p>
 
@@ -568,7 +568,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
             </button>
             <button
               onClick={handleFactoryResetConfirm}
-              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.danger} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors font-semibold flex items-center ${PANEL_LAYOUT.GAP.XS}`}
+              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.danger} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} flex items-center ${PANEL_LAYOUT.GAP.XS}`}
             >
               <Factory className={iconSizes.xs} />
               Επαναφορά Εργοστασιακών

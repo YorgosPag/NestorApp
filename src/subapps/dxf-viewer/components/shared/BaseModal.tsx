@@ -168,7 +168,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
                 {title && (
                   <h3
                     id="modal-title"
-                    className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} font-medium ${colors.text.primary}`}
+                    className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}
                   >
                     {title}
                   </h3>

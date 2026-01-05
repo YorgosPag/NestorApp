@@ -447,7 +447,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
       </fieldset>
 
       {/* ACCORDION SECTIONS */}
-      <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${!settings.enabled ? 'opacity-50 pointer-events-none' : ''}`}>
+      <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${!settings.enabled ? `${PANEL_LAYOUT.OPACITY['50']} pointer-events-none` : ''}`}>
 
         {/* 1. ΠΡΌΤΥΠΑ & ΕΡΓΑΛΕΊΑ */}
         <AccordionSection

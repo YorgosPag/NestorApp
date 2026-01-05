@@ -5,6 +5,8 @@ import { SearchInput as UnifiedSearchInput } from '@/components/ui/search';
 import { cn } from '@/lib/utils';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized typography tokens
+import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
 
 interface DxfSearchInputProps {
   searchTerm: string;
@@ -24,7 +26,7 @@ export const SearchInput = ({ searchTerm, onSearchChange, className }: DxfSearch
       className={cn(
         `${quick.muted} ${colors.bg.primary} ${colors.text.primary} placeholder-gray-400`,
         `${colors.interactive.focus.ring} ${getFocusBorder('input')}`,
-        "text-sm",
+        PANEL_LAYOUT.TYPOGRAPHY.SM,
         className
       )}
     />

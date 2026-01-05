@@ -36,7 +36,7 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
     <>
       {/* ✅ ENTERPRISE: Αφαίρεση περιττού κενού wrapper (ADR-003 Container Nesting) */}
       <section>
-        <h3 className={`text-sm font-semibold ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
           📋 Automated Test Suite
         </h3>
 
@@ -44,7 +44,7 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
         <button
           onClick={handleRunAllTests}
           disabled={testState.runningTests.has('run-all-tests')}
-          className={`w-full ${PANEL_LAYOUT.SPACING.LG} text-lg font-bold rounded-lg shadow-lg transition-all ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${
+          className={`w-full ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} rounded-lg shadow-lg transition-all ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${
             testState.runningTests.has('run-all-tests')
               ? `${colors.bg.warning} ${colors.text.inverted} cursor-wait animate-pulse`
               : testState.completedTests.has('run-all-tests')
@@ -86,7 +86,7 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
       {/* Group 2: Individual Debug Tools */}
       {/* ✅ ENTERPRISE: Χρήση semantic <section> αντί κενού <div> (ADR-003) */}
       <section>
-        <h3 className={`text-sm font-semibold ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
           🛠️ Individual Debug Tools (Manual)
         </h3>
         <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.MD}`}>

@@ -25,7 +25,7 @@ const SnappingView = memo(() => {
   return (
     <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary}`}>
       <header className={PANEL_LAYOUT.MARGIN.BOTTOM_SM}>
-        <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} font-semibold ${colors.text.muted}`}>Object Snap</h3>
+        <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted}`}>Object Snap</h3>
         <p className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.text.muted}`}>Click to toggle snap modes</p>
       </header>
       <ProSnapToolbar
@@ -48,7 +48,7 @@ const LayersView = memo(() => {
 
   return (
     <section className={`${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${PANEL_COLORS.TEXT_PRIMARY}`}>
-      <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.muted}`}>Layers</h3>
+      <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.muted}`}>Layers</h3>
       <nav className={PANEL_LAYOUT.SPACING.GAP_XS} aria-label="Layer list">
         <label className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE}`}>
           <Checkbox defaultChecked />
@@ -78,7 +78,7 @@ const PropertiesView = memo(() => {
 
   return (
     <section className={`${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${PANEL_COLORS.TEXT_PRIMARY}`}>
-      <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.muted}`}>Properties</h3>
+      <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.muted}`}>Properties</h3>
       <form className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE}`}>
         <fieldset>
           <label className={`block ${colors.text.muted}`} htmlFor="layer-select">Layer:</label>
@@ -110,7 +110,7 @@ const HistoryView = memo(() => {
 
   return (
     <section className={`${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${PANEL_COLORS.TEXT_PRIMARY}`}>
-      <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.muted}`}>Command History</h3>
+      <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.muted}`}>Command History</h3>
       <output className={`${PANEL_LAYOUT.SPACING.GAP_XS} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} font-mono block`}>
         <p className={colors.text.muted}>Command: FIT</p>
         <p className={colors.text.muted}>Command: ZOOM Window</p>

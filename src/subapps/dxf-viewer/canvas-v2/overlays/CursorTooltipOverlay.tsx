@@ -34,7 +34,7 @@ export default function CursorTooltipOverlay({
   const label = toolLabels[activeTool] || activeTool;
 
   return (
-    <div className={`${className} z-[1400]`}>
+    <div className={className} style={{ zIndex: portalComponents.overlay.tooltip.zIndex() }}>
       <div style={canvasUI.positioning.tooltip.positioned(cursorPosition.x, cursorPosition.y)}>
         {label}
       </div>

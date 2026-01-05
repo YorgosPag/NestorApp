@@ -86,7 +86,7 @@ export const TestsModal: React.FC<TestsModalProps> = ({
         >
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <FlaskConical className={`${iconSizes.lg} ${colors.text.accent}`} />
-            <h2 className={`text-xl font-bold ${colors.text.primary}`}>DXF Viewer Tests</h2>
+            <h2 className={`${PANEL_LAYOUT.TYPOGRAPHY.XL} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${colors.text.primary}`}>DXF Viewer Tests</h2>
             <span className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.text.tertiary} ${PANEL_LAYOUT.MARGIN.LEFT_SM}`}>Drag to move</span>
           </div>
           <button
@@ -135,7 +135,7 @@ export const TestsModal: React.FC<TestsModalProps> = ({
 
         {/* Footer */}
         <footer className={`${PANEL_LAYOUT.SPACING.LG} ${getDirectionalBorder('muted', 'top')} ${colors.bg.muted}`}>
-          <p className={`text-xs ${colors.text.muted} text-center`}>
+          <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} text-center`}>
             💡 Tip: Τα tests εκτελούνται ασύγχρονα. Έλεγξε το console για λεπτομέρειες.
           </p>
         </footer>

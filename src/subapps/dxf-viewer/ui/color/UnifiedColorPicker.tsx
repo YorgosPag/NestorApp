@@ -172,7 +172,7 @@ function InlineColorPicker({
           onChange={handleTextChange}
           disabled={disabled}
           placeholder={UI_COLORS.WHITE}
-          className={`${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.muted} rounded ${colors.text.primary} text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
+          className={`${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.muted} rounded ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} disabled:opacity-50 disabled:cursor-not-allowed`}
           style={{ width: '6rem' }}
         />
       )}
@@ -182,7 +182,7 @@ function InlineColorPicker({
   if (label) {
     return (
       <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${className}`}>
-        <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+        <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
           {label}
         </label>
         {content}
@@ -231,7 +231,7 @@ function ModalColorPicker({
         style={layoutUtilities.dxf.colors.backgroundColor(value)}
       />
       {triggerText && (
-        <span className={`text-sm ${colors.text.secondary}`}>{triggerText}</span>
+        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.secondary}`}>{triggerText}</span>
       )}
     </ColorDialogTrigger>
   );

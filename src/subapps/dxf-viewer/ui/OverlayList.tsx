@@ -93,12 +93,12 @@ export const OverlayList: React.FC<OverlayListProps> = ({
     <Card className={`w-full h-full flex flex-col ${colors.bg.secondary} ${getStatusBorder('default')} ${colors.text.primary}`}>
       <CardHeader className={`${PANEL_LAYOUT.PADDING.BOTTOM_SM} ${PANEL_LAYOUT.PADDING.TOP_SM} ${PANEL_LAYOUT.SPACING.HORIZONTAL_SM}`}>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm">Overlays</CardTitle>
+          <CardTitle className={PANEL_LAYOUT.TYPOGRAPHY.SM}>Overlays</CardTitle>
           <CommonBadge
             status="company"
             customLabel={overlays.length.toString()}
             variant="secondary"
-            className={`text-xs ${colors.bg.hover} ${colors.text.tertiary}`}
+            className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.hover} ${colors.text.tertiary}`}
           />
         </div>
 
@@ -108,7 +108,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
             placeholder="Αναζήτηση..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`${PANEL_LAYOUT.PADDING.LEFT_XL} ${iconSizes.xl} text-sm ${colors.bg.primary} ${quick.input} ${colors.text.primary} placeholder:${colors.text.muted}`}
+            className={`${PANEL_LAYOUT.PADDING.LEFT_XL} ${iconSizes.xl} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.bg.primary} ${quick.input} ${colors.text.primary} placeholder:${colors.text.muted}`}
           />
         </div>
       </CardHeader>
@@ -118,7 +118,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
           <div className={`${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
             {filteredOverlays.length === 0 ? (
               <div className={`text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
-                <p className={`text-sm ${colors.text.muted}`}>
+                <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted}`}>
                   {searchQuery ? 'Δεν βρέθηκαν overlays' : 'Δεν υπάρχουν overlays'}
                 </p>
               </div>
@@ -152,10 +152,10 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                       })()}`}
                     />
                     <div className="flex-1 min-w-0 overflow-hidden">
-                      <div className="text-sm font-medium truncate">
+                      <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} truncate`}>
                         {STATUS_LABELS[overlay.status || 'for-sale']} {KIND_LABELS[overlay.kind]}
                       </div>
-                      <div className={`text-xs ${colors.text.muted} truncate`}>
+                      <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} truncate`}>
                         {overlay.label || `Overlay ${overlay.id.slice(0, 6)}`}
                       </div>
                     </div>

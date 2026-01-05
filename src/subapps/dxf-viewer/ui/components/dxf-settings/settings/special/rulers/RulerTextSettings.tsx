@@ -106,8 +106,8 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
     <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
       {/* Ruler Text Color */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} ${radius.md} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <div className={`text-sm ${colors.text.primary}`}>
-          <div className="font-medium">Χρώμα Κειμένων</div>
+        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Χρώμα Κειμένων</div>
           <div className={`font-normal ${colors.text.muted}`}>Χρώμα αριθμών και κειμένων χαράκων</div>
         </div>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
@@ -124,7 +124,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
             type="text"
             value={rulerSettings.horizontal.textColor}
             onChange={(e) => handleRulerTextColorChange(e.target.value)}
-            className={`${PANEL_LAYOUT.SPACING.COMPACT} text-xs ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${getStatusBorder('default')} w-20`}
+            className={`${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${getStatusBorder('default')} w-20`}
             placeholder={UI_COLORS.WHITE}
           />
         </div>
@@ -132,8 +132,8 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
 
       {/* Font Size */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} ${radius.md} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <div className={`text-sm ${colors.text.primary}`}>
-          <div className="font-medium">Μέγεθος Κειμένου</div>
+        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Μέγεθος Κειμένου</div>
           <div className={`font-normal ${colors.text.muted}`}>Μέγεθος των αριθμών στους χάρακες</div>
         </div>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
@@ -146,7 +146,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
             onChange={(e) => handleRulerFontSizeChange(parseInt(e.target.value))}
             className="flex-1"
           />
-          <div className={`text-xs ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} text-center ${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY}`}>
+          <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} text-center ${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY}`}>
             {rulerSettings.horizontal.fontSize}px
           </div>
         </div>
@@ -155,12 +155,12 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
       {/* 🏢 ENTERPRISE: Text Visibility Toggle - Using centralized Switch component */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} ${radius.md} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className="flex items-center justify-between">
-          <div className={`text-sm ${colors.text.primary}`}>
-            <div className="font-medium">Εμφάνιση Κειμένων</div>
+          <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+            <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Εμφάνιση Κειμένων</div>
             <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη αριθμών και κειμένων στους χάρακες</div>
           </div>
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-            <span className={`text-xs ${colors.text.muted}`}>
+            <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
               {textVisible ? 'Ενεργό' : 'Ανενεργό'}
             </span>
             <Switch

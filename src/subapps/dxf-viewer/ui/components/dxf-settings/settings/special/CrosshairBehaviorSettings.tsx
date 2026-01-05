@@ -106,8 +106,8 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
     <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
       {/* Crosshair Color */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα</label>
-        <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα γραμμών σταυρώνυματος</div>
+        <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα</label>
+        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα γραμμών σταυρώνυματος</div>
         <ColorDialogTrigger
           value={cursorColors.crosshairColor}
           onChange={(color) => onCursorColorsChange({ ...cursorColors, crosshairColor: color })}
@@ -123,9 +123,9 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
 
       {/* Crosshair Opacity */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <div className={`text-sm ${colors.text.primary}`}>
-          <div className="font-medium">Διαφάνεια Σταυρονήματος</div>
-          <div className={`font-normal ${colors.text.muted}`}>Επίπεδο διαφάνειας του σταυρονήματος</div>
+        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Διαφάνεια Σταυρονήματος</div>
+          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Επίπεδο διαφάνειας του σταυρονήματος</div>
         </div>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <input
@@ -137,7 +137,7 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
             onChange={(e) => updateSettings({ crosshair: { ...settings.crosshair, opacity: parseFloat(e.target.value) } })}
             className="flex-1"
           />
-          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} text-xs ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.XS} text-center`}>
+          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.XS} text-center`}>
             {Math.round((settings.crosshair.opacity || 0.9) * 100)}%
           </div>
         </div>
@@ -146,12 +146,12 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
       {/* 🏢 ENTERPRISE: Cursor Gap Toggle - Using centralized Switch component */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className="flex items-center justify-between">
-          <div className={`text-sm ${colors.text.primary}`}>
-            <div className="font-medium">Cursor Gap</div>
-            <div className={`font-normal ${colors.text.muted}`}>Οι γραμμές ξεκινάνε έξω από τον κέρσορα</div>
+          <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+            <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Cursor Gap</div>
+            <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Οι γραμμές ξεκινάνε έξω από τον κέρσορα</div>
           </div>
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-            <span className={`text-xs ${colors.text.muted}`}>
+            <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
               {settings.crosshair.use_cursor_gap ? 'Ενεργό' : 'Ανενεργό'}
             </span>
             <Switch

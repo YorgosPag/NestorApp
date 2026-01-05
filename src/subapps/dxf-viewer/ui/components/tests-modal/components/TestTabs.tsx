@@ -25,7 +25,7 @@ export const TestTabs: React.FC<TestTabsProps> = ({ activeTab, onTabChange }) =>
     <nav className={`flex ${getDirectionalBorder('muted', 'bottom')} ${PANEL_LAYOUT.SPACING.HORIZONTAL_LG}`}>
       <button
         onClick={() => onTabChange('automated')}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING} text-sm font-medium transition-colors relative ${
+        className={`${PANEL_LAYOUT.BUTTON.PADDING} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} transition-colors relative ${
           activeTab === 'automated'
             ? `${colors.text.accent} ${getDirectionalBorder('info', 'bottom')}`
             : `${colors.text.muted} ${HOVER_TEXT_EFFECTS.BLUE_LIGHT}`
@@ -35,7 +35,7 @@ export const TestTabs: React.FC<TestTabsProps> = ({ activeTab, onTabChange }) =>
       </button>
       <button
         onClick={() => onTabChange('unit')}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING} text-sm font-medium transition-colors relative ${
+        className={`${PANEL_LAYOUT.BUTTON.PADDING} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} transition-colors relative ${
           activeTab === 'unit'
             ? `${colors.text.accent} ${getDirectionalBorder('info', 'bottom')}`
             : `${colors.text.muted} ${HOVER_TEXT_EFFECTS.BLUE_LIGHT}`
@@ -45,7 +45,7 @@ export const TestTabs: React.FC<TestTabsProps> = ({ activeTab, onTabChange }) =>
       </button>
       <button
         onClick={() => onTabChange('standalone')}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING} text-sm font-medium transition-colors relative ${
+        className={`${PANEL_LAYOUT.BUTTON.PADDING} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} transition-colors relative ${
           activeTab === 'standalone'
             ? `${colors.text.accent} ${getDirectionalBorder('info', 'bottom')}`
             : `${colors.text.muted} ${HOVER_TEXT_EFFECTS.BLUE_LIGHT}`

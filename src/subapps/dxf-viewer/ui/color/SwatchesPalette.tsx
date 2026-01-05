@@ -74,7 +74,7 @@ export function SwatchesPalette({
       {/* Recent Colors */}
       {showRecent && recentColors.length > 0 && (
         <div>
-          <h4 className={`text-sm font-medium ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Recent</h4>
+          <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Recent</h4>
           <SwatchGrid
             swatches={recentColors.map((color) => ({
               color,
@@ -91,7 +91,7 @@ export function SwatchesPalette({
       {/* Brand Palettes */}
       {palettes.map((palette) => (
         <div key={palette.id}>
-          <h4 className={`text-sm font-medium ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
+          <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
             {palette.name}
           </h4>
           <SwatchGrid

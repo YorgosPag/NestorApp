@@ -1,5 +1,6 @@
 import React from 'react';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import type { LayerStatisticsProps } from './types';
 
 export function LayerStatisticsDisplay({
@@ -11,14 +12,14 @@ export function LayerStatisticsDisplay({
   return (
     <>
       {/* Layer Statistics */}
-      <div className={`flex justify-between text-xs ${colors.text.muted}`}>
+      <div className={`flex justify-between ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
         <span>Σύνολο: {statistics.totalLayers}</span>
         <span>Ορατά: {statistics.visibleLayers}</span>
         <span>Στοιχεία: {statistics.totalElements}</span>
       </div>
 
       {/* Sync Status Info */}
-      <div className={`text-xs ${colors.text.muted}`}>
+      <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
         <div className="flex justify-between items-center">
           <span>Sync Status:</span>
           <span className={isConnected ? colors.text.success : colors.text.error}>

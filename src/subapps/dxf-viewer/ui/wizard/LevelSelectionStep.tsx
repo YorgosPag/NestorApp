@@ -49,7 +49,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
     <div className={PANEL_LAYOUT.SPACING.GAP_XL}>
       {/* ✅ ENTERPRISE: Semantic header + fix broken template string (ADR-003) */}
       <header>
-        <h3 className={`text-lg font-medium ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
           Επιλέξτε Επίπεδο για Εισαγωγή DXF
         </h3>
         <p className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
@@ -58,7 +58,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
       </header>
 
       <section className={`${PANEL_LAYOUT.SPACING.GAP_MD} ${PANEL_LAYOUT.MAX_HEIGHT.MD} overflow-y-auto ${PANEL_LAYOUT.PADDING.RIGHT_SM}`}>
-        <h4 className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} font-medium ${colors.text.tertiary}`}>Υπάρχοντα Επίπεδα</h4>
+        <h4 className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.tertiary}`}>Υπάρχοντα Επίπεδα</h4>
         {levels.map((level) => (
           <label
             key={level.id}
@@ -79,7 +79,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
             <div className="flex items-center flex-1">
               <Building2 className={`${iconSizes.sm} ${colors.text.muted} ${PANEL_LAYOUT.SPACING.GAP_H_SM}`} />
               <div>
-                <div className={`${colors.text.primary} font-medium`}>{level.name}</div>
+                <div className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>{level.name}</div>
                 {level.isDefault && (
                   <div className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.text.info}`}>Προεπιλεγμένο Επίπεδο</div>
                 )}
@@ -90,7 +90,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
       </section>
 
       <section className={PANEL_LAYOUT.SPACING.GAP_MD}>
-        <h4 className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} font-medium ${colors.text.tertiary}`}>Ή Δημιουργήστε Νέο Επίπεδο</h4>
+        <h4 className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.tertiary}`}>Ή Δημιουργήστε Νέο Επίπεδο</h4>
 
         {!showNewLevelForm ? (
           <button

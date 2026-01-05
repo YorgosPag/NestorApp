@@ -60,10 +60,10 @@ const getActiveVariantStyles = (
 
 // ✅ ENTERPRISE: Button sizes via PANEL_LAYOUT tokens - ZERO HARDCODED VALUES
 const sizeStyles: Record<ButtonSize, string> = {
-  xs: `${PANEL_LAYOUT.BUTTON.HEIGHT_SM} ${PANEL_LAYOUT.SPACING.COMPACT} text-xs`,        // h-6 24px height, px-2 py-1
+  xs: `${PANEL_LAYOUT.BUTTON.HEIGHT_SM} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`,        // h-6 24px height, px-2 py-1
   sm: `${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.BUTTON.PADDING} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE}`, // h-8, px-3 py-2, text-sm
-  md: `${PANEL_LAYOUT.BUTTON.HEIGHT_MD} ${PANEL_LAYOUT.BUTTON.PADDING_LG} text-base`,   // h-10, px-4 py-2
-  lg: `${PANEL_LAYOUT.BUTTON.HEIGHT_LG} ${PANEL_LAYOUT.BUTTON.PADDING_XL} text-lg`,     // h-12, px-6 - largest buttons
+  md: `${PANEL_LAYOUT.BUTTON.HEIGHT_MD} ${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.TYPOGRAPHY.BASE}`,   // h-10, px-4 py-2
+  lg: `${PANEL_LAYOUT.BUTTON.HEIGHT_LG} ${PANEL_LAYOUT.BUTTON.PADDING_XL} ${PANEL_LAYOUT.TYPOGRAPHY.LG}`,     // h-12, px-6 - largest buttons
 };
 
 const getIconSizeStyles = (iconSizes: ReturnType<typeof useIconSizes>): Record<ButtonSize, string> => ({
@@ -95,7 +95,7 @@ export const BaseButton = forwardRef<HTMLButtonElement, BaseButtonProps>(
     const iconSizes = useIconSizes();
     const borderTokens = useBorderTokens();
     const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
-    const baseClasses = `inline-flex items-center justify-center ${borderTokens.radius.md} border transition-colors duration-150 font-medium focus:outline-none focus:ring-2 focus:${borderTokens.getStatusBorder('info')} focus:ring-offset-2`;
+    const baseClasses = `inline-flex items-center justify-center ${borderTokens.radius.md} border transition-colors duration-150 ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} focus:outline-none focus:ring-2 focus:${borderTokens.getStatusBorder('info')} focus:ring-offset-2`;
 
     const variantStyles = getVariantStyles(borderTokens, colors);
     const activeVariantStyles = getActiveVariantStyles(borderTokens, colors);

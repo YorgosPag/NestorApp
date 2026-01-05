@@ -172,11 +172,11 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className="flex items-center justify-between">
           <div>
-            <h4 className={`text-sm font-medium ${colors.text.primary}`}>Εμφάνιση Πλέγματος</h4>
-            <p className={`text-xs ${colors.text.muted}`}>Εμφάνιση/απόκρυψη του πλέγματος</p>
+            <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Εμφάνιση Πλέγματος</h4>
+            <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Εμφάνιση/απόκρυψη του πλέγματος</p>
           </div>
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-            <span className={`text-xs ${colors.text.muted}`}>
+            <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
               {gridSettings.visual.enabled ? 'Ενεργό' : 'Ανενεργό'}
             </span>
             <Switch
@@ -189,8 +189,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
 
       {/* Grid Size (ΚΟΙΝΟ για όλα) - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`text-sm font-medium ${colors.text.primary}`}>Μέγεθος Πλέγματος</h4>
-        <p className={`text-xs ${colors.text.muted}`}>Απόσταση μεταξύ γραμμών πλέγματος (ΚΟΙΝΟ για όλες)</p>
+        <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Μέγεθος Πλέγματος</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Απόσταση μεταξύ γραμμών πλέγματος (ΚΟΙΝΟ για όλες)</p>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <input
             type="range"
@@ -201,7 +201,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             onChange={(e) => handleGridSizeChange(parseFloat(e.target.value))}
             className="flex-1"
           />
-          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} text-xs ${colors.bg.muted} ${colors.text.primary} ${quick.button} ${PANEL_LAYOUT.SPACING.XS} text-center`}>
+          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${quick.button} ${PANEL_LAYOUT.SPACING.XS} text-center`}>
             {gridSettings.visual.step}
           </div>
         </div>
@@ -209,8 +209,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
 
       {/* 🏢 ENTERPRISE: Grid Style Selector - Using centralized TabsOnlyTriggers */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`text-sm font-medium ${colors.text.primary}`}>Στυλ Πλέγματος</h4>
-        <p className={`text-xs ${colors.text.muted}`}>Τύπος εμφάνισης γραμμών πλέγματος</p>
+        <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Στυλ Πλέγματος</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Τύπος εμφάνισης γραμμών πλέγματος</p>
         <TabsOnlyTriggers
           tabs={gridStyleTabs}
           value={gridSettings.visual.style}
@@ -236,8 +236,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
           <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
             {/* Major Grid Color */}
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-              <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Κύριων Γραμμών</label>
-              <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα των κύριων γραμμών πλέγματος</div>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Κύριων Γραμμών</label>
+              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα των κύριων γραμμών πλέγματος</div>
               <ColorDialogTrigger
                 value={gridSettings.visual.majorGridColor}
                 onChange={handleMajorGridColorChange}
@@ -253,9 +253,9 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
 
             {/* Major Grid Line Weight */}
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-              <div className={`text-sm ${colors.text.primary}`}>
-                <div className="font-medium">Πάχος Κύριων Γραμμών</div>
-                <div className={`font-normal ${colors.text.muted}`}>Πάχος των κύριων γραμμών πλέγματος</div>
+              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+                <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Πάχος Κύριων Γραμμών</div>
+                <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Πάχος των κύριων γραμμών πλέγματος</div>
               </div>
               <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <input
@@ -267,7 +267,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
                   onChange={(e) => handleMajorGridWeightChange(parseFloat(e.target.value))}
                   className="flex-1"
                 />
-                <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} text-xs ${colors.bg.muted} ${colors.text.primary} ${quick.button} ${PANEL_LAYOUT.SPACING.XS} text-center`}>
+                <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${quick.button} ${PANEL_LAYOUT.SPACING.XS} text-center`}>
                   {gridSettings.visual.majorGridWeight}
                 </div>
               </div>
@@ -278,8 +278,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
           <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
             {/* Minor Grid Color */}
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-              <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Δευτερευουσών Γραμμών</label>
-              <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα των δευτερευουσών γραμμών πλέγματος</div>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Δευτερευουσών Γραμμών</label>
+              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα των δευτερευουσών γραμμών πλέγματος</div>
               <ColorDialogTrigger
                 value={gridSettings.visual.minorGridColor}
                 onChange={handleMinorGridColorChange}
@@ -295,9 +295,9 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
 
             {/* Minor Grid Line Weight */}
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-              <div className={`text-sm ${colors.text.primary}`}>
-                <div className="font-medium">Πάχος Δευτερευουσών Γραμμών</div>
-                <div className={`font-normal ${colors.text.muted}`}>Πάχος των δευτερευουσών γραμμών πλέγματος</div>
+              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+                <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Πάχος Δευτερευουσών Γραμμών</div>
+                <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Πάχος των δευτερευουσών γραμμών πλέγματος</div>
               </div>
               <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <input
@@ -309,7 +309,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
                   onChange={(e) => handleMinorGridWeightChange(parseFloat(e.target.value))}
                   className="flex-1"
                 />
-                <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} text-xs ${colors.bg.muted} ${colors.text.primary} ${quick.button} ${PANEL_LAYOUT.SPACING.XS} text-center`}>
+                <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${quick.button} ${PANEL_LAYOUT.SPACING.XS} text-center`}>
                   {gridSettings.visual.minorGridWeight}
                 </div>
               </div>

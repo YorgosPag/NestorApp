@@ -876,7 +876,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               Αντικατάσταση {pendingImportData?.typeLabel}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
-              <div className={`${PANEL_LAYOUT.SPACING.GAP_MD} text-sm text-muted-foreground`}>
+              <div className={`${PANEL_LAYOUT.SPACING.GAP_MD} ${PANEL_LAYOUT.TYPOGRAPHY.SM} text-muted-foreground`}>
                 <p>
                   Υπάρχει ήδη αποθηκευμένη {pendingImportData?.typeLabel} για αυτή την εταιρεία.
                 </p>
@@ -884,7 +884,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   Η νέα κάτοψη που θα φορτώσετε ενδέχεται να μην ταιριάζει με τα υπάρχοντα
                   layers που έχουν σχεδιαστεί πάνω στην προηγούμενη κάτοψη.
                 </p>
-                <p className="font-medium">
+                <p className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>
                   Θέλετε να συνεχίσετε και να αντικαταστήσετε την υπάρχουσα κάτοψη;
                 </p>
               </div>

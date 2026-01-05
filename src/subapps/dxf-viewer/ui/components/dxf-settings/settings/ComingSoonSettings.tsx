@@ -7,8 +7,8 @@ export const ComingSoonSettings: React.FC = () => {
 
   return (
     <div className={`${PANEL_LAYOUT.SPACING.LG} text-center ${colors.text.muted}`}>
-      <div className={`text-2xl ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>🚧</div>
-      <div className="text-sm">Σύντομα διαθέσιμο...</div>
+      <div className={`${PANEL_LAYOUT.TYPOGRAPHY['2XL']} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>🚧</div>
+      <div className={PANEL_LAYOUT.TYPOGRAPHY.SM}>Σύντομα διαθέσιμο...</div>
     </div>
   );
 };

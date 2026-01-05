@@ -3,6 +3,7 @@ import React from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 // 🏢 ENTERPRISE: Centralized design tokens for overlay colors
 import { canvasUI } from '@/styles/design-tokens/canvas';
+import { portalComponents } from '@/styles/design-tokens';  // ✅ ENTERPRISE: Centralized z-index hierarchy
 
 interface SnapResult {
   point: Point2D;
@@ -29,7 +30,7 @@ export default function SnapIndicatorOverlay({
   const { point } = snapResult;
 
   return (
-    <div className={`${className} z-[1400]`}>
+    <div className={className} style={{ zIndex: portalComponents.overlay.snap.zIndex() }}>
       <div
         className="absolute w-2 h-2 border-2 border-solid rounded-full pointer-events-none"
         style={{

@@ -30,23 +30,23 @@ export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerLi
     return (
       <div className={`text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL} ${colors.text.muted}`}>
         <Layers className={`${iconSizes.xl} mx-auto ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} opacity-50`} />
-        <p className="text-sm">Δεν βρέθηκαν layers</p>
-        <p className="text-xs">Δημιουργήστε ένα νέο layer ή αλλάξτε τα φίλτρα</p>
+        <p className={PANEL_LAYOUT.TYPOGRAPHY.SM}>Δεν βρέθηκαν layers</p>
+        <p className={PANEL_LAYOUT.TYPOGRAPHY.XS}>Δημιουργήστε ένα νέο layer ή αλλάξτε τα φίλτρα</p>
       </div>
     );
   }
 
   return (
-    <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} max-h-64 overflow-y-auto`}>
+    <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.MAX_HEIGHT.LG} overflow-y-auto`}>
       {layers.map(layer => (
         <div key={layer.id} className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${getStatusBorder('muted')}`}>
           <div className="flex items-center justify-between">
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} flex-1`}>
               <div className={`${PANEL_LAYOUT.ICON.SMALL} rounded-full ${getCategoryColor(layer.category)}`} />
               
-              <span className={`text-sm ${colors.text.primary} font-medium`}>{layer.name}</span>
+              <span className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>{layer.name}</span>
 
-              <span className={`text-xs ${colors.text.muted} ${colors.bg.tertiary} ${PANEL_LAYOUT.PADDING.BADGE} rounded`}>
+              <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${colors.bg.tertiary} ${PANEL_LAYOUT.PADDING.BADGE} rounded`}>
                 {layer.elements}
               </span>
             </div>

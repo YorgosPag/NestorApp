@@ -38,7 +38,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
     <>
       {/* ✅ ENTERPRISE: Χρήση semantic <section> αντί κενού <div> (ADR-003) */}
       <section>
-        <h3 className={`text-sm font-semibold ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
           🧪 Unit Tests (Vitest/Jest)
         </h3>
 
@@ -65,8 +65,8 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className={`font-medium ${colors.text.primary} text-sm leading-tight`}>⚡ Run Vitest Tests</div>
-              <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Property-based + ServiceRegistry tests</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight`}>⚡ Run Vitest Tests</div>
+              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Property-based + ServiceRegistry tests</div>
             </div>
           </button>
 
@@ -92,8 +92,8 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className={`font-medium ${colors.text.primary} text-sm leading-tight`}>⚡ Run Jest Tests</div>
-              <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Visual regression + cursor alignment tests</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight`}>⚡ Run Jest Tests</div>
+              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Visual regression + cursor alignment tests</div>
             </div>
           </button>
         </div>
@@ -101,7 +101,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
 
       {/* ✅ ENTERPRISE: Χρήση semantic <section> αντί κενού <div> (ADR-003) */}
       <section>
-        <h3 className={`text-sm font-semibold ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
           🎭 E2E Tests (Playwright)
         </h3>
 
@@ -126,15 +126,15 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <div className={`font-medium ${colors.text.primary} text-sm leading-tight`}>🎭 Run Playwright Cross-Browser Tests</div>
-            <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Visual regression across Chromium/Firefox/WebKit (2-3 min)</div>
+            <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight`}>🎭 Run Playwright Cross-Browser Tests</div>
+            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Visual regression across Chromium/Firefox/WebKit (2-3 min)</div>
           </div>
         </button>
       </section>
 
       {/* ✅ ENTERPRISE: Χρήση semantic <aside> για info box (ADR-003) */}
       <aside className={`${colors.bg.info} ${quick.info} ${PANEL_LAYOUT.SPACING.LG} ${getStatusBorder('info')}`}>
-        <p className={`text-xs ${colors.text.info}`}>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.info}`}>
           <strong>Note:</strong> Unit & E2E tests run server-side via API endpoints. Check server logs for detailed output.
         </p>
       </aside>

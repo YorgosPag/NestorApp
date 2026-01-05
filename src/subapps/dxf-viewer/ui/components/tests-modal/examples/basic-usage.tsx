@@ -11,6 +11,7 @@ import React, { useState } from 'react';
 import { TestsModal } from '../../TestsModal';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { PANEL_LAYOUT } from '../../../../config/panel-tokens'; // 🏢 ENTERPRISE: Centralized typography tokens
 
 export function BasicUsageExample() {
   // 1. State to control modal visibility
@@ -25,7 +26,7 @@ export function BasicUsageExample() {
   // 3. Render UI
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">DXF Viewer App</h1>
+      <h1 className={`${PANEL_LAYOUT.TYPOGRAPHY['2XL']} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>DXF Viewer App</h1>
 
       {/* Button to open tests modal */}
       <button

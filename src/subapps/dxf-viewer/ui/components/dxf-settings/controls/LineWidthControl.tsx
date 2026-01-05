@@ -56,11 +56,11 @@ export const LineWidthControl: React.FC<LineWidthControlProps> = ({
   return (
     <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
       <div className="flex items-center justify-between">
-        <label className={`text-sm font-medium ${colors.text.secondary}`}>
+        <label className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
           {label}
         </label>
         {showValue && (
-          <span className={`text-xs ${colors.text.muted} font-mono`}>
+          <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} font-mono`}>
             {localValue.toFixed(2)}mm
           </span>
         )}

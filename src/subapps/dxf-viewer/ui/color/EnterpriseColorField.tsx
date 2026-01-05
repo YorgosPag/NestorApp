@@ -240,7 +240,7 @@ export function EnterpriseColorField({
       <div className={`grid grid-cols-4 ${PANEL_LAYOUT.GAP.SM}`}>
         {/* Hue */}
         <div>
-          <label className={`text-xs ${colors.text.muted}`}>{labels.hue || 'H'}</label>
+          <label className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{labels.hue || 'H'}</label>
           <input
             type="number"
             min="0"
@@ -249,13 +249,13 @@ export function EnterpriseColorField({
             onChange={(e) => handleComponentChange('h', parseInt(e.target.value) || 0)}
             disabled={disabled}
             readOnly={readOnly}
-            className={`w-full ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
+            className={`${PANEL_LAYOUT.INPUT.FULL_WIDTH} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.secondary} ${quick.input} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}
           />
         </div>
 
         {/* Saturation */}
         <div>
-          <label className={`text-xs ${colors.text.muted}`}>{labels.saturation || 'S'}</label>
+          <label className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{labels.saturation || 'S'}</label>
           <input
             type="number"
             min="0"
@@ -264,13 +264,13 @@ export function EnterpriseColorField({
             onChange={(e) => handleComponentChange('s', parseInt(e.target.value) || 0)}
             disabled={disabled}
             readOnly={readOnly}
-            className={`w-full ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
+            className={`${PANEL_LAYOUT.INPUT.FULL_WIDTH} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.secondary} ${quick.input} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}
           />
         </div>
 
         {/* Lightness */}
         <div>
-          <label className={`text-xs ${colors.text.muted}`}>{labels.lightness || 'L'}</label>
+          <label className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{labels.lightness || 'L'}</label>
           <input
             type="number"
             min="0"
@@ -279,14 +279,14 @@ export function EnterpriseColorField({
             onChange={(e) => handleComponentChange('l', parseInt(e.target.value) || 0)}
             disabled={disabled}
             readOnly={readOnly}
-            className={`w-full ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
+            className={`${PANEL_LAYOUT.INPUT.FULL_WIDTH} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.secondary} ${quick.input} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}
           />
         </div>
 
         {/* Alpha */}
         {alpha && (
           <div>
-            <label className={`text-xs ${colors.text.muted}`}>{labels.alpha || 'A'}</label>
+            <label className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{labels.alpha || 'A'}</label>
             <input
               type="number"
               min="0"
@@ -296,7 +296,7 @@ export function EnterpriseColorField({
               onChange={(e) => handleComponentChange('a', parseFloat(e.target.value) || 0)}
               disabled={disabled}
               readOnly={readOnly}
-              className={`w-full ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
+              className={`${PANEL_LAYOUT.INPUT.FULL_WIDTH} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.secondary} ${quick.input} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}
             />
           </div>
         )}
@@ -307,7 +307,7 @@ export function EnterpriseColorField({
   return (
     <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${className}`}>
       {renderField()}
-      {error && <div className={`text-xs ${colors.text.error}`}>{error}</div>}
+      {error && <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.error}`}>{error}</div>}
     </div>
   );
 }

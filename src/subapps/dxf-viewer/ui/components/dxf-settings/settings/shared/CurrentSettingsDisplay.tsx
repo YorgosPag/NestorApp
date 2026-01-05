@@ -4,6 +4,7 @@ import type { LineType } from '../../../../../settings-core/types';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Lucide icons replacing emojis
 import { ClipboardList, Minus, Type } from 'lucide-react';
@@ -63,6 +64,7 @@ export function CurrentSettingsDisplay({
 }: CurrentSettingsDisplayProps) {
   const { getStatusBorder, radius } = useBorderTokens();  // ✅ ENTERPRISE: Added radius
   const colors = useSemanticColors();
+  const iconSizes = useIconSizes();  // ✅ ENTERPRISE: Centralized icon sizes
   const [showSettingsDetails, setShowSettingsDetails] = useState(false);
 
   // 🔥 ΔΙΟΡΘΩΣΗ: Χρήση του πραγματικού hook για text settings
@@ -90,8 +92,8 @@ export function CurrentSettingsDisplay({
           onCheckedChange={(checked) => setShowSettingsDetails(checked === true)}
         />
         <label htmlFor="show-settings-details" className={`flex items-center ${PANEL_LAYOUT.GAP.SM} cursor-pointer`}>
-          <ClipboardList className="w-4 h-4" />
-          <span className={`text-sm font-medium ${colors.text.info}`}>Τρέχουσες Ρυθμίσεις</span>
+          <ClipboardList className={iconSizes.sm} />
+          <span className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.info}`}>Τρέχουσες Ρυθμίσεις</span>
         </label>
       </div>
 
@@ -99,11 +101,11 @@ export function CurrentSettingsDisplay({
         <div className={`${colors.bg.primary} ${radius.lg} ${getStatusBorder('default')} ${PANEL_LAYOUT.SPACING.MD}`}>
           {activeTab === 'lines' && (
             <div>
-              <div className={`${PANEL_LAYOUT.SPACING.STANDARD} ${colors.bg.secondary} font-medium ${colors.text.info} text-sm rounded-t-lg ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-                <Minus className="w-4 h-4" />
+              <div className={`${PANEL_LAYOUT.SPACING.STANDARD} ${colors.bg.secondary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.info} ${PANEL_LAYOUT.TYPOGRAPHY.SM} rounded-t-lg ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+                <Minus className={iconSizes.sm} />
                 <span>Γραμμή</span>
               </div>
-              <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} text-xs`}>
+              <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>Τύπος:</span>
                   <span className={`${colors.text.primary} font-mono`}>{lineSettings.lineType}</span>
@@ -147,11 +149,11 @@ export function CurrentSettingsDisplay({
 
           {activeTab === 'text' && (
             <div>
-              <div className={`${PANEL_LAYOUT.SPACING.STANDARD} ${colors.bg.secondary} font-medium ${colors.text.success} text-sm rounded-t-lg ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-                <Type className="w-4 h-4" />
+              <div className={`${PANEL_LAYOUT.SPACING.STANDARD} ${colors.bg.secondary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.success} ${PANEL_LAYOUT.TYPOGRAPHY.SM} rounded-t-lg ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+                <Type className={iconSizes.sm} />
                 <span>Κείμενο</span>
               </div>
-              <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} text-xs`}>
+              <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>Χρώμα:</span>
                   <span className={`${colors.text.primary} font-mono flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
@@ -190,10 +192,10 @@ export function CurrentSettingsDisplay({
 
           {activeTab === 'grips' && (
             <div>
-              <div className={`${PANEL_LAYOUT.SPACING.STANDARD} ${colors.bg.secondary} font-medium ${colors.text.warning} text-sm rounded-t-lg ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
+              <div className={`${PANEL_LAYOUT.SPACING.STANDARD} ${colors.bg.secondary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.warning} ${PANEL_LAYOUT.TYPOGRAPHY.SM} rounded-t-lg ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
                 🔺 Grips
               </div>
-              <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} text-xs`}>
+              <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>Ενεργά:</span>
                   <span className={`${colors.text.primary} font-mono`}>{gripSettings.showGrips ? 'Ναι' : 'Όχι'}</span>
@@ -233,7 +235,7 @@ export function CurrentSettingsDisplay({
           )}
 
           {!activeTab && (
-            <div className={`text-center ${colors.text.muted} text-sm ${PANEL_LAYOUT.PADDING.TOP_LG} ${PANEL_LAYOUT.PADDING.BOTTOM_LG}`}>
+            <div className={`text-center ${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.PADDING.TOP_LG} ${PANEL_LAYOUT.PADDING.BOTTOM_LG}`}>
               Επιλέξτε μια καρτέλα (Γραμμές, Κείμενο ή Grips) για να δείτε τις τρέχουσες ρυθμίσεις
             </div>
           )}

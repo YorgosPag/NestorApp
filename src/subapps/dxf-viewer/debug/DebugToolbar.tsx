@@ -183,7 +183,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to run all tests', 'error');
           }
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} font-bold ${quick.button} bg-gradient-to-r from-purple-600 to-pink-600 ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.GRADIENT_PURPLE_PINK}`}
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} bg-gradient-to-r from-purple-600 to-pink-600 ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.GRADIENT_PURPLE_PINK}`}
       >
         🧪 Run All Tests
       </button>
@@ -228,7 +228,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load test module', 'error');
           });
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} font-bold ${quick.button} ${colors.bg.warning} ${colors.text.BLACK} transition-all ${HOVER_BACKGROUND_EFFECTS.WARNING_BUTTON}`}
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.warning} ${colors.text.BLACK} transition-all ${HOVER_BACKGROUND_EFFECTS.WARNING_BUTTON}`}
       >
         🎯 Canvas Test
       </button>
@@ -255,7 +255,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load workflow test module', 'error');
           });
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} font-bold ${quick.button} ${colors.bg.success} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.SUCCESS_BUTTON}`}
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.success} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.SUCCESS_BUTTON}`}
       >
         🔄 Layering Test (Ctrl+F2)
       </button>
@@ -290,7 +290,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load DOM inspector', 'error');
           });
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} font-bold ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
       >
         🔍 DOM Inspector
       </button>
@@ -323,7 +323,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load enterprise cursor-crosshair test module', 'error');
           });
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} text-xs font-bold ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
       >
         🏢 Enterprise Test (F3)
       </button>
@@ -352,7 +352,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load origin markers debug module', 'error');
           });
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} text-xs font-bold ${quick.button} ${colors.bg.warning} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.WARNING_BUTTON}`}
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.warning} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.WARNING_BUTTON}`}
       >
         🎯 Origin (0,0)
       </button>
@@ -381,7 +381,7 @@ Check console for detailed metrics`;
             console.log(diagnostics);
           });
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} text-xs font-bold ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
       >
         📏 Rulers
       </button>
@@ -394,7 +394,7 @@ Check console for detailed metrics`;
           const status = showCalibration ? 'DISABLED' : 'ENABLED';
           showCopyableNotification(`Calibration panel ${status} ✅`, 'info');
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} text-xs font-bold ${quick.button} transition-all ${
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} transition-all ${
           showCalibration
             ? `${colors.bg.info} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.CYAN}`
             : `${colors.bg.hover} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
@@ -424,7 +424,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load alignment debug module', 'error');
           });
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} text-xs font-bold ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
       >
         🎯 Alignment
       </button>
@@ -461,7 +461,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load grid test module', 'error');
           });
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} text-xs font-bold ${quick.button} transition-all ${
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} transition-all ${
           showGrid
             ? `${colors.bg.success} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.SUCCESS}`
             : `${colors.bg.hover} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
@@ -476,7 +476,7 @@ Check console for detailed metrics`;
           setDxfCanvasVisible(!dxfCanvasVisible);
           console.log('🎯 DxfCanvas visibility toggled:', !dxfCanvasVisible);
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} text-xs font-bold ${quick.button} transition-all ${
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} transition-all ${
           dxfCanvasVisible
             ? `${colors.bg.success} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.SUCCESS}`
             : `${colors.bg.error} ${colors.text.WHITE} ${HOVER_BACKGROUND_EFFECTS.DESTRUCTIVE}`
@@ -490,7 +490,7 @@ Check console for detailed metrics`;
           setLayerCanvasVisible(!layerCanvasVisible);
           console.log('🎯 LayerCanvas visibility toggled:', !layerCanvasVisible);
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} text-xs font-bold ${quick.button} transition-all ${
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} transition-all ${
           layerCanvasVisible
             ? `${colors.bg.info} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
             : `${colors.bg.error} ${colors.text.WHITE} ${HOVER_BACKGROUND_EFFECTS.DESTRUCTIVE}`
@@ -502,12 +502,12 @@ Check console for detailed metrics`;
       {/* Pan to Origin (0,0) Button */}
       <button
         onClick={panToWorldOrigin}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} text-xs font-bold ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.info} ${colors.text.inverted} transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
       >
         🏠 Pan to (0,0)
       </button>
 
-      <div className={`text-xs ${colors.bg.hover} ${colors.text.WHITE} ${PANEL_LAYOUT.SPACING.COMPACT} ${quick.button}`}>
+      <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.hover} ${colors.text.WHITE} ${PANEL_LAYOUT.SPACING.COMPACT} ${quick.button}`}>
         Debug Tools (Development Only)
       </div>
     </nav>

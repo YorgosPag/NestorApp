@@ -149,7 +149,7 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
           <AutoSaveStatus />
           <CentralizedAutoSaveStatus />
 
-          <div className={`flex justify-between items-center text-xs ${colors.text.muted}`}>
+          <div className={`flex justify-between items-center ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
             <span>Sidebar Status</span>
             <span>Zoom: {currentZoom}%</span>
           </div>

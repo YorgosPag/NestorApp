@@ -179,12 +179,12 @@ export function ColorGroupItem({
               onChange={(e) => setEditingColorGroupName(e.target.value)}
               onKeyDown={handleNameKeyDown}
               onBlur={handleNameBlur}
-              className={`${colors.bg.hover} ${colors.text.muted} ${PANEL_LAYOUT.INPUT.TEXT_SIZE} font-medium ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} ${getStatusBorder('info')} ${PANEL_LAYOUT.INPUT.FOCUS} ${colors.interactive.focus.ring} min-w-0 flex-1`}
+              className={`${colors.bg.hover} ${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} ${getStatusBorder('info')} ${PANEL_LAYOUT.INPUT.FOCUS} ${colors.interactive.focus.ring} min-w-0 flex-1`}
               autoFocus
             />
           ) : (
             <span
-              className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} font-medium ${colors.text.muted} truncate cursor-pointer`}
+              className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted} truncate cursor-pointer`}
               title="Double-click για μετονομασία"
               onDoubleClick={handleNameDoubleClick}
             >

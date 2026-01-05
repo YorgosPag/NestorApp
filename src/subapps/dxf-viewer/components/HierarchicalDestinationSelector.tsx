@@ -194,7 +194,7 @@ export function HierarchicalDestinationSelector({
         <p className={`${colors.text.error} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>Σφάλμα: {error}</p>
         <button
           onClick={loadCompanies}
-          className={`${PANEL_LAYOUT.SPACING.COMFORTABLE} ${colors.bg.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} rounded-lg`}
+          className={`${PANEL_LAYOUT.SPACING.COMFORTABLE} ${colors.bg.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.LG}`}
         >
           Ξαναδοκιμή
         </button>
@@ -205,12 +205,12 @@ export function HierarchicalDestinationSelector({
   return (
     <article>
       <header>
-        <h3 className={`text-lg font-medium ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>{getStepTitle()}</h3>
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>{getStepTitle()}</h3>
         <p className={`${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>{getStepDescription()}</p>
       </header>
 
       {/* Breadcrumb Navigation */}
-      <nav className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_SM} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG} text-sm`}>
+      <nav className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_SM} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
         {selectedCompany && (
           <>
             <button
@@ -281,9 +281,9 @@ export function HierarchicalDestinationSelector({
         {/* Project Selection */}
         {currentStep === 'project' && selectedCompany && (
           <fieldset className={PANEL_LAYOUT.SPACING.GAP_MD}>
-            <label className={`text-sm font-medium ${colors.text.primary}`}>Επιλέξτε Έργο</label>
+            <label className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Επιλέξτε Έργο</label>
             {projects.length === 0 ? (
-              <p className={`${colors.text.muted} text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL} ${colors.bg.secondary} rounded-lg ${getStatusBorder('muted')}`}>
+              <p className={`${colors.text.muted} text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.LG} ${getStatusBorder('muted')}`}>
                 Δεν βρέθηκαν έργα για την επιλεγμένη εταιρεία.
               </p>
             ) : (
@@ -297,7 +297,7 @@ export function HierarchicalDestinationSelector({
                       <span className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                         <Folder className={`${iconSizes.sm} ${colors.text.info}`} />
                         <span>{project.name}</span>
-                        <span className={`${colors.text.muted} text-xs`}>({project.buildings.length} κτίρια)</span>
+                        <span className={`${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>({project.buildings.length} κτίρια)</span>
                       </span>
                     </SelectItem>
                   ))}
@@ -340,13 +340,13 @@ export function HierarchicalDestinationSelector({
                 <button
                   key={floor.id}
                   onClick={() => handleFloorSelect(floor.id)}
-                  className={`w-full text-left ${PANEL_LAYOUT.SPACING.LG} rounded-lg ${getStatusBorder('muted')} ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
+                  className={`w-full text-left ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.ROUNDED.LG} ${getStatusBorder('muted')} ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
                 >
                   <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
                     <Home className={`${iconSizes.lg} ${colors.text.info}`} />
                     <div>
-                      <div className={`${colors.text.primary} font-medium`}>{floor.name}</div>
-                      <div className={`${colors.text.muted} text-sm`}>
+                      <div className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>{floor.name}</div>
+                      <div className={`${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
                         {floor.units.length} μονάδες
                       </div>
                     </div>
@@ -364,7 +364,7 @@ export function HierarchicalDestinationSelector({
               <button
                 key={dest.id}
                 onClick={() => handleFinalDestinationSelect(dest)}
-                className={`w-full text-left ${PANEL_LAYOUT.SPACING.LG} rounded-lg border transition-colors ${
+                className={`w-full text-left ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.ROUNDED.LG} border transition-colors ${
                   selectedDestination?.id === dest.id
                     ? `${useBorderTokens().getStatusBorder('info')} ${colors.bg.selection}`
                     : `${getStatusBorder('muted')} ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
@@ -375,8 +375,8 @@ export function HierarchicalDestinationSelector({
                     className: `${iconSizes.lg} ${colors.text.info}`
                   })}
                   <div>
-                    <div className={`${colors.text.primary} font-medium`}>{dest.label}</div>
-                    <div className={`${colors.text.muted} text-sm capitalize`}>{dest.type}</div>
+                    <div className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>{dest.label}</div>
+                    <div className={`${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.SM} capitalize`}>{dest.type}</div>
                   </div>
                 </div>
               </button>

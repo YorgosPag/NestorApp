@@ -142,8 +142,8 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
     <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
       {/* Ruler Units */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <div className={`text-sm ${colors.text.primary}`}>
-          <div className="font-medium">Μονάδες Μέτρησης</div>
+        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Μονάδες Μέτρησης</div>
           <div className={`font-normal ${colors.text.muted}`}>Μονάδα μέτρησης στους χάρακες</div>
         </div>
         <div className={`grid grid-cols-3 ${PANEL_LAYOUT.GAP.SM}`}>
@@ -151,7 +151,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
             <button
               key={unit}
               onClick={() => handleRulerUnitsChange(unit)}
-              className={`${PANEL_LAYOUT.SPACING.SM} rounded text-xs border transition-colors ${
+              className={`${PANEL_LAYOUT.SPACING.SM} rounded ${PANEL_LAYOUT.TYPOGRAPHY.XS} border transition-colors ${
                 rulerSettings.units === unit
                   ? `${colors.bg.info} ${getStatusBorder('info')}`
                   : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
@@ -166,12 +166,12 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
       {/* 🏢 ENTERPRISE: Units Visibility Toggle - Using centralized Switch component */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className="flex items-center justify-between">
-          <div className={`text-sm ${colors.text.primary}`}>
-            <div className="font-medium">Εμφάνιση Μονάδων</div>
+          <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+            <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Εμφάνιση Μονάδων</div>
             <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη μονάδων μέτρησης στους χάρακες</div>
           </div>
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-            <span className={`text-xs ${colors.text.muted}`}>
+            <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
               {unitsVisible ? 'Ενεργό' : 'Ανενεργό'}
             </span>
             <Switch
@@ -184,8 +184,8 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
 
       {/* Units Font Size */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <div className={`text-sm ${colors.text.primary}`}>
-          <div className="font-medium">Μέγεθος Μονάδων</div>
+        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Μέγεθος Μονάδων</div>
           <div className={`font-normal ${colors.text.muted}`}>Μέγεθος των μονάδων μέτρησης στους χάρακες</div>
         </div>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
@@ -198,7 +198,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
             onChange={(e) => handleRulerUnitsFontSizeChange(parseInt(e.target.value))}
             className="flex-1"
           />
-          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} text-xs ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
+          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
             {rulerSettings.horizontal.unitsFontSize || 10}px
           </div>
         </div>
@@ -206,8 +206,8 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
 
       {/* Units Color */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <div className={`text-sm ${colors.text.primary}`}>
-          <div className="font-medium">Χρώμα Μονάδων</div>
+        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Χρώμα Μονάδων</div>
           <div className={`font-normal ${colors.text.muted}`}>Χρώμα των μονάδων μέτρησης στους χάρακες</div>
         </div>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
@@ -232,7 +232,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
               UI_COLORS.WHITE
             }
             onChange={(e) => handleUnitsColorChange(e.target.value)}
-            className={`w-20 ${PANEL_LAYOUT.SPACING.COMPACT} text-xs ${colors.bg.muted} ${colors.text.primary} rounded ${getStatusBorder('muted')}`}
+            className={`w-20 ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} rounded ${getStatusBorder('muted')}`}
             placeholder={UI_COLORS.WHITE}
           />
         </div>

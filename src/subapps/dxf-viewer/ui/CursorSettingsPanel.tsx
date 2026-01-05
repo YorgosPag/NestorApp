@@ -21,6 +21,7 @@ import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useSemanticColors } from '../../../hooks/useSemanticColors';
 import { Checkbox } from '@/components/ui/checkbox';  // ✅ ENTERPRISE: Centralized Radix Checkbox
 import { PANEL_LAYOUT } from '../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
+import { portalComponents } from '@/styles/design-tokens';  // ✅ ENTERPRISE: Centralized z-index hierarchy
 
 // Force cursor styles for the panel to override canvas cursor settings
 const panelStyles = `
@@ -350,7 +351,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
   const panelContent = (
     <div
       ref={panelRef}
-      className={`cursor-settings-panel fixed z-[2147483647] ${colors.bg.primary} ${colors.text.primary}${quick.card} shadow-2xl ${getStatusBorder('default')} select-none pointer-events-auto`}
+      className={`cursor-settings-panel fixed ${colors.bg.primary} ${colors.text.primary}${quick.card} shadow-2xl ${getStatusBorder('default')} select-none pointer-events-auto`}
       style={{
         left: position.x,
         top: position.y,
@@ -358,7 +359,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
         backgroundColor: UI_COLORS.UPLOAD_AREA_BG,
         opacity: 1,
         pointerEvents: 'all',
-        zIndex: 2147483647, // Maximum z-index value
+        zIndex: portalComponents.overlay.floatingPanel.zIndex(), // ✅ ENTERPRISE: Centralized z-index (1550)
         position: 'fixed',
         transition: 'width 0.1s ease-out' // Smooth width transitions
       }}
@@ -370,7 +371,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
             <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${colors.text.cyanAccent}`}>Ρυθμισεις Κερσορα AutoCAD</h3>
             <button
               onClick={onClose}
-              className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} text-xl ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} rounded ${PANEL_LAYOUT.SPACING.COMPACT}`}
+              className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${PANEL_LAYOUT.TYPOGRAPHY.XL} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} rounded ${PANEL_LAYOUT.SPACING.COMPACT}`}
               onMouseDown={(e) => e.stopPropagation()} // Prevent drag when clicking X
             >
               x
@@ -466,9 +467,9 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               Ενεργο: Sub-pixel ακριβεια για crosshair και snap indicators
             </div>
             {settings.performance.precision_mode && (
-              <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.info} ${getStatusBorder('info')} rounded text-xs ${colors.text.info} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+              <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.info} ${getStatusBorder('info')} rounded ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.info} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <div className={`${iconSizes.xs} ${colors.bg.info} ${quick.button} animate-pulse`}></div>
-                <span>PRECISION MODE ΕΝΕΡΓΟ - 4 δεκαδικά ψηφία</span>
+                <span>PRECISION MODE ΕΝΕΡΓΟ - 4 δεκαδικα ψηφια</span>
               </div>
             )}
           </section>

@@ -202,7 +202,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
 
           {/* Status Palette */}
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-            <span className="text-xs font-medium text-muted-foreground">Status:</span>
+            <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} text-muted-foreground`}>Status:</span>
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
               {(Object.keys(STATUS_COLORS) as Status[]).map(status => (
                 <button
@@ -223,7 +223,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
 
           {/* Kind Selection - Using Centralized ToolButton */}
           <fieldset className={`flex items-center ${PANEL_LAYOUT.GAP.SM} border-none ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.MARGIN.NONE}`}>
-            <legend className="text-xs font-medium text-muted-foreground">Τύπος:</legend>
+            <legend className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} text-muted-foreground`}>Τύπος:</legend>
             <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label="Overlay type">
               {(Object.keys(KIND_LABELS) as OverlayKind[]).map(kind => {
                 const Icon = kindIcons[kind];

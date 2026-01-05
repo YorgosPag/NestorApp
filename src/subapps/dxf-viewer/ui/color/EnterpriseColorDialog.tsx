@@ -223,7 +223,7 @@ export function EnterpriseColorDialog({
               >
                 <h2
                   {...titleProps}
-                  className={`text-lg font-medium ${colors.text.primary} pointer-events-none`}
+                  className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} pointer-events-none`}
                 >
                   {title}
                 </h2>
@@ -318,7 +318,7 @@ export function ColorDialogTrigger({
         <div
           className={`w-6 h-6 ${radius.md} ${getStatusBorder('default')} ${dynamicBgClass}`}
         />
-        <span className={`text-sm ${colors.text.secondary}`}>{label}</span>
+        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.secondary}`}>{label}</span>
       </button>
 
       <EnterpriseColorDialog

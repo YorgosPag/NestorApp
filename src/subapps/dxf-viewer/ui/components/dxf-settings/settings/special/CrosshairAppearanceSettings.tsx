@@ -265,9 +265,9 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
                 className={`absolute top-1/2 left-1/2 ${iconSizes.xs} h-px transform -translate-x-1/2 -translate-y-1/2`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
-              {/* Κάθετη γραμμή */}
+              {/* Κάθετη γραμμή - 🏢 ENTERPRISE: Centralized preview size token */}
               <div
-                className={`absolute top-1/2 left-1/2 h-3 w-px transform -translate-x-1/2 -translate-y-1/2`}
+                className={`absolute top-1/2 left-1/2 ${PANEL_LAYOUT.CROSSHAIR_PREVIEW.SIZE_5_PERCENT} w-px transform -translate-x-1/2 -translate-y-1/2`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
             </div>
@@ -287,9 +287,9 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
                 className={`absolute top-1/2 left-1/2 ${iconSizes.sm} h-px transform -translate-x-1/2 -translate-y-1/2`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
-              {/* Κάθετη γραμμή */}
+              {/* Κάθετη γραμμή - 🏢 ENTERPRISE: Centralized preview size token */}
               <div
-                className={`absolute top-1/2 left-1/2 h-4 w-px transform -translate-x-1/2 -translate-y-1/2`}
+                className={`absolute top-1/2 left-1/2 ${PANEL_LAYOUT.CROSSHAIR_PREVIEW.SIZE_8_PERCENT} w-px transform -translate-x-1/2 -translate-y-1/2`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
             </div>
@@ -309,9 +309,9 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
                 className={`absolute top-1/2 left-1/2 ${iconSizes.md} h-px transform -translate-x-1/2 -translate-y-1/2`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
-              {/* Κάθετη γραμμή */}
+              {/* Κάθετη γραμμή - 🏢 ENTERPRISE: Centralized preview size token */}
               <div
-                className={`absolute top-1/2 left-1/2 h-5 w-px transform -translate-x-1/2 -translate-y-1/2`}
+                className={`absolute top-1/2 left-1/2 ${PANEL_LAYOUT.CROSSHAIR_PREVIEW.SIZE_15_PERCENT} w-px transform -translate-x-1/2 -translate-y-1/2`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
             </div>

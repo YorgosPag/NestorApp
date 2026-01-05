@@ -72,7 +72,7 @@ export function CursorSettings() {
   };
 
   return (
-    <article className={`${PANEL_LAYOUT.CONTAINER.PADDING} ${PANEL_LAYOUT.SPACING.GAP_LG} max-h-96 overflow-y-auto`}>
+    <article className={`${PANEL_LAYOUT.CONTAINER.PADDING} ${PANEL_LAYOUT.SPACING.GAP_LG} ${PANEL_LAYOUT.MAX_HEIGHT.XL} overflow-y-auto`}>
       {/* 🏢 ENTERPRISE: Semantic header για section */}
       <header className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${getDirectionalBorder('muted', 'bottom')} ${PANEL_LAYOUT.PADDING.BOTTOM_SM}`}>
         Ρυθμίσεις Κέρσορα

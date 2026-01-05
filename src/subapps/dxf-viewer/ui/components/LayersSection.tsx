@@ -110,11 +110,11 @@ export function LayersSection({
   if (!scene || Object.keys(scene.layers).length === 0) {
     return (
       <div className={PANEL_LAYOUT.SPACING.GAP_MD}>
-        <h3 className={`text-sm font-medium ${colors.text.muted} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <Layers className={iconSizes.sm} />
           Δεν υπάρχουν layers
         </h3>
-        <div className={`text-center ${PANEL_LAYOUT.SPACING.LG} ${colors.text.tertiary} text-xs`}>
+        <div className={`text-center ${PANEL_LAYOUT.SPACING.LG} ${colors.text.tertiary} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>
           Τα layers θα εμφανιστούν μετά την εισαγωγή DXF
         </div>
       </div>

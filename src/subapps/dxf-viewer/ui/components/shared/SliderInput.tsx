@@ -38,7 +38,7 @@ export function SliderInput({
   return (
     <div className={className}>
       <label
-        className={`block text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}
+        className={`block ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}
         title={tooltip}
       >
         {label}

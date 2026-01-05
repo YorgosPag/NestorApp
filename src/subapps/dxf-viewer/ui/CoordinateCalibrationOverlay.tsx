@@ -158,17 +158,17 @@ export default function CoordinateCalibrationOverlay({
               <button onClick={() => setClickTests([])} className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.bg.error} ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_HOVER} ${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} rounded`}>Καθαρισμός</button>
             </div>
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${quick.input} cursor-crosshair pointer-events-auto ${getElementBorder('input', 'focus')}`} onClick={handleCalibrationClick}>
-              <div className={`text-center text-xs ${colors.text.cyanLight} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Κλικ εδώ για τεστ ακρίβειας</div>
+              <div className={`text-center ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.cyanLight} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Κλικ εδώ για τεστ ακρίβειας</div>
               <div className={`${PANEL_LAYOUT.MAX_HEIGHT.XS} overflow-y-auto ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
                 {clickTests.length === 0 ? (
-                  <div className={`${colors.text.muted} text-xs text-center`}>Δεν υπάρχουν δοκιμές</div>
+                  <div className={`${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.XS} text-center`}>Δεν υπάρχουν δοκιμές</div>
                 ) : (
                   clickTests.slice(-2).map(test => (
-                    <div key={test.id} className={`text-xs ${getElementBorder('card', 'default')} ${quick.card} ${PANEL_LAYOUT.SPACING.HORIZONTAL_SM}`}>
+                    <div key={test.id} className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${getElementBorder('card', 'default')} ${quick.card} ${PANEL_LAYOUT.SPACING.HORIZONTAL_SM}`}>
                       <div className={`${colors.text.primary}`}>#{test.id} @ {test.timestamp}</div>
                       <div className={colors.text.successLight}>CSS: ({test.cssPoint.x.toFixed(1)}, {test.cssPoint.y.toFixed(1)})</div>
                       <div className={colors.text.warningLight}>Κόσμος: ({test.worldPoint.x.toFixed(2)}, {test.worldPoint.y.toFixed(2)})</div>
-                      <div className={`text-xs ${test.roundTripError < 0.5 ? colors.text.successLighter : colors.text.orangeLight}`}>
+                      <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${test.roundTripError < 0.5 ? colors.text.successLighter : colors.text.orangeLight}`}>
                         Error: {test.roundTripError.toFixed(2)}px {test.roundTripError < 0.5 ? 'ΤΕΛΕΙΟ ✅' : 'ΧΡΕΙΑΖΕΤΑΙ ΔΙΟΡΘΩΣΗ ⚠️'}
                       </div>
                     </div>
@@ -178,8 +178,8 @@ export default function CoordinateCalibrationOverlay({
             </div>
           </article>
 
-          <aside className={`${colors.bg.info} ${PANEL_LAYOUT.SPACING.SM} rounded text-xs`}>
-            <div className={`${colors.text.infoLight} font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>💡 Συμβουλές:</div>
+          <aside className={`${colors.bg.info} ${PANEL_LAYOUT.SPACING.SM} rounded ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>
+            <div className={`${colors.text.infoLight} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>💡 Συμβουλές:</div>
             <ul className={`${colors.text.infoLighter} ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
               <li>• Round-trip σφάλμα &lt; 0.5px</li>
               <li>• Δοκιμάστε σε διαφορετικά zoom</li>

@@ -23,6 +23,7 @@ import {
 } from './DxfViewerComponents.styles';
 // 🏢 ENTERPRISE: Import centralized panel spacing (Single Source of Truth)
 import { PANEL_LAYOUT } from '../config/panel-tokens';
+import { portalComponents } from '@/styles/design-tokens';  // ✅ ENTERPRISE: Centralized z-index hierarchy
 
 interface OverlayToolbarProps {
   mode: OverlayEditorMode;
@@ -144,18 +145,19 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
     autoCenter: true
   });
 
-  const draggableStyles = disableFloating ? {} : {
+  const draggableStyles: React.CSSProperties = disableFloating ? {} : {
     left: dragPosition.x,
     top: dragPosition.y,
     transform: 'none', // Override center transform when dragging
-    cursor: isDragging ? 'grabbing' : 'auto'
+    cursor: isDragging ? 'grabbing' : 'auto',
+    zIndex: portalComponents.overlay.toolbar.zIndex()  // ✅ ENTERPRISE: Centralized z-index (80)
   };
 
   return (
     <div
       ref={elementRef}
       style={draggableStyles}
-      className={`${disableFloating ? 'relative' : 'fixed z-[80]'} flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} flex-wrap shadow-xl select-none pointer-events-auto`}
+      className={`${disableFloating ? 'relative' : 'fixed'} flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} flex-wrap shadow-xl select-none pointer-events-auto`}
       onMouseEnter={(e) => e.stopPropagation()}
       onMouseMove={(e) => e.stopPropagation()}
       onMouseLeave={(e) => e.stopPropagation()}
@@ -186,8 +188,8 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
               }
             `}
           >
-            {Icon ? <Icon className={iconSizes.sm} /> : <span className="text-xs">?</span>}
-            <span className="hidden sm:inline text-xs">{label}</span>
+            {Icon ? <Icon className={iconSizes.sm} /> : <span className={PANEL_LAYOUT.TYPOGRAPHY.XS}>?</span>}
+            <span className={`hidden sm:inline ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{label}</span>
           </button>
         ))}
       </div>
@@ -196,7 +198,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
 
       {/* Status Palette */}
       <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-        <span className={`text-xs font-medium ${colors.text.muted}`}>Status:</span>
+        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>Status:</span>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
           {(Object.keys(STATUS_COLORS) as Status[]).map(status => (
             <button
@@ -217,7 +219,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
 
       {/* Kind Selection */}
       <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-        <span className={`text-xs font-medium ${colors.text.muted}`}>Τύπος:</span>
+        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>Τύπος:</span>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
           {(Object.keys(KIND_LABELS) as OverlayKind[]).map(kind => {
             const Icon = kindIcons[kind];
@@ -235,7 +237,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
                   }
                 `}
               >
-                {Icon ? <Icon className={iconSizes.sm} /> : <span className="text-xs">?</span>}
+                {Icon ? <Icon className={iconSizes.sm} /> : <span className={PANEL_LAYOUT.TYPOGRAPHY.XS}>?</span>}
               </button>
             );
           })}

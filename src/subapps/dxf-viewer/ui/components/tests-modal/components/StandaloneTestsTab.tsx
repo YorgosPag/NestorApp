@@ -30,7 +30,7 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
     <>
       {/* ✅ ENTERPRISE: Χρήση semantic <section> αντί κενού <div> (ADR-003) */}
       <section>
-        <h3 className={`text-sm font-semibold ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
           📊 Standalone Test Scripts
         </h3>
 
@@ -57,8 +57,8 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className={`font-medium ${colors.text.primary} text-sm leading-tight`}>🔄 Coordinate Reversibility</div>
-              <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Tests screenToWorld(worldToScreen(p)) == p</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight`}>🔄 Coordinate Reversibility</div>
+              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Tests screenToWorld(worldToScreen(p)) == p</div>
             </div>
           </button>
 
@@ -84,8 +84,8 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className={`font-medium ${colors.text.primary} text-sm leading-tight`}>📐 Grid Workflow Test</div>
-              <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>CAD QA standards (5 categories)</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight`}>📐 Grid Workflow Test</div>
+              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>CAD QA standards (5 categories)</div>
             </div>
           </button>
         </div>
@@ -93,7 +93,7 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
 
       {/* ✅ ENTERPRISE: Χρήση semantic <aside> για info box (ADR-003) */}
       <aside className={`${colors.bg.warning} ${quick.info} ${PANEL_LAYOUT.SPACING.LG}`}>
-        <p className={`text-xs ${colors.text.warning}`}>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.warning}`}>
           <strong>⚠️ Work in Progress:</strong> Some standalone tests need refactoring to export runnable functions. Check console for status.
         </p>
       </aside>

@@ -614,15 +614,15 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
     // Για όλα τα άλλα εργαλεία - κενό container
     return (
       <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.LG} ${colors.bg.secondary} ${quick.card}`}>
-        <h3 className={`text-lg font-semibold ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
           Ρυθμίσεις {selectedTool}
         </h3>
         <div className={`text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL} ${colors.text.muted}`}>
           <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} flex justify-center`}>
             <Wrench className={`${PANEL_LAYOUT.WIDTH.ICON_LG} ${PANEL_LAYOUT.HEIGHT.ICON_LG}`} />
           </div>
-          <h3 className={`text-lg font-medium ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.primary}`}>Ρυθμίσεις Εργαλείου</h3>
-          <p className={`text-sm ${colors.text.muted}`}>
+          <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.primary}`}>Ρυθμίσεις Εργαλείου</h3>
+          <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted}`}>
             Οι ρυθμίσεις για αυτό το εργαλείο θα προστεθούν σύντομα
           </p>
         </div>
@@ -654,8 +654,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
       {!selectedTool && (
         <div className={`text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL} ${colors.text.muted}`}>
           <Pen className={`${iconSizes.xl} mx-auto ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`} />
-          <h3 className={`text-lg font-medium ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.primary}`}>Επιλέξτε Εργαλείο</h3>
-          <p className={`text-sm ${colors.text.muted}`}>
+          <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.primary}`}>Επιλέξτε Εργαλείο</h3>
+          <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted}`}>
             Κάντε κλικ σε ένα εργαλείο για να δείτε τις ρυθμίσεις του
           </p>
         </div>

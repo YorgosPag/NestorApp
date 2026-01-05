@@ -14,7 +14,7 @@
 import type { PropertyStatus } from '../../../constants/property-statuses-enterprise';
 import { BUTTON_STATUS_COLORS } from '../config/color-mapping';
 import { UI_COLORS } from '../config/color-config';
-import { PANEL_COLORS } from '../config/panel-tokens'; // 🏢 ENTERPRISE: Centralized border colors
+import { PANEL_COLORS, PANEL_LAYOUT } from '../config/panel-tokens'; // 🏢 ENTERPRISE: Centralized border colors & typography
 // ✅ ENTERPRISE FIX: useBorderTokens is a React hook and cannot be used in styles file
 
 // 🏢 ENTERPRISE: CSS Custom Properties για κεντρικοποιημένα χρώματα
@@ -36,6 +36,29 @@ const CSS_VARS = {
   // Shadow Colors
   SHADOW_RING_OFFSET: 'hsl(var(--muted))',        // rgb(31 41 55) - ring-offset-gray-800
   SHADOW_RING_FOCUS: 'hsl(var(--primary))',       // rgb(59 130 246) - ring-blue-500
+} as const;
+
+// ============================================================================
+// 🏢 ENTERPRISE TYPOGRAPHY CSS VALUES - CENTRALIZED FONT SYSTEM
+// ============================================================================
+// Maps PANEL_LAYOUT.TYPOGRAPHY tokens to CSS pixel values for JS object styles
+// Single source of truth: PANEL_LAYOUT.TYPOGRAPHY (Tailwind classes)
+// ============================================================================
+
+const TYPOGRAPHY_CSS = {
+  // Font sizes (matching PANEL_LAYOUT.TYPOGRAPHY)
+  XS: '0.75rem',    // 12px - matches ${PANEL_LAYOUT.TYPOGRAPHY.XS}
+  SM: '0.875rem',   // 14px - matches ${PANEL_LAYOUT.TYPOGRAPHY.SM}
+  BASE: '1rem',     // 16px - matches ${PANEL_LAYOUT.TYPOGRAPHY.BASE}
+  LG: '1.125rem',   // 18px - matches ${PANEL_LAYOUT.TYPOGRAPHY.LG}
+} as const;
+
+const FONT_WEIGHT_CSS = {
+  // Font weights (matching PANEL_LAYOUT.FONT_WEIGHT)
+  NORMAL: 400,      // matches ${PANEL_LAYOUT.FONT_WEIGHT.NORMAL}
+  MEDIUM: 500,      // matches ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}
+  SEMIBOLD: 600,    // matches ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD}
+  BOLD: 700,        // matches ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}
 } as const;
 
 // 🎯 ENTERPRISE BORDER TOKENS INTEGRATION
@@ -462,8 +485,8 @@ export const getToolbarSectionWithLabelStyles = () => ({
  * Get toolbar label styles
  */
 export const getToolbarLabelStyles = () => ({
-  fontSize: '0.75rem', // text-xs
-  fontWeight: 500, // font-medium
+  fontSize: TYPOGRAPHY_CSS.XS, // ✅ ENTERPRISE: centralized typography
+  fontWeight: FONT_WEIGHT_CSS.MEDIUM, // ✅ ENTERPRISE: centralized font weight
   color: CSS_VARS.TEXT_MUTED, // ✅ ENTERPRISE: text-gray-400 → semantic text
 });
 
@@ -525,7 +548,7 @@ export const getResponsiveButtonTextStyles = () => ({
   display: 'none',
   '@media (min-width: 640px)': {
     display: 'inline',
-    fontSize: '0.75rem' // text-xs
+    fontSize: TYPOGRAPHY_CSS.XS // ✅ ENTERPRISE: centralized typography
   }
 });
 
@@ -553,7 +576,7 @@ export const getCursorShapeButtonStyles = (
 ) => ({
   padding: '0.5rem',
   borderRadius: 'var(--radius)', // Enterprise border radius-md
-  fontSize: '0.75rem', // text-xs
+  fontSize: TYPOGRAPHY_CSS.XS, // ✅ ENTERPRISE: centralized typography
   border: '1px solid',
   transition: 'colors 0.15s ease-in-out',
   ...(isActive ? {
@@ -751,8 +774,8 @@ export const getCalibrationTooltipStyles = () => ({
   color: 'white',
   padding: '2px 6px',
   borderRadius: '4px',
-  fontSize: '0.75rem', // text-xs
-  fontWeight: 'bold' as const,
+  fontSize: TYPOGRAPHY_CSS.XS, // ✅ ENTERPRISE: centralized typography
+  fontWeight: FONT_WEIGHT_CSS.BOLD, // ✅ ENTERPRISE: centralized font weight
   whiteSpace: 'nowrap' as const,
   pointerEvents: 'none' as const
 });
@@ -892,6 +915,16 @@ export const getPropertyStatusColor = (status: PropertyStatus): string =>
 export const isValidPropertyStatus = (status: string): status is PropertyStatus =>
   Object.keys(BUTTON_STATUS_COLORS).includes(status);
 
+// ============================================================================
+// ENTERPRISE TYPOGRAPHY EXPORTS
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Export typography CSS values for use in other style files
+ * These map PANEL_LAYOUT.TYPOGRAPHY/FONT_WEIGHT tokens to CSS pixel values
+ */
+export { TYPOGRAPHY_CSS, FONT_WEIGHT_CSS };
+
 /**
  * ✅ DXF VIEWER COMPONENTS STYLING COMPLETE
  *
@@ -906,6 +939,7 @@ export const isValidPropertyStatus = (status: string): status is PropertyStatus 
  * 8. ✅ Enterprise-class organization με logical grouping
  * 9. ✅ Fortune 500 grade CAD interface standards
  * 10. ✅ Accessibility-ready utilities (ARIA support, keyboard navigation)
+ * 11. ✅ TYPOGRAPHY_CSS/FONT_WEIGHT_CSS centralized constants (2026-01-05)
  *
  * Result: Ready για enterprise-class DXF Viewer components refactoring
  * Standards: Fortune 500 company grade CAD software architecture

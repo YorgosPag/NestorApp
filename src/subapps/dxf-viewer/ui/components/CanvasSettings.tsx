@@ -19,22 +19,22 @@ export const CanvasSettings: React.FC<CanvasSettingsProps> = ({ className }) => 
       <div className={PANEL_LAYOUT.SPACING.LG}>
         {/* Header */}
         <div className={`${getDirectionalBorder('default', 'bottom')} ${PANEL_LAYOUT.PADDING.BOTTOM_SM} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
-          <h2 className={`text-lg font-semibold ${colors.text.primary} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+          <h2 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.primary} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             🖼️ Ρυθμίσεις Καμβά
           </h2>
-          <p className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
+          <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
             Ρυθμίσεις εμφάνισης και συμπεριφοράς καμβά
           </p>
         </div>
 
         {/* Coming Soon Placeholder */}
         <div className={`text-center ${PANEL_LAYOUT.SPACING.XL} ${colors.text.secondary}`}>
-          <div className={`text-4xl ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>🎨</div>
-          <h3 className={`text-lg font-medium ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Σύντομα Διαθέσιμο</h3>
-          <p className={`text-sm ${colors.text.muted}`}>
+          <div className={`${PANEL_LAYOUT.TYPOGRAPHY['4XL']} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>🎨</div>
+          <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Σύντομα Διαθέσιμο</h3>
+          <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted}`}>
             Οι ρυθμίσεις καμβά θα περιλαμβάνουν:
           </p>
-          <ul className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_MD} ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
+          <ul className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_MD} ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
             <li>• Χρώμα φόντου καμβά</li>
             <li>• Ρυθμίσεις zoom και pan</li>
             <li>• Εμφάνιση πλέγματος αναφοράς</li>

@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { getCursorSettings, subscribeToCursorSettings, type CursorSettings } from '../../systems/cursor/config';
 import { useGripContext } from '../../providers/GripProvider';
+import { portalComponents } from '@/styles/design-tokens';  // ✅ ENTERPRISE: Centralized z-index hierarchy
 import type { Point2D } from '../../rendering/types/Types';
 
 interface Viewport {
@@ -298,8 +299,8 @@ export default function CrosshairOverlay({
   return (
     <canvas
       ref={canvasRef}
-      className={`${className} z-[1400]`}
-      style={style}
+      className={className}
+      style={{ ...style, zIndex: portalComponents.overlay.crosshair.zIndex() }}
     />
   );
 }

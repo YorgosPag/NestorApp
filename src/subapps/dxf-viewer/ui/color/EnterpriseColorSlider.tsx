@@ -135,7 +135,7 @@ export function EnterpriseColorSlider({
     <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${className}`}>
       {/* Label */}
       {showLabel && (
-        <div className="flex justify-between text-sm">
+        <div className={`flex justify-between ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
           <label {...labelProps} className={colors.text.secondary}>
             {label || getDefaultLabel(channel)}
           </label>

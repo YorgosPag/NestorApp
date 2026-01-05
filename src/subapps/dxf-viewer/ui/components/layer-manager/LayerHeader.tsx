@@ -12,7 +12,7 @@ export function LayerHeader({ isConnected, onAddLayer, onSettings }: LayerHeader
 
   return (
     <div className="flex items-center justify-between">
-      <h3 className={`text-sm font-medium ${colors.text.primary} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+      <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
         <Layers className={iconSizes.sm} />
         Layer Manager
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>

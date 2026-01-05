@@ -144,7 +144,7 @@ export function EnterpriseColorPicker({
                 onClick={() => handleModeChange(mode)}
                 disabled={disabled || readOnly}
                 className={`
-                  ${PANEL_LAYOUT.SPACING.COMPACT} text-xs font-medium transition-colors
+                  ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} transition-colors
                   ${currentMode === mode
                     ? `${colors.text.info} ${getDirectionalBorder('info', 'bottom')}`
                     : `${colors.text.muted} ${HOVER_TEXT_EFFECTS.GRAY_LIGHT}`
@@ -247,7 +247,7 @@ function EyedropperButton({ onChange, onChangeEnd, disabled }: EyedropperButtonP
       className={`
         w-full ${PANEL_LAYOUT.BUTTON.PADDING_LG} rounded
         flex items-center justify-center ${PANEL_LAYOUT.GAP.SM}
-        text-sm font-medium
+        ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}
         transition-colors
         ${isActive
           ? `${colors.bg.info} ${colors.text.primary}`
@@ -288,8 +288,8 @@ function ContrastPanelPlaceholder({ foreground, background }: ContrastPanelPlace
   const { radius, getStatusBorder } = useBorderTokens();
   return (
     <div className={`${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${radius.md} border ${getStatusBorder('muted')}`}>
-      <h4 className={`text-sm font-medium ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Contrast Checker</h4>
-      <div className={`text-xs ${colors.text.muted}`}>
+      <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Contrast Checker</h4>
+      <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
         <div>Foreground: {foreground}</div>
         <div>Background: {background}</div>
         <div className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${colors.text.secondary}`}>

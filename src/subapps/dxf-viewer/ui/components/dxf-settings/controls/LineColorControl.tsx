@@ -76,7 +76,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
 
   return (
     <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-      <label className={`text-sm font-medium ${colors.text.muted}`}>
+      <label className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>
         {label}
       </label>
 
@@ -103,7 +103,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
             <div className={PANEL_LAYOUT.SPACING.GAP_MD}>
               {/* Preset colors grid */}
               <div>
-                <p className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>AutoCAD Colors</p>
+                <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>AutoCAD Colors</p>
                 <div className={`grid grid-cols-5 ${PANEL_LAYOUT.GAP.XS}`}>
                   {presetColorClasses.map(({ color, bgClass }) => (
                     <button
@@ -125,7 +125,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
 
               {/* Custom color input */}
               <div>
-                <p className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Custom Color</p>
+                <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Custom Color</p>
                 <div className={`flex ${PANEL_LAYOUT.GAP.SM}`}>
                   <Input
                     type="color"
@@ -146,7 +146,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
                       }
                     }}
                     placeholder={UI_COLORS.WHITE}
-                    className={`flex-1 ${colors.bg.secondary} ${getStatusBorder('muted').replace('border ', '')} ${colors.text.secondary} font-mono text-sm`}
+                    className={`flex-1 ${colors.bg.secondary} ${getStatusBorder('muted').replace('border ', '')} ${colors.text.secondary} font-mono ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}
                   />
                 </div>
               </div>

@@ -18,6 +18,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { TestsModal } from '../../TestsModal'; // Corrected path to TestsModal
 import { useBorderTokens } from '@/hooks/useBorderTokens'; // Enterprise border system
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'; // Enterprise semantic colors
+import { PANEL_LAYOUT } from '../../../../config/panel-tokens'; // 🏢 ENTERPRISE: Centralized typography tokens
 
 // Example: Using react-hot-toast for notifications
 // npm install react-hot-toast
@@ -138,7 +139,7 @@ export function AdvancedUsageExample() {
 
       <div className="max-w-6xl mx-auto">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">DXF Viewer - Advanced Testing</h1>
+          <h1 className={`${PANEL_LAYOUT.TYPOGRAPHY['3XL']} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>DXF Viewer - Advanced Testing</h1>
           <p className={colors.text.muted}>
             Press <kbd className={`px-2 py-1 ${colors.bg.secondary} rounded`}>Ctrl+T</kbd> to toggle tests modal
           </p>
@@ -150,8 +151,8 @@ export function AdvancedUsageExample() {
             onClick={() => setIsTestsOpen(true)}
             className={`p-4 ${colors.gradients.testButtonPrimary} rounded-lg ${GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON} transition-all`}
           >
-            <div className="text-xl mb-1">🧪 Run Tests</div>
-            <div className={`text-sm ${colors.text.purpleLight}`}>Open testing interface</div>
+            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XL} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>🧪 Run Tests</div>
+            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.purpleLight}`}>Open testing interface</div>
           </button>
 
           {/* Test History Stats */}
@@ -159,10 +160,10 @@ export function AdvancedUsageExample() {
             onClick={() => setIsTestsOpen(true)}
             className={`p-4 ${colors.bg.secondary} rounded-lg ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} transition-all`}
           >
-            <div className="text-xl mb-1">
+            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XL} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>
               📊 {testHistory.length} Tests Run
             </div>
-            <div className={`text-sm ${colors.text.muted}`}>
+            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted}`}>
               ✅ {testHistory.filter(t => t.status === 'success').length} passed,{' '}
               ❌ {testHistory.filter(t => t.status === 'error').length} failed
             </div>
@@ -174,8 +175,8 @@ export function AdvancedUsageExample() {
             disabled={testHistory.length === 0}
             className={`p-4 ${colors.bg.secondary} rounded-lg ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
           >
-            <div className="text-xl mb-1">🗑️ Clear History</div>
-            <div className={`text-sm ${colors.text.muted}`}>Reset test results</div>
+            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XL} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>🗑️ Clear History</div>
+            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted}`}>Reset test results</div>
           </button>
         </div>
 
@@ -183,10 +184,10 @@ export function AdvancedUsageExample() {
         {testHistory.length > 0 && (
           <div className={`${colors.bg.secondary} rounded-lg p-4 mb-8`}>
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">📝 Test History</h2>
+              <h2 className={`${PANEL_LAYOUT.TYPOGRAPHY.XL} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>📝 Test History</h2>
               <button
                 onClick={exportHistory}
-                className={`px-3 py-1 ${colors.bg.purpleButton} rounded ${INTERACTIVE_PATTERNS.PURPLE_HOVER} text-sm`}
+                className={`px-3 py-1 ${colors.bg.purpleButton} rounded ${INTERACTIVE_PATTERNS.PURPLE_HOVER} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}
               >
                 📥 Export JSON
               </button>
@@ -212,7 +213,7 @@ export function AdvancedUsageExample() {
                           <span className={colors.text.error}>❌ Failed</span>
                         )}
                       </td>
-                      <td className={`py-2 ${colors.text.muted} text-sm`}>
+                      <td className={`py-2 ${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
                         {result.timestamp.toLocaleTimeString()}
                       </td>
                     </tr>
@@ -226,16 +227,16 @@ export function AdvancedUsageExample() {
         {/* Info Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className={`${colors.bg.infoPanel} ${getStatusBorder('info')} rounded-lg p-4`}>
-            <div className={`${colors.text.infoAccent} font-bold mb-2`}>💡 Pro Tip</div>
-            <div className="text-sm">
+            <div className={`${colors.text.infoAccent} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>💡 Pro Tip</div>
+            <div className={PANEL_LAYOUT.TYPOGRAPHY.SM}>
               Use Ctrl+T keyboard shortcut to quickly open/close the tests modal.
               Great for rapid testing during development!
             </div>
           </div>
 
           <div className={`${colors.bg.successPanel} ${getStatusBorder('success')} rounded-lg p-4`}>
-            <div className={`${colors.text.successAccent} font-bold mb-2`}>🚀 Auto-Run</div>
-            <div className="text-sm">
+            <div className={`${colors.text.successAccent} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>🚀 Auto-Run</div>
+            <div className={PANEL_LAYOUT.TYPOGRAPHY.SM}>
               Add <code className={`px-1 ${colors.bg.secondary} rounded`}>?autorun=true</code> to URL
               to automatically open tests on page load.
             </div>

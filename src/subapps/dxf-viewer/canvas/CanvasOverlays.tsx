@@ -13,6 +13,7 @@ import CursorTooltipOverlay from '../canvas-v2/overlays/CursorTooltipOverlay';
 import { useCursor } from '../systems/cursor';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
+import { portalComponents } from '@/styles/design-tokens';  // ✅ ENTERPRISE: Centralized z-index hierarchy
 import type { SceneModel } from '../types/scene';
 // ✅ ENTERPRISE FIX: Correct Point2D import path
 import type { Point2D as Point } from '../rendering/types/Types';
@@ -134,7 +135,7 @@ export default function CanvasOverlays({
   });
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-[1000]">
+    <div className="absolute inset-0 pointer-events-none" style={{ zIndex: portalComponents.overlay.base.zIndex() }}>
       <CrosshairOverlay
         isActive={crosshairActive}  // Active in layering mode OR when mouse position available
         // ✅ ADR-008: REMOVED cursorPosition/mouseWorld - now tracked internally for pixel-perfect alignment

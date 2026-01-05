@@ -69,8 +69,8 @@ const SnapButton: React.FC<SnapButtonProps> = ({ mode, enabled, onClick, compact
       onClick={onClick}
       title={tooltip}
       className={`
-        ${compact ? `${PANEL_LAYOUT.HEIGHT.LG} ${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} text-xs` : `${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.WIDTH.MD} text-sm`}
-        ${radius.md} border transition-all duration-150 font-medium
+        ${compact ? `${PANEL_LAYOUT.HEIGHT.LG} ${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS}` : `${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}
+        ${radius.md} border transition-all duration-150 ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}
         flex items-center justify-center
         ${enabled
           ? `${colors.bg.primary} ${getStatusBorder('info')} ${colors.text.primary} shadow-md ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
@@ -155,14 +155,14 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
     <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.primary} ${quick.card} ${className}`}>
       <button
         onClick={handleMasterToggle}
-        className={`${PANEL_LAYOUT.SPACING.COMPACT} ${radius.md} text-sm font-bold transition-colors border flex items-center ${PANEL_LAYOUT.GAP.XS} ${
+        className={`${PANEL_LAYOUT.SPACING.COMPACT} ${radius.md} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} transition-colors border flex items-center ${PANEL_LAYOUT.GAP.XS} ${
           snapEnabled ? `${colors.bg.primary} ${colors.text.primary} ${getStatusBorder('info')} shadow-md` : `${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
         }`}
         title="Ενεργοποίηση/Απενεργοποίηση Object Snap (F3)"
       >
         <Target size={14} />
         <span>SNAP</span>
-        {enabledCount > 0 && <span className="text-xs opacity-80">({enabledCount})</span>}
+        {enabledCount > 0 && <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} opacity-80`}>({enabledCount})</span>}
       </button>
 
       <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>

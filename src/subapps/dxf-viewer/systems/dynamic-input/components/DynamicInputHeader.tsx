@@ -11,7 +11,7 @@ interface DynamicInputHeaderProps {
 export function DynamicInputHeader({ activeTool }: DynamicInputHeaderProps) {
   const colors = useSemanticColors();
   return (
-    <div className={`text-xs ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
+    <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
       Δυναμική Εισαγωγή ({activeTool})
     </div>
   );

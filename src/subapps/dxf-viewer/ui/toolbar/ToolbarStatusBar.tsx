@@ -50,7 +50,7 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
   }, [mouseCoordinates]);
   
   return (
-    <div className={`${getDirectionalBorder('muted', 'top')} ${colors.bg.backgroundSecondary} ${PANEL_LAYOUT.SPACING.HORIZONTAL_MD} ${PANEL_LAYOUT.PADDING.VERTICAL_XS} text-xs ${colors.text.muted} flex justify-between items-center`}>
+    <div className={`${getDirectionalBorder('muted', 'top')} ${colors.bg.backgroundSecondary} ${PANEL_LAYOUT.SPACING.HORIZONTAL_MD} ${PANEL_LAYOUT.PADDING.VERTICAL_XS} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} flex justify-between items-center`}>
       <div className={`flex items-center ${PANEL_LAYOUT.GAP.LG}`}>
         <span>
           Tool: <strong className={`${colors.text.info}`}>

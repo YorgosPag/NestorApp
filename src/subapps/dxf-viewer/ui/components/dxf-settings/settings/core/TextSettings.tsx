@@ -170,7 +170,7 @@ function TextStyleButtons({ settings, onToggle }: TextStyleButtonsProps) {
           key={style.key}
           onClick={() => onToggle(style.key)}
           title={style.title}
-          className={`${iconSizes.xl} text-sm font-bold ${quick.button} transition-colors ${
+          className={`${iconSizes.xl} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} transition-colors ${
             settings[style.key]
               ? `${colors.bg.success} ${getStatusBorder('success')} ${colors.text.inverted}`
               : `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${quick.button} ${colors.text.muted}`
@@ -343,7 +343,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
       {/* Header - Semantic <header> element */}
       {/* 🏢 ENTERPRISE: flex-col layout για να φαίνονται πλήρως τα κείμενα των κουμπιών */}
       <header className={`flex flex-col ${PANEL_LAYOUT.GAP.SM}`}>
-        <h3 className={`text-lg font-medium ${colors.text.primary}`}>Ρυθμίσεις Κειμένου</h3>
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Ρυθμίσεις Κειμένου</h3>
         <nav className={`flex ${PANEL_LAYOUT.GAP.SM}`} aria-label="Ενέργειες ρυθμίσεων κειμένου">
           {/* 🏢 ENTERPRISE: Centralized Button component (variant="secondary") + Lucide icon */}
           <Button
@@ -382,7 +382,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           />
           <label
             htmlFor="text-enabled"
-            className={`text-sm font-medium cursor-pointer ${textSettings.enabled ? colors.text.primary : colors.text.muted}`}
+            className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} cursor-pointer ${textSettings.enabled ? colors.text.primary : colors.text.muted}`}
           >
             Εμφάνιση κειμένου απόστασης
           </label>
@@ -411,7 +411,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
             {/* 🏢 ADR-001: Radix Select - Font Family */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
                 {TEXT_LABELS.FONT_FAMILY}
               </label>
               <Select
@@ -433,7 +433,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
 
             {/* 🏢 ADR-001: Radix Select - Font Size with +/- controls */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
                 {TEXT_LABELS.FONT_SIZE}
               </label>
               <div className={`flex ${PANEL_LAYOUT.GAP.SM}`}>
@@ -464,7 +464,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
                     title="Αύξηση μεγέθους γραμματοσειράς"
                   >
                     <div className="flex items-center">
-                      <span className="text-base font-bold">A</span>
+                      <span className={`${PANEL_LAYOUT.TYPOGRAPHY.BASE} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>A</span>
                       <svg className={`${iconSizes.xs} ${PANEL_LAYOUT.MARGIN.LEFT_HALF}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 15l7-7 7 7" />
                       </svg>
@@ -478,7 +478,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
                     title="Μείωση μεγέθους γραμματοσειράς"
                   >
                     <div className="flex items-center">
-                      <span className="text-xs font-bold">A</span>
+                      <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>A</span>
                       <svg className={`${iconSizes.xs} ${PANEL_LAYOUT.MARGIN.LEFT_HALF}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
                       </svg>
@@ -490,7 +490,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
 
       {/* Text Color */}
       <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-        <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Κειμένου</label>
+        <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Κειμένου</label>
         <ColorDialogTrigger
           value={textSettings.color}
           onChange={handleColorChange}
@@ -518,7 +518,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
             {/* Text Style Toggles */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block text-sm font-medium ${colors.text.muted}`}>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>
                 {TEXT_LABELS.TEXT_STYLE}
               </label>
               <TextStyleButtons
@@ -541,7 +541,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
             {/* Script Toggles */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block text-sm font-medium ${colors.text.muted}`}>{TEXT_LABELS.SCRIPT_STYLE}</label>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>{TEXT_LABELS.SCRIPT_STYLE}</label>
               <ScriptStyleButtons
                 settings={textSettings}
                 onSuperscriptChange={() => handleScriptChange('superscript')}
@@ -562,7 +562,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
             {/* Live Preview */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block text-sm font-medium ${colors.text.muted}`}>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>
                 {TEXT_LABELS.PREVIEW}
               </label>
               {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.SPACING.LG */}
@@ -576,7 +576,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
             {/* Settings Summary */}
             {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.SPACING.SM */}
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} ${quick.card} ${getDirectionalBorder('success', 'left')} ${PANEL_LAYOUT.MARGIN.TOP_LG}`}>
-              <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
+              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
                 <div><strong>{FREE_FONTS.find(f => f.value === textSettings.fontFamily)?.label}</strong>, {textSettings.fontSize}pt</div>
                 <div>{[
                   textSettings.isBold && 'Έντονα',
@@ -622,15 +622,15 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           {/* 🏢 ENTERPRISE: Warning Message - Using semantic colors */}
           {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.ALERT */}
           <aside className={`${colors.bg.errorSubtle} ${getStatusBorder('error')} ${PANEL_LAYOUT.ALERT.PADDING_LG} ${radius.md}`} role="alert">
-            <p className={`${colors.text.error} font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
+            <p className={`${colors.text.error} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
               ⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!
             </p>
           </aside>
 
           {/* Loss List */}
           <section className={PANEL_LAYOUT.SPACING.GAP_SM}>
-            <p className={`${colors.text.muted} font-medium`}>Θα χάσετε:</p>
-            <ul className={`list-disc list-inside ${PANEL_LAYOUT.SPACING.GAP_XS} ${colors.text.muted} text-sm`}>
+            <p className={`${colors.text.muted} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>Θα χάσετε:</p>
+            <ul className={`list-disc list-inside ${PANEL_LAYOUT.SPACING.GAP_XS} ${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
               <li>Όλες τις προσαρμοσμένες ρυθμίσεις κειμένου</li>
               <li>Όλα τα templates που έχετε επιλέξει</li>
               <li>Όλες τις αλλαγές που έχετε κάνει</li>
@@ -640,13 +640,13 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           {/* 🏢 ENTERPRISE: Reset Info - Using semantic colors */}
           {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.ALERT */}
           <aside className={`${colors.bg.infoSubtle} ${getStatusBorder('info')} ${PANEL_LAYOUT.ALERT.PADDING_LG} ${radius.md}`} role="note">
-            <p className={`${colors.text.info} text-sm`}>
+            <p className={`${colors.text.info} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
               <strong>Επαναφορά:</strong> Οι ρυθμίσεις θα επανέλθουν στα πρότυπα ISO 3098
             </p>
           </aside>
 
           {/* Confirmation Question */}
-          <p className={`${colors.text.primary} font-medium text-center ${PANEL_LAYOUT.PADDING.TOP_SM}`}>
+          <p className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} text-center ${PANEL_LAYOUT.PADDING.TOP_SM}`}>
             Είστε σίγουροι ότι θέλετε να συνεχίσετε;
           </p>
 
@@ -660,7 +660,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
             </button>
             <button
               onClick={handleFactoryResetConfirm}
-              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.primary} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors font-semibold flex items-center ${PANEL_LAYOUT.GAP.XS}`}
+              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.primary} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} flex items-center ${PANEL_LAYOUT.GAP.XS}`}
             >
               <Factory className={iconSizes.xs} />
               Επαναφορά Εργοστασιακών

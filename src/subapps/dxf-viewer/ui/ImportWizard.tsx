@@ -40,7 +40,7 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
       default:
         return (
           <div className={`${PANEL_LAYOUT.SPACING.XXL} text-center`}>
-            <h3 className={`text-lg font-semibold ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>Σφάλμα</h3>
+            <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>Σφάλμα</h3>
             <p className={`${colors.text.muted} ${PANEL_LAYOUT.SPACING.XXL}`}>Άγνωστο βήμα εισαγωγής</p>
             <button
               onClick={onClose}
@@ -60,7 +60,7 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
         {/* Header */}
         <header className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.MD} ${getDirectionalBorder('muted', 'bottom')}`}>
           <div>
-            <h2 className={`text-xl font-semibold ${colors.text.primary}`}>Εισαγωγή DXF</h2>
+            <h2 className={`${PANEL_LAYOUT.TYPOGRAPHY.XL} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.primary}`}>Εισαγωγή DXF</h2>
             <p className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.text.muted}`}>
               Βήμα {stepInfo.number} από {stepInfo.totalSteps}: {stepInfo.title}
               {importWizard.file && ` • ${importWizard.file.name}`}

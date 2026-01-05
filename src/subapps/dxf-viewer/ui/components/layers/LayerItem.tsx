@@ -241,12 +241,12 @@ export function LayerItem({
               onChange={(e) => setEditingName(e.target.value)}
               onKeyDown={handleNameKeyDown}
               onBlur={handleNameBlur}
-              className={`${colors.bg.secondary} ${colors.text.primary} text-sm ${PANEL_LAYOUT.INPUT.PADDING_X} rounded border ${getStatusBorder('info')} focus:outline-none ${colors.interactive.focus.ring}`}
+              className={`${colors.bg.secondary} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.INPUT.PADDING_X} rounded border ${getStatusBorder('info')} focus:outline-none ${colors.interactive.focus.ring}`}
               autoFocus
             />
           ) : (
             <span
-              className={`text-sm ${colors.text.primary} truncate cursor-pointer`}
+              className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary} truncate cursor-pointer`}
               title={layerName}
               onDoubleClick={handleNameDoubleClick}
             >
@@ -257,7 +257,7 @@ export function LayerItem({
         
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           {/* Entity Count */}
-          <span className={`text-xs ${colors.text.muted}`}>{entityCount}</span>
+          <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{entityCount}</span>
           
           {/* Visibility Toggle */}
           <button

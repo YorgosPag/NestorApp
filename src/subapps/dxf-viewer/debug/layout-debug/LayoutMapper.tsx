@@ -25,7 +25,7 @@ const LAYOUT_MAPPER_STYLES = {
   // Hint badge (shown when debug is OFF)
   HINT_BADGE: {
     POSITION: 'fixed',
-    CONTAINER: `fixed ${PANEL_LAYOUT.MARGIN.TOP_SM} right-2 text-xs bg-black bg-opacity-50 ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS}`,
+    CONTAINER: `fixed ${PANEL_LAYOUT.MARGIN.TOP_SM} right-2 ${PANEL_LAYOUT.TYPOGRAPHY.XS} bg-black bg-opacity-50 ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS}`,
   },
 
   // Debug overlay container
@@ -37,20 +37,20 @@ const LAYOUT_MAPPER_STYLES = {
   MEASUREMENT_BOX: {
     BASE: 'absolute border border-dashed opacity-60',
     // ✅ ENTERPRISE: Label styled at runtime with colors.text.WHITE and bg-black
-    LABEL: `absolute -top-6 left-0 text-xs font-mono bg-black ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} whitespace-nowrap`,
+    LABEL: `absolute -top-6 left-0 ${PANEL_LAYOUT.TYPOGRAPHY.XS} font-mono bg-black ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} whitespace-nowrap`,
     // ✅ ENTERPRISE: Coordinate badges styled at runtime with colors.text.WHITE
-    COORD_TOP_LEFT: `absolute top-0 left-0 text-xs font-mono ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS}`,
-    COORD_BOTTOM_RIGHT: `absolute bottom-0 right-0 text-xs font-mono ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS}`,
+    COORD_TOP_LEFT: `absolute top-0 left-0 ${PANEL_LAYOUT.TYPOGRAPHY.XS} font-mono ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS}`,
+    COORD_BOTTOM_RIGHT: `absolute bottom-0 right-0 ${PANEL_LAYOUT.TYPOGRAPHY.XS} font-mono ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS}`,
   },
 
   // Info panel (right side)
   INFO_PANEL: {
-    CONTAINER: `fixed top-20 right-4 ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} text-xs font-mono max-w-md`,
+    CONTAINER: `fixed top-20 right-4 ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} ${PANEL_LAYOUT.TYPOGRAPHY.XS} font-mono max-w-md`,
     HEADER: `flex justify-between items-center ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`,
     // ✅ ENTERPRISE: Header title uses font-bold, color applied via colors.text.WHITE runtime
-    HEADER_TITLE: 'font-bold',
+    HEADER_TITLE: PANEL_LAYOUT.FONT_WEIGHT.BOLD,
     METRIC_ITEM: PANEL_LAYOUT.MARGIN.BOTTOM_XS,
-    METRIC_DETAILS: `${PANEL_LAYOUT.MARGIN.LEFT_HALF} ${PANEL_LAYOUT.MARGIN.LEFT_SM} text-xs`,
+    METRIC_DETAILS: `${PANEL_LAYOUT.MARGIN.LEFT_HALF} ${PANEL_LAYOUT.MARGIN.LEFT_SM} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`,
     FOOTER: `${PANEL_LAYOUT.MARGIN.TOP_LG} ${PANEL_LAYOUT.PADDING.TOP_SM}`,
   },
 } as const;

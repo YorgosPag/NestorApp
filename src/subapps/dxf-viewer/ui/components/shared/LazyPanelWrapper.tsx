@@ -56,7 +56,7 @@ export const LazyPanelWrapper = React.memo<LazyPanelWrapperProps>(function LazyP
     <div className={`flex items-center justify-center ${PANEL_LAYOUT.SPACING.XXXL} ${className}`}>
       <div className={`flex flex-col items-center ${PANEL_LAYOUT.SPACING.GAP_MD}`}>
         <AnimatedSpinner size="medium" />
-        <span className={`text-sm ${colors.text.muted}`}>{loadingText}</span>
+        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted}`}>{loadingText}</span>
       </div>
     </div>
   ), [loadingText, className, colors.text.muted]);

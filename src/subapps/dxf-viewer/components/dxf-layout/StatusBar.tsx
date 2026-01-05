@@ -135,7 +135,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
     </div>
 
     {activeTool === 'select' && (
-        <div className={`text-xs ${colors.text.muted}`}>
+        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
             <strong>SELECT</strong> - Ctrl/Shift + Click για πολλαπλή επιλογή
         </div>
     )}

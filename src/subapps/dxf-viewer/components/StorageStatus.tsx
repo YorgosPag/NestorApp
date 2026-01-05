@@ -74,7 +74,7 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <HardDrive className={`${iconSizes.sm} ${isCritical ? colors.text.error : isWarning ? colors.text.warning : colors.text.muted}`} />
             <div className={PANEL_LAYOUT.INPUT.TEXT_SIZE}>
-              <div className="font-medium">Storage</div>
+              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Storage</div>
               {showDetails && (
                 <div className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.text.muted}`}>
                   {StorageManager.formatBytes(storageInfo.usage)} / {StorageManager.formatBytes(storageInfo.quota)}
@@ -152,7 +152,7 @@ export function StorageStatusIndicator() {
   if (!isWarning) return null;
 
   return (
-    <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS} text-xs ${colors.text.warning}`}>
+    <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.warning}`}>
       <HardDrive className={iconSizes.xs} />
       <span>{usagePercentage.toFixed(0)}%</span>
     </div>

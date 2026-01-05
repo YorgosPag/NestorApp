@@ -89,7 +89,7 @@ export const OverrideToggle = React.memo<OverrideToggleProps>(function OverrideT
           className={PANEL_LAYOUT.MARGIN.LEFT_HALF}
         />
         <div className="flex flex-col flex-1">
-          <span className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.text.muted} font-medium`}>
+          <span className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.text.muted} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>
             {label}
           </span>
           {description && (
@@ -99,7 +99,7 @@ export const OverrideToggle = React.memo<OverrideToggleProps>(function OverrideT
           )}
           {/* ✅ ENTERPRISE: Status badge moved to bottom row - ALL via PANEL_LAYOUT tokens */}
           {showStatusBadge && (
-            <span className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.ALERT.BORDER_RADIUS} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} font-medium inline-block w-fit ${
+            <span className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.ALERT.BORDER_RADIUS} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} inline-block w-fit ${
               checked
                 ? `${colors.bg.warningSubtle} ${colors.text.warning} ${quick.warning}`
                 : `${colors.bg.hover} ${colors.text.muted} ${getStatusBorder('muted')}`

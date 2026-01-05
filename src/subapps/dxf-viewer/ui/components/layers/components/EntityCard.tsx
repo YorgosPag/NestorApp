@@ -124,16 +124,16 @@ export const EntityCard = ({
               onSetEditingEntityName('');
             }}
             className={`${colors.bg.hover} ${colors.text.primary} rounded ${getStatusBorder('info')} focus:outline-none ${colors.interactive.focus.ring} ${
-              isSelected ? `text-sm ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS}` : `text-xs ${PANEL_LAYOUT.SPACING.HORIZONTAL_HALF}`
+              isSelected ? `${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS}` : `${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.SPACING.HORIZONTAL_HALF}`
             }`}
             autoFocus
           />
         ) : (
-          <span 
+          <span
             className={`truncate cursor-pointer ${
               isSelected
-                ? `text-sm ${colors.text.warning} font-medium`
-                : `text-xs ${colors.text.secondary}`
+                ? `${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.warning} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`
+                : `${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.secondary}`
             }`}
             title={entity.name || `${entity.type} #${entity.id.substring(0, 8)}...`}
             onDoubleClick={() => {
@@ -197,7 +197,7 @@ export const EntityCard = ({
         {/* Selection indicator */}
         {isSelected && (
           <span className={`${colors.text.warning} ${
-            isSelected ? 'text-sm' : 'text-xs'
+            isSelected ? PANEL_LAYOUT.TYPOGRAPHY.SM : PANEL_LAYOUT.TYPOGRAPHY.XS
           }`}>★</span>
         )}
       </div>

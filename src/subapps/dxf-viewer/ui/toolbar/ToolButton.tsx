@@ -84,7 +84,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
           ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         `}
       >
-        {IconComponent ? <IconComponent className={`${iconSizes.md} text-current`} /> : <span className="text-xs font-bold">{tool.label?.charAt(0) || '?'}</span>}
+        {IconComponent ? <IconComponent className={`${iconSizes.md} text-current`} /> : <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>{tool.label?.charAt(0) || '?'}</span>}
       </button>
     );
   }
@@ -107,7 +107,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           `}
         >
-          {IconComponent ? <IconComponent className={`${iconSizes.md} text-current`} /> : <span className="text-xs font-bold">{tool.label?.charAt(0) || '?'}</span>}
+          {IconComponent ? <IconComponent className={`${iconSizes.md} text-current`} /> : <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>{tool.label?.charAt(0) || '?'}</span>}
         </button>
         <button
           onClick={handleDropdownToggle}
@@ -136,7 +136,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
               <button
                 key={option.id}
                 onClick={() => handleDropdownItemClick(option.id)}
-                className={`w-full ${PANEL_LAYOUT.BUTTON.PADDING} text-left text-sm ${colors.text.secondary} flex items-center ${PANEL_LAYOUT.GAP.SM} first:rounded-t-md last:rounded-b-md ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+                className={`w-full ${PANEL_LAYOUT.BUTTON.PADDING} text-left ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.secondary} flex items-center ${PANEL_LAYOUT.GAP.SM} first:rounded-t-md last:rounded-b-md ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               >
                 {OptionIcon && <OptionIcon className={iconSizes.sm} />}
                 {option.label}
@@ -176,7 +176,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
         }
       `}
     >
-      {IconComponent ? <IconComponent className={iconSizes.sm} /> : <span className="text-xs font-bold">{action.label?.charAt(0) || '?'}</span>}
+      {IconComponent ? <IconComponent className={iconSizes.sm} /> : <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>{action.label?.charAt(0) || '?'}</span>}
     </button>
   );
 };

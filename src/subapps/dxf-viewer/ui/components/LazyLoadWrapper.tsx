@@ -32,7 +32,7 @@ const DefaultFallback = () => {
   return (
     <aside className={`flex items-center justify-center ${PANEL_LAYOUT.SPACING.XXXL}`}>
       <Loader2 className={`${iconSizes.lg} animate-spin ${colors.text.muted}`} />
-      <span className={`${PANEL_LAYOUT.MARGIN.LEFT_SM} text-sm ${colors.text.muted}`}>Loading component...</span>
+      <span className={`${PANEL_LAYOUT.MARGIN.LEFT_SM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted}`}>Loading component...</span>
     </aside>
   );
 };
@@ -45,15 +45,15 @@ const LazyLoadErrorFallback = (error: Error, _errorInfo: React.ErrorInfo, retry:
 
   return (
     <article className={`${PANEL_LAYOUT.SPACING.LG} ${getStatusBorder('error')} bg-destructive/10 rounded-lg`}>
-      <h3 className={`text-sm font-semibold text-destructive ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
+      <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} text-destructive ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
         Component Loading Error
       </h3>
-      <p className="text-xs text-muted-foreground">
+      <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} text-muted-foreground`}>
         {error?.message || 'Failed to load component'}
       </p>
       <button
         onClick={retry}
-        className={`${PANEL_LAYOUT.MARGIN.TOP_SM} text-xs text-destructive underline hover:text-destructive/80 transition-colors`}
+        className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.TYPOGRAPHY.XS} text-destructive underline hover:text-destructive/80 transition-colors`}
       >
         Retry
       </button>

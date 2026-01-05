@@ -30,7 +30,7 @@ export default function SnapModeIndicator({
   return (
     <div className={`absolute inset-0 pointer-events-none ${className}`}>
       <div
-        className={`absolute text-xs ${colors.text.warning} ${colors.bg.overlay} ${PANEL_LAYOUT.SPACING.COMPACT_XS} rounded`}
+        className={`absolute ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.warning} ${colors.bg.overlay} ${PANEL_LAYOUT.SPACING.COMPACT_XS} rounded`}
         style={{
           left: mouseCss.x + 10,
           top: mouseCss.y - 25,

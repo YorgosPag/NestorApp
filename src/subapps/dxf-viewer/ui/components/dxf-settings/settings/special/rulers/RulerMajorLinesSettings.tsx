@@ -173,12 +173,12 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
       {/* 🏢 ENTERPRISE: Major Lines Visibility Toggle - Using centralized Switch component */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className="flex items-center justify-between">
-          <div className={`text-sm ${colors.text.primary}`}>
-            <div className="font-medium">Εμφάνιση Κύριων Γραμμών</div>
-            <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη των κύριων γραμμών χάρακα</div>
+          <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+            <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Εμφάνιση Κύριων Γραμμών</div>
+            <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Εμφάνιση/απόκρυψη των κύριων γραμμών χάρακα</div>
           </div>
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-            <span className={`text-xs ${colors.text.muted}`}>
+            <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
               {rulerSettings.horizontal.showMajorTicks ? 'Ενεργό' : 'Ανενεργό'}
             </span>
             <Switch
@@ -191,9 +191,9 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
 
       {/* Major Lines Opacity */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <div className={`text-sm ${colors.text.primary}`}>
-          <div className="font-medium">Διαφάνεια Κύριων Γραμμών</div>
-          <div className={`font-normal ${colors.text.muted}`}>Επίπεδο διαφάνειας των κύριων γραμμών χάρακα</div>
+        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Διαφάνεια Κύριων Γραμμών</div>
+          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Επίπεδο διαφάνειας των κύριων γραμμών χάρακα</div>
         </div>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <input
@@ -205,7 +205,7 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
             onChange={(e) => handleMajorTickOpacityChange(parseFloat(e.target.value))}
             className="flex-1"
           />
-          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} text-xs ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
+          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
             {Math.round(getOpacityFromColor(rulerSettings.horizontal.majorTickColor) * 100)}%
           </div>
         </div>
@@ -213,8 +213,8 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
 
       {/* Major Lines Color */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Κύριων Γραμμών</label>
-        <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα κύριων γραμμών (ticks) χαράκων</div>
+        <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Κύριων Γραμμών</label>
+        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα κύριων γραμμών (ticks) χαράκων</div>
         <ColorDialogTrigger
           value={getBaseColor(rulerSettings.horizontal.majorTickColor)}
           onChange={handleMajorTickColorChange}
@@ -230,9 +230,9 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
 
       {/* Major Lines Thickness */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <div className={`text-sm ${colors.text.primary}`}>
-          <div className="font-medium">Πάχος Κύριων Γραμμών</div>
-          <div className={`font-normal ${colors.text.muted}`}>Πάχος των κύριων γραμμών του χάρακα</div>
+        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Πάχος Κύριων Γραμμών</div>
+          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Πάχος των κύριων γραμμών του χάρακα</div>
         </div>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <input
@@ -244,7 +244,7 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
             onChange={(e) => handleMajorTickThicknessChange(parseFloat(e.target.value))}
             className="flex-1"
           />
-          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} text-xs ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
+          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
             {rulerSettings.horizontal.majorTickLength / 10}px
           </div>
         </div>

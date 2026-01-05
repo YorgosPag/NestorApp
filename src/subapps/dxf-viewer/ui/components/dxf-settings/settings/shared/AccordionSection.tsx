@@ -200,18 +200,18 @@ ErrorIcon.displayName = 'ErrorIcon';
 // ALL PADDINGS controlled by PANEL_LAYOUT - change in panel-tokens.ts for global effect
 const getSizeStyles = (iconSizes: ReturnType<typeof useIconSizes>): Record<AccordionSize, { header: string; content: string; icon: string }> => ({
   sm: {
-    header: `${PANEL_LAYOUT.SPACING.COMPACT} text-xs`,        // 🏢 ENTERPRISE: Centralized header padding
-    content: `${PANEL_LAYOUT.CONTAINER.INNER_PADDING} text-xs`, // 🏢 ENTERPRISE: Centralized content padding
+    header: `${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`,        // 🏢 ENTERPRISE: Centralized header padding + typography
+    content: `${PANEL_LAYOUT.CONTAINER.INNER_PADDING} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`, // 🏢 ENTERPRISE: Centralized content padding + typography
     icon: iconSizes.xs
   },
   md: {
-    header: `${PANEL_LAYOUT.SPACING.STANDARD} text-sm`,       // 🏢 ENTERPRISE: Centralized header padding
-    content: `${PANEL_LAYOUT.CONTAINER.INNER_PADDING} text-sm`, // 🏢 ENTERPRISE: Centralized content padding
+    header: `${PANEL_LAYOUT.SPACING.STANDARD} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`,       // 🏢 ENTERPRISE: Centralized header padding + typography
+    content: `${PANEL_LAYOUT.CONTAINER.INNER_PADDING} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`, // 🏢 ENTERPRISE: Centralized content padding + typography
     icon: iconSizes.sm
   },
   lg: {
-    header: `${PANEL_LAYOUT.SPACING.COMFORTABLE} text-base`,  // 🏢 ENTERPRISE: Centralized header padding
-    content: `${PANEL_LAYOUT.CONTAINER.INNER_PADDING} text-base`, // 🏢 ENTERPRISE: Centralized content padding
+    header: `${PANEL_LAYOUT.SPACING.COMFORTABLE} ${PANEL_LAYOUT.TYPOGRAPHY.BASE}`,  // 🏢 ENTERPRISE: Centralized header padding + typography
+    content: `${PANEL_LAYOUT.CONTAINER.INNER_PADDING} ${PANEL_LAYOUT.TYPOGRAPHY.BASE}`, // 🏢 ENTERPRISE: Centralized content padding + typography
     icon: iconSizes.md
   }
 });
@@ -507,13 +507,13 @@ export const AccordionSection = memo(function AccordionSection({
             )}
 
             {/* Title */}
-            <span className={`font-medium ${colors.text.primary}`}>
+            <span className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>
               {title}
             </span>
 
-            {/* 🏢 ENTERPRISE: Badge - Using PANEL_LAYOUT.SPACING.COMPACT */}
+            {/* 🏢 ENTERPRISE: Badge - Using PANEL_LAYOUT.SPACING.COMPACT + TYPOGRAPHY */}
             {badge && (
-              <span className={`${PANEL_LAYOUT.SPACING.COMPACT} text-xs ${colors.bg.info} ${colors.text.inverted} ${radius.full}`}>
+              <span className={`${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.info} ${colors.text.inverted} ${radius.full}`}>
                 {badge}
               </span>
             )}
@@ -544,9 +544,9 @@ export const AccordionSection = memo(function AccordionSection({
           <div
             className={`${styles.size.content} ${colors.bg.secondary} ${getDirectionalBorder('default', 'top')} overflow-visible ${contentClassName}`}
           >
-            {/* 🏢 ENTERPRISE: Error Message - Using semantic error colors + centralized spacing */}
+            {/* 🏢 ENTERPRISE: Error Message - Using semantic error colors + centralized spacing + typography */}
             {error && typeof error === 'string' && (
-              <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.MD} ${colors.bg.errorLight} ${getStatusBorder('error')} rounded ${colors.text.error} text-sm`}>
+              <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.MD} ${colors.bg.errorLight} ${getStatusBorder('error')} rounded ${colors.text.error} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
                 {error}
               </div>
             )}

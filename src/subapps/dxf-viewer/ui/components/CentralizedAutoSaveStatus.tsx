@@ -20,6 +20,7 @@ import { AnimatedSpinner } from '../../components/modal/ModalLoadingStates';
 import { useDxfSettings } from '../../settings-provider';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+import { zIndex as enterpriseZIndex } from '@/styles/design-tokens';  // ✅ ENTERPRISE: Centralized z-index hierarchy
 import {
   centralizedAutoSaveStatusStyles,
   getStatusColorStyles,
@@ -154,9 +155,10 @@ export function CentralizedAutoSaveStatus() {
     return `${colors.text.muted} ${getStatusBorder('muted')}`;
   };
 
-  // Dynamic z-index: Lower when modal is open, high when no modal
-  const getZIndexClass = () => {
-    return isModalOpen ? 'z-10' : 'z-[9999]';
+  // ✅ ENTERPRISE: Dynamic z-index using centralized values
+  // Lower (z-10) when modal is open, high (toast level: 1700) when no modal
+  const getDynamicZIndex = () => {
+    return isModalOpen ? 10 : enterpriseZIndex.toast;
   };
 
   return (
@@ -165,9 +167,9 @@ export function CentralizedAutoSaveStatus() {
         flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.STANDARD}
         ${colors.bg.tertiary}/50 rounded-md border
         transition-all duration-200 relative
-        ${getStatusColor()} ${getZIndexClass()}
+        ${getStatusColor()}
       `}
-      style={centralizedAutoSaveStatusStyles.container}
+      style={{ ...centralizedAutoSaveStatusStyles.container, zIndex: getDynamicZIndex() }}
       {...getStatusContainerProps()}
     >
       {/* Status Icon */}
@@ -177,12 +179,12 @@ export function CentralizedAutoSaveStatus() {
 
       {/* Status Message */}
       <article className="flex-1 min-w-0">
-        <h3 className={`text-sm font-medium ${getStatusColor().split(' ')[0]}`} style={centralizedAutoSaveStatusStyles.statusMessage.primary}>
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${getStatusColor().split(' ')[0]}`} style={centralizedAutoSaveStatusStyles.statusMessage.primary}>
           {getStatusMessage()}
         </h3>
 
         {settings.lastSaved && settings.saveStatus === 'saved' && (
-          <time className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`} style={centralizedAutoSaveStatusStyles.statusMessage.secondary}>
+          <time className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`} style={centralizedAutoSaveStatusStyles.statusMessage.secondary}>
             Τελευταία: {formatLastSaveTime(settings.lastSaved)}
           </time>
         )}
@@ -282,15 +284,15 @@ export function CentralizedAutoSaveStatusCompact() {
     return `Αυτόματη αποθήκευση ενεργή για: ${systems.join(', ')}`;
   };
 
-  // Dynamic z-index for compact version
-  const getCompactZIndexClass = () => {
-    return isModalOpen ? 'z-10' : 'z-[9999]';
+  // ✅ ENTERPRISE: Dynamic z-index for compact version using centralized values
+  const getCompactDynamicZIndex = () => {
+    return isModalOpen ? 10 : enterpriseZIndex.toast;
   };
 
   return (
     <div
-      className={`flex items-center justify-center ${iconSizes.sm} relative ${getCompactZIndexClass()}`}
-      style={centralizedAutoSaveStatusStyles.compactContainer}
+      className={`flex items-center justify-center ${iconSizes.sm} relative`}
+      style={{ ...centralizedAutoSaveStatusStyles.compactContainer, zIndex: getCompactDynamicZIndex() }}
       title={getCompactTooltipText(isAutoSaving, settings.saveStatus)}
       {...getStatusContainerProps()}
     >

@@ -45,7 +45,7 @@ export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onS
   return (
     <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${PANEL_LAYOUT.SPACING.LG} ${getStatusBorder('default')} ${quick.card}`}>
       <div className="flex items-center justify-between">
-        <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} font-medium ${semanticColors.text.primary} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+        <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${semanticColors.text.primary} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <Square className={iconSizes.sm} />
           Περιοχές Επικάλυψης
         </h3>
@@ -72,7 +72,7 @@ export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onS
 
       {/* Status Filter */}
       <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-        <h4 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} font-medium ${semanticColors.text.muted} uppercase`}>Φίλτρο Κατάστασης</h4>
+        <h4 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${semanticColors.text.muted} uppercase`}>Φίλτρο Κατάστασης</h4>
         {Object.entries(STATUS_COLORS_MAPPING).map(([status, statusColors]) => {
           const regions = regionsByStatus[status as RegionStatus] || [];
 

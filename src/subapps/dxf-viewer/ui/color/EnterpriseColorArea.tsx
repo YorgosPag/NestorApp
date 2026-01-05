@@ -177,7 +177,7 @@ export function EnterpriseColorAreaWithLabel({
   return (
     <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
       {label && (
-        <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+        <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
           {label}
         </label>
       )}
@@ -185,7 +185,7 @@ export function EnterpriseColorAreaWithLabel({
       <EnterpriseColorArea {...props} />
 
       {description && (
-        <p className={`text-xs ${colors.text.muted}`}>{description}</p>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{description}</p>
       )}
     </div>
   );

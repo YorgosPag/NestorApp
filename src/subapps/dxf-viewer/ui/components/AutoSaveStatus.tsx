@@ -47,7 +47,7 @@ export function AutoSaveStatus() {
             <svg className={`${iconSizes.xs} ${PANEL_LAYOUT.MARGIN.RIGHT_XS}`} fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
-            <span className="text-xs">Error</span>
+            <span className={PANEL_LAYOUT.TYPOGRAPHY.XS}>Error</span>
           </div>
         );
       default:
@@ -57,7 +57,7 @@ export function AutoSaveStatus() {
               <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
               <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
             </svg>
-            <span className="text-xs">Auto-save</span>
+            <span className={PANEL_LAYOUT.TYPOGRAPHY.XS}>Auto-save</span>
           </div>
         );
     }
@@ -75,7 +75,7 @@ export function AutoSaveStatus() {
   };
   
   return (
-    <div className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.primary} ${quick.card} text-xs`}>
+    <div className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.primary} ${quick.card} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>
       <div className="flex flex-col">
         <div className="flex items-center">
           <span className={`${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.RIGHT_SM}`}>📁 {currentFileName}</span>

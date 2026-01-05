@@ -117,7 +117,7 @@ export const ModalContainer: React.FC<ModalContainerProps> = ({
                 {icon || variantStyles.defaultIcon}
               </span>
             )}
-            <h3 className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} font-medium ${variantStyles.titleColor}`}>
+            <h3 className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${variantStyles.titleColor}`}>
               {title}
             </h3>
           </div>
@@ -243,13 +243,13 @@ export const ModalField: React.FC<{
 
   return (
     <div className={className}>
-      <label className={`block text-xs font-medium ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
+      <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
         {label}
         {required && <span className={`${colors.text.error} ${PANEL_LAYOUT.MARGIN.LEFT_XS}`}>*</span>}
       </label>
       {children}
       {description && (
-        <p className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
           {description}
         </p>
       )}

@@ -154,12 +154,12 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
         onKeyPress={handleKeyPress}
         onFocus={handleInputFocus}
         onBlur={handleInputBlur}
-        className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_X} ${PANEL_LAYOUT.PADDING.VERTICAL_NONE} ${colors.bg.secondary} ${getStatusBorder('muted')} rounded ${colors.text.inverted} text-xs text-center ${getFocusBorder('input')} focus:outline-none transition-colors select-all`}
+        className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_X} ${PANEL_LAYOUT.PADDING.VERTICAL_NONE} ${colors.bg.secondary} ${getStatusBorder('muted')} rounded ${colors.text.inverted} ${PANEL_LAYOUT.TYPOGRAPHY.XS} text-center ${getFocusBorder('input')} focus:outline-none transition-colors select-all`}
         title="Zoom percentage (1-99999%, δεκαδικά με . ή ,) - Press Enter or click away to apply"
         placeholder="100"
       />
       
-      <span className={`text-xs ${colors.text.muted}`}>%</span>
+      <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>%</span>
       
       <button
         onClick={handleZoomInClick}

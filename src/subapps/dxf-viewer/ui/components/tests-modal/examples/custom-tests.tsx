@@ -14,6 +14,7 @@ import React, { useState } from 'react';
 import { TestsModal } from '../../TestsModal'; // Corrected path to TestsModal
 import { useBorderTokens } from '@/hooks/useBorderTokens'; // Enterprise border system
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'; // Enterprise semantic colors
+import { PANEL_LAYOUT } from '../../../../config/panel-tokens'; // 🏢 ENTERPRISE: Centralized typography tokens
 import type { TestDefinition, NotificationFn } from '../types/tests.types'; // Adjust path accordingly
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
@@ -256,7 +257,7 @@ export function CustomTestsExample() {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Custom Tests Example</h1>
+      <h1 className={`${PANEL_LAYOUT.TYPOGRAPHY['2XL']} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>Custom Tests Example</h1>
 
       <div className="space-y-2 mb-4">
         <p className={colors.text.muted}>
@@ -282,8 +283,8 @@ export function CustomTestsExample() {
 
       {/* Info Panel */}
       <div className={`mt-8 ${colors.bg.infoPanel} ${getStatusBorder('info')} rounded-lg p-4`}>
-        <div className={`${colors.text.infoAccent} font-bold mb-2`}>💡 How to Add Custom Tests</div>
-        <div className="text-sm space-y-2">
+        <div className={`${colors.text.infoAccent} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>💡 How to Add Custom Tests</div>
+        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
           <p>1. Create a factory function that returns a TestDefinition</p>
           <p>2. Add your test to constants/automatedTests.ts</p>
           <p>3. Your test will appear in the Automated Tests tab</p>

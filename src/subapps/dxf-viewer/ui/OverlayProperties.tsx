@@ -138,7 +138,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
 
         {/* Label */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <Label htmlFor="label" className="text-xs">Ετικέτα</Label>
+          <Label htmlFor="label" className={PANEL_LAYOUT.TYPOGRAPHY.XS}>Ετικέτα</Label>
           <Input
             id="label"
             value={label}
@@ -150,7 +150,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
 
         {/* Status */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <Label className="text-xs">Κατάσταση</Label>
+          <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>Κατάσταση</Label>
           <Select value={overlay.status} onValueChange={handleStatusChange}>
             <SelectTrigger className={PANEL_LAYOUT.HEIGHT.XL}><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -170,7 +170,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
 
         {/* Kind */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <Label className="text-xs">Τύπος</Label>
+          <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>Τύπος</Label>
           <Select value={overlay.kind} onValueChange={handleKindChange}>
             <SelectTrigger className={PANEL_LAYOUT.HEIGHT.XL}><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -185,13 +185,13 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
 
         {/* Linked Entity (simplified) */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <Label className="text-xs">Συνδεδεμένη Μονάδα</Label>
+          <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>Συνδεδεμένη Μονάδα</Label>
           <Input
             value={linkedUnitId}
             onChange={(e) => setLinkedUnitId(e.target.value)}
             onBlur={handleLinkedEntityUpdate}
             placeholder="Unit ID"
-            className={`${PANEL_LAYOUT.HEIGHT.INPUT_SM} text-xs`}
+            className={`${PANEL_LAYOUT.HEIGHT.INPUT_SM} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}
           />
         </div>
 
@@ -199,8 +199,8 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
 
         {/* Geometry Info */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <Label className="text-xs">Γεωμετρία</Label>
-          <div className={`text-xs text-muted-foreground ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
+          <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>Γεωμετρία</Label>
+          <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} text-muted-foreground ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
             <div>Σημεία: {overlay && overlay.polygon ? overlay.polygon.length : 0}</div>
             <div>Εμβαδό: {area.toFixed(2)} m²</div>
             <div>Περίμετρος: {perimeter.toFixed(2)} m</div>

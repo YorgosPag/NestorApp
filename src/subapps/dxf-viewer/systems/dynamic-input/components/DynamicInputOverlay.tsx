@@ -501,7 +501,7 @@ export default function DynamicInputOverlay({
 
         {/* Multi-point information για polyline/polygon */}
         {multiPointInfo.shouldShowMultiPoint && (
-          <div className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.PADDING.TOP_SM} ${getDirectionalBorder('muted', 'top')} text-xs ${colors.text.tertiary}`}>
+          <div className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.PADDING.TOP_SM} ${getDirectionalBorder('muted', 'top')} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.tertiary}`}>
             {multiPointInfo.lastPointDistance !== null && (
               <div>Distance: {multiPointInfo.lastPointDistance.toFixed(3)}</div>
             )}

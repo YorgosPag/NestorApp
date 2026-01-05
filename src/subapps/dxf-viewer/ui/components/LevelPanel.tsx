@@ -300,7 +300,7 @@ export function LevelPanel({
                         detail: { levelId: level.id, origin: 'card' }
                       }));
                     }}>
-                      <div className="font-medium">{level.name}</div>
+                      <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{level.name}</div>
                       <div className={`${PANEL_TOKENS.TABS.TAB_LABEL.SIZE} opacity-75`}>
                         {hasContent ? `${scene.entities.length} στοιχεία` : 'Κενό επίπεδο'}
                       </div>

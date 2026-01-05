@@ -17,11 +17,11 @@ export const LayersHeader = ({ scene }: LayersHeaderProps) => {
   const colors = useSemanticColors();
   return (
     <div className="flex items-center justify-between">
-      <h3 className={`text-sm font-medium ${colors.text.success} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+      <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.success} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
         <Layers className={iconSizes.sm} />
         DXF Layers ({Object.keys(scene?.layers || {}).length})
       </h3>
-      <div className={`text-xs ${colors.text.muted}`}>
+      <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
         Κλικ για επιλογή
       </div>
     </div>

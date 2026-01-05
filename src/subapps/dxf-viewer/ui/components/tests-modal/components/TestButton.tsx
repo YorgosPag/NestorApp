@@ -56,8 +56,8 @@ export const TestButton: React.FC<TestButtonProps> = ({
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <div className={`font-medium ${colors.text.primary} text-sm leading-tight`}>{test.name}</div>
-        <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS} line-clamp-2`}>{test.description}</div>
+        <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} leading-tight`}>{test.name}</div>
+        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS} line-clamp-2`}>{test.description}</div>
       </div>
     </button>
   );

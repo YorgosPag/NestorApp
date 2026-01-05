@@ -454,6 +454,20 @@ export const PANEL_LAYOUT = {
     SIZE: 'w-4 h-4',
   },
 
+  // ============================================================================
+  // 🎯 CROSSHAIR PREVIEW SIZES - Visual preview element tokens (ADR-012)
+  // ============================================================================
+  // Purpose: Represent crosshair size percentages in settings UI
+  // Usage: CrosshairAppearanceSettings.tsx size/type preview buttons
+  // Enterprise: Centralized preview sizes for consistency across UI
+  // ============================================================================
+  CROSSHAIR_PREVIEW: {
+    // Vertical line heights for size previews (representing % of screen)
+    SIZE_5_PERCENT: 'h-3',    // 12px - Small crosshair preview (5%)
+    SIZE_8_PERCENT: 'h-4',    // 16px - Medium crosshair preview (8% - default)
+    SIZE_15_PERCENT: 'h-5',   // 20px - Large crosshair preview (15%)
+  },
+
   // 🎯 FLOATING TOOLBAR TOKENS - DraggableOverlayToolbar configuration
   FLOATING_TOOLBAR: {
     // Default dimensions (pixels)

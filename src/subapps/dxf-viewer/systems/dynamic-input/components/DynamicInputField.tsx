@@ -79,8 +79,8 @@ export function DynamicInputField({
   return (
     <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
       <label
-        className={`text-xs ${PANEL_LAYOUT.WIDTH.SM} ${
-          isActive ? `${colors.text.info} font-semibold` : colors.text.secondary
+        className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.WIDTH.SM} ${
+          isActive ? `${colors.text.info} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD}` : colors.text.secondary
         }`}
       >
         {label}:
@@ -94,8 +94,8 @@ export function DynamicInputField({
         onFocus={onFocus}
         disabled={disabled}
         placeholder={placeholder}
-        className={`flex-1 ${colors.text.WHITE} ${PANEL_LAYOUT.SPACING.COMPACT} text-sm rounded border ${quick.focus} focus:outline-none
-          ${isAnchored ? `${colors.bg.warning} font-bold ${quick.warning}` : `${colors.bg.hover} ${quick.none}`}
+        className={`flex-1 ${colors.text.WHITE} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.SM} rounded border ${quick.focus} focus:outline-none
+          ${isAnchored ? `${colors.bg.warning} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.warning}` : `${colors.bg.hover} ${quick.none}`}
           ${disabled ? `${colors.bg.accent} opacity-50 cursor-not-allowed ${quick.muted}` : ''}
           ${isActive ? quick.focus : ''}`}
       />

@@ -46,7 +46,7 @@ const LinePreviewControlComponent: React.FC<LinePreviewControlProps> = ({
   return (
     <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
       {label && (
-        <label className={`text-sm font-medium ${colors.text.secondary}`}>
+        <label className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
           {label}
         </label>
       )}
@@ -91,14 +91,14 @@ const LinePreviewControlComponent: React.FC<LinePreviewControlProps> = ({
             />
           </svg>
         ) : (
-          <div className={`${colors.text.muted} text-sm italic`}>
+          <div className={`${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.SM} italic`}>
             Γραμμή απενεργοποιημένη
           </div>
         )}
       </div>
 
       {/* Info text */}
-      <div className={`flex items-center justify-between text-xs ${colors.text.muted}`}>
+      <div className={`flex items-center justify-between ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
         <span>{settings.enabled !== false ? (settings.lineType || 'solid') : 'Απενεργοποιημένη'}</span>
         <span>{(settings.lineWidth || 0.25).toFixed(2)}mm</span>
         <span>{settings.color || UI_COLORS.WHITE}</span>

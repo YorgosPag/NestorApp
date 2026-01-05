@@ -54,7 +54,7 @@ export const LineStyleControl: React.FC<LineStyleControlProps> = ({
     <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
       {/* 🏢 ADR-001: Radix Select - Canonical dropdown component */}
       {label && (
-        <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+        <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
           {label}
         </label>
       )}
@@ -70,7 +70,7 @@ export const LineStyleControl: React.FC<LineStyleControlProps> = ({
           {LINE_TYPE_OPTIONS.map((option) => (
             <SelectItem key={option.value} value={option.value}>
               <span className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-                <span className="font-mono text-xs opacity-70">{option.preview}</span>
+                <span className={`font-mono ${PANEL_LAYOUT.TYPOGRAPHY.XS} opacity-70`}>{option.preview}</span>
                 <span>{option.label}</span>
               </span>
             </SelectItem>
