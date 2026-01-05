@@ -27,6 +27,8 @@ import { useTypography } from '@/hooks/useTypography';
 import { getModalColorScheme, getModalIconColor } from '../config/modal-colors';
 import { MODAL_FLEX_PATTERNS, getIconSize } from '../config/modal-layout';
 import { getSelectStyles, getEncodingOptions } from '../config/modal-select';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../config/panel-tokens';
 
 interface DxfImportModalProps {
     isOpen: boolean;
@@ -114,7 +116,7 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({ isOpen, onClose, onImpo
                                 variant="outline"
                                 className={getSelectStyles().trigger}
                             >
-                                <Upload className={`${getIconSize('field')} mr-2 ${getModalIconColor('upload')}`} />
+                                <Upload className={`${getIconSize('field')} ${PANEL_LAYOUT.MARGIN.RIGHT_SM} ${getModalIconColor('upload')}`} />
                                 {selectedFile ? selectedFile.name : 'Επιλογή αρχείου'}
                             </Button>
                         </ModalField>

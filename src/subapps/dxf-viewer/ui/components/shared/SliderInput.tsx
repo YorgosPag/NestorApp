@@ -12,6 +12,7 @@
 import React from 'react';
 import { useBorderTokens } from '../../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 
 interface SliderInputProps {
   label: string;
@@ -37,7 +38,7 @@ export function SliderInput({
   return (
     <div className={className}>
       <label
-        className={`block text-xs ${colors.text.muted} mb-1`}
+        className={`block text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}
         title={tooltip}
       >
         {label}

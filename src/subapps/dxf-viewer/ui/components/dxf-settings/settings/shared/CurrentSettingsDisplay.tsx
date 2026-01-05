@@ -9,6 +9,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { ClipboardList, Minus, Type } from 'lucide-react';
 // 🏢 ENTERPRISE: Centralized Checkbox component (Radix)
 import { Checkbox } from '@/components/ui/checkbox';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 
 interface LineSettings {
   lineType: LineType;
@@ -79,36 +81,36 @@ export function CurrentSettingsDisplay({
   // 🏢 ENTERPRISE: Component re-renders naturally when props change - no forced updates needed
 
   return (
-    <div className={`space-y-3 ${className}`}>
+    <div className={`${PANEL_LAYOUT.SPACING.GAP_MD} ${className}`}>
       {/* 🏢 ENTERPRISE: Centralized Radix Checkbox */}
-      <div className={`flex items-center gap-3 p-2 ${radius.lg} transition-colors ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK}`}>
+      <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.SM} ${radius.lg} transition-colors ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK}`}>
         <Checkbox
           id="show-settings-details"
           checked={showSettingsDetails}
           onCheckedChange={(checked) => setShowSettingsDetails(checked === true)}
         />
-        <label htmlFor="show-settings-details" className="flex items-center gap-2 cursor-pointer">
+        <label htmlFor="show-settings-details" className={`flex items-center ${PANEL_LAYOUT.GAP.SM} cursor-pointer`}>
           <ClipboardList className="w-4 h-4" />
           <span className={`text-sm font-medium ${colors.text.info}`}>Τρέχουσες Ρυθμίσεις</span>
         </label>
       </div>
 
       {showSettingsDetails && (
-        <div className={`${colors.bg.primary} ${radius.lg} ${getStatusBorder('default')} p-3`}>
+        <div className={`${colors.bg.primary} ${radius.lg} ${getStatusBorder('default')} ${PANEL_LAYOUT.SPACING.MD}`}>
           {activeTab === 'lines' && (
             <div>
-              <div className={`px-3 py-2 ${colors.bg.secondary} font-medium ${colors.text.info} text-sm rounded-t-lg mb-3 flex items-center gap-2`}>
+              <div className={`${PANEL_LAYOUT.SPACING.STANDARD} ${colors.bg.secondary} font-medium ${colors.text.info} text-sm rounded-t-lg ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <Minus className="w-4 h-4" />
                 <span>Γραμμή</span>
               </div>
-              <div className="space-y-2 text-xs">
+              <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} text-xs`}>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>Τύπος:</span>
                   <span className={`${colors.text.primary} font-mono`}>{lineSettings.lineType}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>Χρώμα:</span>
-                  <span className={`${colors.text.primary} font-mono flex items-center gap-2`}>
+                  <span className={`${colors.text.primary} font-mono flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                     {lineSettings.color}
                     <div
                       className={`w-3 h-3 rounded ${getStatusBorder('muted')} ${lineColorBgClass}`}
@@ -145,14 +147,14 @@ export function CurrentSettingsDisplay({
 
           {activeTab === 'text' && (
             <div>
-              <div className={`px-3 py-2 ${colors.bg.secondary} font-medium ${colors.text.success} text-sm rounded-t-lg mb-3 flex items-center gap-2`}>
+              <div className={`${PANEL_LAYOUT.SPACING.STANDARD} ${colors.bg.secondary} font-medium ${colors.text.success} text-sm rounded-t-lg ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <Type className="w-4 h-4" />
                 <span>Κείμενο</span>
               </div>
-              <div className="space-y-2 text-xs">
+              <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} text-xs`}>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>Χρώμα:</span>
-                  <span className={`${colors.text.primary} font-mono flex items-center gap-2`}>
+                  <span className={`${colors.text.primary} font-mono flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                     {effectiveTextSettings.color}
                     <div
                       className={`w-3 h-3 rounded ${getStatusBorder('muted')} ${textColorBgClass}`}
@@ -188,10 +190,10 @@ export function CurrentSettingsDisplay({
 
           {activeTab === 'grips' && (
             <div>
-              <div className={`px-3 py-2 ${colors.bg.secondary} font-medium ${colors.text.warning} text-sm rounded-t-lg mb-3`}>
+              <div className={`${PANEL_LAYOUT.SPACING.STANDARD} ${colors.bg.secondary} font-medium ${colors.text.warning} text-sm rounded-t-lg ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
                 🔺 Grips
               </div>
-              <div className="space-y-2 text-xs">
+              <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} text-xs`}>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>Ενεργά:</span>
                   <span className={`${colors.text.primary} font-mono`}>{gripSettings.showGrips ? 'Ναι' : 'Όχι'}</span>
@@ -210,7 +212,7 @@ export function CurrentSettingsDisplay({
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>Χρώμα Cold:</span>
-                  <span className={`${colors.text.primary} font-mono flex items-center gap-2`}>
+                  <span className={`${colors.text.primary} font-mono flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                     {gripSettings.colors.cold}
                     <div
                       className={`w-3 h-3 rounded ${getStatusBorder('muted')} ${gripColdColorBgClass}`}
@@ -219,7 +221,7 @@ export function CurrentSettingsDisplay({
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>Χρώμα Warm:</span>
-                  <span className={`${colors.text.primary} font-mono flex items-center gap-2`}>
+                  <span className={`${colors.text.primary} font-mono flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                     {gripSettings.colors.warm}
                     <div
                       className={`w-3 h-3 rounded ${getStatusBorder('muted')} ${gripWarmColorBgClass}`}
@@ -231,7 +233,7 @@ export function CurrentSettingsDisplay({
           )}
 
           {!activeTab && (
-            <div className={`text-center ${colors.text.muted} text-sm py-4`}>
+            <div className={`text-center ${colors.text.muted} text-sm ${PANEL_LAYOUT.PADDING.TOP_LG} ${PANEL_LAYOUT.PADDING.BOTTOM_LG}`}>
               Επιλέξτε μια καρτέλα (Γραμμές, Κείμενο ή Grips) για να δείτε τις τρέχουσες ρυθμίσεις
             </div>
           )}

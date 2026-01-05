@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Ruler, AlertCircle, CheckCircle } from 'lucide-react';
+import { Ruler, CheckCircle } from 'lucide-react';
 import { useLevels } from '../../systems/levels';
 import { createDefaultCalibration } from './utils/calibration-utils';
 import { HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 export function CalibrationStep() {
   const iconSizes = useIconSizes();
@@ -40,24 +41,24 @@ export function CalibrationStep() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* ✅ ENTERPRISE: Αφαίρεση περιττού wrapper + fix broken template string (ADR-003) */}
+    <section className={PANEL_LAYOUT.SPACING.GAP_XL}>
+      {/* ✅ ENTERPRISE: Semantic HTML + PANEL_LAYOUT tokens (ADR-003) */}
       <header>
-        <h3 className={`text-lg font-medium ${colors.text.primary} mb-2`}>
+        <h3 className={`text-lg font-medium ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
           Βαθμονόμηση Κλίμακας & Μονάδων
         </h3>
-        <p className={`text-sm ${colors.text.muted} mb-6`}>
+        <p className={`text-sm ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
           Ορίστε τις μονάδες και προαιρετικά βαθμονομήστε την κλίμακα χρησιμοποιώντας γνωστές μετρήσεις από το DXF αρχείο σας.
         </p>
       </header>
 
       {/* Units Selection */}
-      <div className="space-y-3">
-        <h4 className={`text-sm font-medium ${colors.text.tertiary}`}>Μονάδες</h4>
-        <div className="grid grid-cols-5 gap-2">
+      <fieldset className={PANEL_LAYOUT.SPACING.GAP_MD}>
+        <legend className={`text-sm font-medium ${colors.text.tertiary}`}>Μονάδες</legend>
+        <nav className={`grid grid-cols-5 ${PANEL_LAYOUT.GAP.SM}`} role="group" aria-label="Επιλογή μονάδων">
           {[
             { value: 'mm', label: 'χιλιοστά' },
-            { value: 'cm', label: 'εκατοστά' }, 
+            { value: 'cm', label: 'εκατοστά' },
             { value: 'm', label: 'μέτρα' },
             { value: 'in', label: 'ίντσες' },
             { value: 'ft', label: 'πόδια' }
@@ -65,7 +66,7 @@ export function CalibrationStep() {
             <button
               key={unit.value}
               onClick={() => handleUnitsChange(unit.value as typeof units)}
-              className={`p-2 text-sm transition-colors ${
+              className={`${PANEL_LAYOUT.SPACING.SM} text-sm transition-colors ${
                 units === unit.value
                   ? `${getStatusBorder('info')} ${colors.bg.info} ${colors.text.info}`
                   : `${quick.button} ${colors.text.tertiary} ${HOVER_BORDER_EFFECTS.MUTED}`
@@ -74,60 +75,60 @@ export function CalibrationStep() {
               {unit.label}
             </button>
           ))}
-        </div>
-      </div>
+        </nav>
+      </fieldset>
 
       {/* Calibration Options */}
-      <div className="space-y-4">
-        <h4 className={`text-sm font-medium ${colors.text.tertiary}`}>Βαθμονόμηση</h4>
-        
+      <fieldset className={PANEL_LAYOUT.SPACING.GAP_LG}>
+        <legend className={`text-sm font-medium ${colors.text.tertiary}`}>Βαθμονόμηση</legend>
+
         {/* Skip Calibration Option */}
-        <label className={`flex items-start p-3 ${quick.card} cursor-pointer ${HOVER_BORDER_EFFECTS.MUTED} transition-colors`}>
+        <label className={`flex items-start ${PANEL_LAYOUT.SPACING.MD} ${quick.card} cursor-pointer ${HOVER_BORDER_EFFECTS.MUTED} transition-colors`}>
           <input
             type="radio"
             name="calibration"
             checked={skipCalibration}
             onChange={() => handleSkipChange(true)}
-            className="mt-1 mr-3"
+            className={`${PANEL_LAYOUT.MARGIN.TOP_XS} ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}
           />
-          <div>
-            <div className={`${colors.text.primary} font-medium`}>Παράλειψη Βαθμονόμησης (Προτεινόμενο)</div>
-            <p className={`text-sm ${colors.text.muted} mt-1`}>
+          <article>
+            <strong className={`${colors.text.primary} font-medium`}>Παράλειψη Βαθμονόμησης (Προτεινόμενο)</strong>
+            <p className={`text-sm ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
               Χρήση εγγενών μονάδων και κλίμακας του DXF αρχείου. Καλύτερο για τις περισσότερες αρχιτεκτονικές κατόψεις.
             </p>
-            <div className={`flex items-center mt-2 ${colors.text.success}`}>
-              <CheckCircle className={`${iconSizes.sm} mr-1`} />
+            <aside className={`flex items-center ${PANEL_LAYOUT.MARGIN.TOP_SM} ${colors.text.success}`}>
+              <CheckCircle className={`${iconSizes.sm} ${PANEL_LAYOUT.MARGIN.LEFT_HALF}`} />
               <span className="text-xs">Γρήγορη εισαγωγή, διατηρεί την αρχική κλίμακα</span>
-            </div>
-          </div>
+            </aside>
+          </article>
         </label>
 
         {/* Manual Calibration Option */}
-        <label className={`flex items-start p-3 ${quick.card} cursor-pointer ${HOVER_BORDER_EFFECTS.MUTED} transition-colors`}>
+        <label className={`flex items-start ${PANEL_LAYOUT.SPACING.MD} ${quick.card} cursor-pointer ${HOVER_BORDER_EFFECTS.MUTED} transition-colors`}>
           <input
             type="radio"
             name="calibration"
             checked={!skipCalibration}
             onChange={() => handleManualCalibration()}
-            className="mt-1 mr-3"
+            className={`${PANEL_LAYOUT.MARGIN.TOP_XS} ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}
           />
-          <div>
-            <div className={`${colors.text.primary} font-medium`}>Βαθμονόμηση 2 Σημείων</div>
-            <p className={`text-sm ${colors.text.muted} mt-1`}>
+          <article>
+            <strong className={`${colors.text.primary} font-medium`}>Βαθμονόμηση 2 Σημείων</strong>
+            <p className={`text-sm ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
               Ορισμός κλίμακας μετρώντας μια γνωστή απόσταση στο σχέδιο.
             </p>
-            <div className={`flex items-center mt-2 ${colors.text.info}`}>
-              <Ruler className={`${iconSizes.sm} mr-1`} />
+            <aside className={`flex items-center ${PANEL_LAYOUT.MARGIN.TOP_SM} ${colors.text.info}`}>
+              <Ruler className={`${iconSizes.sm} ${PANEL_LAYOUT.MARGIN.LEFT_HALF}`} />
               <span className="text-xs">Ακριβής βαθμονόμηση για προσαρμοσμένη κλίμακα</span>
-            </div>
-          </div>
+            </aside>
+          </article>
         </label>
 
         {/* Manual Calibration Controls */}
         {!skipCalibration && (
-          <div className={`${colors.bg.secondary} rounded-lg p-4 space-y-3`}>
+          <aside className={`${colors.bg.secondary} rounded-lg ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.SPACING.GAP_MD}`}>
             <h5 className={`text-sm font-medium ${colors.text.info}`}>Ρυθμίσεις Βαθμονόμησης</h5>
-            <div className="space-y-2">
+            <section className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block text-sm ${colors.text.tertiary}`}>
                 Γνωστή Απόσταση:
                 <input
@@ -135,17 +136,17 @@ export function CalibrationStep() {
                   value={realDistance}
                   onChange={(e) => setRealDistance(e.target.value)}
                   placeholder="π.χ. 100"
-                  className={`mt-1 w-full ${colors.bg.muted} ${quick.input} px-3 py-2 ${colors.text.primary} ${colors.text.muted} focus:outline-none`}
+                  className={`${PANEL_LAYOUT.MARGIN.TOP_XS} w-full ${colors.bg.muted} ${quick.input} ${PANEL_LAYOUT.INPUT.PADDING} ${colors.text.primary} ${colors.text.muted} ${PANEL_LAYOUT.INPUT.FOCUS}`}
                 />
               </label>
               <p className={`text-xs ${colors.text.muted}`}>
                 Στο επόμενο βήμα θα μπορείτε να επιλέξετε δύο σημεία στο σχέδιο που αντιστοιχούν σε αυτή την απόσταση.
               </p>
-            </div>
-          </div>
+            </section>
+          </aside>
         )}
-      </div>
+      </fieldset>
 
-    </div>
+    </section>
   );
 }

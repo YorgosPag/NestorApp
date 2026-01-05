@@ -9,6 +9,7 @@ import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
 
 type StatusBarProps = Pick<
   DXFViewerLayoutProps,
@@ -36,14 +37,14 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
   return (
-  <div className={`flex gap-2 p-2 items-center ${colors.bg.secondary} ${getDirectionalBorder('muted', 'bottom')}`}>
+  <div className={`flex ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.SM} items-center ${colors.bg.secondary} ${getDirectionalBorder('muted', 'bottom')}`}>
     <Button
       variant="outline"
       size="sm"
       className={`${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} ${getStatusBorder('muted')}`}
       onClick={() => onViewModeChange('normal')}
     >
-      <Eye className={`${iconSizes.sm} mr-2`} />
+      <Eye className={`${iconSizes.sm} ${PANEL_LAYOUT.MARGIN.RIGHT_SM}`} />
       Normal
     </Button>
     <Button
@@ -52,7 +53,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       className={`${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} ${getStatusBorder('muted')}`}
       onClick={() => onViewModeChange('fullscreen')}
     >
-      <Maximize className={`${iconSizes.sm} mr-2`} />
+      <Maximize className={`${iconSizes.sm} ${PANEL_LAYOUT.MARGIN.RIGHT_SM}`} />
       Fullscreen
     </Button>
     <Button 
@@ -61,14 +62,14 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       className={`${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} ${getStatusBorder('muted')}`}
       onClick={onClear}
     >
-      <RotateCcw className={`${iconSizes.sm} mr-2`} />
+      <RotateCcw className={`${iconSizes.sm} ${PANEL_LAYOUT.MARGIN.RIGHT_SM}`} />
       Clear
     </Button>
     
-    <div className={`w-px h-6 ${colors.bg.muted} mx-2`} />
+    <div className={`w-px h-6 ${colors.bg.muted} ${PANEL_LAYOUT.MARGIN.X_SM}`} /> {/* w-px h-6: Semantic separator dimensions */}
     
     {/* Status indicators */}
-    <div className="flex-1 flex gap-2 items-center">
+    <div className={`flex-1 flex ${PANEL_LAYOUT.GAP.SM} items-center`}>
         {status === 'success' && (
           <CommonBadge
             status="company"

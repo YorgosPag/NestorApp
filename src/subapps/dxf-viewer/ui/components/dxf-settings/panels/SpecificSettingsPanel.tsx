@@ -3,7 +3,7 @@
 // PURPOSE: Router for all 7 Specific Settings categories with lazy loading
 
 import { INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
-import { PANEL_TOKENS, PanelTokenUtils } from '../../../../config/panel-tokens';
+import { PANEL_TOKENS, PanelTokenUtils, PANEL_LAYOUT } from '../../../../config/panel-tokens';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -191,8 +191,8 @@ export const SpecificSettingsPanel: React.FC<SpecificSettingsPanelProps> = ({
 
   return (
     <div className={className}>
-      {/* Category Navigation - Icon Only */}
-      <nav className="flex gap-1 mb-4 p-2">
+      {/* Category Navigation - Icon Only - 🏢 ENTERPRISE: Centralized spacing */}
+      <nav className={`flex ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.SM}`}>
         {categories.map((category) => (
           <button
             key={category.id}

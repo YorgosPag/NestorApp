@@ -15,6 +15,8 @@ import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles'
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
 
 interface LineColorControlProps {
   value: string;
@@ -73,19 +75,19 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
   };
 
   return (
-    <div className="space-y-2">
+    <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
       <label className={`text-sm font-medium ${colors.text.muted}`}>
         {label}
       </label>
 
-      <div className="flex items-center gap-2">
+      <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
         {/* Color preview button */}
         <Popover open={isOpen} onOpenChange={setIsOpen}>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
               disabled={disabled}
-              className={`w-full justify-start gap-2 ${colors.bg.primary} ${getStatusBorder('muted')} ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK}`}
+              className={`w-full justify-start ${PANEL_LAYOUT.GAP.SM} ${colors.bg.primary} ${getStatusBorder('muted')} ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK}`}
             >
               <div
                 className={`${iconSizes.md} rounded ${getStatusBorder('muted')} ${valueBgClass}`}
@@ -97,12 +99,12 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
             </Button>
           </PopoverTrigger>
 
-          <PopoverContent className={`w-64 ${colors.bg.primary} ${getStatusBorder('muted')} p-3`}>
-            <div className="space-y-3">
+          <PopoverContent className={`w-64 ${colors.bg.primary} ${getStatusBorder('muted')} ${PANEL_LAYOUT.SPACING.MD}`}>
+            <div className={PANEL_LAYOUT.SPACING.GAP_MD}>
               {/* Preset colors grid */}
               <div>
-                <p className={`text-xs ${colors.text.muted} mb-2`}>AutoCAD Colors</p>
-                <div className="grid grid-cols-5 gap-1">
+                <p className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>AutoCAD Colors</p>
+                <div className={`grid grid-cols-5 ${PANEL_LAYOUT.GAP.XS}`}>
                   {presetColorClasses.map(({ color, bgClass }) => (
                     <button
                       key={color}
@@ -123,13 +125,13 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
 
               {/* Custom color input */}
               <div>
-                <p className={`text-xs ${colors.text.muted} mb-2`}>Custom Color</p>
-                <div className="flex gap-2">
+                <p className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Custom Color</p>
+                <div className={`flex ${PANEL_LAYOUT.GAP.SM}`}>
                   <Input
                     type="color"
                     value={tempColor}
                     onChange={(e) => handleColorChange(e.target.value)}
-                    className={`w-16 h-9 p-1 ${colors.bg.secondary} ${getStatusBorder('muted').replace('border ', '')}`}
+                    className={`w-16 h-9 ${PANEL_LAYOUT.SPACING.XS} ${colors.bg.secondary} ${getStatusBorder('muted').replace('border ', '')}`}
                   />
                   <Input
                     type="text"

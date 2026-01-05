@@ -22,6 +22,8 @@ import { Crosshair, MousePointer2 } from 'lucide-react';
 import { CrosshairSettings } from '../settings/special/CrosshairSettings';
 import { CursorSettings } from '../settings/special/CursorSettings';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
 
 /**
  * CursorCategory - Cursor settings category with sub-tabs
@@ -134,7 +136,7 @@ export const CursorCategory: React.FC<CursorCategoryProps> = ({
   return (
     <section className={className}>
       {/* 🏢 ENTERPRISE: Tab Navigation - Using centralized TabsOnlyTriggers */}
-      <nav className={`${getDirectionalBorder('default', 'bottom')} mb-4`}>
+      <nav className={`${getDirectionalBorder('default', 'bottom')} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
         <TabsOnlyTriggers
           tabs={cursorTabs}
           value={activeTab}
@@ -144,8 +146,8 @@ export const CursorCategory: React.FC<CursorCategoryProps> = ({
         />
       </nav>
 
-      {/* Tab Content - 🏢 ENTERPRISE: Semantic section child */}
-      <div className="px-4">
+      {/* Tab Content - 🏢 ENTERPRISE: Centralized spacing */}
+      <div className={PANEL_LAYOUT.CONTAINER.PADDING}>
         {renderTabContent()}
       </div>
     </section>

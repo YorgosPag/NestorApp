@@ -177,18 +177,172 @@ export function createPanelTokens(
  * Consistent spacing, sizing και layout tokens για όλα τα panels
  */
 export const PANEL_LAYOUT = {
+  // ============================================================================
+  // 🏢 ENTERPRISE SPACING SYSTEM - SINGLE SOURCE OF TRUTH
+  // ============================================================================
+  // Αλλαγή εδώ επηρεάζει: SubTabRenderer, AccordionSection, Settings components,
+  // FloatingPanel, OverrideToggle, και όλα τα DXF Viewer UI components
+  // ============================================================================
+
+  // 📏 UNIFIED SPACING SCALE - Based on 4px grid (Tailwind standard)
+  SPACING: {
+    // 🏢 ENTERPRISE: Zero values (explicit reset)
+    NONE: 'p-0',                       // 0px  - No padding (icon-only buttons)
+    HALF: 'p-0.5',                     // 2px  - Sub-pixel padding (fine-tuning)
+
+    // Uniform padding (all sides)
+    XS: 'p-1',                         // 4px  - Micro spacing
+    SM: 'p-2',                         // 8px  - Compact spacing
+    MD: 'p-3',                         // 12px - Default spacing
+    LG: 'p-4',                         // 16px - Comfortable spacing
+    XL: 'p-5',                         // 20px - Large spacing
+    XXL: 'p-6',                        // 24px - Extra large spacing
+    XXXL: 'p-8',                       // 32px - Maximum spacing
+
+    // Horizontal + Vertical combinations
+    COMPACT: 'px-2 py-1',              // Compact: buttons, badges, inputs
+    STANDARD: 'px-3 py-2',             // Standard: most elements
+    COMFORTABLE: 'px-4 py-3',          // Comfortable: cards, sections
+
+    // 🏢 ENTERPRISE: Horizontal-only padding (px-*)
+    HORIZONTAL_HALF: 'px-0.5',         // 2px horizontal padding (fine-tuning)
+    HORIZONTAL_XS: 'px-1',             // 4px horizontal padding
+    HORIZONTAL_SM: 'px-2',             // 8px horizontal padding
+    HORIZONTAL_MD: 'px-3',             // 12px horizontal padding
+    HORIZONTAL_LG: 'px-4',             // 16px horizontal padding
+
+    // 🏢 ENTERPRISE: Responsive spacing (for breakpoints)
+    SM_NONE: 'sm:p-0',                 // 0px padding at sm breakpoint and above
+
+    // 🏢 ENTERPRISE: Ultra-compact spacing combinations
+    COMPACT_XS: 'px-1 py-0.5',         // Ultra-compact: badges, indicators
+
+    // Section spacing (vertical gap between stacked elements - space-y-*)
+    GAP_XS: 'space-y-1',               // 4px gap
+    GAP_SM: 'space-y-2',               // 8px gap
+    GAP_MD: 'space-y-3',               // 12px gap
+    GAP_LG: 'space-y-4',               // 16px gap
+    GAP_XL: 'space-y-6',               // 24px gap
+
+    // 🏢 ENTERPRISE: Horizontal spacing (horizontal gap between inline elements - space-x-*)
+    GAP_H_XS: 'space-x-1',             // 4px horizontal gap
+    GAP_H_SM: 'space-x-2',             // 8px horizontal gap
+    GAP_H_MD: 'space-x-3',             // 12px horizontal gap
+    GAP_H_LG: 'space-x-4',             // 16px horizontal gap
+    GAP_H_XL: 'space-x-6',             // 24px horizontal gap
+  },
+
+  // 🔗 FLEX/GRID GAPS - For flex and grid layouts (gap-*)
+  GAP: {
+    HALF: 'gap-0.5',                   // 2px  - Sub-pixel gap (fine-tuning)
+    XS: 'gap-1',                       // 4px  - Tight gap
+    SM: 'gap-2',                       // 8px  - Small gap
+    MD: 'gap-3',                       // 12px - Default gap
+    LG: 'gap-4',                       // 16px - Large gap
+    XL: 'gap-6',                       // 24px - Extra large gap
+  },
+
+  // 📐 HEIGHT - Fixed height tokens
+  HEIGHT: {
+    XS: 'h-1',                         // 4px  - Progress bar, dividers
+    SM: 'h-2',                         // 8px  - Small height
+    MD: 'h-4',                         // 16px - Medium height
+    LG: 'h-6',                         // 24px - Large height
+    XL: 'h-8',                         // 32px - Extra large height
+  },
+
+  // ↕️ DIRECTIONAL MARGINS - For specific margin directions
+  MARGIN: {
+    // 🏢 ENTERPRISE: Zero values (explicit reset)
+    NONE: 'm-0',                       // 0px  - No margin (reset for headings)
+
+    TOP_HALF: 'mt-0.5',                // 2px top margin (fine-tuning)
+    TOP_XS: 'mt-1',                    // 4px top margin
+    TOP_SM: 'mt-2',                    // 8px top margin
+    TOP_MD: 'mt-3',                    // 12px top margin
+    TOP_LG: 'mt-4',                    // 16px top margin
+    TOP_XL: 'mt-6',                    // 24px top margin
+    BOTTOM_XS: 'mb-1',                 // 4px bottom margin
+    BOTTOM_SM: 'mb-2',                 // 8px bottom margin
+    BOTTOM_MD: 'mb-3',                 // 12px bottom margin
+    BOTTOM_LG: 'mb-4',                 // 16px bottom margin
+    BOTTOM_XL: 'mb-6',                 // 24px bottom margin
+    LEFT_MD: 'pl-4',                   // 16px left padding
+    LEFT_LG: 'pl-6',                   // 24px left padding (indentation)
+    LEFT_XL: 'pl-8',                   // 32px left padding (deep nesting)
+    LEFT_XXL: 'pl-12',                 // 48px left padding (very deep nesting)
+
+    // 🏢 ENTERPRISE: Right margins (for icon-text spacing)
+    RIGHT_XS: 'mr-1',                  // 4px right margin
+    RIGHT_SM: 'mr-2',                  // 8px right margin (icon-text spacing)
+    RIGHT_MD: 'mr-3',                  // 12px right margin
+    RIGHT_LG: 'mr-4',                  // 16px right margin
+
+    // 🏢 ENTERPRISE: Horizontal margins (mx-*)
+    X_XS: 'mx-1',                      // 4px horizontal margin (small separators)
+    X_SM: 'mx-2',                      // 8px horizontal margin (separators)
+    X_MD: 'mx-3',                      // 12px horizontal margin
+    X_LG: 'mx-4',                      // 16px horizontal margin
+
+    // 🏢 ENTERPRISE: Vertical margins (my-*)
+    Y_XS: 'my-1',                      // 4px vertical margin (separators)
+
+    // 🏢 ENTERPRISE: Left margins (ml-*)
+    LEFT_SM: 'ml-2',                   // 8px left margin (icon-text spacing)
+    LEFT_3XL: 'ml-12',                 // 48px left margin (entity card indentation)
+
+    // 🏢 ENTERPRISE: Sub-pixel margins (fine-tuning)
+    LEFT_HALF: 'ml-0.5',               // 2px  - Sub-pixel left margin (fine-tuning icons)
+  },
+
+  // ↔️ DIRECTIONAL PADDINGS - For specific padding directions
+  PADDING: {
+    // ⬆️ TOP paddings
+    TOP_SM: 'pt-2',                    // 8px top padding
+    TOP_LG: 'pt-4',                    // 16px top padding
+    // ⬇️ BOTTOM paddings
+    BOTTOM_SM: 'pb-2',                 // 8px bottom padding
+    BOTTOM_LG: 'pb-4',                 // 16px bottom padding
+    // ↔️ VERTICAL paddings
+    VERTICAL_NONE: 'py-0',             // 0px vertical padding (inline inputs)
+    VERTICAL_XS: 'py-1',               // 4px vertical padding (compact status bars)
+    VERTICAL_SM: 'py-2',               // 8px vertical padding
+    VERTICAL_XXXL: 'py-8',             // 32px vertical padding (empty states)
+    // ➡️ RIGHT paddings
+    RIGHT_XS: 'pr-1',                  // 4px right padding
+    RIGHT_SM: 'pr-2',                  // 8px right padding (scroll container)
+    RIGHT_MD: 'pr-3',                  // 12px right padding
+    // ⬅️ LEFT paddings
+    LEFT_SM: 'pl-2',                   // 8px left padding
+    LEFT_MD: 'pl-4',                   // 16px left padding
+    LEFT_XL: 'pl-8',                   // 32px left padding (indented content)
+    // 🏷️ SPECIAL paddings
+    TOOLTIP: 'px-1 py-0.5',            // Tooltip/snap indicator padding
+    BADGE: 'px-1.5 py-0.5',            // Badge/chip padding
+    HORIZONTAL_HALF: 'px-0.5',         // 2px horizontal padding (sub-pixel)
+  },
+
   // Panel containers
   CONTAINER: {
-    PADDING: 'px-1 py-2',              // Standard panel padding
-    INNER_PADDING: 'p-3',              // Inner content padding
-    SECTION_SPACING: 'space-y-4',      // Vertical section spacing
+    PADDING: 'px-1 py-1',              // Standard panel padding (REDUCED)
+    INNER_PADDING: 'p-1',              // Inner content padding (REDUCED: 4px)
+    SECTION_SPACING: 'space-y-2',      // Vertical section spacing (8px gap)
     BORDER_RADIUS: 'rounded-lg',       // Standard border radius
+  },
+
+  // 🚨 ALERT/WARNING elements - Semantic feedback areas
+  ALERT: {
+    PADDING: 'p-2',                    // Alert padding (8px)
+    PADDING_LG: 'p-4',                 // Large alert padding (16px)
+    BORDER_RADIUS: 'rounded',          // Alert border radius
+    TEXT_SIZE: 'text-xs',              // Alert text size
   },
 
   // Input elements
   INPUT: {
     HEIGHT: 'h-8',                     // Standard input height
-    PADDING: 'px-3 py-2',              // Input padding
+    PADDING: 'px-3 py-2',              // Standard input padding
+    PADDING_COMPACT: 'px-2 py-1',      // Compact input padding (for inline inputs)
     BORDER_RADIUS: 'rounded',          // Input border radius
     TEXT_SIZE: 'text-sm',              // Input text size
     FULL_WIDTH: 'w-full',              // Full width inputs
@@ -197,10 +351,17 @@ export const PANEL_LAYOUT = {
 
   // Button elements
   BUTTON: {
-    HEIGHT: 'h-8',                     // Standard button height
-    PADDING: 'px-3 py-2',              // Button padding
+    HEIGHT: 'h-8',                     // Standard button height (32px)
+    HEIGHT_SM: 'h-6',                  // Small button height (24px - zoom controls)
+    HEIGHT_MD: 'h-10',                 // Medium button height (40px)
+    HEIGHT_LG: 'h-12',                 // Large button height (48px)
+    PADDING: 'px-3 py-2',              // Standard button padding
+    PADDING_COMPACT: 'px-3 py-1',      // Compact button padding (for inline buttons)
+    PADDING_LG: 'px-4 py-2',           // Large button padding (modal actions)
+    PADDING_XL: 'px-6 py-2',           // Extra large button padding (wizard actions)
     BORDER_RADIUS: 'rounded',          // Button border radius
     TEXT_SIZE: 'text-sm',              // Button text size
+    TEXT_SIZE_XS: 'text-xs',           // Extra small button text
     ICON_SIZE: 'w-4 h-4',              // Button icon size
   },
 
@@ -228,6 +389,31 @@ export const PANEL_LAYOUT = {
   LOADING: {
     SPINNER: 'border border-white border-t-transparent rounded-full animate-spin',
     SIZE: 'w-4 h-4',
+  },
+
+  // 🎯 FLOATING TOOLBAR TOKENS - DraggableOverlayToolbar configuration
+  FLOATING_TOOLBAR: {
+    // Default dimensions (pixels)
+    DIMENSIONS: {
+      WIDTH: 300,
+      HEIGHT: 100,
+    },
+    // Default position (pixels from top-left)
+    POSITION: {
+      X: 450,
+      Y: 150,
+    },
+    // Separator height classes
+    SEPARATOR: {
+      HEIGHT: 'h-6',
+    },
+  },
+
+  // 🏢 OVERLAY DRAWING DEFAULTS - Tool style defaults
+  OVERLAY_DEFAULTS: {
+    LINE_WIDTH: 2,
+    OPACITY: 1,
+    LINE_TYPE: 'solid' as const,
   },
 } as const;
 

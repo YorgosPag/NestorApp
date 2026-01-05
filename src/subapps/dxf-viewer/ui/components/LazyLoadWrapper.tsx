@@ -4,6 +4,8 @@
  * @module LazyLoadWrapper
  * @description Lazy loading wrapper για performance optimization
  * Conference-ready code splitting και lazy loading
+ *
+ * 🏢 ENTERPRISE: All spacing/sizing via PANEL_LAYOUT tokens (ZERO hardcoded values)
  */
 
 import React, { Suspense, lazy, ComponentType } from 'react';
@@ -12,6 +14,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import ErrorBoundary from '@/components/ui/ErrorBoundary/ErrorBoundary';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 interface LazyLoadWrapperProps {
   fallback?: React.ReactNode;
@@ -27,34 +30,34 @@ const DefaultFallback = () => {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   return (
-    <div className="flex items-center justify-center p-8">
+    <aside className={`flex items-center justify-center ${PANEL_LAYOUT.SPACING.XXXL}`}>
       <Loader2 className={`${iconSizes.lg} animate-spin ${colors.text.muted}`} />
-      <span className={`ml-2 text-sm ${colors.text.muted}`}>Loading component...</span>
-    </div>
+      <span className={`${PANEL_LAYOUT.MARGIN.LEFT_SM} text-sm ${colors.text.muted}`}>Loading component...</span>
+    </aside>
   );
 };
 
 /**
  * Custom fallback για lazy loading errors
  */
-const LazyLoadErrorFallback = (error: Error, errorInfo: any, retry: () => void) => {
+const LazyLoadErrorFallback = (error: Error, _errorInfo: React.ErrorInfo, retry: () => void) => {
   const { getStatusBorder } = useBorderTokens();
 
   return (
-    <div className={`p-4 ${getStatusBorder('error')} bg-destructive/10 rounded-lg`}>
-    <h3 className="text-sm font-semibold text-destructive mb-2">
-      Component Loading Error
-    </h3>
-    <p className="text-xs text-muted-foreground">
-      {error?.message || 'Failed to load component'}
-    </p>
-    <button
-      onClick={retry}
-      className="mt-2 text-xs text-destructive underline hover:text-destructive/80 transition-colors"
-    >
-      Retry
-    </button>
-  </div>
+    <article className={`${PANEL_LAYOUT.SPACING.LG} ${getStatusBorder('error')} bg-destructive/10 rounded-lg`}>
+      <h3 className={`text-sm font-semibold text-destructive ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
+        Component Loading Error
+      </h3>
+      <p className="text-xs text-muted-foreground">
+        {error?.message || 'Failed to load component'}
+      </p>
+      <button
+        onClick={retry}
+        className={`${PANEL_LAYOUT.MARGIN.TOP_SM} text-xs text-destructive underline hover:text-destructive/80 transition-colors`}
+      >
+        Retry
+      </button>
+    </article>
   );
 };
 
@@ -116,10 +119,11 @@ export class LazyLoadManager {
 export const LazyLoadWrapper: React.FC<LazyLoadWrapperProps> = ({
   fallback,
   componentPath,
-  ...props
+  children
 }) => {
   // This is a placeholder - actual implementation would dynamically import
   // For now, returning children or fallback
+  // ✅ ENTERPRISE: Removed unnecessary wrapper div (ADR-003 Container Nesting)
   return (
     <ErrorBoundary
       componentName="LazyLoadWrapper"
@@ -128,10 +132,7 @@ export const LazyLoadWrapper: React.FC<LazyLoadWrapperProps> = ({
       fallback={LazyLoadErrorFallback}
     >
       <Suspense fallback={fallback || <DefaultFallback />}>
-        <div {...props}>
-          {/* Component will be loaded here */}
-          {props.children}
-        </div>
+        {children}
       </Suspense>
     </ErrorBoundary>
   );

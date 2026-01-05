@@ -11,6 +11,7 @@ import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PANEL_LAYOUT } from '../../../../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
 
 interface UnitTestsTabProps {
   testState: TestState;
@@ -37,16 +38,16 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
     <>
       {/* ✅ ENTERPRISE: Χρήση semantic <section> αντί κενού <div> (ADR-003) */}
       <section>
-        <h3 className={`text-sm font-semibold ${colors.text.muted} uppercase tracking-wide mb-3`}>
+        <h3 className={`text-sm font-semibold ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
           🧪 Unit Tests (Vitest/Jest)
         </h3>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.MD}`}>
           {/* Vitest Button */}
           <button
             onClick={apiTests.handleRunVitest}
             disabled={testState.runningTests.has('run-vitest')}
-            className={`flex items-start gap-3 p-3.5 ${quick.card} transition-all text-left ${
+            className={`flex items-start ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} ${quick.card} transition-all text-left ${
               testState.runningTests.has('run-vitest')
                 ? `${colors.bg.warning} ${colors.bg.warning} ${getTestButtonBorder('run-vitest')} cursor-wait`
                 : testState.completedTests.has('run-vitest')
@@ -54,7 +55,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
                 : `${colors.bg.secondary} ${colors.bg.hover} ${getTestButtonBorder('run-vitest')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
             }`}
           >
-            <div className="flex-shrink-0 mt-0.5">
+            <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
               {testState.runningTests.has('run-vitest') ? (
                 <div className="animate-spin text-base">⏳</div>
               ) : testState.completedTests.has('run-vitest') ? (
@@ -65,7 +66,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
             </div>
             <div className="flex-1 min-w-0">
               <div className={`font-medium ${colors.text.primary} text-sm leading-tight`}>⚡ Run Vitest Tests</div>
-              <div className={`text-xs ${colors.text.muted} mt-1`}>Property-based + ServiceRegistry tests</div>
+              <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Property-based + ServiceRegistry tests</div>
             </div>
           </button>
 
@@ -73,7 +74,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
           <button
             onClick={apiTests.handleRunJest}
             disabled={testState.runningTests.has('run-jest')}
-            className={`flex items-start gap-3 p-3.5 ${quick.card} transition-all text-left ${
+            className={`flex items-start ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} ${quick.card} transition-all text-left ${
               testState.runningTests.has('run-jest')
                 ? `${colors.bg.warning} ${colors.bg.warning} ${getTestButtonBorder('run-jest')} cursor-wait`
                 : testState.completedTests.has('run-jest')
@@ -81,7 +82,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
                 : `${colors.bg.secondary} ${colors.bg.hover} ${getTestButtonBorder('run-jest')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
             }`}
           >
-            <div className="flex-shrink-0 mt-0.5">
+            <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
               {testState.runningTests.has('run-jest') ? (
                 <div className="animate-spin text-base">⏳</div>
               ) : testState.completedTests.has('run-jest') ? (
@@ -92,7 +93,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
             </div>
             <div className="flex-1 min-w-0">
               <div className={`font-medium ${colors.text.primary} text-sm leading-tight`}>⚡ Run Jest Tests</div>
-              <div className={`text-xs ${colors.text.muted} mt-1`}>Visual regression + cursor alignment tests</div>
+              <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Visual regression + cursor alignment tests</div>
             </div>
           </button>
         </div>
@@ -100,14 +101,14 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
 
       {/* ✅ ENTERPRISE: Χρήση semantic <section> αντί κενού <div> (ADR-003) */}
       <section>
-        <h3 className={`text-sm font-semibold ${colors.text.muted} uppercase tracking-wide mb-3`}>
+        <h3 className={`text-sm font-semibold ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
           🎭 E2E Tests (Playwright)
         </h3>
 
         <button
           onClick={apiTests.handleRunPlaywright}
           disabled={testState.runningTests.has('run-playwright')}
-          className={`flex items-start gap-3 p-3.5 ${radius.lg} transition-all text-left w-full ${
+          className={`flex items-start ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} ${radius.lg} transition-all text-left w-full ${
             testState.runningTests.has('run-playwright')
               ? `${colors.bg.warning} ${colors.bg.warning} ${getTestButtonBorder('run-playwright')} cursor-wait`
               : testState.completedTests.has('run-playwright')
@@ -115,7 +116,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
               : `${colors.bg.secondary} ${colors.bg.hover} ${getTestButtonBorder('run-playwright')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
           }`}
         >
-          <div className="flex-shrink-0 mt-0.5">
+          <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
             {testState.runningTests.has('run-playwright') ? (
               <div className="animate-spin text-base">⏳</div>
             ) : testState.completedTests.has('run-playwright') ? (
@@ -126,13 +127,13 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
           </div>
           <div className="flex-1 min-w-0">
             <div className={`font-medium ${colors.text.primary} text-sm leading-tight`}>🎭 Run Playwright Cross-Browser Tests</div>
-            <div className={`text-xs ${colors.text.muted} mt-1`}>Visual regression across Chromium/Firefox/WebKit (2-3 min)</div>
+            <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Visual regression across Chromium/Firefox/WebKit (2-3 min)</div>
           </div>
         </button>
       </section>
 
       {/* ✅ ENTERPRISE: Χρήση semantic <aside> για info box (ADR-003) */}
-      <aside className={`${colors.bg.info} ${quick.info} p-4 ${getStatusBorder('info')}`}>
+      <aside className={`${colors.bg.info} ${quick.info} ${PANEL_LAYOUT.SPACING.LG} ${getStatusBorder('info')}`}>
         <p className={`text-xs ${colors.text.info}`}>
           <strong>Note:</strong> Unit & E2E tests run server-side via API endpoints. Check server logs for detailed output.
         </p>

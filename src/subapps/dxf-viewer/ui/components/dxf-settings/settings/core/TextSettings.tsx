@@ -68,6 +68,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '../../../../../../../components/ui/effects';
 import { layoutUtilities } from '../../../../../../../styles/design-tokens';
+// 🏢 ENTERPRISE: Import centralized panel spacing (Single Source of Truth)
+import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 
 // Simple SVG icons for text
 const DocumentTextIcon = ({ className }: { className?: string }) => (
@@ -162,7 +164,7 @@ function TextStyleButtons({ settings, onToggle }: TextStyleButtonsProps) {
   const colors = useSemanticColors(); // ✅ ENTERPRISE FIX: Add missing colors hook
 
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className={`flex flex-wrap ${PANEL_LAYOUT.GAP.XS}`}>
       {TEXT_STYLE_BUTTONS.map((style) => (
         <button
           key={style.key}
@@ -191,11 +193,12 @@ function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }
   const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors(); // ✅ ENTERPRISE FIX: Add missing colors hook
 
+  // 🏢 ENTERPRISE: Using PANEL_LAYOUT.BUTTON.PADDING_COMPACT for consistent button spacing
   return (
-    <div className="flex gap-1">
+    <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
       <button
         onClick={onSuperscriptChange}
-        className={`px-3 py-1 text-sm ${quick.button} transition-colors ${
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${quick.button} transition-colors ${
           settings.isSuperscript
             ? `${colors.bg.success} ${getStatusBorder('success')} ${colors.text.inverted}`
             : `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${getStatusBorder('muted')} ${colors.text.muted}`
@@ -205,7 +208,7 @@ function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }
       </button>
       <button
         onClick={onSubscriptChange}
-        className={`px-3 py-1 text-sm ${quick.button} transition-colors ${
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${quick.button} transition-colors ${
           settings.isSubscript
             ? `${colors.bg.success} ${getStatusBorder('success')} ${colors.text.inverted}`
             : `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${getStatusBorder('muted')} ${colors.text.muted}`
@@ -339,16 +342,16 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
     <>
       {/* Header - Semantic <header> element */}
       {/* 🏢 ENTERPRISE: flex-col layout για να φαίνονται πλήρως τα κείμενα των κουμπιών */}
-      <header className="flex flex-col gap-2">
+      <header className={`flex flex-col ${PANEL_LAYOUT.GAP.SM}`}>
         <h3 className={`text-lg font-medium ${colors.text.primary}`}>Ρυθμίσεις Κειμένου</h3>
-        <nav className="flex gap-2" aria-label="Ενέργειες ρυθμίσεων κειμένου">
+        <nav className={`flex ${PANEL_LAYOUT.GAP.SM}`} aria-label="Ενέργειες ρυθμίσεων κειμένου">
           {/* 🏢 ENTERPRISE: Centralized Button component (variant="secondary") + Lucide icon */}
           <Button
             variant="secondary"
             size="sm"
             onClick={resetToDefaults}
             title="Επαναφορά στις προεπιλεγμένες ρυθμίσεις"
-            className="flex items-center gap-1"
+            className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
           >
             <RotateCcw className={iconSizes.xs} />
             Επαναφορά
@@ -359,7 +362,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
             size="sm"
             onClick={handleFactoryResetClick}
             title="Επαναφορά στις εργοστασιακές ρυθμίσεις (ISO 3098)"
-            className="flex items-center gap-1"
+            className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
           >
             <Factory className={iconSizes.xs} />
             Εργοστασιακές
@@ -369,8 +372,9 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
 
       {/* 🏢 ENTERPRISE: Enable/Disable Text Display - Centralized Radix Checkbox */}
       {/* 🏢 ADR-011: Using same styling as AccordionSection for visual consistency */}
-      <fieldset className="space-y-2">
-        <div className={`flex items-center gap-3 p-3 ${colors.bg.secondary} ${getElementBorder('card', 'default')} ${radius.lg}`}>
+      <fieldset className={PANEL_LAYOUT.SPACING.GAP_SM}>
+        {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.SPACING.MD */}
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${getElementBorder('card', 'default')} ${radius.lg}`}>
           <Checkbox
             id="text-enabled"
             checked={textSettings.enabled}
@@ -383,15 +387,16 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
             Εμφάνιση κειμένου απόστασης
           </label>
         </div>
+        {/* 🏢 ENTERPRISE: Warning message - Using PANEL_LAYOUT.ALERT */}
         {!textSettings.enabled && (
-          <aside className={`text-xs ${colors.text.warning} ${colors.bg.warningSubtle} p-2 ${radius.md} ${getStatusBorder('warning')}`} role="alert">
+          <aside className={`${PANEL_LAYOUT.ALERT.TEXT_SIZE} ${colors.text.warning} ${colors.bg.warningSubtle} ${PANEL_LAYOUT.ALERT.PADDING} ${radius.md} ${getStatusBorder('warning')}`} role="alert">
             ⚠️ Το κείμενο απόστασης είναι απενεργοποιημένο και δεν θα εμφανίζεται στην προσχεδίαση
           </aside>
         )}
       </fieldset>
 
       {/* ACCORDION SECTIONS */}
-      <div className={`space-y-4 ${!textSettings.enabled ? 'opacity-50 pointer-events-none' : ''}`}>
+      <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${!textSettings.enabled ? 'opacity-50 pointer-events-none' : ''}`}>
 
         {/* 1. ΒΑΣΙΚΕΣ ΡΥΘΜΙΣΕΙΣ ΚΕΙΜΕΝΟΥ */}
         <AccordionSection
@@ -403,9 +408,9 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           badge={4}
           className="overflow-visible"
         >
-          <div className="space-y-4">
+          <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
             {/* 🏢 ADR-001: Radix Select - Font Family */}
-            <div className="space-y-2">
+            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block text-sm font-medium ${colors.text.secondary}`}>
                 {TEXT_LABELS.FONT_FAMILY}
               </label>
@@ -427,11 +432,11 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
             </div>
 
             {/* 🏢 ADR-001: Radix Select - Font Size with +/- controls */}
-            <div className="space-y-2">
+            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block text-sm font-medium ${colors.text.secondary}`}>
                 {TEXT_LABELS.FONT_SIZE}
               </label>
-              <div className="flex gap-2">
+              <div className={`flex ${PANEL_LAYOUT.GAP.SM}`}>
                 <div className="flex-1">
                   <Select
                     value={textSettings.fontSize.toString()}
@@ -451,7 +456,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
                 </div>
 
                 {/* Font Size Increase/Decrease Controls */}
-                <div className="flex gap-1 items-end">
+                <div className={`flex ${PANEL_LAYOUT.GAP.XS} items-end`}>
                   {/* Increase Font Size - Big A with up arrow */}
                   <button
                     onClick={increaseFontSize}
@@ -460,7 +465,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
                   >
                     <div className="flex items-center">
                       <span className="text-base font-bold">A</span>
-                      <svg className={`${iconSizes.xs} ml-0.5`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className={`${iconSizes.xs} ${PANEL_LAYOUT.MARGIN.LEFT_HALF}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 15l7-7 7 7" />
                       </svg>
                     </div>
@@ -474,7 +479,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
                   >
                     <div className="flex items-center">
                       <span className="text-xs font-bold">A</span>
-                      <svg className={`${iconSizes.xs} ml-0.5`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className={`${iconSizes.xs} ${PANEL_LAYOUT.MARGIN.LEFT_HALF}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
                       </svg>
                     </div>
@@ -484,7 +489,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
             </div>
 
       {/* Text Color */}
-      <div className="space-y-2">
+      <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
         <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Κειμένου</label>
         <ColorDialogTrigger
           value={textSettings.color}
@@ -510,9 +515,9 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           disabled={!textSettings.enabled}
           badge={4}
         >
-          <div className="space-y-4">
+          <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
             {/* Text Style Toggles */}
-            <div className="space-y-2">
+            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block text-sm font-medium ${colors.text.muted}`}>
                 {TEXT_LABELS.TEXT_STYLE}
               </label>
@@ -533,9 +538,9 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           disabled={!textSettings.enabled}
           badge={2}
         >
-          <div className="space-y-4">
+          <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
             {/* Script Toggles */}
-            <div className="space-y-2">
+            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block text-sm font-medium ${colors.text.muted}`}>{TEXT_LABELS.SCRIPT_STYLE}</label>
               <ScriptStyleButtons
                 settings={textSettings}
@@ -554,13 +559,14 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           onToggle={() => toggleSection('preview')}
           disabled={!textSettings.enabled}
         >
-          <div className="space-y-4">
+          <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
             {/* Live Preview */}
-            <div className="space-y-2">
+            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block text-sm font-medium ${colors.text.muted}`}>
                 {TEXT_LABELS.PREVIEW}
               </label>
-              <div className={`p-4 ${colors.bg.primary} ${quick.card}`}>
+              {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.SPACING.LG */}
+              <div className={`${PANEL_LAYOUT.SPACING.LG} ${colors.bg.primary} ${quick.card}`}>
                 <div style={getPreviewStyle()}>
                   {TEXT_LABELS.PREVIEW_TEXT}
                 </div>
@@ -568,8 +574,9 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
             </div>
 
             {/* Settings Summary */}
-            <div className={`p-2 ${colors.bg.hover} ${quick.card} ${getDirectionalBorder('success', 'left')} mt-4`}>
-              <div className={`text-xs ${colors.text.muted} space-y-1`}>
+            {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.SPACING.SM */}
+            <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} ${quick.card} ${getDirectionalBorder('success', 'left')} ${PANEL_LAYOUT.MARGIN.TOP_LG}`}>
+              <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
                 <div><strong>{FREE_FONTS.find(f => f.value === textSettings.fontFamily)?.label}</strong>, {textSettings.fontSize}pt</div>
                 <div>{[
                   textSettings.isBold && 'Έντονα',
@@ -593,10 +600,11 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
   // - Standalone (no contextType): Semantic <section> wrapper with spacing
   return (
     <>
+      {/* 🏢 ENTERPRISE: Conditional wrapper - Using PANEL_LAYOUT.SPACING */}
       {isEmbedded ? (
         settingsContent
       ) : (
-        <section className="space-y-4 p-4" aria-label="Ρυθμίσεις Κειμένου">
+        <section className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${PANEL_LAYOUT.SPACING.LG}`} aria-label="Ρυθμίσεις Κειμένου">
           {settingsContent}
         </section>
       )}
@@ -610,18 +618,19 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
         closeOnBackdrop={false}
         zIndex={10000}
       >
-        <article className="space-y-4">
+        <article className={PANEL_LAYOUT.SPACING.GAP_LG}>
           {/* 🏢 ENTERPRISE: Warning Message - Using semantic colors */}
-          <aside className={`${colors.bg.errorSubtle} ${getStatusBorder('error')} p-4 ${radius.md}`} role="alert">
-            <p className={`${colors.text.error} font-semibold mb-2`}>
+          {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.ALERT */}
+          <aside className={`${colors.bg.errorSubtle} ${getStatusBorder('error')} ${PANEL_LAYOUT.ALERT.PADDING_LG} ${radius.md}`} role="alert">
+            <p className={`${colors.text.error} font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
               ⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!
             </p>
           </aside>
 
           {/* Loss List */}
-          <section className="space-y-2">
+          <section className={PANEL_LAYOUT.SPACING.GAP_SM}>
             <p className={`${colors.text.muted} font-medium`}>Θα χάσετε:</p>
-            <ul className={`list-disc list-inside space-y-1 ${colors.text.muted} text-sm`}>
+            <ul className={`list-disc list-inside ${PANEL_LAYOUT.SPACING.GAP_XS} ${colors.text.muted} text-sm`}>
               <li>Όλες τις προσαρμοσμένες ρυθμίσεις κειμένου</li>
               <li>Όλα τα templates που έχετε επιλέξει</li>
               <li>Όλες τις αλλαγές που έχετε κάνει</li>
@@ -629,28 +638,29 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           </section>
 
           {/* 🏢 ENTERPRISE: Reset Info - Using semantic colors */}
-          <aside className={`${colors.bg.infoSubtle} ${getStatusBorder('info')} p-4 ${radius.md}`} role="note">
+          {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.ALERT */}
+          <aside className={`${colors.bg.infoSubtle} ${getStatusBorder('info')} ${PANEL_LAYOUT.ALERT.PADDING_LG} ${radius.md}`} role="note">
             <p className={`${colors.text.info} text-sm`}>
               <strong>Επαναφορά:</strong> Οι ρυθμίσεις θα επανέλθουν στα πρότυπα ISO 3098
             </p>
           </aside>
 
           {/* Confirmation Question */}
-          <p className={`${colors.text.primary} font-medium text-center pt-2`}>
+          <p className={`${colors.text.primary} font-medium text-center ${PANEL_LAYOUT.PADDING.TOP_SM}`}>
             Είστε σίγουροι ότι θέλετε να συνεχίσετε;
           </p>
 
           {/* 🏢 ENTERPRISE: Action Buttons - Using semantic colors */}
-          <footer className={`flex gap-3 justify-end pt-4 ${quick.separator}`}>
+          <footer className={`flex ${PANEL_LAYOUT.GAP.MD} justify-end ${PANEL_LAYOUT.PADDING.TOP_LG} ${quick.separator}`}>
             <button
               onClick={handleFactoryResetCancel}
-              className={`px-4 py-2 text-sm ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.primary} rounded transition-colors`}
+              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.primary} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors`}
             >
               Ακύρωση
             </button>
             <button
               onClick={handleFactoryResetConfirm}
-              className={`px-4 py-2 text-sm ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.primary} rounded transition-colors font-semibold flex items-center gap-1`}
+              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.primary} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors font-semibold flex items-center ${PANEL_LAYOUT.GAP.XS}`}
             >
               <Factory className={iconSizes.xs} />
               Επαναφορά Εργοστασιακών

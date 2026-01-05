@@ -6,6 +6,7 @@ import { AlertTriangle, Trash2, GitMerge } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
 
 interface ConfirmationToastProps {
   title: string;
@@ -33,10 +34,10 @@ export function ConfirmationToast({
   const colors = useSemanticColors();
 
   return (
-    <div className={`flex flex-col gap-3 p-4 max-w-md ${colors.bg.primary} rounded-lg shadow-lg ${quick.card}`}>
-      <div className="flex items-start gap-3">
+    <div className={`flex flex-col ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.LG} max-w-md ${colors.bg.primary} rounded-lg shadow-lg ${quick.card}`}>
+      <div className={`flex items-start ${PANEL_LAYOUT.GAP.MD}`}>
         {/* Icon */}
-        <div className="flex-shrink-0 mt-1">
+        <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
           {destructive ? (
             <div className={`${iconSizes.xl} ${colors.bg.muted} rounded-full flex items-center justify-center`}>
               <Trash2 className={`${iconSizes.sm} ${colors.text.error}`} />
@@ -50,7 +51,7 @@ export function ConfirmationToast({
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <h4 className={`font-semibold ${colors.text.primary} mb-2`}>
+          <h4 className={`font-semibold ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
             {title}
           </h4>
           <p className={`text-sm ${colors.text.secondary} whitespace-pre-line leading-relaxed`}>
@@ -59,7 +60,7 @@ export function ConfirmationToast({
           
           {/* Irreversible Warning */}
           {irreversible && (
-            <div className={`flex items-center gap-2 mt-3 p-2 ${colors.bg.hover} rounded ${quick.warning}`}>
+            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.MARGIN.TOP_MD} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${quick.warning}`}>
               <AlertTriangle className={`${iconSizes.sm} ${colors.text.warning} flex-shrink-0`} />
               <span className={`text-xs ${colors.text.warning} font-medium`}>
                 ⚠️ Αυτή η ενέργεια δεν μπορεί να αναιρεθεί!
@@ -70,16 +71,16 @@ export function ConfirmationToast({
       </div>
       
       {/* Actions */}
-      <div className={`flex gap-2 justify-end pt-2 ${quick.separatorH}`}>
+      <div className={`flex ${PANEL_LAYOUT.GAP.SM} justify-end ${PANEL_LAYOUT.PADDING.TOP_SM} ${quick.separatorH}`}>
         <button
           onClick={onCancel}
-          className={`px-4 py-2 text-sm font-medium ${colors.text.secondary} ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT} rounded-md transition-colors focus:outline-none ${colors.interactive.focus.ring}`}
+          className={`${PANEL_LAYOUT.BUTTON.PADDING} text-sm font-medium ${colors.text.secondary} ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT} rounded-md transition-colors focus:outline-none ${colors.interactive.focus.ring}`}
         >
           {cancelText}
         </button>
         <button
           onClick={onConfirm}
-          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors focus:outline-none ${colors.interactive.focus.ring} ${
+          className={`${PANEL_LAYOUT.BUTTON.PADDING} text-sm font-medium rounded-md transition-colors focus:outline-none ${colors.interactive.focus.ring} ${
             destructive
               ? `${colors.bg.error} ${HOVER_BACKGROUND_EFFECTS.RED_DARKER} ${colors.text.primary}`
               : `${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.BLUE_DARKER} ${colors.text.primary}`

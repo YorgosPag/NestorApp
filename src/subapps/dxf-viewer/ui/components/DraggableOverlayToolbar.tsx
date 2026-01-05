@@ -28,6 +28,8 @@ import { useOverlayStore } from '../../overlays/overlay-store';
 import { getStatusColorButtonStyles } from '../DxfViewerComponents.styles';
 // 🏢 ENTERPRISE: Centralized Button Components (ZERO inline styles)
 import { ToolButton, ActionButton } from '../../components/shared/BaseButton';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 // ============================================================================
 // CONSTANTS - Enterprise Design Tokens
@@ -179,9 +181,9 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
       />
       <FloatingPanel.Content>
         {/* 🎯 TOOLBAR CONTROLS */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} flex-wrap`}>
           {/* Drawing Modes - Using Centralized ToolButton */}
-          <nav className="flex items-center gap-1" aria-label="Drawing modes">
+          <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label="Drawing modes">
             {modeButtons.map(({ mode: btnMode, icon: Icon, label, key }) => (
               <ToolButton
                 key={btnMode}
@@ -199,9 +201,9 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
           <Separator orientation="vertical" className={`h-6 ${quick.separatorV}`} />
 
           {/* Status Palette */}
-          <div className="flex items-center gap-2">
+          <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <span className="text-xs font-medium text-muted-foreground">Status:</span>
-            <div className="flex items-center gap-1">
+            <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
               {(Object.keys(STATUS_COLORS) as Status[]).map(status => (
                 <button
                   key={status}
@@ -220,9 +222,9 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
           <Separator orientation="vertical" className={`h-6 ${quick.separatorV}`} />
 
           {/* Kind Selection - Using Centralized ToolButton */}
-          <fieldset className="flex items-center gap-2 border-none p-0 m-0">
+          <fieldset className={`flex items-center ${PANEL_LAYOUT.GAP.SM} border-none ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.MARGIN.NONE}`}>
             <legend className="text-xs font-medium text-muted-foreground">Τύπος:</legend>
-            <nav className="flex items-center gap-1" aria-label="Overlay type">
+            <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label="Overlay type">
               {(Object.keys(KIND_LABELS) as OverlayKind[]).map(kind => {
                 const Icon = kindIcons[kind];
                 return (
@@ -242,7 +244,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
           <Separator orientation="vertical" className={`h-6 ${quick.separatorV}`} />
 
           {/* Actions - Using Centralized ActionButton */}
-          <nav className="flex items-center gap-1" aria-label="Overlay actions">
+          <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label="Overlay actions">
             <ActionButton
               onClick={props.onDuplicate}
               disabled={!props.selectedOverlayId}
@@ -263,7 +265,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
           <Separator orientation="vertical" className={`h-6 ${quick.separatorV}`} />
 
           {/* Undo/Redo - Using Centralized ActionButton */}
-          <nav className="flex items-center gap-1" aria-label="History controls">
+          <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label="History controls">
             <ActionButton
               onClick={props.onUndo}
               disabled={!props.canUndo}

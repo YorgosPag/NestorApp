@@ -6,6 +6,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { normalizeNumericInput, validateNumericInput } from './shared/input-validation';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 interface ScaleControlsProps {
   currentZoom: number; // Το τρέχον zoom level (π.χ. 0.01 για 1:100)
@@ -95,7 +97,7 @@ export const ScaleControls: React.FC<ScaleControlsProps> = ({
   }, [applyScale]);
 
   return (
-    <div className={`flex items-center gap-1 ${colors.bg.primary} rounded px-2 py-1`}>
+    <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS} ${colors.bg.primary} rounded ${PANEL_LAYOUT.SPACING.COMPACT}`}>
       <Scale className={`${iconSizes.xs} ${colors.text.muted}`} />
       <span className={`text-xs ${colors.text.muted}`}>1:</span>
       
@@ -107,7 +109,7 @@ export const ScaleControls: React.FC<ScaleControlsProps> = ({
         onKeyPress={handleKeyPress}
         onFocus={handleInputFocus}
         onBlur={handleInputBlur}
-        className={`w-16 px-1 py-0 ${colors.bg.tertiary} ${getStatusBorder('muted')} rounded ${colors.text.inverted} text-xs text-center ${getFocusBorder('input')} focus:outline-none transition-colors select-all`}
+        className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_X} ${PANEL_LAYOUT.PADDING.VERTICAL_NONE} ${colors.bg.tertiary} ${getStatusBorder('muted')} rounded ${colors.text.inverted} text-xs text-center ${getFocusBorder('input')} focus:outline-none transition-colors select-all`}
         title="Drawing scale (1:100 means 1 unit = 100 real units) - Press Enter or click away to apply"
         placeholder="100"
       />

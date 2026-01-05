@@ -29,6 +29,8 @@ import { UI_COLORS } from '../../config/color-config';
 import type { AriaColorAreaProps } from '@react-aria/color';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 interface EnterpriseColorAreaProps {
   /** Current color value (hex) */
@@ -173,7 +175,7 @@ export function EnterpriseColorAreaWithLabel({
 }) {
   const colors = useSemanticColors();
   return (
-    <div className="space-y-2">
+    <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
       {label && (
         <label className={`block text-sm font-medium ${colors.text.secondary}`}>
           {label}

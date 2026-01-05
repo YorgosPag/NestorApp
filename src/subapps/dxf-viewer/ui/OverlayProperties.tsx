@@ -12,6 +12,7 @@ import { Separator } from '../../../components/ui/separator';
 import { X } from 'lucide-react';
 import { CommonBadge } from '../../../core/badges';
 import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, type Overlay, type Status, type OverlayKind } from '../overlays/types';
+import { PANEL_LAYOUT } from '../config/panel-tokens';
 
 interface OverlayPropertiesProps {
   overlay: Overlay | null;
@@ -84,9 +85,9 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
   if (!overlay) {
     return (
       <Card className="w-80">
-        <CardHeader><CardTitle className="text-sm">Ιδιότητες Overlay</CardTitle></CardHeader>
+        <CardHeader><CardTitle className={PANEL_LAYOUT.BUTTON.TEXT_SIZE}>Ιδιότητες Overlay</CardTitle></CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Επιλέξτε ένα overlay για να δείτε τις ιδιότητές του.</p>
+          <p className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} text-muted-foreground`}>Επιλέξτε ένα overlay για να δείτε τις ιδιότητές του.</p>
         </CardContent>
       </Card>
     );
@@ -110,9 +111,9 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
 
   return (
     <Card className="w-80">
-      <CardHeader className="pb-3">
+      <CardHeader className={PANEL_LAYOUT.PADDING.BOTTOM_SM}>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm">Ιδιότητες Overlay</CardTitle>
+          <CardTitle className={PANEL_LAYOUT.BUTTON.TEXT_SIZE}>Ιδιότητες Overlay</CardTitle>
           {onClose && (
             <Button variant="ghost" size="sm" onClick={onClose}>
               <X className={iconSizes.sm} />
@@ -120,9 +121,9 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className={PANEL_LAYOUT.SPACING.GAP_LG}>
         {/* Basic Info */}
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <div
             className={`${iconSizes.sm} rounded ${quick.button} ${useDynamicBackgroundClass(STATUS_COLORS[overlay.status || 'for-sale'] as string)}`}
           />
@@ -136,7 +137,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
         <Separator />
 
         {/* Label */}
-        <div className="space-y-2">
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <Label htmlFor="label" className="text-xs">Ετικέτα</Label>
           <Input
             id="label"
@@ -148,14 +149,14 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
         </div>
 
         {/* Status */}
-        <div className="space-y-2">
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <Label className="text-xs">Κατάσταση</Label>
           <Select value={overlay.status} onValueChange={handleStatusChange}>
             <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
             <SelectContent>
               {(Object.keys(STATUS_LABELS) as Status[]).map(status => (
                 <SelectItem key={status} value={status}>
-                  <div className="flex items-center gap-2">
+                  <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                     <div
                       className={`${iconSizes.xs} rounded ${useDynamicBackgroundClass(String((STATUS_COLORS as any)[status] || ''))}`}
                     />
@@ -168,7 +169,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
         </div>
 
         {/* Kind */}
-        <div className="space-y-2">
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <Label className="text-xs">Τύπος</Label>
           <Select value={overlay.kind} onValueChange={handleKindChange}>
             <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
@@ -183,7 +184,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
         <Separator />
 
         {/* Linked Entity (simplified) */}
-        <div className="space-y-2">
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <Label className="text-xs">Συνδεδεμένη Μονάδα</Label>
           <Input
             value={linkedUnitId}
@@ -197,9 +198,9 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
         <Separator />
 
         {/* Geometry Info */}
-        <div className="space-y-2">
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <Label className="text-xs">Γεωμετρία</Label>
-          <div className="text-xs text-muted-foreground space-y-1">
+          <div className={`text-xs text-muted-foreground ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
             <div>Σημεία: {overlay && overlay.polygon ? overlay.polygon.length : 0}</div>
             <div>Εμβαδό: {area.toFixed(2)} m²</div>
             <div>Περίμετρος: {perimeter.toFixed(2)} m</div>

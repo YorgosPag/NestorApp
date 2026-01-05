@@ -10,6 +10,7 @@ import { INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '@/components/ui/effe
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
 
 interface TestButtonProps {
   test: {
@@ -37,7 +38,7 @@ export const TestButton: React.FC<TestButtonProps> = ({
     <button
       onClick={() => onRun(test.id, test.action)}
       disabled={isRunning}
-      className={`flex items-start gap-3 p-3.5 rounded-lg border transition-all text-left w-full ${
+      className={`flex items-start ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} rounded-lg border transition-all text-left w-full ${
         isRunning
           ? `${colors.bg.warning} ${useBorderTokens().getStatusBorder('warning')} cursor-wait`
           : isCompleted
@@ -45,7 +46,7 @@ export const TestButton: React.FC<TestButtonProps> = ({
           : `${colors.bg.hover} ${getStatusBorder('muted')} ${HOVER_BORDER_EFFECTS.GRAY} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
       }`}
     >
-      <div className="flex-shrink-0 mt-0.5">
+      <div className={`flex-shrink-0 ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
         {isRunning ? (
           <div className="animate-spin text-base">⏳</div>
         ) : isCompleted ? (
@@ -56,7 +57,7 @@ export const TestButton: React.FC<TestButtonProps> = ({
       </div>
       <div className="flex-1 min-w-0">
         <div className={`font-medium ${colors.text.primary} text-sm leading-tight`}>{test.name}</div>
-        <div className={`text-xs ${colors.text.muted} mt-1 line-clamp-2`}>{test.description}</div>
+        <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS} line-clamp-2`}>{test.description}</div>
       </div>
     </button>
   );

@@ -21,6 +21,8 @@ import {
   getStatusColorButtonStyles,
   type ToolbarButtonVariant
 } from './DxfViewerComponents.styles';
+// 🏢 ENTERPRISE: Import centralized panel spacing (Single Source of Truth)
+import { PANEL_LAYOUT } from '../config/panel-tokens';
 
 interface OverlayToolbarProps {
   mode: OverlayEditorMode;
@@ -153,7 +155,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
     <div
       ref={elementRef}
       style={draggableStyles}
-      className={`${disableFloating ? 'relative' : 'fixed z-[80]'} flex items-center gap-2 p-2 ${colors.bg.secondary} ${quick.card} flex-wrap shadow-xl select-none pointer-events-auto`}
+      className={`${disableFloating ? 'relative' : 'fixed z-[80]'} flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} flex-wrap shadow-xl select-none pointer-events-auto`}
       onMouseEnter={(e) => e.stopPropagation()}
       onMouseMove={(e) => e.stopPropagation()}
       onMouseLeave={(e) => e.stopPropagation()}
@@ -162,22 +164,22 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
       {!disableFloating && (
         <div
           onMouseDown={handleMouseDown}
-          className={`cursor-grab active:cursor-grabbing p-1 ${colors.bg.hover} ${radius.md}`}
+          className={`cursor-grab active:cursor-grabbing ${PANEL_LAYOUT.SPACING.XS} ${colors.bg.hover} ${radius.md}`}
           title="Drag to move toolbar"
         >
           <div className={`${iconSizes.xs} ${iconSizes.sm} ${colors.bg.active} ${quick.button}`}></div>
         </div>
       )}
       {/* Drawing Modes */}
-      <div className="flex items-center gap-1">
+      <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
         {modeButtons.map(({ mode: btnMode, icon: Icon, label, key }) => (
           <button
             key={btnMode}
             onClick={() => handleModeChange(btnMode)}
             title={`${label} (${key})`}
             className={`
-              h-8 px-2 ${quick.button} transition-colors duration-150
-              flex items-center justify-center gap-1
+              h-8 ${PANEL_LAYOUT.SPACING.HORIZONTAL_SM} ${quick.button} transition-colors duration-150
+              flex items-center justify-center ${PANEL_LAYOUT.GAP.XS}
               ${mode === btnMode
                 ? `${colors.bg.info} ${colors.text.inverted} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
                 : `${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
@@ -193,9 +195,9 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
       <Separator orientation="vertical" className={`${iconSizes.lg} ${quick.separatorV}`} />
 
       {/* Status Palette */}
-      <div className="flex items-center gap-2">
+      <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
         <span className={`text-xs font-medium ${colors.text.muted}`}>Status:</span>
-        <div className="flex items-center gap-1">
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
           {(Object.keys(STATUS_COLORS) as Status[]).map(status => (
             <button
               key={status}
@@ -214,9 +216,9 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
       <Separator orientation="vertical" className={`${iconSizes.lg} ${quick.separatorV}`} />
 
       {/* Kind Selection */}
-      <div className="flex items-center gap-2">
+      <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
         <span className={`text-xs font-medium ${colors.text.muted}`}>Τύπος:</span>
-        <div className="flex items-center gap-1">
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
           {(Object.keys(KIND_LABELS) as OverlayKind[]).map(kind => {
             const Icon = kindIcons[kind];
             return (
@@ -225,7 +227,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
                 onClick={() => onKindChange(kind)}
                 title={KIND_LABELS[kind]}
                 className={`
-                  ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
+                  ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} transition-colors duration-150
                   flex items-center justify-center
                   ${currentKind === kind
                     ? `${colors.bg.info} ${colors.text.inverted} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
@@ -243,13 +245,13 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
       <Separator orientation="vertical" className={`${iconSizes.lg} ${quick.separatorV}`} />
 
       {/* Actions */}
-      <div className="flex items-center gap-1">
+      <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
         <button
           onClick={onDuplicate}
           disabled={!selectedOverlayId}
           title="Αντιγραφή (D)"
           className={`
-            ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
+            ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} transition-colors duration-150
             flex items-center justify-center
             ${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')}
             disabled:opacity-50 disabled:cursor-not-allowed
@@ -263,7 +265,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           disabled={!selectedOverlayId}
           title="Διαγραφή (Del)"
           className={`
-            ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
+            ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} transition-colors duration-150
             flex items-center justify-center
             ${colors.bg.secondary} ${colors.text.error} ${getStatusBorder('default')}
             disabled:opacity-50 disabled:cursor-not-allowed
@@ -276,13 +278,13 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
       <Separator orientation="vertical" className={`${iconSizes.lg} ${quick.separatorV}`} />
 
       {/* Undo/Redo */}
-      <div className="flex items-center gap-1">
+      <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
         <button
           onClick={onUndo}
           disabled={!canUndo}
           title="Αναίρεση (Ctrl+Z)"
           className={`
-            ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
+            ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} transition-colors duration-150
             flex items-center justify-center
             ${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')}
             disabled:opacity-50 disabled:cursor-not-allowed
@@ -295,7 +297,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           disabled={!canRedo}
           title="Επανάληψη (Ctrl+Y)"
           className={`
-            ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
+            ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} transition-colors duration-150
             flex items-center justify-center
             ${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')}
             disabled:opacity-50 disabled:cursor-not-allowed

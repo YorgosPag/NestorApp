@@ -16,6 +16,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 // Custom hooks (extracted)
 import { useTestState } from './tests-modal/hooks/useTestState';
@@ -68,10 +69,10 @@ export const TestsModal: React.FC<TestsModalProps> = ({
   // RENDER
   // ============================================================================
   return (
-    <div className="fixed inset-0 bg-black/30 z-50 p-4">
+    <div className={`fixed inset-0 bg-black/30 z-50 ${PANEL_LAYOUT.SPACING.LG}`}>
       <div
         ref={draggable.modalRef}
-        className={`absolute ${colors.bg.secondary} rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col`}
+        className={`absolute ${colors.bg.secondary} ${PANEL_LAYOUT.CONTAINER.BORDER_RADIUS} shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col`}
         style={{
           left: `${draggable.position.x}px`,
           top: `${draggable.position.y}px`,
@@ -79,22 +80,22 @@ export const TestsModal: React.FC<TestsModalProps> = ({
         }}
       >
         {/* Header - Draggable */}
-        <div
-          className={`flex items-center justify-between p-4 ${getDirectionalBorder('muted', 'bottom')} cursor-grab active:cursor-grabbing`}
+        <header
+          className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.LG} ${getDirectionalBorder('muted', 'bottom')} cursor-grab active:cursor-grabbing`}
           onMouseDown={draggable.handleMouseDown}
         >
-          <div className="flex items-center gap-2">
+          <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <FlaskConical className={`${iconSizes.lg} ${colors.text.accent}`} />
             <h2 className={`text-xl font-bold ${colors.text.primary}`}>DXF Viewer Tests</h2>
-            <span className={`text-xs ${colors.text.tertiary} ml-2`}>↔️ Drag to move</span>
+            <span className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.text.tertiary} ${PANEL_LAYOUT.MARGIN.LEFT_SM}`}>Drag to move</span>
           </div>
           <button
             onClick={onClose}
-            className={`p-1 rounded transition-colors ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
+            className={`${PANEL_LAYOUT.SPACING.XS} rounded transition-colors ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
           >
             <X className={`${iconSizes.lg} ${colors.text.muted}`} />
           </button>
-        </div>
+        </header>
 
         {/* Tabs */}
         <TestTabs
@@ -103,7 +104,7 @@ export const TestsModal: React.FC<TestsModalProps> = ({
         />
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className={`flex-1 overflow-y-auto ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.SPACING.GAP_LG}`}>
           {/* TAB 1: Automated Tests */}
           {testState.activeTab === 'automated' && (
             <AutomatedTestsTab
@@ -133,11 +134,11 @@ export const TestsModal: React.FC<TestsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className={`p-4 ${getDirectionalBorder('muted', 'top')} ${colors.bg.muted}`}>
-          <div className={`text-xs ${colors.text.muted} text-center`}>
+        <footer className={`${PANEL_LAYOUT.SPACING.LG} ${getDirectionalBorder('muted', 'top')} ${colors.bg.muted}`}>
+          <p className={`text-xs ${colors.text.muted} text-center`}>
             💡 Tip: Τα tests εκτελούνται ασύγχρονα. Έλεγξε το console για λεπτομέρειες.
-          </div>
-        </div>
+          </p>
+        </footer>
       </div>
     </div>
   );

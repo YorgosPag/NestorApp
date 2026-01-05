@@ -15,7 +15,7 @@ import { useNotifications } from '../../../providers/NotificationProvider';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { layoutUtilities } from '@/styles/design-tokens';
+import { PANEL_LAYOUT } from '../config/panel-tokens';
 
 interface StorageStatusProps {
   showDetails?: boolean;
@@ -69,34 +69,34 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
 
   return (
     <Card className={`${className} ${isCritical ? getStatusBorder('error') : isWarning ? getStatusBorder('warning') : ''}`}>
-      <CardContent className="p-3">
+      <CardContent className={PANEL_LAYOUT.SPACING.MD}>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <HardDrive className={`${iconSizes.sm} ${isCritical ? colors.text.error : isWarning ? colors.text.warning : colors.text.muted}`} />
-            <div className="text-sm">
+            <div className={PANEL_LAYOUT.INPUT.TEXT_SIZE}>
               <div className="font-medium">Storage</div>
               {showDetails && (
-                <div className={`text-xs ${colors.text.muted}`}>
+                <div className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.text.muted}`}>
                   {StorageManager.formatBytes(storageInfo.usage)} / {StorageManager.formatBytes(storageInfo.quota)}
                 </div>
               )}
             </div>
           </div>
-          
-          <div className="flex items-center gap-2">
+
+          <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             {(isWarning || isCritical) && (
               <AlertTriangle className={`${iconSizes.sm} ${isCritical ? colors.text.error : colors.text.warning}`} />
             )}
-            
+
             {showDetails && (
               <Button
                 onClick={handleClearStorage}
                 disabled={isClearing}
                 size="sm"
                 variant="outline"
-                className="text-xs"
+                className={PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS}
               >
-                <Trash2 className={`${iconSizes.xs} mr-1`} />
+                <Trash2 className={`${iconSizes.xs} ${PANEL_LAYOUT.MARGIN.RIGHT_XS}`} />
                 {isClearing ? 'Clearing...' : 'Clear'}
               </Button>
             )}
@@ -106,7 +106,7 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
         {showDetails && (
           <>
             {/* Progress bar */}
-            <div className="mt-2">
+            <div className={PANEL_LAYOUT.MARGIN.TOP_SM}>
               <div className={`w-full ${colors.bg.muted} ${radius.full} h-2`}>
                 <div
                   className={`h-2 ${radius.full} transition-all duration-300 ${
@@ -114,19 +114,19 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
                   } w-[${Math.min(usagePercentage, 100)}%]`}
                 />
               </div>
-              <div className={`text-xs ${colors.text.muted} mt-1`}>
+              <div className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
                 {usagePercentage.toFixed(1)}% used • {StorageManager.formatBytes(storageInfo.quota - storageInfo.usage)} available
               </div>
             </div>
-            
+
             {/* Warnings */}
             {isCritical && (
-              <div className={`mt-2 text-xs ${colors.text.error} ${colors.bg.errorLight} p-2 ${radius.md}`}>
+              <div className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.text.error} ${colors.bg.errorLight} ${PANEL_LAYOUT.ALERT.PADDING} ${radius.md}`}>
                 ⚠️ Storage σχεδόν γεμάτο! Καθαρίστε το για να αποφύγετε errors.
               </div>
             )}
             {isWarning && !isCritical && (
-              <div className={`mt-2 text-xs ${colors.text.warning} ${colors.bg.warningLight} p-2 ${radius.md}`}>
+              <div className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.text.warning} ${colors.bg.warningLight} ${PANEL_LAYOUT.ALERT.PADDING} ${radius.md}`}>
                 ⚠️ Storage σε χαμηλά επίπεδα. Σκεφτείτε καθαρισμό.
               </div>
             )}
@@ -151,7 +151,7 @@ export function StorageStatusIndicator() {
   if (!isWarning) return null;
 
   return (
-    <div className={`flex items-center gap-1 text-xs ${colors.text.warning}`}>
+    <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS} text-xs ${colors.text.warning}`}>
       <HardDrive className={iconSizes.xs} />
       <span>{usagePercentage.toFixed(0)}%</span>
     </div>

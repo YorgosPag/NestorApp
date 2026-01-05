@@ -3,6 +3,8 @@
 import React from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 interface WizardProgressProps {
   currentStep: number;
@@ -20,7 +22,7 @@ export function WizardProgress({
   const steps = Array.from({ length: totalSteps }, (_, i) => i + 1);
 
   return (
-    <div className={`px-4 py-3 ${getDirectionalBorder('default', 'bottom')}`}>
+    <div className={`${PANEL_LAYOUT.BUTTON.PADDING} ${getDirectionalBorder('default', 'bottom')}`}>
       <div className="flex items-center">
         {steps.map((stepNum) => (
           <React.Fragment key={stepNum}>
@@ -35,14 +37,14 @@ export function WizardProgress({
                 {stepNum}
               </div>
               {stepLabels[stepNum - 1] && (
-                <div className={`text-xs ${colors.text.muted} mt-1 text-center max-w-16 truncate`}>
+                <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS} text-center max-w-16 truncate`}>
                   {stepLabels[stepNum - 1]}
                 </div>
               )}
             </div>
             {stepNum < totalSteps && (
               <div
-                className={`flex-1 h-1 mx-3 transition-colors ${
+                className={`flex-1 ${PANEL_LAYOUT.HEIGHT.XS} ${PANEL_LAYOUT.MARGIN.X_MD} transition-colors ${
                   stepNum < currentStep ? `${colors.bg.info}` : `${colors.bg.muted}`
                 }`}
               />

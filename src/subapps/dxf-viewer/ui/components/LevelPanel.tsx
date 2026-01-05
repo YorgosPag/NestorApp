@@ -7,7 +7,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Trash2, Plus, Building2, Edit, MousePointer, Pen, Move, Info, Shapes } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useOverlayStore } from '../../overlays/overlay-store';
-import { PANEL_TOKENS, PanelTokenUtils } from '../../config/panel-tokens';
+import { PANEL_TOKENS, PANEL_LAYOUT, PanelTokenUtils } from '../../config/panel-tokens';
 import { OverlayList } from '../OverlayList';
 import { useGripContext } from '../../providers/GripProvider';
 import { SceneInfoSection } from './SceneInfoSection'; // 🔺 ADDED: Import SceneInfoSection
@@ -307,7 +307,7 @@ export function LevelPanel({
                     </div>
                   )}
                   
-                  <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                  <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS} flex-shrink-0 ${PANEL_LAYOUT.MARGIN.LEFT_SM}`}>
                     <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -330,7 +330,7 @@ export function LevelPanel({
                         <Trash2 className={iconSizes.sm} />
                       </button>
                     )}
-                  </div>
+                  </nav>
                 </div>
               </div>
             );

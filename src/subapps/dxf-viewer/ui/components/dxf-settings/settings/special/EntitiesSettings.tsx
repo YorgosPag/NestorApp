@@ -43,6 +43,7 @@ import { updateDraftSettingsStore } from '../../../../../hooks/useLinePreviewSty
 import { updateDraftTextSettingsStore } from '../../../../../hooks/useTextPreviewStyle';
 import { updateDraftGripSettingsStore } from '../../../../../hooks/useGripPreviewStyle';
 import { INTERACTIVE_PATTERNS } from '../../../../../../../components/ui/effects';
+import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 
 // Default grip settings for LinePreview
 const DEFAULT_GRIP_SETTINGS = {
@@ -385,8 +386,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
     }
 
     return (
-      <div className="mb-6">
-        <div className="flex flex-wrap gap-1">
+      <div className={PANEL_LAYOUT.MARGIN.BOTTOM_LG}>
+        <div className={`flex flex-wrap ${PANEL_LAYOUT.GAP.XS}`}>
           {toolsToShow.map((tool) => {
             const hasDropdown = tool.dropdownOptions && tool.dropdownOptions.length > 0;
             const isSelected = selectedTool === tool.id;
@@ -398,7 +399,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                   onClick={() => handleToolClick(tool.id)}
                   title={`${tool.label} (${tool.hotkey})`}
                   className={`
-                    ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
+                    ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} transition-colors duration-150
                     flex items-center justify-center
                     ${isSelected
                       ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${getStatusBorder('info')}`
@@ -417,7 +418,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                   onClick={() => handleToolClick(tool.id)}
                   title={`${tool.label} (${tool.hotkey})`}
                   className={`
-                    h-8 w-7 p-0 ${quick.button} border-r-0 transition-colors duration-150
+                    h-8 w-7 ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} border-r-0 transition-colors duration-150
                     flex items-center justify-center
                     ${isSelected
                       ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${getStatusBorder('info')}`
@@ -429,7 +430,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                 </button>
                 <button
                   className={`
-                    h-8 w-4 p-0 ${quick.button} transition-colors duration-150
+                    h-8 w-4 ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} transition-colors duration-150
                     flex items-center justify-center
                     ${isSelected
                       ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${getStatusBorder('info')}`
@@ -456,7 +457,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
     // Ειδική λογική για το line tool (πλήρης από dxf-viewer-kalo)
     if (selectedTool === 'line') {
       return (
-        <div className={`mb-6 p-4 ${colors.bg.secondary} ${quick.card}`}>
+        <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.LG} ${colors.bg.secondary} ${quick.card}`}>
           {/* 🏢 ENTERPRISE: Καρτέλες για Line Tool - className moved directly to component (ADR-003) */}
           <TabsOnlyTriggers
             tabs={lineToolTabs}
@@ -464,7 +465,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
             onTabChange={handleLineToolTabChange}
             theme="dark"
             alwaysShowLabels={true}
-            className="mb-4"
+            className={PANEL_LAYOUT.MARGIN.BOTTOM_LG}
           />
 
           {/* Περιεχόμενο για Προσχεδίαση με υποκαρτέλες */}
@@ -612,15 +613,15 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
 
     // Για όλα τα άλλα εργαλεία - κενό container
     return (
-      <div className={`mb-6 p-4 ${colors.bg.secondary} ${quick.card}`}>
-        <h3 className={`text-lg font-semibold ${colors.text.primary} mb-4`}>
+      <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.LG} ${colors.bg.secondary} ${quick.card}`}>
+        <h3 className={`text-lg font-semibold ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
           Ρυθμίσεις {selectedTool}
         </h3>
-        <div className={`text-center py-8 ${colors.text.muted}`}>
-          <div className="mb-4 flex justify-center">
+        <div className={`text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL} ${colors.text.muted}`}>
+          <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} flex justify-center`}>
             <Wrench className="w-10 h-10" />
           </div>
-          <h3 className={`text-lg font-medium mb-2 ${colors.text.primary}`}>Ρυθμίσεις Εργαλείου</h3>
+          <h3 className={`text-lg font-medium ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.primary}`}>Ρυθμίσεις Εργαλείου</h3>
           <p className={`text-sm ${colors.text.muted}`}>
             Οι ρυθμίσεις για αυτό το εργαλείο θα προστεθούν σύντομα
           </p>
@@ -630,7 +631,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
   };
 
   return (
-    <div className="p-4 space-y-6">
+    <div className={`${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.SPACING.GAP_XL}`}>
       {/* ✅ ADR-003: Removed empty wrapper div - content flows directly */}
 
       {/* 🏢 ENTERPRISE: Tabs για Ειδικές Ρυθμίσεις - className moved directly to component */}
@@ -640,7 +641,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
         onTabChange={handleSpecificTabChange}
         theme="dark"
         alwaysShowLabels={true}
-        className="mb-4"
+        className={PANEL_LAYOUT.MARGIN.BOTTOM_LG}
       />
 
       {/* Toolbar Icons - ανάλογα με την ενεργή υποκαρτέλα */}
@@ -651,9 +652,9 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
 
       {/* Empty state - shown only when no tool selected */}
       {!selectedTool && (
-        <div className={`text-center py-8 ${colors.text.muted}`}>
-          <Pen className={`${iconSizes.xl} mx-auto mb-4`} />
-          <h3 className={`text-lg font-medium mb-2 ${colors.text.primary}`}>Επιλέξτε Εργαλείο</h3>
+        <div className={`text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL} ${colors.text.muted}`}>
+          <Pen className={`${iconSizes.xl} mx-auto ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`} />
+          <h3 className={`text-lg font-medium ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.primary}`}>Επιλέξτε Εργαλείο</h3>
           <p className={`text-sm ${colors.text.muted}`}>
             Κάντε κλικ σε ένα εργαλείο για να δείτε τις ρυθμίσεις του
           </p>

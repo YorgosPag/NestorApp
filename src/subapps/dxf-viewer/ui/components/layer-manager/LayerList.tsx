@@ -5,6 +5,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { LayerListProps } from './types';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 
 export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerListProps) {
   const iconSizes = useIconSizes();
@@ -26,8 +28,8 @@ export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerLi
 
   if (layers.length === 0) {
     return (
-      <div className={`text-center py-8 ${colors.text.muted}`}>
-        <Layers className={`${iconSizes.xl} mx-auto mb-2 opacity-50`} />
+      <div className={`text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL} ${colors.text.muted}`}>
+        <Layers className={`${iconSizes.xl} mx-auto ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} opacity-50`} />
         <p className="text-sm">Δεν βρέθηκαν layers</p>
         <p className="text-xs">Δημιουργήστε ένα νέο layer ή αλλάξτε τα φίλτρα</p>
       </div>
@@ -35,24 +37,24 @@ export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerLi
   }
 
   return (
-    <div className="space-y-2 max-h-64 overflow-y-auto">
+    <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} max-h-64 overflow-y-auto`}>
       {layers.map(layer => (
-        <div key={layer.id} className={`p-2 ${colors.bg.secondary} rounded ${getStatusBorder('muted')}`}>
+        <div key={layer.id} className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${getStatusBorder('muted')}`}>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 flex-1">
-              <div className={`w-3 h-3 rounded-full ${getCategoryColor(layer.category)}`} />
+            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} flex-1`}>
+              <div className={`${PANEL_LAYOUT.ICON.SMALL} rounded-full ${getCategoryColor(layer.category)}`} />
               
               <span className={`text-sm ${colors.text.primary} font-medium`}>{layer.name}</span>
 
-              <span className={`text-xs ${colors.text.muted} ${colors.bg.tertiary} px-1.5 py-0.5 rounded`}>
+              <span className={`text-xs ${colors.text.muted} ${colors.bg.tertiary} ${PANEL_LAYOUT.PADDING.BADGE} rounded`}>
                 {layer.elements}
               </span>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
               <button
                 onClick={() => onToggleVisibility?.(layer.id)}
-                className={`p-1 ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} transition-colors`}
+                className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} transition-colors`}
                 title={layer.visible ? 'Απόκρυψη' : 'Εμφάνιση'}
               >
                 {layer.visible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
@@ -60,7 +62,7 @@ export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerLi
               
               <button
                 onClick={() => onLayerAction?.(layer.id, 'menu')}
-                className={`p-1 ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} transition-colors`}
+                className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} transition-colors`}
                 title="Περισσότερες επιλογές"
               >
                 <MoreVertical className={iconSizes.xs} />

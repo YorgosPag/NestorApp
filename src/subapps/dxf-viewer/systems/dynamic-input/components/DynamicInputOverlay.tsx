@@ -3,6 +3,7 @@
 import React, { useEffect, useCallback } from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
 import { useCursor } from '../../cursor';
 import { CADFeedback } from '../../../utils/feedback-utils';
 import { DynamicInputField } from './DynamicInputField';
@@ -315,8 +316,8 @@ export default function DynamicInputOverlay({
   return (
     <DynamicInputContainer position={position} showInput={showInput}>
       <DynamicInputHeader activeTool={activeTool} />
-        
-        <div className="space-y-2">
+
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           {/* X Coordinate */}
           {fieldsToShow.includes('x') && (
             <DynamicInputField
@@ -500,7 +501,7 @@ export default function DynamicInputOverlay({
 
         {/* Multi-point information για polyline/polygon */}
         {multiPointInfo.shouldShowMultiPoint && (
-          <div className={`mt-2 pt-2 ${getDirectionalBorder('muted', 'top')} text-xs ${colors.text.tertiary}`}>
+          <div className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.PADDING.TOP_SM} ${getDirectionalBorder('muted', 'top')} text-xs ${colors.text.tertiary}`}>
             {multiPointInfo.lastPointDistance !== null && (
               <div>Distance: {multiPointInfo.lastPointDistance.toFixed(3)}</div>
             )}

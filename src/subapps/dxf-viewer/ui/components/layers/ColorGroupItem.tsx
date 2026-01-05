@@ -1,6 +1,11 @@
 /**
  * ColorGroupItem Component
  * Displays a single color group with its layers and controls
+ *
+ * 🏢 ENTERPRISE MIGRATION: 2026-01-05
+ * - Zero hardcoded values via PANEL_LAYOUT tokens
+ * - Zero inline styles
+ * - Full centralized system compliance
  */
 
 import React from 'react';
@@ -8,6 +13,7 @@ import { Eye, EyeOff, Trash2, Edit2, ChevronRight, ChevronDown } from 'lucide-re
 import { LayerItem } from './LayerItem';
 import { createColorGroupKey, type ColorGroupCommonProps } from './utils';
 import { DEFAULT_LAYER_COLOR } from '../../../config/color-config';
+import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS, createHoverBorderEffects } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -133,20 +139,20 @@ export function ColorGroupItem({
   };
 
   return (
-    <div className="space-y-1">
+    <section className={PANEL_LAYOUT.SPACING.GAP_XS}>
       {/* Color Group Header */}
-      <div 
-        className={`flex items-center justify-between p-2 ${colors.bg.muted} ${getStatusBorder('info')} rounded cursor-pointer ${INTERACTIVE_PATTERNS.PURPLE_HOVER} transition-colors ${
+      <header
+        className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.muted} ${getStatusBorder('info')} ${PANEL_LAYOUT.CONTAINER.BORDER_RADIUS} cursor-pointer ${INTERACTIVE_PATTERNS.PURPLE_HOVER} transition-colors ${
           selectedColorGroupsForMerge.has(colorName) ? `ring-2 ${colors.ring.info} ${colors.bg.selection}` : ''
         }`}
         onClick={handleGroupClick}
         title="Κλικ για επιλογή όλων των entities, Ctrl+Κλικ για multi-selection"
       >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} flex-1 min-w-0`}>
           {/* Expand/Collapse Arrow */}
           <button
             onClick={handleExpandToggle}
-            className={`p-1 ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
+            className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
             title={isExpanded ? "Σύμπτυξη" : "Ανάπτυξη"}
           >
             {isExpanded ? (
@@ -160,11 +166,11 @@ export function ColorGroupItem({
           <div className="relative">
             <button
               onClick={handleColorPickerToggle}
-              className={`${iconSizes.sm} rounded ${getStatusBorder('muted')} ${hoverBorderEffects.BLUE} ${colorBgClass}`}
+              className={`${iconSizes.sm} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} ${getStatusBorder('muted')} ${hoverBorderEffects.BLUE} ${colorBgClass}`}
               title="Αλλαγή χρώματος Color Group"
             />
           </div>
-          
+
           {/* Color Group Name */}
           {isEditingColorGroup ? (
             <input
@@ -173,12 +179,12 @@ export function ColorGroupItem({
               onChange={(e) => setEditingColorGroupName(e.target.value)}
               onKeyDown={handleNameKeyDown}
               onBlur={handleNameBlur}
-              className={`${colors.bg.hover} ${colors.text.muted} text-sm font-medium px-1 rounded ${getStatusBorder('info')} focus:outline-none ${colors.interactive.focus.ring} min-w-0 flex-1`}
+              className={`${colors.bg.hover} ${colors.text.muted} ${PANEL_LAYOUT.INPUT.TEXT_SIZE} font-medium ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} ${getStatusBorder('info')} ${PANEL_LAYOUT.INPUT.FOCUS} ${colors.interactive.focus.ring} min-w-0 flex-1`}
               autoFocus
             />
           ) : (
-            <span 
-              className={`text-sm font-medium ${colors.text.muted} truncate cursor-pointer`}
+            <span
+              className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} font-medium ${colors.text.muted} truncate cursor-pointer`}
               title="Double-click για μετονομασία"
               onDoubleClick={handleNameDoubleClick}
             >
@@ -186,53 +192,53 @@ export function ColorGroupItem({
             </span>
           )}
         </div>
-        
-        <div className="flex items-center gap-1">
+
+        <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
           {/* Visibility Toggle */}
           <button
             onClick={handleVisibilityToggle}
-            className={`p-1 ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
+            className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
             title={allVisible ? "Απόκρυψη Color Group" : "Εμφάνιση Color Group"}
           >
             {allVisible ? (
               <Eye className={iconSizes.sm} />
             ) : someVisible ? (
-              <Eye className={`${iconSizes.sm} opacity-50`} />
+              <Eye className={`${iconSizes.sm} ${PANEL_LAYOUT.INTERACTIVE.DISABLED_OPACITY}`} />
             ) : (
               <EyeOff className={iconSizes.sm} />
             )}
           </button>
-          
+
           {/* Edit Button */}
           <button
             onClick={handleEditClick}
-            className={`p-1 ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
+            className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
             title="Μετονομασία Color Group"
           >
             <Edit2 className={iconSizes.sm} />
           </button>
-          
+
           {/* Delete Button */}
           <button
             onClick={handleDeleteClick}
-            className={`p-1 ${colors.text.error} ${HOVER_TEXT_EFFECTS.RED}`}
+            className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.error} ${HOVER_TEXT_EFFECTS.RED}`}
             title="Διαγραφή Color Group"
           >
             <Trash2 className={iconSizes.sm} />
           </button>
-        </div>
-      </div>
+        </nav>
+      </header>
 
       {/* Individual Layers (when expanded) */}
       {isExpanded && layerNames.map((layerName: string) => (
-        <div key={layerName} className="ml-6">
+        <article key={layerName} className={PANEL_LAYOUT.MARGIN.LEFT_LG}>
           <LayerItem
             layerName={layerName}
             scene={scene}
             {...layerItemProps}
           />
-        </div>
+        </article>
       ))}
-    </div>
+    </section>
   );
 }

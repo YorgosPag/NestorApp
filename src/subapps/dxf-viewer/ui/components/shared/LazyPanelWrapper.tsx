@@ -8,6 +8,8 @@ import React from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '../../../components/modal/ModalLoadingStates';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 
 /**
  * Props for the LazyPanelWrapper component
@@ -51,8 +53,8 @@ export const LazyPanelWrapper = React.memo<LazyPanelWrapperProps>(function LazyP
 }) {
   const colors = useSemanticColors();
   const loadingSpinner = React.useMemo(() => (
-    <div className={`flex items-center justify-center p-8 ${className}`}>
-      <div className="flex flex-col items-center space-y-3">
+    <div className={`flex items-center justify-center ${PANEL_LAYOUT.SPACING.XXXL} ${className}`}>
+      <div className={`flex flex-col items-center ${PANEL_LAYOUT.SPACING.GAP_MD}`}>
         <AnimatedSpinner size="medium" />
         <span className={`text-sm ${colors.text.muted}`}>{loadingText}</span>
       </div>

@@ -22,6 +22,7 @@ import { layoutUtilities } from '@/styles/design-tokens';
 import {
   getTestResultsInteractiveAutoStyles
 } from '../ui/DxfViewerComponents.styles';
+import { PANEL_LAYOUT } from '../config/panel-tokens';
 
 // ============================================================================
 // TYPES
@@ -155,12 +156,12 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER */}
-        <div className={`flex items-center justify-between px-6 py-4 ${colors.bg.secondary} rounded-t-lg ${getStatusBorder('default')} ${getDirectionalBorder('default', 'bottom')}`}>
-          <div className="flex items-center gap-3">
+        <header className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.XXL} ${PANEL_LAYOUT.PADDING.TOP_LG} ${PANEL_LAYOUT.PADDING.BOTTOM_LG} ${colors.bg.secondary} rounded-t-lg ${getStatusBorder('default')} ${getDirectionalBorder('default', 'bottom')}`}>
+          <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD}`}>
             <span className="text-2xl">🧪</span>
             <div>
               <h2 className="text-xl font-bold text-white">Ενιαίο Σύστημα Εκτέλεσης Τεστ - Αποτελέσματα</h2>
-              <p className={`text-xs ${colors.text.muted} mt-1`}>
+              <p className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
                 {new Date(report.timestamp).toLocaleString()} • {report.totalDuration.toFixed(0)}ms σύνολο
               </p>
             </div>
@@ -171,104 +172,104 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
           >
             ✕
           </button>
-        </div>
+        </header>
 
         {/* STATS BAR */}
-        <div className={`flex items-center justify-between px-6 py-3 ${colors.bg.secondary} ${getStatusBorder('default')} ${getDirectionalBorder('default', 'bottom')}`}>
-          <div className="flex gap-6">
-            <div className="flex items-center gap-2">
+        <section className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.XXL} ${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${getStatusBorder('default')} ${getDirectionalBorder('default', 'bottom')}`}>
+          <div className={`flex ${PANEL_LAYOUT.GAP.XL}`}>
+            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <span className={`${colors.text.success} text-lg font-bold`}>{report.passed}</span>
               <span className={`text-xs ${colors.text.muted}`}>Επιτυχία</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <span className={`${colors.text.danger} text-lg font-bold`}>{report.failed}</span>
               <span className={`text-xs ${colors.text.muted}`}>Αποτυχία</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <span className={`${colors.text.warning} text-lg font-bold`}>{report.warnings}</span>
               <span className={`text-xs ${colors.text.muted}`}>Προειδοποιήσεις</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <span className={`${colors.text.info} text-lg font-bold`}>{passRate}%</span>
               <span className={`text-xs ${colors.text.muted}`}>Ποσοστό Επιτυχίας</span>
             </div>
           </div>
 
-          <div className="flex gap-2" style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}>
+          <div className={`flex ${PANEL_LAYOUT.GAP.SM}`} style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}>
             <button
               onClick={handleCopy}
-              className={`px-4 py-2 text-sm font-medium rounded transition-all ${
+              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} text-sm font-medium rounded transition-all ${
                 copied
                   ? `${colors.bg.success} text-white`
                   : `${colors.bg.info} text-white ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT}`
               }`}
               style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}
             >
-              {copied ? '✅ Αντιγράφηκε!' : '📋 Αντιγραφή Όλων'}
+              {copied ? 'Αντιγράφηκε!' : 'Αντιγραφή Όλων'}
             </button>
             <button
               onClick={handleDownload}
-              className={`px-4 py-2 text-sm font-medium rounded ${colors.bg.info} text-white ${HOVER_BACKGROUND_EFFECTS.PURPLE_LIGHT} transition-all`}
+              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} text-sm font-medium rounded ${colors.bg.info} text-white ${HOVER_BACKGROUND_EFFECTS.PURPLE_LIGHT} transition-all`}
               style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}
             >
-              💾 Λήψη JSON
+              Λήψη JSON
             </button>
           </div>
-        </div>
+        </section>
 
         {/* TABS */}
-        <div className={`flex gap-1 px-6 pt-4 ${colors.bg.secondary}`} style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}>
+        <nav className={`flex ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.SPACING.XXL} ${PANEL_LAYOUT.PADDING.TOP_LG} ${colors.bg.secondary}`} style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}>
           <button
             onClick={() => {
-              console.log('🔘 Summary tab clicked');
+              console.log('Summary tab clicked');
               setActiveTab('summary');
             }}
-            className={`px-4 py-2 text-sm font-medium rounded-t transition-all ${getTabBorder('summary')}`}
+            className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} text-sm font-medium rounded-t transition-all ${getTabBorder('summary')}`}
             style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}
           >
-            📊 Περίληψη
+            Περίληψη
           </button>
           <button
             onClick={() => {
-              console.log('🔘 Details tab clicked');
+              console.log('Details tab clicked');
               setActiveTab('details');
             }}
-            className={`px-4 py-2 text-sm font-medium rounded-t transition-all ${getTabBorder('details')}`}
+            className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} text-sm font-medium rounded-t transition-all ${getTabBorder('details')}`}
             style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}
           >
-            🔍 Λεπτομέρειες
+            Λεπτομέρειες
           </button>
           <button
             onClick={() => {
-              console.log('🔘 Raw tab clicked');
+              console.log('Raw tab clicked');
               setActiveTab('raw');
             }}
-            className={`px-4 py-2 text-sm font-medium rounded-t transition-all ${getTabBorder('raw')}`}
+            className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} text-sm font-medium rounded-t transition-all ${getTabBorder('raw')}`}
             style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}
           >
-            📝 Ακατέργαστη Έξοδος
+            Ακατέργαστη Έξοδος
           </button>
-        </div>
+        </nav>
 
         {/* CONTENT */}
-        <div className={`flex-1 overflow-y-auto ${colors.bg.secondary} px-6 py-4`}>
+        <main className={`flex-1 overflow-y-auto ${colors.bg.secondary} ${PANEL_LAYOUT.SPACING.XXL} ${PANEL_LAYOUT.SPACING.LG}`}>
           {activeTab === 'summary' && <SummaryTab report={report} />}
           {activeTab === 'details' && <DetailsTab report={report} />}
           {activeTab === 'raw' && <RawTab formattedReport={formattedReport} />}
-        </div>
+        </main>
 
         {/* FOOTER */}
-        <div className={`flex items-center justify-between px-6 py-3 ${colors.bg.secondary} rounded-b-lg ${getStatusBorder('default')} ${getDirectionalBorder('default', 'top')}`}>
+        <footer className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.XXL} ${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} rounded-b-lg ${getStatusBorder('default')} ${getDirectionalBorder('default', 'top')}`}>
           <div className={`text-xs ${colors.text.disabled}`}>
             🖥️ Viewport: {report.systemInfo.viewport.width}×{report.systemInfo.viewport.height}
           </div>
           <button
             onClick={onClose}
-            className={`px-4 py-2 text-sm font-medium rounded ${colors.bg.hover} text-white ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL} transition-all`}
+            className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} text-sm font-medium rounded ${colors.bg.hover} text-white ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL} transition-all`}
           >
             Κλείσιμο
           </button>
-        </div>
+        </footer>
       </div>
     </div>
   );
@@ -293,8 +294,8 @@ const SummaryTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+    <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
+      <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.LG}`}>
         {report.tests.map((test, index) => {
           const statusColor = getTestStatusBorder(test.status as 'success' | 'error' | 'warning' | 'info');
 
@@ -308,19 +309,19 @@ const SummaryTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
               : 'ℹ️';
 
           return (
-            <div
+            <article
               key={index}
-              className={`p-4 rounded border ${statusColor}`}
+              className={`${PANEL_LAYOUT.SPACING.LG} rounded border ${statusColor}`}
             >
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-2">
+              <div className={`flex items-start justify-between ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
+                <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                   <span className="text-xl">{icon}</span>
                   <span className="font-medium text-white text-sm">{test.name}</span>
                 </div>
                 <span className={`text-xs ${colors.text.muted}`}>{test.duration.toFixed(0)}ms</span>
               </div>
               <p className={`text-xs ${colors.text.tertiary} leading-relaxed`}>{test.summary}</p>
-            </div>
+            </article>
           );
         })}
       </div>
@@ -350,7 +351,7 @@ const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
   };
 
   return (
-    <div className="space-y-2" style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}>
+    <div className={PANEL_LAYOUT.SPACING.GAP_SM} style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}>
       {report.tests.map((test, index) => {
         const isExpanded = expandedTests.has(index);
         const statusColor =
@@ -378,10 +379,10 @@ const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
                 console.log(`🔽 Toggling test ${index}: ${test.name}`);
                 toggleExpand(index);
               }}
-              className={`w-full px-4 py-3 flex items-center justify-between ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK} transition-colors`}
+              className={`w-full ${PANEL_LAYOUT.SPACING.COMFORTABLE} flex items-center justify-between ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK} transition-colors`}
               style={(getTestResultsInteractiveAutoStyles?.() || {}) as React.CSSProperties}
             >
-              <div className="flex items-center gap-3">
+              <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD}`}>
                 <span className="text-lg">{icon}</span>
                 <span className={`font-medium ${statusColor}`}>{test.name}</span>
                 <span className={`text-xs ${colors.text.disabled}`}>({test.duration.toFixed(0)}ms)</span>
@@ -390,23 +391,23 @@ const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
             </button>
 
             {isExpanded && (
-              <div className={`px-4 pb-4 pt-2 ${getStatusBorder('default')} ${getDirectionalBorder('default', 'top')}`}>
-                <div className="space-y-2">
+              <div className={`${PANEL_LAYOUT.SPACING.COMFORTABLE} ${PANEL_LAYOUT.PADDING.TOP_SM} ${getStatusBorder('default')} ${getDirectionalBorder('default', 'top')}`}>
+                <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
                   <div>
                     <span className={`text-xs ${colors.text.disabled}`}>Περίληψη:</span>
-                    <p className={`text-sm ${colors.text.tertiary} mt-1`}>{test.summary}</p>
+                    <p className={`text-sm ${colors.text.tertiary} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{test.summary}</p>
                   </div>
                   {test.details && (
                     <div>
                       <span className={`text-xs ${colors.text.disabled}`}>Λεπτομέρειες:</span>
-                      <pre className={`text-xs ${colors.text.tertiary} mt-1 p-3 ${colors.bg.secondary} rounded overflow-x-auto`}>
+                      <pre className={`text-xs ${colors.text.tertiary} ${PANEL_LAYOUT.MARGIN.TOP_XS} ${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} rounded overflow-x-auto`}>
                         {JSON.stringify(test.details, null, 2)}
                       </pre>
                     </div>
                   )}
                   <div>
                     <span className={`text-xs ${colors.text.disabled}`}>Χρονοσήμανση:</span>
-                    <p className={`text-xs ${colors.text.muted} mt-1`}>{new Date(test.timestamp).toLocaleString()}</p>
+                    <p className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{new Date(test.timestamp).toLocaleString()}</p>
                   </div>
                 </div>
               </div>
@@ -427,7 +428,7 @@ const RawTab: React.FC<{ formattedReport: string }> = ({ formattedReport }) => {
 
   return (
     <div className="h-full">
-      <pre className={`text-xs ${colors.text.tertiary} font-mono whitespace-pre-wrap break-words p-4 ${colors.bg.secondary} rounded h-full overflow-y-auto`}>
+      <pre className={`text-xs ${colors.text.tertiary} font-mono whitespace-pre-wrap break-words ${PANEL_LAYOUT.SPACING.LG} ${colors.bg.secondary} rounded h-full overflow-y-auto`}>
         {formattedReport}
       </pre>
     </div>

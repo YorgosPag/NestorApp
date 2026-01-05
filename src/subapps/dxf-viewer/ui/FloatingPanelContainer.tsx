@@ -26,6 +26,8 @@ export type { FloatingPanelHandleType as FloatingPanelHandle };
 import { usePanelNavigation } from './hooks/usePanelNavigation';
 import { usePanelContentRenderer } from './hooks/usePanelContentRenderer';
 import { usePanelDescription } from './hooks/usePanelDescription';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../config/panel-tokens';
 
 interface FloatingPanelContainerProps {
   sceneModel: SceneModel | null;
@@ -104,7 +106,7 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   if (isLoading) {
     return (
       <div className={`fixed right-4 top-4 ${colors.bg.overlay} backdrop-blur-sm ${quick.card} ${getStatusBorder('default')} shadow-xl w-80`}>
-        <div className={`p-4 text-center ${colors.text.muted}`}>
+        <div className={`${PANEL_LAYOUT.SPACING.LG} text-center ${colors.text.muted}`}>
           Loading translations...
         </div>
       </div>
@@ -134,8 +136,8 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
         />
       </div>
 
-      {/* ✅ ENTERPRISE: Αφαίρεση περιττού hardcoded w-[368px] wrapper (ADR-003 Container Nesting) */}
-      <div className={`flex-1 min-h-0 overflow-y-auto ${colors.bg.primary} ${colors.text.primary} py-4 px-2`}>
+      {/* ✅ ENTERPRISE: Centralized spacing from PANEL_LAYOUT (ADR-003) */}
+      <div className={`flex-1 min-h-0 overflow-y-auto ${colors.bg.primary} ${colors.text.primary} ${PANEL_LAYOUT.CONTAINER.PADDING}`}>
         {renderPanelContent()}
       </div>
 

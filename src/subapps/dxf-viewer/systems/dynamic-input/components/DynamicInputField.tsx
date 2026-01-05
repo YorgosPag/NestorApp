@@ -2,6 +2,7 @@
 import React from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
 
 interface DynamicInputFieldProps {
   label: string;
@@ -76,7 +77,7 @@ export function DynamicInputField({
     onKeyDown?.(e);
   };
   return (
-    <div className="flex items-center gap-2">
+    <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
       <label
         className={`text-xs w-8 ${
           isActive ? `${colors.text.info} font-semibold` : colors.text.secondary
@@ -93,7 +94,7 @@ export function DynamicInputField({
         onFocus={onFocus}
         disabled={disabled}
         placeholder={placeholder}
-        className={`flex-1 text-white px-2 py-1 text-sm rounded border ${quick.focus} focus:outline-none
+        className={`flex-1 text-white ${PANEL_LAYOUT.SPACING.COMPACT} text-sm rounded border ${quick.focus} focus:outline-none
           ${isAnchored ? `${colors.bg.warning} font-bold ${quick.warning}` : `${colors.bg.hover} ${quick.none}`}
           ${disabled ? `${colors.bg.accent} opacity-50 cursor-not-allowed ${quick.muted}` : ''}
           ${isActive ? quick.focus : ''}`}

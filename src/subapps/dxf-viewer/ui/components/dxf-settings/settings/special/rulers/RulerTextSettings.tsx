@@ -18,6 +18,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useRulersGridContext } from '../../../../../../systems/rulers-grid/RulersGridSystem';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../../../../../config/color-config';
+import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: Centralized Switch component (Radix)
 import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: Dynamic background class (ZERO inline styles)
@@ -102,14 +103,14 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
   // ============================================================================
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
       {/* Ruler Text Color */}
-      <div className={`p-2 ${colors.bg.hover} ${radius.md} space-y-2`}>
+      <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} ${radius.md} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className={`text-sm ${colors.text.primary}`}>
           <div className="font-medium">Χρώμα Κειμένων</div>
           <div className={`font-normal ${colors.text.muted}`}>Χρώμα αριθμών και κειμένων χαράκων</div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <div
             className={`${iconSizes.lg} ${radius.md} ${getStatusBorder('default')} ${textColorBgClass}`}
           />
@@ -123,19 +124,19 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
             type="text"
             value={rulerSettings.horizontal.textColor}
             onChange={(e) => handleRulerTextColorChange(e.target.value)}
-            className={`px-2 py-1 text-xs ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${getStatusBorder('default')} w-20`}
+            className={`${PANEL_LAYOUT.SPACING.COMPACT} text-xs ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${getStatusBorder('default')} w-20`}
             placeholder={UI_COLORS.WHITE}
           />
         </div>
       </div>
 
       {/* Font Size */}
-      <div className={`p-2 ${colors.bg.hover} ${radius.md} space-y-2`}>
+      <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} ${radius.md} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className={`text-sm ${colors.text.primary}`}>
           <div className="font-medium">Μέγεθος Κειμένου</div>
           <div className={`font-normal ${colors.text.muted}`}>Μέγεθος των αριθμών στους χάρακες</div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <input
             type="range"
             min="8"
@@ -145,20 +146,20 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
             onChange={(e) => handleRulerFontSizeChange(parseInt(e.target.value))}
             className="flex-1"
           />
-          <div className={`text-xs ${colors.bg.muted} ${colors.text.primary} ${radius.md} px-2 py-1 text-center w-12`}>
+          <div className={`text-xs ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} text-center w-12`}>
             {rulerSettings.horizontal.fontSize}px
           </div>
         </div>
       </div>
 
       {/* 🏢 ENTERPRISE: Text Visibility Toggle - Using centralized Switch component */}
-      <div className={`p-2 ${colors.bg.hover} ${radius.md} space-y-2`}>
+      <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} ${radius.md} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className="flex items-center justify-between">
           <div className={`text-sm ${colors.text.primary}`}>
             <div className="font-medium">Εμφάνιση Κειμένων</div>
             <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη αριθμών και κειμένων στους χάρακες</div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <span className={`text-xs ${colors.text.muted}`}>
               {textVisible ? 'Ενεργό' : 'Ανενεργό'}
             </span>

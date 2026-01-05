@@ -28,6 +28,8 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 // ✅ ENTERPRISE: Custom hook για draggable functionality
 function useDraggable(initialPosition = { x: 0, y: 0 }) {
@@ -217,7 +219,7 @@ export function EnterpriseColorDialog({
               {/* Header - ✅ ENTERPRISE: Draggable handle */}
               <div
                 data-drag-handle
-                className={`flex items-center justify-between p-4 ${getDirectionalBorder('muted', 'bottom')} cursor-grab active:cursor-grabbing`}
+                className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.LG} ${getDirectionalBorder('muted', 'bottom')} cursor-grab active:cursor-grabbing`}
               >
                 <h2
                   {...titleProps}
@@ -249,7 +251,7 @@ export function EnterpriseColorDialog({
               </div>
 
               {/* Content - ✅ FIX: Ensure pointer events work */}
-              <div className="p-0" style={{ cursor: 'default', pointerEvents: 'auto' }}>
+              <div className={PANEL_LAYOUT.SPACING.NONE} style={{ cursor: 'default', pointerEvents: 'auto' }}>
                 <EnterpriseColorPicker
                   {...pickerProps}
                   value={value}
@@ -260,16 +262,16 @@ export function EnterpriseColorDialog({
 
               {/* Footer */}
               {showFooter && (
-                <div className={`flex gap-2 p-4 ${getDirectionalBorder('muted', 'top')}`}>
+                <div className={`flex ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.LG} ${getDirectionalBorder('muted', 'top')}`}>
                   <button
                     onClick={handleCancel}
-                    className={`flex-1 px-4 py-2 ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.inverted} rounded transition-colors cursor-pointer`}
+                    className={`flex-1 ${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.inverted} rounded transition-colors cursor-pointer`}
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleApply}
-                    className={`flex-1 px-4 py-2 ${colors.bg.primary} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${colors.text.primary} rounded transition-colors cursor-pointer`}
+                    className={`flex-1 ${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.primary} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${colors.text.primary} rounded transition-colors cursor-pointer`}
                   >
                     Apply
                   </button>
@@ -308,7 +310,7 @@ export function ColorDialogTrigger({
         onClick={() => setIsOpen(true)}
         disabled={disabled}
         className={`
-          flex items-center gap-3 px-4 py-2 ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER}
+          flex items-center ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER}
           ${colors.text.inverted} ${quick.button} ${getStatusBorder('default')} transition-colors
           disabled:opacity-50 disabled:cursor-not-allowed
         `}

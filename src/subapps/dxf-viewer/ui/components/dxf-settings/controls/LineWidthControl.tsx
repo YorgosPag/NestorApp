@@ -6,6 +6,8 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { Slider } from '../../../../../../components/ui/slider';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
 
 interface LineWidthControlProps {
   value: number;
@@ -52,7 +54,7 @@ export const LineWidthControl: React.FC<LineWidthControlProps> = ({
   }, [onChange, onChangeInstant]);
 
   return (
-    <div className="space-y-2">
+    <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
       <div className="flex items-center justify-between">
         <label className={`text-sm font-medium ${colors.text.secondary}`}>
           {label}

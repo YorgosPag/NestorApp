@@ -4,6 +4,8 @@ import { getDashArray } from '../../../../../settings-core/defaults';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../../../../config/color-config';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 
 // Helper για SVG stroke-dasharray (χρησιμοποιεί την κεντρική getDashArray)
 const getDashArrayForSvg = (type: LineType | string, scale: number = 1) => {
@@ -91,7 +93,7 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
   };
 
   return (
-    <div className={`${colors.bg.secondary} rounded p-6 space-y-4 ${className}`}>
+    <div className={`${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.XXL} ${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
       {/* Live Preview με πραγματικές ρυθμίσεις - ΠΛΗΡΗΣ ΠΡΟΕΠΙΣΚΟΠΗΣΗ GRIPS */}
       <div className="relative h-12 flex items-center">
         <svg width="100%" height="100%" className="absolute inset-0">

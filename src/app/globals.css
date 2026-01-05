@@ -451,11 +451,27 @@ div[style*="position: fixed" i][style*="green" i] {
 }
 
 /* Hide any div with z-index 99999 that might be a debug overlay */
-div[style*="z-index: 99999" i] {
+/* ⚠️ EXCEPTION: Next.js error overlay must remain visible and interactive */
+div[style*="z-index: 99999" i]:not([class*="nextjs"]):not([id*="nextjs"]):not([data-nextjs]) {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
   pointer-events: none !important;
+}
+
+/* 🏢 ENTERPRISE: Next.js Error Overlay - Ensure visibility & interactivity */
+[data-nextjs-dialog],
+[data-nextjs-dialog-overlay],
+nextjs-portal,
+#__next-build-watcher,
+[class*="nextjs-toast"],
+[class*="Toast"] {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  z-index: 2147483647 !important; /* Maximum z-index */
+  user-select: text !important; /* Allow text selection */
 }
 
 /* =============================================================

@@ -120,9 +120,9 @@ export function usePanelContentRenderer({
 
       default:
         return (
-          <div className={`${colors.text.muted} text-center py-8`}>
+          <aside className={`${colors.text.muted} text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
             <p>Επιλέξτε ένα panel από τις καρτέλες</p>
-          </div>
+          </aside>
         );
     }
   };

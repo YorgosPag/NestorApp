@@ -3,6 +3,8 @@ import React from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import { portalComponents } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 interface SnapResult {
   point: Point2D;
@@ -28,7 +30,7 @@ export default function SnapModeIndicator({
   return (
     <div className={`absolute inset-0 pointer-events-none ${className}`}>
       <div
-        className={`absolute text-xs ${colors.text.warning} ${colors.bg.overlay} px-1 py-0.5 rounded`}
+        className={`absolute text-xs ${colors.text.warning} ${colors.bg.overlay} ${PANEL_LAYOUT.SPACING.COMPACT_XS} rounded`}
         style={{
           left: mouseCss.x + 10,
           top: mouseCss.y - 25,

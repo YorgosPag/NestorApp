@@ -22,6 +22,8 @@ import { Grid3X3, Ruler } from 'lucide-react';
 import { GridSettings } from '../settings/special/GridSettings';
 import { RulersSettings } from '../settings/special/RulersSettings';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
 
 /**
  * GridCategory - Grid & Rulers settings category with 2 main tabs
@@ -134,7 +136,7 @@ export const GridCategory: React.FC<GridCategoryProps> = ({
   return (
     <div className={className}>
       {/* 🏢 ENTERPRISE: Tab Navigation - Using centralized TabsOnlyTriggers */}
-      <div className={`${getDirectionalBorder('default', 'bottom')} mb-4`}>
+      <div className={`${getDirectionalBorder('default', 'bottom')} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
         <TabsOnlyTriggers
           tabs={gridTabs}
           value={activeTab}
@@ -144,8 +146,8 @@ export const GridCategory: React.FC<GridCategoryProps> = ({
         />
       </div>
 
-      {/* Tab Content */}
-      <div className="px-4">
+      {/* Tab Content - 🏢 ENTERPRISE: Centralized spacing */}
+      <div className={PANEL_LAYOUT.CONTAINER.PADDING}>
         {renderTabContent()}
       </div>
     </div>

@@ -8,6 +8,7 @@ import { CraneIcon } from '../../components/icons';
 import { useProjectHierarchy } from '../../contexts/ProjectHierarchyContext';
 import { useTranslation } from '../../../../i18n';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 export function HierarchyDebugPanel() {
   const iconSizes = useIconSizes();
@@ -36,211 +37,214 @@ export function HierarchyDebugPanel() {
 
   if (loading) {
     return (
-      <div className={`${colors.bg.secondary} p-4 rounded-lg ${getStatusBorder('muted')}`}>
-        <h3 className="text-white text-lg font-semibold mb-2 flex items-center gap-2">
+      <section className={`${colors.bg.secondary} ${PANEL_LAYOUT.SPACING.LG} rounded-lg ${getStatusBorder('muted')}`}>
+        <h3 className={`text-white text-lg font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <CraneIcon className={`${iconSizes.md} ${colors.text.warning}`} />
           <span>{t('panels.hierarchy.projectHierarchy')}</span>
         </h3>
         <p className={`${colors.text.muted}`}>{t('panels.hierarchy.loading')}</p>
-      </div>
+      </section>
     );
   }
 
   if (error) {
     return (
-      <div className={`${colors.bg.secondary} p-4 rounded-lg ${getStatusBorder('error')}`}>
-        <h3 className="text-white text-lg font-semibold mb-2">{t('panels.hierarchy.error')}</h3>
+      <section className={`${colors.bg.secondary} ${PANEL_LAYOUT.SPACING.LG} rounded-lg ${getStatusBorder('error')}`}>
+        <h3 className={`text-white text-lg font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>{t('panels.hierarchy.error')}</h3>
         <p className={`${colors.text.error}`}>{error}</p>
-        <button 
+        <button
           onClick={loadCompanies}
-          className={`mt-2 px-3 py-1 ${colors.bg.info} text-white rounded ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON}`}
+          className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${colors.bg.info} text-white rounded ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON}`}
         >
           {t('panels.hierarchy.retry')}
         </button>
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className={`${colors.bg.secondary} p-4 rounded-lg ${getStatusBorder('muted')}`}>
-      <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
+    <article className={`${colors.bg.secondary} ${PANEL_LAYOUT.SPACING.LG} rounded-lg ${getStatusBorder('muted')}`}>
+      <h3 className={`text-white text-lg font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_LG} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
         <CraneIcon className={`${iconSizes.md} ${colors.text.warning}`} />
         <span>{t('panels.hierarchy.projectHierarchy')}</span>
       </h3>
-      
+
       {/* Companies List */}
-      <div className="mb-4">
-        <h4 className={`${colors.text.secondary} font-medium mb-2`}>{t('panels.hierarchy.companies')} ({companies.length})</h4>
+      <section className={PANEL_LAYOUT.MARGIN.BOTTOM_LG}>
+        <h4 className={`${colors.text.secondary} font-medium ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>{t('panels.hierarchy.companies')} ({companies.length})</h4>
         {companies.length === 0 ? (
           <p className={`${colors.text.muted} text-sm`}>{t('panels.hierarchy.noCompanies')}</p>
         ) : (
-          <div className="space-y-1">
+          <nav className={PANEL_LAYOUT.SPACING.GAP_XS}>
             {companies.map(company => (
               <button
                 key={company.id}
                 onClick={() => selectCompany(company.id!)}
-                className={`w-full text-left px-2 py-1 rounded text-sm ${
+                className={`w-full text-left ${PANEL_LAYOUT.SPACING.COMPACT} rounded text-sm ${
                   selectedCompany?.id === company.id
                     ? `${colors.bg.warning} text-white`
                     : `${colors.bg.hover} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
                 }`}
               >
-                <Building className={`${iconSizes.sm} inline mr-1`} />{company.companyName}
-                <span className="text-xs ml-2 opacity-70">
+                <Building className={`${iconSizes.sm} inline ${PANEL_LAYOUT.MARGIN.LEFT_HALF}`} />{company.companyName}
+                <span className={`text-xs ${PANEL_LAYOUT.SPACING.GAP_H_SM} opacity-70`}>
                   {company.industry}
                 </span>
               </button>
             ))}
-          </div>
+          </nav>
         )}
-      </div>
+      </section>
 
       {/* Selected Company Info */}
       {selectedCompany && (
-        <div className={`mb-4 pl-4 ${getDirectionalBorder('warning', 'left')}`}>
+        <section className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.MARGIN.LEFT_LG} ${getDirectionalBorder('warning', 'left')}`}>
           {/* ✅ ADR-003: Removed nested div - h4 is now directly flex */}
-          <h4 className={`${colors.text.warning} font-medium mb-2 flex items-center gap-2`}>
+          <h4 className={`${colors.text.warning} font-medium ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <Building className={iconSizes.sm} />
             <span>{selectedCompany.companyName}</span>
           </h4>
-          <div className={`text-xs ${colors.text.muted} mb-2`}>
-            {selectedCompany.vatNumber && <div>ΑΦΜ: {selectedCompany.vatNumber}</div>}
-            {selectedCompany.legalForm && <div>{selectedCompany.legalForm}</div>}
-          </div>
+          <address className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} not-italic`}>
+            {selectedCompany.vatNumber && <span className="block">ΑΦΜ: {selectedCompany.vatNumber}</span>}
+            {selectedCompany.legalForm && <span className="block">{selectedCompany.legalForm}</span>}
+          </address>
 
           {/* Projects for Selected Company */}
-          <div className="mb-3">
-            <h5 className={`${colors.text.secondary} text-sm font-medium mb-2`}>{t('panels.hierarchy.projects')} ({projects.length})</h5>
+          <nav className={PANEL_LAYOUT.MARGIN.BOTTOM_MD}>
+            <h5 className={`${colors.text.secondary} text-sm font-medium ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>{t('panels.hierarchy.projects')} ({projects.length})</h5>
             {projects.length === 0 ? (
               <p className={`${colors.text.muted} text-xs`}>{t('panels.hierarchy.noProjects')}</p>
             ) : (
-              <div className="space-y-1">
+              <menu className={PANEL_LAYOUT.SPACING.GAP_XS}>
                 {projects.map(project => (
-                  <button
-                    key={project.id}
-                    onClick={() => selectProject(project.id)}
-                    className={`w-full text-left px-2 py-1 rounded text-sm ${
-                      selectedProject?.id === project.id
-                        ? `${colors.bg.info} text-white`
-                        : `${colors.bg.hover} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
-                    }`}
-                  >
-                    <FolderIcon className={`${iconSizes.sm} inline mr-1`} />{project.name}
-                    <span className="text-xs ml-2 opacity-70">
-                      ({project.buildings.length} {t('panels.hierarchy.buildingsCount', { count: project.buildings.length })})
-                    </span>
-                  </button>
+                  <li key={project.id} className="list-none">
+                    <button
+                      onClick={() => selectProject(project.id)}
+                      className={`w-full text-left ${PANEL_LAYOUT.SPACING.COMPACT} rounded text-sm ${
+                        selectedProject?.id === project.id
+                          ? `${colors.bg.info} text-white`
+                          : `${colors.bg.hover} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
+                      }`}
+                    >
+                      <FolderIcon className={`${iconSizes.sm} inline ${PANEL_LAYOUT.MARGIN.LEFT_HALF}`} />{project.name}
+                      <span className={`text-xs ${PANEL_LAYOUT.SPACING.GAP_H_SM} opacity-70`}>
+                        ({project.buildings.length} {t('panels.hierarchy.buildingsCount', { count: project.buildings.length })})
+                      </span>
+                    </button>
+                  </li>
                 ))}
-              </div>
+              </menu>
             )}
-          </div>
-        </div>
+          </nav>
+        </section>
       )}
 
       {/* Selected Project Info */}
       {selectedProject && (
-        <div className={`mb-4 pl-4 ${getDirectionalBorder('info', 'left')}`}>
+        <section className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.MARGIN.LEFT_LG} ${getDirectionalBorder('info', 'left')}`}>
           {/* ✅ ADR-003: Removed nested div - h4 is now directly flex */}
-          <h4 className={`${colors.text.info} font-medium mb-2 flex items-center gap-2`}>
+          <h4 className={`${colors.text.info} font-medium ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <Building2 className={iconSizes.sm} />
             <span>{selectedProject.name}</span>
           </h4>
 
           {/* Buildings */}
           {selectedProject.buildings.length > 0 && (
-            <div className="mb-3">
-              <h5 className={`${colors.text.secondary} text-sm font-medium mb-1`}>{t('panels.hierarchy.buildings')}</h5>
-              <div className="space-y-1">
+            <nav className={PANEL_LAYOUT.MARGIN.BOTTOM_MD}>
+              <h5 className={`${colors.text.secondary} text-sm font-medium ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>{t('panels.hierarchy.buildings')}</h5>
+              <menu className={PANEL_LAYOUT.SPACING.GAP_XS}>
                 {selectedProject.buildings.map(building => (
-                  <button
-                    key={building.id}
-                    onClick={() => selectBuilding(building.id)}
-                    className={`w-full text-left px-2 py-1 rounded text-sm ${
-                      selectedBuilding?.id === building.id
-                        ? `${colors.bg.success} text-white`
-                        : `${colors.bg.hover} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
-                    }`}
-                  >
-                    <Building2 className={`${iconSizes.sm} inline mr-1`} />{building.name}
-                    <span className="text-xs ml-2 opacity-70">
-                      ({building.floors.length} {t('panels.hierarchy.floorsCount', { count: building.floors.length })})
-                    </span>
-                  </button>
+                  <li key={building.id} className="list-none">
+                    <button
+                      onClick={() => selectBuilding(building.id)}
+                      className={`w-full text-left ${PANEL_LAYOUT.SPACING.COMPACT} rounded text-sm ${
+                        selectedBuilding?.id === building.id
+                          ? `${colors.bg.success} text-white`
+                          : `${colors.bg.hover} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
+                      }`}
+                    >
+                      <Building2 className={`${iconSizes.sm} inline ${PANEL_LAYOUT.MARGIN.LEFT_HALF}`} />{building.name}
+                      <span className={`text-xs ${PANEL_LAYOUT.SPACING.GAP_H_SM} opacity-70`}>
+                        ({building.floors.length} {t('panels.hierarchy.floorsCount', { count: building.floors.length })})
+                      </span>
+                    </button>
+                  </li>
                 ))}
-              </div>
-            </div>
+              </menu>
+            </nav>
           )}
 
           {/* Parking */}
           {selectedProject.parkingSpots && selectedProject.parkingSpots.length > 0 && (
-            <div className={`text-sm ${colors.text.muted} flex items-center gap-2`}>
+            <aside className={`text-sm ${colors.text.muted} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <ParkingCircle className={iconSizes.sm} />
               <span>{t('panels.hierarchy.parkingSpots', { count: selectedProject.parkingSpots.length })}</span>
-            </div>
+            </aside>
           )}
-        </div>
+        </section>
       )}
 
       {/* Selected Building Info */}
       {selectedBuilding && (
-        <div className={`mb-4 pl-8 ${getDirectionalBorder('success', 'left')}`}>
+        <section className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.MARGIN.LEFT_XL} ${getDirectionalBorder('success', 'left')}`}>
           {/* ✅ ADR-003: Removed nested div - h4 is now directly flex */}
-          <h4 className={`${colors.text.success} font-medium mb-2 flex items-center gap-2`}>
+          <h4 className={`${colors.text.success} font-medium ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <Building2 className={iconSizes.sm} />
             <span>{selectedBuilding.name}</span>
           </h4>
 
           {/* Floors */}
           {selectedBuilding.floors.length > 0 && (
-            <div className="mb-3">
-              <h5 className={`${colors.text.tertiary} text-sm font-medium mb-1`}>{t('panels.hierarchy.floors')}</h5>
-              <div className="space-y-1">
+            <nav className={PANEL_LAYOUT.MARGIN.BOTTOM_MD}>
+              <h5 className={`${colors.text.tertiary} text-sm font-medium ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>{t('panels.hierarchy.floors')}</h5>
+              <menu className={PANEL_LAYOUT.SPACING.GAP_XS}>
                 {selectedBuilding.floors.map(floor => (
-                  <button
-                    key={floor.id}
-                    onClick={() => selectFloor(floor.id)}
-                    className={`w-full text-left px-2 py-1 rounded text-sm ${
-                      selectedFloor?.id === floor.id
-                        ? `${colors.bg.info} text-white`
-                        : `${colors.bg.hover} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
-                    }`}
-                  >
-                    <Home className={`${iconSizes.sm} inline mr-1`} />{floor.name}
-                    <span className="text-xs ml-2 opacity-70">
+                  <li key={floor.id} className="list-none">
+                    <button
+                      onClick={() => selectFloor(floor.id)}
+                      className={`w-full text-left ${PANEL_LAYOUT.SPACING.COMPACT} rounded text-sm ${
+                        selectedFloor?.id === floor.id
+                          ? `${colors.bg.info} text-white`
+                          : `${colors.bg.hover} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
+                      }`}
+                    >
+                      <Home className={`${iconSizes.sm} inline ${PANEL_LAYOUT.MARGIN.RIGHT_XS}`} />{floor.name}
+                      <span className={`text-xs ${PANEL_LAYOUT.MARGIN.LEFT_SM} opacity-70`}>
                       ({Array.isArray(floor.units) ? floor.units.length : 0} {t('panels.hierarchy.unitsCount', { count: Array.isArray(floor.units) ? floor.units.length : 0 })})
-                    </span>
-                  </button>
+                      </span>
+                    </button>
+                  </li>
                 ))}
-              </div>
-            </div>
+              </menu>
+            </nav>
           )}
 
           {/* Storage Areas */}
           {selectedBuilding.storageAreas && selectedBuilding.storageAreas.length > 0 && (
-            <div className={`text-sm ${colors.text.muted} flex items-center gap-2`}>
+            <aside className={`text-sm ${colors.text.muted} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <Package className={iconSizes.sm} />
               <span>{t('panels.hierarchy.storageAreas', { count: selectedBuilding.storageAreas.length })}</span>
-            </div>
+            </aside>
           )}
-        </div>
+        </section>
       )}
 
       {/* Selected Floor Info */}
       {selectedFloor && (
-        <div className={`mb-4 pl-12 ${getDirectionalBorder('info', 'left')}`}>
+        <section className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.MARGIN.LEFT_XXL} ${getDirectionalBorder('info', 'left')}`}>
           {/* ✅ ADR-003: Removed nested div - h4 is now directly flex */}
-          <h4 className={`${colors.text.info} font-medium mb-2 flex items-center gap-2`}>
+          <h4 className={`${colors.text.info} font-medium ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <Home className={iconSizes.sm} />
             <span>{selectedFloor.name}</span>
           </h4>
-          <div className="text-sm space-y-1">
+          <ul className={`text-sm ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
             {Array.isArray(selectedFloor.units) ? selectedFloor.units.map(unit => (
-              <div key={unit.id} className={`${colors.text.muted} flex justify-between`}>
-                <span className="flex items-center gap-1">
+              <li key={unit.id} className={`${colors.text.muted} flex justify-between`}>
+                <span className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
                   <Home className={iconSizes.xs} />
                   <span>{unit.name}</span>
                 </span>
-                <span className={`px-1 rounded text-xs ${
+                <span className={`${PANEL_LAYOUT.SPACING.HORIZONTAL_XS} rounded text-xs ${
                   unit.status === 'forSale' ? colors.bg.warning :
                   unit.status === 'sold' ? colors.bg.error :
                   unit.status === 'forRent' ? colors.bg.info :
@@ -249,26 +253,26 @@ export function HierarchyDebugPanel() {
                 }`}>
                   {unit.status}
                 </span>
-              </div>
+              </li>
             )) : (
-              <div className={`${colors.text.disabled} text-xs`}>Δεν υπάρχουν διαθέσιμα units</div>
+              <li className={`${colors.text.disabled} text-xs`}>Δεν υπάρχουν διαθέσιμα units</li>
             )}
-          </div>
-        </div>
+          </ul>
+        </section>
       )}
 
       {/* Available Destinations */}
-      <div className={`mt-6 pt-4 ${getDirectionalBorder('muted', 'top')}`}>
+      <section className={`${PANEL_LAYOUT.MARGIN.TOP_XL} ${PANEL_LAYOUT.PADDING.TOP_LG} ${getDirectionalBorder('muted', 'top')}`}>
         {/* ✅ ADR-003: h4 with flex - clean semantic structure */}
-        <h4 className={`${colors.text.tertiary} font-medium mb-2 flex items-center gap-2`}>
+        <h4 className={`${colors.text.tertiary} font-medium ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <Target className={`${iconSizes.sm} ${colors.text.info}`} />
           <span>{t('panels.hierarchy.availableDestinations')} ({destinations.length})</span>
         </h4>
-        <div className="max-h-32 overflow-y-auto text-xs space-y-1">
+        <ul className={`max-h-32 overflow-y-auto text-xs ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
           {destinations.map(dest => (
-            <div key={dest.id} className={`${colors.text.muted} flex justify-between`}>
+            <li key={dest.id} className={`${colors.text.muted} flex justify-between`}>
               <span>{dest.label}</span>
-              <span className={`px-1 rounded ${
+              <span className={`${PANEL_LAYOUT.SPACING.HORIZONTAL_XS} rounded ${
                 dest.type === 'project' ? colors.bg.info :
                 dest.type === 'building' ? colors.bg.success :
                 dest.type === 'floor' ? colors.bg.hover :
@@ -278,10 +282,10 @@ export function HierarchyDebugPanel() {
               }`}>
                 {dest.type}
               </span>
-            </div>
+            </li>
           ))}
-        </div>
-      </div>
-    </div>
+        </ul>
+      </section>
+    </article>
   );
 }

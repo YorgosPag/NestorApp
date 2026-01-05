@@ -56,6 +56,8 @@ import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation
 // 🏢 ENTERPRISE: Lucide icons for tabs
 import { Minus, Type, GripVertical } from 'lucide-react';
 import { LazyLinesTab, LazyTextTab, LazyGripsTab } from '../LazyComponents';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
 import { LinePreview } from '../settings/shared/LinePreview';
 import { CurrentSettingsDisplay } from '../settings/shared/CurrentSettingsDisplay';
 import {
@@ -209,8 +211,8 @@ export const GeneralSettingsPanel: React.FC<GeneralSettingsPanelProps> = ({
 
   return (
     <div className={className}>
-      {/* Preview and Current Settings Display */}
-      <div className="px-4 mb-6 space-y-4">
+      {/* Preview and Current Settings Display - 🏢 ENTERPRISE: Centralized spacing */}
+      <div className={`${PANEL_LAYOUT.CONTAINER.PADDING} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.GAP_LG}`}>
         {/* Line Preview Canvas */}
         <LinePreview
           lineSettings={lineSettings.settings}
@@ -252,7 +254,7 @@ export const GeneralSettingsPanel: React.FC<GeneralSettingsPanelProps> = ({
           </div>
         }
       >
-        <div className="px-4">{renderTabContent()}</div>
+        <div className={PANEL_LAYOUT.CONTAINER.PADDING}>{renderTabContent()}</div>
       </Suspense>
     </div>
   );

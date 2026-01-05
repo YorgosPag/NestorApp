@@ -8,6 +8,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Palette, Pencil, RotateCcw, Construction, Layers } from 'lucide-react';
 // 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/etc.)
 import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 
 interface LayersSettingsProps {
   // Για μελλοντική επέκταση μπορούμε να προσθέσουμε props
@@ -65,26 +67,26 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
   };
 
   return (
-    <section className={`p-4 ${colors.bg.primary} ${colors.text.primary}`}>
+    <section className={`${PANEL_LAYOUT.CONTAINER.PADDING} ${colors.bg.primary} ${colors.text.primary}`}>
       {/* Header */}
-      <header className={`${getDirectionalBorder('muted', 'bottom')} pb-3 mb-4`}>
-        <h2 className={`text-lg font-semibold ${colors.text.primary} flex items-center gap-2`}>
+      <header className={`${getDirectionalBorder('muted', 'bottom')} ${PANEL_LAYOUT.PADDING.BOTTOM_SM} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
+        <h2 className={`text-lg font-semibold ${colors.text.primary} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <Layers className="w-5 h-5" />
           <span>Ρυθμίσεις Layers</span>
         </h2>
-        <p className={`text-xs ${colors.text.muted} mt-1`}>
+        <p className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
           Χρώματα και εμφάνιση επιπέδων σχεδίασης
         </p>
       </header>
 
       {/* Layer Preview */}
-      <div className={`mb-4 p-2 ${colors.bg.secondary} rounded space-y-2`}>
+      <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className={`text-sm ${colors.text.primary}`}>
           <div className="font-medium">Προεπισκόπηση Layer</div>
           <div className={`font-normal ${colors.text.muted}`}>Δείτε πώς θα φαίνονται τα layers</div>
         </div>
-        <div className={`p-2 ${colors.bg.muted} ${quick.card} ${getStatusBorder('muted')} flex justify-center`}>
-          <div className="flex gap-1">
+        <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.muted} ${quick.card} ${getStatusBorder('muted')} flex justify-center`}>
+          <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
             {presetClasses.map((preset, index) => (
               <div
                 key={preset.name}
@@ -108,22 +110,22 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
         onTabChange={handleTabChange}
         theme="dark"
         alwaysShowLabels={true}
-        className="mb-4"
+        className={PANEL_LAYOUT.MARGIN.BOTTOM_LG}
       />
 
       {/* Tab Content */}
-      <div className="space-y-4">
+      <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
         {activeTab === 'outlines' && (
           <>
             {/* Preset Outline Colors */}
-            <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
+            <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
               <div className={`text-sm ${colors.text.primary} font-medium`}>Χρώματα Περιγραμμάτων</div>
-              <div className="grid grid-cols-5 gap-2">
+              <div className={`grid grid-cols-5 ${PANEL_LAYOUT.GAP.SM}`}>
                 {presetClasses.map((preset, index) => (
                   <button
                     key={preset.name}
                     onClick={() => setSelectedPreset(index)}
-                    className={`p-2 ${quick.button} transition-colors ${
+                    className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} transition-colors ${
                       selectedPreset === index
                         ? `${colors.bg.info} ${getStatusBorder('info')}`
                         : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -132,14 +134,14 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                     <div
                       className={`w-full ${iconSizes.lg} ${quick.card} ${getStatusBorder('subtle')} ${preset.bgClass}`}
                     />
-                    <div className={`text-xs ${colors.text.primary} mt-1 truncate`}>{preset.name}</div>
+                    <div className={`text-xs ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.TOP_XS} truncate`}>{preset.name}</div>
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Outline Settings */}
-            <div className={`p-2 ${colors.bg.secondary} rounded`}>
+            <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded`}>
               <div className="flex items-center justify-between">
                 <div className={`text-sm ${colors.text.primary}`}>
                   <div className="font-medium">Εμφάνιση Περιγραμμάτων</div>
@@ -156,14 +158,14 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
         {activeTab === 'fills' && (
           <>
             {/* Preset Fill Colors */}
-            <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
+            <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
               <div className={`text-sm ${colors.text.primary} font-medium`}>Χρώματα Γεμισμάτων</div>
-              <div className="grid grid-cols-5 gap-2">
+              <div className={`grid grid-cols-5 ${PANEL_LAYOUT.GAP.SM}`}>
                 {presetClasses.map((preset, index) => (
                   <button
                     key={preset.name}
                     onClick={() => setSelectedPreset(index)}
-                    className={`p-2 ${quick.button} transition-colors ${
+                    className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} transition-colors ${
                       selectedPreset === index
                         ? `${colors.bg.info} ${getStatusBorder('info')}`
                         : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -172,19 +174,19 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                     <div
                       className={`w-full ${iconSizes.lg} ${quick.card} ${getStatusBorder('subtle')} ${preset.bgClass}`}
                     />
-                    <div className={`text-xs ${colors.text.primary} mt-1 truncate`}>{preset.name}</div>
+                    <div className={`text-xs ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.TOP_XS} truncate`}>{preset.name}</div>
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Opacity Control */}
-            <div className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
+            <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
               <div className={`text-sm ${colors.text.primary}`}>
                 <div className="font-medium">Διαφάνεια Γεμίσματος</div>
                 <div className={`font-normal ${colors.text.muted}`}>Επίπεδο διαφάνειας για το γέμισμα</div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <input
                   type="range"
                   min="0.1"
@@ -193,14 +195,14 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                   defaultValue="1.0"
                   className="flex-1"
                 />
-                <div className={`${iconSizes.xl3} text-xs ${colors.bg.muted} ${colors.text.inverted} rounded px-2 py-1 text-center`}>
+                <div className={`${iconSizes.xl3} text-xs ${colors.bg.muted} ${colors.text.inverted} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
                   100%
                 </div>
               </div>
             </div>
 
             {/* Fill Settings */}
-            <div className={`p-2 ${colors.bg.secondary} rounded`}>
+            <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded`}>
               <div className="flex items-center justify-between">
                 <div className={`text-sm ${colors.text.primary}`}>
                   <div className="font-medium">Εμφάνιση Γεμισμάτων</div>
@@ -215,24 +217,24 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
         )}
 
         {/* Reset Button */}
-        <article className={`p-2 ${colors.bg.secondary} rounded space-y-2`}>
+        <article className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
           <div className={`text-sm ${colors.text.primary}`}>
             <div className="font-medium">Επαναφορά</div>
             <div className={`font-normal ${colors.text.muted}`}>Επαναφορά στις προεπιλεγμένες ρυθμίσεις</div>
           </div>
-          <button className={`w-full px-3 py-2 text-xs flex items-center justify-center gap-2 ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded transition-colors`}>
+          <button className={`w-full ${PANEL_LAYOUT.BUTTON.PADDING} text-xs flex items-center justify-center ${PANEL_LAYOUT.GAP.SM} ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded transition-colors`}>
             <RotateCcw className="w-4 h-4" />
             <span>Επαναφορά Ρυθμίσεων Layers</span>
           </button>
         </article>
 
         {/* Coming Soon Features */}
-        <aside className={`p-2 ${colors.bg.secondary} ${quick.card} ${getStatusBorder('muted')}`}>
-          <div className={`text-sm ${colors.text.primary} font-medium mb-2 flex items-center gap-2`}>
+        <aside className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${getStatusBorder('muted')}`}>
+          <div className={`text-sm ${colors.text.primary} font-medium ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <Construction className="w-4 h-4" />
             <span>Σύντομα Διαθέσιμο</span>
           </div>
-          <ul className={`text-xs ${colors.text.muted} space-y-1`}>
+          <ul className={`text-xs ${colors.text.muted} list-none ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
             <li>• Χρώματα γεμίσματος layers</li>
             <li>• Ρυθμίσεις πάχους γραμμών</li>
             <li>• Στυλ γραμμών (διακεκομμένη, κλπ)</li>

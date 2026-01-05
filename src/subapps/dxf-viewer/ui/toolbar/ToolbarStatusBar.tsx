@@ -4,6 +4,7 @@ import React, { useRef, useMemo } from 'react';
 import { useCursor } from '../../systems/cursor';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import type { ToolType } from './types';
 import type { Point2D } from '../../rendering/types/Types';
 
@@ -49,8 +50,8 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
   }, [mouseCoordinates]);
   
   return (
-    <div className={`${getDirectionalBorder('muted', 'top')} ${colors.bg.backgroundSecondary} px-3 py-1 text-xs ${colors.text.muted} flex justify-between items-center`}>
-      <div className="flex items-center gap-4">
+    <div className={`${getDirectionalBorder('muted', 'top')} ${colors.bg.backgroundSecondary} ${PANEL_LAYOUT.SPACING.HORIZONTAL_MD} ${PANEL_LAYOUT.PADDING.VERTICAL_XS} text-xs ${colors.text.muted} flex justify-between items-center`}>
+      <div className={`flex items-center ${PANEL_LAYOUT.GAP.LG}`}>
         <span>
           Tool: <strong className={`${colors.text.info}`}>
             {activeTool?.charAt(0)?.toUpperCase() + activeTool?.slice(1) || 'Unknown'}
@@ -96,7 +97,7 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
         )}
       </div>
       
-      <div className={`flex items-center gap-2 ${colors.text.muted}`}>
+      <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${colors.text.muted}`}>
         <span>🔺 D=Ruler | W=ZoomWindow | +/-=Zoom | F9=Grid | ESC=Cancel</span>
       </div>
     </div>

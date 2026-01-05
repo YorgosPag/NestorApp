@@ -26,6 +26,8 @@ import { Palette, Settings2 } from 'lucide-react';
 import { CrosshairAppearanceSettings } from './CrosshairAppearanceSettings';
 import { CrosshairBehaviorSettings } from './CrosshairBehaviorSettings';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 
 export interface CrosshairSettingsProps {
   className?: string;
@@ -217,9 +219,9 @@ export const CrosshairSettings: React.FC<CrosshairSettingsProps> = ({ className 
   // ============================================================================
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
       {/* 🏢 ENTERPRISE: Sub-tabs - Using centralized TabsOnlyTriggers */}
-      <div className={`p-1 ${colors.bg.primary} rounded`}>
+      <div className={`${PANEL_LAYOUT.SPACING.XS} ${colors.bg.primary} rounded`}>
         <TabsOnlyTriggers
           tabs={crosshairTabs}
           value={activeTab}

@@ -40,6 +40,7 @@ import { AutoSaveStatus } from '../ui/components/AutoSaveStatus';
 import { CentralizedAutoSaveStatus } from '../ui/components/CentralizedAutoSaveStatus';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PANEL_LAYOUT } from '../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
 
 // ============================================================================
 // 🎯 LAYOUT CONSTANTS - Centralized, maintainable
@@ -138,11 +139,11 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
         <footer
           className={`
             flex-shrink-0
-            space-y-2
+            ${PANEL_LAYOUT.SPACING.GAP_SM}
             rounded-b-lg
             ${colors.bg.secondary}
             ${quick.separatorH}
-            p-4
+            ${PANEL_LAYOUT.SPACING.LG}
           `}
         >
           <AutoSaveStatus />

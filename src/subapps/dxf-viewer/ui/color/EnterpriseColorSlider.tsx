@@ -26,6 +26,8 @@ import { useFocusRing } from '@react-aria/focus';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS, UI_GRADIENTS } from '../../config/color-config';
 import type { AriaColorSliderProps } from '@react-aria/color';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 type SliderChannel = 'hue' | 'saturation' | 'brightness' | 'lightness' | 'red' | 'green' | 'blue' | 'alpha';
 
@@ -130,7 +132,7 @@ export function EnterpriseColorSlider({
   const thumbPosition = state.getThumbPercent() * 100;
 
   return (
-    <div className={`space-y-2 ${className}`}>
+    <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${className}`}>
       {/* Label */}
       {showLabel && (
         <div className="flex justify-between text-sm">

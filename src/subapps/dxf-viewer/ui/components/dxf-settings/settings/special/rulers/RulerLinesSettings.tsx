@@ -23,6 +23,8 @@ import { Equal, Minus } from 'lucide-react';
 import { RulerMajorLinesSettings } from './RulerMajorLinesSettings';
 import { RulerMinorLinesSettings } from './RulerMinorLinesSettings';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized spacing tokens (ADR-UI-001)
+import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
 
 export interface RulerLinesSettingsProps {
   className?: string;
@@ -110,9 +112,9 @@ export const RulerLinesSettings: React.FC<RulerLinesSettingsProps> = ({ classNam
   // ============================================================================
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
       {/* 🏢 ENTERPRISE: Lines Sub-tabs - Using centralized TabsOnlyTriggers */}
-      <div className={`p-1 ${colors.bg.primary} rounded`}>
+      <div className={`${PANEL_LAYOUT.SPACING.XS} ${colors.bg.primary} rounded`}>
         <TabsOnlyTriggers
           tabs={linesTabs}
           value={activeLinesTab}

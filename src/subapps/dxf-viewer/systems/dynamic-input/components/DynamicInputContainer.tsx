@@ -1,6 +1,7 @@
 'use client';
 
 import React, { ReactNode } from 'react';
+import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
 import type { Point2D } from '../../../rendering/types/Types';
 
 interface DynamicInputContainerProps {
@@ -18,7 +19,7 @@ export function DynamicInputContainer({ position, showInput, children }: Dynamic
         top: `${position.y}px`
       }}
     >
-      <div className="bg-transparent text-white p-3 min-w-[220px]">
+      <div className={`bg-transparent text-white ${PANEL_LAYOUT.SPACING.MD} min-w-[220px]`}>
         {children}
       </div>
     </div>

@@ -77,6 +77,8 @@ import { HOVER_BACKGROUND_EFFECTS } from '../../../../../../../components/ui/eff
 import { useIconSizes } from '../../../../../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../../../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Import centralized panel spacing (Single Source of Truth)
+import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 
 // ===== TYPES =====
 
@@ -194,20 +196,22 @@ ErrorIcon.displayName = 'ErrorIcon';
 
 // ===== SIZE & VARIANT STYLES =====
 
+// 🏢 ENTERPRISE: Size styles using centralized PANEL_LAYOUT tokens (Single Source of Truth)
+// ALL PADDINGS controlled by PANEL_LAYOUT - change in panel-tokens.ts for global effect
 const getSizeStyles = (iconSizes: ReturnType<typeof useIconSizes>): Record<AccordionSize, { header: string; content: string; icon: string }> => ({
   sm: {
-    header: 'px-3 py-2 text-xs',
-    content: 'px-3 py-3 text-xs',
+    header: `${PANEL_LAYOUT.SPACING.COMPACT} text-xs`,        // 🏢 ENTERPRISE: Centralized header padding
+    content: `${PANEL_LAYOUT.CONTAINER.INNER_PADDING} text-xs`, // 🏢 ENTERPRISE: Centralized content padding
     icon: iconSizes.xs
   },
   md: {
-    header: 'px-4 py-3 text-sm',
-    content: 'px-4 py-4 text-sm',
+    header: `${PANEL_LAYOUT.SPACING.STANDARD} text-sm`,       // 🏢 ENTERPRISE: Centralized header padding
+    content: `${PANEL_LAYOUT.CONTAINER.INNER_PADDING} text-sm`, // 🏢 ENTERPRISE: Centralized content padding
     icon: iconSizes.sm
   },
   lg: {
-    header: 'px-5 py-4 text-base',
-    content: 'px-5 py-5 text-base',
+    header: `${PANEL_LAYOUT.SPACING.COMFORTABLE} text-base`,  // 🏢 ENTERPRISE: Centralized header padding
+    content: `${PANEL_LAYOUT.CONTAINER.INNER_PADDING} text-base`, // 🏢 ENTERPRISE: Centralized content padding
     icon: iconSizes.md
   }
 });
@@ -232,9 +236,10 @@ const getVariantStyles = (
   }
 });
 
+// 🏢 ENTERPRISE: Density styles using centralized PANEL_LAYOUT tokens (Single Source of Truth)
 const densityStyles: Record<AccordionDensity, { gap: string }> = {
-  comfortable: { gap: 'gap-3' },
-  compact: { gap: 'gap-2' }
+  comfortable: { gap: PANEL_LAYOUT.GAP.MD },   // 🏢 ENTERPRISE: 12px gap (gap-3)
+  compact: { gap: PANEL_LAYOUT.GAP.SM }        // 🏢 ENTERPRISE: 8px gap (gap-2)
 };
 
 // ===== MAIN COMPONENT =====
@@ -459,7 +464,7 @@ export const AccordionSection = memo(function AccordionSection({
       data-loading={loading}
     >
       {/* 🏢 ENTERPRISE: Semantic heading structure */}
-      <HeadingTag className="m-0">
+      <HeadingTag className={PANEL_LAYOUT.MARGIN.NONE}>
         <button
           ref={buttonRef}
           id={headerId}
@@ -506,9 +511,9 @@ export const AccordionSection = memo(function AccordionSection({
               {title}
             </span>
 
-            {/* 🏢 ENTERPRISE: Badge - Using semantic info color */}
+            {/* 🏢 ENTERPRISE: Badge - Using PANEL_LAYOUT.SPACING.COMPACT */}
             {badge && (
-              <span className={`px-2 py-1 text-xs ${colors.bg.info} ${colors.text.inverted} ${radius.full}`}>
+              <span className={`${PANEL_LAYOUT.SPACING.COMPACT} text-xs ${colors.bg.info} ${colors.text.inverted} ${radius.full}`}>
                 {badge}
               </span>
             )}
@@ -539,9 +544,9 @@ export const AccordionSection = memo(function AccordionSection({
           <div
             className={`${styles.size.content} ${colors.bg.secondary} ${getDirectionalBorder('default', 'top')} overflow-visible ${contentClassName}`}
           >
-            {/* 🏢 ENTERPRISE: Error Message - Using semantic error colors */}
+            {/* 🏢 ENTERPRISE: Error Message - Using semantic error colors + centralized spacing */}
             {error && typeof error === 'string' && (
-              <div className={`mb-4 p-3 ${colors.bg.errorLight} ${getStatusBorder('error')} rounded ${colors.text.error} text-sm`}>
+              <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.MD} ${colors.bg.errorLight} ${getStatusBorder('error')} rounded ${colors.text.error} text-sm`}>
                 {error}
               </div>
             )}
@@ -741,7 +746,8 @@ export function AccordionGroup({ children, className = '', autoFocus = false }: 
 
   return (
     <AccordionGroupContext.Provider value={contextValue}>
-      <div className={`space-y-2 ${className}`} role="group">
+      {/* 🏢 ENTERPRISE: Using centralized PANEL_LAYOUT.SPACING.GAP_SM (8px gap) */}
+      <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${className}`} role="group">
         {children}
       </div>
     </AccordionGroupContext.Provider>

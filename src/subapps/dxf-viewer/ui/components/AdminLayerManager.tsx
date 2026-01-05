@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { useLayerManagerState } from './layer-manager/useLayerManagerState';
 import { useLayerFiltering } from './layer-manager/useLayerFiltering';
 import { useLayerStatistics } from './layer-manager/useLayerStatistics';
@@ -34,7 +35,7 @@ export function AdminLayerManager({ className }: AdminLayerManagerProps) {
   };
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <article className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
       <LayerHeader
         isConnected={state.isConnected}
         onAddLayer={handleAddLayer}
@@ -60,6 +61,6 @@ export function AdminLayerManager({ className }: AdminLayerManagerProps) {
         onToggleVisibility={actions.toggleLayerVisibility}
         onLayerAction={handleLayerAction}
       />
-    </div>
+    </article>
   );
 }

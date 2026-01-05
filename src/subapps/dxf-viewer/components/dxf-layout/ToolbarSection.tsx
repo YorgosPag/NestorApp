@@ -4,6 +4,7 @@ import { EnhancedDXFToolbar } from '../../ui/toolbar/EnhancedDXFToolbar';
 import { useOverlayStore } from '../../overlays/overlay-store';
 import type { DXFViewerLayoutProps } from '../../integration/types';
 import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
 
 interface ToolbarSectionProps extends DXFViewerLayoutProps {
   overlayMode: OverlayEditorMode;
@@ -41,7 +42,7 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
 
   return (
     <div className="flex-shrink-0">
-      <div className="p-2">
+      <div className={PANEL_LAYOUT.SPACING.SM}>
         <EnhancedDXFToolbar
           activeTool={dxfProps.activeTool}
           onToolChange={dxfProps.onToolChange}

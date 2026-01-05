@@ -11,6 +11,7 @@ import { INTERACTIVE_PATTERNS } from '../../../components/ui/effects';
 import { useIconSizes } from '../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
+import { PANEL_LAYOUT } from '../config/panel-tokens';  // ✅ ENTERPRISE: Centralized layout tokens
 
 interface ImportWizardProps {
   isOpen: boolean;
@@ -38,12 +39,12 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
         return <PreviewStep />;
       default:
         return (
-          <div className="p-6 text-center">
-            <h3 className={`text-lg font-semibold ${colors.text.primary} mb-4`}>Σφάλμα</h3>
-            <p className={`${colors.text.muted} mb-6`}>Άγνωστο βήμα εισαγωγής</p>
+          <div className={`${PANEL_LAYOUT.SPACING.XXL} text-center`}>
+            <h3 className={`text-lg font-semibold ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>Σφάλμα</h3>
+            <p className={`${colors.text.muted} ${PANEL_LAYOUT.SPACING.XXL}`}>Άγνωστο βήμα εισαγωγής</p>
             <button
               onClick={onClose}
-              className={`px-4 py-2 ${colors.bg.hover} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.inverted}rounded`}
+              className={`${PANEL_LAYOUT.BUTTON.PADDING} ${colors.bg.hover} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS}`}
             >
               Κλείσιμο
             </button>
@@ -54,52 +55,52 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className={`${colors.bg.secondary} rounded-lg shadow-xl ${quick.muted} w-full max-w-2xl max-h-[90vh] flex flex-col`}>
+      <div className={`${colors.bg.secondary} ${PANEL_LAYOUT.CONTAINER.BORDER_RADIUS} shadow-xl ${quick.muted} w-full max-w-2xl max-h-[90vh] flex flex-col`}>
         
         {/* Header */}
-        <div className={`flex items-center justify-between p-4 ${getDirectionalBorder('muted', 'bottom')}`}>
+        <header className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.MD} ${getDirectionalBorder('muted', 'bottom')}`}>
           <div>
             <h2 className={`text-xl font-semibold ${colors.text.primary}`}>Εισαγωγή DXF</h2>
-            <p className={`text-sm ${colors.text.muted}`}>
+            <p className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.text.muted}`}>
               Βήμα {stepInfo.number} από {stepInfo.totalSteps}: {stepInfo.title}
               {importWizard.file && ` • ${importWizard.file.name}`}
             </p>
           </div>
           <button
             onClick={onClose}
-            className={`p-2 ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} rounded`}
+            className={`${PANEL_LAYOUT.SPACING.SM} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} rounded`}
           >
             <X className={iconSizes.md} />
           </button>
-        </div>
+        </header>
 
         {/* Progress */}
-        <div className={`px-4 py-2 ${colors.bg.hover}`}>
+        <div className={`${PANEL_LAYOUT.SPACING.HORIZONTAL_MD} ${PANEL_LAYOUT.SPACING.VERTICAL_SM} ${colors.bg.hover}`}>
           <WizardProgress currentStep={stepInfo.number} totalSteps={stepInfo.totalSteps} />
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto max-h-[calc(90vh-200px)] p-6">
+        <main className={`overflow-y-auto max-h-[calc(90vh-200px)] ${PANEL_LAYOUT.SPACING.LG}`}>
           {renderStep()}
-        </div>
+        </main>
 
         {/* Footer */}
-        <div className={`p-4 ${getDirectionalBorder('muted', 'top')} flex justify-between`}>
+        <footer className={`${PANEL_LAYOUT.SPACING.MD} ${getDirectionalBorder('muted', 'top')} flex justify-between`}>
           <button
             onClick={navigation.handleBack}
             disabled={stepInfo.number === 1}
-            className={`px-4 py-2 ${colors.bg.hover} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.inverted}rounded disabled:opacity-50`}
+            className={`${PANEL_LAYOUT.BUTTON.PADDING} ${colors.bg.hover} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} disabled:opacity-50`}
           >
             Πίσω
           </button>
           <button
             onClick={navigation.handleNext}
             disabled={!navigation.canProceed()}
-            className={`px-6 py-2 ${colors.bg.info} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${colors.text.inverted}rounded disabled:opacity-50`}
+            className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.info} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} disabled:opacity-50`}
           >
             {stepInfo.number === stepInfo.totalSteps ? 'Εισαγωγή' : 'Επόμενο'}
           </button>
-        </div>
+        </footer>
 
       </div>
     </div>

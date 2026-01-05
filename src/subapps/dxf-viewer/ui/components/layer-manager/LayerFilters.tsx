@@ -1,6 +1,8 @@
 import React from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { SearchInput } from '@/components/ui/search/SearchInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { LayerFiltersProps } from './types';
@@ -15,7 +17,7 @@ export function LayerFilters({
   const { getFocusBorder, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   return (
-    <div className="space-y-2">
+    <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
       <SearchInput
         value={searchQuery}
         onChange={onSearchChange}

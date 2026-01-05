@@ -7,6 +7,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 interface ToolButtonProps {
   tool: ToolDefinition;
@@ -73,7 +74,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
         disabled={disabled}
         title={`${tool.label} (${tool.hotkey})`}
         className={`
-          ${iconSizes.xl} p-0 rounded-md transition-colors duration-150
+          ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} rounded-md transition-colors duration-150
           flex items-center justify-center
           ${
             isActive
@@ -96,7 +97,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
           disabled={disabled}
           title={`${tool.label} (${tool.hotkey})`}
           className={`
-            h-8 w-7 p-0 rounded-l-md transition-colors duration-150
+            ${PANEL_LAYOUT.BUTTON.HEIGHT} w-7 ${PANEL_LAYOUT.SPACING.NONE} rounded-l-md transition-colors duration-150
             flex items-center justify-center
             ${
               isActive
@@ -113,7 +114,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
           disabled={disabled}
           title="Περισσότερες επιλογές"
           className={`
-            h-8 w-5 p-0 rounded-r-md transition-colors duration-150
+            ${PANEL_LAYOUT.BUTTON.HEIGHT} w-5 ${PANEL_LAYOUT.SPACING.NONE} rounded-r-md transition-colors duration-150
             flex items-center justify-center
             ${
               isActive
@@ -128,21 +129,21 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
       </div>
 
       {showDropdown && (
-        <div className={`absolute top-full left-0 mt-1 ${colors.bg.secondary} rounded-md shadow-lg z-50 min-w-[150px] ${getStatusBorder('default')}`}>
+        <nav className={`absolute top-full left-0 ${PANEL_LAYOUT.MARGIN.TOP_XS} ${colors.bg.secondary} rounded-md shadow-lg z-50 min-w-[150px] ${getStatusBorder('default')}`}>
           {tool.dropdownOptions!.map((option) => {
             const OptionIcon = option.icon;
             return (
               <button
                 key={option.id}
                 onClick={() => handleDropdownItemClick(option.id)}
-                className={`w-full px-3 py-2 text-left text-sm ${colors.text.secondary} flex items-center gap-2 first:rounded-t-md last:rounded-b-md ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+                className={`w-full ${PANEL_LAYOUT.BUTTON.PADDING} text-left text-sm ${colors.text.secondary} flex items-center ${PANEL_LAYOUT.GAP.SM} first:rounded-t-md last:rounded-b-md ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               >
                 {OptionIcon && <OptionIcon className={iconSizes.sm} />}
                 {option.label}
               </button>
             );
           })}
-        </div>
+        </nav>
       )}
     </div>
   );
@@ -164,7 +165,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
       title={action.hotkey ? `${action.label} (${action.hotkey})` : action.label}
       disabled={action.disabled ?? false}
       className={`
-        ${iconSizes.xl} p-0 rounded-md transition-colors duration-150
+        ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} rounded-md transition-colors duration-150
         flex items-center justify-center
         ${
           action.active

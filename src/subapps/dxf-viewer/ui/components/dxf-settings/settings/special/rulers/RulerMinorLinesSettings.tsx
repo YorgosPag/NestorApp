@@ -47,6 +47,8 @@ import { UI_COLORS, withOpacity } from '../../../../../../config/color-config';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized Switch component (Radix)
 import { Switch } from '@/components/ui/switch';
+// 🏢 ENTERPRISE: Centralized spacing tokens (ADR-UI-001)
+import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
 
 export interface RulerMinorLinesSettingsProps {
   className?: string;
@@ -167,15 +169,15 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
   // ============================================================================
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
       {/* 🏢 ENTERPRISE: Minor Lines Visibility Toggle - Using centralized Switch component */}
-      <div className={`p-2 ${colors.bg.hover} rounded space-y-2`}>
+      <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className="flex items-center justify-between">
           <div className={`text-sm ${colors.text.primary}`}>
             <div className="font-medium">Εμφάνιση Δευτερευουσών Γραμμών</div>
             <div className={`font-normal ${colors.text.muted}`}>Εμφάνιση/απόκρυψη των δευτερευουσών γραμμών χάρακα</div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <span className={`text-xs ${colors.text.muted}`}>
               {rulerSettings.horizontal.showMinorTicks ? 'Ενεργό' : 'Ανενεργό'}
             </span>
@@ -188,12 +190,12 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
       </div>
 
       {/* Minor Lines Opacity */}
-      <div className={`p-2 ${colors.bg.hover} rounded space-y-2`}>
+      <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className={`text-sm ${colors.text.primary}`}>
           <div className="font-medium">Διαφάνεια Δευτερευουσών Γραμμών</div>
           <div className={`font-normal ${colors.text.muted}`}>Επίπεδο διαφάνειας των δευτερευουσών γραμμών χάρακα</div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <input
             type="range"
             min="0.1"
@@ -203,16 +205,16 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
             onChange={(e) => handleMinorTickOpacityChange(parseFloat(e.target.value))}
             className="flex-1"
           />
-          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} rounded px-2 py-1 text-center`}>
+          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
             {Math.round(getOpacityFromColor(rulerSettings.horizontal.minorTickColor) * 100)}%
           </div>
         </div>
       </div>
 
       {/* Minor Lines Color */}
-      <div className={`p-2 ${colors.bg.hover} rounded space-y-2`}>
+      <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Δευτερευουσών Γραμμών</label>
-        <div className={`text-xs ${colors.text.muted} mb-2`}>Χρώμα δευτερευουσών γραμμών (ticks) χαράκων</div>
+        <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα δευτερευουσών γραμμών (ticks) χαράκων</div>
         <ColorDialogTrigger
           value={getBaseColor(rulerSettings.horizontal.minorTickColor)}
           onChange={handleMinorTickColorChange}
@@ -227,12 +229,12 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
       </div>
 
       {/* Minor Lines Thickness */}
-      <div className={`p-2 ${colors.bg.hover} rounded space-y-2`}>
+      <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className={`text-sm ${colors.text.primary}`}>
           <div className="font-medium">Πάχος Δευτερευουσών Γραμμών</div>
           <div className={`font-normal ${colors.text.muted}`}>Πάχος των δευτερευουσών γραμμών του χάρακα</div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <input
             type="range"
             min="0.5"
@@ -242,7 +244,7 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
             onChange={(e) => handleMinorTickThicknessChange(parseFloat(e.target.value))}
             className="flex-1"
           />
-          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} rounded px-2 py-1 text-center`}>
+          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
             {rulerSettings.horizontal.minorTickLength / 10}px
           </div>
         </div>

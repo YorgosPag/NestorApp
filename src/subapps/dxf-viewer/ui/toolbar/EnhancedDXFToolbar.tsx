@@ -7,6 +7,7 @@ import React from 'react';
 import { useIconSizes } from '../../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../../hooks/useBorderTokens';
 import { useSemanticColors } from '../../../../hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import type { ToolType } from './types';
 import type { Point2D } from '../../rendering/types/Types';
 import { toolGroups, createActionButtons } from './toolDefinitions';
@@ -226,26 +227,26 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
 
   return (
     <div className={`border ${getStatusBorder('muted')} ${quick.card} ${colors.bg.secondary} shadow-lg ${className}`}>  {/* ✅ ENTERPRISE: bg-gray-800 → CSS variable */}
-      <div className="flex flex-wrap gap-1 p-2">
-        <div className="flex gap-1 flex-1">
-          <UploadDxfButton 
-            className={`${iconSizes.xl} p-0 ${radius.md} border transition-colors duration-150 flex items-center justify-center ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${colors.text.secondary} ${getStatusBorder('default')}`}  // ✅ ENTERPRISE: bg-gray-700 → CSS variable
+      <div className={`flex flex-wrap ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.SPACING.SM}`}>
+        <div className={`flex ${PANEL_LAYOUT.GAP.XS} flex-1`}>
+          <UploadDxfButton
+            className={`${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${radius.md} border transition-colors duration-150 flex items-center justify-center ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${colors.text.secondary} ${getStatusBorder('default')}`}  // ✅ ENTERPRISE: p-0 → PANEL_LAYOUT.SPACING.NONE
             title="Upload DXF File (Legacy)"
             onFileSelect={onSceneImported}
           />
 
           <button
             onClick={() => setShowSimpleDialog(true)}
-            className={`${iconSizes.xl} p-0 ${radius.md} border transition-colors duration-150 flex items-center justify-center ${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.PRIMARY} ${colors.text.inverse} ${getStatusBorder('info')}`}  // ✅ ENTERPRISE: bg-blue-700 → CSS variable
+            className={`${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${radius.md} border transition-colors duration-150 flex items-center justify-center ${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.PRIMARY} ${colors.text.inverse} ${getStatusBorder('info')}`}  // ✅ ENTERPRISE: p-0 → PANEL_LAYOUT.SPACING.NONE
             title="Enhanced DXF Import with Project Management"
           >
             🔺
           </button>
-          
-          <div className={`w-px ${colors.bg.active} mx-1 my-1`} />
+
+          <div className={`w-px ${colors.bg.active} ${PANEL_LAYOUT.MARGIN.X_XS} ${PANEL_LAYOUT.MARGIN.Y_XS}`} />
 
           {toolGroups.map((group, groupIndex) => (
-            <div key={group.name} className="flex gap-1">
+            <div key={group.name} className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
               {group.tools.map((tool) => (
                 <ToolButton
                   key={tool.id}
@@ -257,13 +258,13 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
                 />
               ))}
               {groupIndex < toolGroups.length - 1 && (
-                <div className={`w-px ${colors.bg.active} mx-1 my-1`} />
+                <div className={`w-px ${colors.bg.active} ${PANEL_LAYOUT.MARGIN.X_XS} ${PANEL_LAYOUT.MARGIN.Y_XS}`} />
               )}
             </div>
           ))}
           
-          <div className={`w-px ${colors.bg.active} mx-1 my-1`} />
-          
+          <div className={`w-px ${colors.bg.active} ${PANEL_LAYOUT.MARGIN.X_XS} ${PANEL_LAYOUT.MARGIN.Y_XS}`} />
+
           <ZoomControls
             currentZoom={currentZoom}
             onZoomIn={handleZoomIn}
@@ -271,15 +272,15 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
             onSetZoom={handleSetZoom}
           />
 
-          <div className={`w-px ${colors.bg.active} mx-1 my-1`} />
-          
+          <div className={`w-px ${colors.bg.active} ${PANEL_LAYOUT.MARGIN.X_XS} ${PANEL_LAYOUT.MARGIN.Y_XS}`} />
+
           {actionButtons.map((action) => (
             <ActionButton key={action.id} action={action} />
           ))}
         </div>
 
         <div className="flex-shrink-0">
-          <div className={`w-px ${colors.bg.active} mx-2 my-1`} />
+          <div className={`w-px ${colors.bg.active} ${PANEL_LAYOUT.MARGIN.X_SM} ${PANEL_LAYOUT.MARGIN.Y_XS}`} />
           <ProSnapToolbar
             enabledModes={enabledModes}
             onToggleMode={toggleMode}

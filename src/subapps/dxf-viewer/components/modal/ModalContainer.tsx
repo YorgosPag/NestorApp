@@ -5,6 +5,11 @@
  * @date 2025-12-17
  * @version 1.0.0
  * @compliance CLAUDE.md Enterprise Standards
+ *
+ * 🏢 ENTERPRISE MIGRATION: 2026-01-05
+ * - All hardcoded spacing values migrated to PANEL_LAYOUT tokens
+ * - Zero inline styles
+ * - Full centralized system compliance
  */
 
 import React from 'react';
@@ -15,6 +20,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { spacing, typography } from '@/styles/design-tokens';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 // ====================================================================
 // MODAL CONTAINER VARIANTS
@@ -104,20 +110,20 @@ export const ModalContainer: React.FC<ModalContainerProps> = ({
   return (
     <div className={`${radius.md} ${variantStyles.containerClass} ${className}`}>
       {title && (
-        <div className={`p-4 ${getDirectionalBorder('muted', 'bottom')}`}>
-          <div className="flex items-center gap-2">
+        <div className={`${PANEL_LAYOUT.SPACING.LG} ${getDirectionalBorder('muted', 'bottom')}`}>
+          <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             {(icon || variantStyles.defaultIcon) && (
               <span className={variantStyles.iconColor}>
                 {icon || variantStyles.defaultIcon}
               </span>
             )}
-            <h3 className={`text-sm font-medium ${variantStyles.titleColor}`}>
+            <h3 className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} font-medium ${variantStyles.titleColor}`}>
               {title}
             </h3>
           </div>
         </div>
       )}
-      <div className="p-4">
+      <div className={PANEL_LAYOUT.SPACING.LG}>
         {children}
       </div>
     </div>
@@ -217,7 +223,7 @@ export const ModalFormSection: React.FC<{
   className?: string;
 }> = ({ children, className = '' }) => {
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`${PANEL_LAYOUT.SPACING.GAP_XL} ${className}`}>
       {children}
     </div>
   );
@@ -237,13 +243,13 @@ export const ModalField: React.FC<{
 
   return (
     <div className={className}>
-      <label className={`block text-xs font-medium ${colors.text.muted} mb-2`}>
+      <label className={`block text-xs font-medium ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
         {label}
-        {required && <span className={`${colors.text.error} ml-1`}>*</span>}
+        {required && <span className={`${colors.text.error} ${PANEL_LAYOUT.MARGIN.LEFT_XS}`}>*</span>}
       </label>
       {children}
       {description && (
-        <p className={`text-xs ${colors.text.muted} mt-1`}>
+        <p className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
           {description}
         </p>
       )}
@@ -278,7 +284,7 @@ export const ModalActions: React.FC<{
   };
 
   return (
-    <div className={`flex items-center gap-3 ${getAlignmentClass()} pt-4 ${quick.separatorH} ${className}`}>
+    <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD} ${getAlignmentClass()} ${PANEL_LAYOUT.PADDING.TOP_LG} ${quick.separatorH} ${className}`}>
       {children}
     </div>
   );
@@ -292,7 +298,7 @@ export const ModalContentGrid: React.FC<{
   columns?: 1 | 2 | 3;
   className?: string;
 }> = ({ children, columns = 2, className = '' }) => {
-  const gridClass = `grid gap-4 grid-cols-${columns}`;
+  const gridClass = `grid ${PANEL_LAYOUT.GAP.LG} grid-cols-${columns}`;
 
   return (
     <div className={`${gridClass} ${className}`}>

@@ -11,6 +11,8 @@ import { useIconSizes } from '../../../../../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../../../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { CAD_UI_COLORS, UI_COLORS } from '../../../../../config/color-config';
+// 🏢 ENTERPRISE: Import centralized panel spacing (Single Source of Truth)
+import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: Centralized Checkbox component (Radix)
 import { Checkbox } from '@/components/ui/checkbox';
 // 🏢 ENTERPRISE: Centralized Button component (Radix)
@@ -108,16 +110,16 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
     <>
       {/* Header - Semantic <header> element */}
       {/* 🏢 ENTERPRISE: flex-col layout για να φαίνονται πλήρως τα κείμενα των κουμπιών */}
-      <header className="flex flex-col gap-2">
+      <header className={`flex flex-col ${PANEL_LAYOUT.GAP.SM}`}>
         <h3 className={`text-lg font-medium ${colors.text.primary}`}>Ρυθμίσεις Grips</h3>
-        <nav className="flex gap-2" aria-label="Ενέργειες ρυθμίσεων grips">
+        <nav className={`flex ${PANEL_LAYOUT.GAP.SM}`} aria-label="Ενέργειες ρυθμίσεων grips">
           {/* 🏢 ENTERPRISE: Centralized Button component (variant="secondary") + Lucide icon */}
           <Button
             variant="secondary"
             size="sm"
             onClick={resetToDefaults}
             title="Επαναφορά στις προεπιλεγμένες ρυθμίσεις"
-            className="flex items-center gap-1"
+            className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
           >
             <RotateCcw className={iconSizes.xs} />
             Επαναφορά
@@ -128,7 +130,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
             size="sm"
             onClick={handleFactoryResetClick}
             title="Επαναφορά στις εργοστασιακές ρυθμίσεις (CAD Standards)"
-            className="flex items-center gap-1"
+            className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
           >
             <Factory className={iconSizes.xs} />
             Εργοστασιακές
@@ -138,8 +140,9 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
 
       {/* 🏢 ENTERPRISE: Enable/Disable Grips - Centralized Radix Checkbox */}
       {/* 🏢 ADR-011: Using same styling as AccordionSection for visual consistency */}
-      <fieldset className="space-y-2">
-        <div className={`flex items-center gap-3 p-3 ${colors.bg.secondary} ${getElementBorder('card', 'default')} ${radius.lg}`}>
+      <fieldset className={PANEL_LAYOUT.SPACING.GAP_SM}>
+        {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.SPACING.MD for container padding */}
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${getElementBorder('card', 'default')} ${radius.lg}`}>
           {/* 🏢 ENTERPRISE: Centralized Radix Checkbox */}
           <Checkbox
             id="grips-enabled"
@@ -153,16 +156,16 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
             Εμφάνιση Grips
           </label>
         </div>
-        {/* 🏢 ENTERPRISE: Warning message - Using semantic colors */}
+        {/* 🏢 ENTERPRISE: Warning message - Using semantic colors & PANEL_LAYOUT.ALERT */}
         {!gripSettings.enabled && (
-          <aside className={`text-xs ${colors.text.warning} ${colors.bg.warningSubtle} p-2 ${radius.md} ${getStatusBorder('warning')}`} role="alert">
+          <aside className={`${PANEL_LAYOUT.ALERT.TEXT_SIZE} ${colors.text.warning} ${colors.bg.warningSubtle} ${PANEL_LAYOUT.ALERT.PADDING} ${radius.md} ${getStatusBorder('warning')}`} role="alert">
             ⚠️ Τα grips είναι απενεργοποιημένα και δεν θα εμφανίζονται
           </aside>
         )}
       </fieldset>
 
       {/* ACCORDION SECTIONS */}
-      <div className="space-y-3">
+      <div className={PANEL_LAYOUT.SPACING.GAP_MD}>
         {/* 1. ΒΑΣΙΚΕΣ ΡΥΘΜΙΣΕΙΣ */}
         <AccordionSection
           title="Βασικές Ρυθμίσεις"
@@ -172,14 +175,14 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
           disabled={false}
           badge={3}
         >
-          <div className="space-y-4">
+          <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
 
           {/* Grip Size */}
-          <div className="space-y-2">
+          <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
             <label className={`block text-sm font-medium ${colors.text.secondary}`}>
               Μέγεθος Grips: {gripSettings.gripSize || 8}px
             </label>
-            <div className="flex items-center space-x-3">
+            <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
               <input
                 type="range"
                 min="4"
@@ -196,17 +199,17 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                 step="1"
                 value={gripSettings.gripSize || 8}
                 onChange={(e) => updateSettings({ gripSize: parseInt(e.target.value) })}
-                className={`w-16 px-2 py-1 ${colors.bg.hover} ${quick.input} ${colors.text.primary} text-sm`}
+                className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
               />
             </div>
           </div>
 
           {/* Opacity */}
-          <div className="space-y-2">
+          <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
             <label className={`block text-sm font-medium ${colors.text.secondary}`}>
               Διαφάνεια: {Math.round(gripSettings.opacity * 100)}%
             </label>
-            <div className="flex items-center space-x-3">
+            <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
               <input
                 type="range"
                 min="0.1"
@@ -223,7 +226,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                 step="0.1"
                 value={gripSettings.opacity}
                 onChange={(e) => updateSettings({ opacity: parseFloat(e.target.value) })}
-                className={`w-16 px-2 py-1 ${colors.bg.hover} ${quick.input} ${colors.text.primary} text-sm`}
+                className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
               />
             </div>
           </div>
@@ -239,10 +242,10 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
           disabled={false}
           badge={4}
         >
-          <div className="grid grid-cols-2 gap-4">
+          <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.LG}`}>
 
             {/* Cold Color */}
-            <div className="space-y-2">
+            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Cold</label>
               <ColorDialogTrigger
                 value={gripSettings.colors.cold || CAD_UI_COLORS.grips.cold}
@@ -258,7 +261,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
             </div>
 
             {/* Warm Color */}
-            <div className="space-y-2">
+            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Warm (Hover)</label>
               <ColorDialogTrigger
                 value={gripSettings.colors.warm || CAD_UI_COLORS.grips.warm}
@@ -274,7 +277,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
             </div>
 
             {/* Hot Color */}
-            <div className="space-y-2">
+            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Hot (Επιλεγμένα)</label>
               <ColorDialogTrigger
                 value={gripSettings.colors.hot || CAD_UI_COLORS.grips.hot}
@@ -290,7 +293,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
             </div>
 
             {/* Contour Color */}
-            <div className="space-y-2">
+            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Περιγράμματος</label>
               <ColorDialogTrigger
                 value={gripSettings.colors.contour}
@@ -316,10 +319,10 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
           disabled={false}
           badge={3}
         >
-          <div className="space-y-2">
+          <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
 
             {/* 🏢 ENTERPRISE: Centralized Radix Checkboxes */}
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <Checkbox
                 id="show-midpoints"
                 checked={gripSettings.showMidpoints}
@@ -328,7 +331,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
               <label htmlFor="show-midpoints" className={`text-sm cursor-pointer ${colors.text.secondary}`}>Εμφάνιση Midpoints</label>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <Checkbox
                 id="show-centers"
                 checked={gripSettings.showCenters}
@@ -337,7 +340,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
               <label htmlFor="show-centers" className={`text-sm cursor-pointer ${colors.text.secondary}`}>Εμφάνιση Centers</label>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <Checkbox
                 id="show-quadrants"
                 checked={gripSettings.showQuadrants}
@@ -357,14 +360,14 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
           disabled={false}
           badge={6}
         >
-          <div className="space-y-4">
+          <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
 
             {/* Pick Box Size */}
-            <div className="space-y-2">
+            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block text-sm font-medium ${colors.text.secondary}`}>
                 Μέγεθος Pick Box: {gripSettings.pickBoxSize || 3}px
               </label>
-              <div className="flex items-center space-x-3">
+              <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
                 <input
                   type="range"
                   min="1"
@@ -381,17 +384,17 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step="1"
                   value={gripSettings.pickBoxSize || 3}
                   onChange={(e) => updateSettings({ pickBoxSize: parseInt(e.target.value) })}
-                  className={`w-16 px-2 py-1 ${colors.bg.hover} ${quick.input} ${colors.text.primary} text-sm`}
+                  className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
                 />
               </div>
             </div>
 
             {/* Aperture Size */}
-            <div className="space-y-2">
+            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block text-sm font-medium ${colors.text.secondary}`}>
                 Μέγεθος Aperture: {gripSettings.apertureSize || 16}px
               </label>
-              <div className="flex items-center space-x-3">
+              <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
                 <input
                   type="range"
                   min="8"
@@ -408,17 +411,17 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step="2"
                   value={gripSettings.apertureSize || 16}
                   onChange={(e) => updateSettings({ apertureSize: parseInt(e.target.value) })}
-                  className={`w-16 px-2 py-1 ${colors.bg.hover} ${quick.input} ${colors.text.primary} text-sm`}
+                  className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
                 />
               </div>
             </div>
 
             {/* Max Grips */}
-            <div className="space-y-2">
+            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block text-sm font-medium ${colors.text.secondary}`}>
                 Μέγιστα Grips ανά Οντότητα: {gripSettings.maxGripsPerEntity || 50}
               </label>
-              <div className="flex items-center space-x-3">
+              <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
                 <input
                   type="range"
                   min="10"
@@ -435,14 +438,14 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step="10"
                   value={gripSettings.maxGripsPerEntity || 50}
                   onChange={(e) => updateSettings({ maxGripsPerEntity: parseInt(e.target.value) })}
-                  className={`w-16 px-2 py-1 ${colors.bg.hover} ${quick.input} ${colors.text.primary} text-sm`}
+                  className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
                 />
               </div>
             </div>
 
             {/* 🏢 ENTERPRISE: Advanced Options - Centralized Radix Checkboxes */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
+            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
+              <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <Checkbox
                   id="show-aperture"
                   checked={gripSettings.showAperture}
@@ -451,7 +454,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                 <label htmlFor="show-aperture" className={`text-sm cursor-pointer ${colors.text.secondary}`}>Εμφάνιση Aperture</label>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <Checkbox
                   id="multi-grip-edit"
                   checked={gripSettings.multiGripEdit}
@@ -460,7 +463,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                 <label htmlFor="multi-grip-edit" className={`text-sm cursor-pointer ${colors.text.secondary}`}>Multi-Grip Επεξεργασία</label>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <Checkbox
                   id="snap-to-grips"
                   checked={gripSettings.snapToGrips}
@@ -471,24 +474,24 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
             </div>
 
             {/* 🏢 ENTERPRISE: Quick Presets - Using semantic colors */}
-            <div className={`space-y-2 pt-4 ${quick.separator}`}>
+            <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.PADDING.TOP_LG}${quick.separator}`}>
               <h5 className={`text-sm font-medium ${colors.text.muted}`}>Γρήγορα Presets</h5>
-              <div className="flex space-x-2">
+              <div className={`flex ${PANEL_LAYOUT.SPACING.GAP_H_SM}`}>
                 <button
                   onClick={() => updateSettings({ gripSize: 5, pickBoxSize: 2, apertureSize: 10 })}
-                  className={`px-3 py-1 text-xs ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} rounded transition-colors`}
+                  className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors`}
                 >
                   Μικρό
                 </button>
                 <button
                   onClick={() => updateSettings({ gripSize: 8, pickBoxSize: 3, apertureSize: 16 })}
-                  className={`px-3 py-1 text-xs ${colors.bg.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} rounded transition-colors`}
+                  className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.bg.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors`}
                 >
                   Κανονικό
                 </button>
                 <button
                   onClick={() => updateSettings({ gripSize: 12, pickBoxSize: 5, apertureSize: 24 })}
-                  className={`px-3 py-1 text-xs ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} rounded transition-colors`}
+                  className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors`}
                 >
                   Μεγάλο
                 </button>
@@ -505,10 +508,11 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
   // - Standalone (no contextType): Semantic <section> wrapper with spacing
   return (
     <>
+      {/* 🏢 ENTERPRISE: Conditional wrapper - Using PANEL_LAYOUT.SPACING for section */}
       {isEmbedded ? (
         settingsContent
       ) : (
-        <section className="space-y-6 p-4" aria-label="Ρυθμίσεις Grips">
+        <section className={`${PANEL_LAYOUT.SPACING.GAP_XL} ${PANEL_LAYOUT.SPACING.LG}`} aria-label="Ρυθμίσεις Grips">
           {settingsContent}
         </section>
       )}
@@ -522,18 +526,19 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
         closeOnBackdrop={false}
         zIndex={10000}
       >
-        <article className="space-y-4">
+        <article className={PANEL_LAYOUT.SPACING.GAP_LG}>
           {/* 🏢 ENTERPRISE: Warning Message - Using semantic error colors */}
-          <aside className={`${colors.bg.errorSubtle} ${getStatusBorder('error')} p-4 rounded`} role="alert">
-            <p className={`${colors.text.error} font-semibold mb-2`}>
+          {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.ALERT.PADDING_LG */}
+          <aside className={`${colors.bg.errorSubtle} ${getStatusBorder('error')} ${PANEL_LAYOUT.ALERT.PADDING_LG} ${PANEL_LAYOUT.ALERT.BORDER_RADIUS}`} role="alert">
+            <p className={`${colors.text.error} font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
               ⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!
             </p>
           </aside>
 
           {/* Loss List */}
-          <section className="space-y-2">
+          <section className={PANEL_LAYOUT.SPACING.GAP_SM}>
             <p className={`${colors.text.muted} font-medium`}>Θα χάσετε:</p>
-            <ul className={`list-disc list-inside space-y-1 ${colors.text.muted} text-sm`}>
+            <ul className={`list-disc list-inside ${PANEL_LAYOUT.SPACING.GAP_XS} ${colors.text.muted} text-sm`}>
               <li>Όλες τις προσαρμοσμένες ρυθμίσεις grips</li>
               <li>Όλα τα χρώματα που έχετε επιλέξει</li>
               <li>Όλες τις αλλαγές που έχετε κάνει</li>
@@ -541,28 +546,29 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
           </section>
 
           {/* 🏢 ENTERPRISE: Reset Info - Using semantic info colors */}
-          <aside className={`${colors.bg.infoSubtle} ${getStatusBorder('info')} p-4 rounded`} role="note">
+          {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.ALERT.PADDING_LG */}
+          <aside className={`${colors.bg.infoSubtle} ${getStatusBorder('info')} ${PANEL_LAYOUT.ALERT.PADDING_LG} ${PANEL_LAYOUT.ALERT.BORDER_RADIUS}`} role="note">
             <p className={`${colors.text.info} text-sm`}>
               <strong>Επαναφορά:</strong> Οι ρυθμίσεις θα επανέλθουν στα πρότυπα CAD (AutoCAD/BricsCAD)
             </p>
           </aside>
 
           {/* Confirmation Question */}
-          <p className={`${colors.text.primary} font-medium text-center pt-2`}>
+          <p className={`${colors.text.primary} font-medium text-center ${PANEL_LAYOUT.PADDING.TOP_SM}`}>
             Είστε σίγουροι ότι θέλετε να συνεχίσετε;
           </p>
 
           {/* 🏢 ENTERPRISE: Action Buttons - Using semantic colors */}
-          <footer className={`flex gap-3 justify-end pt-4 ${quick.separator}`}>
+          <footer className={`flex ${PANEL_LAYOUT.GAP.MD} justify-end ${PANEL_LAYOUT.PADDING.TOP_LG}${quick.separator}`}>
             <button
               onClick={handleFactoryResetCancel}
-              className={`px-4 py-2 text-sm ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} rounded transition-colors`}
+              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors`}
             >
               Ακύρωση
             </button>
             <button
               onClick={handleFactoryResetConfirm}
-              className={`px-4 py-2 text-sm ${colors.bg.danger} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded transition-colors font-semibold flex items-center gap-1`}
+              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.danger} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors font-semibold flex items-center ${PANEL_LAYOUT.GAP.XS}`}
             >
               <Factory className={iconSizes.xs} />
               Επαναφορά Εργοστασιακών

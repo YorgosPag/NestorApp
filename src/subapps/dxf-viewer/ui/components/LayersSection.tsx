@@ -9,6 +9,8 @@ import React from 'react';
 import { Layers } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import type { SceneModel } from '../../types/scene';
 import { ColorPickerModal } from './layers/components/ColorPickerModal';
 import { MergePanel } from './layers/components/MergePanel';
@@ -107,12 +109,12 @@ export function LayersSection({
   // Early return for empty scene
   if (!scene || Object.keys(scene.layers).length === 0) {
     return (
-      <div className="space-y-3">
-        <h3 className={`text-sm font-medium ${colors.text.muted} flex items-center gap-2`}>
+      <div className={PANEL_LAYOUT.SPACING.GAP_MD}>
+        <h3 className={`text-sm font-medium ${colors.text.muted} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <Layers className={iconSizes.sm} />
           Δεν υπάρχουν layers
         </h3>
-        <div className={`text-center py-4 ${colors.text.tertiary} text-xs`}>
+        <div className={`text-center ${PANEL_LAYOUT.SPACING.LG} ${colors.text.tertiary} text-xs`}>
           Τα layers θα εμφανιστούν μετά την εισαγωγή DXF
         </div>
       </div>
@@ -169,7 +171,7 @@ export function LayersSection({
   };
 
   return (
-    <div className="space-y-3">
+    <div className={PANEL_LAYOUT.SPACING.GAP_MD}>
       <LayersHeader scene={scene} />
       
       <SearchInput 

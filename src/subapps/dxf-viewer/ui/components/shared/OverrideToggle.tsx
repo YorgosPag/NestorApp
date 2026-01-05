@@ -9,6 +9,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // ✅ ENTERPRISE: Centralized Radix Checkbox - Single Source of Truth
 import { Checkbox } from '@/components/ui/checkbox';
+// 🏢 ENTERPRISE: Import centralized panel spacing (Single Source of Truth)
+import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 
 /**
  * Props for the OverrideToggle component
@@ -75,28 +77,29 @@ export const OverrideToggle = React.memo<OverrideToggleProps>(function OverrideT
     onChange(checkedState === true);
   }, [onChange]);
 
+  // 🏢 ENTERPRISE: Using PANEL_LAYOUT for consistent spacing - ZERO HARDCODED VALUES
   return (
-    <div className={`p-3 ${colors.bg.secondary} rounded-lg ${className}`}>
-      <label className="flex items-start gap-2 cursor-pointer">
+    <div className={`${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${PANEL_LAYOUT.CONTAINER.BORDER_RADIUS} ${className}`}>
+      <label className={`flex items-start ${PANEL_LAYOUT.GAP.SM} cursor-pointer`}>
         {/* ✅ ENTERPRISE: Centralized Radix Checkbox - Single Source of Truth */}
         <Checkbox
           checked={checked}
           onCheckedChange={handleCheckedChange}
           disabled={disabled}
-          className="mt-0.5"
+          className={PANEL_LAYOUT.MARGIN.LEFT_HALF}
         />
         <div className="flex flex-col flex-1">
-          <span className={`text-sm ${colors.text.muted} font-medium`}>
+          <span className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.text.muted} font-medium`}>
             {label}
           </span>
           {description && (
-            <span className={`text-xs ${colors.text.muted} mt-1`}>
+            <span className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
               {description}
             </span>
           )}
-          {/* ✅ ENTERPRISE: Status badge moved to bottom row */}
+          {/* ✅ ENTERPRISE: Status badge moved to bottom row - ALL via PANEL_LAYOUT tokens */}
           {showStatusBadge && (
-            <span className={`mt-2 px-2 py-1 rounded text-xs font-medium inline-block w-fit ${
+            <span className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.ALERT.BORDER_RADIUS} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} font-medium inline-block w-fit ${
               checked
                 ? `${colors.bg.warningSubtle} ${colors.text.warning} ${quick.warning}`
                 : `${colors.bg.hover} ${colors.text.muted} ${getStatusBorder('muted')}`

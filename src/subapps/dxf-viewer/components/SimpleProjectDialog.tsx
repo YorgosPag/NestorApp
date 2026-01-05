@@ -51,6 +51,8 @@ import { useTypography } from '@/hooks/useTypography';
 import { MODAL_COLOR_SCHEMES, getModalColorScheme, getModalIconColor } from '../config/modal-colors';
 import { MODAL_FLEX_PATTERNS, MODAL_DIMENSIONS, MODAL_SPACING, getIconSize } from '../config/modal-layout';
 import { getSelectStyles, getSelectPlaceholder, MODAL_SELECT_ITEM_PATTERNS } from '../config/modal-select';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../config/panel-tokens';
 import { CompaniesLoadingState, ProjectsLoadingState, ModalEmptyState, InlineLoading, ModalErrorState } from './modal/ModalLoadingStates';
 
 interface SimpleProjectDialogProps {
@@ -874,7 +876,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               Αντικατάσταση {pendingImportData?.typeLabel}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
-              <div className="space-y-3 text-sm text-muted-foreground">
+              <div className={`${PANEL_LAYOUT.SPACING.GAP_MD} text-sm text-muted-foreground`}>
                 <p>
                   Υπάρχει ήδη αποθηκευμένη {pendingImportData?.typeLabel} για αυτή την εταιρεία.
                 </p>

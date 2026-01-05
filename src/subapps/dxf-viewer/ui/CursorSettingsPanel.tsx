@@ -20,6 +20,7 @@ import { useIconSizes } from '../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useSemanticColors } from '../../../hooks/useSemanticColors';
 import { Checkbox } from '@/components/ui/checkbox';  // ✅ ENTERPRISE: Centralized Radix Checkbox
+import { PANEL_LAYOUT } from '../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
 
 // Force cursor styles for the panel to override canvas cursor settings
 const panelStyles = `
@@ -70,12 +71,12 @@ function SliderRow({
   step?: number;
   onChange: (v: number) => void;
   disabled?: boolean;
-  colors: any;
-  quick: any;
+  colors: ReturnType<typeof useSemanticColors>;
+  quick: ReturnType<typeof useBorderTokens>['quick'];
 }) {
   return (
-    <div className="mb-3">
-      <div className="flex justify-between items-center mb-1">
+    <div className={PANEL_LAYOUT.MARGIN.BOTTOM_MD}>
+      <div className={`flex justify-between items-center ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>
         <label className={`text-sm ${colors.text.tertiary}`}>{label}</label>
         <span className={`text-xs ${colors.text.muted} font-mono`}>{value}</span>
       </div>
@@ -106,13 +107,13 @@ function CheckboxRow({
   colors: ReturnType<typeof useSemanticColors>;  // ✅ ENTERPRISE: Proper type instead of any
 }) {
   return (
-    <div className="mb-3">
+    <div className={PANEL_LAYOUT.MARGIN.BOTTOM_MD}>
       <label className="flex items-center cursor-pointer">
         <Checkbox
           checked={checked}
           onCheckedChange={(checkedState) => onChange(checkedState === true)}
           disabled={disabled}
-          className="mr-2"
+          className={PANEL_LAYOUT.MARGIN.RIGHT_SM}
         />
         <span className={`text-sm ${colors.text.tertiary}`}>{label}</span>
       </label>
@@ -362,96 +363,96 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
         transition: 'width 0.1s ease-out' // Smooth width transitions
       }}
     >
-          <div
-            className="drag-handle flex justify-between items-center mb-4 p-4"
+          <header
+            className={`drag-handle flex justify-between items-center ${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.LG}`}
             onMouseDown={handleMouseDown}
           >
-            <h3 className="text-lg font-bold text-cyan-400">🔧 Ρυθμίσεις Κέρσορα AutoCAD</h3>
+            <h3 className="text-lg font-bold text-cyan-400">Ρυθμισεις Κερσορα AutoCAD</h3>
             <button
               onClick={onClose}
-              className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} text-xl ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} rounded px-2 py-1`}
+              className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} text-xl ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} rounded ${PANEL_LAYOUT.SPACING.COMPACT}`}
               onMouseDown={(e) => e.stopPropagation()} // Prevent drag when clicking X
             >
-              ×
+              x
             </button>
-          </div>
-          <div className="px-4 pb-4">
+          </header>
+          <div className={`${PANEL_LAYOUT.PADDING.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.HORIZONTAL_LG}`}>
 
           {/* Crosshair Settings - Simplified */}
-          <div className="mb-6">
-            <h4 className={`text-md font-semibold ${colors.text.secondary} mb-3`}>Σταυρόνημα</h4>
+          <section className={PANEL_LAYOUT.SPACING.GAP_XL}>
+            <h4 className={`text-md font-semibold ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>Σταυρονημα</h4>
 
             <CheckboxRow
-              label="Ενεργοποίηση Σταυρονήματος"
+              label="Ενεργοποιηση Σταυρονηματος"
               checked={settings.crosshair.enabled}
               onChange={(enabled) => updateCrosshairSettings({ enabled })}
               colors={colors}
             />
 
-            <div className={`mt-2 p-2 ${colors.bg.info} ${getStatusBorder('info')} rounded text-xs ${colors.text.info}`}>
-              💡 Μέγεθος, χρώμα και πάχος ρυθμίζονται από τις Ρυθμίσεις DXF
+            <div className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.info} ${getStatusBorder('info')} rounded text-xs ${colors.text.info}`}>
+              Μεγεθος, χρωμα και παχος ρυθμιζονται απο τις Ρυθμισεις DXF
             </div>
-          </div>
+          </section>
 
           {/* Behavior Settings */}
-          <div className="mb-6">
-            <h4 className={`text-md font-semibold ${colors.text.secondary} mb-3`}>Συμπεριφορά AutoCAD</h4>
-            <div className={`mb-3 p-2 bg-yellow-900/30 ${getStatusBorder('warning')} rounded text-xs text-yellow-200`}>
-              ⚠️ Σημείωση: Μερικές λειτουργίες είναι σε ανάπτυξη και μπορεί να μην είναι πλήρως ενεργές
+          <section className={PANEL_LAYOUT.SPACING.GAP_XL}>
+            <h4 className={`text-md font-semibold ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>Συμπεριφορα AutoCAD</h4>
+            <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.SPACING.SM} bg-yellow-900/30 ${getStatusBorder('warning')} rounded text-xs text-yellow-200`}>
+              Σημειωση: Μερικες λειτουργιες ειναι σε αναπτυξη και μπορει να μην ειναι πληρως ενεργες
             </div>
-            
+
             <CheckboxRow
-              label="✅ Ενδείξεις Snap (Συνδεδεμένο)"
+              label="Ενδειξεις Snap (Συνδεδεμενο)"
               checked={settings.behavior.snap_indicator}
               onChange={(snap_indicator) => updateBehaviorSettings({ snap_indicator })}
               colors={colors}
             />
-            <div className={`text-xs ${colors.text.success} mb-3 ml-6`}>
-              🔗 Ενεργό: Εμφανίζει κίτρινες ενδείξεις snap στο crosshair
+            <div className={`text-xs ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
+              Ενεργο: Εμφανιζει κιτρινες ενδειξεις snap στο crosshair
             </div>
 
             <CheckboxRow
-              label="✅ Εμφάνιση Συντεταγμένων (Συνδεδεμένο)"
+              label="Εμφανιση Συντεταγμενων (Συνδεδεμενο)"
               checked={settings.behavior.coordinate_display}
               onChange={(coordinate_display) => updateBehaviorSettings({ coordinate_display })}
               colors={colors}
             />
-            <div className={`text-xs ${colors.text.success} mb-3 ml-6`}>
-              🔗 Ενεργό: Δείχνει X,Y συντεταγμένες στο status bar
+            <div className={`text-xs ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
+              Ενεργο: Δειχνει X,Y συντεταγμενες στο status bar
             </div>
 
             <CheckboxRow
-              label="✅ Δυναμική Εισαγωγή (Συνδεδεμένο)"
+              label="Δυναμικη Εισαγωγη (Συνδεδεμενο)"
               checked={settings.behavior.dynamic_input}
               onChange={(dynamic_input) => updateBehaviorSettings({ dynamic_input })}
               colors={colors}
             />
-            <div className={`text-xs ${colors.text.success} mb-3 ml-6`}>
-              🔗 Ενεργό: Πεδία εισαγωγής κοντά στον κέρσορα κατά το σχεδιασμό
+            <div className={`text-xs ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
+              Ενεργο: Πεδια εισαγωγης κοντα στον κερσορα κατα το σχεδιασμο
             </div>
 
             <CheckboxRow
-              label="✅ Cursor Tooltip (Συνδεδεμένο)"
+              label="Cursor Tooltip (Συνδεδεμενο)"
               checked={settings.behavior.cursor_tooltip}
               onChange={(cursor_tooltip) => updateBehaviorSettings({ cursor_tooltip })}
               colors={colors}
             />
-            <div className={`text-xs ${colors.text.success} mb-3 ml-6`}>
-              🔗 Ενεργό: Tooltip με πληροφορίες εργαλείου κοντά στον κέρσορα
+            <div className={`text-xs ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
+              Ενεργο: Tooltip με πληροφοριες εργαλειου κοντα στον κερσορα
             </div>
-          </div>
+          </section>
 
           {/* Performance Settings */}
-          <div className="mb-6">
-            <h4 className={`text-md font-semibold ${colors.text.secondary} mb-3`}>Απόδοση</h4>
-            
+          <section className={PANEL_LAYOUT.MARGIN.BOTTOM_XL}>
+            <h4 className={`text-md font-semibold ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>Απόδοση</h4>
+
             <CheckboxRow
               label="✅ Χρήση RAF 60fps (Συνδεδεμένο)"
               checked={settings.performance.use_raf}
               onChange={(use_raf) => updatePerformanceSettings({ use_raf })}
               colors={colors}
             />
-            <div className={`text-xs ${colors.text.success} mb-3 ml-6`}>
+            <div className={`text-xs ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
               🔗 Ενεργό: RequestAnimationFrame για ομαλότερη κίνηση crosshair
             </div>
 
@@ -461,32 +462,32 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               onChange={(precision_mode) => updatePerformanceSettings({ precision_mode })}
               colors={colors}
             />
-            <div className={`text-xs ${colors.text.success} mb-3 ml-6`}>
+            <div className={`text-xs ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
               🔗 Ενεργό: Sub-pixel ακρίβεια για crosshair και snap indicators
             </div>
             {settings.performance.precision_mode && (
-              <div className={`mb-3 ml-6 p-2 ${colors.bg.info} ${getStatusBorder('info')} rounded text-xs ${colors.text.info} flex items-center gap-2`}>
+              <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.info} ${getStatusBorder('info')} rounded text-xs ${colors.text.info} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <div className={`${iconSizes.xs} ${colors.bg.info} ${quick.button} animate-pulse`}></div>
                 <span>PRECISION MODE ΕΝΕΡΓΟ - 4 δεκαδικά ψηφία</span>
               </div>
             )}
-          </div>
+          </section>
 
           {/* Action Buttons */}
-          <div className="flex gap-2">
+          <nav className={`flex ${PANEL_LAYOUT.GAP.SM}`}>
             <button
-              className={`flex-1 px-3 py-2 rounded ${colors.bg.warning} ${INTERACTIVE_PATTERNS.WARNING_HOVER} text-xs`}
+              className={`flex-1 ${PANEL_LAYOUT.BUTTON.PADDING} rounded ${colors.bg.warning} ${INTERACTIVE_PATTERNS.WARNING_HOVER} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS}`}
               onClick={resetSettings}
             >
               Επαναφορά Προκαθορισμένων
             </button>
             <button
-              className={`px-3 py-1 rounded ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-xs`}
+              className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} rounded ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS}`}
               onClick={clearAndReload}
             >
               Καθαρισμός & Επαναφόρτωση
             </button>
-          </div>
+          </nav>
         </div>
     </div>
   );

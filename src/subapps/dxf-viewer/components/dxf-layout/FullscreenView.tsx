@@ -14,6 +14,7 @@ import { ToolbarSection } from './ToolbarSection';
 import { CanvasSection } from './CanvasSection';
 import type { OverlayEditorMode, OverlayKind } from '../../overlays/types';
 import type { PropertyStatus } from '../../../../constants/property-statuses-enterprise';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
 
 /**
  * Renders the DXF viewer in a fullscreen, immersive layout.
@@ -33,15 +34,15 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
       currentKind={"unit" as OverlayKind}
       setCurrentKind={() => {}}
     />
-    <div className={`flex justify-between items-center p-2 ${colors.bg.secondary} ${getDirectionalBorder('muted', 'bottom')}`}>
-      <div className="flex gap-2 items-center">
+    <div className={`flex justify-between items-center ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${getDirectionalBorder('muted', 'bottom')}`}>
+      <div className={`flex ${PANEL_LAYOUT.GAP.SM} items-center`}>
         <Button
           variant="outline"
           size="sm"
           className={`${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} ${quick.muted}`}
           onClick={() => props.handleAction('setViewMode', 'normal')}
         >
-          <Minimize className={`${iconSizes.sm} mr-2`} />
+          <Minimize className={`${iconSizes.sm} ${PANEL_LAYOUT.MARGIN.RIGHT_SM}`} />
           Exit Fullscreen
         </Button>
         <Button 
@@ -50,12 +51,12 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
           className={`${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.inverted} ${quick.muted}`}
           onClick={() => props.handleAction('clear')}
         >
-          <RotateCcw className={`${iconSizes.sm} mr-2`} />
+          <RotateCcw className={`${iconSizes.sm} ${PANEL_LAYOUT.MARGIN.RIGHT_SM}`} />
           Clear
         </Button>
       </div>
       
-      <div className="flex gap-2 items-center">
+      <div className={`flex ${PANEL_LAYOUT.GAP.SM} items-center`}>
         {props.currentScene && (
           <CommonBadge
             status="company"

@@ -12,6 +12,7 @@ import { layoutUtilities } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 
 interface LayerItemProps {
   layerName: string;
@@ -200,18 +201,18 @@ export function LayerItem({
 
   return (
     <>
-      <div 
-        className={`flex items-center justify-between p-2 rounded cursor-pointer transition-all ${getDirectionalBorder('muted', 'left')} ${
+      <div
+        className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.SM} rounded cursor-pointer transition-all ${getDirectionalBorder('muted', 'left')} ${
           layer.visible ? `${colors.bg.secondary} ${HOVER_BACKGROUND_EFFECTS.LIGHT}` : `${colors.bg.primary} opacity-60`
         } ${selectedLayersForMerge.has(layerName) ? `ring-2 ${colors.ring.info} ${colors.bg.selection}` : ''}`}
         onClick={handleLayerClick}
       >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} flex-1 min-w-0`}>
           {/* Expand/Collapse Arrow for entities */}
           {entityCount > 0 && (
             <button
               onClick={handleExpandToggle}
-              className={`p-1 ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+              className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               title={isLayerExpanded ? "Σύμπτυξη στοιχείων" : "Ανάπτυξη στοιχείων"}
             >
               {isLayerExpanded ? (
@@ -240,7 +241,7 @@ export function LayerItem({
               onChange={(e) => setEditingName(e.target.value)}
               onKeyDown={handleNameKeyDown}
               onBlur={handleNameBlur}
-              className={`${colors.bg.secondary} ${colors.text.primary} text-sm px-1 rounded border ${getStatusBorder('info')} focus:outline-none ${colors.interactive.focus.ring}`}
+              className={`${colors.bg.secondary} ${colors.text.primary} text-sm ${PANEL_LAYOUT.INPUT.PADDING_X} rounded border ${getStatusBorder('info')} focus:outline-none ${colors.interactive.focus.ring}`}
               autoFocus
             />
           ) : (
@@ -254,14 +255,14 @@ export function LayerItem({
           )}
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           {/* Entity Count */}
           <span className={`text-xs ${colors.text.muted}`}>{entityCount}</span>
           
           {/* Visibility Toggle */}
           <button
             onClick={handleVisibilityToggle}
-            className={`p-1 ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+            className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
             title={layer.visible ? "Απόκρυψη" : "Εμφάνιση"}
           >
             {layer.visible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
@@ -270,7 +271,7 @@ export function LayerItem({
           {/* Edit Button */}
           <button
             onClick={handleEditClick}
-            className={`p-1 ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+            className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
             title="Μετονομασία layer"
           >
             <Edit2 className={iconSizes.xs} />
@@ -279,7 +280,7 @@ export function LayerItem({
           {/* Delete Button */}
           <button
             onClick={handleDeleteClick}
-            className={`p-1 ${HOVER_TEXT_EFFECTS.RED}`}
+            className={`${PANEL_LAYOUT.SPACING.XS} ${HOVER_TEXT_EFFECTS.RED}`}
             title="Διαγραφή"
           >
             <Trash2 className={iconSizes.xs} />

@@ -4,6 +4,7 @@ import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { portalComponents } from '@/styles/design-tokens';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 interface ElementMetrics {
   name: string;
@@ -11,6 +12,48 @@ interface ElementMetrics {
   rect: DOMRect | null;
   className?: string;
 }
+
+// ============================================================================
+// LAYOUT MAPPER STYLES - ENTERPRISE TOKENS
+// ============================================================================
+
+/**
+ * @description Centralized styles for LayoutMapper component
+ * All values derived from PANEL_LAYOUT tokens - zero hardcoded values
+ */
+const LAYOUT_MAPPER_STYLES = {
+  // Hint badge (shown when debug is OFF)
+  HINT_BADGE: {
+    POSITION: 'fixed',
+    CONTAINER: `fixed ${PANEL_LAYOUT.MARGIN.TOP_SM} right-2 text-xs bg-black bg-opacity-50 ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS}`,
+  },
+
+  // Debug overlay container
+  DEBUG_OVERLAY: {
+    CONTAINER: 'fixed inset-0 pointer-events-none',
+  },
+
+  // Measurement box for each element
+  MEASUREMENT_BOX: {
+    BASE: 'absolute border border-dashed opacity-60',
+    // Label positioned above the box
+    LABEL: `absolute -top-6 left-0 text-xs font-mono bg-black text-white ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} whitespace-nowrap`,
+    // Coordinate badges at corners
+    COORD_TOP_LEFT: `absolute top-0 left-0 text-xs font-mono text-white ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS}`,
+    COORD_BOTTOM_RIGHT: `absolute bottom-0 right-0 text-xs font-mono text-white ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS}`,
+  },
+
+  // Info panel (right side)
+  INFO_PANEL: {
+    CONTAINER: `fixed top-20 right-4 ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} text-xs font-mono max-w-md`,
+    HEADER: `flex justify-between items-center ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`,
+    HEADER_TITLE: 'text-white font-bold',
+    CLOSE_BUTTON: 'text-red-400',
+    METRIC_ITEM: PANEL_LAYOUT.MARGIN.BOTTOM_XS,
+    METRIC_DETAILS: `${PANEL_LAYOUT.MARGIN.LEFT_HALF} ${PANEL_LAYOUT.MARGIN.LEFT_SM} text-xs`,
+    FOOTER: `${PANEL_LAYOUT.MARGIN.TOP_LG} ${PANEL_LAYOUT.PADDING.TOP_SM}`,
+  },
+} as const;
 
 export default function LayoutMapper() {
   const [metrics, setMetrics] = useState<ElementMetrics[]>([]);
@@ -108,7 +151,10 @@ export default function LayoutMapper() {
 
   if (!isVisible) {
     return (
-      <div className={`fixed top-2 right-2 text-xs ${colors.text.disabled} bg-black bg-opacity-50 px-2 py-1 rounded`} style={{ zIndex: portalComponents.overlay.debug.info.zIndex() }}>
+      <div
+        className={`${LAYOUT_MAPPER_STYLES.HINT_BADGE.CONTAINER} ${colors.text.disabled}`}
+        style={{ zIndex: portalComponents.overlay.debug.info.zIndex() }}
+      >
         Press Ctrl+Shift+L για Layout Debug
       </div>
     );
@@ -118,12 +164,15 @@ export default function LayoutMapper() {
     <>
       {/* Corner Markers */}
       {metrics.length > 0 && (
-        <div className="fixed inset-0 pointer-events-none" style={{ zIndex: portalComponents.overlay.debug.main.zIndex() }}>
+        <div
+          className={LAYOUT_MAPPER_STYLES.DEBUG_OVERLAY.CONTAINER}
+          style={{ zIndex: portalComponents.overlay.debug.main.zIndex() }}
+        >
           {metrics.map(({ name, rect, className }) =>
             rect && (
               <div
                 key={name}
-                className={`absolute border border-dashed opacity-60 ${className}`}
+                className={`${LAYOUT_MAPPER_STYLES.MEASUREMENT_BOX.BASE} ${className}`}
                 style={{
                   left: rect.left,
                   top: rect.top,
@@ -134,15 +183,15 @@ export default function LayoutMapper() {
                 title={name}
               >
                 {/* Ετικέτα με διαστάσεις */}
-                <div className="absolute -top-6 left-0 text-xs font-mono bg-black text-white px-1 rounded whitespace-nowrap">
-                  {name}: {Math.round(rect.width)}×{Math.round(rect.height)}
+                <div className={LAYOUT_MAPPER_STYLES.MEASUREMENT_BOX.LABEL}>
+                  {name}: {Math.round(rect.width)}x{Math.round(rect.height)}
                 </div>
 
                 {/* Συντεταγμένες στις γωνίες */}
-                <div className={`absolute top-0 left-0 text-xs font-mono text-white ${colors.bg.danger} px-1`}>
+                <div className={`${LAYOUT_MAPPER_STYLES.MEASUREMENT_BOX.COORD_TOP_LEFT} ${colors.bg.danger}`}>
                   ({Math.round(rect.left)},{Math.round(rect.top)})
                 </div>
-                <div className={`absolute bottom-0 right-0 text-xs font-mono text-white ${colors.bg.danger} px-1`}>
+                <div className={`${LAYOUT_MAPPER_STYLES.MEASUREMENT_BOX.COORD_BOTTOM_RIGHT} ${colors.bg.danger}`}>
                   ({Math.round(rect.right)},{Math.round(rect.bottom)})
                 </div>
               </div>
@@ -153,35 +202,35 @@ export default function LayoutMapper() {
 
       {/* Info Panel */}
       <div
-        className={`fixed top-20 right-4 ${colors.bg.overlay} ${colors.text.success} p-4 rounded text-xs font-mono max-w-md`}
+        className={`${LAYOUT_MAPPER_STYLES.INFO_PANEL.CONTAINER} ${colors.bg.overlay} ${colors.text.success}`}
         style={{ zIndex: portalComponents.overlay.debug.controls.zIndex() }}
       >
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="text-white font-bold">🎯 LAYOUT MAPPER</h3>
+        <div className={LAYOUT_MAPPER_STYLES.INFO_PANEL.HEADER}>
+          <h3 className={LAYOUT_MAPPER_STYLES.INFO_PANEL.HEADER_TITLE}>🎯 LAYOUT MAPPER</h3>
           <button
             onClick={() => setIsVisible(false)}
-            className={`text-red-400 ${HOVER_TEXT_EFFECTS.RED_LIGHT}`}
+            className={`${LAYOUT_MAPPER_STYLES.INFO_PANEL.CLOSE_BUTTON} ${HOVER_TEXT_EFFECTS.RED_LIGHT}`}
           >
-            ×
+            x
           </button>
         </div>
 
         {metrics.map(({ name, rect }) => (
-          <div key={name} className="mb-1">
+          <div key={name} className={LAYOUT_MAPPER_STYLES.INFO_PANEL.METRIC_ITEM}>
             <strong className={colors.text.info}>{name}:</strong>
             {rect ? (
-              <div className="ml-2 text-xs">
+              <div className={LAYOUT_MAPPER_STYLES.INFO_PANEL.METRIC_DETAILS}>
                 Position: ({Math.round(rect.x)}, {Math.round(rect.y)})<br/>
-                Size: {Math.round(rect.width)} × {Math.round(rect.height)}<br/>
+                Size: {Math.round(rect.width)} x {Math.round(rect.height)}<br/>
                 Bounds: L{Math.round(rect.left)} T{Math.round(rect.top)} R{Math.round(rect.right)} B{Math.round(rect.bottom)}
               </div>
             ) : (
-              <span className={`${colors.text.danger} ml-2`}>NOT FOUND</span>
+              <span className={`${colors.text.danger} ${PANEL_LAYOUT.MARGIN.LEFT_SM}`}>NOT FOUND</span>
             )}
           </div>
         ))}
 
-        <div className={`mt-4 pt-2 ${getDirectionalBorder('muted', 'top')} ${colors.text.warning}`}>
+        <div className={`${LAYOUT_MAPPER_STYLES.INFO_PANEL.FOOTER} ${getDirectionalBorder('muted', 'top')} ${colors.text.warning}`}>
           Ctrl+Shift+L: Toggle | Auto-refresh: 1s
         </div>
       </div>

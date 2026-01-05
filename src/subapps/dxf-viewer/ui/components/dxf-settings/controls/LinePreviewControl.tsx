@@ -10,6 +10,8 @@ import { getDashArray } from '../../../../settings-core/defaults';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { UI_COLORS } from '../../../../config/color-config';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
 
 interface LinePreviewControlProps {
   settings: Partial<LineSettings>;
@@ -42,7 +44,7 @@ const LinePreviewControlComponent: React.FC<LinePreviewControlProps> = ({
   );
 
   return (
-    <div className="space-y-2">
+    <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
       {label && (
         <label className={`text-sm font-medium ${colors.text.secondary}`}>
           {label}
@@ -50,7 +52,7 @@ const LinePreviewControlComponent: React.FC<LinePreviewControlProps> = ({
       )}
 
       <div
-        className={`${colors.bg.backgroundSecondary} rounded ${getStatusBorder('muted')} p-4 flex items-center justify-center`}
+        className={`${colors.bg.backgroundSecondary} rounded ${getStatusBorder('muted')} ${PANEL_LAYOUT.SPACING.LG} flex items-center justify-center`}
         style={{ height }}
       >
         {settings.enabled !== false ? (

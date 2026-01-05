@@ -25,6 +25,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized Switch component (Radix)
 import { Switch } from '@/components/ui/switch';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 
 export interface GridSettingsProps {
   className?: string;
@@ -165,15 +167,15 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
   // ============================================================================
 
   return (
-    <article className={`space-y-4 ${className}`}>
+    <article className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
       {/* 🏢 ENTERPRISE: Grid Visibility Toggle - Using centralized Switch component */}
-      <section className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
+      <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className="flex items-center justify-between">
           <div>
             <h4 className={`text-sm font-medium ${colors.text.primary}`}>Εμφάνιση Πλέγματος</h4>
             <p className={`text-xs ${colors.text.muted}`}>Εμφάνιση/απόκρυψη του πλέγματος</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <span className={`text-xs ${colors.text.muted}`}>
               {gridSettings.visual.enabled ? 'Ενεργό' : 'Ανενεργό'}
             </span>
@@ -186,10 +188,10 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
       </section>
 
       {/* Grid Size (ΚΟΙΝΟ για όλα) - 🏢 ENTERPRISE: Semantic section */}
-      <section className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
+      <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <h4 className={`text-sm font-medium ${colors.text.primary}`}>Μέγεθος Πλέγματος</h4>
         <p className={`text-xs ${colors.text.muted}`}>Απόσταση μεταξύ γραμμών πλέγματος (ΚΟΙΝΟ για όλες)</p>
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <input
             type="range"
             min="0.5"
@@ -199,14 +201,14 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             onChange={(e) => handleGridSizeChange(parseFloat(e.target.value))}
             className="flex-1"
           />
-          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} ${quick.button} px-2 py-1 text-center`}>
+          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} ${quick.button} ${PANEL_LAYOUT.SPACING.XS} text-center`}>
             {gridSettings.visual.step}
           </div>
         </div>
       </section>
 
       {/* 🏢 ENTERPRISE: Grid Style Selector - Using centralized TabsOnlyTriggers */}
-      <section className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
+      <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <h4 className={`text-sm font-medium ${colors.text.primary}`}>Στυλ Πλέγματος</h4>
         <p className={`text-xs ${colors.text.muted}`}>Τύπος εμφάνισης γραμμών πλέγματος</p>
         <TabsOnlyTriggers
@@ -219,23 +221,23 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
       </section>
 
       {/* 🏢 ENTERPRISE: Grid Lines Sub-tabs - className moved directly to component (ADR-003) */}
-      <nav className={`${quick.separatorH} pt-4`}>
+      <nav className={`${quick.separatorH} ${PANEL_LAYOUT.PADDING.TOP_LG}`}>
         <TabsOnlyTriggers
           tabs={gridLinesTabs}
           value={activeGridLinesTab}
           onTabChange={handleGridLinesTabChange}
           theme="dark"
           alwaysShowLabels={true}
-          className="mb-4"
+          className={PANEL_LAYOUT.MARGIN.BOTTOM_LG}
         />
 
         {/* Major Lines Tab Content */}
         {activeGridLinesTab === 'major' ? (
-          <div className="space-y-4">
+          <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
             {/* Major Grid Color */}
-            <div className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
+            <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
               <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Κύριων Γραμμών</label>
-              <div className={`text-xs ${colors.text.muted} mb-2`}>Χρώμα των κύριων γραμμών πλέγματος</div>
+              <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα των κύριων γραμμών πλέγματος</div>
               <ColorDialogTrigger
                 value={gridSettings.visual.majorGridColor}
                 onChange={handleMajorGridColorChange}
@@ -250,12 +252,12 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             </div>
 
             {/* Major Grid Line Weight */}
-            <div className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
+            <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
               <div className={`text-sm ${colors.text.primary}`}>
                 <div className="font-medium">Πάχος Κύριων Γραμμών</div>
                 <div className={`font-normal ${colors.text.muted}`}>Πάχος των κύριων γραμμών πλέγματος</div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <input
                   type="range"
                   min="0.5"
@@ -265,7 +267,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
                   onChange={(e) => handleMajorGridWeightChange(parseFloat(e.target.value))}
                   className="flex-1"
                 />
-                <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} ${quick.button} px-2 py-1 text-center`}>
+                <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} ${quick.button} ${PANEL_LAYOUT.SPACING.XS} text-center`}>
                   {gridSettings.visual.majorGridWeight}
                 </div>
               </div>
@@ -273,11 +275,11 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
           </div>
         ) : (
           /* Minor Lines Tab Content */
-          <div className="space-y-4">
+          <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
             {/* Minor Grid Color */}
-            <div className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
+            <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
               <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Δευτερευουσών Γραμμών</label>
-              <div className={`text-xs ${colors.text.muted} mb-2`}>Χρώμα των δευτερευουσών γραμμών πλέγματος</div>
+              <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα των δευτερευουσών γραμμών πλέγματος</div>
               <ColorDialogTrigger
                 value={gridSettings.visual.minorGridColor}
                 onChange={handleMinorGridColorChange}
@@ -292,12 +294,12 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             </div>
 
             {/* Minor Grid Line Weight */}
-            <div className={`p-2 ${colors.bg.secondary} ${quick.card} space-y-2`}>
+            <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
               <div className={`text-sm ${colors.text.primary}`}>
                 <div className="font-medium">Πάχος Δευτερευουσών Γραμμών</div>
                 <div className={`font-normal ${colors.text.muted}`}>Πάχος των δευτερευουσών γραμμών πλέγματος</div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <input
                   type="range"
                   min="0.1"
@@ -307,7 +309,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
                   onChange={(e) => handleMinorGridWeightChange(parseFloat(e.target.value))}
                   className="flex-1"
                 />
-                <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} ${quick.button} px-2 py-1 text-center`}>
+                <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} ${quick.button} ${PANEL_LAYOUT.SPACING.XS} text-center`}>
                   {gridSettings.visual.minorGridWeight}
                 </div>
               </div>

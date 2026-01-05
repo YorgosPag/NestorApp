@@ -11,6 +11,8 @@ import { TestButton } from './TestButton';
 import type { TestDefinition, TestState } from '../types/tests.types';
 import { HOVER_BACKGROUND_EFFECTS, GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
 
 interface AutomatedTestsTabProps {
   runAllTestsGroup: TestDefinition[];
@@ -34,7 +36,7 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
     <>
       {/* ✅ ENTERPRISE: Αφαίρεση περιττού κενού wrapper (ADR-003 Container Nesting) */}
       <section>
-        <h3 className={`text-sm font-semibold ${colors.text.muted} uppercase tracking-wide mb-3`}>
+        <h3 className={`text-sm font-semibold ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
           📋 Automated Test Suite
         </h3>
 
@@ -42,7 +44,7 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
         <button
           onClick={handleRunAllTests}
           disabled={testState.runningTests.has('run-all-tests')}
-          className={`w-full px-6 py-4 text-lg font-bold rounded-lg shadow-lg transition-all mb-3 ${
+          className={`w-full ${PANEL_LAYOUT.SPACING.LG} text-lg font-bold rounded-lg shadow-lg transition-all ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${
             testState.runningTests.has('run-all-tests')
               ? `${colors.bg.warning} ${colors.text.inverted} cursor-wait animate-pulse`
               : testState.completedTests.has('run-all-tests')
@@ -51,24 +53,24 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
           }`}
         >
           {testState.runningTests.has('run-all-tests') ? (
-            <span className="flex items-center justify-center gap-2">
-              <div className="animate-spin">⏳</div>
+            <span className={`flex items-center justify-center ${PANEL_LAYOUT.GAP.SM}`}>
+              <span className="animate-spin">⏳</span>
               Running All Automated Tests...
             </span>
           ) : testState.completedTests.has('run-all-tests') ? (
-            <span className="flex items-center justify-center gap-2">
+            <span className={`flex items-center justify-center ${PANEL_LAYOUT.GAP.SM}`}>
               <CheckCircle2 className={iconSizes.lg} />
               All Automated Tests Complete!
             </span>
           ) : (
-            <span className="flex items-center justify-center gap-2">
+            <span className={`flex items-center justify-center ${PANEL_LAYOUT.GAP.SM}`}>
               🧪 Run All Automated Tests ({runAllTestsGroup.length} Tests)
             </span>
           )}
         </button>
 
         {/* Individual Test Buttons */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.MD}`}>
           {runAllTestsGroup.map(test => (
             <TestButton
               key={test.id}
@@ -84,10 +86,10 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
       {/* Group 2: Individual Debug Tools */}
       {/* ✅ ENTERPRISE: Χρήση semantic <section> αντί κενού <div> (ADR-003) */}
       <section>
-        <h3 className={`text-sm font-semibold ${colors.text.muted} uppercase tracking-wide mb-3`}>
+        <h3 className={`text-sm font-semibold ${colors.text.muted} uppercase tracking-wide ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
           🛠️ Individual Debug Tools (Manual)
         </h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.MD}`}>
           {individualToolsGroup.map(test => (
             <TestButton
               key={test.id}

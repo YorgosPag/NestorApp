@@ -20,6 +20,7 @@ import { useDxfPipeline } from '../pipeline/useDxfPipeline';
 import { HierarchicalDestinationSelector } from './HierarchicalDestinationSelector';
 import type { DxfDestination, DxfProcessingOptions, ProcessedDxfResult } from '../pipeline/types';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { PANEL_LAYOUT } from '../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
 
 interface DestinationWizardProps {
   isOpen: boolean;
@@ -148,49 +149,48 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className={`${colors.bg.secondary} rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto`}>
+      <div className={`${colors.bg.secondary} rounded-lg shadow-xl max-w-2xl w-full ${PANEL_LAYOUT.MARGIN.X_LG} max-h-[90vh] overflow-y-auto`}>
         
         {/* Header */}
-        <div className={`flex justify-between items-center p-6 ${getDirectionalBorder('default', 'bottom')}`}>
+        <header className={`flex justify-between items-center ${PANEL_LAYOUT.SPACING.XXL} ${getDirectionalBorder('default', 'bottom')}`}>
           <div>
             <h2 className={`text-xl font-semibold ${colors.text.primary}`}>DXF Import Wizard</h2>
-            <p className={`${colors.text.muted} text-sm mt-1`}>
+            <p className={`${colors.text.muted} text-sm ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
               {selectedFile?.name && `Processing: ${selectedFile.name}`}
             </p>
           </div>
           <button
             onClick={handleClose}
-            className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} p-1`}
+            className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${PANEL_LAYOUT.SPACING.XS}`}
           >
             <X className={iconSizes.lg} />
           </button>
-        </div>
+        </header>
 
         {/* Progress */}
-        <div className={`p-6 ${getDirectionalBorder('default', 'bottom')}`}>
-          <div className="flex items-center space-x-4">
+        <nav className={`${PANEL_LAYOUT.SPACING.XXL} ${getDirectionalBorder('default', 'bottom')}`}>
+          <ol className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_LG}`}>
             {['destination', 'options', 'processing', 'complete'].map((step, index) => (
-              <div key={step} className="flex items-center">
-                <div className={`${iconSizes.xl} rounded-full flex items-center justify-center text-sm font-medium ${
+              <li key={step} className="flex items-center">
+                <span className={`${iconSizes.xl} rounded-full flex items-center justify-center text-sm font-medium ${
                   currentStep === step ? `${colors.bg.info} ${colors.text.inverted}` :
                   ['destination', 'options', 'processing', 'complete'].indexOf(currentStep) > index ? `${colors.bg.success} ${colors.text.inverted}` :
                   `${colors.bg.hover} ${colors.text.muted}`
                 }`}>
                   {index + 1}
-                </div>
+                </span>
                 {index < 3 && (
-                  <div className={`${iconSizes['2xl']} h-1 mx-2 ${
+                  <span className={`${iconSizes['2xl']} h-1 ${PANEL_LAYOUT.MARGIN.X_SM} ${
                     ['destination', 'options', 'processing', 'complete'].indexOf(currentStep) > index ? colors.bg.success : colors.bg.hover
                   }`} />
                 )}
-              </div>
+              </li>
             ))}
-          </div>
-        </div>
+          </ol>
+        </nav>
 
         {/* Content */}
-        <div className="p-6">
-          
+        <main className={PANEL_LAYOUT.SPACING.XXL}>
           {/* Step 1: Hierarchical Destination Selection */}
           {currentStep === 'destination' && (
             <HierarchicalDestinationSelector
@@ -202,11 +202,11 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
           {/* Step 2: Processing Options */}
           {currentStep === 'options' && selectedDestination && (
             <div>
-              <h3 className={`text-lg font-medium ${colors.text.primary} mb-4`}>
+              <h3 className={`text-lg font-medium ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
                 Επιλογές επεξεργασίας
               </h3>
-              <div className={`${colors.bg.hover} p-4 rounded-lg mb-6`}>
-                <div className="flex items-center space-x-3">
+              <div className={`${colors.bg.hover} ${PANEL_LAYOUT.CONTAINER.PADDING} rounded-lg ${PANEL_LAYOUT.MARGIN.BOTTOM_XL}`}>
+                <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD}`}>
                   {React.createElement(getDestinationIcon(selectedDestination.type), {
                     className: `${iconSizes.lg} ${colors.text.info}`
                   })}
@@ -217,7 +217,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
                 <div className="flex items-center justify-between">
                   <div>
                     <label className={`${colors.text.primary} font-medium`}>Process Layers</label>
@@ -268,8 +268,8 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
           {/* Step 3: Processing */}
           {currentStep === 'processing' && (
             <div className="text-center">
-              <AnimatedSpinner size="large" className="mx-auto mb-4" />
-              <h3 className={`text-lg font-medium ${colors.text.primary} mb-2`}>
+              <AnimatedSpinner size="large" className={`mx-auto ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`} />
+              <h3 className={`text-lg font-medium ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
                 Επεξεργασία κάτοψης...
               </h3>
               <p className={colors.text.muted}>
@@ -281,20 +281,20 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
           {/* Step 4: Complete */}
           {currentStep === 'complete' && (
             <div className="text-center">
-              <div className={`${iconSizes['2xl']} ${colors.bg.success} rounded-full flex items-center justify-center mx-auto mb-4`}>
+              <div className={`${iconSizes['2xl']} ${colors.bg.success} rounded-full flex items-center justify-center mx-auto ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
                 <svg className={`${iconSizes.lg} ${colors.text.primary}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h3 className={`text-lg font-medium ${colors.text.primary} mb-2`}>
+              <h3 className={`text-lg font-medium ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
                 Επιτυχής ολοκλήρωση!
               </h3>
-              <p className={`${colors.text.muted} mb-4`}>
+              <p className={`${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
                 Η κάτοψη αποθηκεύτηκε επιτυχώς στον επιλεγμένο προορισμό.
               </p>
               {selectedDestination && (
-                <div className={`${colors.bg.hover} p-3 rounded-lg inline-block`}>
-                  <div className="flex items-center space-x-2">
+                <div className={`${colors.bg.hover} ${PANEL_LAYOUT.SPACING.MD} rounded-lg inline-block`}>
+                  <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                     {React.createElement(getDestinationIcon(selectedDestination.type), {
                       className: `${iconSizes.md} ${colors.text.success}`
                     })}
@@ -307,20 +307,20 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
         </div>
 
         {/* Footer */}
-        <div className={`flex justify-between items-center p-6 ${getDirectionalBorder('default', 'top')}`}>
+        <footer className={`flex justify-between items-center ${PANEL_LAYOUT.SPACING.XXL} ${getDirectionalBorder('default', 'top')}`}>
           <button
             onClick={handlePrevStep}
             disabled={currentStep === 'destination' || currentStep === 'processing'}
-            className={`px-4 py-2 ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} disabled:opacity-50 disabled:cursor-not-allowed`}
+            className={`${PANEL_LAYOUT.BUTTON.PADDING} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             ← Προηγούμενο
           </button>
-          
-          <div className="flex space-x-3">
+
+          <div className={`flex ${PANEL_LAYOUT.GAP.MD}`}>
             {currentStep === 'complete' ? (
               <button
                 onClick={handleClose}
-                className={`px-6 py-2 ${colors.bg.success} ${HOVER_BACKGROUND_EFFECTS.GREEN_BUTTON} ${colors.text.inverted} rounded-lg font-medium`}
+                className={`${PANEL_LAYOUT.BUTTON.PADDING_XL} ${colors.bg.success} ${HOVER_BACKGROUND_EFFECTS.GREEN_BUTTON} ${colors.text.inverted} rounded-lg font-medium`}
               >
                 Ολοκλήρωση
               </button>
@@ -332,13 +332,13 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                   currentStep === 'processing' ||
                   busy
                 }
-                className={`px-6 py-2 ${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON} disabled:${colors.bg.hover} disabled:cursor-not-allowed ${colors.text.inverted} rounded-lg font-medium`}
+                className={`${PANEL_LAYOUT.BUTTON.PADDING_XL} ${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON} disabled:${colors.bg.hover} disabled:cursor-not-allowed ${colors.text.inverted} rounded-lg font-medium`}
               >
                 {currentStep === 'options' ? 'Ξεκίνημα επεξεργασίας' : 'Επόμενο →'}
               </button>
             )}
           </div>
-        </div>
+        </footer>
       </div>
     </div>
   );

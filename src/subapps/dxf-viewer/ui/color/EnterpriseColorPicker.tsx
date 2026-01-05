@@ -24,6 +24,7 @@ import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/ef
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../config/color-config';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { EnterpriseColorArea } from './EnterpriseColorArea';
 import { HueSlider, AlphaSlider } from './EnterpriseColorSlider';
 import { EnterpriseColorField } from './EnterpriseColorField';
@@ -101,10 +102,10 @@ export function EnterpriseColorPicker({
 
   return (
     <div
-      className={`space-y-4 p-4 ${colors.bg.primary} border ${getStatusBorder('muted')} ${quick.card} ${disabled ? 'opacity-50 pointer-events-none' : ''} ${className}`}
+      className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${PANEL_LAYOUT.SPACING.LG} ${colors.bg.primary} border ${getStatusBorder('muted')} ${quick.card} ${disabled ? 'opacity-50 pointer-events-none' : ''} ${className}`}
     >
       {/* === COLOR AREA + HUE SLIDER === */}
-      <div className="space-y-3">
+      <div className={PANEL_LAYOUT.SPACING.GAP_MD}>
         <EnterpriseColorArea
           value={value}
           onChange={handleChange}
@@ -133,17 +134,17 @@ export function EnterpriseColorPicker({
       </div>
 
       {/* === MODE TABS + COLOR FIELD === */}
-      <div className="space-y-2">
+      <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
         {/* Mode tabs */}
         {modes.length > 1 && (
-          <div className={`flex gap-1 ${getDirectionalBorder('muted', 'bottom')}`}>
+          <div className={`flex ${PANEL_LAYOUT.GAP.XS} ${getDirectionalBorder('muted', 'bottom')}`}>
             {modes.map((mode) => (
               <button
                 key={mode}
                 onClick={() => handleModeChange(mode)}
                 disabled={disabled || readOnly}
                 className={`
-                  px-3 py-1 text-xs font-medium transition-colors
+                  ${PANEL_LAYOUT.SPACING.COMPACT} text-xs font-medium transition-colors
                   ${currentMode === mode
                     ? `${colors.text.info} ${getDirectionalBorder('info', 'bottom')}`
                     : `${colors.text.muted} ${HOVER_TEXT_EFFECTS.GRAY_LIGHT}`
@@ -244,8 +245,8 @@ function EyedropperButton({ onChange, onChangeEnd, disabled }: EyedropperButtonP
       onClick={handleClick}
       disabled={disabled}
       className={`
-        w-full px-4 py-2 rounded
-        flex items-center justify-center gap-2
+        w-full ${PANEL_LAYOUT.BUTTON.PADDING_LG} rounded
+        flex items-center justify-center ${PANEL_LAYOUT.GAP.SM}
         text-sm font-medium
         transition-colors
         ${isActive
@@ -286,12 +287,12 @@ function ContrastPanelPlaceholder({ foreground, background }: ContrastPanelPlace
   const colors = useSemanticColors();
   const { radius, getStatusBorder } = useBorderTokens();
   return (
-    <div className={`p-3 ${colors.bg.secondary} ${radius.md} border ${getStatusBorder('muted')}`}>
-      <h4 className={`text-sm font-medium ${colors.text.muted} mb-2`}>Contrast Checker</h4>
+    <div className={`${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${radius.md} border ${getStatusBorder('muted')}`}>
+      <h4 className={`text-sm font-medium ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Contrast Checker</h4>
       <div className={`text-xs ${colors.text.muted}`}>
         <div>Foreground: {foreground}</div>
         <div>Background: {background}</div>
-        <div className={`mt-2 ${colors.text.secondary}`}>
+        <div className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${colors.text.secondary}`}>
           Full WCAG contrast checker coming soon...
         </div>
       </div>

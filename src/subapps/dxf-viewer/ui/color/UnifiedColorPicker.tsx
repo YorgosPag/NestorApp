@@ -24,6 +24,8 @@ import type { ColorValue, PickerVariant } from './types';
 import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 // ============================================================================
 // UNIFIED PROPS INTERFACE
@@ -137,10 +139,10 @@ function InlineColorPicker({
 
   const layoutClasses = useMemo(() => {
     switch (layout) {
-      case 'horizontal': return 'flex items-center space-x-3';
-      case 'vertical': return 'flex flex-col space-y-2';
-      case 'inline': return 'flex items-center space-x-2';
-      default: return 'flex items-center space-x-3';
+      case 'horizontal': return `flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`;
+      case 'vertical': return `flex flex-col ${PANEL_LAYOUT.SPACING.GAP_SM}`;
+      case 'inline': return `flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_SM}`;
+      default: return `flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`;
     }
   }, [layout]);
 
@@ -170,7 +172,7 @@ function InlineColorPicker({
           onChange={handleTextChange}
           disabled={disabled}
           placeholder={UI_COLORS.WHITE}
-          className={`px-2 py-1 ${colors.bg.hover} ${quick.muted} rounded ${colors.text.primary} text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
+          className={`${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.muted} rounded ${colors.text.primary} text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
           style={{ width: '6rem' }}
         />
       )}
@@ -179,7 +181,7 @@ function InlineColorPicker({
 
   if (label) {
     return (
-      <div className={`space-y-2 ${className}`}>
+      <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${className}`}>
         <label className={`block text-sm font-medium ${colors.text.secondary}`}>
           {label}
         </label>
@@ -222,7 +224,7 @@ function ModalColorPicker({
     <ColorDialogTrigger
       value={value}
       disabled={disabled}
-      className="inline-flex items-center space-x-2"
+      className={`inline-flex items-center ${PANEL_LAYOUT.SPACING.HORIZONTAL_SM}`}
     >
       <div
         className={`${iconSizes.md} rounded ${getStatusBorder('muted')}`}

@@ -22,6 +22,8 @@ import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation
 // 🏢 ENTERPRISE: Lucide icons for tabs (replacing emojis 📦, 📏, 📝, 📐)
 import { Square, AlignJustify, Type, Ruler } from 'lucide-react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 import { RulerBackgroundSettings } from './rulers/RulerBackgroundSettings';
 import { RulerLinesSettings } from './rulers/RulerLinesSettings';
 import { RulerTextSettings } from './rulers/RulerTextSettings';
@@ -156,7 +158,7 @@ export const RulersSettings: React.FC<RulersSettingsProps> = ({
   return (
     <div className={className}>
       {/* 🏢 ENTERPRISE: Tab Navigation - Using centralized TabsOnlyTriggers */}
-      <div className={`${getDirectionalBorder('muted', 'bottom')} mb-4`}>
+      <div className={`${getDirectionalBorder('muted', 'bottom')} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
         <TabsOnlyTriggers
           tabs={rulerTabs}
           value={activeTab}
@@ -166,8 +168,8 @@ export const RulersSettings: React.FC<RulersSettingsProps> = ({
         />
       </div>
 
-      {/* Tab Content */}
-      <div className="px-4">
+      {/* Tab Content - 🏢 ENTERPRISE: Centralized spacing */}
+      <div className={PANEL_LAYOUT.CONTAINER.PADDING}>
         {renderTabContent()}
       </div>
     </div>

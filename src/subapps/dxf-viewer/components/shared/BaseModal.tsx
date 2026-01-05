@@ -16,10 +16,10 @@ const portalComponents = {
     content: { zIndex: (z: number) => z + 1 }
   }
 };
-import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '../modal/ModalLoadingStates';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 interface BaseModalProps {
   isOpen: boolean;
@@ -46,10 +46,10 @@ interface BaseModalProps {
 
 const sizeClasses = {
   sm: 'max-w-md',
-  md: 'max-w-lg', 
+  md: 'max-w-lg',
   lg: 'max-w-2xl',
   xl: 'max-w-4xl',
-  full: 'max-w-full mx-4'
+  full: `max-w-full ${PANEL_LAYOUT.MARGIN.X_LG}`
 };
 
 export const BaseModal: React.FC<BaseModalProps> = ({
@@ -139,7 +139,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
         className="fixed inset-0 overflow-y-auto"
         style={{ zIndex: portalComponents.modal.content.zIndex(zIndex) }}
       >
-        <div className="flex items-center justify-center min-h-full p-4 text-center sm:p-0">
+        <div className={`flex items-center justify-center min-h-full ${PANEL_LAYOUT.SPACING.LG} text-center ${PANEL_LAYOUT.SPACING.SM_NONE}`}>
           {/* Modal Content */}
           <div
             ref={modalRef}
@@ -163,11 +163,11 @@ export const BaseModal: React.FC<BaseModalProps> = ({
           >
             {/* Header */}
             {(title || showCloseButton) && (
-              <div className={`flex items-center justify-between p-4 ${getDirectionalBorder('muted', 'bottom')}`}>
+              <div className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.LG} ${getDirectionalBorder('muted', 'bottom')}`}>
                 {title && (
-                  <h3 
-                    id="modal-title" 
-                    className={`text-lg font-medium ${colors.text.primary}`}
+                  <h3
+                    id="modal-title"
+                    className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} font-medium ${colors.text.primary}`}
                   >
                     {title}
                   </h3>
@@ -186,13 +186,13 @@ export const BaseModal: React.FC<BaseModalProps> = ({
             )}
 
             {/* Body */}
-            <div className="p-4">
+            <div className={PANEL_LAYOUT.SPACING.LG}>
               {children}
             </div>
 
             {/* Footer */}
             {footer && (
-              <div className={`px-4 py-3 ${getDirectionalBorder('muted', 'top')} ${colors.bg.secondary} rounded-b-lg`}>
+              <div className={`${PANEL_LAYOUT.BUTTON.PADDING} ${getDirectionalBorder('muted', 'top')} ${colors.bg.secondary} rounded-b-lg`}>
                 {footer}
               </div>
             )}
@@ -235,14 +235,14 @@ export const ConfirmModal: React.FC<{
       title={title}
       size="sm"
       footer={
-        <div className="flex justify-end space-x-2">
+        <nav className={`flex justify-end ${PANEL_LAYOUT.SPACING.GAP_H_SM}`}>
           <BaseButton variant="ghost" onClick={onClose}>
             {cancelText}
           </BaseButton>
           <BaseButton variant={confirmVariant} onClick={onConfirm}>
             {confirmText}
           </BaseButton>
-        </div>
+        </nav>
       }
     >
       <p className={`${colors.text.secondary}`}>{message}</p>
@@ -271,10 +271,10 @@ export const LoadingModal: React.FC<{
       closeOnEscape={false}
       showCloseButton={false}
     >
-      <div className="flex items-center space-x-3">
+      <aside className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
         <AnimatedSpinner size="medium" />
         <span className={colors.text.secondary}>{message}</span>
-      </div>
+      </aside>
     </BaseModal>
   );
 };

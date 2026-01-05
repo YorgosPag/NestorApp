@@ -5,6 +5,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../../config/color-config';
+import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 
 export interface CursorColors {
   crosshairColor: string;
@@ -41,25 +42,25 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
     onColorsChange(newColors);
   };
 
-  const ColorRow = ({ 
-    label, 
+  const ColorRow = ({
+    label,
     description,
-    colorKey, 
+    colorKey,
     opacityKey
-  }: { 
-    label: string; 
+  }: {
+    label: string;
     description: string;
-    colorKey: keyof CursorColors; 
+    colorKey: keyof CursorColors;
     opacityKey?: keyof CursorColors;
   }) => (
-    <div className={`p-2 ${semanticColors.bg.secondary} rounded space-y-2`}>
-      <div className={`text-sm ${semanticColors.text.primary}`}>
-        <div className="font-medium">{label}</div>
+    <div className={`${PANEL_LAYOUT.SPACING.SM} ${semanticColors.bg.secondary} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+      <div className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${semanticColors.text.primary}`}>
+        <div className={PANEL_LAYOUT.TAB.FONT_WEIGHT}>{label}</div>
         <div className={`font-normal ${semanticColors.text.muted}`}>{description.charAt(0).toUpperCase() + description.slice(1)}</div>
       </div>
-      <div className="flex items-center gap-2">
-        <div 
-          className={`${iconSizes.md} rounded ${getStatusBorder('muted')}`}
+      <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+        <div
+          className={`${iconSizes.md} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} ${getStatusBorder('muted')}`}
           style={layoutUtilities.dxf.swatch.withOpacity(
             colors[colorKey] as string,
             opacityKey ? colors[opacityKey] as number : 1
@@ -69,13 +70,13 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
           type="color"
           value={colors[colorKey] as string}
           onChange={(e) => handleColorChange(colorKey, e.target.value)}
-          className={`${iconSizes.xl} w-8 h-6 rounded border-0 cursor-pointer`}
+          className={`${iconSizes.xl} ${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} border-0 cursor-pointer`}
         />
         <input
           type="text"
           value={colors[colorKey] as string}
           onChange={(e) => handleColorChange(colorKey, e.target.value)}
-          className={`w-20 px-2 py-1 text-xs ${semanticColors.bg.muted} ${semanticColors.text.primary} rounded ${getStatusBorder('muted')}`}
+          className={`w-20 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${semanticColors.bg.muted} ${semanticColors.text.primary} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} ${getStatusBorder('muted')}`}
           placeholder={UI_COLORS.WHITE}
         />
         {opacityKey && (
@@ -89,7 +90,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
               onChange={(e) => handleColorChange(opacityKey, String(parseFloat(e.target.value)))}
               className="w-16"
             />
-            <div className={`w-8 text-xs ${semanticColors.text.secondary} text-center`}>
+            <div className={`w-8 ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${semanticColors.text.secondary} text-center`}>
               {Math.round((colors[opacityKey] as number) * 100)}%
             </div>
           </>
@@ -98,34 +99,34 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
     </div>
   );
 
-  const BorderStyleRow = ({ 
-    label, 
+  const BorderStyleRow = ({
+    label,
     description,
-    styleKey, 
-    color 
-  }: { 
-    label: string; 
+    styleKey,
+    color
+  }: {
+    label: string;
     description: string;
-    styleKey: 'windowBorderStyle' | 'crossingBorderStyle'; 
+    styleKey: 'windowBorderStyle' | 'crossingBorderStyle';
     color: string;
   }) => (
-    <div className={`p-2 ${semanticColors.bg.secondary} rounded space-y-2`}>
-      <div className={`text-sm ${semanticColors.text.primary}`}>
-        <div className="font-medium">{label}</div>
+    <div className={`${PANEL_LAYOUT.SPACING.SM} ${semanticColors.bg.secondary} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+      <div className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${semanticColors.text.primary}`}>
+        <div className={PANEL_LAYOUT.TAB.FONT_WEIGHT}>{label}</div>
         <div className={`font-normal ${semanticColors.text.muted}`}>{description}</div>
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.SM}`}>
         {(['solid', 'dashed', 'dotted', 'dash-dot'] as const).map((style) => {
           const isSelected = colors[styleKey] === style;
           const styleLabels = {
             solid: 'Συνεχόμενη',
-            dashed: 'Διακεκομμένη', 
+            dashed: 'Διακεκομμένη',
             dotted: 'Κουκίδες',
             'dash-dot': 'Παύλα-Τελεία'
           };
 
-          const getLinePreview = (style: string) => {
-            switch (style) {
+          const getLinePreview = (lineStyle: string) => {
+            switch (lineStyle) {
               case 'dashed':
                 return `repeating-linear-gradient(to right, ${color} 0, ${color} 4px, transparent 4px, transparent 8px)`;
               case 'dotted':
@@ -138,20 +139,20 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
           };
 
           return (
-            <button 
+            <button
               key={style}
               onClick={() => handleColorChange(styleKey, style)}
-              className={`p-2 rounded text-xs border transition-colors ${
+              className={`${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} border ${PANEL_LAYOUT.TAB.TRANSITIONS} ${
                 isSelected
                   ? `${semanticColors.bg.info} ${getStatusBorder('info')}`
                   : `${semanticColors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT} ${getStatusBorder('muted').replace('border ', '')}`
               }`}
             >
-              <div 
-                className="w-full mb-1" 
+              <div
+                className={`w-full ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}
                 style={layoutUtilities.dxf.linePreview.thin(getLinePreview(style))}
               />
-              <span className="block text-xs">{styleLabels[style]}</span>
+              <span className={`block ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS}`}>{styleLabels[style]}</span>
             </button>
           );
         })}
@@ -160,11 +161,11 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
   );
 
   return (
-    <div className="space-y-4">
+    <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
       {/* Window Selection */}
-      <div>
-        <h4 className={`text-xs font-medium ${semanticColors.text.secondary} mb-2`}>🔵 Window Selection</h4>
-        <div className="space-y-2">
+      <section>
+        <h4 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${PANEL_LAYOUT.TAB.FONT_WEIGHT} ${semanticColors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Window Selection</h4>
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <ColorRow
             label="Γέμισμα"
             description="Εσωτερικό κουτιού"
@@ -184,12 +185,12 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
             color={colors.windowBorderColor}
           />
         </div>
-      </div>
+      </section>
 
       {/* Crossing Selection */}
-      <div className={`${getDirectionalBorder('muted', 'top')} pt-3`}>
-        <h4 className={`text-xs font-medium ${semanticColors.text.secondary} mb-2`}>🟢 Crossing Selection</h4>
-        <div className="space-y-2">
+      <section className={`${getDirectionalBorder('muted', 'top')} ${PANEL_LAYOUT.PADDING.TOP_SM}`}>
+        <h4 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${PANEL_LAYOUT.TAB.FONT_WEIGHT} ${semanticColors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Crossing Selection</h4>
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <ColorRow
             label="Γέμισμα"
             description="Εσωτερικό κουτιού"

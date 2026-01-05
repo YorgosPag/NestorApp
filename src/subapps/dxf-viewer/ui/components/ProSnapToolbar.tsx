@@ -7,6 +7,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { ExtendedSnapType } from '../../snapping/extended-types';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 // Ελληνικά labels και configurations για όλα τα snap modes
 const SNAP_LABELS: Record<ExtendedSnapType, string> = {
@@ -150,10 +152,10 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
   const advancedEnabledCount = useMemo(() => ADVANCED_MODES.filter(mode => enabledModes?.has(mode)).length, [enabledModes]);
   
   return (
-    <div className={`flex items-center gap-2 p-2 ${colors.bg.primary} ${quick.card} ${className}`}>
+    <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.primary} ${quick.card} ${className}`}>
       <button
         onClick={handleMasterToggle}
-        className={`px-3 py-1 ${radius.md} text-sm font-bold transition-colors border flex items-center gap-1 ${
+        className={`${PANEL_LAYOUT.SPACING.COMPACT} ${radius.md} text-sm font-bold transition-colors border flex items-center ${PANEL_LAYOUT.GAP.XS} ${
           snapEnabled ? `${colors.bg.primary} ${colors.text.primary} ${getStatusBorder('info')} shadow-md` : `${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
         }`}
         title="Ενεργοποίηση/Απενεργοποίηση Object Snap (F3)"
@@ -163,7 +165,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
         {enabledCount > 0 && <span className="text-xs opacity-80">({enabledCount})</span>}
       </button>
 
-      <div className="flex gap-1">
+      <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
         {CORE_MODES.map(mode => (
           <SnapButton
             key={mode}
@@ -200,7 +202,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
       </button>
 
       {showAdvanced && (
-        <div className={`flex gap-1 ml-1 pl-1 ${quick.separatorV}`}>
+        <div className={`flex ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.MARGIN.LEFT_XS} ${PANEL_LAYOUT.INPUT.PADDING_X} ${quick.separatorV}`}>
           {ADVANCED_MODES.map(mode => (
             <SnapButton
               key={mode}

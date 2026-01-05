@@ -23,6 +23,8 @@ import { parseColor, rgbToHex, formatRgb, formatHsl, parseHex, parseRgb, parseHs
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 /**
  * Enterprise Color Field Component
@@ -119,8 +121,8 @@ export function EnterpriseColorField({
 
   // === HEX MODE ===
   const renderHexField = () => (
-    <div className="flex items-center gap-2">
-      <label className={`text-sm ${colors.text.secondary} w-12`}>{labels.hex || 'HEX'}</label>
+    <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+      <label className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${colors.text.secondary} w-12`}>{labels.hex || 'HEX'}</label>
       <input
         type="text"
         value={formattedValue}
@@ -130,9 +132,9 @@ export function EnterpriseColorField({
         readOnly={readOnly}
         placeholder={UI_COLORS.BLACK}
         className={`
-          flex-1 px-3 py-2 ${colors.bg.secondary} ${quick.input}
-          text-sm ${colors.text.primary} font-mono
-          focus:outline-none focus:ring-2 ${colors.ring.info}
+          flex-1 ${PANEL_LAYOUT.INPUT.PADDING} ${colors.bg.secondary} ${quick.input}
+          ${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${colors.text.primary} font-mono
+          ${PANEL_LAYOUT.INPUT.FOCUS} focus:ring-2 ${colors.ring.info}
           disabled:opacity-50 disabled:cursor-not-allowed
           ${error ? getStatusBorder('error').replace('border ', '') : ''}
         `}
@@ -153,10 +155,10 @@ export function EnterpriseColorField({
     };
 
     return (
-      <div className="grid grid-cols-4 gap-2">
+      <div className={`grid grid-cols-4 ${PANEL_LAYOUT.GAP.SM}`}>
         {/* Red */}
         <div>
-          <label className={`text-xs ${colors.text.muted}`}>{labels.red || 'R'}</label>
+          <label className={`${PANEL_LAYOUT.ALERT.TEXT_SIZE} ${colors.text.muted}`}>{labels.red || 'R'}</label>
           <input
             type="number"
             min="0"
@@ -165,13 +167,13 @@ export function EnterpriseColorField({
             onChange={(e) => handleComponentChange('r', parseInt(e.target.value) || 0)}
             disabled={disabled}
             readOnly={readOnly}
-            className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
+            className={`${PANEL_LAYOUT.INPUT.FULL_WIDTH} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.secondary} ${quick.input} ${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${colors.text.primary}`}
           />
         </div>
 
         {/* Green */}
         <div>
-          <label className={`text-xs ${colors.text.muted}`}>{labels.green || 'G'}</label>
+          <label className={`${PANEL_LAYOUT.ALERT.TEXT_SIZE} ${colors.text.muted}`}>{labels.green || 'G'}</label>
           <input
             type="number"
             min="0"
@@ -180,13 +182,13 @@ export function EnterpriseColorField({
             onChange={(e) => handleComponentChange('g', parseInt(e.target.value) || 0)}
             disabled={disabled}
             readOnly={readOnly}
-            className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
+            className={`${PANEL_LAYOUT.INPUT.FULL_WIDTH} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.secondary} ${quick.input} ${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${colors.text.primary}`}
           />
         </div>
 
         {/* Blue */}
         <div>
-          <label className={`text-xs ${colors.text.muted}`}>{labels.blue || 'B'}</label>
+          <label className={`${PANEL_LAYOUT.ALERT.TEXT_SIZE} ${colors.text.muted}`}>{labels.blue || 'B'}</label>
           <input
             type="number"
             min="0"
@@ -195,14 +197,14 @@ export function EnterpriseColorField({
             onChange={(e) => handleComponentChange('b', parseInt(e.target.value) || 0)}
             disabled={disabled}
             readOnly={readOnly}
-            className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
+            className={`${PANEL_LAYOUT.INPUT.FULL_WIDTH} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.secondary} ${quick.input} ${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${colors.text.primary}`}
           />
         </div>
 
         {/* Alpha */}
         {alpha && (
           <div>
-            <label className={`text-xs ${colors.text.muted}`}>{labels.alpha || 'A'}</label>
+            <label className={`${PANEL_LAYOUT.ALERT.TEXT_SIZE} ${colors.text.muted}`}>{labels.alpha || 'A'}</label>
             <input
               type="number"
               min="0"
@@ -212,7 +214,7 @@ export function EnterpriseColorField({
               onChange={(e) => handleComponentChange('a', parseFloat(e.target.value) || 0)}
               disabled={disabled}
               readOnly={readOnly}
-              className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
+              className={`${PANEL_LAYOUT.INPUT.FULL_WIDTH} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.secondary} ${quick.input} ${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${colors.text.primary}`}
             />
           </div>
         )}
@@ -235,7 +237,7 @@ export function EnterpriseColorField({
     };
 
     return (
-      <div className="grid grid-cols-4 gap-2">
+      <div className={`grid grid-cols-4 ${PANEL_LAYOUT.GAP.SM}`}>
         {/* Hue */}
         <div>
           <label className={`text-xs ${colors.text.muted}`}>{labels.hue || 'H'}</label>
@@ -247,7 +249,7 @@ export function EnterpriseColorField({
             onChange={(e) => handleComponentChange('h', parseInt(e.target.value) || 0)}
             disabled={disabled}
             readOnly={readOnly}
-            className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
+            className={`w-full ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
           />
         </div>
 
@@ -262,7 +264,7 @@ export function EnterpriseColorField({
             onChange={(e) => handleComponentChange('s', parseInt(e.target.value) || 0)}
             disabled={disabled}
             readOnly={readOnly}
-            className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
+            className={`w-full ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
           />
         </div>
 
@@ -277,7 +279,7 @@ export function EnterpriseColorField({
             onChange={(e) => handleComponentChange('l', parseInt(e.target.value) || 0)}
             disabled={disabled}
             readOnly={readOnly}
-            className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
+            className={`w-full ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
           />
         </div>
 
@@ -294,7 +296,7 @@ export function EnterpriseColorField({
               onChange={(e) => handleComponentChange('a', parseFloat(e.target.value) || 0)}
               disabled={disabled}
               readOnly={readOnly}
-              className={`w-full px-2 py-1 ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
+              className={`w-full ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.secondary} ${quick.input} text-sm ${colors.text.primary}`}
             />
           </div>
         )}
@@ -303,7 +305,7 @@ export function EnterpriseColorField({
   };
 
   return (
-    <div className={`space-y-2 ${className}`}>
+    <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${className}`}>
       {renderField()}
       {error && <div className={`text-xs ${colors.text.error}`}>{error}</div>}
     </div>

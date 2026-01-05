@@ -8,6 +8,8 @@ import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/ef
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 interface ZoomControlsProps {
   currentZoom: number;
@@ -135,10 +137,10 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
   }, [applyZoom]);
 
   return (
-    <div className={`flex items-center gap-1 ${colors.bg.backgroundSecondary} rounded px-2 py-1`}>
+    <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS} ${colors.bg.backgroundSecondary} rounded ${PANEL_LAYOUT.SPACING.COMPACT}`}>
       <button
         onClick={handleZoomOutClick}
-        className={`h-6 w-6 p-0 ${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
+        className={`${PANEL_LAYOUT.BUTTON.HEIGHT_SM} w-6 ${PANEL_LAYOUT.SPACING.NONE} ${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
         title={`Zoom Out (-${ZOOM_STEP_PERCENTAGE}%) - Πληκτρολόγιο: -`}
       >
         <Minus className={iconSizes.xs} />
@@ -152,7 +154,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
         onKeyPress={handleKeyPress}
         onFocus={handleInputFocus}
         onBlur={handleInputBlur}
-        className={`w-16 px-1 py-0 ${colors.bg.secondary} ${getStatusBorder('muted')} rounded ${colors.text.inverted} text-xs text-center ${getFocusBorder('input')} focus:outline-none transition-colors select-all`}
+        className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_X} ${PANEL_LAYOUT.PADDING.VERTICAL_NONE} ${colors.bg.secondary} ${getStatusBorder('muted')} rounded ${colors.text.inverted} text-xs text-center ${getFocusBorder('input')} focus:outline-none transition-colors select-all`}
         title="Zoom percentage (1-99999%, δεκαδικά με . ή ,) - Press Enter or click away to apply"
         placeholder="100"
       />
@@ -161,7 +163,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
       
       <button
         onClick={handleZoomInClick}
-        className={`h-6 w-6 p-0 ${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
+        className={`${PANEL_LAYOUT.BUTTON.HEIGHT_SM} w-6 ${PANEL_LAYOUT.SPACING.NONE} ${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
         title={`Zoom In (+${ZOOM_STEP_PERCENTAGE}%) - Πληκτρολόγιο: +`}
       >
         <Plus className={iconSizes.xs} />

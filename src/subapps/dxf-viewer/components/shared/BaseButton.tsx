@@ -12,6 +12,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { AnimatedSpinner } from '../modal/ModalLoadingStates';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 // Button variants for consistent styling
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'outline' | 'tool' | 'tab' | 'action';
@@ -57,11 +58,12 @@ const getActiveVariantStyles = (
   action: `${colors.bg.info} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${colors.text.inverted} ${borderTokens.getStatusBorder('info')}`
 });
 
+// ✅ ENTERPRISE: Button sizes via PANEL_LAYOUT tokens - ZERO HARDCODED VALUES
 const sizeStyles: Record<ButtonSize, string> = {
-  xs: 'h-6 px-2 text-xs',
-  sm: 'h-8 px-3 text-sm',
-  md: 'h-10 px-4 text-base',
-  lg: 'h-12 px-6 text-lg'
+  xs: `${PANEL_LAYOUT.HEIGHT_SM} ${PANEL_LAYOUT.SPACING.COMPACT} text-xs`,        // h-6 24px height, px-2 py-1
+  sm: `${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.BUTTON.PADDING} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE}`, // h-8, px-3 py-2, text-sm
+  md: `${PANEL_LAYOUT.BUTTON.HEIGHT_MD} ${PANEL_LAYOUT.BUTTON.PADDING_LG} text-base`,   // h-10, px-4 py-2
+  lg: `${PANEL_LAYOUT.BUTTON.HEIGHT_LG} ${PANEL_LAYOUT.BUTTON.PADDING_XL} text-lg`,     // h-12, px-6 - largest buttons
 };
 
 const getIconSizeStyles = (iconSizes: ReturnType<typeof useIconSizes>): Record<ButtonSize, string> => ({
@@ -124,17 +126,17 @@ export const BaseButton = forwardRef<HTMLButtonElement, BaseButtonProps>(
         {...props}
       >
         {Icon && iconPosition === 'left' && (
-          <Icon className={`${iconSizeClass} ${children ? 'mr-2' : ''}`} />
+          <Icon className={`${iconSizeClass} ${children ? PANEL_LAYOUT.MARGIN.RIGHT_SM : ''}`} />
         )}
         {isLoading && (
           <AnimatedSpinner
             size={size === 'xs' ? 'small' : size === 'sm' ? 'small' : 'medium'}
-            className={children ? 'mr-2' : ''}
+            className={children ? PANEL_LAYOUT.MARGIN.RIGHT_SM : ''}
           />
         )}
         {children}
         {Icon && iconPosition === 'right' && (
-          <Icon className={`${iconSizeClass} ${children ? 'ml-2' : ''}`} />
+          <Icon className={`${iconSizeClass} ${children ? PANEL_LAYOUT.MARGIN.LEFT_SM : ''}`} />
         )}
       </button>
     );

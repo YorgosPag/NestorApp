@@ -3,6 +3,7 @@
 import React from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
 import type { Phase } from '../hooks/useDynamicInputState';
 
 interface DynamicInputFooterProps {
@@ -14,9 +15,9 @@ export function DynamicInputFooter({ activeTool, drawingPhase }: DynamicInputFoo
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   return (
-    <div className={`text-xs ${colors.text.muted} mt-2 border-t ${quick.muted} pt-2`}>
-      <div className="text-blue-400 font-semibold mb-1">
-        {activeTool === 'line' 
+    <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_SM} border-t ${quick.muted} ${PANEL_LAYOUT.PADDING.TOP_SM}`}>
+      <div className={`text-blue-400 font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>
+        {activeTool === 'line'
           ? drawingPhase === 'first-point'
             ? '🔐 Line (1st point): X→Y→°→L | ή X→Y→°(κενό)→Enter για 2ο σημείο'
             : '🔐 Line (2nd point): X→Y→Enter (complete line)'
@@ -24,12 +25,12 @@ export function DynamicInputFooter({ activeTool, drawingPhase }: DynamicInputFoo
         }
       </div>
       <div className="text-orange-400 text-xs">
-        {activeTool === 'line' 
+        {activeTool === 'line'
           ? '⚠️ 1ο σημείο: °+L = άμεση γραμμή | Κενό ° = 2ο σημείο | Angle: 0-360°'
           : '⚠️ Length: Μόνο θετικές τιμές (χωρίς μείον)'
         }
       </div>
-      <div className={`text-xs ${colors.text.tertiary} mt-1`}>
+      <div className={`text-xs ${colors.text.tertiary} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
         Tab: Επόμενο πεδίο | Enter: Εφαρμογή | Esc: Ακύρωση
       </div>
     </div>

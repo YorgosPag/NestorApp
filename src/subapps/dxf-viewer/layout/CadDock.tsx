@@ -1,6 +1,6 @@
 'use client';
-import React, { useEffect, useRef, memo } from 'react';
-import { DockviewReact, DockviewReadyEvent, DockviewApi } from 'dockview';
+import React, { useRef, memo } from 'react';
+import { DockviewReact, DockviewReadyEvent } from 'dockview';
 import 'dockview/dist/styles/dockview.css';
 
 // Import the ProSnapToolbar instead of deleted SnapButtonsPanel
@@ -8,15 +8,9 @@ import { ProSnapToolbar } from '../ui/components/ProSnapToolbar';
 import { useProSnapIntegration } from '../hooks/common/useProSnapIntegration';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';  // ✅ ENTERPRISE: Centralized Radix Checkbox
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { Checkbox } from '@/components/ui/checkbox';
+import { PANEL_LAYOUT, PANEL_COLORS } from '../config/panel-tokens';
 
 // 🔺 FIXED SNAPPING PANEL με ProSnapToolbar
 const SnappingView = memo(() => {
@@ -26,15 +20,14 @@ const SnappingView = memo(() => {
     snapEnabled,
     toggleSnap
   } = useProSnapIntegration();
-  const { quick, getStatusBorder } = useBorderTokens();
-  const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
-  
+  const colors = useSemanticColors();
+
   return (
-    <div className={`p-2 ${colors.bg.secondary}`}>
-      <div className="mb-2">
-        <h3 className={`text-sm font-semibold ${colors.text.muted}`}>Object Snap</h3>
-        <p className={`text-xs ${colors.text.muted}`}>Click to toggle snap modes</p>
-      </div>
+    <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary}`}>
+      <header className={PANEL_LAYOUT.MARGIN.BOTTOM_SM}>
+        <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} font-semibold ${colors.text.muted}`}>Object Snap</h3>
+        <p className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.text.muted}`}>Click to toggle snap modes</p>
+      </header>
       <ProSnapToolbar
         enabledModes={enabledModes}
         onToggleMode={toggleMode}
@@ -43,7 +36,7 @@ const SnappingView = memo(() => {
         compact={false}
         className="w-full"
       />
-    </div>
+    </section>
   );
 });
 SnappingView.displayName = 'SnappingView';
@@ -51,29 +44,29 @@ SnappingView.displayName = 'SnappingView';
 // 📋 LAYERS PANEL
 const LayersView = memo(() => {
   const iconSizes = useIconSizes();
-  const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
+  const colors = useSemanticColors();
 
   return (
-  <div className={`p-3 ${colors.bg.secondary} text-white`}>
-    <h3 className={`text-sm font-semibold mb-2 ${colors.text.muted}`}>Layers</h3>
-    <div className="space-y-1">
-      <div className="flex items-center gap-2 text-sm">
-        <Checkbox defaultChecked />
-        <span className={`${iconSizes.xs} ${colors.bg.error} rounded`}></span>
-        <span>0 - Default</span>
-      </div>
-      <div className="flex items-center gap-2 text-sm">
-        <Checkbox defaultChecked />
-        <span className={`${iconSizes.xs} ${colors.bg.info} rounded`}></span>
-        <span>Geometry</span>
-      </div>
-      <div className="flex items-center gap-2 text-sm">
-        <Checkbox defaultChecked />
-        <span className={`${iconSizes.xs} ${colors.bg.success} rounded`}></span>
-        <span>Dimensions</span>
-      </div>
-    </div>
-  </div>
+    <section className={`${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${PANEL_COLORS.TEXT_PRIMARY}`}>
+      <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.muted}`}>Layers</h3>
+      <nav className={PANEL_LAYOUT.SPACING.GAP_XS} aria-label="Layer list">
+        <label className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE}`}>
+          <Checkbox defaultChecked />
+          <span className={`${iconSizes.xs} ${colors.bg.error} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS}`} aria-hidden="true" />
+          <span>0 - Default</span>
+        </label>
+        <label className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE}`}>
+          <Checkbox defaultChecked />
+          <span className={`${iconSizes.xs} ${colors.bg.info} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS}`} aria-hidden="true" />
+          <span>Geometry</span>
+        </label>
+        <label className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE}`}>
+          <Checkbox defaultChecked />
+          <span className={`${iconSizes.xs} ${colors.bg.success} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS}`} aria-hidden="true" />
+          <span>Dimensions</span>
+        </label>
+      </nav>
+    </section>
   );
 });
 LayersView.displayName = 'LayersView';
@@ -81,43 +74,50 @@ LayersView.displayName = 'LayersView';
 // 🔧 PROPERTIES PANEL
 const PropertiesView = memo(() => {
   const { quick, getStatusBorder } = useBorderTokens();
-  const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
+  const colors = useSemanticColors();
 
   return (
-  <div className={`p-3 ${colors.bg.secondary} text-white`}>
-    <h3 className={`text-sm font-semibold mb-2 ${colors.text.muted}`}>Properties</h3>
-    <div className="space-y-2 text-sm">
-      <div>
-        <label className={`block ${colors.text.muted}`}>Layer:</label>
-        <select className={`w-full ${colors.bg.secondary} ${getStatusBorder('muted')} ${quick.input} px-2 py-1`}>
-          <option>0 - Default</option>
-          <option>Geometry</option>
-        </select>
-      </div>
-      <div>
-        <label className={`block ${colors.text.muted}`}>Color:</label>
-        <input type="color" className={`w-full h-8 ${colors.bg.secondary} ${getStatusBorder('muted')} ${quick.input}`} />
-      </div>
-    </div>
-  </div>
+    <section className={`${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${PANEL_COLORS.TEXT_PRIMARY}`}>
+      <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.muted}`}>Properties</h3>
+      <form className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE}`}>
+        <fieldset>
+          <label className={`block ${colors.text.muted}`} htmlFor="layer-select">Layer:</label>
+          <select
+            id="layer-select"
+            className={`${PANEL_LAYOUT.INPUT.FULL_WIDTH} ${colors.bg.secondary} ${getStatusBorder('muted')} ${quick.input} ${PANEL_LAYOUT.SPACING.COMPACT}`}
+          >
+            <option>0 - Default</option>
+            <option>Geometry</option>
+          </select>
+        </fieldset>
+        <fieldset>
+          <label className={`block ${colors.text.muted}`} htmlFor="color-input">Color:</label>
+          <input
+            type="color"
+            id="color-input"
+            className={`${PANEL_LAYOUT.INPUT.FULL_WIDTH} ${PANEL_LAYOUT.INPUT.HEIGHT} ${colors.bg.secondary} ${getStatusBorder('muted')} ${quick.input}`}
+          />
+        </fieldset>
+      </form>
+    </section>
   );
 });
 PropertiesView.displayName = 'PropertiesView';
 
 // 📜 HISTORY PANEL
 const HistoryView = memo(() => {
-  const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
+  const colors = useSemanticColors();
 
   return (
-    <div className={`p-3 ${colors.bg.secondary} text-white`}>
-    <h3 className={`text-sm font-semibold mb-2 ${colors.text.muted}`}>Command History</h3>
-    <div className="space-y-1 text-xs font-mono">
-      <div className={colors.text.muted}>Command: FIT</div>
-      <div className={colors.text.muted}>Command: ZOOM Window</div>
-      <div className={colors.text.muted}>Command: LINE</div>
-      <div className={colors.text.success}>Ready for command...</div>
-    </div>
-    </div>
+    <section className={`${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${PANEL_COLORS.TEXT_PRIMARY}`}>
+      <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.muted}`}>Command History</h3>
+      <output className={`${PANEL_LAYOUT.SPACING.GAP_XS} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} font-mono block`}>
+        <p className={colors.text.muted}>Command: FIT</p>
+        <p className={colors.text.muted}>Command: ZOOM Window</p>
+        <p className={colors.text.muted}>Command: LINE</p>
+        <p className={colors.text.success}>Ready for command...</p>
+      </output>
+    </section>
   );
 });
 HistoryView.displayName = 'HistoryView';

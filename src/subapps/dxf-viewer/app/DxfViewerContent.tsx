@@ -5,6 +5,7 @@ const DEBUG_DXF_VIEWER_CONTENT = false;
 
 import { useNotifications } from '../../../providers/NotificationProvider';
 import { UI_COLORS } from '../config/color-config';
+import { PANEL_LAYOUT } from '../config/panel-tokens';
 
 // ✅ React stack suppression handled globally in layout.tsx via public/suppress-console.js
 
@@ -860,8 +861,8 @@ Check console for detailed metrics`;
         initialTransform={canvasTransform}
         onTransformReady={handleTransformReady}
       >
-      <div
-        className={`flex h-full p-2 gap-2 ${colors.bg.primary} ${
+      <section
+        className={`flex h-full ${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.GAP.SM} ${colors.bg.primary} ${
           activeTool === 'layering' ? 'pointer-events-none' : 'pointer-events-auto'
         }`}
       >
@@ -952,7 +953,7 @@ Check console for detailed metrics`;
 
       {/* ⚡ ENTERPRISE: Performance Dashboard is now rendered globally in layout.tsx
           Removed duplicate instance to prevent 2 monitors showing on screen */}
-      </div>
+      </section>
       </TransformProvider>
     </CanvasProvider>
   );

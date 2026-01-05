@@ -6,6 +6,8 @@ import React from 'react';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 interface SelectionButtonProps {
   onClick: () => void;
@@ -27,9 +29,9 @@ export function SelectionButton({
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left p-4 rounded-lg ${quick.muted} transition-colors ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${HOVER_BACKGROUND_EFFECTS.MUTED}`}
+      className={`w-full text-left ${PANEL_LAYOUT.SPACING.LG} rounded-lg ${quick.muted} transition-colors ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${HOVER_BACKGROUND_EFFECTS.MUTED}`}
     >
-      <div className="flex items-center space-x-3">
+      <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
         <span className="text-2xl">{icon}</span>
         <div>
           <div className={`${colors.text.primary} font-medium`}>{title}</div>

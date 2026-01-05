@@ -8,6 +8,7 @@ import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles'
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
 
 interface EntityCardProps {
   entity: AnySceneEntity;
@@ -63,8 +64,8 @@ export const EntityCard = ({
       tabIndex={0}
       data-entity-id={entity.id}
       data-entity-selected={isSelected || undefined}
-      className={`ml-12 flex items-center justify-between rounded cursor-pointer transition-all ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} focus:outline-none ${colors.interactive.focus.ring} ${
-        isSelected ? `p-2.5 ${colors.bg.selection} ${getDirectionalBorder('info', 'left')} rounded` : 'p-1.5'
+      className={`${PANEL_LAYOUT.MARGIN.LEFT_3XL} flex items-center justify-between rounded cursor-pointer transition-all ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} focus:outline-none ${colors.interactive.focus.ring} ${
+        isSelected ? `${PANEL_LAYOUT.SPACING.SM} ${colors.bg.selection} ${getDirectionalBorder('info', 'left')} rounded` : PANEL_LAYOUT.SPACING.XS
       } ${selectedEntitiesForMerge.has(entity.id) ? `ring-2 ${colors.ring.info} ${colors.bg.selection}` : ''} ${
         isFocused ? `ring-2 ${colors.ring.success}` : ''
       }`}
@@ -82,7 +83,7 @@ export const EntityCard = ({
         }
       }}
     >
-      <div className="flex items-center gap-2 flex-1 min-w-0">
+      <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} flex-1 min-w-0`}>
         {/* Entity Color Picker */}
         <div className="relative">
           <button
@@ -123,7 +124,7 @@ export const EntityCard = ({
               onSetEditingEntityName('');
             }}
             className={`${colors.bg.hover} ${colors.text.primary} rounded ${getStatusBorder('info')} focus:outline-none ${colors.interactive.focus.ring} ${
-              isSelected ? 'text-sm px-1' : 'text-xs px-0.5'
+              isSelected ? `text-sm ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS}` : `text-xs ${PANEL_LAYOUT.SPACING.HORIZONTAL_HALF}`
             }`}
             autoFocus
           />
@@ -145,7 +146,7 @@ export const EntityCard = ({
         )}
       </div>
       
-      <div className="flex items-center gap-1">
+      <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
         {/* Visibility Toggle */}
         <button
           onClick={(e) => {
@@ -153,7 +154,7 @@ export const EntityCard = ({
             onEntityToggle?.(entity.id, entity.visible === false ? true : false);
           }}
           className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${
-            isSelected ? 'p-1' : 'p-0.5'
+            isSelected ? PANEL_LAYOUT.SPACING.XS : PANEL_LAYOUT.SPACING.HALF
           }`}
           title={entity.visible === false ? "Εμφάνιση" : "Απόκρυψη"}
         >
@@ -172,7 +173,7 @@ export const EntityCard = ({
             onSetEditingEntityName(entity.name || `${entity.type}_${entity.id.substring(0, 8)}`);
           }}
           className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${
-            isSelected ? 'p-1' : 'p-0.5'
+            isSelected ? PANEL_LAYOUT.SPACING.XS : PANEL_LAYOUT.SPACING.HALF
           }`}
           title="Μετονομασία entity"
         >
@@ -186,7 +187,7 @@ export const EntityCard = ({
             onEntityDelete?.(entity.id); 
           }}
           className={`${colors.text.error} ${HOVER_TEXT_EFFECTS.RED} ${
-            isSelected ? 'p-1' : 'p-0.5'
+            isSelected ? PANEL_LAYOUT.SPACING.XS : PANEL_LAYOUT.SPACING.HALF
           }`}
           title="Διαγραφή"
         >

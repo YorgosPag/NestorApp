@@ -25,6 +25,8 @@ import { getPalettesByIds } from './BrandPalettes';
 import { useRecentColors } from './RecentColorsStore';
 import type { ColorSwatch } from './types';
 import { layoutUtilities } from '@/styles/design-tokens';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 interface SwatchesPaletteProps {
   /** Palette IDs to display */
@@ -68,11 +70,11 @@ export function SwatchesPalette({
   const palettes = getPalettesByIds(paletteIds);
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
       {/* Recent Colors */}
       {showRecent && recentColors.length > 0 && (
         <div>
-          <h4 className={`text-sm font-medium ${colors.text.secondary} mb-2`}>Recent</h4>
+          <h4 className={`text-sm font-medium ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Recent</h4>
           <SwatchGrid
             swatches={recentColors.map((color) => ({
               color,
@@ -89,7 +91,7 @@ export function SwatchesPalette({
       {/* Brand Palettes */}
       {palettes.map((palette) => (
         <div key={palette.id}>
-          <h4 className={`text-sm font-medium ${colors.text.secondary} mb-2`}>
+          <h4 className={`text-sm font-medium ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
             {palette.name}
           </h4>
           <SwatchGrid
@@ -124,7 +126,7 @@ function SwatchGrid({
 }: SwatchGridProps) {
   return (
     <div
-      className="grid gap-2"
+      className={`grid ${PANEL_LAYOUT.GAP.SM}`}
       style={layoutUtilities.dxf.grid.swatchGrid(columns, swatchSize)}
     >
       {swatches.map((swatch, index) => {

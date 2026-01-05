@@ -95,6 +95,8 @@ import { AccordionSection, useAccordion } from '../shared/AccordionSection';
 import { useIconSizes } from '../../../../../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../../../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Import centralized panel spacing (Single Source of Truth)
+import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: Centralized Checkbox component (Radix)
 import { Checkbox } from '@/components/ui/checkbox';
 // 🏢 ENTERPRISE: Centralized Button component (Radix)
@@ -391,16 +393,16 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
     <>
       {/* Header - Semantic <header> element */}
       {/* 🏢 ENTERPRISE: flex-col layout για να φαίνονται πλήρως τα κείμενα των κουμπιών */}
-      <header className="flex flex-col gap-2">
+      <header className={`flex flex-col ${PANEL_LAYOUT.GAP.SM}`}>
         <h3 className={`text-lg font-medium ${colors.text.primary}`}>Ρυθμίσεις Γραμμών</h3>
-        <nav className="flex gap-2" aria-label="Ενέργειες ρυθμίσεων">
+        <nav className={`flex ${PANEL_LAYOUT.GAP.SM}`} aria-label="Ενέργειες ρυθμίσεων">
           {/* 🏢 ENTERPRISE: Centralized Button component (variant="secondary") + Lucide icon */}
           <Button
             variant="secondary"
             size="sm"
             onClick={resetToDefaults}
             title="Επαναφορά στις προεπιλεγμένες ρυθμίσεις"
-            className="flex items-center gap-1"
+            className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
           >
             <RotateCcw className={iconSizes.xs} />
             Επαναφορά
@@ -411,7 +413,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
             size="sm"
             onClick={handleFactoryResetClick}
             title="Επαναφορά στις εργοστασιακές ρυθμίσεις (ISO 128 & AutoCAD 2024)"
-            className="flex items-center gap-1"
+            className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
           >
             <Factory className={iconSizes.xs} />
             Εργοστασιακές
@@ -421,8 +423,9 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
       {/* 🏢 ENTERPRISE: Enable/Disable Line Display - Centralized Radix Checkbox */}
       {/* 🏢 ADR-011: Using same styling as AccordionSection for visual consistency */}
-      <fieldset className="space-y-2">
-        <div className={`flex items-center gap-3 p-3 ${colors.bg.secondary} ${getElementBorder('card', 'default')} ${radius.lg}`}>
+      <fieldset className={PANEL_LAYOUT.SPACING.GAP_SM}>
+        {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.SPACING.MD for container padding */}
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${getElementBorder('card', 'default')} ${radius.lg}`}>
           <Checkbox
             id="line-enabled"
             checked={settings.enabled}
@@ -435,16 +438,16 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
             Εμφάνιση γραμμής
           </label>
         </div>
-        {/* 🏢 ENTERPRISE: Warning message - Using semantic colors */}
+        {/* 🏢 ENTERPRISE: Warning message - Using semantic colors & PANEL_LAYOUT.ALERT */}
         {!settings.enabled && (
-          <aside className={`text-xs ${colors.text.warning} ${colors.bg.warningSubtle} p-2 ${radius.md} ${getStatusBorder('warning')}`} role="alert">
+          <aside className={`${PANEL_LAYOUT.ALERT.TEXT_SIZE} ${colors.text.warning} ${colors.bg.warningSubtle} ${PANEL_LAYOUT.ALERT.PADDING} ${radius.md} ${getStatusBorder('warning')}`} role="alert">
             ⚠️ Οι γραμμές είναι απενεργοποιημένες και δεν θα εμφανίζονται στην προσχεδίαση
           </aside>
         )}
       </fieldset>
 
       {/* ACCORDION SECTIONS */}
-      <div className={`space-y-4 ${!settings.enabled ? 'opacity-50 pointer-events-none' : ''}`}>
+      <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${!settings.enabled ? 'opacity-50 pointer-events-none' : ''}`}>
 
         {/* 1. ΠΡΌΤΥΠΑ & ΕΡΓΑΛΕΊΑ */}
         <AccordionSection
@@ -454,9 +457,9 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           onToggle={() => toggleSection('templates')}
           disabled={!settings.enabled}
         >
-          <div className="space-y-4">
+          <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
             {/* 🏢 ADR-001: Radix Select - Template Quick Select */}
-            <div className="space-y-2">
+            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block text-sm font-medium ${colors.text.secondary}`}>
                 Προκαθορισμένα Πρότυπα
               </label>
@@ -493,10 +496,10 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           disabled={!settings.enabled}
           badge={5}
         >
-          <div className="space-y-4">
+          <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
 
         {/* 🏢 ADR-001: Radix Select - Line Type */}
-        <div className="space-y-2">
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block text-sm font-medium ${colors.text.secondary}`}>
             Τύπος Γραμμής
           </label>
@@ -518,11 +521,11 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         </div>
 
         {/* Line Width */}
-        <div className="space-y-2">
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block text-sm font-medium ${colors.text.secondary}`}>
             Πάχος Γραμμής: {settings.lineWidth}px
           </label>
-          <div className="flex items-center space-x-3">
+          <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD}`}>
             <input
               type="range"
               min={LINE_WIDTH_RANGE.min}
@@ -539,13 +542,13 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.lineWidth}
               onChange={settingsUpdater.createNumberInputHandler('lineWidth', { parseType: 'float' })}
-              className={`w-16 px-2 py-1 ${colors.bg.hover} ${quick.input} ${colors.text.primary} text-sm`}
+              className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
             />
           </div>
         </div>
 
         {/* Color - 🏢 ENTERPRISE Color System */}
-        <div className="space-y-2">
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα</label>
           <ColorDialogTrigger
             value={settings.color}
@@ -567,11 +570,11 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         </div>
 
         {/* Opacity */}
-        <div className="space-y-2">
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block text-sm font-medium ${colors.text.secondary}`}>
             Διαφάνεια: {Math.round(settings.opacity * 100)}%
           </label>
-          <div className="flex items-center space-x-3">
+          <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD}`}>
             <input
               type="range"
               min={OPACITY_RANGE.min}
@@ -588,14 +591,14 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.opacity}
               onChange={settingsUpdater.createNumberInputHandler('opacity', { parseType: 'float' })}
-              className={`w-16 px-2 py-1 ${colors.bg.hover} ${quick.input} ${colors.text.primary} text-sm`}
+              className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
             />
           </div>
         </div>
 
         {/* 🏢 ENTERPRISE: Line Break for Text - Centralized Radix Checkbox */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
+          <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <Checkbox
               id="break-at-center"
               checked={settings.breakAtCenter || false}
@@ -603,7 +606,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
             />
             <label htmlFor="break-at-center" className={`text-sm cursor-pointer ${colors.text.secondary}`}>Σπάσιμο γραμμής για κείμενο</label>
           </div>
-          <p className={`text-xs ${colors.text.muted} pl-6`}>
+          <p className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
             Η γραμμή θα σπάσει στη μέση για να χωράει το κείμενο
           </p>
         </div>
@@ -619,10 +622,10 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           disabled={!settings.enabled}
           badge={3}
         >
-          <div className="space-y-4">
+          <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
 
         {/* Hover Color - 🏢 ENTERPRISE Color System */}
-        <div className="space-y-2">
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Hover</label>
           <ColorDialogTrigger
             value={settings.hoverColor}
@@ -638,11 +641,11 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         </div>
 
         {/* Hover Width */}
-        <div className="space-y-2">
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block text-sm font-medium ${colors.text.secondary}`}>
             Πάχος Hover: {settings.hoverWidth}px
           </label>
-          <div className="flex items-center space-x-3">
+          <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
             <input
               type="range"
               min={LINE_WIDTH_RANGE.min}
@@ -659,17 +662,17 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.hoverWidth}
               onChange={settingsUpdater.createNumberInputHandler('hoverWidth', { parseType: 'float' })}
-              className={`w-16 px-2 py-1 ${colors.bg.hover} ${quick.input} ${colors.text.primary} text-sm`}
+              className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
             />
           </div>
         </div>
 
         {/* Hover Opacity */}
-        <div className="space-y-2">
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block text-sm font-medium ${colors.text.secondary}`}>
             Διαφάνεια Hover: {Math.round(settings.hoverOpacity * 100)}%
           </label>
-          <div className="flex items-center space-x-3">
+          <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
             <input
               type="range"
               min={OPACITY_RANGE.min}
@@ -686,7 +689,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.hoverOpacity}
               onChange={settingsUpdater.createNumberInputHandler('hoverOpacity', { parseType: 'float' })}
-              className={`w-16 px-2 py-1 ${colors.bg.hover} ${quick.input} ${colors.text.primary} text-sm`}
+              className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
             />
           </div>
         </div>
@@ -702,10 +705,10 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           disabled={!settings.enabled}
           badge={3}
         >
-          <div className="space-y-4">
+          <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
 
         {/* Final Color - 🏢 ENTERPRISE Color System */}
-        <div className="space-y-2">
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block text-sm font-medium ${colors.text.secondary}`}>Τελικό Χρώμα</label>
           <ColorDialogTrigger
             value={settings.finalColor}
@@ -721,11 +724,11 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         </div>
 
         {/* Final Width */}
-        <div className="space-y-2">
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block text-sm font-medium ${colors.text.secondary}`}>
             Τελικό Πάχος: {settings.finalWidth}px
           </label>
-          <div className="flex items-center space-x-3">
+          <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
             <input
               type="range"
               min={LINE_WIDTH_RANGE.min}
@@ -742,17 +745,17 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.finalWidth}
               onChange={settingsUpdater.createNumberInputHandler('finalWidth', { parseType: 'float' })}
-              className={`w-16 px-2 py-1 ${colors.bg.hover} ${quick.input} ${colors.text.primary} text-sm`}
+              className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
             />
           </div>
         </div>
 
         {/* Final Opacity */}
-        <div className="space-y-2">
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block text-sm font-medium ${colors.text.secondary}`}>
             Τελική Διαφάνεια: {Math.round(settings.finalOpacity * 100)}%
           </label>
-          <div className="flex items-center space-x-3">
+          <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
             <input
               type="range"
               min={OPACITY_RANGE.min}
@@ -769,7 +772,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.finalOpacity}
               onChange={settingsUpdater.createNumberInputHandler('finalOpacity', { parseType: 'float' })}
-              className={`w-16 px-2 py-1 ${colors.bg.hover} ${quick.input} ${colors.text.primary} text-sm`}
+              className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
             />
           </div>
         </div>
@@ -784,14 +787,14 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           onToggle={() => toggleSection('advanced')}
           disabled={!settings.enabled}
         >
-          <div className="space-y-4">
+          <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
           {/* Dash Scale (only for non-solid lines) */}
           {settings.lineType !== 'solid' && (
-            <div className="space-y-2">
+            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block text-sm font-medium ${colors.text.secondary}`}>
                 Κλίμακα Διακοπών: {settings.dashScale}
               </label>
-              <div className="flex items-center space-x-3">
+              <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
                 <input
                   type="range"
                   min={DASH_SCALE_RANGE.min}
@@ -808,14 +811,14 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step={DASH_SCALE_RANGE.step}
                   value={settings.dashScale}
                   onChange={settingsUpdater.createNumberInputHandler('dashScale', { parseType: 'float' })}
-                  className={`w-16 px-2 py-1 ${colors.bg.hover} ${quick.input} ${colors.text.primary} text-sm`}
+                  className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
                 />
               </div>
             </div>
           )}
 
           {/* 🏢 ADR-001: Radix Select - Line Cap */}
-          <div className="space-y-2">
+          <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
             <label className={`block text-sm font-medium ${colors.text.secondary}`}>
               Άκρα Γραμμής
             </label>
@@ -837,7 +840,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           </div>
 
           {/* 🏢 ADR-001: Radix Select - Line Join */}
-          <div className="space-y-2">
+          <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
             <label className={`block text-sm font-medium ${colors.text.secondary}`}>
               Συνδέσεις Γραμμής
             </label>
@@ -860,11 +863,11 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
           {/* Dash Offset (only for non-solid lines) */}
           {settings.lineType !== 'solid' && (
-            <div className="space-y-2">
+            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block text-sm font-medium ${colors.text.secondary}`}>
                 Μετατόπιση Διακοπών: {settings.dashOffset}px
               </label>
-              <div className="flex items-center space-x-3">
+              <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
                 <input
                   type="range"
                   min={DASH_OFFSET_RANGE.min}
@@ -881,7 +884,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step={DASH_OFFSET_RANGE.step}
                   value={settings.dashOffset}
                   onChange={settingsUpdater.createNumberInputHandler('dashOffset', { parseType: 'float' })}
-                  className={`w-16 px-2 py-1 ${colors.bg.hover} ${quick.input} ${colors.text.primary} text-sm`}
+                  className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
                 />
               </div>
             </div>
@@ -898,10 +901,11 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
   // - Standalone (no contextType): Semantic <section> wrapper with spacing
   return (
     <>
+      {/* 🏢 ENTERPRISE: Conditional wrapper - Using PANEL_LAYOUT.SPACING */}
       {isEmbedded ? (
         settingsContent
       ) : (
-        <section className="space-y-4 p-4" aria-label="Ρυθμίσεις Γραμμών">
+        <section className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${PANEL_LAYOUT.SPACING.LG}`} aria-label="Ρυθμίσεις Γραμμών">
           {settingsContent}
         </section>
       )}
@@ -915,18 +919,19 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         closeOnBackdrop={false}
         zIndex={10000}
       >
-        <article className="space-y-4">
+        <article className={PANEL_LAYOUT.SPACING.GAP_LG}>
           {/* 🏢 ENTERPRISE: Warning Message - Using semantic error colors */}
-          <aside className={`${colors.bg.errorSubtle} ${getStatusBorder('error')} p-4 rounded`} role="alert">
-            <p className={`${colors.text.error} font-semibold mb-2`}>
+          {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.ALERT */}
+          <aside className={`${colors.bg.errorSubtle} ${getStatusBorder('error')} ${PANEL_LAYOUT.ALERT.PADDING_LG} ${PANEL_LAYOUT.ALERT.BORDER_RADIUS}`} role="alert">
+            <p className={`${colors.text.error} font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
               ⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!
             </p>
           </aside>
 
           {/* Loss List */}
-          <section className="space-y-2">
+          <section className={PANEL_LAYOUT.SPACING.GAP_SM}>
             <p className={`${colors.text.muted} font-medium`}>Θα χάσετε:</p>
-            <ul className={`list-disc list-inside space-y-1 ${colors.text.muted} text-sm`}>
+            <ul className={`list-disc list-inside ${PANEL_LAYOUT.SPACING.GAP_XS} ${colors.text.muted} text-sm`}>
               <li>Όλες τις προσαρμοσμένες ρυθμίσεις γραμμών</li>
               <li>Όλα τα templates που έχετε επιλέξει</li>
               <li>Όλες τις αλλαγές που έχετε κάνει</li>
@@ -934,28 +939,29 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           </section>
 
           {/* 🏢 ENTERPRISE: Reset Info - Using semantic info colors */}
-          <aside className={`${colors.bg.infoSubtle} ${getStatusBorder('info')} p-4 rounded`} role="note">
+          {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.ALERT */}
+          <aside className={`${colors.bg.infoSubtle} ${getStatusBorder('info')} ${PANEL_LAYOUT.ALERT.PADDING_LG} ${PANEL_LAYOUT.ALERT.BORDER_RADIUS}`} role="note">
             <p className={`${colors.text.info} text-sm`}>
               <strong>Επαναφορά:</strong> Οι ρυθμίσεις θα επανέλθουν στα πρότυπα ISO 128 & AutoCAD 2024
             </p>
           </aside>
 
           {/* Confirmation Question */}
-          <p className={`${colors.text.primary} font-medium text-center pt-2`}>
+          <p className={`${colors.text.primary} font-medium text-center ${PANEL_LAYOUT.PADDING.TOP_SM}`}>
             Είστε σίγουροι ότι θέλετε να συνεχίσετε;
           </p>
 
           {/* 🏢 ENTERPRISE: Action Buttons - Using semantic colors */}
-          <footer className={`flex gap-3 justify-end pt-4 ${quick.separator}`}>
+          <footer className={`flex ${PANEL_LAYOUT.GAP.MD} justify-end ${PANEL_LAYOUT.PADDING.TOP_LG}${quick.separator}`}>
             <button
               onClick={handleFactoryResetCancel}
-              className={`px-4 py-2 text-sm ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHTER} ${colors.text.inverted} rounded transition-colors`}
+              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHTER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors`}
             >
               Ακύρωση
             </button>
             <button
               onClick={handleFactoryResetConfirm}
-              className={`px-4 py-2 text-sm ${colors.bg.danger} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded transition-colors font-semibold flex items-center gap-1`}
+              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.danger} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors font-semibold flex items-center ${PANEL_LAYOUT.GAP.XS}`}
             >
               <Factory className={iconSizes.xs} />
               Επαναφορά Εργοστασιακών

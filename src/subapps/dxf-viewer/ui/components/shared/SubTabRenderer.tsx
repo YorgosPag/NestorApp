@@ -9,6 +9,8 @@ import { OverrideToggle } from './OverrideToggle';
 import { INTERACTIVE_PATTERNS } from '../../../ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../../config/color-config';
+// 🏢 ENTERPRISE: Import centralized panel spacing (Single Source of Truth)
+import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 // 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/etc.)
 import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
 // 🏢 ENTERPRISE: Lucide icons for sub-tabs
@@ -141,8 +143,9 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
     return null;
   }
 
+  // 🏢 ENTERPRISE: Using centralized PANEL_LAYOUT spacing (Single Source of Truth)
   return (
-    <div className={`p-3 ${colors.bg.secondary} rounded-lg space-y-4`}>
+    <div className={`${PANEL_LAYOUT.CONTAINER.INNER_PADDING} ${colors.bg.secondary} ${PANEL_LAYOUT.CONTAINER.BORDER_RADIUS} ${PANEL_LAYOUT.CONTAINER.SECTION_SPACING}`}>
       {/* Preview Section */}
       {showPreview && (
         <>
@@ -177,7 +180,7 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
       {/* Line Sub-tab Content - 🏢 ENTERPRISE: Removed redundant wrapper (ADR-011) */}
       {/* LineSettingsComponent now handles its own layout via conditional wrapper */}
       {activeSubTab === 'line' && (
-        <section className="space-y-4" aria-label={`Ρυθμίσεις Γραμμής ${config.label}`}>
+        <section className={PANEL_LAYOUT.CONTAINER.SECTION_SPACING} aria-label={`Ρυθμίσεις Γραμμής ${config.label}`}>
           {overrideSettings?.line && (
             <OverrideToggle
               checked={overrideSettings.line.checked}
@@ -197,7 +200,7 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
       {/* Text Sub-tab Content - 🏢 ENTERPRISE: Removed redundant wrapper (ADR-011) */}
       {/* TextSettingsComponent now handles its own layout via conditional wrapper */}
       {activeSubTab === 'text' && (
-        <section className="space-y-4" aria-label={`Ρυθμίσεις Κειμένου ${config.label}`}>
+        <section className={PANEL_LAYOUT.CONTAINER.SECTION_SPACING} aria-label={`Ρυθμίσεις Κειμένου ${config.label}`}>
           {overrideSettings?.text && (
             <OverrideToggle
               checked={overrideSettings.text.checked}
@@ -215,7 +218,7 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
       {/* Grips Sub-tab Content - 🏢 ENTERPRISE: Removed redundant wrapper (ADR-011) */}
       {/* GripSettingsComponent now handles its own layout via conditional wrapper */}
       {activeSubTab === 'grips' && (
-        <section className="space-y-4" aria-label={`Ρυθμίσεις Grips ${config.label}`}>
+        <section className={PANEL_LAYOUT.CONTAINER.SECTION_SPACING} aria-label={`Ρυθμίσεις Grips ${config.label}`}>
           {overrideSettings?.grips && (
             <OverrideToggle
               checked={overrideSettings.grips.checked}

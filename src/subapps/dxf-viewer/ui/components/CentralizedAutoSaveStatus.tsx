@@ -18,6 +18,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '../../components/modal/ModalLoadingStates';
 // 🔄 MIGRATED (2025-10-09): Phase 3.2 - Direct Enterprise (no adapter)
 import { useDxfSettings } from '../../settings-provider';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import {
   centralizedAutoSaveStatusStyles,
   getStatusColorStyles,
@@ -160,7 +162,7 @@ export function CentralizedAutoSaveStatus() {
   return (
     <section
       className={`
-        flex items-center gap-2 px-3 py-2
+        flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.STANDARD}
         ${colors.bg.tertiary}/50 rounded-md border
         transition-all duration-200 relative
         ${getStatusColor()} ${getZIndexClass()}
@@ -180,16 +182,16 @@ export function CentralizedAutoSaveStatus() {
         </h3>
 
         {settings.lastSaved && settings.saveStatus === 'saved' && (
-          <time className={`text-xs ${colors.text.muted} mt-1`} style={centralizedAutoSaveStatusStyles.statusMessage.secondary}>
+          <time className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`} style={centralizedAutoSaveStatusStyles.statusMessage.secondary}>
             Τελευταία: {formatLastSaveTime(settings.lastSaved)}
           </time>
         )}
       </article>
 
       {/* Settings Indicator - Γενικά (Blue) + Ειδικά (Green) */}
-      <aside className="flex items-center gap-2">
+      <aside className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
         {/* 🔵 ΓΕΝΙΚΑ SETTINGS (Blue dots) */}
-        <div className="flex items-center gap-1" style={centralizedAutoSaveStatusStyles.settingsDots.container} {...getSettingsIndicatorProps('general')}>
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} style={centralizedAutoSaveStatusStyles.settingsDots.container} {...getSettingsIndicatorProps('general')}>
           {getGeneralSettingsConfig(settings).map(({ key, isActive, label }) => (
             <div
               key={key}
@@ -203,7 +205,7 @@ export function CentralizedAutoSaveStatus() {
         <div style={getSeparatorStyle()} role="separator" aria-orientation="vertical" />
 
         {/* 🟢 ΕΙΔΙΚΑ SETTINGS (Green dots) */}
-        <div className="flex items-center gap-1" style={centralizedAutoSaveStatusStyles.settingsDots.container} {...getSettingsIndicatorProps('specific')}>
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} style={centralizedAutoSaveStatusStyles.settingsDots.container} {...getSettingsIndicatorProps('specific')}>
           {getSpecificSettingsConfig(settings).map(({ key, isActive, label }) => (
             <div
               key={key}

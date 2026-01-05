@@ -140,6 +140,11 @@ export const MODAL_Z_INDEX = {
 
   // Emergency override (use sparingly)
   EMERGENCY: 100,
+
+  // 🏢 ENTERPRISE: Color Dialog Z-Index (maximum - above canvas crosshair overlays)
+  // Note: These must be at maximum z-index level to appear above WebGL/Canvas overlays
+  COLOR_DIALOG_CONTAINER: 2147483646,  // Just below max to allow stacking
+  COLOR_DIALOG: 2147483647,            // Maximum z-index - above everything
 } as const;
 
 // ====================================================================

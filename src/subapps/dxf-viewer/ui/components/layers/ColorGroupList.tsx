@@ -6,6 +6,8 @@
 import React from 'react';
 import { ColorGroupItem } from './ColorGroupItem';
 import { createColorGroupKey, type ColorGroupCommonProps } from './utils';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 
 interface ColorGroupListProps extends ColorGroupCommonProps {
   colorGroups: Map<string, string[]>;
@@ -37,7 +39,7 @@ export function ColorGroupList({
 }: ColorGroupListProps) {
   
   return (
-    <div className="space-y-2 max-h-64 overflow-y-auto">
+    <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} max-h-64 overflow-y-auto`}>
       {Array.from(colorGroups.entries()).map(([colorName, layerNames]) => {
         const colorGroupKey = createColorGroupKey(colorName);
         const isExpanded = expandedColorGroups.has(colorGroupKey);
