@@ -1,6 +1,10 @@
 /**
  * Parallel Snap Engine
  * Υπεύθυνο για εύρεση parallel snap points σε σχέση με υπάρχουσες γραμμές
+ *
+ * 🏢 ENTERPRISE CENTRALIZATION (2025-01-05):
+ * - Uses centralized Entity types from types/entities.ts
+ * - Uses type guards for safe property access
  */
 
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
@@ -9,6 +13,12 @@ import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/B
 import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ENTERPRISE: Import centralized type guards
+import {
+  isLineEntity,
+  isPolylineEntity,
+  isLWPolylineEntity
+} from '../../types/entities';
 
 export class ParallelSnapEngine extends BaseSnapEngine {
   private referenceLine: {start: Point2D, end: Point2D} | null = null;
@@ -111,29 +121,26 @@ export class ParallelSnapEngine extends BaseSnapEngine {
     for (const entity of context.entities) {
       if (context.excludeEntityId && entity.id === context.excludeEntityId) continue;
       if (!entity.visible) continue;
-      
-      const entityType = entity.type.toLowerCase();
-      
-      if (entityType === 'line') {
-        if (entity.start && entity.end) {
-          const distance = GeometricCalculations.distancePointToLine(cursorPoint, entity.start, entity.end);
-          if (distance <= searchRadius) {
-            lines.push({
-              start: entity.start,
-              end: entity.end,
-              entityId: entity.id
-            });
-          }
+
+      // 🏢 ENTERPRISE: Use type guards for safe property access
+      if (isLineEntity(entity)) {
+        const distance = GeometricCalculations.distancePointToLine(cursorPoint, entity.start, entity.end);
+        if (distance <= searchRadius) {
+          lines.push({
+            start: entity.start,
+            end: entity.end,
+            entityId: entity.id
+          });
         }
-      } else if (entityType === 'polyline' || entityType === 'lwpolyline') {
-        const points = (entity.points || ('vertices' in entity ? entity.vertices : undefined)) as Point2D[] | undefined;
-        if (points && points.length > 1) {
-          for (let i = 1; i < points.length; i++) {
-            const distance = GeometricCalculations.distancePointToLine(cursorPoint, points[i-1], points[i]);
+      } else if (isPolylineEntity(entity) || isLWPolylineEntity(entity)) {
+        const vertices = entity.vertices;
+        if (vertices && vertices.length > 1) {
+          for (let i = 1; i < vertices.length; i++) {
+            const distance = GeometricCalculations.distancePointToLine(cursorPoint, vertices[i-1], vertices[i]);
             if (distance <= searchRadius) {
               lines.push({
-                start: points[i-1],
-                end: points[i],
+                start: vertices[i-1],
+                end: vertices[i],
                 entityId: entity.id
               });
             }

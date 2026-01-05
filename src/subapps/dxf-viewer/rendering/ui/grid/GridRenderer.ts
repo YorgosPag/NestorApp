@@ -202,9 +202,9 @@ export class GridRenderer implements UIRenderer {
 
     // 🏢 ENTERPRISE DOT SIZING:
     // Fixed pixel size - does NOT scale with zoom (like lines and crosses)
-    // Uses gridWeight settings for consistency with other grid styles
-    const minorDotSize = Math.max(2, settings.minorGridWeight * 1.5); // Based on line weight
-    const majorDotSize = Math.max(3, settings.majorGridWeight * 1.5); // Based on line weight
+    // Factory defaults: minor=1px, major=1.5px (adjustable via Settings)
+    const minorDotSize = Math.max(1, settings.minorGridWeight);        // 1px default (1:1 with weight)
+    const majorDotSize = Math.max(1.5, settings.majorGridWeight * 0.75); // 1.5px default
 
     // Calculate grid origin in screen coordinates
     const { CoordinateTransforms: CT } = require('../../core/CoordinateTransforms');

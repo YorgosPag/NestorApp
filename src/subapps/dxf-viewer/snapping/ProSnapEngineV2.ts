@@ -130,7 +130,48 @@ export class ProSnapEngineV2 implements SnapEngineInterface {
   // --------- UTILITY METHODS ---------
 
   getStats(): SnapEngineStats {
-    return this.logger.getStats();
+    // 🏢 ENTERPRISE: Logger returns SnapDebugStats with orchestrator.engineStats
+    // Each engine in engineStats contains SnapEngineStats, we aggregate them
+    const debugStats = this.logger.getStats();
+    const engineStats = debugStats.orchestrator?.engineStats ?? {};
+
+    // Aggregate stats from all engines
+    let totalSnapAttempts = 0;
+    let successfulSnaps = 0;
+    let totalSearchTime = 0;
+    let totalEntities = debugStats.orchestrator?.totalEntities ?? 0;
+    const snapsByType: Partial<Record<ExtendedSnapType, number>> = {};
+
+    // Iterate through each engine's stats
+    for (const [engineType, stats] of Object.entries(engineStats)) {
+      if (stats && typeof stats === 'object') {
+        totalSnapAttempts += (stats as SnapEngineStats).totalSnapAttempts ?? 0;
+        successfulSnaps += (stats as SnapEngineStats).successfulSnaps ?? 0;
+        totalSearchTime += (stats as SnapEngineStats).averageSearchTime ?? 0;
+        totalEntities += (stats as SnapEngineStats).totalEntitiesProcessed ?? 0;
+
+        // Merge snapsByType
+        const typeStats = (stats as SnapEngineStats).snapsByType;
+        if (typeStats) {
+          for (const [type, count] of Object.entries(typeStats)) {
+            const key = type as ExtendedSnapType;
+            snapsByType[key] = (snapsByType[key] ?? 0) + count;
+          }
+        }
+      }
+    }
+
+    const engineCount = Object.keys(engineStats).length || 1;
+
+    return {
+      totalSnapAttempts,
+      successfulSnaps,
+      snapsByType: snapsByType as Record<ExtendedSnapType, number>,
+      averageSearchTime: totalSearchTime / engineCount,
+      totalEntitiesProcessed: totalEntities,
+      lastResetTime: Date.now(),
+      totalEntities
+    };
   }
 
   dispose(): void {

@@ -1,6 +1,11 @@
 /**
  * SnapDebugLogger
  * Debug logging and statistics for snap engine
+ *
+ * 🏢 ENTERPRISE CENTRALIZATION (2025-01-05):
+ * - Uses centralized Entity types from types/entities.ts
+ * - Uses type guards for safe property access
+ * - NO duplicate interface definitions
  */
 
 // DEBUG FLAG - Set to false to disable performance-heavy logging
@@ -10,17 +15,8 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { Entity, ProSnapResult, SnapEngineStats } from '../../snapping/extended-types';
 import type { SnapEngineCore } from '../../snapping/SnapEngineCore';
 import type { SnapOrchestratorStats } from '../../snapping/orchestrator/SnapOrchestrator';
-
-// Extended entity interfaces for proper typing
-interface PolylineEntity extends Entity {
-  vertices?: Point2D[];
-  closed?: boolean;
-}
-
-interface RectangleEntity extends Entity {
-  corner1?: Point2D;
-  corner2?: Point2D;
-}
+// 🏢 ENTERPRISE: Import type guards from centralized types
+import { isPolylineEntity, isLWPolylineEntity, isRectangleEntity } from '../../types/entities';
 
 interface SnapDebugStats {
   version: string;
@@ -72,15 +68,16 @@ export class SnapDebugLogger {
         return types;
       }, {} as Record<string, number>);
 
-      // Log polylines info
-      const polylines = entities.filter(e => e.type.toLowerCase() === 'polyline');
+      // Log polylines info - using type guards from centralized types
+      const polylines = entities.filter(e => isPolylineEntity(e) || isLWPolylineEntity(e));
       if (polylines.length > 0) {
 
         polylines.slice(0, 2).forEach((entity, i) => {
-          const polylineEntity = entity as PolylineEntity;
-          const vertices = polylineEntity.vertices;
-          const closed = polylineEntity.closed;
-
+          // 🏢 ENTERPRISE: Type-safe access via type guards
+          if (isPolylineEntity(entity) || isLWPolylineEntity(entity)) {
+            const vertices = entity.vertices;
+            const closed = entity.closed;
+          }
         });
       }
     }
@@ -129,7 +126,7 @@ export class SnapDebugLogger {
         showSnapMarkers: settings.showSnapMarkers,
         showSnapTooltips: settings.showSnapTooltips,
         autoMode: settings.autoMode,
-        tabCycling: (settings as any).tabCycling ?? false // ✅ ENTERPRISE FIX: Optional property with fallback
+        tabCycling: settings.tabCycling // 🏢 ENTERPRISE: tabCycling is part of ProSnapSettings interface
       },
       orchestrator: orchestratorStats,
       performance: {

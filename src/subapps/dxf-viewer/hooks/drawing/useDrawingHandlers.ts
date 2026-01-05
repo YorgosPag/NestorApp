@@ -58,6 +58,7 @@ import { useUnifiedDrawing } from './useUnifiedDrawing';
 import { useSnapContext } from '../../snapping/context/SnapContext';
 import { useSnapManager } from '../../snapping/hooks/useSnapManager';
 import { useCanvasOperations } from '../interfaces/useCanvasOperations';
+import { useRulersGridContext } from '../../systems/rulers-grid/RulersGridSystem';
 
 type Pt = { x: number, y: number };
 
@@ -85,8 +86,14 @@ export function useDrawingHandlers(
   const { snapEnabled, enabledModes } = useSnapContext();
   const canvasElement = canvasOps.getCanvas();
   const canvasRef = { current: canvasElement };
+
+  // 🔲 GRID SNAP: Get grid step from RulersGrid context for grid snapping
+  const { state: rulersGridState } = useRulersGridContext();
+  const gridStep = rulersGridState?.grid?.visual?.step || 10;
+
   const { snapManager, findSnapPoint } = useSnapManager(canvasRef, {
     scene: currentScene,
+    gridStep, // 🔲 GRID SNAP: Pass grid step for grid snapping
     onSnapPoint: (point) => {
 
     }

@@ -1,6 +1,10 @@
 /**
  * Intersection Snap Engine
  * Υπεύθυνο για εύρεση intersection snap points μεταξύ entities
+ *
+ * 🏢 ENTERPRISE CENTRALIZATION (2025-01-05):
+ * - Uses centralized Entity types from types/entities.ts
+ * - Uses type guards for safe property access
  */
 
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
@@ -11,33 +15,23 @@ import type { IntersectionResult } from '../shared/GeometricCalculations';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { getPolylineSegments } from '../../rendering/entities/shared/geometry-rendering-utils';
-// 🏢 ENTERPRISE: Import centralized entity types
+// 🏢 ENTERPRISE: Import centralized entity types and type guards
 import type {
+  LineEntity,
   PolylineEntity,
+  LWPolylineEntity,
   CircleEntity,
-  RectangleEntity,
-  BaseEntity
+  ArcEntity,
+  RectangleEntity
 } from '../../types/entities';
-
-/**
- * 🏢 ENTERPRISE: Extended interfaces for intersection-specific properties
- * These extend BaseEntity for snap-specific needs
- */
-interface IntersectionPolylineEntity extends BaseEntity {
-  points?: Point2D[];
-  vertices?: Point2D[];
-  closed?: boolean;
-}
-
-interface IntersectionCircleEntity extends BaseEntity {
-  center: Point2D;
-  radius: number;
-}
-
-interface IntersectionRectangleEntity extends BaseEntity {
-  corner1?: Point2D;
-  corner2?: Point2D;
-}
+import {
+  isLineEntity,
+  isPolylineEntity,
+  isLWPolylineEntity,
+  isCircleEntity,
+  isArcEntity,
+  isRectangleEntity
+} from '../../types/entities';
 
 export class IntersectionSnapEngine extends BaseSnapEngine {
   constructor() {
@@ -187,88 +181,113 @@ export class IntersectionSnapEngine extends BaseSnapEngine {
   }
 
   // --------- INTERSECTION CALCULATION METHODS ---------
+  // 🏢 ENTERPRISE: Using specific entity types for type safety
 
   private lineLineIntersection(line1: Entity, line2: Entity): IntersectionResult[] {
-    if (!line1.start || !line1.end || !line2.start || !line2.end) return [];
-    
+    // 🏢 ENTERPRISE: Type guard for LineEntity
+    if (!isLineEntity(line1) || !isLineEntity(line2)) return [];
+
     const intersection = GeometricCalculations.getLineIntersection(
       line1.start, line1.end,
       line2.start, line2.end
     );
-    
+
     return intersection ? [{ point: intersection, type: 'Line-Line' }] : [];
   }
 
   private lineCircleIntersection(line: Entity, circle: Entity): IntersectionResult[] {
-    if (!line.start || !line.end || !circle.center || !circle.radius) return [];
-    
+    // 🏢 ENTERPRISE: Type guards for LineEntity and CircleEntity/ArcEntity
+    if (!isLineEntity(line)) return [];
+    if (!isCircleEntity(circle) && !isArcEntity(circle)) return [];
+
+    const circleData = circle as CircleEntity | ArcEntity;
     const intersections = GeometricCalculations.getLineCircleIntersections(
       line.start, line.end,
-      circle.center, circle.radius
+      circleData.center, circleData.radius
     );
-    
+
     return intersections.map(point => ({ point, type: 'Line-Circle' }));
   }
 
   private circleCircleIntersection(circle1: Entity, circle2: Entity): IntersectionResult[] {
-    if (!circle1.center || !circle1.radius || !circle2.center || !circle2.radius) return [];
-    
+    // 🏢 ENTERPRISE: Type guards for CircleEntity/ArcEntity
+    const isCircle1 = isCircleEntity(circle1) || isArcEntity(circle1);
+    const isCircle2 = isCircleEntity(circle2) || isArcEntity(circle2);
+    if (!isCircle1 || !isCircle2) return [];
+
+    const c1 = circle1 as CircleEntity | ArcEntity;
+    const c2 = circle2 as CircleEntity | ArcEntity;
     const intersections = GeometricCalculations.getCircleIntersections(
-      circle1.center, circle1.radius,
-      circle2.center, circle2.radius
+      c1.center, c1.radius,
+      c2.center, c2.radius
     );
-    
+
     return intersections.map(point => ({ point, type: 'Circle-Circle' }));
   }
 
   private polylineLineIntersection(polyline: Entity, line: Entity): IntersectionResult[] {
-    // Support both 'points' and 'vertices' properties
-    const polylineEntity = polyline as PolylineEntity;
-    const points = polylineEntity.points || polylineEntity.vertices;
-    if (!points || !line.start || !line.end) return [];
-    
+    // 🏢 ENTERPRISE: Type guards for PolylineEntity and LineEntity
+    if (!isLineEntity(line)) return [];
+
+    // Support both polyline and lwpolyline
+    let vertices: Point2D[] | undefined;
+    let isClosed = false;
+
+    if (isPolylineEntity(polyline)) {
+      vertices = polyline.vertices;
+      isClosed = polyline.closed || false;
+    } else if (isLWPolylineEntity(polyline)) {
+      vertices = polyline.vertices;
+      isClosed = polyline.closed || false;
+    }
+
+    if (!vertices || vertices.length < 2) return [];
+
     const intersections: IntersectionResult[] = [];
-    
-    for (let i = 1; i < points.length; i++) {
+
+    for (let i = 1; i < vertices.length; i++) {
       const intersection = GeometricCalculations.getLineIntersection(
-        points[i-1], points[i],
+        vertices[i-1], vertices[i],
         line.start, line.end
       );
-      
+
       if (intersection) {
         intersections.push({ point: intersection, type: 'Polyline-Line' });
       }
     }
-    
+
     // Check closing edge for closed polylines
-    const isClosed = polylineEntity.closed;
-    if (isClosed && points.length > 2) {
+    if (isClosed && vertices.length > 2) {
       const intersection = GeometricCalculations.getLineIntersection(
-        points[points.length - 1], points[0],
+        vertices[vertices.length - 1], vertices[0],
         line.start, line.end
       );
-      
+
       if (intersection) {
         intersections.push({ point: intersection, type: 'Polyline-Line' });
       }
     }
-    
+
     return intersections;
   }
 
   private polylinePolylineIntersection(poly1: Entity, poly2: Entity): IntersectionResult[] {
-    // Support both 'points' and 'vertices' properties
-    const poly1Entity = poly1 as PolylineEntity;
-    const poly2Entity = poly2 as PolylineEntity;
-    const points1 = poly1Entity.points || poly1Entity.vertices;
-    const points2 = poly2Entity.points || poly2Entity.vertices;
-    if (!points1 || !points2) return [];
-    
+    // 🏢 ENTERPRISE: Type guards for polyline entities
+    const getVertices = (entity: Entity): { vertices: Point2D[] | undefined; closed: boolean } => {
+      if (isPolylineEntity(entity)) return { vertices: entity.vertices, closed: entity.closed || false };
+      if (isLWPolylineEntity(entity)) return { vertices: entity.vertices, closed: entity.closed || false };
+      return { vertices: undefined, closed: false };
+    };
+
+    const p1 = getVertices(poly1);
+    const p2 = getVertices(poly2);
+    if (!p1.vertices || !p2.vertices) return [];
+
     const intersections: IntersectionResult[] = [];
-    
-    const segments1 = getPolylineSegments(points1, poly1Entity.closed || false);
-    const segments2 = getPolylineSegments(points2, poly2Entity.closed || false);
-    
+
+    const segments1 = getPolylineSegments(p1.vertices, p1.closed);
+    const segments2 = getPolylineSegments(p2.vertices, p2.closed);
+
     // Check intersection between all segment pairs
     for (const seg1 of segments1) {
       for (const seg2 of segments2) {
@@ -276,56 +295,58 @@ export class IntersectionSnapEngine extends BaseSnapEngine {
           seg1.start, seg1.end,
           seg2.start, seg2.end
         );
-        
+
         if (intersection) {
           intersections.push({ point: intersection, type: 'Polyline-Polyline' });
         }
       }
     }
-    
+
     return intersections;
   }
 
   private polylineCircleIntersection(polyline: Entity, circle: Entity): IntersectionResult[] {
-    // Support both 'points' and 'vertices' properties
-    const polylineEntity = polyline as PolylineEntity;
-    const points = polylineEntity.points || polylineEntity.vertices;
-    if (!points || !circle.center || !circle.radius) return [];
-    
-    const intersections: IntersectionResult[] = [];
-    
-    // Debug logging (occasional)
-    const shouldLog = Math.random() < 0.01;
-    if (shouldLog) {
+    // 🏢 ENTERPRISE: Type guards for polyline and circle entities
+    let vertices: Point2D[] | undefined;
+    let isClosed = false;
 
+    if (isPolylineEntity(polyline)) {
+      vertices = polyline.vertices;
+      isClosed = polyline.closed || false;
+    } else if (isLWPolylineEntity(polyline)) {
+      vertices = polyline.vertices;
+      isClosed = polyline.closed || false;
     }
-    
-    const segments = getPolylineSegments(points, polylineEntity.closed || false);
-    
+
+    if (!vertices) return [];
+    if (!isCircleEntity(circle) && !isArcEntity(circle)) return [];
+
+    const circleData = circle as CircleEntity | ArcEntity;
+    const intersections: IntersectionResult[] = [];
+
+    const segments = getPolylineSegments(vertices, isClosed);
+
     // Check intersection between each polyline segment and the circle
     for (const segment of segments) {
       const lineIntersections = GeometricCalculations.getLineCircleIntersections(
         segment.start, segment.end,
-        circle.center, circle.radius
+        circleData.center, circleData.radius
       );
-      
+
       for (const intersection of lineIntersections) {
         intersections.push({ point: intersection, type: 'Polyline-Circle' });
       }
     }
-    
-    if (shouldLog && intersections.length > 0) {
 
-    }
-    
     return intersections;
   }
 
   private rectangleLineIntersection(rectangle: Entity, line: Entity): IntersectionResult[] {
-    if (!line.start || !line.end) return [];
+    // 🏢 ENTERPRISE: Type guards for rectangle and line entities
+    if (!isLineEntity(line)) return [];
+    if (!isRectangleEntity(rectangle)) return [];
 
-    // 🏢 ENTERPRISE: Use centralized RectangleEntity type
-    const rectLines = GeometricCalculations.getRectangleLines(rectangle as RectangleEntity);
+    const rectLines = GeometricCalculations.getRectangleLines(rectangle);
     const intersections: IntersectionResult[] = [];
     
     for (const rectLine of rectLines) {
@@ -343,50 +364,66 @@ export class IntersectionSnapEngine extends BaseSnapEngine {
   }
 
   private rectangleCircleIntersection(rectangle: Entity, circle: Entity): IntersectionResult[] {
-    if (!circle.center || !circle.radius) return [];
+    // 🏢 ENTERPRISE: Type guards for rectangle and circle entities
+    if (!isRectangleEntity(rectangle)) return [];
+    if (!isCircleEntity(circle) && !isArcEntity(circle)) return [];
 
-    const rectLines = GeometricCalculations.getRectangleLines(rectangle as RectangleEntity);
+    const circleData = circle as CircleEntity | ArcEntity;
+    const rectLines = GeometricCalculations.getRectangleLines(rectangle);
     const intersections: IntersectionResult[] = [];
-    
+
     for (const rectLine of rectLines) {
       const lineIntersections = GeometricCalculations.getLineCircleIntersections(
         rectLine.start, rectLine.end,
-        circle.center, circle.radius
+        circleData.center, circleData.radius
       );
-      
+
       for (const intersection of lineIntersections) {
         intersections.push({ point: intersection, type: 'Rectangle-Circle' });
       }
     }
-    
+
     return intersections;
   }
 
   private rectanglePolylineIntersection(rectangle: Entity, polyline: Entity): IntersectionResult[] {
-    if (!polyline.points || polyline.points.length < 2) return [];
+    // 🏢 ENTERPRISE: Type guards for rectangle and polyline entities
+    if (!isRectangleEntity(rectangle)) return [];
 
-    const rectLines = GeometricCalculations.getRectangleLines(rectangle as RectangleEntity);
+    let vertices: Point2D[] | undefined;
+    if (isPolylineEntity(polyline)) {
+      vertices = polyline.vertices;
+    } else if (isLWPolylineEntity(polyline)) {
+      vertices = polyline.vertices;
+    }
+
+    if (!vertices || vertices.length < 2) return [];
+
+    const rectLines = GeometricCalculations.getRectangleLines(rectangle);
     const intersections: IntersectionResult[] = [];
-    
+
     for (const rectLine of rectLines) {
-      for (let i = 1; i < polyline.points.length; i++) {
+      for (let i = 1; i < vertices.length; i++) {
         const intersection = GeometricCalculations.getLineIntersection(
           rectLine.start, rectLine.end,
-          polyline.points[i-1], polyline.points[i]
+          vertices[i-1], vertices[i]
         );
-        
+
         if (intersection) {
           intersections.push({ point: intersection, type: 'Rectangle-Polyline' });
         }
       }
     }
-    
+
     return intersections;
   }
 
   private rectangleRectangleIntersection(rect1: Entity, rect2: Entity): IntersectionResult[] {
-    const rect1Lines = GeometricCalculations.getRectangleLines(rect1 as RectangleEntity);
-    const rect2Lines = GeometricCalculations.getRectangleLines(rect2 as RectangleEntity);
+    // 🏢 ENTERPRISE: Type guards for rectangle entities
+    if (!isRectangleEntity(rect1) || !isRectangleEntity(rect2)) return [];
+
+    const rect1Lines = GeometricCalculations.getRectangleLines(rect1);
+    const rect2Lines = GeometricCalculations.getRectangleLines(rect2);
     const intersections: IntersectionResult[] = [];
     
     for (const line1 of rect1Lines) {

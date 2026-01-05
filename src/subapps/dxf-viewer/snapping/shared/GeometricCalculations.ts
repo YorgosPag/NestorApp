@@ -1,24 +1,35 @@
 /**
  * Shared Geometric Calculations
  * Κοινές γεωμετρικές υπολογιστικές μέθοδοι για όλα τα snap engines
+ *
+ * 🏢 ENTERPRISE CENTRALIZATION (2025-01-05):
+ * - Uses centralized Entity types from types/entities.ts
+ * - Uses type guards for safe property access
+ * - Eliminated local interface duplicates
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { Entity, ExtendedSnapType } from '../extended-types';
+import { ExtendedSnapType } from '../extended-types';
+import type { Entity } from '../extended-types';
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 import { calculateDistance, rotatePoint } from '../../rendering/entities/shared/geometry-rendering-utils';
-
-// Extended entity interfaces for proper typing
-interface PolylineEntity extends Entity {
-  vertices?: Point2D[];
-  closed?: boolean;
-}
-
-interface RectangleEntity extends Entity {
-  corner1?: Point2D;
-  corner2?: Point2D;
-  rotation?: number;
-}
+// 🏢 ENTERPRISE: Import centralized entity types and type guards
+import type {
+  LineEntity,
+  PolylineEntity,
+  LWPolylineEntity,
+  CircleEntity,
+  ArcEntity,
+  RectangleEntity
+} from '../../types/entities';
+import {
+  isLineEntity,
+  isPolylineEntity,
+  isLWPolylineEntity,
+  isCircleEntity,
+  isArcEntity,
+  isRectangleEntity
+} from '../../types/entities';
 
 export interface IntersectionResult {
   point: Point2D;
@@ -51,92 +62,79 @@ export class GeometricCalculations {
 
   static getEntityEndpoints(entity: Entity): Point2D[] {
     const endpoints: Point2D[] = [];
-    const entityType = entity.type.toLowerCase();
-    
-    if (entityType === 'line') {
-      if (entity.start) endpoints.push(entity.start);
-      if (entity.end) endpoints.push(entity.end);
-    } else if (entityType === 'polyline' || entityType === 'lwpolyline') {
-      // Support both 'points' and 'vertices' properties
-      const polylineEntity = entity as PolylineEntity;
-      const points = entity.points || polylineEntity.vertices;
-      const isClosed = polylineEntity.closed;
-      
-      if (points && points.length > 0) {
+
+    // 🏢 ENTERPRISE: Use type guards for safe property access
+    if (isLineEntity(entity)) {
+      endpoints.push(entity.start);
+      endpoints.push(entity.end);
+    } else if (isPolylineEntity(entity) || isLWPolylineEntity(entity)) {
+      const vertices = entity.vertices;
+      const isClosed = entity.closed || false;
+
+      if (vertices && vertices.length > 0) {
         if (isClosed) {
           // For closed polylines, all vertices are endpoints (corners)
-          endpoints.push(...points);
+          endpoints.push(...vertices);
         } else {
           // For open polylines, only first and last are endpoints
-          endpoints.push(points[0]);
-          if (points.length > 1) {
-            endpoints.push(points[points.length - 1]);
+          endpoints.push(vertices[0]);
+          if (vertices.length > 1) {
+            endpoints.push(vertices[vertices.length - 1]);
           }
         }
       }
-    } else if (entityType === 'arc') {
-      if (entity.center && entity.radius && entity.startAngle !== undefined && entity.endAngle !== undefined) {
-        const start = {
-          x: entity.center.x + entity.radius * Math.cos(entity.startAngle),
-          y: entity.center.y + entity.radius * Math.sin(entity.startAngle)
-        };
-        const end = {
-          x: entity.center.x + entity.radius * Math.cos(entity.endAngle),
-          y: entity.center.y + entity.radius * Math.sin(entity.endAngle)
-        };
-        endpoints.push(start, end);
-      }
-    } else if (entityType === 'rectangle') {
-      const rectEntity = entity as RectangleEntity;
-      if (rectEntity.corner1 && rectEntity.corner2) {
-        const corners = GeometricCalculations.getRectangleCorners(rectEntity);
-        endpoints.push(...corners);
-      }
+    } else if (isArcEntity(entity)) {
+      const start = {
+        x: entity.center.x + entity.radius * Math.cos(entity.startAngle),
+        y: entity.center.y + entity.radius * Math.sin(entity.startAngle)
+      };
+      const end = {
+        x: entity.center.x + entity.radius * Math.cos(entity.endAngle),
+        y: entity.center.y + entity.radius * Math.sin(entity.endAngle)
+      };
+      endpoints.push(start, end);
+    } else if (isRectangleEntity(entity)) {
+      const corners = GeometricCalculations.getRectangleCorners(entity);
+      endpoints.push(...corners);
     }
-    
+
     return endpoints;
   }
 
   static getEntityMidpoints(entity: Entity): Point2D[] {
     const midpoints: Point2D[] = [];
-    const entityType = entity.type.toLowerCase();
-    
-    if (entityType === 'line') {
-      if (entity.start && entity.end) {
-        midpoints.push({
-          x: (entity.start.x + entity.end.x) / 2,
-          y: (entity.start.y + entity.end.y) / 2
-        });
-      }
-    } else if (entityType === 'arc') {
-      if (entity.center && entity.radius && entity.startAngle !== undefined && entity.endAngle !== undefined) {
-        const midAngle = (entity.startAngle + entity.endAngle) / 2;
-        midpoints.push({
-          x: entity.center.x + entity.radius * Math.cos(midAngle),
-          y: entity.center.y + entity.radius * Math.sin(midAngle)
-        });
-      }
-    } else if (entityType === 'polyline' || entityType === 'lwpolyline') {
-      // Support both 'points' and 'vertices' properties
-      const polylineEntity = entity as PolylineEntity;
-      const points = entity.points || polylineEntity.vertices;
-      const isClosed = polylineEntity.closed;
-      
-      if (points && points.length >= 2) {
+
+    // 🏢 ENTERPRISE: Use type guards for safe property access
+    if (isLineEntity(entity)) {
+      midpoints.push({
+        x: (entity.start.x + entity.end.x) / 2,
+        y: (entity.start.y + entity.end.y) / 2
+      });
+    } else if (isArcEntity(entity)) {
+      const midAngle = (entity.startAngle + entity.endAngle) / 2;
+      midpoints.push({
+        x: entity.center.x + entity.radius * Math.cos(midAngle),
+        y: entity.center.y + entity.radius * Math.sin(midAngle)
+      });
+    } else if (isPolylineEntity(entity) || isLWPolylineEntity(entity)) {
+      const vertices = entity.vertices;
+      const isClosed = entity.closed || false;
+
+      if (vertices && vertices.length >= 2) {
         // Calculate midpoint for each edge
-        for (let i = 1; i < points.length; i++) {
-          const p1 = points[i - 1];
-          const p2 = points[i];
+        for (let i = 1; i < vertices.length; i++) {
+          const p1 = vertices[i - 1];
+          const p2 = vertices[i];
           midpoints.push({
             x: (p1.x + p2.x) / 2,
             y: (p1.y + p2.y) / 2
           });
         }
-        
+
         // Add closing edge midpoint for closed polylines
-        if (isClosed && points.length > 2) {
-          const p1 = points[points.length - 1];
-          const p2 = points[0];
+        if (isClosed && vertices.length > 2) {
+          const p1 = vertices[vertices.length - 1];
+          const p2 = vertices[0];
           midpoints.push({
             x: (p1.x + p2.x) / 2,
             y: (p1.y + p2.y) / 2
@@ -144,39 +142,32 @@ export class GeometricCalculations {
         }
       }
     }
-    
+
     return midpoints;
   }
 
   static getEntityMidpoint(entity: Entity): Point2D | null {
-    const entityType = entity.type.toLowerCase();
-    
-    if (entityType === 'line') {
-      if (entity.start && entity.end) {
-        return {
-          x: (entity.start.x + entity.end.x) / 2,
-          y: (entity.start.y + entity.end.y) / 2
-        };
-      }
-    } else if (entityType === 'arc') {
-      if (entity.center && entity.radius && entity.startAngle !== undefined && entity.endAngle !== undefined) {
-        const midAngle = (entity.startAngle + entity.endAngle) / 2;
-        return {
-          x: entity.center.x + entity.radius * Math.cos(midAngle),
-          y: entity.center.y + entity.radius * Math.sin(midAngle)
-        };
-      }
-    } else if (entityType === 'polyline' || entityType === 'lwpolyline') {
-      // Support both 'points' and 'vertices' properties
-      const polylineEntity = entity as PolylineEntity;
-      const points = entity.points || polylineEntity.vertices;
-      if (points && points.length >= 2) {
-        const midIndex = Math.floor(points.length / 2);
-        if (points.length % 2 === 1) {
-          return points[midIndex];
+    // 🏢 ENTERPRISE: Use type guards for safe property access
+    if (isLineEntity(entity)) {
+      return {
+        x: (entity.start.x + entity.end.x) / 2,
+        y: (entity.start.y + entity.end.y) / 2
+      };
+    } else if (isArcEntity(entity)) {
+      const midAngle = (entity.startAngle + entity.endAngle) / 2;
+      return {
+        x: entity.center.x + entity.radius * Math.cos(midAngle),
+        y: entity.center.y + entity.radius * Math.sin(midAngle)
+      };
+    } else if (isPolylineEntity(entity) || isLWPolylineEntity(entity)) {
+      const vertices = entity.vertices;
+      if (vertices && vertices.length >= 2) {
+        const midIndex = Math.floor(vertices.length / 2);
+        if (vertices.length % 2 === 1) {
+          return vertices[midIndex];
         } else {
-          const p1 = points[midIndex - 1];
-          const p2 = points[midIndex];
+          const p1 = vertices[midIndex - 1];
+          const p2 = vertices[midIndex];
           return {
             x: (p1.x + p2.x) / 2,
             y: (p1.y + p2.y) / 2
@@ -184,34 +175,32 @@ export class GeometricCalculations {
         }
       }
     }
-    
+
     return null;
   }
 
   static getEntityCenter(entity: Entity): Point2D | null {
-    const entityType = entity.type.toLowerCase();
-    
-    if (entityType === 'circle' || entityType === 'arc') {
-      return entity.center || null;
-    } else if (entityType === 'rectangle') {
-      const rectEntity = entity as RectangleEntity;
-      if (rectEntity.corner1 && rectEntity.corner2) {
+    // 🏢 ENTERPRISE: Use type guards for safe property access
+    if (isCircleEntity(entity) || isArcEntity(entity)) {
+      return entity.center;
+    } else if (isRectangleEntity(entity)) {
+      // RectangleEntity has required corner1 and corner2
+      if (entity.corner1 && entity.corner2) {
         return {
-          x: (rectEntity.corner1.x + rectEntity.corner2.x) / 2,
-          y: (rectEntity.corner1.y + rectEntity.corner2.y) / 2
+          x: (entity.corner1.x + entity.corner2.x) / 2,
+          y: (entity.corner1.y + entity.corner2.y) / 2
         };
       }
-    } else if (entityType === 'polyline' || entityType === 'lwpolyline') {
+    } else if (isPolylineEntity(entity) || isLWPolylineEntity(entity)) {
       // For closed polylines with 4 vertices (squares/rectangles)
-      const polylineEntity = entity as PolylineEntity;
-      const points = entity.points || polylineEntity.vertices;
-      const isClosed = polylineEntity.closed;
-      
-      if (points && points.length === 4 && isClosed) {
+      const vertices = entity.vertices;
+      const isClosed = entity.closed || false;
+
+      if (vertices && vertices.length === 4 && isClosed) {
         // Calculate center of 4-vertex closed polyline (rectangle)
         let centerX = 0;
         let centerY = 0;
-        for (const point of points) {
+        for (const point of vertices) {
           centerX += point.x;
           centerY += point.y;
         }
@@ -221,7 +210,7 @@ export class GeometricCalculations {
         };
       }
     }
-    
+
     return null;
   }
 
@@ -360,43 +349,32 @@ export class GeometricCalculations {
   // --------- ENTITY PROXIMITY CHECKS ---------
 
   static isEntityNearPoint(entity: Entity, point: Point2D, radius: number): boolean {
-    const entityType = entity.type.toLowerCase();
-    
-    if (entityType === 'line') {
-      if (entity.start && entity.end) {
-        return GeometricCalculations.distancePointToLine(point, entity.start, entity.end) <= radius;
-      }
-    } else if (entityType === 'circle') {
-      if (entity.center && entity.radius) {
-        const distanceToCenter = calculateDistance(point, entity.center);
-        return Math.abs(distanceToCenter - entity.radius) <= radius;
-      }
-    } else if (entityType === 'rectangle') {
-      const rectEntity = entity as RectangleEntity;
-      if (rectEntity.corner1 && rectEntity.corner2) {
-        const rectLines = GeometricCalculations.getRectangleLines(rectEntity);
-        return rectLines.some(line => GeometricCalculations.distancePointToLine(point, line.start, line.end) <= radius);
-      }
-    } else if (entityType === 'polyline' || entityType === 'lwpolyline') {
-      // Support both 'points' and 'vertices' properties
-      const polylineEntity = entity as PolylineEntity;
-      const points = entity.points || polylineEntity.vertices;
-      if (points && points.length > 1) {
-        for (let i = 1; i < points.length; i++) {
-          const dist = GeometricCalculations.distancePointToLine(point, points[i-1], points[i]);
+    // 🏢 ENTERPRISE: Use type guards for safe property access
+    if (isLineEntity(entity)) {
+      return GeometricCalculations.distancePointToLine(point, entity.start, entity.end) <= radius;
+    } else if (isCircleEntity(entity)) {
+      const distanceToCenter = calculateDistance(point, entity.center);
+      return Math.abs(distanceToCenter - entity.radius) <= radius;
+    } else if (isRectangleEntity(entity)) {
+      const rectLines = GeometricCalculations.getRectangleLines(entity);
+      return rectLines.some(line => GeometricCalculations.distancePointToLine(point, line.start, line.end) <= radius);
+    } else if (isPolylineEntity(entity) || isLWPolylineEntity(entity)) {
+      const vertices = entity.vertices;
+      if (vertices && vertices.length > 1) {
+        for (let i = 1; i < vertices.length; i++) {
+          const dist = GeometricCalculations.distancePointToLine(point, vertices[i-1], vertices[i]);
           if (dist <= radius) return true;
         }
-        
+
         // Check closing edge for closed polylines
-        const polylineEntity = entity as PolylineEntity;
-        const isClosed = polylineEntity.closed;
-        if (isClosed && points.length > 2) {
-          const dist = GeometricCalculations.distancePointToLine(point, points[points.length - 1], points[0]);
+        const isClosed = entity.closed || false;
+        if (isClosed && vertices.length > 2) {
+          const dist = GeometricCalculations.distancePointToLine(point, vertices[vertices.length - 1], vertices[0]);
           if (dist <= radius) return true;
         }
       }
     }
-    
+
     return false;
   }
 }

@@ -11,8 +11,14 @@ import type { SnapCandidate, SnapConfig } from '../../extended-types';
 import type { Entity, RectangleEntity, CircleEntity, ArcEntity } from '../../../types/entities';
 import { GeometricCalculations } from '../../shared/GeometricCalculations';
 
-// Legacy rectangle entity with corner1/corner2 properties
-export interface LegacyRectangleEntity extends Entity {
+/**
+ * 🏢 ENTERPRISE: Legacy rectangle entity interface for backward compatibility
+ * Used for entities that may have corner1/corner2 instead of standard RectangleEntity shape
+ */
+export interface LegacyRectangleEntity {
+  id: string;
+  type: string;
+  visible?: boolean;
   corner1?: Point2D;
   corner2?: Point2D;
   rotation?: number;
@@ -155,7 +161,8 @@ export function processRectangleSnapping(
   pointProcessor: (corner: Point2D, index: number, type: string) => void
 ): void {
   if (entity.corner1 && entity.corner2) {
-    const corners = GeometricCalculations.getRectangleCorners(entity);
+    // 🏢 ENTERPRISE: Cast to RectangleEntity for GeometricCalculations compatibility
+    const corners = GeometricCalculations.getRectangleCorners(entity as RectangleEntity);
     corners.forEach((corner, index) => {
       pointProcessor(corner, index, `Corner ${index + 1}`);
     });

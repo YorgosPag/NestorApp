@@ -1,6 +1,10 @@
 /**
  * Perpendicular Snap Engine
  * Υπεύθυνο για εύρεση perpendicular snap points σε γραμμές
+ *
+ * 🏢 ENTERPRISE CENTRALIZATION (2025-01-05):
+ * - Uses centralized Entity types from types/entities.ts
+ * - Uses type guards for safe property access
  */
 
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
@@ -10,6 +14,14 @@ import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { findEntityBasedSnapCandidates, GenericSnapPoint } from './shared/snap-engine-utils';
 import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ENTERPRISE: Import centralized type guards
+import {
+  isLineEntity,
+  isPolylineEntity,
+  isLWPolylineEntity,
+  isRectangleEntity,
+  isCircleEntity
+} from '../../types/entities';
 
 export class PerpendicularSnapEngine extends BaseSnapEngine {
 
@@ -33,77 +45,71 @@ export class PerpendicularSnapEngine extends BaseSnapEngine {
         displayName: 'Perpendicular',
         priority: 4  // Medium-high priority
       },
-      (entity, cursorPoint, _) => this.getPerpendicularPoints(entity, cursorPoint, radius * 2)
+      (entity, cursorPoint, _) => {
+        // Extract only Point2D from the rich point data structure
+        const richPoints = this.getPerpendicularPoints(entity as EntityModel, cursorPoint, radius * 2);
+        return richPoints.map(p => p.point);
+      }
     );
   }
 
   private getPerpendicularPoints(entity: EntityModel, cursorPoint: Point2D, maxDistance: number): Array<{point: Point2D, type: string}> {
     const perpendicularPoints: Array<{point: Point2D, type: string}> = [];
-    const entityType = entity.type.toLowerCase();
 
-    if (entityType === 'line') {
-      const lineEntity = entity as { start?: Point2D; end?: Point2D };
-      if (lineEntity.start && lineEntity.end) {
-        const perpPoint = this.getPerpendicularToLine(lineEntity.start, lineEntity.end, cursorPoint);
-        if (perpPoint && calculateDistance(cursorPoint, perpPoint) <= maxDistance) {
-          perpendicularPoints.push({point: perpPoint, type: 'Line'});
-        }
+    // 🏢 ENTERPRISE: Use type guards for safe property access
+    if (isLineEntity(entity)) {
+      const perpPoint = this.getPerpendicularToLine(entity.start, entity.end, cursorPoint);
+      if (perpPoint && calculateDistance(cursorPoint, perpPoint) <= maxDistance) {
+        perpendicularPoints.push({point: perpPoint, type: 'Line'});
       }
-      
-    } else if (entityType === 'polyline' || entityType === 'lwpolyline') {
-      const polylineEntity = entity as { points?: Point2D[]; vertices?: Point2D[]; closed?: boolean };
-      const points = (polylineEntity.points || polylineEntity.vertices) as Point2D[] | undefined;
-      const isClosed = polylineEntity.closed || false;
-      
-      if (points && points.length > 1) {
+
+    } else if (isPolylineEntity(entity) || isLWPolylineEntity(entity)) {
+      const vertices = entity.vertices;
+      const isClosed = entity.closed || false;
+
+      if (vertices && vertices.length > 1) {
         // Check all line segments
-        for (let i = 1; i < points.length; i++) {
-          const perpPoint = this.getPerpendicularToLine(points[i-1], points[i], cursorPoint);
+        for (let i = 1; i < vertices.length; i++) {
+          const perpPoint = this.getPerpendicularToLine(vertices[i-1], vertices[i], cursorPoint);
           if (perpPoint && calculateDistance(cursorPoint, perpPoint) <= maxDistance) {
             perpendicularPoints.push({point: perpPoint, type: `Polyline Segment ${i}`});
           }
         }
-        
+
         // Check closing segment for closed polylines
-        if (isClosed && points.length > 2) {
-          const perpPoint = this.getPerpendicularToLine(points[points.length - 1], points[0], cursorPoint);
+        if (isClosed && vertices.length > 2) {
+          const perpPoint = this.getPerpendicularToLine(vertices[vertices.length - 1], vertices[0], cursorPoint);
           if (perpPoint && calculateDistance(cursorPoint, perpPoint) <= maxDistance) {
             perpendicularPoints.push({point: perpPoint, type: 'Polyline Closing Segment'});
           }
         }
       }
-      
-    } else if (entityType === 'rectangle') {
-      const rectangleEntity = entity as { corner1?: Point2D; corner2?: Point2D };
-      if (rectangleEntity.corner1 && rectangleEntity.corner2) {
-        const lines = GeometricCalculations.getRectangleLines(entity);
-        lines.forEach((line, index) => {
-          const perpPoint = this.getPerpendicularToLine(line.start, line.end, cursorPoint);
-          if (perpPoint && calculateDistance(cursorPoint, perpPoint) <= maxDistance) {
-            perpendicularPoints.push({point: perpPoint, type: `Rectangle Edge ${index + 1}`});
-          }
-        });
-      }
-      
-    } else if (entityType === 'circle') {
-      const circleEntity = entity as { center?: Point2D; radius?: number };
-      if (circleEntity.center && circleEntity.radius) {
-        // Perpendicular from cursor to circle (nearest point on circle)
-        const dx = cursorPoint.x - circleEntity.center.x;
-        const dy = cursorPoint.y - circleEntity.center.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
 
-        if (distance > 0 && distance <= maxDistance + circleEntity.radius) {
-          const scale = circleEntity.radius / distance;
-          const perpPoint = {
-            x: circleEntity.center.x + dx * scale,
-            y: circleEntity.center.y + dy * scale
-          };
-          perpendicularPoints.push({point: perpPoint, type: 'Circle'});
+    } else if (isRectangleEntity(entity)) {
+      const lines = GeometricCalculations.getRectangleLines(entity);
+      lines.forEach((line, index) => {
+        const perpPoint = this.getPerpendicularToLine(line.start, line.end, cursorPoint);
+        if (perpPoint && calculateDistance(cursorPoint, perpPoint) <= maxDistance) {
+          perpendicularPoints.push({point: perpPoint, type: `Rectangle Edge ${index + 1}`});
         }
+      });
+
+    } else if (isCircleEntity(entity)) {
+      // Perpendicular from cursor to circle (nearest point on circle)
+      const dx = cursorPoint.x - entity.center.x;
+      const dy = cursorPoint.y - entity.center.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance > 0 && distance <= maxDistance + entity.radius) {
+        const scale = entity.radius / distance;
+        const perpPoint = {
+          x: entity.center.x + dx * scale,
+          y: entity.center.y + dy * scale
+        };
+        perpendicularPoints.push({point: perpPoint, type: 'Circle'});
       }
     }
-    
+
     return perpendicularPoints;
   }
 

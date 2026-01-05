@@ -58,7 +58,11 @@ export type EntityType =
   | 'point'
   | 'dimension'
   | 'block'
-  | 'angle-measurement';
+  | 'angle-measurement'
+  | 'leader'               // ✅ ENTERPRISE: AutoCAD leader/annotation entity support
+  | 'hatch'                // ✅ ENTERPRISE: AutoCAD hatch pattern entity support
+  | 'xline'                // ✅ ENTERPRISE: AutoCAD construction line (infinite) support
+  | 'ray';                 // ✅ ENTERPRISE: AutoCAD ray (semi-infinite line) support
 
 // Geometric entities
 export interface LineEntity extends BaseEntity {
@@ -217,6 +221,50 @@ export interface AngleMeasurementEntity extends BaseEntity {
   angle: number; // Angle in degrees
 }
 
+// ✅ ENTERPRISE: AutoCAD Leader Entity (annotation with arrow)
+export interface LeaderEntity extends BaseEntity {
+  type: 'leader';
+  vertices: Point2D[];           // Leader path vertices (arrow tip to text)
+  arrowHead?: {
+    type: 'closed' | 'open' | 'dot' | 'none';
+    size: number;
+  };
+  annotationText?: string;       // Associated annotation text
+  annotationPosition?: Point2D;  // Text position (optional, derived from vertices)
+  hookLineLength?: number;       // Length of horizontal hook at text
+  hasHookLine?: boolean;         // Whether to draw hook line
+}
+
+// ✅ ENTERPRISE: AutoCAD Hatch Entity (fill pattern)
+export interface HatchEntity extends BaseEntity {
+  type: 'hatch';
+  boundaryPaths: Point2D[][];    // Array of closed boundary paths
+  patternName?: string;          // Predefined pattern name (SOLID, ANSI31, etc.)
+  patternType?: 'solid' | 'gradient' | 'pattern';
+  patternScale?: number;         // Pattern scale factor
+  patternAngle?: number;         // Pattern rotation angle in degrees
+  seedPoints?: Point2D[];        // Interior points for island detection
+  fillColor?: string;            // Fill color for solid hatches
+  backgroundColor?: string;      // Background color for patterns
+  associative?: boolean;         // Whether hatch updates with boundary changes
+}
+
+// ✅ ENTERPRISE: AutoCAD XLine Entity (construction line - infinite in both directions)
+export interface XLineEntity extends BaseEntity {
+  type: 'xline';
+  basePoint: Point2D;            // A point on the line
+  direction: Point2D;            // Direction vector (normalized recommended)
+  secondPoint?: Point2D;         // Alternative definition: second point on line
+}
+
+// ✅ ENTERPRISE: AutoCAD Ray Entity (semi-infinite line - one direction)
+export interface RayEntity extends BaseEntity {
+  type: 'ray';
+  basePoint: Point2D;            // Ray origin point
+  direction: Point2D;            // Direction vector (normalized recommended)
+  secondPoint?: Point2D;         // Alternative definition: point defining direction
+}
+
 // Union type for all entities
 // ✅ ENTERPRISE FIX: Explicit intersection with BaseEntity to ensure name property is available
 export type Entity = (
@@ -235,6 +283,10 @@ export type Entity = (
   | DimensionEntity
   | BlockEntity
   | AngleMeasurementEntity
+  | LeaderEntity             // ✅ ENTERPRISE: AutoCAD leader/annotation entity support
+  | HatchEntity              // ✅ ENTERPRISE: AutoCAD hatch pattern entity support
+  | XLineEntity              // ✅ ENTERPRISE: AutoCAD construction line (infinite) support
+  | RayEntity                // ✅ ENTERPRISE: AutoCAD ray (semi-infinite line) support
 ) & Pick<BaseEntity, 'name'>; // ✅ ENTERPRISE: Ensures name property is always available on Entity type
 
 // Entity collection types
@@ -327,6 +379,19 @@ export const isBlockEntity = (entity: Entity): entity is BlockEntity =>
 export const isAngleMeasurementEntity = (entity: Entity): entity is AngleMeasurementEntity =>
   entity.type === 'angle-measurement';
 
+// ✅ ENTERPRISE: Type guards for AutoCAD special entity types
+export const isLeaderEntity = (entity: Entity): entity is LeaderEntity =>
+  entity.type === 'leader';
+
+export const isHatchEntity = (entity: Entity): entity is HatchEntity =>
+  entity.type === 'hatch';
+
+export const isXLineEntity = (entity: Entity): entity is XLineEntity =>
+  entity.type === 'xline';
+
+export const isRayEntity = (entity: Entity): entity is RayEntity =>
+  entity.type === 'ray';
+
 // ✅ ENTERPRISE MIGRATION: generateEntityId moved to systems/entity-creation/utils.ts
 // Re-export from centralized location for backward compatibility
 export { generateEntityId } from '../systems/entity-creation/utils';
@@ -410,6 +475,60 @@ export const getEntityBounds = (entity: Entity): { minX: number; minY: number; m
           minY: Math.min(...ys),
           maxX: Math.max(...xs),
           maxY: Math.max(...ys)
+        };
+      }
+      return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+    case 'leader':   // ✅ ENTERPRISE: AutoCAD leader bounds from vertices
+      if ('vertices' in entity && entity.vertices && entity.vertices.length > 0) {
+        const leaderXs = entity.vertices.map(v => v.x);
+        const leaderYs = entity.vertices.map(v => v.y);
+        return {
+          minX: Math.min(...leaderXs),
+          minY: Math.min(...leaderYs),
+          maxX: Math.max(...leaderXs),
+          maxY: Math.max(...leaderYs)
+        };
+      }
+      return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+    case 'hatch':    // ✅ ENTERPRISE: AutoCAD hatch bounds from boundary paths
+      if ('boundaryPaths' in entity && entity.boundaryPaths && entity.boundaryPaths.length > 0) {
+        const allPoints = entity.boundaryPaths.flat();
+        if (allPoints.length > 0) {
+          const hatchXs = allPoints.map(p => p.x);
+          const hatchYs = allPoints.map(p => p.y);
+          return {
+            minX: Math.min(...hatchXs),
+            minY: Math.min(...hatchYs),
+            maxX: Math.max(...hatchXs),
+            maxY: Math.max(...hatchYs)
+          };
+        }
+      }
+      return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+    case 'xline':    // ✅ ENTERPRISE: XLine is infinite - return basePoint as bounds center
+      if ('basePoint' in entity && entity.basePoint) {
+        // XLines are infinite, so we return a nominal bounds around the base point
+        // Real rendering should handle infinite extent separately
+        const NOMINAL_EXTENT = 10000; // Nominal extent for bounds calculation
+        return {
+          minX: entity.basePoint.x - NOMINAL_EXTENT,
+          minY: entity.basePoint.y - NOMINAL_EXTENT,
+          maxX: entity.basePoint.x + NOMINAL_EXTENT,
+          maxY: entity.basePoint.y + NOMINAL_EXTENT
+        };
+      }
+      return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+    case 'ray':      // ✅ ENTERPRISE: Ray is semi-infinite - return basePoint to direction extent
+      if ('basePoint' in entity && entity.basePoint) {
+        // Rays are semi-infinite, so we return bounds from origin in direction
+        const NOMINAL_EXTENT = 10000; // Nominal extent for bounds calculation
+        const dirX = entity.direction?.x ?? 1;
+        const dirY = entity.direction?.y ?? 0;
+        return {
+          minX: Math.min(entity.basePoint.x, entity.basePoint.x + dirX * NOMINAL_EXTENT),
+          minY: Math.min(entity.basePoint.y, entity.basePoint.y + dirY * NOMINAL_EXTENT),
+          maxX: Math.max(entity.basePoint.x, entity.basePoint.x + dirX * NOMINAL_EXTENT),
+          maxY: Math.max(entity.basePoint.y, entity.basePoint.y + dirY * NOMINAL_EXTENT)
         };
       }
       return { minX: 0, minY: 0, maxX: 0, maxY: 0 };

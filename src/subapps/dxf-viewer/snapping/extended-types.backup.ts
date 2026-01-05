@@ -1,21 +1,11 @@
 /**
  * Extended Types για Pro Snap Engine
  * Εκτεταμένοι τύποι για το προχωρημένο σύστημα snapping
- *
- * 🏢 ENTERPRISE CENTRALIZATION (2025-01-05):
- * - Entity type: Re-exported from centralized types/entities.ts
- * - Point2D: Re-exported from rendering/types/Types.ts
- * - All snap-specific types defined here (SnapCandidate, ProSnapResult, etc.)
  */
 
-// ✅ ENTERPRISE: Χρήση unified Point2D από rendering/types/Types.ts
+// ✅ ΔΙΟΡΑΘΩΣΗ ΔΙΠΛΟΤΥΠΟΥ: Χρήση unified Point2D από rendering/types/Types.ts
 import type { Point2D } from '../rendering/types/Types';
 export type { Point2D } from '../rendering/types/Types';
-
-// 🏢 ENTERPRISE CENTRALIZATION: Entity από κεντρικοποιημένο σύστημα
-// Αντικαθιστά το παλιό loose interface με strict discriminated union
-import type { Entity } from '../types/entities';
-export type { Entity };
 
 // Direct definition αντί για re-export για να αποφύγουμε circular import
 export enum ExtendedSnapType {
@@ -28,7 +18,7 @@ export enum ExtendedSnapType {
   TANGENT = 'tangent',
   QUADRANT = 'quadrant',
   NEAREST = 'nearest',
-
+  
   // Προχωρημένα modes
   EXTENSION = 'extension',
   NODE = 'node',
@@ -38,6 +28,25 @@ export enum ExtendedSnapType {
   ORTHO = 'ortho',
   GRID = 'grid',
   AUTO = 'auto'
+}
+
+// Point2D imported from shared types
+
+export interface Entity {
+  id: string;
+  type: string;
+  visible?: boolean;
+  selected?: boolean;
+  data?: Record<string, unknown>;
+  points?: Point2D[];
+  center?: Point2D;
+  radius?: number;
+  startAngle?: number;
+  endAngle?: number;
+  // DXF specific properties
+  start?: Point2D;
+  end?: Point2D;
+  layer?: string;
 }
 
 export interface SnapCandidate {

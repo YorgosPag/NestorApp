@@ -36,6 +36,7 @@ import { InsertionSnapEngine } from '../engines/InsertionSnapEngine';
 import { NearSnapEngine } from '../engines/NearSnapEngine';
 import { PerpendicularSnapEngine } from '../engines/PerpendicularSnapEngine';
 import { OrthoSnapEngine } from '../engines/OrthoSnapEngine';
+import { GridSnapEngine } from '../engines/GridSnapEngine';
 
 interface Viewport {
   worldPerPixelAt(p: Point2D): number;
@@ -70,10 +71,17 @@ export class SnapEngineRegistry {
     this.engines.set(ExtendedSnapType.NEAR, new NearSnapEngine());
     this.engines.set(ExtendedSnapType.PERPENDICULAR, new PerpendicularSnapEngine());
     this.engines.set(ExtendedSnapType.ORTHO, new OrthoSnapEngine());
+    this.engines.set(ExtendedSnapType.GRID, new GridSnapEngine());
 
   }
 
   initializeEnginesWithEntities(entities: Entity[], settings: ProSnapSettings): void {
+    // 🏢 ENTERPRISE: Αυτόματη σύνδεση gridStep με GridSnapEngine
+    // Όταν αρχικοποιούνται τα engines, το GridSnapEngine λαμβάνει το gridStep από τα settings
+    if (settings.gridStep !== undefined) {
+      this.updateGridSettings(settings.gridStep);
+    }
+
     // Καλούμε initialize σε όλα τα enabled engines
     this.engines.forEach((engine, snapType) => {
       if (settings.enabledTypes.has(snapType)) {
@@ -98,6 +106,20 @@ export class SnapEngineRegistry {
       engine.initialize(entities);
     } else {
       engine.dispose();
+    }
+  }
+
+  /**
+   * 🔲 Update grid snap settings
+   * Called when grid settings change (e.g., gridStep, majorInterval)
+   */
+  updateGridSettings(gridStep: number, majorInterval?: number): void {
+    const gridEngine = this.engines.get(ExtendedSnapType.GRID);
+    if (gridEngine && gridEngine instanceof GridSnapEngine) {
+      gridEngine.setGridStep(gridStep);
+      if (majorInterval !== undefined) {
+        gridEngine.setMajorInterval(majorInterval);
+      }
     }
   }
 

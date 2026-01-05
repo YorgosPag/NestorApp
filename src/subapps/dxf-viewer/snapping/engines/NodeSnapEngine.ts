@@ -142,8 +142,8 @@ export class NodeSnapEngine extends BaseSnapEngine {
         const corner1 = entity.corner1 as Point2D;
         const corner2 = entity.corner2 as Point2D;
 
-        // Χρήση του centralized rectangle snapping utility
-        processRectangleSnapping({ corner1, corner2 }, (corner, index, type) => {
+        // 🏢 ENTERPRISE: Create LegacyRectangleEntity with required properties
+        processRectangleSnapping({ id: entity.id, type: entity.type, corner1, corner2 }, (corner, index, type) => {
           nodes.push({point: corner, type});
         });
 

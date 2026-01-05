@@ -46,6 +46,7 @@ interface UseSnapManagerOptions {
   scene?: SceneModel | null;
   overlayEntities?: Entity[]; // 🔺 NEW: Include overlay entities for unified snapping
   onSnapPoint?: (point: Point2D | null) => void;
+  gridStep?: number; // 🔲 GRID SNAP: Grid step in world units for grid snapping
 }
 
 export const useSnapManager = (
@@ -54,7 +55,7 @@ export const useSnapManager = (
 ) => {
   const { snapEnabled, enabledModes } = useSnapContext();
   const snapManagerRef = useRef<SnapManager | null>(null);
-  const { scene, overlayEntities, onSnapPoint } = options;
+  const { scene, overlayEntities, onSnapPoint, gridStep } = options;
 
   // Initialize SnapManager
   useEffect(() => {
@@ -78,15 +79,24 @@ export const useSnapManager = (
 
   // Update snap modes when snap settings change
   useEffect(() => {
-    if (snapManagerRef.current && scene?.entities?.length > 0) {
+    // 🏢 ENTERPRISE: Safe null check for entities array
+    const entityCount = scene?.entities?.length ?? 0;
+    if (snapManagerRef.current && entityCount > 0) {
 
       // 1) Enable/disable snapping
       snapManagerRef.current.setEnabled(snapEnabled);
-      
+
       // 2) ΠΕΡΑΣΕ ΑΚΡΙΒΩΣ τα ενεργά modes (χωρίς leftovers)
       snapManagerRef.current.updateSettings({ enabledTypes });
     }
   }, [snapEnabled, enabledTypes, scene?.entities?.length]);
+
+  // 🔲 GRID SNAP: Update gridStep when it changes
+  useEffect(() => {
+    if (snapManagerRef.current && gridStep !== undefined && gridStep > 0) {
+      snapManagerRef.current.updateSettings({ gridStep });
+    }
+  }, [gridStep]);
 
   // Update scene when it changes (including overlay entities)
   useEffect(() => {

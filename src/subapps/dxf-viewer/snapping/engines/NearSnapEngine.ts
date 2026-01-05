@@ -24,6 +24,7 @@ export class NearSnapEngine extends BaseSnapEngine {
   findSnapCandidates(cursorPoint: Point2D, context: SnapEngineContext): SnapEngineResult {
     // Use shared entity-based snap candidate finder to eliminate duplication
     // ✅ ENTERPRISE FIX: Type assertion για compatibility με Entity[] type
+    // Extract only Point2D from the rich point data structure
     return findEntityBasedSnapCandidates(
       context.entities as EntityModel[],
       cursorPoint,
@@ -33,7 +34,10 @@ export class NearSnapEngine extends BaseSnapEngine {
         displayName: 'Near',
         priority: 9  // Lower priority - general purpose fallback
       },
-      (entity, cursorPoint, radius) => this.getNearPoints(entity, cursorPoint, radius)
+      (entity, cursorPoint, radius) => {
+        const richPoints = this.getNearPoints(entity as EntityModel, cursorPoint, radius);
+        return richPoints.map(p => p.point);
+      }
     );
   }
 

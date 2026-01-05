@@ -94,6 +94,16 @@ export class SnapEngineCore implements SnapEngineInterface {
   }
 
   getStats(): SnapEngineStats {
-    return this.orchestrator.getStats();
+    // 🏢 ENTERPRISE: Convert SnapOrchestratorStats to SnapEngineStats interface
+    const orchStats = this.orchestrator.getStats();
+    return {
+      totalSnapAttempts: 0, // Orchestrator doesn't track this directly
+      successfulSnaps: 0,
+      snapsByType: {} as Record<ExtendedSnapType, number>,
+      averageSearchTime: 0,
+      totalEntitiesProcessed: orchStats.totalEntities,
+      lastResetTime: Date.now(),
+      totalEntities: orchStats.totalEntities
+    };
   }
 }

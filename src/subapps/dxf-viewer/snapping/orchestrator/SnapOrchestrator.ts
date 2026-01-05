@@ -59,7 +59,12 @@ export class SnapOrchestrator {
 
   updateSettings(settings: Partial<ProSnapSettings>): void {
     this.contextManager.updateSettings(settings);
-    
+
+    // 🏢 ENTERPRISE: Αυτόματη ενημέρωση GridSnapEngine όταν αλλάζει το gridStep
+    if (settings.gridStep !== undefined) {
+      this.registry.updateGridSettings(settings.gridStep);
+    }
+
     // Re-initialize engines αν άλλαξαν τα enabled types και έχουμε entities
     if (settings.enabledTypes && this.entities.length > 0) {
       this.registry.initializeEnginesWithEntities(this.entities, this.contextManager.getSettings());
@@ -161,12 +166,20 @@ export class SnapOrchestrator {
   getStats(): SnapOrchestratorStats {
     const settings = this.contextManager.getSettings();
     const registryStats = this.registry.getEngineStats(settings.enabledTypes);
-    
+
     return {
       ...registryStats,
       totalEntities: this.entities.length,
       candidateIndex: this.processor.getCandidateIndex()
     };
+  }
+
+  /**
+   * 🔲 Update grid snap settings
+   * Called when grid settings change (e.g., gridStep, majorInterval)
+   */
+  updateGridSettings(gridStep: number, majorInterval?: number): void {
+    this.registry.updateGridSettings(gridStep, majorInterval);
   }
 
   dispose(): void {

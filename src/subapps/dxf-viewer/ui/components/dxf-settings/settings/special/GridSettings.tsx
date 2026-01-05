@@ -142,16 +142,31 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
     handleGridStyleChange(tabId as 'lines' | 'dots' | 'crosses');
   };
 
+  // 🏢 ENTERPRISE: Dynamic labels based on selected grid style
+  const getGridLinesLabels = (style: 'lines' | 'dots' | 'crosses') => {
+    switch (style) {
+      case 'dots':
+        return { major: 'Κύριες Τελείες', minor: 'Δευτερεύουσες Τελείες' };
+      case 'crosses':
+        return { major: 'Κύριοι Σταυροί', minor: 'Δευτερεύοντες Σταυροί' };
+      case 'lines':
+      default:
+        return { major: 'Κύριες Γραμμές', minor: 'Δευτερεύουσες Γραμμές' };
+    }
+  };
+
+  const gridLinesLabels = getGridLinesLabels(gridSettings.visual.style);
+
   const gridLinesTabs: TabDefinition[] = [
     {
       id: 'major',
-      label: 'Κύριες Γραμμές',
+      label: gridLinesLabels.major,
       icon: Equal, // 🏢 ENTERPRISE: Lucide icon replacing 📏 emoji
       content: null, // Content rendered separately below
     },
     {
       id: 'minor',
-      label: 'Δευτερεύουσες Γραμμές',
+      label: gridLinesLabels.minor,
       icon: Grid3X3, // 🏢 ENTERPRISE: Lucide icon replacing 📐 emoji
       content: null, // Content rendered separately below
     },
@@ -236,13 +251,13 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
           <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
             {/* Major Grid Color */}
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Κύριων Γραμμών</label>
-              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα των κύριων γραμμών πλέγματος</div>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα {gridLinesLabels.major}</label>
+              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα των {gridLinesLabels.major.toLowerCase()} πλέγματος</div>
               <ColorDialogTrigger
                 value={gridSettings.visual.majorGridColor}
                 onChange={handleMajorGridColorChange}
                 label={gridSettings.visual.majorGridColor}
-                title="Επιλογή Χρώματος Κύριων Γραμμών"
+                title={`Επιλογή Χρώματος ${gridLinesLabels.major}`}
                 alpha={false}
                 modes={['hex', 'rgb', 'hsl']}
                 palettes={['dxf', 'semantic', 'material']}
@@ -254,8 +269,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             {/* Major Grid Line Weight */}
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
               <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-                <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Πάχος Κύριων Γραμμών</div>
-                <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Πάχος των κύριων γραμμών πλέγματος</div>
+                <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Πάχος {gridLinesLabels.major}</div>
+                <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Πάχος των {gridLinesLabels.major.toLowerCase()} πλέγματος</div>
               </div>
               <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <input
@@ -278,13 +293,13 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
           <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
             {/* Minor Grid Color */}
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Δευτερευουσών Γραμμών</label>
-              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα των δευτερευουσών γραμμών πλέγματος</div>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα {gridLinesLabels.minor}</label>
+              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα των {gridLinesLabels.minor.toLowerCase()} πλέγματος</div>
               <ColorDialogTrigger
                 value={gridSettings.visual.minorGridColor}
                 onChange={handleMinorGridColorChange}
                 label={gridSettings.visual.minorGridColor}
-                title="Επιλογή Χρώματος Δευτερευουσών Γραμμών"
+                title={`Επιλογή Χρώματος ${gridLinesLabels.minor}`}
                 alpha={false}
                 modes={['hex', 'rgb', 'hsl']}
                 palettes={['dxf', 'semantic', 'material']}
@@ -296,8 +311,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             {/* Minor Grid Line Weight */}
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
               <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-                <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Πάχος Δευτερευουσών Γραμμών</div>
-                <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Πάχος των δευτερευουσών γραμμών πλέγματος</div>
+                <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Πάχος {gridLinesLabels.minor}</div>
+                <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Πάχος των {gridLinesLabels.minor.toLowerCase()} πλέγματος</div>
               </div>
               <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <input

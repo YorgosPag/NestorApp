@@ -1,11 +1,14 @@
 /**
  * Snap Engine Exports
  * Κεντρικό σημείο εισαγωγής για το snap system
+ *
+ * 🏢 ENTERPRISE CENTRALIZATION (2025-01-05):
+ * - ProSnapSettings is exported from extended-types.ts (no duplicate import needed)
  */
 
 // Main engines
-export { ProSnapEngineV2 } from './ProSnapEngineV2'; // Unified snap engine
-import type { ProSnapSettings } from './ProSnapEngineV2';
+import { ProSnapEngineV2 } from './ProSnapEngineV2'; // Unified snap engine
+export { ProSnapEngineV2 };
 export { snapSystem } from './pro-snap-engine'; // Global instance for legacy compatibility
 
 // Orchestrator and engines
@@ -20,11 +23,14 @@ export { GeometricCalculations } from './shared/GeometricCalculations';
 // SpatialIndex migrated to core/spatial - use SpatialFactory instead
 export { BaseSnapEngine, type SnapEngineContext, type SnapEngineResult } from './shared/BaseSnapEngine';
 
-// Types and settings
+// Types and settings (ProSnapSettings exported here)
 export * from './extended-types';
 
 // Convenience exports
-export { default as useSnapManager } from './hooks/useSnapManager';
+export { useSnapManager } from './hooks/useSnapManager';
+
+// 🏢 ENTERPRISE: Import ProSnapSettings from extended-types for the factory function
+import type { ProSnapSettings } from './extended-types';
 
 /**
  * Migration helper - Use ProSnapEngineV2 for new projects

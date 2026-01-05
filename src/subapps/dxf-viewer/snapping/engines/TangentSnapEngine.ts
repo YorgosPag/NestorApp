@@ -21,6 +21,7 @@ export class TangentSnapEngine extends BaseSnapEngine {
 
   findSnapCandidates(cursorPoint: Point2D, context: SnapEngineContext): SnapEngineResult {
     // Use shared circle-based snap candidate finder to eliminate duplication
+    // 🏢 ENTERPRISE FIX: Use closure to capture cursorPoint since callback receives entity
     return findCircleBasedSnapCandidates(
       context.entities,
       cursorPoint,
@@ -30,7 +31,7 @@ export class TangentSnapEngine extends BaseSnapEngine {
         displayName: 'Tangent',
         priority: 3  // High priority for precision
       },
-      (center, radius, cursorPoint) => this.getTangentPoints(center, radius, cursorPoint)
+      (center, radius, _entity) => this.getTangentPoints(center, radius, cursorPoint)
     );
   }
 
