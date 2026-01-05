@@ -42,7 +42,7 @@ export default function SelectionMarqueeOverlay({
     : canvasUI.overlay.colors.selection.crossing;
 
   return (
-    <div className={`absolute inset-0 ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${className}`}>
+    <div className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${className}`}>
       <div
         className="absolute border border-dashed ${PANEL_LAYOUT.POINTER_EVENTS.NONE}"
         style={{

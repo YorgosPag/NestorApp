@@ -160,7 +160,7 @@ const LoadingSpinner = memo(({ className }: { className?: string }) => (
     aria-hidden="true"
   >
     <circle
-      className="opacity-25"
+      className={PANEL_LAYOUT.OPACITY['25']}
       cx="12"
       cy="12"
       r="10"
@@ -168,7 +168,7 @@ const LoadingSpinner = memo(({ className }: { className?: string }) => (
       strokeWidth="4"
     />
     <path
-      className="opacity-75"
+      className={PANEL_LAYOUT.OPACITY['75']}
       fill="currentColor"
       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
     />
@@ -440,7 +440,7 @@ export const AccordionSection = memo(function AccordionSection({
     }
     return (
       <div
-        className={`flex-shrink-0 ${colors.text.muted} transition-transform duration-200 ${
+        className={`flex-shrink-0 ${colors.text.muted} ${PANEL_LAYOUT.TRANSITION.TRANSFORM} ${PANEL_LAYOUT.DURATION['200']} ${
           isOpen && !reducedMotion ? 'rotate-180' : ''
         }`}
         style={shouldAnimate ? undefined : { transition: 'none' }}
@@ -491,7 +491,7 @@ export const AccordionSection = memo(function AccordionSection({
           className={`w-full ${styles.size.header} flex items-center justify-between ${
             styles.variant.header
           } ${PANEL_LAYOUT.TRANSITION.COLORS} text-left focus:outline-none ${colors.interactive.focus.ring} focus:ring-offset-2 ring-offset-background ${
-            disabled ? 'opacity-50 cursor-not-allowed' : PANEL_LAYOUT.CURSOR.POINTER
+            disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : PANEL_LAYOUT.CURSOR.POINTER
           } ${headerClassName}`}
           style={shouldAnimate ? undefined : { transition: 'none' }}
         >

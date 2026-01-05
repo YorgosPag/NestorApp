@@ -16,7 +16,7 @@ interface CircleIconProps {
 
 export const CircleIcon: React.FC<CircleIconProps> = ({ 
   variant, 
-  className = "w-5 h-5" 
+  className = PANEL_LAYOUT.ICON.LARGE 
 }) => {
   const renderCenterDot = () => (
     <circle cx="12" cy="12" r="1" fill="currentColor" />

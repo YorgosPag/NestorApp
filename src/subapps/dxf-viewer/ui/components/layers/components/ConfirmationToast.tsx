@@ -80,7 +80,7 @@ export function ConfirmationToast({
         </button>
         <button
           onClick={onConfirm}
-          className={`${PANEL_LAYOUT.BUTTON.PADDING} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} rounded-md transition-colors focus:outline-none ${colors.interactive.focus.ring} ${
+          className={`${PANEL_LAYOUT.BUTTON.PADDING} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} rounded-md ${PANEL_LAYOUT.TRANSITION.COLORS} focus:outline-none ${colors.interactive.focus.ring} ${
             destructive
               ? `${colors.bg.error} ${HOVER_BACKGROUND_EFFECTS.RED_DARKER} ${colors.text.primary}`
               : `${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.BLUE_DARKER} ${colors.text.primary}`

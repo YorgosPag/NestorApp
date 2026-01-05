@@ -13,6 +13,8 @@ import type { AnyMeasurement } from '../types/measurements';
 import type { ViewTransform } from '../systems/rulers-grid/config';
 import type { Entity } from '../types/entities';
 import type { GripSettings } from '../types/gripSettings';
+// 🏢 ENTERPRISE: Centralized spacing tokens (ADR-013)
+import { PANEL_LAYOUT } from '../config/panel-tokens';
 
 interface DxfCanvasProps {
   scene?: SceneModel | null;
@@ -213,7 +215,7 @@ export const DxfCanvas = forwardRef<DxfCanvasRef, DxfCanvasProps>((props, ref) =
 
   return (
     <div
-      className={`relative h-full overflow-hidden bg-transparent ${className}`}
+      className={`relative h-full ${PANEL_LAYOUT.OVERFLOW.HIDDEN} bg-transparent ${className}`}
     >
       <DxfCanvasCore
         ref={coreCanvasRef}
@@ -233,7 +235,7 @@ export const DxfCanvas = forwardRef<DxfCanvasRef, DxfCanvasProps>((props, ref) =
         onDrawingCancel={onDrawingCancel}
         onDrawingDoubleClick={onDrawingDoubleClick}
         gripSettings={gripSettings}
-        className="absolute inset-0"
+        className={`absolute ${PANEL_LAYOUT.INSET['0']}`}
       />
       <CanvasOverlays
         mouseCss={mouseCss}

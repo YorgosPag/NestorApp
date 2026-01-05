@@ -22,6 +22,8 @@ import { DebugToolbar } from '../debug/DebugToolbar';
 import type { UnifiedTestReport } from '../debug/unified-test-runner';
 import type { DxfViewerState } from '../integration/types';
 import { getMainContentSectionStyles } from '../ui/DxfViewerComponents.styles';
+// 🏢 ENTERPRISE: Centralized spacing tokens (ADR-013)
+import { PANEL_LAYOUT } from '../config/panel-tokens';
 
 // ✅ ENTERPRISE: Comprehensive type-safe props interface
 interface MainContentSectionProps {
@@ -142,7 +144,7 @@ export const MainContentSection = React.memo<MainContentSectionProps>(({
       )} */}
 
       {/* CANVAS AREA - Main DXF Viewer Layout */}
-      <div className="canvas-area relative flex-1 overflow-hidden">
+      <div className={`canvas-area relative flex-1 ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`}>
         <DXFViewerLayout
           {...state}
           handleAction={state.handleAction}

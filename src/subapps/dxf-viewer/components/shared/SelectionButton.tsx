@@ -29,7 +29,7 @@ export function SelectionButton({
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.ROUNDED.LG} ${quick.muted} transition-colors ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${HOVER_BACKGROUND_EFFECTS.MUTED}`}
+      className={`w-full text-left ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.ROUNDED.LG} ${quick.muted} ${PANEL_LAYOUT.TRANSITION.COLORS} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${HOVER_BACKGROUND_EFFECTS.MUTED}`}
     >
       <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
         <span className={PANEL_LAYOUT.TYPOGRAPHY['2XL']}>{icon}</span>

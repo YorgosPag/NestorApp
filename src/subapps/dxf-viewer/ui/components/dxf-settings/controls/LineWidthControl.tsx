@@ -77,9 +77,9 @@ export const LineWidthControl: React.FC<LineWidthControlProps> = ({
       />
 
       {/* 🏢 ENTERPRISE: Visual preview bar - Using semantic colors */}
-      <div className={`h-2 ${colors.bg.secondary} rounded ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`}>
+      <div className={`${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`}>
         <div
-          className={`h-full ${colors.bg.info} transition-all duration-150 ${disabled ? 'opacity-50' : 'opacity-100'}`}
+          className={`h-full ${colors.bg.info} ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['150']} ${disabled ? PANEL_LAYOUT.OPACITY['50'] : PANEL_LAYOUT.OPACITY['100']}`}
           style={{
             width: `${((localValue - min) / (max - min)) * 100}%`
           }}

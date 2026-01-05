@@ -103,9 +103,9 @@ export const BaseButton = forwardRef<HTMLButtonElement, BaseButtonProps>(
     const sizeClass = sizeStyles[size];
     const iconSizeClass = getIconSizeStyles(iconSizes)[size];
     
-    const disabledClass = disabled ? `opacity-50 ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : '';
+    const disabledClass = disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : '';
     const widthClass = fullWidth ? 'w-full' : '';
-    const loadingClass = isLoading ? `opacity-75 ${PANEL_LAYOUT.CURSOR.WAIT}` : '';
+    const loadingClass = isLoading ? `${PANEL_LAYOUT.OPACITY['75']} ${PANEL_LAYOUT.CURSOR.WAIT}` : '';
     
     const finalTitle = title || (hotkey ? `${children} (${hotkey})` : undefined);
     

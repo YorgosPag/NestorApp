@@ -283,7 +283,7 @@ export function CustomTestsExample() {
 
       <button
         onClick={() => setIsTestsOpen(true)}
-        className={`px-4 py-2 ${colors.bg.purpleButton} ${colors.text.WHITE} rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.PURPLE_BUTTON} flex items-center gap-2`}
+        className={`px-4 py-2 ${colors.bg.purpleButton} ${colors.text.WHITE} rounded-lg ${PANEL_LAYOUT.TRANSITION.COLORS} ${HOVER_BACKGROUND_EFFECTS.PURPLE_BUTTON} flex items-center gap-2`}
       >
         <FlaskConical className="w-4 h-4" /> Run Tests
       </button>

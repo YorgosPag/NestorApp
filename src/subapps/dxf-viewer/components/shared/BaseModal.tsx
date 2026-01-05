@@ -129,7 +129,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 ${colors.bg.modalBackdrop} transition-opacity ${overlayClassName}`}
+        className={`fixed ${PANEL_LAYOUT.INSET['0']} ${colors.bg.modalBackdrop} ${PANEL_LAYOUT.TRANSITION.OPACITY} ${overlayClassName}`}
         style={{ zIndex: portalComponents.modal.backdrop.zIndex(zIndex) }}
         onClick={handleBackdropClick}
         aria-hidden="true"

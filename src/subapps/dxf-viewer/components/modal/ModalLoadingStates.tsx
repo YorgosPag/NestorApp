@@ -16,6 +16,8 @@ import { useTypography } from '@/hooks/useTypography';
 import { getModalIconColor } from '../../config/modal-colors';
 import { MODAL_FLEX_PATTERNS, MODAL_DIMENSIONS, getLoadingSpinner } from '../../config/modal-layout';
 import { ProjectModalContainer, ErrorModalContainer, SuccessModalContainer } from './ModalContainer';
+// 🏢 ENTERPRISE: Centralized z-index tokens (ADR-013)
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 // ====================================================================
 // LOADING SPINNER COMPONENTS - 100% CENTRALIZED
@@ -210,7 +212,7 @@ export const ModalEmptyState: React.FC<EmptyStateProps> = ({
         )}
         <p className={typography.body.sm}>{message}</p>
         {description && (
-          <p className={`${typography.body.xs} opacity-75`}>
+          <p className={`${typography.body.xs} ${PANEL_LAYOUT.OPACITY['75']}`}>
             {description}
           </p>
         )}
@@ -243,7 +245,7 @@ export const ModalLoadingOverlay: React.FC<LoadingOverlayProps> = ({
   if (!isVisible) return null;
 
   return (
-    <div className={`absolute inset-0 flex items-center justify-center ${colors.bg.modalBackdrop} rounded-lg z-50 ${className}`}>
+    <div className={`absolute inset-0 flex items-center justify-center ${colors.bg.modalBackdrop} rounded-lg ${PANEL_LAYOUT.Z_INDEX['50']} ${className}`}>
       <div className={MODAL_FLEX_PATTERNS.COLUMN.centerWithGap}>
         <AnimatedSpinner size="large" />
         <span className={`${typography.label.sm} ${colors.text.inverted}`}>

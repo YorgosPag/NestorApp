@@ -85,7 +85,7 @@ export function CurrentSettingsDisplay({
   return (
     <div className={`${PANEL_LAYOUT.SPACING.GAP_MD} ${className}`}>
       {/* 🏢 ENTERPRISE: Centralized Radix Checkbox */}
-      <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.SM} ${radius.lg} transition-colors ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK}`}>
+      <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.SM} ${radius.lg} ${PANEL_LAYOUT.TRANSITION.COLORS} ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK}`}>
         <Checkbox
           id="show-settings-details"
           checked={showSettingsDetails}

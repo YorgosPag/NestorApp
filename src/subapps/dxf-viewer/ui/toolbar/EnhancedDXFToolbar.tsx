@@ -230,14 +230,14 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
       <div className={`flex flex-wrap ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.SPACING.SM}`}>
         <div className={`flex ${PANEL_LAYOUT.GAP.XS} flex-1`}>
           <UploadDxfButton
-            className={`${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${radius.md} border transition-colors duration-150 flex items-center justify-center ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${colors.text.secondary} ${getStatusBorder('default')}`}  // ✅ ENTERPRISE: p-0 → PANEL_LAYOUT.SPACING.NONE
+            className={`${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${radius.md} border ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']} flex items-center justify-center ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${colors.text.secondary} ${getStatusBorder('default')}`}  // ✅ ENTERPRISE: Centralized transition
             title="Upload DXF File (Legacy)"
             onFileSelect={onSceneImported}
           />
 
           <button
             onClick={() => setShowSimpleDialog(true)}
-            className={`${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${radius.md} border transition-colors duration-150 flex items-center justify-center ${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.PRIMARY} ${colors.text.inverse} ${getStatusBorder('info')}`}  // ✅ ENTERPRISE: p-0 → PANEL_LAYOUT.SPACING.NONE
+            className={`${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${radius.md} border ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']} flex items-center justify-center ${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.PRIMARY} ${colors.text.inverse} ${getStatusBorder('info')}`}  // ✅ ENTERPRISE: Centralized transition
             title="Enhanced DXF Import with Project Management"
           >
             🔺

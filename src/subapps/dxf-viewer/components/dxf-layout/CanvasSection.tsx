@@ -776,7 +776,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         {/* DEBUG BUTTONS MOVED TO HEADER */}
 
         <div
-          className="canvas-stack relative w-full h-full overflow-hidden"
+          className={`canvas-stack relative w-full h-full ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`}
           style={{ cursor: 'none' }} // ✅ ADR-008 CAD-GRADE: ALWAYS hide CSS cursor - crosshair is the only cursor
         >
           {/* 🔺 CANVAS V2: Layer Canvas - Background Overlays (Semi-transparent colored layers) */}
@@ -818,7 +818,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                   props.onMouseMove(point, mockEvent);
                 }
               }}
-              className="absolute inset-0 w-full h-full z-0" // 🎯 Z-INDEX FIX: LayerCanvas BACKGROUND (z-0)
+              className={`absolute inset-0 w-full h-full ${PANEL_LAYOUT.Z_INDEX['0']}`} // 🎯 Z-INDEX FIX: LayerCanvas BACKGROUND (z-0)
               style={canvasUI.positioning.layers.layerCanvasWithTools(activeTool, crosshairSettings.enabled)}
             />
           )}
@@ -863,7 +863,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                 borderWidth: 1
               }}
               data-canvas-type="dxf" // 🎯 DEBUG: Identifier για alignment test
-              className="absolute inset-0 w-full h-full z-10" // 🎯 Z-INDEX FIX: DxfCanvas FOREGROUND (z-10) - ΠΑΝΩ από LayerCanvas!
+              className={`absolute inset-0 w-full h-full ${PANEL_LAYOUT.Z_INDEX['10']}`} // 🎯 Z-INDEX FIX: DxfCanvas FOREGROUND (z-10) - ΠΑΝΩ από LayerCanvas!
               onCanvasClick={handleCanvasClick} // 🎯 FIX: Connect canvas clicks για drawing tools!
               onTransformChange={(newTransform) => {
                 setTransform(newTransform); // ✅ SYNC: Κοινό transform state για DxfCanvas
@@ -908,7 +908,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               top: 0,
               bottom: 0
             }}
-            className={`absolute left-0 right-0 top-0 z-20 ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
+            className={`absolute ${PANEL_LAYOUT.POSITION.LEFT_0} ${PANEL_LAYOUT.POSITION.RIGHT_0} ${PANEL_LAYOUT.POSITION.TOP_0} ${PANEL_LAYOUT.Z_INDEX['20']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
             style={{ height: `calc(100% - ${rulerSettings.height ?? 30}px)` }}
           />
 
@@ -949,7 +949,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               }
             }}
             viewport={viewport}
-            className="z-30"
+            className={PANEL_LAYOUT.Z_INDEX['30']}
           />
         </div>
       </div>

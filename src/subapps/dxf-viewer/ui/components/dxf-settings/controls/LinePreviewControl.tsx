@@ -69,7 +69,7 @@ const LinePreviewControlComponent: React.FC<LinePreviewControlProps> = ({
               strokeDasharray={dashArray}
               strokeLinecap={settings.lineCap || 'butt'}
               strokeLinejoin={settings.lineJoin || 'miter'}
-              className="transition-all duration-150"
+              className={`${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['150']}`}
             />
 
             {/* Start point marker */}

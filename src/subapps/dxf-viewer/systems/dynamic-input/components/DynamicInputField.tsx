@@ -96,7 +96,7 @@ export function DynamicInputField({
         placeholder={placeholder}
         className={`flex-1 ${colors.text.WHITE} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.SM} rounded border ${quick.focus} focus:outline-none
           ${isAnchored ? `${colors.bg.warning} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.warning}` : `${colors.bg.hover} ${quick.none}`}
-          ${disabled ? `${colors.bg.accent} opacity-50 cursor-not-allowed ${quick.muted}` : ''}
+          ${disabled ? `${colors.bg.accent} ${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED} ${quick.muted}` : ''}
           ${isActive ? quick.focus : ''}`}
       />
     </div>

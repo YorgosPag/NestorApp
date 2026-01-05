@@ -53,7 +53,7 @@ const LazyLoadErrorFallback = (error: Error, _errorInfo: React.ErrorInfo, retry:
       </p>
       <button
         onClick={retry}
-        className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.TYPOGRAPHY.XS} text-destructive underline hover:text-destructive/80 transition-colors`}
+        className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.TYPOGRAPHY.XS} text-destructive underline hover:text-destructive/80 ${PANEL_LAYOUT.TRANSITION.COLORS}`}
       >
         Retry
       </button>

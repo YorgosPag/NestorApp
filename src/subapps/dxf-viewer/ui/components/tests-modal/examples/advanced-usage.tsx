@@ -149,7 +149,7 @@ export function AdvancedUsageExample() {
           {/* Run Tests Button */}
           <button
             onClick={() => setIsTestsOpen(true)}
-            className={`p-4 ${colors.gradients.testButtonPrimary} rounded-lg ${GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON} transition-all`}
+            className={`p-4 ${colors.gradients.testButtonPrimary} rounded-lg ${GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON} ${PANEL_LAYOUT.TRANSITION.ALL}`}
           >
             <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XL} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>🧪 Run Tests</div>
             <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.purpleLight}`}>Open testing interface</div>
@@ -158,7 +158,7 @@ export function AdvancedUsageExample() {
           {/* Test History Stats */}
           <button
             onClick={() => setIsTestsOpen(true)}
-            className={`p-4 ${colors.bg.secondary} rounded-lg ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} transition-all`}
+            className={`p-4 ${colors.bg.secondary} rounded-lg ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${PANEL_LAYOUT.TRANSITION.ALL}`}
           >
             <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XL} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>
               📊 {testHistory.length} Tests Run
@@ -173,7 +173,7 @@ export function AdvancedUsageExample() {
           <button
             onClick={clearHistory}
             disabled={testHistory.length === 0}
-            className={`p-4 ${colors.bg.secondary} rounded-lg ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+            className={`p-4 ${colors.bg.secondary} rounded-lg ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${PANEL_LAYOUT.TRANSITION.ALL} disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}`}
           >
             <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XL} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>🗑️ Clear History</div>
             <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted}`}>Reset test results</div>
@@ -193,7 +193,7 @@ export function AdvancedUsageExample() {
               </button>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className={PANEL_LAYOUT.OVERFLOW.X_AUTO}>
               <table className="w-full">
                 <thead className={`${getDirectionalBorder('muted', 'bottom')}`}>
                   <tr className="text-left">

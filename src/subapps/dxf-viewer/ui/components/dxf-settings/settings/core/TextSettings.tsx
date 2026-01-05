@@ -406,7 +406,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           onToggle={() => toggleSection('basic')}
           disabled={!textSettings.enabled}
           badge={4}
-          className="overflow-visible"
+          className={PANEL_LAYOUT.OVERFLOW.VISIBLE}
         >
           <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
             {/* 🏢 ADR-001: Radix Select - Font Family */}

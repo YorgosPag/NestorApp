@@ -26,7 +26,7 @@ export function LayerHeader({ isConnected, onAddLayer, onSettings }: LayerHeader
       <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
         <button
           onClick={onAddLayer}
-          className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} transition-colors`}
+          className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
           title="Προσθήκη νέου layer"
         >
           <Plus className={iconSizes.xs} />
@@ -35,7 +35,7 @@ export function LayerHeader({ isConnected, onAddLayer, onSettings }: LayerHeader
         <div className="relative">
           <button
             onClick={onSettings}
-            className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} transition-colors`}
+            className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
             title="Ρυθμίσεις"
           >
             <Settings className={iconSizes.xs} />

@@ -110,7 +110,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
                       key={color}
                       onClick={() => handlePresetClick(color)}
                       className={`
-                        ${iconSizes.xl2} rounded border transition-all
+                        ${iconSizes.xl2} rounded border ${PANEL_LAYOUT.TRANSITION.ALL}
                         ${tempColor === color
                           ? `${getStatusBorder('info').replace('border ', '')} scale-110`
                           : `${getStatusBorder('muted').replace('border ', '')} ${hoverBorderEffects.GRAY}`
@@ -131,7 +131,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
                     type="color"
                     value={tempColor}
                     onChange={(e) => handleColorChange(e.target.value)}
-                    className={`${PANEL_LAYOUT.WIDTH.MD} h-9 ${PANEL_LAYOUT.SPACING.XS} ${colors.bg.secondary} ${getStatusBorder('muted').replace('border ', '')}`}
+                    className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.HEIGHT.XXL} ${PANEL_LAYOUT.SPACING.XS} ${colors.bg.secondary} ${getStatusBorder('muted').replace('border ', '')}`}
                   />
                   <Input
                     type="text"
@@ -152,7 +152,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
               </div>
 
               {/* Live preview */}
-              <div className={`h-2 rounded ${tempColorBgClass}`} />
+              <div className={`${PANEL_LAYOUT.HEIGHT.SM} rounded ${tempColorBgClass}`} />
             </div>
           </PopoverContent>
         </Popover>

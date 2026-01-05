@@ -33,7 +33,7 @@ export default function ZoomWindowOverlay({
   const height = Math.abs(currentPoint.y - startPoint.y);
 
   return (
-    <div className={`absolute inset-0 ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${className}`}>
+    <div className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${className}`}>
       <div
         className="absolute border-2 border-solid ${PANEL_LAYOUT.POINTER_EVENTS.NONE}"
         style={{

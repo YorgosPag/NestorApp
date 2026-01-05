@@ -129,7 +129,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
       </div>
 
       {showDropdown && (
-        <nav className={`absolute top-full left-0 ${PANEL_LAYOUT.MARGIN.TOP_XS} ${colors.bg.secondary} rounded-md shadow-lg z-50 min-w-[150px] ${getStatusBorder('default')}`}>
+        <nav className={`absolute ${PANEL_LAYOUT.POSITION.TOP_FULL} ${PANEL_LAYOUT.POSITION.LEFT_0} ${PANEL_LAYOUT.MARGIN.TOP_XS} ${colors.bg.secondary} rounded-md shadow-lg ${PANEL_LAYOUT.Z_INDEX['50']} min-w-[150px] ${getStatusBorder('default')}`}>
           {tool.dropdownOptions!.map((option) => {
             const OptionIcon = option.icon;
             return (

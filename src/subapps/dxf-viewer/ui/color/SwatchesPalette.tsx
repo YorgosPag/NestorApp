@@ -188,7 +188,7 @@ function ColorSwatchButton({
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       className={`
-        rounded border transition-all
+        rounded border ${PANEL_LAYOUT.TRANSITION.ALL}
         ${COMPLEX_HOVER_EFFECTS.SCALE_AND_SHADOW}
         focus:outline-none ${colors.interactive.focus.ring} focus:ring-offset-2 ring-offset-background
         ${isSelected ? `${getStatusBorder('info')} ring-2 ${colors.ring.info}` : getStatusBorder('muted')}

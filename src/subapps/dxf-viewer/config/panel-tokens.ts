@@ -553,8 +553,20 @@ export const PANEL_LAYOUT = {
     '25': 'opacity-25',                  // 25% - Very transparent
     '50': 'opacity-50',                  // 50% - Semi-transparent (disabled)
     '60': 'opacity-60',                  // 60% - Debug overlays
+    '70': 'opacity-70',                  // 70% - Preview text opacity
     '75': 'opacity-75',                  // 75% - Slightly transparent
+    '80': 'opacity-80',                  // 80% - Badge count opacity
     '100': 'opacity-100',                // 100% - Fully opaque
+  },
+
+  // ============================================================================
+  // 🎨 BG_OPACITY - Background opacity tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  BG_OPACITY: {
+    '20': 'bg-opacity-20',               // 20% - Very subtle background
+    '30': 'bg-opacity-30',               // 30% - Subtle warning/info backgrounds
+    '50': 'bg-opacity-50',               // 50% - Debug overlay backgrounds
+    '75': 'bg-opacity-75',               // 75% - Moderately transparent
   },
 
   // ============================================================================
@@ -610,18 +622,29 @@ export const PANEL_LAYOUT = {
   // 📍 POSITION - Position offset tokens (ENTERPRISE 2026-01-05)
   // ============================================================================
   POSITION: {
+    // Top positions
     TOP_0: 'top-0',                      // top: 0
     TOP_1: 'top-1',                      // top: 4px
     TOP_2: 'top-2',                      // top: 8px
+    TOP_2_5: 'top-2.5',                  // top: 10px (icon centering)
     TOP_4: 'top-4',                      // top: 16px
     TOP_20: 'top-20',                    // top: 80px (info panels)
+    TOP_FULL: 'top-full',                // top: 100% (dropdowns)
+    TOP_HALF: 'top-1/2',                 // top: 50% (centering)
+    NEGATIVE_TOP_6: '-top-6',            // top: -24px (labels above)
+    // Left positions
     LEFT_0: 'left-0',                    // left: 0
+    LEFT_2: 'left-2',                    // left: 8px
     LEFT_4: 'left-4',                    // left: 16px
+    LEFT_HALF: 'left-1/2',               // left: 50% (centering)
+    // Right positions
     RIGHT_0: 'right-0',                  // right: 0
     RIGHT_2: 'right-2',                  // right: 8px
     RIGHT_4: 'right-4',                  // right: 16px
+    // Bottom positions
     BOTTOM_0: 'bottom-0',                // bottom: 0
     BOTTOM_4: 'bottom-4',                // bottom: 16px
+    // Special
     INSET_0: 'inset-0',                  // all: 0 (full coverage)
   },
 

@@ -118,13 +118,13 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
             type="color"
             value={rulerSettings.horizontal.textColor}
             onChange={(e) => handleRulerTextColorChange(e.target.value)}
-            className={`${iconSizes.xl} ${radius.md} border-0 ${PANEL_LAYOUT.CURSOR.POINTER} ${PANEL_LAYOUT.WIDTH.SM} h-6`}
+            className={`${iconSizes.xl} ${radius.md} border-0 ${PANEL_LAYOUT.CURSOR.POINTER} ${PANEL_LAYOUT.WIDTH.SM} ${PANEL_LAYOUT.HEIGHT.LG}`}
           />
           <input
             type="text"
             value={rulerSettings.horizontal.textColor}
             onChange={(e) => handleRulerTextColorChange(e.target.value)}
-            className={`${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${getStatusBorder('default')} w-20`}
+            className={`${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${getStatusBorder('default')} ${PANEL_LAYOUT.WIDTH.INPUT_SM}`}
             placeholder={UI_COLORS.WHITE}
           />
         </div>

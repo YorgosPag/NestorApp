@@ -28,7 +28,7 @@ export function WizardProgress({
           <React.Fragment key={stepNum}>
             <div className="flex flex-col items-center">
               <div
-                className={`${PANEL_LAYOUT.WIDTH.SM} ${PANEL_LAYOUT.HEIGHT.XL} rounded-full flex items-center justify-center ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} transition-colors ${
+                className={`${PANEL_LAYOUT.WIDTH.SM} ${PANEL_LAYOUT.HEIGHT.XL} rounded-full flex items-center justify-center ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                   stepNum <= currentStep
                     ? `${colors.bg.info} ${colors.text.inverted}`
                     : `${colors.bg.muted} ${colors.text.muted}`
@@ -44,7 +44,7 @@ export function WizardProgress({
             </div>
             {stepNum < totalSteps && (
               <div
-                className={`flex-1 ${PANEL_LAYOUT.HEIGHT.XS} ${PANEL_LAYOUT.MARGIN.X_MD} transition-colors ${
+                className={`flex-1 ${PANEL_LAYOUT.HEIGHT.XS} ${PANEL_LAYOUT.MARGIN.X_MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                   stepNum < currentStep ? `${colors.bg.info}` : `${colors.bg.muted}`
                 }`}
               />

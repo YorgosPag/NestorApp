@@ -148,7 +148,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
   };
 
   return (
-    <div className={`fixed inset-0 ${colors.bg.modalBackdrop} flex items-center justify-center z-50`}>
+    <div className={`fixed inset-0 ${colors.bg.modalBackdrop} flex items-center justify-center ${PANEL_LAYOUT.Z_INDEX['50']}`}>
       <div className={`${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.LG} ${PANEL_LAYOUT.SHADOW.XL} max-w-2xl w-full ${PANEL_LAYOUT.MARGIN.X_LG} max-h-[90vh] ${PANEL_LAYOUT.OVERFLOW.Y_AUTO}`}>
         
         {/* Header */}
@@ -311,7 +311,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
           <button
             onClick={handlePrevStep}
             disabled={currentStep === 'destination' || currentStep === 'processing'}
-            className={`${PANEL_LAYOUT.BUTTON.PADDING} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} disabled:opacity-50 disabled:cursor-not-allowed`}
+            className={`${PANEL_LAYOUT.BUTTON.PADDING} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}`}
           >
             ← Προηγούμενο
           </button>

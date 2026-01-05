@@ -5,6 +5,7 @@ import { CollaborationUser, Annotation } from './CollaborationManager';
 import { isFeatureEnabled } from '../config/experimental-features';
 import { dxfComponentStyles, dxfAccessibility } from '../styles/DxfZIndexSystem.styles';
 import { UI_COLORS } from '../config/color-config';
+import { PANEL_LAYOUT } from '../config/panel-tokens';
 
 interface CollaborationOverlayProps {
   users: CollaborationUser[];
@@ -165,7 +166,7 @@ export function CollaborationOverlay({
       ref={canvasRef}
       width={800}
       height={600}
-      className="absolute inset-0 pointer-events-auto"
+      className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.AUTO}`}
       style={dxfComponentStyles.collaborationOverlay}
       {...dxfAccessibility.getOverlayProps('collaboration', true)}
       onClick={handleCanvasClick}

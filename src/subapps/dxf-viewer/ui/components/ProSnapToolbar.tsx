@@ -162,7 +162,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
       >
         <Target size={14} />
         <span>SNAP</span>
-        {enabledCount > 0 && <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} opacity-80`}>({enabledCount})</span>}
+        {enabledCount > 0 && <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.OPACITY['80']}`}>({enabledCount})</span>}
       </button>
 
       <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>

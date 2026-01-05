@@ -166,7 +166,7 @@ export function CentralizedAutoSaveStatus() {
       className={`
         flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.STANDARD}
         ${colors.bg.tertiary}/50 rounded-md border
-        transition-all duration-200 relative
+        ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['200']} relative
         ${getStatusColor()}
       `}
       style={{ ...centralizedAutoSaveStatusStyles.container, zIndex: getDynamicZIndex() }}

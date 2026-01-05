@@ -112,7 +112,7 @@ export function PreviewStep() {
       </article>
 
       {/* DXF Processing Info */}
-      <aside className={`${colors.bg.warning} bg-opacity-30 ${getStatusBorder('warning')} ${PANEL_LAYOUT.CONTAINER.BORDER_RADIUS} ${PANEL_LAYOUT.SPACING.LG}`}>
+      <aside className={`${colors.bg.warning} ${PANEL_LAYOUT.BG_OPACITY['30']} ${getStatusBorder('warning')} ${PANEL_LAYOUT.CONTAINER.BORDER_RADIUS} ${PANEL_LAYOUT.SPACING.LG}`}>
         <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.warning} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center`}>
           <Scissors className={`${iconSizes.sm} ${PANEL_LAYOUT.SPACING.GAP_H_SM}`} />
           Επεξεργασία DXF
@@ -126,7 +126,7 @@ export function PreviewStep() {
       </aside>
 
       {/* What Happens Next */}
-      <aside className={`${colors.bg.info} bg-opacity-30 ${getStatusBorder('info')} ${PANEL_LAYOUT.CONTAINER.BORDER_RADIUS} ${PANEL_LAYOUT.SPACING.LG}`}>
+      <aside className={`${colors.bg.info} ${PANEL_LAYOUT.BG_OPACITY['30']} ${getStatusBorder('info')} ${PANEL_LAYOUT.CONTAINER.BORDER_RADIUS} ${PANEL_LAYOUT.SPACING.LG}`}>
         <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.info} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>Τι συμβαίνει στη συνέχεια;</h4>
         <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.info}`}>
           <div className="flex items-center">
@@ -138,7 +138,7 @@ export function PreviewStep() {
 
       {/* Warning if creating new level */}
       {importWizard.newLevelName && (
-        <aside className={`${colors.bg.warning} bg-opacity-30 ${getStatusBorder('warning')} ${PANEL_LAYOUT.CONTAINER.BORDER_RADIUS} ${PANEL_LAYOUT.SPACING.MD}`}>
+        <aside className={`${colors.bg.warning} ${PANEL_LAYOUT.BG_OPACITY['30']} ${getStatusBorder('warning')} ${PANEL_LAYOUT.CONTAINER.BORDER_RADIUS} ${PANEL_LAYOUT.SPACING.MD}`}>
           <div className="flex items-center">
             <AlertTriangle className={`${iconSizes.sm} ${PANEL_LAYOUT.MARGIN.RIGHT_SM} ${colors.text.warning}`} />
             <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.warning}`}>

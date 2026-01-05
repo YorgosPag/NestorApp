@@ -31,7 +31,7 @@ export function BasicUsageExample() {
       {/* Button to open tests modal */}
       <button
         onClick={() => setIsTestsOpen(true)}
-        className={`px-4 py-2 ${colors.bg.purpleButton} ${colors.text.WHITE} rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.PURPLE_BUTTON}`}
+        className={`px-4 py-2 ${colors.bg.purpleButton} ${colors.text.WHITE} rounded-lg ${PANEL_LAYOUT.TRANSITION.COLORS} ${HOVER_BACKGROUND_EFFECTS.PURPLE_BUTTON}`}
       >
         🧪 Run Tests
       </button>

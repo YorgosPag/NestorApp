@@ -103,7 +103,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
         </div>
 
         <div className={`relative ${PANEL_LAYOUT.MARGIN.TOP_SM}`}>
-          <Search className={`absolute left-2 top-2.5 ${iconSizes.sm} ${colors.text.muted}`} />
+          <Search className={`absolute ${PANEL_LAYOUT.POSITION.LEFT_2} ${PANEL_LAYOUT.POSITION.TOP_2_5} ${iconSizes.sm} ${colors.text.muted}`} />
           <Input
             placeholder="Αναζήτηση..."
             value={searchQuery}
@@ -142,7 +142,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                       onClick={(e) => handleToggleVisibility(overlay.id, e)}
                       className={`${PANEL_LAYOUT.SPACING.HALF} ${iconSizes.md} ${colors.text.muted}${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
                     >
-                      {isVisible ? <Eye className={iconSizes.xs} /> : <EyeOff className={`${iconSizes.xs} opacity-50`} />}
+                      {isVisible ? <Eye className={iconSizes.xs} /> : <EyeOff className={`${iconSizes.xs} ${PANEL_LAYOUT.OPACITY['50']}`} />}
                     </Button>
 
                     <div

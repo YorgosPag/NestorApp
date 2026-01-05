@@ -109,7 +109,7 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
             <div className={PANEL_LAYOUT.MARGIN.TOP_SM}>
               <div className={`w-full ${colors.bg.muted} ${radius.full} ${PANEL_LAYOUT.HEIGHT.SM}`}>
                 <div
-                  className={`${PANEL_LAYOUT.HEIGHT.SM} ${radius.full} transition-all duration-300 ${
+                  className={`${PANEL_LAYOUT.HEIGHT.SM} ${radius.full} ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['300']} ${
                     isCritical ? `${colors.bg.error}` : isWarning ? `${colors.bg.warning}` : `${colors.bg.info}`
                   } w-[${Math.min(usagePercentage, 100)}%]`}
                 />

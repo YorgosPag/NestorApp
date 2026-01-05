@@ -151,7 +151,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
             <button
               key={unit}
               onClick={() => handleRulerUnitsChange(unit)}
-              className={`${PANEL_LAYOUT.SPACING.SM} rounded ${PANEL_LAYOUT.TYPOGRAPHY.XS} border transition-colors ${
+              className={`${PANEL_LAYOUT.SPACING.SM} rounded ${PANEL_LAYOUT.TYPOGRAPHY.XS} border ${PANEL_LAYOUT.TRANSITION.COLORS} ${
                 rulerSettings.units === unit
                   ? `${colors.bg.info} ${getStatusBorder('info')}`
                   : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
@@ -222,7 +222,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
               UI_COLORS.WHITE
             )}
             onChange={(e) => handleUnitsColorChange(e.target.value)}
-            className={`${iconSizes.xl} h-6 rounded border-0 ${PANEL_LAYOUT.CURSOR.POINTER}`}
+            className={`${iconSizes.xl} ${PANEL_LAYOUT.HEIGHT.LG} rounded border-0 ${PANEL_LAYOUT.CURSOR.POINTER}`}
           />
           <input
             type="text"
@@ -232,7 +232,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
               UI_COLORS.WHITE
             }
             onChange={(e) => handleUnitsColorChange(e.target.value)}
-            className={`w-20 ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} rounded ${getStatusBorder('muted')}`}
+            className={`${PANEL_LAYOUT.WIDTH.INPUT_SM} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} rounded ${getStatusBorder('muted')}`}
             placeholder={UI_COLORS.WHITE}
           />
         </div>

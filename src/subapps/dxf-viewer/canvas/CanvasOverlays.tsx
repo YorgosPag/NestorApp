@@ -137,12 +137,12 @@ export default function CanvasOverlays({
   });
 
   return (
-    <div className={`absolute inset-0 ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`} style={{ zIndex: portalComponents.overlay.base.zIndex() }}>
+    <div className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`} style={{ zIndex: portalComponents.overlay.base.zIndex() }}>
       <CrosshairOverlay
         isActive={crosshairActive}  // Active in layering mode OR when mouse position available
         // ✅ ADR-008: REMOVED cursorPosition/mouseWorld - now tracked internally for pixel-perfect alignment
         viewport={{ width: canvasRect?.width ?? 1920, height: canvasRect?.height ?? 1080 }}
-        className="absolute inset-0"
+        className={`absolute ${PANEL_LAYOUT.INSET['0']}`}
       />
       <SnapIndicatorOverlay
         snapResult={snapResult ? {
@@ -152,7 +152,7 @@ export default function CanvasOverlays({
         viewport={{ width: canvasRect?.width ?? 1920, height: canvasRect?.height ?? 1080 }}
         canvasRect={canvasRect}
         transform={transform}
-        className="absolute inset-0"
+        className={`absolute ${PANEL_LAYOUT.INSET['0']}`}
       />
       <SnapModeIndicator
         snapResult={snapResult ? {
@@ -161,15 +161,15 @@ export default function CanvasOverlays({
         } : null}
         mouseCss={mouseCss}
         enabledModes={enabledSnapModes || new Set()}
-        className={`absolute inset-0 ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
+        className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
       />
       <ZoomWindowOverlay
         zoomWindowState={{ isActive: isZoomWindowActive || false, isDragging: false, startPoint: null, currentPoint: null, previewRect: null }}
-        className="absolute inset-0"
+        className={`absolute ${PANEL_LAYOUT.INSET['0']}`}
       />
       <SelectionMarqueeOverlay
         state={selectionState}
-        className="absolute inset-0"
+        className={`absolute ${PANEL_LAYOUT.INSET['0']}`}
       />
       {/* ✅ ENTERPRISE FIX: CoordinateCalibrationOverlay removed */}
       {/* <CoordinateCalibrationOverlay

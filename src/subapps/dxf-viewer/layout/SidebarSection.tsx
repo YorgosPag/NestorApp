@@ -96,7 +96,7 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
         ${SIDEBAR_LAYOUT.MAX_WIDTH}
         h-full
         flex-shrink-0
-        pointer-events-auto
+        ${PANEL_LAYOUT.POINTER_EVENTS.AUTO}
       `}
       aria-label="DXF Viewer Sidebar"
     >
@@ -121,7 +121,7 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
           - min-h-0: CRITICAL for Flexbox scroll (allows shrinking below content height)
           - overflow-y-auto: Enable vertical scrolling
         */}
-        <main className="flex-1 min-h-0 overflow-y-auto">
+        <main className={`flex-1 min-h-0 ${PANEL_LAYOUT.OVERFLOW.Y_AUTO}`}>
           <FloatingPanelContainer
             ref={floatingRef}
             sceneModel={currentScene}

@@ -29,7 +29,7 @@ export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerLi
   if (layers.length === 0) {
     return (
       <div className={`text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL} ${colors.text.muted}`}>
-        <Layers className={`${iconSizes.xl} mx-auto ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} opacity-50`} />
+        <Layers className={`${iconSizes.xl} mx-auto ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${PANEL_LAYOUT.OPACITY['50']}`} />
         <p className={PANEL_LAYOUT.TYPOGRAPHY.SM}>Δεν βρέθηκαν layers</p>
         <p className={PANEL_LAYOUT.TYPOGRAPHY.XS}>Δημιουργήστε ένα νέο layer ή αλλάξτε τα φίλτρα</p>
       </div>
@@ -37,7 +37,7 @@ export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerLi
   }
 
   return (
-    <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.MAX_HEIGHT.LG} overflow-y-auto`}>
+    <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.MAX_HEIGHT.LG} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO}`}>
       {layers.map(layer => (
         <div key={layer.id} className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${getStatusBorder('muted')}`}>
           <div className="flex items-center justify-between">
@@ -54,7 +54,7 @@ export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerLi
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
               <button
                 onClick={() => onToggleVisibility?.(layer.id)}
-                className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} transition-colors`}
+                className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
                 title={layer.visible ? 'Απόκρυψη' : 'Εμφάνιση'}
               >
                 {layer.visible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
@@ -62,7 +62,7 @@ export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerLi
               
               <button
                 onClick={() => onLayerAction?.(layer.id, 'menu')}
-                className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} transition-colors`}
+                className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
                 title="Περισσότερες επιλογές"
               >
                 <MoreVertical className={iconSizes.xs} />

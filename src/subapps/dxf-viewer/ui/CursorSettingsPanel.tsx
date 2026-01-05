@@ -89,7 +89,7 @@ function SliderRow({
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         disabled={disabled}
-        className={`w-full h-2 ${colors.bg.hover} ${quick.input} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER} slider`}
+        className={`${PANEL_LAYOUT.WIDTH.FULL} ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.hover} ${quick.input} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER} slider`}
       />
     </div>
   );

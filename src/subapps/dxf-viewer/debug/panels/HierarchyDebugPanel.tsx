@@ -268,7 +268,7 @@ export function HierarchyDebugPanel() {
           <Target className={`${iconSizes.sm} ${colors.text.info}`} />
           <span>{t('panels.hierarchy.availableDestinations')} ({destinations.length})</span>
         </h4>
-        <ul className={`${PANEL_LAYOUT.MAX_HEIGHT.SM} overflow-y-auto ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
+        <ul className={`${PANEL_LAYOUT.MAX_HEIGHT.SM} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
           {destinations.map(dest => (
             <li key={dest.id} className={`${colors.text.muted} flex justify-between`}>
               <span>{dest.label}</span>

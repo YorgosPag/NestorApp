@@ -54,7 +54,7 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
   };
 
   return (
-    <div className={`fixed inset-0 ${colors.bg.modalBackdrop} flex items-center justify-center z-50`}>
+    <div className={`fixed inset-0 ${colors.bg.modalBackdrop} flex items-center justify-center ${PANEL_LAYOUT.Z_INDEX['50']}`}>
       <div className={`${colors.bg.secondary} ${PANEL_LAYOUT.CONTAINER.BORDER_RADIUS} shadow-xl ${quick.muted} w-full max-w-2xl max-h-[90vh] flex flex-col`}>
         
         {/* Header */}
@@ -80,7 +80,7 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
         </div>
 
         {/* Content */}
-        <main className={`overflow-y-auto max-h-[calc(90vh-200px)] ${PANEL_LAYOUT.SPACING.LG}`}>
+        <main className={`${PANEL_LAYOUT.OVERFLOW.Y_AUTO} max-h-[calc(90vh-200px)] ${PANEL_LAYOUT.SPACING.LG}`}>
           {renderStep()}
         </main>
 
@@ -89,14 +89,14 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
           <button
             onClick={navigation.handleBack}
             disabled={stepInfo.number === 1}
-            className={`${PANEL_LAYOUT.BUTTON.PADDING} ${colors.bg.hover} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} disabled:opacity-50`}
+            className={`${PANEL_LAYOUT.BUTTON.PADDING} ${colors.bg.hover} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} disabled:${PANEL_LAYOUT.OPACITY['50']}`}
           >
             Πίσω
           </button>
           <button
             onClick={navigation.handleNext}
             disabled={!navigation.canProceed()}
-            className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.info} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} disabled:opacity-50`}
+            className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.info} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} disabled:${PANEL_LAYOUT.OPACITY['50']}`}
           >
             {stepInfo.number === stepInfo.totalSteps ? 'Εισαγωγή' : 'Επόμενο'}
           </button>
