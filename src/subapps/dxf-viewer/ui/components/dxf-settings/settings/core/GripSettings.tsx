@@ -190,7 +190,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                 step="1"
                 value={gripSettings.gripSize || 8}
                 onChange={(e) => updateSettings({ gripSize: parseInt(e.target.value) })}
-                className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+                className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
               />
               <input
                 type="number"
@@ -199,7 +199,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                 step="1"
                 value={gripSettings.gripSize || 8}
                 onChange={(e) => updateSettings({ gripSize: parseInt(e.target.value) })}
-                className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
+                className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
               />
             </div>
           </div>
@@ -217,7 +217,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                 step="0.1"
                 value={gripSettings.opacity}
                 onChange={(e) => updateSettings({ opacity: parseFloat(e.target.value) })}
-                className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+                className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
               />
               <input
                 type="number"
@@ -226,7 +226,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                 step="0.1"
                 value={gripSettings.opacity}
                 onChange={(e) => updateSettings({ opacity: parseFloat(e.target.value) })}
-                className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
+                className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
               />
             </div>
           </div>
@@ -375,7 +375,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step="1"
                   value={gripSettings.pickBoxSize || 3}
                   onChange={(e) => updateSettings({ pickBoxSize: parseInt(e.target.value) })}
-                  className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+                  className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
                 />
                 <input
                   type="number"
@@ -384,7 +384,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step="1"
                   value={gripSettings.pickBoxSize || 3}
                   onChange={(e) => updateSettings({ pickBoxSize: parseInt(e.target.value) })}
-                  className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
+                  className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
                 />
               </div>
             </div>
@@ -402,7 +402,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step="2"
                   value={gripSettings.apertureSize || 16}
                   onChange={(e) => updateSettings({ apertureSize: parseInt(e.target.value) })}
-                  className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+                  className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
                 />
                 <input
                   type="number"
@@ -411,7 +411,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step="2"
                   value={gripSettings.apertureSize || 16}
                   onChange={(e) => updateSettings({ apertureSize: parseInt(e.target.value) })}
-                  className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
+                  className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
                 />
               </div>
             </div>
@@ -429,7 +429,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step="10"
                   value={gripSettings.maxGripsPerEntity || 50}
                   onChange={(e) => updateSettings({ maxGripsPerEntity: parseInt(e.target.value) })}
-                  className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+                  className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
                 />
                 <input
                   type="number"
@@ -438,7 +438,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step="10"
                   value={gripSettings.maxGripsPerEntity || 50}
                   onChange={(e) => updateSettings({ maxGripsPerEntity: parseInt(e.target.value) })}
-                  className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
+                  className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
                 />
               </div>
             </div>

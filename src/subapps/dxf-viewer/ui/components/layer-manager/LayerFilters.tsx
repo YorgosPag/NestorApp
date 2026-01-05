@@ -22,12 +22,12 @@ export function LayerFilters({
         value={searchQuery}
         onChange={onSearchChange}
         placeholder="Αναζήτηση layers..."
-        className={`h-8 ${colors.bg.hover} ${getStatusBorder('muted')} ${colors.text.primary} ${colors.text.muted}`}
+        className={`${PANEL_LAYOUT.HEIGHT.XL} ${colors.bg.hover} ${getStatusBorder('muted')} ${colors.text.primary} ${colors.text.muted}`}
         debounceMs={300}
       />
       
       <Select value={selectedCategory} onValueChange={onCategoryChange}>
-        <SelectTrigger className={`h-8 ${colors.bg.hover} ${getStatusBorder('muted')} ${colors.text.primary} ${getFocusBorder('input')}`}>
+        <SelectTrigger className={`${PANEL_LAYOUT.HEIGHT.XL} ${colors.bg.hover} ${getStatusBorder('muted')} ${colors.text.primary} ${getFocusBorder('input')}`}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

@@ -66,7 +66,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       Clear
     </Button>
     
-    <div className={`w-px h-6 ${colors.bg.muted} ${PANEL_LAYOUT.MARGIN.X_SM}`} /> {/* w-px h-6: Semantic separator dimensions */}
+    <div className={`w-px ${PANEL_LAYOUT.HEIGHT.LG} ${colors.bg.muted} ${PANEL_LAYOUT.MARGIN.X_SM}`} /> {/* w-px: Semantic separator dimensions */}
     
     {/* Status indicators */}
     <div className={`flex-1 flex ${PANEL_LAYOUT.GAP.SM} items-center`}>

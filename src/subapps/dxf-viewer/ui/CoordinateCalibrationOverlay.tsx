@@ -105,19 +105,19 @@ export default function CoordinateCalibrationOverlay({
     <div style={getCalibrationOverlayContainerStyles(portalComponents.overlay.calibration.zIndex())}>
       <div style={getCalibrationDebugPanelStyles()}>
         <header className={`flex justify-between items-center ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
-          <h3 className="text-lg font-bold text-cyan-400">🔧 Καλιμπράρισμα Συντεταγμένων</h3>
-          <button onClick={() => onToggle?.(false)} className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} text-xl`} title="Κλείσιμο">×</button>
+          <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${colors.text.cyanAccent}`}>🔧 Καλιμπράρισμα Συντεταγμένων</h3>
+          <button onClick={() => onToggle?.(false)} className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${PANEL_LAYOUT.TYPOGRAPHY.XL}`} title="Κλείσιμο">×</button>
         </header>
         <section className={PANEL_LAYOUT.SPACING.GAP_MD}>
           {/* ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση CoordinateTransforms */}
-          <article className={`${colors.bg.info} ${PANEL_LAYOUT.SPACING.SM} rounded text-xs`}>
-            <p className={`text-blue-300 font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>✅ Coordinate System:</p>
-            <p className="text-blue-200">Using centralized <strong>CoordinateTransforms</strong></p>
-            <p className="text-green-300 text-xs">Single Source of Truth ✅</p>
+          <article className={`${colors.bg.info} ${PANEL_LAYOUT.SPACING.SM} rounded ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>
+            <p className={`${colors.text.infoLight} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>✅ Coordinate System:</p>
+            <p className={colors.text.infoLighter}>Using centralized <strong>CoordinateTransforms</strong></p>
+            <p className={`${colors.text.successLight} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>Single Source of Truth ✅</p>
           </article>
 
-          <article className={`${colors.bg.secondary} ${PANEL_LAYOUT.SPACING.MD} rounded text-sm`}>
-            <p className={`text-cyan-300 font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>📊 Κατάσταση Σκηνής:</p>
+          <article className={`${colors.bg.secondary} ${PANEL_LAYOUT.SPACING.MD} rounded ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
+            <p className={`${colors.text.cyanLight} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>📊 Κατάσταση Σκηνής:</p>
             <div className="flex justify-between items-center">
               <span>
                 <span className={`inline-block ${iconSizes.xs} ${quick.button} ${PANEL_LAYOUT.MARGIN.RIGHT_SM} ${entitiesCount > 0 ? `${colors.bg.success}` : `${colors.bg.error}`}`}></span>
@@ -125,50 +125,50 @@ export default function CoordinateCalibrationOverlay({
               </span>
               <span className={`${colors.text.muted}`}>Επίπεδα: {layersCount}</span>
             </div>
-            {entitiesCount === 0 && <p className={`text-red-300 text-xs ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>⚠️ Δεν υπάρχουν οντότητες</p>}
+            {entitiesCount === 0 && <p className={`${colors.text.errorLight} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>⚠️ Δεν υπάρχουν οντότητες</p>}
           </article>
 
           <nav className={`flex ${PANEL_LAYOUT.GAP.SM}`}>
-            <button onClick={() => setShowDetails(!showDetails)} className={`${PANEL_LAYOUT.SPACING.COMPACT} rounded text-sm ${showDetails ? colors.bg.hover : colors.bg.active}`}>
+            <button onClick={() => setShowDetails(!showDetails)} className={`${PANEL_LAYOUT.SPACING.COMPACT} rounded ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${showDetails ? colors.bg.hover : colors.bg.active}`}>
               {showDetails ? '📊 Απόκρυψη' : '📊 Εμφάνιση'}
             </button>
           </nav>
 
           {showDetails && (
-            <article className={`${colors.bg.secondary} ${PANEL_LAYOUT.SPACING.MD} rounded text-sm`}>
-              <p className={`text-cyan-300 font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>📍 Συντεταγμένες:</p>
+            <article className={`${colors.bg.secondary} ${PANEL_LAYOUT.SPACING.MD} rounded ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
+              <p className={`${colors.text.cyanLight} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>📍 Συντεταγμένες:</p>
               {mousePos ? (
                 <>
-                  <p className="text-green-300">🖱️ CSS: ({mousePos.x.toFixed(1)}, {mousePos.y.toFixed(1)})</p>
-                  {worldPos && <p className="text-yellow-300">🌍 Κόσμος: ({worldPos.x.toFixed(2)}, {worldPos.y.toFixed(2)})</p>}
+                  <p className={colors.text.successLight}>🖱️ CSS: ({mousePos.x.toFixed(1)}, {mousePos.y.toFixed(1)})</p>
+                  {worldPos && <p className={colors.text.warningLight}>🌍 Κόσμος: ({worldPos.x.toFixed(2)}, {worldPos.y.toFixed(2)})</p>}
                   {currentRoundTripError !== null && (
-                    <p className={`text-xs ${PANEL_LAYOUT.MARGIN.TOP_XS} ${currentRoundTripError < 0.5 ? 'text-green-400' : 'text-orange-400'}`}>
+                    <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_XS} ${currentRoundTripError < 0.5 ? colors.text.successLighter : colors.text.orangeLight}`}>
                       🔄 Σφάλμα round-trip: {currentRoundTripError.toFixed(2)}px {currentRoundTripError < 0.5 ? '✅' : '⚠️'}
                     </p>
                   )}
-                  <p className={`${colors.text.muted} text-xs ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>dPR: {dpr.toFixed(2)} | Ζουμ: {(100/dpr).toFixed(0)}%</p>
+                  <p className={`${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>dPR: {dpr.toFixed(2)} | Ζουμ: {(100/dpr).toFixed(0)}%</p>
                 </>
               ) : <p className={colors.text.muted}>Μετακινήστε το ποντίκι πάνω από τον καμβά...</p>}
             </article>
           )}
 
-          <article className={`${colors.bg.secondary} ${PANEL_LAYOUT.SPACING.MD} rounded text-sm`}>
+          <article className={`${colors.bg.secondary} ${PANEL_LAYOUT.SPACING.MD} rounded ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
             <div className={`flex justify-between items-center ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
-              <span className="text-cyan-300 font-semibold">🎯 Τεστ Κλικ:</span>
+              <span className={`${colors.text.cyanLight} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD}`}>🎯 Τεστ Κλικ:</span>
               <button onClick={() => setClickTests([])} className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.bg.error} ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_HOVER} ${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} rounded`}>Καθαρισμός</button>
             </div>
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${quick.input} cursor-crosshair pointer-events-auto ${getElementBorder('input', 'focus')}`} onClick={handleCalibrationClick}>
-              <div className={`text-center text-xs text-cyan-300 ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Κλικ εδώ για τεστ ακρίβειας</div>
-              <div className={`max-h-24 overflow-y-auto ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
+              <div className={`text-center text-xs ${colors.text.cyanLight} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Κλικ εδώ για τεστ ακρίβειας</div>
+              <div className={`${PANEL_LAYOUT.MAX_HEIGHT.XS} overflow-y-auto ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
                 {clickTests.length === 0 ? (
                   <div className={`${colors.text.muted} text-xs text-center`}>Δεν υπάρχουν δοκιμές</div>
                 ) : (
                   clickTests.slice(-2).map(test => (
                     <div key={test.id} className={`text-xs ${getElementBorder('card', 'default')} ${quick.card} ${PANEL_LAYOUT.SPACING.HORIZONTAL_SM}`}>
                       <div className={`${colors.text.primary}`}>#{test.id} @ {test.timestamp}</div>
-                      <div className="text-green-300">CSS: ({test.cssPoint.x.toFixed(1)}, {test.cssPoint.y.toFixed(1)})</div>
-                      <div className="text-yellow-300">Κόσμος: ({test.worldPoint.x.toFixed(2)}, {test.worldPoint.y.toFixed(2)})</div>
-                      <div className={`text-xs ${test.roundTripError < 0.5 ? 'text-green-400' : 'text-orange-400'}`}>
+                      <div className={colors.text.successLight}>CSS: ({test.cssPoint.x.toFixed(1)}, {test.cssPoint.y.toFixed(1)})</div>
+                      <div className={colors.text.warningLight}>Κόσμος: ({test.worldPoint.x.toFixed(2)}, {test.worldPoint.y.toFixed(2)})</div>
+                      <div className={`text-xs ${test.roundTripError < 0.5 ? colors.text.successLighter : colors.text.orangeLight}`}>
                         Error: {test.roundTripError.toFixed(2)}px {test.roundTripError < 0.5 ? 'ΤΕΛΕΙΟ ✅' : 'ΧΡΕΙΑΖΕΤΑΙ ΔΙΟΡΘΩΣΗ ⚠️'}
                       </div>
                     </div>
@@ -179,8 +179,8 @@ export default function CoordinateCalibrationOverlay({
           </article>
 
           <aside className={`${colors.bg.info} ${PANEL_LAYOUT.SPACING.SM} rounded text-xs`}>
-            <div className={`text-blue-300 font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>💡 Συμβουλές:</div>
-            <ul className={`text-blue-200 ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
+            <div className={`${colors.text.infoLight} font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>💡 Συμβουλές:</div>
+            <ul className={`${colors.text.infoLighter} ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
               <li>• Round-trip σφάλμα &lt; 0.5px</li>
               <li>• Δοκιμάστε σε διαφορετικά zoom</li>
               <li>• {entitiesCount > 0 ? 'Οντότητες OK ✅' : 'Φορτώστε DXF ⚠️'}</li>

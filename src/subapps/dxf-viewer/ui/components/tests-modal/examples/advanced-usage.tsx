@@ -139,7 +139,7 @@ export function AdvancedUsageExample() {
       <div className="max-w-6xl mx-auto">
         <header className="mb-8">
           <h1 className="text-3xl font-bold mb-2">DXF Viewer - Advanced Testing</h1>
-          <p className="text-gray-400">
+          <p className={colors.text.muted}>
             Press <kbd className={`px-2 py-1 ${colors.bg.secondary} rounded`}>Ctrl+T</kbd> to toggle tests modal
           </p>
         </header>
@@ -148,10 +148,10 @@ export function AdvancedUsageExample() {
           {/* Run Tests Button */}
           <button
             onClick={() => setIsTestsOpen(true)}
-            className={`p-4 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg ${GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON} transition-all`}
+            className={`p-4 ${colors.gradients.testButtonPrimary} rounded-lg ${GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON} transition-all`}
           >
             <div className="text-xl mb-1">🧪 Run Tests</div>
-            <div className="text-sm text-purple-200">Open testing interface</div>
+            <div className={`text-sm ${colors.text.purpleLight}`}>Open testing interface</div>
           </button>
 
           {/* Test History Stats */}
@@ -162,7 +162,7 @@ export function AdvancedUsageExample() {
             <div className="text-xl mb-1">
               📊 {testHistory.length} Tests Run
             </div>
-            <div className="text-sm text-gray-400">
+            <div className={`text-sm ${colors.text.muted}`}>
               ✅ {testHistory.filter(t => t.status === 'success').length} passed,{' '}
               ❌ {testHistory.filter(t => t.status === 'error').length} failed
             </div>
@@ -175,7 +175,7 @@ export function AdvancedUsageExample() {
             className={`p-4 ${colors.bg.secondary} rounded-lg ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             <div className="text-xl mb-1">🗑️ Clear History</div>
-            <div className="text-sm text-gray-400">Reset test results</div>
+            <div className={`text-sm ${colors.text.muted}`}>Reset test results</div>
           </button>
         </div>
 
@@ -186,7 +186,7 @@ export function AdvancedUsageExample() {
               <h2 className="text-xl font-bold">📝 Test History</h2>
               <button
                 onClick={exportHistory}
-                className={`px-3 py-1 bg-purple-600 rounded ${INTERACTIVE_PATTERNS.PURPLE_HOVER} text-sm`}
+                className={`px-3 py-1 ${colors.bg.purpleButton} rounded ${INTERACTIVE_PATTERNS.PURPLE_HOVER} text-sm`}
               >
                 📥 Export JSON
               </button>
@@ -207,12 +207,12 @@ export function AdvancedUsageExample() {
                       <td className="py-2">{result.testName}</td>
                       <td className="py-2">
                         {result.status === 'success' ? (
-                          <span className="text-green-500">✅ Passed</span>
+                          <span className={colors.text.success}>✅ Passed</span>
                         ) : (
-                          <span className="text-red-500">❌ Failed</span>
+                          <span className={colors.text.error}>❌ Failed</span>
                         )}
                       </td>
-                      <td className="py-2 text-gray-400 text-sm">
+                      <td className={`py-2 ${colors.text.muted} text-sm`}>
                         {result.timestamp.toLocaleTimeString()}
                       </td>
                     </tr>
@@ -225,16 +225,16 @@ export function AdvancedUsageExample() {
 
         {/* Info Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className={`bg-blue-900/20 ${getStatusBorder('info')} rounded-lg p-4`}>
-            <div className="text-blue-400 font-bold mb-2">💡 Pro Tip</div>
+          <div className={`${colors.bg.infoPanel} ${getStatusBorder('info')} rounded-lg p-4`}>
+            <div className={`${colors.text.infoAccent} font-bold mb-2`}>💡 Pro Tip</div>
             <div className="text-sm">
               Use Ctrl+T keyboard shortcut to quickly open/close the tests modal.
               Great for rapid testing during development!
             </div>
           </div>
 
-          <div className={`bg-green-900/20 ${getStatusBorder('success')} rounded-lg p-4`}>
-            <div className="text-green-400 font-bold mb-2">🚀 Auto-Run</div>
+          <div className={`${colors.bg.successPanel} ${getStatusBorder('success')} rounded-lg p-4`}>
+            <div className={`${colors.text.successAccent} font-bold mb-2`}>🚀 Auto-Run</div>
             <div className="text-sm">
               Add <code className={`px-1 ${colors.bg.secondary} rounded`}>?autorun=true</code> to URL
               to automatically open tests on page load.

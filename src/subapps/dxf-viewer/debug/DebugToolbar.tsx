@@ -228,7 +228,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load test module', 'error');
           });
         }}
-        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} font-bold ${quick.button} ${colors.bg.warning} text-black transition-all ${HOVER_BACKGROUND_EFFECTS.WARNING_BUTTON}`}
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} font-bold ${quick.button} ${colors.bg.warning} ${colors.text.BLACK} transition-all ${HOVER_BACKGROUND_EFFECTS.WARNING_BUTTON}`}
       >
         🎯 Canvas Test
       </button>
@@ -479,7 +479,7 @@ Check console for detailed metrics`;
         className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} text-xs font-bold ${quick.button} transition-all ${
           dxfCanvasVisible
             ? `${colors.bg.success} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.SUCCESS}`
-            : `${colors.bg.error} text-white ${HOVER_BACKGROUND_EFFECTS.DESTRUCTIVE}`
+            : `${colors.bg.error} ${colors.text.WHITE} ${HOVER_BACKGROUND_EFFECTS.DESTRUCTIVE}`
         }`}
       >
         {dxfCanvasVisible ? '🟢 DXF ON' : '🔴 DXF OFF'}
@@ -493,7 +493,7 @@ Check console for detailed metrics`;
         className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} text-xs font-bold ${quick.button} transition-all ${
           layerCanvasVisible
             ? `${colors.bg.info} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
-            : `${colors.bg.error} text-white ${HOVER_BACKGROUND_EFFECTS.DESTRUCTIVE}`
+            : `${colors.bg.error} ${colors.text.WHITE} ${HOVER_BACKGROUND_EFFECTS.DESTRUCTIVE}`
         }`}
       >
         {layerCanvasVisible ? '🔵 LAYER ON' : '🔴 LAYER OFF'}
@@ -507,7 +507,7 @@ Check console for detailed metrics`;
         🏠 Pan to (0,0)
       </button>
 
-      <div className={`text-xs ${colors.bg.hover} text-white ${PANEL_LAYOUT.SPACING.COMPACT} ${quick.button}`}>
+      <div className={`text-xs ${colors.bg.hover} ${colors.text.WHITE} ${PANEL_LAYOUT.SPACING.COMPACT} ${quick.button}`}>
         Debug Tools (Development Only)
       </div>
     </nav>

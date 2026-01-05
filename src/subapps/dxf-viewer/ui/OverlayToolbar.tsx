@@ -178,7 +178,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
             onClick={() => handleModeChange(btnMode)}
             title={`${label} (${key})`}
             className={`
-              h-8 ${PANEL_LAYOUT.SPACING.HORIZONTAL_SM} ${quick.button} transition-colors duration-150
+              ${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.SPACING.HORIZONTAL_SM} ${quick.button} transition-colors duration-150
               flex items-center justify-center ${PANEL_LAYOUT.GAP.XS}
               ${mode === btnMode
                 ? `${colors.bg.info} ${colors.text.inverted} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`

@@ -99,7 +99,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
             </Button>
           </PopoverTrigger>
 
-          <PopoverContent className={`w-64 ${colors.bg.primary} ${getStatusBorder('muted')} ${PANEL_LAYOUT.SPACING.MD}`}>
+          <PopoverContent className={`w-full ${colors.bg.primary} ${getStatusBorder('muted')} ${PANEL_LAYOUT.SPACING.MD}`}>
             <div className={PANEL_LAYOUT.SPACING.GAP_MD}>
               {/* Preset colors grid */}
               <div>
@@ -131,7 +131,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
                     type="color"
                     value={tempColor}
                     onChange={(e) => handleColorChange(e.target.value)}
-                    className={`w-16 h-9 ${PANEL_LAYOUT.SPACING.XS} ${colors.bg.secondary} ${getStatusBorder('muted').replace('border ', '')}`}
+                    className={`${PANEL_LAYOUT.WIDTH.MD} h-9 ${PANEL_LAYOUT.SPACING.XS} ${colors.bg.secondary} ${getStatusBorder('muted').replace('border ', '')}`}
                   />
                   <Input
                     type="text"

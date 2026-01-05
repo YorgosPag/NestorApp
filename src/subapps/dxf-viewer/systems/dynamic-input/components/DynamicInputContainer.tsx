@@ -19,7 +19,7 @@ export function DynamicInputContainer({ position, showInput, children }: Dynamic
         top: `${position.y}px`
       }}
     >
-      <div className={`bg-transparent text-white ${PANEL_LAYOUT.SPACING.MD} min-w-[220px]`}>
+      <div className={`bg-transparent ${PANEL_LAYOUT.SPACING.MD} min-w-[220px]`}>
         {children}
       </div>
     </div>

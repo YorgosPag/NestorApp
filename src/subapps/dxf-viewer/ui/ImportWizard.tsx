@@ -54,7 +54,7 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className={`fixed inset-0 ${colors.bg.modalBackdrop} flex items-center justify-center z-50`}>
       <div className={`${colors.bg.secondary} ${PANEL_LAYOUT.CONTAINER.BORDER_RADIUS} shadow-xl ${quick.muted} w-full max-w-2xl max-h-[90vh] flex flex-col`}>
         
         {/* Header */}

@@ -198,7 +198,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
             ))}
           </nav>
 
-          <Separator orientation="vertical" className={`h-6 ${quick.separatorV}`} />
+          <Separator orientation="vertical" className={`${PANEL_LAYOUT.HEIGHT.LG} ${quick.separatorV}`} />
 
           {/* Status Palette */}
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
@@ -219,7 +219,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
             </div>
           </div>
 
-          <Separator orientation="vertical" className={`h-6 ${quick.separatorV}`} />
+          <Separator orientation="vertical" className={`${PANEL_LAYOUT.HEIGHT.LG} ${quick.separatorV}`} />
 
           {/* Kind Selection - Using Centralized ToolButton */}
           <fieldset className={`flex items-center ${PANEL_LAYOUT.GAP.SM} border-none ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.MARGIN.NONE}`}>
@@ -241,7 +241,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
             </nav>
           </fieldset>
 
-          <Separator orientation="vertical" className={`h-6 ${quick.separatorV}`} />
+          <Separator orientation="vertical" className={`${PANEL_LAYOUT.HEIGHT.LG} ${quick.separatorV}`} />
 
           {/* Actions - Using Centralized ActionButton */}
           <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label="Overlay actions">
@@ -262,7 +262,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
             />
           </nav>
 
-          <Separator orientation="vertical" className={`h-6 ${quick.separatorV}`} />
+          <Separator orientation="vertical" className={`${PANEL_LAYOUT.HEIGHT.LG} ${quick.separatorV}`} />
 
           {/* Undo/Redo - Using Centralized ActionButton */}
           <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label="History controls">

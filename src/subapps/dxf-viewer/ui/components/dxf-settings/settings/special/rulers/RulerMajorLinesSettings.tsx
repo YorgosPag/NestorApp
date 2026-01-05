@@ -205,7 +205,7 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
             onChange={(e) => handleMajorTickOpacityChange(parseFloat(e.target.value))}
             className="flex-1"
           />
-          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
+          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} text-xs ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
             {Math.round(getOpacityFromColor(rulerSettings.horizontal.majorTickColor) * 100)}%
           </div>
         </div>
@@ -244,7 +244,7 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
             onChange={(e) => handleMajorTickThicknessChange(parseFloat(e.target.value))}
             className="flex-1"
           />
-          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
+          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} text-xs ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
             {rulerSettings.horizontal.majorTickLength / 10}px
           </div>
         </div>

@@ -69,7 +69,7 @@ export const TestsModal: React.FC<TestsModalProps> = ({
   // RENDER
   // ============================================================================
   return (
-    <div className={`fixed inset-0 bg-black/30 z-50 ${PANEL_LAYOUT.SPACING.LG}`}>
+    <div className={`fixed inset-0 ${colors.bg.modalBackdropLight} z-50 ${PANEL_LAYOUT.SPACING.LG}`}>
       <div
         ref={draggable.modalRef}
         className={`absolute ${colors.bg.secondary} ${PANEL_LAYOUT.CONTAINER.BORDER_RADIUS} shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col`}

@@ -74,18 +74,18 @@ export function CursorSettings() {
   return (
     <article className={`${PANEL_LAYOUT.CONTAINER.PADDING} ${PANEL_LAYOUT.SPACING.GAP_LG} max-h-96 overflow-y-auto`}>
       {/* 🏢 ENTERPRISE: Semantic header για section */}
-      <header className={`text-lg font-medium ${colors.text.primary} ${getDirectionalBorder('muted', 'bottom')} ${PANEL_LAYOUT.PADDING.BOTTOM_SM}`}>
+      <header className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${getDirectionalBorder('muted', 'bottom')} ${PANEL_LAYOUT.PADDING.BOTTOM_SM}`}>
         Ρυθμίσεις Κέρσορα
       </header>
 
       {/* Cursor Shape - 🏢 ENTERPRISE: Semantic section αντί nested divs */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`font-medium text-sm ${colors.text.primary}`}>Σχήμα Κέρσορα</h4>
-        <p className={`text-xs ${colors.text.muted}`}>Επιλογή μεταξύ κύκλου και τετραγώνου</p>
+        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>Σχήμα Κέρσορα</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Επιλογή μεταξύ κύκλου και τετραγώνου</p>
         <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.SM}`}>
               <button
                 onClick={() => handleCursorShapeChange('circle')}
-                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} text-xs transition-colors ${
+                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
                   settings.cursor.shape === 'circle'
                     ? `${colors.bg.primary} ${getStatusBorder('info')}`
                     : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -99,7 +99,7 @@ export function CursorSettings() {
               </button>
               <button
                 onClick={() => handleCursorShapeChange('square')}
-                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} text-xs transition-colors ${
+                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
                   settings.cursor.shape === 'square'
                     ? `${colors.bg.primary} ${getStatusBorder('info')}`
                     : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -116,8 +116,8 @@ export function CursorSettings() {
 
       {/* Cursor Color - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`font-medium text-sm ${colors.text.secondary}`}>Χρώμα Κέρσορα</h4>
-        <p className={`text-xs ${colors.text.muted}`}>Χρώμα περιγράμματος κέρσορα</p>
+        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.secondary}`}>Χρώμα Κέρσορα</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Χρώμα περιγράμματος κέρσορα</p>
         <ColorDialogTrigger
               value={settings.cursor.color}
               onChange={handleCursorColorChange}
@@ -133,12 +133,12 @@ export function CursorSettings() {
 
       {/* Cursor Line Style - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`font-medium text-sm ${colors.text.primary}`}>Είδος Γραμμής</h4>
-        <p className={`text-xs ${colors.text.muted}`}>Στυλ περιγράμματος κέρσορα</p>
+        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>Είδος Γραμμής</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Στυλ περιγράμματος κέρσορα</p>
         <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.SM}`}>
               <button
                 onClick={() => handleCursorLineStyleChange('solid')}
-                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} text-xs transition-colors ${
+                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
                   settings.cursor.line_style === 'solid'
                     ? `${colors.bg.primary} ${getStatusBorder('info')}`
                     : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -152,7 +152,7 @@ export function CursorSettings() {
               </button>
               <button
                 onClick={() => handleCursorLineStyleChange('dashed')}
-                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} text-xs transition-colors ${
+                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
                   settings.cursor.line_style === 'dashed'
                     ? `${colors.bg.primary} ${getStatusBorder('info')}`
                     : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -168,7 +168,7 @@ export function CursorSettings() {
             <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.MARGIN.TOP_SM}`}>
               <button
                 onClick={() => handleCursorLineStyleChange('dotted')}
-                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} text-xs transition-colors ${
+                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
                   settings.cursor.line_style === 'dotted'
                     ? `${colors.bg.primary} ${getStatusBorder('info')}`
                     : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -182,7 +182,7 @@ export function CursorSettings() {
               </button>
               <button
                 onClick={() => handleCursorLineStyleChange('dash-dot')}
-                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} text-xs transition-colors ${
+                className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
                   settings.cursor.line_style === 'dash-dot'
                     ? `${colors.bg.primary} ${getStatusBorder('info')}`
                     : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -199,8 +199,8 @@ export function CursorSettings() {
 
       {/* Cursor Line Width - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`font-medium text-sm ${colors.text.primary}`}>Πάχος Γραμμής Κέρσορα</h4>
-        <p className={`text-xs ${colors.text.muted}`}>Πάχος περιγράμματος σε pixels</p>
+        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>Πάχος Γραμμής Κέρσορα</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Πάχος περιγράμματος σε pixels</p>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <input
             type="range"
@@ -211,14 +211,14 @@ export function CursorSettings() {
             onChange={(e) => handleCursorLineWidthChange(parseFloat(e.target.value))}
             className="flex-1"
           />
-          <div className={`${iconSizes.xs} text-xs ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>{settings.cursor.line_width || 1}px</div>
+          <div className={`${iconSizes.xs} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>{settings.cursor.line_width || 1}px</div>
         </div>
         <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
           {[1, 1.5, 2, 3, 4, 5].map(width => (
             <button
               key={width}
               onClick={() => handleCursorLineWidthChange(width)}
-              className={`flex-1 ${PANEL_LAYOUT.SPACING.XS} ${radius.md} text-xs transition-colors ${
+              className={`flex-1 ${PANEL_LAYOUT.SPACING.XS} ${radius.md} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
                 (settings.cursor.line_width || 1) === width
                   ? `${colors.bg.primary} ${getStatusBorder('info')}`
                   : `${colors.bg.muted} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
@@ -228,7 +228,7 @@ export function CursorSettings() {
                 className="w-full mx-auto border"
                 style={getCursorSizePreviewStyles(settings.cursor.color, settings.cursor.shape, width)}
               ></div>
-              <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS} text-xs`}>{width}px</span>
+              <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{width}px</span>
             </button>
           ))}
         </div>
@@ -236,8 +236,8 @@ export function CursorSettings() {
 
       {/* Cursor Size - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`font-medium text-sm ${colors.text.primary}`}>Μέγεθος Κέρσορα</h4>
-        <p className={`text-xs ${colors.text.muted}`}>Διάμετρος/πλευρά σε pixels</p>
+        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>Μέγεθος Κέρσορα</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Διάμετρος/πλευρά σε pixels</p>
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <input
                 type="range"
@@ -248,14 +248,14 @@ export function CursorSettings() {
                 onChange={(e) => handleCursorSizeChange(parseInt(e.target.value))}
                 className="flex-1"
               />
-              <div className={`${iconSizes.xs} text-xs ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>{settings.cursor.size}px</div>
+              <div className={`${iconSizes.xs} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>{settings.cursor.size}px</div>
             </div>
             <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
               {[5, 10, 15, 25, 50].map(size => (
                 <button
                   key={size}
                   onClick={() => handleCursorSizeChange(size)}
-                  className={`flex-1 ${PANEL_LAYOUT.SPACING.SM} ${quick.button} text-xs transition-colors ${
+                  className={`flex-1 ${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
                     settings.cursor.size === size
                       ? `${getStatusBorder('info')} ${colors.bg.primary}`
                       : `${getStatusBorder('default')} ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
@@ -265,7 +265,7 @@ export function CursorSettings() {
                     className="mx-auto border"
                     style={getCursorDimensionPreviewStyles(settings.cursor.color, settings.cursor.shape, size)}
                   ></div>
-                  <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS} text-xs`}>{size}px</span>
+                  <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{size}px</span>
                 </button>
               ))}
         </div>
@@ -273,8 +273,8 @@ export function CursorSettings() {
 
       {/* Cursor Opacity - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`font-medium text-sm ${colors.text.primary}`}>Διαφάνεια Κέρσορα</h4>
-        <p className={`text-xs ${colors.text.muted}`}>Επίπεδο διαφάνειας του κέρσορα</p>
+        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>Διαφάνεια Κέρσορα</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Επίπεδο διαφάνειας του κέρσορα</p>
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <input
                 type="range"
@@ -285,18 +285,18 @@ export function CursorSettings() {
                 onChange={(e) => handleCursorOpacityChange(parseFloat(e.target.value))}
                 className="flex-1"
               />
-              <div className={`${iconSizes.xs} text-xs ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>{Math.round(settings.cursor.opacity * 100)}%</div>
+              <div className={`${iconSizes.xs} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>{Math.round(settings.cursor.opacity * 100)}%</div>
         </div>
       </section>
 
       {/* Show/Hide Cursor - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`font-medium text-sm ${colors.text.primary}`}>Εμφάνιση Κέρσορα</h4>
-        <p className={`text-xs ${colors.text.muted}`}>Εμφάνιση/απόκρυψη κύκλου κέρσορα</p>
+        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>Εμφάνιση Κέρσορα</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Εμφάνιση/απόκρυψη κύκλου κέρσορα</p>
             <div className={`flex ${PANEL_LAYOUT.GAP.SM}`}>
               <button
                 onClick={() => handleCursorEnabledChange(true)}
-                className={`flex-1 ${PANEL_LAYOUT.SPACING.SM} ${quick.button} text-xs transition-colors ${
+                className={`flex-1 ${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
                   settings.cursor.enabled
                     ? `${colors.bg.primary} ${getStatusBorder('info')}`
                     : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -306,7 +306,7 @@ export function CursorSettings() {
               </button>
               <button
                 onClick={() => handleCursorEnabledChange(false)}
-                className={`flex-1 ${PANEL_LAYOUT.SPACING.SM} ${quick.button} text-xs transition-colors ${
+                className={`flex-1 ${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
                   !settings.cursor.enabled
                     ? `${colors.bg.primary} ${getStatusBorder('info')}`
                     : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`

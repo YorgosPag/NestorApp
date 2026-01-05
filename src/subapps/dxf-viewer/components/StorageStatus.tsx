@@ -107,9 +107,9 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
           <>
             {/* Progress bar */}
             <div className={PANEL_LAYOUT.MARGIN.TOP_SM}>
-              <div className={`w-full ${colors.bg.muted} ${radius.full} h-2`}>
+              <div className={`w-full ${colors.bg.muted} ${radius.full} ${PANEL_LAYOUT.HEIGHT.SM}`}>
                 <div
-                  className={`h-2 ${radius.full} transition-all duration-300 ${
+                  className={`${PANEL_LAYOUT.HEIGHT.SM} ${radius.full} transition-all duration-300 ${
                     isCritical ? `${colors.bg.error}` : isWarning ? `${colors.bg.warning}` : `${colors.bg.info}`
                   } w-[${Math.min(usagePercentage, 100)}%]`}
                 />
@@ -140,8 +140,9 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
 // Lightweight version for toolbar/status bar
 export function StorageStatusIndicator() {
   const { storageInfo } = useStorageMonitor();
-  const colors = { text: { warning: 'text-yellow-500' } }; // Mock colors
-  const iconSizes = { xs: 'w-3 h-3' }; // Mock icon sizes
+  // ✅ ENTERPRISE: Use centralized hooks instead of hardcoded mock values
+  const colors = useSemanticColors();
+  const iconSizes = useIconSizes();
 
   if (!storageInfo) return null;
 

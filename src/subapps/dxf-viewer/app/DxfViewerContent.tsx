@@ -913,7 +913,7 @@ Check console for detailed metrics`;
       </React.Suspense>
 
       {/* 🚀 LCP OPTIMIZATION: Lazy-loaded Floating Panels Section */}
-      <React.Suspense fallback={<div className={`w-80 ${colors.bg.skeleton} animate-pulse`} />}>
+      <React.Suspense fallback={<div className={`${PANEL_LAYOUT.WIDTH.PANEL_SM} ${colors.bg.skeleton} animate-pulse`} />}>
         <FloatingPanelsSection
         colorMenu={colorMenu}
         currentScene={currentScene}

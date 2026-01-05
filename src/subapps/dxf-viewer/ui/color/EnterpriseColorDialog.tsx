@@ -190,7 +190,7 @@ export function EnterpriseColorDialog({
         >
           {/* Backdrop - ✅ FIX: No click handlers, just visual overlay */}
           <div
-            className="absolute inset-0 bg-black bg-opacity-50"
+            className={`absolute inset-0 ${colors.bg.modalBackdrop}`}
             style={{ pointerEvents: 'none' }}
           />
 

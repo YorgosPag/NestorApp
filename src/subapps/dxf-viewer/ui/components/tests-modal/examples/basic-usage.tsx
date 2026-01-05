@@ -9,11 +9,13 @@
 
 import React, { useState } from 'react';
 import { TestsModal } from '../../TestsModal';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 export function BasicUsageExample() {
   // 1. State to control modal visibility
   const [isTestsOpen, setIsTestsOpen] = useState(false);
+  const colors = useSemanticColors();
 
   // 2. Notification handler (simple console.log version)
   const showNotification = (message: string, type?: 'success' | 'info' | 'warning' | 'error') => {
@@ -28,7 +30,7 @@ export function BasicUsageExample() {
       {/* Button to open tests modal */}
       <button
         onClick={() => setIsTestsOpen(true)}
-        className={`px-4 py-2 bg-purple-600 text-white rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.PURPLE_BUTTON}`}
+        className={`px-4 py-2 ${colors.bg.purpleButton} ${colors.text.WHITE} rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.PURPLE_BUTTON}`}
       >
         🧪 Run Tests
       </button>

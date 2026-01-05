@@ -44,17 +44,17 @@ export function CalibrationStep() {
     <section className={PANEL_LAYOUT.SPACING.GAP_XL}>
       {/* ✅ ENTERPRISE: Semantic HTML + PANEL_LAYOUT tokens (ADR-003) */}
       <header>
-        <h3 className={`text-lg font-medium ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
           Βαθμονόμηση Κλίμακας & Μονάδων
         </h3>
-        <p className={`text-sm ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
           Ορίστε τις μονάδες και προαιρετικά βαθμονομήστε την κλίμακα χρησιμοποιώντας γνωστές μετρήσεις από το DXF αρχείο σας.
         </p>
       </header>
 
       {/* Units Selection */}
       <fieldset className={PANEL_LAYOUT.SPACING.GAP_MD}>
-        <legend className={`text-sm font-medium ${colors.text.tertiary}`}>Μονάδες</legend>
+        <legend className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.tertiary}`}>Μονάδες</legend>
         <nav className={`grid grid-cols-5 ${PANEL_LAYOUT.GAP.SM}`} role="group" aria-label="Επιλογή μονάδων">
           {[
             { value: 'mm', label: 'χιλιοστά' },
@@ -66,7 +66,7 @@ export function CalibrationStep() {
             <button
               key={unit.value}
               onClick={() => handleUnitsChange(unit.value as typeof units)}
-              className={`${PANEL_LAYOUT.SPACING.SM} text-sm transition-colors ${
+              className={`${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} transition-colors ${
                 units === unit.value
                   ? `${getStatusBorder('info')} ${colors.bg.info} ${colors.text.info}`
                   : `${quick.button} ${colors.text.tertiary} ${HOVER_BORDER_EFFECTS.MUTED}`
@@ -80,7 +80,7 @@ export function CalibrationStep() {
 
       {/* Calibration Options */}
       <fieldset className={PANEL_LAYOUT.SPACING.GAP_LG}>
-        <legend className={`text-sm font-medium ${colors.text.tertiary}`}>Βαθμονόμηση</legend>
+        <legend className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.tertiary}`}>Βαθμονόμηση</legend>
 
         {/* Skip Calibration Option */}
         <label className={`flex items-start ${PANEL_LAYOUT.SPACING.MD} ${quick.card} cursor-pointer ${HOVER_BORDER_EFFECTS.MUTED} transition-colors`}>
@@ -92,13 +92,13 @@ export function CalibrationStep() {
             className={`${PANEL_LAYOUT.MARGIN.TOP_XS} ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}
           />
           <article>
-            <strong className={`${colors.text.primary} font-medium`}>Παράλειψη Βαθμονόμησης (Προτεινόμενο)</strong>
-            <p className={`text-sm ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
+            <strong className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>Παράλειψη Βαθμονόμησης (Προτεινόμενο)</strong>
+            <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
               Χρήση εγγενών μονάδων και κλίμακας του DXF αρχείου. Καλύτερο για τις περισσότερες αρχιτεκτονικές κατόψεις.
             </p>
             <aside className={`flex items-center ${PANEL_LAYOUT.MARGIN.TOP_SM} ${colors.text.success}`}>
               <CheckCircle className={`${iconSizes.sm} ${PANEL_LAYOUT.MARGIN.LEFT_HALF}`} />
-              <span className="text-xs">Γρήγορη εισαγωγή, διατηρεί την αρχική κλίμακα</span>
+              <span className={PANEL_LAYOUT.TYPOGRAPHY.XS}>Γρήγορη εισαγωγή, διατηρεί την αρχική κλίμακα</span>
             </aside>
           </article>
         </label>
@@ -113,23 +113,23 @@ export function CalibrationStep() {
             className={`${PANEL_LAYOUT.MARGIN.TOP_XS} ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}
           />
           <article>
-            <strong className={`${colors.text.primary} font-medium`}>Βαθμονόμηση 2 Σημείων</strong>
-            <p className={`text-sm ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
+            <strong className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>Βαθμονόμηση 2 Σημείων</strong>
+            <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
               Ορισμός κλίμακας μετρώντας μια γνωστή απόσταση στο σχέδιο.
             </p>
             <aside className={`flex items-center ${PANEL_LAYOUT.MARGIN.TOP_SM} ${colors.text.info}`}>
               <Ruler className={`${iconSizes.sm} ${PANEL_LAYOUT.MARGIN.LEFT_HALF}`} />
-              <span className="text-xs">Ακριβής βαθμονόμηση για προσαρμοσμένη κλίμακα</span>
+              <span className={PANEL_LAYOUT.TYPOGRAPHY.XS}>Ακριβής βαθμονόμηση για προσαρμοσμένη κλίμακα</span>
             </aside>
           </article>
         </label>
 
         {/* Manual Calibration Controls */}
         {!skipCalibration && (
-          <aside className={`${colors.bg.secondary} rounded-lg ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.SPACING.GAP_MD}`}>
-            <h5 className={`text-sm font-medium ${colors.text.info}`}>Ρυθμίσεις Βαθμονόμησης</h5>
+          <aside className={`${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.LG} ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.SPACING.GAP_MD}`}>
+            <h5 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.info}`}>Ρυθμίσεις Βαθμονόμησης</h5>
             <section className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block text-sm ${colors.text.tertiary}`}>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.tertiary}`}>
                 Γνωστή Απόσταση:
                 <input
                   type="number"
@@ -139,7 +139,7 @@ export function CalibrationStep() {
                   className={`${PANEL_LAYOUT.MARGIN.TOP_XS} w-full ${colors.bg.muted} ${quick.input} ${PANEL_LAYOUT.INPUT.PADDING} ${colors.text.primary} ${colors.text.muted} ${PANEL_LAYOUT.INPUT.FOCUS}`}
                 />
               </label>
-              <p className={`text-xs ${colors.text.muted}`}>
+              <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
                 Στο επόμενο βήμα θα μπορείτε να επιλέξετε δύο σημεία στο σχέδιο που αντιστοιχούν σε αυτή την απόσταση.
               </p>
             </section>

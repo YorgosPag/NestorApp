@@ -110,8 +110,8 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
     <article className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
       {/* Crosshair Color - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`text-sm font-medium ${colors.text.secondary}`}>Χρώμα Σταυρονήματος</h4>
-        <p className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα γραμμών σταυρώνυματος</p>
+        <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Σταυρονήματος</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα γραμμών σταυρώνυματος</p>
         <ColorDialogTrigger
           value={cursorColors.crosshairColor}
           onChange={(color) => onCursorColorsChange({ ...cursorColors, crosshairColor: color })}
@@ -127,14 +127,14 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
 
       {/* Line Style - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`text-sm font-medium ${colors.text.primary}`}>Τύπος Γραμμής</h4>
-        <p className={`text-xs ${colors.text.muted}`}>Στυλ απόδοσης γραμμών</p>
+        <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Τύπος Γραμμής</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Στυλ απόδοσης γραμμών</p>
         <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.SM}`}>
           <button
             onClick={() => {
               updateSettings({ crosshair: { ...settings.crosshair, line_style: 'solid' } });
             }}
-            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} text-xs transition-colors ${
+            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
               (settings.crosshair.line_style || 'solid') === 'solid'
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -148,7 +148,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_style: 'dashed' } })}
-            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} text-xs transition-colors ${
+            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
               (settings.crosshair.line_style || 'solid') === 'dashed'
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -162,7 +162,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_style: 'dotted' } })}
-            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} text-xs transition-colors ${
+            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
               (settings.crosshair.line_style || 'solid') === 'dotted'
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -176,7 +176,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_style: 'dash-dot' } })}
-            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} text-xs transition-colors ${
+            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
               (settings.crosshair.line_style || 'solid') === 'dash-dot'
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -193,8 +193,8 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
 
       {/* Line Width - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`text-sm font-medium ${colors.text.primary}`}>Πάχος Γραμμής</h4>
-        <p className={`text-xs ${colors.text.muted}`}>Πάχος σε pixels</p>
+        <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Πάχος Γραμμής</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Πάχος σε pixels</p>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <input
             type="range"
@@ -205,14 +205,14 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             onChange={(e) => updateSettings({ crosshair: { ...settings.crosshair, line_width: parseFloat(e.target.value) } })}
             className="flex-1"
           />
-          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>{settings.crosshair.line_width}px</div>
+          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>{settings.crosshair.line_width}px</div>
         </div>
         <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
           {[1, 1.5, 2, 3, 4, 5].map(width => (
             <button
               key={width}
               onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_width: width } })}
-              className={`flex-1 ${PANEL_LAYOUT.SPACING.XS} ${radius.md} text-xs transition-colors ${
+              className={`flex-1 ${PANEL_LAYOUT.SPACING.XS} ${radius.md} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
                 settings.crosshair.line_width === width
                   ? `${colors.bg.primary} border ${getStatusBorder('info')}`
                   : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border ${getStatusBorder('default')}`
@@ -222,7 +222,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
                 className="w-full mx-auto"
                 style={layoutUtilities.dxf.composite.coloredBar(width, cursorColors.crosshairColor)}
               ></div>
-              <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS} text-xs`}>{width}px</span>
+              <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{width}px</span>
             </button>
           ))}
         </div>
@@ -230,14 +230,14 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
 
       {/* Size/Type - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`text-sm font-medium ${colors.text.primary}`}>Μέγεθος Σταυρονήματος</h4>
-        <p className={`text-xs ${colors.text.muted}`}>Επέκταση από το κέντρο</p>
+        <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Μέγεθος Σταυρονήματος</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Επέκταση από το κέντρο</p>
         <div className={`grid grid-cols-5 ${PANEL_LAYOUT.GAP.XS}`}>
           <button
             onClick={() => {
               updateSettings({ crosshair: { ...settings.crosshair, size_percent: 0 } });
             }}
-            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} text-xs transition-colors relative flex flex-col items-center ${
+            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 0
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -249,11 +249,11 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
             </div>
-            <span className={`text-xs ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>0%</span>
+            <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>0%</span>
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, size_percent: 5 } })}
-            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} text-xs transition-colors relative flex flex-col items-center ${
+            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 5
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -271,11 +271,11 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
             </div>
-            <span className={`text-xs ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>5%</span>
+            <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>5%</span>
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, size_percent: 8 } })}
-            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} text-xs transition-colors relative flex flex-col items-center ${
+            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 8
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -293,11 +293,11 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
             </div>
-            <span className={`text-xs ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>8%</span>
+            <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>8%</span>
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, size_percent: 15 } })}
-            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} text-xs transition-colors relative flex flex-col items-center ${
+            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 15
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -315,11 +315,11 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
             </div>
-            <span className={`text-xs ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>15%</span>
+            <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>15%</span>
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, size_percent: 100 } })}
-            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} text-xs transition-colors relative flex flex-col items-center ${
+            className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 100
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -342,7 +342,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
             </div>
-            <span className={`text-xs ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Full</span>
+            <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Full</span>
           </button>
         </div>
       </section>

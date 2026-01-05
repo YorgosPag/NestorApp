@@ -243,7 +243,7 @@ export const ModalLoadingOverlay: React.FC<LoadingOverlayProps> = ({
   if (!isVisible) return null;
 
   return (
-    <div className={`absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-lg z-50 ${className}`}>
+    <div className={`absolute inset-0 flex items-center justify-center ${colors.bg.modalBackdrop} rounded-lg z-50 ${className}`}>
       <div className={MODAL_FLEX_PATTERNS.COLUMN.centerWithGap}>
         <AnimatedSpinner size="large" />
         <span className={`${typography.label.sm} ${colors.text.inverted}`}>

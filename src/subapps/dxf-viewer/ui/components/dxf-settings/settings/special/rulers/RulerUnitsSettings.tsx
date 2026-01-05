@@ -198,7 +198,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
             onChange={(e) => handleRulerUnitsFontSizeChange(parseInt(e.target.value))}
             className="flex-1"
           />
-          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
+          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} text-xs ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
             {rulerSettings.horizontal.unitsFontSize || 10}px
           </div>
         </div>

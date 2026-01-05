@@ -13,6 +13,7 @@
 import React, { useState } from 'react';
 import { TestsModal } from '../../TestsModal'; // Corrected path to TestsModal
 import { useBorderTokens } from '@/hooks/useBorderTokens'; // Enterprise border system
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'; // Enterprise semantic colors
 import type { TestDefinition, NotificationFn } from '../types/tests.types'; // Adjust path accordingly
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
@@ -236,6 +237,8 @@ export function createDxfValidationTest(
  */
 export function CustomTestsExample() {
   const [isTestsOpen, setIsTestsOpen] = useState(false);
+  const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   const showNotification = (message: string, type?: 'success' | 'info' | 'warning' | 'error') => {
     console.log(`[${type || 'info'}] ${message}`);
@@ -256,17 +259,17 @@ export function CustomTestsExample() {
       <h1 className="text-2xl font-bold mb-4">Custom Tests Example</h1>
 
       <div className="space-y-2 mb-4">
-        <p className="text-gray-400">
+        <p className={colors.text.muted}>
           This example shows how to create custom tests for your specific needs.
         </p>
-        <p className="text-gray-400">
+        <p className={colors.text.muted}>
           Click "Run Tests" to see the custom tests in action.
         </p>
       </div>
 
       <button
         onClick={() => setIsTestsOpen(true)}
-        className={`px-4 py-2 bg-purple-600 text-white rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.PURPLE_BUTTON}`}
+        className={`px-4 py-2 ${colors.bg.purpleButton} ${colors.text.WHITE} rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.PURPLE_BUTTON}`}
       >
         🧪 Run Tests
       </button>
@@ -278,8 +281,8 @@ export function CustomTestsExample() {
       />
 
       {/* Info Panel */}
-      <div className={`mt-8 bg-blue-900/20 ${useBorderTokens().getStatusBorder('info')} rounded-lg p-4`}>
-        <div className="text-blue-400 font-bold mb-2">💡 How to Add Custom Tests</div>
+      <div className={`mt-8 ${colors.bg.infoPanel} ${getStatusBorder('info')} rounded-lg p-4`}>
+        <div className={`${colors.text.infoAccent} font-bold mb-2`}>💡 How to Add Custom Tests</div>
         <div className="text-sm space-y-2">
           <p>1. Create a factory function that returns a TestDefinition</p>
           <p>2. Add your test to constants/automatedTests.ts</p>

@@ -148,14 +148,14 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className={`${colors.bg.secondary} rounded-lg shadow-xl max-w-2xl w-full ${PANEL_LAYOUT.MARGIN.X_LG} max-h-[90vh] overflow-y-auto`}>
+    <div className={`fixed inset-0 ${colors.bg.modalBackdrop} flex items-center justify-center z-50`}>
+      <div className={`${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.LG} ${PANEL_LAYOUT.SHADOW.XL} max-w-2xl w-full ${PANEL_LAYOUT.MARGIN.X_LG} max-h-[90vh] overflow-y-auto`}>
         
         {/* Header */}
         <header className={`flex justify-between items-center ${PANEL_LAYOUT.SPACING.XXL} ${getDirectionalBorder('default', 'bottom')}`}>
           <div>
-            <h2 className={`text-xl font-semibold ${colors.text.primary}`}>DXF Import Wizard</h2>
-            <p className={`${colors.text.muted} text-sm ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
+            <h2 className={`${PANEL_LAYOUT.TYPOGRAPHY.XL} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.primary}`}>DXF Import Wizard</h2>
+            <p className={`${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
               {selectedFile?.name && `Processing: ${selectedFile.name}`}
             </p>
           </div>
@@ -172,7 +172,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
           <ol className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_LG}`}>
             {['destination', 'options', 'processing', 'complete'].map((step, index) => (
               <li key={step} className="flex items-center">
-                <span className={`${iconSizes.xl} rounded-full flex items-center justify-center text-sm font-medium ${
+                <span className={`${iconSizes.xl} ${PANEL_LAYOUT.ROUNDED.FULL} flex items-center justify-center ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${
                   currentStep === step ? `${colors.bg.info} ${colors.text.inverted}` :
                   ['destination', 'options', 'processing', 'complete'].indexOf(currentStep) > index ? `${colors.bg.success} ${colors.text.inverted}` :
                   `${colors.bg.hover} ${colors.text.muted}`
@@ -180,7 +180,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                   {index + 1}
                 </span>
                 {index < 3 && (
-                  <span className={`${iconSizes['2xl']} h-1 ${PANEL_LAYOUT.MARGIN.X_SM} ${
+                  <span className={`${iconSizes['2xl']} ${PANEL_LAYOUT.HEIGHT.XS} ${PANEL_LAYOUT.MARGIN.X_SM} ${
                     ['destination', 'options', 'processing', 'complete'].indexOf(currentStep) > index ? colors.bg.success : colors.bg.hover
                   }`} />
                 )}
@@ -202,17 +202,17 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
           {/* Step 2: Processing Options */}
           {currentStep === 'options' && selectedDestination && (
             <div>
-              <h3 className={`text-lg font-medium ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
+              <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
                 Επιλογές επεξεργασίας
               </h3>
-              <div className={`${colors.bg.hover} ${PANEL_LAYOUT.CONTAINER.PADDING} rounded-lg ${PANEL_LAYOUT.MARGIN.BOTTOM_XL}`}>
+              <div className={`${colors.bg.hover} ${PANEL_LAYOUT.CONTAINER.PADDING} ${PANEL_LAYOUT.ROUNDED.LG} ${PANEL_LAYOUT.MARGIN.BOTTOM_XL}`}>
                 <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD}`}>
                   {React.createElement(getDestinationIcon(selectedDestination.type), {
                     className: `${iconSizes.lg} ${colors.text.info}`
                   })}
                   <div>
-                    <div className={`${colors.text.primary} font-medium`}>{selectedDestination.label}</div>
-                    <div className={`${colors.text.muted} text-sm`}>Destination: {selectedDestination.type}</div>
+                    <div className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>{selectedDestination.label}</div>
+                    <div className={`${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>Destination: {selectedDestination.type}</div>
                   </div>
                 </div>
               </div>
@@ -220,8 +220,8 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
               <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <label className={`${colors.text.primary} font-medium`}>Process Layers</label>
-                    <p className={`${colors.text.muted} text-sm`}>Create status layers for property management</p>
+                    <label className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>Process Layers</label>
+                    <p className={`${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>Create status layers for property management</p>
                   </div>
                   <Checkbox
                     checked={processingOptions.processLayers}
@@ -231,8 +231,8 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <label className={`${colors.text.primary} font-medium`}>Preserve Grid</label>
-                    <p className={`${colors.text.muted} text-sm`}>Keep grid lines in the final view</p>
+                    <label className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>Preserve Grid</label>
+                    <p className={`${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>Keep grid lines in the final view</p>
                   </div>
                   <Checkbox
                     checked={processingOptions.preserveGrid}
@@ -242,8 +242,8 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <label className={`${colors.text.primary} font-medium`}>Preserve Rulers</label>
-                    <p className={`${colors.text.muted} text-sm`}>Keep measurement rulers</p>
+                    <label className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>Preserve Rulers</label>
+                    <p className={`${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>Keep measurement rulers</p>
                   </div>
                   <Checkbox
                     checked={processingOptions.preserveRulers}
@@ -253,8 +253,8 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <label className={`${colors.text.primary} font-medium`}>Auto Scale</label>
-                    <p className={`${colors.text.muted} text-sm`}>Automatically scale to fit destination</p>
+                    <label className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>Auto Scale</label>
+                    <p className={`${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>Automatically scale to fit destination</p>
                   </div>
                   <Checkbox
                     checked={processingOptions.autoScale}
@@ -269,7 +269,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
           {currentStep === 'processing' && (
             <div className="text-center">
               <AnimatedSpinner size="large" className={`mx-auto ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`} />
-              <h3 className={`text-lg font-medium ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
+              <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
                 Επεξεργασία κάτοψης...
               </h3>
               <p className={colors.text.muted}>
@@ -281,19 +281,19 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
           {/* Step 4: Complete */}
           {currentStep === 'complete' && (
             <div className="text-center">
-              <div className={`${iconSizes['2xl']} ${colors.bg.success} rounded-full flex items-center justify-center mx-auto ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
+              <div className={`${iconSizes['2xl']} ${colors.bg.success} ${PANEL_LAYOUT.ROUNDED.FULL} flex items-center justify-center mx-auto ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
                 <svg className={`${iconSizes.lg} ${colors.text.primary}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h3 className={`text-lg font-medium ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
+              <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
                 Επιτυχής ολοκλήρωση!
               </h3>
               <p className={`${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
                 Η κάτοψη αποθηκεύτηκε επιτυχώς στον επιλεγμένο προορισμό.
               </p>
               {selectedDestination && (
-                <div className={`${colors.bg.hover} ${PANEL_LAYOUT.SPACING.MD} rounded-lg inline-block`}>
+                <div className={`${colors.bg.hover} ${PANEL_LAYOUT.SPACING.MD} ${PANEL_LAYOUT.ROUNDED.LG} inline-block`}>
                   <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                     {React.createElement(getDestinationIcon(selectedDestination.type), {
                       className: `${iconSizes.md} ${colors.text.success}`
@@ -304,7 +304,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
               )}
             </div>
           )}
-        </div>
+        </main>
 
         {/* Footer */}
         <footer className={`flex justify-between items-center ${PANEL_LAYOUT.SPACING.XXL} ${getDirectionalBorder('default', 'top')}`}>
@@ -320,7 +320,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
             {currentStep === 'complete' ? (
               <button
                 onClick={handleClose}
-                className={`${PANEL_LAYOUT.BUTTON.PADDING_XL} ${colors.bg.success} ${HOVER_BACKGROUND_EFFECTS.GREEN_BUTTON} ${colors.text.inverted} rounded-lg font-medium`}
+                className={`${PANEL_LAYOUT.BUTTON.PADDING_XL} ${colors.bg.success} ${HOVER_BACKGROUND_EFFECTS.GREEN_BUTTON} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}
               >
                 Ολοκλήρωση
               </button>
@@ -332,7 +332,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                   currentStep === 'processing' ||
                   busy
                 }
-                className={`${PANEL_LAYOUT.BUTTON.PADDING_XL} ${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON} disabled:${colors.bg.hover} disabled:cursor-not-allowed ${colors.text.inverted} rounded-lg font-medium`}
+                className={`${PANEL_LAYOUT.BUTTON.PADDING_XL} ${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON} disabled:${colors.bg.hover} disabled:cursor-not-allowed ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}
               >
                 {currentStep === 'options' ? 'Ξεκίνημα επεξεργασίας' : 'Επόμενο →'}
               </button>

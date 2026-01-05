@@ -122,7 +122,7 @@ export function EnterpriseColorField({
   // === HEX MODE ===
   const renderHexField = () => (
     <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-      <label className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${colors.text.secondary} w-12`}>{labels.hex || 'HEX'}</label>
+      <label className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${colors.text.secondary} ${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY}`}>{labels.hex || 'HEX'}</label>
       <input
         type="text"
         value={formattedValue}

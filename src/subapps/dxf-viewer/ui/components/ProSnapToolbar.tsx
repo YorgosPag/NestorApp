@@ -69,7 +69,7 @@ const SnapButton: React.FC<SnapButtonProps> = ({ mode, enabled, onClick, compact
       onClick={onClick}
       title={tooltip}
       className={`
-        ${compact ? 'h-6 w-12 text-xs' : 'h-8 w-16 text-sm'}
+        ${compact ? `${PANEL_LAYOUT.HEIGHT.LG} ${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} text-xs` : `${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.WIDTH.MD} text-sm`}
         ${radius.md} border transition-all duration-150 font-medium
         flex items-center justify-center
         ${enabled
@@ -179,7 +179,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
 
       {ADVANCED_MODES.length > 0 && (
         <>
-          <div className={`w-px h-6 ${colors.bg.muted}`} />
+          <div className={`w-px ${PANEL_LAYOUT.HEIGHT.LG} ${colors.bg.muted}`} />
           <button
             onClick={handleToggleAdvanced}
             className={`${iconSizes.xl} ${radius.md} border transition-all duration-150 flex items-center justify-center ${
@@ -192,7 +192,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
         </>
       )}
 
-      <div className={`w-px h-6 ${colors.bg.muted}`} />
+      <div className={`w-px ${PANEL_LAYOUT.HEIGHT.LG} ${colors.bg.muted}`} />
       <button
         onClick={handleQuickEnable}
         className={`${iconSizes.xl} ${radius.md} border transition-all duration-150 flex items-center justify-center ${colors.text.muted} ${HOVER_TEXT_EFFECTS.WHITE} ${colors.bg.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`}

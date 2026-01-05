@@ -77,8 +77,8 @@ function SliderRow({
   return (
     <div className={PANEL_LAYOUT.MARGIN.BOTTOM_MD}>
       <div className={`flex justify-between items-center ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>
-        <label className={`text-sm ${colors.text.tertiary}`}>{label}</label>
-        <span className={`text-xs ${colors.text.muted} font-mono`}>{value}</span>
+        <label className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.tertiary}`}>{label}</label>
+        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} font-mono`}>{value}</span>
       </div>
       <input
         type="range"
@@ -115,7 +115,7 @@ function CheckboxRow({
           disabled={disabled}
           className={PANEL_LAYOUT.MARGIN.RIGHT_SM}
         />
-        <span className={`text-sm ${colors.text.tertiary}`}>{label}</span>
+        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.tertiary}`}>{label}</span>
       </label>
     </div>
   );
@@ -367,7 +367,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
             className={`drag-handle flex justify-between items-center ${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.LG}`}
             onMouseDown={handleMouseDown}
           >
-            <h3 className="text-lg font-bold text-cyan-400">Ρυθμισεις Κερσορα AutoCAD</h3>
+            <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${colors.text.cyanAccent}`}>Ρυθμισεις Κερσορα AutoCAD</h3>
             <button
               onClick={onClose}
               className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} text-xl ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} rounded ${PANEL_LAYOUT.SPACING.COMPACT}`}
@@ -380,7 +380,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
 
           {/* Crosshair Settings - Simplified */}
           <section className={PANEL_LAYOUT.SPACING.GAP_XL}>
-            <h4 className={`text-md font-semibold ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>Σταυρονημα</h4>
+            <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.BASE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>Σταυρονημα</h4>
 
             <CheckboxRow
               label="Ενεργοποιηση Σταυρονηματος"
@@ -389,15 +389,15 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               colors={colors}
             />
 
-            <div className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.info} ${getStatusBorder('info')} rounded text-xs ${colors.text.info}`}>
+            <div className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.info} ${getStatusBorder('info')} rounded ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.info}`}>
               Μεγεθος, χρωμα και παχος ρυθμιζονται απο τις Ρυθμισεις DXF
             </div>
           </section>
 
           {/* Behavior Settings */}
           <section className={PANEL_LAYOUT.SPACING.GAP_XL}>
-            <h4 className={`text-md font-semibold ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>Συμπεριφορα AutoCAD</h4>
-            <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.SPACING.SM} bg-yellow-900/30 ${getStatusBorder('warning')} rounded text-xs text-yellow-200`}>
+            <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.BASE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>Συμπεριφορα AutoCAD</h4>
+            <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.warningPanel} ${getStatusBorder('warning')} rounded ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.warningLighter}`}>
               Σημειωση: Μερικες λειτουργιες ειναι σε αναπτυξη και μπορει να μην ειναι πληρως ενεργες
             </div>
 
@@ -407,7 +407,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               onChange={(snap_indicator) => updateBehaviorSettings({ snap_indicator })}
               colors={colors}
             />
-            <div className={`text-xs ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
+            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
               Ενεργο: Εμφανιζει κιτρινες ενδειξεις snap στο crosshair
             </div>
 
@@ -417,7 +417,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               onChange={(coordinate_display) => updateBehaviorSettings({ coordinate_display })}
               colors={colors}
             />
-            <div className={`text-xs ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
+            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
               Ενεργο: Δειχνει X,Y συντεταγμενες στο status bar
             </div>
 
@@ -427,7 +427,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               onChange={(dynamic_input) => updateBehaviorSettings({ dynamic_input })}
               colors={colors}
             />
-            <div className={`text-xs ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
+            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
               Ενεργο: Πεδια εισαγωγης κοντα στον κερσορα κατα το σχεδιασμο
             </div>
 
@@ -437,14 +437,14 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               onChange={(cursor_tooltip) => updateBehaviorSettings({ cursor_tooltip })}
               colors={colors}
             />
-            <div className={`text-xs ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
+            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
               Ενεργο: Tooltip με πληροφοριες εργαλειου κοντα στον κερσορα
             </div>
           </section>
 
           {/* Performance Settings */}
           <section className={PANEL_LAYOUT.MARGIN.BOTTOM_XL}>
-            <h4 className={`text-md font-semibold ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>Απόδοση</h4>
+            <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.BASE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>Απόδοση</h4>
 
             <CheckboxRow
               label="✅ Χρήση RAF 60fps (Συνδεδεμένο)"
@@ -452,8 +452,8 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               onChange={(use_raf) => updatePerformanceSettings({ use_raf })}
               colors={colors}
             />
-            <div className={`text-xs ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
-              🔗 Ενεργό: RequestAnimationFrame για ομαλότερη κίνηση crosshair
+            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
+              Ενεργο: RequestAnimationFrame για ομαλοτερη κινηση crosshair
             </div>
 
             <CheckboxRow
@@ -462,8 +462,8 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               onChange={(precision_mode) => updatePerformanceSettings({ precision_mode })}
               colors={colors}
             />
-            <div className={`text-xs ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
-              🔗 Ενεργό: Sub-pixel ακρίβεια για crosshair και snap indicators
+            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
+              Ενεργο: Sub-pixel ακριβεια για crosshair και snap indicators
             </div>
             {settings.performance.precision_mode && (
               <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_MD} ${PANEL_LAYOUT.MARGIN.LEFT_LG} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.info} ${getStatusBorder('info')} rounded text-xs ${colors.text.info} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>

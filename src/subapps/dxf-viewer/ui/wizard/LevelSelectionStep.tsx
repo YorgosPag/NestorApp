@@ -57,7 +57,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
         </p>
       </header>
 
-      <section className={`${PANEL_LAYOUT.SPACING.GAP_MD} max-h-48 overflow-y-auto ${PANEL_LAYOUT.PADDING.RIGHT_SM}`}>
+      <section className={`${PANEL_LAYOUT.SPACING.GAP_MD} ${PANEL_LAYOUT.MAX_HEIGHT.MD} overflow-y-auto ${PANEL_LAYOUT.PADDING.RIGHT_SM}`}>
         <h4 className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} font-medium ${colors.text.tertiary}`}>Υπάρχοντα Επίπεδα</h4>
         {levels.map((level) => (
           <label

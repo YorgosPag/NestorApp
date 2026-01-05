@@ -18,6 +18,7 @@ const portalComponents = {
 };
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { AnimatedSpinner } from '../modal/ModalLoadingStates';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
@@ -128,7 +129,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black bg-opacity-50 transition-opacity ${overlayClassName}`}
+        className={`fixed inset-0 ${colors.bg.modalBackdrop} transition-opacity ${overlayClassName}`}
         style={{ zIndex: portalComponents.modal.backdrop.zIndex(zIndex) }}
         onClick={handleBackdropClick}
         aria-hidden="true"

@@ -76,7 +76,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
           type="text"
           value={colors[colorKey] as string}
           onChange={(e) => handleColorChange(colorKey, e.target.value)}
-          className={`w-20 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${semanticColors.bg.muted} ${semanticColors.text.primary} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} ${getStatusBorder('muted')}`}
+          className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${semanticColors.bg.muted} ${semanticColors.text.primary} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} ${getStatusBorder('muted')}`}
           placeholder={UI_COLORS.WHITE}
         />
         {opacityKey && (
@@ -88,9 +88,9 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
               step="0.1"
               value={colors[opacityKey] as number}
               onChange={(e) => handleColorChange(opacityKey, String(parseFloat(e.target.value)))}
-              className="w-16"
+              className={`flex-1 ${PANEL_LAYOUT.WIDTH.MD}`}
             />
-            <div className={`w-8 ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${semanticColors.text.secondary} text-center`}>
+            <div className={`${PANEL_LAYOUT.WIDTH.SM} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${semanticColors.text.secondary} text-center`}>
               {Math.round((colors[opacityKey] as number) * 100)}%
             </div>
           </>
@@ -210,7 +210,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
             color={colors.crossingBorderColor}
           />
         </div>
-      </div>
+      </section>
     </div>
   );
 }

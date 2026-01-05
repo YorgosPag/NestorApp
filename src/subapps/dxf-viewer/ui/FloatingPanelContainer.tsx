@@ -105,7 +105,7 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   // Don't render panels until translations are ready
   if (isLoading) {
     return (
-      <div className={`fixed right-4 top-4 ${colors.bg.overlay} backdrop-blur-sm ${quick.card} ${getStatusBorder('default')} shadow-xl w-80`}>
+      <div className={`fixed right-4 top-4 ${colors.bg.overlay} backdrop-blur-sm ${quick.card} ${getStatusBorder('default')} shadow-xl ${PANEL_LAYOUT.WIDTH.PANEL_SM}`}>
         <div className={`${PANEL_LAYOUT.SPACING.LG} text-center ${colors.text.muted}`}>
           Loading translations...
         </div>
@@ -126,7 +126,7 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   }
 
   return (
-    <div className={`w-96 h-full flex flex-col ${colors.bg.primary} ${quick.card} relative`}>
+    <div className={`${PANEL_LAYOUT.WIDTH.PANEL_LG} ${PANEL_LAYOUT.HEIGHT.FULL} flex flex-col ${colors.bg.primary} ${quick.card} relative`}>
       <div className={`flex-shrink-0 ${colors.bg.primary} ${quick.card} ${getStatusBorder('default')}`}>
         <PanelTabs
           activePanel={activePanel}

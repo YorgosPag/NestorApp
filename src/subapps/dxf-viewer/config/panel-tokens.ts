@@ -211,6 +211,12 @@ export const PANEL_LAYOUT = {
     HORIZONTAL_MD: 'px-3',             // 12px horizontal padding
     HORIZONTAL_LG: 'px-4',             // 16px horizontal padding
 
+    // 🏢 ENTERPRISE: Vertical-only padding (py-*)
+    VERTICAL_XS: 'py-1',               // 4px vertical padding
+    VERTICAL_SM: 'py-2',               // 8px vertical padding
+    VERTICAL_MD: 'py-3',               // 12px vertical padding
+    VERTICAL_LG: 'py-4',               // 16px vertical padding
+
     // 🏢 ENTERPRISE: Responsive spacing (for breakpoints)
     SM_NONE: 'sm:p-0',                 // 0px padding at sm breakpoint and above
 
@@ -244,11 +250,56 @@ export const PANEL_LAYOUT = {
 
   // 📐 HEIGHT - Fixed height tokens
   HEIGHT: {
+    // Core heights
     XS: 'h-1',                         // 4px  - Progress bar, dividers
-    SM: 'h-2',                         // 8px  - Small height
+    SM: 'h-2',                         // 8px  - Small height (snap indicators)
     MD: 'h-4',                         // 16px - Medium height
     LG: 'h-6',                         // 24px - Large height
     XL: 'h-8',                         // 32px - Extra large height
+    XXL: 'h-9',                        // 36px - Button groups
+    ICON_LG: 'h-10',                   // 40px - Large icons (empty states)
+    INPUT_SM: 'h-7',                   // 28px - Small inputs
+
+    // Full height utilities
+    FULL: 'h-full',                    // 100% height
+  },
+
+  // 📐 MAX_HEIGHT - Scroll container constraints (ADR-011: Enterprise Centralization)
+  MAX_HEIGHT: {
+    XS: 'max-h-24',                    // 96px  - Small scroll areas (calibration points)
+    SM: 'max-h-32',                    // 128px - Compact lists (destinations)
+    MD: 'max-h-48',                    // 192px - Medium scroll areas (level selection)
+    LG: 'max-h-64',                    // 256px - Standard scroll lists (layers, colors)
+    XL: 'max-h-96',                    // 384px - Large scroll areas (settings panels)
+  },
+
+  // 📏 WIDTH - Fixed width tokens
+  WIDTH: {
+    // Core widths
+    XS: 'w-5',                         // 20px - Dropdown arrows, small buttons
+    SM: 'w-8',                         // 32px - Small fixed width (labels)
+    MD: 'w-16',                        // 64px - Medium fixed width
+    LG: 'w-24',                        // 96px - Large fixed width
+    XL: 'w-32',                        // 128px - Extra large width
+    FULL: 'w-full',                    // Full width
+
+    // Specific component widths
+    VALUE_DISPLAY: 'w-12',             // 48px - Slider value displays (percentages, pixels)
+    INPUT_SM: 'w-20',                  // 80px - Small input fields
+    BUTTON_SM: 'w-6',                  // 24px - Small button width (zoom controls)
+    BUTTON_MD: 'w-7',                  // 28px - Medium button width
+    PANEL_SM: 'w-80',                  // 320px - Small panels, floating containers
+    PANEL_LG: 'w-96',                  // 384px - Large panels, sidebars
+
+    // Icon indicator widths
+    INDICATOR_SM: 'w-3',               // 12px - Small color indicators
+    INDICATOR_MD: 'w-4',               // 16px - Medium indicators
+    INDICATOR_LG: 'w-5',               // 20px - Large indicators
+    ICON_LG: 'w-10',                   // 40px - Large icons (empty states)
+
+    // Flex utilities
+    MIN_ZERO: 'min-w-0',               // Flex item reset for truncation
+    FLEX_1: 'flex-1',                  // Flexible width
   },
 
   // ↕️ DIRECTIONAL MARGINS - For specific margin directions
@@ -288,6 +339,7 @@ export const PANEL_LAYOUT = {
     Y_XS: 'my-1',                      // 4px vertical margin (separators)
 
     // 🏢 ENTERPRISE: Left margins (ml-*)
+    LEFT_XS: 'ml-1',                   // 4px left margin (required asterisk)
     LEFT_SM: 'ml-2',                   // 8px left margin (icon-text spacing)
     LEFT_3XL: 'ml-12',                 // 48px left margin (entity card indentation)
 
@@ -343,6 +395,7 @@ export const PANEL_LAYOUT = {
     HEIGHT: 'h-8',                     // Standard input height
     PADDING: 'px-3 py-2',              // Standard input padding
     PADDING_COMPACT: 'px-2 py-1',      // Compact input padding (for inline inputs)
+    PADDING_X: 'px-3',                 // Horizontal padding only (for scale/zoom controls)
     BORDER_RADIUS: 'rounded',          // Input border radius
     TEXT_SIZE: 'text-sm',              // Input text size
     FULL_WIDTH: 'w-full',              // Full width inputs
@@ -385,6 +438,16 @@ export const PANEL_LAYOUT = {
     LOADING: 'w-4 h-4',                // Loading spinner size
   },
 
+  // 🏢 INTERACTIVE - Interactive element patterns
+  INTERACTIVE: {
+    HOVER: 'hover:bg-accent/50',       // Hover effect
+    FOCUS: 'focus:outline-none focus:ring-2 focus:ring-blue-500', // Focus ring
+    ACTIVE: 'active:bg-accent/80',     // Active state
+    DISABLED: 'disabled:opacity-50 disabled:cursor-not-allowed', // Disabled state
+    DISABLED_OPACITY: 'opacity-50',    // Just opacity (for icons)
+    TRANSITION: 'transition-colors duration-150', // Smooth transitions
+  },
+
   // Loading states
   LOADING: {
     SPINNER: 'border border-white border-t-transparent rounded-full animate-spin',
@@ -414,6 +477,137 @@ export const PANEL_LAYOUT = {
     LINE_WIDTH: 2,
     OPACITY: 1,
     LINE_TYPE: 'solid' as const,
+  },
+
+  // ============================================================================
+  // 🔤 TYPOGRAPHY - Text size tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  TYPOGRAPHY: {
+    // Core text sizes (matching Tailwind scale)
+    XS: 'text-xs',                       // 12px - Small labels, badges
+    SM: 'text-sm',                       // 14px - Body text, buttons
+    BASE: 'text-base',                   // 16px - Default text
+    LG: 'text-lg',                       // 18px - Subheadings
+    XL: 'text-xl',                       // 20px - Section headings
+    '2XL': 'text-2xl',                   // 24px - Page headings
+    '3XL': 'text-3xl',                   // 30px - Large headings
+    '4XL': 'text-4xl',                   // 36px - Display headings
+  },
+
+  // ============================================================================
+  // 🔡 FONT_WEIGHT - Font weight tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  FONT_WEIGHT: {
+    NORMAL: 'font-normal',               // 400 - Regular text
+    MEDIUM: 'font-medium',               // 500 - Emphasized text
+    SEMIBOLD: 'font-semibold',           // 600 - Subheadings
+    BOLD: 'font-bold',                   // 700 - Headings, important text
+  },
+
+  // ============================================================================
+  // 🔲 ROUNDED - Border radius tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  ROUNDED: {
+    NONE: 'rounded-none',                // 0px - No border radius
+    SM: 'rounded-sm',                    // 2px - Subtle rounding
+    DEFAULT: 'rounded',                  // 4px - Default rounding
+    MD: 'rounded-md',                    // 6px - Medium rounding
+    LG: 'rounded-lg',                    // 8px - Large rounding
+    XL: 'rounded-xl',                    // 12px - Extra large rounding
+    '2XL': 'rounded-2xl',                // 16px - Very large rounding
+    FULL: 'rounded-full',                // Full circular rounding
+  },
+
+  // ============================================================================
+  // 👁️ OPACITY - Opacity tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  OPACITY: {
+    '0': 'opacity-0',                    // 0% - Invisible
+    '25': 'opacity-25',                  // 25% - Very transparent
+    '50': 'opacity-50',                  // 50% - Semi-transparent (disabled)
+    '60': 'opacity-60',                  // 60% - Debug overlays
+    '75': 'opacity-75',                  // 75% - Slightly transparent
+    '100': 'opacity-100',                // 100% - Fully opaque
+  },
+
+  // ============================================================================
+  // 🌫️ SHADOW - Box shadow tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  SHADOW: {
+    SM: 'shadow-sm',                     // Small shadow
+    DEFAULT: 'shadow',                   // Default shadow
+    MD: 'shadow-md',                     // Medium shadow
+    LG: 'shadow-lg',                     // Large shadow
+    XL: 'shadow-xl',                     // Extra large shadow
+    '2XL': 'shadow-2xl',                 // Very large shadow
+    NONE: 'shadow-none',                 // No shadow
+  },
+
+  // ============================================================================
+  // ⏱️ DURATION - Transition duration tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  DURATION: {
+    '75': 'duration-75',                 // 75ms - Very fast
+    '100': 'duration-100',               // 100ms - Fast
+    '150': 'duration-150',               // 150ms - Default (standard UI)
+    '200': 'duration-200',               // 200ms - Comfortable
+    '300': 'duration-300',               // 300ms - Smooth
+    '500': 'duration-500',               // 500ms - Slow (emphasis)
+  },
+
+  // ============================================================================
+  // 📏 LINE_HEIGHT - Leading tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  LEADING: {
+    NONE: 'leading-none',                // 1 - No line height
+    TIGHT: 'leading-tight',              // 1.25 - Compact text
+    SNUG: 'leading-snug',                // 1.375 - Slightly compact
+    NORMAL: 'leading-normal',            // 1.5 - Default
+    RELAXED: 'leading-relaxed',          // 1.625 - Comfortable
+    LOOSE: 'leading-loose',              // 2 - Very spacious
+  },
+
+  // ============================================================================
+  // 🔤 TRACKING - Letter spacing tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  TRACKING: {
+    TIGHTER: 'tracking-tighter',         // -0.05em - Very tight
+    TIGHT: 'tracking-tight',             // -0.025em - Tight
+    NORMAL: 'tracking-normal',           // 0 - Default
+    WIDE: 'tracking-wide',               // 0.025em - Wide
+    WIDER: 'tracking-wider',             // 0.05em - Wider
+    WIDEST: 'tracking-widest',           // 0.1em - Widest
+  },
+
+  // ============================================================================
+  // 📍 POSITION - Position offset tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  POSITION: {
+    TOP_0: 'top-0',                      // top: 0
+    TOP_1: 'top-1',                      // top: 4px
+    TOP_2: 'top-2',                      // top: 8px
+    TOP_4: 'top-4',                      // top: 16px
+    TOP_20: 'top-20',                    // top: 80px (info panels)
+    LEFT_0: 'left-0',                    // left: 0
+    LEFT_4: 'left-4',                    // left: 16px
+    RIGHT_0: 'right-0',                  // right: 0
+    RIGHT_2: 'right-2',                  // right: 8px
+    RIGHT_4: 'right-4',                  // right: 16px
+    BOTTOM_0: 'bottom-0',                // bottom: 0
+    BOTTOM_4: 'bottom-4',                // bottom: 16px
+    INSET_0: 'inset-0',                  // all: 0 (full coverage)
+  },
+
+  // ============================================================================
+  // 📊 Z_INDEX - Z-index tokens (ENTERPRISE 2026-01-05)
+  // ============================================================================
+  Z_INDEX: {
+    '0': 'z-0',                          // 0 - Base level
+    '10': 'z-10',                        // 10 - Low elevation
+    '20': 'z-20',                        // 20 - Medium elevation
+    '30': 'z-30',                        // 30 - High elevation
+    '40': 'z-40',                        // 40 - Very high elevation
+    '50': 'z-50',                        // 50 - Highest elevation
   },
 } as const;
 

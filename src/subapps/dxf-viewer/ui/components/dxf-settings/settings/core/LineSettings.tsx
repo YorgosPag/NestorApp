@@ -394,7 +394,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
       {/* Header - Semantic <header> element */}
       {/* 🏢 ENTERPRISE: flex-col layout για να φαίνονται πλήρως τα κείμενα των κουμπιών */}
       <header className={`flex flex-col ${PANEL_LAYOUT.GAP.SM}`}>
-        <h3 className={`text-lg font-medium ${colors.text.primary}`}>Ρυθμίσεις Γραμμών</h3>
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Ρυθμίσεις Γραμμών</h3>
         <nav className={`flex ${PANEL_LAYOUT.GAP.SM}`} aria-label="Ενέργειες ρυθμίσεων">
           {/* 🏢 ENTERPRISE: Centralized Button component (variant="secondary") + Lucide icon */}
           <Button
@@ -433,7 +433,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           />
           <label
             htmlFor="line-enabled"
-            className={`text-sm font-medium cursor-pointer ${settings.enabled ? colors.text.primary : colors.text.muted}`}
+            className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} cursor-pointer ${settings.enabled ? colors.text.primary : colors.text.muted}`}
           >
             Εμφάνιση γραμμής
           </label>
@@ -460,7 +460,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
             {/* 🏢 ADR-001: Radix Select - Template Quick Select */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
                 Προκαθορισμένα Πρότυπα
               </label>
               <Select
@@ -500,7 +500,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* 🏢 ADR-001: Radix Select - Line Type */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+          <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
             Τύπος Γραμμής
           </label>
           <Select
@@ -522,7 +522,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Line Width */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+          <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
             Πάχος Γραμμής: {settings.lineWidth}px
           </label>
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD}`}>
@@ -533,7 +533,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.lineWidth}
               onChange={settingsUpdater.createNumberInputHandler('lineWidth', { parseType: 'float' })}
-              className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+              className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
             />
             <input
               type="number"
@@ -542,14 +542,14 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.lineWidth}
               onChange={settingsUpdater.createNumberInputHandler('lineWidth', { parseType: 'float' })}
-              className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
+              className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
             />
           </div>
         </div>
 
         {/* Color - 🏢 ENTERPRISE Color System */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα</label>
+          <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα</label>
           <ColorDialogTrigger
             value={settings.color}
             onChange={(color: string) => {
@@ -571,7 +571,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Opacity */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+          <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
             Διαφάνεια: {Math.round(settings.opacity * 100)}%
           </label>
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD}`}>
@@ -582,7 +582,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.opacity}
               onChange={settingsUpdater.createNumberInputHandler('opacity', { parseType: 'float' })}
-              className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+              className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
             />
             <input
               type="number"
@@ -591,7 +591,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.opacity}
               onChange={settingsUpdater.createNumberInputHandler('opacity', { parseType: 'float' })}
-              className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
+              className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
             />
           </div>
         </div>
@@ -604,9 +604,9 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               checked={settings.breakAtCenter || false}
               onCheckedChange={(checked) => settingsUpdater.updateSetting('breakAtCenter', checked === true)}
             />
-            <label htmlFor="break-at-center" className={`text-sm cursor-pointer ${colors.text.secondary}`}>Σπάσιμο γραμμής για κείμενο</label>
+            <label htmlFor="break-at-center" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} cursor-pointer ${colors.text.secondary}`}>Σπάσιμο γραμμής για κείμενο</label>
           </div>
-          <p className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
+          <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
             Η γραμμή θα σπάσει στη μέση για να χωράει το κείμενο
           </p>
         </div>
@@ -626,7 +626,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Hover Color - 🏢 ENTERPRISE Color System */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Hover</label>
+          <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Hover</label>
           <ColorDialogTrigger
             value={settings.hoverColor}
             onChange={settingsUpdater.createColorHandler('hoverColor')}
@@ -642,7 +642,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Hover Width */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+          <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
             Πάχος Hover: {settings.hoverWidth}px
           </label>
           <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
@@ -653,7 +653,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.hoverWidth}
               onChange={settingsUpdater.createNumberInputHandler('hoverWidth', { parseType: 'float' })}
-              className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+              className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
             />
             <input
               type="number"
@@ -662,14 +662,14 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.hoverWidth}
               onChange={settingsUpdater.createNumberInputHandler('hoverWidth', { parseType: 'float' })}
-              className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
+              className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
             />
           </div>
         </div>
 
         {/* Hover Opacity */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+          <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
             Διαφάνεια Hover: {Math.round(settings.hoverOpacity * 100)}%
           </label>
           <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
@@ -680,7 +680,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.hoverOpacity}
               onChange={settingsUpdater.createNumberInputHandler('hoverOpacity', { parseType: 'float' })}
-              className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+              className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
             />
             <input
               type="number"
@@ -689,7 +689,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.hoverOpacity}
               onChange={settingsUpdater.createNumberInputHandler('hoverOpacity', { parseType: 'float' })}
-              className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
+              className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
             />
           </div>
         </div>
@@ -709,7 +709,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Final Color - 🏢 ENTERPRISE Color System */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <label className={`block text-sm font-medium ${colors.text.secondary}`}>Τελικό Χρώμα</label>
+          <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Τελικό Χρώμα</label>
           <ColorDialogTrigger
             value={settings.finalColor}
             onChange={settingsUpdater.createColorHandler('finalColor')}
@@ -725,7 +725,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Final Width */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+          <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
             Τελικό Πάχος: {settings.finalWidth}px
           </label>
           <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
@@ -736,7 +736,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.finalWidth}
               onChange={settingsUpdater.createNumberInputHandler('finalWidth', { parseType: 'float' })}
-              className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+              className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
             />
             <input
               type="number"
@@ -745,14 +745,14 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.finalWidth}
               onChange={settingsUpdater.createNumberInputHandler('finalWidth', { parseType: 'float' })}
-              className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
+              className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
             />
           </div>
         </div>
 
         {/* Final Opacity */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+          <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
             Τελική Διαφάνεια: {Math.round(settings.finalOpacity * 100)}%
           </label>
           <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
@@ -763,7 +763,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.finalOpacity}
               onChange={settingsUpdater.createNumberInputHandler('finalOpacity', { parseType: 'float' })}
-              className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+              className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
             />
             <input
               type="number"
@@ -772,7 +772,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.finalOpacity}
               onChange={settingsUpdater.createNumberInputHandler('finalOpacity', { parseType: 'float' })}
-              className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
+              className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
             />
           </div>
         </div>
@@ -791,7 +791,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           {/* Dash Scale (only for non-solid lines) */}
           {settings.lineType !== 'solid' && (
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
                 Κλίμακα Διακοπών: {settings.dashScale}
               </label>
               <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
@@ -802,7 +802,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step={DASH_SCALE_RANGE.step}
                   value={settings.dashScale}
                   onChange={settingsUpdater.createNumberInputHandler('dashScale', { parseType: 'float' })}
-                  className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+                  className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
                 />
                 <input
                   type="number"
@@ -811,7 +811,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step={DASH_SCALE_RANGE.step}
                   value={settings.dashScale}
                   onChange={settingsUpdater.createNumberInputHandler('dashScale', { parseType: 'float' })}
-                  className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
+                  className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
                 />
               </div>
             </div>
@@ -819,7 +819,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
           {/* 🏢 ADR-001: Radix Select - Line Cap */}
           <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-            <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+            <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
               Άκρα Γραμμής
             </label>
             <Select
@@ -841,7 +841,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
           {/* 🏢 ADR-001: Radix Select - Line Join */}
           <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-            <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+            <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
               Συνδέσεις Γραμμής
             </label>
             <Select
@@ -864,7 +864,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           {/* Dash Offset (only for non-solid lines) */}
           {settings.lineType !== 'solid' && (
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block text-sm font-medium ${colors.text.secondary}`}>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
                 Μετατόπιση Διακοπών: {settings.dashOffset}px
               </label>
               <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
@@ -875,7 +875,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step={DASH_OFFSET_RANGE.step}
                   value={settings.dashOffset}
                   onChange={settingsUpdater.createNumberInputHandler('dashOffset', { parseType: 'float' })}
-                  className={`flex-1 h-2 ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
+                  className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none cursor-pointer`}
                 />
                 <input
                   type="number"
@@ -884,7 +884,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step={DASH_OFFSET_RANGE.step}
                   value={settings.dashOffset}
                   onChange={settingsUpdater.createNumberInputHandler('dashOffset', { parseType: 'float' })}
-                  className={`w-16 ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
+                  className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
                 />
               </div>
             </div>
@@ -923,15 +923,15 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           {/* 🏢 ENTERPRISE: Warning Message - Using semantic error colors */}
           {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.ALERT */}
           <aside className={`${colors.bg.errorSubtle} ${getStatusBorder('error')} ${PANEL_LAYOUT.ALERT.PADDING_LG} ${PANEL_LAYOUT.ALERT.BORDER_RADIUS}`} role="alert">
-            <p className={`${colors.text.error} font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
+            <p className={`${colors.text.error} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
               ⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!
             </p>
           </aside>
 
           {/* Loss List */}
           <section className={PANEL_LAYOUT.SPACING.GAP_SM}>
-            <p className={`${colors.text.muted} font-medium`}>Θα χάσετε:</p>
-            <ul className={`list-disc list-inside ${PANEL_LAYOUT.SPACING.GAP_XS} ${colors.text.muted} text-sm`}>
+            <p className={`${colors.text.muted} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>Θα χάσετε:</p>
+            <ul className={`list-disc list-inside ${PANEL_LAYOUT.SPACING.GAP_XS} ${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
               <li>Όλες τις προσαρμοσμένες ρυθμίσεις γραμμών</li>
               <li>Όλα τα templates που έχετε επιλέξει</li>
               <li>Όλες τις αλλαγές που έχετε κάνει</li>
@@ -941,13 +941,13 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           {/* 🏢 ENTERPRISE: Reset Info - Using semantic info colors */}
           {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.ALERT */}
           <aside className={`${colors.bg.infoSubtle} ${getStatusBorder('info')} ${PANEL_LAYOUT.ALERT.PADDING_LG} ${PANEL_LAYOUT.ALERT.BORDER_RADIUS}`} role="note">
-            <p className={`${colors.text.info} text-sm`}>
+            <p className={`${colors.text.info} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
               <strong>Επαναφορά:</strong> Οι ρυθμίσεις θα επανέλθουν στα πρότυπα ISO 128 & AutoCAD 2024
             </p>
           </aside>
 
           {/* Confirmation Question */}
-          <p className={`${colors.text.primary} font-medium text-center ${PANEL_LAYOUT.PADDING.TOP_SM}`}>
+          <p className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} text-center ${PANEL_LAYOUT.PADDING.TOP_SM}`}>
             Είστε σίγουροι ότι θέλετε να συνεχίσετε;
           </p>
 
@@ -961,7 +961,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
             </button>
             <button
               onClick={handleFactoryResetConfirm}
-              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.danger} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors font-semibold flex items-center ${PANEL_LAYOUT.GAP.XS}`}
+              className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.danger} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} transition-colors ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} flex items-center ${PANEL_LAYOUT.GAP.XS}`}
             >
               <Factory className={iconSizes.xs} />
               Επαναφορά Εργοστασιακών

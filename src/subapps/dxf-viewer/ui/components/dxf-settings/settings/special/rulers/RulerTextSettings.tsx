@@ -118,7 +118,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
             type="color"
             value={rulerSettings.horizontal.textColor}
             onChange={(e) => handleRulerTextColorChange(e.target.value)}
-            className={`${iconSizes.xl} ${radius.md} border-0 cursor-pointer w-8 h-6`}
+            className={`${iconSizes.xl} ${radius.md} border-0 cursor-pointer ${PANEL_LAYOUT.WIDTH.SM} h-6`}
           />
           <input
             type="text"
@@ -146,7 +146,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
             onChange={(e) => handleRulerFontSizeChange(parseInt(e.target.value))}
             className="flex-1"
           />
-          <div className={`text-xs ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} text-center w-12`}>
+          <div className={`text-xs ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} text-center ${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY}`}>
             {rulerSettings.horizontal.fontSize}px
           </div>
         </div>

@@ -84,7 +84,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
 
   if (!overlay) {
     return (
-      <Card className="w-80">
+      <Card className={PANEL_LAYOUT.WIDTH.PANEL_SM}>
         <CardHeader><CardTitle className={PANEL_LAYOUT.BUTTON.TEXT_SIZE}>Ιδιότητες Overlay</CardTitle></CardHeader>
         <CardContent>
           <p className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} text-muted-foreground`}>Επιλέξτε ένα overlay για να δείτε τις ιδιότητές του.</p>
@@ -110,7 +110,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
   };
 
   return (
-    <Card className="w-80">
+    <Card className={PANEL_LAYOUT.WIDTH.PANEL_SM}>
       <CardHeader className={PANEL_LAYOUT.PADDING.BOTTOM_SM}>
         <div className="flex items-center justify-between">
           <CardTitle className={PANEL_LAYOUT.BUTTON.TEXT_SIZE}>Ιδιότητες Overlay</CardTitle>
@@ -144,7 +144,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
             value={label}
             onChange={(e) => handleLabelChange(e.target.value)}
             placeholder="π.χ. A-12, P-034"
-            className="h-8"
+            className={PANEL_LAYOUT.HEIGHT.XL}
           />
         </div>
 
@@ -152,7 +152,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <Label className="text-xs">Κατάσταση</Label>
           <Select value={overlay.status} onValueChange={handleStatusChange}>
-            <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+            <SelectTrigger className={PANEL_LAYOUT.HEIGHT.XL}><SelectValue /></SelectTrigger>
             <SelectContent>
               {(Object.keys(STATUS_LABELS) as Status[]).map(status => (
                 <SelectItem key={status} value={status}>
@@ -172,7 +172,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <Label className="text-xs">Τύπος</Label>
           <Select value={overlay.kind} onValueChange={handleKindChange}>
-            <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+            <SelectTrigger className={PANEL_LAYOUT.HEIGHT.XL}><SelectValue /></SelectTrigger>
             <SelectContent>
               {(Object.keys(KIND_LABELS) as OverlayKind[]).map(kind => (
                 <SelectItem key={kind} value={kind}>{KIND_LABELS[kind]}</SelectItem>
@@ -191,7 +191,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
             onChange={(e) => setLinkedUnitId(e.target.value)}
             onBlur={handleLinkedEntityUpdate}
             placeholder="Unit ID"
-            className="h-7 text-xs"
+            className={`${PANEL_LAYOUT.HEIGHT.INPUT_SM} text-xs`}
           />
         </div>
 

@@ -418,7 +418,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                   onClick={() => handleToolClick(tool.id)}
                   title={`${tool.label} (${tool.hotkey})`}
                   className={`
-                    h-8 w-7 ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} border-r-0 transition-colors duration-150
+                    ${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.WIDTH.BUTTON_MD} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} border-r-0 transition-colors duration-150
                     flex items-center justify-center
                     ${isSelected
                       ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${getStatusBorder('info')}`
@@ -430,7 +430,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                 </button>
                 <button
                   className={`
-                    h-8 w-4 ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} transition-colors duration-150
+                    ${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.WIDTH.INDICATOR_MD} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} transition-colors duration-150
                     flex items-center justify-center
                     ${isSelected
                       ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${getStatusBorder('info')}`
@@ -619,7 +619,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
         </h3>
         <div className={`text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL} ${colors.text.muted}`}>
           <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} flex justify-center`}>
-            <Wrench className="w-10 h-10" />
+            <Wrench className={`${PANEL_LAYOUT.WIDTH.ICON_LG} ${PANEL_LAYOUT.HEIGHT.ICON_LG}`} />
           </div>
           <h3 className={`text-lg font-medium ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.primary}`}>Ρυθμίσεις Εργαλείου</h3>
           <p className={`text-sm ${colors.text.muted}`}>

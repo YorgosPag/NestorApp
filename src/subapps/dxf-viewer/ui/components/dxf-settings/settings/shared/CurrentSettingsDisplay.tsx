@@ -113,7 +113,7 @@ export function CurrentSettingsDisplay({
                   <span className={`${colors.text.primary} font-mono flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                     {lineSettings.color}
                     <div
-                      className={`w-3 h-3 rounded ${getStatusBorder('muted')} ${lineColorBgClass}`}
+                      className={`${PANEL_LAYOUT.ICON.SMALL} rounded ${getStatusBorder('muted')} ${lineColorBgClass}`}
                     ></div>
                   </span>
                 </div>
@@ -157,7 +157,7 @@ export function CurrentSettingsDisplay({
                   <span className={`${colors.text.primary} font-mono flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                     {effectiveTextSettings.color}
                     <div
-                      className={`w-3 h-3 rounded ${getStatusBorder('muted')} ${textColorBgClass}`}
+                      className={`${PANEL_LAYOUT.ICON.SMALL} rounded ${getStatusBorder('muted')} ${textColorBgClass}`}
                     ></div>
                   </span>
                 </div>
@@ -215,7 +215,7 @@ export function CurrentSettingsDisplay({
                   <span className={`${colors.text.primary} font-mono flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                     {gripSettings.colors.cold}
                     <div
-                      className={`w-3 h-3 rounded ${getStatusBorder('muted')} ${gripColdColorBgClass}`}
+                      className={`${PANEL_LAYOUT.ICON.SMALL} rounded ${getStatusBorder('muted')} ${gripColdColorBgClass}`}
                     ></div>
                   </span>
                 </div>
@@ -224,7 +224,7 @@ export function CurrentSettingsDisplay({
                   <span className={`${colors.text.primary} font-mono flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                     {gripSettings.colors.warm}
                     <div
-                      className={`w-3 h-3 rounded ${getStatusBorder('muted')} ${gripWarmColorBgClass}`}
+                      className={`${PANEL_LAYOUT.ICON.SMALL} rounded ${getStatusBorder('muted')} ${gripWarmColorBgClass}`}
                     ></div>
                   </span>
                 </div>

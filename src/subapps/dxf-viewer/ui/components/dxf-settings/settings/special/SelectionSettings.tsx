@@ -102,15 +102,15 @@ export function SelectionSettings() {
 
       {/* TEMPORARY DEBUG BUTTON */}
       {/* ✅ ENTERPRISE: Κεντρικοποιημένα colors και Lucide icon */}
-      <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${getStatusBorder('warning')} rounded`}>
+      <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${getStatusBorder('warning')} ${PANEL_LAYOUT.ROUNDED.DEFAULT}`}>
         <button
           onClick={handleResetSelectionSettings}
-          className={`w-full ${PANEL_LAYOUT.BUTTON.PADDING} text-xs flex items-center justify-center ${PANEL_LAYOUT.GAP.SM} ${colors.bg.card} ${colors.text.primary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${getStatusBorder('default')} rounded transition-colors`}
+          className={`w-full ${PANEL_LAYOUT.BUTTON.PADDING} ${PANEL_LAYOUT.TYPOGRAPHY.XS} flex items-center justify-center ${PANEL_LAYOUT.GAP.SM} ${colors.bg.card} ${colors.text.primary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${getStatusBorder('default')} ${PANEL_LAYOUT.ROUNDED.DEFAULT} transition-colors`}
         >
           <RotateCcw className={PANEL_LAYOUT.ICON.REGULAR} />
           <span>Reset Selection Settings (DEBUG)</span>
         </button>
-        <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_SM}`}>
+        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_SM}`}>
           Κάνει reset όλες τις ρυθμίσεις για να λειτουργήσουν τα νέα borderStyle
         </div>
       </div>
@@ -119,17 +119,17 @@ export function SelectionSettings() {
       {activeSelectionTab === 'window' ? (
         <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
           {/* 🏢 ENTERPRISE: Icon color using semantic tokens */}
-          <h4 className={`text-sm font-medium ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+          <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <Square className={`${PANEL_LAYOUT.ICON.REGULAR} ${colors.text.info}`} />
             <span>Window Selection Settings</span>
           </h4>
-          <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
+          <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
             Ρυθμίσεις για το μπλε κουτί επιλογής (αριστερά προς δεξιά)
           </div>
 
           {/* Window Fill Color */}
-          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-            <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Γεμίσματος</label>
+          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+            <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Γεμίσματος</label>
             <ColorDialogTrigger
               value={settings.selection.window.fillColor}
               onChange={(color) => handleWindowSelectionChange('fillColor', color)}
@@ -144,12 +144,12 @@ export function SelectionSettings() {
           </div>
 
           {/* Window Fill Opacity */}
-          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-            <div className={`text-sm ${colors.text.primary}`}>
-              <div className="font-medium">Διαφάνεια Γεμίσματος</div>
-              <div className={`font-normal ${colors.text.muted}`}>Επίπεδο διαφάνειας του γεμίσματος</div>
+          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Διαφάνεια Γεμίσματος</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Επίπεδο διαφάνειας του γεμίσματος</div>
             </div>
-            <div className="flex items-center ${PANEL_LAYOUT.GAP.SM}">
+            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <input
                 type="range"
                 min="0"
@@ -159,15 +159,15 @@ export function SelectionSettings() {
                 onChange={(e) => handleWindowSelectionChange('fillOpacity', parseFloat(e.target.value))}
                 className="flex-1"
               />
-              <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.inverted} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
+              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
                 {Math.round(settings.selection.window.fillOpacity * 100)}%
               </div>
             </div>
           </div>
 
           {/* Window Border Color */}
-          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-            <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Περιγράμματος</label>
+          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+            <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Περιγράμματος</label>
             <ColorDialogTrigger
               value={settings.selection.window.borderColor}
               onChange={(color) => handleWindowSelectionChange('borderColor', color)}
@@ -182,12 +182,12 @@ export function SelectionSettings() {
           </div>
 
           {/* Window Border Opacity */}
-          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-            <div className={`text-sm ${colors.text.primary}`}>
-              <div className="font-medium">Διαφάνεια Περιγράμματος</div>
-              <div className={`font-normal ${colors.text.muted}`}>Επίπεδο διαφάνειας του περιγράμματος</div>
+          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Διαφάνεια Περιγράμματος</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Επίπεδο διαφάνειας του περιγράμματος</div>
             </div>
-            <div className="flex items-center ${PANEL_LAYOUT.GAP.SM}">
+            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <input
                 type="range"
                 min="0"
@@ -197,19 +197,19 @@ export function SelectionSettings() {
                 onChange={(e) => handleWindowSelectionChange('borderOpacity', parseFloat(e.target.value))}
                 className="flex-1"
               />
-              <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.inverted} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
+              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
                 {Math.round(settings.selection.window.borderOpacity * 100)}%
               </div>
             </div>
           </div>
 
           {/* Window Border Width */}
-          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-            <div className={`text-sm ${colors.text.primary}`}>
-              <div className="font-medium">Πάχος Γραμμής</div>
-              <div className={`font-normal ${colors.text.muted}`}>Πάχος περιγράμματος σε pixels</div>
+          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Πάχος Γραμμής</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Πάχος περιγράμματος σε pixels</div>
             </div>
-            <div className="flex items-center ${PANEL_LAYOUT.GAP.SM}">
+            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <input
                 type="range"
                 min="1"
@@ -219,19 +219,19 @@ export function SelectionSettings() {
                 onChange={(e) => handleWindowSelectionChange('borderWidth', parseInt(e.target.value))}
                 className="flex-1"
               />
-              <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.inverted} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
+              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
                 {settings.selection.window.borderWidth}px
               </div>
             </div>
           </div>
 
           {/* Window Border Style */}
-          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-            <div className={`text-sm ${colors.text.primary}`}>
-              <div className="font-medium">Είδος Περιγράμματος</div>
-              <div className={`font-normal ${colors.text.muted}`}>Τύπος γραμμής περιγράμματος</div>
+          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Είδος Περιγράμματος</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Τύπος γραμμής περιγράμματος</div>
             </div>
-            <div className="grid grid-cols-2 ${PANEL_LAYOUT.GAP.SM}">
+            <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.SM}`}>
               {(['solid', 'dashed', 'dotted', 'dash-dot'] as const).map((style) => {
                 const isSelected = settings.selection.window.borderStyle === style;
                 const styleLabels = {
@@ -259,7 +259,7 @@ export function SelectionSettings() {
                   <button
                     key={style}
                     onClick={() => handleWindowSelectionChange('borderStyle', style)}
-                    className={`${PANEL_LAYOUT.SPACING.SM} rounded text-xs transition-colors ${
+                    className={`${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
                       isSelected
                         ? `${colors.bg.primary} ${getStatusBorder('info')}`
                         : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getElementBorder('button', 'default')}`
@@ -269,7 +269,7 @@ export function SelectionSettings() {
                       className={`w-full ${PANEL_LAYOUT.MARGIN.BOTTOM_XS} h-0.5`}
                       style={{ background: getLinePreview(style) }}
                     />
-                    <span className="block text-xs">{styleLabels[style]}</span>
+                    <span className={`block ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{styleLabels[style]}</span>
                   </button>
                 );
               })}
@@ -279,17 +279,17 @@ export function SelectionSettings() {
       ) : (
         <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
           {/* 🏢 ENTERPRISE: Icon color using semantic tokens */}
-          <h4 className={`text-sm font-medium ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+          <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <SquareDashed className={`${PANEL_LAYOUT.ICON.REGULAR} ${colors.text.success}`} />
             <span>Crossing Selection Settings</span>
           </h4>
-          <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
+          <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
             Ρυθμίσεις για το πράσινο κουτί επιλογής (δεξιά προς αριστερά)
           </div>
 
           {/* Crossing Fill Color */}
-          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-            <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Γεμίσματος</label>
+          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+            <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Γεμίσματος</label>
             <ColorDialogTrigger
               value={settings.selection.crossing.fillColor}
               onChange={(color) => handleCrossingSelectionChange('fillColor', color)}
@@ -304,12 +304,12 @@ export function SelectionSettings() {
           </div>
 
           {/* Crossing Fill Opacity */}
-          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-            <div className={`text-sm ${colors.text.primary}`}>
-              <div className="font-medium">Διαφάνεια Γεμίσματος</div>
-              <div className={`font-normal ${colors.text.muted}`}>Επίπεδο διαφάνειας του γεμίσματος</div>
+          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Διαφάνεια Γεμίσματος</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Επίπεδο διαφάνειας του γεμίσματος</div>
             </div>
-            <div className="flex items-center ${PANEL_LAYOUT.GAP.SM}">
+            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <input
                 type="range"
                 min="0"
@@ -319,15 +319,15 @@ export function SelectionSettings() {
                 onChange={(e) => handleCrossingSelectionChange('fillOpacity', parseFloat(e.target.value))}
                 className="flex-1"
               />
-              <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.inverted} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
+              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
                 {Math.round(settings.selection.crossing.fillOpacity * 100)}%
               </div>
             </div>
           </div>
 
           {/* Crossing Border Color */}
-          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-            <label className={`block text-sm font-medium ${colors.text.secondary}`}>Χρώμα Περιγράμματος</label>
+          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+            <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Περιγράμματος</label>
             <ColorDialogTrigger
               value={settings.selection.crossing.borderColor}
               onChange={(color) => handleCrossingSelectionChange('borderColor', color)}
@@ -342,12 +342,12 @@ export function SelectionSettings() {
           </div>
 
           {/* Crossing Border Opacity */}
-          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-            <div className={`text-sm ${colors.text.primary}`}>
-              <div className="font-medium">Διαφάνεια Περιγράμματος</div>
-              <div className={`font-normal ${colors.text.muted}`}>Επίπεδο διαφάνειας του περιγράμματος</div>
+          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Διαφάνεια Περιγράμματος</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Επίπεδο διαφάνειας του περιγράμματος</div>
             </div>
-            <div className="flex items-center ${PANEL_LAYOUT.GAP.SM}">
+            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <input
                 type="range"
                 min="0"
@@ -357,19 +357,19 @@ export function SelectionSettings() {
                 onChange={(e) => handleCrossingSelectionChange('borderOpacity', parseFloat(e.target.value))}
                 className="flex-1"
               />
-              <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.inverted} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
+              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
                 {Math.round(settings.selection.crossing.borderOpacity * 100)}%
               </div>
             </div>
           </div>
 
           {/* Crossing Border Width */}
-          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-            <div className={`text-sm ${colors.text.primary}`}>
-              <div className="font-medium">Πάχος Γραμμής</div>
-              <div className={`font-normal ${colors.text.muted}`}>Πάχος περιγράμματος σε pixels</div>
+          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Πάχος Γραμμής</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Πάχος περιγράμματος σε pixels</div>
             </div>
-            <div className="flex items-center ${PANEL_LAYOUT.GAP.SM}">
+            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <input
                 type="range"
                 min="1"
@@ -379,19 +379,19 @@ export function SelectionSettings() {
                 onChange={(e) => handleCrossingSelectionChange('borderWidth', parseInt(e.target.value))}
                 className="flex-1"
               />
-              <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.inverted} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
+              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
                 {settings.selection.crossing.borderWidth}px
               </div>
             </div>
           </div>
 
           {/* Crossing Border Style */}
-          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-            <div className={`text-sm ${colors.text.primary}`}>
-              <div className="font-medium">Είδος Περιγράμματος</div>
-              <div className={`font-normal ${colors.text.muted}`}>Τύπος γραμμής περιγράμματος</div>
+          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Είδος Περιγράμματος</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Τύπος γραμμής περιγράμματος</div>
             </div>
-            <div className="grid grid-cols-2 ${PANEL_LAYOUT.GAP.SM}">
+            <div className={`grid grid-cols-2 ${PANEL_LAYOUT.GAP.SM}`}>
               {(['solid', 'dashed', 'dotted', 'dash-dot'] as const).map((style) => {
                 const isSelected = settings.selection.crossing.borderStyle === style;
                 const styleLabels = {
@@ -419,7 +419,7 @@ export function SelectionSettings() {
                   <button
                     key={style}
                     onClick={() => handleCrossingSelectionChange('borderStyle', style)}
-                    className={`${PANEL_LAYOUT.SPACING.SM} rounded text-xs transition-colors ${
+                    className={`${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} transition-colors ${
                       isSelected
                         ? `${colors.bg.primary} ${getStatusBorder('info')}`
                         : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getElementBorder('button', 'default')}`
@@ -429,7 +429,7 @@ export function SelectionSettings() {
                       className={`w-full ${PANEL_LAYOUT.MARGIN.BOTTOM_XS} h-0.5`}
                       style={{ background: getLinePreview(style) }}
                     />
-                    <span className="block text-xs">{styleLabels[style]}</span>
+                    <span className={`block ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{styleLabels[style]}</span>
                   </button>
                 );
               })}

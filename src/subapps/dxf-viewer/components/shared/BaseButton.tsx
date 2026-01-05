@@ -60,7 +60,7 @@ const getActiveVariantStyles = (
 
 // ✅ ENTERPRISE: Button sizes via PANEL_LAYOUT tokens - ZERO HARDCODED VALUES
 const sizeStyles: Record<ButtonSize, string> = {
-  xs: `${PANEL_LAYOUT.HEIGHT_SM} ${PANEL_LAYOUT.SPACING.COMPACT} text-xs`,        // h-6 24px height, px-2 py-1
+  xs: `${PANEL_LAYOUT.BUTTON.HEIGHT_SM} ${PANEL_LAYOUT.SPACING.COMPACT} text-xs`,        // h-6 24px height, px-2 py-1
   sm: `${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.BUTTON.PADDING} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE}`, // h-8, px-3 py-2, text-sm
   md: `${PANEL_LAYOUT.BUTTON.HEIGHT_MD} ${PANEL_LAYOUT.BUTTON.PADDING_LG} text-base`,   // h-10, px-4 py-2
   lg: `${PANEL_LAYOUT.BUTTON.HEIGHT_LG} ${PANEL_LAYOUT.BUTTON.PADDING_XL} text-lg`,     // h-12, px-6 - largest buttons

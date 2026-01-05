@@ -37,7 +37,10 @@ export const COLOR_BRIDGE = {
     elevated: 'bg-card',           // Elevated surfaces
     selection: 'bg-accent',        // Selected states
     backgroundSecondary: 'bg-muted', // Secondary background surfaces
-    overlay: 'bg-background/95',   // Overlay backgrounds
+    overlay: 'bg-background/95',   // Overlay backgrounds (panels, tooltips)
+    modalBackdrop: 'bg-black/50',  // 🏢 ENTERPRISE: Modal backdrop (semi-transparent dark)
+    modalBackdropLight: 'bg-black/30', // 🏢 ENTERPRISE: Light modal backdrop
+    modalBackdropDark: 'bg-black/75',  // 🏢 ENTERPRISE: Dark modal backdrop
     accent: 'bg-accent',           // Accent backgrounds
 
     // Interactive states
@@ -73,6 +76,35 @@ export const COLOR_BRIDGE = {
     orange: 'bg-orange-100',       // Orange constraint backgrounds
     purple: 'bg-purple-100',       // Purple constraint backgrounds
     magenta: 'bg-pink-100',        // Magenta constraint backgrounds (pink is closest)
+
+    // ✅ ENTERPRISE: Dark theme modal backgrounds (ModalContainer variants)
+    infoDark: 'bg-blue-950/40',          // Dark info background for modals
+    successDark: 'bg-green-950/40',      // Dark success background for modals
+    warningDark: 'bg-orange-950/40',     // Dark warning background for modals
+    errorDark: 'bg-red-950/40',          // Dark error background for modals
+    slateDark: 'bg-slate-800/50',        // Dark slate background for default modals
+    slateLight: 'bg-slate-800/60',       // Slightly lighter slate for upload modals
+
+    // ✅ ENTERPRISE: Panel backgrounds on dark UIs (CursorSettingsPanel, debug panels)
+    warningPanel: 'bg-yellow-900/30',    // Warning on dark panels (soft yellow)
+    infoPanel: 'bg-blue-900/30',         // Info on dark panels (soft blue)
+    successPanel: 'bg-green-900/30',     // Success on dark panels (soft green)
+    errorPanel: 'bg-red-900/30',         // Error on dark panels (soft red)
+
+    // ✅ ENTERPRISE: Debug overlay colors (LayoutMapper, visual debugging)
+    debugBlue: 'bg-blue-500',            // Debug: Toolbar elements
+    debugYellow: 'bg-yellow-500',        // Debug: Ruler elements
+    debugGreen: 'bg-green-500',          // Debug: Canvas elements
+    debugPurple: 'bg-purple-500',        // Debug: Layer elements
+    debugRed: 'bg-red-500',              // Debug: Crosshair elements
+    debugOrange: 'bg-orange-500',        // Debug: Section containers
+    debugPink: 'bg-pink-500',            // Debug: Container elements
+    debugIndigo: 'bg-indigo-500',        // Debug: Layout elements
+    debugTeal: 'bg-teal-500',            // Debug: Control panels
+
+    // ✅ ENTERPRISE: Button colors (tests-modal, debug UI)
+    purpleButton: 'bg-purple-600',       // Purple primary button
+    purpleButtonHover: 'bg-purple-700',  // Purple button hover
   },
 
   /** 📝 Text Color Mappings */
@@ -87,6 +119,7 @@ export const COLOR_BRIDGE = {
 
     // ✅ ENTERPRISE FIX: Missing text colors for LayersSettings, ProSnapToolbar, ZoomControls
     WHITE: 'text-white',                  // White text for LayersSettings, ProSnapToolbar, ZoomControls
+    BLACK: 'text-black',                  // Black text for light buttons (DebugToolbar)
     DARKER: 'text-gray-800',              // Darker text for ui/effects
 
     // Status text colors
@@ -119,6 +152,29 @@ export const COLOR_BRIDGE = {
 
     // ✅ ENTERPRISE FIX: Missing mutedInverted for ComboBox.tsx and EnterpriseComboBox.tsx
     mutedInverted: 'text-white',           // Muted text on dark backgrounds
+
+    // ✅ ENTERPRISE: Light variants for dark backgrounds (calibration overlays, debug panels)
+    infoLight: 'text-blue-300',           // Info text on dark backgrounds
+    infoLighter: 'text-blue-200',         // Lighter info text on dark backgrounds
+    infoAccent: 'text-blue-400',          // Info accent (icons on dark backgrounds)
+    successLight: 'text-green-300',       // Success text on dark backgrounds
+    successLighter: 'text-green-400',     // Lighter success text on dark backgrounds
+    successAccent: 'text-green-400',      // Success accent (icons on dark backgrounds)
+    warningLight: 'text-yellow-300',      // Warning text on dark backgrounds
+    warningLighter: 'text-yellow-200',    // Lighter warning text (panels, notes)
+    warningTitleLight: 'text-orange-300', // Warning title on dark backgrounds
+    errorLight: 'text-red-300',           // Error text on dark backgrounds
+    errorAccent: 'text-red-400',          // Error accent (icons on dark backgrounds)
+    orangeLight: 'text-orange-400',       // Orange text on dark backgrounds
+    cyanLight: 'text-cyan-300',           // Cyan/info accent on dark backgrounds
+    cyanAccent: 'text-cyan-400',          // Cyan accent (headers on dark backgrounds)
+
+    // ✅ ENTERPRISE: Slate variants for modal dark themes
+    slateLight: 'text-slate-200',         // Light slate text for modals
+    slateMuted: 'text-slate-400',         // Muted slate text for modals
+
+    // ✅ ENTERPRISE: Purple variants for button descriptions
+    purpleLight: 'text-purple-200',       // Light purple text for button descriptions
   },
 
   /** 🔲 Border Color Mappings */
@@ -195,6 +251,9 @@ export const COLOR_BRIDGE = {
 
     // ✅ ENTERPRISE FIX: Missing gradient for DebugToolbar TS2339 error
     GRADIENT_PURPLE_PINK: 'bg-gradient-to-br from-purple-500 via-pink-500 to-purple-600', // Purple-pink gradient for debug UI
+
+    // ✅ ENTERPRISE: Test button gradients
+    testButtonPrimary: 'bg-gradient-to-r from-purple-600 to-blue-600', // Purple to blue button gradient
   },
 } as const;
 

@@ -201,7 +201,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             onChange={(e) => handleGridSizeChange(parseFloat(e.target.value))}
             className="flex-1"
           />
-          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} ${quick.button} ${PANEL_LAYOUT.SPACING.XS} text-center`}>
+          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} text-xs ${colors.bg.muted} ${colors.text.primary} ${quick.button} ${PANEL_LAYOUT.SPACING.XS} text-center`}>
             {gridSettings.visual.step}
           </div>
         </div>
@@ -267,7 +267,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
                   onChange={(e) => handleMajorGridWeightChange(parseFloat(e.target.value))}
                   className="flex-1"
                 />
-                <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} ${quick.button} ${PANEL_LAYOUT.SPACING.XS} text-center`}>
+                <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} text-xs ${colors.bg.muted} ${colors.text.primary} ${quick.button} ${PANEL_LAYOUT.SPACING.XS} text-center`}>
                   {gridSettings.visual.majorGridWeight}
                 </div>
               </div>
@@ -309,7 +309,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
                   onChange={(e) => handleMinorGridWeightChange(parseFloat(e.target.value))}
                   className="flex-1"
                 />
-                <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} ${quick.button} ${PANEL_LAYOUT.SPACING.XS} text-center`}>
+                <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} text-xs ${colors.bg.muted} ${colors.text.primary} ${quick.button} ${PANEL_LAYOUT.SPACING.XS} text-center`}>
                   {gridSettings.visual.minorGridWeight}
                 </div>
               </div>

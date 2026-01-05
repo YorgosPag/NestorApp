@@ -79,7 +79,7 @@ export function DynamicInputField({
   return (
     <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
       <label
-        className={`text-xs w-8 ${
+        className={`text-xs ${PANEL_LAYOUT.WIDTH.SM} ${
           isActive ? `${colors.text.info} font-semibold` : colors.text.secondary
         }`}
       >
@@ -94,7 +94,7 @@ export function DynamicInputField({
         onFocus={onFocus}
         disabled={disabled}
         placeholder={placeholder}
-        className={`flex-1 text-white ${PANEL_LAYOUT.SPACING.COMPACT} text-sm rounded border ${quick.focus} focus:outline-none
+        className={`flex-1 ${colors.text.WHITE} ${PANEL_LAYOUT.SPACING.COMPACT} text-sm rounded border ${quick.focus} focus:outline-none
           ${isAnchored ? `${colors.bg.warning} font-bold ${quick.warning}` : `${colors.bg.hover} ${quick.none}`}
           ${disabled ? `${colors.bg.accent} opacity-50 cursor-not-allowed ${quick.muted}` : ''}
           ${isActive ? quick.focus : ''}`}

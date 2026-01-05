@@ -36,19 +36,19 @@ const LAYOUT_MAPPER_STYLES = {
   // Measurement box for each element
   MEASUREMENT_BOX: {
     BASE: 'absolute border border-dashed opacity-60',
-    // Label positioned above the box
-    LABEL: `absolute -top-6 left-0 text-xs font-mono bg-black text-white ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} whitespace-nowrap`,
-    // Coordinate badges at corners
-    COORD_TOP_LEFT: `absolute top-0 left-0 text-xs font-mono text-white ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS}`,
-    COORD_BOTTOM_RIGHT: `absolute bottom-0 right-0 text-xs font-mono text-white ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS}`,
+    // ✅ ENTERPRISE: Label styled at runtime with colors.text.WHITE and bg-black
+    LABEL: `absolute -top-6 left-0 text-xs font-mono bg-black ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} whitespace-nowrap`,
+    // ✅ ENTERPRISE: Coordinate badges styled at runtime with colors.text.WHITE
+    COORD_TOP_LEFT: `absolute top-0 left-0 text-xs font-mono ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS}`,
+    COORD_BOTTOM_RIGHT: `absolute bottom-0 right-0 text-xs font-mono ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS}`,
   },
 
   // Info panel (right side)
   INFO_PANEL: {
     CONTAINER: `fixed top-20 right-4 ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} text-xs font-mono max-w-md`,
     HEADER: `flex justify-between items-center ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`,
-    HEADER_TITLE: 'text-white font-bold',
-    CLOSE_BUTTON: 'text-red-400',
+    // ✅ ENTERPRISE: Header title uses font-bold, color applied via colors.text.WHITE runtime
+    HEADER_TITLE: 'font-bold',
     METRIC_ITEM: PANEL_LAYOUT.MARGIN.BOTTOM_XS,
     METRIC_DETAILS: `${PANEL_LAYOUT.MARGIN.LEFT_HALF} ${PANEL_LAYOUT.MARGIN.LEFT_SM} text-xs`,
     FOOTER: `${PANEL_LAYOUT.MARGIN.TOP_LG} ${PANEL_LAYOUT.PADDING.TOP_SM}`,
@@ -63,25 +63,26 @@ export default function LayoutMapper() {
   const colors = useSemanticColors();
 
   const measureElements = () => {
+    // ✅ ENTERPRISE: All debug colors via centralized COLOR_BRIDGE tokens
     const elementsToMeasure = [
       // Core UI Elements
-      { name: '🔧 Central Toolbar', selector: '[class*="toolbar"], .toolbar-container', className: 'bg-blue-500' },
-      { name: '📏 Horizontal Ruler', selector: '.horizontal-ruler, [class*="horizontal-ruler"]', className: 'bg-yellow-500' },
-      { name: '📐 Vertical Ruler', selector: '.vertical-ruler, [class*="vertical-ruler"]', className: 'bg-yellow-500' },
+      { name: '🔧 Central Toolbar', selector: '[class*="toolbar"], .toolbar-container', className: colors.bg.debugBlue },
+      { name: '📏 Horizontal Ruler', selector: '.horizontal-ruler, [class*="horizontal-ruler"]', className: colors.bg.debugYellow },
+      { name: '📐 Vertical Ruler', selector: '.vertical-ruler, [class*="vertical-ruler"]', className: colors.bg.debugYellow },
 
       // Canvas Elements
-      { name: '🎨 DXF Canvas', selector: '.dxf-canvas, canvas[class*="dxf"]', className: 'bg-green-500' },
-      { name: '🎭 Layer Canvas', selector: '.layer-canvas, canvas[class*="layer"]', className: 'bg-purple-500' },
-      { name: '⭕ Crosshair Canvas', selector: 'canvas[class*="crosshair"]', className: 'bg-red-500' },
+      { name: '🎨 DXF Canvas', selector: '.dxf-canvas, canvas[class*="dxf"]', className: colors.bg.debugGreen },
+      { name: '🎭 Layer Canvas', selector: '.layer-canvas, canvas[class*="layer"]', className: colors.bg.debugPurple },
+      { name: '⭕ Crosshair Canvas', selector: 'canvas[class*="crosshair"]', className: colors.bg.debugRed },
 
       // Container Elements
-      { name: '📦 Canvas Section', selector: '[class*="canvas-section"], [class*="CanvasSection"]', className: 'bg-orange-500' },
-      { name: '🏠 Canvas Container', selector: '[class*="canvas-container"], [class*="CanvasContainer"]', className: 'bg-pink-500' },
-      { name: '🖼️ Main Layout', selector: '[class*="dxf-layout"], [class*="DxfLayout"]', className: 'bg-indigo-500' },
+      { name: '📦 Canvas Section', selector: '[class*="canvas-section"], [class*="CanvasSection"]', className: colors.bg.debugOrange },
+      { name: '🏠 Canvas Container', selector: '[class*="canvas-container"], [class*="CanvasContainer"]', className: colors.bg.debugPink },
+      { name: '🖼️ Main Layout', selector: '[class*="dxf-layout"], [class*="DxfLayout"]', className: colors.bg.debugIndigo },
 
       // Status & UI Elements
       { name: '📊 Status Bar', selector: '[class*="status"], [class*="StatusBar"]', className: colors.bg.hover },
-      { name: '🎛️ Control Panel', selector: '[class*="control"], [class*="panel"]', className: 'bg-teal-500' }
+      { name: '🎛️ Control Panel', selector: '[class*="control"], [class*="panel"]', className: colors.bg.debugTeal }
     ];
 
     const newMetrics: ElementMetrics[] = elementsToMeasure.map(({ name, selector, className }) => {
@@ -183,15 +184,15 @@ export default function LayoutMapper() {
                 title={name}
               >
                 {/* Ετικέτα με διαστάσεις */}
-                <div className={LAYOUT_MAPPER_STYLES.MEASUREMENT_BOX.LABEL}>
+                <div className={`${LAYOUT_MAPPER_STYLES.MEASUREMENT_BOX.LABEL} ${colors.text.WHITE}`}>
                   {name}: {Math.round(rect.width)}x{Math.round(rect.height)}
                 </div>
 
                 {/* Συντεταγμένες στις γωνίες */}
-                <div className={`${LAYOUT_MAPPER_STYLES.MEASUREMENT_BOX.COORD_TOP_LEFT} ${colors.bg.danger}`}>
+                <div className={`${LAYOUT_MAPPER_STYLES.MEASUREMENT_BOX.COORD_TOP_LEFT} ${colors.text.WHITE} ${colors.bg.danger}`}>
                   ({Math.round(rect.left)},{Math.round(rect.top)})
                 </div>
-                <div className={`${LAYOUT_MAPPER_STYLES.MEASUREMENT_BOX.COORD_BOTTOM_RIGHT} ${colors.bg.danger}`}>
+                <div className={`${LAYOUT_MAPPER_STYLES.MEASUREMENT_BOX.COORD_BOTTOM_RIGHT} ${colors.text.WHITE} ${colors.bg.danger}`}>
                   ({Math.round(rect.right)},{Math.round(rect.bottom)})
                 </div>
               </div>
@@ -206,10 +207,10 @@ export default function LayoutMapper() {
         style={{ zIndex: portalComponents.overlay.debug.controls.zIndex() }}
       >
         <div className={LAYOUT_MAPPER_STYLES.INFO_PANEL.HEADER}>
-          <h3 className={LAYOUT_MAPPER_STYLES.INFO_PANEL.HEADER_TITLE}>🎯 LAYOUT MAPPER</h3>
+          <h3 className={`${LAYOUT_MAPPER_STYLES.INFO_PANEL.HEADER_TITLE} ${colors.text.WHITE}`}>🎯 LAYOUT MAPPER</h3>
           <button
             onClick={() => setIsVisible(false)}
-            className={`${LAYOUT_MAPPER_STYLES.INFO_PANEL.CLOSE_BUTTON} ${HOVER_TEXT_EFFECTS.RED_LIGHT}`}
+            className={`${colors.text.RED_LIGHT} ${HOVER_TEXT_EFFECTS.RED_LIGHT}`}
           >
             x
           </button>

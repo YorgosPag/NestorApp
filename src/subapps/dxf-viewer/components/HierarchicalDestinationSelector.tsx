@@ -255,7 +255,7 @@ export function HierarchicalDestinationSelector({
         )}
       </nav>
 
-      <section className={`${PANEL_LAYOUT.SPACING.GAP_SM} max-h-96 overflow-y-auto`}>
+      <section className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.MAX_HEIGHT.XL} overflow-y-auto`}>
         {/* Company Selection */}
         {currentStep === 'company' && (
           <>

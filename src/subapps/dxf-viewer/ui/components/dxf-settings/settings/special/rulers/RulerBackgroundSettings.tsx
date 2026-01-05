@@ -231,7 +231,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
             onChange={(e) => handleRulerOpacityChange(parseFloat(e.target.value))}
             className="flex-1"
           />
-          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.XS} text-center`}>
+          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} text-xs ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.XS} text-center`}>
             {Math.round(((() => {
               const bgColor = rulerSettings.horizontal.backgroundColor;
               if (bgColor.includes('rgba')) {
@@ -260,7 +260,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
             onChange={(e) => handleRulerWidthChange(parseInt(e.target.value))}
             className="flex-1"
           />
-          <div className={`w-12 text-xs ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.XS} text-center`}>
+          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} text-xs ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.XS} text-center`}>
             {rulerSettings.horizontal.height}px
           </div>
         </div>

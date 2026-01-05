@@ -16,7 +16,7 @@ export function DynamicInputFooter({ activeTool, drawingPhase }: DynamicInputFoo
   const colors = useSemanticColors();
   return (
     <div className={`text-xs ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_SM} border-t ${quick.muted} ${PANEL_LAYOUT.PADDING.TOP_SM}`}>
-      <div className={`text-blue-400 font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>
+      <div className={`${colors.text.infoAccent} font-semibold ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>
         {activeTool === 'line'
           ? drawingPhase === 'first-point'
             ? '🔐 Line (1st point): X→Y→°→L | ή X→Y→°(κενό)→Enter για 2ο σημείο'
@@ -24,7 +24,7 @@ export function DynamicInputFooter({ activeTool, drawingPhase }: DynamicInputFoo
           : '✅ Flow: X → Y → L → Enter (δημιουργεί σημείο)'
         }
       </div>
-      <div className="text-orange-400 text-xs">
+      <div className={`${colors.text.orangeLight} text-xs`}>
         {activeTool === 'line'
           ? '⚠️ 1ο σημείο: °+L = άμεση γραμμή | Κενό ° = 2ο σημείο | Angle: 0-360°'
           : '⚠️ Length: Μόνο θετικές τιμές (χωρίς μείον)'

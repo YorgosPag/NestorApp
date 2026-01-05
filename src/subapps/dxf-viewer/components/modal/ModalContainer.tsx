@@ -50,55 +50,55 @@ export const ModalContainer: React.FC<ModalContainerProps> = ({
   const { quick, getDirectionalBorder, radius } = useBorderTokens();
   const colors = useSemanticColors();
 
-  // ✅ ENTERPRISE: Dark-theme compatible variant styles
+  // ✅ ENTERPRISE: Dark-theme compatible variant styles - ALL CENTRALIZED via COLOR_BRIDGE
   const getVariantStyles = () => {
     switch (variant) {
       case 'info':
         return {
-          // ✅ ENTERPRISE FIX: Dark-friendly blue instead of light bg-blue-50
-          containerClass: `${quick.info} bg-blue-950/40`,
-          iconColor: 'text-blue-400',
-          titleColor: 'text-blue-300',
+          // ✅ ENTERPRISE CENTRALIZED: Dark-friendly blue via colors.bg.infoDark
+          containerClass: `${quick.info} ${colors.bg.infoDark}`,
+          iconColor: colors.text.infoAccent,
+          titleColor: colors.text.infoLight,
           defaultIcon: <Info className={iconSizes.md} />,
         };
       case 'success':
         return {
-          // ✅ ENTERPRISE FIX: Dark-friendly green
-          containerClass: `${quick.success} bg-green-950/40`,
-          iconColor: 'text-green-400',
-          titleColor: 'text-green-300',
+          // ✅ ENTERPRISE CENTRALIZED: Dark-friendly green via colors.bg.successDark
+          containerClass: `${quick.success} ${colors.bg.successDark}`,
+          iconColor: colors.text.successAccent,
+          titleColor: colors.text.successLight,
           defaultIcon: <CheckCircle2 className={iconSizes.md} />,
         };
       case 'warning':
         return {
-          // ✅ ENTERPRISE FIX: Dark-friendly orange/yellow
-          containerClass: `${useBorderTokens().getStatusBorder('warning')} bg-orange-950/40`,
-          iconColor: 'text-orange-400',
-          titleColor: 'text-orange-300',
+          // ✅ ENTERPRISE CENTRALIZED: Dark-friendly orange/yellow via colors.bg.warningDark
+          containerClass: `${useBorderTokens().getStatusBorder('warning')} ${colors.bg.warningDark}`,
+          iconColor: colors.text.orangeLight,
+          titleColor: colors.text.warningTitleLight,
           defaultIcon: <AlertTriangle className={iconSizes.md} />,
         };
       case 'error':
         return {
-          // ✅ ENTERPRISE FIX: Dark-friendly red
-          containerClass: `${quick.error} bg-red-950/40`,
-          iconColor: 'text-red-400',
-          titleColor: 'text-red-300',
+          // ✅ ENTERPRISE CENTRALIZED: Dark-friendly red via colors.bg.errorDark
+          containerClass: `${quick.error} ${colors.bg.errorDark}`,
+          iconColor: colors.text.errorAccent,
+          titleColor: colors.text.errorLight,
           defaultIcon: <AlertCircle className={iconSizes.md} />,
         };
       case 'upload':
         return {
-          // ✅ ENTERPRISE FIX: Dark-friendly upload styling
-          containerClass: `${useBorderTokens().getStatusBorder('warning')} bg-slate-800/60`,
-          iconColor: 'text-orange-400',
-          titleColor: 'text-slate-200',
+          // ✅ ENTERPRISE CENTRALIZED: Dark-friendly upload styling via colors.bg.slateLight
+          containerClass: `${useBorderTokens().getStatusBorder('warning')} ${colors.bg.slateLight}`,
+          iconColor: colors.text.orangeLight,
+          titleColor: colors.text.slateLight,
           defaultIcon: <Upload className={iconSizes.md} />,
         };
       default:
         return {
-          // ✅ ENTERPRISE FIX: Dark-friendly default
-          containerClass: `${quick.default} bg-slate-800/50`,
-          iconColor: 'text-slate-400',
-          titleColor: 'text-slate-200',
+          // ✅ ENTERPRISE CENTRALIZED: Dark-friendly default via colors.bg.slateDark
+          containerClass: `${quick.default} ${colors.bg.slateDark}`,
+          iconColor: colors.text.slateMuted,
+          titleColor: colors.text.slateLight,
           defaultIcon: <Info className={iconSizes.md} />,
         };
     }

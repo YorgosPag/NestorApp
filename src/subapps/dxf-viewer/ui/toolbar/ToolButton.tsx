@@ -97,7 +97,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
           disabled={disabled}
           title={`${tool.label} (${tool.hotkey})`}
           className={`
-            ${PANEL_LAYOUT.BUTTON.HEIGHT} w-7 ${PANEL_LAYOUT.SPACING.NONE} rounded-l-md transition-colors duration-150
+            ${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.WIDTH.BUTTON_MD} ${PANEL_LAYOUT.SPACING.NONE} rounded-l-md transition-colors duration-150
             flex items-center justify-center
             ${
               isActive
@@ -114,7 +114,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
           disabled={disabled}
           title="Περισσότερες επιλογές"
           className={`
-            ${PANEL_LAYOUT.BUTTON.HEIGHT} w-5 ${PANEL_LAYOUT.SPACING.NONE} rounded-r-md transition-colors duration-150
+            ${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.WIDTH.XS} ${PANEL_LAYOUT.SPACING.NONE} rounded-r-md transition-colors duration-150
             flex items-center justify-center
             ${
               isActive

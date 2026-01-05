@@ -86,6 +86,10 @@ export interface SemanticTextColors {
   readonly muted: string;
   /** Inverse text color - 'text-white' */
   readonly inverse: string;
+  /** Inverted text color - alias for inverse */
+  readonly inverted: string;
+  /** Foreground text color - direct mapping */
+  readonly foreground: string;
 
   // ✅ ENTERPRISE FIX: Missing properties for TestResultsModal and debug components
   /** Danger text color - 'text-red-600' (alias for error) */
@@ -94,6 +98,44 @@ export interface SemanticTextColors {
   readonly disabled: string;
   /** Tertiary text color - 'text-slate-500' */
   readonly tertiary: string;
+  /** Accent text color - 'text-blue-600' (alias for info) */
+  readonly accent: string;
+
+  // ✅ ENTERPRISE: Uppercase color constants (for legacy compatibility)
+  /** White text - 'text-white' */
+  readonly WHITE: string;
+  /** Black text - 'text-black' */
+  readonly BLACK: string;
+  /** Darker text - 'text-gray-800' */
+  readonly DARKER: string;
+  /** Light red text - 'text-red-400' */
+  readonly RED_LIGHT: string;
+
+  // ✅ ENTERPRISE: Strong text variants
+  readonly successStrong: string;
+  readonly errorStrong: string;
+
+  // ✅ ENTERPRISE: Constraint text colors
+  readonly yellow: string;
+  readonly orange: string;
+  readonly purple: string;
+  readonly magenta: string;
+
+  // ✅ ENTERPRISE: Muted inverted for dark backgrounds
+  readonly mutedInverted: string;
+
+  // ✅ ENTERPRISE: Light variants for dark backgrounds (calibration overlays, debug panels)
+  readonly infoLight: string;
+  readonly infoLighter: string;
+  readonly infoAccent: string;
+  readonly successLight: string;
+  readonly successLighter: string;
+  readonly warningLight: string;
+  readonly warningLighter: string;
+  readonly errorLight: string;
+  readonly cyanLight: string;
+  readonly cyanAccent: string;
+  readonly orangeLight: string;
 }
 
 /**
@@ -116,6 +158,56 @@ export interface SemanticBackgroundColors {
   readonly hover: string;
   /** Active background color - 'bg-slate-200' */
   readonly active: string;
+
+  // ✅ ENTERPRISE: Core backgrounds
+  readonly card: string;
+  readonly surface: string;
+  readonly muted: string;
+  readonly skeleton: string;
+  readonly tertiary: string;
+  readonly elevated: string;
+  readonly selection: string;
+  readonly backgroundSecondary: string;
+  readonly overlay: string;
+  readonly accent: string;
+  readonly light: string;
+  readonly transparent: string;
+
+  // ✅ ENTERPRISE: Modal backdrops
+  readonly modalBackdrop: string;
+  readonly modalBackdropLight: string;
+  readonly modalBackdropDark: string;
+
+  // ✅ ENTERPRISE: Status variants
+  readonly danger: string;
+  readonly successHover: string;
+  readonly dangerHover: string;
+  readonly successSubtle: string;
+  readonly errorSubtle: string;
+  readonly infoSubtle: string;
+  readonly neutralSubtle: string;
+  readonly warningSubtle: string;
+  readonly errorLight: string;
+  readonly warningLight: string;
+
+  // ✅ ENTERPRISE: Constraint colors
+  readonly yellow: string;
+  readonly orange: string;
+  readonly purple: string;
+  readonly magenta: string;
+
+  // ✅ ENTERPRISE: Dark theme backgrounds
+  readonly infoDark: string;
+  readonly successDark: string;
+  readonly warningDark: string;
+  readonly errorDark: string;
+  readonly slateDark: string;
+  readonly slateLight: string;
+
+  // ✅ ENTERPRISE: Panel backgrounds on dark UIs
+  readonly warningPanel: string;
+  readonly infoPanel: string;
+  readonly successPanel: string;
 }
 
 /**
