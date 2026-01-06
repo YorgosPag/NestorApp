@@ -147,38 +147,38 @@ export const PdfBackgroundCanvas: React.FC<PdfBackgroundCanvasProps> = ({
       ctx.save();
 
       // ============================================================
-      // 🏢 ENTERPRISE: VIEWPORT-CENTERED PDF RENDERING
+      // 🏢 ENTERPRISE: DUAL TRANSFORM SYSTEM
       // ============================================================
       //
-      // PDF renders in SCREEN SPACE (not world space)
-      // This ensures PDF is always visible and centered on screen
-      // User can then adjust position with pdfTransform controls
+      // LAYER 1: DXF Canvas Transform (zoom/pan)
+      // - Applied first so PDF follows DXF movements
+      // - Uses canvasTransform from parent (CanvasSection)
       //
-      // Benefits:
-      // - PDF always visible when loaded
-      // - Independent from DXF zoom/pan
-      // - User controls alignment via panel
+      // LAYER 2: PDF Transform (user adjustments)
+      // - Applied on top for PDF-specific adjustments
+      // - Scale/rotation/offset independent from DXF
       // ============================================================
 
-      // Calculate viewport center
-      const viewportCenterX = viewport.width / 2;
-      const viewportCenterY = viewport.height / 2;
+      // LAYER 1: Apply DXF canvas transform (zoom/pan)
+      // This makes PDF follow the same zoom/pan as DXF
+      // 🏢 ENTERPRISE: DXF uses CAD Y-axis convention where:
+      // - offsetY is SUBTRACTED (positive offsetY = move UP on screen)
+      // - Canvas standard is opposite (positive Y = move DOWN)
+      // So we NEGATE offsetY to match DXF pan behavior
+      ctx.translate(canvasTransform.offsetX, -canvasTransform.offsetY);
+      ctx.scale(canvasTransform.scale, canvasTransform.scale);
 
-      // Apply PDF-specific transform (user controls from panel)
-      // pdfTransform.offsetX/Y are adjustments from center
-      const pdfCenterX = viewportCenterX + pdfTransform.offsetX;
-      const pdfCenterY = viewportCenterY + pdfTransform.offsetY;
+      // LAYER 2: Apply PDF-specific transform (user controls from panel)
+      // pdfTransform.offsetX/Y are offsets in world coordinates
+      ctx.translate(pdfTransform.offsetX, pdfTransform.offsetY);
 
-      // Move to PDF center position
-      ctx.translate(pdfCenterX, pdfCenterY);
-
-      // Apply rotation around center
+      // Apply PDF rotation around current position
       ctx.rotate((pdfTransform.rotation * Math.PI) / 180);
 
-      // Apply scale
+      // Apply PDF scale on top of DXF scale
       ctx.scale(pdfTransform.scale, pdfTransform.scale);
 
-      // Draw image centered at position
+      // Draw image centered at origin (world 0,0)
       const drawX = -img.width / 2;
       const drawY = -img.height / 2;
 
