@@ -7,12 +7,14 @@
 
 import type { Point2D, ViewTransform, Viewport } from '../types/Types';
 
-// ✅ MARGINS SYSTEM από το παλιό backup για rulers consistency
+// ✅ MARGINS SYSTEM - Single Source of Truth για ruler dimensions
+// 🏢 ENTERPRISE FIX (2026-01-06): Synchronized with actual ruler settings (30px)
+// Previously had inconsistent values (80px) causing snap indicator misalignment
 export const COORDINATE_LAYOUT = {
-  RULER_LEFT_WIDTH: 80,
+  RULER_LEFT_WIDTH: 30,   // ✅ FIXED: Was 80, actual rulers are 30px
   RULER_TOP_HEIGHT: 30,
   MARGINS: {
-    left: 80,   // Space for vertical ruler
+    left: 30,   // Space for vertical ruler (synchronized with ruler width)
     top: 30,    // Space for horizontal ruler
     right: 0,   // No right margin
     bottom: 30  // Space for coordinates/status

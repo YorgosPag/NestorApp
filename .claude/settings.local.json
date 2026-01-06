@@ -123,7 +123,9 @@
       "Bash(dir \"C:\\\\Users\\\\user\\\\AppData\\\\Roaming\\\\ViberPC\\\\306974050023\\\\*.db\" /b)",
       "Bash(dir \"C:\\\\Users\\\\user\\\\AppData\\\\Roaming\\\\ViberPC\\\\306974050023\\\\*.sqlite\" /b)",
       "Bash(powershell.exe -Command \"Get-ChildItem ''C:\\\\Users\\\\user\\\\AppData\\\\Roaming\\\\ViberPC\\\\306974050023'' -Recurse | Select-Object Name, Length, Extension | Format-Table -AutoSize\")",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\n🔒 ENTERPRISE SAFETY CHECKPOINT: Snapping & Drawing Enhancement \\(29 files\\)\n\n- Enhanced SnapIndicatorOverlay with improved visual feedback\n- Upgraded SnapContext and SnapOrchestrator for better performance\n- Improved EndpointSnapEngine with extended types\n- Updated LayerCanvas and LayerRenderer rendering\n- Refined useDrawingHandlers and cursor handlers\n- Cleaned up settings migration and sync systems\n- Code cleanup across canvas and overlay components\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git mv:*)"
     ],
     "deny": [],
     "ask": []
