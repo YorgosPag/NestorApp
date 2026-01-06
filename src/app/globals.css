@@ -460,18 +460,24 @@ div[style*="z-index: 99999" i]:not([class*="nextjs"]):not([id*="nextjs"]):not([d
 }
 
 /* 🏢 ENTERPRISE: Next.js Error Overlay - Ensure visibility & interactivity */
+/* This ensures the error overlay is NEVER hidden by debug panel killer rules above */
 [data-nextjs-dialog],
 [data-nextjs-dialog-overlay],
+[data-nextjs-dialog-content],
 nextjs-portal,
 #__next-build-watcher,
 [class*="nextjs-toast"],
-[class*="Toast"] {
+[class*="Toast"],
+/* Next.js 15+ specific selectors */
+[data-nextjs-codeframe],
+[data-nextjs-terminal],
+[data-nextjs-call-stack] {
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
-  pointer-events: auto !important;
-  z-index: 2147483647 !important; /* Maximum z-index */
+  z-index: 2147483647 !important; /* Maximum z-index - above EVERYTHING */
   user-select: text !important; /* Allow text selection */
+  -webkit-user-select: text !important;
 }
 
 /* =============================================================
@@ -514,24 +520,67 @@ nextjs-portal,
   z-index: var(--z-index-dropdown);
 }
 
-/* ✅ ENTERPRISE FIX: Next.js Development Portal - Prevent click event interception
-   This element covers the entire screen in development mode and blocks click events
-   while allowing pointerdown to pass through. This fix ensures dropdowns work correctly.
-   Reference: Bug discovered via elementsFromPoint() showing NEXTJS-PORTAL intercepting clicks */
+/* =============================================================
+   🏢 ENTERPRISE: Next.js Error Overlay - FULL INTERACTIVITY
+
+   Ensures the error overlay is ALWAYS:
+   - Above all other elements (z-index: 2147483647)
+   - Fully clickable (pointer-events: auto)
+   - Text selectable (user-select: text)
+   ============================================================= */
+
+/* Main Next.js portal container - allow pass-through by default */
 nextjs-portal,
-NEXTJS-PORTAL,
-[class*="nextjs"],
-[id*="nextjs"],
-[data-nextjs-dialog],
-[data-nextjs-dialog-overlay],
-[data-nextjs-toast] {
+NEXTJS-PORTAL {
   pointer-events: none !important;
 }
 
-/* ✅ Allow interaction with content INSIDE Next.js portal (like error messages) */
-nextjs-portal *,
-NEXTJS-PORTAL * {
-  pointer-events: auto;
+/* But ENABLE full interaction for error dialogs and their content */
+nextjs-portal > *,
+NEXTJS-PORTAL > *,
+[data-nextjs-dialog],
+[data-nextjs-dialog-overlay],
+[data-nextjs-dialog-content],
+[data-nextjs-toast],
+[class*="nextjs-toast"],
+[class*="Toast"],
+nextjs-portal dialog,
+nextjs-portal [role="dialog"],
+nextjs-portal [role="alertdialog"] {
+  pointer-events: auto !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  z-index: 2147483647 !important;
+}
+
+/* Ensure ALL elements inside the dialog are interactive */
+[data-nextjs-dialog] *,
+[data-nextjs-dialog-content] *,
+nextjs-portal dialog *,
+nextjs-portal [role="dialog"] *,
+nextjs-portal [role="alertdialog"] * {
+  pointer-events: auto !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+/* Buttons and links must be clickable */
+nextjs-portal button,
+nextjs-portal a,
+nextjs-portal [role="button"],
+[data-nextjs-dialog] button,
+[data-nextjs-dialog] a {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* Code blocks must be selectable */
+nextjs-portal pre,
+nextjs-portal code,
+[data-nextjs-dialog] pre,
+[data-nextjs-dialog] code {
+  user-select: text !important;
+  -webkit-user-select: text !important;
 }
 
 /* ✅ ENTERPRISE: Force high z-index for Radix Popper wrapper */

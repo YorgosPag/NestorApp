@@ -133,32 +133,38 @@ export function UniversalTabsRenderer<TData = unknown>({
 
     // ✅ ENTERPRISE: Special handling για FloorplanViewerTab
     // Πρέπει να μετατρέψουμε projectFloorplan/parkingFloorplan → floorplanData
+    // και να χρησιμοποιήσουμε callbacks από additionalData αν υπάρχουν
     const getFloorplanProps = () => {
       if (tabConfig.component === 'FloorplanViewerTab') {
         const floorplanAdditionalData = additionalData as {
           projectFloorplan?: { scene?: unknown };
           parkingFloorplan?: { scene?: unknown };
+          // ✅ ENTERPRISE: Callbacks from parent component
+          onAddProjectFloorplan?: () => void;
+          onAddParkingFloorplan?: () => void;
+          onEditProjectFloorplan?: () => void;
+          onEditParkingFloorplan?: () => void;
         };
 
         if (tabConfig.value === 'floorplan') {
           return {
             floorplanData: floorplanAdditionalData.projectFloorplan?.scene,
-            onAddFloorplan: () => {
+            onAddFloorplan: floorplanAdditionalData.onAddProjectFloorplan ?? (() => {
               console.log('Add project floorplan for project:', (data as { id?: string })?.id);
-            },
-            onEditFloorplan: () => {
+            }),
+            onEditFloorplan: floorplanAdditionalData.onEditProjectFloorplan ?? (() => {
               console.log('Edit project floorplan for project:', (data as { id?: string })?.id);
-            },
+            }),
           };
         } else if (tabConfig.value === 'parking-floorplan') {
           return {
             floorplanData: floorplanAdditionalData.parkingFloorplan?.scene,
-            onAddFloorplan: () => {
+            onAddFloorplan: floorplanAdditionalData.onAddParkingFloorplan ?? (() => {
               console.log('Add parking floorplan for project:', (data as { id?: string })?.id);
-            },
-            onEditFloorplan: () => {
+            }),
+            onEditFloorplan: floorplanAdditionalData.onEditParkingFloorplan ?? (() => {
               console.log('Edit parking floorplan for project:', (data as { id?: string })?.id);
-            },
+            }),
           };
         }
       }

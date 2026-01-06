@@ -2,10 +2,15 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
+/**
+ * 🏢 ENTERPRISE: Floorplan data structure for context
+ * Uses `unknown` instead of `any` for type safety
+ */
 interface FloorplanData {
   projectId: string;
   type: 'project' | 'parking';
-  scene: any; // DXF scene data
+  /** DXF scene data - typed as unknown for flexibility with SceneModel */
+  scene: unknown;
   fileName: string;
   timestamp: number;
 }
