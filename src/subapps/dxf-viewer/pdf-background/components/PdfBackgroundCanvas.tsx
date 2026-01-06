@@ -41,8 +41,8 @@ interface RenderRequest {
 
 /**
  * Z-index for PDF background layer
- * 🔧 DEBUG: Temporarily set to z-50 to verify visibility
- * TODO: After confirming visibility, change back to z-[-10] or use proper layering
+ * Uses z-50 to ensure visibility above other canvas layers
+ * TODO: Investigate proper layering with transparent backgrounds
  *
  * @see ADR-002 for z-index hierarchy
  */

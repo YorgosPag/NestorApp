@@ -143,7 +143,8 @@
       "Bash(dir node_modulespdfjs-distlegacybuild)",
       "Bash(pnpm remove:*)",
       "Bash(dir /b \"C:\\\\Nestor_Pagonis\\\\node_modules\\\\pdfjs-dist\\\\build\")",
-      "Bash(dir /b \"C:\\\\Nestor_Pagonis\\\\public\\\\*.mjs\")"
+      "Bash(dir /b \"C:\\\\Nestor_Pagonis\\\\public\\\\*.mjs\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\n🔒 ENTERPRISE SAFETY CHECKPOINT: PDF Background System \\(20 files\\)\n\n- NEW: Complete PDF Background system for DXF Viewer\n  - PdfBackgroundCanvas.tsx - Canvas rendering component\n  - PdfControlsPanel.tsx - Control panel UI\n  - usePdfBackground.ts - React hook\n  - PdfRenderer.ts - PDF rendering service\n  - pdfBackgroundStore.ts - Zustand store\n  - pdf.types.ts - TypeScript types\n- Added PDF.js library \\(pdf.min.mjs, pdf.worker.min.mjs\\)\n- Updated next.config.js for PDF support\n- Integrated into DxfViewerContent and CanvasSection\n- New toolbar definitions for PDF tools\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ],
     "deny": [],
     "ask": []
