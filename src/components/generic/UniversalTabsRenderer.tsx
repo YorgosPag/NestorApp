@@ -131,6 +131,40 @@ export function UniversalTabsRenderer<TData = unknown>({
       };
     }
 
+    // ✅ ENTERPRISE: Special handling για FloorplanViewerTab
+    // Πρέπει να μετατρέψουμε projectFloorplan/parkingFloorplan → floorplanData
+    const getFloorplanProps = () => {
+      if (tabConfig.component === 'FloorplanViewerTab') {
+        const floorplanAdditionalData = additionalData as {
+          projectFloorplan?: { scene?: unknown };
+          parkingFloorplan?: { scene?: unknown };
+        };
+
+        if (tabConfig.value === 'floorplan') {
+          return {
+            floorplanData: floorplanAdditionalData.projectFloorplan?.scene,
+            onAddFloorplan: () => {
+              console.log('Add project floorplan for project:', (data as { id?: string })?.id);
+            },
+            onEditFloorplan: () => {
+              console.log('Edit project floorplan for project:', (data as { id?: string })?.id);
+            },
+          };
+        } else if (tabConfig.value === 'parking-floorplan') {
+          return {
+            floorplanData: floorplanAdditionalData.parkingFloorplan?.scene,
+            onAddFloorplan: () => {
+              console.log('Add parking floorplan for project:', (data as { id?: string })?.id);
+            },
+            onEditFloorplan: () => {
+              console.log('Edit parking floorplan for project:', (data as { id?: string })?.id);
+            },
+          };
+        }
+      }
+      return {};
+    };
+
     // Render actual component
     return {
       id: tabConfig.value,
@@ -148,6 +182,7 @@ export function UniversalTabsRenderer<TData = unknown>({
           // For PlaceholderTab compatibility
           icon={getIconComponent(tabConfig.icon)}
           {...additionalData}
+          {...getFloorplanProps()} // ✅ ENTERPRISE: FloorplanViewerTab special props
           {...globalProps}
           {...tabConfig.componentProps}
         />

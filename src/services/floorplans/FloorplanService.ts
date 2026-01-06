@@ -83,7 +83,15 @@ export class FloorplanService {
   static async saveFloorplan(projectId: string, type: 'project' | 'parking' | 'building' | 'storage', data: FloorplanData): Promise<boolean> {
     try {
       const docId = `${projectId}_${type}`;
-      // Debug logging removed - Saving floorplan to Firestore
+      // ✅ ENTERPRISE DEBUG: Verify floorplan save operation
+      console.log('💾 FloorplanService.saveFloorplan called:', {
+        projectId,
+        type,
+        docId,
+        fileName: data.fileName,
+        hasScene: !!data.scene,
+        entitiesCount: data.scene?.entities?.length || 0
+      });
       
       // Compress scene data
       const { compressedData, originalSize, compressedSize } = this.compressScene(data.scene);
@@ -120,10 +128,20 @@ export class FloorplanService {
 
       await setDoc(doc(db, this.COLLECTION, docId), docData);
 
-      // Debug logging removed - Successfully saved floorplan
+      // ✅ ENTERPRISE DEBUG: Confirm successful save
+      console.log('✅ FloorplanService: Successfully saved floorplan to Firestore:', {
+        docId,
+        collection: this.COLLECTION,
+        compressionRatio: `${((1 - compressedSize/originalSize) * 100).toFixed(1)}%`
+      });
       return true;
     } catch (error) {
-      // Error logging removed //(`❌ Error saving ${type} floorplan:`, error);
+      // ✅ ENTERPRISE DEBUG: Log error details
+      console.error('❌ FloorplanService.saveFloorplan FAILED:', {
+        projectId,
+        type,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
       return false;
     }
   }
@@ -134,7 +152,8 @@ export class FloorplanService {
   static async loadFloorplan(projectId: string, type: 'project' | 'parking' | 'building' | 'storage'): Promise<FloorplanData | null> {
     try {
       const docId = `${projectId}_${type}`;
-      // Debug logging removed - Loading floorplan from Firestore
+      // ✅ ENTERPRISE DEBUG: Log load attempt
+      console.log('📖 FloorplanService.loadFloorplan called:', { projectId, type, docId });
       
       const docSnap = await getDoc(doc(db, this.COLLECTION, docId));
       
@@ -169,11 +188,17 @@ export class FloorplanService {
           return data;
         }
       } else {
-        // Debug logging removed - No floorplan found for project
+        // ✅ ENTERPRISE DEBUG: Document not found
+        console.log('⚠️ FloorplanService: No floorplan found:', { projectId, type, docId });
         return null;
       }
     } catch (error) {
-      // Error logging removed - Error loading floorplan
+      // ✅ ENTERPRISE DEBUG: Log load error
+      console.error('❌ FloorplanService.loadFloorplan FAILED:', {
+        projectId,
+        type,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
       return null;
     }
   }
