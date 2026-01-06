@@ -135,7 +135,15 @@
       "Bash(npx vitest:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\n🔒 ENTERPRISE SAFETY CHECKPOINT: Canvas Alignment Test & Vitest Config \\(4 files\\)\n\n- Enhanced canvas-alignment-test.ts with improved verification\n- Updated vitest.config.enterprise.ts for better testing\n- Updated BACKUP_SUMMARY.json with detailed fix documentation\n- Layering Workflow Test fix documentation\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit -m \"$\\(cat <<''EOF''\n🔒 ENTERPRISE SAFETY CHECKPOINT: UniversalTabsRenderer & FloorplanService \\(2 files\\)\n\n- Enhanced UniversalTabsRenderer.tsx with improved functionality\n- Updated FloorplanService.ts with better service handling\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\n🔒 ENTERPRISE SAFETY CHECKPOINT: Project Details & Floorplans Enhancement \\(7 files\\)\n\n- Major project-details.tsx expansion \\(+170 lines\\)\n- Enhanced useProjectFloorplans.ts hook \\(+234 lines\\)\n- Updated FloorplanContext.tsx with improvements\n- Refined UniversalTabsRenderer.tsx\n- Extended globals.css styles \\(+81 lines\\)\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\n🔒 ENTERPRISE SAFETY CHECKPOINT: Project Details & Floorplans Enhancement \\(7 files\\)\n\n- Major project-details.tsx expansion \\(+170 lines\\)\n- Enhanced useProjectFloorplans.ts hook \\(+234 lines\\)\n- Updated FloorplanContext.tsx with improvements\n- Refined UniversalTabsRenderer.tsx\n- Extended globals.css styles \\(+81 lines\\)\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(npm --version:*)",
+      "Bash(pnpm --version:*)",
+      "Bash(pnpm add:*)",
+      "Bash(dir node_modulespdfjs-distbuild)",
+      "Bash(dir node_modulespdfjs-distlegacybuild)",
+      "Bash(pnpm remove:*)",
+      "Bash(dir /b \"C:\\\\Nestor_Pagonis\\\\node_modules\\\\pdfjs-dist\\\\build\")",
+      "Bash(dir /b \"C:\\\\Nestor_Pagonis\\\\public\\\\*.mjs\")"
     ],
     "deny": [],
     "ask": []

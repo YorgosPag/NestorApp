@@ -1328,7 +1328,9 @@ export const DXF_UTILITY_TOOL_LABELS = {
   EXPORT: 'Export',
   RUN_TESTS: 'Run Tests',
   // 🏢 ENTERPRISE: Performance Monitor Toggle (Bentley/Autodesk pattern)
-  TOGGLE_PERF: 'Performance'
+  TOGGLE_PERF: 'Performance',
+  // 🏢 ENTERPRISE: PDF Background Controls (Independent pan/zoom/rotation)
+  PDF_BACKGROUND: 'PDF Background'
 } as const;
 
 // ============================================================================

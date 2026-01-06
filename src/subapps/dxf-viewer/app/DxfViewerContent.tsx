@@ -78,6 +78,8 @@ const CentralizedAutoSaveStatus = React.lazy(() => import('../ui/components/Cent
 const OverlayProperties = React.lazy(() => import('../ui/OverlayProperties').then(mod => ({ default: mod.OverlayProperties })));
 const DraggableOverlayToolbar = React.lazy(() => import('../ui/components/DraggableOverlayToolbar').then(mod => ({ default: mod.DraggableOverlayToolbar })));
 const DraggableOverlayProperties = React.lazy(() => import('../ui/components/DraggableOverlayProperties').then(mod => ({ default: mod.DraggableOverlayProperties })));
+// 🏢 PDF BACKGROUND: Lazy load PDF controls panel
+const PdfControlsPanel = React.lazy(() => import('../pdf-background').then(mod => ({ default: mod.PdfControlsPanel })));
 const ToolbarWithCursorCoordinates = React.lazy(() => import('../ui/components/ToolbarWithCursorCoordinates').then(mod => ({ default: mod.ToolbarWithCursorCoordinates })));
 
 // Layout Components - Canvas V2
@@ -133,6 +135,9 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
 
   // 🧪 TESTS MODAL - State για tests button
   const [testsModalOpen, setTestsModalOpen] = React.useState(false);
+
+  // 🏢 PDF BACKGROUND: State για PDF controls panel visibility
+  const [pdfPanelOpen, setPdfPanelOpen] = React.useState(false);
 
   // 🏢 ENTERPRISE: Performance Monitor Toggle (Bentley/Autodesk pattern - DXF Viewer only)
   const { isEnabled: perfMonitorEnabled, toggle: togglePerfMonitor } = usePerformanceMonitorToggle();
@@ -292,6 +297,11 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
         `Performance Monitor: ${newState ? 'ON ✅' : 'OFF ❌'}`,
         newState ? 'Μετρήσεις FPS, Memory, Rendering ενεργές' : 'Καλύτερη απόδοση - παρακολούθηση απενεργοποιημένη'
       );
+      return;
+    }
+    // 🏢 PDF BACKGROUND: Toggle PDF controls panel
+    if (action === 'toggle-pdf-background') {
+      setPdfPanelOpen(prev => !prev);
       return;
     }
     // Pass all other actions to original handleAction
@@ -964,6 +974,14 @@ Check console for detailed metrics`;
           isOpen={testsModalOpen}
           onClose={() => setTestsModalOpen(false)}
           showCopyableNotification={showCopyableNotification}
+        />
+      </React.Suspense>
+
+      {/* 🏢 PDF BACKGROUND: Lazy-loaded PDF Controls Panel */}
+      <React.Suspense fallback={<div className="hidden" />}>
+        <PdfControlsPanel
+          isOpen={pdfPanelOpen}
+          onClose={() => setPdfPanelOpen(false)}
         />
       </React.Suspense>
 

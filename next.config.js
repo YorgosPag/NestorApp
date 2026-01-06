@@ -17,6 +17,10 @@ const nextConfig = {
   // ✅ NEXT.JS 15: Fix workspace root detection (multiple lockfiles)
   outputFileTracingRoot: __dirname,
 
+  // 🏢 ENTERPRISE: Transpile pdfjs-dist for proper ESM handling
+  // Fixes: "Object.defineProperty called on non-object" error
+  transpilePackages: ['pdfjs-dist'],
+
   // ⚡ ENTERPRISE PERFORMANCE OPTIMIZATIONS
   experimental: {
     // Memory optimizations
@@ -25,6 +29,56 @@ const nextConfig = {
 
   // 📦 BUNDLE OPTIMIZATION
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+    // 🏢 ENTERPRISE: pdf.js configuration for Next.js
+    // Fixes ESM compatibility issues with pdfjs-dist
+
+    // Resolve fallbacks for browser-only modules (needed by pdfjs-dist)
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      canvas: false,
+      fs: false,
+      http: false,
+      https: false,
+      url: false,
+    };
+
+    // 🏢 ENTERPRISE: Fix ESM compatibility for .mjs files (pdfjs-dist)
+    // This prevents "Object.defineProperty called on non-object" error
+    // by letting Webpack handle .mjs as ESM without extra wrapping
+    if (!isServer) {
+      config.module.rules.push({
+        test: /\.mjs$/,
+        include: /node_modules/,
+        type: 'javascript/auto',
+      });
+    }
+
+    // Copy worker to public folder for self-hosted PDF processing
+    // Eliminates CDN dependency (offline support, version lock, security)
+    if (!isServer) {
+      const path = require('path');
+      const CopyPlugin = require('copy-webpack-plugin');
+
+      // 🏢 ENTERPRISE: Copy pdf.js files to public
+      // Uses the version from react-pdf's pdfjs-dist dependency
+      const pdfjsDistPath = path.dirname(require.resolve('pdfjs-dist/package.json'));
+
+      config.plugins.push(
+        new CopyPlugin({
+          patterns: [
+            {
+              from: path.join(pdfjsDistPath, 'build/pdf.min.mjs'),
+              to: path.join(__dirname, 'public/pdf.min.mjs'),
+            },
+            {
+              from: path.join(pdfjsDistPath, 'build/pdf.worker.min.mjs'),
+              to: path.join(__dirname, 'public/pdf.worker.min.mjs'),
+            },
+          ],
+        })
+      );
+    }
+
     // Performance optimizations για production
     if (!dev) {
       config.optimization = {

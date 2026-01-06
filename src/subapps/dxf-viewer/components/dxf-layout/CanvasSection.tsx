@@ -41,6 +41,8 @@ import { useSnapContext } from '../../snapping/context/SnapContext';
 import { canvasUI } from '@/styles/design-tokens/canvas';
 // 🏢 ENTERPRISE: Centralized spacing tokens (ADR-013)
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 PDF BACKGROUND: Enterprise PDF background system
+import { PdfBackgroundCanvas, usePdfBackgroundStore } from '../../pdf-background';
 
 /**
  * Renders the main canvas area, including the renderer and floating panels.
@@ -82,6 +84,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const canvasContext = useCanvasContext();
   // 🎯 SNAP INDICATOR: Get current snap result for visual feedback
   const { currentSnapResult } = useSnapContext();
+  // 🏢 PDF BACKGROUND: Get PDF background state and setViewport action
+  const {
+    enabled: pdfEnabled,
+    opacity: pdfOpacity,
+    transform: pdfTransform,
+    renderedImageUrl: pdfImageUrl,
+    setViewport: setPdfViewport,
+  } = usePdfBackgroundStore();
   // ✅ CENTRALIZED VIEWPORT: Update viewport από canvas dimensions
   // 🏢 FIX (2026-01-04): Use ResizeObserver for reliable viewport tracking
   React.useEffect(() => {
@@ -101,6 +111,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         // Only update if dimensions are valid (not 0x0)
         if (rect.width > 0 && rect.height > 0) {
           setViewport({ width: rect.width, height: rect.height });
+          // 🏢 PDF BACKGROUND: Sync viewport to PDF store for fit-to-view
+          setPdfViewport({ width: rect.width, height: rect.height });
           console.log('✅ [Viewport] Updated:', rect.width, 'x', rect.height);
         }
       }
@@ -118,6 +130,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
             const { width, height } = entry.contentRect;
             if (width > 0 && height > 0) {
               setViewport({ width, height });
+              // 🏢 PDF BACKGROUND: Sync viewport to PDF store for fit-to-view
+              setPdfViewport({ width, height });
             }
           }
         });
@@ -778,6 +792,16 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           className={`canvas-stack relative w-full h-full ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`}
           style={{ cursor: 'none' }} // ✅ ADR-008 CAD-GRADE: ALWAYS hide CSS cursor - crosshair is the only cursor
         >
+          {/* 🏢 PDF BACKGROUND: Lowest layer in canvas stack (z-[-10]) */}
+          <PdfBackgroundCanvas
+            imageUrl={pdfImageUrl}
+            pdfTransform={pdfTransform}
+            canvasTransform={transform}
+            viewport={viewport}
+            enabled={pdfEnabled}
+            opacity={pdfOpacity}
+          />
+
           {/* 🔺 CANVAS V2: Layer Canvas - Background Overlays (Semi-transparent colored layers) */}
           {showLayerCanvas && (
             <LayerCanvas

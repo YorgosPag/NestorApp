@@ -4,7 +4,8 @@ import {
   Move, Copy, Trash2, Ruler, Undo, Redo, Focus, Maximize2,
   Grid, Settings, Crop, Download, Plus, Crosshair,
   Maximize, Calculator, Map, Edit, Hexagon, FlaskConical,
-  Activity // 🏢 ENTERPRISE: Performance Monitor icon
+  Activity, // 🏢 ENTERPRISE: Performance Monitor icon
+  FileUp // 🏢 ENTERPRISE: PDF Background icon
 } from "lucide-react";
 
 // 🏢 ENTERPRISE: Import centralized DXF tool labels - ZERO HARDCODED VALUES
@@ -264,5 +265,14 @@ export const createActionButtons = (props: {
     label: DXF_UTILITY_TOOL_LABELS.TOGGLE_PERF,
     hotkey: 'Ctrl+Shift+P',
     onClick: () => props.onAction('toggle-perf')
+  },
+  // 🏢 ENTERPRISE: PDF Background Controls (Independent pan/zoom/rotation)
+  // Note: Ctrl+Shift+B is reserved by browser (bookmarks bar)
+  {
+    id: 'toggle-pdf-background',
+    icon: FileUp,
+    label: DXF_UTILITY_TOOL_LABELS.PDF_BACKGROUND,
+    hotkey: 'Ctrl+Alt+P',
+    onClick: () => props.onAction('toggle-pdf-background')
   }
 ];
