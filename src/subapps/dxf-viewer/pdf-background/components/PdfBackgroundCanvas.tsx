@@ -21,6 +21,7 @@ import React, { useRef, useEffect, useCallback, useState } from 'react';
 import type { PdfBackgroundCanvasProps } from '../types/pdf.types';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
 
 // ============================================================================
 // RENDER LOOP MANAGEMENT
@@ -147,29 +148,29 @@ export const PdfBackgroundCanvas: React.FC<PdfBackgroundCanvasProps> = ({
       ctx.save();
 
       // ============================================================
-      // 🏢 ENTERPRISE: DUAL TRANSFORM SYSTEM
+      // 🏢 ENTERPRISE: CAD COORDINATE SYSTEM (same as DXF)
       // ============================================================
-      //
-      // LAYER 1: DXF Canvas Transform (zoom/pan)
-      // - Applied first so PDF follows DXF movements
-      // - Uses canvasTransform from parent (CanvasSection)
-      //
-      // LAYER 2: PDF Transform (user adjustments)
-      // - Applied on top for PDF-specific adjustments
-      // - Scale/rotation/offset independent from DXF
+      // Uses EXACTLY the same coordinate system as DXF rendering:
+      // - Origin at bottom-left (after margins)
+      // - Y-axis points UP (CAD convention)
+      // - World (0,0) = screen (left, height - top)
       // ============================================================
 
-      // LAYER 1: Apply DXF canvas transform (zoom/pan)
-      // This makes PDF follow the same zoom/pan as DXF
-      // 🏢 ENTERPRISE: DXF uses CAD Y-axis convention where:
-      // - offsetY is SUBTRACTED (positive offsetY = move UP on screen)
-      // - Canvas standard is opposite (positive Y = move DOWN)
-      // So we NEGATE offsetY to match DXF pan behavior
-      ctx.translate(canvasTransform.offsetX, -canvasTransform.offsetY);
+      const { left, top } = COORDINATE_LAYOUT.MARGINS;
+
+      // STEP 1: Move origin to bottom-left of canvas area (CAD origin)
+      // This matches DXF worldToScreen: (left, height - top) is world (0,0)
+      ctx.translate(left, viewport.height - top);
+
+      // STEP 2: Apply Y-flip for CAD coordinates (Y goes UP, not down)
+      ctx.scale(1, -1);
+
+      // STEP 3: Apply DXF canvas transform (zoom/pan)
+      // After Y-flip, offsetY works correctly (positive = up)
+      ctx.translate(canvasTransform.offsetX, canvasTransform.offsetY);
       ctx.scale(canvasTransform.scale, canvasTransform.scale);
 
-      // LAYER 2: Apply PDF-specific transform (user controls from panel)
-      // pdfTransform.offsetX/Y are offsets in world coordinates
+      // STEP 4: Apply PDF-specific transform (user controls from panel)
       ctx.translate(pdfTransform.offsetX, pdfTransform.offsetY);
 
       // Apply PDF rotation around current position
@@ -178,11 +179,10 @@ export const PdfBackgroundCanvas: React.FC<PdfBackgroundCanvasProps> = ({
       // Apply PDF scale on top of DXF scale
       ctx.scale(pdfTransform.scale, pdfTransform.scale);
 
-      // Draw image centered at origin (world 0,0)
-      const drawX = -img.width / 2;
-      const drawY = -img.height / 2;
-
-      ctx.drawImage(img, drawX, drawY);
+      // STEP 5: Draw with bottom-left at world (0,0)
+      // After Y-flip, we need to flip the image back so it's not upside-down
+      ctx.scale(1, -1);
+      ctx.drawImage(img, 0, -img.height);
 
       // Restore context state
       ctx.restore();
