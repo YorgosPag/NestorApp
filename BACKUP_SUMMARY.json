@@ -1,55 +1,30 @@
 {
-  "category": "CHECKPOINT",
-  "shortDescription": "Snapping & Drawing Enhancement (29 files)",
-  "problem": "Snapping system needed visual feedback improvements and drawing handlers optimization.",
-  "cause": "Continued enhancement of snapping visualization, overlay systems, and cursor handling.",
+  "category": "CLEANUP",
+  "shortDescription": "Documentation Reorganization (107 files)",
+  "problem": "Documentation files were scattered across multiple directories without clear organization.",
+  "cause": "Organic growth of documentation without centralized structure.",
   "filesChanged": [
-    ".claude/settings.local.json",
-    "src/components/GlobalErrorSetup.tsx",
-    "src/providers/PhotoPreviewProvider.tsx",
-    "src/subapps/dxf-viewer/canvas-v2/layer-canvas/LayerCanvas.tsx",
-    "src/subapps/dxf-viewer/canvas-v2/layer-canvas/LayerRenderer.ts",
-    "src/subapps/dxf-viewer/canvas-v2/overlays/SnapIndicatorOverlay.tsx",
-    "src/subapps/dxf-viewer/canvas-v2/overlays/SnapModeIndicator.tsx",
-    "src/subapps/dxf-viewer/canvas/DxfCanvas.tsx",
-    "src/subapps/dxf-viewer/canvas/DxfCanvasCore.tsx",
-    "src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx",
-    "src/subapps/dxf-viewer/debug/TestResultsModal.tsx",
-    "src/subapps/dxf-viewer/hooks/drawing/useDrawingHandlers.ts",
-    "src/subapps/dxf-viewer/hooks/drawing/useUnifiedDrawing.tsx",
-    "src/subapps/dxf-viewer/hooks/state/useCanvasTransformState.ts",
-    "src/subapps/dxf-viewer/overlays/overlay-store.tsx",
-    "src/subapps/dxf-viewer/overlays/snap-adapter.ts",
-    "src/subapps/dxf-viewer/rendering/canvas/core/CanvasEventSystem.ts",
-    "src/subapps/dxf-viewer/settings/io/migrationRegistry.ts",
-    "src/subapps/dxf-viewer/settings/io/safeLoad.ts",
-    "src/subapps/dxf-viewer/settings/sync/storeSync.ts",
-    "src/subapps/dxf-viewer/snapping/context/SnapContext.tsx",
-    "src/subapps/dxf-viewer/snapping/engines/EndpointSnapEngine.ts",
-    "src/subapps/dxf-viewer/snapping/extended-types.ts",
-    "src/subapps/dxf-viewer/snapping/hooks/useSnapManager.tsx",
-    "src/subapps/dxf-viewer/snapping/orchestrator/SnapEngineRegistry.ts",
-    "src/subapps/dxf-viewer/snapping/orchestrator/SnapOrchestrator.ts",
-    "src/subapps/dxf-viewer/systems/cursor/useCentralizedMouseHandlers.ts",
-    "src/subapps/dxf-viewer/ui/toolbar/EnhancedDXFToolbar.tsx"
+    "88 documentation files renamed/moved to src/subapps/dxf-viewer/docs/",
+    "17 obsolete txt files deleted from src/txt_files/",
+    "2 new line-preview settings docs created",
+    "ADR-UI-001.md moved to centralized src/docs/adr/"
   ],
   "solution": {
-    "phase1": "Enhanced SnapIndicatorOverlay with improved visual feedback (+186 lines)",
-    "phase2": "Upgraded SnapContext and SnapOrchestrator for better orchestration",
-    "phase3": "Improved EndpointSnapEngine with extended types support",
-    "phase4": "Refined useDrawingHandlers and cursor handling systems",
-    "phase5": "Cleaned up settings migration and sync systems"
+    "phase1": "Created organized directory structure under docs/",
+    "phase2": "Moved analysis and duplicates documentation",
+    "phase3": "Consolidated architecture and feature docs",
+    "phase4": "Organized guides, services, and troubleshooting docs",
+    "phase5": "Cleaned up obsolete txt files"
   },
   "testing": {
     "userVerification": "Pre-commit checks passed",
     "typescriptVerification": "All checks pass"
   },
   "notes": [
-    "29 files changed: +496 insertions, -192 deletions",
-    "Major SnapIndicatorOverlay enhancement",
-    "Drawing handlers improved",
-    "Settings migration cleanup",
-    "Cursor handlers refined"
+    "107 files changed: +56 insertions, -2967 deletions",
+    "Major documentation cleanup and reorganization",
+    "All docs now under src/subapps/dxf-viewer/docs/",
+    "Proper hierarchy: analysis, architecture, features, guides, services, troubleshooting"
   ],
   "contributors": {
     "user": "Giorgos Pagonis",
@@ -57,16 +32,16 @@
     "sessionDate": "2026-01-06"
   },
   "relatedBackups": [
+    "7b7dde0 - Snapping & Drawing Enhancement (29 files)",
     "237bc1a - Snapping System Major Update (24 files)",
-    "b0c4dcf - Snapping Engines & Settings (16 files)",
-    "a821dcf - Hooks & Settings Enhancement (50 files)"
+    "b0c4dcf - Snapping Engines & Settings (16 files)"
   ],
   "commits": [
     {
-      "hash": "7b7dde0",
-      "message": "🔒 ENTERPRISE SAFETY CHECKPOINT: Snapping & Drawing Enhancement (29 files)"
+      "hash": "7ef8934",
+      "message": "🔒 ENTERPRISE SAFETY CHECKPOINT: Documentation Reorganization (107 files)"
     }
   ],
   "vercelDeployment": true,
-  "backupTimestamp": "2026-01-06T12:00:00Z"
+  "backupTimestamp": "2026-01-06T12:30:00Z"
 }

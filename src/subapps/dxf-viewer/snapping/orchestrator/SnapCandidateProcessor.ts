@@ -1,6 +1,9 @@
 /**
  * SnapCandidateProcessor
  * Processes and sorts snap candidates to determine the best result
+ *
+ * @see docs/features/snapping/SNAP_INDICATOR_LINE.md - Βήμα 2: Επιλογή καλύτερου snap point
+ * @see docs/features/snapping/ARCHITECTURE.md - Αρχιτεκτονική snap system
  */
 
 import type { Point2D } from '../../rendering/types/Types';

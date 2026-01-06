@@ -912,7 +912,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
             style={{ height: `calc(100% - ${rulerSettings.height ?? 30}px)` }}
           />
 
-          {/* 🎯 SNAP INDICATOR: Visual feedback for snap points (AutoCAD/MicroStation style) */}
+          {/* 🎯 SNAP INDICATOR: Visual feedback for snap points (AutoCAD/MicroStation style)
+              @see docs/features/snapping/SNAP_INDICATOR_LINE.md - Βήμα 5: Κλικ και δημιουργία νέας γραμμής */}
           <SnapIndicatorOverlay
             snapResult={currentSnapResult ? {
               point: currentSnapResult.snappedPoint,

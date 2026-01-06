@@ -1,3 +1,10 @@
+/**
+ * SnapIndicatorOverlay
+ * Visual feedback για snap points (■ endpoint, △ midpoint, κλπ)
+ *
+ * @see docs/features/snapping/SNAP_INDICATOR_LINE.md - Βήμα 4: Εμφάνιση ένδειξης
+ * @see docs/features/snapping/ARCHITECTURE.md - Αρχιτεκτονική snap system
+ */
 'use client';
 import React from 'react';
 import type { Point2D } from '../../rendering/types/Types';

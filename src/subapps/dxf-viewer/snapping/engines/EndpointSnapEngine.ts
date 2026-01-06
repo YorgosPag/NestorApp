@@ -1,6 +1,9 @@
 /**
  * Endpoint Snap Engine
  * Υπεύθυνο για εύρεση snap points στα άκρα των entities
+ *
+ * @see docs/features/snapping/SNAP_INDICATOR_LINE.md - Τεκμηρίωση ενδείξεων έλξης
+ * @see docs/features/snapping/ARCHITECTURE.md - Αρχιτεκτονική snap system
  */
 
 // 🔍 DEBUG FLAG - Enable to diagnose snap issues

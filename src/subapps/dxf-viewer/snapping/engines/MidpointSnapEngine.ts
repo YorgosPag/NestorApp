@@ -1,6 +1,9 @@
 /**
  * Midpoint Snap Engine
  * Υπεύθυνο για εύρεση snap points στα μέσα των entities
+ *
+ * @see docs/features/snapping/SNAP_INDICATOR_LINE.md - Τεκμηρίωση ενδείξεων έλξης
+ * @see docs/features/snapping/ARCHITECTURE.md - Αρχιτεκτονική snap system
  */
 
 // DEBUG FLAG - Set to false to disable performance-heavy logging

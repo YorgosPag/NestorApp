@@ -238,27 +238,19 @@ export function useCentralizedMouseHandlers({
         const snap = findSnapPoint(worldPos.x, worldPos.y);
 
         if (snap && snap.found && snap.snappedPoint) {
-          // ✅ FIX: snappedPoint is in WORLD coordinates - convert to SCREEN for rendering
-          const snappedScreenPos = CoordinateTransforms.worldToScreen(
-            snap.snappedPoint,
-            transform,
-            viewport
-          );
-
+          // 🏢 ENTERPRISE FIX (2026-01-06): Store WORLD coordinates in context
+          // The overlay will convert to screen coords on each render (handles zoom correctly)
           setSnapResults([{
-            point: snappedScreenPos, // ✅ Store SCREEN coordinates for rendering
+            point: snap.snappedPoint, // ✅ Store WORLD coordinates (overlay converts to screen)
             type: snap.activeMode || 'default',
-            entityId: snap.snapPoint?.entityId || null, // ✅ ENTERPRISE FIX: ProSnapResult has entityId in snapPoint
-            distance: snap.snapPoint?.distance || 0, // ✅ ENTERPRISE FIX: Use distance from snapPoint
+            entityId: snap.snapPoint?.entityId || null,
+            distance: snap.snapPoint?.distance || 0,
             priority: 0
           }]);
 
           // 🎯 ENTERPRISE FIX: Update SnapContext for visual feedback (SnapIndicatorOverlay)
-          // Create a ProSnapResult with SCREEN coordinates for the overlay
-          setCurrentSnapResult({
-            ...snap,
-            snappedPoint: snappedScreenPos // Override with SCREEN coords for overlay rendering
-          });
+          // Keep WORLD coordinates - overlay will convert to screen on each render
+          setCurrentSnapResult(snap); // ✅ Keep original snap result with WORLD coords
         } else {
           setSnapResults([]);
           setCurrentSnapResult(null); // 🎯 Clear snap result when no snap found
@@ -359,8 +351,27 @@ export function useCentralizedMouseHandlers({
     }
 
     // 🎯 DRAWING TOOLS: Call onCanvasClick if provided (for drawing tools like Line, Circle, etc.)
+    // 🏢 ENTERPRISE FIX (2026-01-06): Apply snap to click position for accurate drawing
     if (onCanvasClick && !cursor.isSelecting && !panState.isPanning && cursor.position) {
-      onCanvasClick(cursor.position);
+      let clickPoint = cursor.position; // Default: screen coordinates
+
+      // ✅ SNAP FIX: Convert screen→world, apply snap, convert back to screen
+      // NOTE: cursor.position is SCREEN coords, findSnapPoint expects WORLD coords,
+      //       onCanvasClick expects SCREEN coords (it converts to world internally)
+      if (snapEnabled && findSnapPoint) {
+        // 1. Convert screen → world for snap detection
+        const worldPos = CoordinateTransforms.screenToWorld(cursor.position, transform, viewport);
+
+        // 2. Find snap point (in world coordinates)
+        const snapResult = findSnapPoint(worldPos.x, worldPos.y);
+
+        // 3. If snap found, convert snapped world point back to screen
+        if (snapResult && snapResult.found && snapResult.snappedPoint) {
+          clickPoint = CoordinateTransforms.worldToScreen(snapResult.snappedPoint, transform, viewport);
+        }
+      }
+
+      onCanvasClick(clickPoint);
     }
 
     // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ MARQUEE SELECTION - Χρήση UniversalMarqueeSelector
@@ -402,7 +413,7 @@ export function useCentralizedMouseHandlers({
     } else {
       // Selection debug disabled for performance
     }
-  }, [cursor, onTransformChange, viewport, hitTestCallback, scene, transform, onEntitySelect, colorLayers, onLayerSelected, canvasRef, onCanvasClick, activeTool]);
+  }, [cursor, onTransformChange, viewport, hitTestCallback, scene, transform, onEntitySelect, colorLayers, onLayerSelected, canvasRef, onCanvasClick, activeTool, snapEnabled, findSnapPoint]);
 
   // 🚀 MOUSE LEAVE HANDLER - CAD-style area detection with pan cleanup
   const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {

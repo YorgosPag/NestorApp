@@ -6,6 +6,9 @@
  * 📖 Architecture Guide: src/subapps/dxf-viewer/docs/CENTRALIZED_SYSTEMS.md
  * 🔍 Section: "Snapping Systems" - Κατάλαβε την αρχιτεκτονική πριν αλλάξεις
  *
+ * @see docs/features/snapping/SNAP_INDICATOR_LINE.md - Τεκμηρίωση ενδείξεων έλξης
+ * @see docs/features/snapping/ARCHITECTURE.md - Αρχιτεκτονική snap system
+ *
  * 🏢 ENTERPRISE PATTERN: Orchestrator για coordination πολλαπλών snap engines
  *
  * @example
