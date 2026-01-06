@@ -6,6 +6,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
+// 🏢 ENTERPRISE NOTE: This component uses a simplified SnapResult interface
+// TODO: Migrate to use ProSnapResult.activeMode instead of type when refactoring
 interface SnapResult {
   point: Point2D;
   type: string;

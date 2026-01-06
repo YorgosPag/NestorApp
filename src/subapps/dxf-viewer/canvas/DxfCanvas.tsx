@@ -4,6 +4,7 @@ import React, { forwardRef, useImperativeHandle } from 'react';
 import { DxfCanvasCore, type DxfCanvasImperativeAPI } from './DxfCanvasCore';
 import CanvasOverlays from './CanvasOverlays';
 import { useCanvasContext } from '../contexts/CanvasContext';
+import { useSnapContext } from '../snapping/context/SnapContext';
 import type { SceneModel } from '../types/scene';
 // ✅ ENTERPRISE FIX: Correct Point2D import path
 import type { Point2D as Point } from '../rendering/types/Types';
@@ -106,6 +107,9 @@ export const DxfCanvas = forwardRef<DxfCanvasRef, DxfCanvasProps>((props, ref) =
   // 🎯 ΣΤΑΘΕΡΟΤΗΤΑ: Σύνδεση με CanvasContext για useCanvasOperations
   const context = useCanvasContext();
   const coreCanvasRef = context?.canvasRef || React.useRef<DxfCanvasImperativeAPI>(null);
+
+  // 🎯 ENTERPRISE: Get snap context for visual feedback
+  const { currentSnapResult, enabledModes } = useSnapContext();
 
   // Expose imperative API
   useImperativeHandle(ref, () => ({
@@ -245,9 +249,9 @@ export const DxfCanvas = forwardRef<DxfCanvasRef, DxfCanvasProps>((props, ref) =
         showCalibration={showCalibration}
         onCalibrationToggle={onCalibrationToggle}
         currentScene={scene || null}
-        snapResult={null} // TODO: Get from snap system
+        snapResult={currentSnapResult} // 🎯 ENTERPRISE: Connected to SnapContext for visual feedback
         transform={transform}
-        enabledSnapModes={new Set()} // TODO: Get from snap system
+        enabledSnapModes={enabledModes} // 🎯 ENTERPRISE: Connected to SnapContext
         activeTool={activeTool}
         tempPoints={tempMeasurementPoints}
       />

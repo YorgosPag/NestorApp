@@ -1,6 +1,6 @@
 'use client';
 
-const DEBUG_SNAP_MANAGER = false;
+const DEBUG_SNAP_MANAGER = false; // 🔍 DISABLED - set to true only for debugging
 
 import { useEffect, useRef, useMemo } from 'react';
 import { ProSnapEngineV2 as SnapManager } from '../ProSnapEngineV2';
@@ -59,15 +59,17 @@ export const useSnapManager = (
 
   // Initialize SnapManager
   useEffect(() => {
+    if (DEBUG_SNAP_MANAGER) console.log('🔍 [useSnapManager] Initialize effect, canvasRef.current:', !!canvasRef.current);
     if (!canvasRef.current) return;
 
     snapManagerRef.current = new SnapManager();
+    if (DEBUG_SNAP_MANAGER) console.log('✅ [useSnapManager] SnapManager created:', snapManagerRef.current);
 
     return () => {
       if (snapManagerRef.current) {
         snapManagerRef.current.dispose();
         snapManagerRef.current = null;
-
+        if (DEBUG_SNAP_MANAGER) console.log('🗑️ [useSnapManager] SnapManager disposed');
       }
     };
   }, [canvasRef]);
@@ -100,17 +102,31 @@ export const useSnapManager = (
 
   // Update scene when it changes (including overlay entities)
   useEffect(() => {
+    if (DEBUG_SNAP_MANAGER) {
+      console.log('🔍 [useSnapManager] Scene effect triggered:', {
+        hasSnapManager: !!snapManagerRef.current,
+        hasScene: !!scene,
+        sceneEntities: scene?.entities?.length ?? 0,
+        overlayEntities: overlayEntities?.length ?? 0
+      });
+    }
 
     if (snapManagerRef.current) {
       const dxfEntities = scene?.entities || [];
       const overlayEnts = overlayEntities || [];
-      
+
       // 🔺 UNIFIED: Combine DXF and overlay entities for unified snapping
       const allEntities = [...dxfEntities, ...overlayEnts];
 
+      if (DEBUG_SNAP_MANAGER) {
+        console.log('🔍 [useSnapManager] Combined entities:', allEntities.length);
+      }
+
       // Only initialize if we have entities - avoid spam with empty scenes
       if (allEntities.length === 0) {
-
+        if (DEBUG_SNAP_MANAGER) {
+          console.log('🔍 [useSnapManager] No entities to initialize - skipping');
+        }
         return;
       }
 
@@ -145,15 +161,26 @@ export const useSnapManager = (
         }
       }
       
+      if (DEBUG_SNAP_MANAGER) {
+        console.log('🔍 [useSnapManager] Calling initialize with', allEntities.length, 'entities');
+      }
+
       snapManagerRef.current.initialize(allEntities);
-      
+
+      if (DEBUG_SNAP_MANAGER) {
+        console.log('🔍 [useSnapManager] initialize() completed');
+      }
+
       if (allEntities.length > 0) {
         // Debug: Log entity types to understand what we're working with
-
         const entityTypes = allEntities.reduce((types, entity) => {
           types[entity.type] = (types[entity.type] || 0) + 1;
           return types;
         }, {} as Record<string, number>);
+
+        if (DEBUG_SNAP_MANAGER) {
+          console.log('🔍 [useSnapManager] Entity types:', entityTypes);
+        }
 
         // Sample first few entities to see their structure
         allEntities.slice(0, 3).forEach((entity, i) => {
@@ -195,7 +222,15 @@ export const useSnapManager = (
   return {
     snapManager: snapManagerRef.current,
     findSnapPoint: (worldX: number, worldY: number) => {
-      return snapManagerRef.current?.findSnapPoint({ x: worldX, y: worldY }) || null;
+      if (DEBUG_SNAP_MANAGER) {
+        console.log('🔍 [useSnapManager.findSnapPoint] Called with:', { worldX, worldY });
+        console.log('🔍 [useSnapManager.findSnapPoint] snapManagerRef.current:', !!snapManagerRef.current);
+      }
+      const result = snapManagerRef.current?.findSnapPoint({ x: worldX, y: worldY }) || null;
+      if (DEBUG_SNAP_MANAGER) {
+        console.log('🔍 [useSnapManager.findSnapPoint] Result:', result);
+      }
+      return result;
     }
   };
 };

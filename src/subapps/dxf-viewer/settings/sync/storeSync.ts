@@ -130,7 +130,7 @@ function wirePort<TPort extends { apply(p: unknown): void; onChange(h: (p: unkno
     try {
       const data = pickFromEffective(getEffective);
       port.apply(data);
-      deps.logger.info('[StoreSync] Pushed to port', data);
+      // Debug disabled: Pushed to port
     } catch (err) {
       deps.logger.warn('[StoreSync] Apply failed', err);
     }
@@ -140,7 +140,7 @@ function wirePort<TPort extends { apply(p: unknown): void; onChange(h: (p: unkno
   if (deps.bus) {
     const unsub = port.onChange((delta) => {
       try {
-        deps.logger.info('[StoreSync] Port delta received', delta);
+        // Debug disabled: Port delta received
         deps.bus!.emit({ type: 'PORT_DELTA', payload: delta });
       } catch (err) {
         deps.logger.warn('[StoreSync] onChange failed', err);
@@ -173,14 +173,14 @@ function wirePort<TPort extends { apply(p: unknown): void; onChange(h: (p: unkno
  * ```
  */
 export function createStoreSync(deps: SyncDependencies): StoreSync {
-  deps.logger.info('[StoreSync] Creating sync instance');
+  // Debug disabled: Creating sync instance
 
   let allSubscriptions: Unsubscribe[] = [];
   let pushers: Array<() => void> = [];
 
   return {
     start(getEffective: EffectiveSettingsGetter) {
-      deps.logger.info('[StoreSync] Starting sync');
+      // Debug disabled: Starting sync
 
       // ===== WIRE TOOL STYLE PORT =====
       if (deps.toolStyle) {
@@ -244,7 +244,7 @@ export function createStoreSync(deps: SyncDependencies): StoreSync {
 
       // ===== INITIAL PUSH (Settings → Ports) =====
       const pushFromSettings = () => {
-        deps.logger.info('[StoreSync] Pushing from settings');
+        // Debug disabled: Pushing from settings
         for (const push of pushers) {
           push();
         }
@@ -256,7 +256,7 @@ export function createStoreSync(deps: SyncDependencies): StoreSync {
       // ===== RETURN CONTROL API =====
       return {
         stop() {
-          deps.logger.info('[StoreSync] Stopping sync');
+          // Debug disabled: Stopping sync
           for (const unsub of allSubscriptions.splice(0)) {
             try {
               unsub();

@@ -34,6 +34,9 @@ import { serviceRegistry } from '../../services';
 import CrosshairOverlay from '../../canvas-v2/overlays/CrosshairOverlay';
 // ✅ ADR-009: Import RulerCornerBox for interactive corner box (AutoCAD/Revit standard)
 import RulerCornerBox from '../../canvas-v2/overlays/RulerCornerBox';
+// 🎯 SNAP INDICATOR: Import for visual snap feedback
+import SnapIndicatorOverlay from '../../canvas-v2/overlays/SnapIndicatorOverlay';
+import { useSnapContext } from '../../snapping/context/SnapContext';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
 // 🏢 ENTERPRISE: Centralized spacing tokens (ADR-013)
@@ -77,6 +80,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   // 🏢 ENTERPRISE: Provide zoom system to context
   const canvasContext = useCanvasContext();
+  // 🎯 SNAP INDICATOR: Get current snap result for visual feedback
+  const { currentSnapResult } = useSnapContext();
   // ✅ CENTRALIZED VIEWPORT: Update viewport από canvas dimensions
   // 🏢 FIX (2026-01-04): Use ResizeObserver for reliable viewport tracking
   React.useEffect(() => {
@@ -591,22 +596,16 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   };
 
   const handleCanvasClick = (point: Point2D) => {
-    console.log('🎯 handleCanvasClick CALLED!', { point, activeTool });
-
     // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Route click to unified drawing system for drawing tools
     const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' || activeTool === 'polygon'
       || activeTool === 'rectangle' || activeTool === 'circle'; // ✅ Removed 'arc' - not in ToolType union
-
-    console.log('🎯 isDrawingTool:', isDrawingTool, 'drawingHandlersRef.current:', !!drawingHandlersRef.current);
 
     if (isDrawingTool && drawingHandlersRef.current) {
       // 🔥 FIX: Use ONLY dxfCanvasRef for drawing tools (NOT overlayCanvasRef!)
       // Drawing tools (Line/Circle/Rectangle) draw on DxfCanvas
       // Color layers draw on LayerCanvas (overlayCanvasRef)
       const canvasElement = dxfCanvasRef.current?.getCanvas?.();
-      console.log('🎯 canvasElement:', !!canvasElement, 'dxfCanvasRef.current:', !!dxfCanvasRef.current);
       if (!canvasElement) {
-        console.log('❌ canvasElement is null - returning early!');
         return;
       }
 
@@ -788,6 +787,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               viewport={viewport} // ✅ CENTRALIZED: Pass centralized viewport
               activeTool={activeTool} // 🔥 ΚΡΙΣΙΜΟ: Pass activeTool για pan cursor
               layersVisible={showLayers} // ✅ ΥΠΑΡΧΟΝ SYSTEM: Existing layer visibility
+              dxfScene={dxfScene} // 🎯 SNAP FIX: Pass DXF scene for snap engine initialization
               enableUnifiedCanvas={true} // ✅ ΕΝΕΡΓΟΠΟΙΗΣΗ: Unified event system για debugging
               data-canvas-type="layer" // 🎯 DEBUG: Identifier για alignment test
               onTransformChange={(newTransform) => {
@@ -910,6 +910,18 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
             }}
             className={`absolute ${PANEL_LAYOUT.POSITION.LEFT_0} ${PANEL_LAYOUT.POSITION.RIGHT_0} ${PANEL_LAYOUT.POSITION.TOP_0} ${PANEL_LAYOUT.Z_INDEX['20']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
             style={{ height: `calc(100% - ${rulerSettings.height ?? 30}px)` }}
+          />
+
+          {/* 🎯 SNAP INDICATOR: Visual feedback for snap points (AutoCAD/MicroStation style) */}
+          <SnapIndicatorOverlay
+            snapResult={currentSnapResult ? {
+              point: currentSnapResult.snappedPoint,
+              type: currentSnapResult.activeMode || 'endpoint'
+            } : null}
+            viewport={viewport}
+            canvasRect={dxfCanvasRef.current?.getCanvas?.()?.getBoundingClientRect() ?? null}
+            transform={transform}
+            className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.Z_INDEX['30']}`}
           />
 
           {/* ✅ ADR-009: RulerCornerBox - Interactive corner box at ruler intersection */}

@@ -64,7 +64,7 @@ export async function safeLoad(
     const rawData = await driver.get<unknown>(key);
 
     if (!rawData) {
-      console.info('[safeLoad] No saved settings found, using factory defaults');
+      // Debug disabled: No saved settings found
       return {
         success: true,
         data: FACTORY_DEFAULTS,
@@ -99,7 +99,7 @@ export async function safeLoad(
         if (lineObj.general && typeof lineObj.general === 'object' && lineObj.general !== null) {
           const lineGeneral = lineObj.general as Record<string, unknown>;
           if ('lineColor' in lineGeneral || 'lineStyle' in lineGeneral || !('enabled' in lineGeneral)) {
-            console.log('[safeLoad] Detected old line property names (lineColor/lineStyle) or missing enabled');
+            // Debug disabled: Detected old line property names
             return true;
           }
         }
@@ -111,7 +111,7 @@ export async function safeLoad(
         if (textObj.general && typeof textObj.general === 'object' && textObj.general !== null) {
           const textGeneral = textObj.general as Record<string, unknown>;
           if ('textColor' in textGeneral || !('enabled' in textGeneral)) {
-            console.log('[safeLoad] Detected old text property names (textColor) or missing enabled');
+            // Debug disabled: Detected old text property names
             return true;
           }
         }
@@ -123,7 +123,7 @@ export async function safeLoad(
         if (gripObj.general && typeof gripObj.general === 'object' && gripObj.general !== null) {
           const gripGeneral = gripObj.general as Record<string, unknown>;
           if ('size' in gripGeneral || ('color' in gripGeneral && !('colors' in gripGeneral)) || !('enabled' in gripGeneral)) {
-            console.log('[safeLoad] Detected old grip property names (size/color flat structure) or missing enabled');
+            // Debug disabled: Detected old grip property names
             return true;
           }
         }
@@ -137,11 +137,8 @@ export async function safeLoad(
     const needsPropertyMigration = hasOldPropertyNames(rawData);
 
     if (needsVersionMigration || needsPropertyMigration) {
-      console.info('[safeLoad] Migration needed (version or property names), creating backup...');
+      // Debug disabled: Migration needed
 
-      if (needsPropertyMigration) {
-        console.warn('[safeLoad] 🔄 FORCING PROPERTY MIGRATION: Old property names detected!');
-      }
 
       // Create backup before migration
       const backup = createBackup(rawData);
@@ -160,8 +157,7 @@ export async function safeLoad(
         if (rawData && typeof rawData === 'object' && '__standards_version' in rawData) {
           warnings.push(`Migrated from v${(rawData as { __standards_version: number }).__standards_version} to v${CURRENT_VERSION}`);
         }
-
-        console.info('[safeLoad] Migration successful');
+        // Debug disabled: Migration successful
       } catch (migrationError) {
         const errorMsg = migrationError instanceof Error ? migrationError.message : String(migrationError);
         warnings.push(`Migration failed: ${errorMsg}`);
@@ -187,7 +183,7 @@ export async function safeLoad(
     }
 
     // Step 5: Validation failed - try to coerce
-    console.warn('[safeLoad] Validation failed, attempting to coerce');
+    // Debug disabled: Validation failed, attempting to coerce
     warnings.push('Schema validation failed, data was coerced');
 
     const coercedData = validateAndCoerce(processedData, FACTORY_DEFAULTS as unknown);

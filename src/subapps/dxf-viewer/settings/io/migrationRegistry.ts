@@ -248,10 +248,7 @@ export function migrateToVersion(
   const dataWithVersion = data as { __standards_version: number };
   let migratedData = data;
   let fromVersion = dataWithVersion.__standards_version;
-
-  console.log(
-    `[Migration] Starting migration from v${fromVersion} to v${currentVersion}`
-  );
+  // Debug disabled: Starting migration
 
   // Apply migrations sequentially
   while (fromVersion < currentVersion) {
@@ -264,8 +261,7 @@ export function migrateToVersion(
         'Cannot upgrade safely.'
       );
     }
-
-    console.log(`[Migration] Applying v${nextVersion}: ${migration.description}`);
+    // Debug disabled: Applying migration
 
     try {
       const migrated = migration.migrate(migratedData);
@@ -282,8 +278,7 @@ export function migrateToVersion(
       );
     }
   }
-
-  console.log(`[Migration] Successfully migrated to v${currentVersion}`);
+  // Debug disabled: Successfully migrated
   return migratedData;
 }
 
@@ -326,10 +321,7 @@ export function rollbackToVersion(
   const dataWithVersion = data as { __standards_version: number };
   let rolledBackData = data;
   let fromVersion = dataWithVersion.__standards_version;
-
-  console.warn(
-    `[Migration] Rolling back from v${fromVersion} to v${targetVersion}`
-  );
+  // Debug disabled: Rolling back
 
   // Apply rollbacks in reverse order
   while (fromVersion > targetVersion) {
@@ -340,8 +332,7 @@ export function rollbackToVersion(
         `Cannot rollback v${fromVersion}: no rollback function defined`
       );
     }
-
-    console.warn(`[Migration] Rolling back v${fromVersion}`);
+    // Debug disabled: Rolling back version
 
     try {
       const rolledBack = migration.rollback(rolledBackData);
@@ -359,8 +350,7 @@ export function rollbackToVersion(
       );
     }
   }
-
-  console.warn(`[Migration] Rolled back to v${targetVersion}`);
+  // Debug disabled: Rolled back to version
   return rolledBackData;
 }
 

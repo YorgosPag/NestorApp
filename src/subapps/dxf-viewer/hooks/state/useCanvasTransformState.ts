@@ -67,8 +67,6 @@ export function useCanvasTransformState({ currentScene, activeTool }: UseCanvasT
       const validated = validateTransformConfig(initialTransform);
       setTransform(validated);
       isInitializedRef.current = true;
-
-      console.log('[useCanvasTransformState] Initialized:', validated);
     } catch (error) {
       console.error('[useCanvasTransformState] Failed to initialize transform:', error);
       setTransform(DEFAULT_TRANSFORM);

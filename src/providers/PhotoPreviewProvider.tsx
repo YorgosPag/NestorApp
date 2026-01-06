@@ -60,15 +60,7 @@ interface PhotoPreviewProviderProps {
 export function PhotoPreviewProvider({ children }: PhotoPreviewProviderProps) {
   // 🏢 ENTERPRISE: Χρησιμοποιούμε το existing hook για backward compatibility
   const photoModalHook = usePhotoPreviewModal();
-
-  // 🔍 DEBUG: Log provider initialization
-  React.useEffect(() => {
-    console.log('🏢 PhotoPreviewProvider initialized:', {
-      hookExists: !!photoModalHook,
-      openModalExists: !!photoModalHook?.openModal,
-      modalPropsExists: !!photoModalHook?.modalProps
-    });
-  }, [photoModalHook]);
+  // Debug disabled: PhotoPreviewProvider initialization
 
   return (
     <PhotoPreviewContext.Provider value={photoModalHook}>

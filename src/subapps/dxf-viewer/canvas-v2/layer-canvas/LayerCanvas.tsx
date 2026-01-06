@@ -61,6 +61,7 @@ interface LayerCanvasProps {
   viewport?: Viewport; // ✅ CENTRALIZED: Optional viewport prop (if not provided, will calculate internally)
   activeTool?: string; // 🔥 ADD: Tool context για pan/select behavior
   layersVisible?: boolean; // ✅ LAYER PERSISTENCE: Independent layer visibility state
+  dxfScene?: DxfScene | null; // 🎯 SNAP FIX: DXF scene for snap engine initialization
   crosshairSettings: CrosshairSettings;
   cursorSettings: CursorSettings;
   snapSettings: SnapSettings;
@@ -89,6 +90,7 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
   viewport: viewportProp, // ✅ CENTRALIZED: Accept viewport prop
   activeTool, // 🔥 ADD: Tool context για pan/select behavior
   layersVisible = true, // ✅ LAYER PERSISTENCE: Default true - show colored layers by default
+  dxfScene, // 🎯 SNAP FIX: DXF scene for snap engine initialization
   crosshairSettings,
   cursorSettings,
   snapSettings,
@@ -200,7 +202,7 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
 
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Centralized mouse handlers for layers
   const mouseHandlers = useCentralizedMouseHandlers({
-    scene: null, // LayerCanvas doesn't have DXF scene
+    scene: dxfScene || null, // 🎯 SNAP FIX: Pass DXF scene for snap engine initialization
     transform,
     viewport,
     activeTool, // 🔥 ΚΡΙΣΙΜΟ: Pass activeTool για pan behavior
@@ -277,10 +279,9 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
 
       // Renderer initialized successfully - debug disabled for performance
 
-      // ✅ ΕUΠΆΡΧΟΝ SYSTEM: Ενεργοποίηση του υπάρχοντος EventSystem debug mode
+      // ✅ ΕUΠΆΡΧΟΝ SYSTEM: EventSystem debug mode (disabled for production)
       if (enableUnifiedCanvas && eventSystem) {
-        eventSystem.setDebugMode(true);
-        console.log('🐛 LayerCanvas: Unified EventSystem debug mode ENABLED');
+        eventSystem.setDebugMode(false); // Set to true only for debugging
       }
 
     } catch (error) {
@@ -306,11 +307,6 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
   // 🎯 Subscribe to Origin Markers toggle event
   useEffect(() => {
     const handleOriginMarkersToggle = (event: CustomEvent) => {
-      console.log('🎯 LayerCanvas: Origin Markers toggled, triggering re-render', event.detail);
-      console.log('🎯 LayerCanvas: renderer exists?', !!rendererRef.current);
-      console.log('🎯 LayerCanvas: viewport', viewport);
-      console.log('🎯 LayerCanvas: useUnifiedUIRendering', useUnifiedUIRendering);
-
       // Force re-render to show/hide origin markers
       if (rendererRef.current) {
         requestAnimationFrame(() => {

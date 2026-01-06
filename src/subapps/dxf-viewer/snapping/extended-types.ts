@@ -64,6 +64,13 @@ export interface ProSnapResult {
   distance?: number; // Distance to snap point
 }
 
+/**
+ * 🏢 ENTERPRISE CENTRALIZATION (2025-01-05):
+ * SnapResult is an alias for ProSnapResult - SINGLE SOURCE OF TRUTH
+ * Use snappedPoint (not point) for coordinates
+ */
+export type SnapResult = ProSnapResult;
+
 // Per-mode tolerances σε pixels
 export type PerModeTolerance = Partial<Record<ExtendedSnapType, number>>;
 

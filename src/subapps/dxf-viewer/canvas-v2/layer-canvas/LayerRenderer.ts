@@ -125,14 +125,14 @@ export class LayerRenderer {
     this.eventSystem.subscribe('canvas:render:start', (event) => {
       // Emit layer render start if this is our canvas
       if (event.canvasId === this.canvasInstance?.id) {
-        console.log('🎨 LayerRenderer: Starting render for canvas', event.canvasId);
+        // Debug disabled: LayerRenderer: Starting render
       }
     });
 
     this.eventSystem.subscribe('canvas:render:complete', (event) => {
       // Handle render completion metrics
       if (event.canvasId === this.canvasInstance?.id) {
-        console.log('🎨 LayerRenderer: Render completed for canvas', event.canvasId, 'in', event.data?.result?.renderTime, 'ms');
+        // Debug disabled: LayerRenderer: Render completed
       }
     });
 
@@ -186,13 +186,7 @@ export class LayerRenderer {
     const originX = px(screenOrigin.x);
     const originY = px(screenOrigin.y);
 
-    // 🔍 DEBUG: Log values to compare with rulers
-    console.log('🔵 LayerRenderer origin marker:', {
-      worldOrigin,
-      screenOrigin,
-      transform: { scale: transform.scale, offsetX: transform.offsetX, offsetY: transform.offsetY },
-      calculated: { originX, originY }
-    });
+    // Debug disabled: origin marker values
     this.ctx.save();
     this.ctx.strokeStyle = UI_COLORS.BUTTON_PRIMARY; // ✅ CENTRALIZED: Blue για LayerRenderer origin marker
     this.ctx.lineWidth = 3;
@@ -214,8 +208,7 @@ export class LayerRenderer {
 
     // Choose rendering path based on unified settings
     const useUnified = this.canvasSettings?.getSetting('useUnifiedRendering') ?? this.useUnifiedRendering;
-
-    console.log('🔍 LayerRenderer: Rendering path =', useUnified ? 'UNIFIED' : 'LEGACY');
+    // Debug disabled: Rendering path selection
 
     if (useUnified) {
       // ✅ ΦΑΣΗ 7: Use unified rendering path
@@ -439,17 +432,7 @@ export class LayerRenderer {
       CoordinateTransforms.worldToScreen(vertex, transform, viewport)
     );
 
-    // 🚨 MARGINS DEBUG - Check if layers are offset due to margins
-    const isOnScreen = screenVertices.some((v: Point2D) => v.x >= 0 && v.x <= viewport.width && v.y >= 0 && v.y <= viewport.height);
-    const isInRenderArea = screenVertices.some((v: Point2D) => v.x >= COORDINATE_LAYOUT.MARGINS.left && v.x <= viewport.width && v.y >= 0 && v.y <= viewport.height - COORDINATE_LAYOUT.MARGINS.top);
-
-    console.log(`🚨 LAYER DEBUG [${layer.id.slice(0,8)}]:`,
-      `worldVert[0]=(${polygon.vertices[0].x.toFixed(1)},${polygon.vertices[0].y.toFixed(1)})`,
-      `screenVert[0]=(${screenVertices[0].x.toFixed(1)},${screenVertices[0].y.toFixed(1)})`,
-      `isOnScreen=${isOnScreen}`,
-      `isInRenderArea=${isInRenderArea}`,
-      `margins=(${COORDINATE_LAYOUT.MARGINS.left},${COORDINATE_LAYOUT.MARGINS.top})`
-    );
+    // Debug disabled: Margins check for layer rendering
 
     // Debug logs disabled to prevent infinite re-render
     // console.log('🔍 Rendering polygon:', { layerId: layer.id, polygonId: polygon.id });

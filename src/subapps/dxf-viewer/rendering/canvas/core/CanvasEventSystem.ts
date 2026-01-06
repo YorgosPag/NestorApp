@@ -217,9 +217,6 @@ export class CanvasEventSystem {
    */
   setDebugMode(enabled: boolean): void {
     this.debugMode = enabled;
-    if (enabled) {
-      console.log('🐛 Canvas Event System: Debug mode enabled');
-    }
   }
 
   /**

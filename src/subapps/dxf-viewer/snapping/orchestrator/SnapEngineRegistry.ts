@@ -16,7 +16,7 @@
  * const engine = new CustomSnapEngine(); // Παρακάμπτει το registry
  */
 
-// DEBUG FLAG - Set to false to disable performance-heavy logging
+// DEBUG FLAG - Set to true for debugging snap issues
 const DEBUG_SNAP_ENGINE_REGISTRY = false;
 
 import { ExtendedSnapType, Entity, ProSnapSettings, SnapEngineStats } from '../extended-types';
@@ -76,6 +76,13 @@ export class SnapEngineRegistry {
   }
 
   initializeEnginesWithEntities(entities: Entity[], settings: ProSnapSettings): void {
+    if (DEBUG_SNAP_ENGINE_REGISTRY) {
+      console.log('🔧 [SnapEngineRegistry] initializeEnginesWithEntities:', {
+        entitiesCount: entities.length,
+        enabledTypes: Array.from(settings.enabledTypes)
+      });
+    }
+
     // 🏢 ENTERPRISE: Αυτόματη σύνδεση gridStep με GridSnapEngine
     // Όταν αρχικοποιούνται τα engines, το GridSnapEngine λαμβάνει το gridStep από τα settings
     if (settings.gridStep !== undefined) {
@@ -83,11 +90,20 @@ export class SnapEngineRegistry {
     }
 
     // Καλούμε initialize σε όλα τα enabled engines
+    let initializedCount = 0;
     this.engines.forEach((engine, snapType) => {
       if (settings.enabledTypes.has(snapType)) {
+        if (DEBUG_SNAP_ENGINE_REGISTRY) {
+          console.log(`🔧 [SnapEngineRegistry] Initializing ${snapType} engine with ${entities.length} entities`);
+        }
         engine.initialize(entities);
+        initializedCount++;
       }
     });
+
+    if (DEBUG_SNAP_ENGINE_REGISTRY) {
+      console.log(`🔧 [SnapEngineRegistry] Initialized ${initializedCount} engines`);
+    }
   }
 
   getEngine(snapType: ExtendedSnapType): BaseSnapEngine | undefined {

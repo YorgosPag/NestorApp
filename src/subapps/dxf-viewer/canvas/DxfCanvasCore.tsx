@@ -608,6 +608,14 @@ export const DxfCanvasCore = forwardRef<DxfCanvasImperativeAPI, Props>(({
 
         // ✅ ΤΡΙΤΑ: Regular entity hover ΜΟΝΟ αν ΔΕΝ βρήκαμε grip ή δεν σέρνουμε
         hoverAndSelect.onMouseMoveEntityHover();
+      } else if (activeTool !== 'layering') {
+        // 🎯 ENTERPRISE: Drawing tools - call onDrawingHover with world coordinates
+        // Tools: line, polyline, circle, rectangle, measure-*, etc.
+        // Note: 'layering' tool has its own custom event handling
+        const cm = rendererRef.current?.getCoordinateManager?.();
+        const worldPoint = cm?.screenToWorld?.(pt) || pt;
+        console.log('🎯 [DxfCanvasCore] Drawing tool hover - world point:', worldPoint);
+        onDrawingHover?.(worldPoint);
       }
     });
   };
@@ -689,6 +697,8 @@ export const DxfCanvasCore = forwardRef<DxfCanvasImperativeAPI, Props>(({
       onMouseLeave={() => {
         hoverAndSelect.onMouseLeave();
         onMouseLeave?.();
+        // 🎯 ENTERPRISE: Clear snap result when mouse leaves canvas
+        onDrawingHover?.(null);
       }}
       onMouseDown={handleDown}
       onMouseUp={(e) => {

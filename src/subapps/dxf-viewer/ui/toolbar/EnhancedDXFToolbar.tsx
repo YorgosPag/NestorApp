@@ -188,7 +188,6 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
     autoCrop,
     showCursorSettings: showCursorSettings || false,
     onAction: (action, data) => {
-      console.log('🎯 EnhancedDXFToolbar onAction called:', action, data); // DEBUG - shows actual values
       onAction(action, data as string | number | Record<string, unknown>);
     }
   });
@@ -198,8 +197,6 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
   const handleSetZoom = (zoom: number) => onAction('set-zoom', zoom);
   
   const handleToolChange = (tool: ToolType) => {
-    console.log('🖐️ EnhancedDXFToolbar handleToolChange called:', { tool, activeTool }); // DEBUG
-
     if (tool === 'zoom-window') {
       onAction('zoom-window');
     } else if (tool === 'layering') {
@@ -220,7 +217,6 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
       onToolChange(tool);
       onAction('grip-edit');
     } else {
-      console.log('🖐️ Calling onToolChange for tool:', tool); // DEBUG
       onToolChange(tool);
     }
   };

@@ -16,7 +16,7 @@
  * const snap = snapEngine.findSnap(...); // Παρακάμπτει το orchestrator
  */
 
-// DEBUG FLAG - Set to false to disable performance-heavy logging
+// DEBUG FLAG - Set to true for debugging snap issues
 const DEBUG_SNAP_ORCHESTRATOR = false;
 
 import type { Point2D } from '../../rendering/types/Types';
@@ -50,11 +50,20 @@ export class SnapOrchestrator {
   }
 
   initialize(entities: Entity[], viewport?: Viewport): void {
+    if (DEBUG_SNAP_ORCHESTRATOR) {
+      console.log('🎭 [SnapOrchestrator] initialize called with', entities.length, 'entities');
+    }
+
     this.entities = entities;
     this.contextManager.setViewport(viewport || null);
-    
+
     // Initialize engines through registry
     this.registry.initializeEnginesWithEntities(entities, this.contextManager.getSettings());
+
+    if (DEBUG_SNAP_ORCHESTRATOR) {
+      const settings = this.contextManager.getSettings();
+      console.log('🎭 [SnapOrchestrator] Initialized with enabledTypes:', Array.from(settings.enabledTypes));
+    }
   }
 
   updateSettings(settings: Partial<ProSnapSettings>): void {
@@ -73,22 +82,30 @@ export class SnapOrchestrator {
 
   findSnapPoint(cursorPoint: Point2D, excludeEntityId?: string): ProSnapResult {
     const settings = this.contextManager.getSettings();
-    
-    if (!settings.enabled || settings.enabledTypes.size === 0) {
 
+    if (!settings.enabled || settings.enabledTypes.size === 0) {
+      if (DEBUG_SNAP_ORCHESTRATOR) {
+        console.log('🎭 [SnapOrchestrator] findSnapPoint: Snapping disabled or no enabled types');
+      }
       return this.processor.processResults(cursorPoint, [], settings);
     }
 
     // Έλεγχος αν έχουμε entities - αν όχι, επιστρέφουμε κενό αποτέλεσμα
     if (this.entities.length === 0) {
-
+      if (DEBUG_SNAP_ORCHESTRATOR) {
+        console.log('🎭 [SnapOrchestrator] findSnapPoint: No entities stored!');
+      }
       return this.processor.processResults(cursorPoint, [], settings);
     }
 
     // Debug logging (limited frequency)
-    const shouldLog = DEBUG_SNAP_ORCHESTRATOR && Math.random() < 0.005; // 0.5% of calls
+    const shouldLog = DEBUG_SNAP_ORCHESTRATOR && Math.random() < 0.01; // 1% of calls
     if (shouldLog) {
-
+      console.log('🎭 [SnapOrchestrator] findSnapPoint:', {
+        cursor: cursorPoint,
+        entitiesCount: this.entities.length,
+        enabledTypes: Array.from(settings.enabledTypes)
+      });
     }
 
     const allCandidates: SnapCandidate[] = [];

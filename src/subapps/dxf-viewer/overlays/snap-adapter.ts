@@ -16,15 +16,17 @@ export function regionsToSnapEntities(regions: Region[]): Entity[] {
       // Convert vertices to Point2D format required by snap engine
       const points = region.vertices.map(v => ({ x: v.x, y: v.y }));
       
-      // Create a polygon entity for snap engine
+      // 🏢 ENTERPRISE: Use polyline with closed=true instead of polygon
+      // Polygons are represented as closed polylines in CAD systems
       const entity: Entity = {
         id: `overlay-${region.id}`,
-        type: 'polygon',
-        points: points,
+        type: 'polyline',          // 🏢 ENTERPRISE: Use polyline type from centralized EntityType
+        vertices: points,          // 🏢 ENTERPRISE: PolylineEntity uses vertices, not points
+        closed: true,              // 🏢 ENTERPRISE: Mark as closed polygon
         visible: region.visible !== false,
         layer: region.layer || 'overlay',
         // Store original region data for reference
-        data: {
+        metadata: {                // 🏢 ENTERPRISE: Use metadata instead of data
           originalRegion: region,
           isOverlay: true,
           status: region.status,

@@ -77,11 +77,6 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
     }
   }, [isOpen]);
 
-  // Debug: Log active tab changes
-  React.useEffect(() => {
-    console.log('🔄 Active tab changed to:', activeTab);
-  }, [activeTab]);
-
   // 🔍 DEBUG: Check what's blocking pointer events
   React.useEffect(() => {
     if (isOpen) {

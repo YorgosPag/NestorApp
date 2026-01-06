@@ -48,7 +48,7 @@
 'use client';
 
 // DEBUG FLAG
-const DEBUG_DRAWING_HANDLERS = false;
+const DEBUG_DRAWING_HANDLERS = false; // 🔍 DISABLED - set to true only for debugging
 
 import { useCallback } from 'react';
 import type { ToolType } from '../../ui/toolbar/types';
@@ -83,7 +83,7 @@ export function useDrawingHandlers(
   } = useUnifiedDrawing();
 
   // Snap functionality
-  const { snapEnabled, enabledModes } = useSnapContext();
+  const { snapEnabled, enabledModes, setCurrentSnapResult } = useSnapContext();
   const canvasElement = canvasOps.getCanvas();
   const canvasRef = { current: canvasElement };
 
@@ -123,23 +123,44 @@ export function useDrawingHandlers(
 
   // Drawing handlers
   const onDrawingPoint = useCallback((p: Pt) => {
-    console.log('🟢 onDrawingPoint CALLED!', { point: p });
-
     const snappedPoint = applySnap(p);
-    console.log('🟢 snappedPoint:', snappedPoint);
     const transformUtils = canvasOps.getTransformUtils();
-    console.log('🟢 transformUtils:', !!transformUtils);
     addPoint(snappedPoint, transformUtils);
-    console.log('🟢 addPoint called');
-
   }, [addPoint, canvasOps, applySnap]);
 
   const onDrawingHover = useCallback((p: Pt | null) => {
+    if (DEBUG_DRAWING_HANDLERS) console.log('🔍 [onDrawingHover] Called with point:', p);
+
     if (p) {
       const transformUtils = canvasOps.getTransformUtils();
       updatePreview(p, transformUtils);
+
+      // 🎯 ENTERPRISE: Update snap result for visual feedback (SnapIndicatorOverlay)
+      if (DEBUG_DRAWING_HANDLERS) console.log('🔍 [onDrawingHover] snapEnabled:', snapEnabled, 'findSnapPoint:', !!findSnapPoint);
+
+      if (snapEnabled && findSnapPoint) {
+        try {
+          const snapResult = findSnapPoint(p.x, p.y);
+          if (DEBUG_DRAWING_HANDLERS) console.log('🔍 [onDrawingHover] snapResult:', snapResult);
+
+          if (snapResult && snapResult.found) {
+            if (DEBUG_DRAWING_HANDLERS) console.log('✅ [onDrawingHover] Setting snap result:', snapResult.snappedPoint, snapResult.activeMode);
+            setCurrentSnapResult(snapResult);
+          } else {
+            setCurrentSnapResult(null);
+          }
+        } catch (error) {
+          console.warn('🔺 Snap detection error:', error);
+          setCurrentSnapResult(null);
+        }
+      } else {
+        setCurrentSnapResult(null);
+      }
+    } else {
+      // Mouse left canvas - clear snap result
+      setCurrentSnapResult(null);
     }
-  }, [updatePreview, canvasOps]);
+  }, [updatePreview, canvasOps, snapEnabled, findSnapPoint, setCurrentSnapResult]);
   
   const onDrawingCancel = useCallback(() => {
     cancelDrawing();

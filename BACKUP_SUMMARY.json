@@ -1,41 +1,47 @@
 {
   "category": "CHECKPOINT",
-  "shortDescription": "Snapping Engines & Settings (16 files)",
-  "problem": "Snapping engines and settings components needed enhancement.",
-  "cause": "Improving snapping system accuracy and settings UI.",
+  "shortDescription": "Snapping System Major Update (24 files)",
+  "problem": "Snapping system needed comprehensive update and new GridSnapEngine.",
+  "cause": "Major snapping system overhaul for better accuracy and features.",
   "filesChanged": [
-    "snapping/engines/CenterSnapEngine.ts",
-    "snapping/engines/EndpointSnapEngine.ts",
-    "snapping/engines/ExtensionSnapEngine.ts",
+    "snapping/ProSnapEngineV2.ts",
+    "snapping/SnapEngineCore.ts",
+    "snapping/orchestrator/SnapOrchestrator.ts",
+    "snapping/orchestrator/SnapEngineRegistry.ts",
+    "snapping/extended-types.ts",
+    "snapping/engines/GridSnapEngine.ts (NEW)",
     "snapping/engines/InsertionSnapEngine.ts",
     "snapping/engines/IntersectionSnapEngine.ts",
-    "snapping/engines/MidpointSnapEngine.ts",
+    "snapping/engines/NearSnapEngine.ts",
+    "snapping/engines/NodeSnapEngine.ts",
+    "snapping/engines/ParallelSnapEngine.ts",
+    "snapping/engines/PerpendicularSnapEngine.ts",
+    "snapping/engines/TangentSnapEngine.ts",
     "snapping/engines/shared/snap-engine-utils.ts",
-    "snapping/shared/BaseSnapEngine.ts",
+    "snapping/shared/GeometricCalculations.ts",
     "snapping/hooks/useSnapManager.tsx",
+    "hooks/drawing/useDrawingHandlers.ts",
+    "debug/loggers/SnapDebugLogger.ts",
     "rendering/ui/grid/GridRenderer.ts",
-    "ui/components/dxf-settings/settings/special/CursorSettings.tsx",
-    "ui/components/dxf-settings/settings/special/EntitiesSettings.tsx",
-    "ui/components/dxf-settings/settings/special/LayersSettings.tsx",
-    "ui/components/dxf-settings/settings/special/RulersSettings.tsx",
-    "ui/components/dxf-settings/settings/special/SelectionSettings.tsx"
+    "types/entities.ts",
+    "ui/components/dxf-settings/settings/special/GridSettings.tsx"
   ],
   "solution": {
-    "phase1": "Enhanced all snap engines (6 engines)",
-    "phase2": "Improved BaseSnapEngine and shared utilities",
-    "phase3": "Updated useSnapManager hook",
-    "phase4": "Refined GridRenderer",
-    "phase5": "Updated settings components (5 files)"
+    "phase1": "Updated core snapping components (ProSnapEngineV2, SnapEngineCore)",
+    "phase2": "Enhanced 7 snap engines with consistent patterns",
+    "phase3": "Created new GridSnapEngine for grid snapping",
+    "phase4": "Updated orchestrator and registry",
+    "phase5": "Enhanced entity types and grid settings UI"
   },
   "testing": {
     "userVerification": "Pre-commit checks passed",
     "typescriptVerification": "All checks pass"
   },
   "notes": [
-    "17 files changed: +225 insertions, -149 deletions",
-    "Snapping system significantly improved",
-    "All snap engines enhanced with consistent patterns",
-    "Settings components refined"
+    "25 files changed: +1111 insertions, -522 deletions",
+    "NEW: GridSnapEngine.ts for grid snapping support",
+    "Major snapping system overhaul",
+    "Entity types significantly expanded (+121 lines)"
   ],
   "contributors": {
     "user": "Giorgos Pagonis",
@@ -43,16 +49,16 @@
     "sessionDate": "2026-01-05"
   },
   "relatedBackups": [
+    "b0c4dcf - Snapping Engines & Settings (16 files)",
     "a821dcf - Hooks & Settings Enhancement (50 files)",
-    "408d081 - Contexts & Components Enhancement (55 files)",
-    "f319873 - UI Final Polish (56 files)"
+    "408d081 - Contexts & Components Enhancement (55 files)"
   ],
   "commits": [
     {
-      "hash": "b0c4dcf",
-      "message": "🔒 ENTERPRISE SAFETY CHECKPOINT: Snapping Engines & Settings (16 files)"
+      "hash": "237bc1a",
+      "message": "🔒 ENTERPRISE SAFETY CHECKPOINT: Snapping System Major Update (24 files)"
     }
   ],
   "vercelDeployment": true,
-  "backupTimestamp": "2026-01-05T20:00:00Z"
+  "backupTimestamp": "2026-01-05T21:00:00Z"
 }

@@ -3,6 +3,9 @@
  * Υπεύθυνο για εύρεση snap points στα άκρα των entities
  */
 
+// 🔍 DEBUG FLAG - Enable to diagnose snap issues
+const DEBUG_ENDPOINT_SNAP = false;
+
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
@@ -19,16 +22,52 @@ export class EndpointSnapEngine extends BaseSnapEngine {
   }
 
   initialize(entities: EntityModel[]): void {
+    if (DEBUG_ENDPOINT_SNAP) {
+      console.log('🔍 [EndpointSnapEngine] initialize called with', entities.length, 'entities');
+
+      // Count entity types and visibility
+      const typeCounts: Record<string, number> = {};
+      let visibleCount = 0;
+      let hiddenCount = 0;
+      entities.forEach(e => {
+        typeCounts[e.type] = (typeCounts[e.type] || 0) + 1;
+        if (e.visible === false) {
+          hiddenCount++;
+        } else {
+          visibleCount++;
+        }
+      });
+      console.log('🔍 [EndpointSnapEngine] Entity types:', typeCounts);
+      console.log('🔍 [EndpointSnapEngine] Visible entities:', visibleCount, '/ Hidden:', hiddenCount);
+
+      // Count endpoints per entity type
+      let totalEndpoints = 0;
+      entities.forEach(e => {
+        const endpoints = GeometricCalculations.getEntityEndpoints(e);
+        if (endpoints.length > 0) {
+          console.log(`🔍 [EndpointSnapEngine] ${e.type} entity ${e.id} (visible=${e.visible}): ${endpoints.length} endpoints`, endpoints.slice(0, 2));
+        }
+        totalEndpoints += endpoints.length;
+      });
+      console.log('🔍 [EndpointSnapEngine] Total endpoints found:', totalEndpoints);
+    }
+
     // ✅ CENTRALIZED: Use base class method for spatial index initialization
     this.spatialIndex = this.initializeSpatialIndex(
       entities,
       (entity) => GeometricCalculations.getEntityEndpoints(entity),
       'endpoint'
     );
+
+    if (DEBUG_ENDPOINT_SNAP) {
+      const stats = this.spatialIndex.getStats();
+      console.log('🔍 [EndpointSnapEngine] Spatial index stats after init:', stats);
+    }
   }
 
   findSnapCandidates(cursorPoint: Point2D, context: SnapEngineContext): SnapEngineResult {
     if (!this.spatialIndex) {
+      if (DEBUG_ENDPOINT_SNAP) console.log('🔍 [EndpointSnapEngine] findSnapCandidates: No spatial index!');
       return { candidates: [] };
     }
 
@@ -37,8 +76,21 @@ export class EndpointSnapEngine extends BaseSnapEngine {
 
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.ENDPOINT);
 
+    if (DEBUG_ENDPOINT_SNAP) {
+      const stats = this.spatialIndex.getStats();
+      console.log('🔍 [EndpointSnapEngine] findSnapCandidates:', {
+        cursor: cursorPoint,
+        radius,
+        indexItems: stats.itemCount
+      });
+    }
+
     // Query using modern core spatial system
     const results = this.spatialIndex.querySnap(cursorPoint, radius, 'endpoint');
+
+    if (DEBUG_ENDPOINT_SNAP) {
+      console.log('🔍 [EndpointSnapEngine] querySnap returned', results.length, 'results');
+    }
 
     for (const result of results) {
       const { point, entity } = result.data;

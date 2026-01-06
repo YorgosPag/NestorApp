@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { ExtendedSnapType } from '../extended-types';
+import type { ProSnapResult } from '../extended-types';
 
 // ✅ ENTERPRISE FIX: Define SnapState locally since ../types doesn't exist
 type SnapState = Record<ExtendedSnapType, boolean>;
@@ -34,6 +35,9 @@ interface SnapContextType {
   enabledModes: Set<ExtendedSnapType>;
   toggleMode: (mode: ExtendedSnapType, enabled: boolean) => void;
   setExclusiveMode: (mode: ExtendedSnapType) => void;
+  // 🎯 ENTERPRISE: Current snap result for visual feedback (SnapIndicatorOverlay)
+  currentSnapResult: ProSnapResult | null;
+  setCurrentSnapResult: (result: ProSnapResult | null) => void;
 }
 
 const SnapContext = createContext<SnapContextType | undefined>(undefined);
@@ -53,6 +57,14 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
   });
 
   const [snapEnabled, setSnapEnabled] = useState<boolean>(true); // Start with snapping enabled
+
+  // 🎯 ENTERPRISE: Current snap result for visual feedback
+  const [currentSnapResult, setCurrentSnapResultState] = useState<ProSnapResult | null>(null);
+
+  // 🎯 ENTERPRISE: Memoized setter to avoid unnecessary re-renders
+  const setCurrentSnapResult = useCallback((result: ProSnapResult | null) => {
+    setCurrentSnapResultState(result);
+  }, []);
 
   const enabledModes = React.useMemo(() => {
     const modes = new Set<ExtendedSnapType>();
@@ -136,7 +148,10 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
     setSnapEnabled,
     enabledModes,
     toggleMode,
-    setExclusiveMode
+    setExclusiveMode,
+    // 🎯 ENTERPRISE: Current snap result for visual feedback
+    currentSnapResult,
+    setCurrentSnapResult
   };
 
   return (

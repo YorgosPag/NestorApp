@@ -62,7 +62,7 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
             coordPairs.push([nums[i], nums[i + 1]]);
           }
           polygon = coordPairs;
-          console.log('🔍 NORMALIZED POLYGON:', { docId: doc.id, original: data.polygon, normalized: polygon });
+          // Debug disabled: NORMALIZED POLYGON conversion
         }
 
         // ✅ ENTERPRISE FIX: Type-safe overlay creation with proper polygon type

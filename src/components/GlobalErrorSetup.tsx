@@ -14,7 +14,7 @@ export function GlobalErrorSetup() {
     // Make errorTracker globally available for console testing
     import('@/services/ErrorTracker').then(({ errorTracker }) => {
       (window as any).errorTracker = errorTracker;
-      console.log('🚨 ErrorTracker is now globally available! Try: errorTracker.captureError(new Error("test"), "error", "system")');
+      // Debug disabled: ErrorTracker initialization message
     });
   }, []);
 

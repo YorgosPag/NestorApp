@@ -63,9 +63,10 @@ export function useCentralizedMouseHandlers({
   const activeCanvasRef = canvasRef || safeCanvasRef;
 
   // ✅ SNAP DETECTION: Get snap context and manager
-  const { snapEnabled } = useSnapContext();
+  const { snapEnabled, setCurrentSnapResult } = useSnapContext();
   const { findSnapPoint } = useSnapManager(activeCanvasRef, {
-    scene,
+    // 🏢 ENTERPRISE: DxfScene extends SceneModel - safe cast
+    scene: scene as import('../../types/scene').SceneModel | null,
     onSnapPoint: () => {
       // TODO: Use this callback in next steps if needed
     }
@@ -251,15 +252,25 @@ export function useCentralizedMouseHandlers({
             distance: snap.snapPoint?.distance || 0, // ✅ ENTERPRISE FIX: Use distance from snapPoint
             priority: 0
           }]);
+
+          // 🎯 ENTERPRISE FIX: Update SnapContext for visual feedback (SnapIndicatorOverlay)
+          // Create a ProSnapResult with SCREEN coordinates for the overlay
+          setCurrentSnapResult({
+            ...snap,
+            snappedPoint: snappedScreenPos // Override with SCREEN coords for overlay rendering
+          });
         } else {
           setSnapResults([]);
+          setCurrentSnapResult(null); // 🎯 Clear snap result when no snap found
         }
       } catch (err) {
         console.warn('⚠️ Snap detection error:', err);
         setSnapResults([]);
+        setCurrentSnapResult(null); // 🎯 Clear snap result on error
       }
     } else {
       setSnapResults([]);
+      setCurrentSnapResult(null); // 🎯 Clear snap result when snap disabled
     }
 
     // Handle selection update - disable in pan mode
@@ -323,13 +334,6 @@ export function useCentralizedMouseHandlers({
     // ✅ UPDATE CENTRALIZED STATE
     cursor.setMouseDown(false);
 
-    console.log('🔥 handleMouseUp CALLED!', {
-      cursorPosition: cursor.position,
-      isSelecting: cursor.isSelecting,
-      isPanning: panStateRef.current.isPanning,
-      activeTool
-    });
-
     // 🚀 CLEANUP PAN STATE for high-performance panning
     const panState = panStateRef.current;
     if (panState.isPanning) {
@@ -355,27 +359,12 @@ export function useCentralizedMouseHandlers({
     }
 
     // 🎯 DRAWING TOOLS: Call onCanvasClick if provided (for drawing tools like Line, Circle, etc.)
-    console.log('🔴 DEBUG onCanvasClick check:', {
-      hasOnCanvasClick: !!onCanvasClick,
-      isSelecting: cursor.isSelecting,
-      isPanning: panState.isPanning,
-      hasPosition: !!cursor.position,
-      position: cursor.position
-    });
     if (onCanvasClick && !cursor.isSelecting && !panState.isPanning && cursor.position) {
-      console.log('✅ Calling onCanvasClick with:', cursor.position);
       onCanvasClick(cursor.position);
     }
 
     // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ MARQUEE SELECTION - Χρήση UniversalMarqueeSelector
     if (cursor.isSelecting && cursor.selectionStart && cursor.position) {
-      console.log('🎯 CENTRALIZED: Performing marquee selection:', {
-        selectionStart: cursor.selectionStart,
-        selectionEnd: cursor.position,
-        hasColorLayers: !!(colorLayers && colorLayers.length > 0),
-        layersCount: colorLayers?.length || 0
-      });
-
       // Χρήση canvas reference για getBoundingClientRect()
       const canvas = canvasRef?.current;
       if (canvas && colorLayers && colorLayers.length > 0 && onLayerSelected) {
@@ -388,7 +377,7 @@ export function useCentralizedMouseHandlers({
           {
             colorLayers: colorLayers,
             tolerance: 5,
-            enableDebugLogs: true,
+            enableDebugLogs: false,
             onLayerSelected: onLayerSelected,
             currentPosition: cursor.position
           }
