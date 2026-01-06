@@ -1,5 +1,5 @@
 /**
- * 🏢 VITEST ENTERPRISE CONFIGURATION
+ * 🏢 VITEST ENTERPRISE CONFIGURATION (v4 Compatible)
  *
  * Fortune 500 / AutoCAD-class test configuration
  *
@@ -11,36 +11,62 @@
  * - CI/CD optimizations
  *
  * @module vitest.config.enterprise
+ * @see https://vitest.dev/guide/migration#pool-rework
  */
 
-// ✅ ENTERPRISE: Type-safe conditional import για production compatibility
 import path from 'path';
 
+// ✅ ENTERPRISE: Type-safe config interface για Vitest 4
+interface VitestTestConfig {
+  environment?: string;
+  globals?: boolean;
+  include?: string[];
+  exclude?: string[];
+  sequence?: { shuffle?: boolean; concurrent?: boolean };
+  testTimeout?: number;
+  hookTimeout?: number;
+  coverage?: {
+    provider?: string;
+    enabled?: boolean;
+    reporter?: string[];
+    thresholds?: { lines?: number; functions?: number; branches?: number; statements?: number };
+    include?: string[];
+    exclude?: string[];
+    all?: boolean;
+    skipFull?: boolean;
+  };
+  reporters?: string[];
+  outputFile?: Record<string, string>;
+  clearMocks?: boolean;
+  restoreMocks?: boolean;
+  mockReset?: boolean;
+  watch?: boolean;
+  isolate?: boolean;
+  pool?: string;
+  setupFiles?: string[];
+  globalSetup?: string;
+}
+
 interface VitestConfig {
-  test?: any;
-  [key: string]: any;
+  test?: VitestTestConfig;
+  resolve?: { alias?: Record<string, string> };
+  poolOptions?: { threads?: { singleThread?: boolean; maxThreads?: number; minThreads?: number } };
 }
 
-let defineConfig: (config: VitestConfig) => VitestConfig;
-
-try {
-  const vitestModule = eval('require')('vitest/config');
-  defineConfig = vitestModule.defineConfig;
-} catch {
-  // Production fallback - vitest not available
-  defineConfig = (config: VitestConfig) => config;
-}
-
-export default defineConfig({
+// ✅ ENTERPRISE: Direct export - no defineConfig needed for npx compatibility
+const config: VitestConfig = {
   test: {
     // ═══ TEST ENVIRONMENT ═══
-    environment: 'jsdom',
+    // Use 'node' for service tests (no DOM needed)
+    // Change to 'jsdom' for UI tests (requires: npm install --save-dev jsdom)
+    environment: 'node',
     globals: true,
 
     // ═══ TEST DISCOVERY ═══
+    // Paths relative to project root (C:\Nestor_Pagonis)
     include: [
-      'services/__tests__/**/*.test.ts',
-      'services/__tests__/**/*.enterprise.test.ts'
+      'src/subapps/dxf-viewer/services/__tests__/**/*.test.ts',
+      'src/subapps/dxf-viewer/services/__tests__/**/*.enterprise.test.ts'
     ],
     exclude: [
       '**/node_modules/**',
@@ -60,9 +86,11 @@ export default defineConfig({
     hookTimeout: 10000,
 
     // ═══ COVERAGE CONFIGURATION ═══
+    // Note: Requires @vitest/coverage-v8 package
+    // Run: npm install --save-dev @vitest/coverage-v8
     coverage: {
       provider: 'v8',
-      enabled: true,
+      enabled: false,         // Disabled until @vitest/coverage-v8 is installed
       reporter: ['text', 'json', 'html', 'lcov'],
 
       // ✅ ENTERPRISE COVERAGE THRESHOLDS
@@ -75,7 +103,7 @@ export default defineConfig({
 
       // Include only production code
       include: [
-        'services/**/*.ts'
+        'src/subapps/dxf-viewer/services/**/*.ts'
       ],
 
       // Exclude test files και utilities
@@ -117,30 +145,36 @@ export default defineConfig({
     // ═══ PERFORMANCE ═══
     isolate: true,            // Isolate tests για memory leaks
     pool: 'threads',          // Use worker threads
-    poolOptions: {
-      threads: {
-        singleThread: false,  // Use multiple threads
-        maxThreads: process.env.CI ? 2 : 4,
-        minThreads: 1
-      }
-    },
+    // Note: poolOptions moved to top-level in Vitest 4
 
     // ═══ SETUP FILES ═══
     setupFiles: [
-      './services/__tests__/setup.ts'
+      './src/subapps/dxf-viewer/services/__tests__/setup.ts'
     ],
 
     // ═══ GLOBALS ═══
     // Expose GC για memory leak tests
-    globalSetup: './services/__tests__/global-setup.ts'
+    globalSetup: './src/subapps/dxf-viewer/services/__tests__/global-setup.ts'
   },
 
   // ═══ RESOLVE ═══
+  // Note: __dirname = C:\Nestor_Pagonis\src\subapps\dxf-viewer (config file location)
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '.'),
-      '@/services': path.resolve(__dirname, './services'),
-      '@/types': path.resolve(__dirname, './types')
+      '@/services': path.resolve(__dirname, 'services'),
+      '@/types': path.resolve(__dirname, 'types')
+    }
+  },
+
+  // ═══ POOL OPTIONS (Vitest 4 - Top Level) ═══
+  poolOptions: {
+    threads: {
+      singleThread: false,    // Use multiple threads
+      maxThreads: process.env.CI ? 2 : 4,
+      minThreads: 1
     }
   }
-});
+};
+
+export default config;
