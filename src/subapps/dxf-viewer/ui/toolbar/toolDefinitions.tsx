@@ -3,7 +3,8 @@ import {
   MousePointer, Hand, ZoomIn, ZoomOut, Minus, Square, CircleDot, Circle, Pen,
   Move, Copy, Trash2, Ruler, Undo, Redo, Focus, Maximize2,
   Grid, Settings, Crop, Download, Plus, Crosshair,
-  Maximize, Calculator, Map, Edit, Hexagon, FlaskConical
+  Maximize, Calculator, Map, Edit, Hexagon, FlaskConical,
+  Activity // 🏢 ENTERPRISE: Performance Monitor icon
 } from "lucide-react";
 
 // 🏢 ENTERPRISE: Import centralized DXF tool labels - ZERO HARDCODED VALUES
@@ -255,5 +256,13 @@ export const createActionButtons = (props: {
     label: DXF_UTILITY_TOOL_LABELS.RUN_TESTS,
     hotkey: 'Ctrl+Shift+T',
     onClick: () => props.onAction('run-tests')
+  },
+  // 🏢 ENTERPRISE: Performance Monitor Toggle (Bentley/Autodesk pattern)
+  {
+    id: 'toggle-perf',
+    icon: Activity,
+    label: DXF_UTILITY_TOOL_LABELS.TOGGLE_PERF,
+    hotkey: 'Ctrl+Shift+P',
+    onClick: () => props.onAction('toggle-perf')
   }
 ];

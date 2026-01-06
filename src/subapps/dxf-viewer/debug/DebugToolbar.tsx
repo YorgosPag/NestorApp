@@ -13,8 +13,11 @@ import {
   Eye,
   EyeOff,
   Home,
-  Circle
+  Circle,
+  Activity  // 🏢 ENTERPRISE: Performance Monitor icon
 } from 'lucide-react';
+// 🏢 ENTERPRISE: Performance Monitor Toggle (Bentley/Autodesk pattern)
+import { usePerformanceMonitorToggle } from '../hooks/usePerformanceMonitorToggle';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
@@ -68,6 +71,9 @@ export const DebugToolbar: React.FC<DebugToolbarProps> = ({
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
   const iconSizes = useIconSizes();  // 🏢 ENTERPRISE: Centralized icon sizing
+
+  // 🏢 ENTERPRISE: Performance Monitor Toggle (Bentley/Autodesk pattern - OFF by default)
+  const { isEnabled: perfMonitorEnabled, toggle: togglePerfMonitor } = usePerformanceMonitorToggle();
   // Keyboard shortcuts for testing (F2, F3, Ctrl+Shift+T)
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -521,6 +527,29 @@ Check console for detailed metrics`;
         className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${colors.bg.info} ${colors.text.inverted} ${PANEL_LAYOUT.TRANSITION.ALL} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`}
       >
         <Home className={iconSizes.xs} /> Pan to (0,0)
+      </button>
+
+      {/* 🏢 ENTERPRISE: Performance Monitor Toggle (Bentley/Autodesk pattern)
+          - OFF by default for better performance
+          - Available only in DXF Viewer (design tools)
+          - State persisted in localStorage */}
+      <button
+        onClick={() => {
+          togglePerfMonitor();
+          const newState = !perfMonitorEnabled;
+          showCopyableNotification(
+            `Performance Monitor: ${newState ? 'ENABLED ✅' : 'DISABLED ❌'}\n\n${newState ? '📊 FPS, Memory, Render metrics now visible' : '⚡ Better performance - monitoring disabled'}`,
+            newState ? 'success' : 'info'
+          );
+        }}
+        className={`${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${PANEL_LAYOUT.TRANSITION.ALL} ${
+          perfMonitorEnabled
+            ? `bg-gradient-to-r from-orange-500 to-red-500 ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.GRADIENT_PURPLE_PINK}`
+            : `${colors.bg.hover} ${colors.text.inverted} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
+        }`}
+        title="Toggle Performance Monitor (Bentley/Autodesk pattern - OFF by default)"
+      >
+        <Activity className={iconSizes.xs} /> PERF {perfMonitorEnabled ? 'ON' : 'OFF'}
       </button>
 
       <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.hover} ${colors.text.WHITE} ${PANEL_LAYOUT.SPACING.COMPACT} ${quick.button}`}>

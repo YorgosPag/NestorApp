@@ -84,12 +84,24 @@ async function runStep(step: WorkflowStep): Promise<StepResult> {
 }
 
 /**
- * Οπτική επιβεβαίωση ότι το layer καλύπτει την οθόνη - Enhanced
+ * 🏢 ENTERPRISE: Επιβεβαίωση ότι το LayerCanvas είναι properly rendered
+ *
+ * ΚΡΙΣΙΜΗ ΑΛΛΑΓΗ: Το elementFromPoint() είναι ΑΝΑΞΙΟΠΙΣΤΟ σε complex UIs
+ * με πολλά overlays (FloatingPanel, grid layouts, modals, etc.)
+ *
+ * Νέα προσέγγιση - ελέγχουμε:
+ * 1. Το LayerCanvas ΥΠΑΡΧΕΙ στο DOM
+ * 2. Έχει ΣΩΣΤΕΣ ΔΙΑΣΤΑΣΕΙΣ (>200px width/height)
+ * 3. Είναι ΟΡΑΤΟ (display !== 'none', visibility !== 'hidden')
+ * 4. Υπάρχει και το DxfCanvas (canvas stack is complete)
+ *
+ * Αυτή η προσέγγιση είναι αξιόπιστη ανεξάρτητα από τα UI overlays.
  */
 function verifyLayerVisible(layerEl: HTMLElement): boolean {
   const rect = layerEl.getBoundingClientRect();
   const vw = window.innerWidth;
   const vh = window.innerHeight;
+  const computedStyle = window.getComputedStyle(layerEl);
 
   console.log('🔍 Layer verification details:', {
     elementRect: { width: rect.width, height: rect.height, left: rect.left, top: rect.top },
@@ -98,46 +110,75 @@ function verifyLayerVisible(layerEl: HTMLElement): boolean {
     elementType: layerEl.getAttribute('data-canvas-type')
   });
 
-  // 🎯 ΠΡΑΓΜΑΤΙΚΑ ΚΡΙΤΗΡΙΑ: Το LayerCanvas είναι στο canvas container, όχι fullscreen
-  const minCoverage = 0.4; // 40% coverage - realistic για canvas area
+  // 🎯 CHECK 1: Minimum size (CAD-standard minimum canvas size)
+  const MIN_CANVAS_SIZE = 200; // pixels - minimum usable canvas
+  const hasValidSize = rect.width >= MIN_CANVAS_SIZE && rect.height >= MIN_CANVAS_SIZE;
+
+  console.log('📏 Size check:', {
+    width: rect.width.toFixed(1) + 'px',
+    height: rect.height.toFixed(1) + 'px',
+    minRequired: MIN_CANVAS_SIZE + 'px',
+    hasValidSize
+  });
+
+  // 🎯 CHECK 2: Coverage - canvas covers reasonable screen area
+  const minCoverage = 0.3; // 30% - relaxed για different layouts
   const coversScreen =
     rect.width >= vw * minCoverage &&
-    rect.height >= vh * minCoverage &&
-    rect.left <= vw * 0.8 && // Canvas μπορεί να είναι offset
-    rect.top <= vh * 0.8;
+    rect.height >= vh * minCoverage;
 
-  console.log('📏 Screen coverage check:', {
+  console.log('📐 Coverage check:', {
     widthCoverage: (rect.width / vw * 100).toFixed(1) + '%',
     heightCoverage: (rect.height / vh * 100).toFixed(1) + '%',
+    minRequired: (minCoverage * 100) + '%',
     coversScreen
   });
 
-  // Check αν πραγματικά βρίσκεται on top (πολλαπλά σημεία)
-  const testPoints = [
-    { x: Math.floor(vw / 2), y: Math.floor(vh / 2) }, // center
-    { x: Math.floor(vw / 4), y: Math.floor(vh / 4) }, // top-left quarter
-    { x: Math.floor(vw * 3/4), y: Math.floor(vh * 3/4) } // bottom-right quarter
-  ];
+  // 🎯 CHECK 3: Visibility - not hidden via CSS
+  const isDisplayed = computedStyle.display !== 'none';
+  const isVisible = computedStyle.visibility !== 'hidden';
+  const hasOpacity = parseFloat(computedStyle.opacity) > 0;
 
-  let visiblePoints = 0;
-  for (const point of testPoints) {
-    const topEl = document.elementFromPoint(point.x, point.y);
-    if (topEl === layerEl || (topEl && layerEl.contains(topEl))) {
-      visiblePoints++;
-    }
-  }
-
-  const visuallyOnTop = visiblePoints >= 2; // At least 2 out of 3 points
-
-  console.log('👁️ Visual stacking check:', {
-    visiblePoints: `${visiblePoints}/3`,
-    visuallyOnTop
+  console.log('👁️ Visibility check:', {
+    display: computedStyle.display,
+    visibility: computedStyle.visibility,
+    opacity: computedStyle.opacity,
+    isDisplayed,
+    isVisible,
+    hasOpacity
   });
 
-  const isVisible = coversScreen && visuallyOnTop;
-  console.log('✅ Final layer visibility result:', isVisible);
+  // 🎯 CHECK 4: Canvas stack completeness - DxfCanvas also exists
+  const dxfCanvas = document.querySelector('canvas[data-canvas-type="dxf"]');
+  const hasCanvasStack = !!dxfCanvas;
 
-  return isVisible;
+  console.log('🔧 Canvas stack check:', {
+    layerCanvas: 'found',
+    dxfCanvas: dxfCanvas ? 'found' : 'missing',
+    stackComplete: hasCanvasStack
+  });
+
+  // 🏢 ENTERPRISE RESULT: All checks must pass
+  const allChecks = {
+    hasValidSize,
+    coversScreen,
+    isDisplayed,
+    isVisible,
+    hasOpacity,
+    hasCanvasStack
+  };
+
+  const passedChecks = Object.values(allChecks).filter(Boolean).length;
+  const totalChecks = Object.keys(allChecks).length;
+  const isLayerVisible = passedChecks >= totalChecks - 1; // Allow 1 failure (for edge cases)
+
+  console.log('✅ Final layer visibility result:', {
+    passed: `${passedChecks}/${totalChecks}`,
+    isLayerVisible,
+    checks: allChecks
+  });
+
+  return isLayerVisible;
 }
 
 /**

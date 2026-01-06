@@ -5,6 +5,8 @@ import { getCursorSettings, subscribeToCursorSettings, type CursorSettings } fro
 import { useGripContext } from '../../providers/GripProvider';
 import { portalComponents } from '@/styles/design-tokens';  // ✅ ENTERPRISE: Centralized z-index hierarchy
 import type { Point2D } from '../../rendering/types/Types';
+// 🏢 ENTERPRISE: Centralized layout tokens (ADR-013)
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 interface Viewport {
   width: number;
@@ -299,7 +301,8 @@ export default function CrosshairOverlay({
   return (
     <canvas
       ref={canvasRef}
-      className={className}
+      // 🏢 ENTERPRISE: pointer-events-none για να μην εμποδίζει mouse events στο canvas κάτω
+      className={`${className} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
       style={{ ...style, zIndex: portalComponents.overlay.crosshair.zIndex() }}
     />
   );

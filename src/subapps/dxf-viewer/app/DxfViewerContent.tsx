@@ -113,7 +113,10 @@ import {
 // ⚡ ENTERPRISE: DXF Performance Optimizer (729 γραμμές Enterprise system)
 import { dxfPerformanceOptimizer } from '../performance/DxfPerformanceOptimizer';
 
-// 🚀 ENTERPRISE: Performance Dashboard is rendered globally in layout.tsx (no duplicate imports needed)
+// 🏢 ENTERPRISE: Performance Monitor - DXF Viewer only (Bentley/Autodesk pattern)
+import { usePerformanceMonitorToggle } from '../hooks/usePerformanceMonitorToggle';
+import { PerformanceCategory } from '@/core/performance/types/performance.types';
+import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/ClientOnlyPerformanceDashboard';
 
 // ✅ PERFORMANCE: Memoize το main component για να αποφύγουμε άχρηστα re-renders
 export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
@@ -130,6 +133,9 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
 
   // 🧪 TESTS MODAL - State για tests button
   const [testsModalOpen, setTestsModalOpen] = React.useState(false);
+
+  // 🏢 ENTERPRISE: Performance Monitor Toggle (Bentley/Autodesk pattern - DXF Viewer only)
+  const { isEnabled: perfMonitorEnabled, toggle: togglePerfMonitor } = usePerformanceMonitorToggle();
 
   // ⚡ ENTERPRISE: Initialize DXF Performance Optimizer
   React.useEffect(() => {
@@ -272,15 +278,25 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // Get grip context for manual control
   const { updateGripSettings } = useGripContext();
 
-  // 🧪 WRAP handleAction to intercept run-tests action
+  // 🧪 WRAP handleAction to intercept special actions
   const wrappedHandleAction = React.useCallback((action: string, data?: unknown) => {
     if (action === 'run-tests') {
       setTestsModalOpen(true);
       return;
     }
+    // 🏢 ENTERPRISE: Performance Monitor Toggle (Bentley/Autodesk pattern)
+    if (action === 'toggle-perf') {
+      togglePerfMonitor();
+      const newState = !perfMonitorEnabled;
+      notifications.success(
+        `Performance Monitor: ${newState ? 'ON ✅' : 'OFF ❌'}`,
+        newState ? 'Μετρήσεις FPS, Memory, Rendering ενεργές' : 'Καλύτερη απόδοση - παρακολούθηση απενεργοποιημένη'
+      );
+      return;
+    }
     // Pass all other actions to original handleAction
     handleAction(action, data);
-  }, [handleAction]);
+  }, [handleAction, togglePerfMonitor, perfMonitorEnabled, notifications]);
 
   // ✅ PERFORMANCE: Memoize wrapped state to prevent unnecessary child re-renders
   const wrappedState = React.useMemo(() => ({
@@ -951,8 +967,20 @@ Check console for detailed metrics`;
         />
       </React.Suspense>
 
-      {/* ⚡ ENTERPRISE: Performance Dashboard is now rendered globally in layout.tsx
-          Removed duplicate instance to prevent 2 monitors showing on screen */}
+      {/* 🏢 ENTERPRISE: Performance Monitor - DXF Viewer only (Bentley/Autodesk pattern)
+          - OFF by default for better performance
+          - Toggle available in DebugToolbar (PERF ON/OFF button)
+          - State persisted in localStorage */}
+      {perfMonitorEnabled && (
+        <ClientOnlyPerformanceDashboard
+          showDetails={true}
+          updateInterval={2000}
+          categories={[
+            PerformanceCategory.RENDERING,
+            PerformanceCategory.MEMORY
+          ]}
+        />
+      )}
       </section>
       </TransformProvider>
     </CanvasProvider>

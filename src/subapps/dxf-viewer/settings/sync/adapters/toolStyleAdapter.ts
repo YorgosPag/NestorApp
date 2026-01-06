@@ -11,7 +11,7 @@
  */
 
 import type { ToolStylePort } from '../ports';
-import { toolStyleStore } from '../../../stores/ToolStyleStore';
+import { toolStyleStore, type ToolStyle } from '../../../stores/ToolStyleStore';
 
 /**
  * Tool Style Adapter
@@ -36,14 +36,8 @@ export const toolStyleAdapter: ToolStylePort = {
   },
 
   apply(partial) {
-    // Map port format → legacy store format
-    const updates: Partial<{
-      strokeColor: string;
-      fillColor: string;
-      lineWidth: number;
-      opacity: number;
-      lineType: string;
-    }> = {};
+    // Map port format → legacy store format (enterprise-typed)
+    const updates: Partial<ToolStyle> = {};
 
     if (partial.stroke !== undefined) updates.strokeColor = partial.stroke;
     if (partial.fill !== undefined) updates.fillColor = partial.fill;
@@ -51,19 +45,19 @@ export const toolStyleAdapter: ToolStylePort = {
     if (partial.opacity !== undefined) updates.opacity = partial.opacity;
     // TODO: Map dashArray → lineType
 
-    toolStyleStore.set(updates as any);
+    toolStyleStore.set(updates);
   },
 
   onChange(handler) {
-    // Subscribe to legacy store changes
-    return toolStyleStore.subscribe((state: unknown) => {
-      const typedState = state as { stroke?: string; fill?: string; width?: number; opacity?: number; dashArray?: number[] };
+    // Subscribe to legacy store changes (Listener doesn't receive state - we fetch it)
+    return toolStyleStore.subscribe(() => {
+      const state = toolStyleStore.get();
       handler({
-        stroke: typedState.stroke ?? '#000000',
-        fill: typedState.fill ?? 'transparent',
-        width: typedState.width ?? 1,
-        opacity: typedState.opacity ?? 1,
-        dashArray: []
+        stroke: state.strokeColor,
+        fill: state.fillColor,
+        width: state.lineWidth,
+        opacity: state.opacity,
+        dashArray: [] // TODO: Map lineType to dashArray
       });
     });
   }

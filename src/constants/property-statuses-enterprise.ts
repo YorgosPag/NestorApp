@@ -1326,7 +1326,9 @@ export const DXF_UTILITY_TOOL_LABELS = {
   CURSOR_SETTINGS: 'Ρυθμίσεις Cursor',
   FIT_TO_VIEW: 'Fit to View',
   EXPORT: 'Export',
-  RUN_TESTS: 'Run Tests'
+  RUN_TESTS: 'Run Tests',
+  // 🏢 ENTERPRISE: Performance Monitor Toggle (Bentley/Autodesk pattern)
+  TOGGLE_PERF: 'Performance'
 } as const;
 
 // ============================================================================

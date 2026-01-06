@@ -314,3 +314,266 @@ export interface SyncDependencies {
   /** Optional: Ruler system port */
   ruler?: RulerPort;
 }
+
+// ============================================================================
+// PORT REGISTRY - RUNTIME VERIFICATION (Enterprise Pattern)
+// ============================================================================
+
+/**
+ * Port Descriptor - Metadata for runtime port validation
+ *
+ * Based on patterns from:
+ * - Angular InjectionToken
+ * - NestJS Provider metadata
+ * - InversifyJS ServiceIdentifier
+ */
+export interface PortDescriptor {
+  /** Unique port identifier */
+  readonly name: string;
+  /** Port version for compatibility checks */
+  readonly version: string;
+  /** Required methods that must be implemented */
+  readonly requiredMethods: readonly string[];
+  /** Optional methods */
+  readonly optionalMethods?: readonly string[];
+  /** Human-readable description */
+  readonly description: string;
+}
+
+/**
+ * PORT_REGISTRY - Central registry of all ports with runtime metadata
+ *
+ * ✅ ENTERPRISE: This object EXISTS at runtime (unlike interfaces)
+ * ✅ Used for: Runtime validation, debugging, introspection
+ *
+ * @example
+ * ```ts
+ * // Runtime check
+ * const hasLoggerPort = PORT_REGISTRY.LoggerPort !== undefined;
+ *
+ * // Validation
+ * const isValid = isValidPort(myAdapter, PORT_REGISTRY.LoggerPort);
+ * ```
+ */
+export const PORT_REGISTRY = {
+  /** Logger Port metadata */
+  LoggerPort: {
+    name: 'LoggerPort',
+    version: '1.0.0',
+    requiredMethods: ['info', 'warn', 'error'] as const,
+    description: 'Abstraction for logging operations'
+  },
+
+  /** Clock Port metadata */
+  ClockPort: {
+    name: 'ClockPort',
+    version: '1.0.0',
+    requiredMethods: ['now'] as const,
+    description: 'Abstraction for time operations'
+  },
+
+  /** Event Bus Port metadata */
+  EventBusPort: {
+    name: 'EventBusPort',
+    version: '1.0.0',
+    requiredMethods: ['emit', 'on'] as const,
+    description: 'Abstraction for event broadcasting'
+  },
+
+  /** Tool Style Port metadata */
+  ToolStylePort: {
+    name: 'ToolStylePort',
+    version: '1.0.0',
+    requiredMethods: ['getCurrent', 'apply', 'onChange'] as const,
+    description: 'Abstraction for tool/line style management'
+  },
+
+  /** Text Style Port metadata */
+  TextStylePort: {
+    name: 'TextStylePort',
+    version: '1.0.0',
+    requiredMethods: ['getCurrent', 'apply', 'onChange'] as const,
+    description: 'Abstraction for text style management'
+  },
+
+  /** Grip Style Port metadata */
+  GripStylePort: {
+    name: 'GripStylePort',
+    version: '1.0.0',
+    requiredMethods: ['getCurrent', 'apply', 'onChange'] as const,
+    description: 'Abstraction for grip style management'
+  },
+
+  /** Grid Port metadata */
+  GridPort: {
+    name: 'GridPort',
+    version: '1.0.0',
+    requiredMethods: ['getState', 'apply', 'onChange'] as const,
+    description: 'Abstraction for grid system'
+  },
+
+  /** Ruler Port metadata */
+  RulerPort: {
+    name: 'RulerPort',
+    version: '1.0.0',
+    requiredMethods: ['getState', 'apply', 'onChange'] as const,
+    description: 'Abstraction for ruler system'
+  },
+
+  /** Sync Dependencies metadata */
+  SyncDependencies: {
+    name: 'SyncDependencies',
+    version: '1.0.0',
+    requiredMethods: [] as const,
+    requiredPorts: ['logger'] as const,
+    optionalPorts: ['clock', 'bus', 'toolStyle', 'textStyle', 'gripStyle', 'grid', 'ruler'] as const,
+    description: 'Aggregate interface for all sync dependencies'
+  }
+} as const;
+
+/**
+ * Type for port names (type-safe)
+ */
+export type PortName = keyof typeof PORT_REGISTRY;
+
+// ============================================================================
+// TYPE GUARDS - RUNTIME PORT VALIDATION
+// ============================================================================
+
+/**
+ * Validates if an object implements a port contract
+ *
+ * ✅ ENTERPRISE: Runtime validation with detailed error reporting
+ *
+ * @param candidate - Object to validate
+ * @param descriptor - Port descriptor with required methods
+ * @returns Validation result with details
+ *
+ * @example
+ * ```ts
+ * const result = validatePortContract(myAdapter, PORT_REGISTRY.LoggerPort);
+ * if (!result.valid) {
+ *   console.error('Missing methods:', result.missingMethods);
+ * }
+ * ```
+ */
+export function validatePortContract(
+  candidate: unknown,
+  descriptor: PortDescriptor
+): { valid: boolean; missingMethods: string[]; presentMethods: string[] } {
+  if (candidate === null || candidate === undefined) {
+    return {
+      valid: false,
+      missingMethods: [...descriptor.requiredMethods],
+      presentMethods: []
+    };
+  }
+
+  const obj = candidate as Record<string, unknown>;
+  const missingMethods: string[] = [];
+  const presentMethods: string[] = [];
+
+  for (const method of descriptor.requiredMethods) {
+    if (typeof obj[method] === 'function') {
+      presentMethods.push(method);
+    } else {
+      missingMethods.push(method);
+    }
+  }
+
+  return {
+    valid: missingMethods.length === 0,
+    missingMethods,
+    presentMethods
+  };
+}
+
+/**
+ * Type guard: Checks if object is a valid LoggerPort
+ */
+export function isValidLoggerPort(candidate: unknown): candidate is LoggerPort {
+  return validatePortContract(candidate, PORT_REGISTRY.LoggerPort).valid;
+}
+
+/**
+ * Type guard: Checks if object is a valid ToolStylePort
+ */
+export function isValidToolStylePort(candidate: unknown): candidate is ToolStylePort {
+  return validatePortContract(candidate, PORT_REGISTRY.ToolStylePort).valid;
+}
+
+/**
+ * Type guard: Checks if object is a valid TextStylePort
+ */
+export function isValidTextStylePort(candidate: unknown): candidate is TextStylePort {
+  return validatePortContract(candidate, PORT_REGISTRY.TextStylePort).valid;
+}
+
+/**
+ * Type guard: Checks if object is a valid GripStylePort
+ */
+export function isValidGripStylePort(candidate: unknown): candidate is GripStylePort {
+  return validatePortContract(candidate, PORT_REGISTRY.GripStylePort).valid;
+}
+
+/**
+ * Type guard: Checks if object is a valid GridPort
+ */
+export function isValidGridPort(candidate: unknown): candidate is GridPort {
+  return validatePortContract(candidate, PORT_REGISTRY.GridPort).valid;
+}
+
+/**
+ * Type guard: Checks if object is a valid RulerPort
+ */
+export function isValidRulerPort(candidate: unknown): candidate is RulerPort {
+  return validatePortContract(candidate, PORT_REGISTRY.RulerPort).valid;
+}
+
+/**
+ * Validates SyncDependencies object
+ *
+ * ✅ ENTERPRISE: Comprehensive validation for DI container
+ */
+export function validateSyncDependencies(deps: unknown): {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+} {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  if (deps === null || deps === undefined) {
+    return { valid: false, errors: ['SyncDependencies is null or undefined'], warnings: [] };
+  }
+
+  const obj = deps as Record<string, unknown>;
+
+  // Required: logger
+  if (!isValidLoggerPort(obj.logger)) {
+    errors.push('Missing or invalid required port: logger');
+  }
+
+  // Optional ports - validate if present
+  if (obj.toolStyle !== undefined && !isValidToolStylePort(obj.toolStyle)) {
+    warnings.push('Invalid optional port: toolStyle');
+  }
+  if (obj.textStyle !== undefined && !isValidTextStylePort(obj.textStyle)) {
+    warnings.push('Invalid optional port: textStyle');
+  }
+  if (obj.gripStyle !== undefined && !isValidGripStylePort(obj.gripStyle)) {
+    warnings.push('Invalid optional port: gripStyle');
+  }
+  if (obj.grid !== undefined && !isValidGridPort(obj.grid)) {
+    warnings.push('Invalid optional port: grid');
+  }
+  if (obj.ruler !== undefined && !isValidRulerPort(obj.ruler)) {
+    warnings.push('Invalid optional port: ruler');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings
+  };
+}

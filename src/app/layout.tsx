@@ -18,8 +18,9 @@ import { cn } from "@/lib/utils";
 import { I18nProvider } from '@/components/providers/I18nProvider';
 import { NavigationProvider } from '@/components/navigation';
 import { PhotoPreviewProvider } from '@/providers/PhotoPreviewProvider';
-import { PerformanceCategory } from '@/core/performance/types/performance.types';
-import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/ClientOnlyPerformanceDashboard';
+// 🏢 ENTERPRISE: Performance Monitor moved to DXF Viewer only (Bentley/Autodesk pattern)
+// import { PerformanceCategory } from '@/core/performance/types/performance.types';
+// import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/ClientOnlyPerformanceDashboard';
 import { GlobalErrorSetup } from '@/components/GlobalErrorSetup';
 import { MainContentBridge } from './components/MainContentBridge';
 
@@ -103,23 +104,9 @@ export default function RootLayout({
                 {/* 🚨 GLOBAL ERROR TRACKER SETUP */}
                 <GlobalErrorSetup />
 
-                {/* 🚀 ENTERPRISE PERFORMANCE SYSTEM - GLOBAL MONITORING */}
-                <ClientOnlyPerformanceDashboard
-                  position="top-right"
-                  minimizable={true}
-                  defaultMinimized={false}
-                  showDetails={true}
-                  updateInterval={2000}
-                  categories={[
-                    PerformanceCategory.RENDERING,
-                    PerformanceCategory.API_RESPONSE,
-                    PerformanceCategory.CACHE_HIT,
-                    PerformanceCategory.CACHE_MISS,
-                    PerformanceCategory.MEMORY,
-                    PerformanceCategory.NETWORK
-                  ]}
-                  theme="auto"
-                />
+                {/* 🏢 ENTERPRISE: Performance Monitor moved to DXF Viewer only
+                    Following Bentley/Autodesk pattern - design tools only, not globally
+                    Toggle available in DXF Viewer status bar */}
 
                 {/* ✅ το κεντρικοποιημένο NotificationProvider (sonner-based) */}
                 </NotificationProvider>

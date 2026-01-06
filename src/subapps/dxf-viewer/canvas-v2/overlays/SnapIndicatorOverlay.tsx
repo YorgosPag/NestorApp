@@ -209,7 +209,11 @@ export default function SnapIndicatorOverlay({
   const snapColor = canvasUI.overlay.colors.snap.border;
 
   return (
-    <div className={className} style={{ zIndex: portalComponents.overlay.snap.zIndex() }}>
+    // 🏢 ENTERPRISE: pointer-events-none για να μην εμποδίζει mouse events στο canvas κάτω
+    <div
+      className={`${className} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
+      style={{ zIndex: portalComponents.overlay.snap.zIndex() }}
+    >
       {/* 🏢 ENTERPRISE: Industry-standard snap indicator (AutoCAD/MicroStation style) */}
       <div
         className={`absolute ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}

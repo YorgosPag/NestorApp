@@ -19,7 +19,8 @@
  */
 
 import { UI_COLORS } from '../config/color-config';
-import type { LineSettings, TextSettings, GripSettings } from '../settings-core/types';
+import type { LineSettings, TextSettings, ViewerMode } from '../settings-core/types';
+import type { GripSettings } from '../types/gripSettings';
 import type { EffectiveSettingsGetter } from '../settings/sync/storeSync';
 
 interface TestResult {
@@ -27,7 +28,7 @@ interface TestResult {
   test: string;
   status: "success" | "failed" | "warning";
   message: string;
-  details?: any;
+  details?: Record<string, unknown>;
   durationMs: number;
 }
 
@@ -61,7 +62,7 @@ interface StoreSyncTestReport {
 async function measureTest(
   category: string,
   test: string,
-  fn: () => Promise<{ status: "success" | "failed" | "warning"; message: string; details?: any }>
+  fn: () => Promise<{ status: "success" | "failed" | "warning"; message: string; details?: Record<string, unknown> }>
 ): Promise<TestResult> {
   const startTime = performance.now();
 
@@ -77,14 +78,15 @@ async function measureTest(
       details: result.details,
       durationMs
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     const durationMs = Math.round(performance.now() - startTime);
+    const errorMessage = err instanceof Error ? err.message : "Unknown error";
 
     return {
       category,
       test,
       status: "failed",
-      message: err.message || "Unknown error",
+      message: errorMessage,
       durationMs
     };
   }
@@ -99,25 +101,44 @@ async function testPortsModuleExists(): Promise<TestResult> {
     try {
       const portsModule = await import('../settings/sync/ports');
 
-      const hasLoggerPort = 'LoggerPort' in portsModule;
-      const hasToolStylePort = 'ToolStylePort' in portsModule;
-      const hasSyncDependencies = 'SyncDependencies' in portsModule;
+      // ✅ ENTERPRISE: Use PORT_REGISTRY for runtime verification (interfaces don't exist at runtime)
+      const hasPortRegistry = 'PORT_REGISTRY' in portsModule;
+      const hasValidatePortContract = 'validatePortContract' in portsModule;
+      const hasTypeGuards = 'isValidLoggerPort' in portsModule && 'isValidToolStylePort' in portsModule;
 
-      if (!hasLoggerPort || !hasToolStylePort || !hasSyncDependencies) {
+      if (!hasPortRegistry || !hasValidatePortContract || !hasTypeGuards) {
         return {
           status: "failed",
-          message: "❌ Ports module incomplete",
-          details: { hasLoggerPort, hasToolStylePort, hasSyncDependencies }
+          message: "❌ Ports module incomplete - missing runtime verification",
+          details: { hasPortRegistry, hasValidatePortContract, hasTypeGuards }
+        };
+      }
+
+      // Verify PORT_REGISTRY has all expected ports
+      const registry = portsModule.PORT_REGISTRY;
+      const expectedPorts = ['LoggerPort', 'ToolStylePort', 'TextStylePort', 'GripStylePort', 'GridPort', 'RulerPort', 'SyncDependencies'];
+      const missingPorts = expectedPorts.filter(port => !(port in registry));
+
+      if (missingPorts.length > 0) {
+        return {
+          status: "failed",
+          message: `❌ PORT_REGISTRY missing ports: ${missingPorts.join(', ')}`,
+          details: { missingPorts, registeredPorts: Object.keys(registry) }
         };
       }
 
       return {
         status: "success",
-        message: "✅ Ports module complete (5 domain ports + 3 core ports)",
-        details: { portsModule: "settings/sync/ports.ts" }
+        message: "✅ Ports module complete with PORT_REGISTRY (8 ports + type guards)",
+        details: {
+          portsModule: "settings/sync/ports.ts",
+          registeredPorts: Object.keys(registry),
+          typeGuards: ['isValidLoggerPort', 'isValidToolStylePort', 'isValidTextStylePort', 'isValidGripStylePort', 'isValidGridPort', 'isValidRulerPort']
+        }
       };
-    } catch (err: any) {
-      return { status: "failed", message: `❌ Ports module error: ${err.message}` };
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      return { status: "failed", message: `❌ Ports module error: ${errorMessage}` };
     }
   });
 }
@@ -125,28 +146,59 @@ async function testPortsModuleExists(): Promise<TestResult> {
 async function testPortInterfacesValid(): Promise<TestResult> {
   return measureTest("PORTS INTEGRITY", "Port Interface Contracts", async () => {
     try {
-      // Import type definitions only (no runtime validation needed)
       const portsModule = await import('../settings/sync/ports');
 
-      // Check that types are exported
-      const exports = Object.keys(portsModule);
-      const expectedPorts = [
-        'consoleLoggerAdapter',  // Should be exported from adapters, not ports
-        'SyncDependencies'       // Type export (won't appear in Object.keys)
+      // ✅ ENTERPRISE: Validate PORT_REGISTRY has correct structure
+      const registry = portsModule.PORT_REGISTRY;
+
+      // Check each port has required metadata
+      const invalidPorts: string[] = [];
+      for (const [portName, descriptor] of Object.entries(registry)) {
+        const desc = descriptor as { name?: string; version?: string; requiredMethods?: readonly string[] };
+        if (!desc.name || !desc.version || !desc.requiredMethods) {
+          invalidPorts.push(portName);
+        }
+      }
+
+      if (invalidPorts.length > 0) {
+        return {
+          status: "failed",
+          message: `❌ Invalid port descriptors: ${invalidPorts.join(', ')}`,
+          details: { invalidPorts }
+        };
+      }
+
+      // Verify type guards are functions
+      const typeGuardNames = [
+        'isValidLoggerPort', 'isValidToolStylePort', 'isValidTextStylePort',
+        'isValidGripStylePort', 'isValidGridPort', 'isValidRulerPort',
+        'validatePortContract', 'validateSyncDependencies'
       ];
 
-      // Ports are TypeScript interfaces, so they won't appear in runtime exports
-      // This test verifies the module loads without errors
+      const missingTypeGuards = typeGuardNames.filter(
+        name => typeof (portsModule as Record<string, unknown>)[name] !== 'function'
+      );
+
+      if (missingTypeGuards.length > 0) {
+        return {
+          status: "failed",
+          message: `❌ Missing type guards: ${missingTypeGuards.join(', ')}`,
+          details: { missingTypeGuards }
+        };
+      }
+
       return {
         status: "success",
-        message: "✅ Port interfaces valid (TypeScript compile-time contracts)",
+        message: "✅ Port contracts valid (PORT_REGISTRY + type guards)",
         details: {
-          note: "Interfaces validated at compile-time",
-          runtimeExports: exports
+          registeredPorts: Object.keys(registry).length,
+          typeGuards: typeGuardNames.length,
+          note: "Runtime validation available via type guards"
         }
       };
-    } catch (err: any) {
-      return { status: "failed", message: `❌ Port validation error: ${err.message}` };
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      return { status: "failed", message: `❌ Port validation error: ${errorMessage}` };
     }
   });
 }
@@ -177,8 +229,9 @@ async function testToolStyleAdapterExists(): Promise<TestResult> {
         message: "✅ ToolStyle adapter implements ToolStylePort",
         details: { methods: ['getCurrent', 'apply', 'onChange'] }
       };
-    } catch (err: any) {
-      return { status: "failed", message: `❌ ToolStyle adapter error: ${err.message}` };
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      return { status: "failed", message: `❌ ToolStyle adapter error: ${errorMessage}` };
     }
   });
 }
@@ -205,8 +258,9 @@ async function testTextStyleAdapterExists(): Promise<TestResult> {
         message: "✅ TextStyle adapter implements TextStylePort",
         details: { methods: ['getCurrent', 'apply', 'onChange'] }
       };
-    } catch (err: any) {
-      return { status: "failed", message: `❌ TextStyle adapter error: ${err.message}` };
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      return { status: "failed", message: `❌ TextStyle adapter error: ${errorMessage}` };
     }
   });
 }
@@ -233,8 +287,9 @@ async function testGripStyleAdapterExists(): Promise<TestResult> {
         message: "✅ GripStyle adapter implements GripStylePort",
         details: { methods: ['getCurrent', 'apply', 'onChange'] }
       };
-    } catch (err: any) {
-      return { status: "failed", message: `❌ GripStyle adapter error: ${err.message}` };
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      return { status: "failed", message: `❌ GripStyle adapter error: ${errorMessage}` };
     }
   });
 }
@@ -269,8 +324,9 @@ async function testAdaptersCentralExport(): Promise<TestResult> {
           total: totalAdapters
         }
       };
-    } catch (err: any) {
-      return { status: "failed", message: `❌ Adapters export error: ${err.message}` };
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      return { status: "failed", message: `❌ Adapters export error: ${errorMessage}` };
     }
   });
 }
@@ -297,8 +353,9 @@ async function testCompositionRootExists(): Promise<TestResult> {
         message: "✅ Composition root factory exists",
         details: { factory: "createSyncDependencies" }
       };
-    } catch (err: any) {
-      return { status: "failed", message: `❌ Composition root error: ${err.message}` };
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      return { status: "failed", message: `❌ Composition root error: ${errorMessage}` };
     }
   });
 }
@@ -357,8 +414,9 @@ async function testCompositionRootCreation(): Promise<TestResult> {
           ruler: hasRuler
         }
       };
-    } catch (err: any) {
-      return { status: "failed", message: `❌ DI creation error: ${err.message}` };
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      return { status: "failed", message: `❌ DI creation error: ${errorMessage}` };
     }
   });
 }
@@ -386,8 +444,9 @@ async function testFeatureFlagDisable(): Promise<TestResult> {
         message: "✅ Feature flag correctly disables sync",
         details: { enableSync: false, result: "undefined" }
       };
-    } catch (err: any) {
-      return { status: "failed", message: `❌ Feature flag error: ${err.message}` };
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      return { status: "failed", message: `❌ Feature flag error: ${errorMessage}` };
     }
   });
 }
@@ -419,8 +478,9 @@ async function testStoreSyncPureFunctions(): Promise<TestResult> {
           pattern: "Dependency Injection via ports"
         }
       };
-    } catch (err: any) {
-      return { status: "failed", message: `❌ Pure function error: ${err.message}` };
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      return { status: "failed", message: `❌ Pure function error: ${errorMessage}` };
     }
   });
 }
@@ -443,8 +503,9 @@ async function testMapperFunctions(): Promise<TestResult> {
           ]
         }
       };
-    } catch (err: any) {
-      return { status: "failed", message: `❌ Mapper functions error: ${err.message}` };
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      return { status: "failed", message: `❌ Mapper functions error: ${errorMessage}` };
     }
   });
 }
@@ -489,8 +550,9 @@ async function testStoreSyncCreation(): Promise<TestResult> {
         message: "✅ Sync instance created successfully",
         details: { methods: ['start'] }
       };
-    } catch (err: any) {
-      return { status: "failed", message: `❌ Sync creation error: ${err.message}` };
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      return { status: "failed", message: `❌ Sync creation error: ${errorMessage}` };
     }
   });
 }
@@ -533,8 +595,9 @@ async function testGracefulDegradation(): Promise<TestResult> {
         message: "✅ Graceful degradation works (faulty port handled)",
         details: { note: "Errors logged, not thrown" }
       };
-    } catch (err: any) {
-      return { status: "failed", message: `❌ Error handling error: ${err.message}` };
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      return { status: "failed", message: `❌ Error handling error: ${errorMessage}` };
     }
   });
 }
@@ -563,8 +626,9 @@ async function testFeatureFlagEnabled(): Promise<TestResult> {
           details: { ENABLE_SETTINGS_SYNC: false }
         };
       }
-    } catch (err: any) {
-      return { status: "failed", message: `❌ Feature flag error: ${err.message}` };
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      return { status: "failed", message: `❌ Feature flag error: ${errorMessage}` };
     }
   });
 }
@@ -581,10 +645,18 @@ async function testSubscriptionCleanup(): Promise<TestResult> {
 
       // Create fake port with subscription tracking
       let subscriptions = 0;
+      type ToolStyleHandler = (partial: Partial<{
+        stroke: string;
+        fill: string;
+        width: number;
+        opacity: number;
+        dashArray: number[];
+      }>) => void;
+
       const fakePort = {
-        getCurrent: () => ({ stroke: UI_COLORS.BLACK, fill: UI_COLORS.WHITE, width: 1, opacity: 1, dashArray: [] }),
+        getCurrent: () => ({ stroke: UI_COLORS.BLACK, fill: UI_COLORS.WHITE, width: 1, opacity: 1, dashArray: [] as number[] }),
         apply: () => {},
-        onChange: (handler: any) => {
+        onChange: (_handler: ToolStyleHandler) => {
           subscriptions++;
           return () => { subscriptions--; };
         }
@@ -599,7 +671,7 @@ async function testSubscriptionCleanup(): Promise<TestResult> {
 
       // Create fake effective getter
       const effectiveGetter = {
-        line: (mode?: any): LineSettings => ({
+        line: (_mode?: ViewerMode): LineSettings => ({
           enabled: true,
           lineType: 'solid' as const,
           lineWidth: 0.25,
@@ -620,7 +692,7 @@ async function testSubscriptionCleanup(): Promise<TestResult> {
           finalOpacity: 1.0,
           activeTemplate: null
         }),
-        text: (mode?: any): TextSettings => ({
+        text: (_mode?: ViewerMode): TextSettings => ({
           enabled: true,
           fontFamily: 'Arial',
           fontSize: 12,
@@ -651,7 +723,7 @@ async function testSubscriptionCleanup(): Promise<TestResult> {
           backgroundPadding: 2,
           activeTemplate: null
         }),
-        grip: (mode?: any): GripSettings => ({
+        grip: (_mode?: ViewerMode): GripSettings => ({
           enabled: true,
           gripSize: 5,
           pickBoxSize: 3,
@@ -670,11 +742,15 @@ async function testSubscriptionCleanup(): Promise<TestResult> {
           showCenters: true,
           showQuadrants: true,
           maxGripsPerEntity: 50,
-          showGrips: true
+          showGrips: true,
+          showGripTips: false,
+          dpiScale: 1.0
         })
       };
 
-      const { stop } = sync.start(effectiveGetter as any as EffectiveSettingsGetter);
+      // effectiveGetter now properly implements EffectiveSettingsGetter interface
+      const typedGetter: EffectiveSettingsGetter = effectiveGetter;
+      const { stop } = sync.start(typedGetter);
 
       const subscriptionsAfterStart = subscriptions;
 
@@ -704,8 +780,9 @@ async function testSubscriptionCleanup(): Promise<TestResult> {
           afterStop: subscriptionsAfterStop
         }
       };
-    } catch (err: any) {
-      return { status: "failed", message: `❌ Subscription cleanup error: ${err.message}` };
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      return { status: "failed", message: `❌ Subscription cleanup error: ${errorMessage}` };
     }
   });
 }
@@ -805,5 +882,6 @@ export async function runStoreSyncTests(): Promise<StoreSyncTestReport> {
 
 // Browser console integration
 if (typeof window !== 'undefined') {
-  (window as any).runStoreSyncTests = runStoreSyncTests;
+  // Extend Window interface for browser console integration
+  (window as unknown as { runStoreSyncTests: typeof runStoreSyncTests }).runStoreSyncTests = runStoreSyncTests;
 }

@@ -11,7 +11,7 @@
  */
 
 import type { GripStylePort } from '../ports';
-import { gripStyleStore } from '../../../stores/GripStyleStore';
+import { gripStyleStore, type GripStyle } from '../../../stores/GripStyleStore';
 import { UI_COLORS } from '../../../config/color-config';
 
 /**
@@ -36,16 +36,8 @@ export const gripStyleAdapter: GripStylePort = {
   },
 
   apply(partial) {
-    // Map port format → legacy store format
-    const updates: Partial<{
-      gripSize: number;
-      colors: {
-        cold?: string;
-        warm?: string;
-        hot?: string;
-        contour?: string;
-      };
-    }> = {};
+    // Map port format → legacy store format (enterprise-typed)
+    const updates: Partial<GripStyle> = {};
 
     if (partial.size !== undefined) {
       updates.gripSize = partial.size;
@@ -54,25 +46,25 @@ export const gripStyleAdapter: GripStylePort = {
     if (partial.color !== undefined || partial.hoverColor !== undefined || partial.selectedColor !== undefined) {
       const currentState = gripStyleStore.get();
       updates.colors = {
-        cold: partial.color ?? currentState.colors?.cold ?? UI_COLORS.OVERLAY_GRIP_COLD,
-        warm: partial.hoverColor ?? currentState.colors?.warm ?? UI_COLORS.TEST_GRIP_HOVER,
-        hot: partial.selectedColor ?? currentState.colors?.hot ?? UI_COLORS.OVERLAY_GRIP_HOT,
-        contour: currentState.colors?.contour ?? UI_COLORS.BLACK
+        cold: partial.color ?? currentState.colors.cold,
+        warm: partial.hoverColor ?? currentState.colors.warm,
+        hot: partial.selectedColor ?? currentState.colors.hot,
+        contour: currentState.colors.contour
       };
     }
 
-    gripStyleStore.set(updates as any);
+    gripStyleStore.set(updates);
   },
 
   onChange(handler) {
-    // Subscribe to legacy store changes
-    return gripStyleStore.subscribe((state: unknown) => {
-      const typedState = state as { gripSize?: number; colors?: { cold?: string; warm?: string; hot?: string } };
+    // Subscribe to legacy store changes (Listener doesn't receive state - we fetch it)
+    return gripStyleStore.subscribe(() => {
+      const state = gripStyleStore.get();
       handler({
-        size: typedState.gripSize ?? 8,
-        color: typedState.colors?.cold ?? UI_COLORS.OVERLAY_GRIP_COLD,
-        hoverColor: typedState.colors?.warm ?? UI_COLORS.TEST_GRIP_HOVER,
-        selectedColor: typedState.colors?.hot ?? UI_COLORS.OVERLAY_GRIP_HOT
+        size: state.gripSize,
+        color: state.colors.cold,
+        hoverColor: state.colors.warm,
+        selectedColor: state.colors.hot
       });
     });
   }
