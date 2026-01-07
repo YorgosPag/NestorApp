@@ -1,48 +1,47 @@
 {
-  "category": "FEATURE",
-  "shortDescription": "Units System & Admin Tools (20 files)",
-  "problem": "Units needed real-time integration and admin tools for data cleanup were missing.",
-  "cause": "Units system was not connected to real-time services and duplicate/orphan data existed.",
+  "category": "ARCHITECTURE",
+  "shortDescription": "EntityLinkingService - Centralized System (18 files)",
+  "problem": "Inline Firestore calls scattered across components for entity linking operations.",
+  "cause": "No centralized service for managing entity relationships (buildings-projects-units).",
   "filesChanged": [
     ".claude/settings.local.json",
-    "REAL_ESTATE_HIERARCHY_DOCUMENTATION.md",
-    "scripts/analyze-buildings.js",
-    "scripts/check-all-buildings.js",
-    "src/app/api/admin/cleanup-duplicates/route.ts",
-    "src/app/api/admin/fix-building-project/route.ts",
-    "src/app/api/admin/fix-unit-project/route.ts",
-    "src/app/api/admin/migrate-units/route.ts",
-    "src/app/api/units/route.ts",
-    "src/components/building-management/building-services.ts",
+    "Local_Οδηγίες.txt",
     "src/components/navigation/components/DesktopMultiColumn.tsx",
-    "src/components/navigation/components/MobileNavigation.tsx",
-    "src/components/navigation/components/NavigationTree.tsx",
-    "src/components/navigation/core/NavigationContext.tsx",
-    "src/components/navigation/core/services/navigationApi.ts",
-    "src/components/navigation/core/types.ts",
-    "src/features/property-details/PropertyDetailsContent.tsx",
-    "src/features/property-details/components/BuildingSelectorCard.tsx",
-    "src/services/realtime/RealtimeService.ts",
-    "src/services/realtime/types.ts"
+    "src/services/entity-linking/EntityLinkingService.ts",
+    "src/services/entity-linking/__tests__/audit.test.ts",
+    "src/services/entity-linking/__tests__/cache.test.ts",
+    "src/services/entity-linking/__tests__/optimistic.test.ts",
+    "src/services/entity-linking/__tests__/retry.test.ts",
+    "src/services/entity-linking/config.ts",
+    "src/services/entity-linking/hooks/useEntityLinking.ts",
+    "src/services/entity-linking/index.ts",
+    "src/services/entity-linking/types.ts",
+    "src/services/entity-linking/utils/audit.ts",
+    "src/services/entity-linking/utils/cache.ts",
+    "src/services/entity-linking/utils/index.ts",
+    "src/services/entity-linking/utils/optimistic.ts",
+    "src/services/entity-linking/utils/retry.ts",
+    "src/subapps/dxf-viewer/docs/CENTRALIZED_SYSTEMS.md"
   ],
   "solution": {
-    "phase1": "Added RealtimeUnit interface and units subscription to RealtimeService",
-    "phase2": "Integrated getUnitsForBuilding in NavigationContext for real-time units",
-    "phase3": "Created Admin API endpoints for data cleanup and migration",
-    "phase4": "Added BuildingSelectorCard component for building selection",
-    "phase5": "Created analysis scripts for building validation"
+    "phase1": "Created EntityLinkingService.ts - Main service with CRUD operations",
+    "phase2": "Added config.ts with retries, timeouts, and limits configuration",
+    "phase3": "Created utility modules: retry, cache, audit, optimistic updates",
+    "phase4": "Added useEntityLinking hook for React component integration",
+    "phase5": "Integrated service in DesktopMultiColumn.tsx (ZERO inline Firestore)"
   },
   "testing": {
     "userVerification": "Pre-commit checks passed",
-    "typescriptVerification": "All type checks pass"
+    "typescriptVerification": "All type checks pass",
+    "unitTests": "4 test files created for core utilities"
   },
   "notes": [
-    "20 files changed: +1483 insertions, -29 deletions",
-    "NEW: Real-time units system integration",
-    "NEW: 4 Admin API endpoints for data management",
-    "NEW: BuildingSelectorCard component",
-    "NEW: Building analysis scripts",
-    "Units now update in real-time across navigation"
+    "18 files changed: +4667 insertions, -25 deletions",
+    "NEW CENTRALIZED SERVICE: src/services/entity-linking/",
+    "ENTERPRISE COMPLIANCE: Zero inline Firestore in components",
+    "Features: Retry logic, caching, audit trail, optimistic updates",
+    "Full TypeScript coverage with interfaces",
+    "React hook for easy component integration"
   ],
   "contributors": {
     "user": "Giorgos Pagonis",
@@ -50,16 +49,16 @@
     "sessionDate": "2026-01-07"
   },
   "relatedBackups": [
+    "180f813 - Units System & Admin Tools (20 files)",
     "c47a019 - Navigation Architecture - Option A (10 files)",
-    "279078b - TypeScript & Performance Improvements (4 files)",
-    "a8d507a - Real-time Navigation & PDF Updates (5 files)"
+    "279078b - TypeScript & Performance Improvements (4 files)"
   ],
   "commits": [
     {
-      "hash": "180f813",
-      "message": "ENTERPRISE SAFETY CHECKPOINT: Units System & Admin Tools (20 files)"
+      "hash": "cd40a97",
+      "message": "ENTERPRISE SAFETY CHECKPOINT: EntityLinkingService - Centralized System (18 files)"
     }
   ],
   "vercelDeployment": true,
-  "backupTimestamp": "2026-01-07T20:00:00Z"
+  "backupTimestamp": "2026-01-07T21:00:00Z"
 }
