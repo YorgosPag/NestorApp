@@ -10,7 +10,8 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { NavigationButton } from './NavigationButton';
 import { NavigationCardToolbar } from './NavigationCardToolbar';
 import { SelectItemModal } from '../dialogs/SelectItemModal';
-import { Building, Home, Construction, Users, MapPin, Map, Car, Package, Layers, Factory } from 'lucide-react';
+import { Building, Home, Construction, MapPin, Map, Car, Package, Factory } from 'lucide-react';
+// 🏢 ENTERPRISE: Layers αφαιρέθηκε - Floors δεν εμφανίζονται στην πλοήγηση (Επιλογή Α)
 import { useNavigation } from '../core/NavigationContext';
 import {
   AlertDialog,
@@ -21,14 +22,14 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 interface DesktopMultiColumnProps {
   onCompanySelect: (companyId: string) => void;
   onProjectSelect: (projectId: string) => void;
   onBuildingSelect: (buildingId: string) => void;
-  onFloorSelect: (floorId: string) => void;
+  /** @deprecated 🏢 ENTERPRISE: Floors αφαιρέθηκαν από navigation (Επιλογή Α) - Παραμένει για backward compatibility */
+  onFloorSelect?: (floorId: string) => void;
   onNavigateToPage: (type: 'properties' | 'projects' | 'buildings' | 'floorplan') => void;
   onAddCompanyClick: () => void;
   navigationCompanyIds: string[];
@@ -38,7 +39,8 @@ export function DesktopMultiColumn({
   onCompanySelect,
   onProjectSelect,
   onBuildingSelect,
-  onFloorSelect,
+  // 🏢 ENTERPRISE: onFloorSelect deprecated - Floors δεν είναι navigation level
+  onFloorSelect: _onFloorSelect,
   onNavigateToPage,
   onAddCompanyClick,
   navigationCompanyIds
@@ -49,7 +51,7 @@ export function DesktopMultiColumn({
     selectedCompany,
     selectedProject,
     selectedBuilding,
-    selectedFloor,
+    // 🏢 ENTERPRISE: selectedFloor αφαιρέθηκε - Floors δεν είναι navigation level (Επιλογή Α)
     projectsLoading,
     loadCompanies,
     // 🏢 ENTERPRISE: Real-time building functions
@@ -66,8 +68,7 @@ export function DesktopMultiColumn({
   const [projectsFilters, setProjectsFilters] = useState<string[]>([]);
   const [buildingsSearch, setBuildingsSearch] = useState('');
   const [buildingsFilters, setBuildingsFilters] = useState<string[]>([]);
-  const [floorsSearch, setFloorsSearch] = useState('');
-  const [floorsFilters, setFloorsFilters] = useState<string[]>([]);
+  // 🏢 ENTERPRISE: Floors αφαιρέθηκαν από navigation (Επιλογή Α)
   const [unitsSearch, setUnitsSearch] = useState('');
   const [unitsFilters, setUnitsFilters] = useState<string[]>([]);
 
@@ -88,13 +89,13 @@ export function DesktopMultiColumn({
   // Modal states for connection dialogs
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isBuildingModalOpen, setIsBuildingModalOpen] = useState(false);
-  const [isFloorModalOpen, setIsFloorModalOpen] = useState(false);
+  // 🏢 ENTERPRISE: Floor modal αφαιρέθηκε (Επιλογή Α)
   const [isUnitModalOpen, setIsUnitModalOpen] = useState(false);
 
-  // Clear selectedUnit when selectedFloor changes
+  // Clear selectedUnit when selectedBuilding changes
   React.useEffect(() => {
     setSelectedUnit(null);
-  }, [selectedFloor]);
+  }, [selectedBuilding]);
 
   // Mock data for available items to connect (in real app, this would come from APIs)
   const availableProjects = [
@@ -109,12 +110,7 @@ export function DesktopMultiColumn({
     { id: 'build_3', name: 'Κεντρικό Κτίριο', subtitle: 'Διαθέσιμο για σύνδεση' },
   ];
 
-  const availableFloors = [
-    { id: 'floor_1', name: 'Ισόγειο', subtitle: 'Διαθέσιμο για σύνδεση' },
-    { id: 'floor_2', name: '1ος Όροφος', subtitle: 'Διαθέσιμο για σύνδεση' },
-    { id: 'floor_3', name: '2ος Όροφος', subtitle: 'Διαθέσιμο για σύνδεση' },
-    { id: 'floor_4', name: 'Υπόγειο', subtitle: 'Διαθέσιμο για σύνδεση' },
-  ];
+  // 🏢 ENTERPRISE: availableFloors αφαιρέθηκε (Επιλογή Α) - Floors δεν είναι navigation level
 
   const availableUnits = [
     { id: 'unit_1', name: 'Διαμέρισμα 1.1', subtitle: 'Διαθέσιμο για σύνδεση' },
@@ -157,9 +153,7 @@ export function DesktopMultiColumn({
     return building.floors.length === 0;
   };
 
-  const canDeleteFloor = (floor: { units: { length: number } }) => {
-    return floor.units.length === 0;
-  };
+  // 🏢 ENTERPRISE: canDeleteFloor αφαιρέθηκε (Επιλογή Α) - Floors δεν είναι navigation level
 
   const showDeleteWarning = (itemType: string, dependentCount: number, dependentType: string) => {
     let action: string;
@@ -299,15 +293,7 @@ export function DesktopMultiColumn({
     }
   };
 
-  const handleDeleteFloor = () => {
-    if (!selectedFloor) return;
-
-    if (canDeleteFloor(selectedFloor)) {
-      // TODO: Implement actual deletion logic
-    } else {
-      showDeleteWarning('όροφο', selectedFloor.units.length, 'μονάδες');
-    }
-  };
+  // 🏢 ENTERPRISE: handleDeleteFloor αφαιρέθηκε (Επιλογή Α) - Floors δεν είναι navigation level
 
   const handleDeleteUnit = () => {
     if (!selectedUnit) return;
@@ -328,9 +314,7 @@ export function DesktopMultiColumn({
     // TODO: Implement actual connection logic
   };
 
-  const handleFloorSelected = (floor: { id: string; name: string }) => {
-    // TODO: Implement actual connection logic
-  };
+  // 🏢 ENTERPRISE: handleFloorSelected αφαιρέθηκε (Επιλογή Α) - Floors δεν είναι navigation level
 
   const handleUnitSelected = (unit: { id: string; name: string }) => {
     // TODO: Implement actual connection logic
@@ -360,6 +344,17 @@ export function DesktopMultiColumn({
       building.name.toLowerCase().includes(searchLower)
     );
   }, [projectBuildings, buildingsSearch]);
+
+  /**
+   * 🏢 ENTERPRISE ARCHITECTURE (Επιλογή Α):
+   * Memoized units για το επιλεγμένο building.
+   * Συλλέγει ΟΛΕΣ τις units από ΟΛΟΥΣ τους ορόφους του building.
+   * Οι όροφοι είναι δομικοί κόμβοι - δεν εμφανίζονται στην πλοήγηση.
+   */
+  const buildingUnits = useMemo(() => {
+    if (!selectedBuilding?.floors) return [];
+    return selectedBuilding.floors.flatMap(floor => floor.units);
+  }, [selectedBuilding]);
 
   return (
     <nav className="hidden md:block" role="navigation" aria-label="Πλοήγηση Ιεραρχίας">
@@ -517,83 +512,36 @@ export function DesktopMultiColumn({
             />
 
             <ul className="space-y-2 max-h-64 overflow-y-auto list-none" role="list">
-              {filteredProjectBuildings.map(building => {
-                const floorsCount = typeof building.floors === 'number' ? building.floors : 0;
-                const hasFloors = floorsCount > 0;
-
-                return (
-                  <li key={building.id}>
-                    <NavigationButton
-                      onClick={() => onBuildingSelect(building.id)}
-                      icon={Building}
-                      title={building.name}
-                      subtitle={`${floorsCount} όροφοι`}
-                      isSelected={selectedBuilding?.id === building.id}
-                      variant="compact"
-                      badgeStatus={!hasFloors ? 'no_projects' : undefined}
-                      badgeText={!hasFloors ? 'Χωρίς ορόφους' : undefined}
-                    />
-                  </li>
-                );
-              })}
+              {/* 🏢 ENTERPRISE: Buildings display without floor count (Επιλογή Α) */}
+              {filteredProjectBuildings.map(building => (
+                <li key={building.id}>
+                  <NavigationButton
+                    onClick={() => onBuildingSelect(building.id)}
+                    icon={Building}
+                    title={building.name}
+                    subtitle="Κτίριο"
+                    isSelected={selectedBuilding?.id === building.id}
+                    variant="compact"
+                  />
+                </li>
+              ))}
             </ul>
           </section>
         )}
 
-        {/* Column 4: Floors */}
+        {/*
+         * 🏢 ENTERPRISE ARCHITECTURE DECISION (Επιλογή Α):
+         * Οι Όροφοι ΔΕΝ εμφανίζονται ως στήλη στην πλοήγηση.
+         * Εμφανίζονται ΜΟΝΟ μέσα στο Building Detail View ως δομικός μηχανισμός ομαδοποίησης.
+         *
+         * Σύμφωνα με REAL_ESTATE_HIERARCHY_DOCUMENTATION.md:
+         * - Floor = ΔΟΜΙΚΟΣ ΚΟΜΒΟΣ (όχι entity πρώτης τάξης)
+         * - Δεν ανήκει στο navigation layer
+         * - Εμφανίζεται μόνο στο Building context
+         */}
+
+        {/* Column 4: Units - 🏢 ENTERPRISE: Απευθείας από Building (skip Floors) */}
         {selectedBuilding && (
-          <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
-                   role="region" aria-label="Όροφοι">
-            <header className="flex items-center gap-2 mb-2">
-              <Users className="h-5 w-5 text-orange-600" />
-              <h3 className="font-semibold text-gray-900 dark:text-foreground">Όροφοι</h3>
-            </header>
-
-            {/* Floors Toolbar */}
-            <NavigationCardToolbar
-              level="floors"
-              searchTerm={floorsSearch}
-              onSearchChange={setFloorsSearch}
-              activeFilters={floorsFilters}
-              onFiltersChange={setFloorsFilters}
-              hasSelectedItems={!!selectedFloor}
-              itemCount={filterData(selectedBuilding.floors, floorsSearch, floorsFilters).length} // 🏢 Count after filtering
-              onNewItem={() => setIsFloorModalOpen(true)}
-              onEditItem={() => {/* TODO: Edit floor */}}
-              onDeleteItem={handleDeleteFloor}
-              onRefresh={() => {/* TODO: Refresh floors */}}
-              onExport={() => {/* TODO: Export floors */}}
-              onSettings={() => {/* TODO: Floors settings */}}
-              onReports={() => {/* TODO: Floors reports */}}
-              onHelp={() => {/* TODO: Floors help */}}
-            />
-
-            <ul className="space-y-2 max-h-64 overflow-y-auto list-none" role="list">
-              {filterData(selectedBuilding.floors, floorsSearch, floorsFilters).map(floor => {
-                // Ελέγχουμε αν ο όροφος έχει μονάδες
-                const hasUnits = floor.units.length > 0;
-
-                return (
-                  <li key={floor.id}>
-                    <NavigationButton
-                      onClick={() => onFloorSelect(floor.id)}
-                      icon={Layers}
-                      title={floor.name}
-                      subtitle={`${floor.units.length} μονάδες`}
-                      isSelected={selectedFloor?.id === floor.id}
-                      variant="compact"
-                      badgeStatus={!hasUnits ? 'no_projects' : undefined}
-                      badgeText={!hasUnits ? 'Χωρίς μονάδες' : undefined}
-                    />
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        )}
-
-        {/* Column 5: Units */}
-        {selectedFloor && (
           <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                    role="region" aria-label="Μονάδες">
             <header className="flex items-center gap-2 mb-2">
@@ -609,7 +557,7 @@ export function DesktopMultiColumn({
               activeFilters={unitsFilters}
               onFiltersChange={setUnitsFilters}
               hasSelectedItems={!!selectedUnit}
-              itemCount={filterData(selectedFloor.units, unitsSearch, unitsFilters).length} // 🏢 Count after filtering
+              itemCount={filterData(buildingUnits, unitsSearch, unitsFilters).length}
               onNewItem={() => setIsUnitModalOpen(true)}
               onEditItem={() => {/* TODO: Edit unit */}}
               onDeleteItem={handleDeleteUnit}
@@ -621,7 +569,7 @@ export function DesktopMultiColumn({
             />
 
             <ul className="space-y-2 max-h-64 overflow-y-auto list-none" role="list" aria-label="Λίστα Μονάδων">
-              {filterData(selectedFloor.units, unitsSearch, unitsFilters).map(unit => (
+              {filterData(buildingUnits, unitsSearch, unitsFilters).map(unit => (
                 <li key={unit.id}>
                   <NavigationButton
                     onClick={() => {
@@ -639,8 +587,8 @@ export function DesktopMultiColumn({
           </section>
         )}
 
-        {/* Column 6: Actions & Extras */}
-        {selectedFloor && (
+        {/* Column 5: Actions & Extras - 🏢 ENTERPRISE: Εξαρτάται από Building (skip Floors) */}
+        {selectedBuilding && (
           <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                    role="region" aria-label="Ενέργειες">
             <header className="flex items-center gap-2 mb-4">
@@ -653,17 +601,17 @@ export function DesktopMultiColumn({
                   onClick={() => onNavigateToPage('properties')}
                   icon={Home}
                   title="Προβολή Μονάδων"
-                  subtitle={`${selectedFloor.units.length} μονάδες`}
+                  subtitle={`${buildingUnits.length} μονάδες`}
                   variant="compact"
                 />
               </li>
 
               <li>
                 <NavigationButton
-                  onClick={() => onNavigateToPage('floorplan')}
-                  icon={Map}
-                  title="Κάτοψη Ορόφου"
-                  subtitle="Διαδραστική προβολή"
+                  onClick={() => onNavigateToPage('buildings')}
+                  icon={Building}
+                  title="Λεπτομέρειες Κτιρίου"
+                  subtitle={selectedBuilding.name}
                   variant="compact"
                 />
               </li>
@@ -680,19 +628,7 @@ export function DesktopMultiColumn({
                 </li>
               )}
 
-              {selectedBuilding && (
-                <li>
-                  <NavigationButton
-                    onClick={() => onNavigateToPage('buildings')}
-                    icon={Building}
-                    title="Λεπτομέρειες Κτιρίου"
-                    subtitle={selectedBuilding.name}
-                    variant="compact"
-                  />
-                </li>
-              )}
-
-              {/* Parking & Storage */}
+              {/* Parking & Storage - Παρακολουθήματα */}
               <li className="pt-3 border-t border-gray-200 dark:border-gray-700">
                 <section>
                   <h4 className="text-xs font-medium text-gray-500 dark:text-muted-foreground mb-2 uppercase tracking-wide">
@@ -750,16 +686,7 @@ export function DesktopMultiColumn({
         itemType="building"
       />
 
-      <SelectItemModal
-        open={isFloorModalOpen}
-        onOpenChange={setIsFloorModalOpen}
-        onItemSelected={handleFloorSelected}
-        items={availableFloors}
-        title="Σύνδεση Ορόφου"
-        description={`Επιλέξτε έναν όροφο για σύνδεση με το κτίριο "${selectedBuilding?.name}".`}
-        searchPlaceholder="Αναζήτηση ορόφου..."
-        itemType="floor"
-      />
+      {/* 🏢 ENTERPRISE: Floor Modal αφαιρέθηκε (Επιλογή Α) - Floors δεν είναι navigation level */}
 
       <SelectItemModal
         open={isUnitModalOpen}
@@ -767,7 +694,7 @@ export function DesktopMultiColumn({
         onItemSelected={handleUnitSelected}
         items={availableUnits}
         title="Σύνδεση Μονάδας"
-        description={`Επιλέξτε μια μονάδα για σύνδεση με τον όροφο "${selectedFloor?.name}".`}
+        description={`Επιλέξτε μια μονάδα για σύνδεση με το κτίριο "${selectedBuilding?.name}".`}
         searchPlaceholder="Αναζήτηση μονάδας..."
         itemType="unit"
       />

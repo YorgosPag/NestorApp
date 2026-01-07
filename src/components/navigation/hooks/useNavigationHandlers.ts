@@ -1,24 +1,32 @@
 /**
  * Navigation Handlers Hook
  * Custom hook for managing all navigation event handlers
+ *
+ * 🏢 ENTERPRISE ARCHITECTURE (Επιλογή Α):
+ * 'floors' αφαιρέθηκε από navigation levels.
+ * Ιεραρχία: Companies → Projects → Buildings → Units → Actions
  */
 
 import { useState } from 'react';
 import { useNavigation } from '../core/NavigationContext';
 
+/** 🏢 ENTERPRISE: Mobile Level type χωρίς 'floors' (Επιλογή Α) */
+type MobileLevel = 'companies' | 'projects' | 'buildings' | 'units' | 'actions' | 'extras';
+
 interface UseNavigationHandlersProps {
-  onMobileLevelChange?: (level: 'companies' | 'projects' | 'buildings' | 'floors' | 'units' | 'actions' | 'extras') => void;
+  onMobileLevelChange?: (level: MobileLevel) => void;
 }
 
 interface UseNavigationHandlersReturn {
   // Mobile navigation
-  mobileLevel: 'companies' | 'projects' | 'buildings' | 'floors' | 'units' | 'actions' | 'extras';
-  setMobileLevel: (level: 'companies' | 'projects' | 'buildings' | 'floors' | 'units' | 'actions' | 'extras') => void;
+  mobileLevel: MobileLevel;
+  setMobileLevel: (level: MobileLevel) => void;
 
   // Navigation handlers
   handleCompanySelect: (companyId: string) => void;
   handleProjectSelect: (projectId: string) => void;
   handleBuildingSelect: (buildingId: string) => void;
+  /** @deprecated 🏢 ENTERPRISE: Floors αφαιρέθηκαν από navigation (Επιλογή Α) */
   handleFloorSelect: (floorId: string) => void;
   handleUnitSelect: (unitId: string) => void;
   handleNavigateToPage: (type: 'properties' | 'projects' | 'buildings' | 'floorplan') => void;
@@ -38,7 +46,7 @@ export function useNavigationHandlers(props: UseNavigationHandlersProps = {}): U
     selectedCompany,
     selectedProject,
     selectedBuilding,
-    selectedFloor,
+    // 🏢 ENTERPRISE: selectedFloor αφαιρέθηκε - Floors δεν είναι navigation level (Επιλογή Α)
     selectCompany,
     selectProject,
     selectBuilding,
@@ -46,11 +54,11 @@ export function useNavigationHandlers(props: UseNavigationHandlersProps = {}): U
     navigateToExistingPages
   } = useNavigation();
 
-  // Mobile navigation level state
-  const [mobileLevel, setMobileLevelState] = useState<'companies' | 'projects' | 'buildings' | 'floors' | 'units' | 'extras'>('companies');
+  // 🏢 ENTERPRISE: Mobile navigation level state χωρίς 'floors' (Επιλογή Α)
+  const [mobileLevel, setMobileLevelState] = useState<MobileLevel>('companies');
 
   // Wrapper για mobile level changes
-  const setMobileLevel = (level: 'companies' | 'projects' | 'buildings' | 'floors' | 'units' | 'extras') => {
+  const setMobileLevel = (level: MobileLevel) => {
     setMobileLevelState(level);
     onMobileLevelChange?.(level);
   };
@@ -69,14 +77,16 @@ export function useNavigationHandlers(props: UseNavigationHandlersProps = {}): U
     if (isMobile) setMobileLevel('buildings');
   };
 
+  // 🏢 ENTERPRISE (Επιλογή Α): Building → Units (skip Floors)
   const handleBuildingSelect = (buildingId: string) => {
     selectBuilding(buildingId);
-    if (isMobile) setMobileLevel('floors');
+    if (isMobile) setMobileLevel('units');
   };
 
+  // 🏢 ENTERPRISE: Deprecated - Floors δεν είναι navigation level
   const handleFloorSelect = (floorId: string) => {
     selectFloor(floorId);
-    if (isMobile) setMobileLevel('units');
+    // No-op for mobile level change - floors removed from navigation
   };
 
   const handleUnitSelect = (unitId: string) => {
@@ -87,7 +97,7 @@ export function useNavigationHandlers(props: UseNavigationHandlersProps = {}): U
     navigateToExistingPages(type);
   };
 
-  // Mobile back navigation
+  // 🏢 ENTERPRISE: Mobile back navigation χωρίς 'floors' (Επιλογή Α)
   const handleMobileBack = () => {
     switch (mobileLevel) {
       case 'projects':
@@ -96,11 +106,9 @@ export function useNavigationHandlers(props: UseNavigationHandlersProps = {}): U
       case 'buildings':
         setMobileLevel('projects');
         break;
-      case 'floors':
-        setMobileLevel('buildings');
-        break;
+      // 🏢 ENTERPRISE: 'floors' case αφαιρέθηκε (Επιλογή Α)
       case 'units':
-        setMobileLevel('floors');
+        setMobileLevel('buildings'); // Back to buildings (skip floors)
         break;
       case 'actions':
         setMobileLevel('units');
@@ -111,14 +119,14 @@ export function useNavigationHandlers(props: UseNavigationHandlersProps = {}): U
     }
   };
 
-  // Get current title for mobile
+  // 🏢 ENTERPRISE: Get current title for mobile χωρίς 'floors' (Επιλογή Α)
   const getMobileTitle = (): string => {
     switch (mobileLevel) {
       case 'companies': return 'Εταιρείες';
       case 'projects': return selectedCompany?.companyName || 'Έργα';
       case 'buildings': return selectedProject?.name || 'Κτίρια';
-      case 'floors': return selectedBuilding?.name || 'Όροφοι';
-      case 'units': return selectedFloor?.name || 'Μονάδες';
+      // 🏢 ENTERPRISE: 'floors' case αφαιρέθηκε (Επιλογή Α)
+      case 'units': return selectedBuilding?.name || 'Μονάδες';
       case 'actions': return 'Ενέργειες';
       case 'extras': return 'Παρκινγκ & Αποθήκες';
     }

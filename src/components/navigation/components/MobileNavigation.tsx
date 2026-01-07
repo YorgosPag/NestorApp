@@ -3,22 +3,28 @@
 /**
  * Mobile Navigation Component
  * Drill-down navigation interface for mobile devices
+ *
+ * 🏢 ENTERPRISE ARCHITECTURE (Επιλογή Α):
+ * Floors αφαιρέθηκαν από navigation - Units συνδέονται απευθείας με Buildings
  */
 
 import React, { useMemo } from 'react';
 import { NavigationButton } from './NavigationButton';
-import { ChevronLeft, Factory, Construction, Building, Layers, Home, Map, Car, Package } from 'lucide-react';
+import { ChevronLeft, Factory, Construction, Building, Home, Map, Car, Package } from 'lucide-react';
+// 🏢 ENTERPRISE: Layers αφαιρέθηκε - Floors δεν εμφανίζονται στην πλοήγηση (Επιλογή Α)
 import { useNavigation } from '../core/NavigationContext';
 import { HOVER_TEXT_EFFECTS } from '../../ui/effects';
 
 interface MobileNavigationProps {
-  mobileLevel: 'companies' | 'projects' | 'buildings' | 'floors' | 'units' | 'actions' | 'extras';
+  /** 🏢 ENTERPRISE: 'floors' αφαιρέθηκε από navigation levels (Επιλογή Α) */
+  mobileLevel: 'companies' | 'projects' | 'buildings' | 'units' | 'actions' | 'extras';
   onBack: () => void;
   getTitle: () => string;
   onCompanySelect: (companyId: string) => void;
   onProjectSelect: (projectId: string) => void;
   onBuildingSelect: (buildingId: string) => void;
-  onFloorSelect: (floorId: string) => void;
+  /** @deprecated 🏢 ENTERPRISE: Floors αφαιρέθηκαν από navigation (Επιλογή Α) */
+  onFloorSelect?: (floorId: string) => void;
   onUnitSelect?: (unitId: string) => void;
   onNavigateToPage: (type: 'properties' | 'projects' | 'buildings' | 'floorplan') => void;
   navigationCompanyIds: string[];
@@ -31,7 +37,8 @@ export function MobileNavigation({
   onCompanySelect,
   onProjectSelect,
   onBuildingSelect,
-  onFloorSelect,
+  // 🏢 ENTERPRISE: onFloorSelect deprecated - Floors δεν είναι navigation level
+  onFloorSelect: _onFloorSelect,
   onUnitSelect,
   onNavigateToPage,
   navigationCompanyIds
@@ -42,7 +49,7 @@ export function MobileNavigation({
     selectedCompany,
     selectedProject,
     selectedBuilding,
-    selectedFloor,
+    // 🏢 ENTERPRISE: selectedFloor αφαιρέθηκε - Floors δεν είναι navigation level (Επιλογή Α)
     projectsLoading,
     // 🏢 ENTERPRISE: Real-time building functions
     getBuildingCount,
@@ -57,6 +64,17 @@ export function MobileNavigation({
     if (!selectedProject) return [];
     return getBuildingsForProject(selectedProject.id);
   }, [selectedProject, getBuildingsForProject]);
+
+  /**
+   * 🏢 ENTERPRISE ARCHITECTURE (Επιλογή Α):
+   * Memoized units για το επιλεγμένο building.
+   * Συλλέγει ΟΛΕΣ τις units από ΟΛΟΥΣ τους ορόφους του building.
+   * Οι όροφοι είναι δομικοί κόμβοι - δεν εμφανίζονται στην πλοήγηση.
+   */
+  const buildingUnits = useMemo(() => {
+    if (!selectedBuilding?.floors) return [];
+    return selectedBuilding.floors.flatMap(floor => floor.units);
+  }, [selectedBuilding]);
 
   return (
     <div className="md:hidden">
@@ -140,54 +158,31 @@ export function MobileNavigation({
           </>
         )}
 
-        {/* Buildings - 🏢 ENTERPRISE: Using memoized real-time data */}
+        {/* Buildings - 🏢 ENTERPRISE: Using memoized real-time data (Επιλογή Α) */}
         {mobileLevel === 'buildings' && selectedProject && (
           <>
-            {projectBuildings.map(building => {
-              const floorsCount = typeof building.floors === 'number' ? building.floors : 0;
-              const hasFloors = floorsCount > 0;
-
-              return (
-                <NavigationButton
-                  key={building.id}
-                  onClick={() => onBuildingSelect(building.id)}
-                  icon={Building}
-                  title={building.name}
-                  subtitle={`${floorsCount} όροφοι`}
-                  badgeStatus={!hasFloors ? 'no_projects' : undefined}
-                  badgeText={!hasFloors ? 'Χωρίς ορόφους' : undefined}
-                />
-              );
-            })}
+            {projectBuildings.map(building => (
+              <NavigationButton
+                key={building.id}
+                onClick={() => onBuildingSelect(building.id)}
+                icon={Building}
+                title={building.name}
+                subtitle="Κτίριο"
+              />
+            ))}
           </>
         )}
 
-        {/* Floors */}
-        {mobileLevel === 'floors' && selectedBuilding && (
-          <>
-            {selectedBuilding.floors.map(floor => {
-              // Ελέγχουμε αν ο όροφος έχει μονάδες
-              const hasUnits = floor.units.length > 0;
+        {/*
+         * 🏢 ENTERPRISE ARCHITECTURE DECISION (Επιλογή Α):
+         * Οι Όροφοι ΔΕΝ εμφανίζονται ως level στην πλοήγηση.
+         * Units συνδέονται απευθείας με Buildings.
+         */}
 
-              return (
-                <NavigationButton
-                  key={floor.id}
-                  onClick={() => onFloorSelect(floor.id)}
-                  icon={Layers}
-                  title={floor.name}
-                  subtitle={`${floor.units.length} μονάδες`}
-                  badgeStatus={!hasUnits ? 'no_projects' : undefined}
-                  badgeText={!hasUnits ? 'Χωρίς μονάδες' : undefined}
-                />
-              );
-            })}
-          </>
-        )}
-
-        {/* Units */}
-        {mobileLevel === 'units' && selectedFloor && (
+        {/* Units - 🏢 ENTERPRISE: Απευθείας από Building (skip Floors) */}
+        {mobileLevel === 'units' && selectedBuilding && (
           <>
-            {selectedFloor.units.map(unit => (
+            {buildingUnits.map(unit => (
               <NavigationButton
                 key={unit.id}
                 onClick={() => onUnitSelect?.(unit.id)}
@@ -199,22 +194,22 @@ export function MobileNavigation({
           </>
         )}
 
-        {/* Actions */}
-        {mobileLevel === 'actions' && selectedFloor && (
-          <div className="space-y-3">
+        {/* Actions - 🏢 ENTERPRISE: Εξαρτάται από Building (skip Floors) */}
+        {mobileLevel === 'actions' && selectedBuilding && (
+          <nav className="space-y-3" aria-label="Ενέργειες Κτιρίου">
             <NavigationButton
               onClick={() => onNavigateToPage('properties')}
               icon={Home}
               title="Προβολή Μονάδων"
-              subtitle={`${selectedFloor.units.length} μονάδες σε αυτόν τον όροφο`}
+              subtitle={`${buildingUnits.length} μονάδες στο κτίριο`}
               variant="compact"
             />
 
             <NavigationButton
-              onClick={() => onNavigateToPage('floorplan')}
-              icon={Map}
-              title="Κάτοψη Ορόφου"
-              subtitle="Προβολή της κάτοψης με όλες τις μονάδες"
+              onClick={() => onNavigateToPage('buildings')}
+              icon={Building}
+              title="Λεπτομέρειες Κτιρίου"
+              subtitle={selectedBuilding.name}
               variant="compact"
             />
 
@@ -227,17 +222,7 @@ export function MobileNavigation({
                 variant="compact"
               />
             )}
-
-            {selectedBuilding && (
-              <NavigationButton
-                onClick={() => onNavigateToPage('buildings')}
-                icon={Building}
-                title="Λεπτομέρειες Κτιρίου"
-                subtitle={selectedBuilding.name}
-                variant="compact"
-              />
-            )}
-          </div>
+          </nav>
         )}
       </div>
     </div>

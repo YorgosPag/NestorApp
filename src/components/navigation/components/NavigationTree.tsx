@@ -3,6 +3,9 @@
 /**
  * Centralized Navigation Tree Component
  * Main navigation interface with hierarchical structure
+ *
+ * 🏢 ENTERPRISE ARCHITECTURE (Επιλογή Α):
+ * Floors αφαιρέθηκαν από navigation - Units συνδέονται απευθείας με Buildings
  */
 import React, { useMemo } from 'react';
 import { Building, Construction, Home, MapPin, Map } from 'lucide-react';
@@ -24,7 +27,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
     projects,
     selectedProject,
     selectedBuilding,
-    selectedFloor,
+    // 🏢 ENTERPRISE: selectedFloor αφαιρέθηκε - Floors δεν είναι navigation level (Επιλογή Α)
     currentLevel,
     loading,
     error,
@@ -32,30 +35,38 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
     selectCompany,
     selectProject,
     selectBuilding,
-    selectFloor,
+    // 🏢 ENTERPRISE: selectFloor αφαιρέθηκε - Floors δεν είναι navigation level (Επιλογή Α)
     navigateToExistingPages,
     // 🏢 ENTERPRISE: Real-time building functions
     getBuildingCount,
     getBuildingsForProject
   } = useNavigation();
 
+  /**
+   * 🏢 ENTERPRISE (Επιλογή Α): Τίτλοι χωρίς 'floors' level
+   */
   const getStepTitle = () => {
     switch (currentLevel) {
       case 'companies': return 'Επιλέξτε Εταιρεία';
       case 'projects': return 'Επιλέξτε Έργο';
       case 'buildings': return 'Επιλέξτε Κτίριο';
-      case 'floors': return 'Επιλέξτε Όροφο';
+      // 🏢 ENTERPRISE: 'floors' case αφαιρέθηκε (Επιλογή Α)
       case 'units': return 'Επιλέξτε Προορισμό';
+      default: return 'Πλοήγηση';
     }
   };
 
+  /**
+   * 🏢 ENTERPRISE (Επιλογή Α): Περιγραφές χωρίς 'floors' level
+   */
   const getStepDescription = () => {
     switch (currentLevel) {
       case 'companies': return 'Επιλέξτε την εταιρεία για να δείτε τα έργα της';
       case 'projects': return 'Επιλέξτε το έργο για να δείτε τα κτίρια';
-      case 'buildings': return 'Επιλέξτε το κτίριο για να δείτε τους ορόφους';
-      case 'floors': return 'Επιλέξτε τον όροφο για να δείτε τις μονάδες';
+      case 'buildings': return 'Επιλέξτε το κτίριο για να δείτε τις μονάδες';
+      // 🏢 ENTERPRISE: 'floors' case αφαιρέθηκε (Επιλογή Α)
       case 'units': return 'Επιλέξτε τον τελικό προορισμό';
+      default: return '';
     }
   };
 
@@ -75,6 +86,17 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
     if (!selectedProject) return [];
     return getBuildingsForProject(selectedProject.id);
   }, [selectedProject, getBuildingsForProject]);
+
+  /**
+   * 🏢 ENTERPRISE ARCHITECTURE (Επιλογή Α):
+   * Memoized units για το επιλεγμένο building.
+   * Συλλέγει ΟΛΕΣ τις units από ΟΛΟΥΣ τους ορόφους του building.
+   * Οι όροφοι είναι δομικοί κόμβοι - δεν εμφανίζονται στην πλοήγηση.
+   */
+  const buildingUnits = useMemo(() => {
+    if (!selectedBuilding?.floors) return [];
+    return selectedBuilding.floors.flatMap(floor => floor.units);
+  }, [selectedBuilding]);
 
   if (loading) {
     return (
@@ -171,65 +193,47 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
                 Δεν βρέθηκαν κτίρια για το επιλεγμένο έργο.
               </div>
             ) : (
-              projectBuildings.map(building => {
-                const floorsCount = typeof building.floors === 'number' ? building.floors : 0;
-                return (
-                  <NavigationButton
-                    key={building.id}
-                    onClick={() => selectBuilding(building.id)}
-                    icon={Home}
-                    title={building.name}
-                    subtitle={`${floorsCount} όροφοι`}
-                    isSelected={selectedBuilding?.id === building.id}
-                  />
-                );
-              })
-            )}
-          </>
-        )}
-
-        {/* Floors */}
-        {currentLevel === 'floors' && selectedBuilding && (
-          <>
-            {selectedBuilding.floors.length === 0 ? (
-              <div className="text-gray-500 dark:text-muted-foreground text-center py-8">
-                Δεν βρέθηκαν όροφοι για το επιλεγμένο κτίριο.
-              </div>
-            ) : (
-              selectedBuilding.floors.map(floor => (
+              /* 🏢 ENTERPRISE: Buildings display without floor count (Επιλογή Α) */
+              projectBuildings.map(building => (
                 <NavigationButton
-                  key={floor.id}
-                  onClick={() => selectFloor(floor.id)}
+                  key={building.id}
+                  onClick={() => selectBuilding(building.id)}
                   icon={Home}
-                  title={floor.name}
-                  subtitle={`${floor.units.length} μονάδες`}
-                  isSelected={selectedFloor?.id === floor.id}
+                  title={building.name}
+                  subtitle="Κτίριο"
+                  isSelected={selectedBuilding?.id === building.id}
                 />
               ))
             )}
           </>
         )}
 
-        {/* Final Destinations */}
-        {currentLevel === 'units' && selectedFloor && (
-          <div className="space-y-3">
-            <div className="text-sm font-medium text-gray-900 dark:text-foreground mb-3">
+        {/*
+         * 🏢 ENTERPRISE ARCHITECTURE DECISION (Επιλογή Α):
+         * Οι Όροφοι ΔΕΝ εμφανίζονται ως level στην πλοήγηση.
+         * Units συνδέονται απευθείας με Buildings.
+         */}
+
+        {/* Final Destinations - 🏢 ENTERPRISE: Εξαρτάται από Building (skip Floors) */}
+        {currentLevel === 'units' && selectedBuilding && (
+          <nav className="space-y-3" aria-label="Τελικοί Προορισμοί">
+            <p className="text-sm font-medium text-gray-900 dark:text-foreground mb-3">
               Μετάβαση σε:
-            </div>
+            </p>
 
             <NavigationButton
               onClick={() => handleNavigateToPage('properties')}
               icon={MapPin}
               title="Προβολή Ακινήτων"
-              subtitle={`${selectedFloor.units.length} μονάδες σε αυτόν τον όροφο`}
+              subtitle={`${buildingUnits.length} μονάδες στο κτίριο`}
               variant="compact"
             />
 
             <NavigationButton
-              onClick={() => handleNavigateToPage('floorplan')}
-              icon={Map}
-              title="Κάτοψη Ορόφου"
-              subtitle="Προβολή της κάτοψης με όλες τις μονάδες"
+              onClick={() => handleNavigateToPage('buildings')}
+              icon={Home}
+              title="Λεπτομέρειες Κτιρίου"
+              subtitle={selectedBuilding.name}
               variant="compact"
             />
 
@@ -242,17 +246,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
                 variant="compact"
               />
             )}
-
-            {selectedBuilding && (
-              <NavigationButton
-                onClick={() => handleNavigateToPage('buildings')}
-                icon={Home}
-                title="Λεπτομέρειες Κτιρίου"
-                subtitle={selectedBuilding.name}
-                variant="compact"
-              />
-            )}
-          </div>
+          </nav>
         )}
       </div>
     </div>

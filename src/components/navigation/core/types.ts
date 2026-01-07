@@ -58,6 +58,10 @@ export interface NavigationState {
   projects: NavigationProject[];
   selectedProject: NavigationProject | null;
   selectedBuilding: NavigationBuilding | null;
+  /**
+   * @deprecated 🏢 ENTERPRISE (Επιλογή Α): Floors αφαιρέθηκαν από navigation.
+   * Παραμένει για backward compatibility - θα αφαιρεθεί σε μελλοντική έκδοση.
+   */
   selectedFloor: NavigationFloor | null;
   currentLevel: NavigationLevel;
   loading: boolean;
@@ -65,7 +69,13 @@ export interface NavigationState {
   error: string | null;
 }
 
-export type NavigationLevel = 'companies' | 'projects' | 'buildings' | 'floors' | 'units';
+/**
+ * 🏢 ENTERPRISE ARCHITECTURE (Επιλογή Α):
+ * 'floors' αφαιρέθηκε από navigation levels.
+ * Οι όροφοι είναι δομικοί κόμβοι - εμφανίζονται μόνο στο Building Detail View.
+ * Ιεραρχία: Companies → Projects → Buildings → Units
+ */
+export type NavigationLevel = 'companies' | 'projects' | 'buildings' | 'units';
 
 export interface NavigationActions {
   loadCompanies: () => Promise<void>;
@@ -73,6 +83,10 @@ export interface NavigationActions {
   loadProjectsForCompany: (companyId: string) => Promise<void>;
   selectProject: (projectId: string) => void;
   selectBuilding: (buildingId: string) => void;
+  /**
+   * @deprecated 🏢 ENTERPRISE (Επιλογή Α): Floors αφαιρέθηκαν από navigation.
+   * Παραμένει για backward compatibility - θα αφαιρεθεί σε μελλοντική έκδοση.
+   */
   selectFloor: (floorId: string) => void;
   navigateToLevel: (level: NavigationLevel) => void;
   reset: () => void;

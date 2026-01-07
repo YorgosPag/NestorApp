@@ -3,9 +3,12 @@
 /**
  * Centralized Navigation Breadcrumb Component
  * Shows current navigation path with clickable levels
+ *
+ * 🏢 ENTERPRISE ARCHITECTURE (Επιλογή Α):
+ * Floors αφαιρέθηκαν από navigation - breadcrumb ends at Buildings
  */
 import React from 'react';
-import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { Building, Construction, Home } from 'lucide-react';
 import { useNavigation } from '../core/NavigationContext';
 import type { BreadcrumbItem } from '../core/types';
@@ -19,10 +22,14 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
     selectedCompany,
     selectedProject,
     selectedBuilding,
-    selectedFloor,
+    // 🏢 ENTERPRISE: selectedFloor αφαιρέθηκε - Floors δεν είναι navigation level (Επιλογή Α)
     navigateToLevel
   } = useNavigation();
 
+  /**
+   * 🏢 ENTERPRISE (Επιλογή Α): Breadcrumb χωρίς floors level
+   * Ιεραρχία: Companies → Projects → Buildings
+   */
   const getBreadcrumbItems = (): BreadcrumbItem[] => {
     const items: BreadcrumbItem[] = [];
 
@@ -56,15 +63,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
       });
     }
 
-    if (selectedFloor) {
-      items.push({
-        id: selectedFloor.id,
-        label: selectedFloor.name,
-        icon: Home,
-        level: 'floors',
-        onClick: () => navigateToLevel('floors')
-      });
-    }
+    // 🏢 ENTERPRISE: floors breadcrumb αφαιρέθηκε (Επιλογή Α)
 
     return items;
   };
@@ -76,12 +75,12 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
   }
 
   return (
-    <div className={`flex items-center space-x-2 text-sm ${className || ''}`}>
+    <nav className={`flex items-center space-x-2 text-sm ${className || ''}`} aria-label="Breadcrumb">
       {breadcrumbItems.map((item, index) => (
         <React.Fragment key={item.id}>
           <button
             onClick={item.onClick}
-            className={`text-blue-400 flex items-center gap-1 ${INTERACTIVE_PATTERNS.LINK_BLUE_SUBTLE}`}
+            className={`text-blue-400 flex items-center gap-1 ${HOVER_TEXT_EFFECTS.BLUE}`}
             title={`Μετάβαση σε ${item.label}`}
           >
             <span>
@@ -98,7 +97,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
           )}
         </React.Fragment>
       ))}
-    </div>
+    </nav>
   );
 }
 

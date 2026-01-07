@@ -98,10 +98,11 @@ export function useNavigationActions(): UseNavigationActionsReturn {
 
     const building = state.selectedProject.buildings.find(b => b.id === buildingId);
 
+    // 🏢 ENTERPRISE (Επιλογή Α): Building → Units (skip Floors)
     setState({
       selectedBuilding: building || null,
       selectedFloor: null,
-      currentLevel: 'floors'
+      currentLevel: 'units'
     });
 
   };

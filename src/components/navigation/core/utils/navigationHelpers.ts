@@ -76,9 +76,7 @@ export function updateNavigationLevel(
       updates.selectedBuilding = null;
       updates.selectedFloor = null;
       break;
-    case 'floors':
-      updates.selectedFloor = null;
-      break;
+    // 🏢 ENTERPRISE: 'floors' case αφαιρέθηκε (Επιλογή Α)
     // 'units' level doesn't clear anything
   }
 
