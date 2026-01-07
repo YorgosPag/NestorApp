@@ -5,7 +5,7 @@
  * Drill-down navigation interface for mobile devices
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { NavigationButton } from './NavigationButton';
 import { ChevronLeft, Factory, Construction, Building, Layers, Home, Map, Car, Package } from 'lucide-react';
 import { useNavigation } from '../core/NavigationContext';
@@ -48,6 +48,15 @@ export function MobileNavigation({
     getBuildingCount,
     getBuildingsForProject
   } = useNavigation();
+
+  // ==========================================================================
+  // 🏢 ENTERPRISE: Memoized Real-time Buildings Data
+  // ==========================================================================
+
+  const projectBuildings = useMemo(() => {
+    if (!selectedProject) return [];
+    return getBuildingsForProject(selectedProject.id);
+  }, [selectedProject, getBuildingsForProject]);
 
   return (
     <div className="md:hidden">
@@ -131,11 +140,10 @@ export function MobileNavigation({
           </>
         )}
 
-        {/* Buildings - 🏢 ENTERPRISE: Using real-time data */}
+        {/* Buildings - 🏢 ENTERPRISE: Using memoized real-time data */}
         {mobileLevel === 'buildings' && selectedProject && (
           <>
-            {getBuildingsForProject(selectedProject.id).map(building => {
-              // 🏢 ENTERPRISE: floors is a number from real-time
+            {projectBuildings.map(building => {
               const floorsCount = typeof building.floors === 'number' ? building.floors : 0;
               const hasFloors = floorsCount > 0;
 

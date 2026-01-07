@@ -146,7 +146,10 @@
       "Bash(dir /b \"C:\\\\Nestor_Pagonis\\\\public\\\\*.mjs\")",
       "Bash(git commit -m \"$\\(cat <<''EOF''\n🔒 ENTERPRISE SAFETY CHECKPOINT: PDF Background System \\(20 files\\)\n\n- NEW: Complete PDF Background system for DXF Viewer\n  - PdfBackgroundCanvas.tsx - Canvas rendering component\n  - PdfControlsPanel.tsx - Control panel UI\n  - usePdfBackground.ts - React hook\n  - PdfRenderer.ts - PDF rendering service\n  - pdfBackgroundStore.ts - Zustand store\n  - pdf.types.ts - TypeScript types\n- Added PDF.js library \\(pdf.min.mjs, pdf.worker.min.mjs\\)\n- Updated next.config.js for PDF support\n- Integrated into DxfViewerContent and CanvasSection\n- New toolbar definitions for PDF tools\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit -m \"$\\(cat <<''EOF''\n🔒 ENTERPRISE SAFETY CHECKPOINT: PDF Background Canvas Fix \\(3 files\\)\n\n- Updated PdfBackgroundCanvas.tsx with minor fixes\n- Updated BACKUP_SUMMARY.json\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(git status:*)"
+      "Bash(git status:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\n🔒 ENTERPRISE SAFETY CHECKPOINT: Real-time Navigation & PDF Updates \\(5 files\\)\n\nNavigation Components:\n- DesktopMultiColumn.tsx: Integrated getBuildingCount & getBuildingsForProject real-time functions\n- MobileNavigation.tsx: Real-time building counts for mobile view\n- NavigationTree.tsx: Real-time building data in tree navigation\n\nPDF Libraries:\n- Updated pdf.min.mjs and pdf.worker.min.mjs\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\n📋 Update BACKUP_SUMMARY.json for latest checkpoint\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []

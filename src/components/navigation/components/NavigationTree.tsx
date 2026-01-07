@@ -4,7 +4,7 @@
  * Centralized Navigation Tree Component
  * Main navigation interface with hierarchical structure
  */
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Building, Construction, Home, MapPin, Map } from 'lucide-react';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
@@ -66,6 +66,15 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
       navigateToExistingPages(type);
     }
   };
+
+  // ==========================================================================
+  // 🏢 ENTERPRISE: Memoized Real-time Buildings Data
+  // ==========================================================================
+
+  const projectBuildings = useMemo(() => {
+    if (!selectedProject) return [];
+    return getBuildingsForProject(selectedProject.id);
+  }, [selectedProject, getBuildingsForProject]);
 
   if (loading) {
     return (
@@ -154,19 +163,15 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
           </>
         )}
 
-        {/* Buildings - 🏢 ENTERPRISE: Using real-time data */}
+        {/* Buildings - 🏢 ENTERPRISE: Using memoized real-time data */}
         {currentLevel === 'buildings' && selectedProject && (
           <>
-            {(() => {
-              const realtimeBuildings = getBuildingsForProject(selectedProject.id);
-              if (realtimeBuildings.length === 0) {
-                return (
-                  <div className="text-gray-500 dark:text-muted-foreground text-center py-8">
-                    Δεν βρέθηκαν κτίρια για το επιλεγμένο έργο.
-                  </div>
-                );
-              }
-              return realtimeBuildings.map(building => {
+            {projectBuildings.length === 0 ? (
+              <div className="text-gray-500 dark:text-muted-foreground text-center py-8">
+                Δεν βρέθηκαν κτίρια για το επιλεγμένο έργο.
+              </div>
+            ) : (
+              projectBuildings.map(building => {
                 const floorsCount = typeof building.floors === 'number' ? building.floors : 0;
                 return (
                   <NavigationButton
@@ -178,8 +183,8 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
                     isSelected={selectedBuilding?.id === building.id}
                   />
                 );
-              });
-            })()}
+              })
+            )}
           </>
         )}
 
