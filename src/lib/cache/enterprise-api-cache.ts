@@ -40,6 +40,7 @@ export class EnterpriseAPICache {
     projects: 3 * 60 * 1000,         // 3 minutes για projects
     buildings: 2 * 60 * 1000,        // 2 minutes για buildings
     storages: 2 * 60 * 1000,         // 2 minutes για storages
+    parking: 2 * 60 * 1000,          // 🅿️ 2 minutes για parking (parallel to storages per local_4.log)
     floors: 1 * 60 * 1000,           // 1 minute για floors
     units: 30 * 1000,                // 30 seconds για units
     navigation: 10 * 60 * 1000,      // 10 minutes για navigation
@@ -187,6 +188,7 @@ export class EnterpriseAPICache {
     if (key.includes('projects')) return this.TTL_CONFIG.projects;
     if (key.includes('buildings')) return this.TTL_CONFIG.buildings;
     if (key.includes('storages')) return this.TTL_CONFIG.storages;
+    if (key.includes('parking')) return this.TTL_CONFIG.parking;  // 🅿️ ENTERPRISE: Parking spaces
     if (key.includes('floors')) return this.TTL_CONFIG.floors;
     if (key.includes('units')) return this.TTL_CONFIG.units;
     if (key.includes('navigation')) return this.TTL_CONFIG.navigation;
@@ -277,6 +279,29 @@ export class CacheHelpers {
   }
 
   /**
+   * 🅿️ Cache parking για specific building
+   * ENTERPRISE: Parking is a parallel category to Units/Storage within Building context (local_4.log)
+   */
+  static cacheParkingByBuilding(buildingId: string, parking: unknown[]): void {
+    this.cache.set(`api:parking:building:${buildingId}`, parking);
+  }
+
+  static getCachedParkingByBuilding(buildingId: string): unknown[] | null {
+    return this.cache.get(`api:parking:building:${buildingId}`);
+  }
+
+  /**
+   * 🅿️ Cache all parking data
+   */
+  static cacheAllParking(parking: unknown[]): void {
+    this.cache.set('api:parking:all', parking);
+  }
+
+  static getCachedAllParking(): unknown[] | null {
+    return this.cache.get('api:parking:all');
+  }
+
+  /**
    * 🔥 Smart cache invalidation
    */
   static invalidateCompanyData(companyId: string): void {
@@ -288,6 +313,16 @@ export class CacheHelpers {
     this.cache.invalidatePattern(`project:${projectId}`);
     this.cache.invalidatePattern(`buildings:project:${projectId}`);
     this.cache.invalidatePattern(`storages:project:${projectId}`);
+    this.cache.invalidatePattern(`parking:project:${projectId}`);  // 🅿️ ENTERPRISE: Parking cache
+  }
+
+  /**
+   * 🅿️ Invalidate building data including parking
+   * ENTERPRISE: Parking belongs to Building context (local_4.log architecture)
+   */
+  static invalidateBuildingData(buildingId: string): void {
+    this.cache.invalidatePattern(`building:${buildingId}`);
+    this.cache.invalidatePattern(`parking:building:${buildingId}`);
   }
 
   /**

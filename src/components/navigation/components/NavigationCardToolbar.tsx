@@ -14,7 +14,11 @@ import { NAVIGATION_ENTITIES, NAVIGATION_ACTIONS } from '../config';
 // 🏢 ENTERPRISE: Centralized labels - ZERO HARDCODED VALUES
 import { getNavigationFilterCategories } from '@/subapps/dxf-viewer/config/modal-select/core/labels/navigation';
 
-type NavigationLevel = 'companies' | 'projects' | 'buildings' | 'floors' | 'units';
+/**
+ * 🏢 ENTERPRISE: Extended navigation levels
+ * Includes storage and parking as parallel categories to units (per local_4.log architecture)
+ */
+type NavigationLevel = 'companies' | 'projects' | 'buildings' | 'floors' | 'units' | 'storage' | 'parking';
 
 // 🏢 ENTERPRISE: Helper functions using centralized config - ZERO hardcoded values
 
@@ -28,6 +32,8 @@ const getLevelTitle = (level: NavigationLevel): string => {
     case 'buildings': return NAVIGATION_ENTITIES.building.pluralLabel;
     case 'floors': return NAVIGATION_ENTITIES.floor.pluralLabel;
     case 'units': return NAVIGATION_ENTITIES.unit.pluralLabel;
+    case 'storage': return NAVIGATION_ENTITIES.storage.pluralLabel;
+    case 'parking': return NAVIGATION_ENTITIES.parking.pluralLabel;
     default: return '';
   }
 };
@@ -43,6 +49,8 @@ const getLevelIcon = (level: NavigationLevel): React.ComponentType<{ className?:
     case 'buildings': return NAVIGATION_ENTITIES.building.icon;
     case 'floors': return NAVIGATION_ENTITIES.floor.icon;
     case 'units': return NAVIGATION_ENTITIES.unit.icon;
+    case 'storage': return NAVIGATION_ENTITIES.storage.icon;
+    case 'parking': return NAVIGATION_ENTITIES.parking.icon;
     default: return NAVIGATION_ENTITIES.building.icon;
   }
 };
@@ -60,6 +68,8 @@ const getDeleteIcon = (level: NavigationLevel): React.ComponentType<{ className?
     case 'buildings': return NAVIGATION_ACTIONS.unlink.icon;
     case 'floors': return NAVIGATION_ACTIONS.unlink.icon;
     case 'units': return NAVIGATION_ACTIONS.unlink.icon;
+    case 'storage': return NAVIGATION_ACTIONS.unlink.icon;
+    case 'parking': return NAVIGATION_ACTIONS.unlink.icon;
     default: return NAVIGATION_ACTIONS.delete.icon;
   }
 };
@@ -77,6 +87,8 @@ const getNewItemIcon = (level: NavigationLevel): React.ComponentType<{ className
     case 'buildings': return NAVIGATION_ACTIONS.link.icon;
     case 'floors': return NAVIGATION_ACTIONS.link.icon;
     case 'units': return NAVIGATION_ACTIONS.link.icon;
+    case 'storage': return NAVIGATION_ACTIONS.link.icon;
+    case 'parking': return NAVIGATION_ACTIONS.link.icon;
     default: return NAVIGATION_ACTIONS.add.icon;
   }
 };
@@ -92,6 +104,8 @@ const getLevelIconColor = (level: NavigationLevel): string => {
     case 'buildings': return NAVIGATION_ENTITIES.building.color;
     case 'floors': return NAVIGATION_ENTITIES.floor.color;
     case 'units': return NAVIGATION_ENTITIES.unit.color;
+    case 'storage': return NAVIGATION_ENTITIES.storage.color;
+    case 'parking': return NAVIGATION_ENTITIES.parking.color;
     default: return NAVIGATION_ENTITIES.company.color;
   }
 };
@@ -405,6 +419,111 @@ const getToolbarConfig = (level: NavigationLevel): CompactToolbarConfig => {
           { field: 'name', ascLabel: 'Όνομα (Α-Ω)', descLabel: 'Όνομα (Ω-Α)' },
           { field: 'area', ascLabel: 'Εμβαδόν (Μικρό-Μεγάλο)', descLabel: 'Εμβαδόν (Μεγάλο-Μικρό)' },
           { field: 'rooms', ascLabel: 'Δωμάτια (Λίγα-Πολλά)', descLabel: 'Δωμάτια (Πολλά-Λίγα)' }
+        ],
+        availableActions: {
+          newItem: true,
+          editItem: true,
+          deleteItems: true,
+          filters: true,
+          refresh: true,
+          export: true,
+          sorting: true,
+          reports: true,
+          help: true
+        }
+      };
+
+    // 🏢 ENTERPRISE: Storage configuration (parallel category to units per local_4.log)
+    case 'storage':
+      return {
+        searchPlaceholder: 'Αναζήτηση αποθήκης...',
+        ...baseConfig,
+        tooltips: {
+          ...baseConfig.tooltips,
+          newItem: 'Σύνδεση αποθήκης με επιλεγμένο κτίριο',
+          editItem: 'Επεξεργασία αποθήκης',
+          deleteItems: 'Αποσύνδεση αποθήκης'
+        },
+        filterCategories: [
+          {
+            id: 'type',
+            label: 'Τύπος Αποθήκης',
+            options: [
+              { value: 'basement', label: 'Υπόγεια' },
+              { value: 'ground', label: 'Ισόγεια' },
+              { value: 'external', label: 'Εξωτερική' }
+            ]
+          },
+          {
+            id: 'status',
+            label: 'Κατάσταση',
+            options: [
+              { value: 'available', label: 'Διαθέσιμη' },
+              { value: 'occupied', label: 'Κατειλημμένη' },
+              { value: 'reserved', label: 'Κρατημένη' }
+            ]
+          }
+        ],
+        sortOptions: [
+          { field: 'name', ascLabel: 'Όνομα (Α-Ω)', descLabel: 'Όνομα (Ω-Α)' },
+          { field: 'area', ascLabel: 'Εμβαδόν (Μικρό-Μεγάλο)', descLabel: 'Εμβαδόν (Μεγάλο-Μικρό)' }
+        ],
+        availableActions: {
+          newItem: true,
+          editItem: true,
+          deleteItems: true,
+          filters: true,
+          refresh: true,
+          export: true,
+          sorting: true,
+          reports: true,
+          help: true
+        }
+      };
+
+    // 🏢 ENTERPRISE: Parking configuration (parallel category to units per local_4.log)
+    case 'parking':
+      return {
+        searchPlaceholder: 'Αναζήτηση θέσης στάθμευσης...',
+        ...baseConfig,
+        tooltips: {
+          ...baseConfig.tooltips,
+          newItem: 'Σύνδεση θέσης στάθμευσης με επιλεγμένο κτίριο',
+          editItem: 'Επεξεργασία θέσης στάθμευσης',
+          deleteItems: 'Αποσύνδεση θέσης στάθμευσης'
+        },
+        filterCategories: [
+          {
+            id: 'type',
+            label: 'Τύπος Θέσης',
+            options: [
+              { value: 'standard', label: 'Κανονική' },
+              { value: 'disabled', label: 'ΑΜΕΑ' },
+              { value: 'electric', label: 'Ηλεκτρικά' }
+            ]
+          },
+          {
+            id: 'location',
+            label: 'Τοποθεσία',
+            options: [
+              { value: 'ground', label: 'Ισόγειο' },
+              { value: 'basement', label: 'Υπόγειο' },
+              { value: 'pilotis', label: 'Πυλωτή' }
+            ]
+          },
+          {
+            id: 'status',
+            label: 'Κατάσταση',
+            options: [
+              { value: 'available', label: 'Διαθέσιμη' },
+              { value: 'occupied', label: 'Κατειλημμένη' },
+              { value: 'reserved', label: 'Κρατημένη' }
+            ]
+          }
+        ],
+        sortOptions: [
+          { field: 'number', ascLabel: 'Αριθμός (Α-Ω)', descLabel: 'Αριθμός (Ω-Α)' },
+          { field: 'location', ascLabel: 'Τοποθεσία (Α-Ω)', descLabel: 'Τοποθεσία (Ω-Α)' }
         ],
         availableActions: {
           newItem: true,

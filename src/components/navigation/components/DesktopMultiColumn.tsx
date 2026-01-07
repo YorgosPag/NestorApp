@@ -10,9 +10,15 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { NavigationButton } from './NavigationButton';
 import { NavigationCardToolbar } from './NavigationCardToolbar';
 import { SelectItemModal } from '../dialogs/SelectItemModal';
+// 🏢 ENTERPRISE: Building spaces tabs for Units/Storage/Parking (per local_4.log architecture)
+import { BuildingSpacesTabs, type StorageUnit, type SelectedBuildingSpace } from './BuildingSpacesTabs';
 // 🏢 ENTERPRISE: Native CSS scroll with data-navigation-scroll="true" (see globals.css)
 // 🏢 ENTERPRISE: Icons/Colors από centralized config - ZERO hardcoded values
 import { NAVIGATION_ENTITIES, NAVIGATION_ACTIONS } from '../config';
+// 🏢 ENTERPRISE: Real data hooks for Firestore (ZERO mock data per CLAUDE.md)
+import { useFirestoreStorages } from '@/hooks/useFirestoreStorages';
+import { useFirestoreParkingSpots } from '@/hooks/useFirestoreParkingSpots';
+import type { NavigationUnit, NavigationParkingSpot } from '../core/types';
 // 🏢 ENTERPRISE: Layers αφαιρέθηκε - Floors δεν εμφανίζονται στην πλοήγηση (Επιλογή Α)
 import { useNavigation } from '../core/NavigationContext';
 // 🏢 ENTERPRISE: Centralized Entity Linking Service (ZERO inline Firestore calls)
@@ -72,6 +78,19 @@ export function DesktopMultiColumn({
 
   const { warning } = useNotifications();
 
+  // ==========================================================================
+  // 🏢 ENTERPRISE: Real Firestore Data Hooks (ZERO mock data per CLAUDE.md)
+  // ==========================================================================
+
+  // 🅿️ Parking spots για επιλεγμένο building (per local_4.log architecture)
+  const { parkingSpots, loading: parkingLoading } = useFirestoreParkingSpots({
+    buildingId: selectedBuilding?.id,
+    autoFetch: !!selectedBuilding
+  });
+
+  // 📦 Storages - loaded globally, filtered by building
+  const { storages, loading: storagesLoading } = useFirestoreStorages();
+
   // 🏢 ENTERPRISE: Action icons from centralized config - ZERO hardcoded values
   const ActionsIcon = NAVIGATION_ACTIONS.actions.icon;
   const DeleteIcon = NAVIGATION_ACTIONS.delete.icon;
@@ -84,9 +103,9 @@ export function DesktopMultiColumn({
   const [projectsFilters, setProjectsFilters] = useState<string[]>([]);
   const [buildingsSearch, setBuildingsSearch] = useState('');
   const [buildingsFilters, setBuildingsFilters] = useState<string[]>([]);
-  // 🏢 ENTERPRISE: Floors αφαιρέθηκαν από navigation (Επιλογή Α)
-  const [unitsSearch, setUnitsSearch] = useState('');
-  const [unitsFilters, setUnitsFilters] = useState<string[]>([]);
+  // 🏢 ENTERPRISE: Units search/filters αφαιρέθηκαν - τώρα διαχειρίζονται από BuildingSpacesTabs
+  // 🏢 ENTERPRISE (local_4.log): Selected building space (units/storage/parking - ισότιμες κατηγορίες)
+  const [selectedBuildingSpace, setSelectedBuildingSpace] = useState<SelectedBuildingSpace | null>(null);
 
   // 🏢 ENTERPRISE CONFIRMATION DIALOG STATE
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
@@ -567,6 +586,60 @@ export function DesktopMultiColumn({
     return [...floorUnits, ...directUnits];
   }, [selectedBuilding]);
 
+  /**
+   * 🏢 ENTERPRISE (local_4.log): Memoized storages filtered by building
+   * Storages are parallel category to Units within Building context
+   */
+  const buildingStorages = useMemo((): StorageUnit[] => {
+    if (!selectedBuilding || !storages) return [];
+
+    // TODO: Filter storages by buildingId when API supports it
+    // For now, return all storages (will need buildingId field in storage_units collection)
+    return storages.map(storage => ({
+      id: storage.id,
+      name: storage.name,
+      type: storage.type as 'basement' | 'ground' | 'external' | undefined,
+      area: storage.area,
+      status: storage.status as StorageUnit['status']
+    }));
+  }, [selectedBuilding, storages]);
+
+  /**
+   * 🏢 ENTERPRISE (local_4.log): Memoized parking spots (already filtered by building via hook)
+   * Parking is parallel category to Units within Building context
+   */
+  const buildingParkingSpots = useMemo((): NavigationParkingSpot[] => {
+    if (!selectedBuilding || !parkingSpots) return [];
+
+    return parkingSpots.map(spot => ({
+      id: spot.id,
+      number: spot.number,
+      type: (spot.type || 'standard') as NavigationParkingSpot['type'],
+      status: (spot.status || 'available') as 'owner' | 'sold' | 'forRent' | 'forSale' | 'reserved',
+      location: (spot.location || 'ground') as NavigationParkingSpot['location']
+    }));
+  }, [selectedBuilding, parkingSpots]);
+
+  // ==========================================================================
+  // 🏢 ENTERPRISE: Handlers for BuildingSpacesTabs (per local_4.log architecture)
+  // ==========================================================================
+
+  const handleUnitSelectFromTabs = useCallback((unit: NavigationUnit) => {
+    // 🏢 ENTERPRISE: Use centralized selectUnit for breadcrumb display
+    selectUnit({ id: unit.id, name: unit.name, type: unit.type });
+    setSelectedBuildingSpace({ id: unit.id, name: unit.name, type: 'units' });
+  }, [selectUnit]);
+
+  const handleStorageSelectFromTabs = useCallback((storage: StorageUnit) => {
+    setSelectedBuildingSpace({ id: storage.id, name: storage.name, type: 'storage' });
+    // TODO: Add storage to breadcrumb when supported
+  }, []);
+
+  const handleParkingSelectFromTabs = useCallback((parking: NavigationParkingSpot) => {
+    setSelectedBuildingSpace({ id: parking.id, name: `Θέση ${parking.number}`, type: 'parking' });
+    // TODO: Add parking to breadcrumb when supported
+  }, []);
+
   return (
     <nav className="hidden md:block" role="navigation" aria-label="Πλοήγηση Ιεραρχίας">
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-4">
@@ -778,59 +851,37 @@ export function DesktopMultiColumn({
          * - Εμφανίζεται μόνο στο Building context
          */}
 
-        {/* Column 4: Units - 🏢 ENTERPRISE: Απευθείας από Building (skip Floors) */}
+        {/*
+         * 🏢 ENTERPRISE ARCHITECTURE (local_4.log):
+         * Column 4: Building Spaces - Units/Storage/Parking ως παράλληλες κατηγορίες
+         *
+         * ❌ ΟΧΙ: Parking/Storage ως "παρακολουθήματα" ή children των Units
+         * ✅ ΝΑΙ: Parking/Storage/Units ως ισότιμες παράλληλες κατηγορίες στο Building context
+         *
+         * Χρησιμοποιεί BuildingSpacesTabs component με tabs για:
+         * - Μονάδες (Units)
+         * - Αποθήκες (Storage)
+         * - Θέσεις Στάθμευσης (Parking)
+         */}
         {selectedBuilding && (
-          <section className="bg-white dark:bg-card border border-border rounded-lg p-3 overflow-hidden"
-                   role="region" aria-label="Μονάδες">
-            <header className="flex items-center gap-2 mb-2">
-              <NAVIGATION_ENTITIES.unit.icon className={`h-5 w-5 ${NAVIGATION_ENTITIES.unit.color}`} />
-              <h3 className="font-semibold text-gray-900 dark:text-foreground">{NAVIGATION_ENTITIES.unit.pluralLabel}</h3>
-            </header>
-
-            {/* Units Toolbar */}
-            <NavigationCardToolbar
-              level="units"
-              searchTerm={unitsSearch}
-              onSearchChange={setUnitsSearch}
-              activeFilters={unitsFilters}
-              onFiltersChange={setUnitsFilters}
-              hasSelectedItems={!!selectedUnit}
-              itemCount={filterData(buildingUnits, unitsSearch, unitsFilters).length}
-              onNewItem={() => setIsUnitModalOpen(true)}
-              onEditItem={() => {/* TODO: Edit unit */}}
-              onDeleteItem={handleDeleteUnit}
-              onRefresh={() => {/* TODO: Refresh units */}}
-              onExport={() => {/* TODO: Export units */}}
-              onSettings={() => {/* TODO: Units settings */}}
-              onReports={() => {/* TODO: Units reports */}}
-              onHelp={() => {/* TODO: Units help */}}
-            />
-
-            {/* 🏢 ENTERPRISE: Native scroll with CSS-styled scrollbar */}
-            <ul
-              className="space-y-2 list-none max-h-64 pr-2 overflow-y-auto"
-              role="list"
-              aria-label="Λίστα Μονάδων"
-              data-navigation-scroll="true"
-            >
-              {filterData(buildingUnits, unitsSearch, unitsFilters).map(unit => (
-                <li key={unit.id}>
-                  <NavigationButton
-                    onClick={() => {
-                      // 🏢 ENTERPRISE: Use centralized selectUnit for breadcrumb display
-                      selectUnit({ id: unit.id, name: unit.name, type: unit.type });
-                    }}
-                    icon={NAVIGATION_ENTITIES.unit.icon}
-                    iconColor={NAVIGATION_ENTITIES.unit.color}
-                    title={unit.name}
-                    subtitle={unit.type || 'Μονάδα'}
-                    isSelected={selectedUnit?.id === unit.id}
-                    variant="compact"
-                  />
-                </li>
-              ))}
-            </ul>
-          </section>
+          <BuildingSpacesTabs
+            units={buildingUnits}
+            storages={buildingStorages}
+            parkingSpots={buildingParkingSpots}
+            selectedItem={selectedBuildingSpace}
+            onUnitSelect={handleUnitSelectFromTabs}
+            onStorageSelect={handleStorageSelectFromTabs}
+            onParkingSelect={handleParkingSelectFromTabs}
+            onAddItem={(tab) => {
+              if (tab === 'units') setIsUnitModalOpen(true);
+              // TODO: Add modals for storage and parking
+            }}
+            onUnlinkItem={(tab) => {
+              if (tab === 'units') handleDeleteUnit();
+              // TODO: Add unlink handlers for storage and parking
+            }}
+            defaultTab="units"
+          />
         )}
 
         {/* Column 5: Actions & Extras - 🏢 ENTERPRISE: Εξαρτάται από Building (skip Floors) */}
@@ -877,37 +928,11 @@ export function DesktopMultiColumn({
                 </li>
               )}
 
-              {/* Parking & Storage - Παρακολουθήματα */}
-              <li className="pt-3 border-t border-border">
-                <section>
-                  <h4 className="text-xs font-medium text-gray-500 dark:text-muted-foreground mb-2 uppercase tracking-wide">
-                    Παρκινγκ & Αποθήκες
-                  </h4>
-                  <ul className="space-y-2 list-none" role="list" aria-label="Παρκινγκ & Αποθήκες">
-                    <li>
-                      <NavigationButton
-                        onClick={() => {/* TODO: Parking spots */}}
-                        icon={NAVIGATION_ENTITIES.parking.icon}
-                        iconColor={NAVIGATION_ENTITIES.parking.color}
-                        title="Θέσεις Στάθμευσης"
-                        subtitle="Διαθέσιμες θέσεις"
-                        variant="compact"
-                      />
-                    </li>
-
-                    <li>
-                      <NavigationButton
-                        onClick={() => {/* TODO: Storage units */}}
-                        icon={NAVIGATION_ENTITIES.storage.icon}
-                        iconColor={NAVIGATION_ENTITIES.storage.color}
-                        title="Αποθήκες"
-                        subtitle="Αποθηκευτικοί χώροι"
-                        variant="compact"
-                      />
-                    </li>
-                  </ul>
-                </section>
-              </li>
+              {/*
+               * 🏢 ENTERPRISE (local_4.log):
+               * Parking & Storage αφαιρέθηκαν από εδώ - τώρα εμφανίζονται στο BuildingSpacesTabs
+               * ως ισότιμες παράλληλες κατηγορίες με τα Units
+               */}
             </ul>
           </section>
         )}

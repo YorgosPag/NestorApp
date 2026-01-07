@@ -29,6 +29,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   BUILDING: 'bldg',
   UNIT: 'unit',
   STORAGE: 'stor',
+  PARKING: 'park',  // 🏢 ENTERPRISE: Parking spots (parallel category to units per local_4.log)
   CONTACT: 'cont',
   FLOOR: 'flr',
   DOCUMENT: 'doc',
@@ -196,6 +197,15 @@ export class EnterpriseIdService {
   }
 
   /**
+   * 🅿️ Generate Parking ID
+   * Format: park_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   * 🏢 ENTERPRISE: Parallel category to units (per local_4.log architecture)
+   */
+  generateParkingId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.PARKING).id;
+  }
+
+  /**
    * 📞 Generate Contact ID
    * Format: cont_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
    */
@@ -326,6 +336,7 @@ export const generateProjectId = () => enterpriseIdService.generateProjectId();
 export const generateBuildingId = () => enterpriseIdService.generateBuildingId();
 export const generateUnitId = () => enterpriseIdService.generateUnitId();
 export const generateStorageId = () => enterpriseIdService.generateStorageId();
+export const generateParkingId = () => enterpriseIdService.generateParkingId();  // 🏢 ENTERPRISE: Parking spots
 export const generateContactId = () => enterpriseIdService.generateContactId();
 export const generateFloorId = () => enterpriseIdService.generateFloorId();
 export const generateDocumentId = () => enterpriseIdService.generateDocumentId();
