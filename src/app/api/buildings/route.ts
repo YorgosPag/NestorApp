@@ -53,9 +53,11 @@ export async function GET(request: NextRequest) {
 
     const snapshot = await getDocs(buildingsQuery);
 
+    // 🏢 ENTERPRISE: Ensure Firestore document ID is preserved
+    // The spread must come BEFORE id to avoid data.id overriding doc.id
     const buildings = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
+      ...doc.data(),
+      id: doc.id,  // ✅ Firestore document ID (always last to prevent override)
     }));
 
     // 💾 ENTERPRISE CACHING: Store in cache for future requests (only for all buildings)

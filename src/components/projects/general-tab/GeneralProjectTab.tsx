@@ -18,6 +18,7 @@ import { useProjectStats } from './hooks/useProjectStats';
 import { useAutosave } from './hooks/useAutosave';
 import { StatCard } from './parts/StatCard';
 import { ProjectCustomersTable } from './parts/ProjectCustomersTable';
+import { ProjectBuildingsCard } from './parts/ProjectBuildingsCard';
 import type { GeneralProjectTabProps } from './types';
 
 export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
@@ -149,6 +150,8 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
             setData={setProjectData}
             isEditing={isEditing}
           />
+          {/* 🏢 ENTERPRISE: Κτίρια που ανήκουν στο έργο */}
+          <ProjectBuildingsCard projectId={project.id} />
           <ProjectCustomersTable projectId={project.id} />
         </TabsContent>
         

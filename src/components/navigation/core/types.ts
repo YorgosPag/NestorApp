@@ -3,6 +3,8 @@
  * Extracted from DXF Viewer for reusability across the application
  */
 
+import type React from 'react';
+
 export interface NavigationCompany {
   id: string;
   companyName: string;
@@ -74,7 +76,29 @@ export interface NavigationActions {
   selectFloor: (floorId: string) => void;
   navigateToLevel: (level: NavigationLevel) => void;
   reset: () => void;
-  navigateToExistingPages: (type: 'properties' | 'projects' | 'buildings' | 'floorplan', filters?: any) => void;
+  navigateToExistingPages: (
+    type: 'properties' | 'projects' | 'buildings' | 'floorplan',
+    filters?: NavigationFilters
+  ) => void;
+  /** 🏢 ENTERPRISE: Get real-time building count for a project */
+  getBuildingCount: (projectId: string) => number;
+  /** 🏢 ENTERPRISE: Get all buildings for a project in real-time */
+  getBuildingsForProject: (projectId: string) => RealtimeBuildingRef[];
+}
+
+/** 🏢 ENTERPRISE: Reference to a building from real-time system */
+export interface RealtimeBuildingRef {
+  id: string;
+  name: string;
+  projectId: string | null;
+}
+
+/** 🏢 ENTERPRISE: Filters for navigation */
+export interface NavigationFilters {
+  companyId?: string;
+  projectId?: string;
+  buildingId?: string;
+  [key: string]: string | undefined;
 }
 
 export interface NavigationOption {
@@ -94,7 +118,8 @@ export interface NavigationOption {
 export interface BreadcrumbItem {
   id: string;
   label: string;
-  icon: string | any; // Support for both emoji strings and Lucide components
+  /** Icon can be emoji string or React component (Lucide) */
+  icon: string | React.ComponentType<{ className?: string; size?: number }>;
   level: NavigationLevel;
   onClick: () => void;
 }

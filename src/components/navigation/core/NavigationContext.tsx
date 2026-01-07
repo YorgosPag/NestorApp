@@ -3,16 +3,21 @@
 /**
  * Refactored Navigation Context
  * Clean separation of concerns using services and hooks
+ *
+ * 🏢 ENTERPRISE UPDATE: Added real-time building counts via useRealtimeBuildings
  */
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useNavigationData } from './hooks/useNavigationData';
 import { useNavigationActions } from './hooks/useNavigationActions';
+import { useRealtimeBuildings } from '@/services/realtime';
 import type {
   NavigationState,
   NavigationActions,
   NavigationCompany,
   NavigationProject,
-  NavigationLevel
+  NavigationLevel,
+  NavigationFilters,
+  RealtimeBuildingRef
 } from './types';
 
 interface NavigationContextType extends NavigationState, NavigationActions {}
@@ -37,6 +42,14 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   // Custom hooks for data loading and actions
   const dataHook = useNavigationData();
   const actions = useNavigationActions();
+
+  // 🏢 ENTERPRISE: Real-time buildings for live counts
+  const {
+    buildingsByProject,
+    getBuildingCount,
+    getBuildingsForProject,
+    loading: realtimeBuildingsLoading,
+  } = useRealtimeBuildings();
 
   // Helper to update state
   const updateState = (updates: Partial<NavigationState>) => {
@@ -154,9 +167,19 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
   const navigateToExistingPages = (
     type: 'properties' | 'projects' | 'buildings' | 'floorplan',
-    filters?: any
+    filters?: NavigationFilters
   ) => {
     actions.navigateToExistingPages(type, state, filters);
+  };
+
+  // 🏢 ENTERPRISE: Wrapper for real-time getBuildingsForProject with proper typing
+  const getBuildingsForProjectTyped = (projectId: string): RealtimeBuildingRef[] => {
+    const buildings = getBuildingsForProject(projectId);
+    return buildings.map(b => ({
+      id: b.id,
+      name: b.name,
+      projectId: b.projectId
+    }));
   };
 
   // Context value with all state and actions
@@ -170,7 +193,10 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     selectFloor,
     navigateToLevel,
     reset,
-    navigateToExistingPages
+    navigateToExistingPages,
+    // 🏢 ENTERPRISE: Real-time building functions
+    getBuildingCount,
+    getBuildingsForProject: getBuildingsForProjectTyped
   };
 
   return (

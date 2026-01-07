@@ -9,6 +9,7 @@ import { ProgressCard } from './GeneralTabContent/ProgressCard';
 import { FilesCard } from './GeneralTabContent/FilesCard';
 import { LegalInfoCard } from './GeneralTabContent/LegalInfoCard';
 import { SettingsCard } from './GeneralTabContent/SettingsCard';
+import { ProjectSelectorCard } from './GeneralTabContent/ProjectSelectorCard';
 import type { Building } from '../BuildingsPageContent';
 import { validateForm } from './GeneralTabContent/utils';
 import { BuildingStats } from './BuildingStats';
@@ -92,6 +93,15 @@ export function GeneralTabContent({ building }: { building: Building }) {
         updateField={updateField}
         isEditing={isEditing}
         errors={errors}
+      />
+      {/* 🏢 ENTERPRISE: Project Selector για σύνδεση Κτιρίου→Έργου */}
+      <ProjectSelectorCard
+        buildingId={String(building.id)}
+        currentProjectId={building.projectId}
+        isEditing={isEditing}
+        onProjectChanged={(newProjectId) => {
+          console.log(`✅ Building ${building.id} linked to project ${newProjectId}`);
+        }}
       />
       <TechnicalSpecsCard
         formData={formData}

@@ -75,9 +75,11 @@ export async function getCompanies(limitCount: number = 50): Promise<Array<{id: 
  */
 export async function getProjectsList(limitCount: number = 50): Promise<Array<{id: string, name: string}>> {
   try {
+    // 🏢 ENTERPRISE: Query χωρίς orderBy('updatedAt') γιατί το field δεν υπάρχει σε όλα τα projects
+    // Χρησιμοποιούμε orderBy('name') για αλφαβητική ταξινόμηση
     const projectsQuery = query(
       collection(db, COLLECTIONS.PROJECTS),
-      orderBy('updatedAt', 'desc'),
+      orderBy('name', 'asc'),
       limit(limitCount)
     );
 
