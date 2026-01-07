@@ -132,6 +132,22 @@ export interface RealtimeProject {
   description?: string;
 }
 
+/**
+ * 🏢 ENTERPRISE: Unit data for navigation real-time
+ * Used by useRealtimeUnits hook for live unit counts per building
+ */
+export interface RealtimeUnit {
+  id: string;
+  name: string;
+  buildingId: string | null;
+  type?: string;
+  status?: string;
+  area?: number;
+  floor?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // ============================================================================
 // EVENT TYPES (for cross-component communication)
 // ============================================================================

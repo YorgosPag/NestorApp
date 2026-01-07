@@ -110,14 +110,14 @@ export function useBorderTokens() {
         const buttonStates = {
           default: borderVariants.button.default.className,
           focus: 'border border-blue-500',
-          hover: 'border border-gray-400'
+          hover: 'border border-border' // 🏢 ENTERPRISE: Centralized
         };
         return buttonStates[state as keyof typeof buttonStates] || buttonStates.default;
       }
 
       // ✅ ENTERPRISE: Interactive states with fallbacks
       const interactiveStates = {
-        hover: 'hover:border-gray-400',
+        hover: 'hover:border-border', // 🏢 ENTERPRISE: Centralized
         focus: 'focus:border-blue-500 focus:ring-2 focus:ring-blue-200',
         selected: 'border-blue-500 bg-blue-50'
       };
@@ -172,7 +172,7 @@ export function useBorderTokens() {
         warning: 'border border-yellow-500',
         error: 'border border-red-500',
         info: 'border border-blue-500',
-        muted: 'border border-gray-400'
+        muted: 'border border-border' // 🏢 ENTERPRISE: Centralized
       };
 
       return statusFallbacks[status as keyof typeof statusFallbacks] || `border-[${borderWidth.default}] border-[${borderColors.default.light}]`;
@@ -183,10 +183,10 @@ export function useBorderTokens() {
      * @param direction - Horizontal or vertical separator
      */
     getSeparatorBorder: (direction: 'horizontal' | 'vertical'): string => {
-      // ✅ ENTERPRISE: Separator fallbacks
+      // ✅ ENTERPRISE: Separator fallbacks - Centralized
       const separatorDirections = {
-        horizontal: 'border-t border-gray-200',
-        vertical: 'border-l border-gray-200'
+        horizontal: 'border-t border-border', // 🏢 ENTERPRISE: Centralized
+        vertical: 'border-l border-border'    // 🏢 ENTERPRISE: Centralized
       };
       return separatorDirections[direction];
     },
@@ -214,19 +214,19 @@ export function useBorderTokens() {
       none: 'border-0',
 
       /** Default border (same as card) */
-      default: 'border border-gray-200 rounded-lg',
+      default: 'border border-border rounded-lg', // 🏢 ENTERPRISE: Centralized
 
       /** Default card border */
-      card: 'border border-gray-200 rounded-lg',
+      card: 'border border-border rounded-lg', // 🏢 ENTERPRISE: Centralized
 
       /** Default button border */
-      button: 'border border-gray-300',
+      button: 'border border-border', // 🏢 ENTERPRISE: Centralized
 
       /** Default input border */
-      input: 'border border-gray-300 rounded-md',
+      input: 'border border-border rounded-md', // 🏢 ENTERPRISE: Centralized
 
       /** Checkbox border */
-      checkbox: 'border border-gray-300 rounded-md',
+      checkbox: 'border border-border rounded-md', // 🏢 ENTERPRISE: Centralized
 
       /** Modal border (typically none + shadow) */
       modal: 'border-0 rounded-lg shadow-lg',
@@ -235,10 +235,10 @@ export function useBorderTokens() {
       container: 'border-0',
 
       /** Horizontal separator */
-      separatorH: 'border-t border-gray-200',
+      separatorH: 'border-t border-border', // 🏢 ENTERPRISE: Centralized
 
       /** Vertical separator */
-      separatorV: 'border-l border-gray-200',
+      separatorV: 'border-l border-border', // 🏢 ENTERPRISE: Centralized
 
       /** Success border */
       success: 'border border-green-500',
@@ -253,7 +253,7 @@ export function useBorderTokens() {
       info: 'border border-blue-500',
 
       /** Muted border για DynamicInput components */
-      muted: 'border border-gray-400',
+      muted: 'border border-border', // 🏢 ENTERPRISE: Centralized
 
       /** Focus state border */
       focus: 'focus:border-blue-500 focus:ring-2 focus:ring-blue-200',
@@ -262,16 +262,16 @@ export function useBorderTokens() {
       selected: 'border-blue-500 bg-blue-50',
 
       /** Table border (for dropdown/table items) */
-      table: 'border border-gray-200 rounded-lg',
+      table: 'border border-border rounded-lg', // 🏢 ENTERPRISE: Centralized
 
       /** Rounded border shortcut */
-      rounded: 'border border-gray-200 rounded-lg',
+      rounded: 'border border-border rounded-lg', // 🏢 ENTERPRISE: Centralized
 
       /** ✅ ENTERPRISE FIX: Dashed border for LevelSelectionStep TS2339 error */
-      dashed: 'border-2 border-gray-200 border-dashed rounded-lg',
+      dashed: 'border-2 border-border border-dashed rounded-lg', // 🏢 ENTERPRISE: Centralized
 
       /** ✅ ENTERPRISE FIX: Generic separator for LineSettings.tsx TS2339 error */
-      separator: 'border-t border-gray-200',
+      separator: 'border-t border-border', // 🏢 ENTERPRISE: Centralized
     },
 
     // ========================================================================
@@ -287,14 +287,15 @@ export function useBorderTokens() {
       status: 'default' | 'success' | 'warning' | 'error' | 'info' | 'muted' | 'subtle',
       direction: 'top' | 'bottom' | 'left' | 'right'
     ): string => {
+      // 🏢 ENTERPRISE: Centralized border colors
       const colorMap = {
-        default: 'gray-600',
+        default: 'border',  // 🏢 ENTERPRISE: Centralized (produces border-border)
         success: 'green-500',
         warning: 'yellow-500',
         error: 'red-500',
         info: 'blue-500',
-        muted: 'gray-500',
-        subtle: 'gray-400'
+        muted: 'border',    // 🏢 ENTERPRISE: Centralized (produces border-border)
+        subtle: 'border'    // 🏢 ENTERPRISE: Centralized (produces border-border)
       };
 
       const directionMap = {
@@ -316,14 +317,15 @@ export function useBorderTokens() {
       status: 'default' | 'success' | 'warning' | 'error' | 'info' | 'muted' | 'subtle',
       directions: ('top' | 'bottom' | 'left' | 'right')[]
     ): string => {
+      // 🏢 ENTERPRISE: Centralized border colors
       const colorMap = {
-        default: 'gray-600',
+        default: 'border',  // 🏢 ENTERPRISE: Centralized (produces border-border)
         success: 'green-500',
         warning: 'yellow-500',
         error: 'red-500',
         info: 'blue-500',
-        muted: 'gray-500',
-        subtle: 'gray-400'
+        muted: 'border',    // 🏢 ENTERPRISE: Centralized (produces border-border)
+        subtle: 'border'    // 🏢 ENTERPRISE: Centralized (produces border-border)
       };
 
       const directionMap = {
@@ -346,15 +348,15 @@ export function useBorderTokens() {
       status: 'default' | 'success' | 'warning' | 'error' | 'info' | 'muted' | 'subtle',
       additionalDirections?: ('top' | 'bottom' | 'left' | 'right')[]
     ): string => {
-      // Get base border
+      // 🏢 ENTERPRISE: Get base border with centralized colors
       const statusBorderMap = {
-        default: 'border border-gray-600',
+        default: 'border border-border', // 🏢 ENTERPRISE: Centralized
         success: 'border border-green-500',
         warning: 'border border-yellow-500',
         error: 'border border-red-500',
         info: 'border border-blue-500',
-        muted: 'border border-gray-500',
-        subtle: 'border border-gray-400'
+        muted: 'border border-border',   // 🏢 ENTERPRISE: Centralized
+        subtle: 'border border-border'   // 🏢 ENTERPRISE: Centralized
       };
 
       const baseBorder = statusBorderMap[status];
@@ -363,15 +365,15 @@ export function useBorderTokens() {
         return baseBorder;
       }
 
-      // Get directional borders
+      // 🏢 ENTERPRISE: Get directional borders with centralized colors
       const colorMap = {
-        default: 'gray-600',
+        default: 'border',  // 🏢 ENTERPRISE: Centralized (produces border-border)
         success: 'green-500',
         warning: 'yellow-500',
         error: 'red-500',
         info: 'blue-500',
-        muted: 'gray-500',
-        subtle: 'gray-400'
+        muted: 'border',    // 🏢 ENTERPRISE: Centralized (produces border-border)
+        subtle: 'border'    // 🏢 ENTERPRISE: Centralized (produces border-border)
       };
 
       const directionMap = {

@@ -106,24 +106,25 @@ function createToolbarConfig(
       sorting: 'Ταξινόμηση'
     },
 
+    // 🏢 ENTERPRISE: 100% Centralized Tooltips - ZERO HARDCODED VALUES
     tooltips: {
-      newItem: tooltips[`new_${type.slice(0, -1)}_tooltip` as keyof typeof tooltips] || 'Νέο στοιχείο (Ctrl+N)',
-      editItem: 'Επεξεργασία επιλεγμένου στοιχείου',
-      deleteItems: 'Διαγραφή επιλεγμένων στοιχείων',
-      filters: 'Εμφάνιση φίλτρων',
-      favorites: 'Προσθήκη στις αγαπημένες',
-      archive: 'Αρχειοθέτηση επιλεγμένων',
-      export: 'Εξαγωγή δεδομένων',
-      import: 'Εισαγωγή δεδομένων',
-      refresh: 'Ανανέωση δεδομένων (F5)',
-      preview: 'Προεπισκόπηση',
-      copy: 'Αντιγραφή επιλεγμένων',
-      share: 'Κοινοποίηση',
-      reports: 'Δημιουργία αναφορών',
-      settings: 'Ρυθμίσεις',
-      favoritesManagement: 'Διαχείριση αγαπημένων',
-      help: 'Βοήθεια και οδηγίες (F1)',
-      sorting: 'Ταξινόμηση στοιχείων'
+      newItem: tooltips[`new_${type.slice(0, -1)}_tooltip` as keyof typeof tooltips] || tooltips.new_building_tooltip,
+      editItem: tooltips[`edit_${type.slice(0, -1)}` as keyof typeof tooltips] || tooltips.edit_generic,
+      deleteItems: tooltips[`delete_${type.slice(0, -1)}` as keyof typeof tooltips] || tooltips.delete_generic,
+      filters: tooltips.filters,
+      favorites: tooltips.favorites,
+      archive: tooltips.archive,
+      export: tooltips.export,
+      import: tooltips.import,
+      refresh: tooltips.refresh,
+      preview: tooltips.preview,
+      copy: tooltips.copy,
+      share: tooltips[`share_${type.slice(0, -1)}` as keyof typeof tooltips] || tooltips.share_generic,
+      reports: tooltips.reports,
+      settings: tooltips.settings,
+      favoritesManagement: tooltips.favorites_management,
+      help: tooltips.help,
+      sorting: tooltips.sorting
     },
 
     filterCategories: getFilterCategoriesForType(type),

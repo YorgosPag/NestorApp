@@ -10,6 +10,8 @@ import React from 'react';
 import { CompactToolbar } from '@/components/core/CompactToolbar/CompactToolbar';
 import type { CompactToolbarConfig } from '@/components/core/CompactToolbar/types';
 import { Building, Home, Construction, Users, Factory, Trash2, Unlink2, Plus, Link2 } from 'lucide-react';
+// 🏢 ENTERPRISE: Centralized labels - ZERO HARDCODED VALUES
+import { getNavigationFilterCategories } from '@/subapps/dxf-viewer/config/modal-select/core/labels/navigation';
 
 type NavigationLevel = 'companies' | 'projects' | 'buildings' | 'floors' | 'units';
 
@@ -166,21 +168,21 @@ const getToolbarConfig = (level: NavigationLevel): CompactToolbarConfig => {
         filterCategories: [
           {
             id: 'type',
-            label: 'Τύπος Εταιρείας',
+            label: getNavigationFilterCategories().company_type_label,
             options: [
-              { value: 'construction', label: 'Κατασκευαστική' },
-              { value: 'development', label: 'Αναπτυξιακή' },
-              { value: 'investment', label: 'Επενδυτική' },
-              { value: 'management', label: 'Διαχειριστική' }
+              { value: 'construction', label: getNavigationFilterCategories().company_construction },
+              { value: 'development', label: getNavigationFilterCategories().company_development },
+              { value: 'investment', label: getNavigationFilterCategories().company_investment },
+              { value: 'management', label: getNavigationFilterCategories().company_management }
             ]
           },
           {
             id: 'status',
-            label: 'Κατάσταση',
+            label: getNavigationFilterCategories().company_status_label,
             options: [
-              { value: 'active', label: 'Ενεργές' },
-              { value: 'with_projects', label: 'Με έργα' },
-              { value: 'without_projects', label: 'Χωρίς έργα' }
+              { value: 'active', label: getNavigationFilterCategories().company_active },
+              { value: 'with_projects', label: getNavigationFilterCategories().company_with_projects },
+              { value: 'without_projects', label: getNavigationFilterCategories().company_without_projects }
             ]
           }
         ],

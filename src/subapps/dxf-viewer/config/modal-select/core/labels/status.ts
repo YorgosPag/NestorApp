@@ -68,7 +68,9 @@ export const MODAL_SELECT_PROPERTY_MARKET_STATUS_LABELS = {
   sold: 'Πωλήθηκε',
   pending: 'Εκκρεμεί',
   withdrawn: 'Αποσύρθηκε',
-  expired: 'Έληξε'
+  expired: 'Έληξε',
+  // 🏢 ENTERPRISE: Added for UNIT_SALE_STATUS_LABELS centralization
+  not_sold: 'Δεν έχει πωληθεί'
 } as const;
 
 /**

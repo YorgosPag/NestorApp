@@ -83,7 +83,7 @@ export function CompactToolbar({
   };
 
   return (
-    <div className="flex flex-col gap-2 p-2 border-b bg-muted/30">
+    <div className={`flex flex-col gap-2 p-2 ${colors.bg.transparent}`}>
 
       {/* Action icons row with selection indicator */}
       <div className="flex items-center justify-between flex-wrap gap-1">
@@ -296,9 +296,6 @@ export function CompactToolbar({
             </DropdownMenuContent>
           </DropdownMenu>
         )}
-
-        {/* Separator - visual divider */}
-        <div className={`w-px ${iconSizes.lg} bg-border mx-1`}></div>
 
         {/* Preview */}
         {config.availableActions.preview && (

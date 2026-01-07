@@ -9,7 +9,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigationData } from './hooks/useNavigationData';
 import { useNavigationActions } from './hooks/useNavigationActions';
-import { useRealtimeBuildings, REALTIME_EVENTS } from '@/services/realtime';
+import { useRealtimeBuildings, useRealtimeUnits, REALTIME_EVENTS } from '@/services/realtime';
 import { NavigationApiService } from './services/navigationApi';
 import type {
   NavigationState,
@@ -51,6 +51,14 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     getBuildingsForProject,
     loading: realtimeBuildingsLoading,
   } = useRealtimeBuildings();
+
+  // 🏢 ENTERPRISE: Real-time units for live counts per building
+  const {
+    unitsByBuilding,
+    getUnitCount,
+    getUnitsForBuilding,
+    loading: realtimeUnitsLoading,
+  } = useRealtimeUnits();
 
   // Helper to update state
   const updateState = (updates: Partial<NavigationState>) => {
@@ -244,7 +252,10 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     navigateToExistingPages,
     // 🏢 ENTERPRISE: Real-time building functions
     getBuildingCount,
-    getBuildingsForProject: getBuildingsForProjectTyped
+    getBuildingsForProject: getBuildingsForProjectTyped,
+    // 🏢 ENTERPRISE: Real-time unit functions
+    getUnitCount,
+    getUnitsForBuilding
   };
 
   return (

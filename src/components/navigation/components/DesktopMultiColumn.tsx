@@ -10,11 +10,15 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { NavigationButton } from './NavigationButton';
 import { NavigationCardToolbar } from './NavigationCardToolbar';
 import { SelectItemModal } from '../dialogs/SelectItemModal';
+// 🏢 ENTERPRISE: Native CSS scroll with data-navigation-scroll="true" (see globals.css)
 import { Building, Home, Construction, MapPin, Car, Package, Factory, Trash2, Unlink2 } from 'lucide-react';
 // 🏢 ENTERPRISE: Layers αφαιρέθηκε - Floors δεν εμφανίζονται στην πλοήγηση (Επιλογή Α)
 import { useNavigation } from '../core/NavigationContext';
 // 🏢 ENTERPRISE: Centralized Entity Linking Service (ZERO inline Firestore calls)
 import { EntityLinkingService, ENTITY_LINKING_CONFIG } from '@/services/entity-linking';
+// 🏢 ENTERPRISE: Centralized labels - ZERO HARDCODED VALUES
+import { getPriorityLabels } from '@/subapps/dxf-viewer/config/modal-select/core/labels/status';
+import { getNavigationFilterCategories } from '@/subapps/dxf-viewer/config/modal-select/core/labels/navigation';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,7 +62,9 @@ export function DesktopMultiColumn({
     loadCompanies,
     // 🏢 ENTERPRISE: Real-time building functions
     getBuildingCount,
-    getBuildingsForProject
+    getBuildingsForProject,
+    // 🏢 ENTERPRISE: Real-time unit functions
+    getUnitCount
   } = useNavigation();
 
   const { warning } = useNotifications();
@@ -567,7 +573,7 @@ export function DesktopMultiColumn({
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-4">
 
         {/* Column 1: Companies */}
-        <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+        <section className="bg-white dark:bg-card border border-border rounded-lg p-3 overflow-hidden"
                  role="region" aria-label="Εταιρείες">
           <header className="flex items-center gap-2 mb-2">
             <Factory className="h-5 w-5 text-blue-600" />
@@ -595,13 +601,17 @@ export function DesktopMultiColumn({
             onHelp={() => {/* TODO: Companies help */}}
           />
 
-          <ul className="space-y-2 max-h-64 overflow-y-auto list-none" role="list" aria-label="Λίστα Εταιρειών">
+          {/* 🏢 ENTERPRISE: Native scroll with CSS-styled scrollbar */}
+          <ul
+            className="space-y-2 list-none max-h-64 pr-2 overflow-y-auto"
+            role="list"
+            aria-label="Λίστα Εταιρειών"
+            data-navigation-scroll="true"
+          >
             {filterData(companies, companiesSearch, companiesFilters).map(company => {
               // Ελέγχουμε αν η εταιρεία έχει έργα
               const companyProjects = projects.filter(p => p.companyId === company.id);
               const hasProjects = companyProjects.length > 0;
-
-              // Debug: Company analysis complete
 
               // Ελέγχουμε αν είναι navigation company (προστέθηκε χειροκίνητα)
               const isNavigationCompany = navigationCompanyIds.includes(company.id);
@@ -629,7 +639,7 @@ export function DesktopMultiColumn({
                     isSelected={selectedCompany?.id === company.id}
                     variant="compact"
                     badgeStatus={!projectsLoading && !hasProjects ? 'no_projects' : undefined}
-                    badgeText={!projectsLoading && !hasProjects ? 'Χωρίς έργα' : undefined}
+                    badgeText={!projectsLoading && !hasProjects ? getNavigationFilterCategories().company_without_projects : undefined}
                   />
                 </li>
               );
@@ -639,7 +649,7 @@ export function DesktopMultiColumn({
 
         {/* Column 2: Projects */}
         {selectedCompany && (
-          <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+          <section className="bg-white dark:bg-card border border-border rounded-lg p-3 overflow-hidden"
                    role="region" aria-label="Έργα">
             <header className="flex items-center gap-2 mb-2">
               <Construction className="h-5 w-5 text-green-600" />
@@ -666,7 +676,13 @@ export function DesktopMultiColumn({
               onHelp={() => {/* TODO: Projects help */}}
             />
 
-            <ul className="space-y-2 max-h-64 overflow-y-auto list-none" role="list" aria-label="Λίστα Έργων">
+            {/* 🏢 ENTERPRISE: Native scroll with CSS-styled scrollbar */}
+            <ul
+              className="space-y-2 list-none max-h-64 pr-2 overflow-y-auto"
+              role="list"
+              aria-label="Λίστα Έργων"
+              data-navigation-scroll="true"
+            >
               {filterData(projects.filter(project => project.companyId === selectedCompany?.id), projectsSearch, projectsFilters).map(project => {
                 // 🏢 ENTERPRISE: Use real-time building count for live updates
                 const buildingCount = getBuildingCount(project.id);
@@ -683,7 +699,7 @@ export function DesktopMultiColumn({
                       isSelected={selectedProject?.id === project.id}
                       variant="compact"
                       badgeStatus={!hasBuildings ? 'no_projects' : undefined}
-                      badgeText={!hasBuildings ? 'Χωρίς κτίρια' : undefined}
+                      badgeText={!hasBuildings ? getNavigationFilterCategories().project_without_buildings : undefined}
                     />
                   </li>
                 );
@@ -694,7 +710,7 @@ export function DesktopMultiColumn({
 
         {/* Column 3: Buildings - 🏢 ENTERPRISE: Using memoized real-time data */}
         {selectedProject && (
-          <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+          <section className="bg-white dark:bg-card border border-border rounded-lg p-3 overflow-hidden"
                    role="region" aria-label="Κτίρια">
             <header className="flex items-center gap-2 mb-2">
               <Building className="h-5 w-5 text-purple-600" />
@@ -719,21 +735,35 @@ export function DesktopMultiColumn({
               onHelp={() => {/* TODO: Buildings help */}}
             />
 
-            <ul className="space-y-2 max-h-64 overflow-y-auto list-none" role="list">
-              {/* 🏢 ENTERPRISE: Buildings display without floor count (Επιλογή Α) */}
-              {filteredProjectBuildings.map(building => (
-                <li key={building.id}>
-                  <NavigationButton
-                    onClick={() => onBuildingSelect(building.id)}
-                    icon={Building}
-                    iconColor="text-purple-600"
-                    title={building.name}
-                    subtitle="Κτίριο"
-                    isSelected={selectedBuilding?.id === building.id}
-                    variant="compact"
-                  />
-                </li>
-              ))}
+            {/* 🏢 ENTERPRISE: Native scroll with CSS-styled scrollbar */}
+            <ul
+              className="space-y-2 list-none max-h-64 pr-2 overflow-y-auto"
+              role="list"
+              aria-label="Λίστα Κτιρίων"
+              data-navigation-scroll="true"
+            >
+              {/* 🏢 ENTERPRISE: Buildings display with real-time unit count */}
+              {filteredProjectBuildings.map(building => {
+                // 🏢 ENTERPRISE: Real-time unit count
+                const unitCount = getUnitCount(building.id);
+                const hasUnits = unitCount > 0;
+
+                return (
+                  <li key={building.id}>
+                    <NavigationButton
+                      onClick={() => onBuildingSelect(building.id)}
+                      icon={Building}
+                      iconColor="text-purple-600"
+                      title={building.name}
+                      subtitle={`${unitCount} μονάδες`}
+                      isSelected={selectedBuilding?.id === building.id}
+                      variant="compact"
+                      badgeStatus={!hasUnits ? 'no_projects' : undefined}
+                      badgeText={!hasUnits ? getNavigationFilterCategories().building_without_units : undefined}
+                    />
+                  </li>
+                );
+              })}
             </ul>
           </section>
         )}
@@ -751,7 +781,7 @@ export function DesktopMultiColumn({
 
         {/* Column 4: Units - 🏢 ENTERPRISE: Απευθείας από Building (skip Floors) */}
         {selectedBuilding && (
-          <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+          <section className="bg-white dark:bg-card border border-border rounded-lg p-3 overflow-hidden"
                    role="region" aria-label="Μονάδες">
             <header className="flex items-center gap-2 mb-2">
               <Home className="h-5 w-5 text-teal-600" />
@@ -777,7 +807,13 @@ export function DesktopMultiColumn({
               onHelp={() => {/* TODO: Units help */}}
             />
 
-            <ul className="space-y-2 max-h-64 overflow-y-auto list-none" role="list" aria-label="Λίστα Μονάδων">
+            {/* 🏢 ENTERPRISE: Native scroll with CSS-styled scrollbar */}
+            <ul
+              className="space-y-2 list-none max-h-64 pr-2 overflow-y-auto"
+              role="list"
+              aria-label="Λίστα Μονάδων"
+              data-navigation-scroll="true"
+            >
               {filterData(buildingUnits, unitsSearch, unitsFilters).map(unit => (
                 <li key={unit.id}>
                   <NavigationButton
@@ -799,7 +835,7 @@ export function DesktopMultiColumn({
 
         {/* Column 5: Actions & Extras - 🏢 ENTERPRISE: Εξαρτάται από Building (skip Floors) */}
         {selectedBuilding && (
-          <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+          <section className="bg-white dark:bg-card border border-border rounded-lg p-3"
                    role="region" aria-label="Ενέργειες">
             <header className="flex items-center gap-2 mb-4">
               <MapPin className="h-5 w-5 text-red-600" />
@@ -842,7 +878,7 @@ export function DesktopMultiColumn({
               )}
 
               {/* Parking & Storage - Παρακολουθήματα */}
-              <li className="pt-3 border-t border-gray-200 dark:border-gray-700">
+              <li className="pt-3 border-t border-border">
                 <section>
                   <h4 className="text-xs font-medium text-gray-500 dark:text-muted-foreground mb-2 uppercase tracking-wide">
                     Παρκινγκ & Αποθήκες

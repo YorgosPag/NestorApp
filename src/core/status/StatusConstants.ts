@@ -23,6 +23,7 @@ import type { UseSemanticColorsReturn } from '../../ui-adapters/react/useSemanti
 import { COLOR_BRIDGE } from '../../design-system/color-bridge';
 
 // 🏢 ENTERPRISE: Import centralized status labels - NO MORE HARDCODED VALUES
+// 📌 NOTE: Import directly from modular files to avoid conflicts with original modal-select.ts re-exports
 import {
   getProjectStatusLabels,
   getUnitStatusLabels,
@@ -30,31 +31,37 @@ import {
   getContactTypeLabels,
   getPropertyMarketStatusLabels,
   getRentalTypeLabels,
-  getPropertySpecialStatusLabels,
-  getStorageStatusLabels,
-  getPriorityLabels,
-  getRecordStateLabels,
-  getEntityTypeLabels,
-  getDocumentStatusLabels
+  getStorageStatusLabels
 } from '../../subapps/dxf-viewer/config/modal-select';
+
+// 🏢 ENTERPRISE: Import from modular status.ts for extended property labels (market/sales-related)
+import {
+  MODAL_SELECT_PROPERTY_SPECIAL_STATUS_LABELS,
+  MODAL_SELECT_PRIORITY_LABELS,
+  MODAL_SELECT_RECORD_STATE_LABELS,
+  MODAL_SELECT_ENTITY_TYPE_LABELS,
+  MODAL_SELECT_DOCUMENT_STATUS_LABELS
+} from '../../subapps/dxf-viewer/config/modal-select/core/labels/status';
 
 // ============================================================================
 // PROJECT STATUS DEFINITIONS
 // ============================================================================
 
-// ✅ ENTERPRISE: Get centralized labels
+// ✅ ENTERPRISE: Get centralized labels via getter functions
 const projectStatusLabels = getProjectStatusLabels();
 const unitStatusLabels = getUnitStatusLabels();
 const contactStatusLabels = getContactStatusLabels();
 const contactTypeLabels = getContactTypeLabels();
 const propertyMarketStatusLabels = getPropertyMarketStatusLabels();
 const rentalTypeLabels = getRentalTypeLabels();
-const propertySpecialStatusLabels = getPropertySpecialStatusLabels();
 const storageStatusLabels = getStorageStatusLabels();
-const priorityLabels = getPriorityLabels();
-const recordStateLabels = getRecordStateLabels();
-const entityTypeLabels = getEntityTypeLabels();
-const documentStatusLabels = getDocumentStatusLabels();
+
+// ✅ ENTERPRISE: Direct constants from modular status.ts (avoid re-export conflicts)
+const propertySpecialStatusLabels = MODAL_SELECT_PROPERTY_SPECIAL_STATUS_LABELS;
+const priorityLabels = MODAL_SELECT_PRIORITY_LABELS;
+const recordStateLabels = MODAL_SELECT_RECORD_STATE_LABELS;
+const entityTypeLabels = MODAL_SELECT_ENTITY_TYPE_LABELS;
+const documentStatusLabels = MODAL_SELECT_DOCUMENT_STATUS_LABELS;
 
 // ============================================================================
 // 🏢 ENTERPRISE: Dynamic Badge Generation με Dependency Injection
@@ -152,74 +159,78 @@ export const createPropertyStatuses = (colors: UseSemanticColorsReturn): Record<
   withdrawn: { label: propertyMarketStatusLabels.withdrawn, variant: 'secondary', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'arrowLeft' },
   expired: { label: propertyMarketStatusLabels.expired, variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'calendar' },
   'rental-only': { label: rentalTypeLabels.rent_only, variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'key' },
-  // Υπόλοιπα properties...
-  'for-sale': { label: 'Προς Πώληση', variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'tag' },
-  'for-rent': { label: 'Προς Ενοικίαση', variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'key' },
-  rented: { label: 'Ενοικιάστηκε', variant: 'purple', backgroundColor: colors.bg.secondary, color: colors.text.primary, icon: 'handshake' },
-  'under-negotiation': { label: 'Υπό Διαπραγμάτευση', variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'messageCircle' },
-  'coming-soon': { label: 'Σύντομα Διαθέσιμο', variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'calendar' },
-  landowner: { label: 'Ιδιοκτήτης Γης', variant: 'secondary', backgroundColor: colors.bg.secondary, color: colors.text.secondary, icon: 'map' },
-  'off-market': { label: 'Εκτός Αγοράς', variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'eyeOff' },
-  unavailable: { label: 'Μη Διαθέσιμο', variant: 'secondary', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'x' },
+  // 🏢 ENTERPRISE: Property statuses using centralized labels - ZERO HARDCODED VALUES
+  'for-sale': { label: unitStatusLabels.for_sale, variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'tag' },
+  'for-rent': { label: unitStatusLabels.for_rent, variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'key' },
+  rented: { label: unitStatusLabels.rented, variant: 'purple', backgroundColor: colors.bg.secondary, color: colors.text.primary, icon: 'handshake' },
+  'under-negotiation': { label: propertySpecialStatusLabels.under_negotiation, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'messageCircle' },
+  'coming-soon': { label: propertySpecialStatusLabels.available_soon, variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'calendar' },
+  landowner: { label: propertySpecialStatusLabels.landowner, variant: 'secondary', backgroundColor: colors.bg.secondary, color: colors.text.secondary, icon: 'map' },
+  'off-market': { label: propertySpecialStatusLabels.off_market, variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'eyeOff' },
+  unavailable: { label: propertySpecialStatusLabels.unavailable, variant: 'secondary', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'x' },
   'long-term-rental': { label: rentalTypeLabels.long_term, variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'calendar' },
   'short-term-rental': { label: rentalTypeLabels.short_term, variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'clock' },
-  'reserved-pending': { label: 'Κρατημένο (Εκκρεμεί)', variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'pause' },
-  'contract-signed': { label: 'Συμβόλαιο Υπογράφηκε', variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'fileSignature' },
-  'deposit-paid': { label: 'Προκαταβολή Πληρώθηκε', variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'creditCard' },
-  'company-owned': { label: 'Εταιρική Ιδιοκτησία', variant: 'purple', backgroundColor: colors.bg.secondary, color: colors.text.primary, icon: 'building' },
-  'not-for-sale': { label: 'Δεν Πωλείται', variant: 'purple', backgroundColor: colors.bg.secondary, color: colors.text.primary, icon: 'shield' },
-  'family-reserved': { label: 'Οικογενειακή Κράτηση', variant: 'purple', backgroundColor: colors.bg.secondary, color: colors.text.primary, icon: 'heart' },
-  'pre-launch': { label: 'Προ-Λανσάρισμα', variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'rocket' },
-  'exclusive-listing': { label: 'Αποκλειστική Καταχώρηση', variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'crown' },
-  'price-reduced': { label: 'Μειωμένη Τιμή', variant: 'error', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'trendingDown' },
-  'urgent-sale': { label: 'Επείγουσα Πώληση', variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'alertTriangle' },
-  'under-renovation': { label: 'Υπό Ανακαίνιση', variant: 'secondary', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'wrench' },
-  'legal-issues': { label: 'Νομικά Ζητήματα', variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'gavel' },
-  'inspection-required': { label: 'Απαιτείται Επιθεώρηση', variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'search' },
-  'documentation-pending': { label: 'Εκκρεμή Έγγραφα', variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'fileText' }
+  'reserved-pending': { label: propertySpecialStatusLabels.reserved_pending, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'pause' },
+  'contract-signed': { label: propertySpecialStatusLabels.contract_signed, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'fileSignature' },
+  'deposit-paid': { label: propertySpecialStatusLabels.deposit_paid, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'creditCard' },
+  'company-owned': { label: propertySpecialStatusLabels.corporate, variant: 'purple', backgroundColor: colors.bg.secondary, color: colors.text.primary, icon: 'building' },
+  'not-for-sale': { label: propertySpecialStatusLabels.not_for_sale, variant: 'purple', backgroundColor: colors.bg.secondary, color: colors.text.primary, icon: 'shield' },
+  'family-reserved': { label: propertySpecialStatusLabels.family, variant: 'purple', backgroundColor: colors.bg.secondary, color: colors.text.primary, icon: 'heart' },
+  'pre-launch': { label: propertySpecialStatusLabels.pre_launch, variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'rocket' },
+  'exclusive-listing': { label: propertySpecialStatusLabels.exclusive, variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'crown' },
+  'price-reduced': { label: propertySpecialStatusLabels.reduced_price, variant: 'error', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'trendingDown' },
+  'urgent-sale': { label: propertySpecialStatusLabels.urgent_sale, variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'alertTriangle' },
+  'under-renovation': { label: propertySpecialStatusLabels.under_renovation, variant: 'secondary', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'wrench' },
+  'legal-issues': { label: propertySpecialStatusLabels.legal_issues, variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'gavel' },
+  'inspection-required': { label: propertySpecialStatusLabels.inspection_required, variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'search' },
+  'documentation-pending': { label: propertySpecialStatusLabels.pending_documents, variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'fileText' }
 });
 
 /**
  * ✅ ENTERPRISE PROFESSIONAL: Unit Statuses Generator
+ * 🏢 CENTRALIZED: Uses unitStatusLabels from modal-select - ZERO HARDCODED VALUES
  */
 export const createUnitStatuses = (colors: UseSemanticColorsReturn): Record<UnitStatus, BadgeDefinition> => ({
   available: { label: storageStatusLabels.available, variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'home' },
-  occupied: { label: 'Κατειλημμένο', variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'users' },
+  occupied: { label: unitStatusLabels.occupied, variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'users' },
   maintenance: { label: storageStatusLabels.maintenance, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'wrench' },
   reserved: { label: storageStatusLabels.reserved, variant: 'purple', backgroundColor: colors.bg.secondary, color: colors.text.primary, icon: 'bookmark' }
 });
 
 /**
  * ✅ ENTERPRISE PROFESSIONAL: Navigation Statuses Generator
+ * 🏢 CENTRALIZED: Uses priorityLabels from modal-select - ZERO HARDCODED VALUES
  */
 export const createNavigationStatuses = (colors: UseSemanticColorsReturn): Record<NavigationStatus, BadgeDefinition> => ({
-  no_projects: { label: 'Κανένα Έργο', variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'alertTriangle' },
-  empty: { label: 'Κενό', variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'circle' },
-  warning: { label: 'Προειδοποίηση', variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'alertTriangle' },
-  alert: { label: 'Προσοχή', variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'alert' },
-  success: { label: 'Επιτυχία', variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'check' },
-  info: { label: 'Πληροφορία', variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'info' }
+  no_projects: { label: priorityLabels.none, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'alertTriangle' },
+  empty: { label: priorityLabels.empty, variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'circle' },
+  warning: { label: priorityLabels.warning, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'alertTriangle' },
+  alert: { label: priorityLabels.attention, variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'alert' },
+  success: { label: priorityLabels.success, variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'check' },
+  info: { label: priorityLabels.info, variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'info' }
 });
 
 /**
  * ✅ ENTERPRISE PROFESSIONAL: Obligation Statuses Generator
+ * 🏢 CENTRALIZED: Uses documentStatusLabels from modal-select - ZERO HARDCODED VALUES
  */
 export const createObligationStatuses = (colors: UseSemanticColorsReturn): Record<ObligationStatus, BadgeDefinition> => ({
-  draft: { label: 'Πρόχειρο', variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'edit' },
-  completed: { label: 'Ολοκληρωμένο', variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'check' },
-  approved: { label: 'Εγκεκριμένο', variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'checkCircle' }
+  draft: { label: documentStatusLabels.draft, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'edit' },
+  completed: { label: documentStatusLabels.completed, variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'check' },
+  approved: { label: documentStatusLabels.approved, variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'checkCircle' }
 });
 
 /**
  * ✅ ENTERPRISE PROFESSIONAL: Common Statuses Generator
+ * 🏢 CENTRALIZED: Uses recordStateLabels + entityTypeLabels from modal-select - ZERO HARDCODED VALUES
  */
 export const createCommonStatuses = (colors: UseSemanticColorsReturn): Record<string, BadgeDefinition> => ({
-  new: { label: 'Νέο', variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'plus' },
-  updated: { label: 'Ενημερωμένο', variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'refresh' },
-  deleted: { label: 'Διαγραμμένο', variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'trash' },
-  company: { label: 'Εταιρία', variant: 'secondary', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'building' },
-  primary: { label: 'Κύριο', variant: 'default', backgroundColor: colors.bg.secondary, color: colors.text.primary, icon: 'star' },
-  secondary: { label: 'Δευτερεύον', variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'circle' }
+  new: { label: recordStateLabels.new, variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'plus' },
+  updated: { label: recordStateLabels.updated, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'refresh' },
+  deleted: { label: recordStateLabels.deleted, variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'trash' },
+  company: { label: entityTypeLabels.company, variant: 'secondary', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'building' },
+  primary: { label: entityTypeLabels.main, variant: 'default', backgroundColor: colors.bg.secondary, color: colors.text.primary, icon: 'star' },
+  secondary: { label: entityTypeLabels.secondary, variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'circle' }
 });
 
 /**
@@ -305,11 +316,12 @@ export const UNIT_SALE_STATUS = {
   PENDING: 'PENDING'
 } as const;
 
+// 🏢 ENTERPRISE: Centralized labels - ZERO HARDCODED VALUES
 export const UNIT_SALE_STATUS_LABELS = {
-  'NOT_SOLD': 'Δεν έχει πωληθεί',
-  'SOLD': 'Πωλήθηκε',
-  'RESERVED': 'Κρατημένη',
-  'PENDING': 'Εκκρεμεί'
+  'NOT_SOLD': propertyMarketStatusLabels.not_sold,
+  'SOLD': propertyMarketStatusLabels.sold,
+  'RESERVED': storageStatusLabels.reserved,
+  'PENDING': propertyMarketStatusLabels.pending
 } as const;
 
 // ============================================================================

@@ -115,6 +115,8 @@ export const MODAL_SELECT_NAVIGATION_FILTER_CATEGORIES = {
   company_active: 'Ενεργές',
   company_with_projects: 'Με έργα',
   company_without_projects: 'Χωρίς έργα',
+  project_without_buildings: 'Χωρίς κτίρια',
+  building_without_units: 'Χωρίς μονάδες',
 
   // Projects Filters
   project_status_label: 'Κατάσταση Έργου',
@@ -245,34 +247,73 @@ export const MODAL_SELECT_COMPACT_TOOLBAR_CONTEXT_LABELS = {
 /**
  * Compact Toolbar Detailed Tooltips - Centralized από CompactToolbar/configs.ts
  * ✅ ENTERPRISE: Single source of truth για όλα τα detailed tooltips
+ * 🏢 ENTERPRISE: Extended με ΟΛΑ τα tooltips για 100% κεντρικοποίηση
  */
 export const MODAL_SELECT_COMPACT_TOOLBAR_TOOLTIPS = {
-  // New Item Tooltips
+  // ========================================================================
+  // 🆕 NEW ITEM TOOLTIPS (Context-specific)
+  // ========================================================================
   new_building_tooltip: 'Νέο Κτίριο (Ctrl+N)',
   new_project_tooltip: 'Νέο Έργο (Ctrl+N)',
   new_contact_tooltip: 'Νέα Επαφή (Ctrl+N)',
   new_unit_tooltip: 'Νέα Μονάδα (Ctrl+N)',
   new_storage_tooltip: 'Νέα Αποθήκη (Ctrl+N)',
 
-  // Edit Tooltips (context-specific)
-  edit_building: 'Επεξεργασία επιλεγμένου',
+  // ========================================================================
+  // ✏️ EDIT TOOLTIPS (Context-specific)
+  // ========================================================================
+  edit_building: 'Επεξεργασία επιλεγμένου κτιρίου',
   edit_project: 'Επεξεργασία επιλεγμένου έργου',
   edit_contact: 'Επεξεργασία επιλεγμένης επαφής',
   edit_unit: 'Επεξεργασία επιλεγμένης μονάδας',
   edit_storage: 'Επεξεργασία επιλεγμένης αποθήκης',
+  edit_generic: 'Επεξεργασία επιλεγμένου στοιχείου',
 
-  // Share Tooltips
+  // ========================================================================
+  // 🗑️ DELETE TOOLTIPS (Context-specific)
+  // ========================================================================
+  delete_building: 'Διαγραφή επιλεγμένου κτιρίου',
+  delete_project: 'Διαγραφή επιλεγμένου έργου',
+  delete_contact: 'Διαγραφή επιλεγμένης επαφής',
+  delete_unit: 'Διαγραφή επιλεγμένης μονάδας',
+  delete_storage: 'Διαγραφή επιλεγμένης αποθήκης',
+  delete_generic: 'Διαγραφή επιλεγμένων στοιχείων',
+
+  // ========================================================================
+  // 📤 SHARE TOOLTIPS (Context-specific)
+  // ========================================================================
   share_building: 'Κοινοποίηση κτιρίου',
   share_project: 'Κοινοποίηση έργου',
   share_contact: 'Κοινοποίηση επαφής',
+  share_unit: 'Κοινοποίηση μονάδας',
+  share_storage: 'Κοινοποίηση αποθήκης',
+  share_generic: 'Κοινοποίηση',
 
-  // Delete Tooltips
-  delete_building: 'Διαγραφή επιλεγμένου',
-  delete_project: 'Διαγραφή επιλεγμένου έργου',
-  delete_contact: 'Διαγραφή επιλεγμένης επαφής',
+  // ========================================================================
+  // 🔧 COMMON ACTION TOOLTIPS (Generic - used across all entity types)
+  // ========================================================================
+  filters: 'Εμφάνιση φίλτρων',
+  favorites: 'Προσθήκη στα αγαπημένα',
+  archive: 'Αρχειοθέτηση επιλεγμένων',
+  export: 'Εξαγωγή δεδομένων',
+  import: 'Εισαγωγή δεδομένων',
+  refresh: 'Ανανέωση δεδομένων (F5)',
+  preview: 'Προεπισκόπηση',
+  copy: 'Αντιγραφή επιλεγμένων',
+  reports: 'Δημιουργία αναφορών',
+  settings: 'Ρυθμίσεις',
+  help: 'Βοήθεια και οδηγίες (F1)',
+  sorting: 'Ταξινόμηση στοιχείων',
 
-  // Management Tooltips
+  // ========================================================================
+  // ⭐ FAVORITES MANAGEMENT TOOLTIPS
+  // ========================================================================
   manage_favorites: 'Διαχείριση αγαπημένων στοιχείων',
+  favorites_management: 'Διαχείριση αγαπημένων',
+
+  // ========================================================================
+  // 📦 BULK ACTION TOOLTIPS
+  // ========================================================================
   bulk_actions: 'Μαζικές ενέργειες για επιλεγμένα στοιχεία'
 } as const;
 

@@ -14,6 +14,9 @@ import { ChevronLeft, Factory, Construction, Building, Home, Map, Car, Package }
 // 🏢 ENTERPRISE: Layers αφαιρέθηκε - Floors δεν εμφανίζονται στην πλοήγηση (Επιλογή Α)
 import { useNavigation } from '../core/NavigationContext';
 import { HOVER_TEXT_EFFECTS } from '../../ui/effects';
+// 🏢 ENTERPRISE: Centralized labels - ZERO HARDCODED VALUES
+import { getPriorityLabels } from '@/subapps/dxf-viewer/config/modal-select/core/labels/status';
+import { getNavigationFilterCategories } from '@/subapps/dxf-viewer/config/modal-select/core/labels/navigation';
 
 interface MobileNavigationProps {
   /** 🏢 ENTERPRISE: 'floors' αφαιρέθηκε από navigation levels (Επιλογή Α) */
@@ -53,7 +56,9 @@ export function MobileNavigation({
     projectsLoading,
     // 🏢 ENTERPRISE: Real-time building functions
     getBuildingCount,
-    getBuildingsForProject
+    getBuildingsForProject,
+    // 🏢 ENTERPRISE: Real-time unit functions
+    getUnitCount
   } = useNavigation();
 
   // ==========================================================================
@@ -136,7 +141,7 @@ export function MobileNavigation({
                   subtitle={subtitle}
                   extraInfo={extraInfo}
                   badgeStatus={!projectsLoading && !hasProjects ? 'no_projects' : undefined}
-                  badgeText={!projectsLoading && !hasProjects ? 'Χωρίς έργα' : undefined}
+                  badgeText={!projectsLoading && !hasProjects ? getNavigationFilterCategories().company_without_projects : undefined}
                 />
               );
             })}
@@ -160,26 +165,34 @@ export function MobileNavigation({
                   title={project.name}
                   subtitle={`${buildingCount} κτίρια`}
                   badgeStatus={!hasBuildings ? 'no_projects' : undefined}
-                  badgeText={!hasBuildings ? 'Χωρίς κτίρια' : undefined}
+                  badgeText={!hasBuildings ? getNavigationFilterCategories().project_without_buildings : undefined}
                 />
               );
             })}
           </>
         )}
 
-        {/* Buildings - 🏢 ENTERPRISE: Using memoized real-time data (Επιλογή Α) */}
+        {/* Buildings - 🏢 ENTERPRISE: Using memoized real-time data with unit count */}
         {mobileLevel === 'buildings' && selectedProject && (
           <>
-            {projectBuildings.map(building => (
-              <NavigationButton
-                key={building.id}
-                onClick={() => onBuildingSelect(building.id)}
-                icon={Building}
-                iconColor="text-purple-600"
-                title={building.name}
-                subtitle="Κτίριο"
-              />
-            ))}
+            {projectBuildings.map(building => {
+              // 🏢 ENTERPRISE: Real-time unit count
+              const unitCount = getUnitCount(building.id);
+              const hasUnits = unitCount > 0;
+
+              return (
+                <NavigationButton
+                  key={building.id}
+                  onClick={() => onBuildingSelect(building.id)}
+                  icon={Building}
+                  iconColor="text-purple-600"
+                  title={building.name}
+                  subtitle={`${unitCount} μονάδες`}
+                  badgeStatus={!hasUnits ? 'no_projects' : undefined}
+                  badgeText={!hasUnits ? getNavigationFilterCategories().building_without_units : undefined}
+                />
+              );
+            })}
           </>
         )}
 

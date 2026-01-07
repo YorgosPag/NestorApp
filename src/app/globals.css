@@ -35,8 +35,8 @@
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 81.4%; /* Πιο σκούρο για ορατότητα */
+    --border: 220 13% 91%; /* 🏢 ENTERPRISE: Matches Tailwind gray-200 (#e5e7eb) exactly */
+    --input: 220 13% 81%; /* Πιο σκούρο για ορατότητα */
     --ring: 222.2 47.4% 11.2%;
     
     --radius: 0.5rem;
@@ -106,8 +106,8 @@
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
     
-    --border: 217 33% 25%;
-    --input: 217 33% 35%; /* Λίγο πιο ανοιχτό για dark mode */
+    --border: 217 19% 27%; /* 🏢 ENTERPRISE: Matches Tailwind gray-700 (#374151) exactly */
+    --input: 217 19% 35%; /* Λίγο πιο ανοιχτό για dark mode */
     --ring: 210 40% 98%;
 
     /* Semantic Status Colors - Dark Mode */
@@ -818,6 +818,95 @@ html body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb {
 body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb:hover,
 html body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb:hover {
   background: #475569 !important;
+}
+
+/* =============================================================
+   ENTERPRISE NAVIGATION SCROLLBAR - EXCEPTION RULES
+
+   Allow visible scrolling for navigation column lists
+   These rules OVERRIDE the nuclear scrollbar hiding above
+   ============================================================= */
+
+/* 🏢 ENTERPRISE: Navigation column scrollbar visibility */
+/* Maximum specificity to override nuclear scrollbar hiding */
+/* scrollbar-gutter: stable reserves space even without scrollbar */
+html body [data-navigation-scroll="true"],
+body [data-navigation-scroll="true"],
+[data-navigation-scroll="true"] {
+  scrollbar-width: thin !important; /* Firefox */
+  scrollbar-color: #94a3b8 transparent !important; /* Firefox - slate-400 */
+  -ms-overflow-style: auto !important; /* IE */
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important; /* Prevent scroll chaining to parent */
+  scrollbar-gutter: stable !important; /* Reserve scrollbar space even without overflow */
+}
+
+/* Dark mode scrollbar colors */
+.dark [data-navigation-scroll="true"] {
+  scrollbar-color: #64748b transparent !important; /* slate-500 for dark mode */
+}
+
+/* Force webkit scrollbar for navigation lists */
+body [data-navigation-scroll="true"]::-webkit-scrollbar,
+html body [data-navigation-scroll="true"]::-webkit-scrollbar {
+  display: block !important;
+  width: 8px !important;
+  background: transparent !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body [data-navigation-scroll="true"]::-webkit-scrollbar-track,
+html body [data-navigation-scroll="true"]::-webkit-scrollbar-track {
+  display: block !important;
+  background: rgba(0,0,0,0.03) !important;
+  border-radius: 4px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Dark mode track */
+.dark body [data-navigation-scroll="true"]::-webkit-scrollbar-track,
+html body.dark [data-navigation-scroll="true"]::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.05) !important;
+}
+
+body [data-navigation-scroll="true"]::-webkit-scrollbar-thumb,
+html body [data-navigation-scroll="true"]::-webkit-scrollbar-thumb {
+  display: block !important;
+  background: #94a3b8 !important; /* slate-400 */
+  border-radius: 4px !important;
+  transition: background-color 0.2s ease !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Dark mode thumb */
+.dark body [data-navigation-scroll="true"]::-webkit-scrollbar-thumb,
+html body.dark [data-navigation-scroll="true"]::-webkit-scrollbar-thumb {
+  background: #64748b !important; /* slate-500 */
+}
+
+body [data-navigation-scroll="true"]::-webkit-scrollbar-thumb:hover,
+html body [data-navigation-scroll="true"]::-webkit-scrollbar-thumb:hover {
+  background: #64748b !important; /* slate-500 on hover */
+}
+
+/* Dark mode thumb hover */
+.dark body [data-navigation-scroll="true"]::-webkit-scrollbar-thumb:hover,
+html body.dark [data-navigation-scroll="true"]::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8 !important; /* slate-400 on hover */
+}
+
+/* Hide scrollbar buttons (arrows) */
+body [data-navigation-scroll="true"]::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+body [data-navigation-scroll="true"]::-webkit-scrollbar-corner {
+  display: none !important;
 }
 
 /* =============================================================

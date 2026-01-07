@@ -34,6 +34,7 @@ export {
   type RealtimeDocResult,
   type RealtimeBuilding,
   type RealtimeProject,
+  type RealtimeUnit,
   type BuildingProjectLinkPayload,
   type RealtimeEventType,
   REALTIME_EVENTS,
@@ -42,3 +43,4 @@ export {
 // Hooks
 export { useRealtimeQuery } from './hooks/useRealtimeQuery';
 export { useRealtimeBuildings } from './hooks/useRealtimeBuildings';
+export { useRealtimeUnits } from './hooks/useRealtimeUnits';
