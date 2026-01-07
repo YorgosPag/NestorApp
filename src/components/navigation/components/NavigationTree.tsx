@@ -8,10 +8,11 @@
  * Floors αφαιρέθηκαν από navigation - Units συνδέονται απευθείας με Buildings
  */
 import React, { useMemo } from 'react';
-import { Building, Construction, Home, MapPin, Map, Factory } from 'lucide-react';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
 import { useNavigation } from '../core/NavigationContext';
+// 🏢 ENTERPRISE: Icons/Colors από centralized config - ZERO hardcoded values
+import { NAVIGATION_ENTITIES } from '../config';
 import { NavigationButton } from './NavigationButton';
 import { NavigationBreadcrumb } from './NavigationBreadcrumb';
 
@@ -159,8 +160,8 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
                 <NavigationButton
                   key={company.id}
                   onClick={() => selectCompany(company.id)}
-                  icon={Factory}
-                  iconColor="text-blue-600"
+                  icon={NAVIGATION_ENTITIES.company.icon}
+                  iconColor={NAVIGATION_ENTITIES.company.color}
                   title={company.companyName}
                   subtitle={company.industry}
                   extraInfo={company.vatNumber ? `ΑΦΜ: ${company.vatNumber}` : undefined}
@@ -183,8 +184,8 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
                 <NavigationButton
                   key={project.id}
                   onClick={() => selectProject(project.id)}
-                  icon={Construction}
-                  iconColor="text-green-600"
+                  icon={NAVIGATION_ENTITIES.project.icon}
+                  iconColor={NAVIGATION_ENTITIES.project.color}
                   title={project.name}
                   subtitle={`${getBuildingCount(project.id)} κτίρια`}
                   isSelected={selectedProject?.id === project.id}
@@ -207,10 +208,10 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
                 <NavigationButton
                   key={building.id}
                   onClick={() => selectBuilding(building.id)}
-                  icon={Building}
-                  iconColor="text-purple-600"
+                  icon={NAVIGATION_ENTITIES.building.icon}
+                  iconColor={NAVIGATION_ENTITIES.building.color}
                   title={building.name}
-                  subtitle="Κτίριο"
+                  subtitle={NAVIGATION_ENTITIES.building.label}
                   isSelected={selectedBuilding?.id === building.id}
                 />
               ))
@@ -233,8 +234,8 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
 
             <NavigationButton
               onClick={() => handleNavigateToPage('properties')}
-              icon={Home}
-              iconColor="text-teal-600"
+              icon={NAVIGATION_ENTITIES.unit.icon}
+              iconColor={NAVIGATION_ENTITIES.unit.color}
               title="Προβολή Μονάδων"
               subtitle={`${buildingUnits.length} μονάδες στο κτίριο`}
               variant="compact"
@@ -242,8 +243,8 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
 
             <NavigationButton
               onClick={() => handleNavigateToPage('buildings')}
-              icon={Building}
-              iconColor="text-purple-600"
+              icon={NAVIGATION_ENTITIES.building.icon}
+              iconColor={NAVIGATION_ENTITIES.building.color}
               title="Λεπτομέρειες Κτιρίου"
               subtitle={selectedBuilding.name}
               variant="compact"
@@ -252,8 +253,8 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
             {selectedProject && (
               <NavigationButton
                 onClick={() => handleNavigateToPage('projects')}
-                icon={Construction}
-                iconColor="text-green-600"
+                icon={NAVIGATION_ENTITIES.project.icon}
+                iconColor={NAVIGATION_ENTITIES.project.color}
                 title="Λεπτομέρειες Έργου"
                 subtitle={selectedProject.name}
                 variant="compact"

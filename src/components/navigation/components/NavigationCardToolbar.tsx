@@ -9,83 +9,90 @@
 import React from 'react';
 import { CompactToolbar } from '@/components/core/CompactToolbar/CompactToolbar';
 import type { CompactToolbarConfig } from '@/components/core/CompactToolbar/types';
-import { Building, Home, Construction, Users, Factory, Trash2, Unlink2, Plus, Link2 } from 'lucide-react';
+// 🏢 ENTERPRISE: Icons/Colors από centralized config - ZERO hardcoded values
+import { NAVIGATION_ENTITIES, NAVIGATION_ACTIONS } from '../config';
 // 🏢 ENTERPRISE: Centralized labels - ZERO HARDCODED VALUES
 import { getNavigationFilterCategories } from '@/subapps/dxf-viewer/config/modal-select/core/labels/navigation';
 
 type NavigationLevel = 'companies' | 'projects' | 'buildings' | 'floors' | 'units';
 
-// Helper functions για header display
+// 🏢 ENTERPRISE: Helper functions using centralized config - ZERO hardcoded values
+
+/**
+ * Get level title using centralized labels
+ */
 const getLevelTitle = (level: NavigationLevel): string => {
   switch (level) {
-    case 'companies': return 'Εταιρείες';
-    case 'projects': return 'Έργα';
-    case 'buildings': return 'Κτίρια';
-    case 'floors': return 'Όροφοι';
-    case 'units': return 'Μονάδες';
+    case 'companies': return NAVIGATION_ENTITIES.company.pluralLabel;
+    case 'projects': return NAVIGATION_ENTITIES.project.pluralLabel;
+    case 'buildings': return NAVIGATION_ENTITIES.building.pluralLabel;
+    case 'floors': return NAVIGATION_ENTITIES.floor.pluralLabel;
+    case 'units': return NAVIGATION_ENTITIES.unit.pluralLabel;
     default: return '';
   }
 };
 
 /**
  * 🏢 ENTERPRISE: Icons για τους τίτλους των στηλών
- * ΣΗΜΑΝΤΙΚΟ: Πρέπει να ταιριάζουν με τα icons των NavigationButton cards!
+ * Χρησιμοποιεί centralized NAVIGATION_ENTITIES config
  */
 const getLevelIcon = (level: NavigationLevel): React.ComponentType<{ className?: string }> => {
   switch (level) {
-    case 'companies': return Factory;      // ✅ Ταιριάζει με τις κάρτες εταιρειών
-    case 'projects': return Construction;  // ✅ Ταιριάζει με τις κάρτες έργων
-    case 'buildings': return Building;     // ✅ Ταιριάζει με τις κάρτες κτιρίων
-    case 'floors': return Building;        // Floors δεν εμφανίζονται (Επιλογή Α)
-    case 'units': return Home;             // ✅ Ταιριάζει με τις κάρτες μονάδων
-    default: return Building;
+    case 'companies': return NAVIGATION_ENTITIES.company.icon;
+    case 'projects': return NAVIGATION_ENTITIES.project.icon;
+    case 'buildings': return NAVIGATION_ENTITIES.building.icon;
+    case 'floors': return NAVIGATION_ENTITIES.floor.icon;
+    case 'units': return NAVIGATION_ENTITIES.unit.icon;
+    default: return NAVIGATION_ENTITIES.building.icon;
   }
 };
 
 /**
  * 🏢 ENTERPRISE: Get the correct delete/unlink icon per level
- * - Companies: Trash2 (αφαίρεση από navigation)
- * - Projects/Buildings/Floors/Units: Unlink2 (αποσύνδεση σχέσης)
+ * Χρησιμοποιεί centralized NAVIGATION_ACTIONS config
+ * - Companies: delete action (αφαίρεση από navigation)
+ * - Projects/Buildings/Floors/Units: unlink action (αποσύνδεση σχέσης)
  */
 const getDeleteIcon = (level: NavigationLevel): React.ComponentType<{ className?: string }> => {
   switch (level) {
-    case 'companies': return Trash2; // Αφαίρεση από navigation list
-    case 'projects': return Unlink2; // Αποσύνδεση από εταιρεία
-    case 'buildings': return Unlink2; // Αποσύνδεση από έργο
-    case 'floors': return Unlink2; // Αποσύνδεση από κτίριο
-    case 'units': return Unlink2; // Αποσύνδεση από κτίριο
-    default: return Trash2;
+    case 'companies': return NAVIGATION_ACTIONS.delete.icon;
+    case 'projects': return NAVIGATION_ACTIONS.unlink.icon;
+    case 'buildings': return NAVIGATION_ACTIONS.unlink.icon;
+    case 'floors': return NAVIGATION_ACTIONS.unlink.icon;
+    case 'units': return NAVIGATION_ACTIONS.unlink.icon;
+    default: return NAVIGATION_ACTIONS.delete.icon;
   }
 };
 
 /**
  * 🏢 ENTERPRISE: Get the correct new item icon per level
- * - Companies: Plus (προσθήκη στη λίστα πλοήγησης)
- * - Projects/Buildings/Floors/Units: Link2 (σύνδεση με parent entity)
+ * Χρησιμοποιεί centralized NAVIGATION_ACTIONS config
+ * - Companies: add action (προσθήκη στη λίστα πλοήγησης)
+ * - Projects/Buildings/Floors/Units: link action (σύνδεση με parent entity)
  */
 const getNewItemIcon = (level: NavigationLevel): React.ComponentType<{ className?: string }> => {
   switch (level) {
-    case 'companies': return Plus; // Προσθήκη νέας εταιρείας στην πλοήγηση
-    case 'projects': return Link2; // Σύνδεση έργου με εταιρεία
-    case 'buildings': return Link2; // Σύνδεση κτιρίου με έργο
-    case 'floors': return Link2; // Σύνδεση ορόφου με κτίριο
-    case 'units': return Link2; // Σύνδεση μονάδας με κτίριο
-    default: return Plus;
+    case 'companies': return NAVIGATION_ACTIONS.add.icon;
+    case 'projects': return NAVIGATION_ACTIONS.link.icon;
+    case 'buildings': return NAVIGATION_ACTIONS.link.icon;
+    case 'floors': return NAVIGATION_ACTIONS.link.icon;
+    case 'units': return NAVIGATION_ACTIONS.link.icon;
+    default: return NAVIGATION_ACTIONS.add.icon;
   }
 };
 
 /**
  * 🏢 ENTERPRISE: Get the correct icon color per level
- * Matches the header icon colors for visual consistency
+ * Χρησιμοποιεί centralized NAVIGATION_ENTITIES config
  */
 const getLevelIconColor = (level: NavigationLevel): string => {
   switch (level) {
-    case 'companies': return 'text-blue-600';   // Factory icon color
-    case 'projects': return 'text-green-600';   // Construction icon color
-    case 'buildings': return 'text-purple-600'; // Building icon color
-    case 'floors': return 'text-orange-600';    // Layers icon color
-    case 'units': return 'text-teal-600';       // Home icon color
-    default: return 'text-blue-600';
+    case 'companies': return NAVIGATION_ENTITIES.company.color;
+    case 'projects': return NAVIGATION_ENTITIES.project.color;
+    case 'buildings': return NAVIGATION_ENTITIES.building.color;
+    case 'floors': return NAVIGATION_ENTITIES.floor.color;
+    case 'units': return NAVIGATION_ENTITIES.unit.color;
+    default: return NAVIGATION_ENTITIES.company.color;
   }
 };
 

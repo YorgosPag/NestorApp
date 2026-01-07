@@ -55,12 +55,21 @@ export interface NavigationParkingSpot {
   location: 'ground' | 'basement' | 'pilotis';
 }
 
+/** 🏢 ENTERPRISE: Selected unit for breadcrumb navigation */
+export interface NavigationSelectedUnit {
+  id: string;
+  name: string;
+  type?: string;
+}
+
 export interface NavigationState {
   companies: NavigationCompany[];
   selectedCompany: NavigationCompany | null;
   projects: NavigationProject[];
   selectedProject: NavigationProject | null;
   selectedBuilding: NavigationBuilding | null;
+  /** 🏢 ENTERPRISE: Selected unit for breadcrumb display */
+  selectedUnit: NavigationSelectedUnit | null;
   /**
    * @deprecated 🏢 ENTERPRISE (Επιλογή Α): Floors αφαιρέθηκαν από navigation.
    * Παραμένει για backward compatibility - θα αφαιρεθεί σε μελλοντική έκδοση.
@@ -86,6 +95,8 @@ export interface NavigationActions {
   loadProjectsForCompany: (companyId: string) => Promise<void>;
   selectProject: (projectId: string) => void;
   selectBuilding: (buildingId: string) => void;
+  /** 🏢 ENTERPRISE: Select unit for breadcrumb display */
+  selectUnit: (unit: NavigationSelectedUnit | null) => void;
   /**
    * @deprecated 🏢 ENTERPRISE (Επιλογή Α): Floors αφαιρέθηκαν από navigation.
    * Παραμένει για backward compatibility - θα αφαιρεθεί σε μελλοντική έκδοση.
@@ -149,6 +160,8 @@ export interface BreadcrumbItem {
   label: string;
   /** Icon can be emoji string or React component (Lucide) */
   icon: string | LucideIcon;
+  /** 🏢 ENTERPRISE: Tailwind color class from NAVIGATION_ENTITIES */
+  color?: string;
   level: NavigationLevel;
   onClick: () => void;
 }

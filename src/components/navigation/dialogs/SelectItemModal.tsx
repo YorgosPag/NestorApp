@@ -11,8 +11,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Loader2, Home, Building, Layers, Construction } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '../../ui/effects';
+// 🏢 ENTERPRISE: Icons/Colors από centralized config - ZERO hardcoded values
+import { NAVIGATION_ENTITIES, type NavigationEntityType } from '../config';
 
 interface Item {
   id: string;
@@ -33,37 +35,29 @@ interface SelectItemModalProps {
 }
 
 /**
- * 🏢 ENTERPRISE: Icons για κάθε entity type
- * ΣΗΜΑΝΤΙΚΟ: Πρέπει να ταιριάζουν με τα icons της πλοήγησης!
+ * 🏢 ENTERPRISE: Icons/Colors από centralized NAVIGATION_ENTITIES
+ * Χρησιμοποιεί το Single Source of Truth - ZERO hardcoded values
  */
-const getIcon = (itemType: string) => {
-  switch (itemType) {
-    case 'project':
-      return Construction;  // ✅ Ταιριάζει με την πλοήγηση
-    case 'building':
-      return Building;      // ✅ Ταιριάζει με την πλοήγηση
-    case 'floor':
-      return Layers;        // Floors δεν εμφανίζονται (Επιλογή Α)
-    case 'unit':
-      return Home;          // ✅ Ταιριάζει με την πλοήγηση
-    default:
-      return Building;
-  }
+const getEntityIcon = (itemType: string) => {
+  const entityMap: Record<string, NavigationEntityType> = {
+    project: 'project',
+    building: 'building',
+    floor: 'floor',
+    unit: 'unit'
+  };
+  const entityType = entityMap[itemType] || 'building';
+  return NAVIGATION_ENTITIES[entityType].icon;
 };
 
-const getIconColor = (itemType: string) => {
-  switch (itemType) {
-    case 'project':
-      return 'text-green-600';
-    case 'building':
-      return 'text-purple-600';
-    case 'floor':
-      return 'text-orange-600';
-    case 'unit':
-      return 'text-teal-600';
-    default:
-      return 'text-blue-600';
-  }
+const getEntityColor = (itemType: string) => {
+  const entityMap: Record<string, NavigationEntityType> = {
+    project: 'project',
+    building: 'building',
+    floor: 'floor',
+    unit: 'unit'
+  };
+  const entityType = entityMap[itemType] || 'building';
+  return NAVIGATION_ENTITIES[entityType].color;
 };
 
 export function SelectItemModal({
@@ -80,8 +74,9 @@ export function SelectItemModal({
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const Icon = getIcon(itemType);
-  const iconColor = getIconColor(itemType);
+  // 🏢 ENTERPRISE: Icons/Colors from centralized config
+  const Icon = getEntityIcon(itemType);
+  const iconColor = getEntityColor(itemType);
 
   // Φιλτράρισμα based on search term
   useEffect(() => {

@@ -6,12 +6,15 @@
  *
  * 🏢 ENTERPRISE ARCHITECTURE (Επιλογή Α):
  * Floors αφαιρέθηκαν από navigation - Units συνδέονται απευθείας με Buildings
+ *
+ * @see navigation-entities.ts - Single Source of Truth για icons/colors
  */
 
 import React, { useMemo } from 'react';
 import { NavigationButton } from './NavigationButton';
-import { ChevronLeft, Factory, Construction, Building, Home, Map, Car, Package } from 'lucide-react';
-// 🏢 ENTERPRISE: Layers αφαιρέθηκε - Floors δεν εμφανίζονται στην πλοήγηση (Επιλογή Α)
+import { ChevronLeft } from 'lucide-react';
+// 🏢 ENTERPRISE: Icons/Colors από centralized config - ZERO hardcoded values
+import { NAVIGATION_ENTITIES } from '../config';
 import { useNavigation } from '../core/NavigationContext';
 import { HOVER_TEXT_EFFECTS } from '../../ui/effects';
 // 🏢 ENTERPRISE: Centralized labels - ZERO HARDCODED VALUES
@@ -52,8 +55,10 @@ export function MobileNavigation({
     selectedCompany,
     selectedProject,
     selectedBuilding,
+    selectedUnit,  // 🏢 ENTERPRISE: Centralized unit selection for breadcrumb
     // 🏢 ENTERPRISE: selectedFloor αφαιρέθηκε - Floors δεν είναι navigation level (Επιλογή Α)
     projectsLoading,
+    selectUnit,  // 🏢 ENTERPRISE: Centralized unit selection action
     // 🏢 ENTERPRISE: Real-time building functions
     getBuildingCount,
     getBuildingsForProject,
@@ -135,8 +140,8 @@ export function MobileNavigation({
                 <NavigationButton
                   key={company.id}
                   onClick={() => onCompanySelect(company.id)}
-                  icon={Factory}
-                  iconColor="text-blue-600"
+                  icon={NAVIGATION_ENTITIES.company.icon}
+                  iconColor={NAVIGATION_ENTITIES.company.color}
                   title={company.companyName}
                   subtitle={subtitle}
                   extraInfo={extraInfo}
@@ -160,8 +165,8 @@ export function MobileNavigation({
                 <NavigationButton
                   key={project.id}
                   onClick={() => onProjectSelect(project.id)}
-                  icon={Construction}
-                  iconColor="text-green-600"
+                  icon={NAVIGATION_ENTITIES.project.icon}
+                  iconColor={NAVIGATION_ENTITIES.project.color}
                   title={project.name}
                   subtitle={`${buildingCount} κτίρια`}
                   badgeStatus={!hasBuildings ? 'no_projects' : undefined}
@@ -184,8 +189,8 @@ export function MobileNavigation({
                 <NavigationButton
                   key={building.id}
                   onClick={() => onBuildingSelect(building.id)}
-                  icon={Building}
-                  iconColor="text-purple-600"
+                  icon={NAVIGATION_ENTITIES.building.icon}
+                  iconColor={NAVIGATION_ENTITIES.building.color}
                   title={building.name}
                   subtitle={`${unitCount} μονάδες`}
                   badgeStatus={!hasUnits ? 'no_projects' : undefined}
@@ -208,11 +213,16 @@ export function MobileNavigation({
             {buildingUnits.map(unit => (
               <NavigationButton
                 key={unit.id}
-                onClick={() => onUnitSelect?.(unit.id)}
-                icon={Home}
-                iconColor="text-teal-600"
+                onClick={() => {
+                  // 🏢 ENTERPRISE: Use centralized selectUnit for breadcrumb display
+                  selectUnit({ id: unit.id, name: unit.name, type: unit.type });
+                  onUnitSelect?.(unit.id);
+                }}
+                icon={NAVIGATION_ENTITIES.unit.icon}
+                iconColor={NAVIGATION_ENTITIES.unit.color}
                 title={unit.name}
-                subtitle={unit.type || 'Μονάδα'}
+                subtitle={unit.type || NAVIGATION_ENTITIES.unit.label}
+                isSelected={selectedUnit?.id === unit.id}
               />
             ))}
           </>
@@ -223,8 +233,8 @@ export function MobileNavigation({
           <nav className="space-y-3" aria-label="Ενέργειες Κτιρίου">
             <NavigationButton
               onClick={() => onNavigateToPage('properties')}
-              icon={Home}
-              iconColor="text-teal-600"
+              icon={NAVIGATION_ENTITIES.unit.icon}
+              iconColor={NAVIGATION_ENTITIES.unit.color}
               title="Προβολή Μονάδων"
               subtitle={`${buildingUnits.length} μονάδες στο κτίριο`}
               variant="compact"
@@ -232,8 +242,8 @@ export function MobileNavigation({
 
             <NavigationButton
               onClick={() => onNavigateToPage('buildings')}
-              icon={Building}
-              iconColor="text-purple-600"
+              icon={NAVIGATION_ENTITIES.building.icon}
+              iconColor={NAVIGATION_ENTITIES.building.color}
               title="Λεπτομέρειες Κτιρίου"
               subtitle={selectedBuilding.name}
               variant="compact"
@@ -242,8 +252,8 @@ export function MobileNavigation({
             {selectedProject && (
               <NavigationButton
                 onClick={() => onNavigateToPage('projects')}
-                icon={Construction}
-                iconColor="text-green-600"
+                icon={NAVIGATION_ENTITIES.project.icon}
+                iconColor={NAVIGATION_ENTITIES.project.color}
                 title="Λεπτομέρειες Έργου"
                 subtitle={selectedProject.name}
                 variant="compact"

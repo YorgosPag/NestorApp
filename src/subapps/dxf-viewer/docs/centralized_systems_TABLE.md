@@ -1,7 +1,7 @@
 # = -> **ENTERPRISE CENTRALIZED SYSTEMS TABLE**
 
 > **= MAIN DOCUMENTATION**: [centralized_systems.md](./centralized_systems.md)
-> **= -> LAST UPDATED**: 2026-01-04
+> **= -> LAST UPDATED**: 2026-01-07
 > **= -> TOTAL SYSTEMS**: 17 Major Enterprise Systems (incl. FloatingPanel UI Styling)
 > **= -> TOTAL CODE**: 12,500+ Lines
 > **= -> TOTAL ADRs**: 11 Architectural Decision Records
@@ -22,11 +22,13 @@
 | **ADR-009** | Ruler Corner Box 🏢 | `RulerCornerBox` interactive | Static corner | 2026-01-04 |
 | **ADR-010** | Panel Type Centralization | `types/panel-types.ts` | Διάσπαρτοι ορισμοί | 2026-01-04 |
 | **ADR-011** | FloatingPanel UI Styling 🏢 | `useSemanticColors` + `useBorderTokens` | Hardcoded Tailwind colors | 2026-01-04 |
+| **ADR-012** | Navigation Entity Config 🏢 | `NAVIGATION_ENTITIES` config | Hardcoded icons/colors | 2026-01-07 |
 
 > **🚫 PROHIBITION**: Νέα Select/Dropdown implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** εκτός Radix Select.
 > **🚫 PROHIBITION**: Hardcoded canvas backgrounds **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `CANVAS_THEME`.
 > **🚫 PROHIBITION**: Νέα drawing implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `useUnifiedDrawing`.
 > **🚫 PROHIBITION**: Hardcoded Tailwind colors (bg-gray-*, rounded-lg) **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε hooks.
+> **🚫 PROHIBITION**: Hardcoded navigation icons/colors **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `NAVIGATION_ENTITIES`.
 > **🏢 WORLD-CLASS**: ADR-004 χρησιμοποιεί CSS Variables για runtime theme switching (Figma/AutoCAD level).
 > **🏢 ENTERPRISE**: ADR-005 - 2,300+ lines centralized drawing system με 3-phase rendering.
 > **🏢 ENTERPRISE**: ADR-011 - 47 files, 100% centralized styling, zero hardcoded values.
@@ -61,6 +63,7 @@
 
 | **🏭 Smart Factory - Tabs** | `src/config/unified-tabs-factory.ts` | 548 | Smart Factory |  **ENTERPRISE** | Dynamic tab generation, 6+ entity types | `import { createTabsConfig } from '@/config/unified-tabs-factory'` | **64% code reduction (1500→548 lines)** |
 | **🏭 Smart Factory - Navigation** | `src/config/smart-navigation-factory.ts` | 814 | Smart Factory |  **ENTERPRISE** | Dynamic menu generation, permissions | `import { createNavigationConfig } from '@/config/smart-navigation-factory'` | **80% code reduction (191→smart generation)** |
+| **🧭 Navigation Entity Config** | `src/components/navigation/config/` | 200+ | UI Config | 🏢 **ENTERPRISE** | Icons, colors, labels για entities | `import { NAVIGATION_ENTITIES } from '@/components/navigation/config'` | **ADR-012: Zero hardcoded icons/colors** |
 
 ---
 

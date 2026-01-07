@@ -18,7 +18,8 @@ import type {
   NavigationProject,
   NavigationLevel,
   NavigationFilters,
-  RealtimeBuildingRef
+  RealtimeBuildingRef,
+  NavigationSelectedUnit
 } from './types';
 
 interface NavigationContextType extends NavigationState, NavigationActions {}
@@ -33,6 +34,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     projects: [],
     selectedProject: null,
     selectedBuilding: null,
+    selectedUnit: null,  // 🏢 ENTERPRISE: For breadcrumb display
     selectedFloor: null,
     currentLevel: 'companies',
     loading: false,
@@ -207,6 +209,13 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
   const selectBuilding = (buildingId: string) => {
     actions.selectBuilding(buildingId, state, updateState);
+    // 🏢 ENTERPRISE: Clear selected unit when building changes
+    updateState({ selectedUnit: null });
+  };
+
+  // 🏢 ENTERPRISE: Select unit for breadcrumb display
+  const selectUnit = (unit: NavigationSelectedUnit | null) => {
+    updateState({ selectedUnit: unit, currentLevel: 'units' });
   };
 
   const selectFloor = (floorId: string) => {
@@ -246,6 +255,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     loadProjectsForCompany,
     selectProject,
     selectBuilding,
+    selectUnit,  // 🏢 ENTERPRISE: For breadcrumb display
     selectFloor,
     navigateToLevel,
     reset,

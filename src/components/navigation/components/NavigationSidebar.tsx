@@ -5,10 +5,12 @@
  * Sidebar section for the app sidebar integration
  */
 import React from 'react';
-import { ChevronDown, ChevronRight, MapPin } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
 import { NavigationTree } from './NavigationTree';
+// 🏢 ENTERPRISE: Icons από centralized config - ZERO hardcoded values
+import { NAVIGATION_ENTITIES } from '../config';
 
 interface NavigationSidebarProps {
   isExpanded?: boolean;
@@ -19,6 +21,8 @@ export function NavigationSidebar({
   isExpanded = false,
   onToggleExpanded
 }: NavigationSidebarProps) {
+  // 🏢 ENTERPRISE: Icon from centralized config - ZERO hardcoded values
+  const LocationIcon = NAVIGATION_ENTITIES.location.icon;
 
   return (
     <div className="space-y-2">
@@ -32,7 +36,7 @@ export function NavigationSidebar({
             TRANSITION_PRESETS.STANDARD_COLORS
           )}
         >
-          <MapPin className="h-4 w-4" />
+          <LocationIcon className="h-4 w-4" />
           <span className="font-medium">Πλοήγηση</span>
           {isExpanded ? (
             <ChevronDown className="h-4 w-4 ml-auto" />

@@ -11,7 +11,8 @@ import { NavigationButton } from './NavigationButton';
 import { NavigationCardToolbar } from './NavigationCardToolbar';
 import { SelectItemModal } from '../dialogs/SelectItemModal';
 // 🏢 ENTERPRISE: Native CSS scroll with data-navigation-scroll="true" (see globals.css)
-import { Building, Home, Construction, MapPin, Car, Package, Factory, Trash2, Unlink2 } from 'lucide-react';
+// 🏢 ENTERPRISE: Icons/Colors από centralized config - ZERO hardcoded values
+import { NAVIGATION_ENTITIES, NAVIGATION_ACTIONS } from '../config';
 // 🏢 ENTERPRISE: Layers αφαιρέθηκε - Floors δεν εμφανίζονται στην πλοήγηση (Επιλογή Α)
 import { useNavigation } from '../core/NavigationContext';
 // 🏢 ENTERPRISE: Centralized Entity Linking Service (ZERO inline Firestore calls)
@@ -57,9 +58,11 @@ export function DesktopMultiColumn({
     selectedCompany,
     selectedProject,
     selectedBuilding,
+    selectedUnit,  // 🏢 ENTERPRISE: Centralized unit selection for breadcrumb
     // 🏢 ENTERPRISE: selectedFloor αφαιρέθηκε - Floors δεν είναι navigation level (Επιλογή Α)
     projectsLoading,
     loadCompanies,
+    selectUnit,  // 🏢 ENTERPRISE: Centralized unit selection action
     // 🏢 ENTERPRISE: Real-time building functions
     getBuildingCount,
     getBuildingsForProject,
@@ -68,6 +71,11 @@ export function DesktopMultiColumn({
   } = useNavigation();
 
   const { warning } = useNotifications();
+
+  // 🏢 ENTERPRISE: Action icons from centralized config - ZERO hardcoded values
+  const ActionsIcon = NAVIGATION_ACTIONS.actions.icon;
+  const DeleteIcon = NAVIGATION_ACTIONS.delete.icon;
+  const UnlinkIcon = NAVIGATION_ACTIONS.unlink.icon;
 
   // Toolbar states for each column
   const [companiesSearch, setCompaniesSearch] = useState('');
@@ -106,23 +114,14 @@ export function DesktopMultiColumn({
     name: string;
   } | null>(null);
 
-  // Selected unit state for Units column
-  const [selectedUnit, setSelectedUnit] = useState<{
-    id: string;
-    name: string;
-    type?: string;
-  } | null>(null);
+  // 🏢 ENTERPRISE: selectedUnit τώρα είναι centralized στο NavigationContext
+  // Το clearing γίνεται αυτόματα στο selectBuilding() του context
 
   // Modal states for connection dialogs
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isBuildingModalOpen, setIsBuildingModalOpen] = useState(false);
   // 🏢 ENTERPRISE: Floor modal αφαιρέθηκε (Επιλογή Α)
   const [isUnitModalOpen, setIsUnitModalOpen] = useState(false);
-
-  // Clear selectedUnit when selectedBuilding changes
-  React.useEffect(() => {
-    setSelectedUnit(null);
-  }, [selectedBuilding]);
 
   // ==========================================================================
   // 🏢 ENTERPRISE: Memoized Real-time Buildings Data (MOVED UP for dependencies)
@@ -486,8 +485,8 @@ export function DesktopMultiColumn({
 
       if (result.success) {
         warning(`✅ Η μονάδα "${pendingUnlinkUnit.name}" αποσυνδέθηκε επιτυχώς.`, { duration: 4000 });
-        // Clear selection
-        setSelectedUnit(null);
+        // 🏢 ENTERPRISE: Clear selection using centralized action
+        selectUnit(null);
       } else if ('error' in result) {
         warning(`❌ Αποτυχία αποσύνδεσης: ${result.error}`, { duration: 5000 });
       }
@@ -576,8 +575,8 @@ export function DesktopMultiColumn({
         <section className="bg-white dark:bg-card border border-border rounded-lg p-3 overflow-hidden"
                  role="region" aria-label="Εταιρείες">
           <header className="flex items-center gap-2 mb-2">
-            <Factory className="h-5 w-5 text-blue-600" />
-            <h3 className="font-semibold text-gray-900 dark:text-foreground">Εταιρείες</h3>
+            <NAVIGATION_ENTITIES.company.icon className={`h-5 w-5 ${NAVIGATION_ENTITIES.company.color}`} />
+            <h3 className="font-semibold text-gray-900 dark:text-foreground">{NAVIGATION_ENTITIES.company.pluralLabel}</h3>
           </header>
 
           {/* Companies Toolbar */}
@@ -631,8 +630,8 @@ export function DesktopMultiColumn({
                 <li key={company.id}>
                   <NavigationButton
                     onClick={() => onCompanySelect(company.id)}
-                    icon={Factory}
-                    iconColor="text-blue-600"
+                    icon={NAVIGATION_ENTITIES.company.icon}
+                    iconColor={NAVIGATION_ENTITIES.company.color}
                     title={company.companyName}
                     subtitle={subtitle}
                     extraInfo={extraInfo}
@@ -652,8 +651,8 @@ export function DesktopMultiColumn({
           <section className="bg-white dark:bg-card border border-border rounded-lg p-3 overflow-hidden"
                    role="region" aria-label="Έργα">
             <header className="flex items-center gap-2 mb-2">
-              <Construction className="h-5 w-5 text-green-600" />
-              <h3 className="font-semibold text-gray-900 dark:text-foreground">Έργα</h3>
+              <NAVIGATION_ENTITIES.project.icon className={`h-5 w-5 ${NAVIGATION_ENTITIES.project.color}`} />
+              <h3 className="font-semibold text-gray-900 dark:text-foreground">{NAVIGATION_ENTITIES.project.pluralLabel}</h3>
             </header>
 
             {/* Projects Toolbar */}
@@ -692,8 +691,8 @@ export function DesktopMultiColumn({
                   <li key={project.id}>
                     <NavigationButton
                       onClick={() => onProjectSelect(project.id)}
-                      icon={Construction}
-                      iconColor="text-green-600"
+                      icon={NAVIGATION_ENTITIES.project.icon}
+                      iconColor={NAVIGATION_ENTITIES.project.color}
                       title={project.name}
                       subtitle={`${buildingCount} κτίρια`}
                       isSelected={selectedProject?.id === project.id}
@@ -713,8 +712,8 @@ export function DesktopMultiColumn({
           <section className="bg-white dark:bg-card border border-border rounded-lg p-3 overflow-hidden"
                    role="region" aria-label="Κτίρια">
             <header className="flex items-center gap-2 mb-2">
-              <Building className="h-5 w-5 text-purple-600" />
-              <h3 className="font-semibold text-gray-900 dark:text-foreground">Κτίρια</h3>
+              <NAVIGATION_ENTITIES.building.icon className={`h-5 w-5 ${NAVIGATION_ENTITIES.building.color}`} />
+              <h3 className="font-semibold text-gray-900 dark:text-foreground">{NAVIGATION_ENTITIES.building.pluralLabel}</h3>
             </header>
 
             <NavigationCardToolbar
@@ -752,8 +751,8 @@ export function DesktopMultiColumn({
                   <li key={building.id}>
                     <NavigationButton
                       onClick={() => onBuildingSelect(building.id)}
-                      icon={Building}
-                      iconColor="text-purple-600"
+                      icon={NAVIGATION_ENTITIES.building.icon}
+                      iconColor={NAVIGATION_ENTITIES.building.color}
                       title={building.name}
                       subtitle={`${unitCount} μονάδες`}
                       isSelected={selectedBuilding?.id === building.id}
@@ -784,8 +783,8 @@ export function DesktopMultiColumn({
           <section className="bg-white dark:bg-card border border-border rounded-lg p-3 overflow-hidden"
                    role="region" aria-label="Μονάδες">
             <header className="flex items-center gap-2 mb-2">
-              <Home className="h-5 w-5 text-teal-600" />
-              <h3 className="font-semibold text-gray-900 dark:text-foreground">Μονάδες</h3>
+              <NAVIGATION_ENTITIES.unit.icon className={`h-5 w-5 ${NAVIGATION_ENTITIES.unit.color}`} />
+              <h3 className="font-semibold text-gray-900 dark:text-foreground">{NAVIGATION_ENTITIES.unit.pluralLabel}</h3>
             </header>
 
             {/* Units Toolbar */}
@@ -818,10 +817,11 @@ export function DesktopMultiColumn({
                 <li key={unit.id}>
                   <NavigationButton
                     onClick={() => {
-                      setSelectedUnit(unit);
+                      // 🏢 ENTERPRISE: Use centralized selectUnit for breadcrumb display
+                      selectUnit({ id: unit.id, name: unit.name, type: unit.type });
                     }}
-                    icon={Home}
-                    iconColor="text-teal-600"
+                    icon={NAVIGATION_ENTITIES.unit.icon}
+                    iconColor={NAVIGATION_ENTITIES.unit.color}
                     title={unit.name}
                     subtitle={unit.type || 'Μονάδα'}
                     isSelected={selectedUnit?.id === unit.id}
@@ -838,15 +838,15 @@ export function DesktopMultiColumn({
           <section className="bg-white dark:bg-card border border-border rounded-lg p-3"
                    role="region" aria-label="Ενέργειες">
             <header className="flex items-center gap-2 mb-4">
-              <MapPin className="h-5 w-5 text-red-600" />
+              <ActionsIcon className={`h-5 w-5 ${NAVIGATION_ACTIONS.actions.color}`} />
               <h3 className="font-semibold text-gray-900 dark:text-foreground">Ενέργειες</h3>
             </header>
             <ul className="space-y-2 list-none" role="list" aria-label="Λίστα Ενεργειών">
               <li>
                 <NavigationButton
                   onClick={() => onNavigateToPage('properties')}
-                  icon={Home}
-                  iconColor="text-teal-600"
+                  icon={NAVIGATION_ENTITIES.unit.icon}
+                  iconColor={NAVIGATION_ENTITIES.unit.color}
                   title="Προβολή Μονάδων"
                   subtitle={`${buildingUnits.length} μονάδες`}
                   variant="compact"
@@ -856,8 +856,8 @@ export function DesktopMultiColumn({
               <li>
                 <NavigationButton
                   onClick={() => onNavigateToPage('buildings')}
-                  icon={Building}
-                  iconColor="text-purple-600"
+                  icon={NAVIGATION_ENTITIES.building.icon}
+                  iconColor={NAVIGATION_ENTITIES.building.color}
                   title="Λεπτομέρειες Κτιρίου"
                   subtitle={selectedBuilding.name}
                   variant="compact"
@@ -868,8 +868,8 @@ export function DesktopMultiColumn({
                 <li>
                   <NavigationButton
                     onClick={() => onNavigateToPage('projects')}
-                    icon={Construction}
-                    iconColor="text-green-600"
+                    icon={NAVIGATION_ENTITIES.project.icon}
+                    iconColor={NAVIGATION_ENTITIES.project.color}
                     title="Λεπτομέρειες Έργου"
                     subtitle={selectedProject.name}
                     variant="compact"
@@ -887,8 +887,8 @@ export function DesktopMultiColumn({
                     <li>
                       <NavigationButton
                         onClick={() => {/* TODO: Parking spots */}}
-                        icon={Car}
-                        iconColor="text-indigo-600"
+                        icon={NAVIGATION_ENTITIES.parking.icon}
+                        iconColor={NAVIGATION_ENTITIES.parking.color}
                         title="Θέσεις Στάθμευσης"
                         subtitle="Διαθέσιμες θέσεις"
                         variant="compact"
@@ -898,8 +898,8 @@ export function DesktopMultiColumn({
                     <li>
                       <NavigationButton
                         onClick={() => {/* TODO: Storage units */}}
-                        icon={Package}
-                        iconColor="text-amber-600"
+                        icon={NAVIGATION_ENTITIES.storage.icon}
+                        iconColor={NAVIGATION_ENTITIES.storage.color}
                         title="Αποθήκες"
                         subtitle="Αποθηκευτικοί χώροι"
                         variant="compact"
@@ -955,7 +955,7 @@ export function DesktopMultiColumn({
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <Trash2 className="h-5 w-5 text-destructive" />
+              <DeleteIcon className={`h-5 w-5 ${NAVIGATION_ACTIONS.delete.color}`} />
               Αφαίρεση Εταιρείας από Πλοήγηση
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
@@ -996,7 +996,7 @@ export function DesktopMultiColumn({
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <Unlink2 className="h-5 w-5 text-orange-500" />
+              <UnlinkIcon className={`h-5 w-5 ${NAVIGATION_ACTIONS.unlink.color}`} />
               Αποσύνδεση Έργου από Εταιρεία
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
@@ -1037,7 +1037,7 @@ export function DesktopMultiColumn({
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <Unlink2 className="h-5 w-5 text-orange-500" />
+              <UnlinkIcon className={`h-5 w-5 ${NAVIGATION_ACTIONS.unlink.color}`} />
               Αποσύνδεση Κτιρίου από Έργο
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
@@ -1078,7 +1078,7 @@ export function DesktopMultiColumn({
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <Unlink2 className="h-5 w-5 text-orange-500" />
+              <UnlinkIcon className={`h-5 w-5 ${NAVIGATION_ACTIONS.unlink.color}`} />
               Αποσύνδεση Μονάδας από Κτίριο
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">

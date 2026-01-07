@@ -14,9 +14,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ContactsService } from '@/services/contacts.service';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
-import { Loader2, Factory, CheckCircle2, Search } from 'lucide-react';
+import { Loader2, CheckCircle2, Search } from 'lucide-react';
 import { SearchInput } from '@/components/ui/search';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '../../ui/effects';
+// 🏢 ENTERPRISE: Icons από centralized config - ZERO hardcoded values
+import { NAVIGATION_ENTITIES } from '../config';
 
 interface SelectCompanyContactModalProps {
   open: boolean;
@@ -32,6 +34,9 @@ export function SelectCompanyContactModal({
   onCompanySelected,
   existingCompanyIds = [],
 }: SelectCompanyContactModalProps) {
+  // 🏢 ENTERPRISE: Icon from centralized config - ZERO hardcoded values
+  const CompanyIcon = NAVIGATION_ENTITIES.company.icon;
+
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -116,7 +121,7 @@ export function SelectCompanyContactModal({
       <DialogContent className="sm:max-w-[600px] max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Factory className="h-5 w-5 text-blue-600" />
+            <CompanyIcon className={`h-5 w-5 ${NAVIGATION_ENTITIES.company.color}`} />
             Επιλογή Εταιρείας
           </DialogTitle>
           <DialogDescription>
@@ -134,7 +139,7 @@ export function SelectCompanyContactModal({
           <div className="flex items-center gap-2">
             {/* Left: Icon + Title + Count - Same as lists */}
             <div className="flex items-center gap-2 flex-shrink-0">
-              <Factory className="h-4 w-4 text-blue-600" />
+              <CompanyIcon className={`h-4 w-4 ${NAVIGATION_ENTITIES.company.color}`} />
               <span className="font-medium text-sm whitespace-nowrap">
                 Εταιρείες ({filteredContacts.length})
               </span>
@@ -176,7 +181,7 @@ export function SelectCompanyContactModal({
                 <div className="text-center py-8 text-gray-500">
                   {contacts.length === 0 ? (
                     <div>
-                      <Factory className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                      <CompanyIcon className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                       {existingCompanyIds.length > 0 ? (
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
@@ -206,7 +211,7 @@ export function SelectCompanyContactModal({
                       onClick={() => handleSelectCompany(contact)}
                       className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                     >
-                      <Factory className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                      <CompanyIcon className={`h-5 w-5 ${NAVIGATION_ENTITIES.company.color} flex-shrink-0`} />
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-gray-900 dark:text-foreground truncate">
                           {getContactDisplayName(contact)}
