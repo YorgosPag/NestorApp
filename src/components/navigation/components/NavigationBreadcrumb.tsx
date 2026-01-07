@@ -9,7 +9,7 @@
  */
 import React from 'react';
 import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
-import { Building, Construction, Home } from 'lucide-react';
+import { Building, Construction, Home, Factory } from 'lucide-react';
 import { useNavigation } from '../core/NavigationContext';
 import type { BreadcrumbItem } from '../core/types';
 
@@ -37,7 +37,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
       items.push({
         id: selectedCompany.id,
         label: selectedCompany.companyName,
-        icon: Building,
+        icon: Factory,  // 🏢 ENTERPRISE: Factory για εταιρείες
         level: 'companies',
         onClick: () => navigateToLevel('companies')
       });
@@ -47,7 +47,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
       items.push({
         id: selectedProject.id,
         label: selectedProject.name,
-        icon: Construction,
+        icon: Construction,  // 🏢 ENTERPRISE: Construction για έργα
         level: 'projects',
         onClick: () => navigateToLevel('projects')
       });
@@ -57,7 +57,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
       items.push({
         id: selectedBuilding.id,
         label: selectedBuilding.name,
-        icon: Home,
+        icon: Building,  // 🏢 ENTERPRISE: Building για κτίρια
         level: 'buildings',
         onClick: () => navigateToLevel('buildings')
       });

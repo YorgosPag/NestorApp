@@ -14,7 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ContactsService } from '@/services/contacts.service';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
-import { Building, Loader2, Factory, CheckCircle2 } from 'lucide-react';
+import { Loader2, Factory, CheckCircle2, Search } from 'lucide-react';
 import { SearchInput } from '@/components/ui/search';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '../../ui/effects';
 
@@ -116,7 +116,7 @@ export function SelectCompanyContactModal({
       <DialogContent className="sm:max-w-[600px] max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Building className="h-5 w-5 text-blue-600" />
+            <Factory className="h-5 w-5 text-blue-600" />
             Επιλογή Εταιρείας
           </DialogTitle>
           <DialogDescription>
@@ -134,7 +134,7 @@ export function SelectCompanyContactModal({
           <div className="flex items-center gap-2">
             {/* Left: Icon + Title + Count - Same as lists */}
             <div className="flex items-center gap-2 flex-shrink-0">
-              <Building className="h-4 w-4 text-blue-600" />
+              <Factory className="h-4 w-4 text-blue-600" />
               <span className="font-medium text-sm whitespace-nowrap">
                 Εταιρείες ({filteredContacts.length})
               </span>

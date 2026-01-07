@@ -131,6 +131,7 @@ export function MobileNavigation({
                   key={company.id}
                   onClick={() => onCompanySelect(company.id)}
                   icon={Factory}
+                  iconColor="text-blue-600"
                   title={company.companyName}
                   subtitle={subtitle}
                   extraInfo={extraInfo}
@@ -155,6 +156,7 @@ export function MobileNavigation({
                   key={project.id}
                   onClick={() => onProjectSelect(project.id)}
                   icon={Construction}
+                  iconColor="text-green-600"
                   title={project.name}
                   subtitle={`${buildingCount} κτίρια`}
                   badgeStatus={!hasBuildings ? 'no_projects' : undefined}
@@ -173,6 +175,7 @@ export function MobileNavigation({
                 key={building.id}
                 onClick={() => onBuildingSelect(building.id)}
                 icon={Building}
+                iconColor="text-purple-600"
                 title={building.name}
                 subtitle="Κτίριο"
               />
@@ -194,6 +197,7 @@ export function MobileNavigation({
                 key={unit.id}
                 onClick={() => onUnitSelect?.(unit.id)}
                 icon={Home}
+                iconColor="text-teal-600"
                 title={unit.name}
                 subtitle={unit.type || 'Μονάδα'}
               />
@@ -207,6 +211,7 @@ export function MobileNavigation({
             <NavigationButton
               onClick={() => onNavigateToPage('properties')}
               icon={Home}
+              iconColor="text-teal-600"
               title="Προβολή Μονάδων"
               subtitle={`${buildingUnits.length} μονάδες στο κτίριο`}
               variant="compact"
@@ -215,6 +220,7 @@ export function MobileNavigation({
             <NavigationButton
               onClick={() => onNavigateToPage('buildings')}
               icon={Building}
+              iconColor="text-purple-600"
               title="Λεπτομέρειες Κτιρίου"
               subtitle={selectedBuilding.name}
               variant="compact"
@@ -224,6 +230,7 @@ export function MobileNavigation({
               <NavigationButton
                 onClick={() => onNavigateToPage('projects')}
                 icon={Construction}
+                iconColor="text-green-600"
                 title="Λεπτομέρειες Έργου"
                 subtitle={selectedProject.name}
                 variant="compact"

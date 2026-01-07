@@ -18,6 +18,8 @@ interface NavigationButtonProps {
   extraInfo?: string;
   isSelected?: boolean;
   variant?: 'default' | 'compact';
+  // 🏢 ENTERPRISE: Custom icon color for entity type consistency
+  iconColor?: string; // e.g., 'text-blue-600', 'text-green-600', etc.
   // Νέο κεντρικοποιημένο badge system
   badgeStatus?: NavigationStatus;
   badgeText?: string; // Override default badge text
@@ -34,6 +36,7 @@ export function NavigationButton({
   extraInfo,
   isSelected = false,
   variant = 'default',
+  iconColor,
   badgeStatus,
   badgeText,
   // Backward compatibility
@@ -66,9 +69,10 @@ export function NavigationButton({
       // Fallback για emojis
       return <span className={variant === 'compact' ? 'text-lg' : 'text-2xl'}>{icon}</span>;
     } else {
-      // Lucide icon component
+      // Lucide icon component - 🏢 ENTERPRISE: Use custom iconColor if provided
       const IconComponent = icon;
-      return <IconComponent className={`${iconSize} text-gray-600 dark:text-gray-400`} />;
+      const colorClass = iconColor || 'text-gray-600 dark:text-gray-400';
+      return <IconComponent className={`${iconSize} ${colorClass}`} />;
     }
   };
 

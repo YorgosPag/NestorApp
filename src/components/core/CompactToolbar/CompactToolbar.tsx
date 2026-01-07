@@ -54,6 +54,9 @@ export function CompactToolbar({
   headerTitle,
   headerCount,
   headerIcon: HeaderIcon,
+  headerIconColor,
+  newItemIcon: NewItemIcon,
+  deleteIcon: DeleteIcon,
   onNewItem,
   onEditItem,
   onDeleteItems,
@@ -87,17 +90,21 @@ export function CompactToolbar({
         <div className="flex items-center flex-wrap gap-1">
 
         {/* New Item */}
-        {config.availableActions.newItem && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`${iconSizes.xl} p-0`}
-            onClick={onNewItem}
-            title={config.tooltips.newItem}
-          >
-            <Plus className={`${iconSizes.sm} ${getIconColor('newItem')}`} />
-          </Button>
-        )}
+        {config.availableActions.newItem && (() => {
+          // 🏢 ENTERPRISE: Use custom icon if provided (e.g., Link2 for connect), fallback to Plus
+          const IconComponent = NewItemIcon || Plus;
+          return (
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`${iconSizes.xl} p-0`}
+              onClick={onNewItem}
+              title={config.tooltips.newItem}
+            >
+              <IconComponent className={`${iconSizes.sm} ${getIconColor('newItem')}`} />
+            </Button>
+          );
+        })()}
 
         {/* Edit Item */}
         {config.availableActions.editItem && (
@@ -114,18 +121,25 @@ export function CompactToolbar({
         )}
 
         {/* Delete Items */}
-        {config.availableActions.deleteItems && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`${iconSizes.xl} p-0`}
-            onClick={() => onDeleteItems?.(selectedItems)}
-            disabled={hasSelectedContact !== undefined ? !hasSelectedContact : selectedItems.length === 0}
-            title={config.tooltips.deleteItems}
-          >
-            <Trash2 className={`${iconSizes.sm} ${hasSelectedContact !== undefined ? (!hasSelectedContact ? colors.text.muted : getIconColor('deleteItems')) : (selectedItems.length === 0 ? colors.text.muted : getIconColor('deleteItems'))}`} />
-          </Button>
-        )}
+        {config.availableActions.deleteItems && (() => {
+          // 🏢 ENTERPRISE: Use custom icon if provided (e.g., Unlink2 for disconnect), fallback to Trash2
+          const IconComponent = DeleteIcon || Trash2;
+          const isDisabled = hasSelectedContact !== undefined ? !hasSelectedContact : selectedItems.length === 0;
+          const iconColor = isDisabled ? colors.text.muted : getIconColor('deleteItems');
+
+          return (
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`${iconSizes.xl} p-0`}
+              onClick={() => onDeleteItems?.(selectedItems)}
+              disabled={isDisabled}
+              title={config.tooltips.deleteItems}
+            >
+              <IconComponent className={`${iconSizes.sm} ${iconColor}`} />
+            </Button>
+          );
+        })()}
 
         {/* Filters Dropdown */}
         {config.availableActions.filters && config.filterCategories.length > 0 && (
@@ -395,7 +409,7 @@ export function CompactToolbar({
         {(headerTitle || headerCount !== undefined || HeaderIcon) && (
           <div className="flex items-center gap-2 flex-shrink-0">
             {HeaderIcon && (
-              <HeaderIcon className={`${iconSizes.sm} ${colors.text.info}`} />
+              <HeaderIcon className={`${iconSizes.sm} ${headerIconColor || colors.text.info}`} />
             )}
             {headerTitle && (
               <span className="font-medium text-sm whitespace-nowrap">

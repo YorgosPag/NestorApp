@@ -4,6 +4,7 @@
  */
 
 import type React from 'react';
+import type { LucideIcon } from 'lucide-react';
 
 export interface NavigationCompany {
   id: string;
@@ -135,7 +136,7 @@ export interface BreadcrumbItem {
   id: string;
   label: string;
   /** Icon can be emoji string or React component (Lucide) */
-  icon: string | React.ComponentType<{ className?: string; size?: number }>;
+  icon: string | LucideIcon;
   level: NavigationLevel;
   onClick: () => void;
 }

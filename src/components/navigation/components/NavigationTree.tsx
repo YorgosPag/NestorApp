@@ -8,7 +8,7 @@
  * Floors αφαιρέθηκαν από navigation - Units συνδέονται απευθείας με Buildings
  */
 import React, { useMemo } from 'react';
-import { Building, Construction, Home, MapPin, Map } from 'lucide-react';
+import { Building, Construction, Home, MapPin, Map, Factory } from 'lucide-react';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
 import { useNavigation } from '../core/NavigationContext';
@@ -159,7 +159,8 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
                 <NavigationButton
                   key={company.id}
                   onClick={() => selectCompany(company.id)}
-                  icon={Building}
+                  icon={Factory}
+                  iconColor="text-blue-600"
                   title={company.companyName}
                   subtitle={company.industry}
                   extraInfo={company.vatNumber ? `ΑΦΜ: ${company.vatNumber}` : undefined}
@@ -183,6 +184,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
                   key={project.id}
                   onClick={() => selectProject(project.id)}
                   icon={Construction}
+                  iconColor="text-green-600"
                   title={project.name}
                   subtitle={`${getBuildingCount(project.id)} κτίρια`}
                   isSelected={selectedProject?.id === project.id}
@@ -205,7 +207,8 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
                 <NavigationButton
                   key={building.id}
                   onClick={() => selectBuilding(building.id)}
-                  icon={Home}
+                  icon={Building}
+                  iconColor="text-purple-600"
                   title={building.name}
                   subtitle="Κτίριο"
                   isSelected={selectedBuilding?.id === building.id}
@@ -230,15 +233,17 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
 
             <NavigationButton
               onClick={() => handleNavigateToPage('properties')}
-              icon={MapPin}
-              title="Προβολή Ακινήτων"
+              icon={Home}
+              iconColor="text-teal-600"
+              title="Προβολή Μονάδων"
               subtitle={`${buildingUnits.length} μονάδες στο κτίριο`}
               variant="compact"
             />
 
             <NavigationButton
               onClick={() => handleNavigateToPage('buildings')}
-              icon={Home}
+              icon={Building}
+              iconColor="text-purple-600"
               title="Λεπτομέρειες Κτιρίου"
               subtitle={selectedBuilding.name}
               variant="compact"
@@ -248,6 +253,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
               <NavigationButton
                 onClick={() => handleNavigateToPage('projects')}
                 icon={Construction}
+                iconColor="text-green-600"
                 title="Λεπτομέρειες Έργου"
                 subtitle={selectedProject.name}
                 variant="compact"

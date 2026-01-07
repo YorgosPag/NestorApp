@@ -10,7 +10,7 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { NavigationButton } from './NavigationButton';
 import { NavigationCardToolbar } from './NavigationCardToolbar';
 import { SelectItemModal } from '../dialogs/SelectItemModal';
-import { Building, Home, Construction, MapPin, Car, Package, Factory } from 'lucide-react';
+import { Building, Home, Construction, MapPin, Car, Package, Factory, Trash2, Unlink2 } from 'lucide-react';
 // 🏢 ENTERPRISE: Layers αφαιρέθηκε - Floors δεν εμφανίζονται στην πλοήγηση (Επιλογή Α)
 import { useNavigation } from '../core/NavigationContext';
 // 🏢 ENTERPRISE: Centralized Entity Linking Service (ZERO inline Firestore calls)
@@ -79,6 +79,25 @@ export function DesktopMultiColumn({
   const [pendingDeletionCompany, setPendingDeletionCompany] = useState<{
     id: string;
     companyName: string;
+  } | null>(null);
+
+  // 🏢 ENTERPRISE: Dialog states για Project/Building/Unit αποσύνδεση
+  const [projectDialogOpen, setProjectDialogOpen] = useState(false);
+  const [pendingUnlinkProject, setPendingUnlinkProject] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+
+  const [buildingDialogOpen, setBuildingDialogOpen] = useState(false);
+  const [pendingUnlinkBuilding, setPendingUnlinkBuilding] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+
+  const [unitDialogOpen, setUnitDialogOpen] = useState(false);
+  const [pendingUnlinkUnit, setPendingUnlinkUnit] = useState<{
+    id: string;
+    name: string;
   } | null>(null);
 
   // Selected unit state for Units column
@@ -199,16 +218,8 @@ export function DesktopMultiColumn({
     return companyProjects.length === 0;
   };
 
-  // 🏢 ENTERPRISE: Use real-time building count for accurate deletion check
-  const canDeleteProject = (project: { id: string }) => {
-    return getBuildingCount(project.id) === 0;
-  };
-
-  const canDeleteBuilding = (building: { floors: { length: number } }) => {
-    return building.floors.length === 0;
-  };
-
-  // 🏢 ENTERPRISE: canDeleteFloor αφαιρέθηκε (Επιλογή Α) - Floors δεν είναι navigation level
+  // 🏢 ENTERPRISE: canDeleteProject, canDeleteBuilding, canDeleteFloor αφαιρέθηκαν
+  // Η αποσύνδεση (unlink) επιτρέπεται πάντα - χρησιμοποιεί το κεντρικοποιημένο EntityLinkingService
 
   const showDeleteWarning = (itemType: string, dependentCount: number, dependentType: string) => {
     let action: string;
@@ -327,37 +338,160 @@ export function DesktopMultiColumn({
     }
   };
 
+  /**
+   * 🏢 ENTERPRISE: Αποσύνδεση Έργου από Εταιρεία
+   *
+   * Χρησιμοποιεί το κεντρικοποιημένο EntityLinkingService.
+   * Το έργο δεν διαγράφεται - απλά αποσυνδέεται (companyId = null).
+   *
+   * 🔒 ΑΣΦΑΛΕΙΑ: Αν το έργο έχει κτίρια, δεν επιτρέπεται αποσύνδεση!
+   */
   const handleDeleteProject = () => {
     if (!selectedProject) return;
 
-    if (canDeleteProject(selectedProject)) {
-      // TODO: Implement actual deletion logic
-    } else {
-      // 🏢 ENTERPRISE: Use real-time building count
-      showDeleteWarning('έργο', getBuildingCount(selectedProject.id), 'κτίρια');
+    // 🔒 ENTERPRISE SAFETY: Έλεγχος εξαρτήσεων
+    const buildingCount = getBuildingCount(selectedProject.id);
+    if (buildingCount > 0) {
+      // 🚫 ΜΠΛΟΚΑΡΙΣΜΑ: Δεν επιτρέπεται αποσύνδεση με κτίρια
+      showDeleteWarning('έργο', buildingCount, 'κτίρια');
+      return;
+    }
+
+    // ✅ Ασφαλές: Δεν έχει κτίρια - άνοιγμα confirmation dialog
+    setPendingUnlinkProject({ id: selectedProject.id, name: selectedProject.name });
+    setProjectDialogOpen(true);
+  };
+
+  /**
+   * 🏢 ENTERPRISE: Εκτέλεση αποσύνδεσης έργου μετά από επιβεβαίωση
+   */
+  const handleConfirmedProjectUnlink = async () => {
+    if (!pendingUnlinkProject) return;
+
+    try {
+      // 🏢 ENTERPRISE: Χρήση κεντρικοποιημένου service
+      const result = await EntityLinkingService.unlinkEntity({
+        entityId: pendingUnlinkProject.id,
+        entityType: 'project',
+      });
+
+      if (result.success) {
+        warning(`✅ Το έργο "${pendingUnlinkProject.name}" αποσυνδέθηκε επιτυχώς.`, { duration: 4000 });
+        // Clear selection
+        onProjectSelect('');
+      } else if ('error' in result) {
+        warning(`❌ Αποτυχία αποσύνδεσης: ${result.error}`, { duration: 5000 });
+      }
+    } catch (error) {
+      console.error('❌ [DesktopMultiColumn] Project unlink failed:', error);
+      warning('❌ Αποτυχία αποσύνδεσης έργου. Δοκιμάστε ξανά.', { duration: 5000 });
+    } finally {
+      setProjectDialogOpen(false);
+      setPendingUnlinkProject(null);
     }
   };
 
+  /**
+   * 🏢 ENTERPRISE: Αποσύνδεση Κτιρίου από Έργο
+   *
+   * Χρησιμοποιεί το κεντρικοποιημένο EntityLinkingService.
+   * Το κτίριο δεν διαγράφεται - απλά αποσυνδέεται (projectId = null).
+   *
+   * 🔒 ΑΣΦΑΛΕΙΑ: Αν το κτίριο έχει μονάδες, δεν επιτρέπεται αποσύνδεση!
+   */
   const handleDeleteBuilding = () => {
     if (!selectedBuilding) return;
 
-    if (canDeleteBuilding(selectedBuilding)) {
-      // TODO: Implement actual deletion logic
-    } else {
-      showDeleteWarning('κτίριο', selectedBuilding.floors.length, 'όροφοι');
+    // 🔒 ENTERPRISE SAFETY: Υπολογισμός μονάδων (από ορόφους + απευθείας)
+    const floorUnits = selectedBuilding.floors?.flatMap(floor => floor.units) || [];
+    const directUnits = selectedBuilding.units || [];
+    const totalUnits = floorUnits.length + directUnits.length;
+
+    if (totalUnits > 0) {
+      // 🚫 ΜΠΛΟΚΑΡΙΣΜΑ: Δεν επιτρέπεται αποσύνδεση με μονάδες
+      showDeleteWarning('κτίριο', totalUnits, 'μονάδες');
+      return;
+    }
+
+    // ✅ Ασφαλές: Δεν έχει μονάδες - άνοιγμα confirmation dialog
+    setPendingUnlinkBuilding({ id: selectedBuilding.id, name: selectedBuilding.name });
+    setBuildingDialogOpen(true);
+  };
+
+  /**
+   * 🏢 ENTERPRISE: Εκτέλεση αποσύνδεσης κτιρίου μετά από επιβεβαίωση
+   */
+  const handleConfirmedBuildingUnlink = async () => {
+    if (!pendingUnlinkBuilding) return;
+
+    try {
+      // 🏢 ENTERPRISE: Χρήση κεντρικοποιημένου service
+      const result = await EntityLinkingService.unlinkEntity({
+        entityId: pendingUnlinkBuilding.id,
+        entityType: 'building',
+      });
+
+      if (result.success) {
+        warning(`✅ Το κτίριο "${pendingUnlinkBuilding.name}" αποσυνδέθηκε επιτυχώς.`, { duration: 4000 });
+        // Clear selection
+        onBuildingSelect('');
+      } else if ('error' in result) {
+        warning(`❌ Αποτυχία αποσύνδεσης: ${result.error}`, { duration: 5000 });
+      }
+    } catch (error) {
+      console.error('❌ [DesktopMultiColumn] Building unlink failed:', error);
+      warning('❌ Αποτυχία αποσύνδεσης κτιρίου. Δοκιμάστε ξανά.', { duration: 5000 });
+    } finally {
+      setBuildingDialogOpen(false);
+      setPendingUnlinkBuilding(null);
     }
   };
 
   // 🏢 ENTERPRISE: handleDeleteFloor αφαιρέθηκε (Επιλογή Α) - Floors δεν είναι navigation level
 
+  /**
+   * 🏢 ENTERPRISE: Αποσύνδεση Μονάδας από Κτίριο
+   *
+   * Χρησιμοποιεί το κεντρικοποιημένο EntityLinkingService.
+   * Η μονάδα δεν διαγράφεται - απλά αποσυνδέεται (buildingId = null).
+   *
+   * ✅ Οι μονάδες δεν έχουν εξαρτήσεις - επιτρέπεται αποσύνδεση πάντα.
+   */
   const handleDeleteUnit = () => {
     if (!selectedUnit) return;
 
-    // Units can always be deleted as they have no dependencies
-    // TODO: Implement actual deletion logic
+    // ✅ Μονάδες δεν έχουν εξαρτήσεις - άνοιγμα confirmation dialog
+    setPendingUnlinkUnit({ id: selectedUnit.id, name: selectedUnit.name });
+    setUnitDialogOpen(true);
+  };
 
-    // Clear selection after deletion
-    setSelectedUnit(null);
+  /**
+   * 🏢 ENTERPRISE: Εκτέλεση αποσύνδεσης μονάδας μετά από επιβεβαίωση
+   */
+  const handleConfirmedUnitUnlink = async () => {
+    if (!pendingUnlinkUnit) return;
+
+    try {
+      // 🏢 ENTERPRISE: Χρήση κεντρικοποιημένου service
+      const result = await EntityLinkingService.unlinkEntity({
+        entityId: pendingUnlinkUnit.id,
+        entityType: 'unit',
+      });
+
+      if (result.success) {
+        warning(`✅ Η μονάδα "${pendingUnlinkUnit.name}" αποσυνδέθηκε επιτυχώς.`, { duration: 4000 });
+        // Clear selection
+        setSelectedUnit(null);
+      } else if ('error' in result) {
+        warning(`❌ Αποτυχία αποσύνδεσης: ${result.error}`, { duration: 5000 });
+      }
+    } catch (error) {
+      console.error('❌ [DesktopMultiColumn] Unit unlink failed:', error);
+      warning('❌ Αποτυχία αποσύνδεσης μονάδας. Δοκιμάστε ξανά.', { duration: 5000 });
+    } finally {
+      setUnitDialogOpen(false);
+      setPendingUnlinkUnit(null);
+    }
   };
 
   // Handlers for connecting items
@@ -436,7 +570,7 @@ export function DesktopMultiColumn({
         <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                  role="region" aria-label="Εταιρείες">
           <header className="flex items-center gap-2 mb-2">
-            <Building className="h-5 w-5 text-blue-600" />
+            <Factory className="h-5 w-5 text-blue-600" />
             <h3 className="font-semibold text-gray-900 dark:text-foreground">Εταιρείες</h3>
           </header>
 
@@ -488,6 +622,7 @@ export function DesktopMultiColumn({
                   <NavigationButton
                     onClick={() => onCompanySelect(company.id)}
                     icon={Factory}
+                    iconColor="text-blue-600"
                     title={company.companyName}
                     subtitle={subtitle}
                     extraInfo={extraInfo}
@@ -507,7 +642,7 @@ export function DesktopMultiColumn({
           <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                    role="region" aria-label="Έργα">
             <header className="flex items-center gap-2 mb-2">
-              <Home className="h-5 w-5 text-green-600" />
+              <Construction className="h-5 w-5 text-green-600" />
               <h3 className="font-semibold text-gray-900 dark:text-foreground">Έργα</h3>
             </header>
 
@@ -542,6 +677,7 @@ export function DesktopMultiColumn({
                     <NavigationButton
                       onClick={() => onProjectSelect(project.id)}
                       icon={Construction}
+                      iconColor="text-green-600"
                       title={project.name}
                       subtitle={`${buildingCount} κτίρια`}
                       isSelected={selectedProject?.id === project.id}
@@ -590,6 +726,7 @@ export function DesktopMultiColumn({
                   <NavigationButton
                     onClick={() => onBuildingSelect(building.id)}
                     icon={Building}
+                    iconColor="text-purple-600"
                     title={building.name}
                     subtitle="Κτίριο"
                     isSelected={selectedBuilding?.id === building.id}
@@ -648,6 +785,7 @@ export function DesktopMultiColumn({
                       setSelectedUnit(unit);
                     }}
                     icon={Home}
+                    iconColor="text-teal-600"
                     title={unit.name}
                     subtitle={unit.type || 'Μονάδα'}
                     isSelected={selectedUnit?.id === unit.id}
@@ -672,6 +810,7 @@ export function DesktopMultiColumn({
                 <NavigationButton
                   onClick={() => onNavigateToPage('properties')}
                   icon={Home}
+                  iconColor="text-teal-600"
                   title="Προβολή Μονάδων"
                   subtitle={`${buildingUnits.length} μονάδες`}
                   variant="compact"
@@ -682,6 +821,7 @@ export function DesktopMultiColumn({
                 <NavigationButton
                   onClick={() => onNavigateToPage('buildings')}
                   icon={Building}
+                  iconColor="text-purple-600"
                   title="Λεπτομέρειες Κτιρίου"
                   subtitle={selectedBuilding.name}
                   variant="compact"
@@ -693,6 +833,7 @@ export function DesktopMultiColumn({
                   <NavigationButton
                     onClick={() => onNavigateToPage('projects')}
                     icon={Construction}
+                    iconColor="text-green-600"
                     title="Λεπτομέρειες Έργου"
                     subtitle={selectedProject.name}
                     variant="compact"
@@ -711,6 +852,7 @@ export function DesktopMultiColumn({
                       <NavigationButton
                         onClick={() => {/* TODO: Parking spots */}}
                         icon={Car}
+                        iconColor="text-indigo-600"
                         title="Θέσεις Στάθμευσης"
                         subtitle="Διαθέσιμες θέσεις"
                         variant="compact"
@@ -721,6 +863,7 @@ export function DesktopMultiColumn({
                       <NavigationButton
                         onClick={() => {/* TODO: Storage units */}}
                         icon={Package}
+                        iconColor="text-amber-600"
                         title="Αποθήκες"
                         subtitle="Αποθηκευτικοί χώροι"
                         variant="compact"
@@ -771,12 +914,13 @@ export function DesktopMultiColumn({
         itemType="unit"
       />
 
-      {/* 🏢 ENTERPRISE CONFIRMATION DIALOG - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ */}
+      {/* 🏢 ENTERPRISE CONFIRMATION DIALOG - ΕΤΑΙΡΕΙΑ */}
       <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              🗑️ Αφαίρεση Εταιρείας από Πλοήγηση
+              <Trash2 className="h-5 w-5 text-destructive" />
+              Αφαίρεση Εταιρείας από Πλοήγηση
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
               <p>
@@ -806,6 +950,129 @@ export function DesktopMultiColumn({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Αφαίρεση
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 🏢 ENTERPRISE CONFIRMATION DIALOG - ΕΡΓΟ */}
+      <AlertDialog open={projectDialogOpen} onOpenChange={setProjectDialogOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Unlink2 className="h-5 w-5 text-orange-500" />
+              Αποσύνδεση Έργου από Εταιρεία
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Είστε βέβαιοι ότι θέλετε να αποσυνδέσετε το έργο{' '}
+                <strong>"{pendingUnlinkProject?.name}"</strong> από την εταιρεία;
+              </p>
+
+              <div className="bg-muted p-3 rounded-md text-sm space-y-2 border border-border">
+                <p className="font-medium text-foreground">Αυτή η ενέργεια:</p>
+                <ul className="text-muted-foreground space-y-1">
+                  <li>• Θα αποσυνδέσει το έργο από την εταιρεία</li>
+                  <li>• <strong className="text-foreground">ΔΕΝ</strong> θα διαγράψει το έργο από τη βάση δεδομένων</li>
+                  <li>• Μπορείτε να το συνδέσετε ξανά αργότερα</li>
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setProjectDialogOpen(false);
+              setPendingUnlinkProject(null);
+            }}>
+              Ακύρωση
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmedProjectUnlink}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Αποσύνδεση
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 🏢 ENTERPRISE CONFIRMATION DIALOG - ΚΤΙΡΙΟ */}
+      <AlertDialog open={buildingDialogOpen} onOpenChange={setBuildingDialogOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Unlink2 className="h-5 w-5 text-orange-500" />
+              Αποσύνδεση Κτιρίου από Έργο
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Είστε βέβαιοι ότι θέλετε να αποσυνδέσετε το κτίριο{' '}
+                <strong>"{pendingUnlinkBuilding?.name}"</strong> από το έργο;
+              </p>
+
+              <div className="bg-muted p-3 rounded-md text-sm space-y-2 border border-border">
+                <p className="font-medium text-foreground">Αυτή η ενέργεια:</p>
+                <ul className="text-muted-foreground space-y-1">
+                  <li>• Θα αποσυνδέσει το κτίριο από το έργο</li>
+                  <li>• <strong className="text-foreground">ΔΕΝ</strong> θα διαγράψει το κτίριο από τη βάση δεδομένων</li>
+                  <li>• Μπορείτε να το συνδέσετε ξανά αργότερα</li>
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setBuildingDialogOpen(false);
+              setPendingUnlinkBuilding(null);
+            }}>
+              Ακύρωση
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmedBuildingUnlink}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Αποσύνδεση
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 🏢 ENTERPRISE CONFIRMATION DIALOG - ΜΟΝΑΔΑ */}
+      <AlertDialog open={unitDialogOpen} onOpenChange={setUnitDialogOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Unlink2 className="h-5 w-5 text-orange-500" />
+              Αποσύνδεση Μονάδας από Κτίριο
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Είστε βέβαιοι ότι θέλετε να αποσυνδέσετε τη μονάδα{' '}
+                <strong>"{pendingUnlinkUnit?.name}"</strong> από το κτίριο;
+              </p>
+
+              <div className="bg-muted p-3 rounded-md text-sm space-y-2 border border-border">
+                <p className="font-medium text-foreground">Αυτή η ενέργεια:</p>
+                <ul className="text-muted-foreground space-y-1">
+                  <li>• Θα αποσυνδέσει τη μονάδα από το κτίριο</li>
+                  <li>• <strong className="text-foreground">ΔΕΝ</strong> θα διαγράψει τη μονάδα από τη βάση δεδομένων</li>
+                  <li>• Μπορείτε να την συνδέσετε ξανά αργότερα</li>
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setUnitDialogOpen(false);
+              setPendingUnlinkUnit(null);
+            }}>
+              Ακύρωση
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmedUnitUnlink}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Αποσύνδεση
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

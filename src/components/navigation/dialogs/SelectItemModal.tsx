@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Loader2, Home, Building, Layers, MapPin } from 'lucide-react';
+import { Search, Loader2, Home, Building, Layers, Construction } from 'lucide-react';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '../../ui/effects';
 
 interface Item {
@@ -32,18 +32,22 @@ interface SelectItemModalProps {
   isLoading?: boolean;
 }
 
+/**
+ * 🏢 ENTERPRISE: Icons για κάθε entity type
+ * ΣΗΜΑΝΤΙΚΟ: Πρέπει να ταιριάζουν με τα icons της πλοήγησης!
+ */
 const getIcon = (itemType: string) => {
   switch (itemType) {
     case 'project':
-      return Home;
+      return Construction;  // ✅ Ταιριάζει με την πλοήγηση
     case 'building':
-      return Building;
+      return Building;      // ✅ Ταιριάζει με την πλοήγηση
     case 'floor':
-      return Layers;
+      return Layers;        // Floors δεν εμφανίζονται (Επιλογή Α)
     case 'unit':
-      return MapPin;
+      return Home;          // ✅ Ταιριάζει με την πλοήγηση
     default:
-      return Home;
+      return Building;
   }
 };
 

@@ -9,7 +9,7 @@
 import React from 'react';
 import { CompactToolbar } from '@/components/core/CompactToolbar/CompactToolbar';
 import type { CompactToolbarConfig } from '@/components/core/CompactToolbar/types';
-import { Building, Home, Construction, Users, Factory } from 'lucide-react';
+import { Building, Home, Construction, Users, Factory, Trash2, Unlink2, Plus, Link2 } from 'lucide-react';
 
 type NavigationLevel = 'companies' | 'projects' | 'buildings' | 'floors' | 'units';
 
@@ -25,14 +25,65 @@ const getLevelTitle = (level: NavigationLevel): string => {
   }
 };
 
+/**
+ * 🏢 ENTERPRISE: Icons για τους τίτλους των στηλών
+ * ΣΗΜΑΝΤΙΚΟ: Πρέπει να ταιριάζουν με τα icons των NavigationButton cards!
+ */
 const getLevelIcon = (level: NavigationLevel): React.ComponentType<{ className?: string }> => {
   switch (level) {
-    case 'companies': return Factory;
-    case 'projects': return Construction;
-    case 'buildings': return Building;
-    case 'floors': return Users;
-    case 'units': return Home;
+    case 'companies': return Factory;      // ✅ Ταιριάζει με τις κάρτες εταιρειών
+    case 'projects': return Construction;  // ✅ Ταιριάζει με τις κάρτες έργων
+    case 'buildings': return Building;     // ✅ Ταιριάζει με τις κάρτες κτιρίων
+    case 'floors': return Building;        // Floors δεν εμφανίζονται (Επιλογή Α)
+    case 'units': return Home;             // ✅ Ταιριάζει με τις κάρτες μονάδων
     default: return Building;
+  }
+};
+
+/**
+ * 🏢 ENTERPRISE: Get the correct delete/unlink icon per level
+ * - Companies: Trash2 (αφαίρεση από navigation)
+ * - Projects/Buildings/Floors/Units: Unlink2 (αποσύνδεση σχέσης)
+ */
+const getDeleteIcon = (level: NavigationLevel): React.ComponentType<{ className?: string }> => {
+  switch (level) {
+    case 'companies': return Trash2; // Αφαίρεση από navigation list
+    case 'projects': return Unlink2; // Αποσύνδεση από εταιρεία
+    case 'buildings': return Unlink2; // Αποσύνδεση από έργο
+    case 'floors': return Unlink2; // Αποσύνδεση από κτίριο
+    case 'units': return Unlink2; // Αποσύνδεση από κτίριο
+    default: return Trash2;
+  }
+};
+
+/**
+ * 🏢 ENTERPRISE: Get the correct new item icon per level
+ * - Companies: Plus (προσθήκη στη λίστα πλοήγησης)
+ * - Projects/Buildings/Floors/Units: Link2 (σύνδεση με parent entity)
+ */
+const getNewItemIcon = (level: NavigationLevel): React.ComponentType<{ className?: string }> => {
+  switch (level) {
+    case 'companies': return Plus; // Προσθήκη νέας εταιρείας στην πλοήγηση
+    case 'projects': return Link2; // Σύνδεση έργου με εταιρεία
+    case 'buildings': return Link2; // Σύνδεση κτιρίου με έργο
+    case 'floors': return Link2; // Σύνδεση ορόφου με κτίριο
+    case 'units': return Link2; // Σύνδεση μονάδας με κτίριο
+    default: return Plus;
+  }
+};
+
+/**
+ * 🏢 ENTERPRISE: Get the correct icon color per level
+ * Matches the header icon colors for visual consistency
+ */
+const getLevelIconColor = (level: NavigationLevel): string => {
+  switch (level) {
+    case 'companies': return 'text-blue-600';   // Factory icon color
+    case 'projects': return 'text-green-600';   // Construction icon color
+    case 'buildings': return 'text-purple-600'; // Building icon color
+    case 'floors': return 'text-orange-600';    // Layers icon color
+    case 'units': return 'text-teal-600';       // Home icon color
+    default: return 'text-blue-600';
   }
 };
 
@@ -399,6 +450,10 @@ export function NavigationCardToolbar({
       headerTitle={getLevelTitle(level)}
       headerCount={itemCount}
       headerIcon={getLevelIcon(level)}
+      headerIconColor={getLevelIconColor(level)}
+      // 🏢 ENTERPRISE: Custom icons for semantic correctness
+      newItemIcon={getNewItemIcon(level)}
+      deleteIcon={getDeleteIcon(level)}
       onNewItem={onNewItem}
       onEditItem={() => onEditItem?.()}
       onDeleteItems={() => onDeleteItem?.()}
