@@ -1,31 +1,38 @@
 {
-  "category": "REFACTOR",
-  "shortDescription": "TypeScript & Performance Improvements (4 files)",
-  "problem": "Navigation components used 'any' types and lacked performance optimization for real-time data.",
-  "cause": "Legacy code patterns without proper TypeScript interfaces and missing memoization.",
+  "category": "ARCHITECTURE",
+  "shortDescription": "Navigation Architecture - Option A (10 files)",
+  "problem": "Navigation included floors as a level, creating complex 5-level hierarchy that was confusing for users.",
+  "cause": "Original design treated floors as navigation targets, but floors are structural nodes not user destinations.",
   "filesChanged": [
     ".claude/settings.local.json",
+    "REAL_ESTATE_HIERARCHY_DOCUMENTATION.md",
     "src/components/navigation/components/DesktopMultiColumn.tsx",
     "src/components/navigation/components/MobileNavigation.tsx",
-    "src/components/navigation/components/NavigationTree.tsx"
+    "src/components/navigation/components/NavigationBreadcrumb.tsx",
+    "src/components/navigation/components/NavigationTree.tsx",
+    "src/components/navigation/core/hooks/useNavigationActions.ts",
+    "src/components/navigation/core/types.ts",
+    "src/components/navigation/core/utils/navigationHelpers.ts",
+    "src/components/navigation/hooks/useNavigationHandlers.ts"
   ],
   "solution": {
-    "phase1": "Replaced all 'any' types with proper TypeScript interfaces",
-    "phase2": "Added useMemo for memoized real-time buildings data",
-    "phase3": "Created proper type definitions for pendingDeletionCompany and selectedUnit",
-    "phase4": "Optimized filtering with memoized computed values (filteredProjectBuildings)",
-    "phase5": "Applied enterprise TypeScript patterns across all navigation components"
+    "phase1": "ENTERPRISE DECISION: Adopted Option A - Floors removed from navigation",
+    "phase2": "Updated NavigationLevel type: 'companies' | 'projects' | 'buildings' | 'units'",
+    "phase3": "Removed floor column from DesktopMultiColumn, floor level from MobileNavigation",
+    "phase4": "Deprecated selectFloor and onFloorSelect with @deprecated JSDoc annotations",
+    "phase5": "Updated REAL_ESTATE_HIERARCHY_DOCUMENTATION.md with complete Option A specs"
   },
   "testing": {
     "userVerification": "Pre-commit checks passed",
-    "typescriptVerification": "All type checks pass - zero 'any' types"
+    "typescriptVerification": "All type checks pass"
   },
   "notes": [
-    "4 files changed: +115 insertions, -81 deletions",
-    "ENTERPRISE COMPLIANCE: Zero 'any' types in navigation components",
-    "Performance: useMemo prevents unnecessary re-renders",
-    "Type safety: Proper interfaces for all state variables",
-    "Real-time data: Memoized getBuildingsForProject calls"
+    "10 files changed: +1124 insertions, -296 deletions",
+    "ARCHITECTURAL DECISION: Option A adopted for navigation",
+    "NEW HIERARCHY: Companies → Projects → Buildings → Units",
+    "FLOORS: Structural nodes - visible only in Building Detail View",
+    "BACKWARD COMPATIBILITY: @deprecated annotations for floor functions",
+    "Complete documentation in REAL_ESTATE_HIERARCHY_DOCUMENTATION.md"
   ],
   "contributors": {
     "user": "Giorgos Pagonis",
@@ -33,16 +40,16 @@
     "sessionDate": "2026-01-07"
   },
   "relatedBackups": [
+    "279078b - TypeScript & Performance Improvements (4 files)",
     "a8d507a - Real-time Navigation & PDF Updates (5 files)",
-    "1569ebc - Realtime Services & Component Updates (21 files)",
-    "8f7e2a8 - Floorplan & DXF Components Enhancement (9 files)"
+    "1569ebc - Realtime Services & Component Updates (21 files)"
   ],
   "commits": [
     {
-      "hash": "279078b",
-      "message": "ENTERPRISE SAFETY CHECKPOINT: TypeScript & Performance Improvements (4 files)"
+      "hash": "c47a019",
+      "message": "ENTERPRISE SAFETY CHECKPOINT: Navigation Architecture - Option A (10 files)"
     }
   ],
   "vercelDeployment": true,
-  "backupTimestamp": "2026-01-07T18:00:00Z"
+  "backupTimestamp": "2026-01-07T19:00:00Z"
 }
