@@ -6,10 +6,11 @@
  *
  * 🏢 ENTERPRISE UPDATE: Added real-time building counts via useRealtimeBuildings
  */
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigationData } from './hooks/useNavigationData';
 import { useNavigationActions } from './hooks/useNavigationActions';
-import { useRealtimeBuildings } from '@/services/realtime';
+import { useRealtimeBuildings, REALTIME_EVENTS } from '@/services/realtime';
+import { NavigationApiService } from './services/navigationApi';
 import type {
   NavigationState,
   NavigationActions,
@@ -103,6 +104,53 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       updateState({ projectsLoading: false });
     }
   };
+
+  // 🏢 ENTERPRISE: Full navigation refresh (clears cache and reloads)
+  const refreshNavigation = useCallback(async () => {
+    console.log('🔄 [NavigationContext] Refreshing navigation data...');
+
+    try {
+      // Clear the companies cache to force fresh data
+      NavigationApiService.clearCompaniesCache();
+
+      updateState({ loading: true, projectsLoading: true, error: null });
+
+      // Reload companies
+      const companies = await dataHook.loadCompanies();
+      updateState({ companies, loading: false });
+
+      // Reload all projects with fresh data
+      if (companies.length > 0) {
+        const projects = await dataHook.loadAllProjects(companies);
+        updateState({ projects, projectsLoading: false });
+      } else {
+        updateState({ projectsLoading: false });
+      }
+
+      console.log('✅ [NavigationContext] Navigation data refreshed');
+    } catch (error) {
+      console.error('❌ [NavigationContext] Failed to refresh:', error);
+      updateState({
+        error: error instanceof Error ? error.message : 'Failed to refresh navigation',
+        loading: false,
+        projectsLoading: false
+      });
+    }
+  }, [dataHook]);
+
+  // 🏢 ENTERPRISE: Listen for NAVIGATION_REFRESH events
+  useEffect(() => {
+    const handleNavigationRefresh = () => {
+      console.log('📡 [NavigationContext] Received NAVIGATION_REFRESH event');
+      refreshNavigation();
+    };
+
+    window.addEventListener(REALTIME_EVENTS.NAVIGATION_REFRESH, handleNavigationRefresh);
+
+    return () => {
+      window.removeEventListener(REALTIME_EVENTS.NAVIGATION_REFRESH, handleNavigationRefresh);
+    };
+  }, [refreshNavigation]);
 
   // Wrapped action functions with state management
   const loadCompanies = async () => {

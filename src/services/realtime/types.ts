@@ -143,6 +143,7 @@ export const REALTIME_EVENTS = {
   BUILDING_UPDATED: 'realtime:building-updated',
   PROJECT_UPDATED: 'realtime:project-updated',
   BUILDING_PROJECT_LINKED: 'realtime:building-project-linked',
+  UNIT_BUILDING_LINKED: 'realtime:unit-building-linked',
   NAVIGATION_REFRESH: 'realtime:navigation-refresh',
 } as const;
 
@@ -155,5 +156,15 @@ export interface BuildingProjectLinkPayload {
   buildingId: string;
   previousProjectId: string | null;
   newProjectId: string | null;
+  timestamp: number;
+}
+
+/**
+ * 🏢 ENTERPRISE: Event payload for unit-building link
+ */
+export interface UnitBuildingLinkPayload {
+  unitId: string;
+  previousBuildingId: string | null;
+  newBuildingId: string | null;
   timestamp: number;
 }

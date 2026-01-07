@@ -26,6 +26,8 @@ export interface NavigationBuilding {
   name: string;
   floors: NavigationFloor[];
   storageAreas?: NavigationUnit[];
+  /** 🏢 ENTERPRISE: Direct units for buildings without floors */
+  units?: NavigationUnit[];
 }
 
 export interface NavigationFloor {

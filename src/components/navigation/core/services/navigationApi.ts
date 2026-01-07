@@ -4,7 +4,13 @@
  */
 
 import { getAllActiveCompanies } from '@/services/companies.service';
-import type { NavigationCompany, NavigationProject } from '../types';
+import type {
+  NavigationCompany,
+  NavigationProject,
+  NavigationBuilding,
+  NavigationFloor,
+  NavigationUnit
+} from '../types';
 
 export class NavigationApiService {
   // 🏢 ENTERPRISE CACHING: Companies cache με memory optimization
@@ -102,11 +108,36 @@ export class NavigationApiService {
                   const floorsResult = await floorsResponse.json();
 
                   if (!floorsResult.success) {
-                    return { ...building, floors: [] };
+                    return { ...building, floors: [], units: [] };
                   }
 
                   // Extract floors from correct API structure (data.floors)
                   const floors = floorsResult.data?.floors || floorsResult.floors || [];
+
+                  // 🏢 ENTERPRISE: If building has NO floors, load units directly by buildingId
+                  if (floors.length === 0) {
+                    try {
+                      const unitsResponse = await fetch(`/api/units?buildingId=${building.id}`);
+                      const unitsResult = await unitsResponse.json();
+
+                      const directUnits = unitsResult.success ? unitsResult.units : [];
+                      console.log(`📦 [Navigation] Building ${building.id} has ${directUnits.length} direct units (no floors)`);
+
+                      return {
+                        ...building,
+                        floors: [],
+                        // 🏢 ENTERPRISE: Direct units for buildings without floors
+                        units: directUnits.map((unit: NavigationUnit) => ({
+                          id: unit.id,
+                          name: unit.name,
+                          type: unit.type
+                        }))
+                      };
+                    } catch (error) {
+                      console.warn(`Failed to load direct units for building ${building.id}:`, error);
+                      return { ...building, floors: [], units: [] };
+                    }
+                  }
 
                   // For each floor, load units
                   const floorsWithUnits = await Promise.all(
@@ -142,12 +173,13 @@ export class NavigationApiService {
 
                   return {
                     ...building,
-                    floors: floorsWithUnits
+                    floors: floorsWithUnits,
+                    units: [] // No direct units when floors exist
                   };
 
                 } catch (error) {
                   console.warn(`Failed to load floors for building ${building.id}:`, error);
-                  return { ...building, floors: [] };
+                  return { ...building, floors: [], units: [] };
                 }
               })
             );

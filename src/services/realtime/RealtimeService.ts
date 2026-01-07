@@ -28,6 +28,7 @@ import {
   type SubscriptionStatus,
   REALTIME_EVENTS,
   type BuildingProjectLinkPayload,
+  type UnitBuildingLinkPayload,
 } from './types';
 
 // ============================================================================
@@ -210,6 +211,15 @@ class RealtimeServiceCore {
    */
   dispatchBuildingProjectLinked(payload: BuildingProjectLinkPayload): void {
     this.dispatchEvent(REALTIME_EVENTS.BUILDING_PROJECT_LINKED, payload);
+    // Also trigger navigation refresh
+    this.dispatchEvent(REALTIME_EVENTS.NAVIGATION_REFRESH, { timestamp: Date.now() });
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch unit-building link event
+   */
+  dispatchUnitBuildingLinked(payload: UnitBuildingLinkPayload): void {
+    this.dispatchEvent(REALTIME_EVENTS.UNIT_BUILDING_LINKED, payload);
     // Also trigger navigation refresh
     this.dispatchEvent(REALTIME_EVENTS.NAVIGATION_REFRESH, { timestamp: Date.now() });
   }

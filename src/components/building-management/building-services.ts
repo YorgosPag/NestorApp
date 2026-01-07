@@ -19,20 +19,20 @@ import { COLLECTIONS } from '@/config/firestore-collections';
  */
 export async function getBuildings(limitCount: number = 100): Promise<Building[]> {
   try {
-    const buildingsQuery = query(
-      collection(db, COLLECTIONS.BUILDINGS),
-      orderBy('updatedAt', 'desc'),
-      limit(limitCount)
-    );
+    // 🏢 ENTERPRISE: Query χωρίς orderBy γιατί τα buildings έχουν μεικτούς τύπους στο updatedAt
+    // (κάποια έχουν string, κάποια Firestore Timestamp - δεν μπορούν να ταξινομηθούν μαζί)
+    console.log('🔍 [getBuildings] Starting Firestore query...');
 
-    const snapshot = await getDocs(buildingsQuery);
+    const buildingsRef = collection(db, COLLECTIONS.BUILDINGS);
+    const snapshot = await getDocs(buildingsRef);
 
     const buildings = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     })) as Building[];
 
-    console.log(`✅ Loaded ${buildings.length} real buildings from Firebase`);
+    console.log(`✅ [getBuildings] Loaded ${buildings.length} buildings from Firebase`);
+    console.log('🏢 [getBuildings] Building names:', buildings.map(b => b.name));
     return buildings;
 
   } catch (error) {

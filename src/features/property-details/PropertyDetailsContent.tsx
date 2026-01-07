@@ -17,6 +17,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { ContactsBlock } from './components/ContactsBlock';
 import { DocumentsBlock } from './components/DocumentsBlock';
 import { DatesBlock } from './components/DatesBlock';
+import { BuildingSelectorCard } from './components/BuildingSelectorCard';
 
 import { resolveAttachments } from './utils/attachments';
 import { makeSafeUpdate } from './utils/safeUpdate';
@@ -91,6 +92,18 @@ export function PropertyDetailsContent({
         property={resolvedProperty}
         onUpdateProperty={safeOnUpdateProperty}
       />
+
+      {/* 🏢 ENTERPRISE: Building Selector για σύνδεση Μονάδας→Κτιρίου */}
+      {!isReadOnly && (
+        <BuildingSelectorCard
+          unitId={resolvedProperty.id}
+          currentBuildingId={resolvedProperty.buildingId}
+          isEditing={true}
+          onBuildingChanged={(newBuildingId) => {
+            console.log(`✅ Unit ${resolvedProperty.id} linked to building ${newBuildingId}`);
+          }}
+        />
+      )}
 
       {/* Share Button - Always visible for easy sharing */}
       <div className="flex justify-end">

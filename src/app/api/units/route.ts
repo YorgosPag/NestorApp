@@ -7,22 +7,45 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🏠 Fetching units from Firestore...');
+    // 🏢 ENTERPRISE: Extract query parameters for filtering
+    const { searchParams } = new URL(request.url);
+    const buildingId = searchParams.get('buildingId');
+    const floorId = searchParams.get('floorId');
+
+    console.log(`🏠 Fetching units from Firestore... (buildingId: ${buildingId || 'all'}, floorId: ${floorId || 'all'})`);
 
     // Get all units from the COLLECTIONS.UNITS collection
     const unitsQuery = query(
       collection(db, COLLECTIONS.UNITS),
       orderBy('name', 'asc')
     );
-    
+
     const unitsSnapshot = await getDocs(unitsQuery);
-    const units = unitsSnapshot.docs.map(doc => ({
+    let units = unitsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
 
+    // 🏢 ENTERPRISE: Filter by buildingId if provided
+    if (buildingId) {
+      units = units.filter(unit => {
+        const unitData = unit as { buildingId?: string };
+        return unitData.buildingId === buildingId;
+      });
+      console.log(`🔍 Filtered by buildingId=${buildingId}: ${units.length} units`);
+    }
+
+    // 🏢 ENTERPRISE: Filter by floorId if provided
+    if (floorId) {
+      units = units.filter(unit => {
+        const unitData = unit as { floorId?: string };
+        return unitData.floorId === floorId;
+      });
+      console.log(`🔍 Filtered by floorId=${floorId}: ${units.length} units`);
+    }
+
     console.log(`✅ Successfully fetched ${units.length} units from Firestore`);
-    
+
     return NextResponse.json({
       success: true,
       units,
@@ -31,7 +54,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ Error fetching units:', error);
-    
+
     return NextResponse.json({
       success: false,
       error: 'Failed to fetch units',

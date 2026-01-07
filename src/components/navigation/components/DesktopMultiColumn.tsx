@@ -348,12 +348,19 @@ export function DesktopMultiColumn({
   /**
    * 🏢 ENTERPRISE ARCHITECTURE (Επιλογή Α):
    * Memoized units για το επιλεγμένο building.
-   * Συλλέγει ΟΛΕΣ τις units από ΟΛΟΥΣ τους ορόφους του building.
+   * Συλλέγει ΟΛΕΣ τις units από:
+   * 1. ΟΛΟΥΣ τους ορόφους του building (αν υπάρχουν)
+   * 2. Απευθείας από το building (αν δεν έχει ορόφους)
    * Οι όροφοι είναι δομικοί κόμβοι - δεν εμφανίζονται στην πλοήγηση.
    */
   const buildingUnits = useMemo(() => {
-    if (!selectedBuilding?.floors) return [];
-    return selectedBuilding.floors.flatMap(floor => floor.units);
+    if (!selectedBuilding) return [];
+
+    // 🏢 ENTERPRISE: Combine units from floors AND direct building units
+    const floorUnits = selectedBuilding.floors?.flatMap(floor => floor.units) || [];
+    const directUnits = selectedBuilding.units || [];
+
+    return [...floorUnits, ...directUnits];
   }, [selectedBuilding]);
 
   return (
