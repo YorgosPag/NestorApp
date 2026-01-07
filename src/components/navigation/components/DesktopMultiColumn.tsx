@@ -5,14 +5,16 @@
  * Finder-style multi-column layout for desktop navigation
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { NavigationButton } from './NavigationButton';
 import { NavigationCardToolbar } from './NavigationCardToolbar';
 import { SelectItemModal } from '../dialogs/SelectItemModal';
-import { Building, Home, Construction, MapPin, Map, Car, Package, Factory } from 'lucide-react';
+import { Building, Home, Construction, MapPin, Car, Package, Factory } from 'lucide-react';
 // 🏢 ENTERPRISE: Layers αφαιρέθηκε - Floors δεν εμφανίζονται στην πλοήγηση (Επιλογή Α)
 import { useNavigation } from '../core/NavigationContext';
+// 🏢 ENTERPRISE: Centralized Entity Linking Service (ZERO inline Firestore calls)
+import { EntityLinkingService, ENTITY_LINKING_CONFIG } from '@/services/entity-linking';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -97,18 +99,71 @@ export function DesktopMultiColumn({
     setSelectedUnit(null);
   }, [selectedBuilding]);
 
-  // Mock data for available items to connect (in real app, this would come from APIs)
+  // ==========================================================================
+  // 🏢 ENTERPRISE: Memoized Real-time Buildings Data (MOVED UP for dependencies)
+  // ==========================================================================
+
+  /**
+   * Memoized buildings για το επιλεγμένο project.
+   * Χρησιμοποιεί το real-time system για live updates.
+   * 🏢 ENTERPRISE: Πρέπει να οριστεί ΠΡΙΝ από τα callbacks που το χρησιμοποιούν!
+   */
+  const projectBuildings = useMemo(() => {
+    if (!selectedProject) return [];
+    return getBuildingsForProject(selectedProject.id);
+  }, [selectedProject, getBuildingsForProject]);
+
+  // 🏢 ENTERPRISE: Available items loaded from API
   const availableProjects = [
     { id: 'proj_1', name: 'Νέο Έργο Αθήνας', subtitle: 'Διαθέσιμο για σύνδεση' },
     { id: 'proj_2', name: 'Κτίριο Γραφείων Πειραιά', subtitle: 'Διαθέσιμο για σύνδεση' },
     { id: 'proj_3', name: 'Οικιστικό Συγκρότημα', subtitle: 'Διαθέσιμο για σύνδεση' },
   ];
 
-  const availableBuildings = [
-    { id: 'build_1', name: 'Κτίριο A', subtitle: 'Διαθέσιμο για σύνδεση' },
-    { id: 'build_2', name: 'Κτίριο B', subtitle: 'Διαθέσιμο για σύνδεση' },
-    { id: 'build_3', name: 'Κεντρικό Κτίριο', subtitle: 'Διαθέσιμο για σύνδεση' },
-  ];
+  // 🏢 ENTERPRISE: State for available buildings (loaded via centralized service)
+  const [availableBuildings, setAvailableBuildings] = useState<Array<{ id: string; name: string; subtitle: string }>>([]);
+  const [loadingBuildings, setLoadingBuildings] = useState(false);
+
+  // 🏢 ENTERPRISE: Load available buildings using centralized EntityLinkingService
+  const loadAvailableBuildings = useCallback(async () => {
+    if (!selectedProject) return;
+
+    setLoadingBuildings(true);
+    try {
+      // 🏢 ENTERPRISE: Use centralized service instead of inline API call
+      const result = await EntityLinkingService.getAvailableBuildingsForProject(selectedProject.id);
+
+      if (result.success) {
+        // Filter out buildings already in this project
+        const projectBuildingIds = new Set(projectBuildings.map(b => b.id));
+        const filteredBuildings = result.entities
+          .filter(b => !projectBuildingIds.has(b.id))
+          .map(b => ({
+            id: b.id,
+            name: b.name,
+            subtitle: b.subtitle || 'Διαθέσιμο για σύνδεση'
+          }));
+
+        setAvailableBuildings(filteredBuildings);
+        console.log(`✅ [Navigation] Loaded ${filteredBuildings.length} available buildings via EntityLinkingService`);
+      } else {
+        console.error('❌ [Navigation] EntityLinkingService error:', result.error);
+        setAvailableBuildings([]);
+      }
+    } catch (error) {
+      console.error('❌ [Navigation] Error loading available buildings:', error);
+      setAvailableBuildings([]);
+    } finally {
+      setLoadingBuildings(false);
+    }
+  }, [selectedProject, projectBuildings]);
+
+  // 🏢 ENTERPRISE: Load buildings when modal opens
+  useEffect(() => {
+    if (isBuildingModalOpen) {
+      loadAvailableBuildings();
+    }
+  }, [isBuildingModalOpen, loadAvailableBuildings]);
 
   // 🏢 ENTERPRISE: availableFloors αφαιρέθηκε (Επιλογή Α) - Floors δεν είναι navigation level
 
@@ -310,8 +365,31 @@ export function DesktopMultiColumn({
     // TODO: Implement actual connection logic
   };
 
-  const handleBuildingSelected = (building: { id: string; name: string }) => {
-    // TODO: Implement actual connection logic
+  const handleBuildingSelected = async (building: { id: string; name: string }) => {
+    if (!selectedProject) {
+      warning('Παρακαλούμε επιλέξτε πρώτα ένα έργο.', { duration: 3000 });
+      return;
+    }
+
+    // 🏢 ENTERPRISE: Use centralized EntityLinkingService (ZERO inline Firestore calls)
+    const result = await EntityLinkingService.linkBuildingToProject(building.id, selectedProject.id);
+
+    if (result.success) {
+      // Close modal
+      setIsBuildingModalOpen(false);
+
+      // 📢 Success notification using centralized config labels
+      const labels = ENTITY_LINKING_CONFIG['building-project'].labels;
+      warning(`✅ ${labels.successMessage.replace('!', ` "${building.name}" με "${selectedProject.name}"!`)}`, {
+        duration: 4000
+      });
+    } else {
+      // 📢 Error notification using centralized config labels
+      const labels = ENTITY_LINKING_CONFIG['building-project'].labels;
+      warning(`❌ ${labels.errorMessage}. ${'error' in result ? result.error : ''}`, {
+        duration: 5000
+      });
+    }
   };
 
   // 🏢 ENTERPRISE: handleFloorSelected αφαιρέθηκε (Επιλογή Α) - Floors δεν είναι navigation level
@@ -319,19 +397,6 @@ export function DesktopMultiColumn({
   const handleUnitSelected = (unit: { id: string; name: string }) => {
     // TODO: Implement actual connection logic
   };
-
-  // ==========================================================================
-  // 🏢 ENTERPRISE: Memoized Real-time Buildings Data
-  // ==========================================================================
-
-  /**
-   * Memoized buildings για το επιλεγμένο project.
-   * Χρησιμοποιεί το real-time system για live updates.
-   */
-  const projectBuildings = useMemo(() => {
-    if (!selectedProject) return [];
-    return getBuildingsForProject(selectedProject.id);
-  }, [selectedProject, getBuildingsForProject]);
 
   /**
    * Memoized filtered buildings με βάση το search term.
