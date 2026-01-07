@@ -6,11 +6,39 @@ import { db } from '@/lib/firebase';
 // @ts-ignore - Pako module lacks TypeScript definitions
 import pako from 'pako';
 
+// 🏢 ENTERPRISE: Floorplan file types
+export type FloorplanFileType = 'dxf' | 'pdf';
+
+// 🏢 ENTERPRISE: DXF Scene data type (replaces any)
+export interface DxfSceneData {
+  entities: Array<{
+    type: string;
+    layer: string;
+    [key: string]: unknown;
+  }>;
+  layers: Record<string, {
+    name: string;
+    color?: string;
+    visible?: boolean;
+  }>;
+  bounds?: {
+    min: { x: number; y: number };
+    max: { x: number; y: number };
+  };
+}
+
 export interface FloorplanData {
   projectId: string;
   buildingId?: string; // For building-level floorplans
   type: 'project' | 'parking' | 'building' | 'storage';
-  scene: any; // DXF scene data
+  /** 🏢 ENTERPRISE: File type - DXF for drawings, PDF for background */
+  fileType: FloorplanFileType;
+  /** DXF scene data (only for fileType: 'dxf') */
+  scene?: DxfSceneData | null;
+  /** PDF rendered image as data URL (only for fileType: 'pdf') */
+  pdfImageUrl?: string | null;
+  /** PDF page dimensions (only for fileType: 'pdf') */
+  pdfDimensions?: { width: number; height: number } | null;
   fileName: string;
   timestamp: number;
 }
@@ -19,7 +47,14 @@ interface CompressedFloorplanData {
   projectId: string;
   buildingId?: string;
   type: 'project' | 'parking' | 'building' | 'storage';
-  compressedScene: string; // Compressed and base64 encoded scene data
+  /** 🏢 ENTERPRISE: File type indicator */
+  fileType: FloorplanFileType;
+  /** Compressed DXF scene (only for fileType: 'dxf') */
+  compressedScene?: string;
+  /** PDF image URL (only for fileType: 'pdf') - stored directly, no compression needed */
+  pdfImageUrl?: string;
+  /** PDF dimensions (only for fileType: 'pdf') */
+  pdfDimensions?: { width: number; height: number };
   fileName: string;
   timestamp: number;
   compressed: boolean;
@@ -67,8 +102,9 @@ export class FloorplanService {
       }
       
       // Decompress using pako
-      const decompressed = pako.ungzip(bytes, { to: 'string' });
-      
+      // 🏢 ENTERPRISE: pako.ungzip returns string when { to: 'string' } is used
+      const decompressed = pako.ungzip(bytes, { to: 'string' }) as unknown as string;
+
       // Parse JSON
       return JSON.parse(decompressed);
     } catch (error) {
@@ -78,35 +114,58 @@ export class FloorplanService {
   }
 
   /**
-   * Save floorplan data to Firestore
+   * 🏢 ENTERPRISE: Save floorplan data to Firestore
+   * Supports both DXF (compressed scene) and PDF (image URL)
    */
   static async saveFloorplan(projectId: string, type: 'project' | 'parking' | 'building' | 'storage', data: FloorplanData): Promise<boolean> {
     try {
       const docId = `${projectId}_${type}`;
+      const fileType = data.fileType || 'dxf'; // Default to DXF for backward compatibility
+
       // ✅ ENTERPRISE DEBUG: Verify floorplan save operation
       console.log('💾 FloorplanService.saveFloorplan called:', {
         projectId,
         type,
         docId,
+        fileType,
         fileName: data.fileName,
-        hasScene: !!data.scene,
+        hasScene: fileType === 'dxf' ? !!data.scene : false,
+        hasPdfImage: fileType === 'pdf' ? !!data.pdfImageUrl : false,
         entitiesCount: data.scene?.entities?.length || 0
       });
-      
-      // Compress scene data
-      const { compressedData, originalSize, compressedSize } = this.compressScene(data.scene);
-      
-      const docData: CompressedFloorplanData = {
-        projectId,
-        type,
-        compressedScene: compressedData,
-        fileName: data.fileName,
-        timestamp: data.timestamp,
-        compressed: true,
-        originalSize,
-        compressedSize,
-        updatedAt: new Date().toISOString()
-      } as any;
+
+      let docData: CompressedFloorplanData;
+
+      if (fileType === 'pdf') {
+        // 🏢 ENTERPRISE: PDF floorplan - store image URL directly
+        const pdfSize = data.pdfImageUrl?.length || 0;
+        docData = {
+          projectId,
+          type,
+          fileType: 'pdf',
+          pdfImageUrl: data.pdfImageUrl || undefined,
+          pdfDimensions: data.pdfDimensions || undefined,
+          fileName: data.fileName,
+          timestamp: data.timestamp,
+          compressed: false, // PDF images are not compressed
+          originalSize: pdfSize,
+          compressedSize: pdfSize,
+        };
+      } else {
+        // 🏢 ENTERPRISE: DXF floorplan - compress scene data
+        const { compressedData, originalSize, compressedSize } = this.compressScene(data.scene);
+        docData = {
+          projectId,
+          type,
+          fileType: 'dxf',
+          compressedScene: compressedData,
+          fileName: data.fileName,
+          timestamp: data.timestamp,
+          compressed: true,
+          originalSize,
+          compressedSize,
+        };
+      }
 
       // Only include buildingId if it's defined
       if (data.buildingId !== undefined) {
@@ -132,7 +191,8 @@ export class FloorplanService {
       console.log('✅ FloorplanService: Successfully saved floorplan to Firestore:', {
         docId,
         collection: this.COLLECTION,
-        compressionRatio: `${((1 - compressedSize/originalSize) * 100).toFixed(1)}%`
+        fileType,
+        compressionRatio: docData.compressed ? `${((1 - docData.compressedSize/docData.originalSize) * 100).toFixed(1)}%` : 'N/A (PDF)'
       });
       return true;
     } catch (error) {
@@ -147,44 +207,77 @@ export class FloorplanService {
   }
 
   /**
-   * Load floorplan data from Firestore
+   * 🏢 ENTERPRISE: Load floorplan data from Firestore
+   * Supports both DXF (compressed scene) and PDF (image URL)
    */
   static async loadFloorplan(projectId: string, type: 'project' | 'parking' | 'building' | 'storage'): Promise<FloorplanData | null> {
     try {
       const docId = `${projectId}_${type}`;
       // ✅ ENTERPRISE DEBUG: Log load attempt
       console.log('📖 FloorplanService.loadFloorplan called:', { projectId, type, docId });
-      
+
       const docSnap = await getDoc(doc(db, this.COLLECTION, docId));
-      
+
       if (docSnap.exists()) {
         const rawData = docSnap.data();
-        
-        // Check if data is compressed
+        const fileType = (rawData.fileType as FloorplanFileType) || 'dxf'; // Default to DXF for backward compatibility
+
+        // 🏢 ENTERPRISE: Handle PDF floorplan
+        if (fileType === 'pdf') {
+          const pdfData = rawData as CompressedFloorplanData;
+          const data: FloorplanData = {
+            projectId: pdfData.projectId,
+            buildingId: pdfData.buildingId,
+            type: pdfData.type,
+            fileType: 'pdf',
+            pdfImageUrl: pdfData.pdfImageUrl || null,
+            pdfDimensions: pdfData.pdfDimensions || null,
+            scene: null,
+            fileName: pdfData.fileName,
+            timestamp: pdfData.timestamp
+          };
+          console.log('✅ FloorplanService: Loaded PDF floorplan:', { docId, fileName: data.fileName });
+          return data;
+        }
+
+        // 🏢 ENTERPRISE: Handle DXF floorplan (compressed)
         if (rawData.compressed && rawData.compressedScene) {
-          // Debug logging removed - Decompressing floorplan data
           const compressedData = rawData as CompressedFloorplanData;
-          
-          // Decompress scene
-          const scene = this.decompressScene(compressedData.compressedScene);
-          
+
+          // Decompress scene (compressedScene is guaranteed to exist by if-check above)
+          const scene = this.decompressScene(compressedData.compressedScene!);
+
           // Return as standard FloorplanData
           const data: FloorplanData = {
             projectId: compressedData.projectId,
             buildingId: compressedData.buildingId,
             type: compressedData.type,
+            fileType: 'dxf',
             scene: scene,
+            pdfImageUrl: null,
+            pdfDimensions: null,
             fileName: compressedData.fileName,
             timestamp: compressedData.timestamp
           };
-          
+
           // Debug logging removed - Successfully loaded compressed floorplan
           
           return data;
         } else {
-          // Legacy uncompressed data
-          const data = rawData as FloorplanData;
-          // Debug logging removed - Successfully loaded uncompressed floorplan
+          // Legacy uncompressed data - assume DXF
+          const legacyData = rawData as Partial<FloorplanData>;
+          const data: FloorplanData = {
+            projectId: legacyData.projectId || projectId,
+            buildingId: legacyData.buildingId,
+            type: legacyData.type || type,
+            fileType: 'dxf',
+            scene: legacyData.scene || null,
+            pdfImageUrl: null,
+            pdfDimensions: null,
+            fileName: legacyData.fileName || 'unknown.dxf',
+            timestamp: legacyData.timestamp || Date.now()
+          };
+          console.log('✅ FloorplanService: Loaded legacy uncompressed floorplan:', { docId });
           return data;
         }
       } else {

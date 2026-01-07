@@ -11,12 +11,22 @@ import pako from 'pako';
 /** 🏢 ENTERPRISE: Firestore collection name - Single source of truth */
 const FLOORPLANS_COLLECTION = 'project_floorplans';
 
-/** 🏢 ENTERPRISE: Compressed data interface from Firestore */
-interface CompressedFloorplanData {
+/** 🏢 ENTERPRISE: File type discriminator */
+type FloorplanFileType = 'dxf' | 'pdf';
+
+/** 🏢 ENTERPRISE: Firestore data interface (supports both DXF and PDF) */
+interface FirestoreFloorplanData {
   projectId: string;
   buildingId?: string;
   type: 'project' | 'parking' | 'building' | 'storage';
-  compressedScene: string;
+  /** 🏢 ENTERPRISE: File type indicator */
+  fileType?: FloorplanFileType;
+  /** Compressed DXF scene (only for fileType: 'dxf') */
+  compressedScene?: string;
+  /** PDF image URL (only for fileType: 'pdf') */
+  pdfImageUrl?: string;
+  /** PDF dimensions (only for fileType: 'pdf') */
+  pdfDimensions?: { width: number; height: number };
   fileName: string;
   timestamp: number;
   compressed: boolean;
@@ -56,30 +66,65 @@ function decompressScene(compressedData: string): unknown {
 
 /**
  * 🏢 ENTERPRISE: Process raw Firestore data to FloorplanData
- * Handles both compressed and legacy uncompressed data
+ * Handles DXF (compressed), PDF, and legacy uncompressed data
  */
 function processFloorplanData(rawData: Record<string, unknown>): FloorplanData | null {
   if (!rawData || rawData.deleted) {
     return null;
   }
 
-  // Check if compressed
-  if (rawData.compressed && rawData.compressedScene) {
-    const compressed = rawData as unknown as CompressedFloorplanData;
-    const scene = decompressScene(compressed.compressedScene);
+  const firestoreData = rawData as unknown as FirestoreFloorplanData;
+  const fileType = firestoreData.fileType || 'dxf'; // Default to DXF for backward compatibility
+
+  // 🏢 ENTERPRISE: Handle PDF floorplan
+  if (fileType === 'pdf') {
+    console.log('📄 [useProjectFloorplans] Processing PDF floorplan from Firestore:', {
+      fileName: firestoreData.fileName,
+      hasPdfImageUrl: !!firestoreData.pdfImageUrl,
+      pdfImageUrlLength: firestoreData.pdfImageUrl?.length || 0,
+      dimensions: firestoreData.pdfDimensions,
+      projectId: firestoreData.projectId
+    });
 
     return {
-      projectId: compressed.projectId,
-      buildingId: compressed.buildingId,
-      type: compressed.type,
-      scene,
-      fileName: compressed.fileName,
-      timestamp: compressed.timestamp
+      projectId: firestoreData.projectId,
+      buildingId: firestoreData.buildingId,
+      type: firestoreData.type,
+      fileType: 'pdf',
+      scene: null,
+      pdfImageUrl: firestoreData.pdfImageUrl || null,
+      pdfDimensions: firestoreData.pdfDimensions || null,
+      fileName: firestoreData.fileName,
+      timestamp: firestoreData.timestamp
     };
   }
 
-  // Legacy uncompressed data
-  return rawData as unknown as FloorplanData;
+  // 🏢 ENTERPRISE: Handle compressed DXF floorplan
+  if (firestoreData.compressed && firestoreData.compressedScene) {
+    const scene = decompressScene(firestoreData.compressedScene);
+
+    return {
+      projectId: firestoreData.projectId,
+      buildingId: firestoreData.buildingId,
+      type: firestoreData.type,
+      fileType: 'dxf',
+      // 🏢 ENTERPRISE: Cast decompressed scene to proper type (DxfSceneData structure)
+      scene: scene as FloorplanData['scene'],
+      pdfImageUrl: null,
+      pdfDimensions: null,
+      fileName: firestoreData.fileName,
+      timestamp: firestoreData.timestamp
+    };
+  }
+
+  // 🏢 ENTERPRISE: Legacy uncompressed DXF data
+  const legacyData = rawData as unknown as FloorplanData;
+  return {
+    ...legacyData,
+    fileType: 'dxf',
+    pdfImageUrl: null,
+    pdfDimensions: null
+  };
 }
 
 /**
@@ -125,10 +170,21 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
       (snapshot) => {
         if (snapshot.exists()) {
           try {
-            const data = processFloorplanData(snapshot.data());
-            console.log('📡 Real-time update received for project floorplan:', {
+            const rawData = snapshot.data();
+            console.log('📡 [useProjectFloorplans] Raw Firestore data received:', {
+              docId,
+              fileType: rawData.fileType,
+              hasCompressedScene: !!rawData.compressedScene,
+              hasPdfImageUrl: !!rawData.pdfImageUrl,
+              fileName: rawData.fileName,
+              compressed: rawData.compressed
+            });
+            const data = processFloorplanData(rawData);
+            console.log('📡 [useProjectFloorplans] Processed data:', {
               docId,
               hasData: !!data,
+              fileType: data?.fileType,
+              hasPdfImageUrl: !!data?.pdfImageUrl,
               timestamp: data?.timestamp
             });
             setProjectFloorplan(data);

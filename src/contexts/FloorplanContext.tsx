@@ -2,15 +2,25 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
+/** 🏢 ENTERPRISE: File type discriminator */
+type FloorplanFileType = 'dxf' | 'pdf';
+
 /**
  * 🏢 ENTERPRISE: Floorplan data structure for context
- * Uses `unknown` instead of `any` for type safety
+ * Supports both DXF and PDF floorplans
  */
 interface FloorplanData {
   projectId: string;
+  buildingId?: string;
   type: 'project' | 'parking';
+  /** 🏢 ENTERPRISE: File type indicator */
+  fileType?: FloorplanFileType;
   /** DXF scene data - typed as unknown for flexibility with SceneModel */
-  scene: unknown;
+  scene?: unknown | null;
+  /** PDF rendered image as data URL (only for fileType: 'pdf') */
+  pdfImageUrl?: string | null;
+  /** PDF page dimensions (only for fileType: 'pdf') */
+  pdfDimensions?: { width: number; height: number } | null;
   fileName: string;
   timestamp: number;
 }

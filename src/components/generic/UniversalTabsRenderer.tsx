@@ -132,13 +132,27 @@ export function UniversalTabsRenderer<TData = unknown>({
     }
 
     // ✅ ENTERPRISE: Special handling για FloorplanViewerTab
-    // Πρέπει να μετατρέψουμε projectFloorplan/parkingFloorplan → floorplanData
-    // και να χρησιμοποιήσουμε callbacks από additionalData αν υπάρχουν
+    // Περνάμε ΟΛΟΚΛΗΡΟ το FloorplanData object (υποστηρίζει DXF και PDF)
     const getFloorplanProps = () => {
       if (tabConfig.component === 'FloorplanViewerTab') {
         const floorplanAdditionalData = additionalData as {
-          projectFloorplan?: { scene?: unknown };
-          parkingFloorplan?: { scene?: unknown };
+          // 🏢 ENTERPRISE: Full FloorplanData type (supports DXF scene and PDF imageUrl)
+          projectFloorplan?: {
+            fileType?: 'dxf' | 'pdf';
+            scene?: unknown;
+            pdfImageUrl?: string | null;
+            pdfDimensions?: { width: number; height: number } | null;
+            fileName?: string;
+            timestamp?: number;
+          } | null;
+          parkingFloorplan?: {
+            fileType?: 'dxf' | 'pdf';
+            scene?: unknown;
+            pdfImageUrl?: string | null;
+            pdfDimensions?: { width: number; height: number } | null;
+            fileName?: string;
+            timestamp?: number;
+          } | null;
           // ✅ ENTERPRISE: Callbacks from parent component
           onAddProjectFloorplan?: () => void;
           onAddParkingFloorplan?: () => void;
@@ -148,7 +162,8 @@ export function UniversalTabsRenderer<TData = unknown>({
 
         if (tabConfig.value === 'floorplan') {
           return {
-            floorplanData: floorplanAdditionalData.projectFloorplan?.scene,
+            // 🏢 ENTERPRISE: Pass FULL FloorplanData object (not just .scene)
+            floorplanData: floorplanAdditionalData.projectFloorplan,
             onAddFloorplan: floorplanAdditionalData.onAddProjectFloorplan ?? (() => {
               console.log('Add project floorplan for project:', (data as { id?: string })?.id);
             }),
@@ -158,7 +173,8 @@ export function UniversalTabsRenderer<TData = unknown>({
           };
         } else if (tabConfig.value === 'parking-floorplan') {
           return {
-            floorplanData: floorplanAdditionalData.parkingFloorplan?.scene,
+            // 🏢 ENTERPRISE: Pass FULL FloorplanData object (not just .scene)
+            floorplanData: floorplanAdditionalData.parkingFloorplan,
             onAddFloorplan: floorplanAdditionalData.onAddParkingFloorplan ?? (() => {
               console.log('Add parking floorplan for project:', (data as { id?: string })?.id);
             }),

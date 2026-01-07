@@ -36,6 +36,10 @@ import { UnitFloorplanService } from '../../../services/floorplans/UnitFloorplan
 import { useNotifications } from '../../../providers/NotificationProvider';
 import DxfImportModal from './DxfImportModal';
 import type { SceneModel } from '../types/scene';
+// 🏢 ENTERPRISE: PDF Background support
+import { usePdfBackgroundStore } from '../pdf-background/stores/pdfBackgroundStore';
+// 🏢 ENTERPRISE: DXF Scene manager for clearing scene when loading PDF
+import { unifiedSceneManager } from '../managers/SceneUpdateManager';
 import { HOVER_TEXT_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { MODAL_CONFIGURATIONS, getModalConfig, getModalZIndex } from '../config/modal-config';
@@ -91,6 +95,9 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
   };
 
   const { setProjectFloorplan, setParkingFloorplan } = useFloorplan();
+
+  // 🏢 ENTERPRISE: PDF Background store for loading PDF files
+  const { loadPdf: loadPdfToBackground, setEnabled: setPdfEnabled, unloadPdf } = usePdfBackgroundStore();
 
   const [currentStep, setCurrentStep] = useState<DialogStep>('company');
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
@@ -284,6 +291,11 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
   // ✅ ENTERPRISE: Inner function to perform the actual import (used by both fresh import and confirmed replacement)
   const performFloorplanImport = async (file: File, encoding: string, type: 'project' | 'parking' | 'building' | 'storage' | 'unit') => {
+    // 🏢 ENTERPRISE: Clear PDF background when loading DXF (only one floorplan at a time)
+    console.log('🔺 [DXF Import] Clearing PDF background before loading DXF...');
+    unloadPdf();
+    setPdfEnabled(false);
+
     // Use the same mechanism as Upload DXF File button to load to canvas
     console.log('🔺 SimpleProjectDialog calling onFileImport with file:', {
       fileName: file.name,
@@ -311,15 +323,19 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         encoding: encoding // Store the encoding used
       };
 
-      // Create compatible floorplan data without encoding - ensure proper type matching
-      const projectFloorplanData = {
+      // 🏢 ENTERPRISE: Create compatible floorplan data for FloorplanService
+      const projectFloorplanData: FloorplanData = {
         projectId: floorplanData.projectId,
         buildingId: floorplanData.buildingId,
         type: floorplanData.type as 'project' | 'parking' | 'building' | 'storage',
-        scene: floorplanData.scene,
+        fileType: 'dxf',
+        // 🏢 ENTERPRISE: Cast SceneModel to DxfSceneData via unknown (different structure, compatible at runtime)
+        scene: floorplanData.scene as unknown as FloorplanData['scene'],
+        pdfImageUrl: null,
+        pdfDimensions: null,
         fileName: floorplanData.fileName,
         timestamp: floorplanData.timestamp
-      } satisfies FloorplanData;
+      };
 
       // Save to Firestore (persistent storage) - use appropriate service
       let saved = false;
@@ -346,25 +362,30 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
       }
 
       if (saved) {
-        // Store in context for immediate access - create context-compatible objects
+        // 🏢 ENTERPRISE: Store in context for immediate access
+        // Context uses narrower type for project-level floorplans only
         if (type === 'project') {
-          const contextData = {
+          setProjectFloorplan(selectedProjectId, {
             projectId: projectFloorplanData.projectId,
-            type: 'project' as const,
+            type: 'project',
+            fileType: 'dxf',
             scene: projectFloorplanData.scene,
+            pdfImageUrl: null,
+            pdfDimensions: null,
             fileName: projectFloorplanData.fileName,
             timestamp: projectFloorplanData.timestamp
-          };
-          setProjectFloorplan(selectedProjectId, contextData);
+          });
         } else if (type === 'parking') {
-          const contextData = {
+          setParkingFloorplan(selectedProjectId, {
             projectId: projectFloorplanData.projectId,
-            type: 'parking' as const,
+            type: 'parking',
+            fileType: 'dxf',
             scene: projectFloorplanData.scene,
+            pdfImageUrl: null,
+            pdfDimensions: null,
             fileName: projectFloorplanData.fileName,
             timestamp: projectFloorplanData.timestamp
-          };
-          setParkingFloorplan(selectedProjectId, contextData);
+          });
         }
       } else {
         console.error(`❌ Failed to save ${type} floorplan to Firestore`);
@@ -385,11 +406,20 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     setShowReplaceConfirm(false);
 
     try {
-      await performFloorplanImport(
-        pendingImportData.file,
-        pendingImportData.encoding,
-        pendingImportData.type
-      );
+      // 🏢 ENTERPRISE: Check if this is a PDF import (encoding === 'pdf')
+      if (pendingImportData.encoding === 'pdf') {
+        await performPdfFloorplanImport(
+          pendingImportData.file,
+          pendingImportData.type
+        );
+      } else {
+        // DXF import
+        await performFloorplanImport(
+          pendingImportData.file,
+          pendingImportData.encoding,
+          pendingImportData.type
+        );
+      }
     } catch (error) {
       console.error('❌ Failed to import floorplan after confirmation:', error);
     } finally {
@@ -466,6 +496,180 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
     setCurrentFloorplanType(type);
     setShowDxfModal(true);
+  };
+
+  /**
+   * 🏢 ENTERPRISE: Handle PDF file import from modal
+   * Loads PDF as background layer AND saves to FloorplanService for persistent storage
+   */
+  const handlePdfImportFromModal = async (file: File) => {
+    console.log('📄 [SimpleProjectDialog] Importing PDF:', file.name);
+
+    const type = currentFloorplanType;
+
+    try {
+      // 🏢 ENTERPRISE: Check if floorplan already exists before proceeding
+      let hasExisting = false;
+
+      if (currentStep === 'building' && (type === 'building' || type === 'storage')) {
+        hasExisting = await BuildingFloorplanService.hasFloorplan(selectedBuildingId, type as 'building' | 'storage');
+      } else {
+        hasExisting = await FloorplanService.hasFloorplan(selectedProjectId, type as 'project' | 'parking');
+      }
+
+      // If floorplan exists, show confirmation dialog (reuse existing confirmation flow)
+      if (hasExisting) {
+        const typeLabels = {
+          project: 'Κάτοψη Έργου',
+          parking: 'Κάτοψη Θ.Σ.',
+          building: 'Κάτοψη Κτηρίου',
+          storage: 'Κάτοψη Αποθηκών',
+          unit: 'Κάτοψη Μονάδας'
+        };
+
+        // Store pending data with special marker for PDF
+        setPendingImportData({
+          file,
+          encoding: 'pdf', // Special marker for PDF files
+          type,
+          typeLabel: typeLabels[type as keyof typeof typeLabels]
+        });
+        setShowReplaceConfirm(true);
+        return; // Wait for user confirmation via AlertDialog
+      }
+
+      // 🏢 ENTERPRISE: No existing floorplan - proceed directly with PDF import
+      await performPdfFloorplanImport(file, type);
+
+    } catch (error) {
+      console.error('❌ [SimpleProjectDialog] Failed to import PDF:', error);
+    }
+  };
+
+  /**
+   * 🏢 ENTERPRISE: Perform actual PDF floorplan import
+   * Renders PDF, saves to Firestore, and loads to background store
+   */
+  const performPdfFloorplanImport = async (file: File, type: 'project' | 'parking' | 'building' | 'storage' | 'unit') => {
+    console.log('📄 [SimpleProjectDialog] Performing PDF floorplan import:', file.name, type);
+
+    // 🏢 ENTERPRISE: Clear DXF scene when loading PDF (only one floorplan at a time)
+    console.log('📄 [PDF Import] Clearing DXF scene before loading PDF...');
+    unifiedSceneManager.resetScene('pdf-import');
+
+    // Load PDF to background store (renders the PDF)
+    console.log('📄 [PDF Import] Loading PDF to background store...');
+    await loadPdfToBackground(file);
+    console.log('📄 [PDF Import] loadPdfToBackground completed');
+
+    // Enable PDF background display
+    setPdfEnabled(true);
+
+    // 🏢 ENTERPRISE: Small delay to ensure state is committed (Zustand batching)
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // 🏢 ENTERPRISE: Get rendered image and dimensions from store
+    const pdfState = usePdfBackgroundStore.getState();
+    console.log('📄 [PDF Import] Store state after load:', {
+      hasDocumentInfo: !!pdfState.documentInfo,
+      hasRenderedImageUrl: !!pdfState.renderedImageUrl,
+      isLoading: pdfState.isLoading,
+      error: pdfState.error
+    });
+
+    const pdfImageUrl = pdfState.renderedImageUrl;
+    const pdfDimensions = pdfState.pageDimensions;
+
+    if (!pdfImageUrl) {
+      console.error('❌ [SimpleProjectDialog] PDF rendering failed - no image URL');
+      console.error('❌ [SimpleProjectDialog] Store error:', pdfState.error);
+      return;
+    }
+
+    // 🏢 ENTERPRISE: Check if PDF image is too large for Firestore (1MB limit)
+    const imageSizeKB = Math.round(pdfImageUrl.length / 1024);
+    const imageSizeMB = (pdfImageUrl.length / (1024 * 1024)).toFixed(2);
+    console.log('📄 [SimpleProjectDialog] PDF rendered:', {
+      hasImageUrl: !!pdfImageUrl,
+      dimensions: pdfDimensions,
+      imageUrlLength: pdfImageUrl.length,
+      imageSizeKB: imageSizeKB,
+      imageSizeMB: imageSizeMB
+    });
+
+    if (pdfImageUrl.length > 900000) {
+      console.warn('⚠️ [SimpleProjectDialog] PDF image is very large:', imageSizeMB, 'MB - may exceed Firestore limit');
+    }
+
+    // 🏢 ENTERPRISE: Create FloorplanData for PDF storage
+    const floorplanData: FloorplanData = {
+      projectId: selectedProjectId,
+      buildingId: currentStep === 'building' ? selectedBuildingId : undefined,
+      type: type as 'project' | 'parking' | 'building' | 'storage',
+      fileType: 'pdf',
+      scene: null, // No DXF scene for PDF
+      pdfImageUrl: pdfImageUrl,
+      pdfDimensions: pdfDimensions ? {
+        width: pdfDimensions.width,
+        height: pdfDimensions.height
+      } : null,
+      fileName: file.name,
+      timestamp: Date.now()
+    };
+
+    // 🏢 ENTERPRISE: Save to Firestore for persistent storage
+    let saved = false;
+    if (currentStep === 'building' && (type === 'building' || type === 'storage')) {
+      const buildingData = {
+        buildingId: selectedBuildingId,
+        type: type as 'building' | 'storage',
+        fileType: 'pdf' as const,
+        scene: null,
+        pdfImageUrl: pdfImageUrl,
+        pdfDimensions: pdfDimensions,
+        fileName: file.name,
+        timestamp: Date.now()
+      };
+      saved = await BuildingFloorplanService.saveFloorplan(selectedBuildingId, type as 'building' | 'storage', buildingData);
+    } else {
+      saved = await FloorplanService.saveFloorplan(selectedProjectId, type as 'project' | 'parking', floorplanData);
+    }
+
+    if (saved) {
+      console.log('✅ [SimpleProjectDialog] PDF floorplan saved to Firestore');
+
+      // 🏢 ENTERPRISE: Store in context for immediate access
+      // Context uses narrower type for project-level floorplans only
+      if (type === 'project') {
+        setProjectFloorplan(selectedProjectId, {
+          projectId: floorplanData.projectId,
+          type: 'project',
+          fileType: 'pdf',
+          scene: null,
+          pdfImageUrl: floorplanData.pdfImageUrl,
+          pdfDimensions: floorplanData.pdfDimensions,
+          fileName: floorplanData.fileName,
+          timestamp: floorplanData.timestamp
+        });
+      } else if (type === 'parking') {
+        setParkingFloorplan(selectedProjectId, {
+          projectId: floorplanData.projectId,
+          type: 'parking',
+          fileType: 'pdf',
+          scene: null,
+          pdfImageUrl: floorplanData.pdfImageUrl,
+          pdfDimensions: floorplanData.pdfDimensions,
+          fileName: floorplanData.fileName,
+          timestamp: floorplanData.timestamp
+        });
+      }
+    } else {
+      console.error(`❌ [SimpleProjectDialog] Failed to save PDF ${type} floorplan to Firestore`);
+    }
+
+    // Close modals after processing
+    setShowDxfModal(false);
+    handleClose();
   };
 
   if (!isOpen) return null;
@@ -861,11 +1065,13 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         </DialogContent>
       </Dialog>
 
-      {/* DXF Import Modal - Nested Modal */}
+      {/* DXF/PDF Import Modal - Nested Modal */}
       <DxfImportModal
         isOpen={showDxfModal}
         onClose={() => setShowDxfModal(false)}
         onImport={handleDxfImportFromModal}
+        onPdfImport={handlePdfImportFromModal}
+        allowPdf={true}
       />
 
       {/* ✅ ENTERPRISE: Floorplan Replacement Confirmation Dialog */}

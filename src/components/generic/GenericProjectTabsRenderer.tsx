@@ -140,11 +140,12 @@ export function GenericProjectTabsRenderer({
     }
 
     // Special handling για FloorplanViewerTab
+    // 🏢 ENTERPRISE: Pass full FloorplanData object (supports both DXF and PDF)
     if (tab.component === 'FloorplanViewerTab') {
       if (tab.value === 'floorplan') {
         return {
           ...baseProps,
-          floorplanData: additionalData.projectFloorplan?.scene,
+          floorplanData: additionalData.projectFloorplan,
           onAddFloorplan: () => {
             console.log('Add project floorplan for project:', project.id);
           },
@@ -155,7 +156,7 @@ export function GenericProjectTabsRenderer({
       } else if (tab.value === 'parking-floorplan') {
         return {
           ...baseProps,
-          floorplanData: additionalData.parkingFloorplan?.scene,
+          floorplanData: additionalData.parkingFloorplan,
           onAddFloorplan: () => {
             console.log('Add parking floorplan for project:', project.id);
           },
