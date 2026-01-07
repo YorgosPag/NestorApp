@@ -51,7 +51,10 @@ export function DesktopMultiColumn({
     selectedBuilding,
     selectedFloor,
     projectsLoading,
-    loadCompanies
+    loadCompanies,
+    // 🏢 ENTERPRISE: Real-time building functions
+    getBuildingCount,
+    getBuildingsForProject
   } = useNavigation();
 
   const { warning } = useNotifications();
@@ -138,8 +141,9 @@ export function DesktopMultiColumn({
     return companyProjects.length === 0;
   };
 
-  const canDeleteProject = (project: any) => {
-    return project.buildings.length === 0;
+  // 🏢 ENTERPRISE: Use real-time building count for accurate deletion check
+  const canDeleteProject = (project: { id: string }) => {
+    return getBuildingCount(project.id) === 0;
   };
 
   const canDeleteBuilding = (building: any) => {
@@ -273,7 +277,8 @@ export function DesktopMultiColumn({
     if (canDeleteProject(selectedProject)) {
       // TODO: Implement actual deletion logic
     } else {
-      showDeleteWarning('έργο', selectedProject.buildings.length, 'κτίρια');
+      // 🏢 ENTERPRISE: Use real-time building count
+      showDeleteWarning('έργο', getBuildingCount(selectedProject.id), 'κτίρια');
     }
   };
 
@@ -429,8 +434,9 @@ export function DesktopMultiColumn({
 
             <ul className="space-y-2 max-h-64 overflow-y-auto list-none" role="list" aria-label="Λίστα Έργων">
               {filterData(projects.filter(project => project.companyId === selectedCompany?.id), projectsSearch, projectsFilters).map(project => {
-                // Ελέγχουμε αν το έργο έχει κτίρια
-                const hasBuildings = project.buildings.length > 0;
+                // 🏢 ENTERPRISE: Use real-time building count for live updates
+                const buildingCount = getBuildingCount(project.id);
+                const hasBuildings = buildingCount > 0;
 
                 return (
                   <li key={project.id}>
@@ -438,7 +444,7 @@ export function DesktopMultiColumn({
                       onClick={() => onProjectSelect(project.id)}
                       icon={Construction}
                       title={project.name}
-                      subtitle={`${project.buildings.length} κτίρια`}
+                      subtitle={`${buildingCount} κτίρια`}
                       isSelected={selectedProject?.id === project.id}
                       variant="compact"
                       badgeStatus={!hasBuildings ? 'no_projects' : undefined}
@@ -460,46 +466,59 @@ export function DesktopMultiColumn({
               <h3 className="font-semibold text-gray-900 dark:text-foreground">Κτίρια</h3>
             </header>
 
-            {/* Buildings Toolbar */}
-            <NavigationCardToolbar
-              level="buildings"
-              searchTerm={buildingsSearch}
-              onSearchChange={setBuildingsSearch}
-              activeFilters={buildingsFilters}
-              onFiltersChange={setBuildingsFilters}
-              hasSelectedItems={!!selectedBuilding}
-              itemCount={filterData(selectedProject.buildings, buildingsSearch, buildingsFilters).length} // 🏢 Count after filtering
-              onNewItem={() => setIsBuildingModalOpen(true)}
-              onEditItem={() => {/* TODO: Edit building */}}
-              onDeleteItem={handleDeleteBuilding}
-              onRefresh={() => {/* TODO: Refresh buildings */}}
-              onExport={() => {/* TODO: Export buildings */}}
-              onSettings={() => {/* TODO: Buildings settings */}}
-              onReports={() => {/* TODO: Buildings reports */}}
-              onHelp={() => {/* TODO: Buildings help */}}
-            />
+            {/* 🏢 ENTERPRISE: Real-time buildings list */}
+            {(() => {
+              const realtimeBuildings = getBuildingsForProject(selectedProject.id);
+              // Filter buildings by search term
+              const filteredBuildings = realtimeBuildings.filter(b =>
+                !buildingsSearch || b.name.toLowerCase().includes(buildingsSearch.toLowerCase())
+              );
 
-            <ul className="space-y-2 max-h-64 overflow-y-auto list-none" role="list">
-              {filterData(selectedProject.buildings, buildingsSearch, buildingsFilters).map(building => {
-                // Ελέγχουμε αν το κτίριο έχει ορόφους
-                const hasFloors = building.floors.length > 0;
+              return (
+                <>
+                  <NavigationCardToolbar
+                    level="buildings"
+                    searchTerm={buildingsSearch}
+                    onSearchChange={setBuildingsSearch}
+                    activeFilters={buildingsFilters}
+                    onFiltersChange={setBuildingsFilters}
+                    hasSelectedItems={!!selectedBuilding}
+                    itemCount={filteredBuildings.length}
+                    onNewItem={() => setIsBuildingModalOpen(true)}
+                    onEditItem={() => {/* TODO: Edit building */}}
+                    onDeleteItem={handleDeleteBuilding}
+                    onRefresh={() => {/* TODO: Refresh buildings */}}
+                    onExport={() => {/* TODO: Export buildings */}}
+                    onSettings={() => {/* TODO: Buildings settings */}}
+                    onReports={() => {/* TODO: Buildings reports */}}
+                    onHelp={() => {/* TODO: Buildings help */}}
+                  />
 
-                return (
-                  <li key={building.id}>
-                    <NavigationButton
-                      onClick={() => onBuildingSelect(building.id)}
-                      icon={Building}
-                      title={building.name}
-                      subtitle={`${building.floors.length} όροφοι`}
-                      isSelected={selectedBuilding?.id === building.id}
-                      variant="compact"
-                      badgeStatus={!hasFloors ? 'no_projects' : undefined}
-                      badgeText={!hasFloors ? 'Χωρίς ορόφους' : undefined}
-                    />
-                  </li>
-                );
-              })}
-            </ul>
+                  <ul className="space-y-2 max-h-64 overflow-y-auto list-none" role="list">
+                    {filteredBuildings.map(building => {
+                      // 🏢 ENTERPRISE: floors is a number from real-time, fallback to 0
+                      const floorsCount = typeof building.floors === 'number' ? building.floors : 0;
+                      const hasFloors = floorsCount > 0;
+
+                      return (
+                        <li key={building.id}>
+                          <NavigationButton
+                            onClick={() => onBuildingSelect(building.id)}
+                            icon={Building}
+                            title={building.name}
+                            subtitle={`${floorsCount} όροφοι`}
+                            isSelected={selectedBuilding?.id === building.id}
+                            variant="compact"
+                            badgeStatus={!hasFloors ? 'no_projects' : undefined}
+                            badgeText={!hasFloors ? 'Χωρίς ορόφους' : undefined}
+                          />
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </>
+              );
+            })()}
           </section>
         )}
 

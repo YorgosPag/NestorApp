@@ -43,7 +43,10 @@ export function MobileNavigation({
     selectedProject,
     selectedBuilding,
     selectedFloor,
-    projectsLoading
+    projectsLoading,
+    // 🏢 ENTERPRISE: Real-time building functions
+    getBuildingCount,
+    getBuildingsForProject
   } = useNavigation();
 
   return (
@@ -105,12 +108,13 @@ export function MobileNavigation({
           </>
         )}
 
-        {/* Projects */}
+        {/* Projects - 🏢 ENTERPRISE: Using real-time building counts */}
         {mobileLevel === 'projects' && selectedCompany && (
           <>
             {projects.filter(project => project.companyId === selectedCompany.id).map(project => {
-              // Ελέγχουμε αν το έργο έχει κτίρια
-              const hasBuildings = project.buildings.length > 0;
+              // 🏢 ENTERPRISE: Real-time building count
+              const buildingCount = getBuildingCount(project.id);
+              const hasBuildings = buildingCount > 0;
 
               return (
                 <NavigationButton
@@ -118,7 +122,7 @@ export function MobileNavigation({
                   onClick={() => onProjectSelect(project.id)}
                   icon={Construction}
                   title={project.name}
-                  subtitle={`${project.buildings.length} κτίρια`}
+                  subtitle={`${buildingCount} κτίρια`}
                   badgeStatus={!hasBuildings ? 'no_projects' : undefined}
                   badgeText={!hasBuildings ? 'Χωρίς κτίρια' : undefined}
                 />
@@ -127,12 +131,13 @@ export function MobileNavigation({
           </>
         )}
 
-        {/* Buildings */}
+        {/* Buildings - 🏢 ENTERPRISE: Using real-time data */}
         {mobileLevel === 'buildings' && selectedProject && (
           <>
-            {selectedProject.buildings.map(building => {
-              // Ελέγχουμε αν το κτίριο έχει ορόφους
-              const hasFloors = building.floors.length > 0;
+            {getBuildingsForProject(selectedProject.id).map(building => {
+              // 🏢 ENTERPRISE: floors is a number from real-time
+              const floorsCount = typeof building.floors === 'number' ? building.floors : 0;
+              const hasFloors = floorsCount > 0;
 
               return (
                 <NavigationButton
@@ -140,7 +145,7 @@ export function MobileNavigation({
                   onClick={() => onBuildingSelect(building.id)}
                   icon={Building}
                   title={building.name}
-                  subtitle={`${building.floors.length} όροφοι`}
+                  subtitle={`${floorsCount} όροφοι`}
                   badgeStatus={!hasFloors ? 'no_projects' : undefined}
                   badgeText={!hasFloors ? 'Χωρίς ορόφους' : undefined}
                 />

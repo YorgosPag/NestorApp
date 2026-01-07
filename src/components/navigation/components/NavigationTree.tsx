@@ -33,7 +33,10 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
     selectProject,
     selectBuilding,
     selectFloor,
-    navigateToExistingPages
+    navigateToExistingPages,
+    // 🏢 ENTERPRISE: Real-time building functions
+    getBuildingCount,
+    getBuildingsForProject
   } = useNavigation();
 
   const getStepTitle = () => {
@@ -143,7 +146,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
                   onClick={() => selectProject(project.id)}
                   icon={Construction}
                   title={project.name}
-                  subtitle={`${project.buildings.length} κτίρια`}
+                  subtitle={`${getBuildingCount(project.id)} κτίρια`}
                   isSelected={selectedProject?.id === project.id}
                 />
               ))
@@ -151,25 +154,32 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
           </>
         )}
 
-        {/* Buildings */}
+        {/* Buildings - 🏢 ENTERPRISE: Using real-time data */}
         {currentLevel === 'buildings' && selectedProject && (
           <>
-            {selectedProject.buildings.length === 0 ? (
-              <div className="text-gray-500 dark:text-muted-foreground text-center py-8">
-                Δεν βρέθηκαν κτίρια για το επιλεγμένο έργο.
-              </div>
-            ) : (
-              selectedProject.buildings.map(building => (
-                <NavigationButton
-                  key={building.id}
-                  onClick={() => selectBuilding(building.id)}
-                  icon={Home}
-                  title={building.name}
-                  subtitle={`${building.floors.length} όροφοι`}
-                  isSelected={selectedBuilding?.id === building.id}
-                />
-              ))
-            )}
+            {(() => {
+              const realtimeBuildings = getBuildingsForProject(selectedProject.id);
+              if (realtimeBuildings.length === 0) {
+                return (
+                  <div className="text-gray-500 dark:text-muted-foreground text-center py-8">
+                    Δεν βρέθηκαν κτίρια για το επιλεγμένο έργο.
+                  </div>
+                );
+              }
+              return realtimeBuildings.map(building => {
+                const floorsCount = typeof building.floors === 'number' ? building.floors : 0;
+                return (
+                  <NavigationButton
+                    key={building.id}
+                    onClick={() => selectBuilding(building.id)}
+                    icon={Home}
+                    title={building.name}
+                    subtitle={`${floorsCount} όροφοι`}
+                    isSelected={selectedBuilding?.id === building.id}
+                  />
+                );
+              });
+            })()}
           </>
         )}
 
