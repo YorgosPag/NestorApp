@@ -1,38 +1,48 @@
 {
-  "category": "ARCHITECTURE",
-  "shortDescription": "Navigation Architecture - Option A (10 files)",
-  "problem": "Navigation included floors as a level, creating complex 5-level hierarchy that was confusing for users.",
-  "cause": "Original design treated floors as navigation targets, but floors are structural nodes not user destinations.",
+  "category": "FEATURE",
+  "shortDescription": "Units System & Admin Tools (20 files)",
+  "problem": "Units needed real-time integration and admin tools for data cleanup were missing.",
+  "cause": "Units system was not connected to real-time services and duplicate/orphan data existed.",
   "filesChanged": [
     ".claude/settings.local.json",
     "REAL_ESTATE_HIERARCHY_DOCUMENTATION.md",
+    "scripts/analyze-buildings.js",
+    "scripts/check-all-buildings.js",
+    "src/app/api/admin/cleanup-duplicates/route.ts",
+    "src/app/api/admin/fix-building-project/route.ts",
+    "src/app/api/admin/fix-unit-project/route.ts",
+    "src/app/api/admin/migrate-units/route.ts",
+    "src/app/api/units/route.ts",
+    "src/components/building-management/building-services.ts",
     "src/components/navigation/components/DesktopMultiColumn.tsx",
     "src/components/navigation/components/MobileNavigation.tsx",
-    "src/components/navigation/components/NavigationBreadcrumb.tsx",
     "src/components/navigation/components/NavigationTree.tsx",
-    "src/components/navigation/core/hooks/useNavigationActions.ts",
+    "src/components/navigation/core/NavigationContext.tsx",
+    "src/components/navigation/core/services/navigationApi.ts",
     "src/components/navigation/core/types.ts",
-    "src/components/navigation/core/utils/navigationHelpers.ts",
-    "src/components/navigation/hooks/useNavigationHandlers.ts"
+    "src/features/property-details/PropertyDetailsContent.tsx",
+    "src/features/property-details/components/BuildingSelectorCard.tsx",
+    "src/services/realtime/RealtimeService.ts",
+    "src/services/realtime/types.ts"
   ],
   "solution": {
-    "phase1": "ENTERPRISE DECISION: Adopted Option A - Floors removed from navigation",
-    "phase2": "Updated NavigationLevel type: 'companies' | 'projects' | 'buildings' | 'units'",
-    "phase3": "Removed floor column from DesktopMultiColumn, floor level from MobileNavigation",
-    "phase4": "Deprecated selectFloor and onFloorSelect with @deprecated JSDoc annotations",
-    "phase5": "Updated REAL_ESTATE_HIERARCHY_DOCUMENTATION.md with complete Option A specs"
+    "phase1": "Added RealtimeUnit interface and units subscription to RealtimeService",
+    "phase2": "Integrated getUnitsForBuilding in NavigationContext for real-time units",
+    "phase3": "Created Admin API endpoints for data cleanup and migration",
+    "phase4": "Added BuildingSelectorCard component for building selection",
+    "phase5": "Created analysis scripts for building validation"
   },
   "testing": {
     "userVerification": "Pre-commit checks passed",
     "typescriptVerification": "All type checks pass"
   },
   "notes": [
-    "10 files changed: +1124 insertions, -296 deletions",
-    "ARCHITECTURAL DECISION: Option A adopted for navigation",
-    "NEW HIERARCHY: Companies → Projects → Buildings → Units",
-    "FLOORS: Structural nodes - visible only in Building Detail View",
-    "BACKWARD COMPATIBILITY: @deprecated annotations for floor functions",
-    "Complete documentation in REAL_ESTATE_HIERARCHY_DOCUMENTATION.md"
+    "20 files changed: +1483 insertions, -29 deletions",
+    "NEW: Real-time units system integration",
+    "NEW: 4 Admin API endpoints for data management",
+    "NEW: BuildingSelectorCard component",
+    "NEW: Building analysis scripts",
+    "Units now update in real-time across navigation"
   ],
   "contributors": {
     "user": "Giorgos Pagonis",
@@ -40,16 +50,16 @@
     "sessionDate": "2026-01-07"
   },
   "relatedBackups": [
+    "c47a019 - Navigation Architecture - Option A (10 files)",
     "279078b - TypeScript & Performance Improvements (4 files)",
-    "a8d507a - Real-time Navigation & PDF Updates (5 files)",
-    "1569ebc - Realtime Services & Component Updates (21 files)"
+    "a8d507a - Real-time Navigation & PDF Updates (5 files)"
   ],
   "commits": [
     {
-      "hash": "c47a019",
-      "message": "ENTERPRISE SAFETY CHECKPOINT: Navigation Architecture - Option A (10 files)"
+      "hash": "180f813",
+      "message": "ENTERPRISE SAFETY CHECKPOINT: Units System & Admin Tools (20 files)"
     }
   ],
   "vercelDeployment": true,
-  "backupTimestamp": "2026-01-07T19:00:00Z"
+  "backupTimestamp": "2026-01-07T20:00:00Z"
 }
