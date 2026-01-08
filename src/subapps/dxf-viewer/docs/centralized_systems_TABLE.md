@@ -1,10 +1,10 @@
 # = -> **ENTERPRISE CENTRALIZED SYSTEMS TABLE**
 
 > **= MAIN DOCUMENTATION**: [centralized_systems.md](./centralized_systems.md)
-> **= -> LAST UPDATED**: 2026-01-07
-> **= -> TOTAL SYSTEMS**: 17 Major Enterprise Systems (incl. FloatingPanel UI Styling)
-> **= -> TOTAL CODE**: 12,500+ Lines
-> **= -> TOTAL ADRs**: 11 Architectural Decision Records
+> **= -> LAST UPDATED**: 2026-01-08
+> **= -> TOTAL SYSTEMS**: 18 Major Enterprise Systems (incl. Enterprise Card System)
+> **= -> TOTAL CODE**: 13,500+ Lines
+> **= -> TOTAL ADRs**: 12 Architectural Decision Records
 
 ---
 
@@ -23,15 +23,18 @@
 | **ADR-010** | Panel Type Centralization | `types/panel-types.ts` | Διάσπαρτοι ορισμοί | 2026-01-04 |
 | **ADR-011** | FloatingPanel UI Styling 🏢 | `useSemanticColors` + `useBorderTokens` | Hardcoded Tailwind colors | 2026-01-04 |
 | **ADR-012** | Navigation Entity Config 🏢 | `NAVIGATION_ENTITIES` config | Hardcoded icons/colors | 2026-01-07 |
+| **ADR-013** | Enterprise Card System 🏢 | `@/design-system` + `@/domain/cards` | Διάσπαρτα *ListItem components | 2026-01-08 |
 
 > **🚫 PROHIBITION**: Νέα Select/Dropdown implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** εκτός Radix Select.
 > **🚫 PROHIBITION**: Hardcoded canvas backgrounds **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `CANVAS_THEME`.
 > **🚫 PROHIBITION**: Νέα drawing implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `useUnifiedDrawing`.
 > **🚫 PROHIBITION**: Hardcoded Tailwind colors (bg-gray-*, rounded-lg) **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε hooks.
 > **🚫 PROHIBITION**: Hardcoded navigation icons/colors **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `NAVIGATION_ENTITIES`.
+> **🚫 PROHIBITION**: Νέα διάσπαρτα *ListItem components **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `@/domain/cards`.
 > **🏢 WORLD-CLASS**: ADR-004 χρησιμοποιεί CSS Variables για runtime theme switching (Figma/AutoCAD level).
 > **🏢 ENTERPRISE**: ADR-005 - 2,300+ lines centralized drawing system με 3-phase rendering.
 > **🏢 ENTERPRISE**: ADR-011 - 47 files, 100% centralized styling, zero hardcoded values.
+> **🏢 ENTERPRISE**: ADR-013 - 18 files, 22→7 cards, Atomic Design Pattern, 64% code reduction.
 >
 > **📍 Full ADRs**: [centralized_systems.md](./centralized_systems.md)
 
@@ -64,6 +67,7 @@
 | **🏭 Smart Factory - Tabs** | `src/config/unified-tabs-factory.ts` | 548 | Smart Factory |  **ENTERPRISE** | Dynamic tab generation, 6+ entity types | `import { createTabsConfig } from '@/config/unified-tabs-factory'` | **64% code reduction (1500→548 lines)** |
 | **🏭 Smart Factory - Navigation** | `src/config/smart-navigation-factory.ts` | 814 | Smart Factory |  **ENTERPRISE** | Dynamic menu generation, permissions | `import { createNavigationConfig } from '@/config/smart-navigation-factory'` | **80% code reduction (191→smart generation)** |
 | **🧭 Navigation Entity Config** | `src/components/navigation/config/` | 200+ | UI Config | 🏢 **ENTERPRISE** | Icons, colors, labels για entities | `import { NAVIGATION_ENTITIES } from '@/components/navigation/config'` | **ADR-012: Zero hardcoded icons/colors** |
+| **🃏 Enterprise Card System** | `src/design-system/` + `src/domain/cards/` | 1,000+ | UI System | 🏢 **ENTERPRISE** | Atomic Design, 7 domain cards, ListCard molecule | `import { ParkingListCard } from '@/domain'` | **ADR-013: 64% code reduction (22→7)** |
 
 ---
 
@@ -74,7 +78,7 @@
 | Category | Systems Count | Total Lines | Maturity Level | Critical for App |
 |----------|---------------|-------------|----------------|------------------|
 | **Design System** | 6 systems | 3,380+ lines |  **Enterprise** | =% **Critical** |
-| **UI Components** | 3 systems | 2,100+ lines |  **Professional** |  -> **High** |
+| **UI Components** | 4 systems | 3,100+ lines |  **Professional** |  -> **High** |
 | **Business Logic** | 2 systems | 2,900+ lines |  **Production** | < -> **Medium** |
 | **Infrastructure** | 4 systems | 1,620+ lines |  **Stable** | =' **Foundation** |
 | **🏭 Smart Factories** | 2 systems | 1,362+ lines |  **ENTERPRISE** | 🏭 **Strategic** |

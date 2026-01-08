@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { UnitsListHeader } from './list/UnitsListHeader';
-import { UnitListItem } from './list/UnitListItem';
+// 🏢 ENTERPRISE: Using centralized domain card
+import { UnitListCard } from '@/domain';
 import { CompactToolbar, unitsConfig } from '@/components/core/CompactToolbar';
 import { UnitTypeQuickFilters } from './UnitTypeQuickFilters';
 import type { Property } from '@/types/property-viewer';
@@ -224,12 +225,12 @@ export function UnitsList({
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">
           {sortedUnits.map((unit) => (
-            <UnitListItem
+            <UnitListCard
               key={unit.id}
               unit={unit}
               isSelected={selectedUnitIds.includes(unit.id)}
               isFavorite={favorites.includes(unit.id)}
-              onSelect={(isShift) => onSelectUnit(unit.id, isShift)}
+              onSelect={(isShift) => onSelectUnit(unit.id, isShift ?? false)}
               onToggleFavorite={() => toggleFavorite(unit.id)}
             />
           ))}

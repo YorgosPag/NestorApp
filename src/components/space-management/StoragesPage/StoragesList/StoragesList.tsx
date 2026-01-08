@@ -7,7 +7,8 @@ import type { Storage } from '@/types/storage/contracts';
 import { useIconSizes } from '@/hooks/useIconSizes';
 
 import { StoragesListHeader } from './StoragesListHeader';
-import { StorageListItem } from './StorageListItem';
+// 🏢 ENTERPRISE: Using centralized domain card
+import { StorageListCard } from '@/domain';
 import { CompactToolbar } from '@/components/core/CompactToolbar';
 import { storagesToolbarConfig } from '@/components/core/CompactToolbar/configs';
 
@@ -159,7 +160,7 @@ export function StoragesList({
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">
           {sortedStorages.map((storage) => (
-            <StorageListItem
+            <StorageListCard
               key={storage.id}
               storage={storage}
               isSelected={selectedStorage?.id === storage.id}

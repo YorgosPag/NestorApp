@@ -4,7 +4,8 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Property } from '@/types/property-viewer';
-import { PropertyListItem } from "./list/PropertyListItem";
+// 🏢 ENTERPRISE: Using centralized domain card
+import { PropertyListCard } from '@/domain';
 import { PropertyListSkeleton } from "./list/PropertyListSkeleton";
 import { PropertyListEmptyState } from "./list/PropertyListEmptyState";
 
@@ -35,11 +36,11 @@ export function PropertyList({
     <div className="p-2">
       <div className="space-y-2">
         {properties.map((property) => (
-          <PropertyListItem
+          <PropertyListCard
             key={property.id}
             property={property}
             isSelected={safeSelectedPropertyIds.includes(property.id)}
-            onSelect={(isShiftClick) => onSelectProperty(property.id, isShiftClick)}
+            onSelect={(isShiftClick) => onSelectProperty(property.id, isShiftClick ?? false)}
           />
         ))}
       </div>

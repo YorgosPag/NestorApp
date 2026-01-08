@@ -14,7 +14,7 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { Star, Edit2, Car, MapPin, Ruler, Euro } from 'lucide-react';
+import { Star, Edit2, Car, MapPin, Ruler, Euro, Accessibility, Bike, Zap, User } from 'lucide-react';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import { PARKING_TYPE_LABELS, PARKING_STATUS_LABELS } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
 
@@ -49,14 +49,15 @@ export function ParkingListItem({
     }
   };
 
-  // Get type icon
+  // Get type icon - Using Lucide icons with orange color for parking entity
   const getTypeIcon = (type: string) => {
+    const iconClass = `${iconSizes.md} text-orange-600`;
     switch (type) {
-      case 'handicapped': return '♿';
-      case 'motorcycle': return '🏍️';
-      case 'electric': return '⚡';
-      case 'visitor': return '👤';
-      default: return '🚗';
+      case 'handicapped': return <Accessibility className={iconClass} />;
+      case 'motorcycle': return <Bike className={iconClass} />;
+      case 'electric': return <Zap className={iconClass} />;
+      case 'visitor': return <User className={iconClass} />;
+      default: return <Car className={iconClass} />;
     }
   };
 
@@ -103,7 +104,7 @@ export function ParkingListItem({
 
         {/* Header */}
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-lg">{getTypeIcon(parking.type || 'standard')}</span>
+          {getTypeIcon(parking.type || 'standard')}
           <div className="flex-1 min-w-0">
             <h4 className="font-medium text-sm truncate">{parking.number}</h4>
             <p className="text-xs text-muted-foreground truncate">
@@ -132,13 +133,6 @@ export function ParkingListItem({
             </div>
           )}
         </div>
-
-        {/* Location */}
-        {parking.location && (
-          <p className="mt-2 text-xs text-muted-foreground truncate">
-            📍 {parking.location}
-          </p>
-        )}
 
         {/* Selection indicator */}
         {isSelected && (

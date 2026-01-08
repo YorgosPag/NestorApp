@@ -7,7 +7,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { Building } from './BuildingsPageContent';
 
 import { BuildingsListHeader } from './BuildingsList/BuildingsListHeader';
-import { BuildingListItem } from './BuildingsList/BuildingListItem';
+// 🏢 ENTERPRISE: Using centralized domain card
+import { BuildingListCard } from '@/domain';
 import { CompactToolbar, buildingsConfig } from '@/components/core/CompactToolbar';
 
 
@@ -157,7 +158,7 @@ export function BuildingsList({
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">
           {sortedBuildings.map((building) => (
-            <BuildingListItem
+            <BuildingListCard
               key={building.id}
               building={building}
               isSelected={selectedBuilding?.id === building.id}

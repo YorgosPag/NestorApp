@@ -14,7 +14,8 @@ import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import { useIconSizes } from '@/hooks/useIconSizes';
 
 import { ParkingsListHeader } from './ParkingsListHeader';
-import { ParkingListItem } from './ParkingListItem';
+// 🏢 ENTERPRISE: Using centralized domain card
+import { ParkingListCard } from '@/domain';
 import { CompactToolbar } from '@/components/core/CompactToolbar';
 import { parkingToolbarConfig } from '@/components/core/CompactToolbar/configs';
 
@@ -165,7 +166,7 @@ export function ParkingsList({
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">
           {sortedParkingSpots.map((parking) => (
-            <ParkingListItem
+            <ParkingListCard
               key={parking.id}
               parking={parking}
               isSelected={selectedParking?.id === parking.id}

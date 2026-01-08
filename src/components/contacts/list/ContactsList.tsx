@@ -5,7 +5,8 @@ import React, { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
-import { ContactListItem } from './ContactListItem';
+// 🏢 ENTERPRISE: Using centralized domain card
+import { ContactListCard } from '@/domain';
 import { CompactToolbar, contactsConfig } from '@/components/core/CompactToolbar';
 import type { Contact } from '@/types/contacts';
 import { Users } from 'lucide-react';
@@ -217,14 +218,13 @@ export function ContactsList({
             </div>
           ) : (
             sortedContacts.map((contact) => (
-              <ContactListItem
+              <ContactListCard
                 key={contact.id}
                 contact={contact}
                 isSelected={selectedContact?.id === contact.id}
                 isFavorite={contact.isFavorite || false}
                 onSelect={() => onSelectContact?.(contact)}
                 onToggleFavorite={() => toggleFavorite(contact.id!)}
-                isTogglingFavorite={togglingFavorites.has(contact.id!)}
               />
             ))
           )}

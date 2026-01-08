@@ -358,7 +358,7 @@ export class SmartDialogEngine {
    * Get entity labels από centralized contact/company label systems
    */
   private getEntityLabelsFromCentralizedSystem(entityType: DialogEntityType) {
-    const entityMappings = {
+    const entityMappings: Record<DialogEntityType, { singular: string; article: string; plural: string }> = {
       contact: { singular: 'Επαφή', article: 'την', plural: 'Επαφές' },
       company: { singular: 'Εταιρεία', article: 'την', plural: 'Εταιρείες' },
       project: { singular: 'Έργο', article: 'το', plural: 'Έργα' },
@@ -366,7 +366,8 @@ export class SmartDialogEngine {
       unit: { singular: 'Μονάδα', article: 'τη', plural: 'Μονάδες' },
       opportunity: { singular: 'Ευκαιρία', article: 'την', plural: 'Ευκαιρίες' },
       property: { singular: 'Ακίνητο', article: 'το', plural: 'Ακίνητα' },
-      service: { singular: 'Υπηρεσία', article: 'την', plural: 'Υπηρεσίες' }
+      service: { singular: 'Υπηρεσία', article: 'την', plural: 'Υπηρεσίες' },
+      task: { singular: 'Εργασία', article: 'την', plural: 'Εργασίες' }
     };
 
     return entityMappings[entityType];

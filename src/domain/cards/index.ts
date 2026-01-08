@@ -1,0 +1,53 @@
+/**
+ * 🏢 ENTERPRISE DOMAIN CARDS - Main Barrel Export
+ *
+ * Central export for all domain-specific card components.
+ * These are Organisms in Atomic Design - composed from design-system molecules.
+ *
+ * @fileoverview Main barrel export for domain cards.
+ * @enterprise Fortune 500 compliant - Single source of truth
+ * @author Enterprise Architecture Team
+ * @since 2026-01-08
+ */
+
+// =============================================================================
+// 🅿️ PARKING
+// =============================================================================
+
+export { ParkingListCard, type ParkingListCardProps } from './parking';
+
+// =============================================================================
+// 🏠 UNIT
+// =============================================================================
+
+export { UnitListCard, type UnitListCardProps } from './unit';
+
+// =============================================================================
+// 📦 STORAGE
+// =============================================================================
+
+export { StorageListCard, type StorageListCardProps } from './storage';
+
+// =============================================================================
+// 🏢 BUILDING
+// =============================================================================
+
+export { BuildingListCard, type BuildingListCardProps } from './building';
+
+// =============================================================================
+// 👤 CONTACT
+// =============================================================================
+
+export { ContactListCard, type ContactListCardProps } from './contact';
+
+// =============================================================================
+// 📋 PROJECT
+// =============================================================================
+
+export { ProjectListCard, type ProjectListCardProps } from './project';
+
+// =============================================================================
+// 🏠 PROPERTY
+// =============================================================================
+
+export { PropertyListCard, type PropertyListCardProps } from './property';

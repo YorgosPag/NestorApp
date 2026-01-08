@@ -5,7 +5,8 @@ import React, { useState, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Project } from '@/types/project';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
-import { ProjectListItem } from './project-list-item'; // Updated import path
+// 🏢 ENTERPRISE: Using centralized domain card
+import { ProjectListCard } from '@/domain';
 import { CompactToolbar, projectsConfig } from '@/components/core/CompactToolbar';
 import { Briefcase } from 'lucide-react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -80,13 +81,12 @@ export function ProjectsList({
         <div className="p-2 space-y-2 min-h-0 w-full">
           {displayProjects.map((project: Project) => (
             <div key={project.id} className="shrink-0 w-full">
-              <ProjectListItem
+              <ProjectListCard
                 project={project}
                 isSelected={selectedProject?.id === project.id}
                 isFavorite={favorites.includes(project.id)}
                 onSelect={() => onSelectProject?.(project)}
                 onToggleFavorite={() => toggleFavorite(project.id)}
-                companyName={companies?.find(c => c.id === project.companyId)?.name || project.company}
               />
             </div>
           ))}

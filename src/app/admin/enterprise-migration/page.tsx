@@ -27,7 +27,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -37,16 +37,23 @@ import {
   CheckCircle,
   AlertTriangle,
   PlayCircle,
-  StopCircle,
   RefreshCw,
   Database,
   Shield,
   Activity,
   FileText
 } from 'lucide-react';
-import { ConfigurationHealthCheck, MigrationAPI } from '@/core/configuration';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+
+// Dynamic import to avoid SSR issues with Firebase
+const getConfigModules = async () => {
+  const configModule = await import('@/core/configuration');
+  return {
+    ConfigurationHealthCheck: configModule.ConfigurationHealthCheck,
+    MigrationAPI: configModule.MigrationAPI
+  };
+};
 
 interface SystemStatus {
   isHealthy: boolean;
@@ -84,23 +91,24 @@ export default function EnterpriseMigrationPage() {
   // 🔄 SYSTEM STATUS MONITORING
   // ============================================================================
 
-  useEffect(() => {
-    const checkSystemHealth = async () => {
-      try {
-        const status = await ConfigurationHealthCheck.getSystemStatus();
-        setSystemStatus(status);
-        addLog(`System health check: ${status.isHealthy ? 'Healthy' : 'Issues detected'} (Score: ${status.score}/100)`);
-      } catch (error) {
-        addLog(`System health check failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
-    };
+  const checkSystemHealth = useCallback(async () => {
+    try {
+      const { ConfigurationHealthCheck } = await getConfigModules();
+      const status = await ConfigurationHealthCheck.getSystemStatus();
+      setSystemStatus(status);
+      addLog(`System health check: ${status.isHealthy ? 'Healthy' : 'Issues detected'} (Score: ${status.score}/100)`);
+    } catch (error) {
+      addLog(`System health check failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }, []);
 
+  useEffect(() => {
     checkSystemHealth();
 
     // Refresh system status every 30 seconds
     const interval = setInterval(checkSystemHealth, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [checkSystemHealth]);
 
   // ============================================================================
   // 📋 LOGGING UTILITIES
@@ -164,6 +172,7 @@ export default function EnterpriseMigrationPage() {
 
       // Execute actual migration
       addLog('Executing actual migration...');
+      const { MigrationAPI } = await getConfigModules();
       await MigrationAPI.executeMigration({ createBackup: true });
 
       setMigrationState(prev => ({
@@ -180,7 +189,8 @@ export default function EnterpriseMigrationPage() {
       addLog('🏢 Application is now fully database-driven');
 
       // Refresh system status after migration
-      const newStatus = await ConfigurationHealthCheck.getSystemStatus();
+      const { ConfigurationHealthCheck: HealthCheck } = await getConfigModules();
+      const newStatus = await HealthCheck.getSystemStatus();
       setSystemStatus(newStatus);
 
     } catch (error) {

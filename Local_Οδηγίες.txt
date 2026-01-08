@@ -79,3 +79,4 @@ SOS...ΑΝ ΒΡΕΙΣ ΔΙΠΛΟΤΥΠΑ ΣΤΑΜΑΤΑΣ ΜΕΣΩΣ ΚΑΙ ΜΕ
 
   ΤΑ ΠΡΩΤΑ 20 ΑΡΧΕΙΑ ΜΕ ΤΟΝ ΠΕΡΙΣΣΟΤΕΡΟ ΚΩΔΙΚΑ:
   Get-ChildItem .\src -Recurse -File -Include *.ts,*.tsx | Where-Object { $_.FullName -notmatch 'node_modules|dist|build' } | ForEach-Object { [PSCustomObject]@{ Lines = (Get-Content -LiteralPath $_.FullName | Measure-Object -Line).Lines; File = $_.FullName } } | Sort-Object Lines -Descending | Select-Object -First 20
+

@@ -12,7 +12,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 import { usePropertyGridFilters } from './hooks/usePropertyGridFilters';
 import { PropertyCard } from './components/PropertyCard';
-import { PropertyListItem } from './components/PropertyListItem';
+// 🏢 ENTERPRISE: Using centralized domain card
+import { PropertyListCard } from '@/domain';
 import { SearchBar } from './components/SearchBar';
 import { TypeSelect } from '@/components/property-viewer/TypeSelect';
 import { ViewModeToggle } from './components/ViewModeToggle';
@@ -127,7 +128,7 @@ export function PropertyGridView() {
                 <div key={property.id} className="w-full min-w-0 overflow-hidden">
                   {viewMode === 'grid'
                     ? <PropertyCard property={property} onViewFloorPlan={handleViewFloorPlan} />
-                    : <PropertyListItem property={property} onViewFloorPlan={handleViewFloorPlan} />
+                    : <PropertyListCard property={property} onViewFloorPlan={handleViewFloorPlan} />
                   }
                 </div>
               ))}
