@@ -3,7 +3,9 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { BuildingBadge } from '@/core/badges';
-import { Building2, Eye } from 'lucide-react';
+import { Eye } from 'lucide-react';
+// 🏢 ENTERPRISE: Using centralized entity config for Building icon
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { cn } from '@/lib/utils';
 import type { Building } from '../BuildingsPageContent';
@@ -21,7 +23,7 @@ export function BuildingDetailsHeader({ building }: BuildingDetailsHeaderProps) 
             {/* 🖥️ DESKTOP: Show full header with actions */}
             <div className="hidden md:block">
                 <EntityDetailsHeader
-                    icon={Building2}
+                    icon={NAVIGATION_ENTITIES.building.icon}
                     title={building.name}
                     actions={[
                         {

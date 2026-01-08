@@ -36,6 +36,14 @@ function formatPrice(price: number | undefined): string {
   }
 }
 
+/**
+ * 🏢 ENTERPRISE CARD SPEC - Stats Component
+ *
+ * Per local_4.log final spec:
+ * - Only 2 metrics: Area + Price
+ * - NO project info in cards (only in detail panel)
+ * - Clean, scannable layout
+ */
 export function UnitListItemStats({ unit }: UnitListItemStatsProps) {
   const colors = useSemanticColors();
 
@@ -46,15 +54,9 @@ export function UnitListItemStats({ unit }: UnitListItemStatsProps) {
         <p className="font-medium">{formatNumber(unit.area)} m²</p>
       </div>
       <div>
-        <p className="text-muted-foreground">Αξία</p>
+        <p className="text-muted-foreground">Τιμή</p>
         <p className={`font-medium ${colors.text.success}`}>{formatPrice(unit.price)}</p>
       </div>
-      {unit.project && (
-        <div className="col-span-2">
-          <p className="text-muted-foreground">Έργο</p>
-          <p className="font-medium text-xs truncate">{unit.project}</p>
-        </div>
-      )}
     </div>
   );
 }

@@ -2,8 +2,10 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
+import { cn } from '@/lib/utils';
 import { formatNumber } from '@/lib/intl-utils';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import { FormRowSelect } from './form/FormRowSelect';
@@ -31,7 +33,8 @@ export function StorageFormSpecs({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <Building className={iconSizes.md} />
+          {/* 🏢 ENTERPRISE: Using centralized storage icon/color */}
+          <NAVIGATION_ENTITIES.storage.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.storage.color)} />
           Τοποθεσία & Προδιαγραφές
         </CardTitle>
       </CardHeader>

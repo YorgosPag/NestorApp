@@ -2,7 +2,9 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { Rocket, Building2, Zap, Palette, Target, ClipboardList } from 'lucide-react';
+import { Rocket, Zap, Palette, Target, ClipboardList } from 'lucide-react';
+// 🏢 ENTERPRISE: Using centralized entity config for Building icon
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export const milestones = [
@@ -96,7 +98,7 @@ export const getStatusText = (status: string) => {
 export const getTypeIcon = (type: string) => {
     switch (type) {
         case 'start': return Rocket;
-        case 'construction': return Building2;
+        case 'construction': return NAVIGATION_ENTITIES.building.icon;
         case 'systems': return Zap;
         case 'finishing': return Palette;
         case 'delivery': return Target;

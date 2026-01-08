@@ -3,7 +3,9 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Building2, ExternalLink, Loader2, AlertCircle } from 'lucide-react';
+import { ExternalLink, Loader2, AlertCircle } from 'lucide-react';
+// 🏢 ENTERPRISE: Using centralized entity config for Building icon
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { useRouter } from 'next/navigation';
 import { useProjectStructure } from '../../structure-tab/hooks/useProjectStructure';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -77,7 +79,7 @@ export function ProjectBuildingsCard({ projectId }: ProjectBuildingsCardProps) {
       <Card className="mt-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Building2 className={iconSizes.md} />
+            <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
             {LABELS.CARD_TITLE}
           </CardTitle>
         </CardHeader>
@@ -97,7 +99,7 @@ export function ProjectBuildingsCard({ projectId }: ProjectBuildingsCardProps) {
       <Card className="mt-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Building2 className={iconSizes.md} />
+            <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
             {LABELS.CARD_TITLE}
           </CardTitle>
         </CardHeader>
@@ -117,13 +119,13 @@ export function ProjectBuildingsCard({ projectId }: ProjectBuildingsCardProps) {
       <Card className="mt-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Building2 className={iconSizes.md} />
+            <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
             {LABELS.CARD_TITLE}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <section className="text-center py-8" aria-label="Κενή λίστα κτιρίων">
-            <Building2 className={cn(iconSizes.xl3, 'mx-auto mb-4', colors.text.muted)} />
+            <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.xl3, 'mx-auto mb-4', NAVIGATION_ENTITIES.building.color)} />
             <p className={cn('text-sm font-medium', colors.text.foreground)}>
               {LABELS.EMPTY_TITLE}
             </p>
@@ -131,7 +133,7 @@ export function ProjectBuildingsCard({ projectId }: ProjectBuildingsCardProps) {
               {LABELS.EMPTY_DESCRIPTION}
             </p>
             <Button variant="outline" size="sm" onClick={handleAddBuilding}>
-              <Building2 className={cn(iconSizes.sm, 'mr-2')} />
+              <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.building.color, 'mr-2')} />
               {LABELS.EMPTY_ACTION}
             </Button>
           </section>
@@ -145,7 +147,7 @@ export function ProjectBuildingsCard({ projectId }: ProjectBuildingsCardProps) {
     <Card className="mt-6">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Building2 className={iconSizes.md} />
+          <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
           {LABELS.CARD_TITLE}
         </CardTitle>
         <CardDescription>
@@ -173,7 +175,7 @@ export function ProjectBuildingsCard({ projectId }: ProjectBuildingsCardProps) {
               onClick={() => handleViewBuilding(building.id)}
             >
               <div className="flex items-center gap-2">
-                <Building2 className={cn(iconSizes.sm, colors.text.info)} />
+                <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.building.color)} />
                 <span className="font-medium">{building.name}</span>
               </div>
               <div className="text-right text-sm">

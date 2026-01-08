@@ -7,8 +7,8 @@ import { getNavigationCompanyIds } from './navigation-companies.service';
 import { getProjectsByCompanyId } from './projects.service';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
-// 🎯 PRODUCTION: DEBUG FLAG disabled - enable when debugging
-const DEBUG_COMPANIES_SERVICE = false;
+// 🎯 PRODUCTION: DEBUG FLAG enabled temporarily for navigation investigation
+const DEBUG_COMPANIES_SERVICE = true;
 
 // 🏢 ENTERPRISE: Centralized Firestore collection configuration
 const CONTACTS_COLLECTION = COLLECTIONS.CONTACTS;

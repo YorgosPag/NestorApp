@@ -2,7 +2,8 @@
 'use client';
 
 import React from 'react';
-import { Building2 } from 'lucide-react';
+// 🏢 ENTERPRISE: Using centralized entity config for Building icon
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { useEmptyStateMessages } from '@/hooks/useEnterpriseMessages';
 import type { Building } from './BuildingsPageContent';
 import { BuildingDetailsHeader } from './BuildingDetails/BuildingDetailsHeader';
@@ -24,7 +25,7 @@ export function BuildingDetails({ building }: BuildingDetailsProps) {
       header={<BuildingDetailsHeader building={building!} />}
       tabsRenderer={<BuildingTabs building={building!} />}
       emptyStateProps={{
-        icon: Building2,
+        icon: NAVIGATION_ENTITIES.building.icon,
         ...emptyStateMessages.building
       }}
     />

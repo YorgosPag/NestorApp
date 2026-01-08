@@ -1,8 +1,11 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { Building, FileText, Hash, MapPin, Users } from "lucide-react";
+import { FileText, Hash, MapPin, Users } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
+import { cn } from '@/lib/utils';
 import type { ObligationDocument } from '@/types/obligations';
 import { formatDate } from '@/lib/intl-utils'; // ✅ Using centralized function
 import { getObligationStatusLabel } from "@/constants/property-statuses-enterprise";
@@ -46,7 +49,8 @@ export function DocumentHeader({ doc }: DocumentHeaderProps) {
           )}
           {doc.projectDetails.address && (
             <div className="flex items-center gap-2">
-              <Building className={`${iconSizes.sm} text-muted-foreground`} />
+              {/* 🏢 ENTERPRISE: Using centralized building icon/color */}
+              <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.building.color)} />
               <span className="text-muted-foreground">Διεύθυνση:</span>
               <span>{doc.projectDetails.address}</span>
             </div>

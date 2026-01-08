@@ -114,6 +114,9 @@ export class NavigationApiService {
                   // Extract floors from correct API structure (data.floors)
                   const floors = floorsResult.data?.floors || floorsResult.floors || [];
 
+                  // 🔍 DEBUG: Log floors for investigation
+                  console.log(`🏢 [Navigation] Building ${building.id} (${building.name}) has ${floors.length} floors`);
+
                   // 🏢 ENTERPRISE: If building has NO floors, load units directly by buildingId
                   if (floors.length === 0) {
                     try {
@@ -149,6 +152,9 @@ export class NavigationApiService {
 
                         const units = unitsResult.success ? unitsResult.units : [];
 
+                        // 🔍 DEBUG: Log units per floor
+                        console.log(`📦 [Navigation] Floor ${floor.id} (${floor.name}) has ${units.length} units`);
+
                         return {
                           id: floor.id,
                           name: floor.name,
@@ -171,10 +177,37 @@ export class NavigationApiService {
                     })
                   );
 
+                  // 🏢 ENTERPRISE: Check if any floor has units
+                  const totalFloorUnits = floorsWithUnits.reduce((sum, f) => sum + f.units.length, 0);
+
+                  // 🔧 FIX: If floors exist but have no units, try loading by buildingId (fallback)
+                  // This handles cases where units don't have floorId but have buildingId
+                  if (totalFloorUnits === 0) {
+                    console.log(`⚠️ [Navigation] Building ${building.id} has ${floors.length} floors but 0 floor units. Trying buildingId fallback...`);
+                    try {
+                      const fallbackResponse = await fetch(`/api/units?buildingId=${building.id}`);
+                      const fallbackResult = await fallbackResponse.json();
+                      const fallbackUnits = fallbackResult.success ? fallbackResult.units : [];
+                      console.log(`📦 [Navigation] Fallback: Found ${fallbackUnits.length} units by buildingId`);
+
+                      return {
+                        ...building,
+                        floors: floorsWithUnits,
+                        units: fallbackUnits.map((unit: NavigationUnit) => ({
+                          id: unit.id,
+                          name: unit.name,
+                          type: unit.type
+                        }))
+                      };
+                    } catch (error) {
+                      console.warn(`Failed to load fallback units for building ${building.id}:`, error);
+                    }
+                  }
+
                   return {
                     ...building,
                     floors: floorsWithUnits,
-                    units: [] // No direct units when floors exist
+                    units: [] // No direct units when floors exist and have units
                   };
 
                 } catch (error) {

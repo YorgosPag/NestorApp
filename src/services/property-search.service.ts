@@ -1,17 +1,51 @@
 import { db } from '@/lib/firebase-admin';
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  orderBy, 
-  limit, 
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  orderBy,
+  limit,
   QueryConstraint,
   startAfter,
   DocumentSnapshot
 } from 'firebase/firestore';
 import type { Property } from '@/types/property';
 import { COLLECTIONS } from '@/config/firestore-collections';
+
+// =============================================================================
+// 🏢 ENTERPRISE: Multi-collection search types (local_4.log architecture)
+// Units / Storage / Parking = παράλληλες οντότητες
+// Search διασχίζει domains με ξεχωριστό labeling
+// =============================================================================
+
+export interface StorageUnit {
+  id: string;
+  name: string;
+  type?: 'basement' | 'ground' | 'external';
+  area?: number;
+  status?: string;
+  buildingId?: string;
+  floor?: number;
+}
+
+export interface ParkingSpace {
+  id: string;
+  number: string;
+  type?: string;
+  status?: string;
+  buildingId?: string;
+  location?: string;
+}
+
+export interface UnifiedSearchResult {
+  success: boolean;
+  units: Property[];
+  storageUnits: StorageUnit[];
+  parkingSpaces: ParkingSpace[];
+  totalCount: number;
+  message: string;
+}
 
 /**
  * Enhanced Property Search Service for Telegram Bot
@@ -208,5 +242,126 @@ export async function getPropertySummary(criteria?: Partial<PropertySearchCriter
   } catch (error) {
     // Error logging removed //('Error getting property summary:', error);
     throw error;
+  }
+}
+
+// =============================================================================
+// 🏢 ENTERPRISE: Unified Multi-Collection Search (local_4.log architecture)
+// =============================================================================
+// Search διασχίζει domains με ξεχωριστό labeling
+// Units / Storage / Parking = παράλληλες οντότητες
+// =============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Detect which collections to search based on keywords
+ */
+function detectSearchCollections(searchText: string): {
+  searchUnits: boolean;
+  searchStorage: boolean;
+  searchParking: boolean;
+} {
+  const text = searchText.toLowerCase();
+
+  // Storage keywords
+  const storageKeywords = ['αποθήκη', 'αποθηκη', 'storage', 'υπόγειο', 'υπογειο'];
+  const searchStorage = storageKeywords.some(kw => text.includes(kw));
+
+  // Parking keywords
+  const parkingKeywords = ['πάρκινγκ', 'παρκινγκ', 'parking', 'θέση', 'θεση', 'στάθμευση', 'σταθμευση'];
+  const searchParking = parkingKeywords.some(kw => text.includes(kw));
+
+  // Unit keywords (default if no specific keywords or explicit unit search)
+  const unitKeywords = ['διαμέρισμα', 'διαμερισμα', 'μεζονέτα', 'μεζονετα', 'κατάστημα', 'καταστημα', 'μονάδα', 'μοναδα', 'unit'];
+  const searchUnits = unitKeywords.some(kw => text.includes(kw)) || (!searchStorage && !searchParking);
+
+  return { searchUnits, searchStorage, searchParking };
+}
+
+/**
+ * 🏢 ENTERPRISE: Unified search across Units, Storage, and Parking collections
+ * Implements local_4.log architecture: parallel categories with separate labeling
+ */
+export async function unifiedPropertySearch(searchText: string): Promise<UnifiedSearchResult> {
+  'use server';
+  try {
+    const { searchUnits, searchStorage, searchParking } = detectSearchCollections(searchText);
+    const searchTerm = searchText.toLowerCase().trim();
+
+    const results: UnifiedSearchResult = {
+      success: true,
+      units: [],
+      storageUnits: [],
+      parkingSpaces: [],
+      totalCount: 0,
+      message: ''
+    };
+
+    // 🏠 Search Units collection
+    if (searchUnits) {
+      const unitsQuery = query(collection(db, COLLECTIONS.UNITS), limit(20));
+      const unitsSnapshot = await getDocs(unitsQuery);
+      results.units = unitsSnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as Property))
+        .filter(unit => {
+          const name = (unit.name || '').toLowerCase();
+          const type = (unit.type || '').toLowerCase();
+          return name.includes(searchTerm) || type.includes(searchTerm) || searchTerm.length < 3;
+        });
+    }
+
+    // 📦 Search Storage collection
+    if (searchStorage) {
+      const storageQuery = query(collection(db, COLLECTIONS.STORAGE), limit(20));
+      const storageSnapshot = await getDocs(storageQuery);
+      results.storageUnits = storageSnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as StorageUnit))
+        .filter(storage => {
+          const name = (storage.name || '').toLowerCase();
+          return name.includes(searchTerm) || searchTerm.length < 3;
+        });
+    }
+
+    // 🚗 Search Parking collection
+    if (searchParking) {
+      const parkingQuery = query(collection(db, COLLECTIONS.PARKING_SPACES), limit(20));
+      const parkingSnapshot = await getDocs(parkingQuery);
+      results.parkingSpaces = parkingSnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as ParkingSpace))
+        .filter(parking => {
+          const number = (parking.number || '').toLowerCase();
+          const location = (parking.location || '').toLowerCase();
+          return number.includes(searchTerm) || location.includes(searchTerm) || searchTerm.length < 3;
+        });
+    }
+
+    // Calculate totals and build message
+    results.totalCount = results.units.length + results.storageUnits.length + results.parkingSpaces.length;
+
+    // 🏢 ENTERPRISE: Build grouped message per local_4.log
+    const messageParts: string[] = [];
+    if (results.units.length > 0) {
+      messageParts.push(`🏠 Μονάδες (${results.units.length})`);
+    }
+    if (results.storageUnits.length > 0) {
+      messageParts.push(`📦 Αποθήκες (${results.storageUnits.length})`);
+    }
+    if (results.parkingSpaces.length > 0) {
+      messageParts.push(`🚗 Θέσεις Στάθμευσης (${results.parkingSpaces.length})`);
+    }
+
+    results.message = results.totalCount > 0
+      ? `Βρέθηκαν:\n${messageParts.join('\n')}`
+      : 'Δεν βρέθηκαν αποτελέσματα.';
+
+    return results;
+  } catch (error) {
+    return {
+      success: false,
+      units: [],
+      storageUnits: [],
+      parkingSpaces: [],
+      totalCount: 0,
+      message: 'Σφάλμα αναζήτησης.'
+    };
   }
 }

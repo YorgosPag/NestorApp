@@ -4,9 +4,15 @@ import React from 'react';
 import { TableCell, TableRow } from "@/components/ui/table";
 import { CommonBadge } from "@/core/badges";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Link, Ruler, Euro, Building } from 'lucide-react';
-import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
+import { Link, Ruler, Euro } from 'lucide-react';
+import type { StorageUnit } from '@/types/storage';
+
+// 🏢 ENTERPRISE: Type aliases for StorageUnit (legacy interface)
+type StorageUnitType = StorageUnit['type']; // 'storage' | 'parking'
+type StorageUnitStatus = StorageUnit['status']; // 'available' | 'sold' | 'reserved' | 'maintenance'
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { formatPrice, formatArea } from '../StorageCard/StorageCardUtils';
 import { cn } from '@/lib/utils';
 import { StorageRowActions } from './StorageRowActions';
@@ -17,10 +23,10 @@ interface StorageTableRowProps {
   onSelectUnit: (unitId: string) => void;
   onEdit: (unit: StorageUnit) => void;
   onDelete: (unitId: string) => void;
-  getStatusColor: (status: StorageStatus) => string;
-  getStatusLabel: (status: StorageStatus) => string;
-  getTypeIcon: (type: StorageType) => React.ElementType;
-  getTypeLabel: (type: StorageType) => string;
+  getStatusColor: (status: StorageUnitStatus) => string;
+  getStatusLabel: (status: StorageUnitStatus) => string;
+  getTypeIcon: (type: StorageUnitType) => React.ElementType;
+  getTypeLabel: (type: StorageUnitType) => string;
 }
 
 export function StorageTableRow({
@@ -60,7 +66,8 @@ export function StorageTableRow({
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-1 text-sm">
-          <Building className={`${iconSizes.xs} text-muted-foreground`} />
+          {/* 🏢 ENTERPRISE: Using centralized floor icon/color for floor display */}
+          <NAVIGATION_ENTITIES.floor.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.floor.color)} />
           {unit.floor}
         </div>
       </TableCell>

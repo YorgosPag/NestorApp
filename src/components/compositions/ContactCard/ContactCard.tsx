@@ -4,8 +4,11 @@ import React, { useState } from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
 import { ContactBadge, CommonBadge } from '@/core/badges';
 import { formatDate } from '@/lib/intl-utils';
-import { User, Mail, Phone, Tag, Calendar, MessageSquare, Building } from 'lucide-react';
+import { User, Mail, Phone, Tag, Calendar, MessageSquare } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
+import { cn } from '@/lib/utils';
 import type { Opportunity } from '@/types/crm';
 import { INTERACTIVE_PATTERNS, HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
@@ -19,19 +22,40 @@ interface ContactCardProps {
   onSelectionChange?: () => void;
 }
 
+// 🏢 ENTERPRISE: Stage labels matching Opportunity type
 const getStageLabel = (stage: string) => {
   const stageLabels: Record<string, string> = {
-    'new': 'Νέος',
-    'qualified': 'Εξειδικευμένος',
+    'initial_contact': 'Αρχική Επαφή',
+    'qualification': 'Αξιολόγηση',
+    'viewing': 'Επίσκεψη',
     'proposal': 'Πρόταση',
     'negotiation': 'Διαπραγμάτευση',
-    'closed-won': 'Κλειστό - Κερδισμένο',
-    'closed-lost': 'Κλειστό - Χαμένο'
+    'contract': 'Συμβόλαιο',
+    'closed_won': 'Κλειστό - Κερδισμένο',
+    'closed_lost': 'Κλειστό - Χαμένο'
   };
   return stageLabels[stage] || stage;
 };
 
-const formatContactDate = (date: string | Date) => {
+// 🏢 ENTERPRISE: Stage-based styling
+const getStatusBadgeClass = (stage: string): string => {
+  const stageClasses: Record<string, string> = {
+    'initial_contact': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    'qualification': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+    'viewing': 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+    'proposal': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+    'negotiation': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+    'contract': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200',
+    'closed_won': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    'closed_lost': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+  };
+  return stageClasses[stage] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
+};
+
+const formatContactDate = (date: string | Date | { toDate(): Date }) => {
+  if (typeof date === 'object' && 'toDate' in date) {
+    return formatDate(date.toDate());
+  }
   return formatDate(new Date(date));
 };
 
@@ -50,8 +74,8 @@ export function ContactCard({
   return (
     <BaseCard
       // Βασικές ιδιότητες
-      title={lead.fullName}
-      subtitle={lead.company || 'Ιδιώτης'}
+      title={lead.fullName || lead.title}
+      subtitle={getStageLabel(lead.stage)}
       
       // Header configuration
       headerConfig={{
@@ -68,21 +92,13 @@ export function ContactCard({
       isFavorite={isFavorite}
       onFavoriteChange={setIsFavorite}
       
-      // Status badges
+      // Status badges - only stage badge (priority not in Opportunity type)
       statusBadges={[
         {
           label: getStageLabel(lead.stage),
           className: getStatusBadgeClass(lead.stage)
-        },
-        lead.priority && {
-          label: `Προτεραιότητα: ${lead.priority}`,
-          className: badgeVariants({ 
-            variant: lead.priority === 'high' ? 'error' : 
-                     lead.priority === 'medium' ? 'warning' : 'info',
-            size: 'sm' 
-          })
         }
-      ].filter(Boolean)}
+      ]}
       
       // Content sections
       contentSections={[
@@ -129,25 +145,16 @@ export function ContactCard({
           )
         },
         
-        // Company info (if available)
-        lead.company && {
-          title: 'Εταιρεία',
-          content: (
-            <div className="flex items-center gap-3">
-              <Building className={`${iconSizes.sm} text-muted-foreground`} />
-              <span className="text-sm font-medium">{lead.company}</span>
-            </div>
-          )
-        },
-        
         // Lead source (if available)
         lead.source && {
           title: 'Πηγή',
           content: (
             <div className="text-sm">
-              <span className={badgeVariants({ variant: 'outline', size: 'sm' })}>
-                {lead.source}
-              </span>
+              <CommonBadge
+                status="contact"
+                customLabel={lead.source}
+                variant="outline"
+              />
             </div>
           )
         },
@@ -161,10 +168,10 @@ export function ContactCard({
                 <span className="text-muted-foreground">Δημιουργία:</span>
                 <span>{formatContactDate(lead.createdAt)}</span>
               </div>
-              {lead.lastContactDate && (
+              {lead.lastActivity && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Τελευταία επαφή:</span>
-                  <span>{formatContactDate(lead.lastContactDate)}</span>
+                  <span className="text-muted-foreground">Τελευταία δραστηριότητα:</span>
+                  <span>{formatContactDate(lead.lastActivity)}</span>
                 </div>
               )}
             </div>
@@ -192,33 +199,37 @@ export function ContactCard({
         }
       ].filter(Boolean)}
       
-      // Actions
+      // Actions - with required id property for CardAction type
       actions={[
-        onEmail && lead.email && {
+        ...(onEmail && lead.email ? [{
+          id: 'email',
           label: 'Email',
           icon: Mail,
           onClick: onEmail,
           variant: 'default' as const
-        },
-        onCall && lead.phone && {
+        }] : []),
+        ...(onCall && lead.phone ? [{
+          id: 'call',
           label: 'Κλήση',
           icon: Phone,
           onClick: onCall,
           variant: 'outline' as const
-        },
-        onMessage && {
+        }] : []),
+        ...(onMessage ? [{
+          id: 'message',
           label: 'Μήνυμα',
           icon: MessageSquare,
           onClick: onMessage,
           variant: 'ghost' as const
-        },
-        onEdit && {
+        }] : []),
+        ...(onEdit ? [{
+          id: 'edit',
           label: 'Επεξεργασία',
           icon: User,
           onClick: onEdit,
           variant: 'ghost' as const
-        }
-      ].filter(Boolean)}
+        }] : [])
+      ]}
       
       // Style overrides
       className={`${TRANSITION_PRESETS.SMOOTH_ALL} ${HOVER_SHADOWS.SUBTLE}`}

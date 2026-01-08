@@ -1,7 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Building2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
+// 🏢 ENTERPRISE: Using centralized entity config for Building icon
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
+import { cn } from '@/lib/utils';
 import { useLevels } from '../../systems/levels';
 import { HOVER_BORDER_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -77,7 +80,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
               className={PANEL_LAYOUT.SPACING.GAP_H_MD}
             />
             <div className="flex items-center flex-1">
-              <Building2 className={`${iconSizes.sm} ${colors.text.muted} ${PANEL_LAYOUT.SPACING.GAP_H_SM}`} />
+              <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.building.color, PANEL_LAYOUT.SPACING.GAP_H_SM)} />
               <div>
                 <div className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>{level.name}</div>
                 {level.isDefault && (

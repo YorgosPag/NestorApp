@@ -3,7 +3,10 @@
 import React from 'react';
 import { LabeledSelect } from './LabeledSelect';
 import { LabeledInput } from './LabeledInput';
-import { Home, MapPin, Activity, Building2, Search } from 'lucide-react';
+import { Home, MapPin, Activity, Search } from 'lucide-react';
+// 🏢 ENTERPRISE: Using centralized entity config for Building icon
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
+import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import {
   PROPERTY_TYPE_LABELS,
@@ -104,7 +107,7 @@ export function PropertyPageFilters({
       />
       <LabeledSelect
         id="building-filter"
-        icon={<Building2 className={iconSizes.xs} />}
+        icon={<NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.building.color)} />}
         label="Κτίριο"
         value={filterBuilding}
         onValueChange={setFilterBuilding}

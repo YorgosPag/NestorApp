@@ -1,32 +1,65 @@
 'use client';
 
-import { Home, Building, Warehouse, Store, Car, Briefcase } from 'lucide-react';
+import { Home, Warehouse, Store, Car, Briefcase, BedSingle } from 'lucide-react';
+// 🏢 ENTERPRISE: Using centralized navigation entities for Building icon
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 
+// =============================================================================
+// 🏢 ENTERPRISE: Centralized Property Type Icons
+// =============================================================================
+// Icons follow enterprise standards (Zillow, Rightmove, JLL patterns)
+// Single source of truth for property type icons across the application
+// Building icon uses NAVIGATION_ENTITIES.building for consistency
 
 export const getPropertyTypeIcon = (type: string) => {
     const typeUpper = type.toUpperCase();
-    
-    if (typeUpper.includes('ΔΙΑΜΈΡΙΣΜΑ') || typeUpper.includes('ΣΤΟΎΝΤΙΟ') || typeUpper.includes('ΓΚΑΡΣΟΝΙΈΡΑ')) {
+
+    // 🏢 Studio / Γκαρσονιέρα (unified per enterprise UX)
+    if (typeUpper.includes('ΣΤΟΎΝΤΙΟ') || typeUpper.includes('ΣΤΟΥΝΤΙΟ') ||
+        typeUpper.includes('ΓΚΑΡΣΟΝΙΈΡΑ') || typeUpper.includes('ΓΚΑΡΣΟΝΙΕΡΑ') ||
+        typeUpper.includes('STUDIO')) {
+        return BedSingle;
+    }
+
+    // 🏢 Διαμέρισμα (apartment) - uses centralized building icon
+    if (typeUpper.includes('ΔΙΑΜΈΡΙΣΜΑ') || typeUpper.includes('ΔΙΑΜΕΡΙΣΜΑ') ||
+        typeUpper.includes('APARTMENT')) {
+        return NAVIGATION_ENTITIES.building.icon;
+    }
+
+    // 🏠 Μεζονέτα (maisonette/house-style)
+    if (typeUpper.includes('ΜΕΖΟΝΈΤΑ') || typeUpper.includes('ΜΕΖΟΝΕΤΑ') ||
+        typeUpper.includes('MAISONETTE') || typeUpper.includes('ΟΙΚΟΔΟΜΉ')) {
         return Home;
     }
-    if (typeUpper.includes('ΚΑΤΆΣΤΗΜΑ') || typeUpper.includes('ΕΜΠΟΡΙΚΌ')) {
+
+    // 🏪 Κατάστημα (retail/shop)
+    if (typeUpper.includes('ΚΑΤΆΣΤΗΜΑ') || typeUpper.includes('ΚΑΤΑΣΤΗΜΑ') ||
+        typeUpper.includes('ΕΜΠΟΡΙΚΌ') || typeUpper.includes('SHOP') ||
+        typeUpper.includes('RETAIL')) {
         return Store;
     }
-    if (typeUpper.includes('ΓΡΑΦΕΊΟ')) {
+
+    // 💼 Γραφείο (office)
+    if (typeUpper.includes('ΓΡΑΦΕΊΟ') || typeUpper.includes('ΓΡΑΦΕΙΟ') ||
+        typeUpper.includes('OFFICE')) {
         return Briefcase;
     }
-    if (typeUpper.includes('ΜΕΖΟΝΈΤΑ') || typeUpper.includes('ΟΙΚΟΔΟΜΉ')) {
-        return Building;
+
+    // 📦 Αποθήκη (storage) - uses centralized storage icon
+    if (typeUpper.includes('ΑΠΟΘΉΚΗ') || typeUpper.includes('ΑΠΟΘΗΚΗ') ||
+        typeUpper.includes('ΑΠΟΘ') || typeUpper.includes('STORAGE')) {
+        return NAVIGATION_ENTITIES.storage.icon;
     }
-    if (typeUpper.includes('ΑΠΟΘΉΚΗ') || typeUpper.includes('ΑΠΟΘ')) {
-        return Warehouse;
+
+    // 🚗 Parking - uses centralized parking icon
+    if (typeUpper.includes('PARKING') || typeUpper.includes('ΧΏΡΟΣ ΣΤΆΘΜΕΥΣΗΣ') ||
+        typeUpper.includes('ΓΚΑΡΆΖ') || typeUpper.includes('ΓΚΑΡΑΖ')) {
+        return NAVIGATION_ENTITIES.parking.icon;
     }
-    if (typeUpper.includes('PARKING') || typeUpper.includes('ΧΏΡΟΣ ΣΤΆΘΜΕΥΣΗΣ') || typeUpper.includes('ΓΚΑΡΆΖ')) {
-        return Car;
-    }
-    
-    // Default to Home for residential properties
-    return Home;
+
+    // Default to centralized building icon
+    return NAVIGATION_ENTITIES.building.icon;
 };
 
 export const getPropertyTypeLabel = (type: string) => {

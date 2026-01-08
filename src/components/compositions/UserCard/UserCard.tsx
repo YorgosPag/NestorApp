@@ -6,15 +6,14 @@ import { CommonBadge } from '@/core/badges';
 import { HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { formatDate as formatIntlDate } from '@/lib/intl-utils';
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Building2, 
-  Calendar, 
-  Shield, 
-  Crown, 
+import {
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  Shield,
+  Crown,
   UserCheck,
   Edit,
   MessageSquare,
@@ -23,6 +22,9 @@ import {
   Clock
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
+import { cn } from '@/lib/utils';
 
 // Generic User interface for the UserCard
 interface UserProfile {
@@ -221,7 +223,8 @@ export function UserCard({
             <div className="space-y-2">
               {user.company && (
                 <div className="flex items-center gap-2 text-sm">
-                  <Building2 className={`${iconSizes.sm} text-muted-foreground`} />
+                  {/* 🏢 ENTERPRISE: Using centralized company icon/color */}
+                  <NAVIGATION_ENTITIES.company.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.company.color)} />
                   <span>{user.company}</span>
                 </div>
               )}

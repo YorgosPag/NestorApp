@@ -4,7 +4,9 @@
 const DEBUG_LEVEL_PANEL = false;
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Trash2, Plus, Building2, Edit, MousePointer, Pen, Move, Info, Shapes } from 'lucide-react';
+import { Trash2, Plus, Edit, MousePointer, Pen, Move, Info, Shapes } from 'lucide-react';
+// 🏢 ENTERPRISE: Using centralized entity config for Building icon
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useOverlayStore } from '../../overlays/overlay-store';
 import { PANEL_TOKENS, PANEL_LAYOUT, PanelTokenUtils } from '../../config/panel-tokens';
@@ -260,7 +262,7 @@ export function LevelPanel({
       
       {/* ✅ ENTERPRISE: Αφαίρεση περιττού wrapper - justify-between χωρίς νόημα με 1 child (ADR-003) */}
       <h3 className={PANEL_TOKENS.LEVEL_PANEL.HEADER.TEXT}>
-        <Building2 className={PANEL_TOKENS.LEVEL_PANEL.HEADER.ICON} />
+        <NAVIGATION_ENTITIES.building.icon className={PANEL_TOKENS.LEVEL_PANEL.HEADER.ICON} />
         Επίπεδα Έργου
       </h3>
 
@@ -343,7 +345,7 @@ export function LevelPanel({
         </div>
       ) : (
         <div className={PANEL_TOKENS.LEVEL_PANEL.EMPTY_STATE.CONTAINER}>
-          <Building2 className={PANEL_TOKENS.LEVEL_PANEL.EMPTY_STATE.ICON} />
+          <NAVIGATION_ENTITIES.building.icon className={PANEL_TOKENS.LEVEL_PANEL.EMPTY_STATE.ICON} />
           <p>Δεν υπάρχουν επίπεδα</p>
         </div>
       )}

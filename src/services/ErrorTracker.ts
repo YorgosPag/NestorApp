@@ -709,8 +709,88 @@ ${context.metadata ? `\n📊 ADDITIONAL METADATA:\n${JSON.stringify(context.meta
 // **🚀 ENTERPRISE CONFIGURATION INTEGRATION**
 import { getErrorConfig } from '@/config/error-reporting';
 
-// Create default instance με enterprise configuration
-export const errorTracker = new ErrorTracker(getErrorConfig());
+// 🏢 ENTERPRISE: Lazy initialization για server-side safety
+// Αποφεύγει errors σε API routes που τρέχουν server-side
+let _errorTrackerInstance: ErrorTracker | null = null;
+
+function getErrorTrackerInstance(): ErrorTracker {
+  if (!_errorTrackerInstance) {
+    _errorTrackerInstance = new ErrorTracker(getErrorConfig());
+  }
+  return _errorTrackerInstance;
+}
+
+// 🏢 ENTERPRISE: Server-safe proxy object
+// Επιτρέπει το import χωρίς να σπάει τα API routes
+export const errorTracker = {
+  captureError: (...args: Parameters<ErrorTracker['captureError']>) => {
+    try {
+      return getErrorTrackerInstance().captureError(...args);
+    } catch (error) {
+      // Silent fail σε server-side - δεν θέλουμε να σπάσει το API
+      console.warn('[ErrorTracker] Failed to capture error (server-side):', error);
+      return '';
+    }
+  },
+  captureUserError: (...args: Parameters<ErrorTracker['captureUserError']>) => {
+    try {
+      return getErrorTrackerInstance().captureUserError(...args);
+    } catch (error) {
+      console.warn('[ErrorTracker] Failed to capture user error (server-side):', error);
+      return '';
+    }
+  },
+  captureNetworkError: (...args: Parameters<ErrorTracker['captureNetworkError']>) => {
+    try {
+      return getErrorTrackerInstance().captureNetworkError(...args);
+    } catch (error) {
+      console.warn('[ErrorTracker] Failed to capture network error (server-side):', error);
+      return '';
+    }
+  },
+  capturePerformanceIssue: (...args: Parameters<ErrorTracker['capturePerformanceIssue']>) => {
+    try {
+      return getErrorTrackerInstance().capturePerformanceIssue(...args);
+    } catch (error) {
+      console.warn('[ErrorTracker] Failed to capture performance issue (server-side):', error);
+      return '';
+    }
+  },
+  getErrors: () => {
+    try {
+      return getErrorTrackerInstance().getErrors();
+    } catch {
+      return [];
+    }
+  },
+  getStats: () => {
+    try {
+      return getErrorTrackerInstance().getStats();
+    } catch {
+      return {
+        totalErrors: 0,
+        totalOccurrences: 0,
+        errorsBySeverity: {},
+        errorsByCategory: {},
+        sessionId: 'server-side'
+      };
+    }
+  },
+  clearErrors: () => {
+    try {
+      getErrorTrackerInstance().clearErrors();
+    } catch {
+      // Silent fail
+    }
+  },
+  updateConfig: (config: Partial<ErrorTrackerConfig>) => {
+    try {
+      getErrorTrackerInstance().updateConfig(config);
+    } catch {
+      // Silent fail
+    }
+  }
+};
 
 // ============================================================================
 // REACT INTEGRATION HOOKS

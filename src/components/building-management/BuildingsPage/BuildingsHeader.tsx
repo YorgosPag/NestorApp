@@ -2,7 +2,9 @@
 'use client';
 
 import React from 'react';
-import { Building2, Filter } from 'lucide-react';
+import { Filter } from 'lucide-react';
+// 🏢 ENTERPRISE: Using centralized entity config for Building icon
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -44,7 +46,7 @@ export function BuildingsHeader({
       layout="compact"
       spacing="compact"
       title={{
-        icon: Building2,
+        icon: NAVIGATION_ENTITIES.building.icon,
         title: "Διαχείριση Κτιρίων",
         subtitle: "Διαχείριση και παρακολούθηση κτιριακών έργων"
       }}

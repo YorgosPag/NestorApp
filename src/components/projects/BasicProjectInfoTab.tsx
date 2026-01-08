@@ -5,8 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Building, Briefcase } from "lucide-react";
+import { Briefcase } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
+import { cn } from '@/lib/utils';
 
 interface BasicProjectInfoTabProps {
     data: {
@@ -50,7 +53,8 @@ export function BasicProjectInfoTab({ data, setData, isEditing }: BasicProjectIn
                 <div className="space-y-2">
                     <Label htmlFor="companyName" className="text-sm font-medium">Εταιρεία</Label>
                      <div className="relative">
-                        <Building className={`absolute left-3 top-1/2 -translate-y-1/2 ${iconSizes.sm} text-muted-foreground`} />
+                        {/* 🏢 ENTERPRISE: Using centralized company icon/color */}
+                        <NAVIGATION_ENTITIES.company.icon className={cn("absolute left-3 top-1/2 -translate-y-1/2", iconSizes.sm, NAVIGATION_ENTITIES.company.color)} />
                         <Input 
                             id="companyName" 
                             name="companyName" 

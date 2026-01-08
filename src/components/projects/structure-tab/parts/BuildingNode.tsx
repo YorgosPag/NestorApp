@@ -1,7 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, Building2 } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+// 🏢 ENTERPRISE: Using centralized entity config for Building icon
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
+import { cn } from '@/lib/utils';
 import { UnitNode } from './UnitNode';
 import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -28,7 +31,7 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
           <ChevronDown size={20} className={`${colors.text.muted}`} /> :
           <ChevronRight size={20} className={`${colors.text.muted}`} />
         }
-        <Building2 className={`${colors.text.info}`} size={20} />
+        <NAVIGATION_ENTITIES.building.icon className={cn(NAVIGATION_ENTITIES.building.color)} size={20} />
         <div className="flex-1">
           <div className={`font-semibold ${colors.text.foreground}`}>{building.name}</div>
           <div className={`text-sm ${colors.text.muted}`}>

@@ -6,14 +6,16 @@ import { CommonBadge } from '@/core/badges';
 import { GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import {
   Link,
-  Building,
   Ruler
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
+import { cn } from '@/lib/utils';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { formatNumber } from '@/lib/intl-utils';
 import type { StorageUnit } from '@/types/storage';
-import { formatPrice, formatArea, getPricePerSqm, getFeatureIcon } from './StorageCardUtils';
+import { formatPrice, formatArea, getPricePerSqm } from './StorageCardUtils';
 
 interface StorageCardContentProps {
     unit: StorageUnit;
@@ -27,7 +29,7 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
     return (
         <CardContent className="p-4 space-y-4">
             <div>
-                <h4 className={`font-semibold text-foreground truncate flex items-center gap-2 ${GROUP_HOVER_PATTERNS.TEXT_PRIMARY_ON_GROUP}`}>
+                <h4 className={`font-semibold text-foreground truncate flex items-center gap-2 ${GROUP_HOVER_PATTERNS.ACCENT_ON_GROUP}`}>
                     <TypeIcon className={iconSizes.sm} />
                     <span>{unit.code}</span>
                 </h4>
@@ -39,7 +41,8 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
             <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="space-y-1">
                     <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <Building className={iconSizes.sm} />
+                        {/* 🏢 ENTERPRISE: Using centralized floor icon/color */}
+                        <NAVIGATION_ENTITIES.floor.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.floor.color)} />
                         <span>Όροφος</span>
                     </div>
                     <div className="font-medium text-foreground">{unit.floor}</div>
@@ -54,7 +57,7 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
                 </div>
             </div>
 
-            <div className={`pt-3 ${quick.borderT}`}>
+            <div className={`pt-3 ${quick.separatorH}`}>
                 <div className="flex items-center justify-between">
                     <div>
                         <div className="text-xs text-muted-foreground">Τιμή</div>
@@ -68,7 +71,7 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
             </div>
 
             {unit.linkedProperty && (
-                <div className={`pt-3 ${quick.borderT}`}>
+                <div className={`pt-3 ${quick.separatorH}`}>
                     <div className="flex items-center gap-1.5 text-sm">
                         <Link className={`${iconSizes.sm} text-primary`} />
                         <span className="text-muted-foreground">Συνδεδεμένο:</span>
@@ -78,25 +81,17 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
             )}
 
             {unit.features && unit.features.length > 0 && (
-                <div className={`pt-3 ${quick.borderT}`}>
+                <div className={`pt-3 ${quick.separatorH}`}>
                     <div className="flex flex-wrap gap-2">
-                        {unit.features.slice(0, 3).map((feature, index) => {
-                            const FeatureIcon = getFeatureIcon(feature);
-                            return (
-                                <CommonBadge
-                                    key={index}
-                                    status="building"
-                                    customLabel={
-                                        <div className="flex items-center gap-1">
-                                            <FeatureIcon className={iconSizes.xs} />
-                                            {feature}
-                                        </div>
-                                    }
-                                    variant="outline"
-                                    className="font-normal"
-                                />
-                            );
-                        })}
+                        {unit.features.slice(0, 3).map((feature, index) => (
+                            <CommonBadge
+                                key={index}
+                                status="building"
+                                customLabel={feature}
+                                variant="outline"
+                                className="font-normal"
+                            />
+                        ))}
                         {unit.features.length > 3 && (
                             <CommonBadge
                                 status="building"

@@ -122,14 +122,51 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 🏠 BUILDINGS & UNITS - PUBLIC READ ACCESS
+    // 🏠 BUILDINGS, FLOORS & UNITS - PUBLIC READ ACCESS
     // =========================================================================
     match /buildings/{buildingId} {
       allow read: if isDevMode() || isAuthenticated(); // Dev-friendly access
       allow write: if false; // Admin/server only
     }
 
+    // 🏢 FLOORS: Ορόφοι κτιρίων - Navigation hierarchy support
+    match /floors/{floorId} {
+      allow read: if isDevMode() || isAuthenticated(); // Dev-friendly access
+      allow write: if false; // Admin/server only
+    }
+
     match /units/{unitId} {
+      allow read: if isDevMode() || isAuthenticated(); // Dev-friendly access
+      allow write: if false; // Admin/server only
+    }
+
+    // =========================================================================
+    // 📦 STORAGE_UNITS COLLECTION - PARALLEL CATEGORY (local_4.log)
+    // =========================================================================
+    // 🏢 ENTERPRISE: Storage units are a PARALLEL category to Units, not nested
+    // Architecture: Building → [Units | Storage | Parking] (parallel)
+    match /storage_units/{storageId} {
+      allow read: if isDevMode() || isAuthenticated(); // Dev-friendly access
+      allow write: if false; // Admin/server only
+    }
+
+    // =========================================================================
+    // 🚗 PARKING_SPOTS COLLECTION - PARALLEL CATEGORY (local_4.log)
+    // =========================================================================
+    // 🏢 ENTERPRISE: Parking spaces are a PARALLEL category to Units, not nested
+    // Architecture: Building → [Units | Storage | Parking] (parallel)
+    // 📍 Collection name: parking_spots (με underscore - όπως στη Firestore)
+    match /parking_spots/{parkingId} {
+      allow read: if isDevMode() || isAuthenticated(); // Dev-friendly access
+      allow write: if isDevMode(); // Dev-friendly write access for seeding
+    }
+
+    // =========================================================================
+    // 🧭 NAVIGATION_COMPANIES COLLECTION - DEV-FRIENDLY READ ACCESS
+    // =========================================================================
+    // 🏢 ENTERPRISE: Εταιρείες που εμφανίζονται χειροκίνητα στην πλοήγηση
+    // Περιέχει contactIds που αντιστοιχούν σε εταιρείες στη contacts collection
+    match /navigation_companies/{navCompanyId} {
       allow read: if isDevMode() || isAuthenticated(); // Dev-friendly access
       allow write: if false; // Admin/server only
     }

@@ -316,7 +316,8 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
           {
             id: 'floorplan',
             value: 'floorplan',
-            icon: 'building',
+            // 🏢 ENTERPRISE: Primary concept = Κάτοψη (floor plan), NOT building context
+            icon: 'layout-grid',
             description: 'Κάτοψη και διάταξη του κτιρίου',
             order: 2,
             enabled: true,

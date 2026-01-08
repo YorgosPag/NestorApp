@@ -79,7 +79,8 @@ export const COLLECTIONS = {
   FLOORPLANS: process.env.NEXT_PUBLIC_FLOORPLANS_COLLECTION || 'floorplans',
 
   // 🅿️ PARKING & SPACES
-  PARKING_SPACES: process.env.NEXT_PUBLIC_PARKING_SPACES_COLLECTION || 'parkingSpaces',
+  // 📍 Collection name: parking_spots (με underscore - όπως στη Firestore)
+  PARKING_SPACES: process.env.NEXT_PUBLIC_PARKING_SPACES_COLLECTION || 'parking_spots',
 
   // 📋 OBLIGATIONS (Enterprise Sections)
   OBLIGATION_SECTIONS: process.env.NEXT_PUBLIC_OBLIGATION_SECTIONS_COLLECTION || 'obligationSections',

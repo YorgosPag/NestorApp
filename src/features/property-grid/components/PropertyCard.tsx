@@ -1,9 +1,12 @@
 'use client';
-import { Eye, ArrowRight, Heart, Square, Bed, Bath, Building } from 'lucide-react';
+import { Eye, ArrowRight, Heart, Square, Bed, Bath } from 'lucide-react';
 import { PropertyBadge, CommonBadge } from '@/core/badges';
 import { getPropertyImage } from '../utils/images';
 import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS, INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
+import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
@@ -37,7 +40,8 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: any; onV
           <section aria-label="Πληροφορίες Ακινήτου">
             <h3 className={`text-lg font-bold ${colors.text.primary}`} itemProp="name">{property.name}</h3>
             <p className={`text-sm ${colors.text.muted} flex items-center gap-1 mt-1`}>
-              <Building className={iconSizes.xs} />
+              {/* 🏢 ENTERPRISE: Using centralized building icon/color */}
+              <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.building.color)} />
               <span itemProp="location">{property.project} • {property.building} • {property.floor}ος όροφος</span>
             </p>
           </section>

@@ -3,7 +3,7 @@
 import React from 'react';
 import { formatDate, formatCurrency } from '@/lib/intl-utils';
 import type { Storage } from '@/types/storage/contracts';
-import { Warehouse, MapPin, Calendar, User, Building, Layers } from 'lucide-react';
+import { Warehouse, MapPin, Calendar, User, Euro, Layers } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface StorageGeneralTabProps {
@@ -72,7 +72,8 @@ export function StorageGeneralTab({ storage }: StorageGeneralTabProps) {
       {/* Οικονομικά Στοιχεία */}
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <Building className={iconSizes.md} />
+          {/* 🏢 ENTERPRISE: Using Euro icon for financial section */}
+          <Euro className={iconSizes.md} />
           Οικονομικά Στοιχεία
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

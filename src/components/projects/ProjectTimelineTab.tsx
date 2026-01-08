@@ -3,8 +3,10 @@
 import React from 'react';
 import type { Project } from '@/types/project';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
+import { cn } from '@/lib/utils';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { BuildingBadge } from '@/core/badges';
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
@@ -47,7 +49,8 @@ export function ProjectTimelineTab({ project }: { project: Project }) {
                 <div key={building.id} className="p-4 ${quick.card}">
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                            <Building className={`${iconSizes.sm} text-muted-foreground`} />
+                            {/* 🏢 ENTERPRISE: Using centralized building icon/color */}
+                            <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.building.color)} />
                             <span className="font-medium">{building.name}</span>
                         </div>
                         <BuildingBadge

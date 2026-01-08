@@ -5,9 +5,11 @@ import { PropertyBadge } from '@/core/badges';
 import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Home, Building, MapPin, Euro, Ruler, Edit3, Eye } from 'lucide-react';
+import { Home, MapPin, Euro, Ruler, Edit3, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import type { ExtendedPropertyDetails, Property } from '@/types/property-viewer';
 import { PROPERTY_STATUS_CONFIG } from '@/lib/property-utils';
 import { formatFloorLabel, formatCurrency } from '@/lib/intl-utils';
@@ -49,7 +51,8 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
       {/* Location */}
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-xs">
-          <Building className={`${iconSizes.xs} text-muted-foreground`} />
+          {/* 🏢 ENTERPRISE: Using centralized building icon/color */}
+          <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.building.color)} />
           <span>{property.building}</span>
         </div>
         <div className="flex items-center gap-2 text-xs">

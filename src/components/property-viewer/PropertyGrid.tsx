@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PropertyBadge } from '@/core/badges';
-import { Home, Building, MapPin, Euro, Ruler, SlidersHorizontal } from 'lucide-react';
+import { Home, MapPin, Euro, Ruler, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { COMPLEX_HOVER_EFFECTS, INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
@@ -27,14 +29,15 @@ import { ViewModeToggle } from './ViewModeToggle';
 import { AdvancedFiltersPanel } from './AdvancedFiltersPanel';
 
 
+// 🏢 ENTERPRISE: Using centralized building icon for building-type properties
 const propertyTypeIcons: { [key: string]: React.ElementType } = {
   'Στούντιο': Home,
   'Γκαρσονιέρα': Home,
   'Διαμέρισμα 2Δ': Home,
   'Διαμέρισμα 3Δ': Home,
-  'Μεζονέτα': Building,
-  'Κατάστημα': Building,
-  'Αποθήκη': Building,
+  'Μεζονέτα': NAVIGATION_ENTITIES.building.icon,
+  'Κατάστημα': NAVIGATION_ENTITIES.building.icon,
+  'Αποθήκη': NAVIGATION_ENTITIES.storage.icon,
 };
 
 function PropertyCard({ property, onSelect, isSelected }: { property: Property, onSelect: () => void, isSelected: boolean }) {
@@ -102,7 +105,8 @@ function PropertyCard({ property, onSelect, isSelected }: { property: Property, 
       </CardHeader>
       <CardContent className="p-4 space-y-3">
         <div className={`flex items-center gap-2 text-xs ${colors.text.muted}`}>
-          <Building className={iconSizes.xs} />
+          {/* 🏢 ENTERPRISE: Using centralized building icon/color */}
+          <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.building.color)} />
           <span>{property.building}</span>
           <MapPin className={`${iconSizes.xs} ml-2`} />
           <span>{formatFloorLabel(property.floor)}</span>

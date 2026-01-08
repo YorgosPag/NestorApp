@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
-import { FileText, Building2, Ruler, CheckCircle, Scissors, AlertTriangle } from 'lucide-react';
+import { FileText, Ruler, CheckCircle, Scissors, AlertTriangle } from 'lucide-react';
+// 🏢 ENTERPRISE: Using centralized entity config for Building icon
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -66,7 +68,7 @@ export function PreviewStep() {
       {/* Level Assignment */}
       <article className={`${colors.bg.secondary} ${PANEL_LAYOUT.CONTAINER.BORDER_RADIUS} ${PANEL_LAYOUT.SPACING.LG}`}>
         <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.success} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center`}>
-          <Building2 className={`${iconSizes.sm} ${PANEL_LAYOUT.SPACING.GAP_H_SM}`} />
+          <NAVIGATION_ENTITIES.building.icon className={`${iconSizes.sm} ${PANEL_LAYOUT.SPACING.GAP_H_SM} ${NAVIGATION_ENTITIES.building.color}`} />
           Ανάθεση Επιπέδου
         </h4>
         <dl className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>

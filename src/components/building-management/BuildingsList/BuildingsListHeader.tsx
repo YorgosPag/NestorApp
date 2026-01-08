@@ -2,7 +2,9 @@
 'use client';
 
 import React from 'react';
-import { Building2, TrendingUp, DollarSign, Settings } from 'lucide-react';
+import { TrendingUp, DollarSign, Settings } from 'lucide-react';
+// 🏢 ENTERPRISE: Using centralized entity config for Building icon
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { Button } from '@/components/ui/button';
@@ -31,7 +33,7 @@ export function BuildingsListHeader({
         <div>
             {/* 🏢 ENTERPRISE CENTRALIZED GenericListHeader - ΜΙΑ ΠΗΓΗ ΑΛΗΘΕΙΑΣ */}
             <GenericListHeader
-                icon={Building2}
+                icon={NAVIGATION_ENTITIES.building.icon}
                 entityName="Κτίρια"
                 itemCount={buildingCount}
                 searchTerm={searchTerm}

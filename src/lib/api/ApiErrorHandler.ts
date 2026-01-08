@@ -283,18 +283,27 @@ export class ApiErrorHandler {
       });
 
       // Log error to ErrorTracker (if should report)
+      // 🔧 ENTERPRISE FIX: Server-safe ErrorTracker call with defensive checks
       let errorId = '';
       if (errorMapping.shouldReport && this.shouldReportError(errorMessage)) {
-        errorId = errorTracker.captureError(
-          error instanceof Error ? error : new Error(errorMessage),
-          errorMapping.severity,
-          errorMapping.category,
-          {
-            component: 'ApiErrorHandler',
-            action: `${request.method} ${context.path}`,
-            ...context
+        try {
+          // Check if errorTracker and captureError are available (may not be on server)
+          if (errorTracker && typeof errorTracker.captureError === 'function') {
+            errorId = errorTracker.captureError(
+              error instanceof Error ? error : new Error(errorMessage),
+              errorMapping.severity,
+              errorMapping.category,
+              {
+                component: 'ApiErrorHandler',
+                action: `${request.method} ${context.path}`,
+                ...context
+              }
+            );
           }
-        );
+        } catch (trackerError) {
+          // ErrorTracker unavailable (server-side) - log warning but don't fail
+          console.warn('[ApiErrorHandler] ErrorTracker unavailable:', trackerError instanceof Error ? trackerError.message : trackerError);
+        }
       }
 
       // Log to console (if should log)

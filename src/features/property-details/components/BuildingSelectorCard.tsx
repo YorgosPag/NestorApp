@@ -16,7 +16,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Building2, Save, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Save, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+// 🏢 ENTERPRISE: Using centralized entity config for consistent icons/colors
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -206,7 +208,7 @@ export function BuildingSelectorCard({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Building2 className={iconSizes.md} />
+          <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
           {LABELS.CARD_TITLE}
         </CardTitle>
       </CardHeader>

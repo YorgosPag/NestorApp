@@ -5,6 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { UnitsListHeader } from './list/UnitsListHeader';
 import { UnitListItem } from './list/UnitListItem';
 import { CompactToolbar, unitsConfig } from '@/components/core/CompactToolbar';
+import { UnitTypeQuickFilters } from './UnitTypeQuickFilters';
 import type { Property } from '@/types/property-viewer';
 import { useUnitsViewerState } from '@/hooks/useUnitsViewerState';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -35,6 +36,9 @@ export function UnitsList({
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [showToolbar, setShowToolbar] = useState(false);
 
+  // 🏢 ENTERPRISE: Quick filter state for unit types (local_4.log - list-scoped filtering)
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+
   const toggleFavorite = (unitId: string) => {
     setFavorites(prev => 
       prev.includes(unitId) 
@@ -43,8 +47,35 @@ export function UnitsList({
     );
   };
 
-  // Filter units based on search term
+  // 🏢 ENTERPRISE: Filter units based on search term AND type quick filters (local_4.log)
   const filteredUnits = units.filter(unit => {
+    // Type filter (quick filters - list-scoped)
+    if (selectedTypes.length > 0) {
+      const unitType = (unit.type || '').toLowerCase();
+
+      // 🏢 ENTERPRISE: Studio filter includes both Studio and Γκαρσονιέρα
+      const matchesType = selectedTypes.some(filterType => {
+        const filter = filterType.toLowerCase();
+
+        // Special case: "studio" matches both studio and γκαρσονιέρα
+        if (filter === 'studio') {
+          return unitType.includes('studio') ||
+                 unitType.includes('στούντιο') ||
+                 unitType.includes('στουντιο') ||
+                 unitType.includes('γκαρσονιέρα') ||
+                 unitType.includes('γκαρσονιερα');
+        }
+
+        // Standard matching
+        return unitType.includes(filter);
+      });
+
+      if (!matchesType) {
+        return false;
+      }
+    }
+
+    // Search filter
     if (!searchTerm) return true;
 
     const searchLower = searchTerm.toLowerCase();
@@ -102,10 +133,6 @@ export function UnitsList({
     <div className={`min-w-[300px] max-w-[420px] w-full bg-card border ${quick.card} flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden`}>
       <UnitsListHeader
         unitCount={units.length}
-        availableCount={availableCount}
-        totalValue={totalValue}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
         showToolbar={showToolbar}
         onToolbarToggle={setShowToolbar}
       />
@@ -185,6 +212,14 @@ export function UnitsList({
           />
         )}
       </div>
+
+      {/* 🏢 ENTERPRISE: Quick Filters for Unit Types (local_4.log architecture) */}
+      {/* List-scoped filtering - NOT global filter panel */}
+      <UnitTypeQuickFilters
+        selectedTypes={selectedTypes}
+        onTypeChange={setSelectedTypes}
+        compact={true}
+      />
 
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">

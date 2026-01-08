@@ -32,15 +32,17 @@ interface GenericListHeaderProps {
     /** Count of items */
     itemCount: number;
     /** Search term value */
-    searchTerm: string;
+    searchTerm?: string;
     /** Search change handler */
-    onSearchChange: (term: string) => void;
+    onSearchChange?: (term: string) => void;
     /** Search placeholder text */
-    searchPlaceholder: string;
+    searchPlaceholder?: string;
     /** Whether toolbar is shown (mobile only) */
     showToolbar?: boolean;
     /** Toolbar toggle handler (mobile only) */
     onToolbarToggle?: (show: boolean) => void;
+    /** 🏢 ENTERPRISE (local_4.log): Hide search when it's handled elsewhere */
+    hideSearch?: boolean;
 }
 
 // ============================================================================
@@ -58,11 +60,12 @@ export function GenericListHeader({
     icon,
     entityName,
     itemCount,
-    searchTerm,
+    searchTerm = '',
     onSearchChange,
-    searchPlaceholder,
+    searchPlaceholder = 'Αναζήτηση...',
     showToolbar = false,
-    onToolbarToggle
+    onToolbarToggle,
+    hideSearch = false
 }: GenericListHeaderProps) {
     const iconSizes = useIconSizes();
     return (
@@ -78,14 +81,17 @@ export function GenericListHeader({
             </div>
 
             {/* Center: 🏢 ENTERPRISE - EXACT SAME PATTERN AS NAVIGATION MODAL */}
-            <SearchInput
-                value={searchTerm}
-                onChange={onSearchChange}
-                placeholder={searchPlaceholder} // 🏢 Dynamic placeholder based on entity
-                debounceMs={0} // Instant για table headers
-                showClearButton={true}
-                className="h-8 text-sm flex-1" // Minimal overrides - let SearchInput handle focus ring
-            />
+            {/* 🏢 ENTERPRISE (local_4.log): Conditionally render search to avoid duplication */}
+            {!hideSearch && onSearchChange && (
+                <SearchInput
+                    value={searchTerm}
+                    onChange={onSearchChange}
+                    placeholder={searchPlaceholder} // 🏢 Dynamic placeholder based on entity
+                    debounceMs={0} // Instant για table headers
+                    showClearButton={true}
+                    className="h-8 text-sm flex-1" // Minimal overrides - let SearchInput handle focus ring
+                />
+            )}
 
             {/* Right: Toolbar Toggle Button - Mobile Only */}
             {onToolbarToggle && (

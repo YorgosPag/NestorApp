@@ -2,12 +2,13 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2 } from 'lucide-react';
+// 🏢 ENTERPRISE: Using centralized entity config for Building icon
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
+import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { cn } from '@/lib/utils';
 
 const nearbyProjects = [
     {
@@ -45,7 +46,7 @@ export function NearbyProjectsList() {
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    <Building2 className={iconSizes.md} />
+                    <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
                     Γειτονικά Έργα
                 </CardTitle>
             </CardHeader>

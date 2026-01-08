@@ -390,4 +390,24 @@ export function isNavigationActionType(value: string): value is NavigationAction
 // 🏢 ENTERPRISE EXPORTS
 // =============================================================================
 
+// =============================================================================
+// 🏢 ENTERPRISE: Pre-configured Icon Components with Colors
+// =============================================================================
+
+/**
+ * Get a pre-styled icon element for an entity
+ *
+ * @param entityType - The type of entity
+ * @param className - Additional className (e.g., size)
+ * @returns JSX element with icon and color applied
+ *
+ * @example
+ * ```tsx
+ * // In a component:
+ * const BuildingIcon = NAVIGATION_ENTITIES.building.icon;
+ * const buildingColor = NAVIGATION_ENTITIES.building.color;
+ * <BuildingIcon className={cn(iconSizes.md, buildingColor)} />
+ * ```
+ */
+
 export default NAVIGATION_ENTITIES;
