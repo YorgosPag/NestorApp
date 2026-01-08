@@ -205,7 +205,8 @@ export const MODAL_SELECT_COMPACT_TOOLBAR_SEARCH_PLACEHOLDERS = {
   projects: 'Αναζήτηση έργων...',
   contacts: 'Αναζήτηση επαφών...',
   units: 'Αναζήτηση μονάδων...',
-  storages: 'Αναζήτηση αποθηκών...'
+  storages: 'Αναζήτηση αποθηκών...',
+  parking: 'Αναζήτηση θέσεων στάθμευσης...'
 } as const;
 
 /**
@@ -217,7 +218,8 @@ export const MODAL_SELECT_COMPACT_TOOLBAR_NEW_ITEM_LABELS = {
   new_project: 'Νέο Έργο',
   new_contact: 'Νέα Επαφή',
   new_unit: 'Νέα Μονάδα',
-  new_storage: 'Νέα Αποθήκη'
+  new_storage: 'Νέα Αποθήκη',
+  parking: 'Νέα Θέση Στάθμευσης'
 } as const;
 
 /**

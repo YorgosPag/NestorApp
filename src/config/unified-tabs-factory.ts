@@ -35,7 +35,7 @@ import {
 /**
  * Supported entity types για το tabs factory
  */
-export type TabEntityType = 'units' | 'storage' | 'building' | 'contact' | 'project' | 'crm-dashboard';
+export type TabEntityType = 'units' | 'storage' | 'building' | 'contact' | 'project' | 'crm-dashboard' | 'parking';
 
 /**
  * Supported contact types για conditional tabs

@@ -20,13 +20,19 @@ import {
   getCompactToolbarTooltips
 } from '@/subapps/dxf-viewer/config/modal-select';
 
+// 🅿️ ENTERPRISE: Import parking labels
+import {
+  PARKING_TYPE_LABELS,
+  PARKING_STATUS_LABELS
+} from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
+
 // 🏢 ENTERPRISE: Get centralized labels ONCE - Smart Configuration Factory
 const searchPlaceholders = getCompactToolbarSearchPlaceholders();
 const newItemLabels = getCompactToolbarNewItemLabels();
 const tooltips = getCompactToolbarTooltips();
 
 // 🚀 ENTERPRISE: Helper functions για filter categories και sort options
-function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' | 'units' | 'storages') {
+function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' | 'units' | 'storages' | 'parking') {
   const baseCategories = [
     {
       id: 'status',
@@ -66,12 +72,37 @@ function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' 
           ]
         }
       ];
+    case 'parking':
+      return [
+        {
+          id: 'status',
+          label: 'Κατάσταση',
+          options: [
+            { value: 'available', label: PARKING_STATUS_LABELS.available },
+            { value: 'occupied', label: PARKING_STATUS_LABELS.occupied },
+            { value: 'reserved', label: PARKING_STATUS_LABELS.reserved },
+            { value: 'sold', label: PARKING_STATUS_LABELS.sold },
+            { value: 'maintenance', label: PARKING_STATUS_LABELS.maintenance }
+          ]
+        },
+        {
+          id: 'type',
+          label: 'Τύπος θέσης',
+          options: [
+            { value: 'standard', label: PARKING_TYPE_LABELS.standard },
+            { value: 'handicapped', label: PARKING_TYPE_LABELS.handicapped },
+            { value: 'motorcycle', label: PARKING_TYPE_LABELS.motorcycle },
+            { value: 'electric', label: PARKING_TYPE_LABELS.electric },
+            { value: 'visitor', label: PARKING_TYPE_LABELS.visitor }
+          ]
+        }
+      ];
     default:
       return baseCategories;
   }
 }
 
-function getSortOptionsForType(type: 'buildings' | 'projects' | 'contacts' | 'units' | 'storages') {
+function getSortOptionsForType(type: 'buildings' | 'projects' | 'contacts' | 'units' | 'storages' | 'parking') {
   return [
     { field: 'name' as const, ascLabel: 'Όνομα (Α-Ζ)', descLabel: 'Όνομα (Ζ-Α)' },
     { field: 'date' as const, ascLabel: 'Ημερομηνία (Παλαιά → Νέα)', descLabel: 'Ημερομηνία (Νέα → Παλαιά)' },
@@ -81,7 +112,7 @@ function getSortOptionsForType(type: 'buildings' | 'projects' | 'contacts' | 'un
 
 // 🚀 ENTERPRISE: Smart Configuration Factory - No duplicated labels!
 function createToolbarConfig(
-  type: 'buildings' | 'projects' | 'contacts' | 'units' | 'storages'
+  type: 'buildings' | 'projects' | 'contacts' | 'units' | 'storages' | 'parking'
 ): CompactToolbarConfig {
   return {
     searchPlaceholder: searchPlaceholders[type],
@@ -166,3 +197,6 @@ export const unitsToolbarConfig: CompactToolbarConfig = createToolbarConfig('uni
 
 // 🚀 ENTERPRISE: Storages Configuration - Using Smart Factory (100+ lines → 1 line!)
 export const storagesToolbarConfig: CompactToolbarConfig = createToolbarConfig('storages');
+
+// 🅿️ ENTERPRISE: Parking Configuration - Using Smart Factory (100+ lines → 1 line!)
+export const parkingToolbarConfig: CompactToolbarConfig = createToolbarConfig('parking');

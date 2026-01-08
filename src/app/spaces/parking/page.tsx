@@ -1,219 +1,239 @@
 'use client';
 
+/**
+ * 🅿️ ENTERPRISE PARKING PAGE
+ *
+ * Σελίδα διαχείρισης θέσεων στάθμευσης
+ * Ακολουθεί το exact pattern από storage/page.tsx
+ *
+ * ΑΡΧΙΤΕΚΤΟΝΙΚΗ (REAL_ESTATE_HIERARCHY_DOCUMENTATION.md):
+ * - Parking είναι παράλληλη κατηγορία με Units/Storage μέσα στο Building
+ * - ΟΧΙ children των Units
+ * - Ισότιμη οντότητα στην πλοήγηση
+ */
+
 import React from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { ParkingsHeader } from '@/components/space-management/ParkingPage/ParkingsHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { ParkingsList } from '@/components/space-management/ParkingPage/ParkingsList';
+import { ParkingDetails } from '@/components/space-management/ParkingPage/ParkingDetails';
 import {
   Car,
-  Truck,
-  MapPin,
   TrendingUp,
   BarChart3,
-  Building2,
-  Square,
+  MapPin,
+  Home,
+  CheckCircle,
+  Euro
 } from 'lucide-react';
+import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
+import { MobileDetailsSlideIn } from '@/core/layouts';
+import { useParkingPageState } from '@/hooks/useParkingPageState';
+import { useParkingStats } from '@/hooks/useParkingStats';
+import { useFirestoreParkingSpots } from '@/hooks/useFirestoreParkingSpots';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters';
+import { parkingFiltersConfig } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
+import { ListContainer } from '@/core/containers';
+import {
+  PARKING_TYPE_LABELS,
+  PARKING_STATUS_LABELS
+} from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
 
-// Placeholder stats for Parking Spaces
-const parkingStats: DashboardStat[] = [
-  {
-    title: 'Συνολικές Θέσεις',
-    value: '437',
-    description: 'Όλες οι θέσεις στάθμευσης',
-    icon: Car,
-    color: 'blue',
-    trend: { value: 0, label: 'Σταθερό' }
-  },
-  {
-    title: 'Υπόγεια Parking',
-    value: '298',
-    description: 'Κλειστά υπόγεια',
-    icon: Building2,
-    color: 'purple',
-    trend: { value: 0, label: 'Σταθερό' }
-  },
-  {
-    title: 'Υπαίθρια Parking',
-    value: '139',
-    description: 'Εξωτερικές θέσεις',
-    icon: Square,
-    color: 'orange',
-    trend: { value: 0, label: 'Σταθερό' }
-  },
-  {
-    title: 'Μέσος Όρος/Κτίριο',
-    value: '18.2',
-    description: 'Θέσεις ανά κτίριο',
-    icon: TrendingUp,
-    color: 'green',
-    trend: { value: 0, label: 'Σταθερό' }
-  }
-];
-
-export default function ParkingPage() {
+function ParkingPageContent() {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+
+  // Firestore data connection - πραγματικά δεδομένα
+  const { parkingSpots, loading, error, refetch } = useFirestoreParkingSpots();
+
+  const {
+    selectedParking,
+    setSelectedParking,
+    viewMode,
+    setViewMode,
+    showDashboard,
+    setShowDashboard,
+    filteredParkingSpots,
+    filters,
+    setFilters,
+  } = useParkingPageState(parkingSpots);
+
+  const stats = useParkingStats(filteredParkingSpots);
+
+  // Search state (for header search)
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const [showMobileFilters, setShowMobileFilters] = React.useState(false);
+
+  // Dashboard stats from real data
+  const dashboardStats: DashboardStat[] = [
+    {
+      title: "Σύνολο Θέσεων",
+      value: stats.totalParkingSpots,
+      icon: Car,
+      color: "blue"
+    },
+    {
+      title: PARKING_STATUS_LABELS.available,
+      value: stats.availableParkingSpots,
+      icon: CheckCircle,
+      color: "green"
+    },
+    {
+      title: PARKING_STATUS_LABELS.sold,
+      value: stats.soldParkingSpots,
+      icon: Euro,
+      color: "purple"
+    },
+    {
+      title: "Συνολική Επιφάνεια",
+      value: `${stats.totalArea.toFixed(1)} m²`,
+      icon: MapPin,
+      color: "orange"
+    },
+    {
+      title: "Συνολική Αξία",
+      value: `${(stats.totalValue / 1000).toFixed(0)}K€`,
+      icon: TrendingUp,
+      color: "cyan"
+    },
+    {
+      title: "Ποσοστό Πωλήσεων",
+      value: `${stats.salesRate}%`,
+      icon: BarChart3,
+      color: "pink"
+    }
+  ];
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <Car className={`${iconSizes.xl} animate-spin mx-auto mb-4 text-muted-foreground`} />
+          <p className="text-muted-foreground">Φόρτωση θέσεων στάθμευσης...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-lg font-medium mb-2">Σφάλμα φόρτωσης</div>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <button
+            onClick={refetch}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+          >
+            Επανάληψη
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <TooltipProvider>
       <div className={`flex h-screen ${colors.bg.primary}`}>
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <div className={`border-b ${colors.bg.primary}/95 backdrop-blur supports-[backdrop-filter]:${colors.bg.primary}/60`}>
-            <div className="flex h-14 items-center px-4">
-              <div className="flex items-center gap-2">
-                <Car className={`${iconSizes.md} text-muted-foreground`} />
-                <h1 className="text-lg font-semibold">Θέσεις Στάθμευσης</h1>
-              </div>
-              <div className="ml-auto text-sm text-muted-foreground">
-                Χώροι στάθμευσης - Φυσικές θέσεις και περιοχές parking
-              </div>
-            </div>
+          <ParkingsHeader
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            showDashboard={showDashboard}
+            setShowDashboard={setShowDashboard}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            showFilters={showMobileFilters}
+            setShowFilters={setShowMobileFilters}
+          />
+
+          {/* Dashboard */}
+          {showDashboard && (
+            <UnifiedDashboard
+              stats={dashboardStats}
+              columns={6}
+              additionalContainers={
+                <>
+                  <div className="bg-card rounded-lg border p-4">
+                    <h3 className="font-medium mb-3 flex items-center gap-2">
+                      <BarChart3 className={iconSizes.sm} />
+                      Κατανομή Κατάστασης
+                    </h3>
+                    <div className="space-y-2">
+                      {Object.entries(stats.parkingByStatus).map(([status, count]) => (
+                        <div key={status} className="flex justify-between text-sm">
+                          <span>{PARKING_STATUS_LABELS[status as keyof typeof PARKING_STATUS_LABELS] || status}</span>
+                          <span className="font-medium">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="bg-card rounded-lg border p-4">
+                    <h3 className="font-medium mb-3 flex items-center gap-2">
+                      <Car className={iconSizes.sm} />
+                      Κατανομή Τύπων
+                    </h3>
+                    <div className="space-y-2">
+                      {Object.entries(stats.parkingByType).map(([type, count]) => (
+                        <div key={type} className="flex justify-between text-sm">
+                          <span>{PARKING_TYPE_LABELS[type as keyof typeof PARKING_TYPE_LABELS] || type}</span>
+                          <span className="font-medium">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              }
+            />
+          )}
+
+          {/* Desktop: Filters */}
+          <div className="hidden md:block px-6">
+            <AdvancedFiltersPanel
+              config={parkingFiltersConfig}
+              filters={filters}
+              onFiltersChange={setFilters}
+            />
           </div>
 
-          {/* Dashboard Stats */}
-          <div className="p-6 space-y-6">
-            <UnifiedDashboard
-              title="Επισκόπηση Θέσεων Στάθμευσης"
-              stats={parkingStats}
-              variant="modern"
+          {/* Content */}
+          <ListContainer>
+            {/* Professional ParkingsList component */}
+            <ParkingsList
+              parkingSpots={filteredParkingSpots}
+              selectedParking={selectedParking}
+              onSelectParking={setSelectedParking}
             />
 
-            {/* Parking Types */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Υπόγεια Section */}
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Building2 className={iconSizes.md} />
-                  Υπόγεια Parking
-                </h2>
-
-                <div className="space-y-3">
-                  {/* Κλειστά Υπόγεια */}
-                  <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className={`p-2 ${colors.bg.info}/10 rounded-lg`}>
-                        <Building2 className={`${iconSizes.sm} text-blue-500`} />
-                      </div>
-                      <h3 className="font-medium">Κλειστά Υπόγεια</h3>
-                      <span className={`ml-auto ${colors.bg.info}/20 ${colors.text.info} px-2 py-1 rounded text-sm font-medium`}>
-                        234
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Εσωτερικές θέσεις με οροφή και τοίχους
-                    </p>
-                  </div>
-
-                  {/* Ημι-υπαίθρια Υπόγεια */}
-                  <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className={`p-2 ${colors.bg.success}/10 rounded-lg`}>
-                        <Square className={`${iconSizes.sm} text-green-500`} />
-                      </div>
-                      <h3 className="font-medium">Ημι-υπαίθρια</h3>
-                      <span className={`ml-auto ${colors.bg.success}/20 ${colors.text.success} px-2 py-1 rounded text-sm font-medium`}>
-                        64
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Υπόγεια με μερική στέγαση ή στο ημίυπαίθριο
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Εξωτερικά Section */}
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Square className={iconSizes.md} />
-                  Εξωτερικά Parking
-                </h2>
-
-                <div className="space-y-3">
-                  {/* Υπαίθρια */}
-                  <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
-                        <Square className={`${iconSizes.sm} text-orange-500`} />
-                      </div>
-                      <h3 className="font-medium">Υπαίθρια</h3>
-                      <span className={`ml-auto ${colors.bg.warning}/20 ${colors.text.warning} px-2 py-1 rounded text-sm font-medium`}>
-                        89
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Εξωτερικές θέσεις χωρίς στέγαση
-                    </p>
-                  </div>
-
-                  {/* Σκεπαστά */}
-                  <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
-                        <Building2 className={`${iconSizes.sm} text-purple-500`} />
-                      </div>
-                      <h3 className="font-medium">Σκεπαστά</h3>
-                      <span className={`ml-auto ${colors.bg.warning}/20 ${colors.text.warning} px-2 py-1 rounded text-sm font-medium`}>
-                        50
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Εξωτερικές θέσεις με στέγαση ή υπόστεγο
-                    </p>
-                  </div>
-                </div>
-
-                {/* Ειδικά Parking */}
-                <div className={`p-6 bg-card ${quick.card}`}>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className={`p-2 ${colors.bg.error}/10 rounded-lg`}>
-                      <Truck className={`${iconSizes.md} text-red-500`} />
-                    </div>
-                    <h3 className="font-semibold">Ειδικές Θέσεις</h3>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Μηχανές</span>
-                      <span className="font-medium">23 θέσεις</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Φορτηγά/Βαν</span>
-                      <span className="font-medium">8 θέσεις</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">ΑΜΕΑ</span>
-                      <span className="font-medium">12 θέσεις</span>
-                    </div>
-                    <div className="border-t pt-3 mt-3">
-                      <div className="flex justify-between items-center font-semibold">
-                        <span>Σύνολο ειδικών</span>
-                        <span>43 θέσεις</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Info Message */}
-            <div className={`p-4 bg-muted/50 ${quick.card}`}>
-              <div className="flex items-center gap-2 text-sm">
-                <Car className={iconSizes.sm} />
-                <span className="font-medium">Θέσεις Στάθμευσης</span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                Εδώ βλέπετε όλες τις φυσικές θέσεις στάθμευσης που υπάρχουν στα κτίρια.
-                Δεν περιλαμβάνονται στοιχεία πώλησης - μόνο η φυσική κατανομή και χαρακτηριστικά.
-              </p>
-            </div>
-          </div>
+            {/* Professional ParkingDetails component */}
+            <ParkingDetails parking={selectedParking} />
+          </ListContainer>
         </div>
+
+        {/* Mobile: Filters Slide-in */}
+        <MobileDetailsSlideIn
+          isOpen={showMobileFilters}
+          onClose={() => setShowMobileFilters(false)}
+          title="Φίλτρα Θέσεων Στάθμευσης"
+        >
+          <AdvancedFiltersPanel
+            config={parkingFiltersConfig}
+            filters={filters}
+            onFiltersChange={setFilters}
+          />
+        </MobileDetailsSlideIn>
       </div>
     </TooltipProvider>
   );
+}
+
+export default function ParkingPage() {
+  return <ParkingPageContent />;
 }

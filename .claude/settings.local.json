@@ -166,7 +166,9 @@
       "Bash(firebase deploy:*)",
       "Bash(del \"C:\\\\Nestor_Pagonis\\\\scripts\\\\check-storage-ownership.js\")",
       "Bash(cmd //c \"del C:\\\\Nestor_Pagonis\\\\scripts\\\\check-storage-ownership.js\")",
-      "WebFetch(domain:lucide.dev)"
+      "WebFetch(domain:lucide.dev)",
+      "Bash(git restore:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\n🔒 ENTERPRISE SAFETY CHECKPOINT: BaseCard & UI Components Enhancement \\(54 files\\)\n\n- Enhanced BaseCard with enterprise header/content configurations\n- Added UnitTypeQuickFilters component for units filtering\n- Updated Real Estate Hierarchy documentation \\(+1172 lines\\)\n- Improved ErrorTracker and property-search services\n- Refactored building/storage/units components for consistency\n- Updated Firestore rules for better security\n- Added seed-parking API endpoint\n- Enhanced navigation configuration\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ],
     "deny": [],
     "ask": []
