@@ -576,33 +576,79 @@ export function DesktopMultiColumn({
    * 2. Απευθείας από το building (αν δεν έχει ορόφους)
    * Οι όροφοι είναι δομικοί κόμβοι - δεν εμφανίζονται στην πλοήγηση.
    */
+  /**
+   * 🏢 ENTERPRISE (local_4.log): Check if a unit is a storage unit
+   * Storage units should be in the "Αποθήκες" tab, NOT in "Μονάδες"
+   */
+  const isStorageType = useCallback((unit: NavigationUnit): boolean => {
+    const type = (unit.type || '').toLowerCase();
+    const name = (unit.name || '').toLowerCase();
+    return type.includes('storage') ||
+           type.includes('αποθήκη') ||
+           type.includes('αποθηκη') ||
+           name.includes('αποθήκη') ||
+           name.includes('αποθηκη');
+  }, []);
+
   const buildingUnits = useMemo(() => {
     if (!selectedBuilding) return [];
 
     // 🏢 ENTERPRISE: Combine units from floors AND direct building units
     const floorUnits = selectedBuilding.floors?.flatMap(floor => floor.units) || [];
     const directUnits = selectedBuilding.units || [];
+    const allUnits = [...floorUnits, ...directUnits];
 
-    return [...floorUnits, ...directUnits];
-  }, [selectedBuilding]);
+    // 🏢 ENTERPRISE (local_4.log): Filter out storage units
+    // Storage is a PARALLEL category to Units, not part of Units
+    return allUnits.filter(unit => !isStorageType(unit));
+  }, [selectedBuilding, isStorageType]);
 
   /**
    * 🏢 ENTERPRISE (local_4.log): Memoized storages filtered by building
    * Storages are parallel category to Units within Building context
+   *
+   * COMBINES:
+   * 1. Storage units from storage_units collection (via useFirestoreStorages)
+   * 2. Units with type='storage' from units collection (legacy data)
    */
   const buildingStorages = useMemo((): StorageUnit[] => {
-    if (!selectedBuilding || !storages) return [];
+    if (!selectedBuilding) return [];
 
-    // TODO: Filter storages by buildingId when API supports it
-    // For now, return all storages (will need buildingId field in storage_units collection)
-    return storages.map(storage => ({
+    // 1. Get storages from storage_units collection
+    const apiStorages: StorageUnit[] = (storages || []).map(storage => ({
       id: storage.id,
       name: storage.name,
       type: storage.type as 'basement' | 'ground' | 'external' | undefined,
       area: storage.area,
       status: storage.status as StorageUnit['status']
     }));
-  }, [selectedBuilding, storages]);
+
+    // 2. Get storage-type units from units collection (legacy data)
+    // These are units with type='storage' that haven't been migrated yet
+    const floorUnits = selectedBuilding.floors?.flatMap(floor => floor.units) || [];
+    const directUnits = selectedBuilding.units || [];
+    const allBuildingUnits = [...floorUnits, ...directUnits];
+
+    const legacyStorages: StorageUnit[] = allBuildingUnits
+      .filter(unit => isStorageType(unit))
+      .map(unit => ({
+        id: unit.id,
+        name: unit.name,
+        type: 'basement' as const, // Default type for legacy
+        area: unit.area,
+        status: unit.status as StorageUnit['status']
+      }));
+
+    // Combine both sources (avoid duplicates by id)
+    const allStorages = [...apiStorages];
+    legacyStorages.forEach(legacy => {
+      if (!allStorages.some(s => s.id === legacy.id)) {
+        allStorages.push(legacy);
+      }
+    });
+
+    return allStorages;
+  }, [selectedBuilding, storages, isStorageType]);
 
   /**
    * 🏢 ENTERPRISE (local_4.log): Memoized parking spots (already filtered by building via hook)

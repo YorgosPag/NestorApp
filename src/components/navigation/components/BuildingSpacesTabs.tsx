@@ -158,23 +158,28 @@ export function BuildingSpacesTabs({
   // TAB CONFIGURATION - Using centralized NAVIGATION_ENTITIES
   // ==========================================================================
 
+  // 🏢 ENTERPRISE: Tab configuration με χρωματιστά icons για consistency
+  // Τα χρώματα προέρχονται από το centralized NAVIGATION_ENTITIES
   const tabs: TabDefinition[] = [
     {
       id: 'units',
       label: NAVIGATION_ENTITIES.unit.pluralLabel,
       icon: NAVIGATION_ENTITIES.unit.icon,
+      iconColor: NAVIGATION_ENTITIES.unit.color, // 🟠 text-orange-600
       content: null // Content rendered separately via TabsContent
     },
     {
       id: 'storage',
       label: NAVIGATION_ENTITIES.storage.pluralLabel,
       icon: NAVIGATION_ENTITIES.storage.icon,
+      iconColor: NAVIGATION_ENTITIES.storage.color, // 🟡 text-amber-600
       content: null
     },
     {
       id: 'parking',
       label: NAVIGATION_ENTITIES.parking.pluralLabel,
       icon: NAVIGATION_ENTITIES.parking.icon,
+      iconColor: NAVIGATION_ENTITIES.parking.color, // 🔵 text-indigo-600
       content: null
     }
   ];

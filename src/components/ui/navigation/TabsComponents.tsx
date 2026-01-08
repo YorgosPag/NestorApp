@@ -25,6 +25,8 @@ export interface TabDefinition {
   icon: LucideIcon;
   content: React.ReactNode;
   disabled?: boolean;
+  /** 🏢 ENTERPRISE: Custom icon color (e.g., 'text-orange-600') for entity consistency */
+  iconColor?: string;
 }
 
 // Main TabsContainer props
@@ -99,7 +101,9 @@ export function TabsContainer({
               disabled={tab.disabled}
               className={themeConfig?.tabTrigger}
             >
-              {React.createElement(tab.icon, { className: iconSizes.sm })}
+              {React.createElement(tab.icon, {
+                className: cn(iconSizes.sm, tab.iconColor)
+              })}
               <span className="hidden sm:inline">{tab.label}</span>
             </TabsTrigger>
           ))}
@@ -225,7 +229,9 @@ export function TabsOnlyTriggers({
               disabled={tab.disabled}
               className={themeConfig?.tabTrigger}
             >
-              {React.createElement(tab.icon, { className: iconSizes.sm })}
+              {React.createElement(tab.icon, {
+                className: cn(iconSizes.sm, tab.iconColor)
+              })}
               <span className={alwaysShowLabels ? '' : 'hidden sm:inline'}>{tab.label}</span>
             </TabsTrigger>
           ))}

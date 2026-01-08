@@ -6,9 +6,30 @@ import type { Property, FilterState } from '@/types/property-viewer';
 import type { PropertyStats } from '@/types/property';
 
 
+/**
+ * 🏢 ENTERPRISE: Property type constants for filtering
+ * Per local_4.log architecture - Units, Storage, Parking are PARALLEL categories
+ */
+const STORAGE_TYPES = ['storage', 'αποθήκη', 'αποθηκη'] as const;
+
+/**
+ * 🏢 ENTERPRISE: Check if a property is a storage unit
+ * Storage units should NOT appear in the Units list (per local_4.log)
+ */
+function isStorageUnit(property: Property): boolean {
+  const type = (property.type || '').toLowerCase();
+  const propertyType = (property.propertyType || '').toLowerCase();
+
+  return STORAGE_TYPES.some(storageType =>
+    type.includes(storageType) || propertyType.includes(storageType)
+  );
+}
+
 export function usePropertyFilters(
   properties: Property[],
-  filters: FilterState
+  filters: FilterState,
+  /** 🏢 ENTERPRISE (local_4.log): Exclude storage units from results */
+  excludeStorageUnits: boolean = true
 ) {
   const { filteredProperties, stats } = useMemo(() => {
     if (!properties || !filters) {
@@ -20,6 +41,12 @@ export function usePropertyFilters(
       };
       return { filteredProperties: [], stats: emptyStats };
     }
+
+    // 🏢 ENTERPRISE (local_4.log): Pre-filter to exclude storage units
+    // Storage units are a PARALLEL category to Units, not part of Units
+    const baseProperties = excludeStorageUnits
+      ? properties.filter(p => !isStorageUnit(p))
+      : properties;
 
     const {
       searchTerm = '',
@@ -33,7 +60,7 @@ export function usePropertyFilters(
       features = [],
     } = filters;
 
-    const filtered = properties.filter(property => {
+    const filtered = baseProperties.filter(property => {
       const searchMatch = !searchTerm ||
         (property.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (property.description || '').toLowerCase().includes(searchTerm.toLowerCase());
@@ -75,7 +102,12 @@ export function usePropertyFilters(
     };
 
     return { filteredProperties: filtered, stats: calculatedStats };
-  }, [properties, filters]);
+  }, [properties, filters, excludeStorageUnits]);
 
   return { filteredProperties, stats };
 }
+
+/**
+ * 🏢 ENTERPRISE: Export isStorageUnit για χρήση σε άλλα components
+ */
+export { isStorageUnit, STORAGE_TYPES };
