@@ -16,17 +16,9 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTypography } from '@/hooks/useTypography';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { CardStatsProps, StatItem, StatsLayout } from './types';
-
-// =============================================================================
-// 🏢 TYPOGRAPHY SIZE CONSTANTS - Semantic text sizes
-// =============================================================================
-const TEXT_SIZES = {
-  xs: 'text-xs',
-  sm: 'text-sm',
-  base: 'text-base',
-} as const;
 
 /**
  * 🏢 CardStats Component
@@ -54,8 +46,10 @@ export function CardStats({
   showDividers = false,
   className,
 }: CardStatsProps) {
+  // 🏢 CENTRALIZED HOOKS
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const typography = useTypography();
 
   // Don't render if no stats
   if (!stats || stats.length === 0) {
@@ -64,7 +58,7 @@ export function CardStats({
 
   // Layout-specific container classes
   const layoutContainerClasses: Record<StatsLayout, string> = {
-    horizontal: 'flex flex-wrap items-center gap-4',
+    horizontal: 'flex flex-wrap items-center gap-4 overflow-hidden w-full',
     vertical: 'flex flex-col gap-2',
     grid: cn(
       'grid gap-3',
@@ -74,11 +68,11 @@ export function CardStats({
     ),
   };
 
-  // Size-based classes
+  // 🏢 ENTERPRISE: Size-based classes using centralized typography
   const sizeClasses = {
     icon: compact ? iconSizes.xs : iconSizes.sm,
-    label: compact ? TEXT_SIZES.xs : TEXT_SIZES.sm,
-    value: compact ? TEXT_SIZES.sm : TEXT_SIZES.base,
+    label: compact ? typography.card.statLabel : typography.card.statLabel,  // text-xs
+    value: compact ? typography.card.statLabel : typography.card.subtitle,   // text-xs / text-sm (smaller!)
     gap: compact ? 'gap-1' : 'gap-1.5',
   };
 
@@ -130,7 +124,7 @@ function StatItemComponent({
   const content = (
     <div
       className={cn(
-        'flex items-center',
+        'flex items-center min-w-0',
         sizeClasses.gap,
         layout === 'vertical' && 'justify-between w-full'
       )}
@@ -157,13 +151,14 @@ function StatItemComponent({
           </span>
         )}
 
-        {/* Value */}
+        {/* Value - 🏢 ENTERPRISE: Using muted color for secondary hierarchy */}
         <span
           className={cn(
             sizeClasses.value,
-            'font-medium',
-            stat.valueColor || colors.text.primary
+            'truncate max-w-[120px]',
+            stat.valueColor || colors.text.muted
           )}
+          title={String(stat.value)}
         >
           {stat.value}
         </span>

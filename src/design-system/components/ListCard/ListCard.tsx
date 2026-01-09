@@ -23,6 +23,7 @@ import { Star } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useTypography } from '@/hooks/useTypography';
 
 // 🏢 CENTRALIZED UI PATTERNS
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
@@ -95,6 +96,7 @@ export function ListCard({
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { quick, getStatusBorder } = useBorderTokens();
+  const typography = useTypography();
 
   // ==========================================================================
   // 🏢 COMPUTED VALUES FROM CENTRALIZED SYSTEMS
@@ -153,7 +155,7 @@ export function ListCard({
     <article
       className={cn(
         // Base styles using centralized tokens
-        'relative group cursor-pointer',
+        'relative group cursor-pointer overflow-hidden w-full',
         quick.card,
         'border',
         // Spacing based on compact mode
@@ -228,49 +230,52 @@ export function ListCard({
       {/* ================================================================== */}
       {/* 🏢 HEADER: Icon + Title + Badges */}
       {/* ================================================================== */}
-      <header className={cn('flex items-center gap-2', compact ? 'mb-1.5' : 'mb-2')}>
-        {/* Entity Icon */}
-        {!hideIcon && (entityType || customIcon) && (
-          <CardIcon
-            entityType={entityType}
-            icon={customIcon}
-            color={customIconColor}
-            size={compact ? 'sm' : 'md'}
-          />
-        )}
+      <header className={cn('overflow-hidden', compact ? 'mb-1.5' : 'mb-2')}>
+        {/* Row 1: Icon + Title */}
+        <div className="flex items-center gap-2">
+          {/* Entity Icon */}
+          {!hideIcon && (entityType || customIcon) && (
+            <CardIcon
+              entityType={entityType}
+              icon={customIcon}
+              color={customIconColor}
+              size={compact ? 'sm' : 'md'}
+            />
+          )}
 
-        {/* Title & Subtitle */}
-        <div className="flex-1 min-w-0">
-          <h3
-            className={cn(
-              'font-medium truncate',
-              compact ? 'text-sm' : 'text-base',
-              colors.text.primary
-            )}
-          >
-            {title}
-          </h3>
-          {subtitle && (
-            <p
+          {/* Title & Subtitle - 🏢 ENTERPRISE: Using centralized typography */}
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <h3
               className={cn(
                 'truncate',
-                compact ? 'text-xs' : 'text-sm',
-                colors.text.muted
+                compact ? typography.card.titleCompact : typography.card.title,
+                colors.text.primary
               )}
             >
-              {subtitle}
-            </p>
-          )}
+              {title}
+            </h3>
+            {subtitle && (
+              <p
+                className={cn(
+                  'truncate',
+                  compact ? typography.card.subtitleCompact : typography.card.subtitle,
+                  colors.text.muted
+                )}
+              >
+                {subtitle}
+              </p>
+            )}
+          </div>
         </div>
 
-        {/* Badges (max 2 recommended per Enterprise spec) */}
+        {/* Row 2: Badges (separate row to prevent overflow) */}
         {badges.length > 0 && (
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className={cn('flex items-center gap-1 mt-1.5 overflow-hidden')}>
             {badges.slice(0, 2).map((badge, index) => (
               <span
                 key={`${badge.label}-${index}`}
                 className={cn(
-                  'px-2 py-0.5 rounded-full text-xs font-medium',
+                  'px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap',
                   getBadgeClasses(badge.variant),
                   badge.className
                 )}

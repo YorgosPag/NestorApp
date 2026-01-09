@@ -1279,6 +1279,81 @@ const portalComponentsBase = {
   zIndex
 } as const;
 
+// ============================================================================
+// 🏢 ENTERPRISE ENTITY LIST TOKENS - Centralized List Column Configuration
+// ============================================================================
+/**
+ * 🏢 ENTITY LIST PRIMITIVES - RAW NUMERIC VALUES
+ *
+ * Single Source of Truth for all entity list dimensions.
+ * ALL derived values (classes, CSS) MUST reference these primitives.
+ *
+ * @enterprise Fortune 500 compliant - Autodesk/Bentley standard
+ * @immutable These values should NEVER be duplicated or hardcoded elsewhere
+ */
+const ENTITY_LIST_PRIMITIVES = {
+  /** Minimum width of entity list column in pixels */
+  MIN_WIDTH: 300,
+  /** Maximum width of entity list column in pixels */
+  MAX_WIDTH: 420,
+  /** Space reserved for scrollbar appearance on hover in pixels */
+  SCROLLBAR_SPACE: 8,
+} as const;
+
+/**
+ * 🏢 ENTITY_LIST_TOKENS
+ *
+ * Centralized tokens for entity list columns (Buildings, Contacts, Units, etc.)
+ * All Tailwind classes are DERIVED from ENTITY_LIST_PRIMITIVES.
+ *
+ * @enterprise Fortune 500 compliant - Autodesk/Bentley/Google standard
+ * @see ENTITY_LIST_PRIMITIVES for source values
+ * @see src/core/containers/EntityListColumn.tsx - Component that uses these tokens
+ * @author Enterprise Architecture Team
+ * @since 2026-01-09
+ */
+export const ENTITY_LIST_TOKENS = {
+  /** 🏢 RAW NUMERIC VALUES - Direct access to primitives */
+  values: ENTITY_LIST_PRIMITIVES,
+
+  /** Width constraints for list columns - DERIVED from primitives */
+  width: {
+    min: `min-w-[${ENTITY_LIST_PRIMITIVES.MIN_WIDTH}px]`,
+    max: `max-w-[${ENTITY_LIST_PRIMITIVES.MAX_WIDTH}px]`,
+    /** Combined width classes - DERIVED from min/max */
+    combined: `min-w-[${ENTITY_LIST_PRIMITIVES.MIN_WIDTH}px] max-w-[${ENTITY_LIST_PRIMITIVES.MAX_WIDTH}px]`,
+  },
+
+  /** 🏢 CARD DIMENSIONS - For items inside list, DERIVED from primitives */
+  card: {
+    /** Width accounting for scrollbar space on hover */
+    width: `w-[calc(100%-${ENTITY_LIST_PRIMITIVES.SCROLLBAR_SPACE}px)]`,
+    /** Full width without scrollbar compensation */
+    fullWidth: 'w-full',
+  },
+
+  /** Layout configuration - Standard flexbox patterns */
+  layout: {
+    display: 'flex',
+    direction: 'flex-col',
+    shrink: 'shrink-0',
+    /** Combined layout classes */
+    combined: 'flex flex-col shrink-0',
+  },
+
+  /** Visual styling - Semantic token references */
+  visual: {
+    background: 'bg-card',
+    shadow: 'shadow-sm',
+    overflow: 'overflow-hidden',
+    maxHeight: 'max-h-full',
+    heightFit: 'h-fit',
+  },
+} as const;
+
+/** Type for ENTITY_LIST_TOKENS for external usage */
+export type EntityListTokens = typeof ENTITY_LIST_TOKENS;
+
 // 🏢 ENTERPRISE: Extended portal components with centralized z-index hierarchy
 // All values derived from centralized zIndex object (ADR-002)
 export const portalComponentsExtended = {

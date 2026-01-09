@@ -147,6 +147,22 @@ export interface UseTypographyReturn {
     readonly simple: string;
   };
 
+  // 🃏 CARD PATTERNS - Enterprise List Cards (Theme-Aware)
+  readonly card: {
+    /** "text-base font-semibold" - Card title (normal mode) */
+    readonly title: string;
+    /** "text-sm font-semibold" - Card title (compact mode) */
+    readonly titleCompact: string;
+    /** "text-sm" - Card subtitle (normal mode) - color via semantic colors */
+    readonly subtitle: string;
+    /** "text-xs" - Card subtitle (compact mode) - color via semantic colors */
+    readonly subtitleCompact: string;
+    /** "text-sm font-medium" - Card stat value */
+    readonly statValue: string;
+    /** "text-xs" - Card stat label */
+    readonly statLabel: string;
+  };
+
   // 💰 SPECIAL PURPOSE PATTERNS
   readonly special: {
     /** "text-xl font-semibold text-foreground" - Main container titles */
@@ -167,6 +183,8 @@ export interface UseTypographyReturn {
   readonly getHeading: (size: 'lg' | 'md' | 'sm' | 'xs') => string;
   readonly getBody: (size: 'base' | 'sm' | 'xs') => string;
   readonly getLabel: (size: 'sm' | 'xs', style?: 'medium' | 'simple') => string;
+  readonly getCardTitle: (compact?: boolean) => string;
+  readonly getCardSubtitle: (compact?: boolean) => string;
 }
 
 // ============================================================================
@@ -219,6 +237,17 @@ export function useTypography(): UseTypographyReturn {
       simple: "text-xs",                    // Simple labels χωρίς font-medium
     },
 
+    // 🃏 CARD PATTERNS - Enterprise List Cards (Theme-Aware)
+    // Colors are NOT included here - use useSemanticColors for theme-aware colors
+    card: {
+      title: "text-base font-semibold",           // Card title normal (larger, bolder)
+      titleCompact: "text-sm font-semibold",      // Card title compact
+      subtitle: "text-sm",                         // Card subtitle normal (color via semantic)
+      subtitleCompact: "text-xs",                  // Card subtitle compact (color via semantic)
+      statValue: "text-sm font-medium",           // Stat values
+      statLabel: "text-xs",                        // Stat labels
+    },
+
     // 💰 SPECIAL PURPOSE PATTERNS - Using centralized semantic tokens where possible
     special: {
       containerTitle: h4Token.tailwind + " text-foreground", // "text-xl font-semibold text-foreground" (semantic token + semantic color)
@@ -254,6 +283,15 @@ export function useTypography(): UseTypographyReturn {
       const fontSize = `text-${size}`;
       if (style === 'simple') return fontSize;
       return `${fontSize} font-medium`;
+    },
+
+    // 🃏 CARD UTILITY METHODS
+    getCardTitle: (compact = false) => {
+      return compact ? "text-sm font-semibold" : "text-base font-semibold";
+    },
+
+    getCardSubtitle: (compact = false) => {
+      return compact ? "text-xs" : "text-sm";
     },
 
   } as const), [h4Token, captionToken, bodyToken]); // Dependencies: semantic tokens
@@ -303,6 +341,16 @@ export function useSpecialTypography() {
   return useMemo(() => typography.special, [typography.special]);
 }
 
+/**
+ * Hook για card typography - Lightweight
+ * Χρήση: Για ListCard και domain cards (Enterprise Theme-Aware)
+ */
+export function useCardTypography() {
+  const typography = useTypography();
+
+  return useMemo(() => typography.card, [typography.card]);
+}
+
 // ============================================================================
 // 🔗 CONVENIENCE EXPORTS - EASY IMPORTS
 // ============================================================================
@@ -321,4 +369,5 @@ export {
   useBodyText as useBodyStyles,
   useLabels as useLabelStyles,
   useSpecialTypography as useSpecialText,
+  useCardTypography as useCardStyles,
 };

@@ -49,7 +49,7 @@ import {
   Receipt,
   User,
   Building2,
-  Wrench
+  Landmark
 } from 'lucide-react';
 
 // =============================================================================
@@ -248,18 +248,18 @@ export const NAVIGATION_ENTITIES: NavigationEntitiesConfig = {
     description: 'Επαφή φυσικού προσώπου'
   },
   contactCompany: {
-    icon: Building2,
-    color: 'text-violet-600',
+    icon: Factory,
+    color: 'text-blue-600',  // 🏢 ENTERPRISE: Same as company entity for consistency
     label: 'Εταιρεία',
     pluralLabel: 'Εταιρείες',
     description: 'Επαφή νομικού προσώπου/εταιρείας'
   },
   contactService: {
-    icon: Wrench,
+    icon: Landmark,
     color: 'text-amber-600',
     label: 'Υπηρεσία',
     pluralLabel: 'Υπηρεσίες',
-    description: 'Επαφή παρόχου υπηρεσιών'
+    description: 'Δημόσια υπηρεσία'
   }
 } as const;
 

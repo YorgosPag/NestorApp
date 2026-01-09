@@ -31,6 +31,7 @@ import {
   getPrimaryPhone,
   isIndividualContact,
   isCompanyContact,
+  isServiceContact,
 } from '@/types/contacts';
 
 // 🏢 BADGE VARIANT MAPPING
@@ -173,12 +174,16 @@ export function ContactListCard({
     return [{ label: typeLabel, variant }];
   }, [contact.type]);
 
-  /** Get subtitle based on contact type */
+  /** Get subtitle based on contact type - shows profession/industry/department */
   const subtitle = useMemo(() => {
     if (isIndividualContact(contact)) {
       return contact.profession ?? undefined;
     } else if (isCompanyContact(contact)) {
-      return contact.vatNumber ? `ΑΦΜ: ${contact.vatNumber}` : undefined;
+      // 🏢 ENTERPRISE: Show industry instead of VAT number
+      return contact.industry ?? undefined;
+    } else if (isServiceContact(contact)) {
+      // 🏢 ENTERPRISE: Show department for services
+      return contact.department ?? undefined;
     }
     return undefined;
   }, [contact]);
