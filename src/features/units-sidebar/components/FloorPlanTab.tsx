@@ -1,7 +1,11 @@
 'use client';
 
 import React from 'react';
-import { Home } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon & Color
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+const unitColor = NAVIGATION_ENTITIES.unit.color;
 import type { Property } from '@/types/property-viewer';
 import type { FloorData } from '../types';
 import { FloorplanViewerTab } from '@/components/projects/tabs/FloorplanViewerTab';
@@ -35,7 +39,7 @@ export function FloorPlanTab({
     if (!selectedUnit) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
-              <Home className={`${iconSizes['2xl']} mb-4 opacity-50`} />
+              <UnitIcon className={`${iconSizes['2xl']} ${unitColor} mb-4 opacity-50`} />
               <h3 className="text-xl font-semibold mb-2">Επιλέξτε μια μονάδα</h3>
               <p className="text-sm max-w-sm">
                 Επιλέξτε μια μονάδα από τη λίστα αριστερά για να δείτε την κάτοψή της και να αλληλεπιδράσετε με αυτή.

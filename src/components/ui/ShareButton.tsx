@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Share2, Copy, Check, Home, MapPin, Euro, Ruler } from 'lucide-react';
+import { Share2, Copy, Check, MapPin, Euro, Ruler } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';

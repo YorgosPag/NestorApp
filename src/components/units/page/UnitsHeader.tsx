@@ -2,8 +2,9 @@
 
 import React from 'react';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
-import { Home, Filter } from 'lucide-react';
+import { Filter } from 'lucide-react';
 import { PageHeader } from '@/core/headers';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -44,7 +45,7 @@ export function UnitsHeader({
         layout="compact"
         spacing="compact"
         title={{
-          icon: Home,
+          icon: NAVIGATION_ENTITIES.unit.icon,
           title: "Διαχείριση Μονάδων",
           subtitle: "Κεντρικό ευρετήριο όλων των μονάδων σας"
         }}

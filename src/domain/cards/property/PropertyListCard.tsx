@@ -15,7 +15,8 @@
  */
 
 import React, { useMemo } from 'react';
-import { MapPin, Ruler, Euro, Building2 } from 'lucide-react';
+// 🏢 ENTERPRISE: All icons from centralized NAVIGATION_ENTITIES
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
 // 🏢 DESIGN SYSTEM
 import { ListCard } from '@/design-system';
@@ -119,40 +120,44 @@ export function PropertyListCard({
     // Building & Floor
     if (property.building) {
       items.push({
-        icon: Building2,
+        icon: NAVIGATION_ENTITIES.building.icon,
+        iconColor: NAVIGATION_ENTITIES.building.color,
         label: 'Κτίριο',
         value: property.building,
       });
     }
 
-    // Floor
+    // Floor - 🏢 ENTERPRISE: Using centralized floor color
     if (property.floor !== undefined) {
       items.push({
-        icon: MapPin,
+        icon: NAVIGATION_ENTITIES.floor.icon,
+        iconColor: NAVIGATION_ENTITIES.floor.color,
         label: 'Όροφος',
         value: formatFloorLabel(property.floor),
       });
     }
 
-    // Area
+    // Area - 🏢 ENTERPRISE: Using centralized area icon/color
     if (property.area) {
       items.push({
-        icon: Ruler,
+        icon: NAVIGATION_ENTITIES.area.icon,
+        iconColor: NAVIGATION_ENTITIES.area.color,
         label: 'Εμβαδόν',
         value: `${property.area} m²`,
       });
     }
 
-    // Price
+    // Price - 🏢 ENTERPRISE: Using centralized price icon/color
     if (property.price && property.price > 0) {
       items.push({
-        icon: Euro,
+        icon: NAVIGATION_ENTITIES.price.icon,
+        iconColor: NAVIGATION_ENTITIES.price.color,
         label: 'Τιμή',
         value: formatCurrency(property.price, 'EUR', {
           minimumFractionDigits: 0,
           maximumFractionDigits: 0,
         }),
-        valueColor: 'text-green-600 dark:text-green-400',
+        valueColor: NAVIGATION_ENTITIES.price.color,
       });
     }
 

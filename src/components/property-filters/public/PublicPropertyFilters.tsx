@@ -2,15 +2,20 @@
 
 import React from 'react';
 import { Label } from '@/components/ui/label';
-import { Home, Euro, Ruler } from 'lucide-react';
+import { Euro, Ruler } from 'lucide-react';
 import type { FilterState } from '@/types/property-viewer';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
 import { propertyTypes, availabilityOptions, PRICE_MAX, AREA_MAX } from './constants';
 import { usePublicPropertyFilterHandlers } from './hooks/usePublicPropertyFilterHandlers';
 import { SearchField } from './components/SearchField';
 import { CheckboxRow } from './components/CheckboxRow';
 import { RangeSlider } from './components/RangeSlider';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon & Color
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+const unitColor = NAVIGATION_ENTITIES.unit.color;
 
 interface PublicPropertyFiltersProps {
   filters: FilterState;
@@ -43,7 +48,7 @@ export function PublicPropertyFilters({ filters, onFiltersChange }: PublicProper
         {/* Property Types */}
         <div className="space-y-3">
           <Label className="text-sm font-medium flex items-center gap-2">
-            <Home className={iconSizes.sm} />
+            <UnitIcon className={`${iconSizes.sm} ${unitColor}`} />
             Τύπος Ακινήτου
           </Label>
           <div className="space-y-2 max-h-32 overflow-y-auto">

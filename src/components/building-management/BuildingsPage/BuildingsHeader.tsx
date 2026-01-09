@@ -18,8 +18,6 @@ interface BuildingsHeaderProps {
   setViewMode: (mode: 'list' | 'grid' | 'byType' | 'byStatus') => void;
   showDashboard: boolean;
   setShowDashboard: (show: boolean) => void;
-  searchTerm: string;
-  setSearchTerm: (term: string) => void;
   onNewBuilding?: () => void;
   // Mobile-only filter toggle
   showFilters?: boolean;
@@ -31,8 +29,6 @@ export function BuildingsHeader({
   setViewMode,
   showDashboard,
   setShowDashboard,
-  searchTerm,
-  setSearchTerm,
   onNewBuilding,
   showFilters,
   setShowFilters,
@@ -49,11 +45,6 @@ export function BuildingsHeader({
         icon: NAVIGATION_ENTITIES.building.icon,
         title: "Διαχείριση Κτιρίων",
         subtitle: "Διαχείριση και παρακολούθηση κτιριακών έργων"
-      }}
-      search={{
-        value: searchTerm,
-        onChange: setSearchTerm,
-        placeholder: "Αναζήτηση κτιρίων..."
       }}
       actions={{
         showDashboard,

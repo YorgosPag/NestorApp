@@ -2,7 +2,9 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Mail, Phone, Briefcase } from 'lucide-react';
+import { cn } from '@/lib/utils';
+// 🏢 ENTERPRISE: Centralized entity icons (ZERO hardcoded values)
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { Contact } from '@/types/contacts';
 import { getPrimaryEmail, getPrimaryPhone } from '@/types/contacts';
 import { CompanyProjectsTable } from './CompanyProjectsTable';
@@ -32,7 +34,7 @@ export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps)
             <h4 className="font-semibold text-sm">{t('details.contactInfo.title')}</h4>
             {email && (
                 <div className="flex items-center gap-2 text-sm">
-                    <Mail className={`${iconSizes.sm} text-muted-foreground`} />
+                    <NAVIGATION_ENTITIES.email.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.email.color)} />
                     <a
                         href={`https://mail.google.com/mail/?view=cm&to=${email}`}
                         target="_blank"
@@ -47,7 +49,7 @@ export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps)
             )}
             {phone && (
                 <div className="flex items-center gap-2 text-sm">
-                    <Phone className={`${iconSizes.sm} text-muted-foreground`} />
+                    <NAVIGATION_ENTITIES.phone.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.phone.color)} />
                     <a
                         href={`tel:${phone}`}
                         className={INTERACTIVE_PATTERNS.LINK_PRIMARY}

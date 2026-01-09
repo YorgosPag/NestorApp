@@ -99,10 +99,6 @@ export function BuildingsList({
     <div className={`min-w-[300px] max-w-[420px] w-full bg-card ${quick.card} flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden`}>
       <BuildingsListHeader
         buildingCount={buildings.length}
-        activeProjectsCount={buildings.filter(b => b.status === 'active' || b.status === 'construction').length}
-        totalValue={buildings.reduce((sum, b) => sum + (b.totalValue || 0), 0)}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
         showToolbar={showToolbar}
         onToolbarToggle={setShowToolbar}
       />
@@ -113,8 +109,8 @@ export function BuildingsList({
           config={buildingsConfig}
           selectedItems={selectedItems}
           onSelectionChange={setSelectedItems}
-          searchTerm=""
-          onSearchChange={() => {}}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
           activeFilters={activeFilters}
           onFiltersChange={setActiveFilters}
           sortBy={sortBy}
@@ -137,8 +133,8 @@ export function BuildingsList({
             config={buildingsConfig}
             selectedItems={selectedItems}
             onSelectionChange={setSelectedItems}
-            searchTerm=""
-            onSearchChange={() => {}}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
             activeFilters={activeFilters}
             onFiltersChange={setActiveFilters}
             sortBy={sortBy}

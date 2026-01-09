@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PropertyBadge } from '@/core/badges';
-import { Home, MapPin, Euro, Ruler, SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
@@ -29,12 +29,16 @@ import { ViewModeToggle } from './ViewModeToggle';
 import { AdvancedFiltersPanel } from './AdvancedFiltersPanel';
 
 
-// 🏢 ENTERPRISE: Using centralized building icon for building-type properties
+// 🏢 ENTERPRISE: Centralized Unit Icon & Color
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+const unitColor = NAVIGATION_ENTITIES.unit.color;
+
+// 🏢 ENTERPRISE: Using centralized icons for property types
 const propertyTypeIcons: { [key: string]: React.ElementType } = {
-  'Στούντιο': Home,
-  'Γκαρσονιέρα': Home,
-  'Διαμέρισμα 2Δ': Home,
-  'Διαμέρισμα 3Δ': Home,
+  'Στούντιο': NAVIGATION_ENTITIES.unit.icon,
+  'Γκαρσονιέρα': NAVIGATION_ENTITIES.unit.icon,
+  'Διαμέρισμα 2Δ': NAVIGATION_ENTITIES.unit.icon,
+  'Διαμέρισμα 3Δ': NAVIGATION_ENTITIES.unit.icon,
   'Μεζονέτα': NAVIGATION_ENTITIES.building.icon,
   'Κατάστημα': NAVIGATION_ENTITIES.building.icon,
   'Αποθήκη': NAVIGATION_ENTITIES.storage.icon,
@@ -76,7 +80,7 @@ function PropertyCard({ property, onSelect, isSelected }: { property: Property, 
   };
 
   const statusInfo = statusConfig[property.status as keyof typeof statusConfig] || { color: `${quick.card}`, label: 'Άγνωστο', textColor: colors.text.muted };
-  const IconComponent = propertyTypeIcons[property.type] || Home;
+  const IconComponent = propertyTypeIcons[property.type] || UnitIcon;
 
   return (
     <Card 
@@ -108,19 +112,22 @@ function PropertyCard({ property, onSelect, isSelected }: { property: Property, 
           {/* 🏢 ENTERPRISE: Using centralized building icon/color */}
           <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.building.color)} />
           <span>{property.building}</span>
-          <MapPin className={`${iconSizes.xs} ml-2`} />
+          {/* 🏢 ENTERPRISE: Using centralized floor icon/color */}
+          <NAVIGATION_ENTITIES.floor.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.floor.color, 'ml-2')} />
           <span>{formatFloorLabel(property.floor)}</span>
         </div>
         <div className="flex justify-between items-center text-sm">
             {property.price && (
-                <div className={`flex items-center gap-1 font-semibold ${colors.text.success}`}>
-                    <Euro className={iconSizes.sm}/>
+                <div className={cn("flex items-center gap-1 font-semibold", NAVIGATION_ENTITIES.price.color)}>
+                    {/* 🏢 ENTERPRISE: Using centralized price icon/color */}
+                    <NAVIGATION_ENTITIES.price.icon className={iconSizes.sm}/>
                     {formatCurrency(property.price)}
                 </div>
             )}
             {property.area && (
                  <div className={`flex items-center gap-1 ${colors.text.muted}`}>
-                    <Ruler className={iconSizes.sm}/>
+                    {/* 🏢 ENTERPRISE: Using centralized area icon/color */}
+                    <NAVIGATION_ENTITIES.area.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.area.color)}/>
                     {property.area} τ.μ.
                 </div>
             )}
@@ -184,7 +191,7 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
   if (displayProperties.length === 0) {
     return (
       <div className={`flex flex-col items-center justify-center h-full ${colors.text.muted} p-4`}>
-        <Home className={`${iconSizes.xl} mb-4`} />
+        <UnitIcon className={`${iconSizes.xl} mb-4 ${unitColor}`} />
         <h2 className="text-xl font-semibold">Δεν βρέθηκαν ακίνητα</h2>
         <p className="text-sm">Δοκιμάστε να αλλάξετε τα φίλτρα</p>
       </div>
@@ -201,7 +208,7 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
             variant="sticky"
             layout="multi-row"
             title={{
-              icon: Home,
+              icon: UnitIcon,
               title: "Διαθέσιμα Ακίνητα",
               subtitle: `Βρέθηκαν ${displayProperties.length} ακίνητα`
             }}
@@ -244,7 +251,7 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
                   onClick={handleViewAllFloorPlan}
                   className={`px-4 py-2 ${colors.bg.gradient} text-white ${radius.lg} transition-all flex items-center gap-2 font-medium h-8 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
                 >
-                  <MapPin className={iconSizes.sm} />
+                  <NAVIGATION_ENTITIES.location.icon className={iconSizes.sm} />
                   Προβολή σε Κάτοψη
                 </button>
               ].filter(Boolean)

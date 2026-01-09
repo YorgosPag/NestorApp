@@ -2,11 +2,15 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Train, Bus, Car, Building, GraduationCap, ShoppingCart, TrendingUp, Home, Euro } from 'lucide-react';
+import { Train, Bus, Car, Building, GraduationCap, ShoppingCart, TrendingUp, Euro } from 'lucide-react';
+// 🏢 ENTERPRISE: Centralized navigation entities
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 
 export function LocationAnalyticsGrid() {
     const iconSizes = useIconSizes();
+    // 🏢 ENTERPRISE: Use centralized unit icon for area quality
+    const AreaQualityIcon = NAVIGATION_ENTITIES.unit.icon;
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -87,7 +91,7 @@ export function LocationAnalyticsGrid() {
                         </div>
                         <div className="flex items-center justify-between">
                             <span className="text-sm flex items-center gap-2">
-                                <Home className={iconSizes.sm} />
+                                <AreaQualityIcon className={iconSizes.sm} />
                                 Ποιότητα περιοχής
                             </span>
                             <span className="text-sm font-medium text-green-600">9.2/10</span>

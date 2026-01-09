@@ -19,7 +19,6 @@ import {
   UserPlus,
   X,
   Filter,
-  Search,
   BrainCircuit,
   TrendingUp,
   Crown,
@@ -77,8 +76,7 @@ export function ContactsPageContent() {
   // Mobile-only compact toolbar toggle state
   const [showCompactToolbar, setShowCompactToolbar] = useState(false);
 
-  // Search state (simplified - only for header search)
-  const [searchTerm, setSearchTerm] = useState('');
+  // 🏢 ENTERPRISE: Search term now unified in filters.searchTerm (AdvancedFiltersPanel)
 
   // 🔥 NEW: Dashboard card filtering state
   const [activeCardFilter, setActiveCardFilter] = useState<string | null>(null);
@@ -185,7 +183,7 @@ export function ContactsPageContent() {
       loadSpecificContact(contactIdParam).then(contact => {
         if (contact) {
           // Clear search terms to focus on this contact
-          setSearchTerm('');
+          setFilters(prev => ({ ...prev, searchTerm: '' }));
           setActiveCardFilter(null);
         }
       });
@@ -209,15 +207,15 @@ export function ContactsPageContent() {
     // Only handle filter param if no contactId (contactId has priority)
     if (filterParam && !contactIdParam) {
       console.log('🔍 FILTERING: Applying URL filter:', filterParam);
-      setSearchTerm(decodeURIComponent(filterParam));
+      setFilters(prev => ({ ...prev, searchTerm: decodeURIComponent(filterParam) }));
       setActiveCardFilter(null);
     }
-  }, [searchParams]);
+  }, [searchParams, setFilters]);
 
   // 🧹 CLEAR FILTER: Function για καθάρισμα του URL filter και contactId
   const handleClearURLFilter = () => {
     console.log('🧹 FILTERING: Clearing URL filter and contactId');
-    setSearchTerm('');
+    setFilters(prev => ({ ...prev, searchTerm: '' }));
     setSelectedContact(null);
     // Navigate back to contacts without any parameters
     router.push('/contacts');
@@ -400,16 +398,7 @@ export function ContactsPageContent() {
       }
     }
 
-    // Header search filter (separate from advanced filters search)
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      const displayName = getContactDisplayName(contact).toLowerCase();
-      if (!displayName.includes(searchLower)) {
-        return false;
-      }
-    }
-
-    // Advanced filters search (from filters.searchTerm)
+    // 🏢 ENTERPRISE: Unified search filter (from filters.searchTerm in AdvancedFiltersPanel)
     if (filters.searchTerm) {
       const searchLower = filters.searchTerm.toLowerCase();
       const displayName = getContactDisplayName(contact).toLowerCase();
@@ -595,17 +584,16 @@ export function ContactsPageContent() {
     <TooltipProvider>
       <main className={`h-full flex flex-col ${colors.bg.primary} w-full overflow-hidden`} role="main" aria-label="Διαχείριση Επαφών">
         {/* Main Header - Works for both desktop and mobile */}
+        {/* 🏢 ENTERPRISE: Search removed from header - using unified search in AdvancedFiltersPanel */}
         <ContactsHeader
           viewMode={viewMode}
           setViewMode={setViewMode}
           showDashboard={showDashboard}
           setShowDashboard={setShowDashboard}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
           onNewContact={handleNewContact}
           showFilters={showFilters}
           setShowFilters={setShowFilters}
-          contactCount={contacts.length} // 🏢 Enterprise count display
+          contactCount={contacts.length}
         />
 
 

@@ -2,62 +2,29 @@
 'use client';
 
 import React from 'react';
-import { TrendingUp, DollarSign, Settings } from 'lucide-react';
 // 🏢 ENTERPRISE: Using centralized entity config for Building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
-import { Button } from '@/components/ui/button';
 
 interface BuildingsListHeaderProps {
     buildingCount: number;
-    activeProjectsCount: number;
-    totalValue: number;
-    searchTerm: string;
-    onSearchChange: (term: string) => void;
     showToolbar?: boolean;
     onToolbarToggle?: (show: boolean) => void;
 }
 
 export function BuildingsListHeader({
     buildingCount,
-    activeProjectsCount,
-    totalValue,
-    searchTerm,
-    onSearchChange,
     showToolbar = false,
     onToolbarToggle
 }: BuildingsListHeaderProps) {
-    const iconSizes = useIconSizes();
     return (
-        <div>
-            {/* 🏢 ENTERPRISE CENTRALIZED GenericListHeader - ΜΙΑ ΠΗΓΗ ΑΛΗΘΕΙΑΣ */}
-            <GenericListHeader
-                icon={NAVIGATION_ENTITIES.building.icon}
-                entityName="Κτίρια"
-                itemCount={buildingCount}
-                searchTerm={searchTerm}
-                onSearchChange={onSearchChange}
-                searchPlaceholder="Αναζήτηση κτιρίων..."
-                showToolbar={showToolbar}
-                onToolbarToggle={onToolbarToggle}
-            />
-
-            {/* Custom Statistics Grid */}
-            <div className="px-4 pb-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20">
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div className="flex items-center gap-1">
-                        <TrendingUp className={`${iconSizes.xs} text-green-600`} />
-                        <span className="text-muted-foreground">Ενεργά:</span>
-                        <span className="font-medium">{activeProjectsCount}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <DollarSign className={`${iconSizes.xs} text-green-600`} />
-                        <span className="text-muted-foreground">Αξία:</span>
-                        <span className="font-medium">{(totalValue / 1000000).toFixed(1)}M€</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <GenericListHeader
+            icon={NAVIGATION_ENTITIES.building.icon}
+            entityName="Κτίρια"
+            itemCount={buildingCount}
+            hideSearch={true}
+            showToolbar={showToolbar}
+            onToolbarToggle={onToolbarToggle}
+        />
     );
 }

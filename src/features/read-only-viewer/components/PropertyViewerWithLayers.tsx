@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { CommonBadge } from '@/core/badges';
 import { Separator } from '@/components/ui/separator';
 import {
-  Home,
   Layers,
   Eye,
   EyeOff,
@@ -18,9 +17,15 @@ import {
   Download,
   Info
 } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
+
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon & Color
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+const unitColor = NAVIGATION_ENTITIES.unit.color;
 
 // Import components
 import { ReadOnlyLayerViewer } from '@/components/property-viewer/ReadOnlyLayerViewer';
@@ -148,7 +153,7 @@ export function PropertyViewerWithLayers({
     return (
       <Card className={className}>
         <CardContent className="flex flex-col items-center justify-center h-96 text-center text-muted-foreground">
-          <Home className={`${iconSizes.xl6} mb-4 opacity-50`} />
+          <UnitIcon className={`${iconSizes.xl6} mb-4 opacity-50 ${unitColor}`} />
           <h3 className="text-xl font-semibold mb-2">Δεν υπάρχει διαθέσιμη κάτοψη</h3>
           <p className="text-sm max-w-sm">
             Δεν υπάρχουν διαθέσιμα δεδομένα κάτοψης για αυτό το ακίνητο.

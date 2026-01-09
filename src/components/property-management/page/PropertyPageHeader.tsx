@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Home } from 'lucide-react';
 import { PageHeader } from '@/core/headers';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { CommonBadge } from '@/core/badges';
 import type { ViewMode } from '@/core/headers';
 
@@ -24,7 +24,7 @@ export function PropertyPageHeader({
       variant="static"
       layout="single-row"
       title={{
-        icon: Home,
+        icon: NAVIGATION_ENTITIES.unit.icon,
         title: "Διαχείριση Ακινήτων",
         badge: (
           <CommonBadge

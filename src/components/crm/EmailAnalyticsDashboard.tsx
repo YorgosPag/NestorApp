@@ -3,13 +3,17 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Mail, Eye, MousePointer, TrendingUp, Construction, ArrowLeft, Home, Building2, Star } from 'lucide-react';
+import { Mail, Eye, MousePointer, TrendingUp, Construction, ArrowLeft, Building2, Star } from 'lucide-react';
+// 🏢 ENTERPRISE: Centralized navigation entities for unit icon
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useRouter } from 'next/navigation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 
 export function EmailAnalyticsDashboard() {
   const router = useRouter();
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: Use centralized unit icon for residential
+  const ResidentialIcon = NAVIGATION_ENTITIES.unit.icon;
 
   const handleBackToCRM = () => {
     router.push('/crm');
@@ -117,7 +121,7 @@ export function EmailAnalyticsDashboard() {
                 <li>• Email performance tracking</li>
               </div>
               <div className="text-left space-y-2 text-sm text-gray-600">
-                <li className="flex items-center gap-2">• <Home className={iconSizes.sm} /> Residential template analytics</li>
+                <li className="flex items-center gap-2">• <ResidentialIcon className={iconSizes.sm} /> Residential template analytics</li>
                 <li className="flex items-center gap-2">• <Building2 className={iconSizes.sm} /> Commercial template analytics</li>
                 <li className="flex items-center gap-2">• <Star className={iconSizes.sm} /> Premium template analytics</li>
                 <li>• Template performance comparison</li>

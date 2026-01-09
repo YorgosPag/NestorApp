@@ -1,10 +1,10 @@
 # = -> **ENTERPRISE CENTRALIZED SYSTEMS TABLE**
 
 > **= MAIN DOCUMENTATION**: [centralized_systems.md](./centralized_systems.md)
-> **= -> LAST UPDATED**: 2026-01-08
+> **= -> LAST UPDATED**: 2026-01-09
 > **= -> TOTAL SYSTEMS**: 18 Major Enterprise Systems (incl. Enterprise Card System)
 > **= -> TOTAL CODE**: 13,500+ Lines
-> **= -> TOTAL ADRs**: 12 Architectural Decision Records
+> **= -> TOTAL ADRs**: 13 Architectural Decision Records
 
 ---
 
@@ -24,16 +24,19 @@
 | **ADR-011** | FloatingPanel UI Styling 🏢 | `useSemanticColors` + `useBorderTokens` | Hardcoded Tailwind colors | 2026-01-04 |
 | **ADR-012** | Navigation Entity Config 🏢 | `NAVIGATION_ENTITIES` config | Hardcoded icons/colors | 2026-01-07 |
 | **ADR-013** | Enterprise Card System 🏢 | `@/design-system` + `@/domain/cards` | Διάσπαρτα *ListItem components | 2026-01-08 |
+| **ADR-014** | Entity Icons Centralization 🏢 | `NAVIGATION_ENTITIES.{entity}.icon` | Hardcoded Lucide icons | 2026-01-09 |
 
 > **🚫 PROHIBITION**: Νέα Select/Dropdown implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** εκτός Radix Select.
 > **🚫 PROHIBITION**: Hardcoded canvas backgrounds **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `CANVAS_THEME`.
 > **🚫 PROHIBITION**: Νέα drawing implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `useUnifiedDrawing`.
 > **🚫 PROHIBITION**: Hardcoded Tailwind colors (bg-gray-*, rounded-lg) **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε hooks.
 > **🚫 PROHIBITION**: Hardcoded navigation icons/colors **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `NAVIGATION_ENTITIES`.
+> **🚫 PROHIBITION**: Hardcoded Lucide icons για entities (Home, Building, Package) **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `NAVIGATION_ENTITIES.{entity}.icon`.
 > **🚫 PROHIBITION**: Νέα διάσπαρτα *ListItem components **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `@/domain/cards`.
 > **🏢 WORLD-CLASS**: ADR-004 χρησιμοποιεί CSS Variables για runtime theme switching (Figma/AutoCAD level).
 > **🏢 ENTERPRISE**: ADR-005 - 2,300+ lines centralized drawing system με 3-phase rendering.
 > **🏢 ENTERPRISE**: ADR-011 - 47 files, 100% centralized styling, zero hardcoded values.
+> **🏢 ENTERPRISE**: ADR-014 - 19 files migrated, 8 entity types, centralized icons & colors.
 > **🏢 ENTERPRISE**: ADR-013 - 18 files, 22→7 cards, Atomic Design Pattern, 64% code reduction.
 >
 > **📍 Full ADRs**: [centralized_systems.md](./centralized_systems.md)

@@ -15,7 +15,8 @@
  */
 
 import React, { useMemo } from 'react';
-import { MapPin, Ruler, Euro } from 'lucide-react';
+// 🏢 ENTERPRISE: All icons from centralized NAVIGATION_ENTITIES
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
 // 🏢 DESIGN SYSTEM
 import { ListCard } from '@/design-system';
@@ -125,34 +126,38 @@ export function ParkingListCard({
   const stats = useMemo<StatItem[]>(() => {
     const items: StatItem[] = [];
 
-    // Level/Floor - supports both schemas
+    // Level/Floor - 🏢 ENTERPRISE: Using centralized floor icon/color
     const levelValue = parking.level || parking.floor;
     if (levelValue) {
       items.push({
-        icon: MapPin,
+        icon: NAVIGATION_ENTITIES.floor.icon,
+        iconColor: NAVIGATION_ENTITIES.floor.color,
         label: 'Επίπεδο',
         value: levelValue,
       });
     }
 
-    // Area
+    // Area - 🏢 ENTERPRISE: Using centralized area icon/color
     if (parking.area) {
       items.push({
-        icon: Ruler,
+        icon: NAVIGATION_ENTITIES.area.icon,
+        iconColor: NAVIGATION_ENTITIES.area.color,
         label: 'Εμβαδόν',
         value: `${parking.area} m²`,
       });
     }
 
-    // Price
+    // Price - 🏢 ENTERPRISE: Using centralized price icon/color
     if (parking.price && parking.price > 0) {
       items.push({
-        icon: Euro,
+        icon: NAVIGATION_ENTITIES.price.icon,
+        iconColor: NAVIGATION_ENTITIES.price.color,
         label: 'Τιμή',
         value: formatCurrency(parking.price, 'EUR', {
           minimumFractionDigits: 0,
           maximumFractionDigits: 0,
         }),
+        valueColor: NAVIGATION_ENTITIES.price.color,
       });
     }
 

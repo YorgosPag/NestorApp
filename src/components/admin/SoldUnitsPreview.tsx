@@ -4,11 +4,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, EyeOff, RefreshCw, Home } from 'lucide-react';
+import { Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { ContactsService } from '@/services/contacts.service';
 import { UNIT_SALE_STATUS_LABELS, UNIT_SALE_STATUS, COMMON_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon & Color
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+const unitColor = NAVIGATION_ENTITIES.unit.color;
 
 interface Unit {
   id: string;
@@ -150,7 +155,7 @@ export function SoldUnitsPreview() {
                 <p className="text-sm text-muted-foreground">Σύνολο Units</p>
                 <p className="text-2xl font-bold">{units.length}</p>
               </div>
-              <Home className={`${iconSizes.xl} text-muted-foreground`} />
+              <UnitIcon className={`${iconSizes.xl} ${unitColor}`} />
             </div>
           </CardContent>
         </Card>

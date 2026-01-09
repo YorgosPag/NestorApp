@@ -34,10 +34,22 @@ import {
   Car,
   Package,
   MapPin,
+  Ruler,
+  Euro,
   Trash2,
   Unlink2,
   Plus,
-  Link2
+  Link2,
+  Eye,
+  Pencil,
+  Share2,
+  Filter,
+  Phone,
+  Mail,
+  Receipt,
+  User,
+  Building2,
+  Wrench
 } from 'lucide-react';
 
 // =============================================================================
@@ -55,7 +67,15 @@ export type NavigationEntityType =
   | 'floor'
   | 'parking'
   | 'storage'
-  | 'location';
+  | 'location'
+  | 'area'
+  | 'price'
+  | 'phone'
+  | 'email'
+  | 'vat'
+  | 'contactIndividual'
+  | 'contactCompany'
+  | 'contactService';
 
 /**
  * Navigation action types - for toolbar and context menu actions
@@ -65,7 +85,11 @@ export type NavigationActionType =
   | 'unlink'
   | 'add'
   | 'link'
-  | 'actions';
+  | 'actions'
+  | 'view'
+  | 'edit'
+  | 'share'
+  | 'filter';
 
 /**
  * Configuration for a single navigation entity
@@ -180,6 +204,62 @@ export const NAVIGATION_ENTITIES: NavigationEntitiesConfig = {
     label: 'Τοποθεσία',
     pluralLabel: 'Τοποθεσίες',
     description: 'Γεωγραφική τοποθεσία'
+  },
+  area: {
+    icon: Ruler,
+    color: 'text-pink-600',
+    label: 'Εμβαδόν',
+    pluralLabel: 'Εμβαδά',
+    description: 'Τετραγωνικά μέτρα'
+  },
+  price: {
+    icon: Euro,
+    color: 'text-emerald-600',
+    label: 'Τιμή',
+    pluralLabel: 'Τιμές',
+    description: 'Τιμή σε ευρώ'
+  },
+  phone: {
+    icon: Phone,
+    color: 'text-sky-600',
+    label: 'Τηλέφωνο',
+    pluralLabel: 'Τηλέφωνα',
+    description: 'Αριθμός τηλεφώνου'
+  },
+  email: {
+    icon: Mail,
+    color: 'text-rose-600',
+    label: 'Email',
+    pluralLabel: 'Emails',
+    description: 'Διεύθυνση email'
+  },
+  vat: {
+    icon: Receipt,
+    color: 'text-slate-600',
+    label: 'ΑΦΜ',
+    pluralLabel: 'ΑΦΜ',
+    description: 'Αριθμός Φορολογικού Μητρώου'
+  },
+  contactIndividual: {
+    icon: User,
+    color: 'text-blue-600',
+    label: 'Φυσικό Πρόσωπο',
+    pluralLabel: 'Φυσικά Πρόσωπα',
+    description: 'Επαφή φυσικού προσώπου'
+  },
+  contactCompany: {
+    icon: Building2,
+    color: 'text-violet-600',
+    label: 'Εταιρεία',
+    pluralLabel: 'Εταιρείες',
+    description: 'Επαφή νομικού προσώπου/εταιρείας'
+  },
+  contactService: {
+    icon: Wrench,
+    color: 'text-amber-600',
+    label: 'Υπηρεσία',
+    pluralLabel: 'Υπηρεσίες',
+    description: 'Επαφή παρόχου υπηρεσιών'
   }
 } as const;
 
@@ -222,6 +302,30 @@ export const NAVIGATION_ACTIONS: NavigationActionsConfig = {
     color: 'text-red-600',
     label: 'Ενέργειες',
     description: 'Διαθέσιμες ενέργειες'
+  },
+  view: {
+    icon: Eye,
+    color: 'text-cyan-600',
+    label: 'Προβολή',
+    description: 'Προβολή στοιχείου'
+  },
+  edit: {
+    icon: Pencil,
+    color: 'text-cyan-600',
+    label: 'Επεξεργασία',
+    description: 'Επεξεργασία στοιχείου'
+  },
+  share: {
+    icon: Share2,
+    color: 'text-violet-600',
+    label: 'Κοινοποίηση',
+    description: 'Κοινοποίηση στοιχείου'
+  },
+  filter: {
+    icon: Filter,
+    color: 'text-orange-500',
+    label: 'Φίλτρα',
+    description: 'Φιλτράρισμα στοιχείων'
   }
 } as const;
 

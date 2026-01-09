@@ -6,12 +6,12 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
   Building2 as BuildingIcon,
   Building,
-  Home,
   Package,
   ParkingCircle,
   Folder,
   ChevronDown
 } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useProjectHierarchy } from '../contexts/ProjectHierarchyContext';
 import { SelectionButton } from './shared/SelectionButton';
 import type { DxfDestination } from '../pipeline/types';
@@ -249,7 +249,7 @@ export function HierarchicalDestinationSelector({
         )}
         {selectedFloor && (
           <span className={`${colors.text.secondary} flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
-            <Home className={iconSizes.sm} />
+            <NAVIGATION_ENTITIES.floor.icon className={`${iconSizes.sm} ${NAVIGATION_ENTITIES.floor.color}`} />
             <span>{selectedFloor.name}</span>
           </span>
         )}
@@ -343,7 +343,7 @@ export function HierarchicalDestinationSelector({
                   className={`w-full ${PANEL_LAYOUT.TEXT_ALIGN.LEFT} ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.ROUNDED.LG} ${getStatusBorder('muted')} ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
                 >
                   <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
-                    <Home className={`${iconSizes.lg} ${colors.text.info}`} />
+                    <NAVIGATION_ENTITIES.floor.icon className={`${iconSizes.lg} ${NAVIGATION_ENTITIES.floor.color}`} />
                     <div>
                       <div className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>{floor.name}</div>
                       <div className={`${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>

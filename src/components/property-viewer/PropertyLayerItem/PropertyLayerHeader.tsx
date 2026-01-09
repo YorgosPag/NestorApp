@@ -4,12 +4,16 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { PropertyBadge } from "@/core/badges";
-import { Eye, EyeOff, Lock, Unlock, ChevronDown, ChevronRight, Home } from "lucide-react";
+import { Eye, EyeOff, Lock, Unlock, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Property } from '@/types/property-viewer';
 import type { LayerState } from '../useLayerStates';
 import { PROPERTY_STATUS_CONFIG, PROPERTY_TYPE_ICONS } from "@/lib/property-utils";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon (fallback)
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 
 interface PropertyLayerHeaderProps {
   property: Property;
@@ -32,7 +36,7 @@ export function PropertyLayerHeader({
 }: PropertyLayerHeaderProps) {
   const iconSizes = useIconSizes();
   const statusInfo = PROPERTY_STATUS_CONFIG[property.status] || PROPERTY_STATUS_CONFIG.default;
-  const IconComponent = PROPERTY_TYPE_ICONS[property.type] || Home;
+  const IconComponent = PROPERTY_TYPE_ICONS[property.type] || UnitIcon;
 
   return (
     <div>

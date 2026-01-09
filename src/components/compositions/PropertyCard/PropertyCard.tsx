@@ -3,9 +3,15 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { BaseCard, CardAction, CardStatus } from '@/components/core/BaseCard';
-import { MapPin, Ruler, Home, Eye, Edit, Trash2 } from 'lucide-react';
+import { MapPin, Ruler, Eye, Edit, Trash2 } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
+
 import type { StorageUnit } from '@/types/storage';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon & Color
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+const unitColor = NAVIGATION_ENTITIES.unit.color;
 
 interface PropertyCardProps {
   property: StorageUnit;
@@ -139,7 +145,7 @@ export function PropertyCard({
           
           {property.floor && (
             <div className="flex items-center gap-1">
-              <Home className={iconSizes.sm} />
+              <UnitIcon className={`${iconSizes.sm} ${unitColor}`} />
               <span>{property.floor}</span>
             </div>
           )}

@@ -4,12 +4,16 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Home, CheckCircle, Ruler } from 'lucide-react';
+import { CheckCircle, Ruler } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { BuildingStats as StatsType } from '@/types/building';
 import { getBuildingStats } from '@/services/buildings.service';
 import { formatNumber } from '@/lib/intl-utils';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 
 interface BuildingStatsProps {
   buildingId: string;
@@ -65,8 +69,8 @@ export function BuildingStats({ buildingId }: BuildingStatsProps) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard 
-            icon={Home}
+        <StatCard
+            icon={UnitIcon}
             value={loading ? '...' : stats?.totalUnits ?? 0}
             label="Σύνολο Μονάδων"
             loading={loading}

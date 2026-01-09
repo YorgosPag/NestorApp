@@ -15,7 +15,8 @@
  */
 
 import React, { useMemo } from 'react';
-import { Ruler, Layers, Home } from 'lucide-react';
+// 🏢 ENTERPRISE: All icons from centralized NAVIGATION_ENTITIES
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
 // 🏢 DESIGN SYSTEM
 import { ListCard } from '@/design-system';
@@ -122,10 +123,11 @@ export function BuildingListCard({
   const stats = useMemo<StatItem[]>(() => {
     const items: StatItem[] = [];
 
-    // Total Area
+    // Total Area - 🏢 ENTERPRISE: Using centralized area icon/color
     if (building.totalArea) {
       items.push({
-        icon: Ruler,
+        icon: NAVIGATION_ENTITIES.area.icon,
+        iconColor: NAVIGATION_ENTITIES.area.color,
         label: 'Συν. Εμβαδόν',
         value: `${formatNumber(building.totalArea)} m²`,
       });
@@ -134,7 +136,8 @@ export function BuildingListCard({
     // Floors
     if (building.floors) {
       items.push({
-        icon: Layers,
+        icon: NAVIGATION_ENTITIES.floor.icon,
+        iconColor: NAVIGATION_ENTITIES.floor.color,
         label: 'Όροφοι',
         value: String(building.floors),
       });
@@ -143,7 +146,8 @@ export function BuildingListCard({
     // Units
     if (building.units) {
       items.push({
-        icon: Home,
+        icon: NAVIGATION_ENTITIES.unit.icon,
+        iconColor: NAVIGATION_ENTITIES.unit.color,
         label: 'Μονάδες',
         value: String(building.units),
       });

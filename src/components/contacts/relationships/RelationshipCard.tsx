@@ -17,17 +17,17 @@ import { formatDate } from '@/lib/intl-utils';
 import {
   Edit,
   Trash2,
-  Building2,
-  Phone,
-  Mail,
   Calendar,
   ChevronDown,
   ChevronRight,
   MapPin
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized entity icons (ZERO hardcoded values)
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
 // 🏢 ENTERPRISE: Import centralized utilities
 import { getRelationshipDisplayProps } from './utils/relationship-types';
@@ -181,10 +181,10 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
         <CardContent className="pt-0">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-            {/* Department */}
+            {/* Department - 🏢 ENTERPRISE: Using centralized building icon */}
             {relationship.department && (
               <div className="flex items-center space-x-2">
-                <Building2 className={`${iconSizes.sm} ${colors.text.muted}`} />
+                <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.building.color)} />
                 <span className="text-sm">{relationship.department}</span>
               </div>
             )}
@@ -199,10 +199,10 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
               </div>
             )}
 
-            {/* Business Phone */}
+            {/* Business Phone - 🏢 ENTERPRISE: Using centralized phone icon */}
             {relationship.contactInfo?.businessPhone && (
               <div className="flex items-center space-x-2">
-                <Phone className={`${iconSizes.sm} ${colors.text.muted}`} />
+                <NAVIGATION_ENTITIES.phone.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.phone.color)} />
                 <span className="text-sm">{relationship.contactInfo.businessPhone}</span>
                 {relationship.contactInfo.extensionNumber && (
                   <span className={`text-xs ${colors.text.light}`}>
@@ -212,10 +212,10 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
               </div>
             )}
 
-            {/* Business Email */}
+            {/* Business Email - 🏢 ENTERPRISE: Using centralized email icon */}
             {relationship.contactInfo?.businessEmail && (
               <div className="flex items-center space-x-2">
-                <Mail className={`${iconSizes.sm} ${colors.text.muted}`} />
+                <NAVIGATION_ENTITIES.email.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.email.color)} />
                 <a
                   href={`mailto:${relationship.contactInfo.businessEmail}`}
                   className={`text-sm ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}

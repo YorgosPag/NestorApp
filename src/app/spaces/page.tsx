@@ -4,7 +4,6 @@ import React from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import {
-  Home,
   Package,
   Car,
   Users,
@@ -13,6 +12,7 @@ import {
   BarChart3,
   MapPin,
 } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -31,7 +31,7 @@ const spacesStats: DashboardStat[] = [
     title: 'Διαμερίσματα',
     value: '486',
     description: 'Κατοικήσιμοι χώροι',
-    icon: Home,
+    icon: NAVIGATION_ENTITIES.unit.icon,
     color: 'green',
     trend: { value: 0, label: 'Σταθερό' }
   },
@@ -89,7 +89,7 @@ export default function SpacesPage() {
               <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-primary/10 rounded-lg">
-                    <Home className={`${iconSizes.md} text-primary`} />
+                    {React.createElement(NAVIGATION_ENTITIES.unit.icon, { className: `${iconSizes.md} ${NAVIGATION_ENTITIES.unit.color}` })}
                   </div>
                   <h3 className="font-semibold">Διαμερίσματα</h3>
                 </div>

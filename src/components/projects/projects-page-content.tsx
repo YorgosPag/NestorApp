@@ -18,14 +18,10 @@ import {
   Briefcase,
   TrendingUp,
   BarChart3,
-  Ruler,
   Calendar,
-  Building2,
-  Plus,
-  Edit,
-  Trash2,
-  Archive,
 } from 'lucide-react';
+// 🏢 ENTERPRISE: All icons from centralized NAVIGATION_ENTITIES
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { ProjectViewSwitch } from './ProjectViewSwitch';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
@@ -80,7 +76,7 @@ export function ProjectsPageContent() {
     {
       title: "Συνολική Επιφάνεια",
       value: `${(projectsStats.totalArea / 1000).toFixed(1)}K m²`,
-      icon: Ruler,
+      icon: NAVIGATION_ENTITIES.area.icon,
       color: "orange"
     },
     {

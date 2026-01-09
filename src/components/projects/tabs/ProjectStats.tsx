@@ -3,13 +3,17 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Home, CheckCircle, Ruler } from 'lucide-react';
+import { CheckCircle, Ruler } from 'lucide-react';
 import type { ProjectStats as StatsType } from '@/types/project';
 import { getProjectStats } from '@/services/projects.service';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 
 interface ProjectStatsProps {
   projectId: number;
@@ -67,8 +71,8 @@ export function ProjectStats({ projectId }: ProjectStatsProps) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <StatCard 
-            icon={Home}
+        <StatCard
+            icon={UnitIcon}
             value={loading ? '...' : stats?.totalUnits ?? 0}
             label="Σύνολο Μονάδων"
             loading={loading}

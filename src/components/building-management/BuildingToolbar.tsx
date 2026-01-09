@@ -14,13 +14,13 @@ import {
   Download,
   Upload,
   RefreshCw,
-  Building,
   FileText,
   BarChart3,
   Archive,
   Star,
   HelpCircle
 } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import {
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
@@ -199,7 +199,7 @@ export function BuildingToolbar({
     {
       id: 'type-filter',
       label: 'Τύπος',
-      icon: Building,
+      icon: NAVIGATION_ENTITIES.building.icon,
       active: activeFilters.some(f => ['residential', 'commercial', 'mixed'].includes(f)),
       count: activeFilters.filter(f => ['residential', 'commercial', 'mixed'].includes(f)).length,
       children: (

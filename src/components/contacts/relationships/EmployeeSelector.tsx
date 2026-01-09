@@ -19,14 +19,13 @@ import {
   Search,
   X,
   User,
-  Building2,
-  Phone,
-  Mail,
   MapPin,
   Check,
   Loader2
 } from 'lucide-react';
 import { PHOTO_COLORS } from '@/components/generic/config/photo-config';
+// 🏢 ENTERPRISE: Centralized entity icons (ZERO hardcoded values)
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
 // 🏢 ENTERPRISE: Import centralized contact types
 import type {
@@ -414,12 +413,13 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   // 🏢 ENTERPRISE: RENDER HELPERS
   // ============================================================================
 
+  // 🏢 ENTERPRISE: Using centralized entity icons
   const getContactIcon = (type: ContactType) => {
     switch (type) {
       case 'company':
-        return Building2;
+        return NAVIGATION_ENTITIES.company.icon;
       case 'service':
-        return Building2;
+        return NAVIGATION_ENTITIES.building.icon;
       default:
         return User;
     }
@@ -469,7 +469,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
               <div className="flex items-center space-x-2 mt-1 text-xs text-muted-foreground">
                 {contact.company && (
                   <>
-                    <Building2 className={iconSizes.xs} />
+                    <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.building.color)} />
                     <span>{contact.company}</span>
                   </>
                 )}
@@ -486,13 +486,13 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
               <div className="flex items-center space-x-3 text-xs text-muted-foreground">
                 {contact.email && (
                   <div className="flex items-center space-x-1">
-                    <Mail className={iconSizes.xs} />
+                    <NAVIGATION_ENTITIES.email.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.email.color)} />
                     <span className="truncate">{contact.email}</span>
                   </div>
                 )}
                 {contact.phone && (
                   <div className="flex items-center space-x-1">
-                    <Phone className={iconSizes.xs} />
+                    <NAVIGATION_ENTITIES.phone.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.phone.color)} />
                     <span>{contact.phone}</span>
                   </div>
                 )}

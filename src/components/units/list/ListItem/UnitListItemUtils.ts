@@ -1,7 +1,7 @@
 'use client';
 
-import { Home, Warehouse, Store, Car, Briefcase, BedSingle } from 'lucide-react';
-// 🏢 ENTERPRISE: Using centralized navigation entities for Building icon
+import { Warehouse, Store, Car, Briefcase, BedSingle } from 'lucide-react';
+// 🏢 ENTERPRISE: Using centralized navigation entities
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 
 // =============================================================================
@@ -27,10 +27,10 @@ export const getPropertyTypeIcon = (type: string) => {
         return NAVIGATION_ENTITIES.building.icon;
     }
 
-    // 🏠 Μεζονέτα (maisonette/house-style)
+    // 🏠 Μεζονέτα (maisonette/house-style) - uses centralized unit icon
     if (typeUpper.includes('ΜΕΖΟΝΈΤΑ') || typeUpper.includes('ΜΕΖΟΝΕΤΑ') ||
         typeUpper.includes('MAISONETTE') || typeUpper.includes('ΟΙΚΟΔΟΜΉ')) {
-        return Home;
+        return NAVIGATION_ENTITIES.unit.icon;
     }
 
     // 🏪 Κατάστημα (retail/shop)

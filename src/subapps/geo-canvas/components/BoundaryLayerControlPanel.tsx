@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Eye, EyeOff, Settings, Layers, Palette, Sliders, Globe, Building2, MapPin, Home } from 'lucide-react';
+import { Eye, EyeOff, Settings, Layers, Palette, Sliders, Globe, Building2, MapPin } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { AdminSearchResult } from '../types/administrative-types';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -92,13 +93,16 @@ export function BoundaryLayerControlPanel({
   // RENDER HELPERS
   // ============================================================================
 
+  // 🏢 ENTERPRISE: Use centralized navigation entity icons
+  const CommunityIcon = NAVIGATION_ENTITIES.unit.icon;
+
   const getBoundaryTypeIcon = (type: BoundaryLayer['type']) => {
     const iconProps = { className: iconSizes.sm };
     switch (type) {
       case 'region': return <Globe {...iconProps} />;
       case 'municipality': return <Building2 {...iconProps} />;
       case 'municipal_unit': return <Building2 {...iconProps} />;
-      case 'community': return <Home {...iconProps} />;
+      case 'community': return <CommunityIcon {...iconProps} />;
       default: return <MapPin {...iconProps} />;
     }
   };

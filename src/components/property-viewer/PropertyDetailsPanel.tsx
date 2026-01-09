@@ -1,12 +1,18 @@
 'use client';
 
 import React from 'react';
-import { Layers, Home } from 'lucide-react';
+import { Layers } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { ScrollArea } from "@/components/ui/scroll-area";
+
 import type { Property } from '@/types/property-viewer';
 import { PropertyDetailsContent } from './details/PropertyDetailsContent';
 import type { ExtendedPropertyDetails } from '@/types/property-viewer';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon & Color
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+const unitColor = NAVIGATION_ENTITIES.unit.color;
 
 interface PropertyDetailsPanelProps {
   propertyIds: string[];
@@ -35,7 +41,7 @@ export function PropertyDetailsPanel({
   if (safePropertyIds.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
-        <Home className={`${iconSizes.xl} mb-2`} />
+        <UnitIcon className={`${iconSizes.xl} mb-2 ${unitColor}`} />
         <p className="text-sm text-center">Επιλέξτε ένα ακίνητο</p>
         <p className="text-xs text-center">για να δείτε τα στοιχεία του</p>
       </div>
@@ -58,7 +64,7 @@ export function PropertyDetailsPanel({
   if (!property) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
-        <Home className={`${iconSizes.xl} mb-2`} />
+        <UnitIcon className={`${iconSizes.xl} mb-2 ${unitColor}`} />
         <p className="text-sm text-center">Δεν βρέθηκαν στοιχεία</p>
         <p className="text-xs text-center">για το επιλεγμένο ακίνητο</p>
       </div>

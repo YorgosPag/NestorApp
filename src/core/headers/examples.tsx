@@ -7,8 +7,9 @@
 
 'use client';
 
-import { Users, Building2, Home, FileText } from 'lucide-react';
+import { Users, Building2, FileText } from 'lucide-react';
 import { PageHeader } from './enterprise-system/components/PageHeader';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { ViewMode } from './enterprise-system/types';
 import { CommonBadge } from '@/core/badges';
 import { COMMON_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
@@ -114,7 +115,7 @@ export const PropertyHeaderExample = () => {
       variant="static"
       layout="single-row"
       title={{
-        icon: Home,
+        icon: NAVIGATION_ENTITIES.unit.icon,
         title: "Διαχείριση Ακινήτων",
         badge: (
           <CommonBadge

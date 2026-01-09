@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Home, TrendingUp, CheckCircle, Euro, Ruler, BarChart3, Activity, Building, Package, MapPin } from 'lucide-react';
+import { TrendingUp, CheckCircle } from 'lucide-react';
+// 🏢 ENTERPRISE: All icons from centralized NAVIGATION_ENTITIES
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { PropertyStats } from '@/types/property';
 import { StatsCard } from './dashboard/StatsCard';
 import { StatusCard } from './dashboard/StatusCard';
@@ -39,13 +41,14 @@ const getTypeLabel = (type: string) => {
     }
 };
 
+// 🏢 ENTERPRISE: Using centralized icons for area and price
 const statsCardsData = (stats: PropertyStats) => [
-    { title: "Συνολικές Μονάδες", value: stats.totalProperties, icon: Home, color: "blue" },
+    { title: "Συνολικές Μονάδες", value: stats.totalProperties, icon: NAVIGATION_ENTITIES.unit.icon, color: "blue" },
     { title: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE, value: stats.availableProperties, icon: TrendingUp, color: "gray" },
-    { title: "Συνολική Αξία", value: formatCurrency(stats.totalValue), icon: Euro, color: "green" },
-    { title: "Συνολικό Εμβαδόν", value: `${Math.round(stats.totalArea)} m²`, icon: Ruler, color: "purple" },
+    { title: "Συνολική Αξία", value: formatCurrency(stats.totalValue), icon: NAVIGATION_ENTITIES.price.icon, color: "green" },
+    { title: "Συνολικό Εμβαδόν", value: `${Math.round(stats.totalArea)} m²`, icon: NAVIGATION_ENTITIES.area.icon, color: "purple" },
     { title: UNIFIED_STATUS_FILTER_LABELS.SOLD, value: stats.soldProperties, icon: CheckCircle, color: "red" },
-    { title: "Μέση Τιμή", value: formatCurrency(stats.averagePrice), icon: Euro, color: "orange" },
+    { title: "Μέση Τιμή", value: formatCurrency(stats.averagePrice), icon: NAVIGATION_ENTITIES.price.icon, color: "orange" },
 ];
 
 interface PropertyDashboardProps {
@@ -59,11 +62,11 @@ export function PropertyDashboard({ stats }: PropertyDashboardProps) {
                 <StatsCard key={card.title} {...card} />
             ))}
             <StatusCard statsByStatus={stats.propertiesByStatus} getStatusLabel={getStatusLabel} />
-            <DetailsCard title="Τύποι Μονάδων" icon={Building} data={stats.propertiesByType} labelFormatter={getTypeLabel} />
-            <DetailsCard title="Κατανομή ανά Όροφο" icon={MapPin} data={stats.propertiesByFloor} isFloorData={true} />
-            <DetailsCard 
-                title="Αποθήκες" 
-                icon={Package} 
+            <DetailsCard title="Τύποι Μονάδων" icon={NAVIGATION_ENTITIES.unit.icon} data={stats.propertiesByType} labelFormatter={getTypeLabel} />
+            <DetailsCard title="Κατανομή ανά Όροφο" icon={NAVIGATION_ENTITIES.floor.icon} data={stats.propertiesByFloor} isFloorData={true} />
+            <DetailsCard
+                title="Αποθήκες"
+                icon={NAVIGATION_ENTITIES.storage.icon} 
                 data={{
                     'Σύνολο': stats.totalStorageUnits,
                     'Διαθέσιμες': stats.availableStorageUnits,

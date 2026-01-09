@@ -8,7 +8,8 @@
 'use client';
 
 import React from 'react';
-import { MapPin, Hexagon, Hand, Trash2, Check, X, Home } from 'lucide-react';
+import { MapPin, Hexagon, Hand, Trash2, Check, X } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -189,7 +190,7 @@ export function PolygonControls({
                 state.currentTool === 'real-estate' ? styles.primary : styles.secondary
               }`}
             >
-              <Home className={iconSizes.sm} />
+              <NAVIGATION_ENTITIES.unit.icon className={`${iconSizes.sm} ${NAVIGATION_ENTITIES.unit.color}`} />
               Ακίνητο
             </button>
           </>

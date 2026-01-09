@@ -6,7 +6,12 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { TabsOnlyTriggers, type TabDefinition } from "@/components/ui/navigation/TabsComponents";
 import type { UnitsTabConfig } from '@/config/units-tabs-config';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Home, Map, FileText, Camera, Video, User } from 'lucide-react';
+import { Map, FileText, Camera, Video, User } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon & Color
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+const unitColor = NAVIGATION_ENTITIES.unit.color;
 
 // ============================================================================
 // ICON MAPPING
@@ -16,15 +21,15 @@ import { Home, Map, FileText, Camera, Video, User } from 'lucide-react';
  * Mapping από string icons σε Lucide React icons
  */
 const ICON_MAPPING = {
-  // Emoji mapping (legacy)
-  '🏠': Home,
+  // Emoji mapping (legacy) - 🏢 ENTERPRISE: Using centralized UnitIcon
+  '🏠': UnitIcon,
   '🗺️': Map,
   '📄': FileText,
   '📸': Camera,
   '🎬': Video,
 
-  // String mapping (new)
-  'home': Home,
+  // String mapping (new) - 🏢 ENTERPRISE: Using centralized UnitIcon
+  'home': UnitIcon,
   'user': User,
   'map': Map,
   'file-text': FileText,
@@ -36,7 +41,7 @@ const ICON_MAPPING = {
  * Helper function για την μετατροπή string/emoji icon σε Lucide icon
  */
 function getIconComponent(icon: string) {
-  return ICON_MAPPING[icon as keyof typeof ICON_MAPPING] || Home;
+  return ICON_MAPPING[icon as keyof typeof ICON_MAPPING] || UnitIcon;
 }
 
 // ============================================================================
@@ -202,7 +207,7 @@ export function GenericUnitsTabsRenderer({
             content
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-              <Home className={`${iconSizes.xl3} mb-4 opacity-50`} />
+              <UnitIcon className={`${iconSizes.xl3} mb-4 opacity-50 ${unitColor}`} />
               <h3 className="text-lg font-semibold mb-2">Επιλέξτε μια μονάδα</h3>
               <p className="text-sm">Επιλέξτε μια μονάδα από τη λίστα αριστερά για να δείτε τις πληροφορίες της.</p>
             </div>

@@ -1,8 +1,11 @@
 'use client';
 
-import { Home, Users } from 'lucide-react';
-// 🏢 ENTERPRISE: Using centralized entity config for Building icon
+import { Users } from 'lucide-react';
+// 🏢 ENTERPRISE: Using centralized entity config for Building & Unit icons
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 import { formatFloorLabel as formatFloorLabelI18n, getCategoryLabel as getCategoryLabelI18n, getStatusLabel as getStatusLabelI18n, getPricePerSqmUnit, formatNumber, getDaysUntilCompletion as getDaysUntilCompletionI18n } from '@/lib/intl-utils';
 import { brandClasses } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -27,9 +30,10 @@ export const getProgressColor = (progress: number) => {
     return 'text-green-500';
 };
 
+// 🏢 ENTERPRISE: Centralized Category Icons - ZERO HARDCODED VALUES
 export const getCategoryIcon = (category: string) => {
     switch (category) {
-        case 'residential': return Home;
+        case 'residential': return UnitIcon;
         case 'commercial': return NAVIGATION_ENTITIES.building.icon;
         case 'mixed': return Users;
         case 'industrial': return NAVIGATION_ENTITIES.building.icon;

@@ -6,13 +6,12 @@ import { useUnitsViewerState } from '@/hooks/useUnitsViewerState';
 import { UnitsHeader } from '@/components/units/page/UnitsHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import {
-  Home,
   TrendingUp,
   BarChart3,
   MapPin,
   Package,
-  Building2,
 } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { StatusCard } from '@/components/property-management/dashboard/StatusCard';
 import { DetailsCard } from '@/components/property-management/dashboard/DetailsCard';
 import { AdvancedFiltersPanel, unitFiltersConfig, defaultUnitFilters, type UnitFilterState } from '@/components/core/AdvancedFilters';
@@ -136,7 +135,7 @@ function UnitsPageContent() {
     {
       title: "Σύνολο Μονάδων",
       value: dashboardStats.totalProperties,
-      icon: Home,
+      icon: NAVIGATION_ENTITIES.unit.icon,
       color: "blue"
     },
     {
@@ -166,7 +165,7 @@ function UnitsPageContent() {
     {
       title: "Μοναδικά Κτίρια",
       value: dashboardStats.uniqueBuildings,
-      icon: Building2,
+      icon: NAVIGATION_ENTITIES.building.icon,
       color: "pink"
     }
   ];

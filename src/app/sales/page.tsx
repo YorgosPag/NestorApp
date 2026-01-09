@@ -5,7 +5,6 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import {
   DollarSign,
-  Home,
   Package,
   Car,
   CheckCircle,
@@ -13,9 +12,15 @@ import {
   TrendingUp,
   BarChart3,
 } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
+
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon & Color
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+const unitColor = NAVIGATION_ENTITIES.unit.color;
 
 // Placeholder stats for Sales
 const salesStats: DashboardStat[] = [
@@ -97,7 +102,7 @@ export default function SalesPage() {
                   <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-primary/10 rounded-lg">
-                        <Home className={`${iconSizes.sm} text-primary`} />
+                        <UnitIcon className={`${iconSizes.sm} ${unitColor}`} />
                       </div>
                       <h3 className="font-medium">Διαθέσιμα Διαμερίσματα</h3>
                       <span className="ml-auto bg-primary/20 text-primary px-2 py-1 rounded text-sm font-medium">

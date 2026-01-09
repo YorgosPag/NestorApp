@@ -2,7 +2,9 @@
 
 import * as React from 'react';
 const { useState, useCallback } = React;
-import { Building, Tag, Palette, Eye, EyeOff, Settings, Info } from 'lucide-react';
+import { Tag, Palette, Eye, EyeOff, Settings, Info } from 'lucide-react';
+// 🏢 ENTERPRISE: Centralized navigation entities for building icon
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useTranslationLazy } from '../../../i18n/hooks/useTranslationLazy';
 // ✅ ENTERPRISE: Mock effects για compilation - θα συνδεθεί με πραγματικό effects system
 const INTERACTIVE_PATTERNS = {
@@ -62,6 +64,8 @@ export function PropertyStatusManager({
   const [selectedStatuses, setSelectedStatuses] = useState<PropertyStatus[]>(getAllStatuses());
   const [colorScheme, setColorScheme] = useState<'status' | 'price' | 'type'>('status');
   const [showLegend, setShowLegend] = useState(true);
+  // 🏢 ENTERPRISE: Use centralized building icon
+  const BuildingIcon = NAVIGATION_ENTITIES.building.icon;
 
   // Handle status visibility toggle
   const handleStatusToggle = useCallback((status: PropertyStatus) => {
@@ -131,7 +135,7 @@ export function PropertyStatusManager({
       <div className="mb-4">
         <div className="flex items-center justify-between">
           <h3 className={`text-lg font-semibold ${colors.text.primary} flex items-center gap-2`}>
-            <Building className={`${iconSizes.md} ${colors.text.info}`} />
+            <BuildingIcon className={`${iconSizes.md} ${NAVIGATION_ENTITIES.building.color}`} />
             {t('propertyStatusManager.title')}
           </h3>
           <button

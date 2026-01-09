@@ -49,13 +49,13 @@ import {
   MapPin,
   Layout,
   DollarSign,
-  Home as HomeIcon,
   Package,
   Car,
   Users as UsersIcon,
   ShoppingCart,
   CheckCircle,
 } from "lucide-react";
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
 // 🏢 ENTERPRISE: Temporary direct labels για runtime fix - WILL BE RE-CENTRALIZED
 // TODO: Re-import from @/subapps/dxf-viewer/config/modal-select when path resolution is fixed
@@ -337,15 +337,15 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
             },
             subItems: [
               {
-                icon: HomeIcon,
+                icon: NAVIGATION_ENTITIES.unit.icon,
                 href: '/spaces/apartments'
               },
               {
-                icon: Package,
+                icon: NAVIGATION_ENTITIES.storage.icon,
                 href: '/spaces/storage'
               },
               {
-                icon: Car,
+                icon: NAVIGATION_ENTITIES.parking.icon,
                 href: '/spaces/parking'
               },
               {
@@ -364,15 +364,15 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
             },
             subItems: [
               {
-                icon: HomeIcon,
+                icon: NAVIGATION_ENTITIES.unit.icon,
                 href: '/sales/available-apartments'
               },
               {
-                icon: Package,
+                icon: NAVIGATION_ENTITIES.storage.icon,
                 href: '/sales/available-storage'
               },
               {
-                icon: Car,
+                icon: NAVIGATION_ENTITIES.parking.icon,
                 href: '/sales/available-parking'
               },
               {

@@ -13,8 +13,9 @@ import { useTypography } from '@/hooks/useTypography';
 import { useButtonPatterns } from '@/hooks/useButtonPatterns';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 import {
-  Home, Building, MapPin, Euro, Ruler, Users, Phone, Mail, FileText, ExternalLink, Calendar, Share2
+  MapPin, Euro, Ruler, Users, Phone, Mail, FileText, ExternalLink, Calendar, Share2
 } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { cn } from '@/lib/utils';
 import { formatCurrency, formatDate } from '@/lib/intl-utils';
 import type { Property } from '@/types/property';
@@ -93,12 +94,12 @@ export function PropertyDetails({ property }: PropertyDetailsProps) {
           <Separator />
           
           <div className={`${layout.gridCols2Gap4} ${typography.body.sm}`}>
-            <PropertyInfoItem icon={<Building />} label="Κτίριο" value={property.building} />
+            <PropertyInfoItem icon={<NAVIGATION_ENTITIES.building.icon className={NAVIGATION_ENTITIES.building.color} />} label="Κτίριο" value={property.building} />
             <PropertyInfoItem icon={<MapPin />} label="Όροφος" value={property.floor} />
             <PropertyInfoItem icon={<Euro />} label="Τιμή" value={formatCurrency(property.price)} valueClassName={`font-semibold ${colors.text.price}`} iconClassName={colors.text.price} />
             <PropertyInfoItem icon={<Ruler />} label="Εμβαδόν" value={`${property.area} m²`} />
-            <PropertyInfoItem icon={<Home />} label="Δωμάτια" value={property.rooms} />
-            <PropertyInfoItem icon={<Home />} label="Μπαλκόνι" value={property.balconyArea ? `${property.balconyArea} m²` : '-'} />
+            <PropertyInfoItem icon={<NAVIGATION_ENTITIES.unit.icon className={NAVIGATION_ENTITIES.unit.color} />} label="Δωμάτια" value={property.rooms} />
+            <PropertyInfoItem icon={<NAVIGATION_ENTITIES.unit.icon className={NAVIGATION_ENTITIES.unit.color} />} label="Μπαλκόνι" value={property.balconyArea ? `${property.balconyArea} m²` : '-'} />
           </div>
           
           <Separator />

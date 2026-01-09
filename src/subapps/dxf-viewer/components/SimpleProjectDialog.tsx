@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Triangle, Building2, Folder, Home, Building as BuildingIcon } from 'lucide-react';
+import { Triangle, Building2, Folder, Building as BuildingIcon } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import {
   Select,
   SelectContent,
@@ -968,7 +969,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                     {units?.map(unit => (
                       <SelectItem key={unit.id} value={unit.id}>
                         <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
-                          <Home className={`${getIconSize('field')} ${getModalIconColor('upload')}`} />
+                          <NAVIGATION_ENTITIES.unit.icon className={`${getIconSize('field')} ${NAVIGATION_ENTITIES.unit.color}`} />
                           <span>{unit.name || unit.unitName}</span>
                           {unit.type && (
                             <span className={typography.body.sm}>({unit.type})</span>

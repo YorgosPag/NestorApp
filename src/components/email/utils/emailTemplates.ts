@@ -1,10 +1,11 @@
-import { Mail, Send, FileText, Users, Calendar, Home } from "lucide-react";
+import { Mail, Send, FileText, Users, Calendar } from "lucide-react";
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
 export const emailTemplates = (fullName?: string) => ([
   { id: "welcome",    name: "Welcome Email",     icon: Users,    description: "Καλωσόρισμα νέου lead", defaultSubject: `Καλώς ήρθατε ${fullName || ""}!` },
   { id: "followup",   name: "Follow-up",         icon: Mail,     description: "Follow-up επικοινωνία", defaultSubject: "Follow-up για το ενδιαφέρον σας" },
   { id: "appointment",name: "Ραντεβού",          icon: Calendar, description: "Προγραμματισμός/επιβεβαίωση ραντεβού", defaultSubject: "Προγραμματισμός Ραντεβού" },
-  { id: "proposal",   name: "Πρόταση Ακινήτου",  icon: Home,     description: "Αποστολή πρότασης ακινήτου", defaultSubject: "Πρόταση Ακινήτου" },
+  { id: "proposal",   name: "Πρόταση Ακινήτου",  icon: NAVIGATION_ENTITIES.unit.icon, description: "Αποστολή πρότασης ακινήτου", defaultSubject: "Πρόταση Ακινήτου" },
   { id: "custom",     name: "Προσαρμοσμένο",     icon: FileText, description: "Δικό σας κείμενο", defaultSubject: "" },
 ]);
 

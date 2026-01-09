@@ -4,8 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
-import { Home, CheckCircle, Ruler, TrendingUp } from 'lucide-react';
+import { CheckCircle, Ruler, TrendingUp } from 'lucide-react';
 import { getThemeVariant } from '@/components/ui/theme/ThemeComponents';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 
 import { GeneralProjectHeader } from '../GeneralProjectHeader';
 import { BasicProjectInfoTab } from '../BasicProjectInfoTab';
@@ -80,8 +84,8 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
       />
       
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 my-6">
-        <StatCard 
-          icon={Home}
+        <StatCard
+          icon={UnitIcon}
           value={loadingStats ? '...' : stats?.totalUnits ?? 0}
           label="Σύνολο Μονάδων"
           loading={loadingStats}

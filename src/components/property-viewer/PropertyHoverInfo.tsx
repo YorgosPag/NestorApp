@@ -1,7 +1,12 @@
 'use client';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { Home, MousePointer } from 'lucide-react';
+import { MousePointer } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon & Color
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+const unitColor = NAVIGATION_ENTITIES.unit.color;
 import { Separator } from '@/components/ui/separator';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
@@ -88,7 +93,7 @@ export function PropertyHoverInfo({ propertyId, properties }: PropertyHoverInfoP
   if (!property) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
-        <Home className={`${iconSizes.md} mb-2`} />
+        <UnitIcon className={`${iconSizes.md} mb-2 ${unitColor}`} />
         <p className="text-xs text-center">Δεν βρέθηκαν στοιχεία</p>
         <p className="text-xs text-center">για αυτό το ακίνητο</p>
       </div>

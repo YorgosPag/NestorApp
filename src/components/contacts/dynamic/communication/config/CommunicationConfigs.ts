@@ -8,7 +8,9 @@
 //
 // ============================================================================
 
-import { Phone, Mail, Globe, User, Briefcase, MapPin } from 'lucide-react';
+import { Globe, User, Briefcase } from 'lucide-react';
+// 🏢 ENTERPRISE: Centralized entity icons (ZERO hardcoded values)
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { CommunicationType, CommunicationConfig, CommunicationConfigRecord } from '../types/CommunicationTypes';
 import {
   PHONE_TYPE_LABELS,
@@ -43,7 +45,7 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
   phone: {
     type: 'phone',
     title: 'Τηλέφωνα',
-    icon: Phone,
+    icon: NAVIGATION_ENTITIES.phone.icon,
     fields: { primary: 'number', secondary: 'countryCode' },
     types: [
       { value: 'mobile', label: PHONE_TYPE_LABELS.mobile },
@@ -64,7 +66,7 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
   email: {
     type: 'email',
     title: 'E-mails',
-    icon: Mail,
+    icon: NAVIGATION_ENTITIES.email.icon,
     fields: { primary: 'email' },
     types: [
       { value: 'personal', label: EMAIL_TYPE_LABELS.personal },
@@ -183,7 +185,7 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
   address: {
     type: 'address',
     title: 'Διευθύνσεις',
-    icon: MapPin,
+    icon: NAVIGATION_ENTITIES.location.icon,
     fields: { primary: 'address', secondary: 'type' },
     types: [
       { value: 'home', label: ADDRESS_TYPE_LABELS.home },

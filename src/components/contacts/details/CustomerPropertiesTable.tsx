@@ -9,7 +9,12 @@ import type { Property } from '@/types/property-viewer';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
-import { Home, Eye, Plus } from 'lucide-react';
+import { Eye, Plus } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon & Color
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+const unitColor = NAVIGATION_ENTITIES.unit.color;
 
 interface CustomerPropertiesTableProps {
     contactId: string;
@@ -56,7 +61,7 @@ export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerProper
         <div className="mt-4">
             <div className="flex justify-between items-center mb-2">
                 <h4 className="font-semibold text-sm flex items-center gap-2">
-                    <Home className={`${iconSizes.sm} text-muted-foreground`}/>
+                    <UnitIcon className={`${iconSizes.sm} ${unitColor}`}/>
                     Ακίνητα Πελάτη ({properties.length})
                 </h4>
                 <Button variant="outline" size="sm" onClick={onAddUnit}>

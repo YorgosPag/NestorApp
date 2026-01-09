@@ -1318,6 +1318,86 @@ import { ListCard } from '@/design-system';
 
 ---
 
+### 📋 ADR-014: NAVIGATION ENTITY ICONS CENTRALIZATION (2026-01-09) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-09
+
+**Context**:
+Εντοπίστηκαν 54 αρχεία με διάσπαρτες χρήσεις του `Home` icon από Lucide React:
+- 19 αρχεία ήδη χρησιμοποιούσαν σωστά το `NAVIGATION_ENTITIES.unit.icon`
+- ~21 αρχεία χρησιμοποιούσαν hardcoded `Home` icon για units/apartments
+- Υπόλοιπα αρχεία χρησιμοποιούσαν `Home` για διαφορετικό semantic meaning (homepage, platforms)
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **CANONICAL SOURCE** | `NAVIGATION_ENTITIES` από `@/components/navigation/config` είναι η ΜΟΝΑΔΙΚΗ πηγή για entity icons |
+| **PROHIBITION** | ❌ Hardcoded Lucide icons για entities **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** |
+| **SEMANTIC ACCURACY** | `NAVIGATION_ENTITIES.{entity}.icon` για το σωστό entity type |
+| **COLOR CONSISTENCY** | `NAVIGATION_ENTITIES.{entity}.color` για entity-specific styling |
+
+**Canonical Entity Icons**:
+
+| Entity | Icon | Color | Import Path |
+|--------|------|-------|-------------|
+| `unit` | `Home` | `text-teal-600` | `NAVIGATION_ENTITIES.unit.icon` |
+| `building` | `Building` | `text-purple-600` | `NAVIGATION_ENTITIES.building.icon` |
+| `storage` | `Package` | `text-indigo-600` | `NAVIGATION_ENTITIES.storage.icon` |
+| `parking` | `Car` | `text-amber-600` | `NAVIGATION_ENTITIES.parking.icon` |
+| `floor` | `Layers` | `text-orange-600` | `NAVIGATION_ENTITIES.floor.icon` |
+| `project` | `Construction` | `text-green-600` | `NAVIGATION_ENTITIES.project.icon` |
+| `company` | `Factory` | `text-blue-600` | `NAVIGATION_ENTITIES.company.icon` |
+| `location` | `MapPin` | `text-red-600` | `NAVIGATION_ENTITIES.location.icon` |
+
+**Implementation Pattern**:
+```typescript
+// ✅ ENTERPRISE: Centralized entity icon
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+
+<PageHeader
+  title={{
+    icon: NAVIGATION_ENTITIES.unit.icon,
+    title: "Διαχείριση Μονάδων",
+  }}
+/>
+
+// ✅ ENTERPRISE: Dynamic icon rendering
+{React.createElement(NAVIGATION_ENTITIES.unit.icon, { className: iconSizes.md })}
+
+// ❌ PROHIBITED: Hardcoded Lucide import
+import { Home } from 'lucide-react';
+<Home className="text-teal-600" />
+```
+
+**Files Migrated** (Phase 1 Complete):
+
+| Category | Files | Status |
+|----------|-------|--------|
+| `app/` pages | 4 | ✅ |
+| `components/` | 8 | ✅ |
+| `features/` & `domain/` | 4 | ✅ |
+| `config/` & `core/` | 3 | ✅ |
+| **TOTAL** | **19 files** | ✅ |
+
+**Excluded Files** (Different Semantic Meaning):
+- `public-sidebar/constants.ts` - `Home` για "Αρχική" homepage navigation
+- `TechnicalDrawingInterface.tsx` - `Home` για Spitogatos.gr platform icon
+- `UnitTypeQuickFilters.tsx` - Intentional different icons per unit subtype
+
+**Consequences**:
+- ✅ **Single Source of Truth**: Αλλαγή icon = αλλάζει παντού
+- ✅ **Consistent Styling**: Entity colors centralized
+- ✅ **Type-Safe**: LucideIcon types enforced
+- ✅ **Maintainable**: Εύκολη ενημέρωση brand colors
+- ✅ **Scalable**: Νέα entities = νέο entry στο NAVIGATION_ENTITIES
+
+**References**:
+- Source: `src/components/navigation/config/navigation-entities.ts`
+- Enterprise Pattern: Design System Icon Libraries (Material Design, Fluent UI)
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

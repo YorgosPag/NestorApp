@@ -16,8 +16,6 @@ interface ContactsHeaderProps {
   setViewMode: (mode: ViewMode) => void;
   showDashboard: boolean;
   setShowDashboard: (show: boolean) => void;
-  searchTerm: string;
-  setSearchTerm: (term: string) => void;
   onNewContact?: () => void;
   // Mobile-only filter toggle
   showFilters?: boolean;
@@ -26,13 +24,12 @@ interface ContactsHeaderProps {
   contactCount?: number;
 }
 
+// 🏢 ENTERPRISE: Search removed from header - using unified search in AdvancedFiltersPanel
 export function ContactsHeader({
   viewMode,
   setViewMode,
   showDashboard,
   setShowDashboard,
-  searchTerm,
-  setSearchTerm,
   onNewContact,
   showFilters,
   setShowFilters,
@@ -52,11 +49,7 @@ export function ContactsHeader({
         title: `Διαχείριση Επαφών${contactCount !== undefined ? ` (${contactCount})` : ''}`,
         subtitle: "Κεντρικό ευρετήριο όλων των επαφών σας"
       }}
-      search={{
-        value: searchTerm,
-        onChange: setSearchTerm,
-        placeholder: "Αναζήτηση επαφών..."
-      }}
+      // 🏢 ENTERPRISE: Search removed from header - using unified search in AdvancedFiltersPanel
       actions={{
         showDashboard,
         onDashboardToggle: () => setShowDashboard(!showDashboard),

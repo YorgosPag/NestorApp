@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Edit, Trash2, Home } from 'lucide-react';
+import { Edit, Trash2 } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useEmptyStateMessages } from '@/hooks/useEnterpriseMessages';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
@@ -72,7 +73,7 @@ export function UnitsSidebar({
         />
       }
       emptyStateProps={{
-        icon: Home,
+        icon: NAVIGATION_ENTITIES.unit.icon,
         ...emptyStateMessages.unit
       }}
     />

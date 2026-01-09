@@ -3,11 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Home, Ruler, Euro } from 'lucide-react';
+import { Ruler, Euro } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 import { getUnitsByOwner } from '@/services/units.service';
 import type { Property } from '@/types/property-viewer';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 
 interface CustomerStatsProps {
   contactId: string;
@@ -90,7 +94,7 @@ export function CustomerStats({ contactId }: CustomerStatsProps) {
         <h4 className="text-sm font-semibold mb-2">Στατιστικά Ιδιοκτησίας</h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <StatCard 
-                icon={Home}
+                icon={UnitIcon}
                 value={stats.unitsCount}
                 label="Αριθμός Μονάδων"
                 loading={false}

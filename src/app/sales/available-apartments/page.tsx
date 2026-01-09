@@ -4,18 +4,20 @@ import React from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import {
-  Home,
   DollarSign,
-  MapPin,
   Calendar,
   TrendingUp,
-  BarChart3,
   Eye,
   Users,
 } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon & Color
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+const unitColor = NAVIGATION_ENTITIES.unit.color;
 
 // Placeholder stats for Available Apartments
 const availableStats: DashboardStat[] = [
@@ -23,7 +25,7 @@ const availableStats: DashboardStat[] = [
     title: 'Διαθέσιμα Διαμερίσματα',
     value: '142',
     description: 'Προς πώληση τώρα',
-    icon: Home,
+    icon: NAVIGATION_ENTITIES.unit.icon,
     color: 'blue',
     trend: { value: -8, label: 'Μείωση' }
   },
@@ -66,7 +68,7 @@ export default function AvailableApartmentsPage() {
           <div className={`border-b ${colors.bg.primary}/95 backdrop-blur supports-[backdrop-filter]:${colors.bg.primary}/60`}>
             <div className="flex h-14 items-center px-4">
               <div className="flex items-center gap-2">
-                <Home className={`${iconSizes.md} ${colors.text.muted}`} />
+                <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
                 <h1 className="text-lg font-semibold">Διαθέσιμα Διαμερίσματα</h1>
               </div>
               <div className={`ml-auto text-sm ${colors.text.muted}`}>
@@ -89,7 +91,7 @@ export default function AvailableApartmentsPage() {
               <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
                   <div className={`p-2 ${colors.bg.info}/10 rounded-lg`}>
-                    <Home className={`${iconSizes.md} ${colors.text.info}`} />
+                    <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
                   </div>
                   <h3 className="font-semibold">Γκαρσονιέρες</h3>
                 </div>
@@ -117,7 +119,7 @@ export default function AvailableApartmentsPage() {
               <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
                   <div className={`p-2 ${colors.bg.success}/10 rounded-lg`}>
-                    <Home className={`${iconSizes.md} ${colors.text.success}`} />
+                    <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
                   </div>
                   <h3 className="font-semibold">Δυάρια</h3>
                 </div>
@@ -145,7 +147,7 @@ export default function AvailableApartmentsPage() {
               <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
                   <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
-                    <Home className={`${iconSizes.md} ${colors.text.warning}`} />
+                    <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
                   </div>
                   <h3 className="font-semibold">Τριάρια+</h3>
                 </div>
@@ -265,7 +267,7 @@ export default function AvailableApartmentsPage() {
             {/* Info Message */}
             <div className={`p-4 bg-muted/50 ${quick.card}`}>
               <div className="flex items-center gap-2 text-sm">
-                <Home className={iconSizes.sm} />
+                <UnitIcon className={`${iconSizes.sm} ${unitColor}`} />
                 <span className="font-medium">Διαθέσιμα Διαμερίσματα</span>
               </div>
               <p className="text-sm text-muted-foreground mt-1">

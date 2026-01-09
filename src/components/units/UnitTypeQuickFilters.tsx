@@ -28,11 +28,11 @@ import {
   LayoutGrid,
   BedSingle,
   Building2,
-  Home,
   Store,
   Briefcase,
   type LucideIcon
 } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
 // =============================================================================
 // 🏢 ENTERPRISE: Unit Type Quick Filters
@@ -49,11 +49,12 @@ interface UnitTypeOption {
 }
 
 // 🏢 ENTERPRISE: Standard icons used by major prop-tech companies
+// Using centralized NAVIGATION_ENTITIES for maisonette (multi-level unit = building icon)
 const UNIT_TYPE_OPTIONS: UnitTypeOption[] = [
   { value: 'all', label: 'Όλες', icon: LayoutGrid, tooltip: 'Εμφάνιση όλων των τύπων' },
   { value: 'studio', label: 'Studio', icon: BedSingle, tooltip: 'Studio / Γκαρσονιέρα' },
   { value: 'apartment', label: 'Διαμέρισμα', icon: Building2, tooltip: 'Διαμέρισμα' },
-  { value: 'maisonette', label: 'Μεζονέτα', icon: Home, tooltip: 'Μεζονέτα' },
+  { value: 'maisonette', label: 'Μεζονέτα', icon: NAVIGATION_ENTITIES.building.icon, tooltip: 'Μεζονέτα' },
   { value: 'shop', label: 'Κατάστημα', icon: Store, tooltip: 'Κατάστημα' },
   { value: 'office', label: 'Γραφείο', icon: Briefcase, tooltip: 'Γραφείο' },
 ];

@@ -1,14 +1,21 @@
 'use client';
 
 import React from 'react';
-import { Home, Euro, User } from 'lucide-react';
+import { Euro, User } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { UnitModel } from '../types';
+
 import { getStatusColor } from '../utils/status';
 import { getStatusLabel } from '@/constants/property-statuses-enterprise';
 import { formatCurrency } from '@/lib/intl-utils';
 import { HOVER_SHADOWS } from '@/components/ui/effects';
+
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon & Color
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+const unitColor = NAVIGATION_ENTITIES.unit.color;
 
 export const UnitNode = ({ unit }: { unit: UnitModel }) => {
   const { quick } = useBorderTokens();
@@ -20,7 +27,7 @@ export const UnitNode = ({ unit }: { unit: UnitModel }) => {
       <div className={`p-4 ${colors.bg.primary} ${quick.card} ${HOVER_SHADOWS.MEDIUM} transition-all`}>
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
-            <Home size={18} className={`${colors.text.muted} mt-1`} />
+            <UnitIcon size={18} className={`${unitColor} mt-1`} />
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className={`font-semibold ${colors.text.foreground}`}>{unit.name}</span>
@@ -30,7 +37,7 @@ export const UnitNode = ({ unit }: { unit: UnitModel }) => {
               </div>
               <div className={`flex items-center gap-4 text-sm ${colors.text.muted}`}>
                 <span className="flex items-center gap-1">
-                  <Home size={14} />
+                  <UnitIcon size={14} className={unitColor} />
                   {unit.area} m²
                 </span>
                 {unit.price && (

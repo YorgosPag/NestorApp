@@ -17,7 +17,8 @@ declare namespace GeoJSON {
 
 // ✅ ENTERPRISE FIX: Use React.RefObject<any> to avoid mapbox-gl type dependency
 type MapboxMap = any;
-import { MapPin, Hexagon, Hand, Trash2, Check, X, Bell, Home, Search, Building2, Settings } from 'lucide-react';
+import { MapPin, Hexagon, Hand, Trash2, Check, X, Bell, Search, Building2, Settings } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import {
   Select,
   SelectContent,
@@ -492,7 +493,7 @@ export function CitizenDrawingInterface({
             ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
           `}
         >
-          <Home className={`${iconSizes.xl} mb-2 ${colors.text.warning}`} />
+          <NAVIGATION_ENTITIES.unit.icon className={`${iconSizes.xl} mb-2 ${NAVIGATION_ENTITIES.unit.color}`} />
           <span className="text-sm font-medium">{t('drawingInterfaces.citizen.tools.realEstate')}</span>
           <span className={`text-xs ${colors.text.muted}`}>{t('drawingInterfaces.citizen.tools.realEstateDescription')}</span>
         </button>

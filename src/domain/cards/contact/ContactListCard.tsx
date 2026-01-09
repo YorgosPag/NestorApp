@@ -15,7 +15,9 @@
  */
 
 import React, { useMemo } from 'react';
-import { Mail, Phone, Briefcase, Building2, Users } from 'lucide-react';
+import { Briefcase } from 'lucide-react';
+// 🏢 ENTERPRISE: All icons from centralized NAVIGATION_ENTITIES
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
 // 🏢 DESIGN SYSTEM
 import { ListCard } from '@/design-system';
@@ -122,19 +124,21 @@ export function ContactListCard({
   const stats = useMemo<StatItem[]>(() => {
     const items: StatItem[] = [];
 
-    // Email
+    // Email - 🏢 ENTERPRISE: Using centralized email icon/color
     if (email) {
       items.push({
-        icon: Mail,
+        icon: NAVIGATION_ENTITIES.email.icon,
+        iconColor: NAVIGATION_ENTITIES.email.color,
         label: 'Email',
         value: email,
       });
     }
 
-    // Phone
+    // Phone - 🏢 ENTERPRISE: Using centralized phone icon/color
     if (phone) {
       items.push({
-        icon: Phone,
+        icon: NAVIGATION_ENTITIES.phone.icon,
+        iconColor: NAVIGATION_ENTITIES.phone.color,
         label: 'Τηλέφωνο',
         value: phone,
       });
@@ -147,9 +151,11 @@ export function ContactListCard({
         label: 'Επάγγελμα',
         value: contact.profession,
       });
+    // VAT Number - 🏢 ENTERPRISE: Using centralized vat icon/color
     } else if (isCompanyContact(contact) && contact.vatNumber) {
       items.push({
-        icon: Building2,
+        icon: NAVIGATION_ENTITIES.vat.icon,
+        iconColor: NAVIGATION_ENTITIES.vat.color,
         label: 'ΑΦΜ',
         value: contact.vatNumber,
       });
@@ -177,14 +183,29 @@ export function ContactListCard({
     return undefined;
   }, [contact]);
 
+  /** 🏢 ENTERPRISE: Get contact icon and color based on type */
+  const contactIconConfig = useMemo(() => {
+    const contactType = contact.type || 'individual';
+    switch (contactType) {
+      case 'individual':
+        return NAVIGATION_ENTITIES.contactIndividual;
+      case 'company':
+        return NAVIGATION_ENTITIES.contactCompany;
+      case 'service':
+        return NAVIGATION_ENTITIES.contactService;
+      default:
+        return NAVIGATION_ENTITIES.contactIndividual;
+    }
+  }, [contact.type]);
+
   // ==========================================================================
   // 🏢 RENDER
   // ==========================================================================
 
   return (
     <ListCard
-      customIcon={Users}
-      customIconColor="text-blue-600 dark:text-blue-400"
+      customIcon={contactIconConfig.icon}
+      customIconColor={contactIconConfig.color}
       title={displayName}
       subtitle={subtitle}
       badges={badges}

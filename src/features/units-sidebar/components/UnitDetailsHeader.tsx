@@ -3,11 +3,15 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { UnitBadge } from '@/core/badges';
-import { Home, Eye } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { cn } from '@/lib/utils';
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { Property } from '@/types/property-viewer';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon & Color
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 
 // Removed hardcoded getStatusColor and getStatusLabel functions - using centralized UnitBadge instead
 
@@ -17,7 +21,7 @@ export function UnitDetailsHeader({ unit }: { unit: Property | null }) {
     return (
       <div className="hidden md:block">
         <EntityDetailsHeader
-          icon={Home}
+          icon={UnitIcon}
           title="Επιλέξτε μια μονάδα"
           subtitle="Δεν έχει επιλεγεί μονάδα"
           variant="detailed"
@@ -33,7 +37,7 @@ export function UnitDetailsHeader({ unit }: { unit: Property | null }) {
       {/* 🖥️ DESKTOP: Show full header with actions */}
       <div className="hidden md:block">
         <EntityDetailsHeader
-          icon={Home}
+          icon={UnitIcon}
           title={unit.name}
           actions={[
             {

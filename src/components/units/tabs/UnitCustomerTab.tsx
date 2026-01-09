@@ -22,7 +22,12 @@
  */
 
 import React from 'react';
-import { User, Phone, Mail, Calendar, Home, FileText, AlertTriangle, ExternalLink, ArrowRight } from 'lucide-react';
+import { User, Phone, Mail, Calendar, FileText, AlertTriangle, ExternalLink, ArrowRight } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon & Color
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+const unitColor = NAVIGATION_ENTITIES.unit.color;
 import { formatDateTime, formatDate, formatCurrency } from '@/lib/intl-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -334,14 +339,14 @@ export function UnitCustomerTab({
       <Card className="m-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Home className={`${iconSizes.md} ${colors.text.info}`} />
+            <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
             Διαθέσιμη Μονάδα
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
             <div className={`${colors.bg.info} rounded-full ${iconSizes.xl4} flex items-center justify-center mx-auto mb-4`}>
-              <Home className={`${iconSizes.xl} ${colors.text.info}`} />
+              <UnitIcon className={`${iconSizes.xl} ${unitColor}`} />
             </div>
             <h3 className="font-semibold text-lg mb-2">
               Η μονάδα "{selectedUnit.name}" είναι διαθέσιμη
@@ -417,7 +422,7 @@ export function UnitCustomerTab({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Home className={`${iconSizes.md} ${colors.text.success}`} />
+            <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
             Στοιχεία Συναλλαγής
           </CardTitle>
         </CardHeader>
@@ -473,7 +478,7 @@ export function UnitCustomerTab({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Home className={`${iconSizes.md} ${colors.text.warning}`} />
+            <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
             Διαχείριση Σχέσης Ακινήτου
           </CardTitle>
         </CardHeader>
@@ -511,7 +516,7 @@ export function UnitCustomerTab({
             </Button>
 
             <Button variant="outline" className="justify-start h-auto p-4">
-              <Home className={`${iconSizes.md} mr-3 ${colors.text.info}`} />
+              <UnitIcon className={`${iconSizes.md} mr-3 ${unitColor}`} />
               <div className="text-left">
                 <div className="font-medium">Άλλα Ακίνητα</div>
                 <div className="text-sm text-muted-foreground">

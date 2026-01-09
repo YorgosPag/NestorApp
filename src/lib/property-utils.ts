@@ -1,9 +1,14 @@
 
-import { Home, Building } from "lucide-react";
 import { PROPERTY_STATUS_LABELS } from '@/constants/property-statuses-enterprise';
 import { borderVariants } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+
+// 🏢 ENTERPRISE: Centralized Icons
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+const BuildingIcon = NAVIGATION_ENTITIES.building.icon;
+const StorageIcon = NAVIGATION_ENTITIES.storage.icon;
 
 /**
  * 🏢 ENTERPRISE PROPERTY STATUS CONFIGURATION με SEMANTIC COLORS
@@ -74,13 +79,14 @@ export const getPropertyStatusConfig = (colors?: ReturnType<typeof useSemanticCo
 // Legacy export για backward compatibility
 export const PROPERTY_STATUS_CONFIG = getPropertyStatusConfig();
 
+// 🏢 ENTERPRISE: Centralized Property Type Icons - ZERO HARDCODED VALUES
 export const PROPERTY_TYPE_ICONS: { [key: string]: React.ElementType } = {
-  'Στούντιο': Home,
-  'Γκαρσονιέρα': Home,
-  'Διαμέρισμα 2Δ': Home,
-  'Διαμέρισμα 3Δ': Home,
-  'Μεζονέτα': Building,
-  'Κατάστημα': Building,
-  'Αποθήκη': Building,
-  'default': Home,
+  'Στούντιο': UnitIcon,
+  'Γκαρσονιέρα': UnitIcon,
+  'Διαμέρισμα 2Δ': UnitIcon,
+  'Διαμέρισμα 3Δ': UnitIcon,
+  'Μεζονέτα': BuildingIcon,
+  'Κατάστημα': BuildingIcon,
+  'Αποθήκη': StorageIcon,
+  'default': UnitIcon,
 };

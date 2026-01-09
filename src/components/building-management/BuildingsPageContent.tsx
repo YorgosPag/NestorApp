@@ -18,10 +18,10 @@ import {
   BarChart3,
   MapPin,
   Calendar,
-  Home,
   Edit,
   Trash2
 } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { BuildingsGroupedView } from './BuildingsPage/BuildingsGroupedView';
 import { useBuildingsPageState } from '@/hooks/useBuildingsPageState';
@@ -53,24 +53,10 @@ export function BuildingsPageContent() {
     setFilters,
   } = useBuildingsPageState(buildingsData);
 
-  // Search state (for header search)
-  const [searchTerm, setSearchTerm] = React.useState('');
-
   // Mobile-only filter toggle state
   const [showFilters, setShowFilters] = React.useState(false);
 
-  // Apply search to the already filtered buildings from hook
-  const finalFilteredBuildings = React.useMemo(() => {
-    if (!searchTerm.trim()) return baseFilteredBuildings;
-
-    return baseFilteredBuildings.filter(building =>
-      building.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      building.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      building.type?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [baseFilteredBuildings, searchTerm]);
-
-  const buildingsStats = useBuildingStats(finalFilteredBuildings);
+  const buildingsStats = useBuildingStats(baseFilteredBuildings);
 
   // 🔥 NEW: Dashboard card filtering state
   const [activeCardFilter, setActiveCardFilter] = React.useState<string | null>(null);
@@ -110,7 +96,7 @@ export function BuildingsPageContent() {
     {
       title: "Σύνολο Μονάδων",
       value: buildingsStats.totalUnits,
-      icon: Home,
+      icon: NAVIGATION_ENTITIES.unit.icon,
       color: "pink"
     }
   ];
@@ -190,8 +176,6 @@ export function BuildingsPageContent() {
           setViewMode={setViewMode}
           showDashboard={showDashboard}
           setShowDashboard={setShowDashboard}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
           showFilters={showFilters}
           setShowFilters={setShowFilters}
         />
@@ -229,7 +213,7 @@ export function BuildingsPageContent() {
               {/* 🖥️ DESKTOP: Standard split layout */}
               <section className="hidden md:flex flex-1 gap-4 min-h-0" role="region" aria-label="Προβολή Κτιρίων Desktop">
                 <BuildingsList
-                  buildings={finalFilteredBuildings}
+                  buildings={baseFilteredBuildings}
                   selectedBuilding={selectedBuilding!}
                   onSelectBuilding={setSelectedBuilding}
                 />
@@ -239,7 +223,7 @@ export function BuildingsPageContent() {
               {/* 📱 MOBILE: Show only BuildingsList when no building is selected */}
               <section className={`md:hidden w-full ${selectedBuilding ? 'hidden' : 'block'}`} role="region" aria-label="Λίστα Κτιρίων Mobile">
                 <BuildingsList
-                  buildings={finalFilteredBuildings}
+                  buildings={baseFilteredBuildings}
                   selectedBuilding={selectedBuilding!}
                   onSelectBuilding={setSelectedBuilding}
                 />
@@ -283,7 +267,7 @@ export function BuildingsPageContent() {
           ) : (
             <BuildingsGroupedView
               viewMode={viewMode}
-              filteredBuildings={finalFilteredBuildings}
+              filteredBuildings={baseFilteredBuildings}
               selectedBuilding={selectedBuilding}
               setSelectedBuilding={setSelectedBuilding}
             />

@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { Home, MapPin, SlidersHorizontal } from 'lucide-react';
+import { MapPin, SlidersHorizontal } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { usePublicPropertyViewer } from '@/hooks/usePublicPropertyViewer';
 import { PageHeader } from '@/core/headers';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
@@ -58,7 +59,7 @@ export function PropertyGridView() {
           variant="sticky"
           layout="multi-row"
           title={{
-            icon: Home,
+            icon: NAVIGATION_ENTITIES.unit.icon,
             title: "Διαθέσιμα Ακίνητα",
             subtitle: `Βρέθηκαν ${filteredProperties.length} ακίνητα`
           }}
@@ -135,7 +136,7 @@ export function PropertyGridView() {
             </div>
           ) : (
             <div className="text-center py-12 px-4 sm:px-0">
-              <Home className={`${iconSizes.xl} ${colors.text.muted} mx-auto mb-4`} />
+              {React.createElement(NAVIGATION_ENTITIES.unit.icon, { className: `${iconSizes.xl} ${colors.text.muted} mx-auto mb-4` })}
               <h3 className={`text-lg font-medium ${colors.text.primary} mb-2`}>Δεν βρέθηκαν ακίνητα</h3>
               <p className={colors.text.muted}>Δοκιμάστε να αλλάξετε τα κριτήρια αναζήτησης</p>
             </div>

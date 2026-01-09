@@ -3,7 +3,8 @@
 import React from 'react';
 import { TabsContent } from "@/components/ui/tabs";
 import { TabsOnlyTriggers } from "@/components/ui/navigation/TabsComponents";
-import { Home, CheckCircle, Target, MoreHorizontal } from 'lucide-react';
+import { CheckCircle, Target, MoreHorizontal } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { GeneralPlotDataTab, type PlotData } from './GeneralPlotDataTab';
 import { AllowedBuildingDataTab, type AllowedDataInput, type AllowedDataCalculated } from './AllowedBuildingDataTab';
 import { ActualBuildingDataTab, type ActualData, type CalculatedActualData } from './ActualBuildingDataTab';
@@ -36,7 +37,7 @@ export function BuildingDataTabs({
     {
       id: 'general-plot-data',
       label: 'Όροι Δόμησης Οικοπέδου',
-      icon: Home,
+      icon: NAVIGATION_ENTITIES.building.icon,
       content: (
         <GeneralPlotDataTab
           plotData={plotData}

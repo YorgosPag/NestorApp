@@ -2,11 +2,12 @@
 'use client';
 
 import React from 'react';
-import { Home } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { cn } from '@/lib/utils';
+// 🏢 ENTERPRISE: Centralized entity/action icons (ZERO hardcoded values)
+import { NAVIGATION_ENTITIES, NAVIGATION_ACTIONS } from '@/components/navigation/config';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
-import { Filter } from 'lucide-react';
 import { PropertyViewerFilters } from '@/components/property-viewer/PropertyViewerFilters';
 import type { FilterState } from '@/types/property-viewer';
 import { PageHeader } from '@/core/headers';
@@ -37,7 +38,7 @@ export function PropertyViewerHeader({
         variant="static"
         layout="single-row"
         title={{
-          icon: Home,
+          icon: NAVIGATION_ENTITIES.unit.icon,
           title: "Ευρετήριο Ακινήτων",
           subtitle: "Οπτική διαχείριση και ανάλυση ακινήτων σε κάτοψη."
         }}
@@ -57,8 +58,8 @@ export function PropertyViewerHeader({
         <Collapsible>
           <CollapsibleTrigger asChild>
             <Button variant="outline" className="w-full justify-start p-4 text-sm font-semibold">
-              <Filter className={`${iconSizes.sm} mr-2`}/>
-              Φίλτρα Αναζήτησης
+              <NAVIGATION_ACTIONS.filter.icon className={cn(iconSizes.sm, NAVIGATION_ACTIONS.filter.color, 'mr-2')}/>
+              {NAVIGATION_ACTIONS.filter.label} Αναζήτησης
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent>

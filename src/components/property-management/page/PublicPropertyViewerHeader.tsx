@@ -3,12 +3,15 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { LayoutGrid, List, Filter, ArrowLeft, Home, Search } from 'lucide-react';
+import { LayoutGrid, List, ArrowLeft, Home, Search } from 'lucide-react';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import type { FilterState } from '@/types/property-viewer';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects/hover-effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
+// 🏢 ENTERPRISE: Centralized action icons (ZERO hardcoded values)
+import { NAVIGATION_ACTIONS } from '@/components/navigation/config';
 
 interface PublicPropertyViewerHeaderProps {
   viewMode: 'list' | 'grid';
@@ -111,8 +114,8 @@ export function PublicPropertyViewerHeader({
         <Collapsible>
           <CollapsibleTrigger asChild>
             <Button variant="outline" className="w-full justify-start p-4 text-sm font-semibold">
-              <Filter className={`${iconSizes.sm} mr-2`}/>
-              Φίλτρα Αναζήτησης
+              <NAVIGATION_ACTIONS.filter.icon className={cn(iconSizes.sm, NAVIGATION_ACTIONS.filter.color, 'mr-2')}/>
+              {NAVIGATION_ACTIONS.filter.label} Αναζήτησης
               {(filters.searchTerm || filters.propertyType.length > 0 || filters.status.length > 0) && (
                 <span className="ml-2 px-2 py-1 bg-primary text-primary-foreground text-xs rounded-full">
                   Ενεργά

@@ -1,8 +1,11 @@
 'use client';
 
 import React from 'react';
-import { Home } from 'lucide-react';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 
 interface UnitsListHeaderProps {
     unitCount: number;
@@ -21,7 +24,7 @@ export function UnitsListHeader({
             {/* 🏢 ENTERPRISE CENTRALIZED GenericListHeader - ΜΙΑ ΠΗΓΗ ΑΛΗΘΕΙΑΣ */}
             {/* 🏢 local_4.log: hideSearch=true - Search is handled in CompactToolbar/list area */}
             <GenericListHeader
-                icon={Home}
+                icon={UnitIcon}
                 entityName="Μονάδες"
                 itemCount={unitCount}
                 hideSearch={true}

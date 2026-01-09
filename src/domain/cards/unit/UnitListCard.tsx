@@ -15,7 +15,8 @@
  */
 
 import React, { useMemo } from 'react';
-import { Ruler, Euro } from 'lucide-react';
+// 🏢 ENTERPRISE: All icons from centralized NAVIGATION_ENTITIES
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
 // 🏢 DESIGN SYSTEM
 import { ListCard } from '@/design-system';
@@ -113,25 +114,27 @@ export function UnitListCard({
   const stats = useMemo<StatItem[]>(() => {
     const items: StatItem[] = [];
 
-    // Area
+    // Area - 🏢 ENTERPRISE: Using centralized area icon/color
     if (unit.area) {
       items.push({
-        icon: Ruler,
+        icon: NAVIGATION_ENTITIES.area.icon,
+        iconColor: NAVIGATION_ENTITIES.area.color,
         label: 'Επιφάνεια',
         value: `${formatNumber(unit.area)} m²`,
       });
     }
 
-    // Price
+    // Price - 🏢 ENTERPRISE: Using centralized price icon/color
     if (unit.price && unit.price > 0) {
       items.push({
-        icon: Euro,
+        icon: NAVIGATION_ENTITIES.price.icon,
+        iconColor: NAVIGATION_ENTITIES.price.color,
         label: 'Τιμή',
         value: formatCurrency(unit.price, 'EUR', {
           minimumFractionDigits: 0,
           maximumFractionDigits: 0,
         }),
-        valueColor: 'text-green-600 dark:text-green-400',
+        valueColor: NAVIGATION_ENTITIES.price.color,
       });
     }
 

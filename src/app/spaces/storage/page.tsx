@@ -14,10 +14,11 @@ import {
   BarChart3,
   MapPin,
   Calendar,
-  Home,
+  PackageCheck,
   Edit,
   Trash2
 } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { useStoragesPageState } from '@/hooks/useStoragesPageState';
@@ -74,7 +75,7 @@ function StoragePageContent() {
     {
       title: UNIFIED_STATUS_FILTER_LABELS.OCCUPIED,
       value: stats.occupiedStorages,
-      icon: Home,
+      icon: PackageCheck,
       color: "purple"
     },
     {
@@ -92,7 +93,7 @@ function StoragePageContent() {
     {
       title: "Μοναδικά Κτίρια",
       value: stats.uniqueBuildings,
-      icon: Home,
+      icon: NAVIGATION_ENTITIES.building.icon,
       color: "pink"
     }
   ];

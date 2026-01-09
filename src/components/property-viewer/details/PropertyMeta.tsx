@@ -5,11 +5,10 @@ import { PropertyBadge } from '@/core/badges';
 import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Home, MapPin, Euro, Ruler, Edit3, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
-import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
+import { NAVIGATION_ENTITIES, NAVIGATION_ACTIONS } from '@/components/navigation/config/navigation-entities';
 import type { ExtendedPropertyDetails, Property } from '@/types/property-viewer';
 import { PROPERTY_STATUS_CONFIG } from '@/lib/property-utils';
 import { formatFloorLabel, formatCurrency } from '@/lib/intl-utils';
@@ -56,7 +55,8 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
           <span>{property.building}</span>
         </div>
         <div className="flex items-center gap-2 text-xs">
-          <MapPin className={`${iconSizes.xs} text-muted-foreground`} />
+          {/* 🏢 ENTERPRISE: Using centralized floor icon/color */}
+          <NAVIGATION_ENTITIES.floor.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.floor.color)} />
           <span>{formatFloorLabel(property.floor)}</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -70,8 +70,9 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
       <div className="space-y-2">
         {property.price && (
           <div className="flex items-center gap-2 text-sm">
-            <Euro className={`${iconSizes.sm} text-green-600`} />
-            <span className="font-semibold text-green-600">
+            {/* 🏢 ENTERPRISE: Using centralized price icon/color */}
+            <NAVIGATION_ENTITIES.price.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.price.color)} />
+            <span className={cn("font-semibold", NAVIGATION_ENTITIES.price.color)}>
               {formatCurrency(property.price)}
             </span>
           </div>
@@ -79,13 +80,14 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
         <div className="grid grid-cols-2 gap-2 text-xs">
           {property.area && (
             <div className="flex items-center gap-1">
-              <Ruler className={`${iconSizes.xs} text-muted-foreground`} />
+              {/* 🏢 ENTERPRISE: Using centralized area icon/color */}
+              <NAVIGATION_ENTITIES.area.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.area.color)} />
               <span>{property.area}τμ</span>
             </div>
           )}
           {property.rooms && (
             <div className="flex items-center gap-1">
-              <Home className={`${iconSizes.xs} text-muted-foreground`} />
+              <NAVIGATION_ENTITIES.unit.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.unit.color)} />
               <span>{property.rooms} δωμ.</span>
             </div>
           )}
@@ -126,15 +128,15 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
         </>
       )}
 
-      {/* Actions */}
+      {/* Actions - 🏢 ENTERPRISE: Using centralized action icons/colors */}
       <Separator />
       <div className="flex gap-2">
         <Button variant="outline" size="sm" className="flex-1">
-          <Eye className={`${iconSizes.xs} mr-1`} />
-          Προβολή
+          <NAVIGATION_ACTIONS.view.icon className={cn(iconSizes.xs, NAVIGATION_ACTIONS.view.color, 'mr-1')} />
+          {NAVIGATION_ACTIONS.view.label}
         </Button>
         <Button variant="outline" size="sm" className="flex-1" onClick={handleEditClick}>
-          <Edit3 className={`${iconSizes.xs} mr-1`} />
+          <NAVIGATION_ACTIONS.edit.icon className={cn(iconSizes.xs, NAVIGATION_ACTIONS.edit.color, 'mr-1')} />
           Επεξ.
         </Button>
       </div>

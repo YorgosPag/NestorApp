@@ -8,15 +8,20 @@ import {
   DollarSign,
   Calendar,
   TrendingUp,
-  Home,
   Package,
   Car,
   BarChart3,
   Users,
 } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
+
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+
+// 🏢 ENTERPRISE: Centralized Unit Icon & Color
+const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
+const unitColor = NAVIGATION_ENTITIES.unit.color;
 
 // Placeholder stats for Sold Properties
 const soldStats: DashboardStat[] = [
@@ -90,7 +95,7 @@ export default function SoldPropertiesPage() {
               <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
                   <div className={`p-2 ${colors.bg.success}/10 rounded-lg`}>
-                    <Home className={`${iconSizes.md} ${colors.text.success}`} />
+                    <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
                   </div>
                   <h3 className="font-semibold">Διαμερίσματα</h3>
                 </div>
