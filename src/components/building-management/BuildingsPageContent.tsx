@@ -29,7 +29,7 @@ import { useBuildingStats } from '@/hooks/useBuildingStats';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { getCompanies, getProjectsList } from './building-services';
 import { AdvancedFiltersPanel, buildingFiltersConfig } from '@/components/core/AdvancedFilters';
-import { ListContainer } from '@/core/containers';
+import { ListContainer, PageContainer } from '@/core/containers';
 
 // Re-export Building type for backward compatibility
 export type { Building } from '@/types/building/contracts';
@@ -140,14 +140,14 @@ export function BuildingsPageContent() {
   if (buildingsLoading) {
     return (
       <TooltipProvider>
-        <main className={`h-full flex flex-col ${colors.bg.primary}`} role="main" aria-label="Φόρτωση Κτιρίων">
+        <PageContainer ariaLabel="Φόρτωση Κτιρίων">
           <section className="flex-1 flex items-center justify-center" role="status" aria-live="polite">
             <div className="text-center">
               <AnimatedSpinner size="large" className="mx-auto mb-4" />
               <p>Φόρτωση κτιρίων από Firestore...</p>
             </div>
           </section>
-        </main>
+        </PageContainer>
       </TooltipProvider>
     );
   }
@@ -156,21 +156,21 @@ export function BuildingsPageContent() {
   if (buildingsError) {
     return (
       <TooltipProvider>
-        <main className={`h-full flex flex-col ${colors.bg.primary}`} role="main" aria-label="Σφάλμα Κτιρίων">
+        <PageContainer ariaLabel="Σφάλμα Κτιρίων">
           <section className="flex-1 flex items-center justify-center" role="alert" aria-label="Σφάλμα Φόρτωσης">
             <div className="text-center text-red-500">
               <p className="mb-4">❌ Σφάλμα φόρτωσης κτιρίων:</p>
               <p className="text-sm">{buildingsError}</p>
             </div>
           </section>
-        </main>
+        </PageContainer>
       </TooltipProvider>
     );
   }
 
   return (
     <TooltipProvider>
-      <main className={`h-full flex flex-col ${colors.bg.primary}`} role="main" aria-label="Διαχείριση Κτιρίων">
+      <PageContainer ariaLabel="Διαχείριση Κτιρίων">
         <BuildingsHeader
           viewMode={viewMode}
           setViewMode={setViewMode}
@@ -273,7 +273,7 @@ export function BuildingsPageContent() {
             />
           )}
         </ListContainer>
-      </main>
+      </PageContainer>
     </TooltipProvider>
   );
 }

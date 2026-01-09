@@ -79,6 +79,15 @@
     --dropdown-top: 0px;
     --dropdown-left: 0px;
     --dropdown-width: 0px;
+
+    /* 🏢 ENTERPRISE: Entity List Column Tokens (SINGLE SOURCE OF TRUTH)
+       @see src/styles/design-tokens.ts - ENTITY_LIST_TOKENS
+       @see src/core/containers/EntityListColumn.tsx
+       These values are used via CSS variables to ensure Tailwind JIT generates
+       the required CSS classes (static class names, not template literals) */
+    --entity-list-min: 300px;
+    --entity-list-max: 420px;
+    --entity-list-scrollbar-space: 8px;
   }
 
   .dark {
@@ -146,6 +155,12 @@
     --dropdown-top: 0px;
     --dropdown-left: 0px;
     --dropdown-width: 0px;
+
+    /* 🏢 ENTERPRISE: Entity List Column Tokens - Dark Mode (same values)
+       @see src/styles/design-tokens.ts - ENTITY_LIST_TOKENS */
+    --entity-list-min: 300px;
+    --entity-list-max: 420px;
+    --entity-list-scrollbar-space: 8px;
   }
 }
 
@@ -260,12 +275,14 @@
   }
 
   /* Prevent horizontal overflow on mobile */
+  /* 🏢 ENTERPRISE FIX: Removed 'div' from selector - it was overriding
+     Tailwind max-w-[...] classes and causing EntityListColumn to be full-width.
+     @see local_4.log analysis for details */
   .container,
   [class*="container"],
   header,
   main,
-  section,
-  div {
+  section {
     max-width: 100%;
     overflow-x: hidden;
   }
@@ -285,7 +302,8 @@
     }
 
     /* Constrain all text elements */
-    h1, h2, h3, h4, h5, h6, p, span, div {
+    /* 🏢 ENTERPRISE FIX: Removed 'div' - it overrides Tailwind max-w-[...] classes */
+    h1, h2, h3, h4, h5, h6, p, span {
       max-width: 100% !important;
       word-wrap: break-word !important;
       overflow-wrap: break-word !important;

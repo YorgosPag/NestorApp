@@ -8,7 +8,7 @@ import { useProjectsPageState } from '@/hooks/useProjectsPageState';
 import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
 import { getCompanies } from '@/components/building-management/building-services';
 import { AdvancedFiltersPanel, projectFiltersConfig } from '@/components/core/AdvancedFilters';
-import { ListContainer } from '@/core/containers';
+import { ListContainer, PageContainer } from '@/core/containers';
 import { useProjectsStats } from '@/hooks/useProjectsStats';
 import { projectsConfig } from '@/components/core/CompactToolbar';
 
@@ -125,19 +125,19 @@ export function ProjectsPageContent() {
   // Εμφάνιση loading state
   if (loading) {
     return (
-      <main className="h-full flex items-center justify-center" role="main" aria-label="Φόρτωση Έργων">
+      <PageContainer ariaLabel="Φόρτωση Έργων" className="items-center justify-center">
         <section className="text-center" role="status" aria-live="polite">
           <AnimatedSpinner size="large" className="mx-auto mb-4" />
           <p>Φόρτωση έργων από βάση δεδομένων...</p>
         </section>
-      </main>
+      </PageContainer>
     );
   }
 
   // Εμφάνιση error state
   if (error) {
     return (
-      <main className="h-full flex items-center justify-center" role="main" aria-label="Σφάλμα Έργων">
+      <PageContainer ariaLabel="Σφάλμα Έργων" className="items-center justify-center">
         <section className="text-center text-red-600" role="alert" aria-label="Σφάλμα Φόρτωσης">
           <p>Σφάλμα φόρτωσης έργων: {error}</p>
           <button
@@ -147,13 +147,13 @@ export function ProjectsPageContent() {
             Δοκιμή ξανά
           </button>
         </section>
-      </main>
+      </PageContainer>
     );
   }
   
   return (
     <TooltipProvider>
-      <main className={`h-full flex flex-col ${colors.bg.primary}`} role="main" aria-label="Διαχείριση Έργων">
+      <PageContainer ariaLabel="Διαχείριση Έργων">
         <ProjectsHeader
             viewMode={viewMode}
             setViewMode={setViewMode}
@@ -202,7 +202,7 @@ export function ProjectsPageContent() {
             onSelectProject={setSelectedProject}
           />
         </ListContainer>
-      </main>
+      </PageContainer>
     </TooltipProvider>
   );
 }

@@ -14,6 +14,7 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PageContainer } from '@/core/containers';
 
 // 🏢 ENTERPRISE: Centralized Unit Icon & Color
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
@@ -61,10 +62,8 @@ export default function AvailableApartmentsPage() {
   const colors = useSemanticColors();
   return (
     <TooltipProvider>
-      <div className={`flex h-screen ${colors.bg.primary}`}>
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
+      <PageContainer fullScreen ariaLabel="Διαθέσιμα Διαμερίσματα">
+        {/* Header */}
           <div className={`border-b ${colors.bg.primary}/95 backdrop-blur supports-[backdrop-filter]:${colors.bg.primary}/60`}>
             <div className="flex h-14 items-center px-4">
               <div className="flex items-center gap-2">
@@ -77,8 +76,8 @@ export default function AvailableApartmentsPage() {
             </div>
           </div>
 
-          {/* Dashboard Stats */}
-          <div className="p-6 space-y-6">
+          {/* Dashboard Stats - Scrollable Content Area */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
             <UnifiedDashboard
               title="Διαθέσιμα Διαμερίσματα - Επισκόπηση"
               stats={availableStats}
@@ -276,8 +275,7 @@ export default function AvailableApartmentsPage() {
               </p>
             </div>
           </div>
-        </div>
-      </div>
+      </PageContainer>
     </TooltipProvider>
   );
 }

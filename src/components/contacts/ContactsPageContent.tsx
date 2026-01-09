@@ -36,7 +36,7 @@ import { EditContactDialog } from './dialogs/EditContactDialog';
 import { DeleteContactDialog } from './dialogs/DeleteContactDialog';
 import { ArchiveContactDialog } from './dialogs/ArchiveContactDialog';
 import { AdvancedFiltersPanel, type ContactFilterState, contactFiltersConfig } from '@/components/core/AdvancedFilters';
-import { ListContainer } from '@/core/containers';
+import { ListContainer, PageContainer } from '@/core/containers';
 import { MobileCompactHeader } from '@/core/headers';
 import { CompactToolbar, contactsConfig } from '@/components/core/CompactToolbar';
 import { Button } from '@/components/ui/button';
@@ -582,7 +582,7 @@ export function ContactsPageContent() {
 
   return (
     <TooltipProvider>
-      <main className={`h-full flex flex-col ${colors.bg.primary} w-full overflow-hidden`} role="main" aria-label="Διαχείριση Επαφών">
+      <PageContainer ariaLabel="Διαχείριση Επαφών">
         {/* Main Header - Works for both desktop and mobile */}
         {/* 🏢 ENTERPRISE: Search removed from header - using unified search in AdvancedFiltersPanel */}
         <ContactsHeader
@@ -756,7 +756,7 @@ export function ContactsPageContent() {
           selectedContactIds={selectedContactIds}
           onContactsArchived={handleContactsArchived}
         />
-      </main>
+      </PageContainer>
     </TooltipProvider>
   );
 }

@@ -12,6 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Car } from 'lucide-react';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 import { ParkingsListHeader } from './ParkingsListHeader';
 // 🏢 ENTERPRISE: Using centralized domain card
@@ -31,6 +32,7 @@ export function ParkingsList({
   onSelectParking,
 }: ParkingsListProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [favorites, setFavorites] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'name' | 'area' | 'price' | 'status' | 'floor' | 'type'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -106,7 +108,7 @@ export function ParkingsList({
   });
 
   return (
-    <div className="min-w-[300px] max-w-[420px] w-full bg-card border rounded-lg flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden">
+    <div className={`min-w-[300px] max-w-[420px] w-full bg-card border ${quick.card} flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden`}>
       <ParkingsListHeader
         parkingSpots={parkingSpots}
         searchTerm={searchTerm}

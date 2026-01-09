@@ -16,6 +16,7 @@ import {
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PageContainer } from '@/core/containers';
 
 // Placeholder stats for Available Parking
 const parkingStats: DashboardStat[] = [
@@ -59,10 +60,8 @@ export default function AvailableParkingPage() {
   const colors = useSemanticColors();
   return (
     <TooltipProvider>
-      <div className={`flex h-screen ${colors.bg.primary}`}>
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
+      <PageContainer fullScreen ariaLabel="Διαθέσιμα Parking">
+        {/* Header */}
           <div className={`border-b ${colors.bg.primary}/95 backdrop-blur supports-[backdrop-filter]:${colors.bg.primary}/60`}>
             <div className="flex h-14 items-center px-4">
               <div className="flex items-center gap-2">
@@ -75,8 +74,8 @@ export default function AvailableParkingPage() {
             </div>
           </div>
 
-          {/* Dashboard Stats */}
-          <div className="p-6 space-y-6">
+          {/* Dashboard Stats - Scrollable Content Area */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
             <UnifiedDashboard
               title="Διαθέσιμα Parking - Επισκόπηση"
               stats={parkingStats}
@@ -297,8 +296,7 @@ export default function AvailableParkingPage() {
               </p>
             </div>
           </div>
-        </div>
-      </div>
+      </PageContainer>
     </TooltipProvider>
   );
 }

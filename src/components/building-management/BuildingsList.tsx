@@ -96,7 +96,7 @@ export function BuildingsList({
   });
 
   return (
-    <div className={`min-w-[300px] max-w-[420px] w-full bg-card ${quick.card} flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden`}>
+    <div className={`min-w-[300px] max-w-[420px] w-full bg-card border ${quick.card} flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden`}>
       <BuildingsListHeader
         buildingCount={buildings.length}
         showToolbar={showToolbar}

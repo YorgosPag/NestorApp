@@ -15,7 +15,7 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { StatusCard } from '@/components/property-management/dashboard/StatusCard';
 import { DetailsCard } from '@/components/property-management/dashboard/DetailsCard';
 import { AdvancedFiltersPanel, unitFiltersConfig, defaultUnitFilters, type UnitFilterState } from '@/components/core/AdvancedFilters';
-import { ListContainer } from '@/core/containers';
+import { ListContainer, PageContainer } from '@/core/containers';
 import { UnitsSidebar } from '@/components/units/UnitsSidebar';
 import { PropertyGridViewCompatible as PropertyGridView } from '@/components/property-viewer/PropertyGrid';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
@@ -262,7 +262,7 @@ function UnitsPageContent() {
 
   return (
     <TooltipProvider>
-      <div className={`h-full flex flex-col ${colors.bg.primary}`}>
+      <PageContainer ariaLabel="Διαχείριση Μονάδων">
         <UnitsHeader
           viewMode={viewMode as 'list' | 'grid'}
           setViewMode={setViewMode}
@@ -342,7 +342,7 @@ function UnitsPageContent() {
             {/* Placeholder for VersionHistoryPanel */}
           </div>
         )}
-      </div>
+      </PageContainer>
     </TooltipProvider>
   );
 }

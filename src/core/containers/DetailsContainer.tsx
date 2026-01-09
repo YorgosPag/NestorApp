@@ -39,11 +39,17 @@ interface DetailsContainerProps {
  * Βασισμένο στη συμπεριφορά του UnitsSidebar details container.
  *
  * Architecture:
- * - Header fixed στην κορυφή
- * - Tabs με shrink-0 και border-b px-4
- * - Content expandable με GenericTabsRenderer
+ * - Header fixed στην κορυφή (shrink-0)
+ * - Content area με flex-1 overflow-y-auto για internal scrolling
+ * - Tabs μέσα στο scrollable content area
  * - min-h-0 σε πολλαπλά επίπεδα για proper flex behavior
+ * - overflow-hidden στο outer για να μην scroll το parent
  * - Unified empty state για όλους τους τύπους
+ *
+ * 🔒 SCROLL BEHAVIOR:
+ * - Το outer div έχει overflow-hidden (δεν scroll)
+ * - Μόνο το content area κάνει scroll (overflow-y-auto)
+ * - Ταυτόσιμη συμπεριφορά με ListContainer
  */
 export function DetailsContainer({
   children,
@@ -57,15 +63,17 @@ export function DetailsContainer({
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-card border rounded-lg shadow-sm">
-      {/* Fixed Header */}
-      {header}
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-card border rounded-lg shadow-sm">
+      {/* Fixed Header - Never scrolls */}
+      <div className="shrink-0">
+        {header}
+      </div>
 
-      {/* Expandable Content */}
-      <div className="flex-1 flex flex-col min-h-0">
+      {/* Scrollable Content Area */}
+      <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
         {/* Tabs Section (if provided) */}
         {tabsRenderer && (
-          <div className="shrink-0 px-4">
+          <div className="px-4">
             {tabsRenderer}
           </div>
         )}

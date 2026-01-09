@@ -1304,30 +1304,48 @@ const ENTITY_LIST_PRIMITIVES = {
  * 🏢 ENTITY_LIST_TOKENS
  *
  * Centralized tokens for entity list columns (Buildings, Contacts, Units, etc.)
- * All Tailwind classes are DERIVED from ENTITY_LIST_PRIMITIVES.
+ *
+ * ⚠️ CRITICAL: Tailwind classes MUST be STATIC strings (not template literals)!
+ * Template literals like `min-w-[${VALUE}px]` are NOT detected by Tailwind JIT
+ * and no CSS will be generated - causing full-width layouts.
+ *
+ * ✅ SOLUTION: Use CSS variables with static class names:
+ *    min-w-[var(--entity-list-min)] instead of min-w-[${VALUE}px]
+ *
+ * CSS Variables defined in: src/app/globals.css
+ *   --entity-list-min: 300px
+ *   --entity-list-max: 420px
+ *   --entity-list-scrollbar-space: 8px
  *
  * @enterprise Fortune 500 compliant - Autodesk/Bentley/Google standard
- * @see ENTITY_LIST_PRIMITIVES for source values
+ * @see ENTITY_LIST_PRIMITIVES for numeric values (kept for reference)
+ * @see src/app/globals.css for CSS variable definitions
  * @see src/core/containers/EntityListColumn.tsx - Component that uses these tokens
  * @author Enterprise Architecture Team
  * @since 2026-01-09
  */
 export const ENTITY_LIST_TOKENS = {
-  /** 🏢 RAW NUMERIC VALUES - Direct access to primitives */
+  /** 🏢 RAW NUMERIC VALUES - Direct access to primitives (for reference only) */
   values: ENTITY_LIST_PRIMITIVES,
 
-  /** Width constraints for list columns - DERIVED from primitives */
+  /**
+   * Width constraints for list columns
+   * ✅ STATIC class names using CSS variables - Tailwind JIT compatible
+   */
   width: {
-    min: `min-w-[${ENTITY_LIST_PRIMITIVES.MIN_WIDTH}px]`,
-    max: `max-w-[${ENTITY_LIST_PRIMITIVES.MAX_WIDTH}px]`,
-    /** Combined width classes - DERIVED from min/max */
-    combined: `min-w-[${ENTITY_LIST_PRIMITIVES.MIN_WIDTH}px] max-w-[${ENTITY_LIST_PRIMITIVES.MAX_WIDTH}px]`,
+    min: 'min-w-[var(--entity-list-min)]',
+    max: 'max-w-[var(--entity-list-max)]',
+    /** Combined width classes */
+    combined: 'min-w-[var(--entity-list-min)] max-w-[var(--entity-list-max)]',
   },
 
-  /** 🏢 CARD DIMENSIONS - For items inside list, DERIVED from primitives */
+  /**
+   * 🏢 CARD DIMENSIONS - For items inside list
+   * ✅ STATIC class names using CSS variables - Tailwind JIT compatible
+   */
   card: {
     /** Width accounting for scrollbar space on hover */
-    width: `w-[calc(100%-${ENTITY_LIST_PRIMITIVES.SCROLLBAR_SPACE}px)]`,
+    width: 'w-[calc(100%-var(--entity-list-scrollbar-space))]',
     /** Full width without scrollbar compensation */
     fullWidth: 'w-full',
   },

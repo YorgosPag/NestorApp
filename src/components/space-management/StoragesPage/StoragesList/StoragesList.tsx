@@ -5,6 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Warehouse } from 'lucide-react';
 import type { Storage } from '@/types/storage/contracts';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 import { StoragesListHeader } from './StoragesListHeader';
 // 🏢 ENTERPRISE: Using centralized domain card
@@ -24,6 +25,7 @@ export function StoragesList({
   onSelectStorage,
 }: StoragesListProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [favorites, setFavorites] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'name' | 'area' | 'price' | 'status' | 'building' | 'type'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -100,7 +102,7 @@ export function StoragesList({
   });
 
   return (
-    <div className="min-w-[300px] max-w-[420px] w-full bg-card border rounded-lg flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden">
+    <div className={`min-w-[300px] max-w-[420px] w-full bg-card border ${quick.card} flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden`}>
       <StoragesListHeader
         storages={storages}
         searchTerm={searchTerm}

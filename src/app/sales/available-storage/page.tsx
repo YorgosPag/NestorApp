@@ -16,6 +16,7 @@ import {
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { PageContainer } from '@/core/containers';
 
 // Placeholder stats for Available Storage
 const storageStats: DashboardStat[] = [
@@ -59,10 +60,8 @@ export default function AvailableStoragePage() {
   const colors = useSemanticColors();
   return (
     <TooltipProvider>
-      <div className={`flex h-screen ${colors.bg.primary}`}>
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
+      <PageContainer fullScreen ariaLabel="Διαθέσιμες Αποθήκες">
+        {/* Header */}
           <div className={`border-b ${colors.bg.primary}/95 backdrop-blur supports-[backdrop-filter]:${colors.bg.primary}/60`}>
             <div className="flex h-14 items-center px-4">
               <div className="flex items-center gap-2">
@@ -75,8 +74,8 @@ export default function AvailableStoragePage() {
             </div>
           </div>
 
-          {/* Dashboard Stats */}
-          <div className="p-6 space-y-6">
+          {/* Dashboard Stats - Scrollable Content Area */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
             <UnifiedDashboard
               title="Διαθέσιμες Αποθήκες - Επισκόπηση"
               stats={storageStats}
@@ -286,8 +285,7 @@ export default function AvailableStoragePage() {
               </p>
             </div>
           </div>
-        </div>
-      </div>
+      </PageContainer>
     </TooltipProvider>
   );
 }
