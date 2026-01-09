@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Warehouse } from 'lucide-react';
 import type { Storage } from '@/types/storage/contracts';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { EntityListColumn } from '@/core/containers';
+import { matchesSearchTerm } from '@/lib/search/search';
 
 import { StoragesListHeader } from './StoragesListHeader';
 // 🏢 ENTERPRISE: Using centralized domain card
@@ -25,7 +26,6 @@ export function StoragesList({
   onSelectStorage,
 }: StoragesListProps) {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
   const [favorites, setFavorites] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'name' | 'area' | 'price' | 'status' | 'building' | 'type'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -42,21 +42,25 @@ export function StoragesList({
     );
   };
 
-  // Filter storages based on search term
-  const filteredStorages = storages.filter(storage => {
-    if (!searchTerm) return true;
-
-    const searchLower = searchTerm.toLowerCase();
-
-    // Search in storage name, description, building, and other relevant fields
-    return storage.name.toLowerCase().includes(searchLower) ||
-           (storage.description && storage.description.toLowerCase().includes(searchLower)) ||
-           storage.building.toLowerCase().includes(searchLower) ||
-           storage.floor.toLowerCase().includes(searchLower) ||
-           storage.type.toLowerCase().includes(searchLower) ||
-           storage.status.toLowerCase().includes(searchLower) ||
-           (storage.owner && storage.owner.toLowerCase().includes(searchLower));
-  });
+  // 🏢 ENTERPRISE: Filter storages using centralized search
+  const filteredStorages = useMemo(() => {
+    return storages.filter(storage =>
+      matchesSearchTerm(
+        [
+          storage.name,
+          storage.description,
+          storage.building,
+          storage.floor,      // number OK
+          storage.type,
+          storage.status,
+          storage.owner,
+          storage.area,       // number OK
+          storage.price       // number OK
+        ],
+        searchTerm
+      )
+    );
+  }, [storages, searchTerm]);
 
   const sortedStorages = [...filteredStorages].sort((a, b) => {
     let aValue, bValue;
@@ -102,9 +106,9 @@ export function StoragesList({
   });
 
   return (
-    <div className={`min-w-[300px] max-w-[420px] w-full bg-card border ${quick.card} flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden`}>
+    <EntityListColumn hasBorder aria-label="Λίστα Αποθηκών">
       <StoragesListHeader
-        storages={storages}
+        storages={sortedStorages}  // 🏢 ENTERPRISE: Περνάμε filtered results για δυναμικό count
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         showToolbar={showToolbar}
@@ -117,8 +121,8 @@ export function StoragesList({
           config={storagesToolbarConfig}
           selectedItems={selectedItems}
           onSelectionChange={setSelectedItems}
-          searchTerm=""
-          onSearchChange={() => {}}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
           activeFilters={activeFilters}
           onFiltersChange={setActiveFilters}
           sortBy={sortBy}
@@ -141,8 +145,8 @@ export function StoragesList({
             config={storagesToolbarConfig}
             selectedItems={selectedItems}
             onSelectionChange={setSelectedItems}
-            searchTerm=""
-            onSearchChange={() => {}}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
             activeFilters={activeFilters}
             onFiltersChange={setActiveFilters}
             sortBy={sortBy}
@@ -183,6 +187,6 @@ export function StoragesList({
           )}
         </div>
       </ScrollArea>
-    </div>
+    </EntityListColumn>
   );
 }

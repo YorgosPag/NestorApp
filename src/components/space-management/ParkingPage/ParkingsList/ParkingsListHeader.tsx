@@ -48,32 +48,8 @@ export function ParkingsListHeader({
         searchPlaceholder="Αναζήτηση θέσεων..."
         showToolbar={showToolbar}
         onToolbarToggle={onToolbarToggle}
+        hideSearch={true}  // 🏢 ENTERPRISE: Κρύβουμε το search - χρησιμοποιούμε το CompactToolbar search
       />
-
-      <div className="px-4 pb-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20">
-        <div className="grid grid-cols-2 gap-3 text-xs">
-          <div className="flex items-center gap-1">
-            <CheckCircle className={`${iconSizes.xs} text-green-600`} />
-            <span className="text-muted-foreground">Διαθέσιμες:</span>
-            <span className="font-medium">{availableCount}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <TrendingUp className={`${iconSizes.xs} text-blue-600`} />
-            <span className="text-muted-foreground">Πωλημένες:</span>
-            <span className="font-medium">{soldCount}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <DollarSign className={`${iconSizes.xs} text-green-600`} />
-            <span className="text-muted-foreground">Συν. Αξία:</span>
-            <span className="font-medium">{(totalValue / 1000).toFixed(0)}K€</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Car className={`${iconSizes.xs} text-orange-600`} />
-            <span className="text-muted-foreground">Συν. Επιφάνεια:</span>
-            <span className="font-medium">{totalArea.toFixed(0)} m²</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

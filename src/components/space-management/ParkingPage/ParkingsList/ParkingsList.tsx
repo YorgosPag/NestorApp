@@ -7,12 +7,13 @@
  * Ακολουθεί το exact pattern από StoragesList.tsx
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Car } from 'lucide-react';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { EntityListColumn } from '@/core/containers';
+import { matchesSearchTerm } from '@/lib/search/search';
 
 import { ParkingsListHeader } from './ParkingsListHeader';
 // 🏢 ENTERPRISE: Using centralized domain card
@@ -32,7 +33,6 @@ export function ParkingsList({
   onSelectParking,
 }: ParkingsListProps) {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
   const [favorites, setFavorites] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'name' | 'area' | 'price' | 'status' | 'floor' | 'type'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -49,19 +49,24 @@ export function ParkingsList({
     );
   };
 
-  // Filter parking spots based on search term
-  const filteredParkingSpots = parkingSpots.filter(parking => {
-    if (!searchTerm) return true;
-
-    const searchLower = searchTerm.toLowerCase();
-
-    return parking.number?.toLowerCase().includes(searchLower) ||
-           parking.location?.toLowerCase().includes(searchLower) ||
-           parking.floor?.toLowerCase().includes(searchLower) ||
-           parking.type?.toLowerCase().includes(searchLower) ||
-           parking.status?.toLowerCase().includes(searchLower) ||
-           parking.notes?.toLowerCase().includes(searchLower);
-  });
+  // 🏢 ENTERPRISE: Filter parking spots using centralized search
+  const filteredParkingSpots = useMemo(() => {
+    return parkingSpots.filter(parking =>
+      matchesSearchTerm(
+        [
+          parking.number,
+          parking.location,
+          parking.floor,
+          parking.type,
+          parking.status,
+          parking.notes,
+          parking.area,       // number OK
+          parking.price       // number OK
+        ],
+        searchTerm
+      )
+    );
+  }, [parkingSpots, searchTerm]);
 
   const sortedParkingSpots = [...filteredParkingSpots].sort((a, b) => {
     let aValue: string | number;
@@ -85,8 +90,14 @@ export function ParkingsList({
         bValue = (b.status || '').toLowerCase();
         break;
       case 'floor':
-        aValue = (a.floor || '').toLowerCase();
-        bValue = (b.floor || '').toLowerCase();
+        // 🏢 ENTERPRISE: Handle floor as number or string safely
+        if (typeof a.floor === 'number' && typeof b.floor === 'number') {
+          aValue = a.floor;
+          bValue = b.floor;
+        } else {
+          aValue = String(a.floor || '').toLowerCase();
+          bValue = String(b.floor || '').toLowerCase();
+        }
         break;
       case 'type':
         aValue = (a.type || '').toLowerCase();
@@ -108,9 +119,9 @@ export function ParkingsList({
   });
 
   return (
-    <div className={`min-w-[300px] max-w-[420px] w-full bg-card border ${quick.card} flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden`}>
+    <EntityListColumn hasBorder aria-label="Λίστα Θέσεων Στάθμευσης">
       <ParkingsListHeader
-        parkingSpots={parkingSpots}
+        parkingSpots={sortedParkingSpots}  // 🏢 ENTERPRISE: Περνάμε filtered results για δυναμικό count
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         showToolbar={showToolbar}
@@ -123,8 +134,8 @@ export function ParkingsList({
           config={parkingToolbarConfig}
           selectedItems={selectedItems}
           onSelectionChange={setSelectedItems}
-          searchTerm=""
-          onSearchChange={() => {}}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
           activeFilters={activeFilters}
           onFiltersChange={setActiveFilters}
           sortBy={sortBy}
@@ -147,8 +158,8 @@ export function ParkingsList({
             config={parkingToolbarConfig}
             selectedItems={selectedItems}
             onSelectionChange={setSelectedItems}
-            searchTerm=""
-            onSearchChange={() => {}}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
             activeFilters={activeFilters}
             onFiltersChange={setActiveFilters}
             sortBy={sortBy}
@@ -189,6 +200,6 @@ export function ParkingsList({
           )}
         </div>
       </ScrollArea>
-    </div>
+    </EntityListColumn>
   );
 }

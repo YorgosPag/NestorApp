@@ -1,9 +1,10 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { EntityListColumn } from '@/core/containers';
+import { matchesSearchTerm } from '@/lib/search/search';
 import type { Building } from './BuildingsPageContent';
 
 import { BuildingsListHeader } from './BuildingsList/BuildingsListHeader';
@@ -23,7 +24,6 @@ export function BuildingsList({
   selectedBuilding,
   onSelectBuilding,
 }: BuildingsListProps) {
-  const { quick } = useBorderTokens();
   const [favorites, setFavorites] = useState<string[]>(['1']);
   const [sortBy, setSortBy] = useState<'name' | 'progress' | 'value' | 'area' | 'date'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -40,19 +40,23 @@ export function BuildingsList({
     );
   };
 
-  // Filter buildings based on search term
-  const filteredBuildings = buildings.filter(building => {
-    if (!searchTerm) return true;
-
-    const searchLower = searchTerm.toLowerCase();
-
-    // Search in building name, description, location, and other relevant fields
-    return building.name.toLowerCase().includes(searchLower) ||
-           (building.description && building.description.toLowerCase().includes(searchLower)) ||
-           (building.location && building.location.toLowerCase().includes(searchLower)) ||
-           (building.address && building.address.toLowerCase().includes(searchLower)) ||
-           (building.status && building.status.toLowerCase().includes(searchLower));
-  });
+  // 🏢 ENTERPRISE: Filter buildings using centralized search
+  const filteredBuildings = useMemo(() => {
+    return buildings.filter(building =>
+      matchesSearchTerm(
+        [
+          building.name,
+          building.description,
+          building.location,
+          building.address,
+          building.status,
+          building.floors,  // number OK
+          building.units    // number OK
+        ],
+        searchTerm
+      )
+    );
+  }, [buildings, searchTerm]);
 
   const sortedBuildings = [...filteredBuildings].sort((a, b) => {
     let aValue, bValue;
@@ -96,9 +100,9 @@ export function BuildingsList({
   });
 
   return (
-    <div className={`min-w-[300px] max-w-[420px] w-full bg-card border ${quick.card} flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden`}>
+    <EntityListColumn hasBorder aria-label="Λίστα Κτιρίων">
       <BuildingsListHeader
-        buildingCount={buildings.length}
+        buildingCount={sortedBuildings.length}  // 🏢 ENTERPRISE: Δυναμικό count με filtered results
         showToolbar={showToolbar}
         onToolbarToggle={setShowToolbar}
       />
@@ -165,6 +169,6 @@ export function BuildingsList({
           ))}
         </div>
       </ScrollArea>
-    </div>
+    </EntityListColumn>
   );
 }

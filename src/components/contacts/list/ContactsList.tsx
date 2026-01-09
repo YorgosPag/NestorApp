@@ -1,19 +1,22 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 // 🏢 ENTERPRISE: Using centralized domain card
 import { ContactListCard } from '@/domain';
 import { CompactToolbar, contactsConfig } from '@/components/core/CompactToolbar';
+// 🏢 ENTERPRISE: Using centralized ContactTypeQuickFilters
+import { ContactTypeQuickFilters } from '@/components/shared/TypeQuickFilters';
 import type { Contact } from '@/types/contacts';
 import { Users } from 'lucide-react';
 import { getContactDisplayName } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
 import toast from 'react-hot-toast';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { EntityListColumn } from '@/core/containers';
+import { matchesSearchTerm } from '@/lib/search/search';
 
 
 interface ContactsListProps {
@@ -39,7 +42,6 @@ export function ContactsList({
   onArchiveContact,
   onContactUpdated
 }: ContactsListProps) {
-  const { quick } = useBorderTokens();
   const [sortBy, setSortBy] = useState<string>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [togglingFavorites, setTogglingFavorites] = useState<Set<string>>(new Set());
@@ -49,6 +51,9 @@ export function ContactsList({
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [showToolbar, setShowToolbar] = useState(false);
+
+  // 🏢 ENTERPRISE: Quick filter state for contact types
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
 
   const toggleFavorite = async (contactId: string) => {
     const contact = contacts.find(c => c.id === contactId);
@@ -83,20 +88,31 @@ export function ContactsList({
     }
   };
 
-  // Filter contacts based on search term
-  const filteredContacts = contacts.filter(contact => {
-    if (!searchTerm) return true;
+  // 🏢 ENTERPRISE: Filter contacts using centralized search
+  const filteredContacts = useMemo(() => {
+    return contacts.filter(contact => {
+      // Type filter (quick filters)
+      if (selectedTypes.length > 0) {
+        const contactType = contact.type || 'individual';
+        if (!selectedTypes.includes(contactType)) {
+          return false;
+        }
+      }
 
-    const displayName = getContactDisplayName(contact).toLowerCase();
-    const searchLower = searchTerm.toLowerCase();
-
-    // Search in name, company name, emails, and phones
-    return displayName.includes(searchLower) ||
-           (contact.companyName && contact.companyName.toLowerCase().includes(searchLower)) ||
-           (contact.serviceName && contact.serviceName.toLowerCase().includes(searchLower)) ||
-           (contact.emails && contact.emails.some(email => email.email.toLowerCase().includes(searchLower))) ||
-           (contact.phones && contact.phones.some(phone => phone.number.includes(searchTerm)));
-  });
+      // Search filter using enterprise search
+      return matchesSearchTerm(
+        [
+          getContactDisplayName(contact),
+          contact.companyName,
+          contact.serviceName,
+          // Flatten emails and phones
+          ...(contact.emails?.map(e => e.email) || []),
+          ...(contact.phones?.map(p => p.number) || [])
+        ],
+        searchTerm
+      );
+    });
+  }, [contacts, selectedTypes, searchTerm]);
 
   const sortedContacts = [...filteredContacts].sort((a, b) => {
     const aValue = (getContactDisplayName(a) || '').toLowerCase();
@@ -108,7 +124,7 @@ export function ContactsList({
   });
 
   return (
-    <div className={`min-w-[300px] max-w-[420px] w-full bg-card border ${quick.card} flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden`}>
+    <EntityListColumn hasBorder aria-label="Λίστα Επαφών">
 
 
       {/* Header with conditional CompactToolbar */}
@@ -116,12 +132,13 @@ export function ContactsList({
         <GenericListHeader
           icon={Users}
           entityName="Επαφές"
-          itemCount={contacts.length}
+          itemCount={filteredContacts.length}  // 🏢 ENTERPRISE: Δυναμικό count με filtered results
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           searchPlaceholder="Αναζήτηση επαφών..."
           showToolbar={showToolbar}
           onToolbarToggle={setShowToolbar}
+          hideSearch={true}  // 🏢 ENTERPRISE: Κρύβουμε το search - χρησιμοποιούμε το CompactToolbar search
         />
 
         {/* CompactToolbar - Always visible on Desktop, Toggleable on Mobile */}
@@ -130,11 +147,11 @@ export function ContactsList({
             config={contactsConfig}
             selectedItems={selectedItems}
             onSelectionChange={setSelectedItems}
-            searchTerm=""
-            onSearchChange={() => {}}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
             activeFilters={activeFilters}
             onFiltersChange={setActiveFilters}
-            sortBy={sortBy as any}
+            sortBy={sortBy}
             onSortChange={(newSortBy, newSortOrder) => {
             setSortBy(newSortBy);
             setSortOrder(newSortOrder);
@@ -168,11 +185,11 @@ export function ContactsList({
             config={contactsConfig}
             selectedItems={selectedItems}
             onSelectionChange={setSelectedItems}
-            searchTerm=""
-            onSearchChange={() => {}}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
             activeFilters={activeFilters}
             onFiltersChange={setActiveFilters}
-            sortBy={sortBy as any}
+            sortBy={sortBy}
             onSortChange={(newSortBy, newSortOrder) => {
             setSortBy(newSortBy);
             setSortOrder(newSortOrder);
@@ -201,12 +218,19 @@ export function ContactsList({
         </div>
       </div>
 
+      {/* 🏢 ENTERPRISE: Quick Filters για τύπους επαφών */}
+      <ContactTypeQuickFilters
+        selectedTypes={selectedTypes}
+        onTypeChange={setSelectedTypes}
+        compact={true}
+      />
+
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">
           {isLoading ? (
             // Loading skeletons
             Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className={`p-3 ${quick.card}`}>
+              <div key={i} className="p-3 rounded-lg border border-border bg-card">
                 <Skeleton className="h-4 w-3/4 mb-2" />
                 <Skeleton className="h-3 w-1/2" />
               </div>
@@ -230,6 +254,6 @@ export function ContactsList({
           )}
         </div>
       </ScrollArea>
-    </div>
+    </EntityListColumn>
   );
 }

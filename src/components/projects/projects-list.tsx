@@ -9,7 +9,7 @@ import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { ProjectListCard } from '@/domain';
 import { CompactToolbar, projectsConfig } from '@/components/core/CompactToolbar';
 import { Briefcase } from 'lucide-react';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { EntityListColumn } from '@/core/containers';
 
 interface ProjectsListProps {
   projects: Project[];
@@ -24,8 +24,6 @@ export function ProjectsList({
   onSelectProject,
   companies,
 }: ProjectsListProps) {
-  const { quick } = useBorderTokens();
-
   const [favorites, setFavorites] = useState<number[]>([1]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showToolbar, setShowToolbar] = useState(false);
@@ -43,7 +41,7 @@ export function ProjectsList({
 
 
   return (
-    <div className={`min-w-[300px] max-w-[420px] w-full bg-card border ${quick.card} flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden`}>
+    <EntityListColumn hasBorder aria-label="Λίστα Έργων">
       <GenericListHeader
         icon={Briefcase}
         entityName="Έργα"
@@ -92,6 +90,6 @@ export function ProjectsList({
           ))}
         </div>
       </ScrollArea>
-    </div>
+    </EntityListColumn>
   );
 }
