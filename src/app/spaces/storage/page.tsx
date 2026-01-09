@@ -27,7 +27,7 @@ import { useFirestoreStorages } from '@/hooks/useFirestoreStorages';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AdvancedFiltersPanel, storageFiltersConfig } from '@/components/core/AdvancedFilters';
-import { ListContainer } from '@/core/containers';
+import { ListContainer, PageContainer } from '@/core/containers';
 
 // Re-export Storage type for backward compatibility
 export type { Storage } from '@/types/storage/contracts';
@@ -130,11 +130,9 @@ function StoragePageContent() {
 
   return (
     <TooltipProvider>
-      <div className={`flex h-screen ${colors.bg.primary}`}>
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <StoragesHeader
+      <PageContainer ariaLabel="Διαχείριση Αποθηκών">
+        {/* Header */}
+        <StoragesHeader
             viewMode={viewMode}
             setViewMode={setViewMode}
             showDashboard={showDashboard}
@@ -145,8 +143,9 @@ function StoragePageContent() {
             setShowFilters={setShowMobileFilters}
           />
 
-          {/* Dashboard */}
-          {showDashboard && (
+        {/* Dashboard */}
+        {showDashboard && (
+          <section role="region" aria-label="Στατιστικά Αποθηκών">
             <UnifiedDashboard
               stats={dashboardStats}
               columns={6}
@@ -188,30 +187,30 @@ function StoragePageContent() {
                 </>
               }
             />
-          )}
+          </section>
+        )}
 
-          {/* Desktop: Filters */}
-          <div className="hidden md:block px-6">
-            <AdvancedFiltersPanel
-              config={storageFiltersConfig}
-              filters={filters}
-              onFiltersChange={setFilters}
-            />
-          </div>
+        {/* Desktop: Filters */}
+        <aside className="hidden md:block" role="complementary" aria-label="Φίλτρα Αποθηκών">
+          <AdvancedFiltersPanel
+            config={storageFiltersConfig}
+            filters={filters}
+            onFiltersChange={setFilters}
+          />
+        </aside>
 
-          {/* Content */}
-          <ListContainer>
-            {/* Professional StoragesList component */}
-            <StoragesList
-              storages={filteredStorages}
-              selectedStorage={selectedStorage}
-              onSelectStorage={setSelectedStorage}
-            />
+        {/* Content */}
+        <ListContainer>
+          {/* Professional StoragesList component */}
+          <StoragesList
+            storages={filteredStorages}
+            selectedStorage={selectedStorage}
+            onSelectStorage={setSelectedStorage}
+          />
 
-            {/* Professional StorageDetails component */}
-            <StorageDetails storage={selectedStorage} />
-          </ListContainer>
-        </div>
+          {/* Professional StorageDetails component */}
+          <StorageDetails storage={selectedStorage} />
+        </ListContainer>
 
         {/* Mobile: Filters Slide-in */}
         <MobileDetailsSlideIn
@@ -225,7 +224,7 @@ function StoragePageContent() {
             onFiltersChange={setFilters}
           />
         </MobileDetailsSlideIn>
-      </div>
+      </PageContainer>
     </TooltipProvider>
   );
 }

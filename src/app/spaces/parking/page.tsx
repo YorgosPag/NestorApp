@@ -36,7 +36,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters';
 import { parkingFiltersConfig } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
-import { ListContainer } from '@/core/containers';
+import { ListContainer, PageContainer } from '@/core/containers';
 import {
   PARKING_TYPE_LABELS,
   PARKING_STATUS_LABELS
@@ -139,11 +139,9 @@ function ParkingPageContent() {
 
   return (
     <TooltipProvider>
-      <div className={`flex h-screen ${colors.bg.primary}`}>
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <ParkingsHeader
+      <PageContainer ariaLabel="Διαχείριση Parking">
+        {/* Header */}
+        <ParkingsHeader
             viewMode={viewMode}
             setViewMode={setViewMode}
             showDashboard={showDashboard}
@@ -154,8 +152,9 @@ function ParkingPageContent() {
             setShowFilters={setShowMobileFilters}
           />
 
-          {/* Dashboard */}
-          {showDashboard && (
+        {/* Dashboard */}
+        {showDashboard && (
+          <section role="region" aria-label="Στατιστικά Parking">
             <UnifiedDashboard
               stats={dashboardStats}
               columns={6}
@@ -192,30 +191,30 @@ function ParkingPageContent() {
                 </>
               }
             />
-          )}
+          </section>
+        )}
 
-          {/* Desktop: Filters */}
-          <div className="hidden md:block px-6">
-            <AdvancedFiltersPanel
-              config={parkingFiltersConfig}
-              filters={filters}
-              onFiltersChange={setFilters}
-            />
-          </div>
+        {/* Desktop: Filters */}
+        <aside className="hidden md:block" role="complementary" aria-label="Φίλτρα Parking">
+          <AdvancedFiltersPanel
+            config={parkingFiltersConfig}
+            filters={filters}
+            onFiltersChange={setFilters}
+          />
+        </aside>
 
-          {/* Content */}
-          <ListContainer>
-            {/* Professional ParkingsList component */}
-            <ParkingsList
-              parkingSpots={filteredParkingSpots}
-              selectedParking={selectedParking}
-              onSelectParking={setSelectedParking}
-            />
+        {/* Content */}
+        <ListContainer>
+          {/* Professional ParkingsList component */}
+          <ParkingsList
+            parkingSpots={filteredParkingSpots}
+            selectedParking={selectedParking}
+            onSelectParking={setSelectedParking}
+          />
 
-            {/* Professional ParkingDetails component */}
-            <ParkingDetails parking={selectedParking} />
-          </ListContainer>
-        </div>
+          {/* Professional ParkingDetails component */}
+          <ParkingDetails parking={selectedParking} />
+        </ListContainer>
 
         {/* Mobile: Filters Slide-in */}
         <MobileDetailsSlideIn
@@ -229,7 +228,7 @@ function ParkingPageContent() {
             onFiltersChange={setFilters}
           />
         </MobileDetailsSlideIn>
-      </div>
+      </PageContainer>
     </TooltipProvider>
   );
 }
