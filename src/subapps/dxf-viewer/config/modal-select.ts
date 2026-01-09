@@ -679,7 +679,8 @@ export {
   getProjectTabLabels,
   getCRMDashboardTabLabels,
   getUnitsTabLabels,
-  getStorageTabLabels
+  getStorageTabLabels,
+  getParkingTabLabels
 } from './modal-select/core/labels/tabs';
 
 export {

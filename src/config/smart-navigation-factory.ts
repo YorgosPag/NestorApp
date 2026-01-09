@@ -75,6 +75,11 @@ const NAVIGATION_LABELS = {
   settings: 'Ρυθμίσεις',
   users: 'Χρήστες',
   keyboard_shortcuts: 'Συντομεύσεις',
+  shortcuts: 'Συντομεύσεις Πληκτρολογίου',
+  geo_canvas: 'Χάρτης',
+  dxf_viewer: 'Προβολέας DXF',
+  login: 'Σύνδεση',
+  debug: 'Αποσφαλμάτωση',
 
   // ✅ ENTERPRISE FIX: Legal Documents menu labels
   legal_documents: 'Νομικά Έγγραφα',
@@ -87,7 +92,23 @@ const NAVIGATION_LABELS = {
   apartments: 'Διαμερίσματα',
   storage: 'Αποθήκες',
   parking: 'Parking',
-  common_areas: 'Κοινόχρηστοι'
+  common_areas: 'Κοινόχρηστοι',
+
+  // Sales submenu - Greek labels
+  available_apartments: 'Διαθέσιμα Διαμερίσματα',
+  available_storage: 'Διαθέσιμες Αποθήκες',
+  available_parking: 'Διαθέσιμες Θέσεις Parking',
+  sold_properties: 'Πωληθέντα',
+
+  // CRM submenu - Greek labels
+  dashboard: 'Πίνακας Ελέγχου',
+  customer_management: 'Διαχείριση Πελατών',
+  communications: 'Επικοινωνίες',
+  leads_opportunities: 'Δυνητικοί Πελάτες',
+  tasks_appointments: 'Εργασίες & Ραντεβού',
+  sales_pipeline: 'Πορεία Πωλήσεων',
+  teams_roles: 'Ομάδες & Ρόλοι',
+  notifications: 'Ειδοποιήσεις'
 };
 
 // 🏢 ENTERPRISE: Define MenuItem locally για compatibility
@@ -132,6 +153,8 @@ export interface SmartNavigationItem {
   smartConfig?: {
     /** Priority για smart ordering */
     priority?: NavigationItemPriority;
+    /** Explicit display order (overrides priority-based sorting) */
+    displayOrder?: number;
     /** Feature flag για conditional display */
     featureFlag?: string;
     /** Required permissions */
@@ -156,6 +179,7 @@ interface NavigationConfigBase {
   subItems?: NavigationConfigBase[];
   smartConfig?: {
     priority?: NavigationItemPriority;
+    displayOrder?: number;
     featureFlag?: string;
     permissions?: string[];
     environments?: NavigationEnvironment[];
@@ -176,6 +200,7 @@ interface SmartNavigationItemBase {
   subItems?: SmartNavigationItemBase[];
   smartConfig?: {
     priority?: NavigationItemPriority;
+    displayOrder?: number;
     featureFlag?: string;
     permissions?: string[];
     environments?: NavigationEnvironment[];
@@ -287,6 +312,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
             badge: null,
             smartConfig: {
               priority: 'critical',
+              displayOrder: 0,  // Always first
               analyticsKey: 'nav_home',
               environments: ['development', 'production', 'staging']
             }
@@ -297,6 +323,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
             badge: process.env.NODE_ENV === 'development' ? 'ΝΕΟ' : null,
             smartConfig: {
               priority: 'high',
+              displayOrder: 10,  // Second section
               analyticsKey: 'nav_properties'
             }
           },
@@ -306,6 +333,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
             badge: null,
             smartConfig: {
               priority: 'high',
+              displayOrder: 20,  // ENTERPRISE: First after Properties
               analyticsKey: 'nav_contacts'
             }
           },
@@ -314,7 +342,8 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
             href: "/audit",
             badge: null,
             smartConfig: {
-              priority: 'medium',
+              priority: 'high',
+              displayOrder: 30,  // ENTERPRISE: Second after Properties
               analyticsKey: 'nav_projects'
             }
           },
@@ -324,6 +353,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
             badge: null,
             smartConfig: {
               priority: 'high',
+              displayOrder: 40,  // ENTERPRISE: Third after Properties
               analyticsKey: 'nav_buildings'
             }
           },
@@ -333,6 +363,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
             badge: null,
             smartConfig: {
               priority: 'medium',
+              displayOrder: 50,
               analyticsKey: 'nav_spaces'
             },
             subItems: [
@@ -360,6 +391,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
             badge: null,
             smartConfig: {
               priority: 'medium',
+              displayOrder: 60,
               analyticsKey: 'nav_sales'
             },
             subItems: [
@@ -387,6 +419,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
             badge: "PRO",
             smartConfig: {
               priority: 'medium',
+              displayOrder: 70,
               analyticsKey: 'nav_crm',
               featureFlag: 'crm_enabled'
             },
@@ -438,6 +471,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
             badge: "ENTERPRISE",
             smartConfig: {
               priority: 'medium',
+              displayOrder: 100,
               analyticsKey: 'nav_geo_canvas',
               featureFlag: 'geo_canvas_enabled'
             }
@@ -463,6 +497,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
             badge: null,
             smartConfig: {
               priority: 'low',
+              displayOrder: 200,
               analyticsKey: 'nav_dxf_viewer',
               environments: ['development', 'production']
             }
@@ -491,6 +526,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
             badge: null,
             smartConfig: {
               priority: 'low',
+              displayOrder: 220,
               analyticsKey: 'nav_login',
               environments: ['development']
             }
@@ -504,6 +540,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
               badge: "DEBUG",
               smartConfig: {
                 priority: 'low',
+                displayOrder: 300,
                 analyticsKey: 'nav_debug'
               }
             }
@@ -551,6 +588,9 @@ function getLabelKeyForPath(path: string): string {
     'sales/available-parking': 'available_parking',
     'sales/sold': 'sold_properties',
 
+    // CRM main
+    'crm': 'crm',
+
     // CRM subpaths
     'crm/dashboard': 'dashboard',
     'crm/customers': 'customer_management',
@@ -563,11 +603,17 @@ function getLabelKeyForPath(path: string): string {
 
     // Legal subpaths
     'legal-documents': 'legal_documents',
-    'obligations': 'obligations_writing',
+    'obligations/new': 'obligations_writing',
 
     // Settings subpaths
     'settings': 'settings',
-    'settings/shortcuts': 'shortcuts'
+    'settings/shortcuts': 'shortcuts',
+
+    // Tools paths
+    'geo/canvas': 'geo_canvas',
+    'dxf/viewer': 'dxf_viewer',
+    'login': 'login',
+    'debug': 'debug'
   };
 
   return pathMappings[path] || path;
@@ -605,7 +651,12 @@ function filterItemsByPermissions(
 }
 
 /**
- * ✅ ENTERPRISE: Sort items by smart priority
+ * ✅ ENTERPRISE: Sort items by smart priority with explicit display order
+ *
+ * Implements Microsoft/Google-style explicit ordering:
+ * 1. First by displayOrder (if defined)
+ * 2. Then by priority (critical > high > medium > low)
+ * 3. Finally by original array position
  */
 function sortItemsByPriority(items: SmartNavigationItem[]): SmartNavigationItem[] {
   const priorityOrder = {
@@ -616,6 +667,17 @@ function sortItemsByPriority(items: SmartNavigationItem[]): SmartNavigationItem[
   };
 
   return items.sort((a, b) => {
+    // ENTERPRISE: Explicit display order takes precedence
+    const aOrder = a.smartConfig?.displayOrder;
+    const bOrder = b.smartConfig?.displayOrder;
+
+    if (aOrder !== undefined && bOrder !== undefined) {
+      return aOrder - bOrder;
+    }
+    if (aOrder !== undefined) return -1;
+    if (bOrder !== undefined) return 1;
+
+    // Fallback to priority-based sorting
     const aPriority = a.smartConfig?.priority || 'medium';
     const bPriority = b.smartConfig?.priority || 'medium';
 

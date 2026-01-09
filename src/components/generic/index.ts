@@ -35,6 +35,7 @@ export {
   STORAGE_COMPONENT_MAPPING,
   UNITS_COMPONENT_MAPPING,
   CONTACT_COMPONENT_MAPPING,
+  PARKING_COMPONENT_MAPPING,
   MASTER_COMPONENT_MAPPING,
   getComponentMapping
 } from './mappings';
@@ -45,6 +46,7 @@ export type {
   StorageComponentName,
   UnitsComponentName,
   ContactComponentName,
+  ParkingComponentName,
   MasterComponentName
 } from './mappings';
 

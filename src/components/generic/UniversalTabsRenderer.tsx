@@ -199,6 +199,7 @@ export function UniversalTabsRenderer<TData = unknown>({
           project={data} // For backward compatibility με project components
           building={data} // For backward compatibility με building components
           storage={data} // For backward compatibility με storage components
+          parking={data} // For backward compatibility με parking components
           unit={data} // For backward compatibility με unit components
           selectedUnit={data} // For backward compatibility με unit components
           // For PlaceholderTab compatibility

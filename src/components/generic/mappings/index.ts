@@ -135,6 +135,21 @@ export const CONTACT_COMPONENT_MAPPING = {
 } as const;
 
 // ============================================================================
+// PARKING COMPONENT MAPPING
+// ============================================================================
+
+import { ParkingGeneralTab } from '../../space-management/ParkingPage/ParkingDetails/tabs/ParkingGeneralTab';
+
+export const PARKING_COMPONENT_MAPPING = {
+  'ParkingGeneralTab': ParkingGeneralTab,
+  'ParkingStatsTab': PlaceholderTab,
+  'ParkingDocumentsTab': PlaceholderTab,
+  'ParkingPhotosTab': PlaceholderTab,
+  'ParkingHistoryTab': PlaceholderTab,
+  'PlaceholderTab': PlaceholderTab,
+} as const;
+
+// ============================================================================
 // MASTER COMPONENT MAPPING (ALL COMBINED)
 // ============================================================================
 
@@ -148,6 +163,7 @@ export const MASTER_COMPONENT_MAPPING = {
   ...STORAGE_COMPONENT_MAPPING,
   ...UNITS_COMPONENT_MAPPING,
   ...CONTACT_COMPONENT_MAPPING,
+  ...PARKING_COMPONENT_MAPPING,
 } as const;
 
 // ============================================================================
@@ -159,6 +175,7 @@ export type BuildingComponentName = keyof typeof BUILDING_COMPONENT_MAPPING;
 export type StorageComponentName = keyof typeof STORAGE_COMPONENT_MAPPING;
 export type UnitsComponentName = keyof typeof UNITS_COMPONENT_MAPPING;
 export type ContactComponentName = keyof typeof CONTACT_COMPONENT_MAPPING;
+export type ParkingComponentName = keyof typeof PARKING_COMPONENT_MAPPING;
 export type MasterComponentName = keyof typeof MASTER_COMPONENT_MAPPING;
 
 // ============================================================================

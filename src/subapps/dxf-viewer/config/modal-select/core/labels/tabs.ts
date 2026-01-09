@@ -114,6 +114,18 @@ export interface StorageTabLabelsConfig {
   readonly history: string;
 }
 
+/**
+ * Parking Tab Labels Configuration Type
+ * ✅ ENTERPRISE: Type-safe parking tab labels
+ */
+export interface ParkingTabLabelsConfig {
+  readonly general: string;
+  readonly statistics: string;
+  readonly documents: string;
+  readonly photos: string;
+  readonly history: string;
+}
+
 // ====================================================================
 // TAB LABELS CONSTANTS - 🏢 ENTERPRISE CENTRALIZED
 // ====================================================================
@@ -221,6 +233,18 @@ export const MODAL_SELECT_STORAGE_TAB_LABELS: StorageTabLabelsConfig = {
   history: "Ιστορικό"             // Using actual data from original (activity)
 } as const;
 
+/**
+ * Parking Tab Labels - Centralized για Parking detail views
+ * ✅ ENTERPRISE: Single source of truth για όλα τα parking tab labels
+ */
+export const MODAL_SELECT_PARKING_TAB_LABELS: ParkingTabLabelsConfig = {
+  general: "Γενικά",
+  statistics: "Στατιστικά",
+  documents: "Έγγραφα",
+  photos: "Φωτογραφίες",
+  history: "Ιστορικό"
+} as const;
+
 // ====================================================================
 // ACCESSOR FUNCTIONS - 🏢 ENTERPRISE CENTRALIZED
 // ====================================================================
@@ -273,6 +297,14 @@ export function getStorageTabLabels(): StorageTabLabelsConfig {
   return MODAL_SELECT_STORAGE_TAB_LABELS;
 }
 
+/**
+ * Get parking tab labels
+ * ✅ CENTRALIZED: Getter function για parking tab labels
+ */
+export function getParkingTabLabels(): ParkingTabLabelsConfig {
+  return MODAL_SELECT_PARKING_TAB_LABELS;
+}
+
 // ====================================================================
 // DOMAIN-SPECIFIC ACCESSORS - 🏢 ENTERPRISE DOMAIN ORGANIZATION
 // ====================================================================
@@ -288,7 +320,8 @@ export function getAllTabLabels() {
     project: MODAL_SELECT_PROJECT_TAB_LABELS,
     crmDashboard: MODAL_SELECT_CRM_DASHBOARD_TAB_LABELS,
     units: MODAL_SELECT_UNITS_TAB_LABELS,
-    storage: MODAL_SELECT_STORAGE_TAB_LABELS
+    storage: MODAL_SELECT_STORAGE_TAB_LABELS,
+    parking: MODAL_SELECT_PARKING_TAB_LABELS
   } as const;
 }
 

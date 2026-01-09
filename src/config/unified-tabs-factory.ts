@@ -25,7 +25,8 @@ import {
   getBuildingTabLabels,
   getContactTabLabels,
   getProjectTabLabels,
-  getCRMDashboardTabLabels
+  getCRMDashboardTabLabels,
+  getParkingTabLabels
 } from '@/subapps/dxf-viewer/config/modal-select';
 
 // ============================================================================
@@ -159,6 +160,8 @@ function getLabelsForEntity(entityType: TabEntityType): Record<string, string> {
       return getProjectTabLabels();
     case 'crm-dashboard':
       return getCRMDashboardTabLabels();
+    case 'parking':
+      return getParkingTabLabels();
     default:
       // ✅ ENTERPRISE: Type-safe default (should never happen due to TypeScript)
       throw new Error(`Unknown entity type: ${entityType}`);
@@ -296,6 +299,58 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             order: 6,
             enabled: true,
             component: 'StorageHistoryTab'
+          }
+        ],
+        defaultEnabled: true
+      };
+
+    case 'parking':
+      return {
+        baseTabs: [
+          {
+            id: 'general',
+            value: 'general',
+            icon: 'info',
+            description: 'Βασικές πληροφορίες και στοιχεία θέσης στάθμευσης',
+            order: 1,
+            enabled: true,
+            component: 'ParkingGeneralTab'
+          },
+          {
+            id: 'statistics',
+            value: 'statistics',
+            icon: 'bar-chart-3',
+            description: 'Στατιστικά χρήσης θέσης στάθμευσης',
+            order: 2,
+            enabled: true,
+            component: 'ParkingStatsTab'
+          },
+          {
+            id: 'documents',
+            value: 'documents',
+            icon: 'file-text',
+            description: 'Διαχείριση εγγράφων θέσης στάθμευσης',
+            order: 3,
+            enabled: true,
+            component: 'ParkingDocumentsTab'
+          },
+          {
+            id: 'photos',
+            value: 'photos',
+            icon: 'camera',
+            description: 'Φωτογραφίες θέσης στάθμευσης',
+            order: 4,
+            enabled: true,
+            component: 'ParkingPhotosTab'
+          },
+          {
+            id: 'history',
+            value: 'history',
+            icon: 'history',
+            description: 'Ιστορικό χρήσης θέσης στάθμευσης',
+            order: 5,
+            enabled: true,
+            component: 'ParkingHistoryTab'
           }
         ],
         defaultEnabled: true
