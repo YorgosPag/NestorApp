@@ -12,8 +12,12 @@ const config = {
     'visual-cross-browser'
   ],
   moduleNameMapper: {
+    // Monorepo workspace packages
+    '^@geo-alert/core$': '<rootDir>/packages/core/index.ts',
+    // Path aliases
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@subapps/(.*)$': '<rootDir>/src/subapps/$1',
+    // Asset mocks
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '\\.(jpg|jpeg|png|gif|webp|svg)$': '<rootDir>/__mocks__/fileStub.js'
   },
