@@ -8,6 +8,7 @@ import { MigrationEngine } from '@/database/migrations/MigrationEngine';
 import { createProjectCompanyRelationshipsMigration } from '@/database/migrations/001_fix_project_company_relationships';
 import { createFloorsNormalizationMigration } from '@/database/migrations/002_normalize_floors_collection';
 import { createEnterpriseArchitectureConsolidationMigration } from '@/database/migrations/003_enterprise_database_architecture_consolidation';
+import { migration as projectCodesMigration, executeDryRun as projectCodesDryRun, executeMigration as projectCodesExecute } from '@/database/migrations/005_assign_project_codes';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -43,6 +44,37 @@ export async function POST(request: NextRequest) {
       case '003_enterprise_database_architecture_consolidation':
         migration = createEnterpriseArchitectureConsolidationMigration();
         break;
+      case '005_assign_project_codes':
+        // Special handling for project codes migration (has its own execution functions)
+        const projectCodesResult = dryRun
+          ? await projectCodesDryRun()
+          : await projectCodesExecute({ dryRun: false });
+
+        const projectCodesResponse = {
+          success: true,
+          migration: {
+            id: projectCodesMigration.id,
+            name: projectCodesMigration.name,
+            version: projectCodesMigration.version,
+            description: projectCodesMigration.description,
+            author: projectCodesMigration.author
+          },
+          execution: {
+            mode: dryRun ? 'DRY_RUN' : 'PRODUCTION',
+            startedAt: new Date(startTime).toISOString(),
+            completedAt: new Date().toISOString(),
+            totalTimeMs: Date.now() - startTime,
+            result: projectCodesResult
+          },
+          environment: {
+            nodeEnv: process.env.NODE_ENV,
+            timestamp: new Date().toISOString(),
+            system: 'Nestor Pagonis Enterprise Platform'
+          }
+        };
+
+        return NextResponse.json(projectCodesResponse, { status: 200 });
+
       default:
         return NextResponse.json(
           {
@@ -51,7 +83,8 @@ export async function POST(request: NextRequest) {
             availableMigrations: [
               '001_fix_project_company_relationships',
               '002_normalize_floors_collection',
-              '003_enterprise_database_architecture_consolidation'
+              '003_enterprise_database_architecture_consolidation',
+              '005_assign_project_codes'
             ]
           },
           { status: 400 }
@@ -156,6 +189,14 @@ export async function GET(request: NextRequest) {
         version: '1.0.0',
         description: 'Extracts embedded buildingFloors arrays to normalized floors collection with proper foreign key relationships following 3NF principles',
         author: 'Claude Enterprise Migration System',
+        status: 'available'
+      },
+      {
+        id: '005_assign_project_codes',
+        name: 'Assign Human-Readable Project Codes',
+        version: '1.0.0',
+        description: 'Assigns sequential human-readable project codes (PRJ-001, PRJ-002, etc.) to existing projects using atomic Firestore transactions',
+        author: 'Enterprise Architecture Team',
         status: 'available'
       }
     ];

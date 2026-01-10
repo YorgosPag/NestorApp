@@ -117,7 +117,10 @@ export const COLLECTIONS = {
 
   // 🌐 LOCALIZATION
   TRANSLATIONS: process.env.NEXT_PUBLIC_TRANSLATIONS_COLLECTION || 'translations',
-  LOCALES: process.env.NEXT_PUBLIC_LOCALES_COLLECTION || 'locales'
+  LOCALES: process.env.NEXT_PUBLIC_LOCALES_COLLECTION || 'locales',
+
+  // 🔢 COUNTERS (Enterprise Sequential ID Generation)
+  COUNTERS: process.env.NEXT_PUBLIC_COUNTERS_COLLECTION || 'counters'
 } as const;
 
 // ============================================================================

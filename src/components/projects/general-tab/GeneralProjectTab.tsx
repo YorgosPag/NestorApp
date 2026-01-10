@@ -75,12 +75,14 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
 
   return (
     <>
-      <GeneralProjectHeader 
+      <GeneralProjectHeader
         isEditing={isEditing}
         setIsEditing={setIsEditing}
         autoSaving={autoSaving}
         lastSaved={lastSaved}
         handleSave={handleSave}
+        projectCode={project.projectCode}
+        projectId={project.id}
       />
       
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 my-6">
