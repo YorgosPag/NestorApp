@@ -12,19 +12,42 @@
  * - Ισότιμη οντότητα στην πλοήγηση
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type { ParkingSpot } from './useFirestoreParkingSpots';
 import { defaultParkingFilters, type ParkingFilterState } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
 
 export function useParkingPageState(initialParkingSpots: ParkingSpot[]) {
-  const [selectedParking, setSelectedParking] = useState<ParkingSpot | null>(
-    initialParkingSpots.length > 0 ? initialParkingSpots[0] : null
-  );
+  // 🏢 ENTERPRISE: URL parameter handling for contextual navigation
+  const searchParams = useSearchParams();
+  const parkingIdFromUrl = searchParams.get('parkingId');
+
+  const [selectedParking, setSelectedParking] = useState<ParkingSpot | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'grid' | 'byType' | 'byStatus'>('list');
   const [showDashboard, setShowDashboard] = useState(false);
 
   // Use centralized filter state
   const [filters, setFilters] = useState<ParkingFilterState>(defaultParkingFilters);
+
+  // 🏢 ENTERPRISE: Auto-selection from URL parameter (contextual navigation)
+  useEffect(() => {
+    if (!initialParkingSpots.length) return;
+
+    if (parkingIdFromUrl) {
+      // URL parameter has priority - find and select the parking spot
+      const found = initialParkingSpots.find(p => p.id === parkingIdFromUrl);
+      if (found) {
+        console.log('🅿️ [useParkingPageState] Auto-selecting parking from URL:', found.number);
+        setSelectedParking(found);
+        return;
+      }
+    }
+
+    // Default: select first parking if none selected
+    if (!selectedParking && initialParkingSpots.length > 0) {
+      setSelectedParking(initialParkingSpots[0]);
+    }
+  }, [initialParkingSpots, parkingIdFromUrl]);
 
   const filteredParkingSpots = useMemo(() => {
     return initialParkingSpots.filter(parking => {

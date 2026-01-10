@@ -8,6 +8,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { NavigationButton } from './NavigationButton';
+import { ContextualNavigationService } from '@/services/navigation/ContextualNavigationService';
 import { NavigationCardToolbar } from './NavigationCardToolbar';
 import { SelectItemModal } from '../dialogs/SelectItemModal';
 // 🏢 ENTERPRISE: Building spaces tabs for Units/Storage/Parking (per local_4.log architecture)
@@ -758,6 +759,9 @@ export function DesktopMultiColumn({
                     variant="compact"
                     badgeStatus={!projectsLoading && !hasProjects ? 'no_projects' : undefined}
                     badgeText={!projectsLoading && !hasProjects ? getNavigationFilterCategories().company_without_projects : undefined}
+                    // 🔗 ENTERPRISE: Navigation to Contacts page
+                    navigationHref={ContextualNavigationService.generateRoute('company', company.id, { action: 'select' })}
+                    navigationTooltip="Άνοιγμα στις Επαφές"
                   />
                 </li>
               );
@@ -818,6 +822,9 @@ export function DesktopMultiColumn({
                       variant="compact"
                       badgeStatus={!hasBuildings ? 'no_projects' : undefined}
                       badgeText={!hasBuildings ? getNavigationFilterCategories().project_without_buildings : undefined}
+                      // 🔗 ENTERPRISE: Navigation to Audit page (Projects page)
+                      navigationHref={ContextualNavigationService.generateRoute('project', project.id, { action: 'select' })}
+                      navigationTooltip="Άνοιγμα στα Έργα"
                     />
                   </li>
                 );
@@ -878,6 +885,9 @@ export function DesktopMultiColumn({
                       variant="compact"
                       badgeStatus={!hasUnits ? 'no_projects' : undefined}
                       badgeText={!hasUnits ? getNavigationFilterCategories().building_without_units : undefined}
+                      // 🔗 ENTERPRISE: Navigation to Buildings page
+                      navigationHref={ContextualNavigationService.generateRoute('building', building.id, { action: 'select' })}
+                      navigationTooltip="Άνοιγμα στα Κτίρια"
                     />
                   </li>
                 );

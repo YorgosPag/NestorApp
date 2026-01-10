@@ -22,6 +22,7 @@ import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation
 import { NavigationButton } from './NavigationButton';
 import { NavigationCardToolbar } from './NavigationCardToolbar';
 import { NAVIGATION_ENTITIES } from '../config';
+import { ContextualNavigationService } from '@/services/navigation/ContextualNavigationService';
 import type { NavigationUnit, NavigationParkingSpot } from '../core/types';
 
 // =============================================================================
@@ -245,6 +246,9 @@ export function BuildingSpacesTabs({
                     subtitle={unit.type || 'Μονάδα'}
                     isSelected={isItemSelected(unit.id, 'units')}
                     variant="compact"
+                    // 🔗 ENTERPRISE: Navigation to Units page
+                    navigationHref={ContextualNavigationService.generateRoute('unit', unit.id, { action: 'select' })}
+                    navigationTooltip="Άνοιγμα στις Μονάδες"
                   />
                 </li>
               ))
@@ -289,6 +293,9 @@ export function BuildingSpacesTabs({
                     subtitle={storage.type || 'Αποθήκη'}
                     isSelected={isItemSelected(storage.id, 'storage')}
                     variant="compact"
+                    // 🔗 ENTERPRISE: Navigation to Storage page
+                    navigationHref={ContextualNavigationService.generateRoute('storage', storage.id, { action: 'select' })}
+                    navigationTooltip="Άνοιγμα στις Αποθήκες"
                   />
                 </li>
               ))
@@ -333,6 +340,9 @@ export function BuildingSpacesTabs({
                     subtitle={spot.location || spot.type || 'Πάρκινγκ'}
                     isSelected={isItemSelected(spot.id, 'parking')}
                     variant="compact"
+                    // 🔗 ENTERPRISE: Navigation to Parking page
+                    navigationHref={ContextualNavigationService.generateRoute('parking', spot.id, { action: 'select' })}
+                    navigationTooltip="Άνοιγμα στο Parking"
                   />
                 </li>
               ))

@@ -1,16 +1,41 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type { Storage } from '@/types/storage/contracts';
 import { defaultStorageFilters, type StorageFilterState } from '@/components/core/AdvancedFilters/configs/storageFiltersConfig';
 
 export function useStoragesPageState(initialStorages: Storage[]) {
-  const [selectedStorage, setSelectedStorage] = useState<Storage | null>(initialStorages.length > 0 ? initialStorages[0] : null);
+  // 🏢 ENTERPRISE: URL parameter handling for contextual navigation
+  const searchParams = useSearchParams();
+  const storageIdFromUrl = searchParams.get('storageId');
+
+  const [selectedStorage, setSelectedStorage] = useState<Storage | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'grid' | 'byType' | 'byStatus'>('list');
   const [showDashboard, setShowDashboard] = useState(false);
 
   // Use centralized filter state
   const [filters, setFilters] = useState<StorageFilterState>(defaultStorageFilters);
+
+  // 🏢 ENTERPRISE: Auto-selection from URL parameter (contextual navigation)
+  useEffect(() => {
+    if (!initialStorages.length) return;
+
+    if (storageIdFromUrl) {
+      // URL parameter has priority - find and select the storage
+      const found = initialStorages.find(s => s.id === storageIdFromUrl);
+      if (found) {
+        console.log('📦 [useStoragesPageState] Auto-selecting storage from URL:', found.name);
+        setSelectedStorage(found);
+        return;
+      }
+    }
+
+    // Default: select first storage if none selected
+    if (!selectedStorage && initialStorages.length > 0) {
+      setSelectedStorage(initialStorages[0]);
+    }
+  }, [initialStorages, storageIdFromUrl]);
 
   const filteredStorages = useMemo(() => {
     return initialStorages.filter(storage => {

@@ -77,16 +77,20 @@ export function useUnitsViewerState() {
     fetchContactIds();
   }, []);
 
+  // 🏢 ENTERPRISE: Auto-selection from URL parameter (contextual navigation)
   useEffect(() => {
     if (unitIdFromUrl && properties.length > 0 && setSelectedProperties) {
       const unitExists = properties.some(p => p.id === unitIdFromUrl);
       if (unitExists) {
+        console.log('🏠 [useUnitsViewerState] Auto-selecting unit from URL:', unitIdFromUrl);
         setSelectedProperties([unitIdFromUrl]);
         // Also select the correct floor
         const unit = properties.find(p => p.id === unitIdFromUrl);
         if (unit?.floorId && onSelectFloor) {
             onSelectFloor(unit.floorId);
         }
+      } else {
+        console.warn('⚠️ [useUnitsViewerState] Unit not found in properties:', unitIdFromUrl);
       }
     }
   }, [unitIdFromUrl, properties, setSelectedProperties, onSelectFloor]);

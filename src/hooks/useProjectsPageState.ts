@@ -1,18 +1,41 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type { Project } from '@/types/project';
 import { defaultProjectFilters, type ProjectFilterState } from '@/components/core/AdvancedFilters';
 
 export function useProjectsPageState(initialProjects: Project[]) {
-  const [selectedProject, setSelectedProject] = useState<Project | null>(
-    initialProjects.length > 0 ? initialProjects[0] : null
-  );
+  // 🏢 ENTERPRISE: URL parameter handling for contextual navigation
+  const searchParams = useSearchParams();
+  const projectIdFromUrl = searchParams.get('projectId');
+
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'byType' | 'byStatus'>('list');
   const [showDashboard, setShowDashboard] = useState(false);
 
   // Use centralized filter state
   const [filters, setFilters] = useState<ProjectFilterState>(defaultProjectFilters);
+
+  // 🏢 ENTERPRISE: Auto-selection from URL parameter (contextual navigation)
+  useEffect(() => {
+    if (!initialProjects.length) return;
+
+    if (projectIdFromUrl) {
+      // URL parameter has priority - find and select the project
+      const found = initialProjects.find(p => p.id === projectIdFromUrl);
+      if (found) {
+        console.log('📋 [useProjectsPageState] Auto-selecting project from URL:', found.name);
+        setSelectedProject(found);
+        return;
+      }
+    }
+
+    // Default: select first project if none selected
+    if (!selectedProject && initialProjects.length > 0) {
+      setSelectedProject(initialProjects[0]);
+    }
+  }, [initialProjects, projectIdFromUrl]);
 
   const filteredProjects = useMemo(() => {
     return initialProjects.filter(project => {

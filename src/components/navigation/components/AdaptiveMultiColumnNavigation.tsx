@@ -6,12 +6,13 @@
  * Desktop: Multi-column layout (Finder-style)
  * Mobile: Drill-down navigation with back stack
  */
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useNavigation } from '../core/NavigationContext';
 import { useNavigationHandlers } from '../hooks/useNavigationHandlers';
 import { NavigationCompanyManager } from './NavigationCompanyManager';
 import { MobileNavigation } from './MobileNavigation';
 import { DesktopMultiColumn } from './DesktopMultiColumn';
+import { ContextualNavigationHandler } from '../core/ContextualNavigationHandler';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 interface AdaptiveMultiColumnNavigationProps {
@@ -59,6 +60,11 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
 
   return (
     <div className={`${className || ''}`}>
+      {/* 🏢 ENTERPRISE: Contextual Navigation Handler for URL-based selection */}
+      <Suspense fallback={null}>
+        <ContextualNavigationHandler />
+      </Suspense>
+
       <NavigationCompanyManager companies={companies}>
         {({ isContactsModalOpen, setIsContactsModalOpen, handleCompanySelected, navigationCompanyIds }) => (
           <>

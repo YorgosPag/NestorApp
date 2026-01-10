@@ -1,16 +1,41 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type { Building } from '@/components/building-management/BuildingsPageContent';
 import { defaultBuildingFilters, type BuildingFilterState } from '@/components/core/AdvancedFilters';
 
 export function useBuildingsPageState(initialBuildings: Building[]) {
-  const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(initialBuildings.length > 0 ? initialBuildings[0] : null);
+  // 🏢 ENTERPRISE: URL parameter handling for contextual navigation
+  const searchParams = useSearchParams();
+  const buildingIdFromUrl = searchParams.get('buildingId');
+
+  const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'grid' | 'byType' | 'byStatus'>('list');
   const [showDashboard, setShowDashboard] = useState(false);
 
   // Use centralized filter state
   const [filters, setFilters] = useState<BuildingFilterState>(defaultBuildingFilters);
+
+  // 🏢 ENTERPRISE: Auto-selection from URL parameter (contextual navigation)
+  useEffect(() => {
+    if (!initialBuildings.length) return;
+
+    if (buildingIdFromUrl) {
+      // URL parameter has priority - find and select the building
+      const found = initialBuildings.find(b => b.id === buildingIdFromUrl);
+      if (found) {
+        console.log('🏢 [useBuildingsPageState] Auto-selecting building from URL:', found.name);
+        setSelectedBuilding(found);
+        return;
+      }
+    }
+
+    // Default: select first building if none selected
+    if (!selectedBuilding && initialBuildings.length > 0) {
+      setSelectedBuilding(initialBuildings[0]);
+    }
+  }, [initialBuildings, buildingIdFromUrl]);
 
   const filteredBuildings = useMemo(() => {
     return initialBuildings.filter(building => {

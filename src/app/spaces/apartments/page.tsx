@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
@@ -18,16 +18,22 @@ import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoad
  * - Avoid code duplication by redirecting instead of duplicating
  * - Maintains URL consistency for new navigation structure
  * - Preserves existing functionality during architecture migration
+ *
+ * 🏢 ENTERPRISE: Preserves URL parameters during redirect (contextual navigation)
  */
 export default function SpacesApartmentsRedirectPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
   useEffect(() => {
-    // Enterprise-grade client-side redirect
-    router.replace('/units');
-  }, [router]);
+    // 🏢 ENTERPRISE: Preserve URL parameters during redirect (contextual navigation)
+    const queryString = searchParams.toString();
+    const targetUrl = queryString ? `/units?${queryString}` : '/units';
+    console.log('🔄 [SpacesApartments] Redirecting with params:', targetUrl);
+    router.replace(targetUrl);
+  }, [router, searchParams]);
 
   // Loading state while redirecting
   return (
