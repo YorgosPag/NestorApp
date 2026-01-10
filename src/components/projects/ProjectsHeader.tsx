@@ -10,6 +10,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PageHeader } from '@/core/headers';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import type { ViewMode } from '@/core/headers';
+// 🏢 ENTERPRISE: Breadcrumb navigation
+import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
 
 interface ProjectsHeaderProps {
   viewMode: 'list' | 'byType' | 'byStatus';
@@ -51,6 +53,7 @@ export function ProjectsHeader({
         title: `Διαχείριση Έργων${projectCount !== undefined ? ` (${projectCount})` : ''}`,
         subtitle: "Παρακολούθηση και διαχείριση έργων"
       }}
+      breadcrumb={<NavigationBreadcrumb />}
       search={searchTerm !== undefined && setSearchTerm ? {
         value: searchTerm,
         onChange: setSearchTerm,

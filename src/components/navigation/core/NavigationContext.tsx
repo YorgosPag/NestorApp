@@ -218,6 +218,57 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     updateState({ selectedUnit: unit, currentLevel: 'units' });
   };
 
+  /**
+   * 🏢 ENTERPRISE: Atomic breadcrumb sync from entity pages
+   *
+   * Sets the navigation display hierarchy in a single atomic state update.
+   * Accepts names directly from pages - no fallback lookups needed.
+   *
+   * ⚠️ CRITICAL CONTRACT:
+   * - Updates DISPLAY-ONLY navigation selection for breadcrumb/UI context
+   * - The resulting selected* objects are NOT full domain entities
+   * - Nested arrays (`buildings`, `floors`) MAY BE EMPTY
+   * - MUST NOT be used for business logic or data fetching
+   *
+   * @see BreadcrumbSyncParams - Full documentation in types.ts
+   */
+  const syncBreadcrumb = useCallback((params: import('./types').BreadcrumbSyncParams) => {
+    const { company, project, building, unit, space, currentLevel } = params;
+
+    // Build the navigation hierarchy objects from provided names
+    const selectedCompany: NavigationCompany = {
+      id: company.id,
+      companyName: company.name
+    };
+
+    const selectedProject: NavigationProject = {
+      id: project.id,
+      name: project.name,
+      company: company.name,
+      companyId: company.id,
+      buildings: []
+    };
+
+    const selectedBuilding: NavigationBuilding | null = building
+      ? { id: building.id, name: building.name, floors: [] }
+      : null;
+
+    const selectedUnit: NavigationSelectedUnit | null = unit
+      ? { id: unit.id, name: unit.name, type: unit.type }
+      : space
+        ? { id: space.id, name: space.name, type: space.type }
+        : null;
+
+    // Single atomic state update - no race conditions
+    updateState({
+      selectedCompany,
+      selectedProject,
+      selectedBuilding,
+      selectedUnit,
+      currentLevel
+    });
+  }, []);
+
   const selectFloor = (floorId: string) => {
     actions.selectFloor(floorId, state, updateState);
   };
@@ -256,6 +307,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     selectProject,
     selectBuilding,
     selectUnit,  // 🏢 ENTERPRISE: For breadcrumb display
+    syncBreadcrumb,  // 🏢 ENTERPRISE: Atomic sync for entity pages
     selectFloor,
     navigateToLevel,
     reset,

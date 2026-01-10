@@ -12,6 +12,9 @@ import {
   Package,
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+// 🏢 ENTERPRISE: Navigation context for breadcrumb sync
+import { useNavigation } from '@/components/navigation/core/NavigationContext';
+import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { StatusCard } from '@/components/property-management/dashboard/StatusCard';
 import { DetailsCard } from '@/components/property-management/dashboard/DetailsCard';
 import { AdvancedFiltersPanel, unitFiltersConfig, defaultUnitFilters, type UnitFilterState } from '@/components/core/AdvancedFilters';
@@ -50,6 +53,11 @@ const getTypeLabel = (type: string) => {
 
 function UnitsPageContent() {
   const colors = useSemanticColors();
+
+  // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
+  const { companies, projects, syncBreadcrumb } = useNavigation();
+  const { buildings } = useFirestoreBuildings();
+
   const {
     properties,
     setProperties,
@@ -114,6 +122,31 @@ function UnitsPageContent() {
 
   // 🔥 NEW: Dashboard card filtering state
   const [activeCardFilter, setActiveCardFilter] = React.useState<string | null>(null);
+
+  // 🏢 ENTERPRISE: Sync selectedUnit with NavigationContext for breadcrumb display
+  React.useEffect(() => {
+    if (selectedUnit && buildings.length > 0 && companies.length > 0 && projects.length > 0) {
+      // Find the building this unit belongs to
+      const building = buildings.find(b => b.id === selectedUnit.buildingId);
+      if (building && building.projectId) {
+        // Find the project and company
+        const project = projects.find(p => p.id === building.projectId);
+        if (project && project.companyId) {
+          const company = companies.find(c => c.id === project.companyId);
+          if (company) {
+            // Use atomic sync with names - enterprise pattern
+            syncBreadcrumb({
+              company: { id: company.id, name: company.companyName },
+              project: { id: project.id, name: project.name },
+              building: { id: building.id, name: building.name },
+              unit: { id: selectedUnit.id, name: selectedUnit.name || selectedUnit.title || selectedUnit.id },
+              currentLevel: 'units'
+            });
+          }
+        }
+      }
+    }
+  }, [selectedUnit?.id, buildings.length, companies.length, projects.length, syncBreadcrumb]);
 
   const safeFloors = Array.isArray(floors) ? floors : [];
   const safeFilteredProperties = Array.isArray(filteredProperties) ? filteredProperties : [];

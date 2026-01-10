@@ -28,6 +28,9 @@ import {
   Euro
 } from 'lucide-react';
 import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
+// 🏢 ENTERPRISE: Navigation context for breadcrumb sync
+import { useNavigation } from '@/components/navigation/core/NavigationContext';
+import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { useParkingPageState } from '@/hooks/useParkingPageState';
 import { useParkingStats } from '@/hooks/useParkingStats';
@@ -46,6 +49,10 @@ function ParkingPageContent() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
+  // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
+  const { companies, projects, syncBreadcrumb } = useNavigation();
+  const { buildings } = useFirestoreBuildings();
+
   // Firestore data connection - πραγματικά δεδομένα
   const { parkingSpots, loading, error, refetch } = useFirestoreParkingSpots();
 
@@ -62,6 +69,35 @@ function ParkingPageContent() {
   } = useParkingPageState(parkingSpots);
 
   const stats = useParkingStats(filteredParkingSpots);
+
+  // 🏢 ENTERPRISE: Sync selectedParking with NavigationContext for breadcrumb display
+  React.useEffect(() => {
+    if (selectedParking && buildings.length > 0 && companies.length > 0 && projects.length > 0) {
+      // Find the building this parking spot belongs to (by buildingId or projectId)
+      const building = selectedParking.buildingId
+        ? buildings.find(b => b.id === selectedParking.buildingId)
+        : buildings.find(b => b.projectId === String(selectedParking.projectId));
+
+      if (building && building.projectId) {
+        // Find the project and company
+        const project = projects.find(p => p.id === building.projectId);
+        if (project && project.companyId) {
+          const company = companies.find(c => c.id === project.companyId);
+          if (company) {
+            // Use atomic sync with names - enterprise pattern
+            // 🏢 ENTERPRISE: Use 'number' property (API returns 'number', not 'code')
+            syncBreadcrumb({
+              company: { id: company.id, name: company.companyName },
+              project: { id: project.id, name: project.name },
+              building: { id: building.id, name: building.name },
+              space: { id: selectedParking.id, name: selectedParking.number, type: 'parking' },
+              currentLevel: 'spaces'
+            });
+          }
+        }
+      }
+    }
+  }, [selectedParking?.id, buildings.length, companies.length, projects.length, syncBreadcrumb]);
 
   // Search state (for header search)
   const [searchTerm, setSearchTerm] = React.useState('');

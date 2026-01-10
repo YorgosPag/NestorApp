@@ -1398,6 +1398,110 @@ import { Home } from 'lucide-react';
 
 ---
 
+### 📋 ADR-016: NAVIGATION BREADCRUMB PATH SYSTEM (2026-01-10) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-10
+
+**Context**:
+Υλοποιήθηκε κεντρικοποιημένο σύστημα breadcrumb paths για όλες τις entity pages:
+- Projects, Buildings, Units, Parking, Storage pages
+- Χρειαζόταν atomic sync με NavigationContext για αποφυγή race conditions
+- Τα selected* objects πρέπει να είναι display-only (όχι full domain entities)
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **CANONICAL SOURCE** | `syncBreadcrumb()` από `NavigationContext` είναι η ΜΟΝΑΔΙΚΗ μέθοδος για breadcrumb sync |
+| **DISPLAY-ONLY CONTRACT** | Τα `selected*` objects (selectedCompany, selectedProject, κλπ) είναι **DISPLAY-ONLY** |
+| **LIGHTWEIGHT TYPE** | `BreadcrumbEntityRef` (`{ id: string; name: string }`) για breadcrumb references |
+| **DYNAMIC ICONS** | Entity-specific icons/colors μέσω `NAVIGATION_ENTITIES[entityType]` |
+
+**Core Architecture**:
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `syncBreadcrumb()` | `NavigationContext.tsx` | Atomic breadcrumb sync method |
+| `BreadcrumbEntityRef` | `navigation/core/types.ts` | Lightweight reference type |
+| `BreadcrumbSyncParams` | `navigation/core/types.ts` | Sync parameters interface |
+| `NavigationBreadcrumb` | `navigation/components/` | Renders breadcrumb UI |
+
+**Enterprise Contract** (CRITICAL):
+```typescript
+/**
+ * ⚠️ CRITICAL CONTRACT FOR selected* FIELDS:
+ * - Updates DISPLAY-ONLY navigation selection for breadcrumb/UI context
+ * - The resulting selected* objects are NOT full domain entities
+ * - Nested arrays (`buildings`, `floors`) MAY BE EMPTY
+ * - MUST NOT be used for business logic or data fetching
+ *
+ * ✅ USE for: Breadcrumb display, Navigation UI context
+ * ❌ DO NOT USE for: Business logic, Data fetching
+ */
+```
+
+**Implementation Pattern**:
+```typescript
+// ✅ ENTERPRISE: Atomic breadcrumb sync from entity page
+import { useNavigation } from '@/components/navigation/core/NavigationContext';
+
+const { syncBreadcrumb } = useNavigation();
+
+React.useEffect(() => {
+  if (selectedEntity && companies.length > 0) {
+    syncBreadcrumb({
+      company: { id: company.id, name: company.companyName },
+      project: { id: project.id, name: project.name },
+      building: { id: building.id, name: building.name },
+      space: { id: entity.id, name: entity.name, type: 'parking' | 'storage' },
+      currentLevel: 'spaces'
+    });
+  }
+}, [selectedEntity?.id, companies.length, syncBreadcrumb]);
+
+// ❌ PROHIBITED: Direct selected* mutations
+setSelectedProject(fullProjectObject); // May cause data inconsistency
+```
+
+**Dynamic Entity Icons** (NavigationBreadcrumb.tsx):
+```typescript
+// ✅ ENTERPRISE: Dynamic icon/color based on entity type
+const entityType = selectedUnit.type && isNavigationEntityType(selectedUnit.type)
+  ? selectedUnit.type  // 'parking' | 'storage'
+  : 'unit';
+const entityConfig = NAVIGATION_ENTITIES[entityType];
+// Uses entityConfig.icon and entityConfig.color
+```
+
+**Pages Integrated**:
+
+| Page | Route | syncBreadcrumb | Status |
+|------|-------|----------------|--------|
+| Projects | `/audit` | ✅ Company → Project | ✅ |
+| Buildings | `/buildings` | ✅ Company → Project → Building | ✅ |
+| Units | `/units` | ✅ Company → Project → Building → Unit | ✅ |
+| Parking | `/spaces/parking` | ✅ Company → Project → Building → Parking | ✅ |
+| Storage | `/spaces/storage` | ✅ Company → Project → Building → Storage | ✅ |
+
+**Known Limitations** (P1 Future Work):
+- Storage/Parking matching uses heuristics (name matching) instead of direct IDs
+- Future migration: Add `buildingId`, `projectId`, `companyId` to Storage/Parking documents
+
+**Consequences**:
+- ✅ **Atomic Updates**: Single state update, no race conditions
+- ✅ **Type-Safe**: `BreadcrumbEntityRef` enforces lightweight contracts
+- ✅ **Entity-Specific UI**: Correct icons/colors for parking (🚗 amber), storage (📦 indigo)
+- ✅ **Documented Contract**: JSDoc warnings prevent misuse of selected* objects
+- ✅ **Scalable**: New entity types = new entry in `NAVIGATION_ENTITIES`
+
+**References**:
+- Source: `src/components/navigation/core/NavigationContext.tsx`
+- Types: `src/components/navigation/core/types.ts`
+- UI: `src/components/navigation/components/NavigationBreadcrumb.tsx`
+- Related: ADR-014 (Navigation Entity Icons)
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

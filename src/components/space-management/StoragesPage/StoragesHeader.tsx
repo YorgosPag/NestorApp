@@ -8,6 +8,8 @@ import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effect
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Breadcrumb navigation
+import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
 
 interface StoragesHeaderProps {
   viewMode: 'list' | 'grid' | 'byType' | 'byStatus';
@@ -47,6 +49,7 @@ export function StoragesHeader({
         title: "Διαχείριση Αποθηκών",
         subtitle: "Διαχείριση και παρακολούθηση χώρων αποθήκευσης"
       }}
+      breadcrumb={<NavigationBreadcrumb />}
       search={{
         value: searchTerm,
         onChange: setSearchTerm,

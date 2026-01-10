@@ -62,13 +62,101 @@ export interface NavigationSelectedUnit {
   type?: string;
 }
 
+/**
+ * 🏢 ENTERPRISE: Lightweight reference type for breadcrumb display
+ *
+ * This is a "display-only" reference containing just id and name.
+ * It is NOT a full domain entity - do not use for business logic or data fetching.
+ *
+ * @example
+ * // Correct usage: display in breadcrumb UI
+ * const breadcrumb = `${company.name} → ${project.name}`;
+ *
+ * // INCORRECT usage: do not use for business logic
+ * // const buildings = selectedProject.buildings; // MAY BE EMPTY!
+ */
+export interface BreadcrumbEntityRef {
+  id: string;
+  name: string;
+}
+
+/**
+ * 🏢 ENTERPRISE: Breadcrumb sync parameters
+ *
+ * Used by entity pages to sync the navigation display hierarchy with NavigationContext.
+ * Names are passed directly from the page (not looked up) to ensure accuracy.
+ *
+ * ⚠️ IMPORTANT CONTRACT:
+ * - This updates DISPLAY-ONLY navigation selection for breadcrumb/UI context
+ * - The resulting selected* objects are NOT full domain entities
+ * - Fields like `buildings`, `floors` arrays MAY BE EMPTY
+ * - MUST NOT be used for business logic or data fetching
+ *
+ * @see BreadcrumbEntityRef - The lightweight type used for display
+ */
+export interface BreadcrumbSyncParams {
+  /** Required: Company ID and name */
+  company: BreadcrumbEntityRef;
+  /** Required: Project ID and name */
+  project: BreadcrumbEntityRef;
+  /** Optional: Building info (for /buildings, /units pages) */
+  building?: BreadcrumbEntityRef;
+  /** Optional: Unit info (for /units page) */
+  unit?: BreadcrumbEntityRef & { type?: string };
+  /** Optional: Space info for parking/storage (for /parking, /storage pages) */
+  space?: BreadcrumbEntityRef & { type: 'parking' | 'storage' };
+  /** The navigation level to set */
+  currentLevel: NavigationLevel;
+}
+
+/**
+ * 🏢 ENTERPRISE: Navigation State
+ *
+ * ⚠️ CRITICAL CONTRACT FOR selected* FIELDS:
+ * The `selectedCompany`, `selectedProject`, `selectedBuilding`, and `selectedUnit` fields
+ * are **DISPLAY-ONLY navigation selections** for breadcrumb/UI context.
+ *
+ * When populated via `syncBreadcrumb()`:
+ * - They are NOT guaranteed to be full domain entities
+ * - Nested arrays (e.g., `buildings`, `floors`, `units`) MAY BE EMPTY
+ * - They contain only the minimum fields needed for breadcrumb display (id, name)
+ *
+ * ❌ DO NOT USE for:
+ * - Business logic decisions
+ * - Data fetching based on nested arrays
+ * - Expecting full entity data
+ *
+ * ✅ USE for:
+ * - Breadcrumb display
+ * - Navigation UI context
+ * - Current selection highlighting
+ *
+ * For full domain entities, fetch directly from the appropriate data source/API.
+ */
 export interface NavigationState {
+  /** Full list of companies (loaded from API) */
   companies: NavigationCompany[];
+  /**
+   * Currently selected company for breadcrumb display.
+   * ⚠️ DISPLAY-ONLY - may not contain full entity data when set via syncBreadcrumb()
+   */
   selectedCompany: NavigationCompany | null;
+  /** Full list of projects (loaded from API) */
   projects: NavigationProject[];
+  /**
+   * Currently selected project for breadcrumb display.
+   * ⚠️ DISPLAY-ONLY - `buildings` array may be empty when set via syncBreadcrumb()
+   */
   selectedProject: NavigationProject | null;
+  /**
+   * Currently selected building for breadcrumb display.
+   * ⚠️ DISPLAY-ONLY - `floors` array may be empty when set via syncBreadcrumb()
+   */
   selectedBuilding: NavigationBuilding | null;
-  /** 🏢 ENTERPRISE: Selected unit for breadcrumb display */
+  /**
+   * 🏢 ENTERPRISE: Selected unit/space for breadcrumb display.
+   * ⚠️ DISPLAY-ONLY - contains only id, name, and optional type
+   */
   selectedUnit: NavigationSelectedUnit | null;
   /**
    * @deprecated 🏢 ENTERPRISE (Επιλογή Α): Floors αφαιρέθηκαν από navigation.
@@ -97,6 +185,38 @@ export interface NavigationActions {
   selectBuilding: (buildingId: string) => void;
   /** 🏢 ENTERPRISE: Select unit for breadcrumb display */
   selectUnit: (unit: NavigationSelectedUnit | null) => void;
+  /**
+   * 🏢 ENTERPRISE: Atomic breadcrumb sync from entity pages
+   *
+   * Sets the navigation display hierarchy in a single atomic state update
+   * to avoid race conditions when syncing from entity pages.
+   *
+   * ⚠️ CRITICAL CONTRACT:
+   * - Updates DISPLAY-ONLY navigation selection for breadcrumb/UI context
+   * - The resulting selected* objects are NOT full domain entities
+   * - Nested arrays (`buildings`, `floors`) will be EMPTY
+   * - MUST NOT be used for business logic or data fetching
+   *
+   * ✅ CORRECT USAGE:
+   * ```typescript
+   * syncBreadcrumb({
+   *   company: { id: company.id, name: company.companyName },
+   *   project: { id: project.id, name: project.name },
+   *   building: { id: building.id, name: building.name },
+   *   currentLevel: 'buildings'
+   * });
+   * ```
+   *
+   * ❌ INCORRECT - Do not expect full entities after sync:
+   * ```typescript
+   * const buildings = selectedProject.buildings; // MAY BE EMPTY!
+   * ```
+   *
+   * @param params - Breadcrumb sync parameters with names (not just IDs)
+   * @see BreadcrumbSyncParams - The parameter type with full documentation
+   * @see BreadcrumbEntityRef - The lightweight display-only reference type
+   */
+  syncBreadcrumb: (params: BreadcrumbSyncParams) => void;
   /**
    * @deprecated 🏢 ENTERPRISE (Επιλογή Α): Floors αφαιρέθηκαν από navigation.
    * Παραμένει για backward compatibility - θα αφαιρεθεί σε μελλοντική έκδοση.

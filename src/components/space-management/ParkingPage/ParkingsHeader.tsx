@@ -20,6 +20,8 @@ import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effect
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Breadcrumb navigation
+import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
 
 interface ParkingsHeaderProps {
   viewMode: 'list' | 'grid' | 'byType' | 'byStatus';
@@ -58,6 +60,7 @@ export function ParkingsHeader({
         title: "Θέσεις Στάθμευσης",
         subtitle: "Διαχείριση και παρακολούθηση θέσεων στάθμευσης"
       }}
+      breadcrumb={<NavigationBreadcrumb />}
       search={{
         value: searchTerm,
         onChange: setSearchTerm,

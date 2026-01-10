@@ -22,6 +22,8 @@ import {
   Trash2
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+// 🏢 ENTERPRISE: Navigation context for breadcrumb sync
+import { useNavigation } from '@/components/navigation/core/NavigationContext';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { BuildingsGroupedView } from './BuildingsPage/BuildingsGroupedView';
 import { useBuildingsPageState } from '@/hooks/useBuildingsPageState';
@@ -37,6 +39,9 @@ export type { Building } from '@/types/building/contracts';
 export function BuildingsPageContent() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+
+  // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
+  const { companies, projects, syncBreadcrumb } = useNavigation();
 
   // Load buildings from Firestore
   const { buildings: buildingsData, loading: buildingsLoading, error: buildingsError } = useFirestoreBuildings();
@@ -55,6 +60,26 @@ export function BuildingsPageContent() {
 
   // Mobile-only filter toggle state
   const [showFilters, setShowFilters] = React.useState(false);
+
+  // 🏢 ENTERPRISE: Sync selectedBuilding with NavigationContext for breadcrumb display
+  React.useEffect(() => {
+    if (selectedBuilding && companies.length > 0 && projects.length > 0) {
+      // Find the project and company this building belongs to
+      const project = projects.find(p => p.id === selectedBuilding.projectId);
+      if (project && project.companyId) {
+        const company = companies.find(c => c.id === project.companyId);
+        if (company) {
+          // Use atomic sync with names (not just IDs) - enterprise pattern
+          syncBreadcrumb({
+            company: { id: company.id, name: company.companyName },
+            project: { id: project.id, name: project.name },
+            building: { id: selectedBuilding.id, name: selectedBuilding.name },
+            currentLevel: 'buildings'
+          });
+        }
+      }
+    }
+  }, [selectedBuilding?.id, companies.length, projects.length, syncBreadcrumb]);
 
   const buildingsStats = useBuildingStats(baseFilteredBuildings);
 

@@ -11,6 +11,8 @@ import { AdvancedFiltersPanel, projectFiltersConfig } from '@/components/core/Ad
 import { ListContainer, PageContainer } from '@/core/containers';
 import { useProjectsStats } from '@/hooks/useProjectsStats';
 import { projectsConfig } from '@/components/core/CompactToolbar';
+// 🏢 ENTERPRISE: Navigation context for breadcrumb sync
+import { useNavigation } from '@/components/navigation/core/NavigationContext';
 
 import { ProjectsHeader } from './ProjectsHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -29,6 +31,10 @@ import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoad
 export function ProjectsPageContent() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+
+  // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
+  const { companies, syncBreadcrumb } = useNavigation();
+
   // Φόρτωση έργων από Firestore αντί για sample data
   const { projects: firestoreProjects, loading, error } = useFirestoreProjects();
 
@@ -45,6 +51,22 @@ export function ProjectsPageContent() {
   } = useProjectsPageState(firestoreProjects || []);
 
   const projectsStats = useProjectsStats(filteredProjects || []);
+
+  // 🏢 ENTERPRISE: Sync selectedProject with NavigationContext for breadcrumb display
+  React.useEffect(() => {
+    if (selectedProject && companies.length > 0) {
+      // Find the company this project belongs to
+      const company = companies.find(c => c.id === selectedProject.companyId);
+      if (company) {
+        // Use atomic sync with names - enterprise pattern
+        syncBreadcrumb({
+          company: { id: company.id, name: company.companyName },
+          project: { id: selectedProject.id, name: selectedProject.name },
+          currentLevel: 'projects'
+        });
+      }
+    }
+  }, [selectedProject?.id, companies.length, syncBreadcrumb]);
 
   // 🔥 NEW: Dashboard card filtering state
   const [activeCardFilter, setActiveCardFilter] = React.useState<string | null>(null);

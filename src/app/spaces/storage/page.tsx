@@ -20,6 +20,9 @@ import {
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
+// 🏢 ENTERPRISE: Navigation context for breadcrumb sync
+import { useNavigation } from '@/components/navigation/core/NavigationContext';
+import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { useStoragesPageState } from '@/hooks/useStoragesPageState';
 import { useStorageStats } from '@/hooks/useStorageStats';
@@ -37,6 +40,10 @@ function StoragePageContent() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
+  // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
+  const { companies, projects, syncBreadcrumb } = useNavigation();
+  const { buildings } = useFirestoreBuildings();
+
   // Firestore data connection - πραγματικά δεδομένα αντί για mock data
   const { storages, loading, error, refetch } = useFirestoreStorages();
 
@@ -53,6 +60,55 @@ function StoragePageContent() {
   } = useStoragesPageState(storages);
 
   const stats = useStorageStats(filteredStorages);
+
+  // 🏢 ENTERPRISE: Sync selectedStorage with NavigationContext for breadcrumb display
+  React.useEffect(() => {
+    if (selectedStorage && buildings.length > 0 && companies.length > 0 && projects.length > 0) {
+      // Find the building this storage belongs to
+      // Try multiple matching strategies for robustness
+      const storageBuildingName = selectedStorage.building?.trim() || '';
+
+      let building = buildings.find(b => b.name === storageBuildingName);
+
+      // Fallback 1: Case-insensitive exact match
+      if (!building && storageBuildingName) {
+        building = buildings.find(b =>
+          b.name.toLowerCase() === storageBuildingName.toLowerCase()
+        );
+      }
+
+      // Fallback 2: Partial match (storage building name contains building name or vice versa)
+      if (!building && storageBuildingName) {
+        building = buildings.find(b =>
+          b.name.toLowerCase().includes(storageBuildingName.toLowerCase()) ||
+          storageBuildingName.toLowerCase().includes(b.name.toLowerCase())
+        );
+      }
+
+      // Fallback 3: Match by projectId if available
+      if (!building && selectedStorage.projectId) {
+        building = buildings.find(b => b.projectId === selectedStorage.projectId);
+      }
+
+      if (building && building.projectId) {
+        // Find the project and company
+        const project = projects.find(p => p.id === building.projectId);
+        if (project && project.companyId) {
+          const company = companies.find(c => c.id === project.companyId);
+          if (company) {
+            // Use atomic sync with names - enterprise pattern
+            syncBreadcrumb({
+              company: { id: company.id, name: company.companyName },
+              project: { id: project.id, name: project.name },
+              building: { id: building.id, name: building.name },
+              space: { id: selectedStorage.id, name: selectedStorage.name, type: 'storage' },
+              currentLevel: 'spaces'
+            });
+          }
+        }
+      }
+    }
+  }, [selectedStorage?.id, buildings.length, companies.length, projects.length, syncBreadcrumb]);
 
   // Search state (for header search)
   const [searchTerm, setSearchTerm] = React.useState('');

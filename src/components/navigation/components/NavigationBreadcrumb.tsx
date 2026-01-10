@@ -13,7 +13,7 @@
 import React from 'react';
 import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: Icons από centralized config - ZERO hardcoded imports
-import { NAVIGATION_ENTITIES } from '../config';
+import { NAVIGATION_ENTITIES, isNavigationEntityType } from '../config';
 import { useNavigation } from '../core/NavigationContext';
 import type { BreadcrumbItem } from '../core/types';
 
@@ -82,11 +82,18 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
     }
 
     if (selectedUnit) {
+      // 🏢 ENTERPRISE: Dynamic entity config based on selectedUnit.type
+      // Supports: 'parking', 'storage', or defaults to 'unit'
+      const entityType = selectedUnit.type && isNavigationEntityType(selectedUnit.type)
+        ? selectedUnit.type
+        : 'unit';
+      const entityConfig = NAVIGATION_ENTITIES[entityType];
+
       items.push({
         id: selectedUnit.id,
         label: selectedUnit.name,
-        icon: NAVIGATION_ENTITIES.unit.icon,
-        color: NAVIGATION_ENTITIES.unit.color,  // 🏢 ENTERPRISE: Centralized color
+        icon: entityConfig.icon,
+        color: entityConfig.color,  // 🏢 ENTERPRISE: Centralized color from entity type
         level: 'units',
         onClick: () => navigateToLevel('units')
       });

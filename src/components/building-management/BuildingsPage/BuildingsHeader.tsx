@@ -5,6 +5,8 @@ import React from 'react';
 import { Filter } from 'lucide-react';
 // 🏢 ENTERPRISE: Using centralized entity config for Building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
+// 🏢 ENTERPRISE: Breadcrumb from centralized navigation
+import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -46,6 +48,8 @@ export function BuildingsHeader({
         title: "Διαχείριση Κτιρίων",
         subtitle: "Διαχείριση και παρακολούθηση κτιριακών έργων"
       }}
+      // 🏢 ENTERPRISE: Breadcrumb για ιεραρχική πλοήγηση
+      breadcrumb={<NavigationBreadcrumb />}
       actions={{
         showDashboard,
         onDashboardToggle: () => setShowDashboard(!showDashboard),

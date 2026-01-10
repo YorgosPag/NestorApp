@@ -88,6 +88,9 @@ interface PageHeaderProps {
   // Title Section
   title: HeaderTitleProps;
 
+  // 🏢 ENTERPRISE: Breadcrumb Section (renders between Title and Actions)
+  breadcrumb?: React.ReactNode;
+
   // Search Section
   search?: HeaderSearchProps;
 
@@ -106,6 +109,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   variant = 'sticky',
   className,
   title,
+  breadcrumb,
   search,
   filters,
   actions,
@@ -148,31 +152,71 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         {/* Single Row Layout */}
         {layout === 'single-row' && (
           <>
-            <HeaderTitle {...title} />
-            {actions && <HeaderActions {...actions} />}
+            <div className="shrink-0">
+              <HeaderTitle {...title} />
+            </div>
+            {/* 🏢 ENTERPRISE: Breadcrumb slot - flexible middle section */}
+            {breadcrumb && (
+              <div className="flex-1 min-w-0 hidden sm:block">
+                <div className="truncate overflow-hidden whitespace-nowrap">
+                  {breadcrumb}
+                </div>
+              </div>
+            )}
+            {actions && (
+              <div className="shrink-0">
+                <HeaderActions {...actions} />
+              </div>
+            )}
           </>
         )}
 
         {/* Compact Layout - Mobile First */}
         {layout === 'compact' && (
           <>
-            <div className="flex items-center gap-2 min-w-0 sm:min-w-fit">
+            <div className="flex items-center gap-2 min-w-0 sm:min-w-fit shrink-0">
               <HeaderTitle
                 {...title}
                 hideSubtitle={true}
               />
             </div>
-            {actions && <HeaderActions {...actions} />}
+            {/* 🏢 ENTERPRISE: Breadcrumb slot - flexible middle section */}
+            {breadcrumb && (
+              <div className="flex-1 min-w-0 hidden sm:block">
+                <div className="truncate overflow-hidden whitespace-nowrap">
+                  {breadcrumb}
+                </div>
+              </div>
+            )}
+            {actions && (
+              <div className="shrink-0">
+                <HeaderActions {...actions} />
+              </div>
+            )}
           </>
         )}
 
         {/* Multi Row Layout */}
         {layout === 'multi-row' && (
           <>
-            {/* Top Row: Title + Actions */}
+            {/* Top Row: Title + Breadcrumb + Actions */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <HeaderTitle {...title} />
-              {actions && <HeaderActions {...actions} />}
+              <div className="shrink-0">
+                <HeaderTitle {...title} />
+              </div>
+              {/* 🏢 ENTERPRISE: Breadcrumb slot - flexible middle section */}
+              {breadcrumb && (
+                <div className="flex-1 min-w-0 hidden sm:block px-4">
+                  <div className="truncate overflow-hidden whitespace-nowrap">
+                    {breadcrumb}
+                  </div>
+                </div>
+              )}
+              {actions && (
+                <div className="shrink-0">
+                  <HeaderActions {...actions} />
+                </div>
+              )}
             </div>
 
             {/* Bottom Row: Search + Filters */}
@@ -200,6 +244,12 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         {layout === 'stacked' && (
           <>
             <HeaderTitle {...title} />
+            {/* 🏢 ENTERPRISE: Breadcrumb slot */}
+            {breadcrumb && (
+              <div className="truncate overflow-hidden whitespace-nowrap">
+                {breadcrumb}
+              </div>
+            )}
             {search && <HeaderSearch {...search} />}
             {filters && <HeaderFilters {...filters} />}
             {actions && <HeaderActions {...actions} />}

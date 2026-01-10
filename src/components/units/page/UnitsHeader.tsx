@@ -5,6 +5,8 @@ import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effect
 import { Filter } from 'lucide-react';
 import { PageHeader } from '@/core/headers';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+// 🏢 ENTERPRISE: Breadcrumb from centralized navigation
+import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -49,6 +51,8 @@ export function UnitsHeader({
           title: "Διαχείριση Μονάδων",
           subtitle: "Κεντρικό ευρετήριο όλων των μονάδων σας"
         }}
+        // 🏢 ENTERPRISE: Breadcrumb για ιεραρχική πλοήγηση
+        breadcrumb={<NavigationBreadcrumb />}
         search={{
           value: searchTerm,
           onChange: setSearchTerm,

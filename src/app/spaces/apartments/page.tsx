@@ -31,7 +31,6 @@ export default function SpacesApartmentsRedirectPage() {
     // 🏢 ENTERPRISE: Preserve URL parameters during redirect (contextual navigation)
     const queryString = searchParams.toString();
     const targetUrl = queryString ? `/units?${queryString}` : '/units';
-    console.log('🔄 [SpacesApartments] Redirecting with params:', targetUrl);
     router.replace(targetUrl);
   }, [router, searchParams]);
 

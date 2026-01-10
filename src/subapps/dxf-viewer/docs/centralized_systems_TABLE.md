@@ -26,6 +26,7 @@
 | **ADR-013** | Enterprise Card System 🏢 | `@/design-system` + `@/domain/cards` | Διάσπαρτα *ListItem components | 2026-01-08 |
 | **ADR-014** | Entity Icons Centralization 🏢 | `NAVIGATION_ENTITIES.{entity}.icon` | Hardcoded Lucide icons | 2026-01-09 |
 | **ADR-015** | Entity List Column Container 🏢 | `EntityListColumn` + `ENTITY_LIST_TOKENS` | Hardcoded width classes | 2026-01-09 |
+| **ADR-016** | Navigation Breadcrumb Path System 🏢 | `syncBreadcrumb()` + `BreadcrumbEntityRef` | Διάσπαρτο breadcrumb sync | 2026-01-10 |
 
 > **🚫 PROHIBITION**: Νέα Select/Dropdown implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** εκτός Radix Select.
 > **🚫 PROHIBITION**: Hardcoded canvas backgrounds **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `CANVAS_THEME`.
@@ -41,6 +42,7 @@
 > **🏢 ENTERPRISE**: ADR-014 - 19 files migrated, 8 entity types, centralized icons & colors.
 > **🏢 ENTERPRISE**: ADR-013 - 18 files, 22→7 cards, Atomic Design Pattern, 64% code reduction.
 > **🏢 ENTERPRISE**: ADR-015 - 6 files migrated, semantic HTML, single source of truth για list column widths.
+> **🏢 ENTERPRISE**: ADR-016 - 5 pages integrated, atomic breadcrumb sync, display-only contract, dynamic entity icons.
 >
 > **📍 Full ADRs**: [centralized_systems.md](./centralized_systems.md)
 
