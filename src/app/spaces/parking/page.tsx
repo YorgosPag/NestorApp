@@ -10,9 +10,11 @@
  * - Parking είναι παράλληλη κατηγορία με Units/Storage μέσα στο Building
  * - ΟΧΙ children των Units
  * - Ισότιμη οντότητα στην πλοήγηση
+ *
+ * 🔧 Next.js 15: useParkingPageState uses useSearchParams, requires Suspense
  */
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ParkingsHeader } from '@/components/space-management/ParkingPage/ParkingsHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -269,6 +271,20 @@ function ParkingPageContent() {
   );
 }
 
+/**
+ * 🔧 Next.js 15: Page with Suspense boundary for useSearchParams
+ */
 export default function ParkingPage() {
-  return <ParkingPageContent />;
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <Car className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+          <p className="text-muted-foreground">Φόρτωση θέσεων στάθμευσης...</p>
+        </div>
+      </div>
+    }>
+      <ParkingPageContent />
+    </Suspense>
+  );
 }

@@ -8,17 +8,34 @@
  * Floors αφαιρέθηκαν από navigation
  * Ιεραρχία: Companies → Projects → Buildings → Units
  *
+ * 🔗 ADR-016: Breadcrumb items are clickable Links (not buttons)
+ * - Uses ContextualNavigationService.generateRoute() for URL generation
+ * - Ctrl+Click opens in new tab (native browser behavior)
+ * - Last item (current page) is NOT clickable
+ *
  * @see navigation-entities.ts - Single Source of Truth για icons/colors
+ * @see ContextualNavigationService - Centralized route generation
  */
 import React from 'react';
+import Link from 'next/link';
 import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: Icons από centralized config - ZERO hardcoded imports
 import { NAVIGATION_ENTITIES, isNavigationEntityType } from '../config';
 import { useNavigation } from '../core/NavigationContext';
 import type { BreadcrumbItem } from '../core/types';
+// 🏢 ENTERPRISE: Centralized route generation - ZERO hardcoded URLs
+import { ContextualNavigationService, type NavigableEntityType } from '@/services/navigation/ContextualNavigationService';
 
 interface NavigationBreadcrumbProps {
   className?: string;
+}
+
+/**
+ * 🏢 ENTERPRISE: Extended BreadcrumbItem with href for Link navigation
+ */
+interface BreadcrumbItemWithHref extends BreadcrumbItem {
+  href: string;
+  entityType: NavigableEntityType;
 }
 
 export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
@@ -27,16 +44,21 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
     selectedProject,
     selectedBuilding,
     selectedUnit,  // 🏢 ENTERPRISE: Unit for breadcrumb display
-    navigateToLevel,
-    selectUnit  // 🏢 ENTERPRISE: Clear unit on click
   } = useNavigation();
 
   /**
-   * 🏢 ENTERPRISE (Επιλογή Α): Breadcrumb με units
-   * Ιεραρχία: Companies → Projects → Buildings → Units
+   * 🏢 ENTERPRISE (ADR-016): Breadcrumb με clickable Links
+   *
+   * Ιεραρχία: Companies → Projects → Buildings → Units/Storage/Parking
+   *
+   * Κάθε item έχει href που δημιουργείται από ContextualNavigationService.generateRoute()
+   * - company → /contacts?contactId=X&selectedCompany=true
+   * - project → /audit?projectId=X&selected=true
+   * - building → /buildings?buildingId=X&selected=true
+   * - unit/storage/parking → current page (last item, not clickable)
    */
-  const getBreadcrumbItems = (): BreadcrumbItem[] => {
-    const items: BreadcrumbItem[] = [];
+  const getBreadcrumbItems = (): BreadcrumbItemWithHref[] => {
+    const items: BreadcrumbItemWithHref[] = [];
 
     // 🏢 ENTERPRISE: Icons/Colors από NAVIGATION_ENTITIES - Single Source of Truth
     if (selectedCompany) {
@@ -44,12 +66,11 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
         id: selectedCompany.id,
         label: selectedCompany.companyName,
         icon: NAVIGATION_ENTITIES.company.icon,
-        color: NAVIGATION_ENTITIES.company.color,  // 🏢 ENTERPRISE: Centralized color
+        color: NAVIGATION_ENTITIES.company.color,
         level: 'companies',
-        onClick: () => {
-          selectUnit(null);
-          navigateToLevel('companies');
-        }
+        entityType: 'company',
+        href: ContextualNavigationService.generateRoute('company', selectedCompany.id, { action: 'select' }),
+        onClick: () => {} // Legacy - not used with Link
       });
     }
 
@@ -58,12 +79,11 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
         id: selectedProject.id,
         label: selectedProject.name,
         icon: NAVIGATION_ENTITIES.project.icon,
-        color: NAVIGATION_ENTITIES.project.color,  // 🏢 ENTERPRISE: Centralized color
+        color: NAVIGATION_ENTITIES.project.color,
         level: 'projects',
-        onClick: () => {
-          selectUnit(null);
-          navigateToLevel('projects');
-        }
+        entityType: 'project',
+        href: ContextualNavigationService.generateRoute('project', selectedProject.id, { action: 'select' }),
+        onClick: () => {} // Legacy - not used with Link
       });
     }
 
@@ -72,12 +92,11 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
         id: selectedBuilding.id,
         label: selectedBuilding.name,
         icon: NAVIGATION_ENTITIES.building.icon,
-        color: NAVIGATION_ENTITIES.building.color,  // 🏢 ENTERPRISE: Centralized color
+        color: NAVIGATION_ENTITIES.building.color,
         level: 'buildings',
-        onClick: () => {
-          selectUnit(null);
-          navigateToLevel('buildings');
-        }
+        entityType: 'building',
+        href: ContextualNavigationService.generateRoute('building', selectedBuilding.id, { action: 'select' }),
+        onClick: () => {} // Legacy - not used with Link
       });
     }
 
@@ -89,13 +108,18 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
         : 'unit';
       const entityConfig = NAVIGATION_ENTITIES[entityType];
 
+      // Map navigation entity type to NavigableEntityType for route generation
+      const navigableType: NavigableEntityType = entityType as NavigableEntityType;
+
       items.push({
         id: selectedUnit.id,
         label: selectedUnit.name,
         icon: entityConfig.icon,
-        color: entityConfig.color,  // 🏢 ENTERPRISE: Centralized color from entity type
+        color: entityConfig.color,
         level: 'units',
-        onClick: () => navigateToLevel('units')
+        entityType: navigableType,
+        href: ContextualNavigationService.generateRoute(navigableType, selectedUnit.id, { action: 'select' }),
+        onClick: () => {} // Legacy - not used with Link
       });
     }
 
@@ -108,31 +132,63 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
     return null;
   }
 
+  /**
+   * 🏢 ENTERPRISE: Render breadcrumb item content (shared between Link and span)
+   */
+  const renderItemContent = (item: BreadcrumbItemWithHref) => (
+    <>
+      {/* 🏢 ENTERPRISE: Icon with entity-specific color from centralized config */}
+      <span className={item.color}>
+        {typeof item.icon === 'string' ? (
+          item.icon
+        ) : (
+          <item.icon className="h-4 w-4" />
+        )}
+      </span>
+      {/* 🏢 ENTERPRISE: Label */}
+      <span>{item.label}</span>
+    </>
+  );
+
   return (
     <nav className={`flex items-center space-x-2 text-sm ${className || ''}`} aria-label="Breadcrumb">
-      {breadcrumbItems.map((item, index) => (
-        <React.Fragment key={item.id}>
-          <button
-            onClick={item.onClick}
-            className={`flex items-center gap-1 hover:opacity-80 transition-opacity`}
-            title={`Μετάβαση σε ${item.label}`}
-          >
-            {/* 🏢 ENTERPRISE: Icon with entity-specific color from centralized config */}
-            <span className={item.color}>
-              {typeof item.icon === 'string' ? (
-                item.icon
-              ) : (
-                <item.icon className="h-4 w-4" />
-              )}
-            </span>
-            {/* 🏢 ENTERPRISE: Label in neutral color */}
-            <span className="text-gray-300 hover:text-white transition-colors">{item.label}</span>
-          </button>
-          {index < breadcrumbItems.length - 1 && (
-            <span className="text-gray-500">→</span>
-          )}
-        </React.Fragment>
-      ))}
+      {breadcrumbItems.map((item, index) => {
+        const isLastItem = index === breadcrumbItems.length - 1;
+
+        return (
+          <React.Fragment key={item.id}>
+            {isLastItem ? (
+              /**
+               * 🏢 ENTERPRISE (ADR-016): Last item is CURRENT PAGE - not clickable
+               * Displayed as plain text with distinct styling
+               */
+              <span
+                className="flex items-center gap-1 text-white font-medium"
+                aria-current="page"
+              >
+                {renderItemContent(item)}
+              </span>
+            ) : (
+              /**
+               * 🏢 ENTERPRISE (ADR-016): Clickable Link for navigation
+               * - Uses ContextualNavigationService.generateRoute() for URL
+               * - Ctrl+Click opens in new tab (native browser behavior)
+               * - Proper <a> semantics for accessibility
+               */
+              <Link
+                href={item.href}
+                className="flex items-center gap-1 text-gray-300 hover:text-white transition-colors"
+                title={`Μετάβαση σε ${item.label}`}
+              >
+                {renderItemContent(item)}
+              </Link>
+            )}
+            {!isLastItem && (
+              <span className="text-gray-500" aria-hidden="true">→</span>
+            )}
+          </React.Fragment>
+        );
+      })}
     </nav>
   );
 }

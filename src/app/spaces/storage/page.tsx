@@ -1,6 +1,10 @@
 'use client';
 
-import React from 'react';
+/**
+ * 🔧 Next.js 15: useStoragesPageState uses useSearchParams, requires Suspense
+ */
+
+import React, { Suspense } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
@@ -285,6 +289,20 @@ function StoragePageContent() {
   );
 }
 
+/**
+ * 🔧 Next.js 15: Page with Suspense boundary for useSearchParams
+ */
 export default function StoragePage() {
-  return <StoragePageContent />;
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <Warehouse className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+          <p className="text-muted-foreground">Φόρτωση αποθηκών...</p>
+        </div>
+      </div>
+    }>
+      <StoragePageContent />
+    </Suspense>
+  );
 }

@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 
@@ -20,11 +19,16 @@ import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoad
  * - Preserves existing functionality during architecture migration
  *
  * 🏢 ENTERPRISE: Preserves URL parameters during redirect (contextual navigation)
+ * 🔧 Next.js 15: useSearchParams() requires Suspense boundary
  */
-export default function SpacesApartmentsRedirectPage() {
+
+/**
+ * 🏢 ENTERPRISE: Inner component that uses useSearchParams
+ * Wrapped in Suspense as required by Next.js 15
+ */
+function RedirectContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
   useEffect(() => {
@@ -44,5 +48,25 @@ export default function SpacesApartmentsRedirectPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+/**
+ * 🔧 Next.js 15: Page component with Suspense boundary
+ */
+export default function SpacesApartmentsRedirectPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <AnimatedSpinner size="large" className="mx-auto" />
+          <p className="text-sm text-muted-foreground">
+            Φόρτωση...
+          </p>
+        </div>
+      </div>
+    }>
+      <RedirectContent />
+    </Suspense>
   );
 }

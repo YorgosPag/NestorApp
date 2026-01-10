@@ -1,0 +1,964 @@
+● Read(src\subapps\dxf-viewer\docs\centralized_systems.md)
+  ⎿  Read 200 lines
+
+● Θα ψάξω το ADR-014 για να δω τι περιέχει και να αποφασίσω τι πρέπει να προσθέσω.
+
+● Read(src\subapps\dxf-viewer\docs\centralized_systems.md)
+  ⎿  Read 150 lines
+
+● Βλέπω ότι υπάρχει το ADR-014 για NAVIGATION ENTITY ICONS. Θα προσθέσω ένα νέο ADR-015 για το Breadcrumb Path System. Θα βρω πού τελειώνει το ADR-014 και θα προσθέσω εκεί.        
+
+● Update(src\subapps\dxf-viewer\docs\centralized_systems.md)
+  ⎿  Added 104 lines
+      1398                                                                                                                                                                          
+      1399   ---                                                                                                                                                                    
+      1400                                                                                                                                                                          
+      1401 + ### 📋 ADR-015: NAVIGATION BREADCRUMB PATH SYSTEM (2026-01-10) - 🏢 ENTERPRISE                                                                                         
+      1402 +                                                                                                                                                                        
+      1403 + **Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-10                                                                                                             
+      1404 +                                                                                                                                                                        
+      1405 + **Context**:                                                                                                                                                           
+      1406 + Υλοποιήθηκε κεντρικοποιημένο σύστημα breadcrumb paths για όλες τις entity pages:                                                                                       
+      1407 + - Projects, Buildings, Units, Parking, Storage pages                                                                                                                   
+      1408 + - Χρειαζόταν atomic sync με NavigationContext για αποφυγή race conditions                                                                                              
+      1409 + - Τα selected* objects πρέπει να είναι display-only (όχι full domain entities)                                                                                         
+      1410 +                                                                                                                                                                        
+      1411 + **Decision**:                                                                                                                                                          
+      1412 +                                                                                                                                                                        
+      1413 + | Rule | Description |                                                                                                                                                 
+      1414 + |------|-------------|                                                                                                                                                 
+      1415 + | **CANONICAL SOURCE** | `syncBreadcrumb()` από `NavigationContext` είναι η ΜΟΝΑΔΙΚΗ μέθοδος για breadcrumb sync |                                                     
+      1416 + | **DISPLAY-ONLY CONTRACT** | Τα `selected*` objects (selectedCompany, selectedProject, κλπ) είναι **DISPLAY-ONLY** |                                                  
+      1417 + | **LIGHTWEIGHT TYPE** | `BreadcrumbEntityRef` (`{ id: string; name: string }`) για breadcrumb references |                                                            
+      1418 + | **DYNAMIC ICONS** | Entity-specific icons/colors μέσω `NAVIGATION_ENTITIES[entityType]` |                                                                            
+      1419 +                                                                                                                                                                        
+      1420 + **Core Architecture**:                                                                                                                                                 
+      1421 +                                                                                                                                                                        
+      1422 + | Component | Location | Purpose |                                                                                                                                     
+      1423 + |-----------|----------|---------|                                                                                                                                     
+      1424 + | `syncBreadcrumb()` | `NavigationContext.tsx` | Atomic breadcrumb sync method |                                                                                       
+      1425 + | `BreadcrumbEntityRef` | `navigation/core/types.ts` | Lightweight reference type |                                                                                    
+      1426 + | `BreadcrumbSyncParams` | `navigation/core/types.ts` | Sync parameters interface |                                                                                    
+      1427 + | `NavigationBreadcrumb` | `navigation/components/` | Renders breadcrumb UI |                                                                                          
+      1428 +                                                                                                                                                                        
+      1429 + **Enterprise Contract** (CRITICAL):                                                                                                                                    
+      1430 + ```typescript                                                                                                                                                          
+      1431 + /**                                                                                                                                                                    
+      1432 +  * ⚠️ CRITICAL CONTRACT FOR selected* FIELDS:                                                                                                                          
+      1433 +  * - Updates DISPLAY-ONLY navigation selection for breadcrumb/UI context      
+      1434 +  * - The resulting selected* objects are NOT full domain entities                                                                                                      
+      1435 +  * - Nested arrays (`buildings`, `floors`) MAY BE EMPTY                                                                                                                
+      1436 +  * - MUST NOT be used for business logic or data fetching                                                                                                              
+      1437 +  *                                                                                                                                                                     
+      1438 +  * ✅ USE for: Breadcrumb display, Navigation UI context                                                                                                                
+      1439 +  * ❌ DO NOT USE for: Business logic, Data fetching                                                                                                                     
+      1440 +  */                                                                                                                                                                    
+      1441 + ```                                                                                                                                                                    
+      1442 +                                                                                                                                                                        
+      1443 + **Implementation Pattern**:                                                                                                                                            
+      1444 + ```typescript                                                                                                                                                          
+      1445 + // ✅ ENTERPRISE: Atomic breadcrumb sync from entity page                                                                                                               
+      1446 + import { useNavigation } from '@/components/navigation/core/NavigationContext';                                                                                        
+      1447 +                                                                                                                                                                        
+      1448 + const { syncBreadcrumb } = useNavigation();                                                                                                                            
+      1449 +                                                                                                                                                                        
+      1450 + React.useEffect(() => {                                                                                                                                                
+      1451 +   if (selectedEntity && companies.length > 0) {                                                                                                                        
+      1452 +     syncBreadcrumb({                                                                                                                                                   
+      1453 +       company: { id: company.id, name: company.companyName },                                                                                                          
+      1454 +       project: { id: project.id, name: project.name },                                                                                                                 
+      1455 +       building: { id: building.id, name: building.name },                                                                                                              
+      1456 +       space: { id: entity.id, name: entity.name, type: 'parking' | 'storage' },                                                                                        
+      1457 +       currentLevel: 'spaces'                                                                                                                                           
+      1458 +     });                                                                                                                                                                
+      1459 +   }                                                                                                                                                                    
+      1460 + }, [selectedEntity?.id, companies.length, syncBreadcrumb]);                                                                                                            
+      1461 +                                                                                                                                                                        
+      1462 + // ❌ PROHIBITED: Direct selected* mutations                                                                                                                            
+      1463 + setSelectedProject(fullProjectObject); // May cause data inconsistency                                                                                                 
+      1464 + ```                                                                                                                                                                    
+      1465 +                                                                                                                                                                        
+      1466 + **Dynamic Entity Icons** (NavigationBreadcrumb.tsx):                                                                                                                   
+      1467 + ```typescript                                                                                                                                                          
+      1468 + // ✅ ENTERPRISE: Dynamic icon/color based on entity type                                                                                                               
+      1469 + const entityType = selectedUnit.type && isNavigationEntityType(selectedUnit.type)                                                                                      
+      1470 +   ? selectedUnit.type  // 'parking' | 'storage'                                                                                                                        
+      1471 +   : 'unit';                                                                                                                                                            
+      1472 + const entityConfig = NAVIGATION_ENTITIES[entityType];                                                                                                                  
+      1473 + // Uses entityConfig.icon and entityConfig.color                                                                                                                       
+      1474 + ```                                                                                                                                                                    
+      1475 +                                                                                                                                                                        
+      1476 + **Pages Integrated**:                                                                                                                                                  
+      1477 +                                                                                                                                                                        
+      1478 + | Page | Route | syncBreadcrumb | Status |                                                                                                                             
+      1479 + |------|-------|----------------|--------|                                                                                                                             
+      1480 + | Projects | `/audit` | ✅ Company → Project | ✅ |                                                                                                                      
+      1481 + | Buildings | `/buildings` | ✅ Company → Project → Building | ✅ |                                                                                                      
+      1482 + | Units | `/units` | ✅ Company → Project → Building → Unit | ✅ |                                                                                                       
+      1483 + | Parking | `/spaces/parking` | ✅ Company → Project → Building → Parking | ✅ |                                                                                         
+      1484 + | Storage | `/spaces/storage` | ✅ Company → Project → Building → Storage | ✅ |                                                                                         
+      1485 +                                                                                                                                                                        
+      1486 + **Known Limitations** (P1 Future Work):                                                                                                                                
+      1487 + - Storage/Parking matching uses heuristics (name matching) instead of direct IDs                                                                                       
+      1488 + - Future migration: Add `buildingId`, `projectId`, `companyId` to Storage/Parking documents                                                                            
+      1489 +                                                                                                                                                                        
+      1490 + **Consequences**:                                                                                                                                                      
+      1491 + - ✅ **Atomic Updates**: Single state update, no race conditions                                                                                                        
+      1492 + - ✅ **Type-Safe**: `BreadcrumbEntityRef` enforces lightweight contracts                                                                                                
+      1493 + - ✅ **Entity-Specific UI**: Correct icons/colors for parking (🚗 amber), storage (📦 indigo)                                                                           
+      1494 + - ✅ **Documented Contract**: JSDoc warnings prevent misuse of selected* objects                                                                                        
+      1495 + - ✅ **Scalable**: New entity types = new entry in `NAVIGATION_ENTITIES`                                                                                                
+      1496 +                                                                                                                                                                        
+      1497 + **References**:                                                                                                                                                        
+      1498 + - Source: `src/components/navigation/core/NavigationContext.tsx`                                                                                                       
+      1499 + - Types: `src/components/navigation/core/types.ts`                                                                                                                     
+      1500 + - UI: `src/components/navigation/components/NavigationBreadcrumb.tsx`                                                                                                  
+      1501 + - Related: ADR-014 (Navigation Entity Icons)                                                                                                                           
+      1502 +                                                                                                                                                                        
+      1503 + ---                                                                                                                                                                    
+      1504 +                                                                                                                                                                        
+      1505   ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS                                                                                                                         
+      1506                                                                                                                                                                          
+      1507   ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)                                                                                                       
+
+● Θα ελέγξω αν χρειάζεται να ενημερώσω και το TABLE αρχείο.
+
+● Search(pattern: "ADR-014|ADR-013", path: "src\subapps\dxf-viewer\docs\centralized_systems_TABLE.md", output_mode: "content")
+  ⎿  Found 5 lines (ctrl+o to expand)
+
+● Read(src\subapps\dxf-viewer\docs\centralized_systems_TABLE.md)
+  ⎿  Read 40 lines
+
+● Βλέπω ότι υπάρχει ήδη ADR-015 για Entity List Column Container. Θα αλλάξω το δικό μου σε ADR-016.
+
+● Update(src\subapps\dxf-viewer\docs\centralized_systems.md)
+  ⎿  Added 1 line, removed 1 line
+      1398                                                                                                                                                                          
+      1399   ---                                                                                                                                                                    
+      1400                                                                                                                                                                          
+      1401 -### 📋 ADR-015: NAVIGATION BREADCRUMB PATH SYSTEM (2026-01-10) - 🏢 ENTERPRISE                                                                                          
+      1401 +### 📋 ADR-016: NAVIGATION BREADCRUMB PATH SYSTEM (2026-01-10) - 🏢 ENTERPRISE                                                                                          
+      1402                                                                                                                                                                          
+      1403   **Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-10                                                                                                             
+      1404                                                                                                                                                                          
+
+● Τώρα θα προσθέσω το ADR-016 στο TABLE.
+
+● Update(src\subapps\dxf-viewer\docs\centralized_systems_TABLE.md)
+  ⎿  Added 1 line
+      26   | **ADR-013** | Enterprise Card System 🏢 | `@/design-system` + `@/domain/cards` | Διάσπαρτα *ListItem components | 2026-01-08 |                                         
+      27   | **ADR-014** | Entity Icons Centralization 🏢 | `NAVIGATION_ENTITIES.{entity}.icon` | Hardcoded Lucide icons | 2026-01-09 |                                             
+      28   | **ADR-015** | Entity List Column Container 🏢 | `EntityListColumn` + `ENTITY_LIST_TOKENS` | Hardcoded width classes | 2026-01-09 |                                     
+      29 + | **ADR-016** | Navigation Breadcrumb Path System 🏢 | `syncBreadcrumb()` + `BreadcrumbEntityRef` | Διάσπαρτο breadcrumb sync | 2026-01-10 |                             
+      30                                                                                                                                                                            
+      31   > **🚫 PROHIBITION**: Νέα Select/Dropdown implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** εκτός Radix Select.                                                                          
+      32   > **🚫 PROHIBITION**: Hardcoded canvas backgrounds **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `CANVAS_THEME`.                                                                    
+
+● Update(src\subapps\dxf-viewer\docs\centralized_systems_TABLE.md)
+  ⎿  Added 1 line
+      42   > **🏢 ENTERPRISE**: ADR-014 - 19 files migrated, 8 entity types, centralized icons & colors.                                                                            
+      43   > **🏢 ENTERPRISE**: ADR-013 - 18 files, 22→7 cards, Atomic Design Pattern, 64% code reduction.                                                                          
+      44   > **🏢 ENTERPRISE**: ADR-015 - 6 files migrated, semantic HTML, single source of truth για list column widths.                                                           
+      45 + > **🏢 ENTERPRISE**: ADR-016 - 5 pages integrated, atomic breadcrumb sync, display-only contract, dynamic entity icons.                                                  
+      46   >                                                                                                                                                                        
+      47   > **📍 Full ADRs**: [centralized_systems.md](./centralized_systems.md)                                                                                                   
+      48                                                                                                                                                                            
+
+● Ολοκλήρωσα την ενημέρωση της τεκμηρίωσης. Να η σύνοψη:
+
+  ---
+  ✅ Ενημέρωση Τεκμηρίωσης - Navigation Breadcrumb Path System
+
+  Προστέθηκε ADR-016: NAVIGATION BREADCRUMB PATH SYSTEM
+
+  Αρχεία που ενημερώθηκαν:
+  1. src/subapps/dxf-viewer/docs/centralized_systems.md - Πλήρες ADR με ~100 γραμμές
+  2. src/subapps/dxf-viewer/docs/centralized_systems_TABLE.md - Quick reference entry
+
+  ---
+  Τι τεκμηριώθηκε:
+  ┌───────────────────────┬───────────────────────────────────────────────────────────────────────┐
+  │       Στοιχείο        │                               Περιγραφή                               │
+  ├───────────────────────┼───────────────────────────────────────────────────────────────────────┤
+  │ syncBreadcrumb()      │ Atomic method για breadcrumb sync                                     │
+  ├───────────────────────┼───────────────────────────────────────────────────────────────────────┤
+  │ BreadcrumbEntityRef   │ Lightweight type { id: string; name: string }                         │
+  ├───────────────────────┼───────────────────────────────────────────────────────────────────────┤
+  │ Display-Only Contract │ Τα selected* objects είναι ΜΟΝΟ για display, όχι business logic       │
+  ├───────────────────────┼───────────────────────────────────────────────────────────────────────┤
+  │ Dynamic Entity Icons  │ Σωστό icon/color βάσει entityType (parking=🚗amber, storage=📦indigo) │
+  └───────────────────────┴───────────────────────────────────────────────────────────────────────┘
+  ---
+  Pages που ενσωματώθηκαν:
+  ┌───────────┬─────────────────┬────────────────────────────────────────┐
+  │   Page    │      Route      │            Breadcrumb Path             │
+  ├───────────┼─────────────────┼────────────────────────────────────────┤
+  │ Projects  │ /audit          │ Company → Project                      │
+  ├───────────┼─────────────────┼────────────────────────────────────────┤
+  │ Buildings │ /buildings      │ Company → Project → Building           │
+  ├───────────┼─────────────────┼────────────────────────────────────────┤
+  │ Units     │ /units          │ Company → Project → Building → Unit    │
+  ├───────────┼─────────────────┼────────────────────────────────────────┤
+  │ Parking   │ /spaces/parking │ Company → Project → Building → Parking │
+  ├───────────┼─────────────────┼────────────────────────────────────────┤
+  │ Storage   │ /spaces/storage │ Company → Project → Building → Storage │
+  └───────────┴─────────────────┴────────────────────────────────────────┘
+  ---
+  Enterprise Contract (ΚΡΙΣΙΜΟ):
+
+  ⚠️ Τα selected* objects (selectedCompany, selectedProject, κλπ):
+  - Είναι DISPLAY-ONLY για breadcrumb/UI context
+  - MAY BE EMPTY στα nested arrays (buildings, floors)
+  - ΑΠΑΓΟΡΕΥΕΤΑΙ η χρήση για business logic
+
+  ---
+  Η τεκμηρίωση είναι πλέον πλήρης για όλη τη δουλειά που έγινε στα μονοπάτια πλοήγησης!
+
+✻ Baked for 3m 20s
+
+❯ "C:\Users\user\Downloads\Στιγμιότυπο οθόνης 2026-01-10 125508.jpg"  C:\Nestor_Pagonis\REAL_ESTATE_HANDOFF_REPORT_1.md                                                             
+  C:\Nestor_Pagonis\REAL_ESTATE_HANDOFF_REPORT_2.md Τώρα θέλω να μελετήσεις τα αρχεία αυτά και το στιγμιότυπο της οθόνης πρώτα θα μελετήσεις τα αρχεία και ύστερα θέλω να μου       
+  πεις πως θα προχωρήσουμε ώστε όταν πηγαίνουμε πάνω στο μονοπάτι της πλοήγησης και κάνουμε κλικ κάθε μία στάση του μονοπατιού να μεταφερόμαστε αυτόματα στην αντίστοιχη            
+  οντότητα στην αντίστοιχη σελίδα και θέλω να μου πεις πως αυτό θα το έκανε μία μεγάλη παγκόσμια κατασκευάστρια εταιρεία και αν αυτό που σκέφτομαι είναι σωστό ή όχι                
+
+● Θα μελετήσω τα αρχεία και το στιγμιότυπο οθόνης.
+
+● Read(~\Downloads\Στιγμιότυπο οθόνης 2026-01-10 125508.jpg)
+  ⎿  Read image (179.2KB)
+
+● Read(REAL_ESTATE_HANDOFF_REPORT_1.md)
+  ⎿  Read 355 lines
+
+● Read(REAL_ESTATE_HANDOFF_REPORT_2.md)
+  ⎿  Read 529 lines
+
+● Γιώργο, μελέτησα τα αρχεία και το screenshot. Ας αναλύσω:
+
+  ---
+  📊 Τι Βλέπω στο Screenshot
+
+  Το breadcrumb path δείχνει:
+  Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε. → Ταμιακή Εμπορικό Κέντρο → ΚΤΙΡΙΟ Α - Παλαιολόγου → P-006
+       (Company)                    (Project)                 (Building)           (Parking)
+
+  Θέλεις κάθε "στάση" να είναι clickable και να σε πηγαίνει στην αντίστοιχη σελίδα.
+
+  ---
+  🏢 Πώς το Κάνουν οι Μεγάλες Εταιρείες
+
+  Salesforce
+
+  Home → Accounts → Acme Corp → Opportunities → Deal #123
+    ↓        ↓          ↓            ↓            ↓
+   click   click      click       click        (current)
+  Κάθε item είναι link που σε πάει στο list view ή detail view του αντίστοιχου object.
+
+  SAP Fiori / Microsoft Dynamics
+
+  - Breadcrumb = Shell Navigation
+  - Κάθε κλικ σε ανεβάζει ένα επίπεδο στην ιεραρχία
+  - Διατηρεί context - αν κάνεις κλικ στο Building, πηγαίνεις στα Buildings με αυτό το building pre-selected
+
+  Google Cloud Console
+
+  Project → Compute Engine → VM Instances → my-vm
+  Κάθε κλικ = navigation + context preservation
+
+  ---
+  ✅ Η Σωστή Προσέγγιση για το Nestor
+  ┌───────────────┬────────────────────┬─────────────────────────┐
+  │  Κλικ σε...   │  Πηγαίνει στο...   │         Context         │
+  ├───────────────┼────────────────────┼─────────────────────────┤
+  │ Company       │ / ή Companies view │ selectedCompany = αυτή  │
+  ├───────────────┼────────────────────┼─────────────────────────┤
+  │ Project       │ /audit (Projects)  │ selectedProject = αυτό  │
+  ├───────────────┼────────────────────┼─────────────────────────┤
+  │ Building      │ /buildings         │ selectedBuilding = αυτό │
+  ├───────────────┼────────────────────┼─────────────────────────┤
+  │ Space (P-006) │ Μένει εδώ          │ Current page            │
+  └───────────────┴────────────────────┴─────────────────────────┘
+  Enterprise Pattern: "Navigate Up with Context Preservation"
+
+  // Κλικ στο "Ταμιακή Εμπορικό Κέντρο" (Project)
+  onClick={() => {
+    // 1. Navigate to Projects page
+    router.push('/audit');
+
+    // 2. Pre-select this project in context
+    selectProject(projectId);
+  }
+
+  ---
+  🎯 Είναι Σωστό αυτό που Σκέφτεσαι;
+
+  ΝΑΙ, 100%! Αυτό είναι enterprise standard.
+
+  Αλλά υπάρχει ένα σημείο προσοχής από τα HANDOFF reports:
+
+  "Breadcrumb hierarchy ends at Building. Units/Storage/Parking are accessed through tabs/sections within the Building detail view."
+
+  Αυτό σημαίνει ότι σύμφωνα με την αρχιτεκτονική:
+  - Κλικ στο Building → θα έπρεπε να πηγαίνει στο Building detail view με tabs για Parking/Storage/Units
+  - Όχι σε ξεχωριστό /spaces/parking route
+
+  Ερώτηση για σένα: Θέλεις να ακολουθήσουμε πιστά την αρχιτεκτονική (Building detail → tabs), ή να κρατήσουμε τα ξεχωριστά routes (/spaces/parking, /spaces/storage) και απλά να κάνουμε τα breadcrumbs clickable;
+
+  ---
+  📋 Πρόταση Υλοποίησης
+
+  Option A: Quick Win (Διατήρηση τρέχουσας δομής)
+
+  - Κάνουμε τα breadcrumb items clickable
+  - Κάθε κλικ → navigate + context preservation
+  - ~30 λεπτά δουλειά
+
+  Option B: Full Enterprise (Σύμφωνα με HANDOFF)
+
+  - Building detail page με tabs (Μονάδες, Parking, Αποθήκες)
+  - Breadcrumb σταματά στο Building
+  - Parking/Storage/Units = tabs, όχι ξεχωριστά routes
+  - Μεγαλύτερη δουλειά, αλλά σύμφωνη με το spec
+
+  ---
+  Τι προτιμάς; Θα σου δώσω την enterprise λύση για οποιαδήποτε επιλογή.
+
+✻ Sautéed for 1m 5s
+
+❯ Θέλω να κάνεις το εξής να πας στην σελίδα navigation της εφαρμογής εκεί θα δεις κάποια κοντέινερ στη σειρά το ένα είναι το κοντέινερ των εταιρειών μετά είναι το νέργων μετά      
+  τον κτιρίων και μετά ένα κοντέινερ που έχει μονάδες αποθήκες και θέσεις στάθμευσης κάθε κοντέινερ περιέχει κάρτες σε κάθε κάρτα στην πάνω δεξιά γωνία υπάρχει ένα navigation      
+  button θέλω να μου δώσεις όσο περισσότερες πληροφορίες γίνεται σχετικά με το πώς λειτουργεί αυτό το navigation button και αν μπορούμε πραγματικά να το χρησιμοποιήσουμε για       
+  αυτή την πλοήγηση που τώρα σου ζητώ μέσω των στάσεων των μονοπατιών http://localhost:3000/navigation                                                                              
+
+● Θα εξερευνήσω τη σελίδα navigation για να καταλάβω πώς λειτουργεί το navigation button.
+
+● Search(pattern: "**/app/**/navigation/**/page.tsx")
+  ⎿  Found 1 file (ctrl+o to expand)
+
+● Search(pattern: "navigation.*button|NavigationButton|navigate.*button", path: "src")
+  ⎿  Found 7 files (ctrl+o to expand)
+
+● Read(src\app\navigation\page.tsx)
+  ⎿  Read 48 lines
+
+● Read(src\components\navigation\components\NavigationButton.tsx)
+  ⎿  Read 249 lines
+
+● Εξαιρετικό! Βρήκα το NavigationButton με το NavigationLinkOverlay. Τώρα θα δω το AdaptiveMultiColumnNavigation για να καταλάβω πώς χρησιμοποιούνται.
+
+● Read(src\components\navigation\components\AdaptiveMultiColumnNavigation.tsx)
+  ⎿  Read 102 lines
+
+● Read(src\components\navigation\components\DesktopMultiColumn.tsx)
+  ⎿  Read 1202 lines
+
+● Τέλεια! Βρήκα τα πάντα. Ας δω και το ContextualNavigationService που δημιουργεί τα routes.
+
+● Read(src\services\navigation\ContextualNavigationService.ts)
+  ⎿  Read 375 lines
+
+● Γιώργο, βρήκα τα πάντα! Έχεις ήδη ένα enterprise-grade navigation system που μπορεί να χρησιμοποιηθεί για τα breadcrumbs!
+
+  ---
+  📊 ΠΛΗΡΗΣ ΑΝΑΛΥΣΗ NAVIGATION SYSTEM
+
+  1. NavigationButton Component (NavigationButton.tsx)
+
+  Κάθε κάρτα στα containers έχει ένα ExternalLink icon στην πάνω δεξιά γωνία:
+
+  // Props που δέχεται:
+  navigationHref?: string;     // URL πλοήγησης (π.χ. '/contacts/123')
+  navigationTooltip?: string;  // Tooltip (π.χ. 'Άνοιγμα στις Επαφές')
+
+  Πώς λειτουργεί το κουμπί:
+  - Κλικ → Πηγαίνει στη σελίδα
+  - Ctrl+Κλικ → Ανοίγει σε νέα καρτέλα
+  - Hover → Εμφανίζει tooltip
+
+  2. NavigationLinkOverlay Component
+
+  Το enterprise pattern για το navigation icon:
+
+  const handleNavigation = (e: React.MouseEvent) => {
+    e.stopPropagation();  // Δεν επιλέγει την κάρτα
+    e.preventDefault();
+
+    const shouldOpenNewTab = e.ctrlKey || e.metaKey;
+    if (shouldOpenNewTab) {
+      window.open(href, '_blank');
+    } else {
+      router.push(href);  // Next.js navigation
+    }
+  };
+
+  3. ContextualNavigationService (Enterprise Routing)
+
+  Κεντρικοποιημένο service που δημιουργεί τα routes:
+  ┌─────────────┬────────────────────┬────────────────────────────┐
+  │ Entity Type │     Base Path      │         Παράμετροι         │
+  ├─────────────┼────────────────────┼────────────────────────────┤
+  │ company     │ /contacts          │ contactId, selectedCompany │
+  ├─────────────┼────────────────────┼────────────────────────────┤
+  │ project     │ /audit             │ projectId, selected        │
+  ├─────────────┼────────────────────┼────────────────────────────┤
+  │ building    │ /buildings         │ buildingId, selected       │
+  ├─────────────┼────────────────────┼────────────────────────────┤
+  │ unit        │ /spaces/apartments │ unitId, selected           │
+  ├─────────────┼────────────────────┼────────────────────────────┤
+  │ storage     │ /spaces/storage    │ storageId, selected        │
+  ├─────────────┼────────────────────┼────────────────────────────┤
+  │ parking     │ /spaces/parking    │ parkingId, selected        │
+  └─────────────┴────────────────────┴────────────────────────────┘
+  4. Πώς χρησιμοποιούνται στο DesktopMultiColumn
+
+  Κάθε κάρτα στα containers περνάει το navigationHref:
+
+  // Companies
+  navigationHref={ContextualNavigationService.generateRoute('company', company.id, { action: 'select' })}
+  // Result: /contacts?contactId=xyz&selectedCompany=true
+
+  // Projects
+  navigationHref={ContextualNavigationService.generateRoute('project', project.id, { action: 'select' })}
+  // Result: /audit?projectId=xyz&selected=true
+
+  // Buildings
+  navigationHref={ContextualNavigationService.generateRoute('building', building.id, { action: 'select' })}
+  // Result: /buildings?buildingId=xyz&selected=true
+
+  ---
+  🎯 ΜΠΟΡΟΥΜΕ ΝΑ ΤΟ ΧΡΗΣΙΜΟΠΟΙΗΣΟΥΜΕ ΓΙΑ ΤΑ BREADCRUMBS;
+
+  ΝΑΙ, 100%!
+
+  Το ίδιο pattern μπορεί να εφαρμοστεί στο NavigationBreadcrumb.tsx!
+
+  Τι χρειάζεται:
+
+  Στο NavigationBreadcrumb.tsx κάθε breadcrumb item έχει ήδη onClick handler. Απλά πρέπει να αλλάξουμε τη λογική:
+  ┌─────────────────┬──────────────────────────────┬───────────────────────────────────────────────────────────┐
+  │ Breadcrumb Item │     Τρέχουσα Συμπεριφορά     │                      Νέα Συμπεριφορά                      │
+  ├─────────────────┼──────────────────────────────┼───────────────────────────────────────────────────────────┤
+  │ Company         │ navigateToLevel('companies') │ router.push('/contacts?contactId=X&selectedCompany=true') │
+  ├─────────────────┼──────────────────────────────┼───────────────────────────────────────────────────────────┤
+  │ Project         │ navigateToLevel('projects')  │ router.push('/audit?projectId=X&selected=true')           │
+  ├─────────────────┼──────────────────────────────┼───────────────────────────────────────────────────────────┤
+  │ Building        │ navigateToLevel('buildings') │ router.push('/buildings?buildingId=X&selected=true')      │
+  ├─────────────────┼──────────────────────────────┼───────────────────────────────────────────────────────────┤
+  │ Space (P-006)   │ Stays here                   │ Stays here (current page)                                 │
+  └─────────────────┴──────────────────────────────┴───────────────────────────────────────────────────────────┘
+  ---
+  🏢 ENTERPRISE APPROACH
+
+  Αυτό ακριβώς κάνουν οι μεγάλες εταιρείες:
+
+  Salesforce Pattern:
+
+  Accounts → Acme Corp → Opportunities → Deal #123
+      ↓         ↓            ↓
+    /accounts  /accounts/xyz  /opportunities?accountId=xyz
+
+  SAP Fiori Pattern:
+
+  - Breadcrumb = Shell Navigation
+  - Κάθε κλικ = Navigation + Context Preservation
+
+  Microsoft Dynamics Pattern:
+
+  - Breadcrumb items είναι clickable links
+  - Διατηρούν το context (selected entity)
+
+  ---
+  ✅ ΣΥΜΠΕΡΑΣΜΑ
+
+  Η υποδομή υπάρχει ήδη! Χρειάζεται μόνο:
+
+  1. Ενημέρωση του NavigationBreadcrumb.tsx για να χρησιμοποιήσει το ContextualNavigationService.generateRoute() αντί για το απλό navigateToLevel()
+  2. Αυτό είναι ~20-30 γραμμές κώδικα
+
+  ---
+  Θέλεις να προχωρήσω με την υλοποίηση; Θα κάνω τα breadcrumb items clickable με navigation στις αντίστοιχες σελίδες.
+
+✻ Cooked for 1m 27s
+
+❯ C:\Nestor_Pagonis\local_41.log 
+
+● Read(local_41.log)
+  ⎿  Read 136 lines
+
+● Τέλεια! Αυτό είναι το roadmap. Θα διαβάσω το NavigationBreadcrumb.tsx για να δω την τρέχουσα υλοποίηση και να κάνω την αλλαγή.
+
+● Read(src\components\navigation\components\NavigationBreadcrumb.tsx)
+  ⎿  Read 140 lines
+
+● Τέλεια! Τώρα βλέπω ακριβώς τι πρέπει να αλλάξει.
+
+  Γιώργο, πριν προχωρήσω θέλω την έγκρισή σου:
+
+  ---
+  📋 ΠΡΟΤΕΙΝΟΜΕΝΗ ΑΛΛΑΓΗ (Option A)
+
+  Τι υπάρχει τώρα:
+
+  <button onClick={item.onClick} ...>
+    {/* navigateToLevel('companies') - αλλάζει μόνο internal state */}
+  </button>
+
+  Τι θα γίνει:
+
+  <Link href={ContextualNavigationService.generateRoute('company', companyId, { action: 'select' })} ...>
+    {/* Πραγματική navigation: /contacts?contactId=xyz&selectedCompany=true */}
+  </Link>
+
+  ---
+  Αλλαγές στο NavigationBreadcrumb.tsx:
+  ┌───────────┬───────────────────┬────────────────────────────────────────────────────┐
+  │ Στοιχείο  │       Πριν        │                        Μετά                        │
+  ├───────────┼───────────────────┼────────────────────────────────────────────────────┤
+  │ Import    │ -                 │ Link from 'next/link', ContextualNavigationService │
+  ├───────────┼───────────────────┼────────────────────────────────────────────────────┤
+  │ Element   │ <button onClick>  │ <Link href>                                        │
+  ├───────────┼───────────────────┼────────────────────────────────────────────────────┤
+  │ Routing   │ navigateToLevel() │ generateRoute() → actual URL                       │
+  ├───────────┼───────────────────┼────────────────────────────────────────────────────┤
+  │ Last item │ Clickable         │ Μη clickable (current page)                        │
+  └───────────┴───────────────────┴────────────────────────────────────────────────────┘
+  Mapping:
+  ┌──────────────────────┬────────────────────────────────────────────┐
+  │      Breadcrumb      │               Generated URL                │
+  ├──────────────────────┼────────────────────────────────────────────┤
+  │ Company              │ /contacts?contactId=X&selectedCompany=true │
+  ├──────────────────────┼────────────────────────────────────────────┤
+  │ Project              │ /audit?projectId=X&selected=true           │
+  ├──────────────────────┼────────────────────────────────────────────┤
+  │ Building             │ /buildings?buildingId=X&selected=true      │
+  ├──────────────────────┼────────────────────────────────────────────┤
+  │ Unit/Storage/Parking │ Stays on current page (last item)          │
+  └──────────────────────┴────────────────────────────────────────────┘
+  ---
+  Enterprise Benefits:
+
+  - ✅ Ctrl+Click → Opens in new tab (native browser behavior)
+  - ✅ Right-click → "Open in new tab" menu works
+  - ✅ Accessibility → Proper <a> semantics
+  - ✅ Zero duplicates → Uses existing ContextualNavigationService
+  - ✅ Consistent UX → Same pattern as navigation buttons
+
+  ---
+  Να προχωρήσω με αυτή την αλλαγή;
+
+✻ Churned for 42s
+
+❯ C:\Nestor_Pagonis\local_41.log 
+
+● Κατάλαβα, προχωράω με την υλοποίηση!
+
+● Update(src\components\navigation\components\NavigationBreadcrumb.tsx)
+  ⎿  Added 9 lines
+       8    * Floors αφαιρέθηκαν από navigation                                                                                                                                     
+       9    * Ιεραρχία: Companies → Projects → Buildings → Units                                                                                                                    
+      10    *                                                                                                                                                                       
+      11 +  * 🔗 ADR-016: Breadcrumb items are clickable Links (not buttons)                                                                                                        
+      12 +  * - Uses ContextualNavigationService.generateRoute() for URL generation                                                                                                 
+      13 +  * - Ctrl+Click opens in new tab (native browser behavior)                                                                                                               
+      14 +  * - Last item (current page) is NOT clickable                                                                                                                           
+      15 +  *                                                                                                                                                                       
+      16    * @see navigation-entities.ts - Single Source of Truth για icons/colors                                                                                                 
+      17 +  * @see ContextualNavigationService - Centralized route generation                                                                                                       
+      18    */                                                                                                                                                                      
+      19   import React from 'react';                                                                                                                                               
+      20 + import Link from 'next/link';                                                                                                                                            
+      21   import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';                                                                                                            
+      22   // 🏢 ENTERPRISE: Icons από centralized config - ZERO hardcoded imports                                                                                                  
+      23   import { NAVIGATION_ENTITIES, isNavigationEntityType } from '../config';                                                                                                 
+      24   import { useNavigation } from '../core/NavigationContext';                                                                                                               
+      25   import type { BreadcrumbItem } from '../core/types';                                                                                                                     
+      26 + // 🏢 ENTERPRISE: Centralized route generation - ZERO hardcoded URLs                                                                                                     
+      27 + import { ContextualNavigationService, type NavigableEntityType } from '@/services/navigation/ContextualNavigationService';                                               
+      28                                                                                                                                                                            
+      29   interface NavigationBreadcrumbProps {                                                                                                                                    
+      30     className?: string;                                                                                                                                                    
+
+● Update(src\components\navigation\components\NavigationBreadcrumb.tsx)
+  ⎿  Added 38 lines, removed 23 lines
+      30     className?: string;                                                                                                                                                    
+      31   }                                                                                                                                                                        
+      32                                                                                                                                                                            
+      33 + /**                                                                                                                                                                      
+      34 +  * 🏢 ENTERPRISE: Extended BreadcrumbItem with href for Link navigation                                                                                                  
+      35 +  */                                                                                                                                                                      
+      36 + interface BreadcrumbItemWithHref extends BreadcrumbItem {                                                                                                                
+      37 +   href: string;                                                                                                                                                          
+      38 +   entityType: NavigableEntityType;                                                                                                                                       
+      39 + }                                                                                                                                                                        
+      40 +                                                                                                                                                                          
+      41   export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {                                                                                         
+      42     const {                                                                                                                                                                
+      43       selectedCompany,                                                                                                                                                     
+      44       selectedProject,                                                                                                                                                     
+      45       selectedBuilding,                                                                                                                                                    
+      46       selectedUnit,  // 🏢 ENTERPRISE: Unit for breadcrumb display                                                                                                         
+      47 -     navigateToLevel,                                                                                                                                                     
+      48 -     selectUnit  // 🏢 ENTERPRISE: Clear unit on click                                                                                                                    
+      47     } = useNavigation();                                                                                                                                                   
+      48                                                                                                                                                                            
+      49     /**                                                                                                                                                                    
+      50 -   * 🏢 ENTERPRISE (Επιλογή Α): Breadcrumb με units                                                                                                                       
+      51 -    * Ιεραρχία: Companies → Projects → Buildings → Units                                                                                                                  
+      50 +   * 🏢 ENTERPRISE (ADR-016): Breadcrumb με clickable Links                                                                                                               
+      51 +    *                                                                                                                                                                     
+      52 +    * Ιεραρχία: Companies → Projects → Buildings → Units/Storage/Parking                                                                                                  
+      53 +    *                                                                                                                                                                     
+      54 +    * Κάθε item έχει href που δημιουργείται από ContextualNavigationService.generateRoute()                                                                               
+      55 +    * - company → /contacts?contactId=X&selectedCompany=true                                                                                                              
+      56 +    * - project → /audit?projectId=X&selected=true                                                                                                                        
+      57 +    * - building → /buildings?buildingId=X&selected=true                                                                                                                  
+      58 +    * - unit/storage/parking → current page (last item, not clickable)                                                                                                    
+      59      */                                                                                                                                                                    
+      60 -  const getBreadcrumbItems = (): BreadcrumbItem[] => {
+      61 -     const items: BreadcrumbItem[] = [];                                                                                                                                  
+      60 +  const getBreadcrumbItems = (): BreadcrumbItemWithHref[] => {                                                                                                            
+      61 +     const items: BreadcrumbItemWithHref[] = [];                                                                                                                          
+      62                                                                                                                                                                            
+      63       // 🏢 ENTERPRISE: Icons/Colors από NAVIGATION_ENTITIES - Single Source of Truth                                                                                      
+      64       if (selectedCompany) {                                                                                                                                               
+     ...
+      53           id: selectedCompany.id,                                                                                                                                          
+      54           label: selectedCompany.companyName,                                                                                                                              
+      55           icon: NAVIGATION_ENTITIES.company.icon,                                                                                                                          
+      56 -        color: NAVIGATION_ENTITIES.company.color,  // 🏢 ENTERPRISE: Centralized color                                                                                    
+      56 +        color: NAVIGATION_ENTITIES.company.color,                                                                                                                         
+      57           level: 'companies',                                                                                                                                              
+      58 -         onClick: () => {                                                                                                                                                 
+      59 -           selectUnit(null);                                                                                                                                              
+      60 -           navigateToLevel('companies');                                                                                                                                  
+      61 -         }                                                                                                                                                                
+      58 +         entityType: 'company',                                                                                                                                           
+      59 +         href: ContextualNavigationService.generateRoute('company', selectedCompany.id, { action: 'select' }),                                                            
+      60 +         onClick: () => {} // Legacy - not used with Link                                                                                                                 
+      61         });                                                                                                                                                                
+      62       }                                                                                                                                                                    
+      63                                                                                                                                                                            
+     ...
+      67           id: selectedProject.id,                                                                                                                                          
+      68           label: selectedProject.name,                                                                                                                                     
+      69           icon: NAVIGATION_ENTITIES.project.icon,                                                                                                                          
+      70 -        color: NAVIGATION_ENTITIES.project.color,  // 🏢 ENTERPRISE: Centralized color                                                                                    
+      70 +        color: NAVIGATION_ENTITIES.project.color,                                                                                                                         
+      71           level: 'projects',                                                                                                                                               
+      72 -         onClick: () => {                                                                                                                                                 
+      73 -           selectUnit(null);                                                                                                                                              
+      74 -           navigateToLevel('projects');                                                                                                                                   
+      75 -         }                                                                                                                                                                
+      72 +         entityType: 'project',                                                                                                                                           
+      73 +         href: ContextualNavigationService.generateRoute('project', selectedProject.id, { action: 'select' }),                                                            
+      74 +         onClick: () => {} // Legacy - not used with Link                                                                                                                 
+      75         });                                                                                                                                                                
+      76       }                                                                                                                                                                    
+      77                                                                                                                                                                            
+     ...
+      81           id: selectedBuilding.id,                                                                                                                                         
+      82           label: selectedBuilding.name,                                                                                                                                    
+      83           icon: NAVIGATION_ENTITIES.building.icon,                                                                                                                         
+      84 -        color: NAVIGATION_ENTITIES.building.color,  // 🏢 ENTERPRISE: Centralized color                                                                                   
+      84 +        color: NAVIGATION_ENTITIES.building.color,                                                                                                                        
+      85           level: 'buildings',                                                                                                                                              
+      86 -         onClick: () => {                                                                                                                                                 
+      87 -           selectUnit(null);                                                                                                                                              
+      88 -           navigateToLevel('buildings');                                                                                                                                  
+      89 -         }                                                                                                                                                                
+      86 +         entityType: 'building',                                                                                                                                          
+      87 +         href: ContextualNavigationService.generateRoute('building', selectedBuilding.id, { action: 'select' }),                                                          
+      88 +         onClick: () => {} // Legacy - not used with Link                                                                                                                 
+      89         });                                                                                                                                                                
+      90       }                                                                                                                                                                    
+      91                                                                                                                                                                            
+     ...
+       98           : 'unit';                                                                                                                                                       
+       99         const entityConfig = NAVIGATION_ENTITIES[entityType];                                                                                                             
+      100                                                                                                                                                                           
+      101 +       // Map navigation entity type to NavigableEntityType for route generation                                                                                         
+      102 +       const navigableType: NavigableEntityType = entityType as NavigableEntityType;                                                                                     
+      103 +                                                                                                                                                                         
+      104         items.push({                                                                                                                                                      
+      105           id: selectedUnit.id,                                                                                                                                            
+      106           label: selectedUnit.name,                                                                                                                                       
+      107           icon: entityConfig.icon,                                                                                                                                        
+      108 -         color: entityConfig.color,  // 🏢 ENTERPRISE: Centralized color from entity type                                                                                
+      108 +         color: entityConfig.color,                                                                                                                                      
+      109           level: 'units',                                                                                                                                                 
+      110 -         onClick: () => navigateToLevel('units')                                                                                                                         
+      110 +         entityType: navigableType,                                                                                                                                      
+      111 +         href: ContextualNavigationService.generateRoute(navigableType, selectedUnit.id, { action: 'select' }),                                                          
+      112 +         onClick: () => {} // Legacy - not used with Link                                                                                                                
+      113         });                                                                                                                                                               
+      114       }                                                                                                                                                                   
+      115 
+
+● Τώρα θα αλλάξω το rendering για να χρησιμοποιήσει <Link> αντί για <button>.
+
+● Update(src\components\navigation\components\NavigationBreadcrumb.tsx)
+  ⎿  Added 55 lines, removed 23 lines
+      132       return null;                                                                                                                                                        
+      133     }                                                                                                                                                                     
+      134                                                                                                                                                                           
+      135 +   /**                                                                                                                                                                   
+      136 +    * 🏢 ENTERPRISE: Render breadcrumb item content (shared between Link and span)                                                                                       
+      137 +    */                                                                                                                                                                   
+      138 +   const renderItemContent = (item: BreadcrumbItemWithHref) => (                                                                                                         
+      139 +     <>                                                                                                                                                                  
+      140 +       {/* 🏢 ENTERPRISE: Icon with entity-specific color from centralized config */}                                                                                    
+      141 +       <span className={item.color}>                                                                                                                                     
+      142 +         {typeof item.icon === 'string' ? (                                                                                                                              
+      143 +           item.icon                                                                                                                                                     
+      144 +         ) : (                                                                                                                                                           
+      145 +           <item.icon className="h-4 w-4" />                                                                                                                             
+      146 +         )}                                                                                                                                                              
+      147 +       </span>                                                                                                                                                           
+      148 +       {/* 🏢 ENTERPRISE: Label */}                                                                                                                                      
+      149 +       <span>{item.label}</span>                                                                                                                                         
+      150 +     </>                                                                                                                                                                 
+      151 +   );                                                                                                                                                                    
+      152 +                                                                                                                                                                         
+      153     return (                                                                                                                                                              
+      154       <nav className={`flex items-center space-x-2 text-sm ${className || ''}`} aria-label="Breadcrumb">                                                                  
+      155 -      {breadcrumbItems.map((item, index) => (                                                                                                                            
+      156 -         <React.Fragment key={item.id}>                                                                                                                                  
+      157 -           <button                                                                                                                                                       
+      158 -             onClick={item.onClick}                                                                                                                                      
+      159 -             className={`flex items-center gap-1 hover:opacity-80 transition-opacity`}                                                                                   
+      160 -             title={`Μετάβαση σε ${item.label}`}                                                                                                                         
+      161 -           >                                                                                                                                                             
+      162 -             {/* 🏢 ENTERPRISE: Icon with entity-specific color from centralized config */}                                                                              
+      163 -             <span className={item.color}>                                                                                                                               
+      164 -               {typeof item.icon === 'string' ? (                                                                                                                        
+      165 -                 item.icon                                                                                                                                               
+      166 -               ) : (                                                                                                                                                     
+      167 -                 <item.icon className="h-4 w-4" />
+      168 -              )}                                                                                                                                                         
+      169 -             </span>                                                                                                                                                     
+      170 -             {/* 🏢 ENTERPRISE: Label in neutral color */}                                                                                                               
+      171 -             <span className="text-gray-300 hover:text-white transition-colors">{item.label}</span>                                                                      
+      172 -           </button>                                                                                                                                                     
+      173 -           {index < breadcrumbItems.length - 1 && (                                                                                                                      
+      174 -             <span className="text-gray-500">→</span>                                                                                                                    
+      175 -           )}                                                                                                                                                            
+      176 -         </React.Fragment>                                                                                                                                               
+      177 -       ))}                                                                                                                                                               
+      155 +      {breadcrumbItems.map((item, index) => {                                                                                                                            
+      156 +         const isLastItem = index === breadcrumbItems.length - 1;                                                                                                        
+      157 +                                                                                                                                                                         
+      158 +         return (                                                                                                                                                        
+      159 +           <React.Fragment key={item.id}>                                                                                                                                
+      160 +             {isLastItem ? (                                                                                                                                             
+      161 +               /**                                                                                                                                                       
+      162 +                * 🏢 ENTERPRISE (ADR-016): Last item is CURRENT PAGE - not clickable                                                                                     
+      163 +                * Displayed as plain text with distinct styling                                                                                                          
+      164 +                */                                                                                                                                                       
+      165 +               <span                                                                                                                                                     
+      166 +                 className="flex items-center gap-1 text-white font-medium"                                                                                              
+      167 +                 aria-current="page"                                                                                                                                     
+      168 +              >                                                                                                                                                          
+      169 +                 {renderItemContent(item)}                                                                                                                               
+      170 +               </span>                                                                                                                                                   
+      171 +             ) : (                                                                                                                                                       
+      172 +               /**                                                                                                                                                       
+      173 +                * 🏢 ENTERPRISE (ADR-016): Clickable Link for navigation                                                                                                 
+      174 +                * - Uses ContextualNavigationService.generateRoute() for URL                                                                                             
+      175 +                * - Ctrl+Click opens in new tab (native browser behavior)                                                                                                
+      176 +                * - Proper <a> semantics for accessibility                                                                                                               
+      177 +                */                                                                                                                                                       
+      178 +               <Link                                                                                                                                                     
+      179 +                 href={item.href}                                                                                                                                        
+      180 +                 className="flex items-center gap-1 text-gray-300 hover:text-white transition-colors"                                                                    
+      181 +                 title={`Μετάβαση σε ${item.label}`}                                                                                                                     
+      182 +               >                                                                                                                                                         
+      183 +                 {renderItemContent(item)}                                                                                                                               
+      184 +               </Link>                                                                                                                                                   
+      185 +             )}                                                                                                                                                          
+      186 +             {!isLastItem && (                                                                                                                                           
+      187 +               <span className="text-gray-500" aria-hidden="true">→</span>                                                                                               
+      188 +             )}                                                                                                                                                          
+      189 +           </React.Fragment>                                                                                                                                             
+      190 +         );                                                                                                                                                              
+      191 +       })}                                                                                                                                                               
+      192       </nav>                                                                                                                                                              
+      193     );                                                                                                                                                                    
+      194   }                                                                                                                                                                       
+
+● Τώρα ας ελέγξω για TypeScript errors.
+
+● Bash(npx tsc --noEmit --skipLibCheck 2>&1 | head -50) timeout: 1m 0s
+  ⎿  Running in the background (↓ to manage)
+
+● Task Output bda9636
+  ⎿  (No content)
+
+● Ας ελέγξω μόνο το αρχείο που άλλαξα.
+
+● Bash(cd C:/Nestor_Pagonis && npx tsc --noEmit --skipLibCheck src/components/navigation/components/NavigationBreadcrumb.tsx 2>&1) timeout: 30s
+  ⎿  Error: Exit code 2
+     npm info using npm@10.8.2
+     npm info using node@v20.19.0
+     src/components/navigation/components/NavigationBreadcrumb.tsx(19,8): error TS1259: Module 
+     '"C:/Nestor_Pagonis/node_modules/.pnpm/@types+react@18.3.27/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+     src/components/navigation/components/NavigationBreadcrumb.tsx(21,36): error TS2307: Cannot find module '@/components/ui/effects' or its corresponding type declarations.       
+     src/components/navigation/components/NavigationBreadcrumb.tsx(24,31): error TS6142: Module '../core/NavigationContext' was resolved to 
+     'C:/Nestor_Pagonis/src/components/navigation/core/NavigationContext.tsx', but '--jsx' is not set.
+     src/components/navigation/components/NavigationBreadcrumb.tsx(27,71): error TS2307: Cannot find module '@/services/navigation/ContextualNavigationService' or its corresponding 
+     type declarations.
+     src/components/navigation/components/NavigationBreadcrumb.tsx(139,5): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+     src/components/navigation/components/NavigationBreadcrumb.tsx(141,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+     src/components/navigation/components/NavigationBreadcrumb.tsx(145,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+
+     … +7 lines (ctrl+o to see all)
+
+● Αυτά τα errors είναι λόγω standalone compilation. Ας ελέγξω με ESLint ή με το project tsconfig.
+
+● Bash(cd C:/Nestor_Pagonis && npx eslint src/components/navigation/components/NavigationBreadcrumb.tsx --max-warnings 0 2>&1 | head -30) timeout: 30s
+  ⎿  npm info using npm@10.8.2
+     npm info using node@v20.19.0
+     … +14 lines (ctrl+o to expand)
+
+● Ας ελέγξω τα IDE diagnostics.
+
+● ide - getDiagnostics (MCP)(uri: "file:///c:/Nestor_Pagonis/src/components/navigation/components/NavigationBreadcrumb.tsx")
+  ⎿  [
+       {
+         "uri": "file:///c:/Nestor_Pagonis/src/components/navigation/components/NavigationBreadcrumb.tsx",
+     … +3 lines (ctrl+o to expand)
+
+✻ Ενημερώνοντας NavigationBreadcrumb.tsx με clickable links… (ctrl+c to interrupt · ctrl+t to show todos · 4m 38s · ↓ 14 tokens)
+  ⎿  Tip: Run /install-github-app to tag @claude right from your Github issues and PRs
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────❯  
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────  ⏵⏵ accept edits on · npx tsc --noEmit --skipLibCheck 2>&1 | … (running) · ↓ to view                                                                            ⧉ In local_41.log  
+Error: ENOSPC: no space left on device, write
+    at Object.writeFileSync (node:fs:2368:20)
+    at Module.appendFileSync (node:fs:2449:6)
+    at file:///C:/Users/user/AppData/Local/nvm/v20.19.0/node_modules/@anthropic-ai/claude-code/cli.js:9:1023
+    at LD (file:///C:/Users/user/AppData/Local/nvm/v20.19.0/node_modules/@anthropic-ai/claude-code/cli.js:8:34291)
+    at Object.appendFileSync (file:///C:/Users/user/AppData/Local/nvm/v20.19.0/node_modules/@anthropic-ai/claude-code/cli.js:9:841)
+
+✶ Ενημερώνοντας NavigationBreadcrumb.tsx με clickable links… (ctrl+c to interrupt · ctrl+t to show todos · 4m 41s · ↑ 86 tokens)
+  ⎿  Tip: Run /install-github-app to tag @claude right from your Github issues and PRs
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────❯  
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────  ⏵⏵ accept edits on · npx tsc --noEmit --skipLibCheck 2>&1 | … (running) · ↓ to view                                                                            ⧉ In local_41.log  
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted: Unexpected end of JSON input
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted
+The corrupted file has been backed up to: C:\Users\user\.claude.json.corrupted.1768044048053
+
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted: Unexpected end of JSON input
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted
+The corrupted file has been backed up to: C:\Users\user\.claude.json.corrupted.1768044048065
+
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted: Unexpected end of JSON input
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted
+The corrupted file has been backed up to: C:\Users\user\.claude.json.corrupted.1768044048117
+
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted: Unexpected end of JSON input
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted
+The corrupted file has been backed up to: C:\Users\user\.claude.json.corrupted.1768044048204
+
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted: Unexpected end of JSON input
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted
+The corrupted file has been backed up to: C:\Users\user\.claude.json.corrupted.1768044048285
+
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted: Unexpected end of JSON input
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted
+The corrupted file has been backed up to: C:\Users\user\.claude.json.corrupted.1768044048385
+
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted: Unexpected end of JSON input
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted
+The corrupted file has been backed up to: C:\Users\user\.claude.json.corrupted.1768044048443
+
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted: Unexpected end of JSON input
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted
+The corrupted file has been backed up to: C:\Users\user\.claude.json.corrupted.1768044048516
+
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted: Unexpected end of JSON input
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted
+The corrupted file has been backed up to: C:\Users\user\.claude.json.corrupted.1768044048588
+
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted: Unexpected end of JSON input
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted
+The corrupted file has been backed up to: C:\Users\user\.claude.json.corrupted.1768044048666
+
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted: Unexpected end of JSON input
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted
+The corrupted file has been backed up to: C:\Users\user\.claude.json.corrupted.1768044048750
+
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted: Unexpected end of JSON input
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted
+The corrupted file has been backed up to: C:\Users\user\.claude.json.corrupted.1768044048787
+
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted: Unexpected end of JSON input
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted
+The corrupted file has been backed up to: C:\Users\user\.claude.json.corrupted.1768044048816
+
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted: Unexpected end of JSON input
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted
+The corrupted file has been backed up to: C:\Users\user\.claude.json.corrupted.1768044048922
+
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted: Unexpected end of JSON input
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted
+The corrupted file has been backed up to: C:\Users\user\.claude.json.corrupted.1768044048932
+
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted: Unexpected end of JSON input
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted
+The corrupted file has been backed up to: C:\Users\user\.claude.json.corrupted.1768044048938
+
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted: Unexpected end of JSON input
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted
+The corrupted file has been backed up to: C:\Users\user\.claude.json.corrupted.1768044048996
+
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted: Unexpected end of JSON input
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted
+The corrupted file has been backed up to: C:\Users\user\.claude.json.corrupted.1768044049434
+
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted: Unexpected end of JSON input
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted
+The corrupted file has been backed up to: C:\Users\user\.claude.json.corrupted.1768044049458
+
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted: Unexpected end of JSON input
+
+Claude configuration file at C:\Users\user\.claude.json is corrupted
+The corrupted file has been backed up to: C:\Users\user\.claude.json.corrupted.1768044049473
