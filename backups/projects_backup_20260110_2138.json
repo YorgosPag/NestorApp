@@ -1,0 +1,45 @@
+{
+  "backupInfo": {
+    "timestamp": "2026-01-10T19:38:36.564Z",
+    "type": "PRE_MIGRATION_BACKUP",
+    "description": "Backup of projects collection before applying project codes migration (005_assign_project_codes)",
+    "environment": "development",
+    "firebaseProject": "pagonis-87766"
+  },
+  "projects": [
+    {
+      "id": "mR6tY8uI3oP5qW7eA9sD",
+      "name": "Μεγάλου Αλεξάνδρου Συγκρότημα",
+      "projectCode": null,
+      "plannedCode": "PRJ-001"
+    },
+    {
+      "id": "pzK8mN3xQw9vR2dL4jF7",
+      "name": "Παλαιολόγου Πολυκατοικία",
+      "projectCode": null,
+      "plannedCode": "PRJ-002"
+    },
+    {
+      "id": "xL2nV4bC6mZ8kJ9hG1fQ",
+      "name": "Τσιμισκή Εμπορικό Κέντρο",
+      "projectCode": null,
+      "plannedCode": "PRJ-003"
+    }
+  ],
+  "migrationPlan": {
+    "migrationId": "005_assign_project_codes",
+    "totalProjects": 3,
+    "projectsToMigrate": 3,
+    "projectsAlreadyMigrated": 0,
+    "command": "POST /api/admin/migrations/execute { migrationId: '005_assign_project_codes', dryRun: false }"
+  },
+  "rollbackInstructions": {
+    "description": "To rollback, set projectCode to null for each project",
+    "steps": [
+      "1. Access Firestore Console",
+      "2. Navigate to 'projects' collection",
+      "3. For each project, delete the 'projectCode' field",
+      "4. Delete the 'counters/projects' document"
+    ]
+  }
+}
