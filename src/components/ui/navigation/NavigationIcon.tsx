@@ -1,0 +1,290 @@
+'use client';
+
+/**
+ * 🔗 ENTERPRISE NAVIGATION ICON COMPONENT
+ *
+ * Centralized navigation icon for cards across the entire application.
+ * Used in: Company cards, Project cards, Building cards, Unit cards, etc.
+ *
+ * Enterprise Pattern: SAP Fiori, Microsoft Dynamics, Salesforce Lightning
+ *
+ * @enterprise-certified
+ * @centralized-system
+ */
+
+import React from 'react';
+import { ExternalLink } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export interface NavigationIconProps {
+  /**
+   * The route to navigate to
+   * @example "/contacts/123" or "/projects/456"
+   */
+  href: string;
+
+  /**
+   * Tooltip text (optional, defaults to "Άνοιγμα")
+   * @example "Άνοιγμα στις Επαφές"
+   */
+  tooltip?: string;
+
+  /**
+   * Open in new tab behavior
+   * @default false (ctrl+click always opens new tab)
+   */
+  openInNewTab?: boolean;
+
+  /**
+   * Visual size of the icon
+   * @default 'sm'
+   */
+  size?: 'xs' | 'sm' | 'md' | 'lg';
+
+  /**
+   * Additional CSS classes
+   */
+  className?: string;
+
+  /**
+   * Visibility behavior
+   * @default 'hover' - Shows on hover
+   * 'always' - Always visible
+   * 'subtle' - Always visible but very light
+   */
+  visibility?: 'hover' | 'always' | 'subtle';
+
+  /**
+   * Position within the card
+   * @default 'top-right'
+   */
+  position?: 'top-right' | 'top-left' | 'inline';
+
+  /**
+   * Analytics tracking
+   */
+  analyticsLabel?: string;
+}
+
+// ============================================================================
+// SIZE CONFIGURATIONS
+// ============================================================================
+
+const SIZE_CONFIG = {
+  xs: {
+    icon: 14,
+    padding: 'p-1',
+    offset: 'top-1 right-1'
+  },
+  sm: {
+    icon: 16,
+    padding: 'p-1.5',
+    offset: 'top-2 right-2'
+  },
+  md: {
+    icon: 18,
+    padding: 'p-2',
+    offset: 'top-3 right-3'
+  },
+  lg: {
+    icon: 20,
+    padding: 'p-2.5',
+    offset: 'top-4 right-4'
+  }
+} as const;
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+/**
+ * 🔗 NavigationIcon - Enterprise centralized navigation component
+ *
+ * @example
+ * ```tsx
+ * // In a Company Card
+ * <div className="company-card relative">
+ *   <NavigationIcon
+ *     href={`/contacts/${companyId}`}
+ *     tooltip="Άνοιγμα στις Επαφές"
+ *     analyticsLabel="company-to-contacts"
+ *   />
+ *   <h3>{companyName}</h3>
+ * </div>
+ *
+ * // In a Project Card
+ * <div className="project-card relative">
+ *   <NavigationIcon
+ *     href={`/projects/${projectId}`}
+ *     tooltip="Άνοιγμα στα Έργα"
+ *   />
+ * </div>
+ * ```
+ */
+export function NavigationIcon({
+  href,
+  tooltip = 'Άνοιγμα',
+  openInNewTab = false,
+  size = 'sm',
+  className,
+  visibility = 'hover',
+  position = 'top-right',
+  analyticsLabel,
+  asChild = false
+}: NavigationIconProps & { asChild?: boolean }) {
+  const router = useRouter();
+  const config = SIZE_CONFIG[size];
+
+  // ============================================================================
+  // HANDLERS
+  // ============================================================================
+
+  const handleClick = (e: React.MouseEvent<HTMLElement>) => {
+    e.stopPropagation(); // Prevent card click
+    e.preventDefault();
+
+    // Analytics tracking (if configured)
+    if (analyticsLabel && typeof window !== 'undefined') {
+      // Track navigation event
+      console.log(`[Analytics] Navigation: ${analyticsLabel} → ${href}`);
+    }
+
+    // Handle navigation
+    const shouldOpenNewTab = openInNewTab || e.ctrlKey || e.metaKey;
+
+    if (shouldOpenNewTab) {
+      window.open(href, '_blank', 'noopener,noreferrer');
+    } else {
+      router.push(href);
+    }
+  };
+
+  // ============================================================================
+  // VISIBILITY CLASSES
+  // ============================================================================
+
+  const visibilityClasses = {
+    hover: 'opacity-0 group-hover:opacity-100',
+    always: 'opacity-100',
+    subtle: 'opacity-40 hover:opacity-100'
+  };
+
+  const positionClasses = {
+    'top-right': `absolute ${config.offset}`,
+    'top-left': `absolute ${config.offset.replace('right', 'left')}`,
+    'inline': 'relative inline-flex ml-2'
+  };
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={handleClick}
+            className={cn(
+              // Base styles
+              'rounded-md',
+              'transition-all duration-200',
+              'hover:bg-accent/10',
+              'active:scale-95',
+              'focus:outline-none focus:ring-2 focus:ring-primary/20',
+
+              // Size
+              config.padding,
+
+              // Position
+              positionClasses[position],
+
+              // Visibility
+              visibilityClasses[visibility],
+
+              // Z-index for absolute positioning
+              position !== 'inline' && 'z-10',
+
+              // Custom classes
+              className
+            )}
+            aria-label={tooltip}
+          >
+            <ExternalLink
+              size={config.icon}
+              className="text-muted-foreground hover:text-foreground"
+            />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="text-xs">
+            {tooltip}
+            {!openInNewTab && (
+              <span className="ml-1 opacity-60">
+                (Ctrl+Click για νέα καρτέλα)
+              </span>
+            )}
+          </p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+// ============================================================================
+// EXPORT VARIANTS FOR SPECIFIC USE CASES
+// ============================================================================
+
+/**
+ * Pre-configured for Company Cards in Navigation
+ */
+export function CompanyNavigationIcon({ companyId, ...props }: Omit<NavigationIconProps, 'href'> & { companyId: string }) {
+  return (
+    <NavigationIcon
+      href={`/contacts/${companyId}`}
+      tooltip="Άνοιγμα στις Επαφές"
+      analyticsLabel="nav-company-to-contacts"
+      {...props}
+    />
+  );
+}
+
+/**
+ * Pre-configured for Project Cards in Navigation
+ */
+export function ProjectNavigationIcon({ projectId, ...props }: Omit<NavigationIconProps, 'href'> & { projectId: string }) {
+  return (
+    <NavigationIcon
+      href={`/projects/${projectId}`}
+      tooltip="Άνοιγμα στα Έργα"
+      analyticsLabel="nav-project-to-projects"
+      {...props}
+    />
+  );
+}
+
+/**
+ * Pre-configured for Building Cards in Navigation
+ */
+export function BuildingNavigationIcon({ buildingId, ...props }: Omit<NavigationIconProps, 'href'> & { buildingId: string }) {
+  return (
+    <NavigationIcon
+      href={`/buildings/${buildingId}`}
+      tooltip="Άνοιγμα στα Κτίρια"
+      analyticsLabel="nav-building-to-buildings"
+      {...props}
+    />
+  );
+}
+
+// ============================================================================
+// DEFAULT EXPORT
+// ============================================================================
+
+export default NavigationIcon;
