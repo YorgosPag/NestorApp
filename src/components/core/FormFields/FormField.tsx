@@ -24,7 +24,8 @@ import {
 import { HelpCircle, Eye, EyeOff } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
+// 🏢 ENTERPRISE: Import from canonical location
+import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 
 // Types για το unified form field system
 export interface SelectOption {

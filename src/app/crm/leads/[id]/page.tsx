@@ -8,7 +8,8 @@ import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effect
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
+// 🏢 ENTERPRISE: Import from canonical location
+import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { Toaster } from 'react-hot-toast';
 
 import CommunicationsHistory from '@/components/CommunicationsHistory';

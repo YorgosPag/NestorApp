@@ -196,8 +196,10 @@ export async function withRetry<T>(
   const fullConfig: RetryConfig = { ...DEFAULT_RETRY_CONFIG, ...config };
   const startTime = Date.now();
   let lastError: Error | undefined;
+  let actualAttempts = 0;
 
   for (let attempt = 1; attempt <= fullConfig.maxAttempts; attempt++) {
+    actualAttempts = attempt;
     try {
       const data = await operation();
 
@@ -249,7 +251,7 @@ export async function withRetry<T>(
   return {
     success: false,
     error: lastError,
-    attempts: fullConfig.maxAttempts,
+    attempts: actualAttempts,
     totalTimeMs: Date.now() - startTime,
   };
 }

@@ -124,14 +124,19 @@ export function diffSettings<T>(
     const fromValue = from[key];
     const toValue = to[key];
 
-    // Check for deep equality για objects
+    // Check for deep equality για objects - recursive diff
     if (
       typeof toValue === 'object' &&
       toValue !== null &&
-      !Array.isArray(toValue)
+      !Array.isArray(toValue) &&
+      typeof fromValue === 'object' &&
+      fromValue !== null &&
+      !Array.isArray(fromValue)
     ) {
-      if (JSON.stringify(fromValue) !== JSON.stringify(toValue)) {
-        diff[key] = toValue;
+      // Recursive diff για nested objects
+      const nestedDiff = diffSettings(fromValue, toValue);
+      if (nestedDiff !== null) {
+        diff[key] = nestedDiff as T[Extract<keyof T, string>];
       }
     } else if (fromValue !== toValue) {
       diff[key] = toValue;

@@ -451,12 +451,15 @@ export class AuditLogger {
 
   /**
    * Determine severity based on params
+   * Note: Action-specific severities take precedence over success status
    */
   private static getSeverity(params: AuditLogParams): AuditSeverity {
-    if (!params.success) return 'ERROR';
+    // Action-specific severities (take precedence)
     if (params.action === 'RETRY_ATTEMPT') return 'WARN';
     if (params.action === 'VALIDATION_FAILED') return 'WARN';
     if (params.action === 'CACHE_HIT' || params.action === 'CACHE_MISS') return 'DEBUG';
+    // General failure fallback
+    if (!params.success) return 'ERROR';
     return 'INFO';
   }
 

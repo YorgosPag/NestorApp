@@ -7,7 +7,8 @@ import { useButtonPatterns } from '@/hooks/useButtonPatterns';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatDateTime } from '@/lib/intl-utils';
 import { Edit, Save, X, CheckCircle } from 'lucide-react';
-import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
+// 🏢 ENTERPRISE: Import from canonical location
+import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 
 interface HeaderProps {
     building: { id: string; category: string };

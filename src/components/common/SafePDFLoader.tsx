@@ -7,7 +7,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { layoutUtilities, canvasUtilities } from '@/styles/design-tokens';
-import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
+// 🏢 ENTERPRISE: Import from canonical location
+import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 
 interface SafePDFLoaderProps {
   file: string | File | null;

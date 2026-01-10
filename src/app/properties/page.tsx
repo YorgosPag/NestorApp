@@ -5,7 +5,8 @@ import { PropertyGridView } from '@/features/property-grid/PropertyGridView';
 import { PropertyManagementPageContent } from '@/components/property-management/PropertyManagementPageContent';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
+// 🏢 ENTERPRISE: Import from canonical location
+import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 
 function PropertiesPageContent() {
   const searchParams = useSearchParams();

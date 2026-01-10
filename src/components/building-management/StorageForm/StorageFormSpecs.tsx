@@ -7,7 +7,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { cn } from '@/lib/utils';
 import { formatNumber } from '@/lib/intl-utils';
-import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
+// 🏢 ENTERPRISE: Import from canonical location
+import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { FormRowSelect } from './form/FormRowSelect';
 import { FormRowInput } from './form/FormRowInput';
 import { FormRowCoordinates } from './form/FormRowCoordinates';

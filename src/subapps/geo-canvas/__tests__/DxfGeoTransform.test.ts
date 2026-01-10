@@ -266,17 +266,23 @@ describe('ControlPointManager', () => {
 describe('AccuracyValidator', () => {
   describe('Accuracy Metrics', () => {
     it('should calculate basic accuracy metrics', () => {
+      // Use 5 points with excellent spatial distribution (4 corners + center)
+      // Required for 'excellent' grade as assessSpatialDistribution needs >= 4 points
       const controlPoints: GeoControlPoint[] = [
         { id: 'CP1', dxfPoint: { x: 0, y: 0 }, geoPoint: { lng: 23.0, lat: 37.0 }, accuracy: 1.0 },
         { id: 'CP2', dxfPoint: { x: 100, y: 0 }, geoPoint: { lng: 23.001, lat: 37.0 }, accuracy: 1.0 },
-        { id: 'CP3', dxfPoint: { x: 0, y: 100 }, geoPoint: { lng: 23.0, lat: 37.001 }, accuracy: 1.0 }
+        { id: 'CP3', dxfPoint: { x: 0, y: 100 }, geoPoint: { lng: 23.0, lat: 37.001 }, accuracy: 1.0 },
+        { id: 'CP4', dxfPoint: { x: 100, y: 100 }, geoPoint: { lng: 23.001, lat: 37.001 }, accuracy: 1.0 },
+        { id: 'CP5', dxfPoint: { x: 50, y: 50 }, geoPoint: { lng: 23.0005, lat: 37.0005 }, accuracy: 1.0 }
       ];
 
       // Simulate perfect transformation (no errors)
       const transformedPoints: GeoCoordinate[] = [
         { lng: 23.0, lat: 37.0 },
         { lng: 23.001, lat: 37.0 },
-        { lng: 23.0, lat: 37.001 }
+        { lng: 23.0, lat: 37.001 },
+        { lng: 23.001, lat: 37.001 },
+        { lng: 23.0005, lat: 37.0005 }
       ];
 
       const metrics = calculateAccuracyMetrics(controlPoints, transformedPoints);

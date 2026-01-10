@@ -26,6 +26,12 @@ interface NavigationContextType extends NavigationState, NavigationActions {}
 
 const NavigationContext = createContext<NavigationContextType | null>(null);
 
+// 🏢 ENTERPRISE: Module-level initialization guard
+// This MUST be module-level (not useRef) because React Strict Mode creates new component instances
+// With useRef, each mount gets a fresh ref → guard fails → double bootstrap
+// With module-level flag, ALL mounts share the same flag → guard works
+let navigationInitialized = false;
+
 export function NavigationProvider({ children }: { children: React.ReactNode }) {
   // Core navigation state
   const [state, setState] = useState<NavigationState>({
@@ -67,28 +73,43 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     setState(prev => ({ ...prev, ...updates }));
   };
 
-  // Load companies on mount
+  // Load companies on mount - SINGLE bootstrap call
   useEffect(() => {
+    // 🏢 ENTERPRISE: Module-level guard prevents double initialization
+    // This works with React Strict Mode because the flag persists across component remounts
+    if (navigationInitialized) {
+      console.log('⚡ [NavigationContext] Already initialized (module-level guard)');
+      return;
+    }
+    navigationInitialized = true;
+    console.log('🚀 [NavigationContext] Initializing navigation...');
+
     const initializeNavigation = async () => {
       try {
-        updateState({ loading: true, error: null });
+        updateState({ loading: true, projectsLoading: true, error: null });
 
-        const companies = await dataHook.loadCompanies();
+        // 🏢 ENTERPRISE: Single bootstrap call for BOTH companies AND projects
+        // Combined with promise de-duplication in useNavigationData
+        const { companies, projects } = await dataHook.loadViaBootstrap();
+
+        console.log(`✅ [NavigationContext] Bootstrap complete: ${companies.length} companies, ${projects.length} projects`);
+
         updateState({
           companies,
+          projects,
           loading: false,
+          projectsLoading: false,
           currentLevel: 'companies'
         });
 
-        // Load all projects immediately after companies are loaded
-        if (companies.length > 0) {
-          await loadAllProjectsInternal(companies);
-        }
-
       } catch (error) {
+        console.error('❌ [NavigationContext] Bootstrap failed:', error);
+        // Reset flag on error so retry is possible
+        navigationInitialized = false;
         updateState({
           error: error instanceof Error ? error.message : 'Failed to load navigation data',
-          loading: false
+          loading: false,
+          projectsLoading: false
         });
       }
     };

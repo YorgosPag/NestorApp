@@ -1,0 +1,27 @@
+{
+  "testName": "combined-1920x1080",
+  "passed": true,
+  "mismatchedPixels": 0,
+  "totalPixels": 2073600,
+  "mismatchRate": 0,
+  "threshold": 0.0001,
+  "dimensions": {
+    "width": 1920,
+    "height": 1080
+  },
+  "timestamp": "2026-01-10T23:16:59.375Z",
+  "duration": 21597,
+  "artifacts": {
+    "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+    "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\combined-1920x1080.baseline.png",
+    "actual": "C:\\Nestor_Pagonis\\reports\\visual\\combined-1920x1080.actual.png",
+    "diff": "C:\\Nestor_Pagonis\\reports\\visual\\combined-1920x1080.diff.png",
+    "report": "C:\\Nestor_Pagonis\\reports\\visual\\combined-1920x1080.report.json"
+  },
+  "metadata": {
+    "overlayType": "combined",
+    "seed": 42,
+    "maxMismatchPixels": 207,
+    "deterministic": true
+  }
+}

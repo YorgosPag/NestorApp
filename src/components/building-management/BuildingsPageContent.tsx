@@ -7,7 +7,8 @@ import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effect
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
+// 🏢 ENTERPRISE: Import from canonical location
+import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { BuildingsList } from './BuildingsList';
 import { BuildingDetails } from './BuildingDetails';
 import { BuildingsHeader } from './BuildingsPage/BuildingsHeader';

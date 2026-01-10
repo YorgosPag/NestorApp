@@ -1,9 +1,46 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { TabsOnlyTriggers, TabsContent, type TabDefinition } from "@/components/ui/navigation/TabsComponents";
 import { getIconComponent } from './utils/IconMapping';
 import PlaceholderTab from '../building-management/tabs/PlaceholderTab';
+
+// ============================================================================
+// 🏢 ENTERPRISE: Lazy Tab Content Wrapper
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: LazyTabContent
+ *
+ * Renders tab content ONLY when the tab is active.
+ * Prevents premature API calls and component mounting for inactive tabs.
+ *
+ * This is the enterprise pattern used by SAP, Salesforce, and other large apps.
+ */
+interface LazyTabContentProps {
+  tabId: string;
+  activeTab: string;
+  children: React.ReactNode;
+}
+
+function LazyTabContent({ tabId, activeTab, children }: LazyTabContentProps) {
+  // 🏢 ENTERPRISE: Only render content when this tab is/was active
+  // Initialize hasBeenActive to true if this tab is the default (active on mount)
+  const [hasBeenActive, setHasBeenActive] = React.useState(tabId === activeTab);
+
+  React.useEffect(() => {
+    if (tabId === activeTab && !hasBeenActive) {
+      setHasBeenActive(true);
+    }
+  }, [tabId, activeTab, hasBeenActive]);
+
+  // Don't render until tab has been activated at least once
+  if (!hasBeenActive) {
+    return null;
+  }
+
+  return <>{children}</>;
+}
 
 // ============================================================================
 // UNIVERSAL TAB CONFIG INTERFACE
@@ -96,6 +133,10 @@ export function UniversalTabsRenderer<TData = unknown>({
 }: UniversalTabsRendererProps<TData>) {
   // Φιλτράρισμα enabled tabs
   const enabledTabs = tabs.filter(tab => tab.enabled);
+
+  // 🏢 ENTERPRISE: Track active tab for lazy rendering
+  const computedDefaultTab = defaultTab || enabledTabs[0]?.value;
+  const [activeTab, setActiveTab] = useState(computedDefaultTab);
 
   // Sort by order
   const sortedTabs = enabledTabs.sort((a, b) => {
@@ -213,16 +254,25 @@ export function UniversalTabsRenderer<TData = unknown>({
     };
   });
 
+  // 🏢 ENTERPRISE: Handle tab change for controlled mode
+  const handleTabChange = useCallback((tabId: string) => {
+    setActiveTab(tabId);
+    console.log(`📑 [UniversalTabsRenderer] Tab changed to: ${tabId}`);
+  }, []);
+
   return (
     <TabsOnlyTriggers
       tabs={tabDefinitions}
-      defaultTab={defaultTab || sortedTabs[0]?.value}
+      value={activeTab}
+      onTabChange={handleTabChange}
       theme={theme}
     >
-      {/* Render TabsContent panels manually */}
+      {/* 🏢 ENTERPRISE: Lazy render TabsContent - only render when tab becomes active */}
       {tabDefinitions.map((tabDef) => (
         <TabsContent key={tabDef.id} value={tabDef.id}>
-          {tabDef.content}
+          <LazyTabContent tabId={tabDef.id} activeTab={activeTab}>
+            {tabDef.content}
+          </LazyTabContent>
         </TabsContent>
       ))}
     </TabsOnlyTriggers>

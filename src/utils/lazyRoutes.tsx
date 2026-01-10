@@ -5,7 +5,8 @@ import { ComponentType } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
+// 🏢 ENTERPRISE: Import from canonical location (not DXF Viewer)
+import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 
 // Generic loading components for different types of pages
 export const PageLoadingSpinner = () => {

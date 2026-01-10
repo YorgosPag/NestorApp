@@ -42,51 +42,34 @@ export function useNavigationActions(): UseNavigationActionsReturn {
 
   };
 
+  /**
+   * 🏢 ENTERPRISE: Select project without extra API call
+   *
+   * Projects are already loaded via bootstrap - no need to reload.
+   * Buildings/floors/units are loaded ON-DEMAND via lazy loading in UI components.
+   */
   const selectProject = async (
     projectId: string,
     state: NavigationState,
     setState: (updates: Partial<NavigationState>) => void
   ) => {
-    // First, find the basic project in state
-    const basicProject = state.projects.find(p => p.id === projectId);
-    if (!basicProject) return;
+    // Find the project in state (already loaded via bootstrap)
+    const project = state.projects.find(p => p.id === projectId);
+    if (!project) {
+      console.warn(`⚠️ [selectProject] Project ${projectId} not found in state`);
+      return;
+    }
 
-    // Set loading state and basic selection immediately
+    console.log(`📍 [selectProject] Selected: ${project.name} (${projectId})`);
+
+    // 🏢 ENTERPRISE: Simple state update - NO extra API call
+    // Buildings/floors/units will be loaded on-demand when user expands them
     setState({
-      selectedProject: basicProject,
+      selectedProject: project,
       selectedBuilding: null,
       selectedFloor: null,
-      currentLevel: 'buildings',
-      projectsLoading: true
+      currentLevel: 'buildings'
     });
-
-    try {
-      // Reload the specific project with full hierarchy (buildings, floors, units)
-      console.log(`🔄 Reloading project ${projectId} with full hierarchy...`);
-      const fullProjects = await NavigationApiService.loadProjectsForCompany(basicProject.companyId);
-      const fullProject = fullProjects.find(p => p.id === projectId);
-
-      if (fullProject) {
-        console.log(`✅ Project ${projectId} loaded with ${fullProject.buildings.length} buildings`);
-
-        // Update both the selectedProject with full data AND the project in the main projects array
-        const updatedProjects = state.projects.map(p =>
-          p.id === projectId ? fullProject : p
-        );
-
-        setState({
-          projects: updatedProjects,
-          selectedProject: fullProject,
-          projectsLoading: false
-        });
-      } else {
-        console.warn(`⚠️ Could not find project ${projectId} after reload`);
-        setState({ projectsLoading: false });
-      }
-    } catch (error) {
-      console.error(`🚨 Failed to reload project ${projectId}:`, error);
-      setState({ projectsLoading: false });
-    }
   };
 
   const selectBuilding = (

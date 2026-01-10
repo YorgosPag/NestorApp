@@ -3,7 +3,8 @@
 import dynamic from 'next/dynamic';
 import { ComponentProps } from 'react';
 import { LandingPage } from './LandingPage';
-import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
+// 🏢 ENTERPRISE: Import from canonical location
+import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 
 // Lazy-loaded LandingPage with optimized loading
 const LandingPageDynamic = dynamic(

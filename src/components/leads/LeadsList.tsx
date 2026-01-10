@@ -4,7 +4,8 @@ import { User } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
+// 🏢 ENTERPRISE: Import from canonical location
+import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { EditOpportunityModal } from "@/components/crm/dashboard/EditOpportunityModal";
 import SendEmailModal from "@/components/email/SendEmailModal";
 import { useLeadsList } from "./hooks/useLeadsList";

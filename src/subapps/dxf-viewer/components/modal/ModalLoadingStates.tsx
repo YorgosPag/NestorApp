@@ -3,12 +3,17 @@
  * @description Centralized loading, error, and state components
  * @author Claude (Anthropic AI)
  * @date 2025-12-17
- * @version 1.0.0
+ * @version 1.1.0 - AnimatedSpinner moved to canonical location
  * @compliance CLAUDE.md Enterprise Standards - 100% CENTRALIZATION
  */
 
 import React from 'react';
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+
+// 🏢 ENTERPRISE: Re-export AnimatedSpinner from canonical location
+// This provides backward compatibility for existing imports while
+// keeping single source of truth at @/components/ui/spinner
+export { AnimatedSpinner } from '@/components/ui/spinner';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Button } from '@/components/ui/button';
@@ -43,19 +48,9 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   );
 };
 
-/**
- * Alternative animated icon spinner (Lucide-based)
- */
-export const AnimatedSpinner: React.FC<LoadingSpinnerProps> = ({
-  size = 'medium',
-  className = ''
-}) => {
-  const sizeClass = MODAL_DIMENSIONS.ICONS[size];
-
-  return (
-    <Loader2 className={`${sizeClass} ${PANEL_LAYOUT.ANIMATE.SPIN} ${getModalIconColor('info')} ${className}`} />
-  );
-};
+// 🏢 ENTERPRISE NOTE: AnimatedSpinner has been moved to @/components/ui/spinner
+// and is re-exported above for backward compatibility.
+// New code should import directly from '@/components/ui/spinner'.
 
 // ====================================================================
 // LOADING STATE CONTAINERS

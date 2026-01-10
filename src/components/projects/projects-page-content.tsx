@@ -26,7 +26,8 @@ import {
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { ProjectViewSwitch } from './ProjectViewSwitch';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
+// 🏢 ENTERPRISE: Import from canonical location (not DXF Viewer)
+import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 
 export function ProjectsPageContent() {
   const iconSizes = useIconSizes();

@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
-import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
+// 🏢 ENTERPRISE: Import from canonical location (not DXF Viewer)
+import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface LoadingStep {

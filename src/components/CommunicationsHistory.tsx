@@ -10,7 +10,8 @@ import {
 import { formatDateTime as formatDate } from '@/lib/intl-utils';
 import { useCommunicationsHistory } from './communications/hooks/useCommunicationsHistory';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
+// 🏢 ENTERPRISE: Import from canonical location
+import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 
 export default function CommunicationsHistory({ contactId }) {
   const iconSizes = useIconSizes();

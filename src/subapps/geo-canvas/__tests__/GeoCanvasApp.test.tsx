@@ -1,148 +1,144 @@
 /**
  * GEO-CANVAS APP TESTS
- * Enterprise-class smoke tests για το Geo-Alert σύστημα
+ * Enterprise-class tests για το Geo-Alert σύστημα
  *
- * NOTE: These are minimal smoke tests. The component uses i18n translations,
- * so we avoid testing specific text content which can change based on locale.
+ * Tests verify:
+ * 1. Component renders with correct semantic structure
+ * 2. Props are accepted and handled correctly
+ * 3. Accessible controls are present
  */
 
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, jest, beforeAll, afterAll } from '@jest/globals';
-import { GeoCanvasApp } from '../GeoCanvasApp';
+import { describe, it, expect, jest, beforeEach, afterEach, beforeAll } from '@jest/globals';
 
-// Mock dependencies - use @/ alias to match component imports
-jest.mock('@/providers/NotificationProvider', () => ({
-  NotificationProvider: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="notification-provider">{children}</div>
-  ),
-}));
+// Mock PerformanceObserver (required by some dependencies)
+beforeAll(() => {
+  global.PerformanceObserver = class PerformanceObserver {
+    observe() {}
+    disconnect() {}
+    takeRecords() { return []; }
+  } as unknown as typeof PerformanceObserver;
+});
 
-// Mock i18n hook to provide consistent translations for testing
-jest.mock('@/i18n/hooks/useTranslationLazy', () => ({
-  useTranslationLazy: () => ({
-    t: (key: string) => key,
-    isLoading: false,
-  }),
-}));
-
-// Mock MapLibre GL JS
+// Mock external dependencies
 jest.mock('maplibre-gl', () => ({
-  Map: jest.fn(() => ({
+  Map: jest.fn().mockImplementation(() => ({
     on: jest.fn(),
+    off: jest.fn(),
     remove: jest.fn(),
     getCanvas: jest.fn(() => ({ style: {} })),
     addControl: jest.fn(),
     resize: jest.fn(),
+    getCenter: jest.fn(() => ({ lng: 0, lat: 0 })),
+    getZoom: jest.fn(() => 10),
   })),
   NavigationControl: jest.fn(),
   ScaleControl: jest.fn(),
 }));
 
-// Mock analytics
-jest.mock('@/services/AnalyticsBridge', () => ({
-  useAnalytics: () => ({
-    trackUserBehavior: jest.fn(),
-    updateUser: jest.fn(),
-  }),
-}));
+import { GeoCanvasApp } from '../GeoCanvasApp';
 
 describe('GeoCanvasApp', () => {
-  it('renders without crashing', async () => {
-    const { container } = render(<GeoCanvasApp />);
-
-    // Basic smoke test - component renders
-    expect(container).toBeInTheDocument();
-    // Component should have rendered something
-    expect(container.firstChild).toBeInTheDocument();
-  });
-
-  it('accepts feature flags prop', async () => {
-    const features = {
-      enableDxfImport: true,
-      enableMapLibre: false,
-      enableAlerts: false,
-      enableSpatialQueries: false,
-    };
-
-    const { container } = render(<GeoCanvasApp features={features} />);
-    expect(container).toBeInTheDocument();
-  });
-
-  it('accepts initial configuration prop', async () => {
-    const initialConfig = {
-      mapCenter: { lng: 23.7275, lat: 37.9755 },
-      mapZoom: 8,
-      defaultCRS: 'EPSG:4326',
-    };
-
-    const { container } = render(<GeoCanvasApp initialConfig={initialConfig} />);
-    expect(container).toBeInTheDocument();
-  });
-
-  it('applies custom className', async () => {
-    const { container } = render(
-      <GeoCanvasApp className="custom-geo-canvas" />
-    );
-
-    expect(container.firstChild).toBeInTheDocument();
-  });
-});
-
-/**
- * ERROR BOUNDARY TESTS
- */
-describe('GeoCanvasErrorBoundary', () => {
-  // Suppress console.error για error boundary tests
+  const originalWarn = console.warn;
   const originalError = console.error;
-  beforeAll(() => {
+  const originalLog = console.log;
+
+  beforeEach(() => {
+    console.warn = jest.fn();
     console.error = jest.fn();
+    console.log = jest.fn();
   });
-  afterAll(() => {
+
+  afterEach(() => {
+    console.warn = originalWarn;
     console.error = originalError;
+    console.log = originalLog;
   });
 
-  it('handles runtime errors gracefully', async () => {
-    // Component that throws an error
-    const ThrowError = () => {
-      throw new Error('Test error');
-    };
+  describe('Layout Structure', () => {
+    it('renders main content area', async () => {
+      render(<GeoCanvasApp />);
 
-    const AppWithError = () => (
-      <GeoCanvasApp>
-        <ThrowError />
-      </GeoCanvasApp>
-    );
+      await waitFor(() => {
+        expect(screen.getByRole('main')).toBeInTheDocument();
+      });
+    });
 
-    const { container } = render(<AppWithError />);
+    it('renders navigation toolbar', async () => {
+      render(<GeoCanvasApp />);
 
-    // Error boundary should render something (error UI or fallback)
-    expect(container).toBeInTheDocument();
-  });
-});
+      await waitFor(() => {
+        expect(screen.getByRole('toolbar')).toBeInTheDocument();
+      });
+    });
 
-/**
- * PERFORMANCE TESTS
- */
-describe('GeoCanvasApp Performance', () => {
-  it('renders within acceptable time', async () => {
-    const startTime = performance.now();
+    it('renders heading element', async () => {
+      render(<GeoCanvasApp />);
 
-    render(<GeoCanvasApp />);
-
-    const renderTime = performance.now() - startTime;
-
-    // Should render within 1000ms (generous for CI with complex component tree)
-    expect(renderTime).toBeLessThan(1000);
+      await waitFor(() => {
+        const headings = screen.getAllByRole('heading', { level: 1 });
+        expect(headings.length).toBeGreaterThan(0);
+      });
+    });
   });
 
-  it('does not crash on rerender', async () => {
-    const { rerender, container } = render(<GeoCanvasApp />);
+  describe('Props Handling', () => {
+    it('accepts feature flags prop', async () => {
+      const features = {
+        enableDxfImport: true,
+        enableMapLibre: false,
+        enableAlerts: true,
+        enableSpatialQueries: false,
+      };
 
-    // Same props should not cause crash
-    rerender(<GeoCanvasApp />);
+      render(<GeoCanvasApp features={features} />);
 
-    // Component should still be there
-    expect(container).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByRole('main')).toBeInTheDocument();
+      });
+    });
+
+    it('accepts initial configuration prop', async () => {
+      const initialConfig = {
+        mapCenter: { lng: 23.7275, lat: 37.9755 },
+        mapZoom: 8,
+        defaultCRS: 'EPSG:4326',
+      };
+
+      render(<GeoCanvasApp initialConfig={initialConfig} />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('main')).toBeInTheDocument();
+      });
+    });
+
+    it('accepts className prop', async () => {
+      const { container } = render(<GeoCanvasApp className="custom-class" />);
+
+      await waitFor(() => {
+        expect(container.firstChild).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('has combobox controls for selections', async () => {
+      render(<GeoCanvasApp />);
+
+      await waitFor(() => {
+        const comboboxes = screen.getAllByRole('combobox');
+        expect(comboboxes.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('has button controls', async () => {
+      render(<GeoCanvasApp />);
+
+      await waitFor(() => {
+        const buttons = screen.getAllByRole('button');
+        expect(buttons.length).toBeGreaterThan(0);
+      });
+    });
   });
 });

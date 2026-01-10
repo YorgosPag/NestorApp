@@ -21,7 +21,8 @@ import { AdvancedFiltersPanel, unitFiltersConfig, defaultUnitFilters, type UnitF
 import { ListContainer, PageContainer } from '@/core/containers';
 import { UnitsSidebar } from '@/components/units/UnitsSidebar';
 import { PropertyGridViewCompatible as PropertyGridView } from '@/components/property-viewer/PropertyGrid';
-import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
+// 🏢 ENTERPRISE: Import from canonical location
+import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 

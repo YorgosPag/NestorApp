@@ -136,18 +136,19 @@ function wirePort<TPort extends { apply(p: unknown): void; onChange(h: (p: unkno
     }
   };
 
-  // ===== OPTIONAL BIDIRECTIONAL: Port → Settings (via EventBus) =====
-  if (deps.bus) {
-    const unsub = port.onChange((delta) => {
-      try {
-        // Debug disabled: Port delta received
-        deps.bus!.emit({ type: 'PORT_DELTA', payload: delta });
-      } catch (err) {
-        deps.logger.warn('[StoreSync] onChange failed', err);
+  // ===== BIDIRECTIONAL: Port → Settings (subscribe to port changes) =====
+  const unsub = port.onChange((delta) => {
+    try {
+      // Debug disabled: Port delta received
+      // If bus exists, emit delta for other listeners
+      if (deps.bus) {
+        deps.bus.emit({ type: 'PORT_DELTA', payload: delta });
       }
-    });
-    subscriptions.push(unsub);
-  }
+    } catch (err) {
+      deps.logger.warn('[StoreSync] onChange failed', err);
+    }
+  });
+  subscriptions.push(unsub);
 
   return { push, subscriptions };
 }
@@ -173,7 +174,7 @@ function wirePort<TPort extends { apply(p: unknown): void; onChange(h: (p: unkno
  * ```
  */
 export function createStoreSync(deps: SyncDependencies): StoreSync {
-  // Debug disabled: Creating sync instance
+  deps.logger.info('[StoreSync] Creating sync instance');
 
   let allSubscriptions: Unsubscribe[] = [];
   let pushers: Array<() => void> = [];

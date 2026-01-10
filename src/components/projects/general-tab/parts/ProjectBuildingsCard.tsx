@@ -1,9 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, Loader2, AlertCircle } from 'lucide-react';
+import { ExternalLink, Loader2, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 // 🏢 ENTERPRISE: Using centralized entity config for Building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { useRouter } from 'next/navigation';
@@ -12,10 +12,15 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 
-// 🏢 ENTERPRISE: Type definitions (ZERO any)
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ZERO any)
+// ============================================================================
+
 interface ProjectBuildingsCardProps {
   /** Project ID για fetch buildings */
   projectId: number;
+  /** Whether to start expanded (load immediately) @default false for lazy loading */
+  defaultExpanded?: boolean;
 }
 
 interface BuildingSummary {
@@ -26,7 +31,10 @@ interface BuildingSummary {
   totalArea: number;
 }
 
-// 🏢 ENTERPRISE: Centralized labels (ZERO hardcoded strings)
+// ============================================================================
+// 🏢 ENTERPRISE: Centralized Labels (ZERO hardcoded strings)
+// ============================================================================
+
 const LABELS = {
   CARD_TITLE: 'Κτίρια Έργου',
   LOADING: 'Φόρτωση κτιρίων...',
@@ -39,21 +47,36 @@ const LABELS = {
   SOLD_LABEL: 'πωλημένες',
   AREA_LABEL: 'm²',
   VIEW_ALL_STRUCTURE: 'Προβολή Δομής Έργου',
+  CLICK_TO_LOAD: 'Κάντε κλικ για φόρτωση κτιρίων',
+  RETRY: 'Επανάληψη',
 } as const;
+
+// ============================================================================
+// 🏢 ENTERPRISE: Component
+// ============================================================================
 
 /**
  * 🏢 ENTERPRISE: ProjectBuildingsCard Component
  *
  * Εμφανίζει τα κτίρια που ανήκουν σε ένα έργο.
- * Χρησιμοποιεί το existing useProjectStructure hook για data fetching.
+ *
+ * LAZY LOADING PATTERN:
+ * - Starts collapsed by default (no API call)
+ * - User clicks to expand → triggers data fetch
+ * - Data is cached after first fetch
  */
-export function ProjectBuildingsCard({ projectId }: ProjectBuildingsCardProps) {
+export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: ProjectBuildingsCardProps) {
   const router = useRouter();
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
-  // 🏢 ENTERPRISE: Reuse existing hook (ZERO duplicate API calls)
-  const { structure, loading, error } = useProjectStructure(projectId);
+  // 🏢 ENTERPRISE: Lazy loading state
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+
+  // 🏢 ENTERPRISE: Only fetch when expanded (enabled flag)
+  const { structure, loading, error, refetch, isFetched } = useProjectStructure(projectId, {
+    enabled: isExpanded
+  });
 
   // 🏢 ENTERPRISE: Transform buildings data for display
   const buildings: BuildingSummary[] = structure?.buildings.map(building => ({
@@ -73,14 +96,48 @@ export function ProjectBuildingsCard({ projectId }: ProjectBuildingsCardProps) {
     router.push('/buildings');
   };
 
+  // 🏢 ENTERPRISE: Toggle expand/collapse
+  const handleToggleExpand = () => {
+    setIsExpanded(!isExpanded);
+  };
+
+  // 🏢 ENTERPRISE: Collapsed state (no data fetch yet)
+  if (!isExpanded) {
+    return (
+      <Card className="mt-6">
+        <CardHeader
+          className="cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg"
+          onClick={handleToggleExpand}
+        >
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
+              {LABELS.CARD_TITLE}
+            </span>
+            <ChevronRight className={cn(iconSizes.md, colors.text.muted)} />
+          </CardTitle>
+          <CardDescription>
+            {LABELS.CLICK_TO_LOAD}
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
   // 🏢 ENTERPRISE: Loading state
   if (loading) {
     return (
       <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
-            {LABELS.CARD_TITLE}
+        <CardHeader
+          className="cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg"
+          onClick={handleToggleExpand}
+        >
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
+              {LABELS.CARD_TITLE}
+            </span>
+            <ChevronDown className={cn(iconSizes.md, colors.text.muted)} />
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -93,20 +150,29 @@ export function ProjectBuildingsCard({ projectId }: ProjectBuildingsCardProps) {
     );
   }
 
-  // 🏢 ENTERPRISE: Error state
+  // 🏢 ENTERPRISE: Error state with retry
   if (error) {
     return (
       <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
-            {LABELS.CARD_TITLE}
+        <CardHeader
+          className="cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg"
+          onClick={handleToggleExpand}
+        >
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
+              {LABELS.CARD_TITLE}
+            </span>
+            <ChevronDown className={cn(iconSizes.md, colors.text.muted)} />
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <section className="flex items-center justify-center gap-2 py-8 text-destructive" aria-live="polite">
-            <AlertCircle className={iconSizes.md} />
-            <span>{LABELS.ERROR_PREFIX} {error}</span>
+          <section className="flex flex-col items-center justify-center gap-3 py-8" aria-live="polite">
+            <AlertCircle className={cn(iconSizes.lg, 'text-destructive')} />
+            <span className="text-destructive text-sm">{LABELS.ERROR_PREFIX} {error}</span>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              {LABELS.RETRY}
+            </Button>
           </section>
         </CardContent>
       </Card>
@@ -117,10 +183,16 @@ export function ProjectBuildingsCard({ projectId }: ProjectBuildingsCardProps) {
   if (buildings.length === 0) {
     return (
       <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
-            {LABELS.CARD_TITLE}
+        <CardHeader
+          className="cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg"
+          onClick={handleToggleExpand}
+        >
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
+              {LABELS.CARD_TITLE}
+            </span>
+            <ChevronDown className={cn(iconSizes.md, colors.text.muted)} />
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -142,13 +214,19 @@ export function ProjectBuildingsCard({ projectId }: ProjectBuildingsCardProps) {
     );
   }
 
-  // 🏢 ENTERPRISE: Buildings list
+  // 🏢 ENTERPRISE: Buildings list (expanded)
   return (
     <Card className="mt-6">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
-          {LABELS.CARD_TITLE}
+      <CardHeader
+        className="cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg"
+        onClick={handleToggleExpand}
+      >
+        <CardTitle className="flex items-center justify-between">
+          <span className="flex items-center gap-2">
+            <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
+            {LABELS.CARD_TITLE}
+          </span>
+          <ChevronDown className={cn(iconSizes.md, colors.text.muted)} />
         </CardTitle>
         <CardDescription>
           {buildings.length} κτίρια συνδεδεμένα με αυτό το έργο

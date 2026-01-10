@@ -60,7 +60,12 @@ export class NavigationApiService {
   }
 
   /**
-   * Load projects for a specific company
+   * 🚀 ENTERPRISE PHASE 2: Load projects for a specific company
+   *
+   * PERFORMANCE FIX: No longer loads buildings/floors/units cascade
+   * Buildings/floors/units are loaded ON-DEMAND when user navigates
+   *
+   * This eliminates the N+1 cascade that caused 85+ API calls
    */
   static async loadProjectsForCompany(companyId: string): Promise<NavigationProject[]> {
     try {
@@ -70,11 +75,7 @@ export class NavigationApiService {
         return [];
       }
 
-      // 🏢 ENTERPRISE PATTERN: Load real data from normalized collections FOR ALL COMPANIES
-      // 🎯 PRODUCTION: Reduced logging verbosity για καθαρότερη κονσόλα
-      // console.log(`🔍 Loading projects for company: ${companyId}`);
-
-      // Load projects from projects API (normalized structure)
+      // 🚀 PERFORMANCE: Single API call - NO cascade!
       const projectsResponse = await fetch(`/api/projects/by-company/${companyId}`);
       if (!projectsResponse.ok) {
         console.warn(`Failed to load projects for company ${companyId}`);
@@ -86,154 +87,144 @@ export class NavigationApiService {
         return [];
       }
 
-      // For each project, load buildings and floors using enterprise normalized structure
-      const projectsWithBuildings = await Promise.all(
-        projectsResult.data.projects.map(async (project: NavigationProject) => {
-          try {
-
-            // Load buildings for this project
-            const buildingsResponse = await fetch(`/api/buildings?projectId=${project.id}`);
-            const buildingsResult = await buildingsResponse.json();
-
-            if (!buildingsResult.success) {
-              return { ...project, buildings: [], companyId };
-            }
-
-            // For each building, load floors from normalized floors collection
-            const buildingsWithFloors = await Promise.all(
-              buildingsResult.buildings.map(async (building: NavigationBuilding) => {
-                try {
-                  // Enterprise query: Load floors by buildingId foreign key
-                  const floorsResponse = await fetch(`/api/floors?buildingId=${building.id}`);
-                  const floorsResult = await floorsResponse.json();
-
-                  if (!floorsResult.success) {
-                    return { ...building, floors: [], units: [] };
-                  }
-
-                  // Extract floors from correct API structure (data.floors)
-                  const floors = floorsResult.data?.floors || floorsResult.floors || [];
-
-                  // 🔍 DEBUG: Log floors for investigation
-                  console.log(`🏢 [Navigation] Building ${building.id} (${building.name}) has ${floors.length} floors`);
-
-                  // 🏢 ENTERPRISE: If building has NO floors, load units directly by buildingId
-                  if (floors.length === 0) {
-                    try {
-                      const unitsResponse = await fetch(`/api/units?buildingId=${building.id}`);
-                      const unitsResult = await unitsResponse.json();
-
-                      const directUnits = unitsResult.success ? unitsResult.units : [];
-                      console.log(`📦 [Navigation] Building ${building.id} has ${directUnits.length} direct units (no floors)`);
-
-                      return {
-                        ...building,
-                        floors: [],
-                        // 🏢 ENTERPRISE: Direct units for buildings without floors
-                        units: directUnits.map((unit: NavigationUnit) => ({
-                          id: unit.id,
-                          name: unit.name,
-                          type: unit.type
-                        }))
-                      };
-                    } catch (error) {
-                      console.warn(`Failed to load direct units for building ${building.id}:`, error);
-                      return { ...building, floors: [], units: [] };
-                    }
-                  }
-
-                  // For each floor, load units
-                  const floorsWithUnits = await Promise.all(
-                    floors.map(async (floor: NavigationFloor) => {
-                      try {
-                        // Load units for this floor
-                        const unitsResponse = await fetch(`/api/units?floorId=${floor.id}&buildingId=${building.id}`);
-                        const unitsResult = await unitsResponse.json();
-
-                        const units = unitsResult.success ? unitsResult.units : [];
-
-                        // 🔍 DEBUG: Log units per floor
-                        console.log(`📦 [Navigation] Floor ${floor.id} (${floor.name}) has ${units.length} units`);
-
-                        return {
-                          id: floor.id,
-                          name: floor.name,
-                          number: floor.number,
-                          units: units.map((unit: NavigationUnit) => ({
-                            id: unit.id,
-                            name: unit.name,
-                            type: unit.type
-                          }))
-                        };
-                      } catch (error) {
-                        console.warn(`Failed to load units for floor ${floor.id}:`, error);
-                        return {
-                          id: floor.id,
-                          name: floor.name,
-                          number: floor.number,
-                          units: []
-                        };
-                      }
-                    })
-                  );
-
-                  // 🏢 ENTERPRISE: Check if any floor has units
-                  const totalFloorUnits = floorsWithUnits.reduce((sum, f) => sum + f.units.length, 0);
-
-                  // 🔧 FIX: If floors exist but have no units, try loading by buildingId (fallback)
-                  // This handles cases where units don't have floorId but have buildingId
-                  if (totalFloorUnits === 0) {
-                    console.log(`⚠️ [Navigation] Building ${building.id} has ${floors.length} floors but 0 floor units. Trying buildingId fallback...`);
-                    try {
-                      const fallbackResponse = await fetch(`/api/units?buildingId=${building.id}`);
-                      const fallbackResult = await fallbackResponse.json();
-                      const fallbackUnits = fallbackResult.success ? fallbackResult.units : [];
-                      console.log(`📦 [Navigation] Fallback: Found ${fallbackUnits.length} units by buildingId`);
-
-                      return {
-                        ...building,
-                        floors: floorsWithUnits,
-                        units: fallbackUnits.map((unit: NavigationUnit) => ({
-                          id: unit.id,
-                          name: unit.name,
-                          type: unit.type
-                        }))
-                      };
-                    } catch (error) {
-                      console.warn(`Failed to load fallback units for building ${building.id}:`, error);
-                    }
-                  }
-
-                  return {
-                    ...building,
-                    floors: floorsWithUnits,
-                    units: [] // No direct units when floors exist and have units
-                  };
-
-                } catch (error) {
-                  console.warn(`Failed to load floors for building ${building.id}:`, error);
-                  return { ...building, floors: [], units: [] };
-                }
-              })
-            );
-
-            return {
-              ...project,
-              buildings: buildingsWithFloors,
-              companyId
-            };
-
-          } catch (error) {
-            console.warn(`Failed to load buildings for project ${project.id}:`, error);
-            return { ...project, buildings: [], companyId };
-          }
+      // 🚀 ENTERPRISE PHASE 2: Return projects WITHOUT buildings/floors/units
+      // Buildings/floors/units will be loaded ON-DEMAND (Phase 3: Lazy Loading)
+      const projects: NavigationProject[] = projectsResult.data.projects.map(
+        (project: Record<string, unknown>) => ({
+          id: project.id as string,
+          name: project.name as string || 'Unnamed Project',
+          company: '', // Will be filled by caller if needed
+          companyId,
+          projectCode: project.projectCode as string | null || null,
+          status: project.status as string || 'unknown',
+          // 🚀 PERFORMANCE: Empty arrays - loaded on-demand
+          buildings: []
         })
       );
 
-      return projectsWithBuildings;
+      return projects;
 
     } catch (error) {
       console.error(`🚨 Failed to load projects for company ${companyId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Load buildings for a specific project (ON-DEMAND)
+   * Called when user expands/selects a project in navigation
+   */
+  static async loadBuildingsForProject(projectId: string): Promise<NavigationBuilding[]> {
+    try {
+      const buildingsResponse = await fetch(`/api/buildings?projectId=${projectId}`);
+      if (!buildingsResponse.ok) {
+        console.warn(`Failed to load buildings for project ${projectId}`);
+        return [];
+      }
+
+      const buildingsResult = await buildingsResponse.json();
+      if (!buildingsResult.success) {
+        return [];
+      }
+
+      // Return buildings with empty floors (loaded on-demand)
+      return (buildingsResult.buildings || []).map((building: Record<string, unknown>) => ({
+        id: building.id as string,
+        name: building.name as string || 'Unnamed Building',
+        floors: [] // Loaded on-demand
+      }));
+
+    } catch (error) {
+      console.error(`🚨 Failed to load buildings for project ${projectId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Load floors for a specific building (ON-DEMAND)
+   * Called when user expands/selects a building in navigation
+   */
+  static async loadFloorsForBuilding(buildingId: string): Promise<NavigationFloor[]> {
+    try {
+      const floorsResponse = await fetch(`/api/floors?buildingId=${buildingId}`);
+      if (!floorsResponse.ok) {
+        console.warn(`Failed to load floors for building ${buildingId}`);
+        return [];
+      }
+
+      const floorsResult = await floorsResponse.json();
+      if (!floorsResult.success) {
+        return [];
+      }
+
+      const floors = floorsResult.data?.floors || floorsResult.floors || [];
+
+      return floors.map((floor: Record<string, unknown>) => ({
+        id: floor.id as string,
+        name: floor.name as string || 'Unnamed Floor',
+        number: floor.number as number || 0,
+        units: [] // Loaded on-demand
+      }));
+
+    } catch (error) {
+      console.error(`🚨 Failed to load floors for building ${buildingId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Load units for a specific floor (ON-DEMAND)
+   * Called when user expands/selects a floor in navigation
+   */
+  static async loadUnitsForFloor(floorId: string, buildingId: string): Promise<NavigationUnit[]> {
+    try {
+      const unitsResponse = await fetch(`/api/units?floorId=${floorId}&buildingId=${buildingId}`);
+      if (!unitsResponse.ok) {
+        console.warn(`Failed to load units for floor ${floorId}`);
+        return [];
+      }
+
+      const unitsResult = await unitsResponse.json();
+      if (!unitsResult.success) {
+        return [];
+      }
+
+      return (unitsResult.units || []).map((unit: Record<string, unknown>) => ({
+        id: unit.id as string,
+        name: unit.name as string || 'Unnamed Unit',
+        type: unit.type as string || 'unknown'
+      }));
+
+    } catch (error) {
+      console.error(`🚨 Failed to load units for floor ${floorId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Load units directly by building (for buildings without floors)
+   */
+  static async loadUnitsForBuilding(buildingId: string): Promise<NavigationUnit[]> {
+    try {
+      const unitsResponse = await fetch(`/api/units?buildingId=${buildingId}`);
+      if (!unitsResponse.ok) {
+        console.warn(`Failed to load units for building ${buildingId}`);
+        return [];
+      }
+
+      const unitsResult = await unitsResponse.json();
+      if (!unitsResult.success) {
+        return [];
+      }
+
+      return (unitsResult.units || []).map((unit: Record<string, unknown>) => ({
+        id: unit.id as string,
+        name: unit.name as string || 'Unnamed Unit',
+        type: unit.type as string || 'unknown'
+      }));
+
+    } catch (error) {
+      console.error(`🚨 Failed to load units for building ${buildingId}:`, error);
       return [];
     }
   }
