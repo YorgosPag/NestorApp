@@ -3730,8 +3730,9 @@ src/subapps/dxf-viewer/
 | | `ProjectsService` | `projects/services/` | Project management |
 | | `PDFExportService` | `pdf/` | PDF generation |
 | | `ErrorTracker` | `ErrorTracker.ts` | Error tracking |
-| **Specialized** | 5 services | `src/services/` | ✅ **ACTIVE** |
-| | `EnterpriseIdService` | `enterprise-id.service.ts` | ID management |
+| **Specialized** | 6 services | `src/services/` | ✅ **ACTIVE** |
+| | `EnterpriseIdService` | `enterprise-id.service.ts` | UUID generation |
+| | `ProjectCodeService` | `project-code.service.ts` | Sequential codes (PRJ-001) |
 | | `NavigationCompaniesService` | `navigation-companies.service.ts` | Navigation |
 | | `PropertySearchService` | `property-search.service.ts` | Property search |
 | | `NotificationService` | `notificationService.ts` | Notifications |
