@@ -1,53 +1,63 @@
 {
-  "category": "REFACTOR",
-  "timestamp": "20250110_1245",
-  "shortDescription": "Navigation System Refinements & Page State Hooks Centralization",
-  "problem": "Navigation components needed enhanced styling and smart navigation logic. Page state hooks had duplicate patterns that required centralization.",
-  "cause": "Navigation logic was scattered across components. Page state hooks followed different patterns without unified approach.",
+  "category": "FEATURE",
+  "timestamp": "20260110_0345",
+  "shortDescription": "Contextual Navigation Auto-Selection System Complete",
+  "problem": "Navigation buttons were redirecting to pages but entities were not auto-selected. Users had to manually find and select the entity after navigation.",
+  "cause": "Page state hooks did not read URL parameters. Redirect pages lost query parameters during navigation.",
   "filesChanged": [
-    "src/app/spaces/apartments/page.tsx",
-    "src/components/navigation/components/AdaptiveMultiColumnNavigation.tsx",
-    "src/components/navigation/components/BuildingSpacesTabs.tsx",
-    "src/components/navigation/components/DesktopMultiColumn.tsx",
-    "src/components/navigation/components/NavigationButton.tsx",
-    "src/components/navigation/core/ContextualNavigationHandler.tsx",
     "src/hooks/useBuildingsPageState.ts",
-    "src/hooks/useParkingPageState.ts",
     "src/hooks/useProjectsPageState.ts",
     "src/hooks/useStoragesPageState.ts",
-    "src/hooks/useUnitsPageState.ts (deleted)",
+    "src/hooks/useParkingPageState.ts",
     "src/hooks/useUnitsViewerState.ts",
-    "src/services/navigation/ContextualNavigationService.ts"
+    "src/app/spaces/apartments/page.tsx",
+    "src/services/navigation/ContextualNavigationService.ts",
+    "src/components/navigation/core/ContextualNavigationHandler.tsx",
+    "src/hooks/useUnitsPageState_old.ts (deprecated)",
+    "src/components/ui/navigation/NavigationIcon.tsx"
   ],
   "solution": {
-    "phase1": "Enhanced NavigationButton component with improved styling (203 lines)",
-    "phase2": "Created ContextualNavigationHandler for smart navigation (126 lines)",
-    "phase3": "Added ContextualNavigationService for centralized navigation logic (375 lines)",
-    "phase4": "Updated all page state hooks with unified patterns",
-    "phase5": "Removed deprecated useUnitsPageState in favor of centralized approach"
+    "phase1": "Extended useBuildingsPageState with buildingId URL parameter handling",
+    "phase2": "Extended useProjectsPageState with projectId URL parameter handling",
+    "phase3": "Extended useStoragesPageState with storageId URL parameter handling",
+    "phase4": "Extended useParkingPageState with parkingId URL parameter handling",
+    "phase5": "Fixed /spaces/apartments redirect to preserve URL parameters",
+    "phase6": "Marked useUnitsPageState as deprecated (_old suffix)"
   },
   "technicalDetails": {
-    "additions": "817 lines of code added",
-    "deletions": "142 lines removed (deprecated code)",
-    "newComponents": "ContextualNavigationHandler, ContextualNavigationService",
-    "typeSafety": "Full TypeScript typing throughout",
-    "patterns": "Centralized service pattern for navigation logic"
+    "pattern": "All hooks follow unified enterprise pattern: useSearchParams -> useEffect -> auto-selection",
+    "urlParameters": {
+      "companies": "contactId -> /contacts",
+      "projects": "projectId -> /audit",
+      "buildings": "buildingId -> /buildings",
+      "units": "unitId -> /spaces/apartments -> /units",
+      "storage": "storageId -> /spaces/storage",
+      "parking": "parkingId -> /spaces/parking"
+    },
+    "redirectFix": "/spaces/apartments now preserves query string during redirect to /units",
+    "typeSafety": "Full TypeScript typing, ZERO any usage"
   },
   "testing": {
-    "compilation": "TypeScript pre-commit checks passed",
-    "vercelDeployment": "Push to origin/main for auto-deployment"
+    "companies": "PASSED - Auto-selection works",
+    "projects": "PASSED - Auto-selection works",
+    "buildings": "PASSED - Auto-selection works",
+    "units": "PASSED - Auto-selection works (after redirect fix)",
+    "storage": "PASSED - Auto-selection works",
+    "parking": "PASSED - Auto-selection works",
+    "vercelDeployment": "Push to origin/main completed"
   },
-  "notes": "Major navigation system enhancement - centralized navigation logic into dedicated service and handler. Page state hooks now follow unified patterns. Enterprise-grade architecture.",
+  "notes": "Full contextual navigation system now operational. All navigation buttons auto-select the target entity when landing on destination page. Enterprise-grade centralized pattern across all page state hooks.",
   "contributors": {
     "user": "YorgosPag",
-    "assistant": "Claude (Anthropic)",
-    "sessionDate": "2025-01-10"
+    "assistant": "Claude Opus 4.5 (Anthropic)",
+    "sessionDate": "2026-01-10"
   },
   "relatedBackups": [
-    "20250110_0030 - ParkingTabs Centralization",
-    "20250109_1730 - Unified Search System"
+    "20260110_0245 - Navigation System Refinements & Page State Hooks",
+    "20260110_0030 - ParkingTabs Centralization"
   ],
   "commits": [
-    "6bbcca6 - ENTERPRISE SAFETY CHECKPOINT: Navigation System Refinements & Page State Hooks"
+    "6bbcca6 - Navigation System Refinements & Page State Hooks",
+    "71d5fd8 - Contextual Navigation Auto-Selection System"
   ]
 }
