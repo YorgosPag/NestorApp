@@ -1,58 +1,53 @@
 {
   "category": "FEATURE",
-  "timestamp": "20260110_0500",
-  "shortDescription": "Enhanced Navigation Context & PageHeader Integration",
-  "problem": "Navigation context needed enhanced state management. PageHeader required integration with navigation system. All page headers lacked unified navigation support.",
-  "cause": "Navigation logic was not fully integrated across all page headers. Need for comprehensive navigation types and context management.",
+  "timestamp": "20260110_2130",
+  "shortDescription": "Enterprise Human-Readable Project Codes System (PRJ-001)",
+  "problem": "Projects only had technical Firestore document IDs. Users needed human-readable codes for referencing projects (like PRJ-001, PRJ-002).",
+  "cause": "Enterprise applications require dual-ID model: internal technical ID for database + human-readable business code for user reference (SAP/Salesforce/Jira pattern).",
   "filesChanged": [
-    "src/app/spaces/apartments/page.tsx",
-    "src/app/spaces/parking/page.tsx",
-    "src/app/spaces/storage/page.tsx",
-    "src/app/units/page.tsx",
-    "src/components/building-management/BuildingsPage/BuildingsHeader.tsx",
-    "src/components/building-management/BuildingsPageContent.tsx",
-    "src/components/navigation/components/NavigationBreadcrumb.tsx",
-    "src/components/navigation/core/NavigationContext.tsx",
-    "src/components/navigation/core/types.ts",
-    "src/components/projects/ProjectsHeader.tsx",
-    "src/components/projects/projects-page-content.tsx",
-    "src/components/space-management/ParkingPage/ParkingsHeader.tsx",
-    "src/components/space-management/StoragesPage/StoragesHeader.tsx",
-    "src/components/units/page/UnitsHeader.tsx",
-    "src/core/headers/enterprise-system/components/PageHeader.tsx",
-    "src/hooks/useUnitsViewerState.ts",
-    "src/subapps/dxf-viewer/docs/CENTRALIZED_SYSTEMS.md",
-    "src/subapps/dxf-viewer/docs/centralized_systems_TABLE.md"
+    "src/services/project-code.service.ts",
+    "src/database/migrations/005_assign_project_codes.ts",
+    "src/app/api/admin/migrations/execute/route.ts",
+    "src/components/projects/GeneralProjectHeader.tsx",
+    "src/components/projects/general-tab/GeneralProjectTab.tsx",
+    "src/config/firestore-collections.ts",
+    "src/types/project.ts"
   ],
   "solution": {
-    "phase1": "Extended NavigationContext with enhanced state management (52+ lines)",
-    "phase2": "Added comprehensive navigation types (122+ lines)",
-    "phase3": "Enhanced PageHeader with navigation integration (64+ lines)",
-    "phase4": "Integrated navigation into all page headers (Buildings, Projects, Parkings, Storages, Units)",
-    "phase5": "Updated centralized systems documentation"
+    "phase1": "Created project-code.service.ts - Atomic Firestore counter service for sequential code generation (404 lines)",
+    "phase2": "Created 005_assign_project_codes.ts - Migration script with dry-run, rollback, idempotent logic (364 lines)",
+    "phase3": "Integrated migration into central migration runner (/api/admin/migrations/execute)",
+    "phase4": "Updated GeneralProjectHeader.tsx - Display projectCode with tooltip + copy-to-clipboard",
+    "phase5": "Added COUNTERS collection and projectCode field to types"
   },
   "technicalDetails": {
-    "additions": "535 lines of code added",
-    "deletions": "13 lines removed",
-    "components": "NavigationContext, PageHeader, NavigationBreadcrumb enhanced",
-    "typeSafety": "Full TypeScript typing with comprehensive navigation types",
-    "patterns": "Context-based navigation state management"
+    "additions": "883 lines of code added",
+    "deletions": "12 lines removed",
+    "rootCauseFix": "Firestore orderBy excludes docs without the field - fixed with simple .get() + JS sorting",
+    "patterns": "Atomic transactions, Dual-ID model, Migration dry-run/rollback",
+    "typeSafety": "Full TypeScript typing without any bypass"
   },
   "testing": {
     "compilation": "TypeScript pre-commit checks passed",
+    "dryRun": "Migration dry-run successful - 3 projects found (PRJ-001, PRJ-002, PRJ-003)",
     "vercelDeployment": "Push to origin/main for auto-deployment"
   },
-  "notes": "Major navigation system enhancement - all page headers now integrated with centralized navigation context. Enterprise-grade architecture with comprehensive type definitions.",
+  "notes": "Enterprise-grade project code system. Migration ready to execute after backup. Root cause of Firestore query issue fully documented and fixed.",
   "contributors": {
     "user": "YorgosPag",
     "assistant": "Claude Opus 4.5 (Anthropic)",
     "sessionDate": "2026-01-10"
   },
   "relatedBackups": [
-    "20260110_0345 - Contextual Navigation Auto-Selection System",
-    "20260110_0250 - Navigation System Refinements"
+    "20260110_0500 - Enhanced Navigation Context & PageHeader Integration",
+    "20260110_0345 - Contextual Navigation Auto-Selection System"
   ],
   "commits": [
-    "d86d14d - ENTERPRISE SAFETY CHECKPOINT: Enhanced Navigation Context & PageHeader Integration"
-  ]
+    "94e6525 - ENTERPRISE: Human-Readable Project Codes System (PRJ-001)"
+  ],
+  "pendingMigration": {
+    "status": "READY",
+    "command": "POST /api/admin/migrations/execute { migrationId: '005_assign_project_codes', dryRun: false }",
+    "prerequisites": "Backup of projects collection required before execution"
+  }
 }
