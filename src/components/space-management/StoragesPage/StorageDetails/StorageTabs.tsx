@@ -3,7 +3,9 @@
 import React from 'react';
 import type { Storage } from '@/types/storage/contracts';
 import { getSortedStorageTabs } from '@/config/storage-tabs-config';
-import { UniversalTabsRenderer, STORAGE_COMPONENT_MAPPING, convertToUniversalConfig } from '@/components/generic';
+// 🏢 ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
+import { UniversalTabsRenderer, convertToUniversalConfig } from '@/components/generic/UniversalTabsRenderer';
+import { STORAGE_COMPONENT_MAPPING } from '@/components/generic/mappings/storageMappings';
 
 interface StorageTabsProps {
   storage: Storage;

@@ -1,17 +1,26 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import type { Project } from '@/types/project';
 import { ProjectDetailsHeader } from './ProjectDetailsHeader';
 import { Briefcase } from 'lucide-react';
 import { useProjectFloorplans } from '../../hooks/useProjectFloorplans';
-import { UniversalTabsRenderer, PROJECT_COMPONENT_MAPPING, convertToUniversalConfig } from '@/components/generic';
+// 🏢 ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
+// UniversalTabsRenderer from generic (renderer only, no mappings)
+import { UniversalTabsRenderer, convertToUniversalConfig } from '@/components/generic/UniversalTabsRenderer';
+// PROJECT_COMPONENT_MAPPING from domain-scoped file (not master barrel)
+import { PROJECT_COMPONENT_MAPPING } from '@/components/generic/mappings/projectMappings';
 import { getSortedProjectTabs } from '@/config/project-tabs-config';
 import { DetailsContainer } from '@/core/containers';
-// ✅ ENTERPRISE: DXF Import integration
-import DxfImportModal from '@/subapps/dxf-viewer/components/DxfImportModal';
-import { dxfImportService } from '@/subapps/dxf-viewer/io/dxf-import';
 import { FloorplanService, type FloorplanData } from '@/services/floorplans/FloorplanService';
+
+// 🏢 ENTERPRISE: Dynamic import for DXF Modal - loads only on user interaction
+// This removes DXF module graph from /audit critical path
+const DxfImportModal = dynamic(
+  () => import('@/subapps/dxf-viewer/components/DxfImportModal'),
+  { ssr: false }
+);
 
 /** Type-safe floorplan types */
 type FloorplanType = 'project' | 'parking';
@@ -49,6 +58,10 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
 
         try {
             console.log('📁 Starting DXF import for project:', project.id, 'type:', importFloorplanType);
+
+            // 🏢 ENTERPRISE: Dynamic import service only when needed (user clicked Import)
+            // This removes DXF IO graph from initial bundle
+            const { dxfImportService } = await import('@/subapps/dxf-viewer/io/dxf-import');
 
             // Parse DXF file using centralized service
             const result = await dxfImportService.importDxfFile(file, encoding);
@@ -161,12 +174,17 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
                 }}
             />
 
-            {/* ✅ ENTERPRISE: DXF Import Modal */}
-            <DxfImportModal
-                isOpen={isImportModalOpen}
-                onClose={handleCloseImportModal}
-                onImport={handleDxfImport}
-            />
+            {/* 🏢 ENTERPRISE: DXF Import Modal - renders only when open
+                This ensures the modal component is loaded only on user interaction,
+                not on initial page load. Combined with dynamic import above,
+                this completely removes DXF module graph from /audit critical path. */}
+            {isImportModalOpen && (
+                <DxfImportModal
+                    isOpen={isImportModalOpen}
+                    onClose={handleCloseImportModal}
+                    onImport={handleDxfImport}
+                />
+            )}
         </>
     );
 }

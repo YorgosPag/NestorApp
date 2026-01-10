@@ -3,7 +3,9 @@
 import React from 'react';
 import type { Building } from '../BuildingsPageContent';
 import { useBuildingFloorplans } from '../../../hooks/useBuildingFloorplans';
-import { UniversalTabsRenderer, BUILDING_COMPONENT_MAPPING, convertToUniversalConfig } from '@/components/generic';
+// 🏢 ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
+import { UniversalTabsRenderer, convertToUniversalConfig } from '@/components/generic/UniversalTabsRenderer';
+import { BUILDING_COMPONENT_MAPPING } from '@/components/generic/mappings/buildingMappings';
 import { getSortedBuildingTabs } from '../../../config/building-tabs-config';
 
 interface BuildingTabsProps {

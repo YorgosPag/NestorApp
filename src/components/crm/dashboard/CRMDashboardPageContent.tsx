@@ -4,7 +4,9 @@ import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { GenericCRMDashboardTabsRenderer, GenericPeriodSelector } from '@/components/generic';
+// 🏢 ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
+import { GenericCRMDashboardTabsRenderer } from '@/components/generic/GenericCRMDashboardTabsRenderer';
+import { GenericPeriodSelector } from '@/components/generic/GenericPeriodSelector';
 import { getSortedCRMDashboardTabs } from '@/config/crm-dashboard-tabs-config';
 import { getSortedPeriods } from '@/config/period-selector-config';
 import { TelegramNotifications } from './TelegramNotifications';

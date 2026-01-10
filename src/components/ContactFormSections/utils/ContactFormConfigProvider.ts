@@ -1,7 +1,9 @@
 import { getSortedSections } from '@/config/company-gemi';
 import { getServiceSortedSections } from '@/config/service-config';
 import { getIndividualSortedSections } from '@/config/individual-config';
-import { GenericFormTabRenderer, ServiceFormTabRenderer } from '@/components/generic';
+// 🏢 ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
+import { GenericFormTabRenderer } from '@/components/generic/GenericFormTabRenderer';
+import { ServiceFormTabRenderer } from '@/components/generic/ServiceFormTabRenderer';
 import { IndividualFormTabRenderer } from '@/components/generic/IndividualFormTabRenderer';
 import type { ContactType } from '@/types/ContactFormTypes';
 

@@ -15,7 +15,9 @@
 import React from 'react';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import { getSortedParkingTabs } from '@/config/parking-tabs-config';
-import { UniversalTabsRenderer, PARKING_COMPONENT_MAPPING, convertToUniversalConfig } from '@/components/generic';
+// 🏢 ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
+import { UniversalTabsRenderer, convertToUniversalConfig } from '@/components/generic/UniversalTabsRenderer';
+import { PARKING_COMPONENT_MAPPING } from '@/components/generic/mappings/parkingMappings';
 
 interface ParkingTabsProps {
   parking: ParkingSpot;

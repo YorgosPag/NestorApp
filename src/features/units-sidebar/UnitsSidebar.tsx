@@ -10,7 +10,11 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import { UnitsList } from '@/components/units/UnitsList';
-import { UniversalTabsRenderer, UNITS_COMPONENT_MAPPING, convertToUniversalConfig } from '@/components/generic';
+// 🏢 ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
+// UniversalTabsRenderer from generic (renderer only, no mappings)
+import { UniversalTabsRenderer, convertToUniversalConfig } from '@/components/generic/UniversalTabsRenderer';
+// UNITS_COMPONENT_MAPPING from domain-scoped file (not master barrel)
+import { UNITS_COMPONENT_MAPPING } from '@/components/generic/mappings/unitsMappings';
 import { getSortedUnitsTabs } from '@/config/units-tabs-config';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { DetailsContainer } from '@/core/containers';

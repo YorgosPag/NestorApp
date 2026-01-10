@@ -1,6 +1,7 @@
 'use client';
 
-import { ServiceFormTabRenderer } from '@/components/generic';
+// 🏢 ENTERPRISE: Direct import to avoid barrel (reduces module graph)
+import { ServiceFormTabRenderer } from '@/components/generic/ServiceFormTabRenderer';
 import { getServiceSortedSections } from '@/config/service-config';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 
