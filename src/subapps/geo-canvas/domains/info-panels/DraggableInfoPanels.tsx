@@ -310,7 +310,6 @@ export type {
   PanelDragState,
   PanelsState
 };
-export { DEFAULT_INFO_PANELS };
 export default DraggableInfoPanels;
 
 /**

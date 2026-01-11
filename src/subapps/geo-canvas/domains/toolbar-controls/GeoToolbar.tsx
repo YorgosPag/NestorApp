@@ -267,7 +267,6 @@ export const GeoToolbar: React.FC<GeoToolbarProps> = ({
 // ============================================================================
 
 export type { GeoToolbarProps, ToolbarAction, ToolbarState };
-export { DEFAULT_GEO_TOOLBAR_ACTIONS };
 export default GeoToolbar;
 
 /**

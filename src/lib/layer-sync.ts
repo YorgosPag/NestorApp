@@ -15,7 +15,6 @@ import {
   getDocs
 } from 'firebase/firestore';
 import type { Layer, LayerEvent } from '@/types/layers';
-import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**
  * Layer Sync Utility για τη διαχείριση real-time συγχρονισμού

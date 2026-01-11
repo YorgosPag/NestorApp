@@ -4,6 +4,7 @@ import { emailAdapter } from '../email-adapter';
 import { isFirebaseAvailable } from '../../../app/api/communications/webhooks/telegram/firebase/availability';
 import { getFirestoreHelpers } from '../../../app/api/communications/webhooks/telegram/firebase/helpers-lazy';
 import { safeDbOperation } from '../../../app/api/communications/webhooks/telegram/firebase/safe-op';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export class EmailWorker {
   private isRunning = false;
@@ -189,6 +190,3 @@ export class EmailWorker {
 
 // Export singleton instance
 export const emailWorker = new EmailWorker();
-
-// Export class for custom instances
-export { EmailWorker };

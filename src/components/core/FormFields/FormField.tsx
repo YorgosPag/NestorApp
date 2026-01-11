@@ -477,5 +477,3 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
 });
 
 UnifiedFormField.displayName = 'UnifiedFormField';
-
-export { UnifiedFormField };

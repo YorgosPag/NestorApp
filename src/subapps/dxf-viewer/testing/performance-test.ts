@@ -562,5 +562,4 @@ if (typeof window !== 'undefined') {
   };
 }
 
-export { DxfPerformanceTestRunner };
 export type { PerformanceTestResult, PerformanceTestSuite };

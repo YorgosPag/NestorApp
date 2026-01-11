@@ -1,7 +1,6 @@
 /**
- * THEME PROVIDER & SYSTEM - JSX ENABLED
+ * THEME PROVIDER & SYSTEM
  * Geo-Alert System - Phase 6: Enterprise Theme Management
- * @jsx React.createElement
  */
 
 import * as React from 'react';

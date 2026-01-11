@@ -24,7 +24,7 @@ export function BorderSystemDemo() {
     getResponsiveBorder,
     variants,
     width,
-    colors,
+    colors: borderColors,
     radius
   } = useBorderTokens();
   const colors = useSemanticColors();
