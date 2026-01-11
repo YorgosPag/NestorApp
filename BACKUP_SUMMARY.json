@@ -1,54 +1,57 @@
 {
   "category": "FEATURE",
-  "timestamp": "20260111_1430",
-  "shortDescription": "Option A Architecture - Separated Projects List Endpoint",
-  "problem": "Duplicate project queries: NavigationContext via /api/audit/bootstrap AND useFirestoreProjects via direct Firestore client SDK.",
-  "cause": "No dedicated projects list API. Projects grid used client-side Firestore queries while navigation used server-side bootstrap endpoint.",
+  "timestamp": "20260111_2100",
+  "shortDescription": "BuildingFloorplanService Enterprise Storage Migration",
+  "problem": "BuildingFloorplanService stored 177K+ DXF entities directly in Firestore with scene: any - 1MB limit risk, expensive reads, no type safety",
+  "cause": "Legacy implementation before enterprise DXF Storage architecture was available",
   "filesChanged": [
-    "src/app/api/projects/list/route.ts (NEW - 219 lines)",
-    "src/hooks/useFirestoreProjects.ts (UPDATED - client to API)"
+    "src/services/floorplans/BuildingFloorplanService.ts (REWRITTEN - v2.0.0 Enterprise Migration)"
   ],
   "solution": {
-    "phase1": "Created /api/projects/list endpoint with Admin SDK, type-safe extractors, 30s TTL cache",
-    "phase2": "Updated useFirestoreProjects to fetch from /api/projects/list",
-    "phase3": "Added AbortController for proper request cleanup on unmount",
-    "phase4": "Removed direct Firestore dependency from hook",
-    "phase5": "Verified no duplicate queries remain"
+    "phase1": "Analyzed existing enterprise DxfFirestoreService architecture (Firebase Storage + Metadata)",
+    "phase2": "Rewrote BuildingFloorplanService to use DxfFirestoreService.saveToStorage()",
+    "phase3": "Added intelligent fallback: Enterprise Storage -> Legacy Firestore",
+    "phase4": "Added support for both DXF and PDF formats with type discrimination",
+    "phase5": "Replaced scene: any with scene?: SceneModel | null (type-safe)"
   },
   "technicalDetails": {
-    "additions": "323 lines added",
-    "deletions": "49 lines removed",
-    "newFiles": "/api/projects/list/route.ts",
-    "architecture": "Option A - Separated data concerns",
-    "typeSafety": "Type-safe field extractors (no as string assertions)"
+    "additions": "285 lines added",
+    "deletions": "43 lines removed",
+    "architectureChange": "DXF -> Firebase Storage (no 1MB limit), PDF -> Firestore metadata",
+    "typeSafety": "scene: any eliminated, SceneModel used"
   },
-  "architecture": {
-    "auditBootstrap": {
-      "endpoint": "/api/audit/bootstrap",
-      "purpose": "Navigation context (companies + projects summary)",
-      "consumer": "useNavigationData"
-    },
-    "projectsList": {
-      "endpoint": "/api/projects/list",
-      "purpose": "Audit grid (full project fields)",
-      "consumer": "useFirestoreProjects"
+  "newFeatures": {
+    "enterpriseStorage": "DXF scenes stored in Firebase Storage via DxfFirestoreService",
+    "intelligentLoading": "Tries enterprise storage first, falls back to legacy Firestore",
+    "pdfSupport": "PDF floorplans continue to work (Firestore metadata only)",
+    "migrationHelper": "migrateToEnterpriseStorage() for future bulk migration"
+  },
+  "interfaceChanges": {
+    "BuildingFloorplanData": {
+      "removed": "scene: any",
+      "added": [
+        "scene?: SceneModel | null",
+        "fileType?: 'dxf' | 'pdf'",
+        "pdfImageUrl?: string",
+        "pdfDimensions?: { width: number; height: number } | null"
+      ]
     }
   },
   "testing": {
     "compilation": "TypeScript pre-commit checks passed",
     "vercelDeployment": "Pushed to origin/main for auto-deployment"
   },
-  "notes": "Enterprise-grade separation of concerns. Each endpoint serves distinct purpose with no data overlap.",
+  "notes": "Legacy Firestore data loads normally via fallback - no data migration required immediately",
   "contributors": {
-    "user": "YorgosPag",
-    "assistant": "Claude Opus 4.5 (Anthropic)",
+    "user": "Giorgos Pagonis",
+    "assistant": "Claude Opus 4.5",
     "sessionDate": "2026-01-11"
   },
   "relatedBackups": [
-    "20260111_1300 - Navigation System & Visual Testing Suite Enhancement",
-    "f20eea0 - ENTERPRISE SAFETY CHECKPOINT: Navigation System & Visual Testing Suite"
+    "20260111_1800 - Enterprise ID Generation System (ADR-017)",
+    "20260111_1430 - Option A Architecture - Separated Projects List Endpoint"
   ],
   "commits": [
-    "d7893ba - feat(api): add /api/projects/list endpoint with Option A architecture"
+    "62db9cc - perf(floorplans): migrate BuildingFloorplanService to enterprise storage architecture"
   ]
 }
