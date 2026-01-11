@@ -102,7 +102,7 @@ export {
 
 // ===== UTILITY FUNCTIONS =====
 export {
-  generateRandomId,  // ✅ NEW: Centralized ID generation
+  // 🏢 ENTERPRISE: ID generation now from centralized enterprise-id.service
   generateSectionId,
   generateArticleId,
   generateParagraphId,
@@ -119,6 +119,9 @@ export {
   isValidId,
   normalizeId
 } from './utils';
+
+// 🏢 ENTERPRISE: Re-export generateTempId as generateRandomId for backward compatibility
+export { generateTempId as generateRandomId } from '@/services/enterprise-id.service';
 
 // ===== LEGACY COMPATIBILITY EXPORTS =====
 // Αυτά τα exports διατηρούν backward compatibility με τα existing imports

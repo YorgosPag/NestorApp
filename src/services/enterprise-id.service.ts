@@ -42,6 +42,14 @@ export const ENTERPRISE_ID_PREFIXES = {
   RELATIONSHIP: 'rel',
 
   // ==========================================================================
+  // LEGAL DOCUMENTS & OBLIGATIONS
+  // ==========================================================================
+  SECTION: 'sec',
+  ARTICLE: 'art',
+  PARAGRAPH: 'par',
+  OBLIGATION: 'obl',
+
+  // ==========================================================================
   // RUNTIME & EPHEMERAL
   // ==========================================================================
   SESSION: 'sess',
@@ -292,6 +300,42 @@ export class EnterpriseIdService {
    */
   generateRelationshipId(): string {
     return this.generateId(ENTERPRISE_ID_PREFIXES.RELATIONSHIP).id;
+  }
+
+  // ==========================================================================
+  // LEGAL DOCUMENTS & OBLIGATIONS
+  // ==========================================================================
+
+  /**
+   * 📑 Generate Section ID (for legal document sections)
+   * Format: sec_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateSectionId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.SECTION).id;
+  }
+
+  /**
+   * 📄 Generate Article ID (for legal document articles)
+   * Format: art_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateArticleId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.ARTICLE).id;
+  }
+
+  /**
+   * 📝 Generate Paragraph ID (for legal document paragraphs)
+   * Format: par_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateParagraphId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.PARAGRAPH).id;
+  }
+
+  /**
+   * ⚖️ Generate Obligation ID (for contractual obligations)
+   * Format: obl_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateObligationId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.OBLIGATION).id;
   }
 
   /**
@@ -656,6 +700,14 @@ export const generateDocumentId = () => enterpriseIdService.generateDocumentId()
 export const generateUserId = () => enterpriseIdService.generateUserId();
 export const generateAssetId = () => enterpriseIdService.generateAssetId();
 export const generateRelationshipId = () => enterpriseIdService.generateRelationshipId();
+
+// =============================================================================
+// LEGAL DOCUMENTS & OBLIGATIONS
+// =============================================================================
+export const generateSectionId = () => enterpriseIdService.generateSectionId();
+export const generateArticleId = () => enterpriseIdService.generateArticleId();
+export const generateParagraphId = () => enterpriseIdService.generateParagraphId();
+export const generateObligationId = () => enterpriseIdService.generateObligationId();
 
 // =============================================================================
 // RUNTIME & EPHEMERAL
