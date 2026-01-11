@@ -18,6 +18,7 @@ import type {
 } from './config';
 import { DEFAULT_TOOLBAR_STYLE } from './config';
 import type { Point2D } from '../../rendering/types/Types';
+import { generateCustomizationId } from '@/services/enterprise-id.service';
 
 // ===== TOOL DEFINITION UTILITIES =====
 export const ToolUtils = {
@@ -437,9 +438,10 @@ export const CustomizationUtils = {
     toolbarId: string,
     changes: Record<string, any>,
     createdBy: string = 'user'
+  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   ): ToolbarCustomization => {
     return {
-      id: `customization_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: generateCustomizationId(),
       name,
       description,
       toolbarId,

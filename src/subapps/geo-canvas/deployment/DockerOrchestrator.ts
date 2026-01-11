@@ -7,6 +7,7 @@
  */
 
 import { performance } from 'perf_hooks';
+import { generateDeploymentId as generateEnterpriseDeploymentId, generateContainerId } from '@/services/enterprise-id.service';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -1589,12 +1590,14 @@ export class GeoAlertDockerOrchestrator {
     });
   }
 
+  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   private generateDeploymentId(): string {
-    return `deployment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return generateEnterpriseDeploymentId();
   }
 
+  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   private generateHash(): string {
-    return Math.random().toString(36).substr(2, 12);
+    return generateContainerId();
   }
 
   private generateClusterIP(): string {

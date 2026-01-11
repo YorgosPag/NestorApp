@@ -1,6 +1,12 @@
 import { ObligationDocument, ObligationSection, SectionCategory } from '@/types/obligations';
 import { getDefaultTemplate } from './constants';
 import { formatDate } from '@/lib/intl-utils';
+import {
+  generateSectionId as generateEnterpriseSectionId,
+  generateArticleId as generateEnterpriseArticleId,
+  generateParagraphId as generateEnterpriseParagraphId,
+  generateObligationId as generateEnterpriseObligationId
+} from '@/services/enterprise-id.service';
 
 /**
  * ============================================================================
@@ -23,16 +29,13 @@ import { formatDate } from '@/lib/intl-utils';
 // ============================================================================
 
 /**
- * ✅ ENTERPRISE: Centralized ID generation utility
- * Replaces scattered Math.random().toString(36).slice() patterns
+ * 🏢 ENTERPRISE: Using centralized ID generation from enterprise-id.service
+ * All IDs are now crypto-secure with 128-bit entropy (UUID v4)
  */
-export const generateRandomId = (prefix: string = 'id', length: number = 9): string =>
-  `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 2 + length)}`;
-
-export const generateSectionId = (): string => generateRandomId('section', 9);
-export const generateArticleId = (): string => generateRandomId('article', 9);
-export const generateParagraphId = (): string => generateRandomId('paragraph', 9);
-export const generateObligationId = (): string => generateRandomId('obligation', 9);
+export const generateSectionId = (): string => generateEnterpriseSectionId();
+export const generateArticleId = (): string => generateEnterpriseArticleId();
+export const generateParagraphId = (): string => generateEnterpriseParagraphId();
+export const generateObligationId = (): string => generateEnterpriseObligationId();
 
 // ============================================================================
 // 📝 TITLE & FILE GENERATION

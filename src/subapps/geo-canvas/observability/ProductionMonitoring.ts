@@ -8,6 +8,7 @@
 
 import { performance } from 'perf_hooks';
 import { GEO_COLORS } from '../config/color-config';
+import { generateTraceId as generateEnterpriseTraceId, generateSpanId as generateEnterpriseSpanId, generateAlertId as generateEnterpriseAlertId } from '@/services/enterprise-id.service';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -2096,16 +2097,25 @@ export class GeoAlertProductionMonitoring {
     console.log(`  📤 Sending resolution via ${channel.type} (${channel.name})`);
   }
 
+  /**
+   * 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
+   */
   private generateTraceId(): string {
-    return Math.random().toString(36).substr(2, 16);
+    return generateEnterpriseTraceId();
   }
 
+  /**
+   * 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
+   */
   private generateSpanId(): string {
-    return Math.random().toString(36).substr(2, 8);
+    return generateEnterpriseSpanId();
   }
 
+  /**
+   * 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
+   */
   private generateAlertId(): string {
-    return `alert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return generateEnterpriseAlertId();
   }
 
   // ========================================================================

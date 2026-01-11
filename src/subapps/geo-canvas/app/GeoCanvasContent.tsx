@@ -48,6 +48,7 @@ import {
 import { Globe, AlertCircle, Construction, CheckCircle, RefreshCcw } from 'lucide-react';
 import type { GeoCanvasAppProps } from '../types';
 import type { GeoCoordinate, DxfCoordinate } from '../types';
+import { generateLayerId } from '@/services/enterprise-id.service';
 
 /**
  * GEO-CANVAS CONTENT COMPONENT
@@ -284,8 +285,8 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
       };
     }
 
-    // Create new layer
-    const layerId = `boundary-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
+    const layerId = generateLayerId();
     const newLayer = {
       id: layerId,
       name: result.name,

@@ -9,6 +9,7 @@ import { notificationConfig } from '@/config/error-reporting';
 import { componentSizes } from '@/styles/design-tokens';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { generateErrorId } from '@/services/enterprise-id.service';
 
 interface CustomErrorInfo {
   componentStack: string | null | undefined; // ✅ ENTERPRISE: Handle React's full nullable componentStack
@@ -63,8 +64,9 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     };
   }
 
+  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
-    const errorId = `error-${Date.now()}-${Math.random().toString(36).substring(2)}`;
+    const errorId = generateErrorId();
     return {
       hasError: true,
       error,

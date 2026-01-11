@@ -14,6 +14,7 @@ import type {
   SearchHistoryEntry,
   BoundingBox
 } from '../../types/administrative-types';
+import { generateSearchId, generateRequestId, generateAlertId } from '@/services/enterprise-id.service';
 
 // ============================================================================
 // ADMINISTRATIVE BOUNDARIES SPECIFIC TYPES
@@ -223,7 +224,7 @@ export class AdminBoundariesPerformanceAnalytics {
    * Record the start of a search operation
    */
   public startSearchTracking(searchQuery: string, adminLevel?: GreekAdminLevel): string {
-    const searchId = `search_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    const searchId = generateSearchId();
     const startTime = performance.now();
 
     this.searchMetrics.activeSearches.set(searchId, startTime);
@@ -291,7 +292,7 @@ export class AdminBoundariesPerformanceAnalytics {
    * Record Overpass API request start
    */
   public startOverpassRequest(query: string): string {
-    const requestId = `overpass_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    const requestId = generateRequestId();
     const startTime = performance.now();
 
     this.apiMetrics.activeRequests.set(requestId, startTime);
@@ -597,7 +598,7 @@ export class AdminBoundariesPerformanceAnalytics {
 
   private createAlert(alertData: Omit<AdminBoundariesAlert, 'id' | 'timestamp'>): void {
     const alert: AdminBoundariesAlert = {
-      id: `admin_alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: generateAlertId(),
       timestamp: Date.now(),
       ...alertData
     };

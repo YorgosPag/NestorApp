@@ -8,6 +8,7 @@
 import { EventEmitter } from 'events';
 import type { Point2D } from '../../rendering/types/Types';
 import { UI_COLORS } from '../../config/color-config';
+import { generateUserId, generateOperationId as generateEnterpriseOperationId } from '@/services/enterprise-id.service';
 
 /**
  * User presence data
@@ -340,9 +341,10 @@ export class CollaborationEngine extends EventEmitter {
 
   /**
    * Helper methods
+   * 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
    */
   private generateUserId(): void {
-    this.currentUserId = `user-${Math.random().toString(36).substr(2, 9)}`;
+    this.currentUserId = generateUserId();
   }
 
   private generateUserColor(): void {
@@ -350,11 +352,13 @@ export class CollaborationEngine extends EventEmitter {
       UI_COLORS.COLLAB_USER_1, UI_COLORS.COLLAB_USER_2, UI_COLORS.COLLAB_USER_3, UI_COLORS.COLLAB_USER_4,
       UI_COLORS.COLLAB_USER_5, UI_COLORS.COLLAB_USER_6, UI_COLORS.COLLAB_USER_7, UI_COLORS.COLLAB_USER_8
     ];
+    // Random color selection (crypto not required for UI color)
     this.userColor = colors[Math.floor(Math.random() * colors.length)];
   }
 
+  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   private generateOperationId(): string {
-    return `op-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return generateEnterpriseOperationId();
   }
 
   private getUserName(): string {

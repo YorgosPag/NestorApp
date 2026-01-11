@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStorage } from 'firebase-admin/storage';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { FileNamingService } from '@/services/FileNamingService';
+import { generateTempId } from '@/services/enterprise-id.service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -99,18 +100,18 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         console.error('❌ SERVER: FileNamingService failed, using fallback:', error);
 
-        // Fallback to timestamp naming if FileNamingService fails
+        // 🏢 ENTERPRISE: Fallback with crypto-secure ID generation
         const timestamp = Date.now();
-        const randomString = Math.random().toString(36).substring(2, 15);
+        const uniqueId = generateTempId(); // Crypto-secure temp ID
         const extension = file.name.split('.').pop();
-        fileName = `${timestamp}_${randomString}.${extension}`;
+        fileName = `${timestamp}_${uniqueId}.${extension}`;
       }
     } else {
-      // No contact data - use fallback timestamp naming
+      // 🏢 ENTERPRISE: No contact data - use crypto-secure fallback naming
       const timestamp = Date.now();
-      const randomString = Math.random().toString(36).substring(2, 15);
+      const uniqueId = generateTempId(); // Crypto-secure temp ID
       const extension = file.name.split('.').pop();
-      fileName = `${timestamp}_${randomString}.${extension}`;
+      fileName = `${timestamp}_${uniqueId}.${extension}`;
 
       console.log('⚠️ SERVER: No contact data provided, using fallback naming');
     }

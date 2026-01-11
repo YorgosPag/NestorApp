@@ -23,6 +23,7 @@
  */
 
 import type { SceneModel } from '../types/scene';
+import { generateTempId } from '@/services/enterprise-id.service';
 import { SceneValidator } from '../managers/SceneValidator';
 import { validateNumericInput, normalizeNumericInput } from '../ui/toolbar/shared/input-validation';
 
@@ -297,13 +298,14 @@ export class DxfSecurityValidator extends SceneValidator {
   /**
    * Generate secure file ID from filename
    */
+  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   static generateSecureFileId(fileName: string): string {
     const sanitizedName = this.sanitizeFileName(fileName);
     const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 8);
+    const uniqueId = generateTempId().substring(0, 8); // Crypto-secure short ID
 
     // Format: sanitized_name_timestamp_random
-    const fileId = `${sanitizedName.replace(/\.[^/.]+$/, '')}_${timestamp}_${random}`;
+    const fileId = `${sanitizedName.replace(/\.[^/.]+$/, '')}_${timestamp}_${uniqueId}`;
 
     // Ensure Firestore ID length limit
     return fileId.substring(0, ENTERPRISE_LIMITS.MAX_FILENAME_LENGTH);

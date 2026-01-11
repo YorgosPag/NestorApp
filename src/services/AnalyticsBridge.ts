@@ -16,6 +16,7 @@
 // TODO: EventAnalyticsEngine not implemented yet - temporarily disabled
 // import { EventAnalyticsEngine } from '@geo-alert/core/alert-engine/analytics/EventAnalyticsEngine';
 import { errorTracker } from './ErrorTracker';
+import { generateSessionId as generateEnterpriseSessionId, generateEventId as generateEnterpriseEventId } from '@/services/enterprise-id.service';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -180,7 +181,8 @@ export class AnalyticsBridge {
   }
 
   private generateSessionId(): string {
-    return `geo_session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
+    return generateEnterpriseSessionId();
   }
 
   private getCurrentUserId(): string | undefined {
@@ -586,7 +588,8 @@ export class AnalyticsBridge {
   // ============================================================================
 
   private generateEventId(): string {
-    return `geo_event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
+    return generateEnterpriseEventId();
   }
 
   private log(message: string, data?: any): void {

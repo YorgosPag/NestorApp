@@ -11,6 +11,7 @@ import { geoAlertTestSuite } from '../testing/TestSuite';
 import { geoAlertBundleOptimizer } from '../optimization/BundleOptimizer';
 import { geoAlertMemoryLeakDetector } from '../optimization/MemoryLeakDetector';
 import { geoAlertPerformanceProfiler } from '../profiling/PerformanceProfiler';
+import { generatePipelineId } from '@/services/enterprise-id.service';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -1401,8 +1402,9 @@ export class GeoAlertTestingPipeline {
     };
   }
 
+  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   private generateExecutionId(): string {
-    return `pipeline-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return generatePipelineId();
   }
 
   // ========================================================================

@@ -7,6 +7,7 @@ import { useTransformValue } from '../../contexts/TransformContext';
 import styles from './DebugOverlay.module.css';
 import { cn } from '@/lib/utils';
 import { canvasUtilities } from '@/styles/design-tokens';
+import { generateTempId } from '@/services/enterprise-id.service';
 
 // Global window extension
 declare global {
@@ -22,10 +23,11 @@ interface CoordinateDebugOverlayProps {
 }
 
 // ⚡ GLOBAL COPY FUNCTION - Εντελώς εκτός React
+// 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
 if (!window.globalCoordinateCopy) {
   window.globalCoordinateCopy = (key: string) => {
     const now = Date.now();
-    const uniqueId = Math.random().toString(36).substr(2, 5);
+    const uniqueId = generateTempId().substring(0, 8); // Short ID for logging
 
     // Get fresh mouse position
     const mouseEvent = (window as any).lastMouseEvent;

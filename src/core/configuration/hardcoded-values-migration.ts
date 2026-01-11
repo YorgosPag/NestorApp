@@ -37,6 +37,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { generateMigrationId, generateBackupId } from '@/services/enterprise-id.service';
 import {
   CompanyConfiguration,
   SystemConfiguration,
@@ -700,12 +701,18 @@ export class HardcodedValuesMigrationEngine {
     return 2 + DETECTED_PROJECT_DATA.length; // Company + System + Projects
   }
 
+  /**
+   * 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
+   */
   private generateMigrationId(): string {
-    return `migration_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return generateMigrationId();
   }
 
+  /**
+   * 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
+   */
   private generateBackupId(): string {
-    return `backup_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return generateBackupId();
   }
 
   /**

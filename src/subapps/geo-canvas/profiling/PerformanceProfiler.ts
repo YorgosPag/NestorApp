@@ -10,6 +10,7 @@
 declare const performance: Performance;
 declare const PerformanceObserver: typeof window.PerformanceObserver;
 import { GEO_COLORS } from '../config/color-config';
+import { generateTraceId, generateSessionId } from '@/services/enterprise-id.service';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -926,8 +927,9 @@ export class GeoAlertPerformanceProfiler {
   /**
    * Start trace measurement
    */
+  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   public startTrace(name: string, category: PerformanceTrace['category'] = 'computation'): string {
-    const traceId = `${name}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const traceId = generateTraceId();
 
     const trace: PerformanceTrace = {
       id: traceId,
@@ -1578,8 +1580,9 @@ export class GeoAlertPerformanceProfiler {
   // UTILITY METHODS
   // ========================================================================
 
+  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   private generateSessionId(): string {
-    return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return generateSessionId();
   }
 
   /**

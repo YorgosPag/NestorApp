@@ -12,6 +12,7 @@ import type {
   AdminSearchResult,
   SearchAnalytics
 } from '../../types/administrative-types';
+import { generateSearchId } from '@/services/enterprise-id.service';
 
 // ============================================================================
 // SEARCH HISTORY SERVICE
@@ -488,9 +489,10 @@ export class SearchHistoryService {
 
   /**
    * Generate unique ID για history entry
+   * 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
    */
   private generateId(): string {
-    return `search_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return generateSearchId();
   }
 }
 

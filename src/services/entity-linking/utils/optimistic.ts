@@ -28,6 +28,7 @@
  */
 
 import type { EntityType } from '../types';
+import { generateOptimisticId } from '@/services/enterprise-id.service';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Optimistic Update Types
@@ -322,11 +323,10 @@ export class OptimisticUpdateManager {
 
   /**
    * Generate unique update ID
+   * 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
    */
   private generateUpdateId(): string {
-    const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).substring(2, 8);
-    return `opt_${timestamp}_${random}`;
+    return generateOptimisticId();
   }
 }
 

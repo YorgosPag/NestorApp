@@ -17,6 +17,7 @@
  */
 
 import type { SettingsState } from '../core/types';
+import { generateTempId } from '@/services/enterprise-id.service';
 
 // ============================================================================
 // SYNC MESSAGE TYPES
@@ -228,10 +229,10 @@ export class SyncService {
   // PRIVATE - UTILITIES
   // ==========================================================================
 
+  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   private generateOrigin(): string {
-    // Create unique tab identifier
-    // Format: timestamp + random
-    return `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    // Create unique tab identifier with crypto-secure ID
+    return generateTempId();
   }
 }
 

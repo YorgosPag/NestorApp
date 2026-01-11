@@ -4,6 +4,7 @@ import WebSocketService from '../../../services/websocket/WebSocketService';
 import type { WebSocketMessage } from '../../../services/websocket/WebSocketService';
 import type { Point2D } from '../rendering/types/Types';
 import { SIMPLE_COLORS } from '../config/color-config';
+import { generateAnnotationId, generateEventId } from '@/services/enterprise-id.service';
 
 // DXF Viewer Collaboration Manager
 export interface CollaborationUser {
@@ -206,8 +207,9 @@ class DXFCollaborationManager {
   addAnnotation(type: Annotation['type'], position: Point2D, content: string): string {
     if (!this.currentUser) return '';
 
+    // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
     const annotation: Annotation = {
-      id: `annotation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: generateAnnotationId(),
       userId: this.currentUser.id,
       type,
       position,
@@ -247,8 +249,9 @@ class DXFCollaborationManager {
   private broadcastEvent(type: CollaborationEvent['type'], data: unknown) {
     if (!this.wsService || !this.currentUser) return;
 
+    // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
     const event: CollaborationEvent = {
-      id: `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: generateEventId(),
       type,
       userId: this.currentUser.id,
       timestamp: Date.now(),

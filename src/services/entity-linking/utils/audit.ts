@@ -23,6 +23,7 @@
  */
 
 import type { EntityType } from '../types';
+import { generateAuditId } from '@/services/enterprise-id.service';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Audit Types
@@ -442,11 +443,10 @@ export class AuditLogger {
 
   /**
    * Generate unique log entry ID
+   * 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
    */
   private static generateId(): string {
-    const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).substring(2, 8);
-    return `audit_${timestamp}_${random}`;
+    return generateAuditId();
   }
 
   /**

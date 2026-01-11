@@ -6,6 +6,8 @@
  * memory tracking, render performance analysis, και automated reporting.
  */
 
+import { generateAlertId } from '@/services/enterprise-id.service';
+
 // ============================================================================
 // PERFORMANCE TYPES
 // ============================================================================
@@ -606,9 +608,10 @@ export class PerformanceMonitor {
   // ALERT MANAGEMENT
   // ========================================================================
 
+  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   private createAlert(alertData: Omit<PerformanceAlert, 'id' | 'timestamp'>): void {
     const alert: PerformanceAlert = {
-      id: `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: generateAlertId(),
       timestamp: Date.now(),
       ...alertData
     };

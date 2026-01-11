@@ -3,6 +3,8 @@
  *
  * Custom hook για control point management (georeferencing)
  *
+ * 🏢 ENTERPRISE: Using centralized ID generation for control points
+ *
  * @module floor-plan-system/hooks/useFloorPlanControlPoints
  *
  * Features:
@@ -26,6 +28,7 @@ import type {
   GeoCoordinate,
   ControlPointPickingState
 } from '../types/control-points';
+import { generateControlPointId } from '@/services/enterprise-id.service';
 
 /**
  * Hook state interface
@@ -161,9 +164,9 @@ export function useFloorPlanControlPoints(): UseFloorPlanControlPointsReturn {
       return;
     }
 
-    // Create new control point
+    // 🏢 ENTERPRISE: Create new control point with crypto-secure ID
     const newPoint: FloorPlanControlPoint = {
-      id: `cp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: generateControlPointId(),
       floorPlan: tempFloorPlan,
       geo: { lng, lat },
       label: label || `Point ${points.length + 1}`,

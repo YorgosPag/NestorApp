@@ -1,8 +1,10 @@
 import type { ObligationSection, ObligationArticle, ObligationParagraph } from './contracts';
+import { generateSectionId, generateArticleId, generateParagraphId } from '@/services/enterprise-id.service';
 
 // Enhanced helper functions
+// 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
 export const createNewSection = (order: number = 0): ObligationSection => ({
-  id: `section-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  id: generateSectionId(),
   number: (order + 1).toString(),
   title: 'Νέα Ενότητα',
   content: '',
@@ -14,7 +16,7 @@ export const createNewSection = (order: number = 0): ObligationSection => ({
 });
 
 export const createNewArticle = (sectionId: string, order: number = 0): ObligationArticle => ({
-  id: `article-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  id: generateArticleId(),
   sectionId,
   number: (order + 1).toString(),
   title: 'Νέο Άρθρο',
@@ -25,7 +27,7 @@ export const createNewArticle = (sectionId: string, order: number = 0): Obligati
 });
 
 export const createNewParagraph = (articleId: string, order: number = 0): ObligationParagraph => ({
-  id: `paragraph-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  id: generateParagraphId(),
   articleId,
   number: `${order + 1}`,
   content: '',

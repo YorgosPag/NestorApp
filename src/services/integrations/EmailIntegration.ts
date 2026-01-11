@@ -1,5 +1,7 @@
 'use client';
 
+import { generateMessageId, generateTemplateId } from '@/services/enterprise-id.service';
+
 // Email Integration Service
 export interface EmailProvider {
   type: 'smtp' | 'outlook' | 'gmail' | 'sendgrid' | 'ses';
@@ -215,13 +217,14 @@ class EmailIntegrationService {
   private async sendViaSMTP(message: EmailMessage, provider: EmailProvider): Promise<EmailSendResult> {
     // Sample SMTP implementation
     // Debug logging removed - Sending email via SMTP
-    
+
     // Simulate network delay
     await this.delay(Math.random() * 1000 + 500);
-    
-    return { 
-      success: true, 
-      messageId: `smtp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+
+    // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
+    return {
+      success: true,
+      messageId: generateMessageId(),
       providerId: 'smtp'
     };
   }
@@ -229,12 +232,13 @@ class EmailIntegrationService {
   private async sendViaSendGrid(message: EmailMessage, provider: EmailProvider): Promise<EmailSendResult> {
     // Sample SendGrid implementation
     // Debug logging removed - Sending email via SendGrid
-    
+
     await this.delay(Math.random() * 800 + 300);
-    
-    return { 
-      success: true, 
-      messageId: `sg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+
+    // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
+    return {
+      success: true,
+      messageId: generateMessageId(),
       providerId: 'sendgrid'
     };
   }
@@ -242,12 +246,13 @@ class EmailIntegrationService {
   private async sendViaGmail(message: EmailMessage, provider: EmailProvider): Promise<EmailSendResult> {
     // Sample Gmail API implementation
     // Debug logging removed - Sending email via Gmail API
-    
+
     await this.delay(Math.random() * 600 + 400);
-    
-    return { 
-      success: true, 
-      messageId: `gmail_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+
+    // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
+    return {
+      success: true,
+      messageId: generateMessageId(),
       providerId: 'gmail'
     };
   }
@@ -255,12 +260,13 @@ class EmailIntegrationService {
   private async sendViaOutlook(message: EmailMessage, provider: EmailProvider): Promise<EmailSendResult> {
     // Sample Outlook API implementation
     // Debug logging removed - Sending email via Outlook API
-    
+
     await this.delay(Math.random() * 700 + 300);
-    
-    return { 
-      success: true, 
-      messageId: `outlook_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+
+    // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
+    return {
+      success: true,
+      messageId: generateMessageId(),
       providerId: 'outlook'
     };
   }
@@ -293,10 +299,11 @@ class EmailIntegrationService {
   }
 
   // Queue management
+  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   queueEmail(message: EmailMessage): void {
     this.messageQueue.push({
       ...message,
-      id: message.id || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      id: message.id || generateMessageId()
     });
     
     if (!this.isProcessing) {
@@ -361,8 +368,9 @@ class EmailIntegrationService {
   ): EmailTemplate {
     const variables = this.extractVariables(htmlContent + ' ' + (textContent || ''));
     
+    // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
     const template: EmailTemplate = {
-      id: `tpl_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: generateTemplateId(),
       name,
       subject,
       htmlContent,

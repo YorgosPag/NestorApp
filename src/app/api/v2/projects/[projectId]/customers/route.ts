@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
+import { generateRequestId } from '@/services/enterprise-id.service';
 
 // 🏢 ENTERPRISE API V2 - PostgreSQL Version
 // ============================================
@@ -85,7 +86,8 @@ export async function GET(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   const startTime = Date.now();
-  const requestId = Math.random().toString(36).substring(7);
+  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
+  const requestId = generateRequestId();
 
   try {
     const { projectId } = await params;

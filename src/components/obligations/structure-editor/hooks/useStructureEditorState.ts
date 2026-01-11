@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import type { ObligationSection, ObligationArticle, ObligationParagraph } from '@/types/obligations';
 import { createNewSection, createNewArticle, createNewParagraph, renumberSections, renumberArticles } from '@/types/obligations';
 import type { DragState, DragKind } from '../dnd/dnd-types';
+import { generateTempId } from '@/services/enterprise-id.service';
 
 interface UseStructureEditorStateProps {
   initialSections: ObligationSection[];
@@ -65,11 +66,12 @@ export function useStructureEditorState({
     if (editingItem === sectionId) stopEditing();
   }, [readOnly, sections, onSectionsChange, editingItem, stopEditing]);
 
+  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   const duplicateSection = useCallback((sectionId: string) => {
     if (readOnly) return;
     const sectionToDuplicate = sections.find(s => s.id === sectionId);
     if (!sectionToDuplicate) return;
-    const newId = () => `id-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const newId = () => generateTempId(); // Crypto-secure IDs
 
     const duplicatedSection: ObligationSection = {
       ...sectionToDuplicate,

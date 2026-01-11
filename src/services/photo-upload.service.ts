@@ -7,6 +7,7 @@ import type { FileUploadProgress, FileUploadResult } from '@/hooks/useFileUpload
 import { smartCompressContactPhoto, ImageParser } from '@/subapps/geo-canvas/floor-plan-system/parsers/raster/ImageParser';
 import compressionConfig, { type UsageContext } from '@/config/photo-compression-config';
 import { validateImageFile, type FileValidationResult } from '@/utils/file-validation';
+import { generateTempId } from '@/services/enterprise-id.service';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -52,18 +53,19 @@ export interface PhotoUploadResult extends FileUploadResult {
 
 /**
  * Generates a unique filename for Firebase Storage
+ * 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
  */
 function generateUniqueFileName(originalName: string, prefix?: string): string {
   const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 15);
+  const uniqueId = generateTempId(); // Crypto-secure temp ID
   const extension = originalName.substring(originalName.lastIndexOf('.'));
   const baseName = originalName.substring(0, originalName.lastIndexOf('.'))
     .replace(/[^a-zA-Z0-9]/g, '_')
     .substring(0, 50); // Limit length
 
   return prefix
-    ? `${prefix}_${baseName}_${timestamp}_${random}${extension}`
-    : `${baseName}_${timestamp}_${random}${extension}`;
+    ? `${prefix}_${baseName}_${timestamp}_${uniqueId}${extension}`
+    : `${baseName}_${timestamp}_${uniqueId}${extension}`;
 }
 
 
