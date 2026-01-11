@@ -10,7 +10,8 @@ import { UI_COLORS } from '../../config/color-config';
 import {
   DEFAULT_LINE_SETTINGS,
   DEFAULT_TEXT_SETTINGS,
-  DEFAULT_GRIP_SETTINGS
+  DEFAULT_GRIP_SETTINGS,
+  DEFAULT_DXF_SETTINGS
 } from '../../settings-core/defaults';
 
 describe('DxfSettingsStore', () => {
@@ -74,11 +75,8 @@ describe('DxfSettingsStore', () => {
         result.current.resetGeneralToDefaults();
       });
 
-      expect(result.current.general).toEqual({
-        line: DEFAULT_LINE_SETTINGS,
-        text: DEFAULT_TEXT_SETTINGS,
-        grip: DEFAULT_GRIP_SETTINGS
-      });
+      // general includes all settings (line, text, grip, cursor, grid, ruler)
+      expect(result.current.general).toEqual(DEFAULT_DXF_SETTINGS);
     });
   });
 
@@ -164,11 +162,8 @@ describe('DxfSettingsStore', () => {
 
       const effective = result.current.getEffective(entityId);
 
-      expect(effective).toEqual({
-        line: DEFAULT_LINE_SETTINGS,
-        text: DEFAULT_TEXT_SETTINGS,
-        grip: DEFAULT_GRIP_SETTINGS
-      });
+      // effective includes all settings (line, text, grip, cursor, grid, ruler)
+      expect(effective).toEqual(DEFAULT_DXF_SETTINGS);
     });
 
     it('should merge general and override settings', () => {
@@ -299,12 +294,8 @@ describe('DxfSettingsStore', () => {
         result.current.loadFromLocalStorage();
       });
 
-      // Should use defaults on error
-      expect(result.current.general).toEqual({
-        line: DEFAULT_LINE_SETTINGS,
-        text: DEFAULT_TEXT_SETTINGS,
-        grip: DEFAULT_GRIP_SETTINGS
-      });
+      // Should use defaults on error (includes all settings)
+      expect(result.current.general).toEqual(DEFAULT_DXF_SETTINGS);
       expect(result.current.isLoaded).toBe(true);
     });
   });

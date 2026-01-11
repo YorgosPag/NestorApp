@@ -131,20 +131,22 @@ describe('ServiceRegistry', () => {
 
   describe('Service Retrieval - Lazy Initialization', () => {
     it('should create service on first access', () => {
-      const metadata = registry.getMetadata('fit-to-view');
+      // Use factory-based service (hit-testing) for lazy initialization testing
+      // Note: fit-to-view is registered as singleton, not factory
+      const metadata = registry.getMetadata('hit-testing');
       expect(metadata?.initialized).toBe(false);
 
       // First access - triggers lazy initialization
-      const service = registry.get('fit-to-view');
+      const service = registry.get('hit-testing');
       expect(service).toBeDefined();
 
-      const updatedMetadata = registry.getMetadata('fit-to-view');
+      const updatedMetadata = registry.getMetadata('hit-testing');
       expect(updatedMetadata?.initialized).toBe(true);
     });
 
     it('should return same instance on multiple calls', () => {
-      const service1 = registry.get('fit-to-view');
-      const service2 = registry.get('fit-to-view');
+      const service1 = registry.get('hit-testing');
+      const service2 = registry.get('hit-testing');
 
       expect(service1).toBe(service2);
     });
@@ -166,32 +168,33 @@ describe('ServiceRegistry', () => {
 
   describe('Service Lifecycle - Reset', () => {
     it('should reset individual service', () => {
-      // Initialize service
-      const service1 = registry.get('fit-to-view');
-      expect(registry.getMetadata('fit-to-view')?.initialized).toBe(true);
+      // Use factory-based service for reset testing
+      // Note: singleton services cannot be re-created after reset
+      const service1 = registry.get('hit-testing');
+      expect(registry.getMetadata('hit-testing')?.initialized).toBe(true);
 
       // Reset
-      registry.reset('fit-to-view');
-      expect(registry.getMetadata('fit-to-view')?.initialized).toBe(false);
+      registry.reset('hit-testing');
+      expect(registry.getMetadata('hit-testing')?.initialized).toBe(false);
 
       // Get again - should create new instance
-      const service2 = registry.get('fit-to-view');
+      const service2 = registry.get('hit-testing');
       expect(service2).toBeDefined();
       expect(service1).not.toBe(service2); // Different instances
     });
 
     it('should reset all services', () => {
       // Initialize multiple services
-      registry.get('fit-to-view');
+      registry.get('layer-operations');
       registry.get('hit-testing');
 
-      expect(registry.getMetadata('fit-to-view')?.initialized).toBe(true);
+      expect(registry.getMetadata('layer-operations')?.initialized).toBe(true);
       expect(registry.getMetadata('hit-testing')?.initialized).toBe(true);
 
       // Reset all
       registry.resetAll();
 
-      expect(registry.getMetadata('fit-to-view')?.initialized).toBe(false);
+      expect(registry.getMetadata('layer-operations')?.initialized).toBe(false);
       expect(registry.getMetadata('hit-testing')?.initialized).toBe(false);
     });
   });
@@ -209,8 +212,9 @@ describe('ServiceRegistry', () => {
     });
 
     it('should measure initialization time', () => {
-      const service = registry.get('fit-to-view');
-      const metadata = registry.getMetadata('fit-to-view');
+      // Use factory-based service - singletons don't track initializationTime
+      const service = registry.get('hit-testing');
+      const metadata = registry.getMetadata('hit-testing');
 
       expect(metadata?.initializationTime).toBeDefined();
       expect(metadata?.initializationTime).toBeGreaterThanOrEqual(0);

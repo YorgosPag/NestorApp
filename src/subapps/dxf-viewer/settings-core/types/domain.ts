@@ -277,9 +277,15 @@ export const validateLineSettings = (settings: Partial<LineSettings>): LineSetti
     activeTemplate: null
   };
 
-  const validatedSettings: Partial<LineSettings> = { ...settings };
+  // ENTERPRISE: Filter out undefined values to preserve defaults
+  const validatedSettings: Partial<LineSettings> = {};
+  for (const key of Object.keys(settings) as Array<keyof LineSettings>) {
+    if (settings[key] !== undefined) {
+      validatedSettings[key] = settings[key] as never;
+    }
+  }
 
-  if (settings.lineType && !['solid', 'dashed', 'dotted', 'dash-dot', 'dash-dot-dot'].includes(settings.lineType)) {
+  if (validatedSettings.lineType && !['solid', 'dashed', 'dotted', 'dash-dot', 'dash-dot-dot'].includes(validatedSettings.lineType)) {
     validatedSettings.lineType = 'solid';
   }
 
