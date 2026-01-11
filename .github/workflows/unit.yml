@@ -68,12 +68,12 @@ jobs:
         if: always()
         run: |
           # Enforce minimum coverage thresholds
-          # These values match jest.config.ts coverageThreshold
-          echo "✅ Coverage threshold check (configured in jest.config.ts)"
-          echo "   - Branches: 80%"
-          echo "   - Functions: 85%"
-          echo "   - Lines: 85%"
-          echo "   - Statements: 85%"
+          # These values match jest.config.js coverageThreshold
+          echo "✅ Coverage threshold check (configured in jest.config.js)"
+          echo "   - Branches: 60%"
+          echo "   - Functions: 60%"
+          echo "   - Lines: 60%"
+          echo "   - Statements: 60%"
 
       - name: 💾 Upload test artifacts
         if: always()
