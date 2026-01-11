@@ -17,8 +17,9 @@ import * as path from 'path';
 
 describe('🎯 Line Drawing Smoke Test (CRITICAL)', () => {
   describe('✅ Critical Files Exist', () => {
-    it('should have useUnifiedDrawing hook file', () => {
-      const filePath = path.join(__dirname, '../hooks/drawing/useUnifiedDrawing.ts');
+    it('should have useDrawingSystem hook file', () => {
+      // 🔧 FIX: useUnifiedDrawing.ts was renamed to useDrawingSystem.ts
+      const filePath = path.join(__dirname, '../hooks/drawing/useDrawingSystem.ts');
       expect(fs.existsSync(filePath)).toBe(true);
     });
 
@@ -54,7 +55,8 @@ describe('🎯 Line Drawing Smoke Test (CRITICAL)', () => {
         const content = fs.readFileSync(filePath, 'utf-8');
 
         // Verify previewEntity is spread into entities array
-        expect(content).toContain('drawingHandlers.state.previewEntity');
+        // 🔧 FIX: Updated to match current code structure (drawingState instead of state)
+        expect(content).toContain('drawingHandlers.drawingState.previewEntity');
         expect(content).toContain('ADD PREVIEW ENTITY');
       }
     });

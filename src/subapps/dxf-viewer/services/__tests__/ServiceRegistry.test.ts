@@ -131,14 +131,16 @@ describe('ServiceRegistry', () => {
 
   describe('Service Retrieval - Lazy Initialization', () => {
     it('should create service on first access', () => {
-      const metadata = registry.getMetadata('fit-to-view');
+      // 🔧 FIX: Use factory-based service (hit-testing) instead of singleton (fit-to-view)
+      // Singletons are already initialized, so we need a factory-based service for lazy init test
+      const metadata = registry.getMetadata('hit-testing');
       expect(metadata?.initialized).toBe(false);
 
       // First access - triggers lazy initialization
-      const service = registry.get('fit-to-view');
+      const service = registry.get('hit-testing');
       expect(service).toBeDefined();
 
-      const updatedMetadata = registry.getMetadata('fit-to-view');
+      const updatedMetadata = registry.getMetadata('hit-testing');
       expect(updatedMetadata?.initialized).toBe(true);
     });
 
@@ -166,16 +168,18 @@ describe('ServiceRegistry', () => {
 
   describe('Service Lifecycle - Reset', () => {
     it('should reset individual service', () => {
+      // 🔧 FIX: Use factory-based service (layer-operations) instead of singleton (fit-to-view)
+      // Singletons cannot be reset because they don't have factories
       // Initialize service
-      const service1 = registry.get('fit-to-view');
-      expect(registry.getMetadata('fit-to-view')?.initialized).toBe(true);
+      const service1 = registry.get('layer-operations');
+      expect(registry.getMetadata('layer-operations')?.initialized).toBe(true);
 
       // Reset
-      registry.reset('fit-to-view');
-      expect(registry.getMetadata('fit-to-view')?.initialized).toBe(false);
+      registry.reset('layer-operations');
+      expect(registry.getMetadata('layer-operations')?.initialized).toBe(false);
 
       // Get again - should create new instance
-      const service2 = registry.get('fit-to-view');
+      const service2 = registry.get('layer-operations');
       expect(service2).toBeDefined();
       expect(service1).not.toBe(service2); // Different instances
     });
@@ -209,8 +213,10 @@ describe('ServiceRegistry', () => {
     });
 
     it('should measure initialization time', () => {
-      const service = registry.get('fit-to-view');
-      const metadata = registry.getMetadata('fit-to-view');
+      // 🔧 FIX: Use factory-based service (dxf-import) instead of singleton (fit-to-view)
+      // Only factory-based services measure initialization time
+      const service = registry.get('dxf-import');
+      const metadata = registry.getMetadata('dxf-import');
 
       expect(metadata?.initializationTime).toBeDefined();
       expect(metadata?.initializationTime).toBeGreaterThanOrEqual(0);

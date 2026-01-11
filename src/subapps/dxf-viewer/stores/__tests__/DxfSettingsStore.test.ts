@@ -10,7 +10,10 @@ import { UI_COLORS } from '../../config/color-config';
 import {
   DEFAULT_LINE_SETTINGS,
   DEFAULT_TEXT_SETTINGS,
-  DEFAULT_GRIP_SETTINGS
+  DEFAULT_GRIP_SETTINGS,
+  DEFAULT_CURSOR_SETTINGS,
+  DEFAULT_GRID_SETTINGS,
+  DEFAULT_RULER_SETTINGS
 } from '../../settings-core/defaults';
 
 describe('DxfSettingsStore', () => {
@@ -74,10 +77,14 @@ describe('DxfSettingsStore', () => {
         result.current.resetGeneralToDefaults();
       });
 
+      // 🔧 FIX: DxfSettings now includes cursor, grid, and ruler settings
       expect(result.current.general).toEqual({
         line: DEFAULT_LINE_SETTINGS,
         text: DEFAULT_TEXT_SETTINGS,
-        grip: DEFAULT_GRIP_SETTINGS
+        grip: DEFAULT_GRIP_SETTINGS,
+        cursor: DEFAULT_CURSOR_SETTINGS,
+        grid: DEFAULT_GRID_SETTINGS,
+        ruler: DEFAULT_RULER_SETTINGS
       });
     });
   });
@@ -164,10 +171,14 @@ describe('DxfSettingsStore', () => {
 
       const effective = result.current.getEffective(entityId);
 
+      // 🔧 FIX: DxfSettings now includes cursor, grid, and ruler settings
       expect(effective).toEqual({
         line: DEFAULT_LINE_SETTINGS,
         text: DEFAULT_TEXT_SETTINGS,
-        grip: DEFAULT_GRIP_SETTINGS
+        grip: DEFAULT_GRIP_SETTINGS,
+        cursor: DEFAULT_CURSOR_SETTINGS,
+        grid: DEFAULT_GRID_SETTINGS,
+        ruler: DEFAULT_RULER_SETTINGS
       });
     });
 
@@ -300,10 +311,14 @@ describe('DxfSettingsStore', () => {
       });
 
       // Should use defaults on error
+      // 🔧 FIX: DxfSettings now includes cursor, grid, and ruler settings
       expect(result.current.general).toEqual({
         line: DEFAULT_LINE_SETTINGS,
         text: DEFAULT_TEXT_SETTINGS,
-        grip: DEFAULT_GRIP_SETTINGS
+        grip: DEFAULT_GRIP_SETTINGS,
+        cursor: DEFAULT_CURSOR_SETTINGS,
+        grid: DEFAULT_GRID_SETTINGS,
+        ruler: DEFAULT_RULER_SETTINGS
       });
       expect(result.current.isLoaded).toBe(true);
     });
