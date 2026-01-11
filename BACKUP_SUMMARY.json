@@ -1,55 +1,54 @@
 {
   "category": "FEATURE",
-  "timestamp": "20260111_1300",
-  "shortDescription": "Navigation System & Visual Testing Suite Enhancement",
-  "problem": "Navigation system needed comprehensive enhancement. Visual regression testing required baseline images and reports.",
-  "cause": "Navigation hooks and context needed refinement. Project components required data loading improvements. Visual testing infrastructure needed expansion.",
+  "timestamp": "20260111_1430",
+  "shortDescription": "Option A Architecture - Separated Projects List Endpoint",
+  "problem": "Duplicate project queries: NavigationContext via /api/audit/bootstrap AND useFirestoreProjects via direct Firestore client SDK.",
+  "cause": "No dedicated projects list API. Projects grid used client-side Firestore queries while navigation used server-side bootstrap endpoint.",
   "filesChanged": [
-    "src/components/navigation/core/NavigationContext.tsx",
-    "src/components/navigation/core/hooks/useNavigationActions.ts",
-    "src/components/navigation/core/hooks/useNavigationData.ts",
-    "src/components/navigation/core/services/navigationApi.ts",
-    "src/components/projects/customers-tab/hooks/useProjectCustomers.ts",
-    "src/components/projects/general-tab/parts/ProjectBuildingsCard.tsx",
-    "src/components/projects/general-tab/parts/ProjectCustomersTable.tsx",
-    "src/components/projects/structure-tab/hooks/useProjectStructure.ts",
-    "src/components/generic/UniversalTabsRenderer.tsx",
-    "src/components/ui/spinner/Spinner.tsx (NEW)",
-    "src/app/api/audit/bootstrap/route.ts (NEW)",
-    "reports/visual/*.png (visual test baselines)",
-    "test/baselines/*.png (test baselines)",
-    "Multiple component import refinements (20+ files)"
+    "src/app/api/projects/list/route.ts (NEW - 219 lines)",
+    "src/hooks/useFirestoreProjects.ts (UPDATED - client to API)"
   ],
   "solution": {
-    "phase1": "Enhanced NavigationContext with improved state management (39+ lines)",
-    "phase2": "Extended useNavigationData and useNavigationActions hooks",
-    "phase3": "Refactored navigationApi service for better API handling",
-    "phase4": "Updated ProjectCustomersTable and ProjectBuildingsCard",
-    "phase5": "Added visual regression test baselines and reports"
+    "phase1": "Created /api/projects/list endpoint with Admin SDK, type-safe extractors, 30s TTL cache",
+    "phase2": "Updated useFirestoreProjects to fetch from /api/projects/list",
+    "phase3": "Added AbortController for proper request cleanup on unmount",
+    "phase4": "Removed direct Firestore dependency from hook",
+    "phase5": "Verified no duplicate queries remain"
   },
   "technicalDetails": {
-    "additions": "1973 lines of code added",
-    "deletions": "698 lines removed",
-    "newFiles": "Spinner component, Audit bootstrap API, 24 visual test files",
-    "components": "Navigation hooks, Project components enhanced",
-    "typeSafety": "Full TypeScript typing maintained"
+    "additions": "323 lines added",
+    "deletions": "49 lines removed",
+    "newFiles": "/api/projects/list/route.ts",
+    "architecture": "Option A - Separated data concerns",
+    "typeSafety": "Type-safe field extractors (no as string assertions)"
+  },
+  "architecture": {
+    "auditBootstrap": {
+      "endpoint": "/api/audit/bootstrap",
+      "purpose": "Navigation context (companies + projects summary)",
+      "consumer": "useNavigationData"
+    },
+    "projectsList": {
+      "endpoint": "/api/projects/list",
+      "purpose": "Audit grid (full project fields)",
+      "consumer": "useFirestoreProjects"
+    }
   },
   "testing": {
     "compilation": "TypeScript pre-commit checks passed",
-    "visualTests": "Baseline images generated for 8 test scenarios",
-    "vercelDeployment": "Push to origin/main for auto-deployment"
+    "vercelDeployment": "Pushed to origin/main for auto-deployment"
   },
-  "notes": "Major navigation system enhancement with visual testing infrastructure. 87 files changed with comprehensive improvements across navigation, project components, and testing suite.",
+  "notes": "Enterprise-grade separation of concerns. Each endpoint serves distinct purpose with no data overlap.",
   "contributors": {
     "user": "YorgosPag",
     "assistant": "Claude Opus 4.5 (Anthropic)",
     "sessionDate": "2026-01-11"
   },
   "relatedBackups": [
-    "20260110_2200 - Spaces Pages & NavigationBreadcrumb Enhancement",
-    "20260110_2130 - Enterprise Human-Readable Project Codes System"
+    "20260111_1300 - Navigation System & Visual Testing Suite Enhancement",
+    "f20eea0 - ENTERPRISE SAFETY CHECKPOINT: Navigation System & Visual Testing Suite"
   ],
   "commits": [
-    "f20eea0 - ENTERPRISE SAFETY CHECKPOINT: Navigation System & Visual Testing Suite"
+    "d7893ba - feat(api): add /api/projects/list endpoint with Option A architecture"
   ]
 }
