@@ -1,10 +1,23 @@
 'use client';
 
-// 🎯 PRODUCTION: Debug disabled για καθαρότερα logs στην obligations/new page
+/**
+ * 🏢 ENTERPRISE: SharedPropertiesProvider with LAZY INITIALIZATION
+ *
+ * PERF-001 Optimization: Firestore listener is NOT set up on mount.
+ * It only activates when a component calls useSharedProperties().
+ *
+ * This prevents the global layout from loading units data on ALL routes.
+ * Only /properties and /units routes (that use the hook) trigger the listener.
+ *
+ * @module contexts/SharedPropertiesProvider
+ * @version 2.0.0 - Lazy initialization
+ */
+
+// 🎯 PRODUCTION: Debug disabled για καθαρότερα logs
 const DEBUG_SHARED_PROPERTIES_PROVIDER = false;
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Property } from '@/types/property-viewer';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -24,6 +37,8 @@ interface SharedPropertiesContextType {
   isLoading: boolean;
   error: string | null;
   forceDataRefresh: () => void;
+  /** 🏢 ENTERPRISE: Activate listener (called by useSharedProperties) */
+  activate: () => void;
 }
 
 const SharedPropertiesContext = createContext<SharedPropertiesContextType | null>(null);
@@ -38,26 +53,38 @@ const getFloorLabel = (floor?: number): string => {
 export function SharedPropertiesProvider({ children }: { children: React.ReactNode }) {
   const [properties, setPropertiesState] = useState<Property[]>([]);
   const [floors, setFloors] = useState<Floor[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // 🏢 CHANGE: Start false (lazy)
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // 🏢 ENTERPRISE: Lazy activation flag
+  const [activated, setActivated] = useState(false);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   const forceDataRefresh = useCallback(() => {
     setRefreshKey(prev => prev + 1);
   }, []);
 
+  // 🏢 ENTERPRISE: Activate function - called by useSharedProperties
+  const activate = useCallback(() => {
+    if (!activated) {
+      console.log('🔌 [SharedProperties] Lazy activation triggered');
+      setActivated(true);
+    }
+  }, [activated]);
+
   // Νέα συνάρτηση που αποθηκεύει στο Firestore
   const setProperties = useCallback(async (newProperties: Property[], description: string) => {
     try {
       if (DEBUG_SHARED_PROPERTIES_PROVIDER) console.log(`🔄 Updating Firestore: ${description}`);
-      
+
       // Βρίσκουμε τις διαφορές μεταξύ παλιών και νέων properties
       const oldIds = new Set(properties.map(p => p.id));
       const newIds = new Set(newProperties.map(p => p.id));
-      
+
       // Properties προς διαγραφή
       const toDelete = properties.filter(p => !newIds.has(p.id));
-      
+
       // Properties προς ενημέρωση/δημιουργία
       const toUpdate = newProperties.filter(p => {
         const oldProperty = properties.find(old => old.id === p.id);
@@ -76,7 +103,7 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
         await setDoc(doc(db, COLLECTIONS.UNITS, id), propertyData);
         if (DEBUG_SHARED_PROPERTIES_PROVIDER) console.log(`✅ Updated/Created: ${id}`);
       }
-      
+
       if (DEBUG_SHARED_PROPERTIES_PROVIDER) console.log(`✅ Firestore sync complete: ${description}`);
     } catch (err) {
       console.error('❌ Error syncing to Firestore:', err);
@@ -84,12 +111,18 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
     }
   }, [properties]);
 
+  // 🏢 ENTERPRISE: Only set up listener when activated
   useEffect(() => {
+    // Skip if not activated (lazy initialization)
+    if (!activated) {
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     const unitsCollection = collection(db, COLLECTIONS.UNITS);
-    if (DEBUG_SHARED_PROPERTIES_PROVIDER) console.log('🔄 Setting up Firestore listener...');
+    console.log('🔄 [SharedProperties] Setting up Firestore listener (activated)...');
 
     const unsubscribe = onSnapshot(
       unitsCollection,
@@ -97,14 +130,14 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
         if (DEBUG_SHARED_PROPERTIES_PROVIDER) console.log('✅ Firestore snapshot received:', snapshot.size, 'docs');
 
         const propertiesData: Property[] = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          propertiesData.push({ id: doc.id, ...data } as Property);
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          propertiesData.push({ id: docSnap.id, ...data } as Property);
         });
 
         if (propertiesData.length > 0) {
           setPropertiesState(propertiesData);
-          
+
           const floorsMap = new Map<string, Floor>();
           propertiesData.forEach(property => {
             if (!property.floorId) return;
@@ -121,29 +154,34 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
             }
             floorsMap.get(floorKey)!.properties.push(property);
           });
-          
+
           const floorsArray = Array.from(floorsMap.values()).sort((a, b) => a.level - b.level);
           setFloors(floorsArray);
 
           setError(null);
         } else {
           console.warn("⚠️ No properties found in Firestore snapshot.");
+          setPropertiesState([]);
+          setFloors([]);
         }
-        
+
         setIsLoading(false);
       },
-      (error) => {
-        console.error('❌ Firestore listener error:', error);
+      (listenerError) => {
+        console.error('❌ Firestore listener error:', listenerError);
         setError('Failed to load data from Firestore.');
         setIsLoading(false);
       }
     );
 
+    unsubscribeRef.current = unsubscribe;
+
     return () => {
-      if (DEBUG_SHARED_PROPERTIES_PROVIDER) console.log('🔌 Unsubscribing from Firestore listener.');
+      console.log('🔌 [SharedProperties] Unsubscribing from Firestore listener.');
       unsubscribe();
+      unsubscribeRef.current = null;
     };
-  }, [refreshKey]);
+  }, [activated, refreshKey]);
 
   return (
     <SharedPropertiesContext.Provider value={{
@@ -153,16 +191,31 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
       isLoading,
       error,
       forceDataRefresh,
+      activate,
     }}>
       {children}
     </SharedPropertiesContext.Provider>
   );
 }
 
+/**
+ * 🏢 ENTERPRISE: Hook with lazy activation
+ *
+ * When called, triggers the Firestore listener to activate.
+ * Routes that don't use this hook won't have the listener running.
+ */
 export function useSharedProperties() {
   const context = useContext(SharedPropertiesContext);
   if (!context) {
     throw new Error('useSharedProperties must be used within a SharedPropertiesProvider');
   }
-  return context;
+
+  // 🏢 ENTERPRISE: Trigger activation on first use
+  useEffect(() => {
+    context.activate();
+  }, [context]);
+
+  // Return without the activate function (internal use only)
+  const { activate: _activate, ...publicContext } = context;
+  return publicContext;
 }
