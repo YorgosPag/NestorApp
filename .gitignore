@@ -91,3 +91,19 @@ coverage/
 *.bak
 *.backup
 BACKUP_SUMMARY.json
+
+# =============================================================================
+# LOCAL ARTIFACTS - NEVER COMMIT (Enterprise Guardrail)
+# =============================================================================
+# Claude Code local settings
+.claude/settings.local.json
+
+# Local development notes/logs
+local_*.txt
+local_*.log
+Local_*.txt
+
+# Generic local pattern
+*.local.json
+*.local.yaml
+*.local.yml
