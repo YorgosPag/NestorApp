@@ -31,6 +31,8 @@ interface BootstrapProject {
   totalUnits?: number;
   soldUnits?: number;
   soldAreaM2?: number;
+  // 🏢 PERF-001: Building count from bootstrap (eliminates realtime listener)
+  buildingCount: number;
 }
 
 interface BootstrapResponse {
@@ -143,7 +145,9 @@ export function useNavigationData(): UseNavigationDataReturn {
           companyId: p.companyId,
           projectCode: p.projectCode,
           status: p.status,
-          buildings: [] // Loaded on-demand (Phase 3)
+          buildings: [], // Loaded on-demand (Phase 3)
+          // 🏢 PERF-001: Use bootstrap count instead of realtime listener
+          buildingCount: p.buildingCount
         }));
 
         // Update cache

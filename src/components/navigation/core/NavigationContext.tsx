@@ -319,6 +319,17 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     }));
   };
 
+  // 🏢 PERF-001: Use bootstrap buildingCount first, fallback to realtime
+  const getBuildingCountOptimized = useCallback((projectId: string): number => {
+    // First, try to get count from bootstrap data (stored in project)
+    const project = state.projects.find(p => p.id === projectId);
+    if (project?.buildingCount !== undefined) {
+      return project.buildingCount;
+    }
+    // Fallback to realtime count (if realtime hooks are active)
+    return getBuildingCount(projectId);
+  }, [state.projects, getBuildingCount]);
+
   // Context value with all state and actions
   const contextValue: NavigationContextType = {
     ...state,
@@ -333,8 +344,8 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     navigateToLevel,
     reset,
     navigateToExistingPages,
-    // 🏢 ENTERPRISE: Real-time building functions
-    getBuildingCount,
+    // 🏢 PERF-001: Use bootstrap counts first, fallback to realtime
+    getBuildingCount: getBuildingCountOptimized,
     getBuildingsForProject: getBuildingsForProjectTyped,
     // 🏢 ENTERPRISE: Real-time unit functions
     getUnitCount,

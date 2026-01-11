@@ -42,6 +42,8 @@ interface BootstrapProject {
   totalUnits?: number;
   soldUnits?: number;
   soldAreaM2?: number;
+  // 🏢 PERF-001: Building count from bootstrap (eliminates realtime listener)
+  buildingCount: number;
 }
 
 interface BootstrapResponse {
@@ -206,6 +208,47 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
   console.log(`🏗️ [Bootstrap] Found ${allProjects.length} total projects`);
 
   // ============================================================================
+  // 3.5 FETCH BUILDING COUNTS PER PROJECT (PERF-001)
+  // ============================================================================
+
+  const projectIds = allProjects.map(p => p.id);
+  const buildingCountByProject = new Map<string, number>();
+
+  if (projectIds.length > 0) {
+    // 🏢 ENTERPRISE: Fetch all buildings and count per project
+    // This eliminates the need for realtime listeners in NavigationContext
+    const buildingChunks = chunkArray(projectIds, FIRESTORE_IN_LIMIT);
+
+    const buildingResults = await Promise.all(
+      buildingChunks.map(async (chunk) => {
+        const snapshot = await adminDb
+          .collection(COLLECTIONS.BUILDINGS)
+          .where('projectId', 'in', chunk)
+          .get();
+        return snapshot.docs;
+      })
+    );
+
+    const allBuildingDocs = buildingResults.flat();
+    console.log(`🏗️ [Bootstrap] Found ${allBuildingDocs.length} total buildings`);
+
+    // Count buildings per project
+    allBuildingDocs.forEach(doc => {
+      const projectId = doc.data().projectId;
+      if (projectId) {
+        const count = buildingCountByProject.get(projectId) || 0;
+        buildingCountByProject.set(projectId, count + 1);
+      }
+    });
+  }
+
+  // Add buildingCount to each project
+  allProjects = allProjects.map(project => ({
+    ...project,
+    buildingCount: buildingCountByProject.get(project.id) || 0
+  }));
+
+  // ============================================================================
   // 4. BUILD AGGREGATED RESPONSE
   // ============================================================================
 
@@ -276,6 +319,8 @@ function mapProjectDocument(doc: FirebaseFirestore.QueryDocumentSnapshot): Boots
     // Precomputed aggregates (if available in document)
     totalUnits: typeof data.totalUnits === 'number' ? data.totalUnits : undefined,
     soldUnits: typeof data.soldUnits === 'number' ? data.soldUnits : undefined,
-    soldAreaM2: typeof data.soldAreaM2 === 'number' ? data.soldAreaM2 : undefined
+    soldAreaM2: typeof data.soldAreaM2 === 'number' ? data.soldAreaM2 : undefined,
+    // 🏢 PERF-001: Building count (will be populated after buildings query)
+    buildingCount: 0
   };
 }
