@@ -26,8 +26,8 @@ service cloud.firestore {
     // =========================================================================
     match /projects/{projectId} {
 
-      // 📖 READ: Dev-friendly access - public για development, preparatory για ownership
-      allow read: if isDevMode() || isAuthenticated();
+      // 📖 READ: Authenticated users only (Production mode)
+      allow read: if isAuthenticated();
 
       // ✍️ CREATE: Μόνο authenticated users με validated data
       allow create: if request.auth != null
@@ -80,11 +80,10 @@ service cloud.firestore {
     // =========================================================================
     match /cadFiles/{fileId} {
 
-      // 📖 READ: Dev-friendly access με ownership support για production
-      allow read: if isDevMode()
-                  || (request.auth != null
-                      && (resource.data.keys().hasAny(['ownerId']) == false
-                          || resource.data.ownerId == request.auth.uid));
+      // 📖 READ: Authenticated with ownership support (Production mode)
+      allow read: if request.auth != null
+                  && (resource.data.keys().hasAny(['ownerId']) == false
+                      || resource.data.ownerId == request.auth.uid);
 
       // ✍️ CREATE: Authenticated users με enterprise validation
       allow create: if request.auth != null
@@ -102,11 +101,10 @@ service cloud.firestore {
                         || request.resource.data.ownerId == request.auth.uid)
                     && !isAttemptingToModifySystemFields(request.resource.data, resource.data);
 
-      // 🗑️ DELETE: Owner με development access
-      allow delete: if isDevMode()
-                    || (request.auth != null
-                        && (resource.data.keys().hasAny(['ownerId']) == false
-                            || resource.data.ownerId == request.auth.uid));
+      // 🗑️ DELETE: Owner only (Production mode)
+      allow delete: if request.auth != null
+                    && (resource.data.keys().hasAny(['ownerId']) == false
+                        || resource.data.ownerId == request.auth.uid);
     }
 
     // =========================================================================
@@ -125,18 +123,18 @@ service cloud.firestore {
     // 🏠 BUILDINGS, FLOORS & UNITS - PUBLIC READ ACCESS
     // =========================================================================
     match /buildings/{buildingId} {
-      allow read: if isDevMode() || isAuthenticated(); // Dev-friendly access
+      allow read: if isAuthenticated(); // Authenticated users only
       allow write: if false; // Admin/server only
     }
 
     // 🏢 FLOORS: Ορόφοι κτιρίων - Navigation hierarchy support
     match /floors/{floorId} {
-      allow read: if isDevMode() || isAuthenticated(); // Dev-friendly access
+      allow read: if isAuthenticated(); // Authenticated users only
       allow write: if false; // Admin/server only
     }
 
     match /units/{unitId} {
-      allow read: if isDevMode() || isAuthenticated(); // Dev-friendly access
+      allow read: if isAuthenticated(); // Authenticated users only
       allow write: if false; // Admin/server only
     }
 
@@ -146,7 +144,7 @@ service cloud.firestore {
     // 🏢 ENTERPRISE: Storage units are a PARALLEL category to Units, not nested
     // Architecture: Building → [Units | Storage | Parking] (parallel)
     match /storage_units/{storageId} {
-      allow read: if isDevMode() || isAuthenticated(); // Dev-friendly access
+      allow read: if isAuthenticated(); // Authenticated users only
       allow write: if false; // Admin/server only
     }
 
@@ -157,8 +155,8 @@ service cloud.firestore {
     // Architecture: Building → [Units | Storage | Parking] (parallel)
     // 📍 Collection name: parking_spots (με underscore - όπως στη Firestore)
     match /parking_spots/{parkingId} {
-      allow read: if isDevMode() || isAuthenticated(); // Dev-friendly access
-      allow write: if isDevMode(); // Dev-friendly write access for seeding
+      allow read: if isAuthenticated(); // Authenticated users only
+      allow write: if false; // Admin/server only (use Firebase Admin SDK for seeding)
     }
 
     // =========================================================================
@@ -167,7 +165,7 @@ service cloud.firestore {
     // 🏢 ENTERPRISE: Εταιρείες που εμφανίζονται χειροκίνητα στην πλοήγηση
     // Περιέχει contactIds που αντιστοιχούν σε εταιρείες στη contacts collection
     match /navigation_companies/{navCompanyId} {
-      allow read: if isDevMode() || isAuthenticated(); // Dev-friendly access
+      allow read: if isAuthenticated(); // Authenticated users only
       allow write: if false; // Admin/server only
     }
 
@@ -184,8 +182,9 @@ service cloud.firestore {
     // =========================================================================
     match /contacts/{contactId} {
 
-      // 📖 READ: Dev-friendly access, preparatory για ownership
-      allow read: if isDevMode() || (request.auth != null && request.auth.uid == contactId);
+      // 📖 READ: Authenticated users can read contacts (for business operations)
+      // TODO: Refine to project-based access when relationships are implemented
+      allow read: if isAuthenticated();
 
       // ✍️ CREATE: Μόνο για τον εαυτό του
       allow create: if request.auth != null
@@ -275,10 +274,11 @@ service cloud.firestore {
     // 🏗️ DEVELOPMENT MODE HELPERS
     // =========================================================================
 
-    // Dev mode helper - επιτρέπει public access για development
+    // Dev mode helper - PRODUCTION MODE ENABLED
     function isDevMode() {
-      // 🚨 DEV FLAG: Θα αλλάξει όταν πάμε σε production
-      return true; // Currently in development mode
+      // 🔒 PRODUCTION: Dev mode disabled for security
+      // Changed from true → false on 2026-01-11 (Security Audit Fix)
+      return false;
     }
 
     // Authentication helper
