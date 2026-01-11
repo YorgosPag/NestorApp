@@ -17,7 +17,7 @@ importers:
         version: 0.27.16(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@geo-alert/core':
         specifier: file:packages/core
-        version: file:packages/core
+        version: link:packages/core
       '@heroicons/react':
         specifier: ^2.2.0
         version: 2.2.0(react@19.2.1)
@@ -205,6 +205,9 @@ importers:
         specifier: ^5.0.8
         version: 5.0.9(@types/react@18.3.27)(immer@10.2.0)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
     devDependencies:
+      '@eslint/js':
+        specifier: ^9.33.0
+        version: 9.39.2
       '@napi-rs/canvas':
         specifier: ^0.1.80
         version: 0.1.86
@@ -1163,9 +1166,6 @@ packages:
 
   '@formatjs/intl-localematcher@0.6.2':
     resolution: {integrity: sha512-XOMO2Hupl0wdd172Y06h6kLpBz6Dv+J4okPLl4LPtzbr8f66WbIoy4ev98EBuZ6ZK4h5ydTN6XneT4QVpD7cdA==}
-
-  '@geo-alert/core@file:packages/core':
-    resolution: {directory: packages/core, type: directory}
 
   '@google-cloud/firestore@7.11.6':
     resolution: {integrity: sha512-EW/O8ktzwLfyWBOsNuhRoMi8lrC3clHM5LVFhGvO1HCsLozCOOXRAlHrYBoE6HL42Sc8yYMuCb2XqcnJ4OOEpw==}
@@ -7700,8 +7700,6 @@ snapshots:
   '@formatjs/intl-localematcher@0.6.2':
     dependencies:
       tslib: 2.8.1
-
-  '@geo-alert/core@file:packages/core': {}
 
   '@google-cloud/firestore@7.11.6':
     dependencies:
