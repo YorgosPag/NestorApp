@@ -1508,18 +1508,18 @@ const entityConfig = NAVIGATION_ENTITIES[entityType];
 
 **Context**:
 Εντοπίστηκαν **6 διαφορετικά upload systems** στην εφαρμογή με διάσπαρτη λογική:
-- `PhotoUploadService` (92/100 enterprise score) - Images με compression
+- `PhotoUploadService` (92/100 enterprise score) - Images με compression → wrapped by ImageProcessor
 - `useEnterpriseFileUpload` (88/100) - Hook για file uploads
-- `pdf-utils.ts` (45/100) - PDF floor plans (scattered)
-- `usePDFUpload` (40/100) - PDF hook (scattered)
-- `useFloorPlanUpload` (40/100) - DXF parser only
-- `DxfFirestoreService` (85/100) - DXF scene storage
+- `pdf-utils.ts` (45/100) - PDF floor plans → **DEPRECATED**, use UnifiedUploadService
+- ~~`usePDFUpload`~~ - **DELETED** (dead code, no imports)
+- `useFloorPlanUpload` (40/100) - DXF parser only (kept - different purpose)
+- `DxfFirestoreService` (85/100) - DXF scene storage → wrapped by CADProcessor
 
-**Προβλήματα**:
-- 📄 Διπλότυπο component: `PDFUploader.tsx` ≈ `SimplePDFUploader.tsx` (90% identical)
-- 🔄 Scattered validation: PDF validation σε 3 διαφορετικά σημεία
-- ⚠️ Inconsistent error handling: Κάποια retry, κάποια όχι
-- 🐛 PDF duplicate bug: timestamp-based naming → 27 duplicates per floor
+**Προβλήματα (ΕΠΙΛΥΘΗΚΑΝ)**:
+- ✅ ~~Διπλότυπο component: `PDFUploader.tsx` ≈ `SimplePDFUploader.tsx`~~ → **DELETED both**
+- ✅ ~~Scattered validation~~ → Centralized στο UnifiedUploadService
+- ✅ ~~Inconsistent error handling~~ → Unified retry με exponential backoff
+- ✅ ~~PDF duplicate bug~~ → Fixed με `floorplan.pdf` αντί για timestamp naming
 
 **Decision**:
 
@@ -1528,7 +1528,7 @@ const entityConfig = NAVIGATION_ENTITIES[entityType];
 | **CANONICAL** | `UnifiedUploadService` (`@/services/upload`) είναι το ΜΟΝΑΔΙΚΟ entry point για uploads |
 | **PATTERN** | Gateway + Strategy Pattern (Fortune 500 standard) |
 | **DEPRECATED** | `pdf-utils.ts` functions - use UnifiedUploadService |
-| **DELETED** | `PDFUploader.tsx` (duplicate component) |
+| **DELETED** | `PDFUploader.tsx`, `SimplePDFUploader.tsx`, `usePDFUpload.ts` (dead code) |
 
 **Architecture**:
 ```
@@ -1723,7 +1723,7 @@ const report = await geoAlertEngine.generateQuickReport();
 #### **🔧 Business Logic Hooks (Domain-Specific)**:
 - ✅ **Form Management**: `useContactForm`, `useFormValidation`, `useFormState`
 - ✅ **Data Loading**: `useFirestoreBuildings`, `useFirestoreProjects`, `useContactsState`
-- ✅ **File Handling**: `useEnterpriseFileUpload`, `usePDFUpload`, `useMultiplePhotosHandlers`
+- ✅ **File Handling**: `useEnterpriseFileUpload`, `UnifiedUploadService`, `useMultiplePhotosHandlers`
 - ✅ **State Management**: `usePropertyViewer`, `useLayerManagement`, `usePolygonHandlers`
 - ✅ **Performance**: `usePerformanceTracker`, `useMemoryTracker`, `useCacheBusting`
 
@@ -3762,7 +3762,7 @@ src/subapps/dxf-viewer/
 - `useFileUploadState()` - Upload state
 - `useContactLogoHandlers()` - Logo handlers
 - `useFormValidation()` - Form validation
-- `usePDFUpload()` - PDF upload
+- ~~`usePDFUpload()`~~ - **DELETED** (use UnifiedUploadService.uploadPDF)
 - `useContactSubmission()` - Contact submission
 - `useEnterFormNavigation()` - Form navigation
 

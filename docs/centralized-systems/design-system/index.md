@@ -73,7 +73,7 @@ src/styles/design-tokens/
 #### **BUSINESS LOGIC HOOKS** (Domain-Specific):
 - **Form Management**: `useContactForm`, `useFormValidation`, `useFormState`
 - **Data Loading**: `useFirestoreBuildings`, `useFirestoreProjects`, `useContactsState`
-- **File Handling**: `useEnterpriseFileUpload`, `usePDFUpload`, `useMultiplePhotosHandlers`
+- **File Handling**: `useEnterpriseFileUpload`, `UnifiedUploadService`, `useMultiplePhotosHandlers`
 - **State Management**: `usePropertyViewer`, `useLayerManagement`, `usePolygonHandlers`
 - **Performance**: `usePerformanceTracker`, `useMemoryTracker`, `useCacheBusting`
 
