@@ -12,6 +12,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -698,6 +699,11 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               </section>
             </DialogTitle>
           </DialogHeader>
+
+          {/* 🏢 ENTERPRISE: Accessibility - Screen reader description */}
+          <DialogDescription className="sr-only">
+            Wizard εισαγωγής DXF αρχείων. Επιλέξτε εταιρεία, έργο, κτίριο ή μονάδα για να εισάγετε το αρχείο.
+          </DialogDescription>
 
         {/* Content */}
         <main className={MODAL_SPACING.CONTAINER.padding}>

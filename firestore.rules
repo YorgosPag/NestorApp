@@ -178,6 +178,40 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 📐 PROJECT_FLOORPLANS COLLECTION - DXF/PDF FLOORPLAN STORAGE
+    // =========================================================================
+    // 🏢 ENTERPRISE: Floorplans for projects, buildings, units
+    match /project_floorplans/{floorplanId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated(); // Authenticated users can manage floorplans
+    }
+
+    // =========================================================================
+    // 📐 BUILDING_FLOORPLANS COLLECTION - BUILDING-LEVEL FLOORPLANS
+    // =========================================================================
+    match /building_floorplans/{floorplanId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // =========================================================================
+    // 📐 UNIT_FLOORPLANS COLLECTION - UNIT-LEVEL FLOORPLANS
+    // =========================================================================
+    match /unit_floorplans/{floorplanId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // =========================================================================
+    // 🎚️ DXF-VIEWER-LEVELS COLLECTION - DXF VIEWER LAYER/LEVEL SYSTEM
+    // =========================================================================
+    // 🏢 ENTERPRISE: Levels for DXF viewer layer management
+    match /dxf-viewer-levels/{levelId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // =========================================================================
     // 📞 CONTACTS COLLECTION - PUBLIC READ ACCESS
     // =========================================================================
     match /contacts/{contactId} {
