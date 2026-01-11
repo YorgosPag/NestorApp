@@ -14,6 +14,8 @@
 
 'use client';
 
+import { generateSessionId, generateErrorId } from '@/services/enterprise-id.service';
+
 // ============================================================================
 // TYPES & INTERFACES
 // ============================================================================
@@ -112,7 +114,7 @@ export class ErrorTracker {
       ...config
     };
 
-    this.sessionId = this.generateSessionId();
+    this.sessionId = this.generateSessionIdInternal();
 
     if (this.config.enabled) {
       this.initialize();
@@ -162,8 +164,9 @@ export class ErrorTracker {
     this.log('ErrorTracker initialized', { sessionId: this.sessionId });
   }
 
-  private generateSessionId(): string {
-    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  private generateSessionIdInternal(): string {
+    // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
+    return generateSessionId();
   }
 
   // ============================================================================
@@ -222,7 +225,7 @@ export class ErrorTracker {
 
     // Create new error report
     const errorReport: ErrorReport = {
-      id: this.generateErrorId(),
+      id: this.generateErrorIdInternal(),
       severity,
       category,
       message: errorMessage,
@@ -389,8 +392,9 @@ export class ErrorTracker {
     return this.safeBase64Encode(key).substr(0, 16);
   }
 
-  private generateErrorId(): string {
-    return `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  private generateErrorIdInternal(): string {
+    // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
+    return generateErrorId();
   }
 
   // ============================================================================

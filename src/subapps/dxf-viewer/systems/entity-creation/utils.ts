@@ -7,6 +7,7 @@ import type { DrawingTool } from './config';
 import { calculateLineBounds, calculateDistance, calculateAngle } from '../../rendering/entities/shared/geometry-rendering-utils';
 import type { Point2D } from '../../rendering/types/Types';
 import { SmartBoundsManager } from '../../utils/SmartBoundsManager';
+import { generateEntityId as generateEnterpriseEntityId } from '@/services/enterprise-id.service';
 
 // Point type imported from shared types
 
@@ -54,9 +55,10 @@ export function calculateAngleDegrees(p1: Point2D, p2: Point2D): number {
 
 /**
  * Generate unique entity ID
+ * 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
  */
 export function generateEntityId(): string {
-  return `entity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return generateEnterpriseEntityId();
 }
 
 /**

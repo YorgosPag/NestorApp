@@ -17,6 +17,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { SYSTEM_LAYERS, DEFAULT_LAYER_STYLES } from '@/types/layers';
+import { generateHistoryId, generateLayerId, generateElementId } from '@/services/enterprise-id.service';
 import type {
   Layer,
   LayerGroup,
@@ -305,11 +306,12 @@ export function useLayerManagement({
   };
 
   // Add to history
+  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   const addToHistory = useCallback((entry: Omit<LayerHistoryEntry, 'id' | 'timestamp'>) => {
     setState(prev => {
       const newEntry: LayerHistoryEntry = {
         ...entry,
-        id: `history_${Date.now()}_${Math.random().toString(36).substring(2)}`,
+        id: generateHistoryId(),
         timestamp: new Date().toISOString()
       };
       
@@ -331,11 +333,12 @@ export function useLayerManagement({
 
   // Layer Operations
   // 🏢 ENTERPRISE: floorId, buildingId, createdBy are auto-injected from hook options
+  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   const createLayer = useCallback(async (layerData: Omit<Layer, 'id' | 'createdAt' | 'updatedAt' | 'floorId' | 'buildingId' | 'createdBy'>): Promise<string> => {
     const now = new Date().toISOString();
     const newLayer: Layer = {
       ...layerData,
-      id: `layer_${Date.now()}_${Math.random().toString(36).substring(2)}`,
+      id: generateLayerId(),
       createdAt: now,
       updatedAt: now,
       floorId,
@@ -422,11 +425,12 @@ export function useLayerManagement({
   }, [state.layers, updateLayer]);
 
   // Element Operations
+  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   const createElement = useCallback((layerId: string, elementData: Omit<AnyLayerElement, 'id' | 'createdAt' | 'updatedAt'>): string => {
     const now = new Date().toISOString();
     const newElement: AnyLayerElement = {
       ...elementData,
-      id: `element_${Date.now()}_${Math.random().toString(36).substring(2)}`,
+      id: generateElementId(),
       createdAt: now,
       updatedAt: now
     } as AnyLayerElement;
@@ -550,16 +554,17 @@ export function useLayerManagement({
     createLayer,
     updateLayer,
     deleteLayer,
+    // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
     duplicateLayer: async (layerId: string) => {
       const layer = getLayerById(layerId);
       if (!layer) return '';
-      
+
       const duplicatedLayer = {
         ...layer,
         name: `${layer.name} (Αντίγραφο)`,
-        elements: layer.elements.map(e => ({ ...e, id: `element_${Date.now()}_${Math.random()}` }))
+        elements: layer.elements.map(e => ({ ...e, id: generateElementId() }))
       };
-      
+
       return createLayer(duplicatedLayer);
     },
     

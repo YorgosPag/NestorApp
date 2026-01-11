@@ -19,6 +19,7 @@ import { Contact } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
 import { FirestoreRelationshipAdapter } from '../adapters/FirestoreRelationshipAdapter';
 import { RelationshipValidationService, DuplicateRelationshipError } from './RelationshipValidationService';
+import { generateRelationshipId } from '@/services/enterprise-id.service';
 
 // ============================================================================
 // CRUD SERVICE CLASS
@@ -477,10 +478,11 @@ export class RelationshipCRUDService {
   }
 
   /**
-   * 🆔 Generate Unique ID (Copied από παλιό working code)
+   * 🆔 Generate Unique ID
+   * 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
    */
   private static generateId(): string {
-    return `rel_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return generateRelationshipId();
   }
 
   /**

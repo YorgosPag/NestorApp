@@ -1,5 +1,7 @@
 'use client';
 
+import { generateJobId, generateOperationId } from '@/services/enterprise-id.service';
+
 // Batch Processing Service for bulk operations
 export type BatchOperationType = 'create' | 'update' | 'delete' | 'custom';
 
@@ -79,12 +81,13 @@ class BatchProcessingService {
   }
 
   // Create a new batch job
+  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   createJob<T>(
     name: string,
     operations: BatchOperation<T>[],
     options: BatchProcessingOptions = {}
   ): string {
-    const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const jobId = generateJobId();
     
     const defaultOptions: BatchProcessingOptions = {
       concurrency: 3,
@@ -99,9 +102,10 @@ class BatchProcessingService {
     const job: BatchJob<T> = {
       id: jobId,
       name,
-      operations: operations.map((op, index) => ({
+      // 🏢 ENTERPRISE: Using centralized ID generation for missing operation IDs
+      operations: operations.map((op) => ({
         ...op,
-        id: op.id || `op_${index}`,
+        id: op.id || generateOperationId(),
         priority: op.priority || 0,
         retries: 0
       })),

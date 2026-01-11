@@ -19,28 +19,77 @@
  *
  * @author Enterprise Architecture Team
  * @date 2025-12-17
- * @version 1.0.0
+ * @version 2.0.0
+ * @updated 2026-01-11 - Added 30+ new ID types for complete enterprise coverage
  */
 
 // Enterprise prefix mappings για namespace isolation
 export const ENTERPRISE_ID_PREFIXES = {
+  // ==========================================================================
+  // CORE BUSINESS ENTITIES
+  // ==========================================================================
   COMPANY: 'comp',
   PROJECT: 'proj',
   BUILDING: 'bldg',
   UNIT: 'unit',
   STORAGE: 'stor',
-  PARKING: 'park',  // 🏢 ENTERPRISE: Parking spots (parallel category to units per local_4.log)
+  PARKING: 'park',
   CONTACT: 'cont',
   FLOOR: 'flr',
   DOCUMENT: 'doc',
   USER: 'usr',
+  ASSET: 'ast',
+  RELATIONSHIP: 'rel',
+
+  // ==========================================================================
+  // RUNTIME & EPHEMERAL
+  // ==========================================================================
   SESSION: 'sess',
   TRANSACTION: 'txn',
   NOTIFICATION: 'notif',
   TASK: 'task',
   EVENT: 'evt',
+  REQUEST: 'req',
+  MESSAGE: 'msg',
+  JOB: 'job',
+
+  // ==========================================================================
+  // UI & VISUALIZATION
+  // ==========================================================================
   LAYER: 'lyr',
-  ASSET: 'ast'
+  ELEMENT: 'elem',
+  HISTORY: 'hist',
+  ANNOTATION: 'annot',
+  CONTROL_POINT: 'cp',
+  ENTITY: 'ent',
+  CUSTOMIZATION: 'cust',
+
+  // ==========================================================================
+  // OBSERVABILITY & MONITORING
+  // ==========================================================================
+  ERROR: 'err',
+  METRIC: 'metric',
+  ALERT: 'alert',
+  TRACE: 'trace',
+  SPAN: 'span',
+  SEARCH: 'search',
+  AUDIT: 'audit',
+
+  // ==========================================================================
+  // DEVOPS & OPERATIONS
+  // ==========================================================================
+  DEPLOYMENT: 'deploy',
+  PIPELINE: 'pipe',
+  BACKUP: 'backup',
+  MIGRATION: 'migr',
+  TEMPLATE: 'tpl',
+  OPERATION: 'op',
+
+  // ==========================================================================
+  // OPTIMISTIC & TEMPORARY
+  // ==========================================================================
+  OPTIMISTIC: 'opt',
+  TEMP: 'tmp'
 } as const;
 
 export type EnterpriseIdPrefix = typeof ENTERPRISE_ID_PREFIXES[keyof typeof ENTERPRISE_ID_PREFIXES];
@@ -237,6 +286,264 @@ export class EnterpriseIdService {
     return this.generateId(ENTERPRISE_ID_PREFIXES.USER).id;
   }
 
+  /**
+   * 🔗 Generate Relationship ID
+   * Format: rel_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateRelationshipId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.RELATIONSHIP).id;
+  }
+
+  /**
+   * 🔔 Generate Notification ID
+   * Format: notif_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateNotificationId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.NOTIFICATION).id;
+  }
+
+  /**
+   * 🔐 Generate Session ID
+   * Format: sess_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateSessionId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.SESSION).id;
+  }
+
+  /**
+   * 📡 Generate Request ID
+   * Format: req_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateRequestId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.REQUEST).id;
+  }
+
+  /**
+   * 💬 Generate Message ID
+   * Format: msg_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateMessageId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.MESSAGE).id;
+  }
+
+  /**
+   * ⚙️ Generate Job ID
+   * Format: job_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateJobId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.JOB).id;
+  }
+
+  /**
+   * 🗂️ Generate Layer ID
+   * Format: lyr_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateLayerId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.LAYER).id;
+  }
+
+  /**
+   * 🔲 Generate Element ID
+   * Format: elem_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateElementId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.ELEMENT).id;
+  }
+
+  /**
+   * 📜 Generate History ID
+   * Format: hist_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateHistoryId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.HISTORY).id;
+  }
+
+  /**
+   * 📝 Generate Annotation ID
+   * Format: annot_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateAnnotationId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.ANNOTATION).id;
+  }
+
+  /**
+   * 📍 Generate Control Point ID
+   * Format: cp_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateControlPointId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.CONTROL_POINT).id;
+  }
+
+  /**
+   * 🔷 Generate Entity ID (generic)
+   * Format: ent_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateEntityId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.ENTITY).id;
+  }
+
+  /**
+   * 🎨 Generate Customization ID
+   * Format: cust_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateCustomizationId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.CUSTOMIZATION).id;
+  }
+
+  /**
+   * ❌ Generate Error ID
+   * Format: err_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateErrorId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.ERROR).id;
+  }
+
+  /**
+   * 📊 Generate Metric ID
+   * Format: metric_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateMetricId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.METRIC).id;
+  }
+
+  /**
+   * 🚨 Generate Alert ID
+   * Format: alert_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateAlertId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.ALERT).id;
+  }
+
+  /**
+   * 🔍 Generate Trace ID
+   * Format: trace_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateTraceId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.TRACE).id;
+  }
+
+  /**
+   * 📏 Generate Span ID
+   * Format: span_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateSpanId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.SPAN).id;
+  }
+
+  /**
+   * 🔎 Generate Search ID
+   * Format: search_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateSearchId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.SEARCH).id;
+  }
+
+  /**
+   * 📋 Generate Audit ID
+   * Format: audit_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateAuditId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.AUDIT).id;
+  }
+
+  /**
+   * 🚀 Generate Deployment ID
+   * Format: deploy_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateDeploymentId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.DEPLOYMENT).id;
+  }
+
+  /**
+   * 🔄 Generate Pipeline ID
+   * Format: pipe_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generatePipelineId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.PIPELINE).id;
+  }
+
+  /**
+   * 💾 Generate Backup ID
+   * Format: backup_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateBackupId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.BACKUP).id;
+  }
+
+  /**
+   * 🔀 Generate Migration ID
+   * Format: migr_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateMigrationId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.MIGRATION).id;
+  }
+
+  /**
+   * 📄 Generate Template ID
+   * Format: tpl_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateTemplateId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.TEMPLATE).id;
+  }
+
+  /**
+   * ⚡ Generate Operation ID
+   * Format: op_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateOperationId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.OPERATION).id;
+  }
+
+  /**
+   * 🔮 Generate Optimistic ID (for optimistic updates)
+   * Format: opt_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateOptimisticId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.OPTIMISTIC).id;
+  }
+
+  /**
+   * ⏱️ Generate Temp ID (for ephemeral/temporary use)
+   * Format: tmp_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   *
+   * Use this for IDs that don't need persistence but require uniqueness
+   */
+  generateTempId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.TEMP).id;
+  }
+
+  /**
+   * 📅 Generate Event ID
+   * Format: evt_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateEventId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.EVENT).id;
+  }
+
+  /**
+   * 📋 Generate Task ID
+   * Format: task_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateTaskId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.TASK).id;
+  }
+
+  /**
+   * 💰 Generate Transaction ID
+   * Format: txn_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateTransactionId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.TRANSACTION).id;
+  }
+
+  /**
+   * 🏷️ Generate Asset ID
+   * Format: ast_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateAssetId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.ASSET).id;
+  }
+
   // ==========================================================================
   // UTILITY METHODS
   // ==========================================================================
@@ -330,17 +637,75 @@ export const enterpriseIdService = new EnterpriseIdService({
 
 /**
  * Quick access functions για common ID generation
+ *
+ * 🏢 ENTERPRISE: Organized by category for easy discovery
  */
+
+// =============================================================================
+// CORE BUSINESS ENTITIES
+// =============================================================================
 export const generateCompanyId = () => enterpriseIdService.generateCompanyId();
 export const generateProjectId = () => enterpriseIdService.generateProjectId();
 export const generateBuildingId = () => enterpriseIdService.generateBuildingId();
 export const generateUnitId = () => enterpriseIdService.generateUnitId();
 export const generateStorageId = () => enterpriseIdService.generateStorageId();
-export const generateParkingId = () => enterpriseIdService.generateParkingId();  // 🏢 ENTERPRISE: Parking spots
+export const generateParkingId = () => enterpriseIdService.generateParkingId();
 export const generateContactId = () => enterpriseIdService.generateContactId();
 export const generateFloorId = () => enterpriseIdService.generateFloorId();
 export const generateDocumentId = () => enterpriseIdService.generateDocumentId();
 export const generateUserId = () => enterpriseIdService.generateUserId();
+export const generateAssetId = () => enterpriseIdService.generateAssetId();
+export const generateRelationshipId = () => enterpriseIdService.generateRelationshipId();
+
+// =============================================================================
+// RUNTIME & EPHEMERAL
+// =============================================================================
+export const generateSessionId = () => enterpriseIdService.generateSessionId();
+export const generateTransactionId = () => enterpriseIdService.generateTransactionId();
+export const generateNotificationId = () => enterpriseIdService.generateNotificationId();
+export const generateTaskId = () => enterpriseIdService.generateTaskId();
+export const generateEventId = () => enterpriseIdService.generateEventId();
+export const generateRequestId = () => enterpriseIdService.generateRequestId();
+export const generateMessageId = () => enterpriseIdService.generateMessageId();
+export const generateJobId = () => enterpriseIdService.generateJobId();
+
+// =============================================================================
+// UI & VISUALIZATION
+// =============================================================================
+export const generateLayerId = () => enterpriseIdService.generateLayerId();
+export const generateElementId = () => enterpriseIdService.generateElementId();
+export const generateHistoryId = () => enterpriseIdService.generateHistoryId();
+export const generateAnnotationId = () => enterpriseIdService.generateAnnotationId();
+export const generateControlPointId = () => enterpriseIdService.generateControlPointId();
+export const generateEntityId = () => enterpriseIdService.generateEntityId();
+export const generateCustomizationId = () => enterpriseIdService.generateCustomizationId();
+
+// =============================================================================
+// OBSERVABILITY & MONITORING
+// =============================================================================
+export const generateErrorId = () => enterpriseIdService.generateErrorId();
+export const generateMetricId = () => enterpriseIdService.generateMetricId();
+export const generateAlertId = () => enterpriseIdService.generateAlertId();
+export const generateTraceId = () => enterpriseIdService.generateTraceId();
+export const generateSpanId = () => enterpriseIdService.generateSpanId();
+export const generateSearchId = () => enterpriseIdService.generateSearchId();
+export const generateAuditId = () => enterpriseIdService.generateAuditId();
+
+// =============================================================================
+// DEVOPS & OPERATIONS
+// =============================================================================
+export const generateDeploymentId = () => enterpriseIdService.generateDeploymentId();
+export const generatePipelineId = () => enterpriseIdService.generatePipelineId();
+export const generateBackupId = () => enterpriseIdService.generateBackupId();
+export const generateMigrationId = () => enterpriseIdService.generateMigrationId();
+export const generateTemplateId = () => enterpriseIdService.generateTemplateId();
+export const generateOperationId = () => enterpriseIdService.generateOperationId();
+
+// =============================================================================
+// OPTIMISTIC & TEMPORARY
+// =============================================================================
+export const generateOptimisticId = () => enterpriseIdService.generateOptimisticId();
+export const generateTempId = () => enterpriseIdService.generateTempId();
 
 /**
  * Validation και utility functions

@@ -28,6 +28,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { generateRelationshipId } from '@/services/enterprise-id.service';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // ============================================================================
@@ -323,9 +324,10 @@ export class FirestoreRelationshipAdapter {
 
   /**
    * 🆔 Generate Unique Relationship ID
+   * 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
    */
-  static generateRelationshipId(): string {
-    return `rel_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  static generateRelationshipIdInternal(): string {
+    return generateRelationshipId();
   }
 
   /**

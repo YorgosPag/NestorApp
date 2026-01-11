@@ -1,5 +1,7 @@
 'use client';
 
+import { generateMessageId, generateTempId } from '@/services/enterprise-id.service';
+
 // WebSocket service for real-time communication
 export type WebSocketEventType = 
   | 'user_online'
@@ -195,7 +197,7 @@ class WebSocketService {
     priority?: 'low' | 'normal' | 'high';
   } = {}): boolean {
     const message: WebSocketMessage<T> = {
-      id: this.generateMessageId(),
+      id: this.generateMessageIdInternal(),
       type,
       payload,
       timestamp: Date.now(),
@@ -384,12 +386,13 @@ class WebSocketService {
   }
 
   // Utility methods
-  private generateMessageId(): string {
-    return `msg_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+  // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
+  private generateMessageIdInternal(): string {
+    return generateMessageId();
   }
 
   private generateListenerId(): string {
-    return `listener_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+    return generateTempId(); // Listeners are ephemeral, use temp IDs
   }
 
   private log(...args: any[]): void {

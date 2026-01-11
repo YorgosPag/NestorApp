@@ -6,6 +6,7 @@ import { CheckCircle, AlertCircle, AlertTriangle, Info, Loader2, X } from 'lucid
 import { useTranslation } from '@/i18n';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { generateNotificationId } from '@/services/enterprise-id.service';
 import type {
   NotificationContextValue,
   NotificationOptions,
@@ -139,8 +140,8 @@ export function NotificationProvider({
       return ''; // Return empty ID for rate-limited notifications
     }
 
-    // Generate unique ID
-    const notificationId = customId || `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Generate unique ID - 🏢 ENTERPRISE: Using centralized ID generation
+    const notificationId = customId || generateNotificationId();
 
     // Create notification data
     const notificationData: NotificationData = {

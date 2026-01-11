@@ -1,10 +1,10 @@
 # = -> **ENTERPRISE CENTRALIZED SYSTEMS TABLE**
 
 > **= MAIN DOCUMENTATION**: [centralized_systems.md](./centralized_systems.md)
-> **= -> LAST UPDATED**: 2026-01-09
-> **= -> TOTAL SYSTEMS**: 19 Major Enterprise Systems (incl. Enterprise Card System, Entity List Column)
-> **= -> TOTAL CODE**: 13,550+ Lines
-> **= -> TOTAL ADRs**: 14 Architectural Decision Records
+> **= -> LAST UPDATED**: 2026-01-11
+> **= -> TOTAL SYSTEMS**: 20 Major Enterprise Systems (incl. Enterprise ID Generation System)
+> **= -> TOTAL CODE**: 14,250+ Lines
+> **= -> TOTAL ADRs**: 15 Architectural Decision Records
 
 ---
 
@@ -27,6 +27,7 @@
 | **ADR-014** | Entity Icons Centralization 🏢 | `NAVIGATION_ENTITIES.{entity}.icon` | Hardcoded Lucide icons | 2026-01-09 |
 | **ADR-015** | Entity List Column Container 🏢 | `EntityListColumn` + `ENTITY_LIST_TOKENS` | Hardcoded width classes | 2026-01-09 |
 | **ADR-016** | Navigation Breadcrumb Path System 🏢 | `syncBreadcrumb()` + `BreadcrumbEntityRef` | Διάσπαρτο breadcrumb sync | 2026-01-10 |
+| **ADR-017** | Enterprise ID Generation 🏢 | `@/services/enterprise-id.service` | `Math.random()` patterns | 2026-01-11 |
 
 > **🚫 PROHIBITION**: Νέα Select/Dropdown implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** εκτός Radix Select.
 > **🚫 PROHIBITION**: Hardcoded canvas backgrounds **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `CANVAS_THEME`.
@@ -36,6 +37,7 @@
 > **🚫 PROHIBITION**: Hardcoded Lucide icons για entities (Home, Building, Package) **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `NAVIGATION_ENTITIES.{entity}.icon`.
 > **🚫 PROHIBITION**: Νέα διάσπαρτα *ListItem components **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `@/domain/cards`.
 > **🚫 PROHIBITION**: Hardcoded list column widths (min-w-[300px] max-w-[420px]) **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `EntityListColumn`.
+> **🚫 PROHIBITION**: `Math.random()` για ID generation **ΑΠΑΓΟΡΕΥΕΤΑΙ** - χρησιμοποιήστε `@/services/enterprise-id.service`.
 > **🏢 WORLD-CLASS**: ADR-004 χρησιμοποιεί CSS Variables για runtime theme switching (Figma/AutoCAD level).
 > **🏢 ENTERPRISE**: ADR-005 - 2,300+ lines centralized drawing system με 3-phase rendering.
 > **🏢 ENTERPRISE**: ADR-011 - 47 files, 100% centralized styling, zero hardcoded values.
@@ -43,6 +45,7 @@
 > **🏢 ENTERPRISE**: ADR-013 - 18 files, 22→7 cards, Atomic Design Pattern, 64% code reduction.
 > **🏢 ENTERPRISE**: ADR-015 - 6 files migrated, semantic HTML, single source of truth για list column widths.
 > **🏢 ENTERPRISE**: ADR-016 - 5 pages integrated, atomic breadcrumb sync, display-only contract, dynamic entity icons.
+> **🏢 ENTERPRISE**: ADR-017 - 40+ ID types, 8 files migrated, crypto-secure UUIDs, zero Math.random() for IDs.
 >
 > **📍 Full ADRs**: [centralized_systems.md](./centralized_systems.md)
 

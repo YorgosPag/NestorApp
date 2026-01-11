@@ -18,6 +18,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { errorTracker, type ErrorSeverity, type ErrorCategory } from '@/services/ErrorTracker';
 import { getErrorConfig } from '@/config/error-reporting';
+import { generateRequestId } from '@/services/enterprise-id.service';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -550,7 +551,8 @@ export class ApiErrorHandler {
   }
 
   private generateRequestId(): string {
-    return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
+    return generateRequestId();
   }
 
   private getMemoryUsage(): number {
