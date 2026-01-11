@@ -1,11 +1,39 @@
+/**
+ * @deprecated This module is deprecated in favor of UnifiedUploadService
+ *
+ * 🏢 ENTERPRISE MIGRATION NOTICE
+ *
+ * All PDF upload functionality has been migrated to:
+ * `src/services/upload/UnifiedUploadService.ts`
+ *
+ * For new code, use:
+ * ```typescript
+ * import { UnifiedUploadService } from '@/services/upload';
+ *
+ * const result = await UnifiedUploadService.uploadPDF(file, {
+ *   buildingId: 'building-1',
+ *   floorId: 'floor-1',
+ *   folderPath: 'floor-plans',
+ * });
+ * ```
+ *
+ * This module is maintained ONLY for backward compatibility.
+ * DO NOT ADD NEW FUNCTIONALITY HERE - use UnifiedUploadService instead.
+ *
+ * @see src/services/upload/UnifiedUploadService.ts
+ * @see src/services/upload/processors/PDFProcessor.ts
+ */
+
 import { storage, db } from '@/lib/firebase';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
 import { doc, updateDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**
+ * @deprecated Use UnifiedUploadService from '@/services/upload' instead
+ *
  * PDF Utils Library για τη διαχείριση PDF κατόψεων
- * 
+ *
  * Παρέχει λειτουργίες για:
  * - Upload PDF στο Firebase Storage
  * - Διαχείριση PDF metadata στο Firestore
@@ -315,7 +343,24 @@ export async function validatePDFUrl(url: string): Promise<boolean> {
 }
 
 /**
+ * @deprecated Use `UnifiedUploadService.uploadPDF()` from '@/services/upload' instead
+ *
  * Complete PDF upload workflow
+ *
+ * Migration example:
+ * ```typescript
+ * // OLD (this function)
+ * const result = await uploadFloorPDF(file, buildingId, floorId, onProgress);
+ *
+ * // NEW (UnifiedUploadService)
+ * import { UnifiedUploadService } from '@/services/upload';
+ * const result = await UnifiedUploadService.uploadPDF(file, {
+ *   buildingId,
+ *   floorId,
+ *   folderPath: `floor-plans/${buildingId}/${floorId}`,
+ *   onProgress,
+ * });
+ * ```
  */
 export async function uploadFloorPDF(
   file: File,

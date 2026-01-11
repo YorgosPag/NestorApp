@@ -1502,6 +1502,103 @@ const entityConfig = NAVIGATION_ENTITIES[entityType];
 
 ---
 
+### 📋 ADR-018: UNIFIED UPLOAD SERVICE (2026-01-11) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-11
+
+**Context**:
+Εντοπίστηκαν **6 διαφορετικά upload systems** στην εφαρμογή με διάσπαρτη λογική:
+- `PhotoUploadService` (92/100 enterprise score) - Images με compression
+- `useEnterpriseFileUpload` (88/100) - Hook για file uploads
+- `pdf-utils.ts` (45/100) - PDF floor plans (scattered)
+- `usePDFUpload` (40/100) - PDF hook (scattered)
+- `useFloorPlanUpload` (40/100) - DXF parser only
+- `DxfFirestoreService` (85/100) - DXF scene storage
+
+**Προβλήματα**:
+- 📄 Διπλότυπο component: `PDFUploader.tsx` ≈ `SimplePDFUploader.tsx` (90% identical)
+- 🔄 Scattered validation: PDF validation σε 3 διαφορετικά σημεία
+- ⚠️ Inconsistent error handling: Κάποια retry, κάποια όχι
+- 🐛 PDF duplicate bug: timestamp-based naming → 27 duplicates per floor
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **CANONICAL** | `UnifiedUploadService` (`@/services/upload`) είναι το ΜΟΝΑΔΙΚΟ entry point για uploads |
+| **PATTERN** | Gateway + Strategy Pattern (Fortune 500 standard) |
+| **DEPRECATED** | `pdf-utils.ts` functions - use UnifiedUploadService |
+| **DELETED** | `PDFUploader.tsx` (duplicate component) |
+
+**Architecture**:
+```
+UnifiedUploadService (Gateway)
+         │
+    FileTypeRouter
+         │
+   ┌─────┼─────┐
+   ▼     ▼     ▼
+Image  PDF   CAD
+Proc.  Proc. Proc.
+```
+
+**Files Structure**:
+```
+src/services/upload/
+├── UnifiedUploadService.ts      # Main gateway service
+├── processors/
+│   ├── ImageProcessor.ts        # Wraps PhotoUploadService
+│   ├── PDFProcessor.ts          # Floor plan PDFs
+│   └── CADProcessor.ts          # DXF files
+├── types/
+│   └── upload.types.ts          # Unified type definitions
+└── index.ts                     # Public API
+```
+
+**Usage**:
+```typescript
+// NEW: Use UnifiedUploadService
+import { UnifiedUploadService } from '@/services/upload';
+
+// Auto-detect file type
+const result = await UnifiedUploadService.upload(file, {
+  fileType: 'auto',
+  folderPath: 'uploads',
+});
+
+// Image with compression
+const imageResult = await UnifiedUploadService.uploadImage(file, {
+  folderPath: 'contacts/photos',
+  enableCompression: true,
+});
+
+// PDF floor plan (fixed filename, no duplicates)
+const pdfResult = await UnifiedUploadService.uploadPDF(file, {
+  buildingId: 'building-1',
+  floorId: 'floor-1',
+  folderPath: 'floor-plans',
+});
+```
+
+**Enforcement**:
+- ❌ **NO NEW** pdf-utils.ts usage
+- ✅ **MIGRATE ON TOUCH**: Replace pdf-utils imports with UnifiedUploadService
+- ✅ **NEW UPLOADS**: Must use UnifiedUploadService
+
+**Consequences**:
+- ✅ Single entry point for all uploads
+- ✅ Consistent retry/fallback mechanism
+- ✅ Type-safe (zero `as any`)
+- ✅ Fixed PDF duplicate bug
+- ✅ Backward compatible via re-exports
+
+**References**:
+- Source: `src/services/upload/`
+- Deprecated: `src/lib/pdf-utils.ts`
+- Pattern: Gateway + Strategy (SAP, Salesforce, Microsoft, Google)
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

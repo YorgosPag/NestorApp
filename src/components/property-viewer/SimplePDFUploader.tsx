@@ -10,7 +10,7 @@ import { Upload, FileText, Check, X, AlertTriangle, Loader2 } from 'lucide-react
 
 // Firebase imports
 import { storage } from '@/lib/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, listAll, deleteObject } from 'firebase/storage';
 import { getAuth, signInAnonymously } from 'firebase/auth';
 import { HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -119,18 +119,47 @@ export function SimplePDFUploader({ currentFloor, onPDFUpdate, className }: Simp
       console.log('✅ Authenticated user UID:', user.uid);
       
       console.log('Starting upload for floor:', currentFloor.id);
-      
-      // Create file path
-      const timestamp = Date.now();
-      const fileName = `${timestamp}_${selectedFile.name}`;
-      const filePath = `floor-plans/${currentFloor.buildingId}/${currentFloor.id}/${fileName}`;
-      
+
+      // 🏢 ENTERPRISE: Fixed filename to prevent duplicates (Fortune 500 standard)
+      const fileName = 'floorplan.pdf';
+      const folderPath = `floor-plans/${currentFloor.buildingId}/${currentFloor.id}`;
+      const filePath = `${folderPath}/${fileName}`;
+
       console.log('Upload path:', filePath);
       console.log('Storage bucket:', storage.app.options.storageBucket);
-      
-      // Create storage reference
+
+      // 🏢 ENTERPRISE: Delete existing files in folder before upload (prevent duplicates)
+      console.log('🗑️ ENTERPRISE: Cleaning up existing files in folder...');
+      try {
+        const folderRef = ref(storage, folderPath);
+        const existingFiles = await listAll(folderRef);
+
+        if (existingFiles.items.length > 0) {
+          console.log(`🗑️ Found ${existingFiles.items.length} existing file(s) - deleting...`);
+
+          // Delete all existing files in parallel
+          const deletePromises = existingFiles.items.map(async (fileRef) => {
+            try {
+              await deleteObject(fileRef);
+              console.log(`✅ Deleted: ${fileRef.name}`);
+            } catch (deleteError) {
+              console.warn(`⚠️ Could not delete ${fileRef.name}:`, deleteError);
+            }
+          });
+
+          await Promise.all(deletePromises);
+          console.log('✅ ENTERPRISE: Folder cleanup completed');
+        } else {
+          console.log('✅ Folder is empty - no cleanup needed');
+        }
+      } catch (cleanupError) {
+        // If folder doesn't exist, that's fine - continue with upload
+        console.log('ℹ️ Folder may not exist yet - proceeding with upload');
+      }
+
+      // Create storage reference for the new file
       const storageRef = ref(storage, filePath);
-      
+
       // Simulate progress
       const progressInterval = setInterval(() => {
         setProgress(prev => {
@@ -141,7 +170,7 @@ export function SimplePDFUploader({ currentFloor, onPDFUpdate, className }: Simp
           return prev + 10;
         });
       }, 200);
-      
+
       // Upload file
       console.log('📤 Uploading to Firebase Storage...');
       const snapshot = await uploadBytes(storageRef, selectedFile);

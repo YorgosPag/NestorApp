@@ -75,15 +75,6 @@ export const CreateTaskModalLazy = dynamic(
   }
 );
 
-// Lazy PDF Uploader
-export const PDFUploaderLazy = dynamic(
-  () => import('@/components/pdf/PDFUploader').then(mod => ({ default: mod.PDFUploader })),
-  {
-    loading: () => <FormSkeleton />,
-    ssr: false
-  }
-);
-
 // Chart Container Lazy (for recharts)
 export const ChartContainerLazy = dynamic(
   () => import('@/components/ui/ChartContainer').then(mod => ({ default: mod.ChartContainer })),
@@ -142,10 +133,9 @@ export const SidebarLazy = dynamic(
 );
 
 // Export component props for type safety
-export type ShareModalProps = ComponentProps<any>;
-export type SendMessageModalProps = ComponentProps<any>;
-export type CreateTaskModalProps = ComponentProps<any>;
-export type PDFUploaderProps = ComponentProps<any>;
-export type ChartContainerProps = ComponentProps<any>;
-export type AdminLayerManagerProps = ComponentProps<any>;
-export type SidebarProps = ComponentProps<any>;
+export type ShareModalProps = ComponentProps<typeof ShareModalLazy>;
+export type SendMessageModalProps = ComponentProps<typeof SendMessageModalLazy>;
+export type CreateTaskModalProps = ComponentProps<typeof CreateTaskModalLazy>;
+export type ChartContainerProps = ComponentProps<typeof ChartContainerLazy>;
+export type AdminLayerManagerProps = ComponentProps<typeof AdminLayerManagerLazy>;
+export type SidebarProps = ComponentProps<typeof SidebarLazy>;

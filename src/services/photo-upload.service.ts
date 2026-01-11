@@ -413,16 +413,35 @@ export class PhotoUploadService {
       await deleteObject(storageRef);
 
       console.log('✅ ENTERPRISE CLEANUP: Photo deleted successfully from storage');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ ENTERPRISE CLEANUP: Photo delete error:', error);
-      // Don't throw error if file doesn't exist
-      if ((error as any)?.code !== 'storage/object-not-found') {
+
+      // 🏢 ENTERPRISE: Type-safe error handling without `as any`
+      const isObjectNotFound = PhotoUploadService.isFirebaseStorageError(error) &&
+                                error.code === 'storage/object-not-found';
+
+      if (isObjectNotFound) {
+        // File doesn't exist - this is OK, probably already deleted
         console.log('⚠️ ENTERPRISE CLEANUP: File not found - probably already deleted');
       } else {
+        // Actual deletion error - throw
         console.error('💥 ENTERPRISE CLEANUP: Actual deletion error:', error);
         throw new Error('Αποτυχία διαγραφής αρχείου');
       }
     }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Type guard for Firebase Storage errors
+   * Replaces unsafe `as any` with proper TypeScript type checking
+   */
+  private static isFirebaseStorageError(error: unknown): error is { code: string; message: string } {
+    return (
+      error !== null &&
+      typeof error === 'object' &&
+      'code' in error &&
+      typeof (error as { code: unknown }).code === 'string'
+    );
   }
 
   /**
