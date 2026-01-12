@@ -192,7 +192,7 @@ export function usePerformanceTracker() {
 }
 
 // HOC for automatic component performance tracking
-export function withPerformanceTracking<T extends {}>(
+export function withPerformanceTracking<T extends object>(
   Component: React.ComponentType<T>,
   componentName?: string
 ) {

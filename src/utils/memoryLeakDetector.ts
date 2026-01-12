@@ -290,7 +290,7 @@ export function useMemoryTracker(componentName?: string) {
 }
 
 // HOC for automatic memory tracking
-export function withMemoryTracking<T extends {}>(
+export function withMemoryTracking<T extends object>(
   Component: React.ComponentType<T>,
   componentName?: string
 ) {
