@@ -26,7 +26,9 @@ import {
   sendPasswordResetEmail,
   updateProfile,
   sendEmailVerification,
-  AuthError
+  AuthError,
+  GoogleAuthProvider,
+  signInWithPopup
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import type { FirebaseAuthUser } from '../types/auth.types';
@@ -43,6 +45,7 @@ interface AuthContextType {
 
   // Authentication methods
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signUp: (email: string, password: string, displayName?: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -96,7 +99,12 @@ function getErrorMessage(error: unknown): string {
     'auth/network-request-failed': 'Πρόβλημα δικτύου. Δοκιμάστε ξανά.',
     'auth/too-many-requests': 'Πολλές προσπάθειες. Δοκιμάστε αργότερα.',
     'auth/operation-not-allowed': 'Η λειτουργία δεν επιτρέπεται.',
-    'auth/requires-recent-login': 'Απαιτείται πρόσφατη σύνδεση. Παρακαλώ συνδεθείτε ξανά.'
+    'auth/requires-recent-login': 'Απαιτείται πρόσφατη σύνδεση. Παρακαλώ συνδεθείτε ξανά.',
+    // Google Sign-In specific errors
+    'auth/popup-closed-by-user': 'Η σύνδεση ακυρώθηκε. Το παράθυρο έκλεισε.',
+    'auth/popup-blocked': 'Το παράθυρο σύνδεσης αποκλείστηκε. Ενεργοποιήστε τα popups.',
+    'auth/cancelled-popup-request': 'Η αίτηση σύνδεσης ακυρώθηκε.',
+    'auth/account-exists-with-different-credential': 'Υπάρχει λογαριασμός με αυτό το email αλλά με διαφορετική μέθοδο σύνδεσης.'
   };
 
   return errorMessages[error.code] || error.message || 'Άγνωστο σφάλμα authentication.';
@@ -164,9 +172,43 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setLoading(true);
       setError(null);
 
-      console.log('🔐 [AuthContext] Signing in:', email);
+      console.log('[ENTERPRISE] [AuthContext] Signing in:', email);
       await signInWithEmailAndPassword(auth, email, password);
-      console.log('✅ [AuthContext] Sign in successful');
+      console.log('[OK] [AuthContext] Sign in successful');
+    } catch (error) {
+      handleError(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ==========================================================================
+  // GOOGLE SIGN-IN - Enterprise OAuth 2.0
+  // ==========================================================================
+
+  const signInWithGoogleFn = async (): Promise<void> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      console.log('[ENTERPRISE] [AuthContext] Starting Google Sign-In');
+
+      // Create Google Auth Provider with enterprise settings
+      const provider = new GoogleAuthProvider();
+
+      // Request additional OAuth scopes for enterprise features
+      provider.addScope('email');
+      provider.addScope('profile');
+
+      // Set custom parameters for better UX
+      provider.setCustomParameters({
+        prompt: 'select_account' // Always show account selector
+      });
+
+      const result = await signInWithPopup(auth, provider);
+
+      console.log('[OK] [AuthContext] Google Sign-In successful:', result.user.email);
     } catch (error) {
       handleError(error);
       throw error;
@@ -282,6 +324,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     loading,
     error,
     signIn,
+    signInWithGoogle: signInWithGoogleFn,
     signUp,
     signOut,
     resetPassword,

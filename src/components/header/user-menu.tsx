@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
   User,
   Settings,
@@ -83,9 +84,20 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" disabled={isLoggingOut}>
+        <Button variant="outline" size="icon" disabled={isLoggingOut} className="relative overflow-hidden">
           {isLoggingOut ? (
             <Spinner size="small" aria-label={t('userMenu.loggingOut')} />
+          ) : user?.photoURL ? (
+            <Avatar className="h-8 w-8">
+              <AvatarImage
+                src={user.photoURL}
+                alt={user.displayName || t('userMenu.defaultUser')}
+                referrerPolicy="no-referrer"
+              />
+              <AvatarFallback>
+                <User className={iconSizes.sm} />
+              </AvatarFallback>
+            </Avatar>
           ) : (
             <User className={iconSizes.sm} />
           )}
@@ -94,13 +106,29 @@ export function UserMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">
-              {user?.displayName || t('userMenu.defaultUser')}
-            </p>
-            <p className="text-xs leading-none text-muted-foreground">
-              {user?.email || t('userMenu.noEmail')}
-            </p>
+          <div className="flex items-center gap-3">
+            {/* User Avatar */}
+            <Avatar className="h-10 w-10">
+              {user?.photoURL ? (
+                <AvatarImage
+                  src={user.photoURL}
+                  alt={user.displayName || t('userMenu.defaultUser')}
+                  referrerPolicy="no-referrer"
+                />
+              ) : null}
+              <AvatarFallback>
+                <User className={iconSizes.md} />
+              </AvatarFallback>
+            </Avatar>
+            {/* User Info */}
+            <div className="flex flex-col space-y-1">
+              <p className="text-sm font-medium leading-none">
+                {user?.displayName || t('userMenu.defaultUser')}
+              </p>
+              <p className="text-xs leading-none text-muted-foreground">
+                {user?.email || t('userMenu.noEmail')}
+              </p>
+            </div>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
