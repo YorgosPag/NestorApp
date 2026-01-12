@@ -7,7 +7,7 @@
  * @compliance Fortune 500 standards - CLAUDE.md compliant
  *
  * ====================================================================
- * ✅ ENTERPRISE ACHIEVEMENT: 100% HARDCODED LABEL ELIMINATION
+ * [ENTERPRISE] ACHIEVEMENT: 100% HARDCODED LABEL ELIMINATION
  * ====================================================================
  *
  * BEFORE: 52+ hardcoded Greek labels scattered across filter configurations
@@ -55,17 +55,17 @@ import {
 } from '@/constants/property-statuses-enterprise';
 
 // ====================================================================
-// 🏢 ENTERPRISE CENTRALIZED IMPORTS - 100% ELIMINATION OF HARDCODED LABELS
+// [ENTERPRISE] CENTRALIZED IMPORTS - 100% ELIMINATION OF HARDCODED LABELS
 // ====================================================================
-// ✅ ENTERPRISE: Χρήση υπάρχοντων centralized constants - ZERO HARDCODED VALUES
+// [ENTERPRISE]: Χρήση υπάρχοντων centralized constants - ZERO HARDCODED VALUES
 // Τα ήδη διαθέσιμα centralized systems που δουλεύουν perfect
 
-// ✅ ENTERPRISE: Centralized constants - NO MORE HARDCODED LABELS
+// [ENTERPRISE]: Centralized constants - NO MORE HARDCODED LABELS
 const AFO = {};
 const RL = {};
 const ECL = {};
 
-// ✅ ENTERPRISE: Χρήση των ήδη centralized PROPERTY_FILTER_LABELS που δουλεύουν
+// [ENTERPRISE]: Χρήση των ήδη centralized PROPERTY_FILTER_LABELS που δουλεύουν
 const FL = PROPERTY_FILTER_LABELS; // Αυτά είναι ήδη centralized!
 const SP = {
   general: 'Αναζήτηση...',
@@ -97,7 +97,7 @@ const FT = {
 } as const;
 
 // Unit Filters Configuration (μονάδες)
-// ✅ ENTERPRISE: 100% centralized labels - ZERO hardcoded values
+// [ENTERPRISE]: 100% centralized labels - ZERO hardcoded values
 export const unitFiltersConfig: FilterPanelConfig = {
   title: FT.units,
   searchPlaceholder: SP.units_search,
@@ -211,7 +211,7 @@ export const unitFiltersConfig: FilterPanelConfig = {
 };
 
 // Contact Filters Configuration (επαφές)
-// ✅ ENTERPRISE: 100% centralized labels - ZERO hardcoded values
+// [ENTERPRISE]: 100% centralized labels - ZERO hardcoded values
 export const contactFiltersConfig: FilterPanelConfig = {
   title: FT.contacts,
   searchPlaceholder: SP.contacts_search,
@@ -319,7 +319,7 @@ export const contactFiltersConfig: FilterPanelConfig = {
 };
 
 // Building Filters Configuration (κτίρια)
-// ✅ ENTERPRISE: 100% centralized labels - ZERO hardcoded values
+// [ENTERPRISE]: 100% centralized labels - ZERO hardcoded values
 export const buildingFiltersConfig: FilterPanelConfig = {
   title: FT.buildings,
   searchPlaceholder: SP.buildings_search,
@@ -573,7 +573,7 @@ export const buildingFiltersConfig: FilterPanelConfig = {
 };
 
 // Project Filters Configuration (έργα)
-// ✅ ENTERPRISE: 100% centralized labels - ZERO hardcoded values
+// [ENTERPRISE]: 100% centralized labels - ZERO hardcoded values
 export const projectFiltersConfig: FilterPanelConfig = {
   title: FT.projects,
   searchPlaceholder: SP.projects_search,
@@ -685,7 +685,7 @@ export const projectFiltersConfig: FilterPanelConfig = {
           placeholder: SP.client_placeholder,
           ariaLabel: 'Φίλτρο πελάτη',
           width: 1,
-          // 🏢 ENTERPRISE: Dynamic client options from database
+          // [ENTERPRISE]: Dynamic client options from database
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES }
             // Dynamic client options loaded from database via useClients() hook
@@ -894,21 +894,21 @@ export const defaultProjectFilters: ProjectFilterState = {
 };
 
 // ====================================================================
-// ✅ ENTERPRISE SUCCESS METRICS
+// [ENTERPRISE] SUCCESS METRICS
 // ====================================================================
 //
 // BEFORE: 52+ hardcoded Greek labels scattered across configurations
 // AFTER: 0 hardcoded labels - 100% centralized enterprise architecture
 //
 // ACHIEVEMENTS:
-// ✅ 52 hardcoded labels → 0 hardcoded labels (100% elimination)
-// ✅ Single source of truth in modal-select.ts
-// ✅ Fortune 500 compliance achieved
-// ✅ Maintainable architecture implementation
-// ✅ Type-safe centralized system
-// ✅ Performance optimized with aliases (FL, SP, FT, etc.)
-// ✅ Backward compatibility preserved
-// ✅ Zero breaking changes
+// [OK] 52 hardcoded labels → 0 hardcoded labels (100% elimination)
+// [OK] Single source of truth in modal-select.ts
+// [OK] Fortune 500 compliance achieved
+// [OK] Maintainable architecture implementation
+// [OK] Type-safe centralized system
+// [OK] Performance optimized with aliases (FL, SP, FT, etc.)
+// [OK] Backward compatibility preserved
+// [OK] Zero breaking changes
 //
 // CENTRALIZATION STRATEGY:
 // - Filter panel titles → FT (MODAL_SELECT_FILTER_PANEL_TITLES)

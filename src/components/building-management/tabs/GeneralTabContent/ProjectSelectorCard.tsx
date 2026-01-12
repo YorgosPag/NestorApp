@@ -15,6 +15,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Type definitions (ZERO any)
 interface ProjectOption {
@@ -33,19 +35,6 @@ interface ProjectSelectorCardProps {
   isEditing?: boolean;
 }
 
-// 🏢 ENTERPRISE: Centralized labels (ZERO hardcoded strings)
-const LABELS = {
-  CARD_TITLE: 'Σύνδεση με Έργο',
-  SELECT_LABEL: 'Ανήκει σε Έργο',
-  SELECT_PLACEHOLDER: 'Επιλέξτε έργο...',
-  NO_PROJECT: 'Χωρίς έργο',
-  SAVE_BUTTON: 'Αποθήκευση',
-  SAVING: 'Αποθήκευση...',
-  SUCCESS_MESSAGE: 'Το κτίριο συνδέθηκε με το έργο!',
-  ERROR_MESSAGE: 'Σφάλμα κατά την αποθήκευση',
-  LOADING_PROJECTS: 'Φόρτωση έργων...',
-} as const;
-
 /**
  * 🏢 ENTERPRISE: ProjectSelectorCard Component
  *
@@ -58,6 +47,8 @@ export function ProjectSelectorCard({
   onProjectChanged,
   isEditing = true,
 }: ProjectSelectorCardProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
   // 🏢 ENTERPRISE: Centralized hooks (ZERO inline styles)
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
@@ -160,18 +151,18 @@ export function ProjectSelectorCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FolderKanban className={iconSizes.md} />
-          {LABELS.CARD_TITLE}
+          {t('projectSelector.title')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Project Selector */}
         <fieldset className="space-y-2">
-          <Label htmlFor="project-selector">{LABELS.SELECT_LABEL}</Label>
+          <Label htmlFor="project-selector">{t('projectSelector.label')}</Label>
 
           {loading ? (
             <section className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className={cn(iconSizes.sm, 'animate-spin')} />
-              <span>{LABELS.LOADING_PROJECTS}</span>
+              <span>{t('projectSelector.loading')}</span>
             </section>
           ) : (
             <Select
@@ -187,12 +178,12 @@ export function ProjectSelectorCard({
                   saveStatus === 'error' && getStatusBorder('error')
                 )}
               >
-                <SelectValue placeholder={LABELS.SELECT_PLACEHOLDER} />
+                <SelectValue placeholder={t('projectSelector.placeholder')} />
               </SelectTrigger>
               <SelectContent>
                 {/* Option for no project - Radix requires non-empty value */}
                 <SelectItem value="__none__">
-                  {LABELS.NO_PROJECT}
+                  {t('projectSelector.noProject')}
                 </SelectItem>
 
                 {/* Project options */}
@@ -209,7 +200,7 @@ export function ProjectSelectorCard({
         {/* Current project info (when not editing) */}
         {!isEditing && currentProjectName && (
           <p className={cn('text-sm', colors.text.muted)}>
-            Τρέχον έργο: <strong>{currentProjectName}</strong>
+            {t('projectSelector.currentProject')} <strong>{currentProjectName}</strong>
           </p>
         )}
 
@@ -225,12 +216,12 @@ export function ProjectSelectorCard({
               {saving ? (
                 <>
                   <Loader2 className={cn(iconSizes.sm, 'mr-2 animate-spin')} />
-                  {LABELS.SAVING}
+                  {t('projectSelector.saving')}
                 </>
               ) : (
                 <>
                   <Save className={cn(iconSizes.sm, 'mr-2')} />
-                  {LABELS.SAVE_BUTTON}
+                  {t('projectSelector.save')}
                 </>
               )}
             </Button>
@@ -239,13 +230,13 @@ export function ProjectSelectorCard({
             {saveStatus === 'success' && (
               <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
                 <CheckCircle className={iconSizes.sm} />
-                {LABELS.SUCCESS_MESSAGE}
+                {t('projectSelector.success')}
               </span>
             )}
             {saveStatus === 'error' && (
               <span className="flex items-center gap-1 text-sm text-red-600 dark:text-red-400">
                 <AlertCircle className={iconSizes.sm} />
-                {LABELS.ERROR_MESSAGE}
+                {t('projectSelector.error')}
               </span>
             )}
           </footer>

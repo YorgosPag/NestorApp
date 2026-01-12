@@ -116,6 +116,34 @@
       "import": "Import Data"
     }
   },
+  "viewMode": {
+    "list": "List View",
+    "grid": "Grid View",
+    "byType": "Group by Type",
+    "byTypeTooltip": "Group buildings by type (e.g. Residential, Commercial)",
+    "byStatus": "Group by Status",
+    "byStatusTooltip": "Group buildings by status (e.g. Active, Under Construction)"
+  },
+  "filtersDisplay": {
+    "activeFilters": "Active filters:",
+    "clearAll": "Clear all"
+  },
+  "card": {
+    "metrics": {
+      "area": "Area",
+      "floors": "Floors",
+      "units": "Units",
+      "value": "Value",
+      "totalValueTooltip": "Total project value"
+    }
+  },
+  "validation": {
+    "nameRequired": "Name is required",
+    "areaPositive": "Area must be greater than 0",
+    "builtAreaExceeds": "Built area cannot exceed total area",
+    "floorsMinimum": "Floors must be at least 1",
+    "unitsMinimum": "Units must be at least 1"
+  },
   "storages": {
     "header": {
       "title": "Storage Management",
@@ -149,14 +177,42 @@
     }
   },
   "storage": {
+    "card": {
+      "labels": {
+        "floor": "Floor",
+        "area": "Area",
+        "price": "Price",
+        "pricePerSqm": "€/m²",
+        "linked": "Linked:"
+      },
+      "actions": {
+        "viewEdit": "View / Edit",
+        "addToFavorites": "Add to favorites",
+        "removeFromFavorites": "Remove from favorites",
+        "delete": "Delete"
+      }
+    },
     "form": {
+      "title": {
+        "newStorage": "New Storage",
+        "editStorage": "Edit Storage",
+        "newParking": "New Parking Spot",
+        "editParking": "Edit Parking Spot"
+      },
+      "footer": {
+        "requiredFields": "* Required fields",
+        "cancel": "Cancel",
+        "save": "Save",
+        "update": "Update"
+      },
       "specs": {
         "title": "Location & Specifications",
         "labels": {
           "floor": "Floor",
           "area": "Area (m²)",
           "price": "Price (€)",
-          "linkedProperty": "Linked Property"
+          "linkedProperty": "Linked Property",
+          "coordinates": "Coordinates (X, Y)"
         },
         "placeholders": {
           "area": "0.00",
@@ -164,7 +220,8 @@
           "linkedProperty": "e.g. D2.1"
         },
         "helpers": {
-          "linkedProperty": "Property code that accompanies this unit"
+          "linkedProperty": "Property code that accompanies this unit",
+          "coordinates": "Position on the building map"
         }
       },
       "features": {
@@ -177,8 +234,41 @@
         "placeholders": {
           "newFeature": "New feature..."
         }
+      },
+      "floors": {
+        "basement2": "Basement 2",
+        "basement1": "Basement 1",
+        "basement": "Basement",
+        "ground": "Ground Floor",
+        "floor1": "1st Floor",
+        "floor2": "2nd Floor",
+        "floor3": "3rd Floor",
+        "floor4": "4th Floor",
+        "floor5": "5th Floor",
+        "floor6": "6th Floor",
+        "floor7": "7th Floor"
+      },
+      "storageFeatures": {
+        "electricity": "Electricity",
+        "naturalLight": "Natural Light",
+        "artificialLight": "Artificial Light",
+        "airChamber": "Air Chamber",
+        "security": "Security",
+        "elevatorAccess": "Elevator Access",
+        "plumbing": "Plumbing"
+      },
+      "parkingFeatures": {
+        "evCharging": "EV Charging",
+        "enclosed": "Enclosed",
+        "lighting": "Lighting",
+        "security": "Security",
+        "easyAccess": "Easy Access"
       }
     }
+  },
+  "details": {
+    "viewBuilding": "View Building",
+    "percentComplete": "{{percent}}% complete"
   },
   "pages": {
     "buildings": {
@@ -236,10 +326,13 @@
       "statusLabels": {
         "available": "Available",
         "occupied": "Occupied",
+        "sold": "Sold",
         "maintenance": "Maintenance",
         "reserved": "Reserved"
       },
       "typeLabels": {
+        "storage": "Storage",
+        "parking": "Parking Spot",
         "large": "Large",
         "small": "Small",
         "basement": "Basement",
@@ -295,6 +388,292 @@
       "label": "Building Progress"
     }
   },
+  "stats": {
+    "totalUnits": "Total Units",
+    "soldUnits": "Sold Units",
+    "totalSoldArea": "Total Sold Area"
+  },
+  "tabs": {
+    "general": {
+      "header": {
+        "edit": "Edit",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saving": "Saving...",
+        "saved": "Saved"
+      },
+      "validation": {
+        "nameRequired": "Name is required",
+        "areaPositive": "Area must be greater than 0",
+        "builtAreaExceeds": "Built area cannot exceed total area",
+        "floorsMin": "Floors must be at least 1",
+        "unitsMin": "Units must be at least 1"
+      },
+      "basicInfo": {
+        "title": "Basic Information",
+        "buildingTitle": "Building Title *",
+        "description": "Building Description",
+        "descriptionPlaceholder": "Describe the building...",
+        "charactersCount": "{{count}}/500 characters"
+      },
+      "technicalSpecs": {
+        "title": "Technical Specifications",
+        "totalArea": "Total Area (m²) *",
+        "builtArea": "Built Area (m²) *",
+        "buildingRatio": "Building ratio: {{ratio}}%",
+        "numberOfFloors": "Number of Floors *",
+        "numberOfUnits": "Number of Units *",
+        "unitsPerFloor": "~{{count}} units/floor",
+        "autoCalculations": "Automatic Calculations",
+        "costPerSqm": "Cost/m²:",
+        "buildingRatioShort": "Building Ratio:",
+        "sqmPerUnit": "m²/Unit:",
+        "valuePerUnit": "Value/Unit:"
+      },
+      "legalInfo": {
+        "title": "Legal Information",
+        "contractNumber": "Contract Number",
+        "contractDate": "Contract Date",
+        "contractFile": "Contract File",
+        "notary": "Notary"
+      },
+      "settings": {
+        "title": "Settings",
+        "showOnWeb": "Show on website"
+      },
+      "files": {
+        "title": "Project Files",
+        "addFiles": "Add Files",
+        "newPhoto": "New Photo",
+        "clickToSelect": "Click to select files",
+        "orDragAndDrop": "or drag and drop here",
+        "fileTypes": "PNG, JPG, PDF, DOC, XLS up to 10MB",
+        "existingFiles": "Existing Files",
+        "uploadedOn": "Uploaded {{date}}",
+        "uploadedToday": "Uploaded today",
+        "view": "View",
+        "download": "Download",
+        "uploadInProgress": "Upload in progress...",
+        "filesCompleted": "{{completed}} of {{total}} files completed"
+      },
+      "location": {
+        "title": "Location Details",
+        "address": "Address",
+        "coordinates": "Coordinates",
+        "directions": "Get directions",
+        "shareLocation": "Share location",
+        "areaInfo": "Area Information",
+        "areaType": "Area type:",
+        "centralCommercial": "Central - Commercial",
+        "buildingRatio": "Building ratio:",
+        "maxHeight": "Max height:",
+        "floors": "{{count}} floors"
+      },
+      "progress": {
+        "title": "Project Progress",
+        "completionPercentage": "Completion Percentage",
+        "completed": "{{percent}}% Completed",
+        "phases": {
+          "foundations": "Foundations",
+          "construction": "Construction",
+          "finishing": "Finishing",
+          "delivery": "Delivery"
+        }
+      }
+    },
+    "timeline": {
+      "header": {
+        "title": "Project Timeline",
+        "subtitle": "Progress tracking and milestones",
+        "completedCount": "{{completed}} / {{total}} completed"
+      },
+      "overallProgress": {
+        "title": "Overall Progress",
+        "label": "Overall Building Progress",
+        "completed": "Completed",
+        "inProgress": "In Progress",
+        "pending": "Pending",
+        "daysRemaining": "Days Remaining"
+      },
+      "milestones": {
+        "title": "Detailed Milestones"
+      },
+      "milestone": {
+        "progressLabel": "Milestone progress",
+        "nextSteps": "Next steps:",
+        "completedAt": "Completed on {{date}}"
+      },
+      "status": {
+        "completed": "Completed",
+        "inProgress": "In progress",
+        "pending": "Pending",
+        "delayed": "Delayed",
+        "unknown": "Unknown"
+      },
+      "forecast": {
+        "title": "Completion Forecast",
+        "originalSchedule": "Original schedule",
+        "currentForecast": "Current forecast",
+        "delay": "Delay",
+        "days": "+{{days}} days",
+        "tip": "Tip:",
+        "tipContent": "Speeding up M&E works could reduce delay to 2-3 days."
+      },
+      "criticalPath": {
+        "title": "Critical Points",
+        "mecInstallations": "M&E Installations",
+        "affectsDelivery": "Affects delivery",
+        "daysDelay": "{{days}} days delay",
+        "finalWorks": "Final Works",
+        "dependsOnPrevious": "Depends on previous",
+        "waiting": "Waiting"
+      }
+    },
+    "map": {
+      "header": {
+        "title": "Map & Location",
+        "subtitle": "Interactive map with nearby projects",
+        "streetButton": "Street",
+        "satelliteButton": "Satellite",
+        "hybridButton": "Hybrid"
+      },
+      "analytics": {
+        "transportation": {
+          "title": "Transportation",
+          "metro": "Metro Evangelismos",
+          "busStop": "Bus stop",
+          "parking": "Parking"
+        },
+        "services": {
+          "title": "Services",
+          "hospital": "Hospital",
+          "schools": "Schools",
+          "supermarket": "Supermarket"
+        },
+        "areaRating": {
+          "title": "Area Rating",
+          "investmentIndex": "Investment index",
+          "areaQuality": "Area quality",
+          "propertyPrices": "Property prices"
+        }
+      },
+      "nearbyProjects": {
+        "title": "Nearby Projects",
+        "distance": "distance",
+        "types": {
+          "commercial": "Commercial",
+          "residential": "Residential",
+          "office": "Office"
+        },
+        "statuses": {
+          "active": "In Progress",
+          "completed": "Completed",
+          "planning": "Planning"
+        }
+      },
+      "controls": {
+        "showNearby": "Show nearby projects",
+        "filter": "Filter:",
+        "selectFilter": "Select filter",
+        "activeOnly": "Active only",
+        "completedOnly": "Completed only",
+        "measureDistance": "Measure distance",
+        "zoomIn": "Zoom In",
+        "zoomOut": "Zoom Out"
+      },
+      "views": {
+        "street": "Street map",
+        "satellite": "Satellite view",
+        "hybrid": "Hybrid view"
+      }
+    },
+    "storageTab": {
+      "searchPlaceholder": "Search code or description...",
+      "exportReport": "Export Report",
+      "loading": "Loading storage units..."
+    },
+    "analytics": {
+      "title": "Advanced Analytics",
+      "subtitle": "Advanced data analysis and KPIs",
+      "exportReport": "Export Report",
+      "timeRange": {
+        "placeholder": "Select time range",
+        "lastMonth": "Last month",
+        "last3Months": "Last 3 months",
+        "last6Months": "Last 6 months",
+        "lastYear": "Last year"
+      },
+      "views": {
+        "overview": "Overview",
+        "financial": "Financial",
+        "progress": "Progress",
+        "comparison": "Comparison"
+      },
+      "kpi": {
+        "costEfficiency": "Cost Efficiency",
+        "timeEfficiency": "Time Efficiency",
+        "qualityScore": "Quality Score",
+        "roi": "ROI",
+        "profitMargin": "Profit Margin",
+        "riskLevel": "Risk Level",
+        "excellent": "Excellent",
+        "good": "Good",
+        "needsImprovement": "Needs improvement",
+        "exceptional": "Exceptional",
+        "aboveTarget": "Above target",
+        "withinTarget": "Within target",
+        "underControl": "Under control"
+      },
+      "comparison": {
+        "title": "Comparison with Similar Projects",
+        "metrics": {
+          "costPerSqm": "Cost/m²",
+          "completionTime": "Completion Time",
+          "workQuality": "Work Quality",
+          "efficiency": "Efficiency"
+        },
+        "current": "Current:",
+        "average": "Average:",
+        "better": "Better",
+        "worse": "Worse"
+      },
+      "progress": {
+        "title": "Progress Analysis",
+        "totalProgress": "Total Progress",
+        "efficiency": "Efficiency",
+        "daysDelay": "Days Delay",
+        "withinAcceptableLimits": "Within acceptable limits",
+        "forecastsAndRecommendations": "Forecasts & Recommendations",
+        "positivePoints": "Positive Points:",
+        "positive1": "Work quality above standards",
+        "positive2": "Material costs within budget",
+        "positive3": "Work team efficient",
+        "suggestedImprovements": "Suggested Improvements:",
+        "improvement1": "Accelerate M&E installations",
+        "improvement2": "Pre-order finishing materials",
+        "improvement3": "Coordination with third parties (elevators)"
+      },
+      "financial": {
+        "totalBudget": "Total Budget",
+        "spentCost": "Spent Cost",
+        "remainingBudget": "Remaining Budget",
+        "costPerSqm": "Cost per m²",
+        "cashFlows": "Cash Flows",
+        "monthlyExpense": "Monthly expense:",
+        "cumulative": "Cumulative:",
+        "withinBudget": "Within budget",
+        "attention": "Attention"
+      },
+      "overview": {
+        "costAnalysis": "Cost Analysis",
+        "analysis": "Analysis",
+        "analysisText": "Material costs are 5% higher than market average. Renegotiation with suppliers is recommended.",
+        "progressVsPlanned": "Progress vs Planning",
+        "planned": "Planned:",
+        "actual": "Actual:"
+      }
+    }
+  },
   "customers": {
     "title": "Building Customers",
     "loading": "Loading customers...",
@@ -320,6 +699,222 @@
       "ariaLabel": "Storages List",
       "entityName": "Storages",
       "searchPlaceholder": "Search storages..."
+    }
+  },
+  "unitsTable": {
+    "title": "Building Units",
+    "description": "List of properties included in this building.",
+    "noUnits": "No units registered for this building.",
+    "loading": "Loading units...",
+    "columns": {
+      "code": "Code",
+      "type": "Type",
+      "area": "Area",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "view": "View"
+  },
+  "projectSelector": {
+    "title": "Link to Project",
+    "label": "Belongs to Project",
+    "placeholder": "Select project...",
+    "noProject": "No project",
+    "save": "Save",
+    "saving": "Saving...",
+    "success": "Building linked to project!",
+    "error": "Error saving",
+    "loading": "Loading projects...",
+    "currentProject": "Current project:"
+  },
+  "videos": {
+    "title": "Building Videos",
+    "upload": "Upload Video",
+    "addVideo": "Add Video"
+  },
+  "placeholder": {
+    "comingSoon": "This section will be developed soon. It will contain all necessary functionality for managing {{title}}.",
+    "add": "Add {{title}}"
+  },
+  "emptyState": {
+    "selectBuilding": "Select a building",
+    "selectBuildingDescription": "Select a building from the list to view its details."
+  },
+  "emptyList": {
+    "noUnitsFound": "No units found",
+    "noUnitsDescription": "No storages or parking spaces match the search criteria."
+  },
+  "storageMap": {
+    "title": "Storages & Parking Map",
+    "description": "Map of storages & parking spaces",
+    "comingSoon": "Coming soon"
+  },
+  "storageSummary": {
+    "available": "Available",
+    "totalValue": "Total Value",
+    "totalArea": "Total Area",
+    "avgPricePerSqm": "Average €/m²"
+  },
+  "storageActions": {
+    "openMenu": "Open menu",
+    "view": "View",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "storageListHeader": {
+    "results": "{{count}} results",
+    "selected": "{{count}} selected",
+    "deleteSelected": "Delete selected",
+    "cardsView": "Cards",
+    "tableView": "Table"
+  },
+  "storageTabHeader": {
+    "title": "Storages & Parking",
+    "description": "Manage storages and parking spaces for building {{buildingName}}",
+    "listView": "List",
+    "mapView": "Map",
+    "newStorage": "New Storage",
+    "newParking": "New Parking Space"
+  },
+  "storageTable": {
+    "selectAll": "Select all",
+    "columns": {
+      "code": "Code",
+      "type": "Type",
+      "floor": "Floor",
+      "area": "Area",
+      "price": "Price",
+      "status": "Status",
+      "linked": "Linked",
+      "actions": "Actions"
+    }
+  },
+  "storageStats": {
+    "storages": "Storages",
+    "parkingSpaces": "Parking Spaces",
+    "available": "Available",
+    "totalValue": "Total Value"
+  },
+  "tabs": {
+    "timeline": {
+      "header": {
+        "title": "Project Timeline",
+        "subtitle": "Track construction progress and milestones",
+        "completedCount": "{{completed}}/{{total}} Completed"
+      },
+      "milestones": {
+        "title": "Construction Milestones",
+        "projectStart": "Project Start",
+        "projectStartDesc": "Contract signing and work commencement",
+        "foundation": "Foundation & Basement",
+        "foundationDesc": "Excavation completion and foundation construction",
+        "structure": "Structural Framework",
+        "structureDesc": "Building skeleton - floors 1-7",
+        "walls": "Walls & Waterproofing",
+        "wallsDesc": "Building enclosure and waterproofing",
+        "systems": "MEP Installations",
+        "systemsDesc": "Electrical and mechanical installations",
+        "finishing": "Final Works",
+        "finishingDesc": "Painting, flooring, decorative elements",
+        "delivery": "Project Delivery",
+        "deliveryDesc": "Final inspection and handover to client"
+      },
+      "status": {
+        "completed": "Completed",
+        "inProgress": "In Progress",
+        "pending": "Pending",
+        "delayed": "Delayed",
+        "unknown": "Unknown"
+      },
+      "overallProgress": {
+        "title": "Overall Progress",
+        "label": "Construction progress",
+        "completed": "Completed",
+        "inProgress": "In Progress",
+        "pending": "Pending",
+        "daysRemaining": "Days"
+      },
+      "criticalPath": {
+        "title": "Critical Path",
+        "mecInstallations": "MEP Installations",
+        "affectsDelivery": "Affects delivery",
+        "daysDelay": "+{{days}} days",
+        "finalWorks": "Final Works",
+        "dependsOnPrevious": "Depends on previous",
+        "waiting": "Waiting"
+      },
+      "forecast": {
+        "title": "Completion Forecast",
+        "originalSchedule": "Original Schedule",
+        "currentForecast": "Current Forecast",
+        "delay": "Delay",
+        "days": "+{{days}} days",
+        "tip": "Tip",
+        "tipContent": "Accelerating MEP work may reduce the delay."
+      }
+    }
+  },
+  "map": {
+    "interactiveMap": "Interactive Map"
+  },
+  "analytics": {
+    "costCategories": {
+      "materials": "Materials",
+      "labor": "Labor",
+      "equipment": "Equipment",
+      "other": "Other"
+    },
+    "months": {
+      "jan": "Jan",
+      "feb": "Feb",
+      "mar": "Mar",
+      "apr": "Apr",
+      "may": "May",
+      "jun": "Jun",
+      "jul": "Jul",
+      "aug": "Aug",
+      "sep": "Sep",
+      "oct": "Oct",
+      "nov": "Nov",
+      "dec": "Dec"
+    },
+    "riskLevels": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    }
+  },
+  "storageForm": {
+    "floors": {
+      "basement2": "Basement 2",
+      "basement1": "Basement 1",
+      "basement": "Basement",
+      "ground": "Ground Floor",
+      "floor1": "1st Floor",
+      "floor2": "2nd Floor",
+      "floor3": "3rd Floor",
+      "floor4": "4th Floor",
+      "floor5": "5th Floor",
+      "floor6": "6th Floor",
+      "floor7": "7th Floor"
+    },
+    "features": {
+      "storage": {
+        "electricity": "Electricity",
+        "naturalLight": "Natural Light",
+        "artificialLight": "Artificial Light",
+        "ventilation": "Ventilation",
+        "security": "Security",
+        "elevatorAccess": "Elevator Access",
+        "plumbing": "Plumbing"
+      },
+      "parking": {
+        "evCharging": "EV Charging",
+        "covered": "Covered",
+        "lighting": "Lighting",
+        "security": "Security",
+        "easyAccess": "Easy Access"
+      }
     }
   }
 }

@@ -36,7 +36,7 @@ export function useFirestoreBuildings(): UseFirestoreBuildingsReturn {
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      console.error('❌ Error fetching buildings:', err);
+      console.error('[ERROR] Error fetching buildings:', err);
       setError(errorMessage);
     } finally {
       setLoading(false);

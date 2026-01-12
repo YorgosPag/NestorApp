@@ -5,14 +5,18 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { UnitBadge } from '@/core/badges';
+import type { UnitStatus } from '@/core/types/BadgeTypes';
 import { Button } from '@/components/ui/button';
 import { Package, Eye } from 'lucide-react';
 import { useBuildingRelationships } from '@/services/relationships/hooks/useEnterpriseRelationships';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Property } from '@/types/property-viewer';
-import { getStatusColor, getStatusLabel } from '@/lib/project-utils';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 function BuildingUnitsTable({ buildingId }: { buildingId: number }) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
   // 🏢 ENTERPRISE: Centralized icon sizes
   const iconSizes = useIconSizes();
 
@@ -50,17 +54,17 @@ function BuildingUnitsTable({ buildingId }: { buildingId: number }) {
   }, [router]);
   
   if (loading) {
-    return <div>Φόρτωση μονάδων...</div>;
+    return <div>{t('unitsTable.loading')}</div>;
   }
-  
+
   if (units.length === 0) {
     return (
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Package className={iconSizes.md}/>Μονάδες Κτιρίου</CardTitle>
+          <CardTitle className="flex items-center gap-2"><Package className={iconSizes.md}/>{t('unitsTable.title')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Δεν υπάρχουν καταχωρημένες μονάδες για αυτό το κτίριο.</p>
+          <p className="text-sm text-muted-foreground">{t('unitsTable.noUnits')}</p>
         </CardContent>
       </Card>
     );
@@ -69,18 +73,18 @@ function BuildingUnitsTable({ buildingId }: { buildingId: number }) {
   return (
     <Card className="mt-6">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2"><Package className={iconSizes.md}/>Μονάδες Κτιρίου</CardTitle>
-        <CardDescription>Λίστα των ακινήτων που περιλαμβάνονται σε αυτό το κτίριο.</CardDescription>
+        <CardTitle className="flex items-center gap-2"><Package className={iconSizes.md}/>{t('unitsTable.title')}</CardTitle>
+        <CardDescription>{t('unitsTable.description')}</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Κωδικός</TableHead>
-              <TableHead>Τύπος</TableHead>
-              <TableHead>Εμβαδόν</TableHead>
-              <TableHead>Κατάσταση</TableHead>
-              <TableHead className="text-right">Ενέργειες</TableHead>
+              <TableHead>{t('unitsTable.columns.code')}</TableHead>
+              <TableHead>{t('unitsTable.columns.type')}</TableHead>
+              <TableHead>{t('unitsTable.columns.area')}</TableHead>
+              <TableHead>{t('unitsTable.columns.status')}</TableHead>
+              <TableHead className="text-right">{t('unitsTable.columns.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -91,7 +95,7 @@ function BuildingUnitsTable({ buildingId }: { buildingId: number }) {
                 <TableCell>{unit.area || 0} m²</TableCell>
                 <TableCell>
                   <UnitBadge
-                    status={unit.status as any}
+                    status={unit.status as UnitStatus}
                     size="sm"
                     className="text-xs"
                   />
@@ -99,7 +103,7 @@ function BuildingUnitsTable({ buildingId }: { buildingId: number }) {
                 <TableCell className="text-right">
                   <Button variant="ghost" size="sm" onClick={() => handleViewUnit(unit.id)}>
                     <Eye className={`${iconSizes.sm} mr-2`} />
-                    Προβολή
+                    {t('unitsTable.view')}
                   </Button>
                 </TableCell>
               </TableRow>

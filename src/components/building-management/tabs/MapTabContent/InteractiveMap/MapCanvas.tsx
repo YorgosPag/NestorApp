@@ -3,6 +3,8 @@
 import React from 'react';
 import { Building2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
@@ -25,6 +27,8 @@ interface MapCanvasProps {
 }
 
 export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedLayer }: MapCanvasProps) {
+    // 🏢 ENTERPRISE: i18n hook for translations
+    const { t } = useTranslation('building');
     const iconSizes = useIconSizes();
 
     // 🏢 ENTERPRISE: CSS-in-JS hooks - NO inline styles, NO hardcoded colors
@@ -89,9 +93,9 @@ export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedL
 
                     {/* Map type indicator */}
                     <div className={`absolute top-4 right-4 ${colors.bg.primary} opacity-90 px-3 py-2 ${quick.input} text-sm font-medium`}>
-                        {mapView === 'street' ? 'Χάρτης δρόμων' :
-                            mapView === 'satellite' ? 'Δορυφορική όψη' :
-                                'Υβριδική όψη'}
+                        {mapView === 'street' ? t('tabs.map.views.street') :
+                            mapView === 'satellite' ? t('tabs.map.views.satellite') :
+                                t('tabs.map.views.hybrid')}
                     </div>
                 </div>
             </div>

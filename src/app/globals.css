@@ -1,10 +1,10 @@
+/* 🤖 AUTO-GENERATED DESIGN SYSTEM - Enterprise CSS Variables */
+/* ⚠️ @import MUST be at the very top (CSS spec requirement) */
+@import '../styles/design-system/generated/variables.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-
-/* 🤖 AUTO-GENERATED DESIGN SYSTEM - Enterprise CSS Variables */
-@import '../styles/design-system/generated/variables.css';
 
 /* Import dropdown z-index overrides */
 /* Dropdown overrides inlined for Next.js 16 compatibility */
@@ -438,10 +438,8 @@ div[style*="border: 1px solid green" i] {
   display: none !important;
 }
 
-/* Hide any div containing "OVERLAY TOOLS" text */
-div:has-text("OVERLAY TOOLS") {
-  display: none !important;
-}
+/* [REMOVED] Invalid CSS - :has-text() is Playwright selector, not CSS */
+/* Use data attributes or classes instead if you need to hide specific elements */
 
 /* CSS4 selector fallback - hide divs containing debug-related text */
 div[class*="debug" i],
@@ -690,7 +688,7 @@ body {
    ============================================================= */
 
 /* Prevent text wrapping in relationship headers */
-*:contains("Σχέσεις Επαφής"),
+/* [REMOVED] :contains() is jQuery/Sizzle selector, not valid CSS */
 [class*="card"] h1,
 [class*="card"] h2,
 [class*="card"] h3,

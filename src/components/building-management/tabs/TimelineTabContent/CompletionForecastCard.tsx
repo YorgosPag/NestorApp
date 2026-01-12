@@ -7,12 +7,16 @@ import { Separator } from '@/components/ui/separator';
 import { TrendingUp, Lightbulb } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatDate } from '@/lib/intl-utils';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface CompletionForecastCardProps {
-    milestones: { status: string }[];
+    milestones: { status: string; date: string }[];
 }
 
 export function CompletionForecastCard({ milestones }: CompletionForecastCardProps) {
+    // 🏢 ENTERPRISE: i18n hook for translations
+    const { t } = useTranslation('building');
     const iconSizes = useIconSizes();
     const lastMilestone = milestones[milestones.length - 1];
     const delayDays = 5; // Mock data for delay
@@ -22,18 +26,18 @@ export function CompletionForecastCard({ milestones }: CompletionForecastCardPro
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <TrendingUp className={`${iconSizes.md} text-green-500`} />
-                    Πρόβλεψη Ολοκλήρωσης
+                    {t('tabs.timeline.forecast.title')}
                 </CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="space-y-4">
                     <div>
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm text-muted-foreground">Αρχικό χρονοδιάγραμμα</span>
+                            <span className="text-sm text-muted-foreground">{t('tabs.timeline.forecast.originalSchedule')}</span>
                             <span className="font-medium">{formatDate(lastMilestone.date)}</span>
                         </div>
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm text-muted-foreground">Τρέχουσα πρόβλεψη</span>
+                            <span className="text-sm text-muted-foreground">{t('tabs.timeline.forecast.currentForecast')}</span>
                             <span className="font-medium text-orange-600">
                                 {(() => {
                                     const d = new Date(lastMilestone.date);
@@ -43,10 +47,10 @@ export function CompletionForecastCard({ milestones }: CompletionForecastCardPro
                             </span>
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className="text-sm text-muted-foreground">Καθυστέρηση</span>
+                            <span className="text-sm text-muted-foreground">{t('tabs.timeline.forecast.delay')}</span>
                             <CommonBadge
                                 status="building"
-                                customLabel={`+${delayDays} ημέρες`}
+                                customLabel={t('tabs.timeline.forecast.days', { days: delayDays })}
                                 variant="outline"
                                 className="bg-orange-100 text-orange-700"
                             />
@@ -58,9 +62,9 @@ export function CompletionForecastCard({ milestones }: CompletionForecastCardPro
                     <div className="text-sm text-muted-foreground">
                         <p className="mb-2 flex items-center gap-2">
                             <Lightbulb className={`${iconSizes.sm} text-yellow-500`} />
-                            <strong>Συμβουλή:</strong>
+                            <strong>{t('tabs.timeline.forecast.tip')}</strong>
                         </p>
-                        <p>Επιτάχυνση ηλ/μηχ εργασιών μπορεί να μειώσει την καθυστέρηση στις 2-3 ημέρες.</p>
+                        <p>{t('tabs.timeline.forecast.tipContent')}</p>
                     </div>
                 </div>
             </CardContent>

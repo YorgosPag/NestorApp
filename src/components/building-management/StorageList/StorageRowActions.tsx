@@ -12,6 +12,8 @@ import {
 import { Eye, Edit, Trash2, MoreVertical } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { StorageUnit } from '@/types/storage';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface StorageRowActionsProps {
   unit: StorageUnit;
@@ -20,23 +22,25 @@ interface StorageRowActionsProps {
 }
 
 export function StorageRowActions({ unit, onEdit, onDelete }: StorageRowActionsProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className={`${iconSizes.xl} p-0`}>
-          <span className="sr-only">Open menu</span>
+          <span className="sr-only">{t('storageActions.openMenu')}</span>
           <MoreVertical className={iconSizes.sm} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => onEdit(unit)}>
           <Eye className={`${iconSizes.sm} mr-2`} />
-          Προβολή
+          {t('storageActions.view')}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onEdit(unit)}>
           <Edit className={`${iconSizes.sm} mr-2`} />
-          Επεξεργασία
+          {t('storageActions.edit')}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
@@ -44,7 +48,7 @@ export function StorageRowActions({ unit, onEdit, onDelete }: StorageRowActionsP
           className="text-destructive focus:text-destructive"
         >
           <Trash2 className={`${iconSizes.sm} mr-2`} />
-          Διαγραφή
+          {t('storageActions.delete')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

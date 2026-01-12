@@ -1,11 +1,13 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { StorageUnit, StorageType } from '@/types/storage';
+import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 import { COLLECTIONS } from '@/config/firestore-collections';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { StorageList } from './StorageList';
 import { StorageForm } from './StorageForm/index';
@@ -13,6 +15,8 @@ import { StorageTabHeader } from './StorageTab/StorageTabHeader';
 import { StorageTabStats } from './StorageTab/StorageTabStats';
 import { StorageTabFilters } from './StorageTab/StorageTabFilters';
 import { StorageMapPlaceholder } from './StorageTab/StorageMapPlaceholder';
+// 🏢 ENTERPRISE: Centralized spinner component
+import { Spinner } from '@/components/ui/spinner';
 import {
   getStatusColor,
   getStatusLabel,
@@ -32,8 +36,22 @@ interface StorageTabProps {
 }
 
 export function StorageTab({ building }: StorageTabProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
+
   const [units, setUnits] = useState<StorageUnit[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // 🏢 ENTERPRISE: i18n-enabled wrapper functions for utilities
+  const translatedGetStatusLabel = useCallback(
+    (status: StorageStatus) => getStatusLabel(status, t),
+    [t]
+  );
+
+  const translatedGetTypeLabel = useCallback(
+    (type: StorageType) => getTypeLabel(type, t),
+    [t]
+  );
 
   // 🔥 ΦΟΡΤΩΣΗ ΠΡΑΓΜΑΤΙΚΩΝ STORAGE UNITS ΑΠΟ FIREBASE
   useEffect(() => {
@@ -68,8 +86,9 @@ export function StorageTab({ building }: StorageTabProps) {
   }, [building.name]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<StorageType | 'all'>('all');
-  const [filterStatus, setFilterStatus] = useState<any>('all');
-  const [filterFloor, setFilterFloor] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<StorageStatus | 'all'>('all');
+  // 🏢 ENTERPRISE: filterFloor ready for future floor filter UI implementation
+  const filterFloor = 'all'; // Static value until floor filter UI is added
   const [editingUnit, setEditingUnit] = useState<StorageUnit | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState<StorageType>('storage');
@@ -108,23 +127,35 @@ export function StorageTab({ building }: StorageTabProps) {
     setUnits(units => units.filter(u => u.id !== unitId));
   };
 
+  // 🏢 ENTERPRISE: Loading state with centralized spinner
+  if (loading) {
+    return (
+      <section className="flex items-center justify-center py-12" role="status" aria-live="polite">
+        <div className="text-center">
+          <Spinner size="large" className="mx-auto mb-4" />
+          <p className="text-muted-foreground">{t('tabs.storageTab.loading')}</p>
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      <StorageTabHeader 
+    <article className="space-y-6">
+      <StorageTabHeader
         buildingName={building.name}
         viewMode={viewMode}
         onSetViewMode={setViewMode}
         onAddNew={handleAddNew}
       />
-      
-      <StorageTabStats 
+
+      <StorageTabStats
         storageCount={stats.storageCount}
         parkingCount={stats.parkingCount}
         available={stats.available}
         totalValue={stats.totalValue}
       />
 
-      <StorageTabFilters 
+      <StorageTabFilters
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         filterType={filterType}
@@ -139,9 +170,9 @@ export function StorageTab({ building }: StorageTabProps) {
           onEdit={handleEdit}
           onDelete={handleDelete}
           getStatusColor={getStatusColor}
-          getStatusLabel={getStatusLabel}
+          getStatusLabel={translatedGetStatusLabel}
           getTypeIcon={getTypeIcon}
-          getTypeLabel={getTypeLabel}
+          getTypeLabel={translatedGetTypeLabel}
         />
       ) : (
         <StorageMapPlaceholder />
@@ -159,6 +190,6 @@ export function StorageTab({ building }: StorageTabProps) {
           formType={formType}
         />
       )}
-    </div>
+    </article>
   );
 }

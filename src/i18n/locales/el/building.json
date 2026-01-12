@@ -116,6 +116,34 @@
       "import": "Εισαγωγή Δεδομένων"
     }
   },
+  "viewMode": {
+    "list": "Προβολή Λίστας",
+    "grid": "Προβολή Πλέγματος",
+    "byType": "Ομαδοποίηση ανά Τύπο",
+    "byTypeTooltip": "Ομαδοποίηση των κτιρίων ανά τύπο (π.χ. Κατοικίες, Εμπορικό)",
+    "byStatus": "Ομαδοποίηση ανά Κατάσταση",
+    "byStatusTooltip": "Ομαδοποίηση των κτιρίων ανά κατάσταση (π.χ. Ενεργό, Υπό Κατασκευή)"
+  },
+  "filtersDisplay": {
+    "activeFilters": "Ενεργά φίλτρα:",
+    "clearAll": "Καθαρισμός όλων"
+  },
+  "card": {
+    "metrics": {
+      "area": "Επιφάνεια",
+      "floors": "Όροφοι",
+      "units": "Μονάδες",
+      "value": "Αξία",
+      "totalValueTooltip": "Συνολική αξία έργου"
+    }
+  },
+  "validation": {
+    "nameRequired": "Το όνομα είναι υποχρεωτικό",
+    "areaPositive": "Η επιφάνεια πρέπει να είναι μεγαλύτερη από 0",
+    "builtAreaExceeds": "Η δομημένη επιφάνεια δεν μπορεί να υπερβαίνει τη συνολική",
+    "floorsMinimum": "Οι όροφοι πρέπει να είναι τουλάχιστον 1",
+    "unitsMinimum": "Οι μονάδες πρέπει να είναι τουλάχιστον 1"
+  },
   "storages": {
     "header": {
       "title": "Διαχείριση Αποθηκών",
@@ -149,14 +177,42 @@
     }
   },
   "storage": {
+    "card": {
+      "labels": {
+        "floor": "Όροφος",
+        "area": "Επιφάνεια",
+        "price": "Τιμή",
+        "pricePerSqm": "€/m²",
+        "linked": "Συνδεδεμένο:"
+      },
+      "actions": {
+        "viewEdit": "Προβολή / Επεξεργασία",
+        "addToFavorites": "Προσθήκη στα αγαπημένα",
+        "removeFromFavorites": "Αφαίρεση από αγαπημένα",
+        "delete": "Διαγραφή"
+      }
+    },
     "form": {
+      "title": {
+        "newStorage": "Νέα Αποθήκη",
+        "editStorage": "Επεξεργασία Αποθήκης",
+        "newParking": "Νέα Θέση Στάθμευσης",
+        "editParking": "Επεξεργασία Θέσης Στάθμευσης"
+      },
+      "footer": {
+        "requiredFields": "* Υποχρεωτικά πεδία",
+        "cancel": "Ακύρωση",
+        "save": "Αποθήκευση",
+        "update": "Ενημέρωση"
+      },
       "specs": {
         "title": "Τοποθεσία & Προδιαγραφές",
         "labels": {
           "floor": "Όροφος",
           "area": "Επιφάνεια (m²)",
           "price": "Τιμή (€)",
-          "linkedProperty": "Συνδεδεμένο Ακίνητο"
+          "linkedProperty": "Συνδεδεμένο Ακίνητο",
+          "coordinates": "Συντεταγμένες (X, Y)"
         },
         "placeholders": {
           "area": "0.00",
@@ -164,7 +220,8 @@
           "linkedProperty": "π.χ. Δ2.1"
         },
         "helpers": {
-          "linkedProperty": "Κωδικός ακινήτου που συνοδεύει αυτή την μονάδα"
+          "linkedProperty": "Κωδικός ακινήτου που συνοδεύει αυτή την μονάδα",
+          "coordinates": "Θέση στον χάρτη του κτιρίου"
         }
       },
       "features": {
@@ -177,8 +234,41 @@
         "placeholders": {
           "newFeature": "Νέο χαρακτηριστικό..."
         }
+      },
+      "floors": {
+        "basement2": "Υπόγειο 2",
+        "basement1": "Υπόγειο 1",
+        "basement": "Υπόγειο",
+        "ground": "Ισόγειο",
+        "floor1": "1ος Όροφος",
+        "floor2": "2ος Όροφος",
+        "floor3": "3ος Όροφος",
+        "floor4": "4ος Όροφος",
+        "floor5": "5ος Όροφος",
+        "floor6": "6ος Όροφος",
+        "floor7": "7ος Όροφος"
+      },
+      "storageFeatures": {
+        "electricity": "Ηλεκτρικό ρεύμα",
+        "naturalLight": "Φυσικός φωτισμός",
+        "artificialLight": "Τεχνητός φωτισμός",
+        "airChamber": "Αεροθαλάμος",
+        "security": "Ασφάλεια",
+        "elevatorAccess": "Πρόσβαση ανελκυστήρα",
+        "plumbing": "Υδραυλικές εγκαταστάσεις"
+      },
+      "parkingFeatures": {
+        "evCharging": "Πρίζα φόρτισης EV",
+        "enclosed": "Κλειστό",
+        "lighting": "Φωτισμός",
+        "security": "Ασφάλεια",
+        "easyAccess": "Εύκολη πρόσβαση"
       }
     }
+  },
+  "details": {
+    "viewBuilding": "Προβολή Κτιρίου",
+    "percentComplete": "{{percent}}% ολοκληρωμένο"
   },
   "pages": {
     "buildings": {
@@ -234,17 +324,20 @@
         "mobileTitle": "Φίλτρα Αποθηκών"
       },
       "statusLabels": {
-        "available": "Διαθέσιμες",
-        "occupied": "Κατειλημμένες",
+        "available": "Διαθέσιμο",
+        "occupied": "Κατειλημμένο",
+        "sold": "Πωλήθηκε",
         "maintenance": "Συντήρηση",
-        "reserved": "Κρατημένες"
+        "reserved": "Κρατημένο"
       },
       "typeLabels": {
-        "large": "Μεγάλες",
-        "small": "Μικρές",
-        "basement": "Υπόγειες",
-        "ground": "Ισόγειες",
-        "special": "Ειδικές"
+        "storage": "Αποθήκη",
+        "parking": "Θέση Στάθμευσης",
+        "large": "Μεγάλη",
+        "small": "Μικρή",
+        "basement": "Υπόγεια",
+        "ground": "Ισόγεια",
+        "special": "Ειδική"
       }
     },
     "parking": {
@@ -295,6 +388,292 @@
       "label": "Πρόοδος Κτιρίου"
     }
   },
+  "stats": {
+    "totalUnits": "Σύνολο Μονάδων",
+    "soldUnits": "Πωλημένες Μονάδες",
+    "totalSoldArea": "Συνολικό Εμβαδόν Πωληθέντων"
+  },
+  "tabs": {
+    "general": {
+      "header": {
+        "edit": "Επεξεργασία",
+        "cancel": "Ακύρωση",
+        "save": "Αποθήκευση",
+        "saving": "Αποθήκευση...",
+        "saved": "Αποθηκεύτηκε"
+      },
+      "validation": {
+        "nameRequired": "Το όνομα είναι υποχρεωτικό",
+        "areaPositive": "Η επιφάνεια πρέπει να είναι μεγαλύτερη από 0",
+        "builtAreaExceeds": "Η δομημένη επιφάνεια δεν μπορεί να υπερβαίνει τη συνολική",
+        "floorsMin": "Οι όροφοι πρέπει να είναι τουλάχιστον 1",
+        "unitsMin": "Οι μονάδες πρέπει να είναι τουλάχιστον 1"
+      },
+      "basicInfo": {
+        "title": "Βασικές Πληροφορίες",
+        "buildingTitle": "Τίτλος Κτιρίου *",
+        "description": "Περιγραφή Κτιρίου",
+        "descriptionPlaceholder": "Περιγράψτε το κτίριο...",
+        "charactersCount": "{{count}}/500 χαρακτήρες"
+      },
+      "technicalSpecs": {
+        "title": "Τεχνικά Χαρακτηριστικά",
+        "totalArea": "Συνολική Επιφάνεια (m²) *",
+        "builtArea": "Δομημένη Επιφάνεια (m²) *",
+        "buildingRatio": "Συντελεστής δόμησης: {{ratio}}%",
+        "numberOfFloors": "Αριθμός Ορόφων *",
+        "numberOfUnits": "Αριθμός Μονάδων *",
+        "unitsPerFloor": "~{{count}} μονάδες/όροφο",
+        "autoCalculations": "Αυτόματοι Υπολογισμοί",
+        "costPerSqm": "Κόστος/m²:",
+        "buildingRatioShort": "Συντ. Δόμησης:",
+        "sqmPerUnit": "m²/Μονάδα:",
+        "valuePerUnit": "Αξία/Μονάδα:"
+      },
+      "legalInfo": {
+        "title": "Νομικά Στοιχεία",
+        "contractNumber": "Αριθμός Συμβολαίου",
+        "contractDate": "Ημερομηνία Συμβολαίου",
+        "contractFile": "Αρχείο Συμβολαίου",
+        "notary": "Συμβολαιογράφος"
+      },
+      "settings": {
+        "title": "Ρυθμίσεις",
+        "showOnWeb": "Προβολή στο διαδίκτυο"
+      },
+      "files": {
+        "title": "Αρχεία Έργου",
+        "addFiles": "Προσθήκη Αρχείων",
+        "newPhoto": "Νέα Φωτογραφία",
+        "clickToSelect": "Κάντε κλικ για επιλογή αρχείων",
+        "orDragAndDrop": "ή σύρετε και αφήστε εδώ",
+        "fileTypes": "PNG, JPG, PDF, DOC, XLS μέχρι 10MB",
+        "existingFiles": "Υπάρχοντα Αρχεία",
+        "uploadedOn": "Ανέβηκε {{date}}",
+        "uploadedToday": "Ανέβηκε σήμερα",
+        "view": "Προβολή",
+        "download": "Λήψη",
+        "uploadInProgress": "Ανέβασμα σε εξέλιξη...",
+        "filesCompleted": "{{completed}} από {{total}} αρχεία ολοκληρώθηκαν"
+      },
+      "location": {
+        "title": "Στοιχεία Τοποθεσίας",
+        "address": "Διεύθυνση",
+        "coordinates": "Συντεταγμένες",
+        "directions": "Οδηγίες μετάβασης",
+        "shareLocation": "Κοινοποίηση τοποθεσίας",
+        "areaInfo": "Πληροφορίες Περιοχής",
+        "areaType": "Τύπος περιοχής:",
+        "centralCommercial": "Κεντρικό - Εμπορικό",
+        "buildingRatio": "Συντ. δόμησης:",
+        "maxHeight": "Μέγιστο ύψος:",
+        "floors": "{{count}} όροφοι"
+      },
+      "progress": {
+        "title": "Πρόοδος Έργου",
+        "completionPercentage": "Ποσοστό Ολοκλήρωσης",
+        "completed": "{{percent}}% Ολοκληρωμένο",
+        "phases": {
+          "foundations": "Θεμέλια",
+          "construction": "Κατασκευή",
+          "finishing": "Ολοκληρώσεις",
+          "delivery": "Παράδοση"
+        }
+      }
+    },
+    "timeline": {
+      "header": {
+        "title": "Χρονοδιάγραμμα Έργου",
+        "subtitle": "Παρακολούθηση προόδου και milestones",
+        "completedCount": "{{completed}} / {{total}} ολοκληρώθηκαν"
+      },
+      "overallProgress": {
+        "title": "Συνολική Πρόοδος",
+        "label": "Συνολική Πρόοδος Κτιρίου",
+        "completed": "Ολοκληρωμένα",
+        "inProgress": "Σε εξέλιξη",
+        "pending": "Εκκρεμεί",
+        "daysRemaining": "Ημέρες απομένουν"
+      },
+      "milestones": {
+        "title": "Λεπτομερή Milestones"
+      },
+      "milestone": {
+        "progressLabel": "Πρόοδος milestone",
+        "nextSteps": "Επόμενα βήματα:",
+        "completedAt": "Ολοκληρώθηκε στις {{date}}"
+      },
+      "status": {
+        "completed": "Ολοκληρώθηκε",
+        "inProgress": "Σε εξέλιξη",
+        "pending": "Εκκρεμεί",
+        "delayed": "Καθυστέρηση",
+        "unknown": "Άγνωστο"
+      },
+      "forecast": {
+        "title": "Πρόβλεψη Ολοκλήρωσης",
+        "originalSchedule": "Αρχικό χρονοδιάγραμμα",
+        "currentForecast": "Τρέχουσα πρόβλεψη",
+        "delay": "Καθυστέρηση",
+        "days": "+{{days}} ημέρες",
+        "tip": "Συμβουλή:",
+        "tipContent": "Επιτάχυνση ηλ/μηχ εργασιών μπορεί να μειώσει την καθυστέρηση στις 2-3 ημέρες."
+      },
+      "criticalPath": {
+        "title": "Κρίσιμα Σημεία",
+        "mecInstallations": "Ηλ/Μηχ Εγκαταστάσεις",
+        "affectsDelivery": "Επηρεάζει την παράδοση",
+        "daysDelay": "{{days}} ημέρες καθυστέρηση",
+        "finalWorks": "Τελικές Εργασίες",
+        "dependsOnPrevious": "Εξαρτάται από προηγούμενο",
+        "waiting": "Αναμονή"
+      }
+    },
+    "map": {
+      "header": {
+        "title": "Χάρτης & Τοποθεσία",
+        "subtitle": "Διαδραστικός χάρτης με γειτονικά έργα",
+        "streetButton": "Δρόμος",
+        "satelliteButton": "Δορυφόρος",
+        "hybridButton": "Υβριδικός"
+      },
+      "analytics": {
+        "transportation": {
+          "title": "Συγκοινωνίες",
+          "metro": "Μετρό Ευαγγελισμός",
+          "busStop": "Στάση λεωφορείου",
+          "parking": "Πάρκινγκ"
+        },
+        "services": {
+          "title": "Υπηρεσίες",
+          "hospital": "Νοσοκομείο",
+          "schools": "Σχολεία",
+          "supermarket": "Σούπερ μάρκετ"
+        },
+        "areaRating": {
+          "title": "Αξιολόγηση Περιοχής",
+          "investmentIndex": "Επενδυτικός δείκτης",
+          "areaQuality": "Ποιότητα περιοχής",
+          "propertyPrices": "Τιμές ακινήτων"
+        }
+      },
+      "nearbyProjects": {
+        "title": "Γειτονικά Έργα",
+        "distance": "απόσταση",
+        "types": {
+          "commercial": "Εμπορικό",
+          "residential": "Κατοικίες",
+          "office": "Γραφεία"
+        },
+        "statuses": {
+          "active": "Σε εξέλιξη",
+          "completed": "Ολοκληρωμένο",
+          "planning": "Σχεδιασμός"
+        }
+      },
+      "controls": {
+        "showNearby": "Εμφάνιση γειτονικών έργων",
+        "filter": "Φίλτρο:",
+        "selectFilter": "Επιλογή φίλτρου",
+        "activeOnly": "Ενεργά μόνο",
+        "completedOnly": "Ολοκληρωμένα μόνο",
+        "measureDistance": "Μέτρηση απόστασης",
+        "zoomIn": "Μεγέθυνση",
+        "zoomOut": "Σμίκρυνση"
+      },
+      "views": {
+        "street": "Χάρτης δρόμων",
+        "satellite": "Δορυφορική όψη",
+        "hybrid": "Υβριδική όψη"
+      }
+    },
+    "storageTab": {
+      "searchPlaceholder": "Αναζήτηση κωδικού ή περιγραφής...",
+      "exportReport": "Εξαγωγή Αναφοράς",
+      "loading": "Φόρτωση αποθηκευτικών χώρων..."
+    },
+    "analytics": {
+      "title": "Advanced Analytics",
+      "subtitle": "Προχωρημένη ανάλυση δεδομένων και KPIs",
+      "exportReport": "Εξαγωγή Αναφοράς",
+      "timeRange": {
+        "placeholder": "Επιλογή χρονικού διαστήματος",
+        "lastMonth": "Τελευταίος μήνας",
+        "last3Months": "Τελευταίοι 3 μήνες",
+        "last6Months": "Τελευταίοι 6 μήνες",
+        "lastYear": "Τελευταίο έτος"
+      },
+      "views": {
+        "overview": "Επισκόπηση",
+        "financial": "Οικονομικά",
+        "progress": "Πρόοδος",
+        "comparison": "Σύγκριση"
+      },
+      "kpi": {
+        "costEfficiency": "Κοστολογική Αποδοτικότητα",
+        "timeEfficiency": "Χρονική Αποδοτικότητα",
+        "qualityScore": "Δείκτης Ποιότητας",
+        "roi": "ROI",
+        "profitMargin": "Περιθώριο Κέρδους",
+        "riskLevel": "Επίπεδο Κινδύνου",
+        "excellent": "Άριστα",
+        "good": "Καλά",
+        "needsImprovement": "Χρήζει βελτίωσης",
+        "exceptional": "Εξαιρετικό",
+        "aboveTarget": "Πάνω από στόχο",
+        "withinTarget": "Εντός στόχων",
+        "underControl": "Υπό έλεγχο"
+      },
+      "comparison": {
+        "title": "Σύγκριση με Παρόμοια Έργα",
+        "metrics": {
+          "costPerSqm": "Κόστος/m²",
+          "completionTime": "Χρόνος ολοκλήρωσης",
+          "workQuality": "Ποιότητα εργασιών",
+          "efficiency": "Αποδοτικότητα"
+        },
+        "current": "Τρέχον:",
+        "average": "Μέσος όρος:",
+        "better": "Καλύτερα",
+        "worse": "Χειρότερα"
+      },
+      "progress": {
+        "title": "Ανάλυση Προόδου",
+        "totalProgress": "Συνολική Πρόοδος",
+        "efficiency": "Αποδοτικότητα",
+        "daysDelay": "Ημέρες Καθυστέρηση",
+        "withinAcceptableLimits": "Εντός αποδεκτών ορίων",
+        "forecastsAndRecommendations": "Προβλέψεις & Συστάσεις",
+        "positivePoints": "Θετικά Σημεία:",
+        "positive1": "Ποιότητα εργασιών πάνω από τα standards",
+        "positive2": "Κόστος υλικών εντός προϋπολογισμού",
+        "positive3": "Ομάδα εργασίας αποδοτική",
+        "suggestedImprovements": "Προτεινόμενες Βελτιώσεις:",
+        "improvement1": "Επιτάχυνση ηλ/μηχ εγκαταστάσεων",
+        "improvement2": "Προπαραγγελία υλικών τελικών εργασιών",
+        "improvement3": "Συντονισμός με τρίτους (ανελκυστήρες)"
+      },
+      "financial": {
+        "totalBudget": "Συνολικός Προϋπολογισμός",
+        "spentCost": "Δαπανηθέν Κόστος",
+        "remainingBudget": "Υπόλοιπο Budget",
+        "costPerSqm": "Κόστος ανά m²",
+        "cashFlows": "Ταμειακές Ροές",
+        "monthlyExpense": "Μηνιαία δαπάνη:",
+        "cumulative": "Σωρευτικό:",
+        "withinBudget": "Εντός budget",
+        "attention": "Προσοχή"
+      },
+      "overview": {
+        "costAnalysis": "Ανάλυση Κόστους",
+        "analysis": "Ανάλυση",
+        "analysisText": "Το κόστος υλικών είναι 5% υψηλότερο από τον μέσο όρο της αγοράς. Συνιστάται επαναδιαπραγμάτευση με προμηθευτές.",
+        "progressVsPlanned": "Πρόοδος vs Προγραμματισμός",
+        "planned": "Προγρ:",
+        "actual": "Πραγμ:"
+      }
+    }
+  },
   "customers": {
     "title": "Πελάτες Κτιρίου",
     "loading": "Φόρτωση πελατών...",
@@ -320,6 +699,222 @@
       "ariaLabel": "Λίστα Αποθηκών",
       "entityName": "Αποθήκες",
       "searchPlaceholder": "Αναζήτηση αποθηκών..."
+    }
+  },
+  "unitsTable": {
+    "title": "Μονάδες Κτιρίου",
+    "description": "Λίστα των ακινήτων που περιλαμβάνονται σε αυτό το κτίριο.",
+    "noUnits": "Δεν υπάρχουν καταχωρημένες μονάδες για αυτό το κτίριο.",
+    "loading": "Φόρτωση μονάδων...",
+    "columns": {
+      "code": "Κωδικός",
+      "type": "Τύπος",
+      "area": "Εμβαδόν",
+      "status": "Κατάσταση",
+      "actions": "Ενέργειες"
+    },
+    "view": "Προβολή"
+  },
+  "projectSelector": {
+    "title": "Σύνδεση με Έργο",
+    "label": "Ανήκει σε Έργο",
+    "placeholder": "Επιλέξτε έργο...",
+    "noProject": "Χωρίς έργο",
+    "save": "Αποθήκευση",
+    "saving": "Αποθήκευση...",
+    "success": "Το κτίριο συνδέθηκε με το έργο!",
+    "error": "Σφάλμα κατά την αποθήκευση",
+    "loading": "Φόρτωση έργων...",
+    "currentProject": "Τρέχον έργο:"
+  },
+  "videos": {
+    "title": "Videos Κτιρίου",
+    "upload": "Ανέβασμα Video",
+    "addVideo": "Προσθήκη Video"
+  },
+  "placeholder": {
+    "comingSoon": "Αυτή η ενότητα θα αναπτυχθεί σύντομα. Θα περιέχει όλες τις απαραίτητες λειτουργίες για τη διαχείριση {{title}}.",
+    "add": "Προσθήκη {{title}}"
+  },
+  "emptyState": {
+    "selectBuilding": "Επιλέξτε ένα κτίριο",
+    "selectBuildingDescription": "Επιλέξτε ένα κτίριο από τη λίστα για να δείτε τις λεπτομέρειές του."
+  },
+  "emptyList": {
+    "noUnitsFound": "Δεν βρέθηκαν μονάδες",
+    "noUnitsDescription": "Δεν υπάρχουν αποθήκες ή θέσεις στάθμευσης που να ταιριάζουν με τα κριτήρια αναζήτησης."
+  },
+  "storageMap": {
+    "title": "Χάρτης Αποθηκών & Parking",
+    "description": "Χάρτης αποθηκών & θέσεων στάθμευσης",
+    "comingSoon": "Θα αναπτυχθεί σύντομα"
+  },
+  "storageSummary": {
+    "available": "Διαθέσιμα",
+    "totalValue": "Συνολική Αξία",
+    "totalArea": "Συνολική Επιφάνεια",
+    "avgPricePerSqm": "Μέσος όρος €/m²"
+  },
+  "storageActions": {
+    "openMenu": "Άνοιγμα μενού",
+    "view": "Προβολή",
+    "edit": "Επεξεργασία",
+    "delete": "Διαγραφή"
+  },
+  "storageListHeader": {
+    "results": "{{count}} αποτελέσματα",
+    "selected": "{{count}} επιλεγμένα",
+    "deleteSelected": "Διαγραφή επιλεγμένων",
+    "cardsView": "Κάρτες",
+    "tableView": "Πίνακας"
+  },
+  "storageTabHeader": {
+    "title": "Αποθήκες & Parking",
+    "description": "Διαχείριση αποθηκών και θέσεων στάθμευσης του κτιρίου {{buildingName}}",
+    "listView": "Λίστα",
+    "mapView": "Χάρτης",
+    "newStorage": "Νέα Αποθήκη",
+    "newParking": "Νέα Θέση Στάθμευσης"
+  },
+  "storageTable": {
+    "selectAll": "Επιλογή όλων",
+    "columns": {
+      "code": "Κωδικός",
+      "type": "Τύπος",
+      "floor": "Όροφος",
+      "area": "Επιφάνεια",
+      "price": "Τιμή",
+      "status": "Κατάσταση",
+      "linked": "Συνδεδεμένο",
+      "actions": "Ενέργειες"
+    }
+  },
+  "storageStats": {
+    "storages": "Αποθήκες",
+    "parkingSpaces": "Θέσεις Στάθμευσης",
+    "available": "Διαθέσιμα",
+    "totalValue": "Συνολική Αξία"
+  },
+  "tabs": {
+    "timeline": {
+      "header": {
+        "title": "Χρονοδιάγραμμα Έργου",
+        "subtitle": "Παρακολούθηση προόδου και ορόσημων κατασκευής",
+        "completedCount": "{{completed}}/{{total}} Ολοκληρωμένα"
+      },
+      "milestones": {
+        "title": "Ορόσημα Κατασκευής",
+        "projectStart": "Έναρξη Έργου",
+        "projectStartDesc": "Υπογραφή συμβολαίου και έναρξη εργασιών",
+        "foundation": "Θεμέλια & Υπόγειο",
+        "foundationDesc": "Ολοκλήρωση εκσκαφών και κατασκευή θεμελίων",
+        "structure": "Κατασκευή Φέροντα Οργανισμού",
+        "structureDesc": "Σκελετός κτιρίου - όροφοι 1-7",
+        "walls": "Τοιχοποιίες & Στεγανοποίηση",
+        "wallsDesc": "Κλείσιμο κτιρίου και στεγανότητα",
+        "systems": "Ηλ/Μηχ Εγκαταστάσεις",
+        "systemsDesc": "Ηλεκτρολογικές και μηχανολογικές εγκαταστάσεις",
+        "finishing": "Τελικές Εργασίες",
+        "finishingDesc": "Χρωματισμοί, δάπεδα, διακοσμητικά στοιχεία",
+        "delivery": "Παράδοση Έργου",
+        "deliveryDesc": "Τελικός έλεγχος και παράδοση στον πελάτη"
+      },
+      "status": {
+        "completed": "Ολοκληρώθηκε",
+        "inProgress": "Σε εξέλιξη",
+        "pending": "Εκκρεμεί",
+        "delayed": "Καθυστέρηση",
+        "unknown": "Άγνωστο"
+      },
+      "overallProgress": {
+        "title": "Συνολική Πρόοδος",
+        "label": "Πρόοδος κατασκευής",
+        "completed": "Ολοκληρωμένα",
+        "inProgress": "Σε Εξέλιξη",
+        "pending": "Εκκρεμούν",
+        "daysRemaining": "Ημέρες"
+      },
+      "criticalPath": {
+        "title": "Κρίσιμη Διαδρομή",
+        "mecInstallations": "Η/Μ Εγκαταστάσεις",
+        "affectsDelivery": "Επηρεάζει την παράδοση",
+        "daysDelay": "+{{days}} ημέρες",
+        "finalWorks": "Τελικές Εργασίες",
+        "dependsOnPrevious": "Εξαρτάται από προηγούμενο",
+        "waiting": "Αναμονή"
+      },
+      "forecast": {
+        "title": "Πρόβλεψη Ολοκλήρωσης",
+        "originalSchedule": "Αρχικό Πρόγραμμα",
+        "currentForecast": "Τρέχουσα Πρόβλεψη",
+        "delay": "Καθυστέρηση",
+        "days": "+{{days}} ημέρες",
+        "tip": "Συμβουλή",
+        "tipContent": "Επιτάχυνση των Η/Μ εργασιών μπορεί να μειώσει την καθυστέρηση."
+      }
+    }
+  },
+  "map": {
+    "interactiveMap": "Διαδραστικός Χάρτης"
+  },
+  "analytics": {
+    "costCategories": {
+      "materials": "Υλικά",
+      "labor": "Εργατικά",
+      "equipment": "Μηχανήματα",
+      "other": "Άλλα"
+    },
+    "months": {
+      "jan": "Ιαν",
+      "feb": "Φεβ",
+      "mar": "Μαρ",
+      "apr": "Απρ",
+      "may": "Μάι",
+      "jun": "Ιουν",
+      "jul": "Ιουλ",
+      "aug": "Αυγ",
+      "sep": "Σεπ",
+      "oct": "Οκτ",
+      "nov": "Νοε",
+      "dec": "Δεκ"
+    },
+    "riskLevels": {
+      "low": "Χαμηλός",
+      "medium": "Μέτριος",
+      "high": "Υψηλός"
+    }
+  },
+  "storageForm": {
+    "floors": {
+      "basement2": "Υπόγειο 2",
+      "basement1": "Υπόγειο 1",
+      "basement": "Υπόγειο",
+      "ground": "Ισόγειο",
+      "floor1": "1ος Όροφος",
+      "floor2": "2ος Όροφος",
+      "floor3": "3ος Όροφος",
+      "floor4": "4ος Όροφος",
+      "floor5": "5ος Όροφος",
+      "floor6": "6ος Όροφος",
+      "floor7": "7ος Όροφος"
+    },
+    "features": {
+      "storage": {
+        "electricity": "Ηλεκτρικό ρεύμα",
+        "naturalLight": "Φυσικός φωτισμός",
+        "artificialLight": "Τεχνητός φωτισμός",
+        "ventilation": "Αεροθάλαμος",
+        "security": "Ασφάλεια",
+        "elevatorAccess": "Πρόσβαση ανελκυστήρα",
+        "plumbing": "Υδραυλικές εγκαταστάσεις"
+      },
+      "parking": {
+        "evCharging": "Πρίζα φόρτισης EV",
+        "covered": "Κλειστό",
+        "lighting": "Φωτισμός",
+        "security": "Ασφάλεια",
+        "easyAccess": "Εύκολη πρόσβαση"
+      }
     }
   }
 }

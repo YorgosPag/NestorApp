@@ -8,6 +8,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { TRANSITION_PRESETS, HOVER_BACKGROUND_EFFECTS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface Props {
   onEdit: () => void;
@@ -17,6 +19,8 @@ interface Props {
 }
 
 export function StorageCardActions({ onEdit, onDelete, onToggleFavorite, isFavorite }: Props) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   return (
@@ -30,17 +34,17 @@ export function StorageCardActions({ onEdit, onDelete, onToggleFavorite, isFavor
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
             <Eye className={`${iconSizes.sm} mr-2`} />
-            Προβολή / Επεξεργασία
+            {t('storage.card.actions.viewEdit')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}>
             <Star className={cn(`${iconSizes.sm} mr-2`, isFavorite && "text-yellow-500 fill-yellow-500")} />
-            {isFavorite ? 'Αφαίρεση από αγαπημένα' : 'Προσθήκη στα αγαπημένα'}
+            {isFavorite ? t('storage.card.actions.removeFromFavorites') : t('storage.card.actions.addToFavorites')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive focus:text-destructive">
             <Trash2 className={`${iconSizes.sm} mr-2`} />
-            Διαγραφή
+            {t('storage.card.actions.delete')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

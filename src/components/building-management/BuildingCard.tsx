@@ -10,6 +10,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Building } from './BuildingsPageContent';
 import { COMPLEX_HOVER_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { BuildingCardContent } from './BuildingCard/BuildingCardContent';
@@ -28,6 +30,8 @@ export function BuildingCard({
   isSelected,
   onClick,
 }: BuildingCardProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const [isFavorite, setIsFavorite] = useState(false);
@@ -61,7 +65,7 @@ export function BuildingCard({
           },
           {
             type: 'progress',
-            value: `${building.progress}% ολοκληρωμένο`,
+            value: t('details.percentComplete', { percent: building.progress }),
             variant: 'secondary',
             size: 'sm'
           }

@@ -6,7 +6,7 @@ import type { Building } from '@/components/building-management/BuildingsPageCon
 import { defaultBuildingFilters, type BuildingFilterState } from '@/components/core/AdvancedFilters';
 
 export function useBuildingsPageState(initialBuildings: Building[]) {
-  // 🏢 ENTERPRISE: URL parameter handling for contextual navigation
+  // [ENTERPRISE] URL parameter handling for contextual navigation
   const searchParams = useSearchParams();
   const buildingIdFromUrl = searchParams.get('buildingId');
 
@@ -17,7 +17,7 @@ export function useBuildingsPageState(initialBuildings: Building[]) {
   // Use centralized filter state
   const [filters, setFilters] = useState<BuildingFilterState>(defaultBuildingFilters);
 
-  // 🏢 ENTERPRISE: Auto-selection from URL parameter (contextual navigation)
+  // [ENTERPRISE] Auto-selection from URL parameter (contextual navigation)
   useEffect(() => {
     if (!initialBuildings.length) return;
 
@@ -25,7 +25,7 @@ export function useBuildingsPageState(initialBuildings: Building[]) {
       // URL parameter has priority - find and select the building
       const found = initialBuildings.find(b => b.id === buildingIdFromUrl);
       if (found) {
-        console.log('🏢 [useBuildingsPageState] Auto-selecting building from URL:', found.name);
+        console.log('[useBuildingsPageState] Auto-selecting building from URL:', found.name);
         setSelectedBuilding(found);
         return;
       }
@@ -39,7 +39,7 @@ export function useBuildingsPageState(initialBuildings: Building[]) {
 
   const filteredBuildings = useMemo(() => {
     return initialBuildings.filter(building => {
-      // Search filter - εκτεταμένη αναζήτηση
+      // Search filter - extended search
       if (filters.searchTerm) {
         const searchLower = filters.searchTerm.toLowerCase();
         const matchesSearch = building.name.toLowerCase().includes(searchLower) ||

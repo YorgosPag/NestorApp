@@ -7,7 +7,7 @@ import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effect
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-// 🏢 ENTERPRISE: Import from canonical location
+// [ENTERPRISE] Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { BuildingsList } from './BuildingsList';
 import { BuildingDetails } from './BuildingDetails';
@@ -23,29 +23,29 @@ import {
   Trash2
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-// 🏢 ENTERPRISE: Navigation context for breadcrumb sync
+// [ENTERPRISE] Navigation context for breadcrumb sync
 import { useNavigation } from '@/components/navigation/core/NavigationContext';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { BuildingsGroupedView } from './BuildingsPage/BuildingsGroupedView';
 import { useBuildingsPageState } from '@/hooks/useBuildingsPageState';
 import { useBuildingStats } from '@/hooks/useBuildingStats';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
-import { getCompanies, getProjectsList } from './building-services';
+// [ENTERPRISE] building-services removed - using NavigationContext for companies/projects
 import { AdvancedFiltersPanel, buildingFiltersConfig } from '@/components/core/AdvancedFilters';
 import { ListContainer, PageContainer } from '@/core/containers';
-// 🏢 ENTERPRISE: i18n - Full internationalization support
+// [ENTERPRISE] i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // Re-export Building type for backward compatibility
 export type { Building } from '@/types/building/contracts';
 
 export function BuildingsPageContent() {
-  // 🏢 ENTERPRISE: i18n hook for translations
+  // [ENTERPRISE] i18n hook for translations
   const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
-  // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
+  // [ENTERPRISE] Navigation context for breadcrumb sync
   const { companies, projects, syncBreadcrumb } = useNavigation();
 
   // Load buildings from Firestore
@@ -66,7 +66,7 @@ export function BuildingsPageContent() {
   // Mobile-only filter toggle state
   const [showFilters, setShowFilters] = React.useState(false);
 
-  // 🏢 ENTERPRISE: Sync selectedBuilding with NavigationContext for breadcrumb display
+  // [ENTERPRISE] Sync selectedBuilding with NavigationContext for breadcrumb display
   React.useEffect(() => {
     if (selectedBuilding && companies.length > 0 && projects.length > 0) {
       // Find the project and company this building belongs to
@@ -88,7 +88,7 @@ export function BuildingsPageContent() {
 
   const buildingsStats = useBuildingStats(baseFilteredBuildings);
 
-  // 🔥 NEW: Dashboard card filtering state
+  // [NEW] Dashboard card filtering state
   const [activeCardFilter, setActiveCardFilter] = React.useState<string | null>(null);
 
   // Transform stats to UnifiedDashboard format
@@ -107,13 +107,13 @@ export function BuildingsPageContent() {
     },
     {
       title: t('pages.buildings.dashboard.totalValue'),
-      value: `€${(buildingsStats.totalValue / 1000000).toFixed(1)}M`,
+      value: `\u20AC${(buildingsStats.totalValue / 1000000).toFixed(1)}M`,
       icon: BarChart3,
       color: "purple"
     },
     {
       title: t('pages.buildings.dashboard.totalArea'),
-      value: `${(buildingsStats.totalArea / 1000).toFixed(1)}K m²`,
+      value: `${(buildingsStats.totalArea / 1000).toFixed(1)}K m\u00B2`,
       icon: MapPin,
       color: "orange"
     },
@@ -131,13 +131,13 @@ export function BuildingsPageContent() {
     }
   ];
 
-  // 🔥 NEW: Handle dashboard card clicks για filtering
-  const handleCardClick = (stat: DashboardStat, index: number) => {
+  // [NEW] Handle dashboard card clicks for filtering
+  const handleCardClick = (stat: DashboardStat) => {
     const cardTitle = stat.title;
     const totalBuildingsTitle = t('pages.buildings.dashboard.totalBuildings');
     const activeProjectsTitle = t('pages.buildings.dashboard.activeProjects');
 
-    // Toggle filter: αν κλικάρουμε την ίδια κάρτα, αφαιρούμε το φίλτρο
+    // Toggle filter: if we click the same card, remove the filter
     if (activeCardFilter === cardTitle) {
       setActiveCardFilter(null);
       // Reset filters to show all buildings
@@ -190,8 +190,8 @@ export function BuildingsPageContent() {
       <TooltipProvider>
         <PageContainer ariaLabel={t('pages.buildings.error.pageLabel')}>
           <section className="flex-1 flex items-center justify-center" role="alert" aria-label={t('pages.buildings.error.ariaLabel')}>
-            <div className="text-center text-red-500">
-              <p className="mb-4">❌ {t('pages.buildings.error.title')}</p>
+            <div className={`text-center ${colors.text.error}`}>
+              <p className="mb-4">[ERROR] {t('pages.buildings.error.title')}</p>
               <p className="text-sm">{buildingsError}</p>
             </div>
           </section>
@@ -234,7 +234,7 @@ export function BuildingsPageContent() {
               config={buildingFiltersConfig}
               filters={filters}
               onFiltersChange={setFilters}
-              defaultOpen={true}
+              defaultOpen
             />
           </aside>
         )}
@@ -242,7 +242,7 @@ export function BuildingsPageContent() {
         <ListContainer>
           {viewMode === 'list' ? (
             <>
-              {/* 🖥️ DESKTOP: Standard split layout */}
+              {/* [DESKTOP] Standard split layout */}
               <section className="hidden md:flex flex-1 gap-4 min-h-0" role="region" aria-label={t('pages.buildings.views.desktopView')}>
                 <BuildingsList
                   buildings={baseFilteredBuildings}
@@ -252,7 +252,7 @@ export function BuildingsPageContent() {
                 <BuildingDetails building={selectedBuilding!} />
               </section>
 
-              {/* 📱 MOBILE: Show only BuildingsList when no building is selected */}
+              {/* [MOBILE] Show only BuildingsList when no building is selected */}
               <section className={`md:hidden w-full ${selectedBuilding ? 'hidden' : 'block'}`} role="region" aria-label={t('pages.buildings.views.mobileList')}>
                 <BuildingsList
                   buildings={baseFilteredBuildings}
@@ -261,7 +261,7 @@ export function BuildingsPageContent() {
                 />
               </section>
 
-              {/* 📱 MOBILE: Slide-in BuildingDetails when building is selected */}
+              {/* [MOBILE] Slide-in BuildingDetails when building is selected */}
               <MobileDetailsSlideIn
                 isOpen={!!selectedBuilding}
                 onClose={() => setSelectedBuilding(null)}

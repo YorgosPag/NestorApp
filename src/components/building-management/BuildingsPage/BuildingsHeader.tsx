@@ -1,15 +1,15 @@
 'use client';
 
 /**
- * 🏢 ENTERPRISE BuildingsHeader with i18n support
+ * [ENTERPRISE] BuildingsHeader with i18n support
  * ZERO HARDCODED STRINGS - All labels from centralized translations
  */
 
 import React from 'react';
 import { Filter } from 'lucide-react';
-// 🏢 ENTERPRISE: Using centralized entity config for Building icon
+// [ENTERPRISE] Using centralized entity config for Building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
-// 🏢 ENTERPRISE: Breadcrumb from centralized navigation
+// [ENTERPRISE] Breadcrumb from centralized navigation
 import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -18,10 +18,10 @@ import { PageHeader } from '@/core/headers';
 import { CompactToolbar, buildingsConfig } from '@/components/core/CompactToolbar';
 import type { ViewMode } from '@/core/headers';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-// 🏢 ENTERPRISE: i18n - Full internationalization support
+// [ENTERPRISE] i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
-// 🏢 ENTERPRISE: Type for Buildings view modes (avoids `as any`)
+// [ENTERPRISE] Type for Buildings view modes (avoids `as any`)
 type BuildingsViewMode = 'list' | 'grid' | 'byType' | 'byStatus';
 
 interface BuildingsHeaderProps {
@@ -44,7 +44,7 @@ export function BuildingsHeader({
   showFilters,
   setShowFilters,
 }: BuildingsHeaderProps) {
-  // 🏢 ENTERPRISE: i18n hook
+  // [ENTERPRISE] i18n hook
   const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
@@ -59,7 +59,7 @@ export function BuildingsHeader({
         title: t('header.title'),
         subtitle: t('header.subtitle')
       }}
-      // 🏢 ENTERPRISE: Breadcrumb για ιεραρχική πλοήγηση
+      // [ENTERPRISE] Breadcrumb for hierarchical navigation
       breadcrumb={<NavigationBreadcrumb />}
       actions={{
         showDashboard,

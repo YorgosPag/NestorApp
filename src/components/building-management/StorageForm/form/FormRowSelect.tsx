@@ -9,6 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface Props {
   label: string;
@@ -20,12 +22,15 @@ interface Props {
 }
 
 export function FormRowSelect({ label, value, options, onChange, required, placeholder }: Props) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('common');
+
   return (
     <div className="space-y-2">
       <Label>{label}{required && ' *'}</Label>
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger>
-          <SelectValue placeholder={placeholder ?? 'Επιλέξτε...'} />
+          <SelectValue placeholder={placeholder ?? t('placeholders.selectOption')} />
         </SelectTrigger>
         <SelectContent>
           {options.map(opt => (

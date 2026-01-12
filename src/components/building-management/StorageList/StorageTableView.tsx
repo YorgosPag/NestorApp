@@ -12,6 +12,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from "@/components/ui/checkbox";
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 import { StorageTableRow } from './StorageTableRow';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface StorageTableViewProps {
   units: StorageUnit[];
@@ -38,6 +40,8 @@ export function StorageTableView({
   getTypeIcon,
   getTypeLabel
 }: StorageTableViewProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
   const allSelected = selectedUnits.length === units.length && units.length > 0;
   const isIndeterminate = selectedUnits.length > 0 && !allSelected;
 
@@ -52,18 +56,18 @@ export function StorageTableView({
                   <Checkbox
                     checked={allSelected}
                     onCheckedChange={onSelectAll}
-                    aria-label="Select all rows"
+                    aria-label={t('storageTable.selectAll')}
                     data-state={isIndeterminate ? 'indeterminate' : (allSelected ? 'checked' : 'unchecked')}
                   />
                 </TableHead>
-                <TableHead>Κωδικός</TableHead>
-                <TableHead>Τύπος</TableHead>
-                <TableHead>Όροφος</TableHead>
-                <TableHead>Επιφάνεια</TableHead>
-                <TableHead>Τιμή</TableHead>
-                <TableHead>Κατάσταση</TableHead>
-                <TableHead>Συνδεδεμένο</TableHead>
-                <TableHead className="text-right">Ενέργειες</TableHead>
+                <TableHead>{t('storageTable.columns.code')}</TableHead>
+                <TableHead>{t('storageTable.columns.type')}</TableHead>
+                <TableHead>{t('storageTable.columns.floor')}</TableHead>
+                <TableHead>{t('storageTable.columns.area')}</TableHead>
+                <TableHead>{t('storageTable.columns.price')}</TableHead>
+                <TableHead>{t('storageTable.columns.status')}</TableHead>
+                <TableHead>{t('storageTable.columns.linked')}</TableHead>
+                <TableHead className="text-right">{t('storageTable.columns.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

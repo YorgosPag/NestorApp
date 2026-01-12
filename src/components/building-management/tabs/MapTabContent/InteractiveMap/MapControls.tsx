@@ -58,10 +58,10 @@ export function MapControls({
 
             <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm">
-                    <ZoomIn className={`${iconSizes.sm} mr-2`} /> Zoom In
+                    <ZoomIn className={`${iconSizes.sm} mr-2`} /> {t('tabs.map.controls.zoomIn')}
                 </Button>
                 <Button variant="outline" size="sm">
-                    <ZoomOut className={`${iconSizes.sm} mr-2`} /> Zoom Out
+                    <ZoomOut className={`${iconSizes.sm} mr-2`} /> {t('tabs.map.controls.zoomOut')}
                 </Button>
                 <Button variant="outline" size="sm">
                     <Ruler className={`${iconSizes.sm} mr-2`} /> {t('tabs.map.controls.measureDistance')}

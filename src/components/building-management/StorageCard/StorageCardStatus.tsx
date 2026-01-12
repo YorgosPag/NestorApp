@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { UnitBadge, CommonBadge } from '@/core/badges';
+import type { UnitStatus } from '@/core/types/BadgeTypes';
 import { Star } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
@@ -22,7 +23,7 @@ export function StorageCardStatus({ unit, isFavorite, getStatusColor, getStatusL
     <div className="absolute bottom-3 left-3 right-3 z-10 flex justify-between items-end">
       <div className='flex items-center gap-2'>
         <UnitBadge
-          status={unit.status as any}
+          status={unit.status as UnitStatus}
           size="sm"
           className="text-xs text-white shadow-sm pointer-events-none"
         />

@@ -9,6 +9,8 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // BUILDING MANAGEMENT: PURE RADIX UI FILTER SELECT
@@ -41,16 +43,20 @@ export function FilterSelect({
   placeholder,
   className
 }: FilterSelectProps) {
-  // 🏢 ENTERPRISE: Smart label mapping για status values
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
+
+  // 🏢 ENTERPRISE: Smart label mapping για status values with i18n
   const getDisplayLabel = (name: string): string => {
-    const statusLabels: Record<string, string> = {
-      'active': 'Ενεργά',
-      'construction': 'Υπό Κατασκευή',
-      'planned': 'Σχεδιασμένα',
-      'completed': 'Ολοκληρωμένα'
+    const statusKeys: Record<string, string> = {
+      'active': 'filters.states.active',
+      'construction': 'filters.states.construction',
+      'planned': 'filters.states.planned',
+      'completed': 'filters.states.completed'
     };
 
-    return statusLabels[name] || name; // Fallback to original name
+    const key = statusKeys[name];
+    return key ? t(key) : name; // Fallback to original name
   };
 
   return (

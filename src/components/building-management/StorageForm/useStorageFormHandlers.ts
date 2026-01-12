@@ -5,6 +5,9 @@ import { useMemo, useCallback } from 'react';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 import { generateAutoCode, validateForm } from './storageFormUtils';
 
+// 🏢 ENTERPRISE: Type for translate function (from useTranslation hook)
+type TranslateFunction = (key: string) => string;
+
 interface UseStorageFormHandlersProps {
     unit: StorageUnit | null;
     formData: Partial<StorageUnit>;
@@ -12,6 +15,8 @@ interface UseStorageFormHandlersProps {
     setErrors: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>;
     onSave: (unit: StorageUnit) => void;
     updateField: (field: keyof StorageUnit, value: StorageUnit[keyof StorageUnit]) => void;
+    // 🏢 ENTERPRISE: Optional translate function for i18n support
+    t?: TranslateFunction;
 }
 
 export function useStorageFormHandlers({
@@ -20,7 +25,8 @@ export function useStorageFormHandlers({
     formType,
     setErrors,
     onSave,
-    updateField
+    updateField,
+    t
 }: UseStorageFormHandlersProps) {
 
     const handleGenerateAutoCode = useCallback(() => {
@@ -54,11 +60,19 @@ export function useStorageFormHandlers({
         }
     }, [formData, onSave, unit, setErrors]);
 
-    const formTitle = useMemo(() => (
-        unit
-            ? (formType === 'storage' ? 'Επεξεργασία Αποθήκης' : 'Επεξεργασία Θέσης Στάθμευσης')
-            : (formType === 'storage' ? 'Νέα Αποθήκη' : 'Νέα Θέση Στάθμευσης')
-    ), [unit, formType]);
+    // 🏢 ENTERPRISE: i18n-enabled form title
+    const formTitle = useMemo(() => {
+        if (t) {
+            const key = unit
+                ? (formType === 'storage' ? 'storage.form.title.editStorage' : 'storage.form.title.editParking')
+                : (formType === 'storage' ? 'storage.form.title.newStorage' : 'storage.form.title.newParking');
+            return t(key);
+        }
+        // Fallback for backward compatibility
+        return unit
+            ? (formType === 'storage' ? 'Edit Storage' : 'Edit Parking Spot')
+            : (formType === 'storage' ? 'New Storage' : 'New Parking Spot');
+    }, [unit, formType, t]);
 
     return {
         formTitle,

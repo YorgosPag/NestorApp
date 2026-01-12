@@ -11,6 +11,8 @@ import { cn } from '@/lib/utils';
 import type { Building } from '../BuildingsPageContent';
 import { getStatusColor, getStatusLabel } from '../BuildingCard/BuildingCardUtils';
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 
 interface BuildingDetailsHeaderProps {
@@ -18,6 +20,9 @@ interface BuildingDetailsHeaderProps {
 }
 
 export function BuildingDetailsHeader({ building }: BuildingDetailsHeaderProps) {
+    // 🏢 ENTERPRISE: i18n hook for translations
+    const { t } = useTranslation('building');
+
     return (
         <>
             {/* 🖥️ DESKTOP: Show full header with actions */}
@@ -27,7 +32,7 @@ export function BuildingDetailsHeader({ building }: BuildingDetailsHeaderProps) 
                     title={building.name}
                     actions={[
                         {
-                            label: 'Προβολή Κτιρίου',
+                            label: t('details.viewBuilding'),
                             onClick: () => console.log('Show building details'),
                             icon: Eye,
                             className: GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON
@@ -39,7 +44,7 @@ export function BuildingDetailsHeader({ building }: BuildingDetailsHeaderProps) 
                     <div className="flex gap-2 mt-2">
                         <BuildingBadge status={building.status} size="sm" />
                         <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-secondary text-secondary-foreground rounded-full">
-                            {building.progress}% ολοκληρωμένο
+                            {t('details.percentComplete', { percent: building.progress })}
                         </span>
                     </div>
                 </EntityDetailsHeader>

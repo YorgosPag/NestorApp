@@ -5,6 +5,9 @@ import { Car, Package } from 'lucide-react';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
+// 🏢 ENTERPRISE: Type for translate function (from useTranslation hook)
+type TranslateFunction = (key: string) => string;
+
 export const getStatusColor = (status: StorageStatus, colors?: ReturnType<typeof useSemanticColors>) => {
     if (!colors) {
         // Enterprise fallback
@@ -26,7 +29,14 @@ export const getStatusColor = (status: StorageStatus, colors?: ReturnType<typeof
     }
 };
 
-export const getStatusLabel = (status: StorageStatus) => {
+// 🏢 ENTERPRISE: i18n-enabled status label function
+export const getStatusLabel = (status: StorageStatus, t?: TranslateFunction) => {
+    // Use translation function if provided
+    if (t) {
+      const key = `pages.storage.statusLabels.${status}`;
+      return t(key);
+    }
+    // Fallback to hardcoded values (backward compatibility)
     switch (status) {
       case 'available': return 'Διαθέσιμο';
       case 'sold': return 'Πωλήθηκε';
@@ -40,7 +50,14 @@ export const getTypeIcon = (type: StorageType) => {
     return type === 'storage' ? Package : Car;
 };
 
-export const getTypeLabel = (type: StorageType) => {
+// 🏢 ENTERPRISE: i18n-enabled type label function
+export const getTypeLabel = (type: StorageType, t?: TranslateFunction) => {
+    // Use translation function if provided
+    if (t) {
+      const key = `pages.storage.typeLabels.${type}`;
+      return t(key);
+    }
+    // Fallback to hardcoded values (backward compatibility)
     return type === 'storage' ? 'Αποθήκη' : 'Θέση Στάθμευσης';
 };
 

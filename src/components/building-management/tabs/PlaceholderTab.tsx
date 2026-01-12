@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -6,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface PlaceholderTabProps {
   title?: string;
@@ -14,7 +15,9 @@ interface PlaceholderTabProps {
   [key: string]: unknown; // Allow additional props from UniversalTabsRenderer
 }
 
-const PlaceholderTab = ({ title = 'Περιεχόμενο', icon: Icon, building, ...additionalProps }: PlaceholderTabProps) => {
+const PlaceholderTab = ({ title = 'Content', icon: Icon, building, ...additionalProps }: PlaceholderTabProps) => {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const { createBorder, quick } = useBorderTokens();
 
@@ -23,17 +26,17 @@ const PlaceholderTab = ({ title = 'Περιεχόμενο', icon: Icon, building
   const IconComponent = Icon || FallbackIcon;
 
   return (
-    <div className={`flex flex-col items-center justify-center ${iconSizes.xl12} ${createBorder('medium', 'hsl(var(--border))', 'dashed')} ${quick.card} bg-muted/50`}>
+    <section className={`flex flex-col items-center justify-center ${iconSizes.xl12} ${createBorder('medium', 'hsl(var(--border))', 'dashed')} ${quick.card} bg-muted/50`}>
       <IconComponent className={`${iconSizes.xl3} text-muted-foreground mb-4`} />
-    <h2 className="text-xl font-semibold text-muted-foreground mb-2">{title}</h2>
-    <p className="text-sm text-muted-foreground text-center max-w-md">
-      Αυτή η ενότητα θα αναπτυχθεί σύντομα. Θα περιέχει όλες τις απαραίτητες λειτουργίες για τη διαχείριση {title.toLowerCase()}.
-    </p>
-    <Button variant="outline" className="mt-4">
-      <Plus className={`${iconSizes.sm} mr-2`} />
-      Προσθήκη {title}
-    </Button>
-  </div>
+      <h2 className="text-xl font-semibold text-muted-foreground mb-2">{title}</h2>
+      <p className="text-sm text-muted-foreground text-center max-w-md">
+        {t('placeholder.comingSoon', { title: title.toLowerCase() })}
+      </p>
+      <Button variant="outline" className="mt-4">
+        <Plus className={`${iconSizes.sm} mr-2`} />
+        {t('placeholder.add', { title })}
+      </Button>
+    </section>
   );
 };
 

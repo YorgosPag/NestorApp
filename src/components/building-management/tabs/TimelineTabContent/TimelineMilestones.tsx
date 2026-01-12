@@ -4,6 +4,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { MilestoneItem, type Milestone } from './MilestoneItem';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface TimelineMilestonesProps {
     milestones: Milestone[];
@@ -13,12 +15,14 @@ interface TimelineMilestonesProps {
 }
 
 export function TimelineMilestones({ milestones, getStatusColor, getStatusText, getTypeIcon }: TimelineMilestonesProps) {
+    // 🏢 ENTERPRISE: i18n hook for translations
+    const { t } = useTranslation('building');
     const colors = useSemanticColors();
 
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Λεπτομερή Milestones</CardTitle>
+                <CardTitle>{t('tabs.timeline.milestones.title')}</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="relative">

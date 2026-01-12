@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 🚀 FAST DEV MODE - Skip checks για άμεσο startup
+  // [FAST] FAST DEV MODE - Skip checks για άμεσο startup
   typescript: {
     // Skip type checking για ταχύτητα
     ignoreBuildErrors: true,
@@ -8,28 +8,72 @@ const nextConfig = {
   // Disable strict mode για λιγότερα re-renders
   reactStrictMode: false,
 
-  // ✅ ENTERPRISE FIX: Disable Next.js dev indicators/overlay that blocks click events
+  // [OK] ENTERPRISE FIX: Disable Next.js dev indicators/overlay that blocks click events
   devIndicators: false,
 
-  // ✅ NEXT.JS 15: Moved from experimental to root level
+  // [OK] NEXT.JS 15: Moved from experimental to root level
   serverExternalPackages: ['@mapbox/node-pre-gyp'],
 
-  // ✅ NEXT.JS 15: Fix workspace root detection (multiple lockfiles)
+  // [OK] NEXT.JS 15: Fix workspace root detection (multiple lockfiles)
   outputFileTracingRoot: __dirname,
 
-  // 🏢 ENTERPRISE: Transpile pdfjs-dist for proper ESM handling
+  // [ENTERPRISE] ENTERPRISE: Transpile pdfjs-dist for proper ESM handling
   // Fixes: "Object.defineProperty called on non-object" error
   transpilePackages: ['pdfjs-dist'],
 
-  // ⚡ ENTERPRISE PERFORMANCE OPTIMIZATIONS
+  // [ENTERPRISE] PERFORMANCE OPTIMIZATIONS - Fortune 500 Standard
   experimental: {
-    // Memory optimizations
-    optimizePackageImports: ['lucide-react', '@heroicons/react'],
+    // [ENTERPRISE] Optimized imports - Prevents barrel export overhead
+    // These packages have heavy barrel exports that slow down dev compilation
+    optimizePackageImports: [
+      // Icon libraries (heavy barrel exports)
+      'lucide-react',
+      '@heroicons/react',
+      // Radix UI components
+      '@radix-ui/react-accordion',
+      '@radix-ui/react-alert-dialog',
+      '@radix-ui/react-avatar',
+      '@radix-ui/react-checkbox',
+      '@radix-ui/react-collapsible',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-label',
+      '@radix-ui/react-menubar',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-progress',
+      '@radix-ui/react-radio-group',
+      '@radix-ui/react-scroll-area',
+      '@radix-ui/react-select',
+      '@radix-ui/react-separator',
+      '@radix-ui/react-slider',
+      '@radix-ui/react-slot',
+      '@radix-ui/react-switch',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-toast',
+      '@radix-ui/react-tooltip',
+      // React Aria (heavy barrel exports)
+      '@react-aria/color',
+      '@react-aria/dialog',
+      '@react-aria/interactions',
+      '@react-aria/overlays',
+      '@react-stately/color',
+      // Other heavy packages
+      'date-fns',
+      'recharts',
+      'react-hook-form',
+      'zod',
+      'firebase',
+      'firebase-admin',
+      'class-variance-authority',
+    ],
+
+    // [NOTE] Turbopack handles Node.js module fallbacks automatically
+    // No turbo config needed - webpack fallbacks are only used in production build
   },
 
-  // 📦 BUNDLE OPTIMIZATION
+  // [BUNDLE] BUNDLE OPTIMIZATION
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
-    // 🏢 ENTERPRISE: pdf.js configuration for Next.js
+    // [ENTERPRISE] ENTERPRISE: pdf.js configuration for Next.js
     // Fixes ESM compatibility issues with pdfjs-dist
 
     // Resolve fallbacks for browser-only modules (needed by pdfjs-dist)
@@ -42,7 +86,7 @@ const nextConfig = {
       url: false,
     };
 
-    // 🏢 ENTERPRISE: Fix ESM compatibility for .mjs files (pdfjs-dist)
+    // [ENTERPRISE] ENTERPRISE: Fix ESM compatibility for .mjs files (pdfjs-dist)
     // This prevents "Object.defineProperty called on non-object" error
     // by letting Webpack handle .mjs as ESM without extra wrapping
     if (!isServer) {
@@ -59,7 +103,7 @@ const nextConfig = {
       const path = require('path');
       const CopyPlugin = require('copy-webpack-plugin');
 
-      // 🏢 ENTERPRISE: Copy pdf.js files to public
+      // [ENTERPRISE] ENTERPRISE: Copy pdf.js files to public
       // Uses the version from react-pdf's pdfjs-dist dependency
       const pdfjsDistPath = path.dirname(require.resolve('pdfjs-dist/package.json'));
 
@@ -149,7 +193,7 @@ const nextConfig = {
     return config;
   },
 
-  // 🖼️ IMAGE OPTIMIZATION
+  // [IMAGE] IMAGE OPTIMIZATION
   images: {
     // Domains για external images
     domains: ['images.unsplash.com', 'via.placeholder.com'],
@@ -163,10 +207,10 @@ const nextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
 
-  // 📊 COMPRESSION
+  // [COMPRESS] COMPRESSION
   compress: true,
 
-  // 🔗 HEADERS για caching
+  // [CACHE] HEADERS για caching
   async headers() {
     return [
       {
@@ -208,7 +252,7 @@ const nextConfig = {
     ];
   },
 
-  // 🌐 PWA MANIFEST
+  // [PWA] PWA MANIFEST
   async rewrites() {
     return [
       {

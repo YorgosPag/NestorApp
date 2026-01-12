@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MapCanvas } from './InteractiveMap/MapCanvas';
 import { MapControls } from './InteractiveMap/MapControls';
 import type { Building } from '../../BuildingsPageContent';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface InteractiveMapProps {
     building: Pick<Building, 'name'>;
@@ -23,10 +25,12 @@ export function InteractiveMap({
     selectedLayer,
     setSelectedLayer,
 }: InteractiveMapProps) {
+    // 🏢 ENTERPRISE: i18n hook for translations
+    const { t } = useTranslation('building');
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Διαδραστικός Χάρτης</CardTitle>
+                <CardTitle>{t('map.interactiveMap')}</CardTitle>
             </CardHeader>
             <CardContent>
                 <MapCanvas

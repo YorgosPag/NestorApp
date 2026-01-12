@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart3, DollarSign, TrendingUp, Scale } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface HeaderProps {
     timeRange: '1M' | '3M' | '6M' | '1Y';
@@ -14,48 +16,54 @@ interface HeaderProps {
 }
 
 export default function Header({ timeRange, setTimeRange, analyticsView, setAnalyticsView }: HeaderProps) {
+    // 🏢 ENTERPRISE: i18n hook for translations
+    const { t } = useTranslation('building');
     const iconSizes = useIconSizes();
+
+    // 🏢 ENTERPRISE: i18n-enabled view configuration
+    const viewConfig = [
+        { id: 'overview', labelKey: 'tabs.analytics.views.overview', icon: <BarChart3 className={`${iconSizes.sm} mr-2`} /> },
+        { id: 'financial', labelKey: 'tabs.analytics.views.financial', icon: <DollarSign className={`${iconSizes.sm} mr-2`} /> },
+        { id: 'progress', labelKey: 'tabs.analytics.views.progress', icon: <TrendingUp className={`${iconSizes.sm} mr-2`} /> },
+        { id: 'comparison', labelKey: 'tabs.analytics.views.comparison', icon: <Scale className={`${iconSizes.sm} mr-2`} /> }
+    ];
+
     return (
         <div>
             <div className="flex items-center justify-between">
                 <div>
-                    <h3 className="text-lg font-semibold">Advanced Analytics</h3>
+                    <h3 className="text-lg font-semibold">{t('tabs.analytics.title')}</h3>
                     <p className="text-sm text-muted-foreground">
-                        Προχωρημένη ανάλυση δεδομένων και KPIs
+                        {t('tabs.analytics.subtitle')}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
                     <Select value={timeRange} onValueChange={setTimeRange}>
                         <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Select time range" />
+                            <SelectValue placeholder={t('tabs.analytics.timeRange.placeholder')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="1M">Τελευταίος μήνας</SelectItem>
-                            <SelectItem value="3M">Τελευταίοι 3 μήνες</SelectItem>
-                            <SelectItem value="6M">Τελευταίοι 6 μήνες</SelectItem>
-                            <SelectItem value="1Y">Τελευταίο έτος</SelectItem>
+                            <SelectItem value="1M">{t('tabs.analytics.timeRange.lastMonth')}</SelectItem>
+                            <SelectItem value="3M">{t('tabs.analytics.timeRange.last3Months')}</SelectItem>
+                            <SelectItem value="6M">{t('tabs.analytics.timeRange.last6Months')}</SelectItem>
+                            <SelectItem value="1Y">{t('tabs.analytics.timeRange.lastYear')}</SelectItem>
                         </SelectContent>
                     </Select>
                     <Button variant="outline" size="sm">
-                        <BarChart3 className={`${iconSizes.sm} mr-2`} /> Εξαγωγή Αναφοράς
+                        <BarChart3 className={`${iconSizes.sm} mr-2`} /> {t('tabs.analytics.exportReport')}
                     </Button>
                 </div>
             </div>
 
             <div className="flex gap-2 mt-4">
-                {[
-                    { id: 'overview', label: 'Επισκόπηση', icon: <BarChart3 className={`${iconSizes.sm} mr-2`} /> },
-                    { id: 'financial', label: 'Οικονομικά', icon: <DollarSign className={`${iconSizes.sm} mr-2`} /> },
-                    { id: 'progress', label: 'Πρόοδος', icon: <TrendingUp className={`${iconSizes.sm} mr-2`} /> },
-                    { id: 'comparison', label: 'Σύγκριση', icon: <Scale className={`${iconSizes.sm} mr-2`} /> }
-                ].map((view) => (
+                {viewConfig.map((view) => (
                     <Button
                         key={view.id}
                         variant={analyticsView === view.id ? 'default' : 'outline'}
                         size="sm"
-                        onClick={() => setAnalyticsView(view.id as any)}
+                        onClick={() => setAnalyticsView(view.id as 'overview' | 'financial' | 'progress' | 'comparison')}
                     >
-                        {view.icon} {view.label}
+                        {view.icon} {t(view.labelKey)}
                     </Button>
                 ))}
             </div>

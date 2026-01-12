@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { X } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ToolbarFiltersDisplayProps {
   activeFilters: string[];
@@ -16,6 +18,8 @@ export function ToolbarFiltersDisplay({
   activeFilters,
   onActiveFiltersChange
 }: ToolbarFiltersDisplayProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const handleRemoveFilter = (filterToRemove: string) => {
     onActiveFiltersChange(activeFilters.filter(f => f !== filterToRemove));
@@ -28,7 +32,7 @@ export function ToolbarFiltersDisplay({
   return (
     <div className="px-2 pb-2 border-t border-border/50">
       <div className="flex items-center gap-2 pt-2">
-        <span className="text-xs text-muted-foreground">Ενεργά φίλτρα:</span>
+        <span className="text-xs text-muted-foreground">{t('filtersDisplay.activeFilters')}</span>
         <div className="flex flex-wrap gap-1">
           {activeFilters.map((filter) => (
             <CommonBadge
@@ -55,7 +59,7 @@ export function ToolbarFiltersDisplay({
             onClick={handleClearAll}
             className="h-6 px-2 text-xs"
           >
-            Καθαρισμός όλων
+            {t('filtersDisplay.clearAll')}
           </Button>
         </div>
       </div>

@@ -9,6 +9,8 @@ import { formatDateTime } from '@/lib/intl-utils';
 import { Edit, Save, X, CheckCircle } from 'lucide-react';
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface HeaderProps {
     building: { id: string; category: string };
@@ -21,8 +23,15 @@ interface HeaderProps {
 
 export function Header({ building, isEditing, autoSaving, lastSaved, setIsEditing, handleSave }: HeaderProps) {
   // 🏢 ENTERPRISE: Centralized systems
+  const { t } = useTranslation('building');
   const buttonPatterns = useButtonPatterns();
   const iconSizes = useIconSizes();
+
+  // 🏢 ENTERPRISE: i18n-enabled category label mapping
+  const getCategoryLabel = (category: string): string => {
+    const categoryKey = `categories.${category}`;
+    return t(categoryKey);
+  };
 
   return (
     <div className="flex items-center justify-between">
@@ -36,50 +45,45 @@ export function Header({ building, isEditing, autoSaving, lastSaved, setIsEditin
         />
         <CommonBadge
           status="company"
-          customLabel={
-            building.category === 'residential' ? 'Κατοικίες' :
-            building.category === 'commercial' ? 'Εμπορικό' :
-            building.category === 'mixed' ? 'Μικτή Χρήση' :
-            building.category === 'industrial' ? 'Βιομηχανικό' : ''
-          }
+          customLabel={getCategoryLabel(building.category)}
           variant="outline"
           size="sm"
         />
-        
+
         {isEditing && (
           <div className="flex items-center gap-2 text-xs">
             {autoSaving ? (
               <>
                 <AnimatedSpinner size="small" />
-                <span className="text-blue-600">Αποθήκευση...</span>
+                <span className="text-blue-600">{t('tabs.general.header.saving')}</span>
               </>
             ) : lastSaved ? (
               <>
                 <CheckCircle className={`${iconSizes.xs} text-green-600`} />
                 <span className="text-green-600">
-                  Αποθηκεύτηκε {lastSaved ? formatDateTime(lastSaved, { timeStyle: 'medium' }).split(' ')[1] : '--'}
+                  {t('tabs.general.header.saved')} {lastSaved ? formatDateTime(lastSaved, { timeStyle: 'medium' }).split(' ')[1] : '--'}
                 </span>
               </>
             ) : null}
           </div>
         )}
       </div>
-      
+
       <div className="flex items-center gap-2">
         {!isEditing ? (
           <Button {...buttonPatterns.actions.edit} onClick={() => setIsEditing(true)}>
             <Edit className={`${iconSizes.sm} mr-2`} />
-            Επεξεργασία
+            {t('tabs.general.header.edit')}
           </Button>
         ) : (
           <>
             <Button {...buttonPatterns.actions.cancel} onClick={() => setIsEditing(false)}>
               <X className={`${iconSizes.sm} mr-2`} />
-              Ακύρωση
+              {t('tabs.general.header.cancel')}
             </Button>
             <Button size="sm" onClick={handleSave}>
               <Save className={`${iconSizes.sm} mr-2`} />
-              Αποθήκευση
+              {t('tabs.general.header.save')}
             </Button>
           </>
         )}

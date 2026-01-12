@@ -11,6 +11,8 @@ import {
   CheckSquare,
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ViewModeToggleProps {
   viewMode: 'list' | 'grid' | 'byType' | 'byStatus';
@@ -18,6 +20,8 @@ interface ViewModeToggleProps {
 }
 
 export function ViewModeToggle({ viewMode, setViewMode }: ViewModeToggleProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   return (
     <>
@@ -31,7 +35,7 @@ export function ViewModeToggle({ viewMode, setViewMode }: ViewModeToggleProps) {
             <List className={iconSizes.sm} />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Προβολή Λίστας</TooltipContent>
+        <TooltipContent>{t('viewMode.list')}</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -43,7 +47,7 @@ export function ViewModeToggle({ viewMode, setViewMode }: ViewModeToggleProps) {
             <LayoutGrid className={iconSizes.sm} />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Προβολή Πλέγματος</TooltipContent>
+        <TooltipContent>{t('viewMode.grid')}</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -53,10 +57,10 @@ export function ViewModeToggle({ viewMode, setViewMode }: ViewModeToggleProps) {
             onClick={() => setViewMode('byType')}
           >
             <FolderOpen className={`${iconSizes.sm} mr-2`} />
-            Ομαδοποίηση ανά Τύπο
+            {t('viewMode.byType')}
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Ομαδοποίηση των κτιρίων ανά τύπο (π.χ. Κατοικίες, Εμπορικό).</TooltipContent>
+        <TooltipContent>{t('viewMode.byTypeTooltip')}</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -66,10 +70,10 @@ export function ViewModeToggle({ viewMode, setViewMode }: ViewModeToggleProps) {
             onClick={() => setViewMode('byStatus')}
           >
             <CheckSquare className={`${iconSizes.sm} mr-2`} />
-            Ομαδοποίηση ανά Κατάσταση
+            {t('viewMode.byStatus')}
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Ομαδοποίηση των κτιρίων ανά κατάσταση (π.χ. Ενεργό, Υπό Κατασκευή).</TooltipContent>
+        <TooltipContent>{t('viewMode.byStatusTooltip')}</TooltipContent>
       </Tooltip>
     </>
   );

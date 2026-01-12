@@ -8,10 +8,10 @@ import { matchesSearchTerm } from '@/lib/search/search';
 import type { Building } from './BuildingsPageContent';
 
 import { BuildingsListHeader } from './BuildingsList/BuildingsListHeader';
-// 🏢 ENTERPRISE: Using centralized domain card
+// [ENTERPRISE] Using centralized domain card
 import { BuildingListCard } from '@/domain';
 import { CompactToolbar, buildingsConfig } from '@/components/core/CompactToolbar';
-// 🏢 ENTERPRISE: i18n - Full internationalization support
+// [ENTERPRISE] i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 
@@ -26,7 +26,7 @@ export function BuildingsList({
   selectedBuilding,
   onSelectBuilding,
 }: BuildingsListProps) {
-  // 🏢 ENTERPRISE: i18n hook for translations
+  // [ENTERPRISE] i18n hook for translations
   const { t } = useTranslation('building');
   const [favorites, setFavorites] = useState<string[]>(['1']);
   const [sortBy, setSortBy] = useState<'name' | 'progress' | 'value' | 'area' | 'date'>('name');
@@ -44,7 +44,7 @@ export function BuildingsList({
     );
   };
 
-  // 🏢 ENTERPRISE: Filter buildings using centralized search
+  // [ENTERPRISE] Filter buildings using centralized search
   const filteredBuildings = useMemo(() => {
     return buildings.filter(building =>
       matchesSearchTerm(
@@ -106,7 +106,7 @@ export function BuildingsList({
   return (
     <EntityListColumn hasBorder aria-label={t('list.ariaLabel')}>
       <BuildingsListHeader
-        buildingCount={sortedBuildings.length}  // 🏢 ENTERPRISE: Δυναμικό count με filtered results
+        buildingCount={sortedBuildings.length}  // [ENTERPRISE] Dynamic count with filtered results
         showToolbar={showToolbar}
         onToolbarToggle={setShowToolbar}
       />

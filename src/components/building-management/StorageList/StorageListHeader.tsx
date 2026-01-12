@@ -9,6 +9,8 @@ import {
   Trash2
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface StorageListHeaderProps {
   totalCount: number;
@@ -25,47 +27,49 @@ export function StorageListHeader({
   viewMode,
   setViewMode,
 }: StorageListHeaderProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   return (
-    <div className="flex items-center justify-between">
+    <header className="flex items-center justify-between">
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">
-          {totalCount} αποτελέσματα
+          {t('storageListHeader.results', { count: totalCount })}
         </span>
         {selectedCount > 0 && (
           <>
             <span className="text-sm text-primary">
-              • {selectedCount} επιλεγμένα
+              • {t('storageListHeader.selected', { count: selectedCount })}
             </span>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={onBulkDelete}
               className={`text-destructive ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
             >
               <Trash2 className={`${iconSizes.sm} mr-1`} />
-              Διαγραφή επιλεγμένων
+              {t('storageListHeader.deleteSelected')}
             </Button>
           </>
         )}
       </div>
-      
-      <div className="flex items-center gap-2">
+
+      <nav className="flex items-center gap-2">
         <Button
           variant={viewMode === 'cards' ? 'default' : 'outline'}
           size="sm"
           onClick={() => setViewMode('cards')}
         >
-          <Layers className={`${iconSizes.sm} mr-2`} /> Κάρτες
+          <Layers className={`${iconSizes.sm} mr-2`} /> {t('storageListHeader.cardsView')}
         </Button>
         <Button
           variant={viewMode === 'table' ? 'default' : 'outline'}
           size="sm"
           onClick={() => setViewMode('table')}
         >
-          <TableIcon className={`${iconSizes.sm} mr-2`} /> Πίνακας
+          <TableIcon className={`${iconSizes.sm} mr-2`} /> {t('storageListHeader.tableView')}
         </Button>
-      </div>
-    </div>
+      </nav>
+    </header>
   );
 }

@@ -21,6 +21,8 @@
 import React from 'react';
 import type { Building } from '@/types/building/contracts';
 import { PhotosTabBase } from '@/components/generic/photo-system';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // =============================================================================
 // PROPS
@@ -47,8 +49,12 @@ interface PhotosTabContentProps {
  * - Units context (receives selectedUnit prop from GenericUnitsTabsRenderer)
  */
 const PhotosTabContent = ({ building, selectedUnit }: PhotosTabContentProps) => {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
+
   // Support both building and unit contexts
-  const entity = building || selectedUnit || { id: 'placeholder', name: 'Κτίριο' };
+  const defaultName = t('header.title');
+  const entity = building || selectedUnit || { id: 'placeholder', name: defaultName };
 
   return (
     <PhotosTabBase

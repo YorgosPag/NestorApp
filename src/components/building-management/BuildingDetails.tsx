@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-// 🏢 ENTERPRISE: Using centralized entity config for Building icon
+// [ENTERPRISE] Using centralized entity config for Building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { useEmptyStateMessages } from '@/hooks/useEnterpriseMessages';
 import type { Building } from './BuildingsPageContent';
@@ -16,7 +16,7 @@ interface BuildingDetailsProps {
 }
 
 export function BuildingDetails({ building }: BuildingDetailsProps) {
-  // 🗨️ ENTERPRISE: Centralized messages system
+  // [ENTERPRISE] Centralized messages system
   const emptyStateMessages = useEmptyStateMessages();
 
   return (

@@ -8,11 +8,14 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { formatCurrency } from '@/lib/intl-utils';
 import { Lightbulb } from 'lucide-react';
-import { layoutUtilities } from '@/styles/design-tokens';
 import { costBreakdown, monthlyProgress } from './utils';
 import { analyticsOverviewStyles } from './AnalyticsOverview.styles';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export default function AnalyticsOverview() {
+    // 🏢 ENTERPRISE: i18n hook for translations
+    const { t } = useTranslation('building');
     const iconSizes = useIconSizes();
     const { quick } = useBorderTokens();
 
@@ -21,7 +24,7 @@ export default function AnalyticsOverview() {
             {/* Cost Breakdown */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Ανάλυση Κόστους</CardTitle>
+                    <CardTitle>{t('tabs.analytics.overview.costAnalysis')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
@@ -43,23 +46,22 @@ export default function AnalyticsOverview() {
                         ))}
                     </div>
 
-                    <div className={`mt-6 p-4 bg-blue-50 dark:bg-blue-950/30 ${quick.card}`}>
+                    <aside className={`mt-6 p-4 bg-blue-50 dark:bg-blue-950/30 ${quick.card}`}>
                         <div className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2 flex items-center gap-2">
                             <Lightbulb className={iconSizes.sm} />
-                            Ανάλυση
+                            {t('tabs.analytics.overview.analysis')}
                         </div>
                         <p className="text-sm text-blue-700 dark:text-blue-300">
-                            Το κόστος υλικών είναι 5% υψηλότερο από τον μέσο όρο της αγοράς.
-                            Συνιστάται επαναδιαπραγμάτευση με προμηθευτές.
+                            {t('tabs.analytics.overview.analysisText')}
                         </p>
-                    </div>
+                    </aside>
                 </CardContent>
             </Card>
 
             {/* Progress Chart */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Πρόοδος vs Προγραμματισμός</CardTitle>
+                    <CardTitle>{t('tabs.analytics.overview.progressVsPlanned')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
@@ -68,7 +70,7 @@ export default function AnalyticsOverview() {
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm font-medium">{month.month}</span>
                                     <span className="text-xs text-muted-foreground">
-                                        Προγρ: {month.planned}% | Πραγμ: {month.actual}%
+                                        {t('tabs.analytics.overview.planned')} {month.planned}% | {t('tabs.analytics.overview.actual')} {month.actual}%
                                     </span>
                                 </div>
                                 <div className="relative">
