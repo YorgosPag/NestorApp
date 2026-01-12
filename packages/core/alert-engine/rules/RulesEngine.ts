@@ -14,6 +14,7 @@ import type { DatabaseManager } from '../../database-system/connection/DatabaseM
 import { databaseManager } from '../../database-system/connection/DatabaseManager';
 import type { GeoControlPoint } from '../../database-system/repositories/ControlPointRepository';
 import type { GeoProject } from '../../database-system/repositories/ProjectRepository';
+import type * as GeoJSON from 'geojson';
 
 // ============================================================================
 // RULES ENGINE TYPES

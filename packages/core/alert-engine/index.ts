@@ -69,17 +69,17 @@ export {
   type NotificationConfig
 } from './notifications/NotificationDispatchEngine';
 
-// Real-time Dashboard
-export * from './dashboard';
-export { AlertMonitoringDashboard, defaultDashboardService } from './dashboard';
+// Real-time Dashboard - Direct imports to avoid UI component dependencies
+export type { DashboardService, DashboardMetrics, RealTimeEvent, DashboardConfig } from './dashboard/DashboardService';
+export { dashboardService as defaultDashboardService, DashboardService as DashboardServiceClass } from './dashboard/DashboardService';
 
-// Configuration Interface
-export * from './configuration';
-export { AlertConfigurationInterface, defaultConfigurationService } from './configuration';
+// Configuration Interface - Direct imports to avoid UI component dependencies
+export type { ConfigurationService } from './configuration/ConfigurationService';
+export { configurationService as defaultConfigurationService, ConfigurationService as ConfigurationServiceClass } from './configuration/ConfigurationService';
 
-// Analytics & Reporting
-export * from './analytics';
-export { AnalyticsDashboard, defaultAnalyticsEngine } from './analytics';
+// Analytics & Reporting - Direct imports to avoid UI component dependencies
+export type { EventAnalyticsEngine } from './analytics/EventAnalyticsEngine';
+export { eventAnalyticsEngine as defaultAnalyticsEngine, EventAnalyticsEngine as EventAnalyticsEngineClass } from './analytics/EventAnalyticsEngine';
 
 // ============================================================================
 // UNIFIED ALERT ENGINE SERVICE
@@ -88,9 +88,9 @@ export { AnalyticsDashboard, defaultAnalyticsEngine } from './analytics';
 import { RulesEngine, rulesEngine } from './rules/RulesEngine';
 import { AlertDetectionSystem, alertDetectionSystem } from './detection/AlertDetectionSystem';
 import { NotificationDispatchEngine, notificationDispatchEngine } from './notifications/NotificationDispatchEngine';
-import { DashboardService, defaultDashboardService } from './dashboard';
-import { ConfigurationService, defaultConfigurationService } from './configuration';
-import { EventAnalyticsEngine, defaultAnalyticsEngine } from './analytics';
+import { DashboardService, dashboardService } from './dashboard/DashboardService';
+import { ConfigurationService, configurationService } from './configuration/ConfigurationService';
+import { EventAnalyticsEngine, eventAnalyticsEngine } from './analytics/EventAnalyticsEngine';
 
 /**
  * Unified Alert Engine - Master Service για όλα τα subsystems
@@ -119,9 +119,9 @@ export class GeoAlertEngine {
     this.rules = rulesEngine;
     this.detection = alertDetectionSystem;
     this.notifications = notificationDispatchEngine;
-    this.dashboard = defaultDashboardService;
-    this.configuration = defaultConfigurationService;
-    this.analytics = defaultAnalyticsEngine;
+    this.dashboard = dashboardService;
+    this.configuration = configurationService;
+    this.analytics = eventAnalyticsEngine;
   }
 
   public static getInstance(): GeoAlertEngine {

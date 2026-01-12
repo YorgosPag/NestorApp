@@ -12,6 +12,7 @@ import type {
   PolygonExportOptions,
   PolygonImportResult
 } from '../types';
+import type * as GeoJSON from 'geojson';
 
 /**
  * Convert UniversalPolygon to GeoJSON Feature

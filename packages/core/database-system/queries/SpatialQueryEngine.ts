@@ -12,6 +12,7 @@
 
 import type { DatabaseManager } from '../connection/DatabaseManager';
 import { databaseManager } from '../connection/DatabaseManager';
+import type * as GeoJSON from 'geojson';
 
 // ============================================================================
 // SPATIAL QUERY TYPES
@@ -132,6 +133,160 @@ export interface GridCell {
 }
 
 // ============================================================================
+// DATABASE ROW INTERFACES - Query Result Types
+// ============================================================================
+
+/** Row type for proximity search results */
+interface ProximityRow {
+  id: string;
+  name: string;
+  entity_type: string;
+  geometry: string; // JSON string
+  distance_meters: string; // Numeric as string from DB
+}
+
+/** Row type for nearby control points */
+interface NearbyControlPointRow {
+  id: string;
+  name: string;
+  description?: string;
+  accuracy_meters: number;
+  lng: string;
+  lat: string;
+  distance_meters: string;
+}
+
+/** Row type for bounding box search */
+interface BoundingBoxRow {
+  id: string;
+  name: string;
+  entity_type: string;
+  geometry: string;
+}
+
+/** Row type for cluster analysis */
+interface ClusterRow {
+  cluster_id: number;
+  point_count: string;
+  centroid_lng: string;
+  centroid_lat: string;
+  point_ids: string[];
+  total_area: string;
+  avg_distance: string;
+  density: string;
+  geometry: string;
+}
+
+/** Row type for grid analysis */
+interface GridRow {
+  cell_id: string;
+  x_index: number;
+  y_index: number;
+  point_count: string;
+  avg_accuracy: string | null;
+  point_ids: string[];
+  cell_geometry: string;
+}
+
+/** Row type for spatial relationship */
+interface SpatialRelationshipRow {
+  intersects: boolean;
+  contains: boolean;
+  within: boolean;
+  overlaps: boolean;
+  touches: boolean;
+  crosses: boolean;
+  distance_meters: string;
+  intersection_area: string;
+}
+
+/** Row type for intersection result */
+interface IntersectionRow {
+  intersection_geometry: string;
+}
+
+/** Row type for coordinate system */
+interface CoordinateSystemRow {
+  srid: number;
+  auth_name: string;
+  auth_srid: number;
+  srtext: string;
+}
+
+/** Row type for geometry validation */
+interface ValidationRow {
+  is_valid: boolean;
+  reason: string | null;
+}
+
+/** Row type for buffer result */
+interface BufferRow {
+  buffered_geometry: string;
+}
+
+/** Row type for spatial relationship analysis */
+interface SpatialRelationshipAnalysisRow {
+  intersects: boolean;
+  contains: boolean;
+  within: boolean;
+  touches: boolean;
+  crosses: boolean;
+  overlaps: boolean;
+  disjoint: boolean;
+  distance: string;
+}
+
+/** Row type for convex hull result */
+interface ConvexHullRow {
+  hull_geometry: string;
+  area_sqm: string;
+  perimeter_m: string;
+  point_count: string;
+}
+
+/** Row type for coordinate transform result */
+interface TransformRow {
+  x: string;
+  y: string;
+  z: string | null;
+}
+
+/** Row type for available SRS */
+interface SRSRow {
+  srid: number;
+  auth_name: string;
+  auth_srid: number;
+  srtext: string;
+}
+
+/** Row type for cluster analysis result */
+interface ClusterAnalysisRow {
+  cluster_id: number;
+  center_lng: string;
+  center_lat: string;
+  point_count: string;
+  avg_accuracy: string;
+  min_lng: string;
+  min_lat: string;
+  max_lng: string;
+  max_lat: string;
+  entity_ids: string[];
+}
+
+/** Row type for grid analysis result */
+interface GridAnalysisRow {
+  cell_id: string;
+  cell_min_lng: string;
+  cell_min_lat: string;
+  cell_max_lng: string;
+  cell_max_lat: string;
+  entity_count: string;
+  control_point_count: string;
+  avg_accuracy: string;
+  cell_geometry: string;
+}
+
+// ============================================================================
 // SPATIAL QUERY ENGINE CLASS
 // ============================================================================
 
@@ -196,7 +351,7 @@ export class SpatialQueryEngine {
     }
 
     const result = await this.dbManager.query(sql, queryParams);
-    return result.rows.map(row => ({
+    return (result.rows as ProximityRow[]).map(row => ({
       ...row,
       geometry: JSON.parse(row.geometry),
       distance_meters: parseFloat(row.distance_meters)
@@ -242,7 +397,7 @@ export class SpatialQueryEngine {
     sql += ` ORDER BY distance_meters ASC`;
 
     const result = await this.dbManager.query(sql, queryParams);
-    return result.rows.map(row => ({
+    return (result.rows as NearbyControlPointRow[]).map(row => ({
       ...row,
       distance_meters: parseFloat(row.distance_meters),
       lng: parseFloat(row.lng),
@@ -303,7 +458,7 @@ export class SpatialQueryEngine {
     }
 
     const result = await this.dbManager.query(sql, queryParams);
-    return result.rows.map(row => ({
+    return (result.rows as BoundingBoxRow[]).map(row => ({
       ...row,
       geometry: JSON.parse(row.geometry)
     }));
@@ -334,7 +489,8 @@ export class SpatialQueryEngine {
       segments
     ]);
 
-    return JSON.parse(result.rows[0].buffered_geometry);
+    const row = result.rows[0] as BufferRow;
+    return JSON.parse(row.buffered_geometry);
   }
 
   /**
@@ -355,7 +511,8 @@ export class SpatialQueryEngine {
       JSON.stringify(params.geometry2)
     ]);
 
-    const intersectionGeom = result.rows[0]?.intersection_geometry;
+    const row = result.rows[0] as IntersectionRow | undefined;
+    const intersectionGeom = row?.intersection_geometry;
     return intersectionGeom ? JSON.parse(intersectionGeom) : null;
   }
 
@@ -389,7 +546,7 @@ export class SpatialQueryEngine {
       JSON.stringify(geometry2)
     ]);
 
-    const row = result.rows[0];
+    const row = result.rows[0] as SpatialRelationshipAnalysisRow;
     return {
       intersects: row.intersects,
       contains: row.contains,
@@ -456,7 +613,7 @@ export class SpatialQueryEngine {
       params.maxDistanceMeters
     ]);
 
-    return result.rows.map(row => ({
+    return (result.rows as ClusterAnalysisRow[]).map(row => ({
       clusterId: row.cluster_id,
       centerPoint: {
         lng: parseFloat(row.center_lng),
@@ -513,7 +670,7 @@ export class SpatialQueryEngine {
       throw new Error('Insufficient control points για convex hull calculation');
     }
 
-    const row = result.rows[0];
+    const row = result.rows[0] as ConvexHullRow;
     return {
       geometry: JSON.parse(row.hull_geometry),
       area: parseFloat(row.area_sqm),
@@ -605,7 +762,7 @@ export class SpatialQueryEngine {
 
     const result = await this.dbManager.query(sql, queryParams);
 
-    return result.rows.map(row => ({
+    return (result.rows as GridAnalysisRow[]).map(row => ({
       cellId: row.cell_id,
       bounds: {
         minLng: parseFloat(row.cell_min_lng),
@@ -653,7 +810,7 @@ export class SpatialQueryEngine {
       toSRID
     ]);
 
-    const row = result.rows[0];
+    const row = result.rows[0] as TransformRow;
     return {
       x: parseFloat(row.x),
       y: parseFloat(row.y),
@@ -677,7 +834,7 @@ export class SpatialQueryEngine {
     `;
 
     const result = await this.dbManager.query(sql);
-    return result.rows;
+    return result.rows as SRSRow[];
   }
 
   /**
@@ -691,11 +848,11 @@ export class SpatialQueryEngine {
     `;
 
     const result = await this.dbManager.query(sql, [JSON.stringify(geometry)]);
-    const row = result.rows[0];
+    const row = result.rows[0] as ValidationRow;
 
     return {
       isValid: row.is_valid,
-      reason: row.is_valid ? undefined : row.reason
+      reason: row.is_valid ? undefined : row.reason ?? undefined
     };
   }
 }

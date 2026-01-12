@@ -140,6 +140,55 @@ export interface SpatialDistributionAnalysis {
 }
 
 // ============================================================================
+// DATABASE ROW INTERFACES - Query Result Types
+// ============================================================================
+
+/** Row type for control point statistics */
+interface StatisticsRow {
+  total_points: string;
+  active_points: string;
+  inactive_points: string;
+  control_points: string;
+  check_points: string;
+  tie_points: string;
+  average_accuracy: string | null;
+  best_accuracy: string | null;
+  worst_accuracy: string | null;
+  total_usage: string | null;
+  average_usage: string | null;
+}
+
+/** Row type for spatial distribution analysis */
+interface DistributionRow {
+  point_count: string;
+  max_distance: string | null;
+  avg_distance: string | null;
+  convex_hull_area: string | null;
+}
+
+/** Row type for control point database row */
+interface ControlPointRow {
+  id: string;
+  project_id: string;
+  name: string | null;
+  description: string | null;
+  dxf_x: string;
+  dxf_y: string;
+  dxf_z: string | null;
+  geo_lng: string;
+  geo_lat: string;
+  geo_alt: string | null;
+  accuracy_meters: string;
+  accuracy_source: string | null;
+  point_type: 'control' | 'check' | 'tie';
+  is_active: boolean;
+  usage_count: string;
+  last_used_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================================================
 // CONTROL POINT REPOSITORY CLASS
 // ============================================================================
 
@@ -191,7 +240,7 @@ export class ControlPointRepository {
 
     try {
       const result = await this.dbManager.query(sql, values);
-      return this.mapRowToControlPoint(result.rows[0]);
+      return this.mapRowToControlPoint(result.rows[0] as ControlPointRow);
     } catch (error) {
       if (error instanceof Error && error.message.includes('unique constraint')) {
         throw new Error(`Control point με όνομα '${params.name}' υπάρχει ήδη στο project`);
@@ -240,7 +289,7 @@ export class ControlPointRepository {
         ];
 
         const result = await trx.query(sql, values);
-        createdPoints.push(this.mapRowToControlPoint(result.rows[0]));
+        createdPoints.push(this.mapRowToControlPoint(result.rows[0] as ControlPointRow));
       }
 
       return createdPoints;
@@ -266,7 +315,7 @@ export class ControlPointRepository {
     `;
 
     const result = await this.dbManager.query(sql, [id]);
-    return result.rows.length > 0 ? this.mapRowToControlPoint(result.rows[0]) : null;
+    return result.rows.length > 0 ? this.mapRowToControlPoint(result.rows[0] as ControlPointRow) : null;
   }
 
   /**
@@ -292,7 +341,7 @@ export class ControlPointRepository {
     sql += ` ORDER BY created_at ASC`;
 
     const result = await this.dbManager.query(sql, params);
-    return result.rows.map(row => this.mapRowToControlPoint(row));
+    return (result.rows as ControlPointRow[]).map(row => this.mapRowToControlPoint(row));
   }
 
   /**
@@ -395,7 +444,7 @@ export class ControlPointRepository {
     }
 
     const result = await this.dbManager.query(sql, params);
-    return result.rows.map(row => this.mapRowToControlPoint(row));
+    return (result.rows as ControlPointRow[]).map(row => this.mapRowToControlPoint(row));
   }
 
   // ========================================================================
@@ -483,7 +532,7 @@ export class ControlPointRepository {
       throw new Error(`Control point με ID '${id}' δεν βρέθηκε`);
     }
 
-    return this.mapRowToControlPoint(result.rows[0]);
+    return this.mapRowToControlPoint(result.rows[0] as ControlPointRow);
   }
 
   /**
@@ -554,7 +603,7 @@ export class ControlPointRepository {
     `;
 
     const result = await this.dbManager.query(sql, [projectId]);
-    const row = result.rows[0];
+    const row = result.rows[0] as StatisticsRow;
 
     return {
       totalPoints: parseInt(row.total_points) || 0,
@@ -563,11 +612,11 @@ export class ControlPointRepository {
       controlPoints: parseInt(row.control_points) || 0,
       checkPoints: parseInt(row.check_points) || 0,
       tiePoints: parseInt(row.tie_points) || 0,
-      averageAccuracy: parseFloat(row.average_accuracy) || 0,
-      bestAccuracy: parseFloat(row.best_accuracy) || 0,
-      worstAccuracy: parseFloat(row.worst_accuracy) || 0,
-      totalUsage: parseInt(row.total_usage) || 0,
-      averageUsage: parseFloat(row.average_usage) || 0
+      averageAccuracy: row.average_accuracy ? parseFloat(row.average_accuracy) : 0,
+      bestAccuracy: row.best_accuracy ? parseFloat(row.best_accuracy) : 0,
+      worstAccuracy: row.worst_accuracy ? parseFloat(row.worst_accuracy) : 0,
+      totalUsage: row.total_usage ? parseInt(row.total_usage) : 0,
+      averageUsage: row.average_usage ? parseFloat(row.average_usage) : 0
     };
   }
 
@@ -598,12 +647,12 @@ export class ControlPointRepository {
     `;
 
     const result = await this.dbManager.query(sql, [projectId]);
-    const row = result.rows[0];
+    const row = result.rows[0] as DistributionRow;
 
     const pointCount = parseInt(row.point_count) || 0;
-    const spatialSpread = parseFloat(row.max_distance) || 0;
-    const averageDistance = parseFloat(row.avg_distance) || 0;
-    const convexHullArea = parseFloat(row.convex_hull_area) || 0;
+    const spatialSpread = row.max_distance ? parseFloat(row.max_distance) : 0;
+    const averageDistance = row.avg_distance ? parseFloat(row.avg_distance) : 0;
+    const convexHullArea = row.convex_hull_area ? parseFloat(row.convex_hull_area) : 0;
 
     // Calculate GDOP score (simplified)
     let gdopScore = 0;
@@ -655,12 +704,12 @@ export class ControlPointRepository {
   /**
    * Map database row to GeoControlPoint object
    */
-  private mapRowToControlPoint(row: any): GeoControlPoint {
+  private mapRowToControlPoint(row: ControlPointRow): GeoControlPoint {
     return {
       id: row.id,
       projectId: row.project_id,
-      name: row.name,
-      description: row.description,
+      name: row.name ?? undefined,
+      description: row.description ?? undefined,
       dxfX: parseFloat(row.dxf_x),
       dxfY: parseFloat(row.dxf_y),
       dxfZ: row.dxf_z ? parseFloat(row.dxf_z) : undefined,
@@ -670,7 +719,7 @@ export class ControlPointRepository {
         alt: row.geo_alt ? parseFloat(row.geo_alt) : undefined
       },
       accuracyMeters: parseFloat(row.accuracy_meters),
-      accuracySource: row.accuracy_source,
+      accuracySource: row.accuracy_source ?? undefined,
       pointType: row.point_type,
       isActive: row.is_active,
       usageCount: parseInt(row.usage_count),

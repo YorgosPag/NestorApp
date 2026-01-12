@@ -11,6 +11,7 @@
 
 import type { DatabaseManager, DatabaseTransaction } from '../connection/DatabaseManager';
 import { databaseManager } from '../connection/DatabaseManager';
+import type * as GeoJSON from 'geojson';
 
 // ============================================================================
 // PROJECT DATA TYPES
@@ -109,6 +110,52 @@ export interface ProjectStatistics {
 }
 
 // ============================================================================
+// DATABASE ROW INTERFACES - Query Result Types
+// ============================================================================
+
+/** Row type for project statistics */
+interface ProjectStatisticsRow {
+  total_projects: string;
+  calibrated_projects: string;
+  uncalibrated_projects: string;
+  average_rms_error: string | null;
+  best_rms_error: string | null;
+  worst_rms_error: string | null;
+  total_dxf_files: string;
+  total_file_size: string | null;
+}
+
+/** Row type for project database row */
+interface ProjectRow {
+  id: string;
+  name: string;
+  description: string | null;
+  dxf_filename: string | null;
+  dxf_file_hash: string | null;
+  dxf_file_size: number | null;
+  source_crs: string;
+  target_crs: string;
+  transform_a: number | null;
+  transform_b: number | null;
+  transform_c: number | null;
+  transform_d: number | null;
+  transform_e: number | null;
+  transform_f: number | null;
+  rms_error: number | null;
+  transformation_method: string;
+  is_calibrated: boolean;
+  spatial_bounds_geojson: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+}
+
+/** Row type for count query */
+interface CountRow {
+  count: string;
+}
+
+// ============================================================================
 // PROJECT REPOSITORY CLASS
 // ============================================================================
 
@@ -153,7 +200,7 @@ export class ProjectRepository {
 
     try {
       const result = await this.dbManager.query(sql, values);
-      return this.mapRowToProject(result.rows[0]);
+      return this.mapRowToProject(result.rows[0] as ProjectRow);
     } catch (error) {
       if (error instanceof Error && error.message.includes('unique constraint')) {
         throw new Error(`Project με όνομα '${params.name}' υπάρχει ήδη`);
@@ -182,7 +229,7 @@ export class ProjectRepository {
     `;
 
     const result = await this.dbManager.query(sql, [id]);
-    return result.rows.length > 0 ? this.mapRowToProject(result.rows[0]) : null;
+    return result.rows.length > 0 ? this.mapRowToProject(result.rows[0] as ProjectRow) : null;
   }
 
   /**
@@ -201,7 +248,7 @@ export class ProjectRepository {
     `;
 
     const result = await this.dbManager.query(sql, [name]);
-    return result.rows.length > 0 ? this.mapRowToProject(result.rows[0]) : null;
+    return result.rows.length > 0 ? this.mapRowToProject(result.rows[0] as ProjectRow) : null;
   }
 
   /**
@@ -264,7 +311,7 @@ export class ProjectRepository {
     }
 
     const result = await this.dbManager.query(sql, params);
-    return result.rows.map(row => this.mapRowToProject(row));
+    return (result.rows as ProjectRow[]).map(row => this.mapRowToProject(row));
   }
 
   // ========================================================================
@@ -338,7 +385,7 @@ export class ProjectRepository {
       throw new Error(`Project με ID '${id}' δεν βρέθηκε`);
     }
 
-    return this.mapRowToProject(result.rows[0]);
+    return this.mapRowToProject(result.rows[0] as ProjectRow);
   }
 
   /**
@@ -386,7 +433,7 @@ export class ProjectRepository {
       throw new Error(`Project με ID '${id}' δεν βρέθηκε`);
     }
 
-    return this.mapRowToProject(result.rows[0]);
+    return this.mapRowToProject(result.rows[0] as ProjectRow);
   }
 
   // ========================================================================
@@ -424,17 +471,17 @@ export class ProjectRepository {
     `;
 
     const result = await this.dbManager.query(sql);
-    const row = result.rows[0];
+    const row = result.rows[0] as ProjectStatisticsRow;
 
     return {
       totalProjects: parseInt(row.total_projects) || 0,
       calibratedProjects: parseInt(row.calibrated_projects) || 0,
       uncalibratedProjects: parseInt(row.uncalibrated_projects) || 0,
-      averageRmsError: parseFloat(row.average_rms_error) || 0,
-      bestRmsError: parseFloat(row.best_rms_error) || 0,
-      worstRmsError: parseFloat(row.worst_rms_error) || 0,
+      averageRmsError: row.average_rms_error ? parseFloat(row.average_rms_error) : 0,
+      bestRmsError: row.best_rms_error ? parseFloat(row.best_rms_error) : 0,
+      worstRmsError: row.worst_rms_error ? parseFloat(row.worst_rms_error) : 0,
       totalDxfFiles: parseInt(row.total_dxf_files) || 0,
-      totalFileSize: parseInt(row.total_file_size) || 0
+      totalFileSize: row.total_file_size ? parseInt(row.total_file_size) : 0
     };
   }
 
@@ -445,29 +492,29 @@ export class ProjectRepository {
   /**
    * Map database row to GeoProject object
    */
-  private mapRowToProject(row: any): GeoProject {
+  private mapRowToProject(row: ProjectRow): GeoProject {
     return {
       id: row.id,
       name: row.name,
-      description: row.description,
-      dxfFilename: row.dxf_filename,
-      dxfFileHash: row.dxf_file_hash,
-      dxfFileSize: row.dxf_file_size,
+      description: row.description ?? undefined,
+      dxfFilename: row.dxf_filename ?? undefined,
+      dxfFileHash: row.dxf_file_hash ?? undefined,
+      dxfFileSize: row.dxf_file_size ?? undefined,
       sourceCrs: row.source_crs,
       targetCrs: row.target_crs,
-      transformA: row.transform_a,
-      transformB: row.transform_b,
-      transformC: row.transform_c,
-      transformD: row.transform_d,
-      transformE: row.transform_e,
-      transformF: row.transform_f,
-      rmsError: row.rms_error,
+      transformA: row.transform_a ?? undefined,
+      transformB: row.transform_b ?? undefined,
+      transformC: row.transform_c ?? undefined,
+      transformD: row.transform_d ?? undefined,
+      transformE: row.transform_e ?? undefined,
+      transformF: row.transform_f ?? undefined,
+      rmsError: row.rms_error ?? undefined,
       transformationMethod: row.transformation_method,
       isCalibrated: row.is_calibrated,
       spatialBounds: row.spatial_bounds_geojson ? JSON.parse(row.spatial_bounds_geojson) : undefined,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
-      createdBy: row.created_by
+      createdBy: row.created_by ?? undefined
     };
   }
 
@@ -484,7 +531,8 @@ export class ProjectRepository {
     }
 
     const result = await this.dbManager.query(sql, params);
-    return parseInt(result.rows[0].count) === 0;
+    const row = result.rows[0] as CountRow;
+    return parseInt(row.count) === 0;
   }
 }
 

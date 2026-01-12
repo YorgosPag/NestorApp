@@ -21,5 +21,8 @@
   "files": [
     "dist/**/*",
     "README.md"
-  ]
+  ],
+  "devDependencies": {
+    "@types/geojson": "7946.0.16"
+  }
 }

@@ -28,20 +28,23 @@
     }
   },
   "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "polygon-system/**/*.ts",
-    "polygon-system/**/*.tsx",
-    "database-system/**/*.ts",
-    "database-system/**/*.tsx",
-    "alert-engine/**/*.ts",
-    "alert-engine/**/*.tsx"
+    "./src/**/*.ts",
+    "./src/**/*.tsx",
+    "./polygon-system/**/*.ts",
+    "./polygon-system/**/*.tsx",
+    "./database-system/**/*.ts",
+    "./database-system/**/*.tsx",
+    "./alert-engine/**/*.ts",
+    "./alert-engine/**/*.tsx"
   ],
   "exclude": [
     "node_modules",
     "dist",
     "**/*.test.ts",
     "**/*.test.tsx",
-    "examples/**/*"
+    "**/examples/**/*",
+    "alert-engine/dashboard/**/*",
+    "alert-engine/analytics/**/*",
+    "alert-engine/configuration/**/*"
   ]
 }

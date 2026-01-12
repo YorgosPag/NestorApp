@@ -17,6 +17,7 @@ import {
   GeoCanvasPolygonManager,
   type GeoCanvasIntegrationOptions
 } from './geo-canvas-integration';
+import type * as GeoJSON from 'geojson';
 
 /**
  * Polygon system hook options
@@ -96,6 +97,7 @@ export function usePolygonSystem(options: UsePolygonSystemOptions = {}): UsePoly
       'simple': 0,
       'georeferencing': 0,
       'alert-zone': 0,
+      'real-estate': 0,
       'measurement': 0,
       'annotation': 0
     }

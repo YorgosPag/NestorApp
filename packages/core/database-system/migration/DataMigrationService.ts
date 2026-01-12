@@ -16,7 +16,38 @@ import type { GeoProject } from '../repositories/ProjectRepository';
 import { projectRepository } from '../repositories/ProjectRepository';
 import type { GeoControlPoint } from '../repositories/ControlPointRepository';
 import { controlPointRepository } from '../repositories/ControlPointRepository';
-import type { GeoControlPoint as MemoryControlPoint } from '../../types';
+
+// ============================================================================
+// MEMORY MODEL TYPES - Represent in-memory data structures
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Memory-side control point representation
+ * Different from GeoControlPoint which is the database model
+ */
+interface MemoryControlPoint {
+  id: string;
+  projectId: string;
+  name?: string;
+  description?: string;
+  /** DXF coordinates as nested object (memory model) */
+  dxfPoint: {
+    x: number;
+    y: number;
+    z?: number;
+  };
+  /** Geographic coordinates */
+  geoPoint?: {
+    lng: number;
+    lat: number;
+    alt?: number;
+  };
+  /** Accuracy in meters (simplified property name) */
+  accuracy: number;
+  accuracySource?: string;
+  pointType: 'control' | 'check' | 'tie';
+  isActive: boolean;
+}
 
 // ============================================================================
 // MIGRATION DATA TYPES
@@ -498,31 +529,33 @@ export class DataMigrationService {
           }
         }
 
-        // Geographic bounds validation
-        if (point.geoPoint.lng < -180 || point.geoPoint.lng > 180) {
-          errors.push({
-            id: `cp_${i}_invalid_lng`,
-            type: 'validation',
-            severity: 'high',
-            message: `Invalid longitude: ${point.geoPoint.lng}`,
-            itemId: point.id,
-            itemType: 'control_point',
-            timestamp: new Date(),
-            canRetry: false
-          });
-        }
+        // Geographic bounds validation (only if geoPoint exists)
+        if (point.geoPoint) {
+          if (point.geoPoint.lng < -180 || point.geoPoint.lng > 180) {
+            errors.push({
+              id: `cp_${i}_invalid_lng`,
+              type: 'validation',
+              severity: 'high',
+              message: `Invalid longitude: ${point.geoPoint.lng}`,
+              itemId: point.id,
+              itemType: 'control_point',
+              timestamp: new Date(),
+              canRetry: false
+            });
+          }
 
-        if (point.geoPoint.lat < -90 || point.geoPoint.lat > 90) {
-          errors.push({
-            id: `cp_${i}_invalid_lat`,
-            type: 'validation',
-            severity: 'high',
-            message: `Invalid latitude: ${point.geoPoint.lat}`,
-            itemId: point.id,
-            itemType: 'control_point',
-            timestamp: new Date(),
-            canRetry: false
-          });
+          if (point.geoPoint.lat < -90 || point.geoPoint.lat > 90) {
+            errors.push({
+              id: `cp_${i}_invalid_lat`,
+              type: 'validation',
+              severity: 'high',
+              message: `Invalid latitude: ${point.geoPoint.lat}`,
+              itemId: point.id,
+              itemType: 'control_point',
+              timestamp: new Date(),
+              canRetry: false
+            });
+          }
         }
       }
     }
@@ -559,11 +592,11 @@ export class DataMigrationService {
             dxfX: memoryPoint.dxfPoint.x,
             dxfY: memoryPoint.dxfPoint.y,
             dxfZ: memoryPoint.dxfPoint.z,
-            geoPoint: {
+            geoPoint: memoryPoint.geoPoint ? {
               lng: memoryPoint.geoPoint.lng,
               lat: memoryPoint.geoPoint.lat,
               alt: memoryPoint.geoPoint.alt
-            },
+            } : existingPoint.geoPoint, // Keep existing if no new geoPoint
             accuracyMeters: memoryPoint.accuracy
           });
           break;
@@ -580,7 +613,10 @@ export class DataMigrationService {
           return;
       }
     } else {
-      // Create new point
+      // Create new point - geoPoint is required for new points
+      if (!memoryPoint.geoPoint) {
+        throw new Error(`Cannot create control point without geoPoint: ${memoryPoint.id}`);
+      }
       await controlPointRepository.createControlPoint({
         projectId: project.id,
         name: memoryPoint.description || `Point ${memoryPoint.id}`,
@@ -630,11 +666,12 @@ export class DataMigrationService {
 
     // Check accuracy differences
     if (Math.abs(memoryPoint.accuracy - dbPoint.accuracyMeters) > 0.1) {
+      const accuracyRecommendation: 'memory' | 'database' = memoryPoint.accuracy < dbPoint.accuracyMeters ? 'memory' : 'database';
       conflicts.push({
         field: 'accuracy',
         memoryValue: memoryPoint.accuracy,
         databaseValue: dbPoint.accuracyMeters,
-        recommendation: memoryPoint.accuracy < dbPoint.accuracyMeters ? 'memory' : 'database'
+        recommendation: accuracyRecommendation
       });
     }
 
@@ -644,7 +681,7 @@ export class DataMigrationService {
         field: 'description',
         memoryValue: memoryPoint.description,
         databaseValue: dbPoint.description,
-        recommendation: 'merge'
+        recommendation: 'merge' as 'merge'
       });
     }
 

@@ -15,6 +15,7 @@ import type {
 import { SimplePolygonDrawer } from '../drawing/SimplePolygonDrawer';
 import { ControlPointDrawer } from '../drawing/ControlPointDrawer';
 import { polygonToGeoJSON, polygonsToGeoJSONCollection } from '../converters/polygon-converters';
+import type * as GeoJSON from 'geojson';
 
 /**
  * Geo-canvas integration options
@@ -489,6 +490,7 @@ export class GeoCanvasPolygonManager {
       'simple': 0,
       'georeferencing': 0,
       'alert-zone': 0,
+      'real-estate': 0,
       'measurement': 0,
       'annotation': 0
     };

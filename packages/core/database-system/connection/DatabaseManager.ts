@@ -74,6 +74,20 @@ export interface QueryPerformanceMetrics {
 }
 
 // ============================================================================
+// DATABASE ROW INTERFACES - Query Result Types
+// ============================================================================
+
+/** Row type for PostGIS version query */
+interface PostGISVersionRow {
+  version: string;
+}
+
+/** Row type for connection count query */
+interface ConnectionCountRow {
+  active_connections: string;
+}
+
+// ============================================================================
 // MOCK DATABASE IMPLEMENTATION (για development χωρίς PostgreSQL)
 // ============================================================================
 
@@ -312,7 +326,8 @@ export class DatabaseManager {
       // Check PostGIS version
       try {
         const postgisResult = await this.connection.query('SELECT PostGIS_Version() as version');
-        this.healthStatus.postgisVersion = postgisResult.rows[0]?.version || null;
+        const versionRow = postgisResult.rows[0] as PostGISVersionRow | undefined;
+        this.healthStatus.postgisVersion = versionRow?.version || null;
       } catch (error) {
         errors.push(`PostGIS check failed: ${error}`);
       }
@@ -325,7 +340,8 @@ export class DatabaseManager {
           WHERE datname = current_database()
             AND state = 'active'
         `);
-        this.healthStatus.connectionCount = parseInt(connResult.rows[0]?.active_connections || '0');
+        const connRow = connResult.rows[0] as ConnectionCountRow | undefined;
+        this.healthStatus.connectionCount = parseInt(connRow?.active_connections || '0');
       } catch (error) {
         errors.push(`Connection count check failed: ${error}`);
       }

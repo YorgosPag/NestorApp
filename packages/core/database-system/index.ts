@@ -12,10 +12,9 @@
 
 // Configuration και Connection Management
 export { default as getDatabaseConfig } from './config/database.config';
-export type {
-  DatabaseConfig,
-  DatabaseHealthStatus
-} from './config/database.config';
+export type { DatabaseConfig, DatabaseHealthStatus } from './config/database.config';
+// 🏢 ENTERPRISE: Import only types used locally
+import type { DatabaseHealthStatus } from './config/database.config';
 
 export { default as databaseManager, DatabaseManager } from './connection/DatabaseManager';
 export type {
@@ -25,6 +24,8 @@ export type {
   ConnectionPoolStats,
   QueryPerformanceMetrics
 } from './connection/DatabaseManager';
+// 🏢 ENTERPRISE: Import only types used locally
+import type { ConnectionPoolStats, QueryPerformanceMetrics } from './connection/DatabaseManager';
 
 // ============================================================================
 // DATA ACCESS LAYER (REPOSITORIES)
@@ -40,6 +41,8 @@ export type {
   ProjectQueryOptions,
   ProjectStatistics
 } from './repositories/ProjectRepository';
+// 🏢 ENTERPRISE: Import only types used locally
+import type { GeoProject, CreateProjectParams } from './repositories/ProjectRepository';
 
 // Control Point Repository
 export { default as controlPointRepository, ControlPointRepository } from './repositories/ControlPointRepository';
@@ -48,6 +51,13 @@ export type {
   CreateControlPointParams,
   UpdateControlPointParams,
   ControlPointQueryOptions,
+  ControlPointStatistics,
+  SpatialDistributionAnalysis
+} from './repositories/ControlPointRepository';
+// 🏢 ENTERPRISE: Import only types used locally
+import type {
+  GeoControlPoint,
+  CreateControlPointParams,
   ControlPointStatistics,
   SpatialDistributionAnalysis
 } from './repositories/ControlPointRepository';
@@ -85,6 +95,8 @@ export type {
   CustomReportParams,
   CustomReportResult
 } from './analytics/DatabaseAnalytics';
+// 🏢 ENTERPRISE: Import only types used locally
+import type { CustomReportResult } from './analytics/DatabaseAnalytics';
 
 // ============================================================================
 // DATA MIGRATION και SYNCHRONIZATION
