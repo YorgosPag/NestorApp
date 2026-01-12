@@ -1,72 +1,61 @@
 {
   "category": "FEATURE",
-  "timestamp": "20260112_1800",
-  "shortDescription": "Auth givenName/familyName + Custom Domain nestorconstruct.gr",
-  "problem": "Η φόρμα εγγραφής είχε ένα πεδίο 'Όνομα' αντί για ξεχωριστά πεδία Όνομα + Επώνυμο. Επίσης το Google Sign-In popup εμφάνιζε το default Firebase domain.",
-  "cause": "Αρχικός σχεδιασμός με απλό displayName field. Firebase default authDomain configuration.",
+  "timestamp": "20260112_1930",
+  "shortDescription": "Enterprise Session Validation + Auto-logout for Corrupt Sessions",
+  "problem": "Χρήστες με corrupted auth state (no email, anonymous) εμφανίζονταν ως authenticated αλλά χωρίς στοιχεία.",
+  "cause": "Firebase session corruption, stale localStorage data, ή anonymous auth attempts.",
   "filesChanged": [
-    "src/auth/components/AuthForm.tsx - 2 separate name fields (Όνομα + Επώνυμο)",
-    "src/auth/contexts/AuthContext.tsx - completeProfile function + structured name storage",
-    "src/auth/types/auth.types.ts - SignUpData interface με givenName/familyName",
-    "src/i18n/locales/el/auth.json - Greek translations for name fields",
-    "src/i18n/locales/en/auth.json - English translations for name fields",
-    "src/i18n/locales/el/building.json - Building translations cleanup",
-    "src/i18n/locales/en/building.json - Building translations cleanup",
-    "src/i18n/config.ts - i18n configuration updates",
-    "src/i18n/hooks/useTranslation.ts - Translation hook improvements",
-    "src/i18n/lazy-config.ts - Lazy loading config",
-    "src/components/generic/UniversalTabsRenderer.tsx - Tabs improvements",
-    "src/components/projects/tabs/FloorplanViewerTab.tsx - Floorplan tab updates",
-    "src/subapps/dxf-viewer/config/modal-select/core/labels/tabs.ts - Tab labels",
-    "src/docs/AUTHENTICATION_SYSTEM.md - Full OAuth configuration documentation",
-    "Nestor_Pagonis_Logo.png - Logo for OAuth consent screen",
-    ".env.local (not committed) - authDomain = nestorconstruct.gr"
+    "src/auth/types/auth.types.ts - SessionValidationStatus, SessionIssue, SessionValidationResult types",
+    "src/auth/contexts/AuthContext.tsx - validateSession(), clearCorruptedUserData(), auto-logout",
+    "src/components/core/AdvancedFilters/AdvancedFiltersPanel.tsx - Filter improvements",
+    "src/components/core/AdvancedFilters/FilterField.tsx - Field updates",
+    "src/components/core/AdvancedFilters/configs.ts - Configuration refinements",
+    "src/components/projects/tabs/FloorplanViewerTab.tsx - Tab updates",
+    "src/constants/property-statuses-enterprise.ts - Status constants",
+    "src/features/property-hover/components/PropertyHoverHeader.tsx - Header improvements",
+    "src/features/property-hover/constants.ts - Hover constants",
+    "src/features/units-sidebar/components/UnitDetailsHeader.tsx - Unit header updates",
+    "src/i18n/locales/el/building.json - Greek translations",
+    "src/i18n/locales/en/building.json - English translations",
+    "src/app/storage/[id]/page.tsx - Storage page updates",
+    "src/app/units/page.tsx - Units page updates"
   ],
   "solution": {
-    "phase1": "Updated auth.types.ts με SignUpData interface που περιέχει givenName + familyName",
-    "phase2": "Updated AuthContext με completeProfile function για Google users και updateUserProfile για structured name data",
-    "phase3": "Updated AuthForm με 2 ξεχωριστά input fields για Όνομα και Επώνυμο",
-    "phase4": "Added i18n translations για Greek και English (labels, placeholders, validation messages)",
-    "phase5": "Configured custom domain nestorconstruct.gr στο Firebase Console και Google Cloud Console OAuth credentials"
+    "phase1": "Added SessionValidationStatus type με explicit status codes (VALID, INVALID_NO_EMAIL, etc.)",
+    "phase2": "Added validateSession() function - enterprise security pattern",
+    "phase3": "Added auto-logout for corrupted sessions (no email, anonymous)",
+    "phase4": "Added clearCorruptedUserData() for localStorage cleanup",
+    "phase5": "Integrated validation into onAuthStateChanged handler"
   },
   "technicalDetails": {
-    "customDomain": "nestorconstruct.gr",
-    "oauthConfig": {
-      "authorizedOrigins": ["https://pagonis-87766.firebaseapp.com", "https://nestorconstruct.gr"],
-      "authorizedRedirectURIs": [
-        "https://pagonis-87766.firebaseapp.com/__/auth/handler",
-        "https://nestorconstruct.gr/__/auth/handler"
-      ]
+    "sessionValidation": {
+      "statusCodes": ["VALID", "NO_SESSION", "INVALID_NO_EMAIL", "INVALID_NO_UID", "INVALID_ANONYMOUS", "EXPIRED"],
+      "recommendations": ["CONTINUE", "LOGOUT", "REFRESH", "RE_AUTHENTICATE"]
     },
-    "dataModel": {
-      "givenName": "localStorage: givenName_{uid}",
-      "familyName": "localStorage: familyName_{uid}",
-      "displayName": "Firebase Auth: {givenName} {familyName}",
-      "profileComplete": "localStorage: profile_complete_{uid}"
+    "autoLogout": {
+      "triggers": ["INVALID_NO_EMAIL", "INVALID_NO_UID", "INVALID_ANONYMOUS"],
+      "actions": ["clearCorruptedUserData", "firebaseSignOut", "setUser(null)"]
     },
-    "enterprisePattern": "SAP/Salesforce givenName + familyName + displayName pattern"
+    "enterprisePattern": "Google/Microsoft/Okta session validation standards"
   },
   "verification": {
     "commits": [
-      "6230448 - feat(auth): givenName/familyName fields + custom domain (nestorconstruct.gr)"
+      "880560b - feat(auth): enterprise session validation + auto-logout for corrupt sessions"
     ],
-    "checkpointTag": "checkpoint-auth-custom-domain-2026-01-12",
+    "checkpointTag": "checkpoint-session-validation-2026-01-12",
     "vercelPush": "Successful",
     "preCommitChecks": "All passed"
   },
   "testing": {
-    "signupForm": "Shows 2 separate name fields (Όνομα + Επώνυμο)",
-    "validation": "Greek validation messages appear correctly",
-    "googleOAuth": "Works with nestorconstruct.gr domain",
-    "translations": "Load correctly after cache clear",
-    "redirect_uri": "No mismatch error after OAuth config update"
+    "sessionValidation": "Invalid sessions trigger auto-logout",
+    "consoleLogging": "Enterprise logging for debugging",
+    "cleanupFunction": "Corrupted localStorage data cleared automatically"
   },
   "notes": [
-    "CRITICAL: Google OAuth Authorized Redirect URIs must include https://nestorconstruct.gr/__/auth/handler",
-    "CRITICAL: Google OAuth Authorized JavaScript Origins must include https://nestorconstruct.gr",
-    "Logo uploaded to Google OAuth consent screen - requires Brand Verification to display",
-    "givenName/familyName stored in localStorage (Firebase Auth doesn't support custom profile fields)",
-    "Full documentation in src/docs/AUTHENTICATION_SYSTEM.md"
+    "Enterprise session validation following Google/Microsoft/Okta patterns",
+    "Auto-logout prevents corrupted state from persisting",
+    "Console logging helps debug auth issues",
+    "Combined with previous auth improvements (givenName/familyName, custom domain)"
   ],
   "contributors": {
     "user": "Giorgos Pagonis",
@@ -74,11 +63,10 @@
     "sessionDate": "2026-01-12"
   },
   "relatedBackups": [
-    "checkpoint-auth-custom-domain-2026-01-12",
-    "v2026.01.12-turbopack-perf",
-    "v2026.01.12-batch6-fixes"
+    "checkpoint-session-validation-2026-01-12",
+    "checkpoint-auth-custom-domain-2026-01-12"
   ],
   "commits": [
-    "6230448 - feat(auth): givenName/familyName fields + custom domain (nestorconstruct.gr)"
+    "880560b - feat(auth): enterprise session validation + auto-logout for corrupt sessions"
   ]
 }
