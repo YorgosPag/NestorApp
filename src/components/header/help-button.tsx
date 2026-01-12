@@ -46,6 +46,13 @@ export function HelpButton() {
   const router = useRouter();
   const { t } = useTranslation('common');
 
+  // 🏢 ENTERPRISE: SSR-safe platform detection
+  const [isMac, setIsMac] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMac(typeof navigator !== 'undefined' && navigator.platform?.includes('Mac'));
+  }, []);
+
   const handleNavigation = (path: string) => {
     router.push(path);
   };
@@ -53,10 +60,11 @@ export function HelpButton() {
   const handleCommandPalette = () => {
     // 🏢 ENTERPRISE: Dispatch global keyboard event for command palette
     // This allows the command palette to be triggered from anywhere
+    const isWindows = typeof navigator !== 'undefined' && navigator.platform?.includes('Win');
     const event = new KeyboardEvent('keydown', {
       key: 'k',
       metaKey: true,
-      ctrlKey: navigator.platform.includes('Win'),
+      ctrlKey: isWindows,
       bubbles: true,
     });
     document.dispatchEvent(event);
@@ -79,7 +87,7 @@ export function HelpButton() {
           <Command className={`mr-2 ${iconSizes.sm}`} />
           <span>{t('helpHub.commandPalette')}</span>
           <DropdownMenuShortcut>
-            {navigator.platform?.includes('Mac') ? '⌘K' : 'Ctrl+K'}
+            {isMac ? '⌘K' : 'Ctrl+K'}
           </DropdownMenuShortcut>
         </DropdownMenuItem>
 

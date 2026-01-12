@@ -2,7 +2,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // 🏢 ENTERPRISE: Type-safe interfaces for debug data
@@ -57,21 +56,19 @@ export async function GET(request: NextRequest) {
       allCompanies: []
     };
 
-    // 1. Παίρνουμε όλα τα contacts
+    // 1. Παίρνουμε όλα τα contacts - Firebase Admin SDK syntax
     console.log('📋 Step 1: All contacts in database...');
-    const allContactsQuery = query(collection(database, COLLECTIONS.CONTACTS));
-    const allContactsSnapshot = await getDocs(allContactsQuery);
+    const allContactsSnapshot = await database.collection(COLLECTIONS.CONTACTS).get();
     result.totalContacts = allContactsSnapshot.docs.length;
 
     console.log(`Total contacts: ${result.totalContacts}\n`);
 
-    // 2. Παίρνουμε μόνο τις εταιρείες
+    // 2. Παίρνουμε μόνο τις εταιρείες - Firebase Admin SDK syntax
     console.log('📋 Step 2: Companies only...');
-    const companiesQuery = query(
-      collection(database, COLLECTIONS.CONTACTS),
-      where('type', '==', 'company')
-    );
-    const companiesSnapshot = await getDocs(companiesQuery);
+    const companiesSnapshot = await database
+      .collection(COLLECTIONS.CONTACTS)
+      .where('type', '==', 'company')
+      .get();
     result.totalCompanies = companiesSnapshot.docs.length;
 
     console.log(`Total companies: ${result.totalCompanies}\n`);
@@ -92,13 +89,12 @@ export async function GET(request: NextRequest) {
     console.log('\n🔍 Step 3: Checking primary companies...');
 
     // Find primary company by name pattern instead of hardcoded ID
-    const primaryCompaniesQuery = query(
-      collection(database, COLLECTIONS.CONTACTS),
-      where('type', '==', 'company')
-    );
-    const primarySnapshot = await getDocs(primaryCompaniesQuery);
+    const primarySnapshot = await database
+      .collection(COLLECTIONS.CONTACTS)
+      .where('type', '==', 'company')
+      .get();
 
-    let primaryCompany = null;
+    let primaryCompany: { id: string; companyName?: string; type?: string; status?: string; isPrimary?: boolean } | null = null;
     primarySnapshot.docs.forEach(doc => {
       const data = doc.data();
       if (data.companyName?.toLowerCase().includes('παγωνη') || data.isPrimary) {
@@ -125,11 +121,10 @@ export async function GET(request: NextRequest) {
     // 4. Check projects for primary company
     if (primaryCompany) {
       console.log('\n🏗️ Step 4: Checking projects for primary company...');
-      const projectsQuery = query(
-        collection(database, COLLECTIONS.PROJECTS),
-        where('companyId', '==', primaryCompany.id)
-      );
-      const projectsSnapshot = await getDocs(projectsQuery);
+      const projectsSnapshot = await database
+        .collection(COLLECTIONS.PROJECTS)
+        .where('companyId', '==', primaryCompany.id)
+        .get();
       result.projectsForPrimaryCompany = projectsSnapshot.docs.length;
       console.log(`Projects found: ${result.projectsForPrimaryCompany}`);
     } else {
@@ -138,8 +133,7 @@ export async function GET(request: NextRequest) {
 
     // 5. Ελέγχουμε όλα τα projects για να δούμε ποια companyIds υπάρχουν
     console.log('\n🏗️ Step 5: All projects and their company IDs...');
-    const allProjectsQuery = query(collection(database, COLLECTIONS.PROJECTS));
-    const allProjectsSnapshot = await getDocs(allProjectsQuery);
+    const allProjectsSnapshot = await database.collection(COLLECTIONS.PROJECTS).get();
 
     console.log(`Total projects: ${allProjectsSnapshot.docs.length}\n`);
 

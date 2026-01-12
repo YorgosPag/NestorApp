@@ -161,7 +161,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
         <div><strong>Debug:</strong> {debugInfo}</div>
         <div className="flex items-center gap-1">
           <strong>Browser:</strong>
-          {navigator.userAgent.includes('Chrome') ? (
+          {typeof navigator !== 'undefined' && navigator.userAgent?.includes('Chrome') ? (
             <span className={`flex items-center gap-1 ${colors.text.danger}`}>
               <Circle className={`${iconSizes.xs} fill-current`} />
               Chrome (needs CSP fix)

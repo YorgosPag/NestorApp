@@ -99,7 +99,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
         metadata: {
           componentStack: errorInfo.componentStack,
           retryCount: this.state.retryCount,
-          userAgent: navigator.userAgent,
+          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR',
           url: window.location.href,
           userId: this.getUserId(),
           // ErrorBoundary specific context
@@ -117,7 +117,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       ...error,
       timestamp: new Date().toISOString(),
       component: componentName || 'Unknown',
-      userAgent: navigator.userAgent,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR',
       url: window.location.href,
       userId: this.getUserId(),
       errorInfo: customErrorInfo,
@@ -201,7 +201,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
         componentStack: errorInfo?.componentStack,
         component: this.props.componentName,
         timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent,
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR',
         url: window.location.href,
         userId: this.getUserId()
       };
@@ -228,7 +228,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       componentStack: errorInfo?.componentStack,
       timestamp: new Date().toISOString(),
       url: window.location.href,
-      userAgent: navigator.userAgent,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR',
       userId: this.getUserId(),
       component: this.props.componentName
     };
@@ -256,7 +256,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
         componentStack: errorInfo?.componentStack,
         timestamp: new Date().toISOString(),
         url: window.location.href,
-        userAgent: navigator.userAgent,
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR',
         userId: this.getUserId(),
         component: this.props.componentName || 'Unknown',
         severity: this.getErrorSeverity(error),
@@ -675,7 +675,7 @@ export function useErrorReporting() {
         context,
         timestamp: new Date().toISOString(),
         url: window.location.href,
-        userAgent: navigator.userAgent
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR'
       };
 
       console.error('Manual error report:', errorReport);
