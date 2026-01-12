@@ -128,8 +128,9 @@ const CadDock = memo(({ children }: { children?: React.ReactNode }) => {
   const apiRef = useRef<{ addPanel?: ((config: unknown) => void) | undefined } | null>(null);
 
   const onReady = (e: DockviewReadyEvent) => {
-    // ✅ ENTERPRISE FIX: Type-safe API reference assignment
-    apiRef.current = e.api as any;
+    // 🏢 ENTERPRISE: Store API reference with proper typing
+    // The Dockview API has more methods than our simplified ref type, so we extract what we need
+    apiRef.current = { addPanel: e.api.addPanel.bind(e.api) };
 
     try {
 

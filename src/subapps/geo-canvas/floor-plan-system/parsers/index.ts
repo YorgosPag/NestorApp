@@ -32,7 +32,7 @@ export type { ImageMetadata, ImageParserResult } from './raster/ImageParser';
 // 🔧 UTILITY: Format Detection
 // ============================================================================
 
-import type { FloorPlanFormat } from '../types';
+import type { FloorPlanFormat, ParserResult } from '../types';
 
 /**
  * Detect format from file
@@ -75,10 +75,11 @@ export function isRasterFormat(format: FloorPlanFormat): boolean {
 
 /**
  * Get appropriate parser για format
+ * 🏢 ENTERPRISE: Returns parser with proper ParserResult type
  */
 export async function getParser(
   format: FloorPlanFormat
-): Promise<{ parse: (file: File) => Promise<any> }> {
+): Promise<{ parse: (file: File) => Promise<ParserResult> }> {
   switch (format) {
     case 'DXF':
       return { parse: parseDxf };

@@ -196,7 +196,7 @@ export function EnterpriseDxfSettingsProvider({
 
   // Storage load callbacks
   const onLoadSuccess = useCallback(
-    (settings: any) => dispatch({ type: 'LOAD_SUCCESS', payload: settings }),
+    (settings: SettingsState) => dispatch({ type: 'LOAD_SUCCESS', payload: settings }),
     [dispatch]
   );
 

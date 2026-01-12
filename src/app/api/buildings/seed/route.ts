@@ -1,143 +1,184 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, doc, setDoc, getDocs, query, where } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
-/**
- * 🏢 ENTERPRISE: Database-driven company lookup (NO MORE HARDCODED IDs)
- */
-async function getCompanyIdByName(companyName: string): Promise<string | null> {
-  try {
-    const companiesQuery = query(
-      collection(db, COLLECTIONS.CONTACTS),
-      where('type', '==', 'company'),
-      where('companyName', '==', companyName)
-    );
-    const snapshot = await getDocs(companiesQuery);
-    return snapshot.empty ? null : snapshot.docs[0].id;
-  } catch (error) {
-    console.error(`🚨 Error loading company ID for ${companyName}:`, error);
-    return null;
-  }
-}
+// ENTERPRISE: Import centralized building features registry with runtime validation
+import type { BuildingFeatureKey } from '@/types/building/features';
 
-// 🏢 ENTERPRISE: Real buildings for configurable primary project
-const realBuildings = [
+// ENTERPRISE: Use centralized company service (NO local duplicates)
+import { getCompanyByName } from '@/services/companies.service';
+
+// ENTERPRISE: Use centralized admin env config (NO local helpers)
+import { getRequiredAdminCompanyName, getOptionalAdminProjectName } from '@/config/admin-env';
+
+/**
+ * ENTERPRISE SEED ROUTE: Sample Buildings Data
+ *
+ * Server-only admin endpoint for seeding sample building data.
+ * Company ID is loaded dynamically from database.
+ *
+ * @method POST - Seed sample buildings
+ * @requires ADMIN_COMPANY_NAME - Server-only env var (required)
+ *
+ * @author George Pagonis + Claude Code (Anthropic AI)
+ */
+
+// ============================================================================
+// SEED DATA: Sample buildings (server-only, no NEXT_PUBLIC_ env vars)
+// ============================================================================
+
+const SEED_BUILDINGS: Array<{
+  id: string;
+  name: string;
+  description: string;
+  address: string;
+  city: string;
+  totalArea: number;
+  builtArea: number;
+  floors: number;
+  units: number;
+  status: string;
+  startDate: string;
+  completionDate: string;
+  progress: number;
+  totalValue: number;
+  project: string;
+  projectId: string;
+  category: string;
+  features: BuildingFeatureKey[];
+  buildingFloors: Array<{ id: string; name: string; number: number; units: number }>;
+}> = [
   {
-    id: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_ID || "building_1_palaiologou",
-    name: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_NAME || "ΚΤΙΡΙΟ Α - Main Building",
-    description: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_DESC || "Κύριο κτίριο με 8 μονάδες υψηλών προδιαγραφών",
-    address: process.env.NEXT_PUBLIC_DEFAULT_ADDRESS_1 || "Main Street 45",
-    city: process.env.NEXT_PUBLIC_DEFAULT_CITY || "Θεσσαλονίκη", 
-    totalArea: parseFloat(process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_TOTAL_AREA || '1850.50'),
-    builtArea: parseFloat(process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_BUILT_AREA || '1650.25'),
-    floors: parseInt(process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_FLOORS || '6'),
-    units: parseInt(process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_UNITS || '8'),
-    status: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_STATUS || 'active',
-    startDate: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_START_DATE || '2020-03-15',
-    completionDate: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_END_DATE || '2023-06-30',
-    progress: parseInt(process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_PROGRESS || '95'),
-    totalValue: parseFloat(process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_TOTAL_VALUE || '1800000'),
-    company: process.env.NEXT_PUBLIC_COMPANY_NAME || 'Default Construction Company',
-    project: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_NAME || "Sample Development Project",
-    projectId: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_1_ID || "project_1_default",
-    category: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_CATEGORY || 'residential',
-    features: (process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_FEATURES || 'Θέρμανση Αυτονομίας,Ασανσέρ,Μπαλκόνια,Αποθήκες').split(',').map(f => f.trim()),
+    id: 'building_1_sample',
+    name: 'Building A - Main Building',
+    description: 'Main building with 8 high-spec units',
+    address: 'Main Street 45',
+    city: 'Thessaloniki',
+    totalArea: 1850.50,
+    builtArea: 1650.25,
+    floors: 6,
+    units: 8,
+    status: 'active',
+    startDate: '2020-03-15',
+    completionDate: '2023-06-30',
+    progress: 95,
+    totalValue: 1800000,
+    project: 'Sample Development Project',
+    projectId: 'project_1_sample',
+    category: 'residential',
+    features: [
+      'autonomousHeating',
+      'elevator',
+      'balconiesWithView',
+      'parkingSpaces'
+    ],
     buildingFloors: [
-      { id: process.env.NEXT_PUBLIC_FLOOR_0_ID || "floor_0", name: "Ισόγειο", number: 0, units: 1 },
-      { id: process.env.NEXT_PUBLIC_FLOOR_1_ID || "floor_1", name: "1ος Όροφος", number: 1, units: 2 },
-      { id: process.env.NEXT_PUBLIC_FLOOR_2_ID || "floor_2", name: "2ος Όροφος", number: 2, units: 2 },
-      { id: process.env.NEXT_PUBLIC_FLOOR_3_ID || "floor_3", name: "3ος Όροφος", number: 3, units: 2 },
-      { id: process.env.NEXT_PUBLIC_FLOOR_4_ID || "floor_4", name: "4ος Όροφος", number: 4, units: 1 }
+      { id: 'floor_0', name: 'Ground Floor', number: 0, units: 1 },
+      { id: 'floor_1', name: '1st Floor', number: 1, units: 2 },
+      { id: 'floor_2', name: '2nd Floor', number: 2, units: 2 },
+      { id: 'floor_3', name: '3rd Floor', number: 3, units: 2 },
+      { id: 'floor_4', name: '4th Floor', number: 4, units: 1 }
     ]
   },
   {
-    id: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_ID || "building_2_palaiologou", 
-    name: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_NAME || "ΚΤΙΡΙΟ Β - Auxiliary Building",
-    description: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_DESC || "Βοηθητικό κτίριο με αποθήκες και κοινόχρηστους χώρους",
-    address: process.env.NEXT_PUBLIC_DEFAULT_ADDRESS_2 || "Main Street 47",
-    city: process.env.NEXT_PUBLIC_DEFAULT_CITY || "Θεσσαλονίκη",
-    totalArea: parseFloat(process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_TOTAL_AREA || '450.75'),
-    builtArea: parseFloat(process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_BUILT_AREA || '380.50'),
-    floors: parseInt(process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_FLOORS || '2'),
-    units: parseInt(process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_UNITS || '6'),
-    status: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_STATUS || 'construction',
-    startDate: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_START_DATE || '2023-09-01',
-    completionDate: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_END_DATE || '2024-12-15',
-    progress: parseInt(process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_PROGRESS || '65'),
-    totalValue: parseFloat(process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_TOTAL_VALUE || '450000'),
-    company: process.env.NEXT_PUBLIC_COMPANY_NAME || 'Default Construction Company',
-    project: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_NAME || "Sample Development Project",
-    projectId: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_1_ID || "project_1_default",
-    category: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_CATEGORY || 'storage',
-    features: (process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_FEATURES || 'Αποθήκες,Χώρος Κοινής Ωφέλειας,Υπόγειο Πάρκινγκ').split(',').map(f => f.trim()),
+    id: 'building_2_sample',
+    name: 'Building B - Auxiliary Building',
+    description: 'Auxiliary building with storage and common areas',
+    address: 'Main Street 47',
+    city: 'Thessaloniki',
+    totalArea: 450.75,
+    builtArea: 380.50,
+    floors: 2,
+    units: 6,
+    status: 'construction',
+    startDate: '2023-09-01',
+    completionDate: '2024-12-15',
+    progress: 65,
+    totalValue: 450000,
+    project: 'Sample Development Project',
+    projectId: 'project_1_sample',
+    category: 'storage',
+    features: [
+      'warehouseClimate',
+      'loadingRamps',
+      'parkingSpaces'
+    ],
     buildingFloors: [
-      { id: process.env.NEXT_PUBLIC_FLOOR_BASEMENT_ID || "floor_-1", name: "Υπόγειο", number: -1, units: 3 },
-      { id: process.env.NEXT_PUBLIC_FLOOR_GROUND_ID || "floor_0", name: "Ισόγειο", number: 0, units: 3 }
+      { id: 'floor_-1', name: 'Basement', number: -1, units: 3 },
+      { id: 'floor_0', name: 'Ground Floor', number: 0, units: 3 }
     ]
   }
 ];
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🏗️ Starting enterprise building seeding (database-driven)...');
+    console.log('[SEED] Starting enterprise building seeding (database-driven)...');
 
-    // 🏢 ENTERPRISE: Load company ID από database αντί για hardcoded value
-    const mainCompanyName = process.env.NEXT_PUBLIC_COMPANY_NAME || 'Default Construction Company';
-    const pagonisCompanyId = await getCompanyIdByName(mainCompanyName);
-
-    if (!pagonisCompanyId) {
+    // ENTERPRISE: Get required company name (fail-fast if not configured)
+    let companyName: string;
+    try {
+      companyName = getRequiredAdminCompanyName();
+    } catch (error) {
       return NextResponse.json({
-        error: `Company "${mainCompanyName}" not found in database`,
+        success: false,
+        error: (error as Error).message,
+        suggestion: 'Add ADMIN_COMPANY_NAME to .env.local'
+      }, { status: 500 });
+    }
+
+    // ENTERPRISE: Database-driven company lookup (centralized service)
+    const company = await getCompanyByName(companyName);
+    if (!company) {
+      return NextResponse.json({
+        success: false,
+        error: `Company "${companyName}" not found in database`,
         suggestion: 'Please ensure company data exists before seeding buildings'
       }, { status: 404 });
     }
 
-    console.log(`✅ Found company in database: ${pagonisCompanyId}`);
+    console.log(`[SEED] Found company in database: ${company.id} (${company.companyName})`);
 
     const results = [];
 
-    for (const buildingTemplate of realBuildings) {
-      console.log(`📝 Creating building: ${buildingTemplate.name}`);
+    for (const buildingTemplate of SEED_BUILDINGS) {
+      console.log(`[SEED] Creating building: ${buildingTemplate.name}`);
 
-      // 🏢 ENTERPRISE: Use database-driven companyId
+      // ENTERPRISE: Spread template and override with database-driven companyId
       const building = {
         ...buildingTemplate,
-        companyId: pagonisCompanyId, // Database-driven value
+        companyId: company.id, // Database-driven value (overrides any template value)
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
 
-      // Remove the old hardcoded companyId if it exists in template
-      delete building.companyId;
-      building.companyId = pagonisCompanyId;
-
       await setDoc(doc(db, COLLECTIONS.BUILDINGS, building.id), building);
 
-      console.log(`✅ Successfully created building with database-driven companyId: ${building.name}`);
+      console.log(`[SEED] Successfully created building with database-driven companyId: ${building.name}`);
       results.push({
         id: building.id,
         name: building.name,
-        companyId: pagonisCompanyId,
+        companyId: company.id,
         status: 'created'
       });
     }
 
-    console.log('🎉 All real buildings have been successfully seeded to Firestore!');
+    console.log('[SEED] All sample buildings have been successfully seeded to Firestore!');
 
     return NextResponse.json({
       success: true,
-      message: 'Real buildings seeded successfully',
+      message: 'Sample buildings seeded successfully',
       results,
       summary: {
-        totalBuildings: realBuildings.length,
-        project: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_NAME || "Sample Development Project",
-        company: process.env.NEXT_PUBLIC_COMPANY_NAME || "Default Construction Company"
+        totalBuildings: SEED_BUILDINGS.length,
+        project: getOptionalAdminProjectName() || SEED_BUILDINGS[0]?.project,
+        company: company.companyName,
+        companyId: company.id
       }
     });
 
   } catch (error) {
-    console.error('❌ Error seeding buildings:', error);
+    console.error('[SEED] Error seeding buildings:', error);
     
     return NextResponse.json({
       success: false,

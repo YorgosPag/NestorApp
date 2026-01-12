@@ -158,7 +158,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
                 <SelectItem key={status} value={status}>
                   <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                     <div
-                      className={`${iconSizes.xs} rounded ${useDynamicBackgroundClass(String((STATUS_COLORS as any)[status] || ''))}`}
+                      className={`${iconSizes.xs} rounded ${useDynamicBackgroundClass(String(STATUS_COLORS[status] || ''))}`}
                     />
                     {STATUS_LABELS[status]}
                   </div>

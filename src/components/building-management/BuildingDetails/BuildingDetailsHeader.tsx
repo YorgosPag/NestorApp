@@ -9,7 +9,7 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-e
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { cn } from '@/lib/utils';
 import type { Building } from '../BuildingsPageContent';
-import { getStatusColor, getStatusLabel } from '../BuildingCard/BuildingCardUtils';
+// 🏢 ENTERPRISE: Status display uses centralized BuildingBadge component (no hardcoded functions)
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -20,8 +20,8 @@ interface BuildingDetailsHeaderProps {
 }
 
 export function BuildingDetailsHeader({ building }: BuildingDetailsHeaderProps) {
-    // 🏢 ENTERPRISE: i18n hook for translations
-    const { t } = useTranslation('building');
+    // 🏢 ENTERPRISE: i18n hook for translations with namespace readiness check
+    const { t, isNamespaceReady } = useTranslation('building');
 
     return (
         <>
@@ -32,7 +32,8 @@ export function BuildingDetailsHeader({ building }: BuildingDetailsHeaderProps) 
                     title={building.name}
                     actions={[
                         {
-                            label: t('details.viewBuilding'),
+                            // 🏢 ENTERPRISE: Fallback when namespace not ready
+                            label: isNamespaceReady ? t('details.viewBuilding') : 'View Building',
                             onClick: () => console.log('Show building details'),
                             icon: Eye,
                             className: GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON
@@ -44,7 +45,10 @@ export function BuildingDetailsHeader({ building }: BuildingDetailsHeaderProps) 
                     <div className="flex gap-2 mt-2">
                         <BuildingBadge status={building.status} size="sm" />
                         <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-secondary text-secondary-foreground rounded-full">
-                            {t('details.percentComplete', { percent: building.progress })}
+                            {/* 🏢 ENTERPRISE: Fallback when namespace not ready */}
+                            {isNamespaceReady
+                                ? t('details.percentComplete', { percent: building.progress ?? 0 })
+                                : `${building.progress ?? 0}%`}
                         </span>
                     </div>
                 </EntityDetailsHeader>

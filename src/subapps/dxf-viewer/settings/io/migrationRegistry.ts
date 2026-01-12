@@ -99,10 +99,18 @@ export const migrations: Migration[] = [
     version: 3,
     description: 'Fix fontWeight: convert string values (bold/normal) to numbers (700/400)',
     migrate: (data: unknown) => {
-      const state = data as any;
+      // 🏢 ENTERPRISE: Type-safe migration state
+      const state = data as {
+        __standards_version: number;
+        text?: {
+          general?: { fontWeight?: string | number };
+          specific?: Record<string, { fontWeight?: string | number }>;
+        };
+        [key: string]: unknown;
+      };
 
       // ✅ ENTERPRISE: ChatGPT5 solution - normalize fontWeight
-      const toWeight = (w: any): number => {
+      const toWeight = (w: string | number | undefined): number => {
         if (typeof w === 'string') {
           return w === 'bold' ? 700 : w === 'normal' ? 400 : Number(w) || 400;
         }
@@ -128,14 +136,22 @@ export const migrations: Migration[] = [
       };
     },
     rollback: (data: unknown) => {
-      const state = data as any;
+      // 🏢 ENTERPRISE: Type-safe migration state
+      const state = data as {
+        __standards_version: number;
+        text?: {
+          general?: { fontWeight?: string | number };
+          specific?: Record<string, { fontWeight?: string | number }>;
+        };
+        [key: string]: unknown;
+      };
 
       // Convert numbers back to strings
-      const toWeightString = (w: any): string => {
+      const toWeightString = (w: string | number | undefined): string => {
         if (typeof w === 'number') {
           return w >= 700 ? 'bold' : 'normal';
         }
-        return w || 'normal';
+        return typeof w === 'string' ? w : 'normal';
       };
 
       if (state.text?.general?.fontWeight) {
@@ -163,17 +179,38 @@ export const migrations: Migration[] = [
     version: 4,
     description: 'Complete grip colors: ensure all modes have cold/warm/hot/contour',
     migrate: (data: unknown) => {
-      const state = data as any;
+      // 🏢 ENTERPRISE: Type-safe grip colors interface
+      interface GripColors {
+        cold?: string;
+        warm?: string;
+        hot?: string;
+        contour?: string;
+      }
+
+      interface GripSettingsLayer {
+        colors?: GripColors;
+        [key: string]: unknown;
+      }
+
+      const state = data as {
+        __standards_version: number;
+        grip?: {
+          general?: GripSettingsLayer;
+          specific?: Record<string, GripSettingsLayer>;
+          overrides?: Record<string, GripSettingsLayer>;
+        };
+        [key: string]: unknown;
+      };
 
       // ✅ ENTERPRISE: Default colors from ACI palette
-      const DEFAULT_COLORS = {
+      const DEFAULT_COLORS: Required<GripColors> = {
         cold: '#0000FF',      // Blue (ACI 5)
         warm: '#00FFFF',      // Cyan (ACI 4)
         hot: '#FF0000',       // Red (ACI 1)
         contour: '#000000'    // Black
       };
 
-      const COMPLETION_COLORS = {
+      const COMPLETION_COLORS: Required<GripColors> = {
         cold: '#00FF00',      // Green (ACI 3)
         warm: '#00FF00',      // Green
         hot: '#00FF00',       // Green
@@ -181,7 +218,7 @@ export const migrations: Migration[] = [
       };
 
       // Helper to complete colors object
-      const completeColors = (colors: any, defaults: any) => {
+      const completeColors = (colors: GripColors | undefined, defaults: Required<GripColors>): Required<GripColors> => {
         if (!colors || typeof colors !== 'object') {
           return defaults;
         }

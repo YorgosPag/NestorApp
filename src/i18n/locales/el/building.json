@@ -26,7 +26,11 @@
     "construction": "Υπό Κατασκευή",
     "planned": "Σχεδιασμένο",
     "completed": "Ολοκληρωμένο",
-    "maintenance": "Συντήρηση"
+    "maintenance": "Συντήρηση",
+    "planning": "Σχεδιασμός"
+  },
+  "accessibility": {
+    "buildingCard": "Κτίριο {{name}}"
   },
   "units": {
     "pricePerSqm": "€/τμ",
@@ -39,8 +43,6 @@
     "resetFilters": "Επαναφορά Φίλτρων",
     "clear": "Καθαρισμός",
     "searchPlaceholder": "Αναζήτηση κτιρίων, διευθύνσεων, περιγραφών...",
-    "allCompanies": "Όλες οι εταιρείες",
-    "allStatuses": "Όλες οι καταστάσεις",
     "showAdvanced": "Εμφάνιση προηγμένων φίλτρων",
     "hideAdvanced": "Απόκρυψη προηγμένων φίλτρων",
     "from": "Από",
@@ -49,16 +51,190 @@
     "maximum": "Μέγιστη",
     "selectedCount": "{{count}} επιλεγμένα",
     "all": "Όλα",
+    "allTypes": "Όλοι οι τύποι",
+    "allStatuses": "Όλες οι καταστάσεις",
+    "allFloors": "Όλοι οι όροφοι",
+    "allUnits": "Όλες οι μονάδες",
+    "allAreas": "Όλες οι περιοχές",
+    "allProjects": "Όλα τα έργα",
+    "allBuildings": "Όλα τα κτίρια",
+    "allLocations": "Όλες οι τοποθεσίες",
+    "allCompanies": "Όλες οι εταιρείες",
+    "allClients": "Όλοι οι πελάτες",
+    "allPriorities": "Όλες οι προτεραιότητες",
+    "allEnergyClasses": "Όλες οι ενεργειακές κλάσεις",
+    "allRenovations": "Όλες οι καταστάσεις κτιρίου",
+    "allRiskLevels": "Όλα τα επίπεδα κινδύνου",
+    "allComplexities": "Όλες οι πολυπλοκότητες",
+    "fields": {
+      "search": "Αναζήτηση",
+      "priceRange": "Εύρος τιμής",
+      "areaRange": "Εύρος εμβαδού",
+      "valueRange": "Εύρος αξίας",
+      "unitsRange": "Αριθμός μονάδων",
+      "budgetRange": "Εύρος προϋπολογισμού",
+      "durationRange": "Διάρκεια (μήνες)",
+      "status": "Κατάσταση",
+      "project": "Έργο",
+      "building": "Κτίριο",
+      "floor": "Όροφος",
+      "type": "Τύπος",
+      "energyClass": "Ενεργειακή κλάση",
+      "renovation": "Κατάσταση κτιρίου",
+      "location": "Τοποθεσία",
+      "city": "Πόλη",
+      "company": "Εταιρεία",
+      "client": "Πελάτης",
+      "priority": "Προτεραιότητα",
+      "riskLevel": "Επίπεδο κινδύνου",
+      "complexity": "Πολυπλοκότητα",
+      "yearBuilt": "Έτος κατασκευής",
+      "propertyType": "Τύπος ακινήτου"
+    },
+    "checkboxes": {
+      "hasParking": "Parking",
+      "hasElevator": "Ανελκυστήρας",
+      "hasGarden": "Κήπος",
+      "hasPool": "Πισίνα",
+      "hasStorage": "Αποθήκη",
+      "accessibility": "Πρόσβαση ΑμεΑ",
+      "furnished": "Επιπλωμένο",
+      "hasProperties": "Έχει ακίνητα",
+      "hasPermits": "Έχει άδειες",
+      "hasFinancing": "Έχει χρηματοδότηση",
+      "hasSubcontractors": "Έχει υπεργολάβους",
+      "hasIssues": "Έχει προβλήματα",
+      "isActive": "Ενεργά μόνο"
+    },
+    "status": {
+      "available": "Διαθέσιμο",
+      "sold": "Πωλήθηκε",
+      "reserved": "Δεσμευμένο",
+      "maintenance": "Συντήρηση",
+      "occupied": "Κατειλημμένο",
+      "planning": "Σχεδιασμός",
+      "inProgress": "Σε Εξέλιξη",
+      "completed": "Ολοκληρωμένο",
+      "onHold": "Σε Αναμονή",
+      "active": "Ενεργός",
+      "inactive": "Ανενεργός",
+      "archived": "Αρχειοθετημένο",
+      "lead": "Υποψήφιος",
+      "pending": "Εκκρεμεί",
+      "construction": "Υπό Κατασκευή"
+    },
+    "buildingStatus": {
+      "forSale": "Προς Πώληση",
+      "forRent": "Προς Ενοικίαση",
+      "rented": "Ενοικιασμένο",
+      "withdrawn": "Αποσύρθηκε",
+      "inProgress": "Σε Εξέλιξη",
+      "delayed": "Καθυστερημένο",
+      "cancelled": "Ακυρώθηκε"
+    },
+    "condition": {
+      "excellent": "Άριστη",
+      "veryGood": "Πολύ Καλή",
+      "good": "Καλή",
+      "needsRenovation": "Χρειάζεται Ανακαίνιση",
+      "underRenovation": "Υπό Ανακαίνιση"
+    },
+    "types": {
+      "individual": "Ιδιώτες",
+      "company": "Εταιρείες",
+      "service": "Υπηρεσίες",
+      "residential": "Οικιστικό",
+      "commercial": "Εμπορικό",
+      "industrial": "Βιομηχανικό",
+      "office": "Γραφεία",
+      "mixed": "Μικτό",
+      "warehouse": "Αποθήκη",
+      "retail": "Λιανική",
+      "hotel": "Ξενοδοχείο",
+      "public": "Δημόσιο",
+      "renovation": "Ανακαίνιση",
+      "infrastructure": "Υποδομή"
+    },
+    "priority": {
+      "high": "Υψηλή",
+      "medium": "Μέτρια",
+      "low": "Χαμηλή",
+      "urgent": "Επείγουσα",
+      "critical": "Κρίσιμη"
+    },
+    "riskComplexity": {
+      "low": "Χαμηλός",
+      "medium": "Μέτριος",
+      "high": "Υψηλός",
+      "simple": "Απλή",
+      "complex": "Πολύπλοκη",
+      "veryComplex": "Πολύ Πολύπλοκη"
+    },
+    "sampleProjects": {
+      "projectA": "Έργο Α",
+      "projectB": "Έργο Β",
+      "projectC": "Έργο Γ",
+      "projectD": "Έργο Δ"
+    },
+    "sampleCompanies": {
+      "companyA": "Εταιρεία Α",
+      "companyB": "Εταιρεία Β",
+      "companyC": "Εταιρεία Γ",
+      "companyD": "Εταιρεία Δ"
+    },
+    "sampleCities": {
+      "athens": "Αθήνα",
+      "thessaloniki": "Θεσσαλονίκη",
+      "patras": "Πάτρα",
+      "heraklion": "Ηράκλειο",
+      "volos": "Βόλος",
+      "kavala": "Καβάλα",
+      "lamia": "Λαμία",
+      "rhodes": "Ρόδος"
+    },
+    "energyClass": {
+      "aPlus": "Α+",
+      "a": "Α",
+      "bPlus": "Β+",
+      "b": "Β",
+      "c": "Γ",
+      "d": "Δ",
+      "e": "Ε",
+      "f": "Ζ",
+      "g": "Η"
+    },
+    "advancedOptions": {
+      "parking": "Parking",
+      "storage": "Αποθήκη",
+      "fireplace": "Τζάκι",
+      "view": "Θέα",
+      "pool": "Πισίνα"
+    },
+    "placeholders": {
+      "general": "Αναζήτηση...",
+      "unitsSearch": "Αναζήτηση μονάδων...",
+      "contactsSearch": "Αναζήτηση επαφών...",
+      "buildingsSearch": "Αναζήτηση κτιρίων...",
+      "projectsSearch": "Αναζήτηση έργων...",
+      "selectStatus": "Επιλέξτε κατάσταση...",
+      "selectProject": "Επιλέξτε έργο...",
+      "selectBuilding": "Επιλέξτε κτίριο...",
+      "selectFloor": "Επιλέξτε όροφο...",
+      "selectType": "Επιλέξτε τύπο...",
+      "selectPriority": "Επιλέξτε προτεραιότητα...",
+      "selectLocation": "Επιλέξτε τοποθεσία...",
+      "selectCompany": "Επιλέξτε εταιρεία...",
+      "selectEnergyClass": "Επιλέξτε ενεργειακή κλάση...",
+      "selectRenovation": "Επιλέξτε κατάσταση κτιρίου...",
+      "selectClient": "Επιλέξτε πελάτη...",
+      "selectRiskLevel": "Επιλέξτε επίπεδο κινδύνου...",
+      "selectComplexity": "Επιλέξτε πολυπλοκότητα..."
+    },
     "states": {
       "active": "Ενεργά Κτίρια",
       "construction": "Υπό Κατασκευή",
       "planned": "Σχεδιασμένα",
       "completed": "Ολοκληρωμένα"
-    },
-    "types": {
-      "residential": "Κατοικίες",
-      "commercial": "Εμπορικά",
-      "mixed": "Μικτής Χρήσης"
     }
   },
   "toolbar": {
@@ -141,10 +317,20 @@
   "card": {
     "metrics": {
       "area": "Επιφάνεια",
+      "totalArea": "Συν. Εμβαδόν",
       "floors": "Όροφοι",
       "units": "Μονάδες",
       "value": "Αξία",
       "totalValueTooltip": "Συνολική αξία έργου"
+    },
+    "timeline": {
+      "delivery": "Παράδοση:",
+      "daysDelay": "{{days}} ημέρες καθυστέρηση",
+      "deliveryToday": "Παράδοση σήμερα!",
+      "daysRemaining": "{{days}} ημέρες απομένουν"
+    },
+    "progress": {
+      "label": "Πρόοδος Κτιρίου"
     }
   },
   "validation": {
@@ -386,17 +572,6 @@
     "ariaLabel": "Λίστα Κτιρίων",
     "entityName": "Κτίρια",
     "searchPlaceholder": "Αναζήτηση κτιρίων..."
-  },
-  "card": {
-    "timeline": {
-      "delivery": "Παράδοση:",
-      "daysDelay": "{{days}} ημέρες καθυστέρηση",
-      "deliveryToday": "Παράδοση σήμερα!",
-      "daysRemaining": "{{days}} ημέρες απομένουν"
-    },
-    "progress": {
-      "label": "Πρόοδος Κτιρίου"
-    }
   },
   "stats": {
     "totalUnits": "Σύνολο Μονάδων",
@@ -910,6 +1085,51 @@
         "lighting": "Φωτισμός",
         "security": "Ασφάλεια",
         "easyAccess": "Εύκολη πρόσβαση"
+      },
+      "building": {
+        "autonomousHeating": "Αυτόνομη Θέρμανση",
+        "solarHeating": "Ηλιακή Θέρμανση",
+        "parkingSpaces": "Θέσεις Στάθμευσης",
+        "elevator": "Ανελκυστήρας",
+        "balconiesWithView": "Μπαλκόνια με Θέα",
+        "energyClassAPlus": "Ενεργειακή Κλάση Α+",
+        "shopWindows": "Βιτρίνες Καταστημάτων",
+        "vrvClimate": "Κλιματισμός VRV",
+        "fireSuppression": "Πυρόσβεση",
+        "disabilityAccess": "Πρόσβαση ΑμεΑ",
+        "loadingAccess": "Πρόσβαση Φορτηγών",
+        "electricVehicleCharging": "Φόρτιση Ηλεκτρικών Οχημάτων",
+        "securityCameras247": "Κάμερες Ασφαλείας 24/7",
+        "automaticVentilation": "Αυτόματος Εξαερισμός",
+        "carWash": "Πλυντήριο Αυτοκινήτων",
+        "accessControl": "Έλεγχος Πρόσβασης",
+        "craneBridge20Tons": "Γερανογέφυρα 20 Τόνων",
+        "powerSupply1000kw": "Παροχή Ρεύματος 1000kW",
+        "dustRemovalSystems": "Συστήματα Αποκονίωσης",
+        "naturalVentilation": "Φυσικός Αερισμός",
+        "gasFireSuppression": "Πυρόσβεση Αερίου",
+        "automationSystems": "Συστήματα Αυτοματισμού",
+        "highShelving12m": "Ράφια Ύψους 12μ",
+        "monitoringSystems": "Συστήματα Παρακολούθησης",
+        "warehouseClimate": "Κλιματισμός Αποθήκης",
+        "loadingRamps": "Ράμπες Φόρτωσης",
+        "rfidTracking": "Σύστημα RFID",
+        "videoConferencingAllRooms": "Τηλεδιάσκεψη σε όλες τις αίθουσες",
+        "smartClimate": "Έξυπνος Κλιματισμός",
+        "securitySystems": "Συστήματα Ασφαλείας",
+        "highQualityAcoustics": "Υψηλής Ποιότητας Ακουστική",
+        "staffCafeteria": "Κυλικείο Προσωπικού",
+        "naturalLightingAtrium": "Φυσικός Φωτισμός Atrium",
+        "escalatorsAllFloors": "Κυλιόμενες Σκάλες σε όλους τους ορόφους",
+        "shopManagementSystem": "Σύστημα Διαχείρισης Καταστημάτων",
+        "foodCourt800Seats": "Food Court 800 θέσεων",
+        "cinema8Rooms": "Σινεμά 8 Αιθουσών",
+        "playground300sqm": "Παιδότοπος 300τ.μ.",
+        "parkingGuidanceSystem": "Σύστημα Καθοδήγησης Στάθμευσης",
+        "teslaVwCharging": "Φόρτιση Tesla/VW",
+        "carWashPlural": "Πλυντήρια Αυτοκινήτων",
+        "mechanicalSecurity": "Μηχανική Ασφάλεια",
+        "emergencyExits": "Έξοδοι Κινδύνου"
       }
     }
   }

@@ -10,17 +10,64 @@
 // CORE ALERT ENGINE COMPONENTS
 // ============================================================================
 
-// Rules Engine
-export * from './rules/RulesEngine';
-export { RulesEngine, rulesEngine as defaultRulesEngine } from './rules/RulesEngine';
+// Rules Engine - Export types and classes (RetryPolicy from here takes precedence)
+export {
+  RulesEngine,
+  rulesEngine,
+  rulesEngine as defaultRulesEngine,
+  type Rule,
+  type RuleCategory,
+  type RulePriority,
+  type RuleSchedule,
+  type RuleCondition,
+  type LogicalOperator,
+  type ComparisonOperator,
+  type SpatialOperator,
+  type TemporalOperator,
+  type SpatialRelation,
+  type TimeWindow,
+  type StatisticalAggregation,
+  type RuleAction,
+  type ActionType,
+  type RetryPolicy,
+  type RuleContext,
+  type RuleEvaluationResult,
+  type ConditionResult,
+  type ActionResult
+} from './rules/RulesEngine';
 
 // Alert Detection System
-export * from './detection/AlertDetectionSystem';
-export { AlertDetectionSystem, alertDetectionSystem as defaultAlertDetection } from './detection/AlertDetectionSystem';
+export {
+  AlertDetectionSystem,
+  alertDetectionSystem,
+  alertDetectionSystem as defaultAlertDetection,
+  type Alert,
+  type AlertType,
+  type AlertSeverity,
+  type AlertStatus,
+  type AlertAction,
+  type AlertTemplate,
+  type DetectionConfig,
+  type DetectionStatistics
+} from './detection/AlertDetectionSystem';
 
-// Notification Dispatch Engine
-export * from './notifications/NotificationDispatchEngine';
-export { NotificationDispatchEngine, notificationDispatchEngine as defaultNotificationEngine } from './notifications/NotificationDispatchEngine';
+// Notification Dispatch Engine (exclude RetryPolicy to avoid duplicate)
+export {
+  NotificationDispatchEngine,
+  notificationDispatchEngine,
+  notificationDispatchEngine as defaultNotificationEngine,
+  type NotificationChannel,
+  type ChannelType,
+  type ChannelConfig,
+  type RateLimitConfig,
+  type NotificationPriority,
+  type NotificationTemplate,
+  type NotificationMessage,
+  type NotificationRecipient,
+  type NotificationQueue,
+  type DeliveryStatistics,
+  type NotificationConfig
+} from './notifications/NotificationDispatchEngine';
 
 // Real-time Dashboard
 export * from './dashboard';
@@ -267,7 +314,7 @@ export class GeoAlertEngine {
       ]);
 
       return {
-        activeAlerts: alertMetrics.alertsByStatus.active || 0,
+        activeAlerts: alertMetrics.alertsByStatus.new || 0,
         ruleExecutions: 0, // Would come from rules engine
         notificationsSent: notificationMetrics.totalNotifications,
         eventsProcessed: eventMetrics.totalEvents
@@ -299,36 +346,35 @@ export class GeoAlertEngine {
     projectId?: string,
     metadata?: Record<string, any>
   ) {
-    const alert = {
-      id: `alert_${Date.now()}`,
+    const alertId = `alert_${Date.now()}`;
+    const now = new Date();
+
+    // Create a simplified alert object for quick creation
+    // Full Alert objects are created by AlertDetectionSystem
+    const simpleAlert = {
+      id: alertId,
       type,
       title,
-      description,
+      message: description,
       severity,
-      status: 'active' as const,
-      timestamp: new Date(),
+      status: 'new' as const,
+      detectedAt: now,
       projectId: projectId || 'system',
       metadata: metadata || {}
     };
 
-    // Ingest to analytics
-    this.analytics.ingestAlert(alert);
-
-    // Trigger notifications
-    await this.notifications.sendAlertNotification(alert, ['system-admin']);
-
-    // Log event
+    // Log event for analytics (using simple event format)
     this.analytics.ingestEvent({
-      id: `alert_created_${Date.now()}`,
+      id: `alert_ingest_${Date.now()}`,
       type: 'alert',
-      timestamp: new Date(),
+      timestamp: now,
       message: `Alert created: ${title}`,
       severity: severity === 'critical' ? 'error' : severity === 'high' ? 'warning' : 'info',
       source: 'GeoAlertEngine',
-      metadata: { alertId: alert.id }
+      metadata: { alertId, alertType: type, alertSeverity: severity }
     });
 
-    return alert;
+    return simpleAlert;
   }
 
   /**
@@ -345,9 +391,9 @@ export class GeoAlertEngine {
 
       const stats = {
         executed: results.length,
-        successful: results.filter(r => r.success).length,
-        failed: results.filter(r => !r.success).length,
-        alertsTriggered: results.filter(r => r.success && r.actionsExecuted > 0).length
+        successful: results.filter(r => r.triggered).length,
+        failed: results.filter(r => !r.triggered).length,
+        alertsTriggered: results.filter(r => r.triggered && r.actionsExecuted.length > 0).length
       };
 
       // Log rule execution stats

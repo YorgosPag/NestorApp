@@ -71,7 +71,7 @@ export interface Communication {
   status: 'completed' | 'scheduled' | 'cancelled' | 'pending' | 'sent' | 'delivered' | 'failed';
   requiresFollowUp?: boolean;
   followUpDate?: FirestoreishTimestamp;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // Tasks
@@ -101,5 +101,5 @@ export interface CrmTask {
   createdAt: FirestoreishTimestamp;
   updatedAt: FirestoreishTimestamp;
   reminderSent?: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }

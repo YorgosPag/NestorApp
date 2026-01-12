@@ -25,6 +25,9 @@ import type { StatItem } from '@/design-system';
 // 🏢 CENTRALIZED FORMATTERS
 import { formatNumber } from '@/lib/intl-utils';
 
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+
 // 🏢 DOMAIN TYPES
 import type { Building } from '@/types/building/contracts';
 
@@ -64,26 +67,9 @@ const STATUS_BADGE_VARIANTS: Record<string, ListCardBadgeVariant> = {
 };
 
 // =============================================================================
-// 🏢 STATUS LABELS (Greek)
+// 🏢 ENTERPRISE: STATUS/CATEGORY Labels now come from centralized i18n
+// See: src/i18n/locales/{locale}/building.json - status.* and category.*
 // =============================================================================
-
-const STATUS_LABELS: Record<string, string> = {
-  planning: 'Σχεδιασμός',
-  construction: 'Κατασκευή',
-  completed: 'Ολοκληρωμένο',
-  active: 'Ενεργό',
-};
-
-// =============================================================================
-// 🏢 CATEGORY LABELS (Greek)
-// =============================================================================
-
-const CATEGORY_LABELS: Record<string, string> = {
-  mixed: 'Μικτό',
-  residential: 'Κατοικίες',
-  commercial: 'Εμπορικό',
-  industrial: 'Βιομηχανικό',
-};
 
 // =============================================================================
 // 🏢 COMPONENT
@@ -116,6 +102,11 @@ export function BuildingListCard({
   className,
 }: BuildingListCardProps) {
   // ==========================================================================
+  // 🏢 ENTERPRISE: i18n hook for translations
+  // ==========================================================================
+  const { t } = useTranslation('building');
+
+  // ==========================================================================
   // 🏢 COMPUTED VALUES (Memoized)
   // ==========================================================================
 
@@ -123,53 +114,53 @@ export function BuildingListCard({
   const stats = useMemo<StatItem[]>(() => {
     const items: StatItem[] = [];
 
-    // Total Area - 🏢 ENTERPRISE: Using centralized area icon/color
+    // Total Area - 🏢 ENTERPRISE: Using centralized area icon/color + i18n
     if (building.totalArea) {
       items.push({
         icon: NAVIGATION_ENTITIES.area.icon,
         iconColor: NAVIGATION_ENTITIES.area.color,
-        label: 'Συν. Εμβαδόν',
+        label: t('card.metrics.totalArea'),
         value: `${formatNumber(building.totalArea)} m²`,
       });
     }
 
-    // Floors
+    // Floors - 🏢 ENTERPRISE: Using i18n
     if (building.floors) {
       items.push({
         icon: NAVIGATION_ENTITIES.floor.icon,
         iconColor: NAVIGATION_ENTITIES.floor.color,
-        label: 'Όροφοι',
+        label: t('card.metrics.floors'),
         value: String(building.floors),
       });
     }
 
-    // Units
+    // Units - 🏢 ENTERPRISE: Using i18n
     if (building.units) {
       items.push({
         icon: NAVIGATION_ENTITIES.unit.icon,
         iconColor: NAVIGATION_ENTITIES.unit.color,
-        label: 'Μονάδες',
+        label: t('card.metrics.units'),
         value: String(building.units),
       });
     }
 
     return items;
-  }, [building.totalArea, building.floors, building.units]);
+  }, [building.totalArea, building.floors, building.units, t]);
 
-  /** Build badges from status */
+  /** Build badges from status - 🏢 ENTERPRISE: Using centralized i18n */
   const badges = useMemo(() => {
     const status = building.status || 'planning';
-    const statusLabel = STATUS_LABELS[status] || status;
+    const statusLabel = t(`status.${status}`, { defaultValue: status });
     const variant = STATUS_BADGE_VARIANTS[status] || 'default';
 
     return [{ label: statusLabel, variant }];
-  }, [building.status]);
+  }, [building.status, t]);
 
-  /** Get category label for subtitle */
+  /** Get category label for subtitle - 🏢 ENTERPRISE: Using centralized i18n */
   const categoryLabel = useMemo(() => {
     const category = building.category || 'mixed';
-    return CATEGORY_LABELS[category] || category;
-  }, [building.category]);
+    return t(`category.${category}`, { defaultValue: category });
+  }, [building.category, t]);
 
   // ==========================================================================
   // 🏢 RENDER
@@ -188,7 +179,7 @@ export function BuildingListCard({
       onToggleFavorite={onToggleFavorite}
       compact={compact}
       className={className}
-      aria-label={`Κτίριο ${building.name || building.id}`}
+      aria-label={t('accessibility.buildingCard', { name: building.name || building.id })}
     />
   );
 }

@@ -53,6 +53,19 @@ export function useBorderTokens() {
     /** Border radius tokens (none, xs, sm, default, md, lg, xl, 2xl, 3xl, full) */
     radius: coreBorderRadius,
 
+    /** Border radius Tailwind classes - ENTERPRISE: Single source of truth for rounded-* */
+    radiusClass: {
+      none: 'rounded-none',
+      sm: 'rounded-sm',
+      default: 'rounded',
+      md: 'rounded-md',
+      lg: 'rounded-lg',
+      xl: 'rounded-xl',
+      '2xl': 'rounded-2xl',
+      '3xl': 'rounded-3xl',
+      full: 'rounded-full',
+    } as const,
+
     /** Border style tokens (solid, dashed, dotted, double, hidden, none) */
     style: borderStyle,
 

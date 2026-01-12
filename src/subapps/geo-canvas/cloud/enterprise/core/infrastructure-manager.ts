@@ -37,6 +37,49 @@ import type {
 } from '../types/status';
 
 // ============================================================================
+// 🏢 ENTERPRISE: Mock types for alert engine integration
+// ============================================================================
+
+/**
+ * Mock alert structure for alert engine integration
+ */
+interface MockAlert {
+  type: string;
+  title: string;
+  description: string;
+  severity: string;
+  source: string;
+  timestamp: Date;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Region status structure for multi-region monitoring
+ */
+interface RegionStatus {
+  name: string;
+  provider: string;
+  status: string;
+  latency: { average: number; min: number; max: number; p95: number; lastMeasured: Date };
+  availability: number;
+  components: number;
+  healthyComponents: number;
+  lastUpdated: Date;
+}
+
+/**
+ * Provider status structure for multi-cloud monitoring
+ */
+interface ProviderStatus {
+  name: string;
+  status: string;
+  services: string[];
+  overallHealth: number;
+  incidentCount: number;
+  lastUpdated: Date;
+}
+
+// ============================================================================
 // CORE INFRASTRUCTURE MANAGER CLASS
 // ============================================================================
 
@@ -54,12 +97,13 @@ export class InfrastructureManager {
 
   // Enterprise: Integration με existing Alert Engine
   // TODO: Connect to real alert engine when available
+  // 🏢 ENTERPRISE: Properly typed mock alert engine
   private alertEngine = {
-    reportAlert: (alert: any) => console.warn('Alert Engine not connected:', alert),
-    createAlert: async (type: string, title: string, description: string, severity: string, source: string, metadata?: Record<string, any>) => {
+    reportAlert: (alert: MockAlert) => console.warn('Alert Engine not connected:', alert),
+    createAlert: async (type: string, title: string, description: string, severity: string, source: string, metadata?: Record<string, unknown>) => {
       console.warn('Alert Engine not connected - createAlert:', { type, title, description, severity, source, metadata });
     },
-    generateQuickReport: async () => ({ alerts: { active: [] } })
+    generateQuickReport: async () => ({ alerts: { active: [] as MockAlert[] } })
   };
 
   constructor(config: InfrastructureConfig) {
@@ -495,7 +539,8 @@ export class InfrastructureManager {
    * Get active alerts από Alert Engine
    * Enterprise: Unified alert management
    */
-  private async getActiveAlerts(): Promise<any[]> {
+  // 🏢 ENTERPRISE: Proper return type for alerts
+  private async getActiveAlerts(): Promise<MockAlert[]> {
     try {
       // Get recent analytics report από Alert Engine
       const report = await this.alertEngine.generateQuickReport();
@@ -794,7 +839,8 @@ export class InfrastructureManager {
    * Get region statuses (simulated)
    * Enterprise: Multi-region monitoring
    */
-  private async getRegionStatuses(): Promise<any[]> {
+  // 🏢 ENTERPRISE: Proper return type for region statuses
+  private async getRegionStatuses(): Promise<RegionStatus[]> {
     return this.config.regions.map(region => ({
       name: region.name,
       provider: region.provider,
@@ -811,7 +857,8 @@ export class InfrastructureManager {
    * Get provider statuses (simulated)
    * Enterprise: Multi-cloud provider monitoring
    */
-  private async getProviderStatuses(): Promise<any[]> {
+  // 🏢 ENTERPRISE: Proper return type for provider statuses
+  private async getProviderStatuses(): Promise<ProviderStatus[]> {
     return Array.from(this.providers.keys()).map(providerName => ({
       name: providerName,
       status: 'operational',

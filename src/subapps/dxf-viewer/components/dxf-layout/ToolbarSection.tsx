@@ -60,7 +60,7 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
           currentZoom={dxfProps.currentZoom}
           commandCount={0}
           onSceneImported={dxfProps.onSceneImported}
-          {...({} as any)} // ✅ ENTERPRISE FIX: Temporary type assertion
+          // 🏢 ENTERPRISE: Removed unnecessary empty spread - all required props are passed explicitly
         />
       </div>
 

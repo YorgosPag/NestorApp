@@ -153,6 +153,16 @@ export interface MemoryLeakDetectorConfig {
   };
 }
 
+/**
+ * 🏢 ENTERPRISE: Memory export data structure
+ */
+interface MemoryExportData {
+  config: MemoryLeakDetectorConfig;
+  snapshots: MemorySnapshot[];
+  leaks: MemoryLeakResult[];
+  components: ComponentMemoryUsage[];
+}
+
 // ============================================================================
 // MAIN MEMORY LEAK DETECTOR CLASS
 // ============================================================================
@@ -801,7 +811,8 @@ export class GeoAlertMemoryLeakDetector {
   // UTILITY METHODS
   // ========================================================================
 
-  private getActiveTimers(): any[] {
+  // 🏢 ENTERPRISE: Proper type for mock timer data
+  private getActiveTimers(): unknown[] {
     // Mock timer tracking
     // Real implementation would hook into setTimeout/setInterval
     return new Array(5).fill(null); // Mock 5 active timers
@@ -1064,7 +1075,8 @@ export class GeoAlertMemoryLeakDetector {
     return JSON.stringify(data, null, 2);
   }
 
-  private convertToCSV(data: any): string {
+  // 🏢 ENTERPRISE: Proper type for export data
+  private convertToCSV(data: MemoryExportData): string {
     // Simplified CSV conversion
     const headers = 'Timestamp,HeapUsed,HeapTotal,Components,EventListeners,LeaksDetected\n';
     const rows = data.snapshots.map((snapshot: MemorySnapshot) =>

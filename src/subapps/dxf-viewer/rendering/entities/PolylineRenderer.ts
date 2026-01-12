@@ -6,6 +6,7 @@
 import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
+import type { PolylineEntity } from '../../types/entities';
 import { calculatePolygonArea, calculatePolygonCentroid } from './shared/geometry-utils';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { UI_COLORS } from '../../config/color-config';
@@ -19,7 +20,7 @@ export class PolylineRenderer extends BaseEntityRenderer {
     if (entity.type !== 'polyline' && entity.type !== 'lwpolyline') return;
 
     // ✅ ENTERPRISE FIX: Safe type casting for entity-specific properties
-    const polylineEntity = entity as any; // Enterprise safe casting for PolylineEntity properties
+    const polylineEntity = entity as PolylineEntity; // 🏢 ENTERPRISE: Type-safe casting
     const vertices = polylineEntity.vertices as Point2D[];
     const closed = polylineEntity.closed as boolean;
     
@@ -259,10 +260,10 @@ export class PolylineRenderer extends BaseEntityRenderer {
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
     if (entity.type !== 'polyline' && entity.type !== 'lwpolyline') return false;
 
-    // ✅ ENTERPRISE FIX: Safe type casting for entity-specific properties
-    const polylineEntity = entity as any;
-    const vertices = polylineEntity.vertices as Point2D[];
-    const closed = polylineEntity.closed as boolean;
+    // 🏢 ENTERPRISE: Type-safe casting for entity-specific properties
+    const polylineEntity = entity as PolylineEntity;
+    const vertices = polylineEntity.vertices;
+    const closed = polylineEntity.closed ?? false;
 
     if (!vertices || vertices.length < 2) return false;
 

@@ -99,14 +99,18 @@ export type GripSettingsType = z.infer<typeof GripSettingsSchema>;
 // ENTITY SETTINGS SCHEMA (GENERIC)
 // ============================================================================
 
-export function createEntitySettingsSchema<T extends z.ZodTypeAny>(
+// 🏢 ENTERPRISE: Type-safe helper to access Zod partial() method
+// Zod's .partial() is only available on ZodObject, so we need proper type constraint
+type ZodObjectWithPartial = z.ZodObject<z.ZodRawShape, z.UnknownKeysParam, z.ZodTypeAny>;
+
+export function createEntitySettingsSchema<T extends ZodObjectWithPartial>(
   settingsSchema: T
 ) {
-  // ✅ ENTERPRISE: Use z.ZodType<unknown> instead of any for type-safe partial schemas
+  // 🏢 ENTERPRISE: Use proper ZodObject constraint for type-safe partial schemas
   return z.object({
     general: settingsSchema,
-    specific: z.record(StorageModeSchema, (settingsSchema as any).partial()), // ✅ ENTERPRISE FIX: Use any for Zod partial() method access
-    overrides: z.record(StorageModeSchema, (settingsSchema as any).partial()) // ✅ ENTERPRISE FIX: Use any for Zod partial() method access
+    specific: z.record(StorageModeSchema, settingsSchema.partial()),
+    overrides: z.record(StorageModeSchema, settingsSchema.partial())
   });
 }
 

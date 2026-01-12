@@ -18,7 +18,8 @@ import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 export class ArcRenderer extends BaseEntityRenderer {
   private validateArc(entity: EntityModel) {
     // 🔺 Χρήση κεντρικοποιημένης validation - μείωση διπλότυπου κώδικα
-    return validateArcEntity(entity as any);
+    // 🏢 ENTERPRISE: validateArcEntity accepts EntityModel directly
+    return validateArcEntity(entity);
   }
 
   render(entity: EntityModel, options: RenderOptions = {}): void {

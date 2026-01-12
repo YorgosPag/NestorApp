@@ -12,8 +12,22 @@ import { VersionList } from './version-history/VersionList';
 import { VersionDetails } from './version-history/VersionDetails';
 import { BUILDING_IDS } from '@/config/building-ids-config';
 
+// 🏢 ENTERPRISE: Version interface instead of any
+interface FloorplanVersion {
+    id: string;
+    buildingId: string;
+    timestamp: { toDate: () => Date };
+    author: { name: string };
+    message: string;
+    type: 'milestone' | 'auto' | 'manual';
+    size: number;
+    stats: { polygons: number; objects: number };
+    thumbnail: string;
+    diff?: { added: string[]; removed: string[]; modified: string[]; changes: number };
+}
+
 // 🏢 ENTERPRISE: Mock version data - NO HARDCODED building IDs
-const mockVersions = [
+const mockVersions: FloorplanVersion[] = [
     {
         id: 'v_1722956400000',
         buildingId: BUILDING_IDS.LEGACY_BUILDING_1,
@@ -55,8 +69,9 @@ export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingI
     const iconSizes = useIconSizes();
     const colors = useSemanticColors();
     const notifications = useNotifications();
-    const [versions, setVersions] = useState<any[]>([]);
-    const [selectedVersion, setSelectedVersion] = useState<any | null>(null);
+    // 🏢 ENTERPRISE: Proper types instead of any
+    const [versions, setVersions] = useState<FloorplanVersion[]>([]);
+    const [selectedVersion, setSelectedVersion] = useState<FloorplanVersion | null>(null);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {

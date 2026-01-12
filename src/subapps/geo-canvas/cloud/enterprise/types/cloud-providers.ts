@@ -21,6 +21,20 @@ export interface CloudProvider {
   pricing: CloudPricing;
 }
 
+// 🏢 ENTERPRISE: Service Account Key structure (GCP standard)
+export interface ServiceAccountKey {
+  type: 'service_account';
+  project_id: string;
+  private_key_id: string;
+  private_key: string;
+  client_email: string;
+  client_id: string;
+  auth_uri: string;
+  token_uri: string;
+  auth_provider_x509_cert_url: string;
+  client_x509_cert_url: string;
+}
+
 /**
  * Cloud credentials
  */
@@ -30,7 +44,8 @@ export interface CloudCredentials {
   tenantId?: string;
   subscriptionId?: string;
   projectId?: string;
-  serviceAccountKey?: any;
+  // 🏢 ENTERPRISE: Proper type for service account key
+  serviceAccountKey?: ServiceAccountKey | string;
   token?: string;
 }
 
@@ -102,6 +117,21 @@ export interface ProviderValidationResult {
   provider?: string; // Add missing provider property
 }
 
+// 🏢 ENTERPRISE: Provider capabilities interface
+export interface ProviderCapabilities {
+  compute: boolean;
+  storage: boolean;
+  database: boolean;
+  networking: boolean;
+  kubernetes: boolean;
+  serverless: boolean;
+  cdn: boolean;
+  monitoring: boolean;
+  maxInstances?: number;
+  maxStorage?: number;
+  regions?: string[];
+}
+
 /**
  * Provider connection status
  */
@@ -112,7 +142,8 @@ export interface ProviderConnectionStatus {
   lastChecked: Date;
   latency?: number;
   error?: string;
-  capabilities?: any;
+  // 🏢 ENTERPRISE: Proper type instead of any
+  capabilities?: ProviderCapabilities;
 }
 
 // ============================================================================
@@ -196,5 +227,6 @@ export interface GCPCloudProvider extends CloudProvider {
 export interface GCPCredentials extends CloudCredentials {
   projectId: string;
   keyFilename?: string;
-  serviceAccountKey?: any;
+  // 🏢 ENTERPRISE: Proper type for GCP service account (overrides base)
+  serviceAccountKey?: ServiceAccountKey | string;
 }

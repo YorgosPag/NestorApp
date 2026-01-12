@@ -103,7 +103,8 @@ export interface ToolConfiguration {
   icon: string;
   keyboard?: string;
   isEnabled: boolean;
-  settings: Record<string, any>;
+  // 🏢 ENTERPRISE: Tool settings with proper typing
+  settings: Record<string, unknown>;
 }
 
 export interface ToolEventData {
@@ -175,11 +176,14 @@ export interface LayerConfiguration {
   zIndex: number;
   source: {
     url?: string;
-    data?: any;
+    // 🏢 ENTERPRISE: GeoJSON or other layer data - unknown for type safety
+    data?: GeoJSON.FeatureCollection | GeoJSON.Feature | Record<string, unknown>;
     format: string;
   };
-  style?: Record<string, any>;
-  metadata?: Record<string, any>;
+  // 🏢 ENTERPRISE: Style properties with proper typing
+  style?: Record<string, string | number | boolean>;
+  // 🏢 ENTERPRISE: Metadata with unknown instead of any
+  metadata?: Record<string, unknown>;
 }
 
 export interface LayerEventData {
@@ -242,20 +246,23 @@ export type GeoCanvasEventType =
   | 'panel-opened'
   | 'panel-closed';
 
-export interface GeoCanvasEvent<T = any> {
+// 🏢 ENTERPRISE: Generic event with unknown default for type safety
+export interface GeoCanvasEvent<T = unknown> {
   type: GeoCanvasEventType;
   timestamp: Date;
   source: 'user' | 'system' | 'api';
   data: T;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
-export type GeoCanvasEventHandler<T = any> = (event: GeoCanvasEvent<T>) => void | Promise<void>;
+// 🏢 ENTERPRISE: Type-safe event handler with unknown default
+export type GeoCanvasEventHandler<T = unknown> = (event: GeoCanvasEvent<T>) => void | Promise<void>;
 
+// 🏢 ENTERPRISE: Type-safe event bus interface
 export interface GeoCanvasEventBus {
-  subscribe<T = any>(eventType: GeoCanvasEventType, handler: GeoCanvasEventHandler<T>): () => void;
-  unsubscribe<T = any>(eventType: GeoCanvasEventType, handler: GeoCanvasEventHandler<T>): void;
-  emit<T = any>(event: GeoCanvasEvent<T>): void;
+  subscribe<T = unknown>(eventType: GeoCanvasEventType, handler: GeoCanvasEventHandler<T>): () => void;
+  unsubscribe<T = unknown>(eventType: GeoCanvasEventType, handler: GeoCanvasEventHandler<T>): void;
+  emit<T = unknown>(event: GeoCanvasEvent<T>): void;
   clear(): void;
 }
 

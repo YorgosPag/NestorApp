@@ -85,6 +85,7 @@
     "menuLabel": "User menu",
     "defaultUser": "User",
     "noEmail": "No email",
+    "account": "Account",
     "profile": "Profile",
     "settings": "Settings",
     "shortcuts": "Shortcuts",
@@ -97,6 +98,96 @@
       "shortcuts": "⌘K",
       "logout": "⇧⌘Q"
     }
+  },
+  "account": {
+    "title": "Account",
+    "subtitle": "Manage your account settings",
+    "defaultUser": "User",
+    "noEmail": "No email",
+    "nav": {
+      "ariaLabel": "Account navigation",
+      "profile": "Profile",
+      "preferences": "Preferences",
+      "notifications": "Notifications",
+      "security": "Security",
+      "privacy": "Privacy"
+    },
+    "profile": {
+      "title": "Personal Information",
+      "description": "Update your personal details",
+      "changePhoto": "Change photo",
+      "photoHint": "Click to change photo",
+      "givenName": "First Name",
+      "givenNamePlaceholder": "Enter your first name",
+      "familyName": "Last Name",
+      "familyNamePlaceholder": "Enter your last name",
+      "email": "Email",
+      "emailHint": "Email cannot be changed",
+      "role": "Role",
+      "roleUser": "User",
+      "save": "Save Changes",
+      "saving": "Saving...",
+      "saveSuccess": "Profile updated successfully!",
+      "saveError": "Failed to update profile"
+    },
+    "preferences": {
+      "title": "Preferences",
+      "description": "Customize appearance and language",
+      "language": "Language",
+      "selectLanguage": "Select language",
+      "languageHint": "Application display language",
+      "theme": "Theme",
+      "selectTheme": "Select theme",
+      "themeLight": "Light",
+      "themeDark": "Dark",
+      "themeSystem": "System",
+      "themeHint": "Application display theme"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "Manage your notifications",
+      "notAvailable": "Not available yet",
+      "comingSoon": "Notification settings will be available soon"
+    },
+    "security": {
+      "passwordTitle": "Password",
+      "passwordDescription": "Manage your password",
+      "currentPassword": "Current password",
+      "resetPassword": "Send reset email",
+      "sendingReset": "Sending...",
+      "resetEmailSent": "Reset email sent successfully",
+      "resetError": "Error sending reset email",
+      "googleSignIn": "You signed in with Google. Password is managed by Google.",
+      "twoFactorTitle": "Two-Factor Authentication",
+      "twoFactorDescription": "Add extra security layer",
+      "twoFactorNotAvailable": "Two-factor authentication will be available soon",
+      "sessionsTitle": "Active Sessions",
+      "sessionsDescription": "Manage connected devices",
+      "sessionsNotAvailable": "Session management will be available soon",
+      "comingSoon": "Coming Soon"
+    },
+    "privacy": {
+      "title": "Privacy",
+      "description": "Manage privacy settings",
+      "visibility": "Profile Visibility",
+      "visibilityDescription": "Your data is visible only to you",
+      "private": "Private",
+      "dataStorage": "Data Storage",
+      "dataStorageDescription": "Your data is stored securely",
+      "secure": "Secure",
+      "securityStatus": "Security Status",
+      "securityStatusDescription": "Your account is protected",
+      "protected": "Protected",
+      "policyText": "For more information about how we handle your data, please review our Privacy Policy."
+    }
+  },
+  "helpHub": {
+    "menuLabel": "Help & Support",
+    "title": "Help Center",
+    "commandPalette": "Command Palette",
+    "keyboardShortcuts": "Keyboard Shortcuts",
+    "documentation": "Documentation",
+    "support": "Support"
   },
   "upload": {
     "addPhoto": "Add photo",

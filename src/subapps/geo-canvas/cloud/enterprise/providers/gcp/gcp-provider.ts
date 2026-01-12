@@ -438,7 +438,8 @@ export class GCPProvider {
    * Mock GCP API call για testing
    * Enterprise: Service integration simulation
    */
-  private async mockGCPCall(service: string, operation: string): Promise<any> {
+  // 🏢 ENTERPRISE: Proper return type for mock call
+  private async mockGCPCall(service: string, operation: string): Promise<unknown> {
     // Simulate network latency
     await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
 

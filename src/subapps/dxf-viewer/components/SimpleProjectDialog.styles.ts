@@ -11,8 +11,34 @@
 // dialogComponents removed - not available in design-tokens
 import { UI_COLORS, withOpacity } from '../config/color-config';
 
+// 🏢 ENTERPRISE: Type-safe button style interface
+interface ButtonStyle {
+  padding: string;
+  borderRadius: string;
+  backgroundColor: string;
+  color: string;
+  '&:focus'?: { boxShadow: string };
+  '&:hover'?: { backgroundColor: string };
+}
+
+interface DialogComponentsType {
+  modal: {
+    backdrop: { position: 'fixed'; inset: number; backgroundColor: string; zIndex: number };
+    content: { position: 'relative'; backgroundColor: string; borderRadius: string; padding: string };
+    header: { marginBottom: string };
+    title: { fontSize: string; fontWeight: string };
+    closeButton: { padding: string; borderRadius: string };
+  };
+  form: {
+    fieldset: { marginBottom: string };
+    label: { fontSize: string; fontWeight: string; marginBottom: string };
+    select: { width: string; padding: string; borderRadius: string; border: string };
+  };
+  buttons: Record<'primary' | 'secondary' | 'success' | 'destructive' | 'warning', ButtonStyle>;
+}
+
 // Mock dialogComponents for TypeScript compatibility
-const dialogComponents = {
+const dialogComponents: DialogComponentsType = {
   modal: {
     backdrop: { position: 'fixed' as const, inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.8)', zIndex: 50 },
     content: { position: 'relative' as const, backgroundColor: 'white', borderRadius: '0.5rem', padding: '1.5rem' },
@@ -26,11 +52,11 @@ const dialogComponents = {
     select: { width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid #ccc' }
   },
   buttons: {
-    primary: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#3B82F6', color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.2)' }, '&:hover': { backgroundColor: '#2563EB' } } as any,
-    secondary: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#6B7280', color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(107, 114, 128, 0.2)' }, '&:hover': { backgroundColor: '#4B5563' } } as any,
-    success: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#10B981', color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.2)' }, '&:hover': { backgroundColor: '#059669' } } as any,
-    destructive: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#EF4444', color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(239, 68, 68, 0.2)' }, '&:hover': { backgroundColor: '#DC2626' } } as any,
-    warning: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#F59E0B', color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(245, 158, 11, 0.2)' }, '&:hover': { backgroundColor: '#D97706' } } as any
+    primary: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#3B82F6', color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.2)' }, '&:hover': { backgroundColor: '#2563EB' } },
+    secondary: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#6B7280', color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(107, 114, 128, 0.2)' }, '&:hover': { backgroundColor: '#4B5563' } },
+    success: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#10B981', color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.2)' }, '&:hover': { backgroundColor: '#059669' } },
+    destructive: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#EF4444', color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(239, 68, 68, 0.2)' }, '&:hover': { backgroundColor: '#DC2626' } },
+    warning: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#F59E0B', color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(245, 158, 11, 0.2)' }, '&:hover': { backgroundColor: '#D97706' } }
   }
 };
 
@@ -97,8 +123,8 @@ export const getSelectFocusHandlers = () => ({
  * Button hover handlers for action buttons
  */
 export const getButtonHoverHandlers = (variant: 'primary' | 'secondary' | 'success' | 'destructive' | 'warning') => {
-  const baseStyles = dialogComponents.buttons?.[variant] || { padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: '500' };
-  const hoverStyle = (baseStyles as any)['&:hover'];
+  const baseStyles = dialogComponents.buttons?.[variant] || { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#6B7280', color: 'white' };
+  const hoverStyle = baseStyles['&:hover'];
 
   return {
     onMouseEnter: (e: React.MouseEvent<HTMLButtonElement>) => {

@@ -11,12 +11,21 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
 
+// 🏢 ENTERPRISE: Type-safe measurement structure
+interface Measurement {
+  id: string;
+  type: 'distance' | 'area' | 'angle';
+  value: number;
+  unit: string;
+  label?: string;
+}
+
 type StatusBarProps = Pick<
   DXFViewerLayoutProps,
   'status' | 'entities' | 'selectedEntityIds' | 'drawingState' |
   'activeTool' | 'snapEnabled' | 'onViewModeChange' | 'onClear'
 > & {
-  measurements?: any[];
+  measurements?: Measurement[];
 };
 
 /**

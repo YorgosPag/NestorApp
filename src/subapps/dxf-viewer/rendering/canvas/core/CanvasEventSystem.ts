@@ -248,7 +248,7 @@ export class CanvasEventSystem {
   /**
    * Get performance metrics
    */
-  getMetrics(): any {
+  getMetrics(): CanvasEventMetrics {
     return {
       totalListeners: this.getListenerCount(),
       eventTypes: Array.from(this.listeners.keys()),
@@ -264,6 +264,15 @@ export class CanvasEventSystem {
   cleanup(): void {
     this.clear();
   }
+}
+
+// 🏢 ENTERPRISE: Type-safe metrics structure (moved outside class)
+export interface CanvasEventMetrics {
+  totalListeners: number;
+  eventTypes: string[];
+  historySize: number;
+  maxHistorySize: number;
+  debugMode: boolean;
 }
 
 // Global instance για convenience

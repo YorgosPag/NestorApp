@@ -42,7 +42,6 @@ import type {
   BuildingFilterState,
   ProjectFilterState
 } from './types';
-import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import {
   PROPERTY_FILTER_LABELS,
   COMMON_FILTER_LABELS,
@@ -60,32 +59,38 @@ import {
 // [ENTERPRISE]: Using existing centralized constants - ZERO HARDCODED VALUES
 // Available centralized systems that work perfectly
 
-// [ENTERPRISE]: Centralized constants - NO MORE HARDCODED LABELS
-const AFO = {};
+// [ENTERPRISE]: Centralized constants - 100% i18n translation keys
+const AFO = {
+  parking: 'filters.advancedOptions.parking',
+  storage: 'filters.advancedOptions.storage',
+  fireplace: 'filters.advancedOptions.fireplace',
+  view: 'filters.advancedOptions.view',
+  pool: 'filters.advancedOptions.pool'
+};
 const RL = {};
 const ECL = {};
 
-// 🏢 ENTERPRISE: Centralized filter labels (Ελληνικά - enterprise standard)
+// 🏢 ENTERPRISE: Centralized filter labels - i18n translation keys
 const FL = PROPERTY_FILTER_LABELS;
 const SP = {
-  general: 'Αναζήτηση...',
-  units_search: 'Αναζήτηση μονάδων...',
-  contacts_search: 'Αναζήτηση επαφών...',
-  buildings_search: 'Αναζήτηση κτιρίων...',
-  projects_search: 'Αναζήτηση έργων...',
-  status_placeholder: 'Επιλέξτε κατάσταση...',
-  project_placeholder: 'Επιλέξτε έργο...',
-  building_placeholder: 'Επιλέξτε κτίριο...',
-  floor_placeholder: 'Επιλέξτε όροφο...',
-  type_placeholder: 'Επιλέξτε τύπο...',
-  priority_placeholder: 'Επιλέξτε προτεραιότητα...',
-  location_placeholder: 'Επιλέξτε τοποθεσία...',
-  company_placeholder: 'Επιλέξτε εταιρεία...',
-  energy_class_placeholder: 'Επιλέξτε ενεργειακή κλάση...',
-  renovation_placeholder: 'Επιλέξτε κατάσταση κτιρίου...',
-  client_placeholder: 'Επιλέξτε πελάτη...',
-  risk_level_placeholder: 'Επιλέξτε επίπεδο κινδύνου...',
-  complexity_placeholder: 'Επιλέξτε πολυπλοκότητα...'
+  general: 'filters.placeholders.general',
+  units_search: 'filters.placeholders.unitsSearch',
+  contacts_search: 'filters.placeholders.contactsSearch',
+  buildings_search: 'filters.placeholders.buildingsSearch',
+  projects_search: 'filters.placeholders.projectsSearch',
+  status_placeholder: 'filters.placeholders.selectStatus',
+  project_placeholder: 'filters.placeholders.selectProject',
+  building_placeholder: 'filters.placeholders.selectBuilding',
+  floor_placeholder: 'filters.placeholders.selectFloor',
+  type_placeholder: 'filters.placeholders.selectType',
+  priority_placeholder: 'filters.placeholders.selectPriority',
+  location_placeholder: 'filters.placeholders.selectLocation',
+  company_placeholder: 'filters.placeholders.selectCompany',
+  energy_class_placeholder: 'filters.placeholders.selectEnergyClass',
+  renovation_placeholder: 'filters.placeholders.selectRenovation',
+  client_placeholder: 'filters.placeholders.selectClient',
+  risk_level_placeholder: 'filters.placeholders.selectRiskLevel',
+  complexity_placeholder: 'filters.placeholders.selectComplexity'
 } as const;
 
 // 🏢 ENTERPRISE: Filter titles as i18n translation keys
@@ -403,9 +408,9 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_PROJECTS },
-            { value: 'project1', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_1_NAME || 'Project A' },
-            { value: 'project2', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_2_NAME || 'Project B' },
-            { value: 'project3', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_3_NAME || 'Project C' }
+            { value: 'project1', label: 'filters.sampleProjects.projectA' },
+            { value: 'project2', label: 'filters.sampleProjects.projectB' },
+            { value: 'project3', label: 'filters.sampleProjects.projectC' }
           ]
         },
         {
@@ -417,13 +422,13 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_LOCATIONS },
-            { value: 'main-city', label: GEOGRAPHIC_CONFIG.DEFAULT_CITY },
-            { value: 'alternative-city', label: GEOGRAPHIC_CONFIG.ALTERNATIVE_CITY },
-            { value: 'city3', label: process.env.NEXT_PUBLIC_FILTER_CITY_3 || 'Πάτρα' },
-            { value: 'city4', label: process.env.NEXT_PUBLIC_FILTER_CITY_4 || 'Ηράκλειο' },
-            { value: 'city5', label: process.env.NEXT_PUBLIC_FILTER_CITY_5 || 'Βόλος' },
-            { value: 'city6', label: process.env.NEXT_PUBLIC_FILTER_CITY_6 || 'Καβάλα' },
-            { value: 'city7', label: process.env.NEXT_PUBLIC_FILTER_CITY_7 || 'Λαμία' }
+            { value: 'main-city', label: 'filters.sampleCities.athens' },
+            { value: 'alternative-city', label: 'filters.sampleCities.thessaloniki' },
+            { value: 'city3', label: 'filters.sampleCities.patras' },
+            { value: 'city4', label: 'filters.sampleCities.heraklion' },
+            { value: 'city5', label: 'filters.sampleCities.volos' },
+            { value: 'city6', label: 'filters.sampleCities.kavala' },
+            { value: 'city7', label: 'filters.sampleCities.lamia' }
           ]
         },
         {
@@ -435,9 +440,9 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_COMPANIES },
-            { value: 'company1', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_1_NAME || 'Εταιρεία Α' },
-            { value: 'company2', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_2_NAME || 'Εταιρεία Β' },
-            { value: 'company3', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_3_NAME || 'Εταιρεία Γ' }
+            { value: 'company1', label: 'filters.sampleCompanies.companyA' },
+            { value: 'company2', label: 'filters.sampleCompanies.companyB' },
+            { value: 'company3', label: 'filters.sampleCompanies.companyC' }
           ]
         }
       ]
@@ -528,15 +533,15 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_ENERGY_CLASSES },
-            { value: 'A+', label: 'Α+' },
-            { value: 'A', label: 'Α' },
-            { value: 'B+', label: 'Β+' },
-            { value: 'B', label: 'Β' },
-            { value: 'C', label: 'Γ' },
-            { value: 'D', label: 'Δ' },
-            { value: 'E', label: 'Ε' },
-            { value: 'F', label: 'Ζ' },
-            { value: 'G', label: 'Η' }
+            { value: 'A+', label: 'filters.energyClass.aPlus' },
+            { value: 'A', label: 'filters.energyClass.a' },
+            { value: 'B+', label: 'filters.energyClass.bPlus' },
+            { value: 'B', label: 'filters.energyClass.b' },
+            { value: 'C', label: 'filters.energyClass.c' },
+            { value: 'D', label: 'filters.energyClass.d' },
+            { value: 'E', label: 'filters.energyClass.e' },
+            { value: 'F', label: 'filters.energyClass.f' },
+            { value: 'G', label: 'filters.energyClass.g' }
           ]
         },
         {
@@ -655,10 +660,10 @@ export const projectFiltersConfig: FilterPanelConfig = {
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_COMPANIES },
-            { value: 'company1', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_1_NAME || 'Εταιρεία Α' },
-            { value: 'company2', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_2_NAME || 'Εταιρεία Β' },
-            { value: 'company3', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_3_NAME || 'Εταιρεία Γ' },
-            { value: 'company4', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_4_NAME || 'Εταιρεία Δ' }
+            { value: 'company1', label: 'filters.sampleCompanies.companyA' },
+            { value: 'company2', label: 'filters.sampleCompanies.companyB' },
+            { value: 'company3', label: 'filters.sampleCompanies.companyC' },
+            { value: 'company4', label: 'filters.sampleCompanies.companyD' }
           ]
         },
         {
@@ -670,14 +675,14 @@ export const projectFiltersConfig: FilterPanelConfig = {
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_LOCATIONS },
-            { value: 'main-city', label: GEOGRAPHIC_CONFIG.DEFAULT_CITY },
-            { value: 'alternative-city', label: GEOGRAPHIC_CONFIG.ALTERNATIVE_CITY },
-            { value: 'city3', label: process.env.NEXT_PUBLIC_FILTER_CITY_3 || 'Πάτρα' },
-            { value: 'city4', label: process.env.NEXT_PUBLIC_FILTER_CITY_4 || 'Ηράκλειο' },
-            { value: 'city5', label: process.env.NEXT_PUBLIC_FILTER_CITY_5 || 'Βόλος' },
-            { value: 'city6', label: process.env.NEXT_PUBLIC_FILTER_CITY_6 || 'Καβάλα' },
-            { value: 'city7', label: process.env.NEXT_PUBLIC_FILTER_CITY_7 || 'Λαμία' },
-            { value: 'city8', label: process.env.NEXT_PUBLIC_FILTER_CITY_8 || 'Ρόδος' }
+            { value: 'main-city', label: 'filters.sampleCities.athens' },
+            { value: 'alternative-city', label: 'filters.sampleCities.thessaloniki' },
+            { value: 'city3', label: 'filters.sampleCities.patras' },
+            { value: 'city4', label: 'filters.sampleCities.heraklion' },
+            { value: 'city5', label: 'filters.sampleCities.volos' },
+            { value: 'city6', label: 'filters.sampleCities.kavala' },
+            { value: 'city7', label: 'filters.sampleCities.lamia' },
+            { value: 'city8', label: 'filters.sampleCities.rhodes' }
           ]
         },
         {

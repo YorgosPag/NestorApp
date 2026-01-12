@@ -54,6 +54,43 @@ export interface ImageParserResult extends ParserResult {
 }
 
 /**
+ * 🏢 ENTERPRISE: Format recommendation structure
+ */
+interface FormatRecommendation {
+  useCase: string;
+  pros: string[];
+  cons: string[];
+}
+
+/**
+ * 🏢 ENTERPRISE: Compression settings interface
+ */
+interface CompressionSettings {
+  maxDimension: number;
+  quality: number;
+  size: 'avatar' | 'thumbnail' | 'profile';
+}
+
+/**
+ * 🏢 ENTERPRISE: Compression statistics interface
+ */
+interface CompressionStats {
+  originalSize: number;
+  compressedSize: number;
+  compressionRatio: number;
+  dimensions: { width: number; height: number };
+}
+
+/**
+ * 🏢 ENTERPRISE: Smart compression info interface
+ */
+export interface SmartCompressionInfo {
+  strategy: string;
+  settings: CompressionSettings;
+  stats: CompressionStats;
+}
+
+/**
  * Universal Image Parser
  *
  * ✅ Works για ΟΛΕΣ τις image formats
@@ -332,7 +369,8 @@ export class ImageParser {
     pros: string[];
     cons: string[];
   } {
-    const recommendations: Record<string, any> = {
+    // 🏢 ENTERPRISE: Proper type for format recommendations
+    const recommendations: Record<string, FormatRecommendation> = {
       PNG: {
         useCase: 'Floor plans με text και sharp lines',
         pros: [
@@ -471,7 +509,7 @@ export class ImageParser {
   async smartCompressContactPhoto(
     file: File,
     usage: 'avatar' | 'list-item' | 'profile-modal' | 'print' = 'profile-modal'
-  ): Promise<{ blob: Blob; info: { strategy: string; settings: any; stats: any } }> {
+  ): Promise<{ blob: Blob; info: SmartCompressionInfo }> {
     const img = await this.loadImage(file);
     const fileSize = file.size;
     const megabytes = fileSize / (1024 * 1024);
@@ -589,7 +627,7 @@ export async function compressContactPhoto(
 export async function smartCompressContactPhoto(
   file: File,
   usage: 'avatar' | 'list-item' | 'profile-modal' | 'print' = 'profile-modal'
-): Promise<{ blob: Blob; compressionInfo: any }> {
+): Promise<{ blob: Blob; compressionInfo: SmartCompressionInfo }> {
   const parser = new ImageParser();
   const result = await parser.smartCompressContactPhoto(file, usage);
   return {

@@ -46,6 +46,42 @@ export interface PerformanceStatus {
   isMonitoring: boolean;
 }
 
+// 🏢 ENTERPRISE: Type-safe performance configuration
+export interface PerformanceOptimizerConfig {
+  monitoring?: {
+    performanceThresholds?: {
+      maxLoadTime?: number;
+      maxRenderTime?: number;
+      maxMemoryUsage?: number;
+      minFPS?: number;
+    };
+    enableRealTimeMonitoring?: boolean;
+    enableAlerts?: boolean;
+  };
+  optimization?: {
+    enableAutoOptimizations?: boolean;
+    optimizationLevel?: 'low' | 'medium' | 'high';
+  };
+}
+
+// 🏢 ENTERPRISE: Type-safe custom events
+export interface PerformanceAlertEvent extends CustomEvent {
+  detail: {
+    type: string;
+    message: string;
+    severity: 'warning' | 'error' | 'info';
+    timestamp: number;
+  };
+}
+
+export interface OptimizationAppliedEvent extends CustomEvent {
+  detail: {
+    actionId: string;
+    success: boolean;
+    timestamp: number;
+  };
+}
+
 export interface PerformanceControls {
   /** Start performance monitoring */
   startMonitoring: () => void;
@@ -58,7 +94,7 @@ export interface PerformanceControls {
   /** Clear performance alerts */
   clearAlerts: () => void;
   /** Update performance configuration */
-  updateConfig: (config: any) => void;
+  updateConfig: (config: PerformanceOptimizerConfig) => void;
   /** Trigger manual performance measurement */
   measurePerformance: () => void;
   /** Get performance report */
@@ -190,7 +226,7 @@ export function usePerformanceOptimization(
   /**
    * ⚙️ Update configuration
    */
-  const updateConfig = useCallback((config: any) => {
+  const updateConfig = useCallback((config: PerformanceOptimizerConfig) => {
     dxfPerformanceOptimizer.updateConfig(config);
     updateStatus();
     console.log('⚙️ Performance config updated');
@@ -310,13 +346,15 @@ export function usePerformanceOptimization(
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const handlePerformanceAlert = (event: any) => {
-      console.warn('⚠️ Performance Alert:', event.detail);
+    const handlePerformanceAlert = (event: Event) => {
+      const customEvent = event as PerformanceAlertEvent;
+      console.warn('⚠️ Performance Alert:', customEvent.detail);
       updateStatus();
     };
 
-    const handleOptimizationApplied = (event: any) => {
-      console.log('✅ Optimization Applied:', event.detail);
+    const handleOptimizationApplied = (event: Event) => {
+      const customEvent = event as OptimizationAppliedEvent;
+      console.log('✅ Optimization Applied:', customEvent.detail);
       updateStatus();
     };
 

@@ -41,11 +41,13 @@ export function useRenderingCalculations(
     transform: ViewTransform,
     canvasRect: { width: number; height: number }
   ): RulerTick[] => {
-    return RulersGridCalculations.calculateTicks(type, bounds, rulers, transform, canvasRect as any);
+    // 🏢 ENTERPRISE: Cast to DOMRect since calculateTicks only uses width/height properties
+    return RulersGridCalculations.calculateTicks(type, bounds, rulers, transform, canvasRect as DOMRect);
   }, [rulers]);
 
   const calculateLayout = useCallback((canvasRect: { width: number; height: number }): RulersLayoutInfo => {
-    return RulersGridCalculations.calculateLayout(canvasRect as any, rulers);
+    // 🏢 ENTERPRISE: Cast to DOMRect since calculateLayout only uses width/height properties
+    return RulersGridCalculations.calculateLayout(canvasRect as DOMRect, rulers);
   }, [rulers]);
 
   // Rendering functions

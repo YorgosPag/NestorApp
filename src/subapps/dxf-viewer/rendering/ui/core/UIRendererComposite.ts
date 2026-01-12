@@ -92,7 +92,7 @@ export class UIRendererComposite {
     viewport: Viewport,
     settings: Map<string, UIElementSettings>,
     options: Partial<UIRenderOptions> = {},
-    worldTransform?: any // 🎯 OPTIONAL: World transform για debug overlays (Origin Markers)
+    worldTransform?: import('../../types/Types').ViewTransform // 🏢 ENTERPRISE: Type-safe world transform για debug overlays
   ): void {
     const startTime = performance.now();
     const renderOptions = { ...this.options, ...options };

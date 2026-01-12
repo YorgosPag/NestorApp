@@ -143,7 +143,7 @@ export const useOrthoPolar = useConstraints;
 // ✅ ENTERPRISE FIX: Fixed circular reference - use proper type alias
 export type ConstraintsHookReturn = ConstraintsContextType;
 
-export function setConstraintsContext(context: any) {
+export function setConstraintsContext(context: ConstraintsContextType) {
   // TODO: Implement proper context setter if needed
   // This is a placeholder to resolve import error
   console.warn('setConstraintsContext called but not implemented');

@@ -227,10 +227,40 @@ export const formatLastSaveTime = (date?: Date | null): string => {
 // SETTINGS MAPPING UTILITIES
 // ============================================================================
 
+// 🏢 ENTERPRISE: Type-safe settings interfaces
+interface GeneralSettingsFlags {
+  line?: boolean;
+  text?: boolean;
+  grip?: boolean;
+  cursor?: boolean;
+  grid?: boolean;
+  ruler?: boolean;
+}
+
+interface SpecificSettingsFlags extends GeneralSettingsFlags {
+  specific?: {
+    line?: {
+      draft?: boolean;
+      hover?: boolean;
+      selection?: boolean;
+      completion?: boolean;
+    };
+    text?: {
+      draft?: boolean;
+    };
+  };
+}
+
+interface SettingsConfigItem {
+  key: string;
+  isActive: boolean | undefined;
+  label: string;
+}
+
 /**
  * Map general settings to display configuration
  */
-export const getGeneralSettingsConfig = (settings: any) => [
+export const getGeneralSettingsConfig = (settings: GeneralSettingsFlags): SettingsConfigItem[] => [
   { key: 'line', isActive: settings.line, label: 'Γραμμές (Γενικά)' },
   { key: 'text', isActive: settings.text, label: 'Κείμενο (Γενικά)' },
   { key: 'grip', isActive: settings.grip, label: 'Grips (Γενικά)' },
@@ -242,7 +272,7 @@ export const getGeneralSettingsConfig = (settings: any) => [
 /**
  * Map specific settings to display configuration
  */
-export const getSpecificSettingsConfig = (settings: any) => [
+export const getSpecificSettingsConfig = (settings: SpecificSettingsFlags): SettingsConfigItem[] => [
   { key: 'line.draft', isActive: settings.specific?.line?.draft, label: 'Line Draft (Προσχεδίαση)' },
   { key: 'line.hover', isActive: settings.specific?.line?.hover, label: 'Line Hover' },
   { key: 'line.selection', isActive: settings.specific?.line?.selection, label: 'Line Selection (Επιλογή)' },

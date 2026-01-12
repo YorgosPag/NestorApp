@@ -17,6 +17,7 @@
 
 import * as React from 'react';
 const { useRef, useEffect, useState, useCallback } = React;
+import type { Map as MaplibreMapType } from 'maplibre-gl';
 import type { GeoCoordinate, GeoControlPoint } from '../types';
 import { useTranslationLazy } from '../../../i18n/hooks/useTranslationLazy';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
@@ -51,8 +52,10 @@ type UniversalPolygon = {
 // Enterprise Services & Hooks
 import { elevationService } from '../services/map/ElevationService';
 import { getAllMapStyleUrls, type MapStyleType } from '../services/map/MapStyleManager';
-import { useMapInteractions } from '../hooks/map/useMapInteractions';
+import { useMapInteractions, type TransformState } from '../hooks/map/useMapInteractions';
 import { useMapState } from '../hooks/map/useMapState';
+// 🏢 ENTERPRISE: Import maplibre types for proper map reference typing
+import type { Map as MaplibreMap } from 'maplibre-gl';
 
 // Centralized Systems
 import { useCentralizedPolygonSystem } from '../systems/polygon-system';
@@ -80,10 +83,10 @@ export interface InteractiveMapContainerProps {
   showControlPoints?: boolean;
   showTransformationPreview?: boolean;
   isPickingCoordinates?: boolean;
-  transformState: any;
+  transformState: TransformState;
   className?: string;
   onPolygonComplete?: () => void;
-  onMapReady?: (map: any) => void;
+  onMapReady?: (map: MaplibreMap) => void;
   searchMarker?: {
     lat: number;
     lng: number;
@@ -144,7 +147,8 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
 
   const { t } = useTranslationLazy('geo-canvas');
   const { getStatusBorder } = useBorderTokens();
-  const mapRef = useRef<any>(null);
+  // 🏢 ENTERPRISE: Proper type for MapLibre map reference
+  const mapRef = useRef<MaplibreMapType | null>(null);
 
   // Centralized map state management
   const mapState = useMapState({

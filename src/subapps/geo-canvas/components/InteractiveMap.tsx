@@ -19,6 +19,9 @@ import React, { memo } from 'react';
 import type { GeoCoordinate, GeoControlPoint } from '../types';
 import type { PolygonType, UniversalPolygon } from '@geo-alert/core';
 import { InteractiveMapContainer } from './InteractiveMapContainer';
+// 🏢 ENTERPRISE: Import proper types for type safety
+import type { TransformState } from '../hooks/map/useMapInteractions';
+import type { Map as MaplibreMap } from 'maplibre-gl';
 
 // ============================================================================
 // 🎯 ENTERPRISE INTERFACE
@@ -29,10 +32,10 @@ export interface InteractiveMapProps {
   showControlPoints?: boolean;
   showTransformationPreview?: boolean;
   isPickingCoordinates?: boolean;
-  transformState: any;
+  transformState: TransformState;
   className?: string;
   onPolygonComplete?: () => void;
-  onMapReady?: (map: any) => void;
+  onMapReady?: (map: MaplibreMap) => void;
   searchMarker?: {
     lat: number;
     lng: number;

@@ -14,7 +14,8 @@ import type {
   SpatialBounds,
   SpatialQueryOptions,
   SpatialQueryResult,
-  SpatialIndexStats
+  SpatialIndexStats,
+  SpatialDebugInfo
 } from './ISpatialIndex';
 import { SpatialIndexType } from './ISpatialIndex';
 import type { Point2D } from '../../rendering/types/Types';
@@ -229,15 +230,31 @@ export class QuadTreeSpatialIndex implements ISpatialIndex {
     }
   }
 
-  debug(): any {
+  debug(): SpatialDebugInfo {
     return {
-      type: 'QuadTreeSpatialIndex',
-      bounds: this.bounds,
+      indexType: SpatialIndexType.QUADTREE,
       itemCount: this._itemCount,
-      maxDepth: this.maxDepth,
-      maxItemsPerNode: this.maxItemsPerNode,
-      treeStructure: this.getTreeStructure(this.root)
+      bounds: this.bounds,
+      structure: {
+        depth: this.maxDepth,
+        nodeCount: this.getNodeCount(),
+        treeStructure: this.getTreeStructure(this.root)
+      },
+      performance: this.getStats()
     };
+  }
+
+  // 🏢 ENTERPRISE: Helper to count total nodes
+  private getNodeCount(): number {
+    let count = 0;
+    const countNodes = (node: QuadTreeNode): void => {
+      count++;
+      if (node.children) {
+        node.children.forEach(countNodes);
+      }
+    };
+    countNodes(this.root);
+    return count;
   }
 
   // ========================================
@@ -372,7 +389,8 @@ export class QuadTreeSpatialIndex implements ISpatialIndex {
     }
   }
 
-  private getTreeStructure(node: QuadTreeNode): any {
+  // 🏢 ENTERPRISE: Type-safe tree structure
+  private getTreeStructure(node: QuadTreeNode): TreeNodeInfo {
     return {
       bounds: node.bounds,
       depth: node.depth,
@@ -381,4 +399,13 @@ export class QuadTreeSpatialIndex implements ISpatialIndex {
       children: node.children ? node.children.map(child => this.getTreeStructure(child)) : undefined
     };
   }
+}
+
+// 🏢 ENTERPRISE: Type-safe tree node structure for debug
+interface TreeNodeInfo {
+  bounds: SpatialBounds;
+  depth: number;
+  itemCount: number;
+  hasChildren: boolean;
+  children?: TreeNodeInfo[];
 }

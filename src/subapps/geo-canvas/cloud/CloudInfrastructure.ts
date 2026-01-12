@@ -70,8 +70,14 @@ export class GeoAlertCloudInfrastructure {
 
   /**
    * Get infrastructure statistics με enterprise metrics
+   * 🏢 ENTERPRISE: Proper return type for statistics
    */
-  public getInfrastructureStatistics(): any {
+  public getInfrastructureStatistics(): {
+    status: string;
+    version: string;
+    architecture: string;
+    message: string;
+  } {
     return {
       status: 'enterprise_ready',
       version: '2.0.0',

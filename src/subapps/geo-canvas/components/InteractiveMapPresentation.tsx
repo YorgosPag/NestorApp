@@ -17,6 +17,7 @@
 
 import React, { memo } from 'react';
 import { Map } from 'react-map-gl/maplibre';
+import type { MapLayerMouseEvent } from 'react-map-gl/maplibre';
 import type { GeoControlPoint } from '../types';
 import type { UniversalPolygon } from '@geo-alert/core';
 import type { ViewState } from '../hooks/map/useMapState';
@@ -39,6 +40,21 @@ import { interactiveMapStyles } from './InteractiveMap.styles';
 // 🎯 ENTERPRISE TYPE DEFINITIONS
 // ============================================================================
 
+// 🏢 ENTERPRISE: GeoJSON types for export function
+interface GeoJSONFeatureCollection {
+  type: 'FeatureCollection';
+  features: GeoJSONFeature[];
+}
+
+interface GeoJSONFeature {
+  type: 'Feature';
+  geometry: {
+    type: string;
+    coordinates: number[][] | number[][][] | number[][][][];
+  };
+  properties?: Record<string, unknown>;
+}
+
 export interface InteractiveMapPresentationProps {
   // Map Configuration
   mapStyle: string;
@@ -47,8 +63,8 @@ export interface InteractiveMapPresentationProps {
   onLoad: () => void;
 
   // Event Handlers
-  onClick: (event: any) => void;
-  onMouseMove: (event: any) => void;
+  onClick: (event: MapLayerMouseEvent) => void;
+  onMouseMove: (event: MapLayerMouseEvent) => void;
 
   // Layer Data
   controlPoints: GeoControlPoint[];
@@ -84,7 +100,8 @@ export interface InteractiveMapPresentationProps {
   };
 
   // Export Functions
-  exportAsGeoJSON: () => any;
+  // 🏢 ENTERPRISE: Proper return type instead of any
+  exportAsGeoJSON: () => GeoJSONFeatureCollection | null;
 
   // Cursor
   cursor?: string;

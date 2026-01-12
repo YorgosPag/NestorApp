@@ -264,7 +264,7 @@ export function useFormErrorHandler() {
 // Utility function to create standardized error messages
 export const createErrorMessage = (
   key: string,
-  params?: Record<string, any>,
+  params?: Record<string, unknown>,
   namespace: string = 'forms'
 ) => {
   return `${namespace}.validation.${key}`;
@@ -287,7 +287,8 @@ export const errorMessages = {
 };
 
 // Form validation result type
-export interface ValidationResult<T = any> {
+// 🏢 ENTERPRISE: Generic type with proper constraint (unknown instead of any)
+export interface ValidationResult<T = unknown> {
   isValid: boolean;
   data?: T;
   errors?: Record<string, string>;

@@ -23,11 +23,26 @@ import { interactiveMapStyles } from '../InteractiveMap.styles';
 // 🎯 ENTERPRISE TYPE DEFINITIONS
 // ============================================================================
 
+// 🏢 ENTERPRISE: GeoJSON Feature Collection type
+interface GeoJSONFeatureCollection {
+  type: 'FeatureCollection';
+  features: GeoJSONFeature[];
+}
+
+interface GeoJSONFeature {
+  type: 'Feature';
+  geometry: {
+    type: string;
+    coordinates: number[][] | number[][][] | number[][][][];
+  };
+  properties?: Record<string, unknown>;
+}
+
 export interface PolygonSystemLayersProps {
   /** Polygons από centralized system */
   polygons: UniversalPolygon[];
   /** Function to export polygons as GeoJSON */
-  exportAsGeoJSON: () => any;
+  exportAsGeoJSON: () => GeoJSONFeatureCollection | null;
   /** Whether polygon drawing is enabled */
   enablePolygonDrawing?: boolean;
 }
@@ -109,7 +124,7 @@ export const PolygonSystemLayers: React.FC<PolygonSystemLayersProps> = memo(({
 
   // ✅ PERFORMANCE: Memoized polygon rendering data
   const polygonRenderData = useMemo(() => {
-    return geojsonData.features.map((feature: any, index: number) => {
+    return geojsonData.features.map((feature: GeoJSONFeature, index: number) => {
       const polygon = polygons.find(p => p.id === feature.properties?.id);
       if (!polygon) return null;
 

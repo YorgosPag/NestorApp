@@ -77,7 +77,10 @@ export function extractEndpoints(parserResult: ParserResult | null): SnapPoint[]
 /**
  * Extract LineString endpoints from GeoJSON geometry
  */
-function extractLineStringEndpoints(geometry: any, properties?: any): SnapPoint[] {
+function extractLineStringEndpoints(
+  geometry: GeoJSON.Geometry,
+  properties?: Record<string, unknown> | null
+): SnapPoint[] {
   const snapPoints: SnapPoint[] = [];
 
   if (!geometry.coordinates || !Array.isArray(geometry.coordinates)) {
@@ -113,7 +116,10 @@ function extractLineStringEndpoints(geometry: any, properties?: any): SnapPoint[
 /**
  * Extract Polygon endpoints from GeoJSON geometry
  */
-function extractPolygonEndpoints(geometry: any, properties?: any): SnapPoint[] {
+function extractPolygonEndpoints(
+  geometry: GeoJSON.Geometry,
+  properties?: Record<string, unknown> | null
+): SnapPoint[] {
   const snapPoints: SnapPoint[] = [];
 
   if (!geometry.coordinates || !Array.isArray(geometry.coordinates)) {
@@ -142,7 +148,10 @@ function extractPolygonEndpoints(geometry: any, properties?: any): SnapPoint[] {
 /**
  * Extract endpoints from coordinate array
  */
-function extractCoordsEndpoints(coords: number[][], properties?: any): SnapPoint[] {
+function extractCoordsEndpoints(
+  coords: number[][],
+  properties?: Record<string, unknown> | null
+): SnapPoint[] {
   const snapPoints: SnapPoint[] = [];
 
   if (!coords || coords.length < 2) return snapPoints;

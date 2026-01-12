@@ -9,15 +9,28 @@
 
 import { adminBoundariesAnalytics } from '../performance/AdminBoundariesPerformanceAnalytics';
 import { adminBoundariesCache } from '../cache/AdminBoundariesCacheManager';
-// ✅ ENTERPRISE FIX: Define GeoJSON types locally to avoid module dependency
+// ============================================================================
+// 🏢 ENTERPRISE: GeoJSON Type Definitions (ISO 19107 compliant)
+// ============================================================================
+
+// 🏢 ENTERPRISE: GeoJSON coordinate types per specification
+type GeoJSONPosition = [number, number] | [number, number, number];
+type GeoJSONCoordinates =
+  | GeoJSONPosition
+  | GeoJSONPosition[]
+  | GeoJSONPosition[][]
+  | GeoJSONPosition[][][];
+
 interface Geometry {
-  type: string;
-  coordinates?: any;
+  type: 'Point' | 'LineString' | 'Polygon' | 'MultiPoint' | 'MultiLineString' | 'MultiPolygon' | 'GeometryCollection';
+  // 🏢 ENTERPRISE: Proper GeoJSON coordinates type
+  coordinates?: GeoJSONCoordinates;
 }
 
 interface Feature {
   type: 'Feature';
-  properties: Record<string, any> | null;
+  // 🏢 ENTERPRISE: Proper properties type
+  properties: Record<string, string | number | boolean | null> | null;
   geometry: Geometry | null;
 }
 

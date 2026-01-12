@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator"
 import { ThemeToggle } from "@/components/header/theme-toggle"
 import { UserMenu } from "@/components/header/user-menu"
 import { LanguageSwitcher } from "@/components/header/language-switcher"
+import { HelpButton } from "@/components/header/help-button"
 import { NotificationBell } from "@/components/NotificationBell.enterprise"
 import { useFirestoreNotifications } from "@/hooks/useFirestoreNotifications"
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors"
@@ -32,6 +33,8 @@ export function AppHeader() {
           <NotificationBell />
           <Separator orientation="vertical" className="h-6 hidden sm:block" />
           <ThemeToggle />
+          <Separator orientation="vertical" className="h-6 hidden sm:block" />
+          <HelpButton />
           <Separator orientation="vertical" className="h-6 hidden sm:block" />
           <UserMenu />
         </div>

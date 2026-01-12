@@ -285,7 +285,8 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
             rotation: 0
           };
           const context = createUIRenderContext(ctx, viewport, uiTransform);
-          gridRendererRef.current.render(context, viewport, gridSettings as any);
+          // 🏢 ENTERPRISE: Type-safe UIElementSettings cast for GridRenderer
+          gridRendererRef.current.render(context, viewport, gridSettings as import('../../rendering/ui/core/UIRenderer').UIElementSettings);
         }
       }
 
@@ -302,7 +303,8 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
             rotation: 0
           };
           const context = createUIRenderContext(ctx, viewport, uiTransform);
-          rulerRendererRef.current.render(context, viewport, rulerSettings as any);
+          // 🏢 ENTERPRISE: Type-safe UIElementSettings cast for RulerRenderer
+          rulerRendererRef.current.render(context, viewport, rulerSettings as import('../../rendering/ui/core/UIRenderer').UIElementSettings);
         }
       }
     } catch (error) {

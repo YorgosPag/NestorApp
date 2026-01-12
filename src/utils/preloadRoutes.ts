@@ -15,7 +15,10 @@ import {
 // Re-export types for backward compatibility
 export type { PreloadableRoute, UserRole };
 
-const routePreloaders: Record<PreloadableRoute, () => Promise<any>> = {
+// 🏢 ENTERPRISE: Dynamic module import type
+type DynamicModuleImport = Record<string, unknown>;
+
+const routePreloaders: Record<PreloadableRoute, () => Promise<DynamicModuleImport>> = {
   'crm-dashboard': () => import('@/components/crm/dashboard/CRMDashboardPageContent'),
   'buildings': () => import('@/components/building-management/BuildingsPageContent'),
   'contacts': () => import('@/components/contacts/ContactsPageContent'),

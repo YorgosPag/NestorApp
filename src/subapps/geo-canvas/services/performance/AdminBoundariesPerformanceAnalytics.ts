@@ -20,6 +20,17 @@ import { generateSearchId, generateRequestId, generateAlertId } from '@/services
 // ADMINISTRATIVE BOUNDARIES SPECIFIC TYPES
 // ============================================================================
 
+// 🏢 ENTERPRISE: Performance Report Summary interface
+export interface PerformanceReportSummary {
+  totalSearches: number;
+  averageSearchTime: number;
+  cacheHitRate: number;
+  apiResponseTime: number;
+  boundariesProcessed: number;
+  alertsCount: number;
+  criticalAlertsCount: number;
+}
+
 export interface AdminBoundariesMetrics {
   timestamp: number;
 
@@ -653,8 +664,9 @@ export class AdminBoundariesPerformanceAnalytics {
     console.log('🏛️ Performance thresholds updated');
   }
 
+  // 🏢 ENTERPRISE: Proper return type instead of any
   public getPerformanceReport(): {
-    summary: any;
+    summary: PerformanceReportSummary;
     recommendations: string[];
     criticalIssues: AdminBoundariesAlert[];
     topSlowQueries: Array<{adminLevel: string; avgTime: number;}>;

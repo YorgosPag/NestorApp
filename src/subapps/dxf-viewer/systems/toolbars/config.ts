@@ -102,26 +102,29 @@ export interface ToolDefinition {
   };
 }
 
+// 🏢 ENTERPRISE: Type-safe tool value types
+export type ToolValue = string | number | boolean | null | Point2D | Point2D[] | ToolValue[] | { [key: string]: ToolValue };
+
 // ===== TOOL DATA TYPES =====
 export interface ToolData {
   state?: string;
   progress?: number;
-  tempValues?: Record<string, any>;
+  tempValues?: Record<string, ToolValue>;
   validationErrors?: string[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, ToolValue>;
 }
 
 export interface ActionParameters {
   target?: string;
-  values?: Record<string, any>;
-  options?: Record<string, any>;
-  context?: Record<string, any>;
+  values?: Record<string, ToolValue>;
+  options?: Record<string, ToolValue>;
+  context?: Record<string, ToolValue>;
 }
 
 export interface ValidationInput {
-  value: any;
+  value: ToolValue;
   type: string;
-  constraints?: Record<string, any>;
+  constraints?: Record<string, ToolValue>;
 }
 
 export interface ValidationResult {

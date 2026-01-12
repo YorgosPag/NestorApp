@@ -212,15 +212,42 @@ export function createRenderPipeline(): RenderPipeline {
   return new RenderPipeline(backgroundPass, entityPass, overlayPass);
 }
 
+// 🏢 ENTERPRISE: Type-safe pass configuration
+export interface BackgroundPassConfig {
+  showGrid?: boolean;
+  showRulers?: boolean;
+  showOrigin?: boolean;
+  gridColor?: string;
+  backgroundColor?: string;
+}
+
+export interface EntityPassConfig {
+  batchingEnabled?: boolean;
+  maxBatchSize?: number;
+  cullOutsideViewport?: boolean;
+  levelOfDetail?: boolean;
+  cacheEnabled?: boolean;
+}
+
+export interface OverlayPassConfig {
+  showGrips?: boolean;
+  showSelection?: boolean;
+  showCursor?: boolean;
+  gripColor?: string;
+  selectionColor?: string;
+}
+
+export interface CustomRenderPipelineConfig {
+  background?: BackgroundPassConfig;
+  entity?: EntityPassConfig;
+  overlay?: OverlayPassConfig;
+}
+
 /**
  * 🔺 ADVANCED FACTORY με CUSTOM CONFIG
  * Για προχωρημένη configuration των passes
  */
-export function createCustomRenderPipeline(config?: {
-  background?: any;
-  entity?: any;
-  overlay?: any;
-}): RenderPipeline {
+export function createCustomRenderPipeline(config?: CustomRenderPipelineConfig): RenderPipeline {
   const { createBackgroundPass } = require('../passes/BackgroundPass');
   const { createEntityPass } = require('../passes/EntityPass');
   const { createOverlayPass } = require('../passes/OverlayPass');

@@ -1,9 +1,11 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { getCommunicationsByContact } from '@/services/communications.service';
+import type { Communication } from '@/types/crm';
 
 export function useCommunicationsHistory(contactId?: string) {
-  const [communications, setCommunications] = useState<any[]>([]);
+  // 🏢 ENTERPRISE: Proper type instead of any[]
+  const [communications, setCommunications] = useState<Communication[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string|null>(null);
 

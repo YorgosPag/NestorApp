@@ -13,16 +13,26 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { EntityModel } from '../../rendering/types/Types';
 import { PhaseManager } from '../phase-manager/PhaseManager';
 
+// 🏢 ENTERPRISE: Type-safe geometry union for entity properties
+export type EntityGeometry =
+  | { start: Point2D; end: Point2D } // line
+  | { center: Point2D; radius: number } // circle
+  | { corner1: Point2D; corner2: Point2D } // rectangle
+  | { center: Point2D; radius: number; startAngle: number; endAngle: number } // arc
+  | { vertices: Point2D[] } // polyline
+  | { center: Point2D; majorAxis: number; minorAxis: number } // ellipse
+  | Record<string, unknown>; // fallback
+
 export interface GripInteractionState {
   // Current grip states
   hoveredGrip: { entityId: string; gripIndex: number } | null;
   activeGrip: { entityId: string; gripIndex: number } | null;
   dragging: boolean;
-  
+
   // Dragging state
   dragStartPosition: Point2D | null;
   currentDragPosition: Point2D | null;
-  originalGeometry: Record<string, any> | null;
+  originalGeometry: EntityGeometry | null;
 }
 
 export interface GripInteractionOptions {
@@ -38,7 +48,7 @@ export class GripInteractionManager {
   private options: GripInteractionOptions;
   
   // Event callbacks
-  private onGeometryUpdate?: (entityId: string, geometry: Record<string, any> | null) => void;
+  private onGeometryUpdate?: (entityId: string, geometry: EntityGeometry | null) => void;
   private onGripStateChange?: (state: GripInteractionState) => void;
 
   constructor(options: GripInteractionOptions) {
@@ -182,7 +192,7 @@ export class GripInteractionManager {
    * 🔺 SET EVENT CALLBACKS
    */
   setCallbacks(callbacks: {
-    onGeometryUpdate?: (entityId: string, geometry: Record<string, any> | null) => void;
+    onGeometryUpdate?: (entityId: string, geometry: EntityGeometry | null) => void;
     onGripStateChange?: (state: GripInteractionState) => void;
   }): void {
     this.onGeometryUpdate = callbacks.onGeometryUpdate;
@@ -200,41 +210,69 @@ export class GripInteractionManager {
   /**
    * PRIVATE HELPER METHODS
    */
-  private cloneEntityGeometry(entity: EntityModel): Record<string, any> {
-    // Clone geometry based on entity type with proper type safety
-    const entityAny = entity as any; // Enterprise safe casting for entity properties
+  private cloneEntityGeometry(entity: EntityModel): EntityGeometry {
+    // 🏢 ENTERPRISE: Type-safe geometry cloning using type guards
+    // Access entity properties via intersection type for geometry properties
+    const entityWithGeometry = entity as EntityModel & {
+      start?: Point2D;
+      end?: Point2D;
+      center?: Point2D;
+      radius?: number;
+      corner1?: Point2D;
+      corner2?: Point2D;
+      startAngle?: number;
+      endAngle?: number;
+      vertices?: Point2D[];
+      majorAxis?: number;
+      minorAxis?: number;
+    };
 
     switch (entity.type) {
       case 'line':
-        return { start: { ...entityAny.start }, end: { ...entityAny.end } };
+        if (entityWithGeometry.start && entityWithGeometry.end) {
+          return { start: { ...entityWithGeometry.start }, end: { ...entityWithGeometry.end } };
+        }
+        break;
       case 'circle':
-        return { center: { ...entityAny.center }, radius: entityAny.radius };
+        if (entityWithGeometry.center && entityWithGeometry.radius !== undefined) {
+          return { center: { ...entityWithGeometry.center }, radius: entityWithGeometry.radius };
+        }
+        break;
       case 'rectangle':
-        return { corner1: { ...entityAny.corner1 }, corner2: { ...entityAny.corner2 } };
+        if (entityWithGeometry.corner1 && entityWithGeometry.corner2) {
+          return { corner1: { ...entityWithGeometry.corner1 }, corner2: { ...entityWithGeometry.corner2 } };
+        }
+        break;
       case 'arc':
-        return {
-          center: { ...entityAny.center },
-          radius: entityAny.radius,
-          startAngle: entityAny.startAngle,
-          endAngle: entityAny.endAngle
-        };
-      case 'polyline':
-        return { vertices: (entityAny.vertices as Point2D[] || []).map((v: Point2D) => ({ ...v })) };
-      default:
-        // Handle ellipse and other entity types with safe property access
-        if (entityAny.center && entityAny.majorAxis !== undefined) {
-          // Ellipse-like entity
+        if (entityWithGeometry.center && entityWithGeometry.radius !== undefined &&
+            entityWithGeometry.startAngle !== undefined && entityWithGeometry.endAngle !== undefined) {
           return {
-            center: { ...entityAny.center },
-            majorAxis: entityAny.majorAxis,
-            minorAxis: entityAny.minorAxis
+            center: { ...entityWithGeometry.center },
+            radius: entityWithGeometry.radius,
+            startAngle: entityWithGeometry.startAngle,
+            endAngle: entityWithGeometry.endAngle
           };
         }
-        return {};
+        break;
+      case 'polyline':
+        if (entityWithGeometry.vertices) {
+          return { vertices: entityWithGeometry.vertices.map((v: Point2D) => ({ ...v })) };
+        }
+        break;
+      default:
+        // Handle ellipse and other entity types with safe property access
+        if (entityWithGeometry.center && entityWithGeometry.majorAxis !== undefined) {
+          return {
+            center: { ...entityWithGeometry.center },
+            majorAxis: entityWithGeometry.majorAxis,
+            minorAxis: entityWithGeometry.minorAxis ?? 0
+          };
+        }
     }
+    return {}; // Fallback empty geometry
   }
 
-  private calculateNewGeometry(entity: EntityModel, currentPosition: Point2D): Record<string, any> | null {
+  private calculateNewGeometry(entity: EntityModel, currentPosition: Point2D): EntityGeometry | null {
     if (!this.state.activeGrip || !this.state.originalGeometry) return null;
     
     // This would calculate new geometry based on entity type and grip index

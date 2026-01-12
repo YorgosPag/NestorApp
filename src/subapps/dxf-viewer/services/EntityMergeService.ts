@@ -88,7 +88,8 @@ export class EntityMergeService {
     }
     
     const newId = `polyline_${Date.now()}`;
-    const mergedEntity = {
+    // 🏢 ENTERPRISE: Type-safe entity creation using LWPolylineEntity structure
+    const mergedEntity: AnySceneEntity = {
       id: newId,
       type: 'lwpolyline' as const,
       layer: targetEntity.layer,
@@ -97,7 +98,7 @@ export class EntityMergeService {
       closed: samePoint(chain[0], chain[chain.length - 1]),
       name: targetEntity.name || `Merged_${pool.length}_entities`,
       color: targetEntity.color
-    } as any;
+    };
 
     // Remove all old entities and add the new merged one
     const toDelete = new Set([targetEntity.id, ...sourceEntities.map(e => e.id)]);

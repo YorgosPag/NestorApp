@@ -265,7 +265,8 @@ export interface LayerConfig {
 
   // Vector-specific
   geoJSON?: GeoJSON.FeatureCollection;
-  styleFunction?: (feature: GeoJSON.Feature) => Record<string, any>;
+  // 🏢 ENTERPRISE: Proper type for style values (color, width, opacity, etc.)
+  styleFunction?: (feature: GeoJSON.Feature) => Record<string, string | number | boolean>;
 
   // Performance
   cacheEnabled?: boolean;

@@ -26,7 +26,11 @@
     "construction": "Under Construction",
     "planned": "Planned",
     "completed": "Completed",
-    "maintenance": "Maintenance"
+    "maintenance": "Maintenance",
+    "planning": "Planning"
+  },
+  "accessibility": {
+    "buildingCard": "Building {{name}}"
   },
   "units": {
     "pricePerSqm": "€/sq.m",
@@ -39,8 +43,6 @@
     "resetFilters": "Reset Filters",
     "clear": "Clear",
     "searchPlaceholder": "Search buildings, addresses, descriptions...",
-    "allCompanies": "All companies",
-    "allStatuses": "All statuses",
     "showAdvanced": "Show advanced filters",
     "hideAdvanced": "Hide advanced filters",
     "from": "From",
@@ -49,16 +51,190 @@
     "maximum": "Maximum",
     "selectedCount": "{{count}} selected",
     "all": "All",
+    "allTypes": "All types",
+    "allStatuses": "All statuses",
+    "allFloors": "All floors",
+    "allUnits": "All units",
+    "allAreas": "All areas",
+    "allProjects": "All projects",
+    "allBuildings": "All buildings",
+    "allLocations": "All locations",
+    "allCompanies": "All companies",
+    "allClients": "All clients",
+    "allPriorities": "All priorities",
+    "allEnergyClasses": "All energy classes",
+    "allRenovations": "All building conditions",
+    "allRiskLevels": "All risk levels",
+    "allComplexities": "All complexities",
+    "fields": {
+      "search": "Search",
+      "priceRange": "Price range",
+      "areaRange": "Area range",
+      "valueRange": "Value range",
+      "unitsRange": "Number of units",
+      "budgetRange": "Budget range",
+      "durationRange": "Duration (months)",
+      "status": "Status",
+      "project": "Project",
+      "building": "Building",
+      "floor": "Floor",
+      "type": "Type",
+      "energyClass": "Energy class",
+      "renovation": "Building condition",
+      "location": "Location",
+      "city": "City",
+      "company": "Company",
+      "client": "Client",
+      "priority": "Priority",
+      "riskLevel": "Risk level",
+      "complexity": "Complexity",
+      "yearBuilt": "Year built",
+      "propertyType": "Property type"
+    },
+    "checkboxes": {
+      "hasParking": "Parking",
+      "hasElevator": "Elevator",
+      "hasGarden": "Garden",
+      "hasPool": "Pool",
+      "hasStorage": "Storage",
+      "accessibility": "Accessibility",
+      "furnished": "Furnished",
+      "hasProperties": "Has properties",
+      "hasPermits": "Has permits",
+      "hasFinancing": "Has financing",
+      "hasSubcontractors": "Has subcontractors",
+      "hasIssues": "Has issues",
+      "isActive": "Active only"
+    },
+    "status": {
+      "available": "Available",
+      "sold": "Sold",
+      "reserved": "Reserved",
+      "maintenance": "Maintenance",
+      "occupied": "Occupied",
+      "planning": "Planning",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "onHold": "On Hold",
+      "active": "Active",
+      "inactive": "Inactive",
+      "archived": "Archived",
+      "lead": "Lead",
+      "pending": "Pending",
+      "construction": "Under Construction"
+    },
+    "buildingStatus": {
+      "forSale": "For Sale",
+      "forRent": "For Rent",
+      "rented": "Rented",
+      "withdrawn": "Withdrawn",
+      "inProgress": "In Progress",
+      "delayed": "Delayed",
+      "cancelled": "Cancelled"
+    },
+    "condition": {
+      "excellent": "Excellent",
+      "veryGood": "Very Good",
+      "good": "Good",
+      "needsRenovation": "Needs Renovation",
+      "underRenovation": "Under Renovation"
+    },
+    "types": {
+      "individual": "Individuals",
+      "company": "Companies",
+      "service": "Services",
+      "residential": "Residential",
+      "commercial": "Commercial",
+      "industrial": "Industrial",
+      "office": "Offices",
+      "mixed": "Mixed",
+      "warehouse": "Warehouse",
+      "retail": "Retail",
+      "hotel": "Hotel",
+      "public": "Public",
+      "renovation": "Renovation",
+      "infrastructure": "Infrastructure"
+    },
+    "priority": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "urgent": "Urgent",
+      "critical": "Critical"
+    },
+    "riskComplexity": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "simple": "Simple",
+      "complex": "Complex",
+      "veryComplex": "Very Complex"
+    },
+    "sampleProjects": {
+      "projectA": "Project A",
+      "projectB": "Project B",
+      "projectC": "Project C",
+      "projectD": "Project D"
+    },
+    "sampleCompanies": {
+      "companyA": "Company A",
+      "companyB": "Company B",
+      "companyC": "Company C",
+      "companyD": "Company D"
+    },
+    "sampleCities": {
+      "athens": "Athens",
+      "thessaloniki": "Thessaloniki",
+      "patras": "Patras",
+      "heraklion": "Heraklion",
+      "volos": "Volos",
+      "kavala": "Kavala",
+      "lamia": "Lamia",
+      "rhodes": "Rhodes"
+    },
+    "energyClass": {
+      "aPlus": "A+",
+      "a": "A",
+      "bPlus": "B+",
+      "b": "B",
+      "c": "C",
+      "d": "D",
+      "e": "E",
+      "f": "F",
+      "g": "G"
+    },
+    "advancedOptions": {
+      "parking": "Parking",
+      "storage": "Storage",
+      "fireplace": "Fireplace",
+      "view": "View",
+      "pool": "Pool"
+    },
+    "placeholders": {
+      "general": "Search...",
+      "unitsSearch": "Search units...",
+      "contactsSearch": "Search contacts...",
+      "buildingsSearch": "Search buildings...",
+      "projectsSearch": "Search projects...",
+      "selectStatus": "Select status...",
+      "selectProject": "Select project...",
+      "selectBuilding": "Select building...",
+      "selectFloor": "Select floor...",
+      "selectType": "Select type...",
+      "selectPriority": "Select priority...",
+      "selectLocation": "Select location...",
+      "selectCompany": "Select company...",
+      "selectEnergyClass": "Select energy class...",
+      "selectRenovation": "Select building condition...",
+      "selectClient": "Select client...",
+      "selectRiskLevel": "Select risk level...",
+      "selectComplexity": "Select complexity..."
+    },
     "states": {
       "active": "Active Buildings",
       "construction": "Under Construction",
       "planned": "Planned",
       "completed": "Completed"
-    },
-    "types": {
-      "residential": "Residential",
-      "commercial": "Commercial",
-      "mixed": "Mixed Use"
     }
   },
   "toolbar": {
@@ -141,10 +317,20 @@
   "card": {
     "metrics": {
       "area": "Area",
+      "totalArea": "Total Area",
       "floors": "Floors",
       "units": "Units",
       "value": "Value",
       "totalValueTooltip": "Total project value"
+    },
+    "timeline": {
+      "delivery": "Delivery:",
+      "daysDelay": "{{days}} days delay",
+      "deliveryToday": "Delivery today!",
+      "daysRemaining": "{{days}} days remaining"
+    },
+    "progress": {
+      "label": "Building Progress"
     }
   },
   "validation": {
@@ -386,17 +572,6 @@
     "ariaLabel": "Buildings List",
     "entityName": "Buildings",
     "searchPlaceholder": "Search buildings..."
-  },
-  "card": {
-    "timeline": {
-      "delivery": "Delivery:",
-      "daysDelay": "{{days}} days delay",
-      "deliveryToday": "Delivery today!",
-      "daysRemaining": "{{days}} days remaining"
-    },
-    "progress": {
-      "label": "Building Progress"
-    }
   },
   "stats": {
     "totalUnits": "Total Units",
@@ -910,6 +1085,51 @@
         "lighting": "Lighting",
         "security": "Security",
         "easyAccess": "Easy Access"
+      },
+      "building": {
+        "autonomousHeating": "Autonomous Heating",
+        "solarHeating": "Solar Heating",
+        "parkingSpaces": "Parking Spaces",
+        "elevator": "Elevator",
+        "balconiesWithView": "Balconies with View",
+        "energyClassAPlus": "Energy Class A+",
+        "shopWindows": "Shop Windows",
+        "vrvClimate": "VRV Climate System",
+        "fireSuppression": "Fire Suppression",
+        "disabilityAccess": "Disability Access",
+        "loadingAccess": "Loading Access",
+        "electricVehicleCharging": "Electric Vehicle Charging",
+        "securityCameras247": "24/7 Security Cameras",
+        "automaticVentilation": "Automatic Ventilation",
+        "carWash": "Car Wash",
+        "accessControl": "Access Control",
+        "craneBridge20Tons": "20-Ton Crane Bridge",
+        "powerSupply1000kw": "1000kW Power Supply",
+        "dustRemovalSystems": "Dust Removal Systems",
+        "naturalVentilation": "Natural Ventilation",
+        "gasFireSuppression": "Gas Fire Suppression",
+        "automationSystems": "Automation Systems",
+        "highShelving12m": "12m High Shelving",
+        "monitoringSystems": "Monitoring Systems",
+        "warehouseClimate": "Warehouse Climate Control",
+        "loadingRamps": "Loading Ramps",
+        "rfidTracking": "RFID Tracking System",
+        "videoConferencingAllRooms": "Video Conferencing in All Rooms",
+        "smartClimate": "Smart Climate Control",
+        "securitySystems": "Security Systems",
+        "highQualityAcoustics": "High-Quality Acoustics",
+        "staffCafeteria": "Staff Cafeteria",
+        "naturalLightingAtrium": "Natural Lighting Atrium",
+        "escalatorsAllFloors": "Escalators on All Floors",
+        "shopManagementSystem": "Shop Management System",
+        "foodCourt800Seats": "800-Seat Food Court",
+        "cinema8Rooms": "8-Room Cinema",
+        "playground300sqm": "300m² Playground",
+        "parkingGuidanceSystem": "Parking Guidance System",
+        "teslaVwCharging": "Tesla/VW Charging",
+        "carWashPlural": "Car Washes",
+        "mechanicalSecurity": "Mechanical Security",
+        "emergencyExits": "Emergency Exits"
       }
     }
   }

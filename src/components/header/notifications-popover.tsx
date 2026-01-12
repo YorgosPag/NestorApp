@@ -12,10 +12,11 @@ import { Bell } from "lucide-react"
 import { useIconSizes } from '@/hooks/useIconSizes'
 import { getNotifications } from "@/constants/header"
 import { NotificationItem } from "@/components/header/notification-item"
+import type { Notification } from "@/types/header"
 
 export function NotificationsPopover() {
   const iconSizes = useIconSizes();
-  const [notifications, setNotifications] = React.useState([])
+  const [notifications, setNotifications] = React.useState<Notification[]>([])
 
   React.useEffect(() => {
     const loadNotifications = async () => {

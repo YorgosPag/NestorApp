@@ -11,7 +11,7 @@
  */
 
 import type { RulesEngine, Rule, RuleEvaluationResult } from '../rules/RulesEngine';
-import { rulesEngine } from '../rules/RulesEngine';
+import { rulesEngine as defaultRulesEngineInstance } from '../rules/RulesEngine';
 import type { DatabaseManager } from '../../database-system/connection/DatabaseManager';
 import { databaseManager } from '../../database-system/connection/DatabaseManager';
 import type { GeoControlPoint } from '../../database-system/repositories/ControlPointRepository';
@@ -161,9 +161,9 @@ export class AlertDetectionSystem {
   private alertTemplates: Map<string, AlertTemplate> = new Map();
   private detectionStatistics: DetectionStatistics;
 
-  constructor(dbManager?: DatabaseManager, rulesEngine?: RulesEngine) {
+  constructor(dbManager?: DatabaseManager, rulesEngineInstance?: RulesEngine) {
     this.dbManager = dbManager || databaseManager;
-    this.rulesEngine = rulesEngine || rulesEngine;
+    this.rulesEngine = rulesEngineInstance || defaultRulesEngineInstance;
 
     this.detectionStatistics = {
       totalAlertsDetected: 0,
@@ -235,10 +235,7 @@ export class AlertDetectionSystem {
             }
           }
         ],
-        createdBy: 'system',
-        triggerCount: 0,
-        averageExecutionTime: 0,
-        successRate: 1.0
+        createdBy: 'system'
       }
     });
 
@@ -281,10 +278,7 @@ export class AlertDetectionSystem {
             }
           }
         ],
-        createdBy: 'system',
-        triggerCount: 0,
-        averageExecutionTime: 0,
-        successRate: 1.0
+        createdBy: 'system'
       }
     });
 
@@ -330,10 +324,7 @@ export class AlertDetectionSystem {
             }
           }
         ],
-        createdBy: 'system',
-        triggerCount: 0,
-        averageExecutionTime: 0,
-        successRate: 1.0
+        createdBy: 'system'
       }
     });
 
@@ -356,7 +347,10 @@ export class AlertDetectionSystem {
         ...template.ruleTemplate,
         id: `alert_rule_${template.id}`,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        triggerCount: 0,
+        averageExecutionTime: 0,
+        successRate: 1.0
       };
 
       await this.rulesEngine.registerRule(rule);
@@ -677,7 +671,12 @@ export class AlertDetectionSystem {
         actionsExecuted: [],
         executionTime: 0,
         evaluatedAt: new Date(),
-        metadata: { source: 'manual_detection' }
+        context: {
+          ruleId: 'accuracy_degradation_manual',
+          triggeredAt: new Date(),
+          data: { source: 'manual_detection' },
+          executionStart: Date.now()
+        }
       },
       actionsTaken: [],
       createdBy: 'alert_detection_system',
@@ -713,7 +712,12 @@ export class AlertDetectionSystem {
         actionsExecuted: [],
         executionTime: 0,
         evaluatedAt: new Date(),
-        metadata: { source: 'manual_detection' }
+        context: {
+          ruleId: 'data_quality_manual',
+          triggeredAt: new Date(),
+          data: { source: 'manual_detection' },
+          executionStart: Date.now()
+        }
       },
       actionsTaken: [],
       createdBy: 'alert_detection_system',

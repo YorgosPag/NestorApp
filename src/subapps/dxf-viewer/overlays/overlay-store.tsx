@@ -55,7 +55,8 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
         let polygon = data.polygon;
 
         // 🔍 FIX: Normalize polygon format - convert flat array to coordinate pairs
-        if (Array.isArray(polygon) && polygon.length > 0 && typeof (polygon as any[])[0] === 'number') {
+        // 🏢 ENTERPRISE: Type-safe array element check using unknown[]
+        if (Array.isArray(polygon) && polygon.length > 0 && typeof (polygon as unknown[])[0] === 'number') {
           const nums = polygon as unknown as number[];
           const coordPairs: [number, number][] = [];
           for (let i = 0; i < nums.length; i += 2) {

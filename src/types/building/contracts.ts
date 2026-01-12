@@ -1,3 +1,6 @@
+// 🏢 ENTERPRISE: Import centralized building features registry
+import type { BuildingFeatureKey } from './features';
+
 // Building hierarchy interfaces
 export interface Contact {
     id: string;
@@ -39,7 +42,8 @@ export interface Contact {
     companyId?: string;
     project?: string;
     category?: 'mixed' | 'residential' | 'commercial' | 'industrial';
-    features?: string[];
+    // 🏢 ENTERPRISE: Type-safe building features (keys, not strings)
+    features?: BuildingFeatureKey[];
   }
   
   export interface Floor {

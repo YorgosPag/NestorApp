@@ -43,12 +43,21 @@ export function validateCircleEntity(entity: EntityModel): {
   return { center, radius };
 }
 
+// 🏢 ENTERPRISE: Type-safe ellipse entity interface (temporary until added to centralized types)
+interface EllipseEntity extends Entity {
+  type: 'ellipse';
+  center: Point2D;
+  majorAxis: number;
+  minorAxis: number;
+  rotation?: number;
+}
+
 /**
  * Validate ellipse entity and extract data
  * ⚠️ NOTE: Ellipse entity type not currently supported in centralized Entity system
  * TODO: Add ellipse support to types/entities.ts if needed
  */
-export function validateEllipseEntity(entity: any): {
+export function validateEllipseEntity(entity: EntityModel): {
   center: Point2D;
   majorAxis: number;
   minorAxis: number;
@@ -56,10 +65,12 @@ export function validateEllipseEntity(entity: any): {
 } | null {
   if (entity.type !== 'ellipse') return null;
 
-  const center = entity.center as Point2D;
-  const majorAxis = entity.majorAxis as number;
-  const minorAxis = entity.minorAxis as number;
-  const rotation = entity.rotation as number || 0;
+  // 🏢 ENTERPRISE: Type-safe property access
+  const ellipseEntity = entity as unknown as EllipseEntity;
+  const center = ellipseEntity.center;
+  const majorAxis = ellipseEntity.majorAxis;
+  const minorAxis = ellipseEntity.minorAxis;
+  const rotation = ellipseEntity.rotation ?? 0;
 
   if (!center || !majorAxis || !minorAxis) return null;
 
@@ -123,15 +134,15 @@ export function validateEntityType(entity: Entity, expectedType: string | string
  */
 export function isValidPoint(point: unknown): point is Point2D {
   // ✅ ENTERPRISE: Proper type guard with explicit boolean return and object type check
-  return Boolean(
-    point &&
-    typeof point === 'object' &&
-    point !== null &&
-    'x' in point &&
-    'y' in point &&
-    typeof (point as any).x === 'number' &&
-    typeof (point as any).y === 'number' &&
-    !isNaN((point as any).x) &&
-    !isNaN((point as any).y)
+  if (!point || typeof point !== 'object' || point === null) return false;
+  if (!('x' in point) || !('y' in point)) return false;
+
+  // 🏢 ENTERPRISE: Type-safe property access using Record type
+  const pointRecord = point as Record<string, unknown>;
+  return (
+    typeof pointRecord.x === 'number' &&
+    typeof pointRecord.y === 'number' &&
+    !isNaN(pointRecord.x) &&
+    !isNaN(pointRecord.y)
   );
 }

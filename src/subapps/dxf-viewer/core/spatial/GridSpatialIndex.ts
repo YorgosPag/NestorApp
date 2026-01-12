@@ -14,7 +14,8 @@ import type {
   SpatialBounds,
   SpatialQueryOptions,
   SpatialQueryResult,
-  SpatialIndexStats
+  SpatialIndexStats,
+  SpatialDebugInfo
 } from './ISpatialIndex';
 import { SpatialIndexType } from './ISpatialIndex';
 import type { Point2D } from '../../rendering/types/Types';
@@ -283,21 +284,17 @@ export class GridSpatialIndex implements ISpatialIndex {
     console.log('🏢 Grid index is already optimized');
   }
 
-  debug(): any {
-    const cellStats = Array.from(this.grid.values()).map(cell => ({
-      x: cell.x,
-      y: cell.y,
-      itemCount: cell.items.length
-    }));
-
+  debug(): SpatialDebugInfo {
     return {
-      type: 'GridSpatialIndex',
-      bounds: this.bounds,
+      indexType: SpatialIndexType.GRID,
       itemCount: this._itemCount,
-      cellSize: this.cellSize,
-      gridDimensions: { cols: this.cols, rows: this.rows },
-      activeCells: this.grid.size,
-      cellStats: cellStats.slice(0, 20) // Show first 20 cells
+      bounds: this.bounds,
+      structure: {
+        cellCount: this.grid.size,
+        gridSize: this.cellSize,
+        gridDimensions: { cols: this.cols, rows: this.rows }
+      },
+      performance: this.getStats()
     };
   }
 

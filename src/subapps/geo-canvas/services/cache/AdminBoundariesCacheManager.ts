@@ -18,7 +18,23 @@ import type {
 // CACHE TYPES & INTERFACES
 // ============================================================================
 
-export interface CacheEntry<T = any> {
+// 🏢 ENTERPRISE: Cache Report interfaces
+export interface CacheReportSummary {
+  totalEntries: number;
+  hitRate: number;
+  memoryUsed: number;
+  evictions: number;
+  persistedEntries: number;
+}
+
+export interface CacheReportPerformance {
+  avgAccessTime: number;
+  avgWriteTime: number;
+  slowQueries: number;
+}
+
+// 🏢 ENTERPRISE: Generic cache entry with unknown default for type safety
+export interface CacheEntry<T = unknown> {
   key: string;
   data: T;
   timestamp: number;
@@ -195,7 +211,7 @@ export class AdminBoundariesCacheManager {
   /**
    * Get entry from cache με LRU tracking
    */
-  public async get<T = any>(key: string): Promise<T | null> {
+  public async get<T = unknown>(key: string): Promise<T | null> {
     const startTime = performance.now();
 
     try {
@@ -253,7 +269,7 @@ export class AdminBoundariesCacheManager {
   /**
    * Set entry in cache με intelligent eviction
    */
-  public async set<T = any>(
+  public async set<T = unknown>(
     key: string,
     data: T,
     options: {
@@ -492,7 +508,7 @@ export class AdminBoundariesCacheManager {
   // INDEXEDDB PERSISTENCE
   // ============================================================================
 
-  private async getFromIndexedDB<T = any>(key: string): Promise<CacheEntry<T> | null> {
+  private async getFromIndexedDB<T = unknown>(key: string): Promise<CacheEntry<T> | null> {
     if (!this.db) return null;
 
     return new Promise((resolve) => {
@@ -520,7 +536,7 @@ export class AdminBoundariesCacheManager {
     });
   }
 
-  private async persistToIndexedDB<T = any>(entry: CacheEntry<T>): Promise<void> {
+  private async persistToIndexedDB<T = unknown>(entry: CacheEntry<T>): Promise<void> {
     if (!this.db) return;
 
     return new Promise((resolve, reject) => {
@@ -657,12 +673,13 @@ export class AdminBoundariesCacheManager {
 
   /**
    * Generate comprehensive cache report
+   * 🏢 ENTERPRISE: Proper return types instead of any
    */
   public generateCacheReport(): {
-    summary: any;
+    summary: CacheReportSummary;
     recommendations: string[];
     topEntries: Array<{key: string; accessCount: number; size: number;}>;
-    performance: any;
+    performance: CacheReportPerformance;
   } {
     const stats = this.getStatistics();
     const recommendations: string[] = [];

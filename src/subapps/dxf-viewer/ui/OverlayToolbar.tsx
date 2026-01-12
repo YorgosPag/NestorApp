@@ -119,10 +119,11 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
       });
 
       // Αποθήκευση του stop callback για double-click handling (async)
+      // 🏢 ENTERPRISE: Type-safe callback using inferred type from startOverlayCreation
       polylineControlPromise?.then((polylineControl) => {
         if (polylineControl && 'stop' in polylineControl && typeof polylineControl.stop === 'function') {
           toolStyleStore.setOverlayCompletionCallback(() => {
-            (polylineControl as any).stop();
+            polylineControl.stop();
           });
         }
       });

@@ -150,6 +150,57 @@ export interface UseLayoutClassesReturn {
   /** Center element both ways - "m-auto" */
   readonly centerBoth: string;
 
+  // ==========================================================================
+  // 📏 SPACING/PADDING PATTERNS - Account, Settings, Card layouts
+  // ==========================================================================
+
+  /** Padding 4 - "p-4" (16px) - Standard card padding */
+  readonly padding4: string;
+  /** Padding 3 - "p-3" (12px) - Medium padding */
+  readonly padding3: string;
+  /** Padding 2 - "p-2" (8px) - Small padding */
+  readonly padding2: string;
+  /** Padding x3 y2 - "px-3 py-2" - Nav link padding */
+  readonly paddingNavLink: string;
+  /** Responsive page padding - "p-4 sm:p-6 md:p-8" */
+  readonly responsivePagePadding: string;
+  /** Gap 6 - "gap-6" - Section gaps */
+  readonly gap6: string;
+
+  // ==========================================================================
+  // 📐 LAYOUT PRIMITIVES - Single source of truth for common utilities
+  // ==========================================================================
+
+  /** Min height screen - "min-h-screen" */
+  readonly minHeightScreen: string;
+  /** Flex 1 - "flex-1" */
+  readonly flex1: string;
+  /** Min width 0 - "min-w-0" */
+  readonly minW0: string;
+  /** Truncate text - "truncate" */
+  readonly truncate: string;
+  /** Items center - "items-center" */
+  readonly itemsCenter: string;
+  /** Justify center - "justify-center" */
+  readonly justifyCenter: string;
+  /** Items center + justify center - "items-center justify-center" */
+  readonly centerContent: string;
+  /** Padding top 6 - "pt-6" */
+  readonly paddingTop6: string;
+  /** Margin top 1 - "mt-1" */
+  readonly marginTop1: string;
+  /** Padding Y 12 - "py-12" */
+  readonly paddingY12: string;
+
+  // ==========================================================================
+  // 🖱️ INTERACTION PATTERNS - Cursor, transitions
+  // ==========================================================================
+
+  /** Cursor pointer - "cursor-pointer" */
+  readonly cursorPointer: string;
+  /** Transition colors - "transition-colors duration-150" */
+  readonly transitionColors: string;
+
   // 🔧 UTILITY METHODS
   readonly getFlexGap: (gap: '1' | '2' | '4' | '8') => string;
   readonly getFlexCenter: (gap?: '1' | '2' | '4') => string;
@@ -245,6 +296,39 @@ export function useLayoutClasses(): UseLayoutClassesReturn {
     centerHorizontal: "mx-auto",                       // Center horizontally
     centerVertical: "my-auto",                         // Center vertically
     centerBoth: "m-auto",                              // Center both ways
+
+    // ========================================================================
+    // 📏 SPACING/PADDING PATTERNS - Account, Settings, Card layouts
+    // ========================================================================
+
+    padding4: "p-4",                                   // Standard card padding (16px)
+    padding3: "p-3",                                   // Medium padding (12px)
+    padding2: "p-2",                                   // Small padding (8px)
+    paddingNavLink: "px-3 py-2",                       // Nav link padding
+    responsivePagePadding: "p-4 sm:p-6 md:p-8",        // Responsive page padding
+    gap6: "gap-6",                                     // Section gaps
+
+    // ========================================================================
+    // 📐 LAYOUT PRIMITIVES - Single source of truth for common utilities
+    // ========================================================================
+
+    minHeightScreen: "min-h-screen",                   // Min height screen
+    flex1: "flex-1",                                   // Flex 1
+    minW0: "min-w-0",                                  // Min width 0
+    truncate: "truncate",                              // Truncate text
+    itemsCenter: "items-center",                       // Items center
+    justifyCenter: "justify-center",                   // Justify center
+    centerContent: "items-center justify-center",      // Center content both ways
+    paddingTop6: "pt-6",                               // Padding top 6
+    marginTop1: "mt-1",                                // Margin top 1
+    paddingY12: "py-12",                               // Padding Y 12
+
+    // ========================================================================
+    // 🖱️ INTERACTION PATTERNS - Cursor, transitions
+    // ========================================================================
+
+    cursorPointer: "cursor-pointer",                   // Pointer cursor
+    transitionColors: "transition-colors duration-150", // Color transitions
 
     // 🔧 UTILITY METHODS - Type-safe dynamic access
     getFlexGap: (gap) => `flex gap-${gap}`,

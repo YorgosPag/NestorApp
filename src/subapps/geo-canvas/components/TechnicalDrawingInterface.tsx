@@ -21,9 +21,17 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { GEO_COLORS } from '../config/color-config';
 
+// 🏢 ENTERPRISE: Type-safe polygon props
+interface BasePolygonData {
+  id?: string;
+  points: Array<[number, number]>;
+  type?: string;
+  [key: string]: unknown;
+}
+
 interface TechnicalDrawingInterfaceProps {
-  mapRef: React.RefObject<any>;
-  onPolygonComplete?: (polygon: any) => void;
+  mapRef: React.RefObject<{ getCenter?: () => { lng: number; lat: number } } | null>;
+  onPolygonComplete?: (polygon: BasePolygonData) => void;
   onRealEstateAlertCreated?: (alert: RealEstatePolygon) => void;
 }
 
@@ -95,7 +103,7 @@ export function TechnicalDrawingInterface({
   const actualIsDrawing = isDrawing || systemIsDrawing;
 
   // Advanced automated alert creation
-  const handleAutomatedAlertCreation = useCallback((polygon: any) => {
+  const handleAutomatedAlertCreation = useCallback((polygon: BasePolygonData) => {
     const technicalRealEstatePolygon: RealEstatePolygon = {
       ...polygon,
       type: 'real-estate',

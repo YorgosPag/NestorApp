@@ -403,7 +403,8 @@ export class AzureProvider {
    * Mock Azure API call για testing
    * Enterprise: Service integration simulation
    */
-  private async mockAzureCall(service: string, operation: string): Promise<any> {
+  // 🏢 ENTERPRISE: Proper return type for mock call
+  private async mockAzureCall(service: string, operation: string): Promise<unknown> {
     // Simulate network latency
     await new Promise(resolve => setTimeout(resolve, 120 + Math.random() * 180));
 

@@ -56,7 +56,8 @@ export class HitTestingService {
 
     // Convert DxfEntityUnion to EntityModel
     const entityModels = scene.entities.map(entity => this.convertToEntityModel(entity));
-    this.hitTester.setEntities(entityModels as any[], true);
+    // 🏢 ENTERPRISE: Type-safe cast - EntityModel extends BaseEntity which is compatible with Entity
+    this.hitTester.setEntities(entityModels as import('../types/entities').Entity[], true);
   }
 
   /**

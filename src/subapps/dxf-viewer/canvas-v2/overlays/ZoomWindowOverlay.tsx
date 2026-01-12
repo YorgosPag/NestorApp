@@ -6,12 +6,20 @@ import { canvasUI } from '@/styles/design-tokens/canvas';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
+// 🏢 ENTERPRISE: Type-safe preview rect structure
+interface PreviewRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
 interface ZoomWindowState {
   isActive: boolean;
   isDragging: boolean;
   startPoint: Point2D | null;
   currentPoint: Point2D | null;
-  previewRect: any | null;
+  previewRect: PreviewRect | null;
 }
 
 interface ZoomWindowOverlayProps {

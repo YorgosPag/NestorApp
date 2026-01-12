@@ -1,7 +1,7 @@
 'use client';
 import React, { useRef, useState } from 'react';
 // === CANVAS V2 IMPORTS ===
-import { DxfCanvas, LayerCanvas, type ColorLayer, type SnapSettings, type GridSettings, type RulerSettings, type SelectionSettings, type DxfScene, type DxfEntityUnion } from '../../canvas-v2';
+import { DxfCanvas, LayerCanvas, type ColorLayer, type SnapSettings, type GridSettings, type RulerSettings, type SelectionSettings, type DxfScene, type DxfEntityUnion, type DxfCanvasRef } from '../../canvas-v2';
 import { createCombinedBounds } from '../../systems/zoom/utils/bounds';
 import type { CrosshairSettings } from '../../rendering/ui/crosshair/CrosshairTypes';
 // ✅ CURSOR SETTINGS: Import από κεντρικό system αντί για duplicate
@@ -21,7 +21,7 @@ import { useRulersGridContext } from '../../systems/rulers-grid/RulersGridSystem
 import { useCursorSettings } from '../../systems/cursor';
 import { globalRulerStore } from '../../settings-provider';
 import type { DXFViewerLayoutProps } from '../../integration/types';
-import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
+import type { OverlayEditorMode, Status, OverlayKind, Overlay } from '../../overlays/types';
 import { getStatusColors } from '../../config/color-mapping';
 import { createOverlayHandlers } from '../../overlays/types';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
@@ -49,7 +49,7 @@ import { PdfBackgroundCanvas, usePdfBackgroundStore } from '../../pdf-background
  */
 export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: OverlayEditorMode, currentStatus: Status, currentKind: OverlayKind }> = (props) => {
   // ✅ FIX: Use DxfCanvasRef type για getCanvas() method access
-  const dxfCanvasRef = useRef<any>(null); // DxfCanvasRef type (με getCanvas() method)
+  const dxfCanvasRef = useRef<DxfCanvasRef>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // === NEW ZOOM SYSTEM ===
@@ -346,7 +346,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
 
   // === CONVERT OVERLAYS TO CANVAS V2 FORMAT ===
-  const convertToColorLayers = (overlays: any[]): ColorLayer[] => {
+  const convertToColorLayers = (overlays: Overlay[]): ColorLayer[] => {
     // Simple debug - only log count and first overlay sample (no infinite re-render)
     if (overlays.length > 0) {
       // // console.log('🔍 Converting overlays:', {

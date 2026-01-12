@@ -135,7 +135,8 @@ export function ProfessionalDrawingInterface({
   }, [showPropertyManager]);
 
   // Professional batch real estate monitoring handler
-  const handleBatchRealEstateMonitoring = useCallback((polygons: any[]) => {
+  // 🏢 ENTERPRISE: Type-safe polygon array using local RealEstatePolygon type
+  const handleBatchRealEstateMonitoring = useCallback((polygons: Array<Partial<RealEstatePolygon>>) => {
     console.log('🏢 Professional: Setting up batch real estate monitoring for', polygons.length, 'polygons');
 
     polygons.forEach((polygon, index) => {

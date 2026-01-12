@@ -191,9 +191,11 @@ export class SmartBoundsManager {
       default:
         // Generic fallback για unknown entity types
         if (entity.bounds && typeof entity.bounds === 'object') {
-          const bounds = entity.bounds as any;
-          if (bounds.minX !== undefined && bounds.maxX !== undefined) {
-            return bounds as LegacyBoundingBox;
+          // 🏢 ENTERPRISE: Type-safe bounds extraction with validation
+          const bounds = entity.bounds as Record<string, unknown>;
+          if (typeof bounds.minX === 'number' && typeof bounds.maxX === 'number' &&
+              typeof bounds.minY === 'number' && typeof bounds.maxY === 'number') {
+            return bounds as unknown as LegacyBoundingBox;
           }
         }
     }

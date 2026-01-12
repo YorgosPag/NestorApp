@@ -17,7 +17,7 @@ import { TestsModal } from '../../TestsModal'; // Corrected path to TestsModal
 import { useBorderTokens } from '@/hooks/useBorderTokens'; // Enterprise border system
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'; // Enterprise semantic colors
 import { PANEL_LAYOUT } from '../../../../config/panel-tokens'; // 🏢 ENTERPRISE: Centralized typography tokens
-import type { TestDefinition, NotificationFn } from '../types/tests.types'; // Adjust path accordingly
+import type { TestDefinition, NotificationFn, DxfEntity, DxfValidationData } from '../types/tests.types'; // Adjust path accordingly
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import {
   Globe,
@@ -184,7 +184,7 @@ export function createPerformanceTest(notify: NotificationFn): TestDefinition {
  */
 export function createDxfValidationTest(
   notify: NotificationFn,
-  getDxfData: () => unknown | null
+  getDxfData: () => DxfValidationData | null
 ): TestDefinition {
   return {
     id: 'dxf-validation',
@@ -216,7 +216,7 @@ export function createDxfValidationTest(
         },
         {
           name: 'Valid entity types',
-          check: () => dxfData.entities.every((e: any) => e.type)
+          check: () => dxfData.entities.every((e: DxfEntity) => e.type)
         }
       ];
 

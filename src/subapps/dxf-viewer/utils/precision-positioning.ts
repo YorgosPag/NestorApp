@@ -14,7 +14,7 @@ export type PositionAlignment = 'bottom-right' | 'bottom-left' | 'top-right' | '
 export interface PrecisionPositionConfig {
   targetPoint: Point2D;
   alignment: PositionAlignment;
-  dependencies?: any[];
+  dependencies?: unknown[];  // 🏢 ENTERPRISE: Type-safe dependencies
 }
 
 /**

@@ -2,7 +2,18 @@
 import * as React from "react";
 import type { ChartConfig } from "../ChartContext";
 
-export type TooltipPayloadItem = any; // διατηρούμε την ευελιξία όπως στο αρχικό
+// 🏢 ENTERPRISE: Proper type definition for chart tooltip payload items
+export interface TooltipPayloadItem {
+  value: number | string;
+  name: string;
+  dataKey: string;
+  payload?: Record<string, unknown>;
+  color?: string;
+  fill?: string;
+  stroke?: string;
+  unit?: string;
+  formatter?: (value: number | string) => string;
+}
 export type TooltipPayload = TooltipPayloadItem[];
 
 export interface ChartTooltipLabelProps {

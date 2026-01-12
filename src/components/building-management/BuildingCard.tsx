@@ -16,7 +16,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { BuildingCardContent } from './BuildingCard/BuildingCardContent';
 import { BuildingCardTimeline } from './BuildingCard/BuildingCardTimeline';
-import { getStatusColor, getStatusLabel, getCategoryLabel, getCategoryIcon } from './BuildingCard/BuildingCardUtils';
+// 🏢 ENTERPRISE: Only import non-i18n utilities - labels come from centralized i18n
+import { getStatusColor, getCategoryIcon } from './BuildingCard/BuildingCardUtils';
 
 
 interface BuildingCardProps {
@@ -30,8 +31,8 @@ export function BuildingCard({
   isSelected,
   onClick,
 }: BuildingCardProps) {
-  // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('building');
+  // 🏢 ENTERPRISE: i18n hook for translations with namespace readiness check
+  const { t, isNamespaceReady } = useTranslation('building');
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const [isFavorite, setIsFavorite] = useState(false);
@@ -60,12 +61,18 @@ export function BuildingCard({
         badges={[
           {
             type: 'status',
-            value: getStatusLabel(building.status),
+            // 🏢 ENTERPRISE: Using centralized i18n translations with namespace readiness
+            value: isNamespaceReady
+              ? t(`status.${building.status}`, { defaultValue: building.status })
+              : building.status,
             size: 'sm'
           },
           {
             type: 'progress',
-            value: t('details.percentComplete', { percent: building.progress }),
+            // 🏢 ENTERPRISE: Fallback to raw percent when namespace not ready
+            value: isNamespaceReady
+              ? t('details.percentComplete', { percent: building.progress ?? 0 })
+              : `${building.progress ?? 0}%`,
             variant: 'secondary',
             size: 'sm'
           }

@@ -32,21 +32,22 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
   User,
-  Settings,
-  Keyboard,
-  HelpCircle,
   LogOut,
 } from 'lucide-react';
 // 🏢 ENTERPRISE: Centralized design system
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { Spinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ENTERPRISE: Centralized routes
+import { ACCOUNT_ROUTES } from '@/lib/routes';
 
 export function UserMenu() {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
+  const layout = useLayoutClasses();
   const router = useRouter();
   // 🏢 ENTERPRISE: Centralized auth hook
   const { user, signOut } = useAuth();
@@ -133,37 +134,24 @@ export function UserMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
-            <User className={`mr-2 ${iconSizes.sm}`} />
-            <span>{t('userMenu.profile')}</span>
-            <DropdownMenuShortcut>{t('userMenu.keyboard.profile')}</DropdownMenuShortcut>
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            <Settings className={`mr-2 ${iconSizes.sm}`} />
-            <span>{t('userMenu.settings')}</span>
-            <DropdownMenuShortcut>{t('userMenu.keyboard.settings')}</DropdownMenuShortcut>
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            <Keyboard className={`mr-2 ${iconSizes.sm}`} />
-            <span>{t('userMenu.shortcuts')}</span>
-            <DropdownMenuShortcut>{t('userMenu.keyboard.shortcuts')}</DropdownMenuShortcut>
+          <DropdownMenuItem
+            onClick={() => router.push(ACCOUNT_ROUTES.root)}
+            className={layout.cursorPointer}
+          >
+            <User className={`${layout.buttonIconSpacing} ${iconSizes.sm}`} />
+            <span>{t('userMenu.account')}</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem>
-          <HelpCircle className={`mr-2 ${iconSizes.sm}`} />
-          <span>{t('userMenu.help')}</span>
-        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={handleLogout}
           disabled={isLoggingOut}
-          className="text-red-600 dark:text-red-400 cursor-pointer focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/50"
+          className={`text-red-600 dark:text-red-400 ${layout.cursorPointer} focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/50`}
         >
           {isLoggingOut ? (
-            <Spinner size="small" className="mr-2" />
+            <Spinner size="small" className={layout.buttonIconSpacing} />
           ) : (
-            <LogOut className={`mr-2 ${iconSizes.sm}`} />
+            <LogOut className={`${layout.buttonIconSpacing} ${iconSizes.sm}`} />
           )}
           <span>{isLoggingOut ? t('userMenu.loggingOut') : t('userMenu.logout')}</span>
           {!isLoggingOut && <DropdownMenuShortcut>{t('userMenu.keyboard.logout')}</DropdownMenuShortcut>}

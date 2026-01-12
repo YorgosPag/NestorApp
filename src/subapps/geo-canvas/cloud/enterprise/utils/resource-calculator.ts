@@ -21,6 +21,47 @@ import type {
 } from '../types/status';
 
 // ============================================================================
+// 🏢 ENTERPRISE: Recommendation type definition
+// ============================================================================
+
+/**
+ * Cost optimization recommendation
+ */
+interface CostOptimizationRecommendation {
+  type: 'rightsizing' | 'reserved-instances' | 'spot-instances' | 'storage-optimization';
+  component: string;
+  currentCost: number;
+  optimizedCost: number;
+  savings: number;
+  description: string;
+  effort: 'low' | 'medium' | 'high';
+  confidence: number;
+}
+
+/**
+ * Capacity planning recommendation
+ */
+interface CapacityPlanningRecommendation {
+  type: 'scaling' | 'reservation' | 'migration';
+  resource: string;
+  timeline: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  estimatedCost: number;
+  justification: string;
+}
+
+/**
+ * Regional optimization recommendation
+ */
+interface RegionalOptimizationRecommendation {
+  region: string;
+  provider: string;
+  expectedLatencyImprovement: number;
+  affectedUsers: number;
+  estimatedCost: number;
+}
+
+// ============================================================================
 // RESOURCE CALCULATION UTILITIES
 // ============================================================================
 
@@ -281,7 +322,7 @@ export function calculateCostOptimizations(
     confidence: number;
   }[];
 } {
-  const recommendations: any[] = [];
+  const recommendations: CostOptimizationRecommendation[] = [];
 
   // Rightsizing recommendations
   components.forEach(component => {
@@ -424,16 +465,10 @@ export function calculateRegionalOptimization(
   userLocations: { region: string; userCount: number; avgLatency: number }[],
   availableRegions: { name: string; provider: string; latency: Record<string, number> }[]
 ): {
-  recommendations: {
-    region: string;
-    provider: string;
-    expectedLatencyImprovement: number;
-    affectedUsers: number;
-    estimatedCost: number;
-  }[];
+  recommendations: RegionalOptimizationRecommendation[];
   totalLatencyImprovement: number;
 } {
-  const recommendations: any[] = [];
+  const recommendations: RegionalOptimizationRecommendation[] = [];
 
   userLocations.forEach(location => {
     if (location.avgLatency > 100) { // High latency threshold

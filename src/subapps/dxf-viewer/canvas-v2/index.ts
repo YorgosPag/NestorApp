@@ -9,6 +9,7 @@ import type { Point2D } from '../rendering/types/Types';
 // === MAIN COMPONENTS ===
 // Conditional exports για αποφυγή compilation errors
 export { DxfCanvas } from './dxf-canvas/DxfCanvas';
+export type { DxfCanvasRef } from './dxf-canvas/DxfCanvas';  // 🏢 ENTERPRISE: Type-safe ref
 export { LayerCanvas } from './layer-canvas/LayerCanvas';
 
 // === RENDERERS ===

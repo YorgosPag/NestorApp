@@ -14,6 +14,13 @@
 import { componentSizes, semanticColors } from '../../../styles/design-tokens';
 import { COLOR_BRIDGE } from '../../../design-system/color-bridge';
 import { PANEL_COLORS, PANEL_LAYOUT } from './panel-tokens';
+// 🏢 ENTERPRISE: Import centralized building features registry
+import {
+  BUILDING_FEATURES,
+  BUILDING_FEATURE_KEYS,
+  getBuildingFeaturesForUI,
+  type BuildingFeatureKey,
+} from '@/types/building/features';
 
 // ====================================================================
 // MODULAR SYSTEM RE-EXPORTS - BACKWARD COMPATIBILITY
@@ -752,55 +759,27 @@ export function getValidationMessages() {
 // ====================================================================
 
 /**
- * Building Features - Centralized building amenities and features
+ * 🏢 ENTERPRISE: Building Features - Re-export from centralized registry
+ * Returns array of { key, i18nKey } for UI rendering.
+ *
+ * @returns Array of building feature definitions with keys and i18n paths
  */
-export function getBuildingFeatures() {
-  return {
-    autonomous_heating: 'Αυτόνομη Θέρμανση',
-    solar_heating: 'Ηλιακή Θέρμανση',
-    parking_spaces: 'Θέσεις Στάθμευσης',
-    elevator: 'Ανελκυστήρας',
-    balconies_with_view: 'Μπαλκόνια με Θέα',
-    energy_class_a_plus: 'Ενεργειακή Κλάση Α+',
-    shop_windows: 'Βιτρίνες Καταστημάτων',
-    vrv_climate: 'Κλιματισμός VRV',
-    fire_suppression: 'Πυρόσβεση',
-    disability_access: 'Πρόσβαση ΑμεΑ',
-    loading_access: 'Πρόσβαση Φορτηγών',
-    electric_vehicle_charging: 'Φόρτιση Ηλεκτρικών Οχημάτων',
-    security_cameras_24_7: 'Κάμερες Ασφαλείας 24/7',
-    automatic_ventilation: 'Αυτόματος Εξαερισμός',
-    car_wash: 'Πλυντήριο Αυτοκινήτων',
-    access_control: 'Έλεγχος Πρόσβασης',
-    crane_bridge_20_tons: 'Γερανογέφυρα 20 Τόνων',
-    power_supply_1000kw: 'Παροχή Ρεύματος 1000kW',
-    dust_removal_systems: 'Συστήματα Αποκονίωσης',
-    natural_ventilation: 'Φυσικός Αερισμός',
-    gas_fire_suppression: 'Πυρόσβεση Αερίου',
-    automation_systems: 'Συστήματα Αυτοματισμού',
-    high_shelving_12m: 'Ράφια Ύψους 12μ',
-    monitoring_systems: 'Συστήματα Παρακολούθησης',
-    warehouse_climate: 'Κλιματισμός Αποθήκης',
-    loading_ramps: 'Ράμπες Φόρτωσης',
-    rfid_tracking: 'Σύστημα RFID',
-    video_conferencing_all_rooms: 'Τηλεδιάσκεψη σε όλες τις αίθουσες',
-    smart_climate: 'Έξυπνος Κλιματισμός',
-    security_systems: 'Συστήματα Ασφαλείας',
-    high_quality_acoustics: 'Υψηλής Ποιότητας Ακουστική',
-    staff_cafeteria: 'Κυλικείο Προσωπικού',
-    natural_lighting_atrium: 'Φυσικός Φωτισμός Atrium',
-    escalators_all_floors: 'Κυλιόμενες Σκάλες σε όλους τους ορόφους',
-    shop_management_system: 'Σύστημα Διαχείρισης Καταστημάτων',
-    food_court_800_seats: 'Food Court 800 θέσεων',
-    cinema_8_rooms: 'Σινεμά 8 Αιθουσών',
-    playground_300sqm: 'Παιδότοπος 300τ.μ.',
-    parking_guidance_system: 'Σύστημα Καθοδήγησης Στάθμευσης',
-    tesla_vw_charging: 'Φόρτιση Tesla/VW',
-    car_wash_plural: 'Πλυντήρια Αυτοκινήτων',
-    mechanical_security: 'Μηχανική Ασφάλεια',
-    emergency_exits: 'Έξοδοι Κινδύνου'
-  } as const;
+export function getBuildingFeatures(): Array<{ key: BuildingFeatureKey; i18nKey: string }> {
+  return getBuildingFeaturesForUI();
 }
+
+/**
+ * 🏢 ENTERPRISE: Get all valid building feature keys.
+ * Use this for validation and DB operations.
+ */
+export function getBuildingFeatureKeys(): readonly BuildingFeatureKey[] {
+  return BUILDING_FEATURE_KEYS;
+}
+
+/**
+ * 🏢 ENTERPRISE: Re-export types and constants for consumers
+ */
+export { BUILDING_FEATURES, BUILDING_FEATURE_KEYS, type BuildingFeatureKey };
 
 /**
  * Building Descriptions - Centralized building descriptions

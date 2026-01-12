@@ -399,14 +399,18 @@ export const GeoDialogSystem: React.FC<GeoDialogSystemProps> = ({
 // 🎯 ENTERPRISE DIALOG HOOKS
 // ============================================================================
 
-export function useGeoDialogs() {
-  const [dialogSystem, setDialogSystem] = React.useState<{
-    openDialog: (config: DialogConfig) => void;
-    closeDialog: (id: string) => void;
-    closeAllDialogs: () => void;
-  } | null>(null);
+// 🏢 ENTERPRISE: Dialog system interface for type safety
+interface DialogSystemAPI {
+  openDialog: (config: DialogConfig) => void;
+  closeDialog: (id: string) => void;
+  closeAllDialogs: () => void;
+}
 
-  const registerDialogSystem = React.useCallback((system: any) => {
+export function useGeoDialogs() {
+  const [dialogSystem, setDialogSystem] = React.useState<DialogSystemAPI | null>(null);
+
+  // 🏢 ENTERPRISE: Proper type instead of any
+  const registerDialogSystem = React.useCallback((system: DialogSystemAPI) => {
     setDialogSystem(system);
   }, []);
 

@@ -16,8 +16,8 @@ interface BuildingCardTimelineProps {
 }
 
 export function BuildingCardTimeline({ building }: BuildingCardTimelineProps) {
-  // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('building');
+  // 🏢 ENTERPRISE: i18n hook for translations with namespace readiness check
+  const { t, isNamespaceReady } = useTranslation('building');
   const iconSizes = useIconSizes();
   const daysUntilCompletion = getDaysUntilCompletion(building.completionDate);
 
@@ -28,7 +28,8 @@ export function BuildingCardTimeline({ building }: BuildingCardTimelineProps) {
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-1 text-muted-foreground">
           <Calendar className={iconSizes.xs} />
-          <span>{t('card.timeline.delivery')}</span>
+          {/* 🏢 ENTERPRISE: Fallback when namespace not ready */}
+          <span>{isNamespaceReady ? t('card.timeline.delivery') : 'Delivery:'}</span>
         </div>
         <div className="text-right">
           <p className="font-medium">{formatDate(building.completionDate)}</p>
@@ -38,11 +39,16 @@ export function BuildingCardTimeline({ building }: BuildingCardTimelineProps) {
               daysUntilCompletion < 0 ? "text-red-500" :
               daysUntilCompletion < 30 ? "text-yellow-600" : "text-green-600"
             )}>
+              {/* 🏢 ENTERPRISE: Fallback to raw values when namespace not ready */}
               {daysUntilCompletion < 0
-                ? t('card.timeline.daysDelay', { days: Math.abs(daysUntilCompletion) })
+                ? (isNamespaceReady
+                    ? t('card.timeline.daysDelay', { days: Math.abs(daysUntilCompletion) })
+                    : `${Math.abs(daysUntilCompletion)} days delay`)
                 : daysUntilCompletion === 0
-                ? t('card.timeline.deliveryToday')
-                : t('card.timeline.daysRemaining', { days: daysUntilCompletion })
+                ? (isNamespaceReady ? t('card.timeline.deliveryToday') : 'Delivery today!')
+                : (isNamespaceReady
+                    ? t('card.timeline.daysRemaining', { days: daysUntilCompletion })
+                    : `${daysUntilCompletion} days remaining`)
               }
             </p>
           )}

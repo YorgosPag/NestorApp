@@ -58,7 +58,8 @@ export class CompaniesService {
 
       // 🚀 ENTERPRISE BATCH OPTIMIZATION: Single query για όλες τις εταιρείες
       const companyIds: string[] = [];
-      const companyMap = new Map<string, any>();
+      // 🏢 ENTERPRISE: Proper type instead of any
+      const companyMap = new Map<string, Contact>();
 
       // Build company map
       snapshot.docs.forEach(doc => {
@@ -83,7 +84,13 @@ export class CompaniesService {
         }
 
         // Group projects by companyId
-        const projectsByCompany = new Map<string, any[]>();
+        // 🏢 ENTERPRISE: Proper project type
+        interface ProjectData {
+          companyId?: string;
+          name?: string;
+          [key: string]: unknown;
+        }
+        const projectsByCompany = new Map<string, ProjectData[]>();
         projectsSnapshot.docs.forEach(projectDoc => {
           const projectData = projectDoc.data();
           const companyId = projectData.companyId;
@@ -248,12 +255,12 @@ export class CompaniesService {
         where('type', '==', 'company'),
         where('__name__', '==', companyId)
       );
-      
+
       const snapshot = await getDocs(companiesQuery);
       const doc = snapshot.docs[0];
-      
+
       if (!doc) return null;
-      
+
       const contact = doc.data();
       return contact.type === 'company' ? contact : null;
     } catch (error) {
@@ -261,7 +268,48 @@ export class CompaniesService {
       return null;
     }
   }
-  
+
+  /**
+   * 🏢 ENTERPRISE: Βρίσκει εταιρία με βάση το όνομα
+   *
+   * Χρησιμοποιείται από admin routes (seed, populate) για database-driven
+   * company lookup αντί για hardcoded IDs.
+   *
+   * @param companyName - Το ακριβές όνομα της εταιρίας (companyName field)
+   * @returns CompanyContact ή null αν δεν βρεθεί
+   *
+   * @note Απαιτεί composite index: type + companyName
+   */
+  async getCompanyByName(companyName: string): Promise<CompanyContact | null> {
+    try {
+      const companiesQuery = query(
+        collection(db, CONTACTS_COLLECTION).withConverter(contactConverter),
+        where('type', '==', 'company'),
+        where('companyName', '==', companyName)
+      );
+
+      const snapshot = await getDocs(companiesQuery);
+      const doc = snapshot.docs[0];
+
+      if (!doc) {
+        if (DEBUG_COMPANIES_SERVICE) {
+          console.log(`🔍 Company not found by name: "${companyName}"`);
+        }
+        return null;
+      }
+
+      const contact = doc.data();
+      if (DEBUG_COMPANIES_SERVICE) {
+        console.log(`✅ Company found by name: "${companyName}" → ID: ${doc.id}`);
+      }
+
+      return contact.type === 'company' ? contact : null;
+    } catch (error) {
+      console.error(`🚨 Error fetching company by name "${companyName}":`, error);
+      return null;
+    }
+  }
+
 }
 
 // Singleton instance
@@ -270,3 +318,4 @@ export const companiesService = new CompaniesService();
 // Helper functions για εύκολη χρήση
 export const getAllActiveCompanies = () => companiesService.getAllActiveCompanies();
 export const getCompanyById = (companyId: string) => companiesService.getCompanyById(companyId);
+export const getCompanyByName = (companyName: string) => companiesService.getCompanyByName(companyName);

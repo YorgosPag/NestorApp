@@ -199,11 +199,11 @@ export class GeoEventFactory {
   /**
    * Create map events με standardized format
    */
-  static createMapEvent<T = any>(
+  static createMapEvent<T = unknown>(
     type: GeoCanvasEventType,
     data: T,
     source: 'user' | 'system' | 'api' = 'user',
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): GeoCanvasEvent<T> {
     return {
       type,
@@ -220,7 +220,7 @@ export class GeoEventFactory {
   static createToolEvent(
     action: 'activated' | 'deactivated',
     toolId: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): GeoCanvasEvent<{ toolId: string; action: string }> {
     return this.createMapEvent(
       action === 'activated' ? 'tool-activated' : 'tool-deactivated',
@@ -240,7 +240,7 @@ export class GeoEventFactory {
       unit: string;
       coordinates: Array<[number, number]>;
     },
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): GeoCanvasEvent<typeof measurement> {
     return this.createMapEvent(
       'measurement-completed',
@@ -260,7 +260,7 @@ export class GeoEventFactory {
       bearing?: number;
       pitch?: number;
     },
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): GeoCanvasEvent<typeof viewState> {
     return this.createMapEvent(
       'view-changed',
@@ -278,7 +278,7 @@ export class GeoEventFactory {
 /**
  * Throttle event emissions για performance
  */
-export function throttleEvents<T = any>(
+export function throttleEvents<T = unknown>(
   eventBus: GeoCanvasEventBus,
   eventType: GeoCanvasEventType,
   throttleMs: number
@@ -320,7 +320,7 @@ export function throttleEvents<T = any>(
 /**
  * Debounce event emissions
  */
-export function debounceEvents<T = any>(
+export function debounceEvents<T = unknown>(
   eventBus: GeoCanvasEventBus,
   eventType: GeoCanvasEventType,
   debounceMs: number

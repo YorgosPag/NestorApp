@@ -23,9 +23,16 @@ interface SceneUpdateOptions {
   reason?: string;
 }
 
+// 🏢 ENTERPRISE: Type-safe renderer interface
+interface SceneRenderer {
+  setScene: (scene: Scene | null) => void;
+  render?: () => void;
+  clear?: () => void;
+}
+
 export class SceneUpdateManager {
   private currentScene: Scene | null = null;
-  private renderer: any | null = null;
+  private renderer: SceneRenderer | null = null;
   private reactSetScene: ((scene: Scene | null) => void) | null = null;
   private sceneVersion = 0;
   private updateInProgress = false;
@@ -39,7 +46,7 @@ export class SceneUpdateManager {
 
   // ═══ INITIALIZATION ═══
 
-  setRenderer(renderer: any): void {
+  setRenderer(renderer: SceneRenderer): void {
     this.renderer = renderer;
     dlog('🎬 Renderer registered');
   }

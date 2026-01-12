@@ -3,41 +3,44 @@ import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'fire
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
-// ✅ ENTERPRISE: Import centralized building data - NO MORE HARDCODED STRINGS
+// ENTERPRISE: Import centralized building features registry (keys only, no labels)
+import type { BuildingFeatureKey } from '@/types/building/features';
 import {
-  getBuildingFeatures,
   getBuildingDescriptions,
   getBuildingTechnicalTerms
 } from '@/subapps/dxf-viewer/config/modal-select';
 
+// ENTERPRISE: Use centralized company service (NO local duplicates)
+import { getCompanyByName } from '@/services/companies.service';
+
+// ENTERPRISE: Use centralized admin env config (NO local helpers)
+import { getRequiredAdminCompanyName } from '@/config/admin-env';
+
 /**
- * 🏗️ ENTERPRISE DATABASE POPULATION: Real Buildings Data for ΠΑΓΩΝΗΣ Projects
+ * ENTERPRISE DATABASE POPULATION: Real Buildings Data
  *
- * API endpoint που προσθέτει πραγματικά building records στη βάση δεδομένων
- * για κάθε έργο της εταιρίας "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε."
+ * API endpoint that adds building records to the database.
+ * Company ID is loaded dynamically from database (zero hardcoded values).
  *
  * PROBLEM SOLVED:
- * - Όλα τα projects έδειχναν τα ίδια 2 κτίρια (mockdata)
- * - Χρειάζεται unique buildings για κάθε project
+ * - All projects showed the same 2 buildings (mockdata)
+ * - Need unique buildings for each project
  * - Comprehensive building data based on complete schema research
  *
- * COMPANY: Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.
- * COMPANY_ID: pzNUy8ksddGCtcQMqumR
+ * @method POST - Populate buildings
+ * @method GET - Verify buildings
  *
- * @author Γιώργος Παγώνης + Claude Code (Anthropic AI)
+ * @requires ADMIN_COMPANY_NAME - Server-only env var (required, no default)
+ *
+ * @author George Pagonis + Claude Code (Anthropic AI)
  * @date 2025-12-21
  */
 
-// 👥 COMPANY DATA
-const PAGONIS_COMPANY_ID = 'pzNUy8ksddGCtcQMqumR';
-const COMPANY_NAME = 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.';
-
-// ✅ ENTERPRISE: Get centralized building data - NO MORE HARDCODED STRINGS
-const buildingFeatures = getBuildingFeatures();
+// ENTERPRISE: Get centralized building descriptions (features use keys directly)
 const buildingDescriptions = getBuildingDescriptions();
 const buildingTechnicalTerms = getBuildingTechnicalTerms();
 
-// 🏗️ COMPREHENSIVE BUILDING DATA - Based on Complete Schema Research
+// ENTERPRISE: COMPREHENSIVE BUILDING DATA - Based on Complete Schema Research
 const BUILDING_COLLECTIONS = {
 
   // ===== PROJECT 1: Πολυκατοικία Παλαιολόγου =====
@@ -58,14 +61,15 @@ const BUILDING_COLLECTIONS = {
       completionDate: '2024-08-30',
       totalValue: 3200000,
       category: 'residential' as const,
+      // ENTERPRISE: Features as BuildingFeatureKey[] (keys, not labels)
       features: [
-        buildingFeatures.autonomous_heating,
-        buildingFeatures.solar_heating,
-        buildingFeatures.parking_spaces,
-        buildingFeatures.elevator,
-        buildingFeatures.balconies_with_view,
-        buildingFeatures.energy_class_a_plus
-      ]
+        'autonomousHeating',
+        'solarHeating',
+        'parkingSpaces',
+        'elevator',
+        'balconiesWithView',
+        'energyClassAPlus'
+      ] satisfies readonly BuildingFeatureKey[]
     },
     {
       id: 'building_2_palaiologou_commercial',
@@ -84,12 +88,12 @@ const BUILDING_COLLECTIONS = {
       totalValue: 850000,
       category: 'commercial' as const,
       features: [
-        buildingFeatures.shop_windows,
-        buildingFeatures.vrv_climate,
-        buildingFeatures.fire_suppression,
-        buildingFeatures.disability_access,
-        buildingFeatures.loading_access
-      ]
+        'shopWindows',
+        'vrvClimate',
+        'fireSuppression',
+        'disabilityAccess',
+        'loadingAccess'
+      ] satisfies readonly BuildingFeatureKey[]
     },
     {
       id: 'building_3_palaiologou_parking',
@@ -108,12 +112,12 @@ const BUILDING_COLLECTIONS = {
       totalValue: 450000,
       category: 'commercial' as const,
       features: [
-        buildingFeatures.electric_vehicle_charging,
-        buildingFeatures.security_cameras_24_7,
-        buildingFeatures.automatic_ventilation,
-        buildingFeatures.car_wash,
-        buildingFeatures.access_control
-      ]
+        'electricVehicleCharging',
+        'securityCameras247',
+        'automaticVentilation',
+        'carWash',
+        'accessControl'
+      ] satisfies readonly BuildingFeatureKey[]
     }
   ],
 
@@ -136,13 +140,13 @@ const BUILDING_COLLECTIONS = {
       totalValue: 5500000,
       category: 'industrial' as const,
       features: [
-        buildingFeatures.crane_bridge_20_tons,
-        buildingFeatures.power_supply_1000kw,
-        buildingFeatures.dust_removal_systems,
-        buildingFeatures.natural_ventilation,
-        buildingFeatures.gas_fire_suppression,
-        buildingFeatures.automation_systems
-      ]
+        'craneBridge20Tons',
+        'powerSupply1000kw',
+        'dustRemovalSystems',
+        'naturalVentilation',
+        'gasFireSuppression',
+        'automationSystems'
+      ] satisfies readonly BuildingFeatureKey[]
     },
     {
       id: 'building_2_thermi_warehouse',
@@ -161,12 +165,12 @@ const BUILDING_COLLECTIONS = {
       totalValue: 1800000,
       category: 'industrial' as const,
       features: [
-        buildingFeatures.high_shelving_12m,
-        buildingFeatures.monitoring_systems,
-        buildingFeatures.warehouse_climate,
-        buildingFeatures.loading_ramps,
-        buildingFeatures.rfid_tracking
-      ]
+        'highShelving12m',
+        'monitoringSystems',
+        'warehouseClimate',
+        'loadingRamps',
+        'rfidTracking'
+      ] satisfies readonly BuildingFeatureKey[]
     },
     {
       id: 'building_3_thermi_offices',
@@ -185,12 +189,12 @@ const BUILDING_COLLECTIONS = {
       totalValue: 1200000,
       category: 'commercial' as const,
       features: [
-        buildingFeatures.video_conferencing_all_rooms,
-        buildingFeatures.smart_climate,
-        buildingFeatures.security_systems,
-        buildingFeatures.high_quality_acoustics,
-        buildingFeatures.staff_cafeteria
-      ]
+        'videoConferencingAllRooms',
+        'smartClimate',
+        'securitySystems',
+        'highQualityAcoustics',
+        'staffCafeteria'
+      ] satisfies readonly BuildingFeatureKey[]
     }
   ],
 
@@ -213,13 +217,13 @@ const BUILDING_COLLECTIONS = {
       totalValue: 12500000,
       category: 'commercial' as const,
       features: [
-        buildingFeatures.natural_lighting_atrium,
-        buildingFeatures.escalators_all_floors,
-        buildingFeatures.shop_management_system,
-        buildingFeatures.food_court_800_seats,
-        buildingFeatures.cinema_8_rooms,
-        buildingFeatures.playground_300sqm
-      ]
+        'naturalLightingAtrium',
+        'escalatorsAllFloors',
+        'shopManagementSystem',
+        'foodCourt800Seats',
+        'cinema8Rooms',
+        'playground300sqm'
+      ] satisfies readonly BuildingFeatureKey[]
     },
     {
       id: 'building_2_kalamaria_parking_tower',
@@ -238,49 +242,72 @@ const BUILDING_COLLECTIONS = {
       totalValue: 2800000,
       category: 'commercial' as const,
       features: [
-        buildingFeatures.parking_guidance_system,
-        buildingFeatures.tesla_vw_charging,
-        buildingFeatures.car_wash_plural,
-        buildingFeatures.mechanical_security,
-        buildingFeatures.emergency_exits
-      ]
+        'parkingGuidanceSystem',
+        'teslaVwCharging',
+        'carWashPlural',
+        'mechanicalSecurity',
+        'emergencyExits'
+      ] satisfies readonly BuildingFeatureKey[]
     }
   ]
 };
 
 /**
- * 🎯 MAIN POPULATION FUNCTION
- * POST endpoint που δημιουργεί όλα τα building records στη Firestore
+ * MAIN POPULATION FUNCTION
+ * POST endpoint that creates all building records in Firestore
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  console.log('🚀 STARTING DATABASE POPULATION...');
-  console.log(`📊 Company: ${COMPANY_NAME}`);
-  console.log(`🆔 Company ID: ${PAGONIS_COMPANY_ID}`);
+  console.log('[POPULATE] Starting database population...');
+
+  // ENTERPRISE: Get required company name (fail-fast if not configured)
+  let companyName: string;
+  try {
+    companyName = getRequiredAdminCompanyName();
+  } catch (error) {
+    return NextResponse.json({
+      success: false,
+      error: (error as Error).message,
+      suggestion: 'Add ADMIN_COMPANY_NAME to .env.local'
+    }, { status: 500 });
+  }
+
+  // ENTERPRISE: Database-driven company lookup (centralized service)
+  const company = await getCompanyByName(companyName);
+  if (!company) {
+    return NextResponse.json({
+      success: false,
+      error: `Company "${companyName}" not found in database`,
+      suggestion: 'Please ensure company data exists before populating buildings'
+    }, { status: 404 });
+  }
+
+  console.log(`[POPULATE] Company: ${company.companyName}`);
+  console.log(`[POPULATE] Company ID: ${company.id}`);
 
   let totalBuildings = 0;
   const results = {
-    success: [],
-    errors: [],
-    summary: {}
+    success: [] as Array<{ id: string; originalId: string; name: string; project: string }>,
+    errors: [] as Array<{ id: string; error: string }>,
+    summary: {} as Record<string, unknown>
   };
 
   try {
-    // 🏗️ Προσθήκη buildings για κάθε project
+    // Add buildings for each project
     for (const [projectKey, buildings] of Object.entries(BUILDING_COLLECTIONS)) {
-      console.log(`\n🏢 Processing project: ${projectKey}`);
+      console.log(`\n[POPULATE] Processing project: ${projectKey}`);
 
       for (const building of buildings) {
         try {
-          // 📝 Προσθήκη πλήρων δεδομένων based on schema research
+          // Add full data based on schema research
           const buildingData = {
             ...building,
-            projectId: projectKey,  // 🔗 Critical: Link to specific project
-            companyId: PAGONIS_COMPANY_ID,
-            company: COMPANY_NAME,
+            projectId: projectKey,  // Critical: Link to specific project
+            companyId: company.id,  // ENTERPRISE: Database-driven
+            company: company.companyName,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
 
-            // 🎯 ENTERPRISE: Additional schema fields από research
+            // ENTERPRISE: Additional schema fields from research
             legalInfo: {
               buildingPermit: `BP-${building.id.slice(-8).toUpperCase()}`,
               zoneDesignation: building.category === 'industrial' ? buildingTechnicalTerms.industrial_zone : building.category === 'commercial' ? buildingTechnicalTerms.commercial_zone : buildingTechnicalTerms.residential_zone,
@@ -305,7 +332,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             }
           };
 
-          // 💾 Αποθήκευση στο Firestore με custom ID
+          // Save to Firestore with custom ID
           const docRef = await addDoc(collection(db, COLLECTIONS.BUILDINGS), buildingData);
 
           results.success.push({
@@ -316,10 +343,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           });
 
           totalBuildings++;
-          console.log(`  ✅ ${building.name} - ${docRef.id}`);
+          console.log(`  [OK] ${building.name} - ${docRef.id}`);
 
         } catch (error) {
-          console.error(`  ❌ Error creating building ${building.id}:`, (error as Error).message);
+          console.error(`  [ERROR] Error creating building ${building.id}:`, (error as Error).message);
           results.errors.push({
             id: building.id,
             error: (error as Error).message
@@ -328,7 +355,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    // 📊 Final Summary
+    // Final Summary
     results.summary = {
       totalBuildings,
       successCount: results.success.length,
@@ -337,72 +364,104 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       timestamp: new Date().toISOString()
     };
 
-    console.log('\n🎉 DATABASE POPULATION COMPLETED!');
-    console.log(`📊 Buildings Created: ${results.summary.successCount}/${totalBuildings}`);
-    console.log(`🏗️ Projects Processed: ${results.summary.projectsProcessed}`);
+    console.log('\n[POPULATE] Database population completed!');
+    console.log(`[POPULATE] Buildings Created: ${results.summary.successCount}/${totalBuildings}`);
+    console.log(`[POPULATE] Projects Processed: ${results.summary.projectsProcessed}`);
 
     return NextResponse.json({
       success: true,
-      message: `Successfully created ${results.summary.successCount} buildings for ${COMPANY_NAME}`,
+      message: `Successfully created ${results.summary.successCount} buildings for ${company.companyName}`,
       results,
-      company: COMPANY_NAME,
-      companyId: PAGONIS_COMPANY_ID
+      company: company.companyName,
+      companyId: company.id
     });
 
   } catch (error) {
-    console.error('💥 CRITICAL ERROR during database population:', error);
+    console.error('[POPULATE] CRITICAL ERROR during database population:', error);
 
     return NextResponse.json({
       success: false,
       error: 'Database population failed',
       details: (error as Error).message,
-      company: COMPANY_NAME,
-      companyId: PAGONIS_COMPANY_ID
+      company: company.companyName,
+      companyId: company.id
     }, { status: 500 });
   }
 }
 
+// Type for building summary in verification response
+interface BuildingSummary {
+  id: string;
+  name: string;
+  status: string;
+  address: string;
+  totalValue: number;
+  createdAt: unknown;
+}
+
 /**
- * 🔍 VERIFICATION ENDPOINT
- * GET endpoint που επαληθεύει τα buildings που δημιουργήθηκαν
+ * VERIFICATION ENDPOINT
+ * GET endpoint that verifies the created buildings
  */
 export async function GET(): Promise<NextResponse> {
-  console.log('\n🔍 VERIFYING BUILDINGS CREATION...');
+  console.log('\n[VERIFY] Verifying buildings creation...');
+
+  // ENTERPRISE: Get required company name (fail-fast if not configured)
+  let companyName: string;
+  try {
+    companyName = getRequiredAdminCompanyName();
+  } catch (error) {
+    return NextResponse.json({
+      success: false,
+      error: (error as Error).message,
+      suggestion: 'Add ADMIN_COMPANY_NAME to .env.local'
+    }, { status: 500 });
+  }
+
+  // ENTERPRISE: Database-driven company lookup (centralized service)
+  const company = await getCompanyByName(companyName);
+  if (!company) {
+    return NextResponse.json({
+      success: false,
+      error: `Company "${companyName}" not found in database`,
+      suggestion: 'Please ensure company data exists'
+    }, { status: 404 });
+  }
 
   try {
-    // Έλεγχος για buildings του ΠΑΓΩΝΗΣ
+    // Check buildings for the company
     const buildingsQuery = query(
       collection(db, COLLECTIONS.BUILDINGS),
-      where('companyId', '==', PAGONIS_COMPANY_ID)
+      where('companyId', '==', company.id)
     );
     const buildingsSnapshot = await getDocs(buildingsQuery);
 
-    console.log(`📊 Found ${buildingsSnapshot.docs.length} buildings for ${COMPANY_NAME}`);
+    console.log(`[VERIFY] Found ${buildingsSnapshot.docs.length} buildings for ${company.companyName}`);
 
     // Group by project
-    const projectGroups: Record<string, any[]> = {};
+    const projectGroups: Record<string, BuildingSummary[]> = {};
     buildingsSnapshot.docs.forEach(doc => {
       const data = doc.data();
-      const projectId = data.projectId;
+      const projectId = data.projectId as string;
 
       if (!projectGroups[projectId]) {
         projectGroups[projectId] = [];
       }
       projectGroups[projectId].push({
         id: doc.id,
-        name: data.name,
-        status: data.status,
-        address: data.address,
-        totalValue: data.totalValue,
+        name: data.name as string,
+        status: data.status as string,
+        address: data.address as string,
+        totalValue: data.totalValue as number,
         createdAt: data.createdAt
       });
     });
 
-    // Εμφάνιση αποτελεσμάτων
+    // Display results
     for (const [projectId, buildings] of Object.entries(projectGroups)) {
-      console.log(`\n🏗️ Project: ${projectId}`);
+      console.log(`\n[VERIFY] Project: ${projectId}`);
       buildings.forEach(building => {
-        console.log(`  📋 ${building.name} (${building.status}) - ID: ${building.id}`);
+        console.log(`  - ${building.name} (${building.status}) - ID: ${building.id}`);
       });
     }
 
@@ -410,20 +469,20 @@ export async function GET(): Promise<NextResponse> {
       success: true,
       totalBuildings: buildingsSnapshot.docs.length,
       projectGroups,
-      company: COMPANY_NAME,
-      companyId: PAGONIS_COMPANY_ID,
+      company: company.companyName,
+      companyId: company.id,
       timestamp: new Date().toISOString()
     });
 
   } catch (error) {
-    console.error('❌ Verification failed:', error);
+    console.error('[ERROR] Verification failed:', error);
 
     return NextResponse.json({
       success: false,
       error: 'Buildings verification failed',
       details: (error as Error).message,
-      company: COMPANY_NAME,
-      companyId: PAGONIS_COMPANY_ID
+      company: company.companyName,
+      companyId: company.id
     }, { status: 500 });
   }
 }

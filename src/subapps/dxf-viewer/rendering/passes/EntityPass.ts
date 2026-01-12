@@ -244,7 +244,11 @@ export class EntityPass implements IRenderPass {
    * 🔺 VIEWPORT CULLING
    * Αφαιρεί entities που είναι εκτός viewport
    */
-  private cullEntitiesOutsideViewport(entities: Entity[], viewport: any, transform: any): Entity[] {
+  private cullEntitiesOutsideViewport(
+    entities: Entity[],
+    viewport: { x: number; y: number; width: number; height: number },
+    transform: { scale: number; offsetX: number; offsetY: number }
+  ): Entity[] {
     const visible: Entity[] = [];
 
     for (const entity of entities) {
@@ -262,7 +266,11 @@ export class EntityPass implements IRenderPass {
    * 🔺 VISIBILITY CHECK
    * Ελέγχει αν ένα entity είναι ορατό στο viewport
    */
-  private isEntityVisible(entity: Entity, viewport: any, transform: any): boolean {
+  private isEntityVisible(
+    entity: Entity,
+    viewport: { x: number; y: number; width: number; height: number },
+    transform: { scale: number; offsetX: number; offsetY: number }
+  ): boolean {
     // Simple bounding box check - can be optimized with proper bounds calculation
     const bounds = this.calculateEntityBounds(entity);
     if (!bounds) return true; // If can't calculate bounds, assume visible

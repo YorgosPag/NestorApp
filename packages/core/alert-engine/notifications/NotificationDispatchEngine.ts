@@ -496,44 +496,30 @@ export class NotificationDispatchEngine {
 
   private initializeDefaultTemplates(): void {
     // Alert notification template
+    // Note: Using {{placeholder}} syntax for template variables (not JS template literals)
     this.templates.set('alert_notification', {
       id: 'alert_notification',
       name: 'Alert Notification Template',
       description: 'Default template για alert notifications',
       channels: {
         email: {
-          subject: '🚨 Alert: ${alert.title}',
-          body: `
-            <h2>Alert Notification</h2>
-            <p><strong>Type:</strong> ${alert.type}</p>
-            <p><strong>Severity:</strong> ${alert.severity}</p>
-            <p><strong>Message:</strong> ${alert.message}</p>
-            <p><strong>Detected At:</strong> ${alert.detectedAt}</p>
-
-            ${alert.location ? '<p><strong>Location:</strong> ${alert.location.lat}, ${alert.location.lng}</p>' : ''}
-
-            <hr>
-            <p>This is an automated notification από the Geo-Alert System.</p>
-          `,
+          subject: '🚨 Alert: {{alert.title}}',
+          body: '<h2>Alert Notification</h2>\n' +
+            '<p><strong>Type:</strong> {{alert.type}}</p>\n' +
+            '<p><strong>Severity:</strong> {{alert.severity}}</p>\n' +
+            '<p><strong>Message:</strong> {{alert.message}}</p>\n' +
+            '<p><strong>Detected At:</strong> {{alert.detectedAt}}</p>\n' +
+            '{{#alert.location}}<p><strong>Location:</strong> {{alert.location.lat}}, {{alert.location.lng}}</p>{{/alert.location}}\n' +
+            '<hr>\n' +
+            '<p>This is an automated notification από the Geo-Alert System.</p>',
           format: 'html'
         },
         in_app: {
-          body: '${alert.title}: ${alert.message}',
+          body: '{{alert.title}}: {{alert.message}}',
           format: 'plain'
         },
         webhook: {
-          body: JSON.stringify({
-            event: 'alert_triggered',
-            alert: {
-              id: '${alert.id}',
-              type: '${alert.type}',
-              severity: '${alert.severity}',
-              title: '${alert.title}',
-              message: '${alert.message}',
-              detectedAt: '${alert.detectedAt}',
-              location: '${alert.location}'
-            }
-          }),
+          body: '{"event":"alert_triggered","alert":{"id":"{{alert.id}}","type":"{{alert.type}}","severity":"{{alert.severity}}","title":"{{alert.title}}","message":"{{alert.message}}","detectedAt":"{{alert.detectedAt}}","location":"{{alert.location}}"}}',
           format: 'json'
         }
       },
@@ -545,7 +531,7 @@ export class NotificationDispatchEngine {
       }
     });
 
-    console.log(`✅ Initialized ${this.templates.size} notification templates`);
+    console.log('✅ Initialized ' + this.templates.size + ' notification templates');
   }
 
   // ========================================================================

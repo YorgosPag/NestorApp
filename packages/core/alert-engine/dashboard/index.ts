@@ -6,6 +6,12 @@
  */
 
 // ============================================================================
+// IMPORTS FOR INTERNAL USE
+// ============================================================================
+
+import { DashboardService, dashboardService } from './DashboardService';
+
+// ============================================================================
 // MAIN DASHBOARD COMPONENT
 // ============================================================================
 
@@ -19,7 +25,7 @@ export { AlertMonitoringDashboard as Dashboard } from './AlertMonitoringDashboar
 export {
   DashboardService,
   dashboardService as defaultDashboardService
-} from './DashboardService';
+};
 
 export type {
   DashboardMetrics,

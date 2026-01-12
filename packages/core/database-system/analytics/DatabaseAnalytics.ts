@@ -215,6 +215,97 @@ export interface CustomReportResult {
 }
 
 // ============================================================================
+// SQL RESULT ROW TYPES - Enterprise Type Safety for DB Queries
+// ============================================================================
+
+/** Project analytics SQL result row */
+interface ProjectAnalyticsRow {
+  total_projects: string;
+  calibrated_projects: string;
+  uncalibrated_projects: string;
+  projects_last_month: string;
+  projects_last_week: string;
+  most_active_day: number | null;
+  avg_rms_error: string;
+  best_project_id: string | null;
+  best_project_name: string | null;
+  best_project_error: string;
+  worst_project_id: string | null;
+  worst_project_name: string | null;
+  worst_project_error: string;
+  total_dxf_files: string;
+  total_file_size: string;
+  avg_file_size: string;
+  largest_project_id: string | null;
+  largest_project_name: string | null;
+  largest_project_size: string;
+}
+
+/** Control point analytics SQL result row */
+interface ControlPointAnalyticsRow {
+  total_control_points: string;
+  active_points: string;
+  inactive_points: string;
+  control_count: string;
+  check_count: string;
+  tie_count: string;
+  excellent_count: string;
+  good_count: string;
+  fair_count: string;
+  poor_count: string;
+  unacceptable_count: string;
+  avg_accuracy: string;
+  best_accuracy: string;
+  worst_accuracy: string;
+  points_last_month: string;
+  points_last_week: string;
+  most_active_project_id: string | null;
+  most_active_project_name: string | null;
+  most_active_point_count: string;
+  asprs_class1: string;
+  asprs_class2: string;
+  asprs_class3: string;
+  iso_cadastral: string;
+}
+
+/** Spatial analytics SQL result row */
+interface SpatialAnalyticsRow {
+  total_area: string;
+  min_area: string;
+  max_area: string;
+  average_area: string;
+  total_projects_with_bounds: string;
+  projects_with_holes: string;
+  avg_vertices_per_project: string;
+  complexity_score: string;
+}
+
+/** Type distribution row */
+interface TypeDistributionRow {
+  dxf_entity_type: string;
+  entity_count: string;
+}
+
+/** Layer distribution row */
+interface LayerDistributionRow {
+  layer_name: string;
+  entity_count: string;
+}
+
+/** Density row */
+interface DensityRow {
+  center_lng: string;
+  center_lat: string;
+  entity_count: string;
+  radius: string;
+}
+
+/** Generic row with indexable properties */
+interface GenericAnalyticsRow {
+  [key: string]: string | number | null;
+}
+
+// ============================================================================
 // DATABASE ANALYTICS ENGINE CLASS
 // ============================================================================
 
@@ -292,7 +383,7 @@ export class DatabaseAnalytics {
     `;
 
     const result = await this.dbManager.query(sql);
-    const row = result.rows[0];
+    const row = result.rows[0] as ProjectAnalyticsRow;
 
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -306,12 +397,12 @@ export class DatabaseAnalytics {
       averageRmsError: parseFloat(row.avg_rms_error) || 0,
       bestProject: row.best_project_id ? {
         id: row.best_project_id,
-        name: row.best_project_name,
+        name: row.best_project_name || 'Unnamed',
         rmsError: parseFloat(row.best_project_error)
       } : null,
       worstProject: row.worst_project_id ? {
         id: row.worst_project_id,
-        name: row.worst_project_name,
+        name: row.worst_project_name || 'Unnamed',
         rmsError: parseFloat(row.worst_project_error)
       } : null,
       totalDxfFiles: parseInt(row.total_dxf_files) || 0,
@@ -319,7 +410,7 @@ export class DatabaseAnalytics {
       averageFileSize: parseFloat(row.avg_file_size) || 0,
       largestProject: row.largest_project_id ? {
         id: row.largest_project_id,
-        name: row.largest_project_name,
+        name: row.largest_project_name || 'Unnamed',
         fileSize: parseInt(row.largest_project_size)
       } : null
     };
@@ -370,36 +461,36 @@ export class DatabaseAnalytics {
     `;
 
     const result = await this.dbManager.query(sql);
-    const row = result.rows[0];
+    const row = result.rows[0] as GenericAnalyticsRow;
 
     return {
-      totalControlPoints: parseInt(row.total_control_points) || 0,
-      activeControlPoints: parseInt(row.active_control_points) || 0,
-      inactiveControlPoints: parseInt(row.inactive_control_points) || 0,
+      totalControlPoints: parseInt(String(row.total_control_points)) || 0,
+      activeControlPoints: parseInt(String(row.active_control_points)) || 0,
+      inactiveControlPoints: parseInt(String(row.inactive_control_points)) || 0,
       controlPointsByType: {
-        control: parseInt(row.control_type_count) || 0,
-        check: parseInt(row.check_type_count) || 0,
-        tie: parseInt(row.tie_type_count) || 0
+        control: parseInt(String(row.control_type_count)) || 0,
+        check: parseInt(String(row.check_type_count)) || 0,
+        tie: parseInt(String(row.tie_type_count)) || 0
       },
       accuracyDistribution: {
-        excellent: parseInt(row.excellent_accuracy) || 0,
-        good: parseInt(row.good_accuracy) || 0,
-        fair: parseInt(row.fair_accuracy) || 0,
-        poor: parseInt(row.poor_accuracy) || 0,
-        unacceptable: parseInt(row.unacceptable_accuracy) || 0
+        excellent: parseInt(String(row.excellent_accuracy)) || 0,
+        good: parseInt(String(row.good_accuracy)) || 0,
+        fair: parseInt(String(row.fair_accuracy)) || 0,
+        poor: parseInt(String(row.poor_accuracy)) || 0,
+        unacceptable: parseInt(String(row.unacceptable_accuracy)) || 0
       },
-      averageAccuracy: parseFloat(row.avg_accuracy) || 0,
-      bestAccuracy: parseFloat(row.best_accuracy) || 0,
-      worstAccuracy: parseFloat(row.worst_accuracy) || 0,
-      totalUsage: parseInt(row.total_usage) || 0,
-      averageUsage: parseFloat(row.avg_usage) || 0,
+      averageAccuracy: parseFloat(String(row.avg_accuracy)) || 0,
+      bestAccuracy: parseFloat(String(row.best_accuracy)) || 0,
+      worstAccuracy: parseFloat(String(row.worst_accuracy)) || 0,
+      totalUsage: parseInt(String(row.total_usage)) || 0,
+      averageUsage: parseFloat(String(row.avg_usage)) || 0,
       mostUsedPoint: row.most_used_id ? {
-        id: row.most_used_id,
-        name: row.most_used_name || 'Unnamed',
-        usageCount: parseInt(row.most_used_count)
+        id: String(row.most_used_id),
+        name: String(row.most_used_name) || 'Unnamed',
+        usageCount: parseInt(String(row.most_used_count))
       } : null,
-      pointsAddedLastMonth: parseInt(row.points_last_month) || 0,
-      pointsAddedLastWeek: parseInt(row.points_last_week) || 0
+      pointsAddedLastMonth: parseInt(String(row.points_last_month)) || 0,
+      pointsAddedLastWeek: parseInt(String(row.points_last_week)) || 0
     };
   }
 
@@ -482,7 +573,7 @@ export class DatabaseAnalytics {
     `;
 
     const result = await this.dbManager.query(sql);
-    const row = result.rows[0];
+    const row = result.rows[0] as GenericAnalyticsRow;
 
     // Get entity types
     const typesResult = await this.dbManager.query(`
@@ -493,7 +584,7 @@ export class DatabaseAnalytics {
     `);
 
     const entitiesByType: Record<string, number> = {};
-    typesResult.rows.forEach(typeRow => {
+    (typesResult.rows as TypeDistributionRow[]).forEach(typeRow => {
       entitiesByType[typeRow.dxf_entity_type] = parseInt(typeRow.entity_count);
     });
 
@@ -506,7 +597,7 @@ export class DatabaseAnalytics {
     `);
 
     const entitiesByLayer: Record<string, number> = {};
-    layersResult.rows.forEach(layerRow => {
+    (layersResult.rows as LayerDistributionRow[]).forEach(layerRow => {
       entitiesByLayer[layerRow.layer_name] = parseInt(layerRow.entity_count);
     });
 
@@ -531,7 +622,7 @@ export class DatabaseAnalytics {
       ) clusters
     `);
 
-    const highDensityAreas = densityResult.rows.map(densityRow => ({
+    const highDensityAreas = (densityResult.rows as DensityRow[]).map(densityRow => ({
       centerLng: parseFloat(densityRow.center_lng),
       centerLat: parseFloat(densityRow.center_lat),
       entityCount: parseInt(densityRow.entity_count),
@@ -539,24 +630,24 @@ export class DatabaseAnalytics {
     }));
 
     return {
-      totalSpatialEntities: parseInt(row.total_spatial_entities) || 0,
+      totalSpatialEntities: parseInt(String(row.total_spatial_entities)) || 0,
       entitiesByType,
       entitiesByLayer,
-      totalLength: parseFloat(row.total_length) || 0,
-      totalArea: parseFloat(row.total_area) || 0,
-      averageEntitySize: parseFloat(row.avg_entity_size) || 0,
-      validGeometries: parseInt(row.valid_geometries) || 0,
-      invalidGeometries: parseInt(row.invalid_geometries) || 0,
-      transformationErrors: parseInt(row.transformation_errors) || 0,
+      totalLength: parseFloat(String(row.total_length)) || 0,
+      totalArea: parseFloat(String(row.total_area)) || 0,
+      averageEntitySize: parseFloat(String(row.avg_entity_size)) || 0,
+      validGeometries: parseInt(String(row.valid_geometries)) || 0,
+      invalidGeometries: parseInt(String(row.invalid_geometries)) || 0,
+      transformationErrors: parseInt(String(row.transformation_errors)) || 0,
       spatialExtent: {
-        minLng: parseFloat(row.min_lng) || 0,
-        minLat: parseFloat(row.min_lat) || 0,
-        maxLng: parseFloat(row.max_lng) || 0,
-        maxLat: parseFloat(row.max_lat) || 0,
-        centerLng: parseFloat(row.center_lng) || 0,
-        centerLat: parseFloat(row.center_lat) || 0,
-        spanLng: parseFloat(row.span_lng) || 0,
-        spanLat: parseFloat(row.span_lat) || 0
+        minLng: parseFloat(String(row.min_lng)) || 0,
+        minLat: parseFloat(String(row.min_lat)) || 0,
+        maxLng: parseFloat(String(row.max_lng)) || 0,
+        maxLat: parseFloat(String(row.max_lat)) || 0,
+        centerLng: parseFloat(String(row.center_lng)) || 0,
+        centerLat: parseFloat(String(row.center_lat)) || 0,
+        spanLng: parseFloat(String(row.span_lng)) || 0,
+        spanLat: parseFloat(String(row.span_lat)) || 0
       },
       highDensityAreas
     };
@@ -586,11 +677,11 @@ export class DatabaseAnalytics {
       ORDER BY date ASC
     `);
 
-    const dailyAccuracyTrends = dailyTrendsResult.rows.map(row => ({
-      date: row.date,
-      averageAccuracy: parseFloat(row.avg_accuracy),
-      pointCount: parseInt(row.point_count),
-      calibratedProjects: parseInt(row.calibrated_projects)
+    const dailyAccuracyTrends = (dailyTrendsResult.rows as GenericAnalyticsRow[]).map(row => ({
+      date: String(row.date),
+      averageAccuracy: parseFloat(String(row.avg_accuracy)),
+      pointCount: parseInt(String(row.point_count)),
+      calibratedProjects: parseInt(String(row.calibrated_projects))
     }));
 
     // Calculate trend
@@ -617,7 +708,7 @@ export class DatabaseAnalytics {
       WHERE is_active = true
     `);
 
-    const benchmarkRow = benchmarkResult.rows[0];
+    const benchmarkRow = benchmarkResult.rows[0] as GenericAnalyticsRow;
 
     return {
       dailyAccuracyTrends,
@@ -628,10 +719,10 @@ export class DatabaseAnalytics {
         worstMonth: 'March'   // TODO: Calculate actual worst month
       },
       benchmarkComparison: {
-        asprsClassI: parseFloat(benchmarkRow.asprs_class_i) || 0,
-        asprsClassII: parseFloat(benchmarkRow.asprs_class_ii) || 0,
-        asprsClassIII: parseFloat(benchmarkRow.asprs_class_iii) || 0,
-        isoCadastral: parseFloat(benchmarkRow.iso_cadastral) || 0
+        asprsClassI: parseFloat(String(benchmarkRow.asprs_class_i)) || 0,
+        asprsClassII: parseFloat(String(benchmarkRow.asprs_class_ii)) || 0,
+        asprsClassIII: parseFloat(String(benchmarkRow.asprs_class_iii)) || 0,
+        isoCadastral: parseFloat(String(benchmarkRow.iso_cadastral)) || 0
       }
     };
   }

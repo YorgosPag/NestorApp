@@ -137,7 +137,8 @@ export function useUnifiedDrawing() {
   // ===== ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΗ HELPER FUNCTION ΓΙΑ PREVIEW SETTINGS =====
   // Applies ColorPalettePanel settings (DXF Settings → General + Specific Preview)
   // Used by: line, polyline, circle, rectangle entities
-  const applyPreviewSettings = useCallback((entity: any) => {
+  // 🏢 ENTERPRISE: Type-safe entity with preview properties
+  const applyPreviewSettings = useCallback((entity: ExtendedSceneEntity & Record<string, unknown>) => {
     // ✅ FIX (ChatGPT-5): Guard against undefined linePreviewStyles
     if (!linePreviewStyles) {
       return;

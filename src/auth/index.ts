@@ -59,6 +59,22 @@ export {
   useAuth
 } from './hooks/useAuth';
 
+export {
+  useAuthProviderInfo
+} from './hooks/useAuthProviderInfo';
+
+// =============================================================================
+// UTILITIES
+// =============================================================================
+
+export {
+  getAuthProviderInfo,
+  canChangePassword,
+  hasProvider,
+  type AuthProviderId,
+  type AuthProviderInfo
+} from './utils/authProviders';
+
 // =============================================================================
 // TYPES
 // =============================================================================

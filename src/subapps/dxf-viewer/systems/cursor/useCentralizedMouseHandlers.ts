@@ -14,6 +14,22 @@ import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Typ
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ColorLayer } from '../../canvas-v2/layer-canvas/layer-types';
 import { UniversalMarqueeSelector } from '../selection/UniversalMarqueeSelection';
+
+// 🏢 ENTERPRISE: Type-safe snap result interface
+export interface SnapResultItem {
+  point: Point2D;
+  type: string;
+  entityId: string | null;
+  distance: number;
+  priority: number;
+}
+
+// 🏢 ENTERPRISE: Type-safe zoom constraints interface
+export interface ZoomConstraints {
+  minScale?: number;
+  maxScale?: number;
+  stepSize?: number;
+}
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Canvas bounds service για performance optimization
 import { canvasBoundsService } from '../../services/CanvasBoundsService';
 // ✅ SNAP DETECTION: Import snap context and manager
@@ -28,7 +44,7 @@ interface CentralizedMouseHandlersProps {
   onTransformChange?: (transform: ViewTransform) => void;
   onEntitySelect?: (entityId: string | null) => void;
   onMouseMove?: (screenPos: Point2D, worldPos: Point2D) => void;
-  onWheelZoom?: (wheelDelta: number, center: Point2D, constraints?: any, modifiers?: { ctrlKey?: boolean; shiftKey?: boolean }) => void;
+  onWheelZoom?: (wheelDelta: number, center: Point2D, constraints?: ZoomConstraints, modifiers?: { ctrlKey?: boolean; shiftKey?: boolean }) => void;
   hitTestCallback?: (scene: DxfScene | null, screenPos: Point2D, transform: ViewTransform, viewport: Viewport) => string | null;
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Marquee selection support για layers
   colorLayers?: ColorLayer[];
@@ -73,7 +89,7 @@ export function useCentralizedMouseHandlers({
   });
 
   // ✅ SNAP RESULTS STATE: Store snap detection results
-  const [snapResults, setSnapResults] = useState<any[]>([]);
+  const [snapResults, setSnapResults] = useState<SnapResultItem[]>([]);
 
   // 🚀 HIGH PERFORMANCE PANNING - requestAnimationFrame approach
   const panStateRef = useRef<{

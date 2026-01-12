@@ -18,12 +18,23 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
+// 🏢 ENTERPRISE: Task statistics interface
+interface TaskStats {
+  total: number;
+  pending: number;
+  overdue: number;
+  completed: number;
+  dueToday: number;
+  dueThisWeek: number;
+}
+
 export default function CrmTasksPage() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [stats, setStats] = useState<any>(null);
+  // 🏢 ENTERPRISE: Proper type instead of any
+  const [stats, setStats] = useState<TaskStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
 
   const fetchStats = async () => {

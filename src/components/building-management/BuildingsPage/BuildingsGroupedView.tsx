@@ -3,7 +3,8 @@
 
 import React from 'react';
 import { BuildingCard } from '../BuildingCard';
-import { getCategoryLabel, getStatusLabel } from '../BuildingCard/BuildingCardUtils';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Building } from '../BuildingsPageContent';
 
 interface BuildingsGroupedViewProps {
@@ -19,6 +20,9 @@ export function BuildingsGroupedView({
   selectedBuilding,
   setSelectedBuilding,
 }: BuildingsGroupedViewProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
+
   const groupedByType = filteredBuildings.reduce((acc, building) => {
     const type = building.category || 'mixed';
     if (!acc[type]) acc[type] = [];
@@ -55,7 +59,7 @@ export function BuildingsGroupedView({
       <div className="flex-1 p-4 overflow-auto">
         {Object.entries(groupedByType).map(([type, buildingsOfType]) => (
           <div key={type} className="mb-8">
-            <h2 className="text-xl font-bold mb-4 capitalize border-b pb-2">{getCategoryLabel(type)} ({buildingsOfType.length})</h2>
+            <h2 className="text-xl font-bold mb-4 capitalize border-b pb-2">{t(`category.${type}`, { defaultValue: type })} ({buildingsOfType.length})</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {buildingsOfType.map((building) => (
                 <BuildingCard
@@ -77,7 +81,7 @@ export function BuildingsGroupedView({
       <div className="flex-1 p-4 overflow-auto">
         {Object.entries(groupedByStatus).map(([status, buildingsOfStatus]) => (
           <div key={status} className="mb-8">
-            <h2 className="text-xl font-bold mb-4 capitalize border-b pb-2">{getStatusLabel(status)} ({buildingsOfStatus.length})</h2>
+            <h2 className="text-xl font-bold mb-4 capitalize border-b pb-2">{t(`status.${status}`, { defaultValue: status })} ({buildingsOfStatus.length})</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {buildingsOfStatus.map((building) => (
                 <BuildingCard

@@ -269,7 +269,8 @@ export interface PerformanceTrace {
   startTime: number;
   endTime: number;
   duration: number;
-  details: any;
+  // 🏢 ENTERPRISE: Proper type for trace details
+  details: Record<string, unknown>;
   children: PerformanceTrace[];
   metadata: {
     stackTrace?: string;
@@ -952,7 +953,7 @@ export class GeoAlertPerformanceProfiler {
   /**
    * End trace measurement
    */
-  public endTrace(traceId: string, details?: any): PerformanceTrace | null {
+  public endTrace(traceId: string, details?: Record<string, unknown>): PerformanceTrace | null {
     const trace = this.traces.get(traceId);
     if (!trace) return null;
 

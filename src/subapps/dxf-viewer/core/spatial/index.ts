@@ -20,10 +20,10 @@ type SpatialBounds = {
   maxY: number;
 };
 
-type SpatialItem = {
+type SpatialItem<T = unknown> = {
   id: string;
   bounds: SpatialBounds;
-  data?: any;
+  data?: T;
 };
 
 export type {
@@ -65,19 +65,28 @@ export {
 
 /**
  * Type guards για development
+ * 🏢 ENTERPRISE: Type-safe guards with unknown instead of any
  */
 export const SpatialTypeGuards = {
-  isValidBounds: (bounds: any): bounds is SpatialBounds =>
-    bounds &&
-    typeof bounds.minX === 'number' &&
-    typeof bounds.minY === 'number' &&
-    typeof bounds.maxX === 'number' &&
-    typeof bounds.maxY === 'number' &&
-    bounds.minX <= bounds.maxX &&
-    bounds.minY <= bounds.maxY,
+  isValidBounds: (bounds: unknown): bounds is SpatialBounds => {
+    if (!bounds || typeof bounds !== 'object') return false;
+    const b = bounds as Record<string, unknown>;
+    return (
+      typeof b.minX === 'number' &&
+      typeof b.minY === 'number' &&
+      typeof b.maxX === 'number' &&
+      typeof b.maxY === 'number' &&
+      b.minX <= b.maxX &&
+      b.minY <= b.maxY
+    );
+  },
 
-  isValidItem: (item: any): item is SpatialItem =>
-    item &&
-    typeof item.id === 'string' &&
-    SpatialTypeGuards.isValidBounds(item.bounds)
+  isValidItem: (item: unknown): item is SpatialItem => {
+    if (!item || typeof item !== 'object') return false;
+    const i = item as Record<string, unknown>;
+    return (
+      typeof i.id === 'string' &&
+      SpatialTypeGuards.isValidBounds(i.bounds)
+    );
+  }
 };

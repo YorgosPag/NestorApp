@@ -54,11 +54,13 @@ function getBoundingBox(geometry: GeoJSON.Geometry): BoundingBox {
     maxLat = Math.max(maxLat, lat);
   }
 
-  function processCoordinates(coords: any) {
+  // 🏢 ENTERPRISE: Type-safe recursive coordinate processing
+  type GeoJSONCoordinates = number[] | number[][] | number[][][] | number[][][][];
+  function processCoordinates(coords: GeoJSONCoordinates) {
     if (Array.isArray(coords[0])) {
-      coords.forEach(processCoordinates);
+      (coords as GeoJSONCoordinates[]).forEach(processCoordinates);
     } else {
-      processCoordinate(coords);
+      processCoordinate(coords as number[]);
     }
   }
 

@@ -6,6 +6,7 @@
 import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
+import type { RectangleEntity, RectEntity } from '../../types/entities';
 import { pointToLineDistance } from './shared/geometry-utils';
 import { hitTestLineSegments, createEdgeGrips } from './shared/line-utils';
 import { createVertexGrip } from './shared/grip-utils';
@@ -13,10 +14,13 @@ import { drawVerticesPath } from './shared/geometry-rendering-utils';
 import { getRectangleVertices } from '../../systems/selection/utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 
+// 🏢 ENTERPRISE: Union type for rectangle entities
+type RectangleEntityUnion = RectangleEntity | RectEntity;
 
 export class RectangleRenderer extends BaseEntityRenderer {
   private getVertices(entity: EntityModel): Point2D[] | null {
-    return getRectangleVertices(entity as any);
+    // 🏢 ENTERPRISE: Type-safe casting for rectangle entities
+    return getRectangleVertices(entity as RectangleEntityUnion);
   }
 
   render(entity: EntityModel, options: RenderOptions = {}): void {

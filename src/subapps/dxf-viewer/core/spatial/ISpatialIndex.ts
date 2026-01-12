@@ -23,10 +23,10 @@ import type { Point2D } from '../../rendering/types/Types';
  * const index = SpatialFactory.forHitTesting(bounds);
  * index.insert(spatialItem);
  */
-export interface SpatialItem {
+export interface SpatialItem<T = unknown> {
   id: string;
   bounds: SpatialBounds;
-  data?: any; // Flexible data payload
+  data?: T; // Flexible data payload
 }
 
 /**
@@ -56,8 +56,8 @@ export interface SpatialQueryOptions {
 /**
  * Query result with distance information
  */
-export interface SpatialQueryResult<T = any> {
-  item: SpatialItem;
+export interface SpatialQueryResult<T = unknown> {
+  item: SpatialItem<T>;
   distance: number;
   data: T;
   bounds?: SpatialBounds; // ✅ ENTERPRISE FIX: Added bounds property για HitTester.ts
@@ -80,6 +80,23 @@ export interface SpatialIndexStats {
   queryTime: number;
   indexType: SpatialIndexType;
   memoryUsage?: number;
+}
+
+/**
+ * 🏢 ENTERPRISE: Debug information structure
+ */
+export interface SpatialDebugInfo {
+  indexType: SpatialIndexType;
+  itemCount: number;
+  bounds: SpatialBounds;
+  structure?: {
+    depth?: number;
+    nodeCount?: number;
+    cellCount?: number;
+    gridSize?: number;
+    [key: string]: unknown;
+  };
+  performance?: SpatialIndexStats;
 }
 
 // ========================================
@@ -175,8 +192,9 @@ export interface ISpatialIndex {
 
   /**
    * Debug information (development only)
+   * 🏢 ENTERPRISE: Returns structured debug info
    */
-  debug(): any;
+  debug(): SpatialDebugInfo;
 
   // ========================================
   // LEGACY COMPATIBILITY METHODS

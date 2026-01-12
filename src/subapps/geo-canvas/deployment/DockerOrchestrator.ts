@@ -91,11 +91,39 @@ export interface VolumeMount {
 }
 
 /**
- * Volume source
+ * 🏢 ENTERPRISE: Volume source configuration variants
+ */
+interface EmptyDirSource {
+  medium?: 'Memory' | '';
+  sizeLimit?: string;
+}
+
+interface HostPathSource {
+  path: string;
+  type?: 'Directory' | 'DirectoryOrCreate' | 'File' | 'FileOrCreate';
+}
+
+interface ConfigMapSource {
+  name: string;
+  items?: { key: string; path: string }[];
+}
+
+interface SecretSource {
+  secretName: string;
+  items?: { key: string; path: string }[];
+}
+
+interface PVCSource {
+  claimName: string;
+  readOnly?: boolean;
+}
+
+/**
+ * Volume source - properly typed for all volume types
  */
 export interface VolumeSource {
   type: 'emptyDir' | 'hostPath' | 'configMap' | 'secret' | 'persistentVolumeClaim';
-  source: any;
+  source: EmptyDirSource | HostPathSource | ConfigMapSource | SecretSource | PVCSource;
 }
 
 /**

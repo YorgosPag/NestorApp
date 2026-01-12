@@ -9,7 +9,7 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import type { TestDefinition, NotificationFn } from '../types/tests.types';
+import type { TestDefinition, NotificationFn, WindowWithDxfTransform } from '../types/tests.types';
 import {
   Triangle,
   Target,
@@ -144,9 +144,9 @@ export function getDebugTools(showCopyableNotification: NotificationFn): TestDef
                 TransformModule.TransformProvider,
                 {
                   initialTransform: {
-                    scale: (window as any).dxfTransform?.scale || 1,
-                    offsetX: (window as any).dxfTransform?.offsetX || 0,
-                    offsetY: (window as any).dxfTransform?.offsetY || 0
+                    scale: (window as WindowWithDxfTransform).dxfTransform?.scale || 1,
+                    offsetX: (window as WindowWithDxfTransform).dxfTransform?.offsetX || 0,
+                    offsetY: (window as WindowWithDxfTransform).dxfTransform?.offsetY || 0
                   },
                   children: React.createElement(CoordinateModule.default)
                 }

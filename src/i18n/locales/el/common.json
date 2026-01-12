@@ -85,6 +85,7 @@
     "menuLabel": "Μενού χρήστη",
     "defaultUser": "Χρήστης",
     "noEmail": "Δεν υπάρχει email",
+    "account": "Λογαριασμός",
     "profile": "Προφίλ",
     "settings": "Ρυθμίσεις",
     "shortcuts": "Συντομεύσεις",
@@ -96,6 +97,96 @@
       "settings": "⌘S",
       "shortcuts": "⌘K",
       "logout": "⇧⌘Q"
+    }
+  },
+  "helpHub": {
+    "menuLabel": "Βοήθεια & Υποστήριξη",
+    "title": "Κέντρο Βοήθειας",
+    "commandPalette": "Παλέτα Εντολών",
+    "keyboardShortcuts": "Συντομεύσεις Πληκτρολογίου",
+    "documentation": "Τεκμηρίωση",
+    "support": "Υποστήριξη"
+  },
+  "account": {
+    "title": "Λογαριασμός",
+    "subtitle": "Διαχειριστείτε τις ρυθμίσεις του λογαριασμού σας",
+    "defaultUser": "Χρήστης",
+    "noEmail": "Χωρίς email",
+    "nav": {
+      "ariaLabel": "Πλοήγηση λογαριασμού",
+      "profile": "Προφίλ",
+      "preferences": "Προτιμήσεις",
+      "notifications": "Ειδοποιήσεις",
+      "security": "Ασφάλεια",
+      "privacy": "Απόρρητο"
+    },
+    "profile": {
+      "title": "Προσωπικά Στοιχεία",
+      "description": "Διαχειριστείτε τις προσωπικές σας πληροφορίες",
+      "changePhoto": "Αλλαγή φωτογραφίας",
+      "photoHint": "Κάντε κλικ για αλλαγή φωτογραφίας",
+      "givenName": "Όνομα",
+      "givenNamePlaceholder": "Εισάγετε το όνομά σας",
+      "familyName": "Επώνυμο",
+      "familyNamePlaceholder": "Εισάγετε το επώνυμό σας",
+      "email": "Email",
+      "emailHint": "Το email δεν μπορεί να αλλάξει",
+      "role": "Ρόλος",
+      "roleUser": "Χρήστης",
+      "save": "Αποθήκευση",
+      "saving": "Αποθήκευση...",
+      "saveSuccess": "Οι αλλαγές αποθηκεύτηκαν επιτυχώς",
+      "saveError": "Σφάλμα κατά την αποθήκευση"
+    },
+    "preferences": {
+      "title": "Προτιμήσεις",
+      "description": "Προσαρμόστε την εμφάνιση και τη γλώσσα",
+      "language": "Γλώσσα",
+      "selectLanguage": "Επιλέξτε γλώσσα",
+      "languageHint": "Η γλώσσα εμφάνισης της εφαρμογής",
+      "theme": "Θέμα",
+      "selectTheme": "Επιλέξτε θέμα",
+      "themeLight": "Φωτεινό",
+      "themeDark": "Σκοτεινό",
+      "themeSystem": "Σύστημα",
+      "themeHint": "Το θέμα εμφάνισης της εφαρμογής"
+    },
+    "notifications": {
+      "title": "Ειδοποιήσεις",
+      "description": "Διαχειριστείτε τις ειδοποιήσεις σας",
+      "notAvailable": "Δεν είναι διαθέσιμο ακόμα",
+      "comingSoon": "Οι ρυθμίσεις ειδοποιήσεων θα είναι σύντομα διαθέσιμες"
+    },
+    "security": {
+      "passwordTitle": "Κωδικός Πρόσβασης",
+      "passwordDescription": "Διαχειριστείτε τον κωδικό πρόσβασής σας",
+      "currentPassword": "Τρέχων κωδικός",
+      "resetPassword": "Αποστολή email επαναφοράς",
+      "sendingReset": "Αποστολή...",
+      "resetEmailSent": "Το email επαναφοράς στάλθηκε επιτυχώς",
+      "resetError": "Σφάλμα κατά την αποστολή email",
+      "googleSignIn": "Συνδεθήκατε με Google. Ο κωδικός διαχειρίζεται από το Google.",
+      "twoFactorTitle": "Επαλήθευση Δύο Παραγόντων",
+      "twoFactorDescription": "Προσθέστε επιπλέον επίπεδο ασφάλειας",
+      "twoFactorNotAvailable": "Η επαλήθευση δύο παραγόντων θα είναι σύντομα διαθέσιμη",
+      "sessionsTitle": "Ενεργές Συνεδρίες",
+      "sessionsDescription": "Διαχειριστείτε τις συνδεδεμένες συσκευές",
+      "sessionsNotAvailable": "Η διαχείριση συνεδριών θα είναι σύντομα διαθέσιμη",
+      "comingSoon": "Σύντομα"
+    },
+    "privacy": {
+      "title": "Απόρρητο",
+      "description": "Διαχειριστείτε τις ρυθμίσεις απορρήτου",
+      "visibility": "Ορατότητα Προφίλ",
+      "visibilityDescription": "Τα στοιχεία σας είναι ορατά μόνο σε εσάς",
+      "private": "Ιδιωτικό",
+      "dataStorage": "Αποθήκευση Δεδομένων",
+      "dataStorageDescription": "Τα δεδομένα σας αποθηκεύονται με ασφάλεια",
+      "secure": "Ασφαλές",
+      "securityStatus": "Κατάσταση Ασφάλειας",
+      "securityStatusDescription": "Ο λογαριασμός σας είναι προστατευμένος",
+      "protected": "Προστατευμένο",
+      "policyText": "Για περισσότερες πληροφορίες σχετικά με τον τρόπο χειρισμού των δεδομένων σας, επικοινωνήστε με τον διαχειριστή."
     }
   },
   "upload": {

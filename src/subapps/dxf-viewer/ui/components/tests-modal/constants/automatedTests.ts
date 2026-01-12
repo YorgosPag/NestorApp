@@ -7,7 +7,13 @@
  * 🏢 ENTERPRISE: Uses Lucide icons instead of emoji (centralized icon system)
  */
 
-import type { TestDefinition, NotificationFn } from '../types/tests.types';
+import type {
+  TestDefinition,
+  NotificationFn,
+  LineDrawingCheckResult,
+  WorkflowStepResult,
+  FloatingPanelResult
+} from '../types/tests.types';
 import {
   Pencil,
   Target,
@@ -33,9 +39,9 @@ export function getAutomatedTests(showCopyableNotification: NotificationFn): Tes
           const response = await fetch('/api/validate-line-drawing');
           if (response.ok) {
             const result = await response.json();
-            const allPassed = result.checks.every((c: any) => c.passed);
-            const passedCount = result.checks.filter((c: any) => c.passed).length;
-            const summary = `Line Drawing System: ${allPassed ? '✅ ALL CHECKS PASSED' : '⚠️ SOME CHECKS FAILED'}\n\nPassed: ${passedCount}/${result.checks.length}\n\n${result.checks.map((c: any) => `${c.passed ? '✅' : '❌'} ${c.description}`).join('\n')}`;
+            const allPassed = result.checks.every((c: LineDrawingCheckResult) => c.passed);
+            const passedCount = result.checks.filter((c: LineDrawingCheckResult) => c.passed).length;
+            const summary = `Line Drawing System: ${allPassed ? '✅ ALL CHECKS PASSED' : '⚠️ SOME CHECKS FAILED'}\n\nPassed: ${passedCount}/${result.checks.length}\n\n${result.checks.map((c: LineDrawingCheckResult) => `${c.passed ? '✅' : '❌'} ${c.description}`).join('\n')}`;
             showCopyableNotification(summary, allPassed ? 'success' : 'warning');
           } else {
             const checks = [
@@ -74,7 +80,7 @@ export function getAutomatedTests(showCopyableNotification: NotificationFn): Tes
       action: async () => {
         const module = await import('../../../../debug/layering-workflow-test');
         const result = await module.runLayeringWorkflowTest();
-        const successSteps = result.steps.filter((s: any) => s.status === 'success').length;
+        const successSteps = result.steps.filter((s: WorkflowStepResult) => s.status === 'success').length;
         const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${result.steps.length}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
         showCopyableNotification(summary, result.success ? 'success' : 'error');
       }
@@ -90,7 +96,7 @@ export function getAutomatedTests(showCopyableNotification: NotificationFn): Tes
         const inspection = inspectDOMElements();
         const panel = findFloatingPanelAdvanced();
         showDetailedDOMInfo();
-        const summary = `DOM Inspection Complete!\nFloating Panels: ${inspection.floatingPanels.filter((p: any) => p.found).length}\nTabs: ${inspection.tabs.length}\nCanvases: ${inspection.canvases.length}\nAdvanced Detection: ${panel ? '✅' : '❌'}`;
+        const summary = `DOM Inspection Complete!\nFloating Panels: ${inspection.floatingPanels.filter((p: FloatingPanelResult) => p.found).length}\nTabs: ${inspection.tabs.length}\nCanvases: ${inspection.canvases.length}\nAdvanced Detection: ${panel ? '✅' : '❌'}`;
         showCopyableNotification(summary, 'info');
       }
     },

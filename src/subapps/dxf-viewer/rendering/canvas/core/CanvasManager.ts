@@ -39,6 +39,19 @@ export interface CanvasManagerOptions {
   sharedResources: boolean;
 }
 
+// 🏢 ENTERPRISE: Type-safe metrics structure
+export interface CanvasManagerMetrics {
+  totalCanvases: number;
+  activeCanvases: number;
+  queuedRenders: number;
+  isRendering: boolean;
+  canvasesByType: {
+    dxf: number;
+    layer: number;
+    overlay: number;
+  };
+}
+
 /**
  * 🔺 UNIFIED CANVAS MANAGER
  * Central coordinator για όλα τα canvas instances
@@ -249,7 +262,7 @@ export class CanvasManager {
   /**
    * Get rendering metrics
    */
-  getMetrics(): any {
+  getMetrics(): CanvasManagerMetrics {
     return {
       totalCanvases: this.canvases.size,
       activeCanvases: this.getActiveCanvases().length,

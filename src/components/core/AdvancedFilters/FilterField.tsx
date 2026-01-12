@@ -3,6 +3,7 @@
 import React from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from "lucide-react";
 import type { FilterFieldConfig } from './types';
@@ -30,6 +31,17 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
+
+  // 🏢 ENTERPRISE: Helper to translate option labels
+  // Supports both translation keys (e.g., 'filters.allStatuses') and direct values
+  const translateLabel = (label: string): string => {
+    // If it's a translation key (contains a dot), translate it
+    if (label.includes('.')) {
+      return t(label);
+    }
+    // Otherwise return as-is (for dynamic values like city names from env)
+    return label;
+  };
   const getColumnSpan = (width?: number) => {
     switch (width) {
       case 1: return 'col-span-1';
@@ -49,7 +61,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
             <Input
               id={config.id}
               aria-label={config.ariaLabel}
-              placeholder={config.placeholder}
+              placeholder={translateLabel(config.placeholder || '')}
               className="pl-9 h-9"
               value={value || ''}
               onChange={(e) => onValueChange(e.target.value)}
@@ -90,12 +102,12 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
             value={Array.isArray(value) && value.length === 1 ? value[0] : (Array.isArray(value) ? 'all' : value || 'all')}
           >
             <SelectTrigger className="h-9 w-full" aria-label={config.ariaLabel}>
-              <SelectValue placeholder={config.placeholder} />
+              <SelectValue placeholder={translateLabel(config.placeholder || '')} />
             </SelectTrigger>
             <SelectContent>
               {config.options?.map(option => (
                 <SelectItem key={option.value} value={option.value}>
-                  {option.label}
+                  {translateLabel(option.label)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -123,14 +135,14 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
               <SelectValue placeholder={
                 Array.isArray(value) && value.length > 0
                   ? t('filters.selectedCount', { count: value.length })
-                  : config.placeholder
+                  : translateLabel(config.placeholder || '')
               } />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('filters.all')}</SelectItem>
               {config.options?.map(option => (
                 <SelectItem key={option.value} value={option.value}>
-                  {option.label} {Array.isArray(value) && value.includes(option.value) ? '✓' : ''}
+                  {translateLabel(option.label)} {Array.isArray(value) && value.includes(option.value) ? '✓' : ''}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -138,18 +150,20 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
         );
 
       case 'checkbox':
+        // 🏢 ENTERPRISE: Using centralized Checkbox component (Radix UI)
         return (
           <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
+            <Checkbox
               id={config.id}
-              checked={value || false}
-              onChange={(e) => onValueChange(e.target.checked)}
+              checked={Boolean(value)}
+              onCheckedChange={(checked) => onValueChange(checked === true)}
               aria-label={config.ariaLabel}
-              className="rounded border border-input"
             />
-            <Label htmlFor={config.id} className="text-sm font-normal">
-              {config.label}
+            <Label
+              htmlFor={config.id}
+              className="text-sm font-normal cursor-pointer"
+            >
+              {translateLabel(config.label || '')}
             </Label>
           </div>
         );
@@ -159,7 +173,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
           <Input
             id={config.id}
             aria-label={config.ariaLabel}
-            placeholder={config.placeholder}
+            placeholder={translateLabel(config.placeholder || '')}
             className="h-9"
             value={value || ''}
             onChange={(e) => onValueChange(e.target.value)}
@@ -168,11 +182,16 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
     }
   };
 
+  // 🏢 ENTERPRISE: Checkboxes have their own internal label, so we skip the external label
+  const isCheckbox = config.type === 'checkbox';
+
   return (
     <div className={`flex items-center gap-2 ${getColumnSpan(config.width)}`}>
-      <Label htmlFor={config.id} className="text-xs font-medium shrink-0">
-        {config.label}
-      </Label>
+      {!isCheckbox && (
+        <Label htmlFor={config.id} className="text-xs font-medium shrink-0">
+          {translateLabel(config.label || '')}
+        </Label>
+      )}
       {renderField()}
     </div>
   );

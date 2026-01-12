@@ -22,16 +22,16 @@ interface GeographicConfig {
 function getGeographicConfig(): GeographicConfig {
   return {
     // Primary location (configurable for different deployments)
-    DEFAULT_CITY: process.env.NEXT_PUBLIC_DEFAULT_CITY || 'Default City',
-    DEFAULT_REGION: process.env.NEXT_PUBLIC_DEFAULT_REGION || 'Default Region',
-    DEFAULT_COUNTRY: process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || 'Default Country',
+    DEFAULT_CITY: process.env.NEXT_PUBLIC_DEFAULT_CITY || 'Αθήνα',
+    DEFAULT_REGION: process.env.NEXT_PUBLIC_DEFAULT_REGION || 'Αττική',
+    DEFAULT_COUNTRY: process.env.NEXT_PUBLIC_DEFAULT_COUNTRY || 'Ελλάδα',
 
-    // Primary coordinates (defaults to safe neutral location)
-    DEFAULT_LATITUDE: parseFloat(process.env.NEXT_PUBLIC_DEFAULT_LATITUDE || '37.9838'), // Center of Europe
+    // Primary coordinates (defaults to Athens, Greece)
+    DEFAULT_LATITUDE: parseFloat(process.env.NEXT_PUBLIC_DEFAULT_LATITUDE || '37.9838'),
     DEFAULT_LONGITUDE: parseFloat(process.env.NEXT_PUBLIC_DEFAULT_LONGITUDE || '23.7275'),
 
-    // Alternative/Secondary location
-    ALTERNATIVE_CITY: process.env.NEXT_PUBLIC_ALTERNATIVE_CITY || 'Alternative City',
+    // Alternative/Secondary location (Thessaloniki)
+    ALTERNATIVE_CITY: process.env.NEXT_PUBLIC_ALTERNATIVE_CITY || 'Θεσσαλονίκη',
     ALTERNATIVE_LATITUDE: parseFloat(process.env.NEXT_PUBLIC_ALTERNATIVE_LATITUDE || '40.6401'),
     ALTERNATIVE_LONGITUDE: parseFloat(process.env.NEXT_PUBLIC_ALTERNATIVE_LONGITUDE || '22.9444'),
 

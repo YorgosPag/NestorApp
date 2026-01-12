@@ -285,7 +285,8 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           }
         };
         applyTemplate(lineSettingsTemplate);
-        updateSettings({ activeTemplate: templateName } as any); // ✅ ENTERPRISE FIX: Type assertion for updateSettings
+        // 🏢 ENTERPRISE: activeTemplate is part of LineSettings interface (settings-core/types/domain.ts)
+        updateSettings({ activeTemplate: templateName });
         console.log('✅ Template applied, activeTemplate set to:', templateName);
       }
     } else {

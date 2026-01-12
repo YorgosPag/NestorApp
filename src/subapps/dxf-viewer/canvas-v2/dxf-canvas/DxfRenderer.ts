@@ -160,7 +160,8 @@ export class DxfRenderer {
     };
 
     // 🚀 ΑΥΤΟ ΑΝΤΙΚΑΘΙΣΤΑ ΤΟ SWITCH STATEMENT!
-    this.entityComposite.render(entityModel as any, renderOptions); // ✅ ENTERPRISE FIX: Type assertion for EntityModel to Entity compatibility
+    // 🏢 ENTERPRISE: EntityModel is compatible with Entity - both extend BaseEntity
+    this.entityComposite.render(entityModel as import('../../types/entities').Entity, renderOptions);
   }
 
 

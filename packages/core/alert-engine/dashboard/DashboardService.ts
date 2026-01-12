@@ -332,12 +332,12 @@ export class DashboardService {
       queueSize: 5, // Current queue size
       avgDeliveryTime: 2.3, // seconds
       channelStats: {
-        'email': baseStats.sent * 0.6,
-        'sms': baseStats.sent * 0.2,
-        'webhook': baseStats.sent * 0.15,
-        'in_app': baseStats.sent * 0.05
+        'email': baseStats.totalSent * 0.6,
+        'sms': baseStats.totalSent * 0.2,
+        'webhook': baseStats.totalSent * 0.15,
+        'in_app': baseStats.totalSent * 0.05
       },
-      deliveryRate: baseStats.sent > 0 ? ((baseStats.sent - baseStats.failed) / baseStats.sent) * 100 : 0
+      deliveryRate: baseStats.totalSent > 0 ? ((baseStats.totalSent - baseStats.totalFailed) / baseStats.totalSent) * 100 : 0
     };
   }
 
@@ -524,13 +524,22 @@ export class DashboardService {
         failureRate: 0
       },
       notifications: {
-        sent: 0,
-        failed: 0,
-        pending: 0,
+        totalSent: 0,
+        totalDelivered: 0,
+        totalFailed: 0,
+        deliveryRate: 0,
+        byChannel: {},
+        byPriority: {
+          immediate: { sent: 0, delivered: 0, avgDeliveryTime: 0 },
+          high: { sent: 0, delivered: 0, avgDeliveryTime: 0 },
+          normal: { sent: 0, delivered: 0, avgDeliveryTime: 0 },
+          low: { sent: 0, delivered: 0, avgDeliveryTime: 0 },
+          batch: { sent: 0, delivered: 0, avgDeliveryTime: 0 }
+        },
+        last24Hours: { sent: 0, delivered: 0, failed: 0 },
         queueSize: 0,
         avgDeliveryTime: 0,
-        channelStats: {},
-        deliveryRate: 0
+        channelStats: {}
       },
       system: {
         status: 'critical',

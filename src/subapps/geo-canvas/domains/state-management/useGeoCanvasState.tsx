@@ -42,7 +42,7 @@ export interface PanelState {
 
 export interface ToolState {
   activeTool: string | null;
-  toolSettings: Record<string, any>;
+  toolSettings: Record<string, unknown>;
   measurementData: Array<{
     type: 'distance' | 'area';
     coordinates: number[][];
@@ -81,18 +81,21 @@ export interface GeoCanvasState {
 // 🎯 STATE ACTIONS - ENTERPRISE REDUX PATTERN
 // ============================================================================
 
+// 🏢 ENTERPRISE: Type-safe mode values
+export type GeoCanvasModeValue = 'view' | 'edit' | 'measure' | 'annotate';
+
 export type GeoCanvasAction =
   | { type: 'INITIALIZE'; payload?: Partial<GeoCanvasState> }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: Error | null }
-  | { type: 'CHANGE_MODE'; payload: { mode: string; saveHistory?: boolean } }
+  | { type: 'CHANGE_MODE'; payload: { mode: GeoCanvasModeValue; saveHistory?: boolean } }
   | { type: 'UPDATE_MAP_VIEW'; payload: Partial<MapViewState> }
   | { type: 'UPDATE_PANEL'; payload: { panelId: string; updates: Partial<PanelState> } }
   | { type: 'ADD_PANEL'; payload: PanelState }
   | { type: 'REMOVE_PANEL'; payload: string }
   | { type: 'REORDER_PANELS'; payload: string[] }
   | { type: 'SET_ACTIVE_TOOL'; payload: string | null }
-  | { type: 'UPDATE_TOOL_SETTINGS'; payload: { tool: string; settings: Record<string, any> } }
+  | { type: 'UPDATE_TOOL_SETTINGS'; payload: { tool: string; settings: Record<string, unknown> } }
   | { type: 'ADD_MEASUREMENT'; payload: { type: 'distance' | 'area'; coordinates: number[][]; result: number } }
   | { type: 'UPDATE_UI'; payload: Partial<GeoCanvasState['ui']> };
 
@@ -156,7 +159,7 @@ function geoCanvasReducer(state: GeoCanvasState, action: GeoCanvasAction): GeoCa
       return {
         ...state,
         mode: {
-          current: action.payload.mode as any,
+          current: action.payload.mode,
           previous: action.payload.saveHistory !== false ? state.mode.current : state.mode.previous
         }
       };
@@ -305,7 +308,7 @@ export function useGeoCanvasState(initialData?: Partial<GeoCanvasState>) {
     setActiveTool: (toolId: string | null) =>
       dispatch({ type: 'SET_ACTIVE_TOOL', payload: toolId }),
 
-    updateToolSettings: (tool: string, settings: Record<string, any>) =>
+    updateToolSettings: (tool: string, settings: Record<string, unknown>) =>
       dispatch({ type: 'UPDATE_TOOL_SETTINGS', payload: { tool, settings } }),
 
     addMeasurement: (measurement: { type: 'distance' | 'area'; coordinates: number[][]; result: number }) =>

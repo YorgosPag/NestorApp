@@ -130,11 +130,23 @@ export function useObligation(id: string) {
   };
 }
 
+// 🏢 ENTERPRISE: Obligation Template type
+export interface ObligationTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  category: string;
+  defaultValues?: Partial<ObligationDocument>;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 /**
  * 📋 Hook for fetching obligation templates
  */
 export function useObligationTemplates() {
-  const [templates, setTemplates] = useState<any[]>([]);
+  // 🏢 ENTERPRISE: Proper type instead of any[]
+  const [templates, setTemplates] = useState<ObligationTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [repository] = useState(() => new FirestoreObligationsRepository());

@@ -245,7 +245,7 @@ export interface CORSConfig {
 export interface AuthenticationConfig {
   type: 'apikey' | 'jwt' | 'oauth' | 'custom';
   provider?: string;
-  settings: Record<string, any>;
+  settings: Record<string, unknown>;
 }
 
 /**
@@ -756,7 +756,7 @@ export interface DashboardPanel {
   title: string;
   type: 'graph' | 'table' | 'stat' | 'gauge';
   query: string;
-  visualization: Record<string, any>;
+  visualization: Record<string, unknown>;
 }
 
 // ============================================================================

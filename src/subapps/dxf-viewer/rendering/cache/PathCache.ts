@@ -182,11 +182,13 @@ export class PathCache {
    * Υπολογίζει hash για ένα entity (για cache invalidation)
    */
   static calculateEntityHash(entity: EntityModel, transform?: { scale: number; offsetX: number; offsetY: number }): string {
-    // ✅ ENTERPRISE FIX: Use type guards to safely access entity-specific properties
-    const relevant: Record<string, any> = {
+    // 🏢 ENTERPRISE: Use type guards to safely access entity-specific properties
+    // LineEntity has lineWidth property, so we check if it exists on the entity
+    const entityWithLineWidth = entity as EntityModel & { lineWidth?: number };
+    const relevant: Record<string, unknown> = {
       type: entity.type,
       // Style properties that affect path (available on BaseEntity)
-      lineWidth: (entity as any).lineWidth || entity.lineweight,
+      lineWidth: entityWithLineWidth.lineWidth ?? entity.lineweight,
       // Transform properties
       transform: transform ? `${transform.scale}_${transform.offsetX}_${transform.offsetY}` : null
     };
