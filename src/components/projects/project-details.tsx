@@ -150,6 +150,8 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
                         componentMapping={PROJECT_COMPONENT_MAPPING}
                         defaultTab="general"
                         theme="default"
+                        // 🏢 ENTERPRISE: i18n - Use building namespace for tab labels
+                        translationNamespace="building"
                         additionalData={{
                             projectFloorplan,
                             parkingFloorplan,

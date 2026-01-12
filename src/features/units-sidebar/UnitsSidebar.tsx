@@ -63,6 +63,8 @@ export function UnitsSidebar({
           componentMapping={UNITS_COMPONENT_MAPPING}
           defaultTab="info"
           theme="default"
+          // 🏢 ENTERPRISE: i18n - Use building namespace for tab labels
+          translationNamespace="building"
           additionalData={{
             safeFloors,
             currentFloor,

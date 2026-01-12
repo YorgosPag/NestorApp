@@ -29,6 +29,8 @@ export function StorageTabs({ storage }: StorageTabsProps) {
       componentMapping={STORAGE_COMPONENT_MAPPING}
       defaultTab="general"
       theme="default"
+      // 🏢 ENTERPRISE: i18n - Use building namespace for tab labels
+      translationNamespace="building"
     />
   );
 }
