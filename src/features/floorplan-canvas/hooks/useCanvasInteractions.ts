@@ -1,10 +1,11 @@
 import { useCallback, RefObject } from 'react';
-import type { 
-  FloorData, 
-  CanvasMode, 
-  UIState, 
-  Point, 
-  MeasurementLine, 
+import type { Property } from '@/types/property-viewer';
+import type {
+  FloorData,
+  CanvasMode,
+  UIState,
+  Point,
+  MeasurementLine,
   PolyLine,
   ConnectionPair,
   CanvasDimensions
@@ -26,8 +27,8 @@ interface UseCanvasInteractionsProps {
   connectionPairs: ConnectionPair[];
   onConnectionPairsChange?: (pairs: ConnectionPair[]) => void;
   onPropertySelect?: (id: string | null) => void;
-  onPropertyCreate?: (property: any) => void;
-  onPropertyUpdate?: (id: string, updates: any) => void;
+  onPropertyCreate?: (property: Omit<Property, 'id'>) => void;
+  onPropertyUpdate?: (id: string, updates: Partial<Property>) => void;
   isReadOnly: boolean;
   dimensions: CanvasDimensions;
   GRID_SIZE: number;

@@ -36,6 +36,9 @@
     "title": "Building Filters",
     "tooltip": "Filters and View",
     "clearAll": "Clear Filters",
+    "clear": "Clear",
+    "searchPlaceholder": "Search buildings, addresses, descriptions...",
+    "allCompanies": "All companies",
     "states": {
       "active": "Active Buildings",
       "construction": "Under Construction",
@@ -90,6 +93,27 @@
     },
     "selection": {
       "selected": "{{count}} buildings selected"
+    },
+    "advanced": {
+      "copy": "Copy Selected",
+      "archive": "Archive",
+      "addToFavorites": "Add to Favorites",
+      "share": "Share",
+      "viewOnMap": "View on Map",
+      "createReport": "Create Report",
+      "scheduleVisit": "Schedule Visit",
+      "selectedCount": "{{count}} selected",
+      "activeFilters": "{{count}} filters active",
+      "synced": "Synced"
+    },
+    "export": {
+      "title": "Export Data",
+      "exportTo": "Export to:",
+      "excel": "Excel (.xlsx)",
+      "pdfReport": "PDF Report",
+      "statsDashboard": "Statistics Dashboard",
+      "timeline": "Timeline",
+      "import": "Import Data"
     }
   },
   "storages": {
@@ -259,6 +283,17 @@
     "ariaLabel": "Buildings List",
     "entityName": "Buildings",
     "searchPlaceholder": "Search buildings..."
+  },
+  "card": {
+    "timeline": {
+      "delivery": "Delivery:",
+      "daysDelay": "{{days}} days delay",
+      "deliveryToday": "Delivery today!",
+      "daysRemaining": "{{days}} days remaining"
+    },
+    "progress": {
+      "label": "Building Progress"
+    }
   },
   "customers": {
     "title": "Building Customers",

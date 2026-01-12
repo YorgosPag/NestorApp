@@ -1,8 +1,8 @@
 'use client';
 import * as React from 'react';
-import { applyFilters } from '../utils/filtering';
+import { applyFilters, type FilterableProperty } from '../utils/filtering';
 
-export function usePropertyGridFilters(allProperties: any[], filters: { propertyType: string[] }) {
+export function usePropertyGridFilters(allProperties: FilterableProperty[], filters: { propertyType: string[] }) {
   const [viewMode, setViewMode] = React.useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');

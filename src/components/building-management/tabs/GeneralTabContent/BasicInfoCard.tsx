@@ -13,7 +13,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface BasicInfoCardProps {
     formData: { name: string; description: string };
-    updateField: (field: string, value: any) => void;
+    updateField: (field: string, value: string | number) => void;
     isEditing: boolean;
     errors: { [key: string]: string };
 }

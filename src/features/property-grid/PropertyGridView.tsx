@@ -19,6 +19,7 @@ import { SearchBar } from './components/SearchBar';
 import { TypeSelect } from '@/components/property-viewer/TypeSelect';
 import { ViewModeToggle } from './components/ViewModeToggle';
 import { AdvancedFiltersPanel } from './components/AdvancedFiltersPanel';
+import type { FilterableProperty } from './utils/filtering';
 
 export function PropertyGridView() {
   const router = useRouter();
@@ -125,7 +126,7 @@ export function PropertyGridView() {
               ? "flex flex-col gap-4"
               : "flex flex-col gap-4"
             }>
-              {filteredProperties.map((property: any) => (
+              {filteredProperties.map((property: FilterableProperty) => (
                 <div key={property.id} className="w-full min-w-0 overflow-hidden">
                   {viewMode === 'grid'
                     ? <PropertyCard property={property} onViewFloorPlan={handleViewFloorPlan} />

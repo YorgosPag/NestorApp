@@ -11,7 +11,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatDate } from '@/lib/intl-utils';
 
 // 🏢 ENTERPRISE: Proper type safety - Zero 'any' tolerance
-interface Milestone {
+export interface Milestone {
+    id: string;
     status: 'completed' | 'in-progress' | 'pending' | 'delayed';
     title: string;
     type: string;

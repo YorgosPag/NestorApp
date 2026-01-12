@@ -1,10 +1,17 @@
-/** Property data for filtering */
-interface FilterableProperty {
+/** Property data for filtering and display */
+export interface FilterableProperty {
   id: string;
   name?: string;
   type?: string;
   price?: number;
   area?: number;
+  project?: string;
+  building?: string;
+  floor?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  tags?: string[];
+  photos?: string[];
   [key: string]: unknown;
 }
 

@@ -7,9 +7,16 @@ import { PhotoUploadService as FirebasePhotoUploadService } from '@/services/pho
 // TYPES & INTERFACES
 // ============================================================================
 
+// 🏢 ENTERPRISE: Proper progress type for upload handlers
+export interface UploadProgress {
+  loaded: number;
+  total: number;
+  percentage?: number;
+}
+
 export interface PhotoUploadHandlers {
-  logoUploadHandler?: (file: File, onProgress: (progress: any) => void) => Promise<FileUploadResult>;
-  photoUploadHandler?: (file: File, onProgress: (progress: any) => void) => Promise<FileUploadResult>;
+  logoUploadHandler?: (file: File, onProgress: (progress: UploadProgress) => void) => Promise<FileUploadResult>;
+  photoUploadHandler?: (file: File, onProgress: (progress: UploadProgress) => void) => Promise<FileUploadResult>;
 }
 
 export interface UnifiedPhotoHandlers {

@@ -72,9 +72,9 @@ export interface FloorPlanCanvasProps {
   onPolygonSelect?: (propertyId: string, isShiftClick: boolean) => void;
   onPropertySelect?: (propertyId: string | null) => void;
   onPolygonCreated?: (newProperty: Omit<Property, 'id'>) => void;
-  onPropertyCreate?: (property: any) => void;
+  onPropertyCreate?: (property: Omit<Property, 'id'>) => void;
   onPolygonUpdated?: (polygonId: string, vertices: Array<Point>) => void;
-  onPropertyUpdate?: (propertyId: string, data: any) => void;
+  onPropertyUpdate?: (propertyId: string, data: Partial<Property>) => void;
   onNavigateLevels?: (property: Property) => void;
   showGrid?: boolean;
   snapToGrid?: boolean;

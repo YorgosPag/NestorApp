@@ -6,7 +6,10 @@ export function safeSelectPrimary(isNodeEditMode: boolean, ids: string[]) {
   return isNodeEditMode ? ids[ids.length - 1] ?? null : null;
 }
 
-export function isDrawingTool(t: any) {
+// 🏢 ENTERPRISE: Proper type for drawing tool check
+type DrawingTool = 'create' | 'measure' | 'polyline' | null | undefined;
+
+export function isDrawingTool(t: DrawingTool | string): boolean {
   return t === 'create' || t === 'measure' || t === 'polyline';
 }
 

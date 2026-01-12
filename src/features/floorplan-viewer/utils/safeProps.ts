@@ -1,5 +1,29 @@
 // Safe props utilities με null protection
 
+// 🏢 ENTERPRISE: Proper types for floor data
+interface FloorData {
+  id?: string;
+  name?: string;
+  properties?: PropertyItem[];
+  metadata?: Record<string, unknown>;
+  floorPlanUrl?: string | null;
+  [key: string]: unknown;
+}
+
+interface PropertyItem {
+  id: string;
+  [key: string]: unknown;
+}
+
+interface SafeFloor {
+  id: string;
+  name: string;
+  properties: PropertyItem[];
+  metadata: Record<string, unknown>;
+  floorPlanUrl: string | null;
+  [key: string]: unknown;
+}
+
 export function asArray<T>(value: T[] | T | null | undefined): T[] {
   if (Array.isArray(value)) {
     return value;
@@ -10,7 +34,7 @@ export function asArray<T>(value: T[] | T | null | undefined): T[] {
   return [value];
 }
 
-export function ensureFloor(floor: any) {
+export function ensureFloor(floor: FloorData | null | undefined): SafeFloor {
   if (!floor) {
     return {
       id: 'default',
@@ -35,18 +59,22 @@ export function isNodeEditMode(mode: string): boolean {
   return mode === 'edit' || mode === 'create';
 }
 
-export function safeGetProperty(properties: any[], id: string | null) {
+export function safeGetProperty(properties: PropertyItem[], id: string | null): PropertyItem | null {
   if (!id || !Array.isArray(properties)) {
     return null;
   }
   return properties.find(p => p && p.id === id) || null;
 }
 
-export function safeUpdateProperties(properties: any[], id: string, updates: any) {
+export function safeUpdateProperties(
+  properties: PropertyItem[],
+  id: string,
+  updates: Partial<PropertyItem>
+): PropertyItem[] {
   if (!Array.isArray(properties)) {
     return [];
   }
-  return properties.map(p => 
+  return properties.map(p =>
     (p && p.id === id) ? { ...p, ...updates } : p
-  ).filter(Boolean);
+  ).filter((p): p is PropertyItem => Boolean(p));
 }

@@ -6,7 +6,7 @@ import { UnifiedFormField } from '@/components/core/FormFields/FormField';
 interface Props {
   label: string;
   value: string | number;
-  onChange: (value: any) => void;
+  onChange: (value: string | number) => void;
   type?: string;
   placeholder?: string;
   error?: string;

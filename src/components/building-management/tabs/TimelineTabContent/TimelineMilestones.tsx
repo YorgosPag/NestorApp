@@ -3,10 +3,10 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { MilestoneItem } from './MilestoneItem';
+import { MilestoneItem, type Milestone } from './MilestoneItem';
 
 interface TimelineMilestonesProps {
-    milestones: any[];
+    milestones: Milestone[];
     getStatusColor: (status: string) => string;
     getStatusText: (status: string) => string;
     getTypeIcon: (type: string) => string;

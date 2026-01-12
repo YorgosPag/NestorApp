@@ -4,12 +4,13 @@
 import { ServiceFormTabRenderer } from '@/components/generic/ServiceFormTabRenderer';
 import { getServiceSortedSections } from '@/config/service-config';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 
 interface ServiceContactTabbedSectionProps {
   formData: ContactFormData;
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
-  onPhotosChange?: (photos: any[]) => void;
+  onPhotosChange?: (photos: PhotoSlot[]) => void;
   setFormData?: (data: ContactFormData) => void;
   disabled?: boolean;
 }

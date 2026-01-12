@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 interface StorageFormBasicInfoProps {
   formData: Partial<StorageUnit>;
   errors: { [key: string]: string };
-  updateField: (field: string, value: any) => void;
+  updateField: (field: string, value: string | number) => void;
   generateAutoCode: () => void;
   formType: StorageType;
 }

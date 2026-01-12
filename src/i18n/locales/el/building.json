@@ -36,6 +36,9 @@
     "title": "Φίλτρα Κτιρίων",
     "tooltip": "Φίλτρα και Προβολή",
     "clearAll": "Καθαρισμός Φίλτρων",
+    "clear": "Καθαρισμός",
+    "searchPlaceholder": "Αναζήτηση κτιρίων, διευθύνσεων, περιγραφών...",
+    "allCompanies": "Όλες οι εταιρείες",
     "states": {
       "active": "Ενεργά Κτίρια",
       "construction": "Υπό Κατασκευή",
@@ -90,6 +93,27 @@
     },
     "selection": {
       "selected": "{{count}} επιλεγμένα κτίρια"
+    },
+    "advanced": {
+      "copy": "Αντιγραφή Επιλεγμένων",
+      "archive": "Αρχειοθέτηση",
+      "addToFavorites": "Προσθήκη στα Αγαπημένα",
+      "share": "Κοινοποίηση",
+      "viewOnMap": "Προβολή σε Χάρτη",
+      "createReport": "Δημιουργία Αναφοράς",
+      "scheduleVisit": "Προγραμματισμός Επίσκεψης",
+      "selectedCount": "{{count}} επιλεγμένα",
+      "activeFilters": "{{count}} φίλτρα ενεργά",
+      "synced": "Συγχρονισμένο"
+    },
+    "export": {
+      "title": "Εξαγωγή Δεδομένων",
+      "exportTo": "Εξαγωγή σε:",
+      "excel": "Excel (.xlsx)",
+      "pdfReport": "PDF Αναφορά",
+      "statsDashboard": "Στατιστικά Dashboard",
+      "timeline": "Χρονοδιάγραμμα",
+      "import": "Εισαγωγή Δεδομένων"
     }
   },
   "storages": {
@@ -259,6 +283,17 @@
     "ariaLabel": "Λίστα Κτιρίων",
     "entityName": "Κτίρια",
     "searchPlaceholder": "Αναζήτηση κτιρίων..."
+  },
+  "card": {
+    "timeline": {
+      "delivery": "Παράδοση:",
+      "daysDelay": "{{days}} ημέρες καθυστέρηση",
+      "deliveryToday": "Παράδοση σήμερα!",
+      "daysRemaining": "{{days}} ημέρες απομένουν"
+    },
+    "progress": {
+      "label": "Πρόοδος Κτιρίου"
+    }
   },
   "customers": {
     "title": "Πελάτες Κτιρίου",

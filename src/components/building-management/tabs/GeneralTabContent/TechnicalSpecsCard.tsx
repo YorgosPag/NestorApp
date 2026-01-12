@@ -13,14 +13,14 @@ import { calculateBuildingRatio, calculateCostPerSqm } from './utils';
 import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 
 interface TechnicalSpecsCardProps {
-    formData: { 
+    formData: {
         totalArea: number;
         builtArea: number;
         floors: number;
         units: number;
         totalValue: number;
     };
-    updateField: (field: string, value: any) => void;
+    updateField: (field: string, value: string | number) => void;
     isEditing: boolean;
     errors: { [key: string]: string };
 }

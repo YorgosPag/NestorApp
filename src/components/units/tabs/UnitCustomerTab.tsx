@@ -45,6 +45,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UnifiedCustomerCard } from '@/components/shared/customer-info';
 import { useOptimizedCustomerInfo } from './hooks/useOptimizedCustomerInfo';
 import type { Property } from '@/types/property-viewer';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /** Additional data passed from parent component */
 interface AdditionalTabData {
@@ -83,6 +85,8 @@ interface CustomerProfileSectionProps {
 }
 
 function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectionProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('units');
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -100,11 +104,11 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className={`${iconSizes.md} ${colors.text.info}`} />
-            Πληροφορίες Πελάτη
+            {t('customerTab.customerInfo')}
             <div className="ml-auto">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <AnimatedSpinner size="small" variant="info" />
-                <span>Φόρτωση...</span>
+                <span>{t('customerTab.loading')}</span>
               </div>
             </div>
           </CardTitle>
@@ -149,14 +153,14 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className={`${iconSizes.md} text-destructive`} />
-            Σφάλμα Φόρτωσης Πελάτη
+            {t('customerTab.loadingError')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Alert variant="destructive">
             <AlertTriangle className={iconSizes.sm} />
             <AlertDescription>
-              Δεν ήταν δυνατή η φόρτωση των στοιχείων του πελάτη: {error}
+              {t('customerTab.loadingErrorMessage')}: {error}
             </AlertDescription>
           </Alert>
           <div className="mt-4 flex gap-2">
@@ -165,14 +169,14 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
               onClick={refetch}
               className="flex-1"
             >
-              Επανάληψη Φόρτωσης
+              {t('customerTab.retryLoading')}
             </Button>
             <Button
               variant="ghost"
               onClick={() => window.location.reload()}
               className="flex-1"
             >
-              Reload Σελίδας
+              {t('customerTab.reloadPage')}
             </Button>
           </div>
         </CardContent>
@@ -186,9 +190,9 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <User className={`${iconSizes.md} ${colors.text.info}`} />
-          Πληροφορίες Πελάτη
+          {t('customerTab.customerInfo')}
           <Badge variant="outline" className="ml-auto">
-            Φορτώθηκε
+            {t('customerTab.loaded')}
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -206,7 +210,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
             }}
             role="button"
             tabIndex={0}
-            title="Κλικ για προβολή στη λίστα επαφών"
+            title={t('customerTab.viewInContacts')}
           >
             <div className={`${iconSizes.xl4} bg-primary/10 rounded-full flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors`}>
               <User className={`${iconSizes.xl} text-primary`} />
@@ -214,7 +218,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
-                  {customerInfo?.displayName || 'Άγνωστος πελάτης'}
+                  {customerInfo?.displayName || t('customerTab.unknownCustomer')}
                 </h3>
                 <ExternalLink className={`${iconSizes.sm} text-muted-foreground group-hover:text-primary transition-colors opacity-0 group-hover:opacity-100`} />
               </div>
@@ -232,7 +236,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
               )}
               <div className="text-xs text-muted-foreground flex items-center gap-2">
                 <Calendar className={iconSizes.xs} />
-                Φόρτωση: {customerInfo ? formatDateTime(customerInfo.fetchedAt, { hour: '2-digit', minute: '2-digit' }) : '—'}
+                {t('customerTab.fetchedAt')}: {customerInfo ? formatDateTime(customerInfo.fetchedAt, { hour: '2-digit', minute: '2-digit' }) : '—'}
               </div>
             </div>
             <div className="flex items-center text-muted-foreground group-hover:text-primary transition-colors">
@@ -244,7 +248,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
           <div className={`${colors.bg.info} ${quick.info} p-3`}>
             <p className={`text-sm ${colors.text.info} flex items-center gap-2`}>
               <ExternalLink className={iconSizes.sm} />
-              <strong>Tip:</strong> Κάνε κλικ στα στοιχεία του πελάτη για να τον δεις στη λίστα επαφών
+              <strong>{t('customerTab.tip')}:</strong> {t('customerTab.tipMessage')}
             </p>
           </div>
 

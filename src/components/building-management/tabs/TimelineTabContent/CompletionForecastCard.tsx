@@ -9,7 +9,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatDate } from '@/lib/intl-utils';
 
 interface CompletionForecastCardProps {
-    milestones: any[];
+    milestones: { status: string }[];
 }
 
 export function CompletionForecastCard({ milestones }: CompletionForecastCardProps) {

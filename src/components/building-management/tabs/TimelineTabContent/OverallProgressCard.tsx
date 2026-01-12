@@ -7,7 +7,7 @@ import type { Building } from '../../BuildingsPageContent';
 
 interface OverallProgressCardProps {
     building: Building;
-    milestones: any[];
+    milestones: { status: string }[];
 }
 
 export function OverallProgressCard({ building, milestones }: OverallProgressCardProps) {

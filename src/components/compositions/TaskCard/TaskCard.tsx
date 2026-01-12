@@ -94,15 +94,26 @@ const getPriorityColor = (priority: string) => {
   }
 };
 
-const formatTaskDate = (date: any) => {
+/** Date value that could be string, Date, or Firestore Timestamp */
+type TaskDateValue = string | Date | { toDate: () => Date } | null | undefined;
+
+const formatTaskDate = (date: TaskDateValue) => {
   if (!date) return 'Μη καθορισμένη';
-  const taskDate = typeof date === 'string' ? new Date(date) : date.toDate ? date.toDate() : date;
+  const taskDate = typeof date === 'string'
+    ? new Date(date)
+    : (date && typeof date === 'object' && 'toDate' in date)
+      ? date.toDate()
+      : date as Date;
   return formatDate(taskDate);
 };
 
-const isOverdue = (dueDate: any, status: string) => {
+const isOverdue = (dueDate: TaskDateValue, status: string) => {
   if (!dueDate || status === 'completed' || status === 'cancelled') return false;
-  const due = typeof dueDate === 'string' ? new Date(dueDate) : dueDate.toDate ? dueDate.toDate() : dueDate;
+  const due = typeof dueDate === 'string'
+    ? new Date(dueDate)
+    : (dueDate && typeof dueDate === 'object' && 'toDate' in dueDate)
+      ? dueDate.toDate()
+      : dueDate as Date;
   return due < new Date();
 };
 

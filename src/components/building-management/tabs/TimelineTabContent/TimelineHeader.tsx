@@ -4,7 +4,7 @@ import React from 'react';
 import { CommonBadge } from '@/core/badges';
 
 interface TimelineHeaderProps {
-    milestones: any[];
+    milestones: { status: string }[];
 }
 
 export function TimelineHeader({ milestones }: TimelineHeaderProps) {

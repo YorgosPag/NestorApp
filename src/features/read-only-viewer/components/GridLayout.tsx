@@ -2,13 +2,14 @@
 
 import React from 'react';
 import { PropertyGrid } from '@/components/property-viewer/PropertyGrid';
+import type { Property } from '@/types/property-viewer';
 
 export function GridLayout({
   filteredProperties,
   handlePolygonSelect,
   selectedPropertyIds,
 }: {
-  filteredProperties: any[];
+  filteredProperties: Property[];
   handlePolygonSelect: (id: string, isShiftClick: boolean) => void;
   selectedPropertyIds: string[];
 }) {

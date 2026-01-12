@@ -1,11 +1,17 @@
 import type { ReadOnlyViewerProps } from '../types';
 
+// 🏢 ENTERPRISE: Input props type for viewer passthrough
+interface ViewerInputProps {
+  setScale?: (scale: number) => void;
+  [key: string]: unknown;
+}
+
 /**
  * Χτίζει τα props προς FloorPlanViewer για read-only χρήση.
- * Δεν αλλάζει ονόματα/δομή· μόνο “κλειδώνει” τα editing APIs σε no-op.
+ * Δεν αλλάζει ονόματα/δομή· μόνο "κλειδώνει" τα editing APIs σε no-op.
  * Διατηρούμε το zoom (setScale) όπως στο αρχικό.
  */
-export function buildReadOnlyViewerProps(viewerProps: any): ReadOnlyViewerProps {
+export function buildReadOnlyViewerProps(viewerProps: ViewerInputProps): ReadOnlyViewerProps {
   return {
     ...viewerProps,
     activeTool: null,

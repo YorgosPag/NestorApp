@@ -10,8 +10,9 @@ import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
+import type { FilterableProperty } from '../utils/filtering';
 
-export function PropertyCard({ property, onViewFloorPlan }: { property: any; onViewFloorPlan: (id: string) => void; }) {
+export function PropertyCard({ property, onViewFloorPlan }: { property: FilterableProperty; onViewFloorPlan: (id: string) => void; }) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { quick, radius } = useBorderTokens();
