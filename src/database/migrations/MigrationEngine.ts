@@ -8,6 +8,7 @@ import {
   MigrationResult,
   MigrationConfig,
   MigrationContext,
+  MigrationBackupData,
   DEFAULT_MIGRATION_CONFIG
 } from './types';
 
@@ -226,13 +227,16 @@ export class MigrationEngine {
     console.log('✅ Post-migration validation passed');
   }
 
-  private async createBackup(migration: Migration): Promise<any> {
+  private async createBackup(migration: Migration): Promise<MigrationBackupData> {
     // Implementation would create database backup
     console.log('💾 Backup created successfully');
-    return { backupId: `backup_${migration.id}_${Date.now()}` };
+    return {
+      backupId: `backup_${migration.id}_${Date.now()}`,
+      timestamp: new Date()
+    };
   }
 
-  private async performFullRollback(migration: Migration, backupData: any): Promise<void> {
+  private async performFullRollback(migration: Migration, backupData: MigrationBackupData): Promise<void> {
     // Implementation would restore from backup
     console.log('🔄 Full rollback completed');
   }

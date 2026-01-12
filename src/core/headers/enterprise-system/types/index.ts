@@ -198,10 +198,17 @@ export type { CompactToolbarConfig, CompactToolbarProps } from '@/components/cor
 // 🚀 FUTURE EXTENSIBILITY
 // ============================================================================
 
-export interface HeaderPlugin {
+// 🏢 ENTERPRISE: Generic props interface for header plugins
+export interface HeaderPluginProps {
+  className?: string;
+  disabled?: boolean;
+  [key: string]: unknown;
+}
+
+export interface HeaderPlugin<P extends HeaderPluginProps = HeaderPluginProps> {
   name: string;
   version: string;
-  component: React.ComponentType<any>;
+  component: React.ComponentType<P>;
   dependencies?: string[];
 }
 

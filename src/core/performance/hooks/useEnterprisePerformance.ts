@@ -416,8 +416,14 @@ export function useApiPerformance() {
       const duration = performance.now() - startTime;
       recordApiCall(endpoint, duration, statusCode);
       return result;
-    } catch (error: any) {
-      statusCode = error?.status || error?.response?.status || 500;
+    } catch (error: unknown) {
+      // 🏢 ENTERPRISE: Type-safe error status extraction
+      if (error && typeof error === 'object') {
+        const errorObj = error as { status?: number; response?: { status?: number } };
+        statusCode = errorObj.status ?? errorObj.response?.status ?? 500;
+      } else {
+        statusCode = 500;
+      }
       const duration = performance.now() - startTime;
       recordApiCall(endpoint, duration, statusCode);
       throw error;

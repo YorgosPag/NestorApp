@@ -65,27 +65,27 @@ const AFO = {};
 const RL = {};
 const ECL = {};
 
-// 🏢 ENTERPRISE: Centralized filter labels (English - professional standard)
+// 🏢 ENTERPRISE: Centralized filter labels (Ελληνικά - enterprise standard)
 const FL = PROPERTY_FILTER_LABELS;
 const SP = {
-  general: 'Search...',
-  units_search: 'Search units...',
-  contacts_search: 'Search contacts...',
-  buildings_search: 'Search buildings...',
-  projects_search: 'Search projects...',
-  status_placeholder: 'Select status...',
-  project_placeholder: 'Select project...',
-  building_placeholder: 'Select building...',
-  floor_placeholder: 'Select floor...',
-  type_placeholder: 'Select type...',
-  priority_placeholder: 'Select priority...',
-  location_placeholder: 'Select location...',
-  company_placeholder: 'Select company...',
-  energy_class_placeholder: 'Select energy class...',
-  renovation_placeholder: 'Select renovation status...',
-  client_placeholder: 'Select client...',
-  risk_level_placeholder: 'Select risk level...',
-  complexity_placeholder: 'Select complexity...'
+  general: 'Αναζήτηση...',
+  units_search: 'Αναζήτηση μονάδων...',
+  contacts_search: 'Αναζήτηση επαφών...',
+  buildings_search: 'Αναζήτηση κτιρίων...',
+  projects_search: 'Αναζήτηση έργων...',
+  status_placeholder: 'Επιλέξτε κατάσταση...',
+  project_placeholder: 'Επιλέξτε έργο...',
+  building_placeholder: 'Επιλέξτε κτίριο...',
+  floor_placeholder: 'Επιλέξτε όροφο...',
+  type_placeholder: 'Επιλέξτε τύπο...',
+  priority_placeholder: 'Επιλέξτε προτεραιότητα...',
+  location_placeholder: 'Επιλέξτε τοποθεσία...',
+  company_placeholder: 'Επιλέξτε εταιρεία...',
+  energy_class_placeholder: 'Επιλέξτε ενεργειακή κλάση...',
+  renovation_placeholder: 'Επιλέξτε κατάσταση κτιρίου...',
+  client_placeholder: 'Επιλέξτε πελάτη...',
+  risk_level_placeholder: 'Επιλέξτε επίπεδο κινδύνου...',
+  complexity_placeholder: 'Επιλέξτε πολυπλοκότητα...'
 } as const;
 
 // 🏢 ENTERPRISE: Filter titles as i18n translation keys
@@ -363,7 +363,7 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'Priority filter',
           width: 1,
           options: [
-            { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_PRIORITIES },
             { value: 'high', label: PRIORITY_LABELS.high },
             { value: 'medium', label: PRIORITY_LABELS.medium },
             { value: 'low', label: PRIORITY_LABELS.low },
@@ -383,7 +383,7 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'Building type filter',
           width: 1,
           options: [
-            { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_TYPES },
             { value: 'residential', label: PROPERTY_BUILDING_TYPE_LABELS.residential },
             { value: 'commercial', label: PROPERTY_BUILDING_TYPE_LABELS.commercial },
             { value: 'industrial', label: PROPERTY_BUILDING_TYPE_LABELS.industrial },
@@ -402,7 +402,7 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'Project filter',
           width: 1,
           options: [
-            { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_PROJECTS },
             { value: 'project1', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_1_NAME || 'Project A' },
             { value: 'project2', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_2_NAME || 'Project B' },
             { value: 'project3', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_3_NAME || 'Project C' }
@@ -416,14 +416,14 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'Location filter',
           width: 1,
           options: [
-            { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_LOCATIONS },
             { value: 'main-city', label: GEOGRAPHIC_CONFIG.DEFAULT_CITY },
             { value: 'alternative-city', label: GEOGRAPHIC_CONFIG.ALTERNATIVE_CITY },
-            { value: 'city3', label: process.env.NEXT_PUBLIC_FILTER_CITY_3 || 'Patras' },
-            { value: 'city4', label: process.env.NEXT_PUBLIC_FILTER_CITY_4 || 'Heraklion' },
-            { value: 'city5', label: process.env.NEXT_PUBLIC_FILTER_CITY_5 || 'Volos' },
-            { value: 'city6', label: process.env.NEXT_PUBLIC_FILTER_CITY_6 || 'Kavala' },
-            { value: 'city7', label: process.env.NEXT_PUBLIC_FILTER_CITY_7 || 'Lamia' }
+            { value: 'city3', label: process.env.NEXT_PUBLIC_FILTER_CITY_3 || 'Πάτρα' },
+            { value: 'city4', label: process.env.NEXT_PUBLIC_FILTER_CITY_4 || 'Ηράκλειο' },
+            { value: 'city5', label: process.env.NEXT_PUBLIC_FILTER_CITY_5 || 'Βόλος' },
+            { value: 'city6', label: process.env.NEXT_PUBLIC_FILTER_CITY_6 || 'Καβάλα' },
+            { value: 'city7', label: process.env.NEXT_PUBLIC_FILTER_CITY_7 || 'Λαμία' }
           ]
         },
         {
@@ -434,10 +434,10 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'Company filter',
           width: 1,
           options: [
-            { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
-            { value: 'company1', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_1_NAME || 'Tech Corp.' },
-            { value: 'company2', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_2_NAME || 'Build Ltd.' },
-            { value: 'company3', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_3_NAME || 'Construction Inc.' }
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_COMPANIES },
+            { value: 'company1', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_1_NAME || 'Εταιρεία Α' },
+            { value: 'company2', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_2_NAME || 'Εταιρεία Β' },
+            { value: 'company3', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_3_NAME || 'Εταιρεία Γ' }
           ]
         }
       ]
@@ -527,16 +527,16 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'Energy class filter',
           width: 1,
           options: [
-            { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
-            { value: 'A+', label: ECL['A+'] },
-            { value: 'A', label: ECL.A },
-            { value: 'B+', label: ECL['B+'] },
-            { value: 'B', label: ECL.B },
-            { value: 'C', label: ECL.C },
-            { value: 'D', label: ECL.D },
-            { value: 'E', label: ECL.E },
-            { value: 'F', label: ECL.F },
-            { value: 'G', label: ECL.G }
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_ENERGY_CLASSES },
+            { value: 'A+', label: 'Α+' },
+            { value: 'A', label: 'Α' },
+            { value: 'B+', label: 'Β+' },
+            { value: 'B', label: 'Β' },
+            { value: 'C', label: 'Γ' },
+            { value: 'D', label: 'Δ' },
+            { value: 'E', label: 'Ε' },
+            { value: 'F', label: 'Ζ' },
+            { value: 'G', label: 'Η' }
           ]
         },
         {
@@ -561,7 +561,7 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'Renovation status filter',
           width: 1,
           options: [
-            { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_RENOVATIONS },
             { value: 'excellent', label: BUILDING_PROJECT_STATUS_LABELS.excellent },
             { value: 'very-good', label: BUILDING_PROJECT_STATUS_LABELS['very-good'] },
             { value: 'good', label: BUILDING_PROJECT_STATUS_LABELS.good },
@@ -616,7 +616,7 @@ export const projectFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'Priority filter',
           width: 1,
           options: [
-            { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_PRIORITIES },
             { value: 'critical', label: PRIORITY_LABELS.critical },
             { value: 'high', label: PRIORITY_LABELS.high },
             { value: 'medium', label: PRIORITY_LABELS.medium },
@@ -636,7 +636,7 @@ export const projectFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'Project type filter',
           width: 1,
           options: [
-            { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_TYPES },
             { value: 'residential', label: PROJECT_TYPE_LABELS.residential },
             { value: 'commercial', label: PROJECT_TYPE_LABELS.commercial },
             { value: 'industrial', label: PROPERTY_BUILDING_TYPE_LABELS.industrial },
@@ -654,11 +654,11 @@ export const projectFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'Company filter',
           width: 1,
           options: [
-            { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
-            { value: 'company1', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_1_NAME || 'Tech Corp.' },
-            { value: 'company2', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_2_NAME || 'Build Ltd.' },
-            { value: 'company3', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_3_NAME || 'Construction Inc.' },
-            { value: 'company4', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_4_NAME || 'Architecture Ltd.' }
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_COMPANIES },
+            { value: 'company1', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_1_NAME || 'Εταιρεία Α' },
+            { value: 'company2', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_2_NAME || 'Εταιρεία Β' },
+            { value: 'company3', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_3_NAME || 'Εταιρεία Γ' },
+            { value: 'company4', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_4_NAME || 'Εταιρεία Δ' }
           ]
         },
         {
@@ -669,15 +669,15 @@ export const projectFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'Location filter',
           width: 1,
           options: [
-            { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_LOCATIONS },
             { value: 'main-city', label: GEOGRAPHIC_CONFIG.DEFAULT_CITY },
             { value: 'alternative-city', label: GEOGRAPHIC_CONFIG.ALTERNATIVE_CITY },
-            { value: 'city3', label: process.env.NEXT_PUBLIC_FILTER_CITY_3 || 'Patras' },
-            { value: 'city4', label: process.env.NEXT_PUBLIC_FILTER_CITY_4 || 'Heraklion' },
-            { value: 'city5', label: process.env.NEXT_PUBLIC_FILTER_CITY_5 || 'Volos' },
-            { value: 'city6', label: process.env.NEXT_PUBLIC_FILTER_CITY_6 || 'Kavala' },
-            { value: 'city7', label: process.env.NEXT_PUBLIC_FILTER_CITY_7 || 'Lamia' },
-            { value: 'city8', label: process.env.NEXT_PUBLIC_FILTER_CITY_8 || 'Rhodes' }
+            { value: 'city3', label: process.env.NEXT_PUBLIC_FILTER_CITY_3 || 'Πάτρα' },
+            { value: 'city4', label: process.env.NEXT_PUBLIC_FILTER_CITY_4 || 'Ηράκλειο' },
+            { value: 'city5', label: process.env.NEXT_PUBLIC_FILTER_CITY_5 || 'Βόλος' },
+            { value: 'city6', label: process.env.NEXT_PUBLIC_FILTER_CITY_6 || 'Καβάλα' },
+            { value: 'city7', label: process.env.NEXT_PUBLIC_FILTER_CITY_7 || 'Λαμία' },
+            { value: 'city8', label: process.env.NEXT_PUBLIC_FILTER_CITY_8 || 'Ρόδος' }
           ]
         },
         {
@@ -689,7 +689,7 @@ export const projectFiltersConfig: FilterPanelConfig = {
           width: 1,
           // [ENTERPRISE]: Dynamic client options from database
           options: [
-            { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES }
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_CLIENTS }
             // Dynamic client options loaded from database via useClients() hook
           ]
         }
@@ -780,7 +780,7 @@ export const projectFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'Risk level filter',
           width: 1,
           options: [
-            { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_RISK_LEVELS },
             { value: 'low', label: RISK_COMPLEXITY_LABELS.low },
             { value: 'medium', label: RISK_COMPLEXITY_LABELS.medium },
             { value: 'high', label: RISK_COMPLEXITY_LABELS.high },
@@ -795,7 +795,7 @@ export const projectFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'Complexity filter',
           width: 1,
           options: [
-            { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_COMPLEXITIES },
             { value: 'simple', label: RISK_COMPLEXITY_LABELS.simple },
             { value: 'medium', label: RISK_COMPLEXITY_LABELS.medium },
             { value: 'complex', label: RISK_COMPLEXITY_LABELS.complex },

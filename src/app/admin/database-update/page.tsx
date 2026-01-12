@@ -264,7 +264,18 @@ export default function DatabaseUpdatePage() {
           const assignment = CONTACT_ASSIGNMENTS[contactId];
           const newStatus = STATUS_ASSIGNMENTS[assignment.role];
 
-          const updateData: any = {
+          // 🏢 ENTERPRISE: Type-safe unit update data
+          interface UnitUpdateData {
+            status: string;
+            updatedAt: ReturnType<typeof serverTimestamp>;
+            soldTo?: string;
+            saleDate?: string;
+            ownerId?: string;
+            tenantId?: string;
+            companyId?: string;
+          }
+
+          const updateData: UnitUpdateData = {
             status: newStatus,
             updatedAt: serverTimestamp()
           };

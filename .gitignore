@@ -107,3 +107,6 @@ Local_*.txt
 *.local.json
 *.local.yaml
 *.local.yml
+
+# Claude CLI temporary files
+tmpclaude-*

@@ -3,12 +3,26 @@
  * Type definitions for database migrations
  */
 
+// 🏢 ENTERPRISE: Type-safe migration data structures
+export interface MigrationStepResult {
+  affectedRecords?: number;
+  data?: Record<string, unknown>;
+  message?: string;
+}
+
+export interface MigrationBackupData {
+  backupId: string;
+  timestamp: Date;
+  tables?: string[];
+  snapshotData?: Record<string, unknown>;
+}
+
 export interface MigrationResult {
   success: boolean;
   migrationId: string;
   executedAt: Date;
   affectedRecords: number;
-  rollbackData?: any;
+  rollbackData?: MigrationBackupData;
   errors?: string[];
   warnings?: string[];
   executionTimeMs: number;
@@ -17,8 +31,8 @@ export interface MigrationResult {
 export interface MigrationStep {
   stepId: string;
   description: string;
-  execute: () => Promise<any>;
-  rollback?: () => Promise<any>;
+  execute: () => Promise<MigrationStepResult | void>;
+  rollback?: () => Promise<MigrationStepResult | void>;
   validate?: () => Promise<boolean>;
 }
 
@@ -41,10 +55,16 @@ export interface MigrationContext {
   backupRequired: boolean;
 }
 
+// 🏢 ENTERPRISE: Validation result structure
+export interface ValidationResult {
+  valid: boolean;
+  message?: string;
+}
+
 export interface ValidationRule {
   name: string;
   description: string;
-  validate: (data: any) => Promise<{ valid: boolean; message?: string }>;
+  validate: (data: unknown) => Promise<ValidationResult>;
 }
 
 export interface DataIntegrityCheck {

@@ -85,21 +85,67 @@ export const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = {
 //
 // ============================================================================
 
-// 🏢 ENTERPRISE: Core common filter labels (English - professional standard)
-// These serve as base values - i18n translation happens at component level
+// 🏢 ENTERPRISE: Core common filter labels (Ελληνικά - enterprise standard)
+// Professional UI labels for filter dropdowns
 export const COMMON_FILTER_LABELS = {
-  ALL_TYPES: 'All types',
-  ALL_STATUSES: 'All statuses',
-  ALL_FLOORS: 'All floors',
-  ALL_UNITS: 'All units',
-  ALL_AREAS: 'All areas'
+  ALL_TYPES: 'Όλοι οι τύποι',
+  ALL_STATUSES: 'Όλες οι καταστάσεις',
+  ALL_FLOORS: 'Όλοι οι όροφοι',
+  ALL_UNITS: 'Όλες οι μονάδες',
+  ALL_AREAS: 'Όλες οι περιοχές',
+  ALL_PROJECTS: 'Όλα τα έργα',
+  ALL_LOCATIONS: 'Όλες οι τοποθεσίες',
+  ALL_COMPANIES: 'Όλες οι εταιρείες',
+  ALL_CLIENTS: 'Όλοι οι πελάτες',
+  ALL_PRIORITIES: 'Όλες οι προτεραιότητες',
+  ALL_ENERGY_CLASSES: 'Όλες οι ενεργειακές κλάσεις',
+  ALL_RENOVATIONS: 'Όλες οι καταστάσεις κτιρίου',
+  ALL_RISK_LEVELS: 'Όλα τα επίπεδα κινδύνου',
+  ALL_COMPLEXITIES: 'Όλες οι πολυπλοκότητες'
 } as const;
 
-// Domain-specific extensions
+// Domain-specific extensions with all filter labels
 export const PROPERTY_FILTER_LABELS = {
   ...COMMON_FILTER_LABELS,
-  ALL_BUILDINGS: 'All buildings',
-  ALL_PROJECTS: 'All projects'
+  ALL_BUILDINGS: 'Όλα τα κτίρια',
+  ALL_PROJECTS: 'Όλα τα έργα',
+  // Field labels
+  search: 'Αναζήτηση',
+  price_range: 'Εύρος τιμής',
+  area_range: 'Εύρος εμβαδού',
+  value_range: 'Εύρος αξίας',
+  units_range: 'Αριθμός μονάδων',
+  budget_range: 'Εύρος προϋπολογισμού',
+  duration_range: 'Διάρκεια (μήνες)',
+  status: 'Κατάσταση',
+  project: 'Έργο',
+  building: 'Κτίριο',
+  floor: 'Όροφος',
+  type: 'Τύπος',
+  energy_class: 'Ενεργειακή κλάση',
+  renovation: 'Κατάσταση κτιρίου',
+  location: 'Τοποθεσία',
+  city: 'Πόλη',
+  company: 'Εταιρεία',
+  client: 'Πελάτης',
+  priority: 'Προτεραιότητα',
+  risk_level: 'Επίπεδο κινδύνου',
+  complexity: 'Πολυπλοκότητα',
+  year_built: 'Έτος κατασκευής',
+  // Checkbox labels
+  has_parking: 'Parking',
+  has_elevator: 'Ανελκυστήρας',
+  has_garden: 'Κήπος',
+  has_pool: 'Πισίνα',
+  has_storage: 'Αποθήκη',
+  accessibility: 'Πρόσβαση ΑμεΑ',
+  furnished: 'Επιπλωμένο',
+  has_properties: 'Έχει ακίνητα',
+  has_permits: 'Έχει άδειες',
+  has_financing: 'Έχει χρηματοδότηση',
+  has_subcontractors: 'Έχει υπεργολάβους',
+  has_issues: 'Έχει προβλήματα',
+  is_active: 'Ενεργά μόνο'
 } as const;
 
 // 🏢 ENTERPRISE: Storage domain filter labels (unified from storage/constants.ts)
@@ -136,27 +182,27 @@ const CONTACT_STATUSES = ['ACTIVE', 'INACTIVE', 'PENDING', 'COMPLETED'] as const
 // ✅ ENTERPRISE FIX: Fixed array access - use static labels since UNIT_STATUSES etc are arrays not objects
 export const UNIFIED_STATUS_FILTER_LABELS = {
   // Base statuses - static labels (UNIT_STATUSES, BUILDING_STATUSES are arrays)
-  AVAILABLE: 'Available',
-  SOLD: 'Sold',
-  RESERVED: 'Reserved',
-  MAINTENANCE: 'Maintenance',
-  OCCUPIED: 'Occupied',
+  AVAILABLE: 'Διαθέσιμο',
+  SOLD: 'Πωλήθηκε',
+  RESERVED: 'Δεσμευμένο',
+  MAINTENANCE: 'Συντήρηση',
+  OCCUPIED: 'Κατειλημμένο',
 
   // Project statuses - static labels (PROJECT_STATUSES is array)
-  PLANNING: 'Planning',
-  IN_PROGRESS: 'In Progress',
-  COMPLETED: 'Completed',
-  ON_HOLD: 'On Hold',
+  PLANNING: 'Σχεδιασμός',
+  IN_PROGRESS: 'Σε Εξέλιξη',
+  COMPLETED: 'Ολοκληρωμένο',
+  ON_HOLD: 'Σε Αναμονή',
 
   // Contact statuses - static labels (CONTACT_STATUSES is array)
-  ACTIVE: 'Active',
-  INACTIVE: 'Inactive',
-  ARCHIVED: 'Archived',
+  ACTIVE: 'Ενεργός',
+  INACTIVE: 'Ανενεργός',
+  ARCHIVED: 'Αρχειοθετημένο',
 
   // Extended status labels (migrated from AdvancedFilters)
-  LEAD: 'Lead',                      // from contact filters
-  PENDING: 'Pending',                // from various filters
-  CONSTRUCTION: 'Under Construction' // from building filters
+  LEAD: 'Υποψήφιος',                  // from contact filters
+  PENDING: 'Εκκρεμεί',                // from various filters
+  CONSTRUCTION: 'Υπό Κατασκευή'       // from building filters
 } as const;
 
 // ============================================================================
@@ -183,9 +229,9 @@ export const STORAGE_STATUS_LABELS = {
 
 // Project type labels (migrated from ProjectToolbar.tsx)
 export const PROJECT_TYPE_LABELS = {
-  residential: 'Residential',
-  commercial: 'Commercial',
-  infrastructure: 'Infrastructure'
+  residential: 'Οικιστικό',
+  commercial: 'Εμπορικό',
+  infrastructure: 'Υποδομή'
 } as const;
 
 // DXF Layer category labels (migrated from DXF Viewer Layer Manager)
@@ -632,11 +678,11 @@ export default {
 // ============================================================================
 
 export const PRIORITY_LABELS = {
-  high: 'High',
-  medium: 'Medium',
-  low: 'Low',
-  urgent: 'Urgent',
-  critical: 'Critical'
+  high: 'Υψηλή',
+  medium: 'Μέτρια',
+  low: 'Χαμηλή',
+  urgent: 'Επείγουσα',
+  critical: 'Κρίσιμη'
 } as const;
 
 // ============================================================================
@@ -644,18 +690,18 @@ export const PRIORITY_LABELS = {
 // ============================================================================
 
 export const BUILDING_PROJECT_STATUS_LABELS = {
-  'for-sale': 'For Sale',
-  'for-rent': 'For Rent',
-  'rented': 'Rented',
-  'withdrawn': 'Withdrawn',
-  'in_progress': 'In Progress',
-  'delayed': 'Delayed',
-  'cancelled': 'Cancelled',
-  'excellent': 'Excellent',
-  'very-good': 'Very Good',
-  'good': 'Good',
-  'needs-renovation': 'Needs Renovation',
-  'under-renovation': 'Under Renovation'
+  'for-sale': 'Προς Πώληση',
+  'for-rent': 'Προς Ενοικίαση',
+  'rented': 'Ενοικιασμένο',
+  'withdrawn': 'Αποσύρθηκε',
+  'in_progress': 'Σε Εξέλιξη',
+  'delayed': 'Καθυστερημένο',
+  'cancelled': 'Ακυρώθηκε',
+  'excellent': 'Άριστη',
+  'very-good': 'Πολύ Καλή',
+  'good': 'Καλή',
+  'needs-renovation': 'Χρειάζεται Ανακαίνιση',
+  'under-renovation': 'Υπό Ανακαίνιση'
 } as const;
 
 // ============================================================================
@@ -663,20 +709,20 @@ export const BUILDING_PROJECT_STATUS_LABELS = {
 // ============================================================================
 
 export const PROPERTY_BUILDING_TYPE_LABELS = {
-  'individual': 'Individuals',
-  'company': 'Companies',
-  'service': 'Services',
-  'residential': 'Residential',
-  'commercial': 'Commercial',
-  'industrial': 'Industrial',
-  'office': 'Offices',
-  'mixed': 'Mixed',
-  'warehouse': 'Warehouse',
-  'retail': 'Retail',
-  'hotel': 'Hotel',
-  'public': 'Public',
-  'renovation': 'Renovation',
-  'infrastructure': 'Infrastructure'
+  'individual': 'Ιδιώτες',
+  'company': 'Εταιρείες',
+  'service': 'Υπηρεσίες',
+  'residential': 'Οικιστικό',
+  'commercial': 'Εμπορικό',
+  'industrial': 'Βιομηχανικό',
+  'office': 'Γραφεία',
+  'mixed': 'Μικτό',
+  'warehouse': 'Αποθήκη',
+  'retail': 'Λιανική',
+  'hotel': 'Ξενοδοχείο',
+  'public': 'Δημόσιο',
+  'renovation': 'Ανακαίνιση',
+  'infrastructure': 'Υποδομή'
 } as const;
 
 // ============================================================================
@@ -840,12 +886,12 @@ export const EXTENDED_PROPERTY_TYPE_LABELS = {
 // ============================================================================
 
 export const RISK_COMPLEXITY_LABELS = {
-  'low': 'Low',
-  'medium': 'Medium',
-  'high': 'High',
-  'simple': 'Simple',
-  'complex': 'Complex',
-  'very_complex': 'Very Complex'
+  'low': 'Χαμηλός',
+  'medium': 'Μέτριος',
+  'high': 'Υψηλός',
+  'simple': 'Απλή',
+  'complex': 'Πολύπλοκη',
+  'very_complex': 'Πολύ Πολύπλοκη'
 } as const;
 
 // ============================================================================

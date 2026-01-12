@@ -217,21 +217,28 @@ export interface AlertRules {
   filters?: AlertFilter[];
 }
 
+// 🏢 ENTERPRISE: Type-safe configuration value types
+export type ConfigValue = string | number | boolean | null | ConfigValue[] | { [key: string]: ConfigValue };
+export type AlertConfigRecord = Record<string, ConfigValue>;
+
+// 🏢 ENTERPRISE: Type-safe condition value types
+export type ConditionValue = string | number | boolean | Date | string[] | number[] | { min: number; max: number };
+
 export interface AlertTrigger {
   type: 'point_entry' | 'polygon_overlap' | 'proximity' | 'custom';
-  config: Record<string, any>;
+  config: AlertConfigRecord;
 }
 
 export interface AlertCondition {
   field: string;
   operator: 'equals' | 'contains' | 'greater_than' | 'less_than' | 'between';
-  value: any;
+  value: ConditionValue;
   logicalOperator?: 'AND' | 'OR';
 }
 
 export interface AlertFilter {
   type: 'time_range' | 'user_type' | 'data_source' | 'custom';
-  config: Record<string, any>;
+  config: AlertConfigRecord;
 }
 
 export type NotificationChannel = 'email' | 'sms' | 'push' | 'webhook';
@@ -251,6 +258,10 @@ export interface CreateAlertZoneRequest {
 // ALERT EVENTS
 // ============================================================================
 
+// 🏢 ENTERPRISE: Type-safe event data
+export type EventDataValue = string | number | boolean | null | EventDataValue[] | { [key: string]: EventDataValue };
+export type EventDataRecord = Record<string, EventDataValue>;
+
 export interface AlertEvent {
   // Primary identifiers
   id: string;
@@ -258,7 +269,7 @@ export interface AlertEvent {
 
   // Event details
   eventType: string;
-  eventData: Record<string, any>; // Event specific data
+  eventData: EventDataRecord; // Event specific data
 
   // Geographic context
   triggerLocation?: GeoPoint; // Where the alert was triggered
@@ -290,7 +301,7 @@ export interface NotificationResult {
 export interface CreateAlertEventRequest {
   alertZoneId: string;
   eventType: string;
-  eventData: Record<string, any>;
+  eventData: EventDataRecord;
   triggerLocation?: GeoPoint;
   triggerPolygon?: GeoPolygon;
   createdBy?: string;
@@ -341,7 +352,7 @@ export interface DatabaseConfig {
   connectionTimeoutMs?: number;
 }
 
-export interface QueryResult<T = any> {
+export interface QueryResult<T = unknown> {
   rows: T[];
   rowCount: number;
   command: string;

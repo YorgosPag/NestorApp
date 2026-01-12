@@ -232,12 +232,13 @@ export class CachePerformanceIntegration {
 
   /**
    * 📏 Estimate data size in bytes
+   * 🏢 ENTERPRISE: Type-safe with unknown instead of any
    */
-  private estimateDataSize(data: any): number {
+  private estimateDataSize(data: unknown): number {
     try {
       const serialized = JSON.stringify(data);
       return new Blob([serialized]).size;
-    } catch (error) {
+    } catch {
       // Fallback estimation
       return String(data).length * 2; // Rough UTF-16 estimation
     }

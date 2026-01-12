@@ -52,7 +52,15 @@ interface EnterpriseFloorplan extends EnterpriseDocument {
   planType: 'architectural' | 'structural' | 'electrical' | 'mechanical';
   fileUrl?: string;
   fileName?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
+}
+
+// 🏢 ENTERPRISE: Type-safe legacy scene structure for backward compatibility
+interface LegacySceneData {
+  entities?: unknown[];
+  layers?: unknown[];
+  blocks?: unknown[];
+  [key: string]: unknown;
 }
 
 interface EnterpriseCADFile extends EnterpriseDocument {
@@ -65,7 +73,7 @@ interface EnterpriseCADFile extends EnterpriseDocument {
   entityCount?: number;
   sizeBytes?: number;
   checksum?: string;
-  scene?: any; // For backward compatibility
+  scene?: LegacySceneData; // For backward compatibility
 }
 
 interface EnterpriseCADLayer extends EnterpriseDocument {
@@ -75,7 +83,7 @@ interface EnterpriseCADLayer extends EnterpriseDocument {
   visibility: boolean;
   color?: string;
   lineType?: string;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
 }
 
 interface MigrationStats {

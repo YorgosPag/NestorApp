@@ -63,29 +63,45 @@ export {
 // 🏗️ ENTERPRISE COMPOSITION PATTERN
 // ============================================================================
 
+import type { LucideIcon } from 'lucide-react';
+
+/**
+ * 🏢 ENTERPRISE: Type-safe builder configuration
+ */
+interface HeaderBuilderConfig {
+  title?: {
+    title: string;
+    subtitle?: string;
+  };
+  search?: {
+    placeholder?: string;
+  };
+  icon?: LucideIcon;
+}
+
 /**
  * Enterprise Header Builder Pattern
  * Προγραμματιστικός τρόπος δημιουργίας headers
  */
 export class EnterpriseHeaderBuilder {
-  private config: any = {};
+  private config: HeaderBuilderConfig = {};
 
-  withTitle(title: string, subtitle?: string) {
+  withTitle(title: string, subtitle?: string): this {
     this.config.title = { title, subtitle };
     return this;
   }
 
-  withSearch(placeholder?: string) {
+  withSearch(placeholder?: string): this {
     this.config.search = { placeholder };
     return this;
   }
 
-  withIcon(icon: any) {
+  withIcon(icon: LucideIcon): this {
     this.config.icon = icon;
     return this;
   }
 
-  build() {
+  build(): HeaderBuilderConfig {
     return this.config;
   }
 }

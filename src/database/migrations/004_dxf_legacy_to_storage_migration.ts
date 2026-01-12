@@ -30,10 +30,18 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { COLLECTIONS } from '../../../config/firestore-collections';
 import { DxfFirestoreService } from '../../../subapps/dxf-viewer/services/dxf-firestore.service';
 
+// 🏢 ENTERPRISE: Type-safe legacy scene structure (massive serialized DXF data)
+interface LegacyDxfScene {
+  entities?: unknown[];
+  layers?: unknown[];
+  blocks?: unknown[];
+  [key: string]: unknown;
+}
+
 interface LegacyDxfData {
   id: string;
   fileName: string;
-  scene: any; // The problematic massive scene object
+  scene: LegacyDxfScene; // The problematic massive scene object
   lastModified: Timestamp;
   version?: number;
   checksum?: string;
