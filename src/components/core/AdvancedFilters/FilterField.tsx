@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search } from "lucide-react";
 import type { FilterFieldConfig } from './types';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /** Range value for filter fields */
 interface RangeValue {
@@ -25,6 +27,8 @@ interface FilterFieldProps {
 }
 
 export function FilterField({ config, value, onValueChange, onRangeChange }: FilterFieldProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const getColumnSpan = (width?: number) => {
     switch (width) {
@@ -58,8 +62,8 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
           <div className="flex gap-2">
             <Input
               type="number"
-              aria-label={`Ελάχιστη ${config.label?.toLowerCase()}`}
-              placeholder="Από"
+              aria-label={`${t('filters.minimum')} ${config.label?.toLowerCase()}`}
+              placeholder={t('filters.from')}
               className="h-9"
               value={value?.min ?? ''}
               onChange={(e) => onRangeChange?.('min', e.target.value)}
@@ -68,8 +72,8 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
             />
             <Input
               type="number"
-              aria-label={`Μέγιστη ${config.label?.toLowerCase()}`}
-              placeholder="Έως"
+              aria-label={`${t('filters.maximum')} ${config.label?.toLowerCase()}`}
+              placeholder={t('filters.to')}
               className="h-9"
               value={value?.max ?? ''}
               onChange={(e) => onRangeChange?.('max', e.target.value)}
@@ -118,12 +122,12 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
             <SelectTrigger className="h-9 w-full" aria-label={config.ariaLabel}>
               <SelectValue placeholder={
                 Array.isArray(value) && value.length > 0
-                  ? `${value.length} επιλεγμένα`
+                  ? t('filters.selectedCount', { count: value.length })
                   : config.placeholder
               } />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Όλα</SelectItem>
+              <SelectItem value="all">{t('filters.all')}</SelectItem>
               {config.options?.map(option => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label} {Array.isArray(value) && value.includes(option.value) ? '✓' : ''}

@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { UnitBadge } from '@/core/badges';
+import { PropertyBadge } from '@/core/badges';
+import type { PropertyStatus } from '@/core/types/BadgeTypes';
 import { Eye } from 'lucide-react';
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { cn } from '@/lib/utils';
@@ -49,9 +50,9 @@ export function UnitDetailsHeader({ unit }: { unit: Property | null }) {
           ]}
           variant="detailed"
         >
-          {/* Centralized UnitBadge Component */}
+          {/* Centralized PropertyBadge Component - Property.status uses PropertyStatus */}
           <div className="flex gap-2 mt-2">
-            <UnitBadge status={unit.status as any} size="sm" />
+            <PropertyBadge status={unit.status as PropertyStatus} size="sm" />
           </div>
         </EntityDetailsHeader>
       </div>

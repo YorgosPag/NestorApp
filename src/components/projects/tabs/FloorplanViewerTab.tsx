@@ -282,8 +282,8 @@ export function FloorplanViewerTab({
         ) : (
           <div className="flex flex-col items-center justify-center h-64 text-center">
             <Map className={`${iconSizes.xl} ${colors.text.muted} mb-4`} />
-            <h3 className={`text-lg font-semibold ${colors.text.muted} mb-2`}>Δεν υπάρχει κάτοψη</h3>
-            <p className={`${colors.text.muted} mb-4`}>Πατήστε "Προσθήκη Κάτοψη Έργου" για να φορτώσετε κάτοψη</p>
+            <h3 className={`text-lg font-semibold ${colors.text.muted} mb-2`}>{t('tabs.floorplan.noFloorplan.title')}</h3>
+            <p className={`${colors.text.muted} mb-4`}>{t('tabs.floorplan.noFloorplan.description')}</p>
           </div>
         )}
       </CardContent>

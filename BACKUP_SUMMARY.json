@@ -1,89 +1,72 @@
 {
   "category": "FEATURE",
-  "timestamp": "20260112_1400",
-  "shortDescription": "Google Sign-In + Avatar display - Enterprise OAuth 2.0",
-  "problem": "Only email/password authentication available",
-  "cause": "No social login providers configured",
+  "timestamp": "20260112_1800",
+  "shortDescription": "Auth givenName/familyName + Custom Domain nestorconstruct.gr",
+  "problem": "Η φόρμα εγγραφής είχε ένα πεδίο 'Όνομα' αντί για ξεχωριστά πεδία Όνομα + Επώνυμο. Επίσης το Google Sign-In popup εμφάνιζε το default Firebase domain.",
+  "cause": "Αρχικός σχεδιασμός με απλό displayName field. Firebase default authDomain configuration.",
   "filesChanged": [
-    "src/auth/contexts/AuthContext.tsx - GoogleAuthProvider + signInWithPopup",
-    "src/auth/components/AuthForm.tsx - Google button + official logo SVG",
-    "src/components/header/user-menu.tsx - Avatar from Google profile",
-    "src/i18n/locales/el/auth.json - Greek translations for Google auth",
-    "src/i18n/locales/en/auth.json - English translations for Google auth"
+    "src/auth/components/AuthForm.tsx - 2 separate name fields (Όνομα + Επώνυμο)",
+    "src/auth/contexts/AuthContext.tsx - completeProfile function + structured name storage",
+    "src/auth/types/auth.types.ts - SignUpData interface με givenName/familyName",
+    "src/i18n/locales/el/auth.json - Greek translations for name fields",
+    "src/i18n/locales/en/auth.json - English translations for name fields",
+    "src/i18n/locales/el/building.json - Building translations cleanup",
+    "src/i18n/locales/en/building.json - Building translations cleanup",
+    "src/i18n/config.ts - i18n configuration updates",
+    "src/i18n/hooks/useTranslation.ts - Translation hook improvements",
+    "src/i18n/lazy-config.ts - Lazy loading config",
+    "src/components/generic/UniversalTabsRenderer.tsx - Tabs improvements",
+    "src/components/projects/tabs/FloorplanViewerTab.tsx - Floorplan tab updates",
+    "src/subapps/dxf-viewer/config/modal-select/core/labels/tabs.ts - Tab labels",
+    "src/docs/AUTHENTICATION_SYSTEM.md - Full OAuth configuration documentation",
+    "Nestor_Pagonis_Logo.png - Logo for OAuth consent screen",
+    ".env.local (not committed) - authDomain = nestorconstruct.gr"
   ],
   "solution": {
-    "phase1": "Added GoogleAuthProvider with OAuth 2.0 scopes (email, profile)",
-    "phase2": "Created Google Sign-In button with official G logo (brand colors)",
-    "phase3": "Implemented Avatar display from user.photoURL",
-    "phase4": "Added i18n translations (EL/EN) for all Google auth strings",
-    "phase5": "Enterprise error handling for popup-blocked, cancelled, etc."
+    "phase1": "Updated auth.types.ts με SignUpData interface που περιέχει givenName + familyName",
+    "phase2": "Updated AuthContext με completeProfile function για Google users και updateUserProfile για structured name data",
+    "phase3": "Updated AuthForm με 2 ξεχωριστά input fields για Όνομα και Επώνυμο",
+    "phase4": "Added i18n translations για Greek και English (labels, placeholders, validation messages)",
+    "phase5": "Configured custom domain nestorconstruct.gr στο Firebase Console και Google Cloud Console OAuth credentials"
   },
   "technicalDetails": {
-    "authProvider": "Firebase GoogleAuthProvider",
-    "oauthScopes": ["email", "profile"],
-    "customParams": { "prompt": "select_account" },
-    "avatarFallback": "Generic User icon when no photoURL",
-    "referrerPolicy": "no-referrer for Google CDN images"
+    "customDomain": "nestorconstruct.gr",
+    "oauthConfig": {
+      "authorizedOrigins": ["https://pagonis-87766.firebaseapp.com", "https://nestorconstruct.gr"],
+      "authorizedRedirectURIs": [
+        "https://pagonis-87766.firebaseapp.com/__/auth/handler",
+        "https://nestorconstruct.gr/__/auth/handler"
+      ]
+    },
+    "dataModel": {
+      "givenName": "localStorage: givenName_{uid}",
+      "familyName": "localStorage: familyName_{uid}",
+      "displayName": "Firebase Auth: {givenName} {familyName}",
+      "profileComplete": "localStorage: profile_complete_{uid}"
+    },
+    "enterprisePattern": "SAP/Salesforce givenName + familyName + displayName pattern"
   },
   "verification": {
     "commits": [
-      "63c71b4 - feat(auth): Google Sign-In + Avatar display"
+      "6230448 - feat(auth): givenName/familyName fields + custom domain (nestorconstruct.gr)"
     ],
+    "checkpointTag": "checkpoint-auth-custom-domain-2026-01-12",
     "vercelPush": "Successful",
     "preCommitChecks": "All passed"
   },
   "testing": {
-    "googleSignIn": "Working - popup opens correctly",
-    "avatarDisplay": "Shows Google profile photo in header",
-    "i18nTranslations": "Loading correctly for EL/EN",
-    "errorHandling": "Localized messages for all auth errors"
-  },
-  "backlog": {
-    "authProviders": {
-      "apple": {
-        "status": "PENDING",
-        "trigger": "KPIs/telemetry showing friction in Apple-heavy audience OR iOS app development",
-        "requirements": [
-          "Apple Developer account",
-          "Firebase Apple provider configuration",
-          "Account linking strategy for existing users"
-        ]
-      },
-      "microsoft": {
-        "status": "PENDING",
-        "trigger": "Enterprise customer requirement for Entra ID/SSO integration",
-        "requirements": [
-          "Azure AD app registration",
-          "Firebase Microsoft provider configuration",
-          "SSO/SAML support consideration"
-        ]
-      }
-    },
-    "telemetryKPIs": {
-      "authFunnel": [
-        "Login page views",
-        "Auth method selection (email vs Google)",
-        "Sign-in success/failure rate by method",
-        "User agent analysis (iOS vs Android vs Desktop)",
-        "Drop-off points in auth flow"
-      ],
-      "decisionCriteria": {
-        "apple": "Add if >20% users on Apple devices AND Google sign-in friction detected",
-        "microsoft": "Add if enterprise customer explicitly requires Entra ID/SSO"
-      }
-    },
-    "securityConsiderations": {
-      "accountLinking": "Handle users signing in with different providers but same email",
-      "verifiedOnly": "Require email verification for sensitive operations",
-      "noDuplicates": "Single auth context, centralized error handling"
-    }
+    "signupForm": "Shows 2 separate name fields (Όνομα + Επώνυμο)",
+    "validation": "Greek validation messages appear correctly",
+    "googleOAuth": "Works with nestorconstruct.gr domain",
+    "translations": "Load correctly after cache clear",
+    "redirect_uri": "No mismatch error after OAuth config update"
   },
   "notes": [
-    "Google Sign-In fully operational",
-    "Firebase Console: Google provider enabled",
-    "Project name: Nestor Pagonis",
-    "Support email: georgios.pagonis@gmail.com",
-    "Apple/Microsoft deferred pending telemetry data"
+    "CRITICAL: Google OAuth Authorized Redirect URIs must include https://nestorconstruct.gr/__/auth/handler",
+    "CRITICAL: Google OAuth Authorized JavaScript Origins must include https://nestorconstruct.gr",
+    "Logo uploaded to Google OAuth consent screen - requires Brand Verification to display",
+    "givenName/familyName stored in localStorage (Firebase Auth doesn't support custom profile fields)",
+    "Full documentation in src/docs/AUTHENTICATION_SYSTEM.md"
   ],
   "contributors": {
     "user": "Giorgos Pagonis",
@@ -91,11 +74,11 @@
     "sessionDate": "2026-01-12"
   },
   "relatedBackups": [
+    "checkpoint-auth-custom-domain-2026-01-12",
     "v2026.01.12-turbopack-perf",
-    "v2026.01.12-batch6-fixes",
-    "v2026.01.12-final-session"
+    "v2026.01.12-batch6-fixes"
   ],
   "commits": [
-    "63c71b4 - feat(auth): Google Sign-In + Avatar display"
+    "6230448 - feat(auth): givenName/familyName fields + custom domain (nestorconstruct.gr)"
   ]
 }

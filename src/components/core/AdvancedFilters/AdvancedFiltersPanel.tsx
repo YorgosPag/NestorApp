@@ -13,6 +13,8 @@ import type { FilterPanelConfig, GenericFilterState } from './types';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface AdvancedFiltersPanelProps<T extends GenericFilterState> {
   config: FilterPanelConfig;
@@ -27,6 +29,8 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
   onFiltersChange,
   defaultOpen = false
 }: AdvancedFiltersPanelProps<T>) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
@@ -76,7 +80,8 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
         <CollapsibleTrigger asChild>
           <Button variant="ghost" className="w-full justify-start p-4 text-sm font-semibold">
             <Filter className={`${iconSizes.sm} mr-2`} />
-            {config.title}
+            {/* 🏢 ENTERPRISE: Support both translation keys and direct labels */}
+            {config.title.startsWith('filters.') ? t(config.title) : config.title}
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent>
@@ -103,7 +108,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
                   <CollapsibleTrigger asChild>
                     <Button variant="link" size="sm">
                       <Filter className={`${iconSizes.sm} mr-2`}/>
-                      {showAdvanced ? 'Απόκρυψη προηγμένων φίλτρων' : 'Εμφάνιση προηγμένων φίλτρων'}
+                      {showAdvanced ? t('filters.hideAdvanced') : t('filters.showAdvanced')}
                     </Button>
                   </CollapsibleTrigger>
                   <CollapsibleContent className={`mt-4 p-4 ${quick.card} ${colors.bg.primary} animate-in fade-in-0 zoom-in-95`}>
@@ -131,7 +136,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
                 <div className="flex justify-end pt-2">
                   <Button variant="ghost" size="sm" onClick={clearAllFilters}>
                     <RotateCcw className={`${iconSizes.sm} mr-2`} />
-                    Επαναφορά Φίλτρων
+                    {t('filters.resetFilters')}
                   </Button>
                 </div>
               )}

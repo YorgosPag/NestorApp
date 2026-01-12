@@ -49,5 +49,6 @@ export const getPropertyStatusConfig = (colors: UseSemanticColorsReturn) => {
  * ⚠️ DEPRECATED: Για backward compatibility ΜΟΝΟ
  * Αυτό θα αφαιρεθεί σε μελλοντική έκδοση.
  * Χρησιμοποίησε getPropertyStatusConfig(colors) αντί για αυτό.
+ * 🏢 ENTERPRISE: Type-safe empty object with proper typing
  */
-export const statusConfig = {} as any; // Empty για να μην σπάσει compilation
+export const statusConfig: Record<string, never> = {}; // Empty για να μην σπάσει compilation

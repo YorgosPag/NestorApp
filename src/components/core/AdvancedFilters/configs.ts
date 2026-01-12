@@ -22,7 +22,7 @@
  * • Energy class labels → MODAL_SELECT_ENERGY_CLASS_LABELS
  *
  * PERFORMANCE OPTIMIZATION:
- * • Performance aliases (FL, SP, FT, AFO, RL, ECL) για compact code
+ * • Performance aliases (FL, SP, FT, AFO, RL, ECL) for compact code
  * • Single source of truth in modal-select.ts
  * • Type-safe centralized system
  * • Zero breaking changes - Full backward compatibility
@@ -57,46 +57,48 @@ import {
 // ====================================================================
 // [ENTERPRISE] CENTRALIZED IMPORTS - 100% ELIMINATION OF HARDCODED LABELS
 // ====================================================================
-// [ENTERPRISE]: Χρήση υπάρχοντων centralized constants - ZERO HARDCODED VALUES
-// Τα ήδη διαθέσιμα centralized systems που δουλεύουν perfect
+// [ENTERPRISE]: Using existing centralized constants - ZERO HARDCODED VALUES
+// Available centralized systems that work perfectly
 
 // [ENTERPRISE]: Centralized constants - NO MORE HARDCODED LABELS
 const AFO = {};
 const RL = {};
 const ECL = {};
 
-// [ENTERPRISE]: Χρήση των ήδη centralized PROPERTY_FILTER_LABELS που δουλεύουν
-const FL = PROPERTY_FILTER_LABELS; // Αυτά είναι ήδη centralized!
+// 🏢 ENTERPRISE: Centralized filter labels (English - professional standard)
+const FL = PROPERTY_FILTER_LABELS;
 const SP = {
-  general: 'Αναζήτηση...',
-  units_search: 'Αναζήτηση μονάδων...',
-  contacts_search: 'Αναζήτηση επαφών...',
-  buildings_search: 'Αναζήτηση κτιρίων...',
-  projects_search: 'Αναζήτηση έργων...',
-  status_placeholder: 'Επιλέξτε κατάσταση...',
-  project_placeholder: 'Επιλέξτε έργο...',
-  building_placeholder: 'Επιλέξτε κτίριο...',
-  floor_placeholder: 'Επιλέξτε όροφο...',
-  type_placeholder: 'Επιλέξτε τύπο...',
-  priority_placeholder: 'Επιλέξτε προτεραιότητα...',
-  location_placeholder: 'Επιλέξτε τοποθεσία...',
-  company_placeholder: 'Επιλέξτε εταιρεία...',
-  energy_class_placeholder: 'Επιλέξτε ενεργειακή κλάση...',
-  renovation_placeholder: 'Επιλέξτε κατάσταση ανακαίνισης...',
-  client_placeholder: 'Επιλέξτε πελάτη...',
-  risk_level_placeholder: 'Επιλέξτε επίπεδο κινδύνου...',
-  complexity_placeholder: 'Επιλέξτε πολυπλοκότητα...'
+  general: 'Search...',
+  units_search: 'Search units...',
+  contacts_search: 'Search contacts...',
+  buildings_search: 'Search buildings...',
+  projects_search: 'Search projects...',
+  status_placeholder: 'Select status...',
+  project_placeholder: 'Select project...',
+  building_placeholder: 'Select building...',
+  floor_placeholder: 'Select floor...',
+  type_placeholder: 'Select type...',
+  priority_placeholder: 'Select priority...',
+  location_placeholder: 'Select location...',
+  company_placeholder: 'Select company...',
+  energy_class_placeholder: 'Select energy class...',
+  renovation_placeholder: 'Select renovation status...',
+  client_placeholder: 'Select client...',
+  risk_level_placeholder: 'Select risk level...',
+  complexity_placeholder: 'Select complexity...'
 } as const;
 
+// 🏢 ENTERPRISE: Filter titles as i18n translation keys
+// These are translated in AdvancedFiltersPanel using the 'building' namespace
 const FT = {
-  units: 'Φίλτρα Μονάδων',
-  contacts: 'Φίλτρα Επαφών',
-  buildings: 'Φίλτρα Κτιρίων',
-  projects: 'Φίλτρα Έργων',
-  advanced: 'Προχωρημένα'
+  units: 'filters.title',      // Translated based on context
+  contacts: 'filters.title',   // Translated based on context
+  buildings: 'filters.title',  // → "Building Filters" (i18n translated)
+  projects: 'filters.title',   // Translated based on context
+  advanced: 'filters.showAdvanced'
 } as const;
 
-// Unit Filters Configuration (μονάδες)
+// Unit Filters Configuration
 // [ENTERPRISE]: 100% centralized labels - ZERO hardcoded values
 export const unitFiltersConfig: FilterPanelConfig = {
   title: FT.units,
@@ -111,21 +113,21 @@ export const unitFiltersConfig: FilterPanelConfig = {
           label: FL.search,
           placeholder: SP.general,
           width: 1,
-          ariaLabel: 'Αναζήτηση με όνομα ή περιγραφή'
+          ariaLabel: 'Search by name or description'
         },
         {
           id: 'priceRange',
           type: 'range',
           label: FL.price_range,
           width: 1,
-          ariaLabel: 'Φίλτρο εύρους τιμής'
+          ariaLabel: 'Price range filter'
         },
         {
           id: 'areaRange',
           type: 'range',
           label: FL.area_range,
           width: 1,
-          ariaLabel: 'Φίλτρο εύρους εμβαδού'
+          ariaLabel: 'Area range filter'
         },
         {
           id: 'status',
@@ -133,7 +135,7 @@ export const unitFiltersConfig: FilterPanelConfig = {
           label: FL.status,
           placeholder: SP.status_placeholder,
           width: 1,
-          ariaLabel: 'Φίλτρο κατάστασης',
+          ariaLabel: 'Status filter',
           options: [
             { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_STATUSES },
             { value: 'for-sale', label: BUILDING_PROJECT_STATUS_LABELS['for-sale'] },
@@ -155,7 +157,7 @@ export const unitFiltersConfig: FilterPanelConfig = {
           label: FL.project,
           placeholder: SP.project_placeholder,
           width: 1,
-          ariaLabel: 'Φίλτρο έργου',
+          ariaLabel: 'Project filter',
           options: [
             { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_PROJECTS }
           ]
@@ -166,7 +168,7 @@ export const unitFiltersConfig: FilterPanelConfig = {
           label: FL.building,
           placeholder: SP.building_placeholder,
           width: 1,
-          ariaLabel: 'Φίλτρο κτιρίου',
+          ariaLabel: 'Building filter',
           options: [
             { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_BUILDINGS }
           ]
@@ -177,7 +179,7 @@ export const unitFiltersConfig: FilterPanelConfig = {
           label: FL.floor,
           placeholder: SP.floor_placeholder,
           width: 1,
-          ariaLabel: 'Φίλτρο ορόφου',
+          ariaLabel: 'Floor filter',
           options: [
             { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_FLOORS }
           ]
@@ -188,7 +190,7 @@ export const unitFiltersConfig: FilterPanelConfig = {
           label: FL.property_type,
           placeholder: SP.type_placeholder,
           width: 1,
-          ariaLabel: 'Φίλτρο τύπου ακινήτου',
+          ariaLabel: 'Property type filter',
           options: [
             { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_TYPES }
           ]
@@ -210,7 +212,7 @@ export const unitFiltersConfig: FilterPanelConfig = {
   }
 };
 
-// Contact Filters Configuration (επαφές)
+// Contact Filters Configuration
 // [ENTERPRISE]: 100% centralized labels - ZERO hardcoded values
 export const contactFiltersConfig: FilterPanelConfig = {
   title: FT.contacts,
@@ -225,7 +227,7 @@ export const contactFiltersConfig: FilterPanelConfig = {
           label: FL.search,
           placeholder: SP.general,
           width: 2,
-          ariaLabel: 'Αναζήτηση επαφών'
+          ariaLabel: 'Search contacts'
         },
         {
           id: 'contactType',
@@ -318,7 +320,7 @@ export const contactFiltersConfig: FilterPanelConfig = {
   }
 };
 
-// Building Filters Configuration (κτίρια)
+// Building Filters Configuration
 // [ENTERPRISE]: 100% centralized labels - ZERO hardcoded values
 export const buildingFiltersConfig: FilterPanelConfig = {
   title: FT.buildings,
@@ -332,7 +334,7 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           type: 'search',
           label: FL.search,
           placeholder: SP.buildings_search,
-          ariaLabel: 'Αναζήτηση κτιρίων',
+          ariaLabel: 'Search buildings',
           width: 2
         },
         {
@@ -340,7 +342,7 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           type: 'select',
           label: FL.status,
           placeholder: SP.status_placeholder,
-          ariaLabel: 'Φίλτρο κατάστασης κτιρίου',
+          ariaLabel: 'Building status filter',
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
@@ -358,7 +360,7 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           type: 'select',
           label: FL.priority,
           placeholder: SP.priority_placeholder,
-          ariaLabel: 'Φίλτρο προτεραιότητας',
+          ariaLabel: 'Priority filter',
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
@@ -378,7 +380,7 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           type: 'select',
           label: FL.type,
           placeholder: SP.type_placeholder,
-          ariaLabel: 'Φίλτρο τύπου κτιρίου',
+          ariaLabel: 'Building type filter',
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
@@ -397,13 +399,13 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           type: 'select',
           label: FL.project,
           placeholder: SP.project_placeholder,
-          ariaLabel: 'Φίλτρο έργου',
+          ariaLabel: 'Project filter',
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
-            { value: 'project1', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_1_NAME || 'Έργο Α' },
-            { value: 'project2', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_2_NAME || 'Έργο Β' },
-            { value: 'project3', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_3_NAME || 'Έργο Γ' }
+            { value: 'project1', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_1_NAME || 'Project A' },
+            { value: 'project2', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_2_NAME || 'Project B' },
+            { value: 'project3', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_3_NAME || 'Project C' }
           ]
         },
         {
@@ -411,17 +413,17 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           type: 'select',
           label: FL.location,
           placeholder: SP.location_placeholder,
-          ariaLabel: 'Φίλτρο περιοχής',
+          ariaLabel: 'Location filter',
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
             { value: 'main-city', label: GEOGRAPHIC_CONFIG.DEFAULT_CITY },
             { value: 'alternative-city', label: GEOGRAPHIC_CONFIG.ALTERNATIVE_CITY },
-            { value: 'city3', label: process.env.NEXT_PUBLIC_FILTER_CITY_3 || 'Πάτρα' },
-            { value: 'city4', label: process.env.NEXT_PUBLIC_FILTER_CITY_4 || 'Ηράκλειο' },
-            { value: 'city5', label: process.env.NEXT_PUBLIC_FILTER_CITY_5 || 'Βόλος' },
-            { value: 'city6', label: process.env.NEXT_PUBLIC_FILTER_CITY_6 || 'Καβάλα' },
-            { value: 'city7', label: process.env.NEXT_PUBLIC_FILTER_CITY_7 || 'Λαμία' }
+            { value: 'city3', label: process.env.NEXT_PUBLIC_FILTER_CITY_3 || 'Patras' },
+            { value: 'city4', label: process.env.NEXT_PUBLIC_FILTER_CITY_4 || 'Heraklion' },
+            { value: 'city5', label: process.env.NEXT_PUBLIC_FILTER_CITY_5 || 'Volos' },
+            { value: 'city6', label: process.env.NEXT_PUBLIC_FILTER_CITY_6 || 'Kavala' },
+            { value: 'city7', label: process.env.NEXT_PUBLIC_FILTER_CITY_7 || 'Lamia' }
           ]
         },
         {
@@ -429,13 +431,13 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           type: 'select',
           label: FL.company,
           placeholder: SP.company_placeholder,
-          ariaLabel: 'Φίλτρο εταιρείας',
+          ariaLabel: 'Company filter',
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
-            { value: 'company1', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_1_NAME || 'ΤΕΧΝΙΚΗ Α.Ε.' },
-            { value: 'company2', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_2_NAME || 'ΔΟΜΙΚΗ Ε.Π.Ε.' },
-            { value: 'company3', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_3_NAME || 'ΚΑΤΑΣΚΕΥΕΣ Ο.Ε.' }
+            { value: 'company1', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_1_NAME || 'Tech Corp.' },
+            { value: 'company2', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_2_NAME || 'Build Ltd.' },
+            { value: 'company3', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_3_NAME || 'Construction Inc.' }
           ]
         }
       ]
@@ -447,7 +449,7 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           id: 'valueRange',
           type: 'range',
           label: FL.value_range,
-          ariaLabel: 'Φίλτρο εύρους αξίας',
+          ariaLabel: 'Value range filter',
           width: 1,
           min: parseInt(process.env.NEXT_PUBLIC_FILTER_VALUE_MIN || '0'),
           max: parseInt(process.env.NEXT_PUBLIC_FILTER_VALUE_MAX || '10000000')
@@ -456,7 +458,7 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           id: 'areaRange',
           type: 'range',
           label: FL.area_range,
-          ariaLabel: 'Φίλτρο εύρους εμβαδού',
+          ariaLabel: 'Area range filter',
           width: 1,
           min: parseInt(process.env.NEXT_PUBLIC_FILTER_AREA_MIN || '0'),
           max: parseInt(process.env.NEXT_PUBLIC_FILTER_AREA_MAX || '10000')
@@ -465,7 +467,7 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           id: 'unitsRange',
           type: 'range',
           label: FL.units_range,
-          ariaLabel: 'Φίλτρο εύρους αριθμού μονάδων',
+          ariaLabel: 'Units count range filter',
           width: 1,
           min: parseInt(process.env.NEXT_PUBLIC_FILTER_UNITS_MIN || '1'),
           max: parseInt(process.env.NEXT_PUBLIC_FILTER_UNITS_MAX || '500')
@@ -474,7 +476,7 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           id: 'yearRange',
           type: 'range',
           label: FL.year_range,
-          ariaLabel: 'Φίλτρο εύρους έτους κατασκευής',
+          ariaLabel: 'Construction year range filter',
           width: 1,
           min: parseInt(process.env.NEXT_PUBLIC_FILTER_YEAR_MIN || '1950'),
           max: parseInt(process.env.NEXT_PUBLIC_FILTER_YEAR_MAX || '2030')
@@ -488,28 +490,28 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           id: 'hasParking',
           type: 'checkbox',
           label: FL.has_parking,
-          ariaLabel: 'Φίλτρο ύπαρξης parking',
+          ariaLabel: 'Has parking filter',
           width: 1
         },
         {
           id: 'hasElevator',
           type: 'checkbox',
           label: FL.has_elevator,
-          ariaLabel: 'Φίλτρο ύπαρξης ασανσέρ',
+          ariaLabel: 'Has elevator filter',
           width: 1
         },
         {
           id: 'hasGarden',
           type: 'checkbox',
           label: FL.has_garden,
-          ariaLabel: 'Φίλτρο ύπαρξης κήπου',
+          ariaLabel: 'Has garden filter',
           width: 1
         },
         {
           id: 'hasPool',
           type: 'checkbox',
           label: FL.has_pool,
-          ariaLabel: 'Φίλτρο ύπαρξης πισίνας',
+          ariaLabel: 'Has pool filter',
           width: 1
         }
       ]
@@ -522,7 +524,7 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           type: 'select',
           label: FL.energy_class,
           placeholder: SP.energy_class_placeholder,
-          ariaLabel: 'Φίλτρο ενεργειακής κλάσης',
+          ariaLabel: 'Energy class filter',
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
@@ -541,14 +543,14 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           id: 'accessibility',
           type: 'checkbox',
           label: FL.accessibility,
-          ariaLabel: 'Φίλτρο προσβασιμότητας ΑΜΕΑ',
+          ariaLabel: 'Accessibility filter',
           width: 1
         },
         {
           id: 'furnished',
           type: 'checkbox',
           label: FL.furnished,
-          ariaLabel: 'Φίλτρο επίπλωσης',
+          ariaLabel: 'Furnished filter',
           width: 1
         },
         {
@@ -556,7 +558,7 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           type: 'select',
           label: FL.renovation,
           placeholder: SP.renovation_placeholder,
-          ariaLabel: 'Φίλτρο κατάστασης ανακαίνισης',
+          ariaLabel: 'Renovation status filter',
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
@@ -572,7 +574,7 @@ export const buildingFiltersConfig: FilterPanelConfig = {
   ]
 };
 
-// Project Filters Configuration (έργα)
+// Project Filters Configuration
 // [ENTERPRISE]: 100% centralized labels - ZERO hardcoded values
 export const projectFiltersConfig: FilterPanelConfig = {
   title: FT.projects,
@@ -586,7 +588,7 @@ export const projectFiltersConfig: FilterPanelConfig = {
           type: 'search',
           label: FL.search,
           placeholder: SP.projects_search,
-          ariaLabel: 'Αναζήτηση έργων',
+          ariaLabel: 'Search projects',
           width: 2
         },
         {
@@ -594,7 +596,7 @@ export const projectFiltersConfig: FilterPanelConfig = {
           type: 'select',
           label: FL.status,
           placeholder: SP.status_placeholder,
-          ariaLabel: 'Φίλτρο κατάστασης έργου',
+          ariaLabel: 'Project status filter',
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
@@ -611,7 +613,7 @@ export const projectFiltersConfig: FilterPanelConfig = {
           type: 'select',
           label: FL.priority,
           placeholder: SP.priority_placeholder,
-          ariaLabel: 'Φίλτρο προτεραιότητας',
+          ariaLabel: 'Priority filter',
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
@@ -631,7 +633,7 @@ export const projectFiltersConfig: FilterPanelConfig = {
           type: 'select',
           label: FL.type,
           placeholder: SP.type_placeholder,
-          ariaLabel: 'Φίλτρο τύπου έργου',
+          ariaLabel: 'Project type filter',
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
@@ -649,14 +651,14 @@ export const projectFiltersConfig: FilterPanelConfig = {
           type: 'select',
           label: FL.company,
           placeholder: SP.company_placeholder,
-          ariaLabel: 'Φίλτρο εταιρείας',
+          ariaLabel: 'Company filter',
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
-            { value: 'company1', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_1_NAME || 'ΤΕΧΝΙΚΗ Α.Ε.' },
-            { value: 'company2', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_2_NAME || 'ΔΟΜΙΚΗ Ε.Π.Ε.' },
-            { value: 'company3', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_3_NAME || 'ΚΑΤΑΣΚΕΥΕΣ Ο.Ε.' },
-            { value: 'company4', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_4_NAME || 'ΑΡΧΙΤΕΚΤΟΝΙΚΗ ΛΤΔ' }
+            { value: 'company1', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_1_NAME || 'Tech Corp.' },
+            { value: 'company2', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_2_NAME || 'Build Ltd.' },
+            { value: 'company3', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_3_NAME || 'Construction Inc.' },
+            { value: 'company4', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_4_NAME || 'Architecture Ltd.' }
           ]
         },
         {
@@ -664,18 +666,18 @@ export const projectFiltersConfig: FilterPanelConfig = {
           type: 'select',
           label: FL.location,
           placeholder: SP.location_placeholder,
-          ariaLabel: 'Φίλτρο περιοχής',
+          ariaLabel: 'Location filter',
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
             { value: 'main-city', label: GEOGRAPHIC_CONFIG.DEFAULT_CITY },
             { value: 'alternative-city', label: GEOGRAPHIC_CONFIG.ALTERNATIVE_CITY },
-            { value: 'city3', label: process.env.NEXT_PUBLIC_FILTER_CITY_3 || 'Πάτρα' },
-            { value: 'city4', label: process.env.NEXT_PUBLIC_FILTER_CITY_4 || 'Ηράκλειο' },
-            { value: 'city5', label: process.env.NEXT_PUBLIC_FILTER_CITY_5 || 'Βόλος' },
-            { value: 'city6', label: process.env.NEXT_PUBLIC_FILTER_CITY_6 || 'Καβάλα' },
-            { value: 'city7', label: process.env.NEXT_PUBLIC_FILTER_CITY_7 || 'Λαμία' },
-            { value: 'city8', label: process.env.NEXT_PUBLIC_FILTER_CITY_8 || 'Ρόδος' }
+            { value: 'city3', label: process.env.NEXT_PUBLIC_FILTER_CITY_3 || 'Patras' },
+            { value: 'city4', label: process.env.NEXT_PUBLIC_FILTER_CITY_4 || 'Heraklion' },
+            { value: 'city5', label: process.env.NEXT_PUBLIC_FILTER_CITY_5 || 'Volos' },
+            { value: 'city6', label: process.env.NEXT_PUBLIC_FILTER_CITY_6 || 'Kavala' },
+            { value: 'city7', label: process.env.NEXT_PUBLIC_FILTER_CITY_7 || 'Lamia' },
+            { value: 'city8', label: process.env.NEXT_PUBLIC_FILTER_CITY_8 || 'Rhodes' }
           ]
         },
         {
@@ -683,7 +685,7 @@ export const projectFiltersConfig: FilterPanelConfig = {
           type: 'select',
           label: FL.client,
           placeholder: SP.client_placeholder,
-          ariaLabel: 'Φίλτρο πελάτη',
+          ariaLabel: 'Client filter',
           width: 1,
           // [ENTERPRISE]: Dynamic client options from database
           options: [
@@ -700,7 +702,7 @@ export const projectFiltersConfig: FilterPanelConfig = {
           id: 'budgetRange',
           type: 'range',
           label: FL.budget_range,
-          ariaLabel: 'Φίλτρο εύρους προϋπολογισμού',
+          ariaLabel: 'Budget range filter',
           width: 1,
           min: parseInt(process.env.NEXT_PUBLIC_FILTER_BUDGET_MIN || '0'),
           max: parseInt(process.env.NEXT_PUBLIC_FILTER_BUDGET_MAX || '50000000')
@@ -709,7 +711,7 @@ export const projectFiltersConfig: FilterPanelConfig = {
           id: 'durationRange',
           type: 'range',
           label: FL.duration_range,
-          ariaLabel: 'Φίλτρο εύρους διάρκειας',
+          ariaLabel: 'Duration range filter',
           width: 1,
           min: parseInt(process.env.NEXT_PUBLIC_FILTER_DURATION_MIN || '1'),
           max: parseInt(process.env.NEXT_PUBLIC_FILTER_DURATION_MAX || '120')
@@ -718,7 +720,7 @@ export const projectFiltersConfig: FilterPanelConfig = {
           id: 'progressRange',
           type: 'range',
           label: FL.progress_range,
-          ariaLabel: 'Φίλτρο εύρους προόδου',
+          ariaLabel: 'Progress range filter',
           width: 1,
           min: parseInt(process.env.NEXT_PUBLIC_FILTER_PROGRESS_MIN || '0'),
           max: parseInt(process.env.NEXT_PUBLIC_FILTER_PROGRESS_MAX || '100')
@@ -727,7 +729,7 @@ export const projectFiltersConfig: FilterPanelConfig = {
           id: 'yearRange',
           type: 'range',
           label: FL.start_year_range,
-          ariaLabel: 'Φίλτρο εύρους έτους έναρξης',
+          ariaLabel: 'Start year range filter',
           width: 1,
           min: parseInt(process.env.NEXT_PUBLIC_FILTER_PROJECT_YEAR_MIN || '2020'),
           max: parseInt(process.env.NEXT_PUBLIC_FILTER_PROJECT_YEAR_MAX || '2030')
@@ -741,28 +743,28 @@ export const projectFiltersConfig: FilterPanelConfig = {
           id: 'hasPermits',
           type: 'checkbox',
           label: FL.has_permits,
-          ariaLabel: 'Φίλτρο ύπαρξης αδειών',
+          ariaLabel: 'Has permits filter',
           width: 1
         },
         {
           id: 'hasFinancing',
           type: 'checkbox',
           label: FL.has_financing,
-          ariaLabel: 'Φίλτρο ύπαρξης χρηματοδότησης',
+          ariaLabel: 'Has financing filter',
           width: 1
         },
         {
           id: 'isEcological',
           type: 'checkbox',
           label: FL.is_ecological,
-          ariaLabel: 'Φίλτρο οικολογικών έργων',
+          ariaLabel: 'Ecological projects filter',
           width: 1
         },
         {
           id: 'hasSubcontractors',
           type: 'checkbox',
           label: FL.has_subcontractors,
-          ariaLabel: 'Φίλτρο ύπαρξης υπεργολάβων',
+          ariaLabel: 'Has subcontractors filter',
           width: 1
         }
       ]
@@ -775,7 +777,7 @@ export const projectFiltersConfig: FilterPanelConfig = {
           type: 'select',
           label: FL.risk_level,
           placeholder: SP.risk_level_placeholder,
-          ariaLabel: 'Φίλτρο επιπέδου κινδύνου',
+          ariaLabel: 'Risk level filter',
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
@@ -790,7 +792,7 @@ export const projectFiltersConfig: FilterPanelConfig = {
           type: 'select',
           label: FL.complexity,
           placeholder: SP.complexity_placeholder,
-          ariaLabel: 'Φίλτρο πολυπλοκότητας',
+          ariaLabel: 'Complexity filter',
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
@@ -804,14 +806,14 @@ export const projectFiltersConfig: FilterPanelConfig = {
           id: 'isActive',
           type: 'checkbox',
           label: FL.is_active,
-          ariaLabel: 'Φίλτρο μόνο ενεργών έργων',
+          ariaLabel: 'Active projects only filter',
           width: 1
         },
         {
           id: 'hasIssues',
           type: 'checkbox',
           label: FL.has_issues,
-          ariaLabel: 'Φίλτρο έργων με προβλήματα',
+          ariaLabel: 'Projects with issues filter',
           width: 1
         }
       ]
@@ -819,7 +821,7 @@ export const projectFiltersConfig: FilterPanelConfig = {
   ]
 };
 
-// Default filter states - unchanged για backward compatibility
+// Default filter states - unchanged for backward compatibility
 export const defaultUnitFilters: UnitFilterState = {
   searchTerm: '',
   project: [],

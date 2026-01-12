@@ -31,7 +31,13 @@ import {
   signInWithPopup
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import type { FirebaseAuthUser, SignUpData } from '../types/auth.types';
+import type {
+  FirebaseAuthUser,
+  SignUpData,
+  SessionValidationStatus,
+  SessionValidationResult,
+  SessionIssue
+} from '../types/auth.types';
 
 // =============================================================================
 // CONTEXT TYPES
@@ -114,6 +120,115 @@ function getErrorMessage(error: unknown): string {
 }
 
 // =============================================================================
+// 🛡️ SESSION VALIDATION - ENTERPRISE SECURITY
+// =============================================================================
+// Following Google/Microsoft/Okta enterprise security standards
+// Validates session integrity and handles corrupted auth states
+// =============================================================================
+
+/**
+ * Validate Firebase user session
+ * Enterprise pattern: Detect and handle corrupted/stale auth states
+ *
+ * @param firebaseUser - The Firebase user object to validate
+ * @returns SessionValidationResult with status and recommendations
+ */
+function validateSession(firebaseUser: FirebaseUser | null): SessionValidationResult {
+  const issues: SessionIssue[] = [];
+  const timestamp = new Date();
+  const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : undefined;
+
+  // No session - valid state (not logged in)
+  if (!firebaseUser) {
+    return {
+      isValid: true,
+      status: 'NO_SESSION',
+      issues: [],
+      recommendation: 'CONTINUE'
+    };
+  }
+
+  // Check for missing UID (should never happen, but defensive coding)
+  if (!firebaseUser.uid) {
+    issues.push({
+      code: 'INVALID_NO_UID',
+      message: 'User object exists but has no UID - corrupted state',
+      timestamp,
+      userAgent,
+      recoveryAttempted: false
+    });
+    return {
+      isValid: false,
+      status: 'INVALID_NO_UID',
+      issues,
+      recommendation: 'LOGOUT'
+    };
+  }
+
+  // Check for missing email (common corruption issue)
+  if (!firebaseUser.email) {
+    // Check if this is an anonymous user (which we don't support)
+    const isAnonymous = firebaseUser.isAnonymous;
+
+    if (isAnonymous) {
+      issues.push({
+        code: 'INVALID_ANONYMOUS',
+        message: 'Anonymous authentication detected - not supported in this application',
+        timestamp,
+        userAgent,
+        recoveryAttempted: false
+      });
+      return {
+        isValid: false,
+        status: 'INVALID_ANONYMOUS',
+        issues,
+        recommendation: 'LOGOUT'
+      };
+    }
+
+    // Non-anonymous user without email - corrupted state
+    issues.push({
+      code: 'INVALID_NO_EMAIL',
+      message: 'Authenticated user has no email - session may be corrupted',
+      timestamp,
+      userAgent,
+      recoveryAttempted: false
+    });
+    return {
+      isValid: false,
+      status: 'INVALID_NO_EMAIL',
+      issues,
+      recommendation: 'LOGOUT'
+    };
+  }
+
+  // Session is valid
+  return {
+    isValid: true,
+    status: 'VALID',
+    issues: [],
+    recommendation: 'CONTINUE'
+  };
+}
+
+/**
+ * Clear corrupted localStorage data for a user
+ * Enterprise pattern: Clean up stale data to prevent issues
+ */
+function clearCorruptedUserData(uid: string): void {
+  console.log('🧹 [AuthContext] Clearing corrupted user data for:', uid);
+
+  try {
+    localStorage.removeItem(`givenName_${uid}`);
+    localStorage.removeItem(`familyName_${uid}`);
+    localStorage.removeItem(`profile_complete_${uid}`);
+    console.log('✅ [AuthContext] Corrupted data cleared');
+  } catch (error) {
+    console.warn('⚠️ [AuthContext] Could not clear localStorage:', error);
+  }
+}
+
+// =============================================================================
 // AUTH PROVIDER
 // =============================================================================
 
@@ -131,8 +246,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // ==========================================================================
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       console.log('[ENTERPRISE] [AuthContext] Auth state changed:', firebaseUser?.uid || 'No user');
+
+      // 🛡️ ENTERPRISE: Session Validation
+      const validation = validateSession(firebaseUser);
+      console.log('[ENTERPRISE] [AuthContext] Session validation:', validation.status);
+
+      // Handle invalid sessions with auto-logout
+      if (!validation.isValid && validation.recommendation === 'LOGOUT') {
+        console.error('🚨 [AuthContext] INVALID SESSION DETECTED:', validation.status);
+        console.error('🚨 [AuthContext] Issues:', validation.issues);
+
+        // Clear corrupted data if UID exists
+        if (firebaseUser?.uid) {
+          clearCorruptedUserData(firebaseUser.uid);
+        }
+
+        // Auto-logout for security
+        try {
+          console.log('🔐 [AuthContext] Auto-logout triggered for security');
+          await firebaseSignOut(auth);
+        } catch (logoutError) {
+          console.error('⚠️ [AuthContext] Auto-logout failed:', logoutError);
+        }
+
+        setUser(null);
+        setLoading(false);
+        return;
+      }
 
       if (firebaseUser) {
         // Extract givenName and familyName from displayName if available
@@ -162,6 +304,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           photoURL: firebaseUser.photoURL,
           profileIncomplete
         };
+
+        console.log('✅ [AuthContext] Valid session established:', authUser.email);
         setUser(authUser);
       } else {
         setUser(null);

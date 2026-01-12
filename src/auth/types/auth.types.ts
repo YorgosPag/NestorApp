@@ -145,3 +145,48 @@ export interface ProtectedRouteProps {
   requiredRole?: UserRole;
   redirectTo?: string;
 }
+
+// =============================================================================
+// 🛡️ SESSION VALIDATION - ENTERPRISE SECURITY
+// =============================================================================
+// Following enterprise security standards (Google, Microsoft, Okta)
+// Validates session integrity and detects corrupted auth states
+// =============================================================================
+
+/**
+ * Session validation status codes
+ * Enterprise pattern: Explicit status codes for debugging and telemetry
+ */
+export type SessionValidationStatus =
+  | 'VALID'                    // Session is fully valid
+  | 'INVALID_NO_EMAIL'         // User authenticated but no email (corrupted state)
+  | 'INVALID_NO_UID'           // User object exists but no UID (corrupted state)
+  | 'INVALID_ANONYMOUS'        // Anonymous user (not supported in this app)
+  | 'EXPIRED'                  // Session token expired
+  | 'NO_SESSION';              // No active session
+
+/**
+ * Detected session issues for logging/telemetry
+ */
+export interface SessionIssue {
+  code: SessionValidationStatus;
+  message: string;
+  timestamp: Date;
+  /** User agent for debugging */
+  userAgent?: string;
+  /** Whether auto-recovery was attempted */
+  recoveryAttempted: boolean;
+}
+
+/**
+ * Session validation result
+ * Enterprise pattern: Detailed validation result for debugging
+ */
+export interface SessionValidationResult {
+  isValid: boolean;
+  status: SessionValidationStatus;
+  /** Detected issues (empty if valid) */
+  issues: SessionIssue[];
+  /** Recommendation for handling the session */
+  recommendation: 'CONTINUE' | 'LOGOUT' | 'REFRESH' | 'RE_AUTHENTICATE';
+}

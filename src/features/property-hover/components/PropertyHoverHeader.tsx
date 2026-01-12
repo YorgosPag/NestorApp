@@ -1,10 +1,26 @@
 'use client';
 import { PropertyBadge } from '@/core/badges';
+import type { PropertyStatus } from '@/core/types/BadgeTypes';
 import { cn } from '@/lib/utils';
 
-export function PropertyHoverHeader({ name, type, building, statusLabel, statusColor }:{
-  name: string; type: string; building: string; statusLabel: string; statusColor: string;
-}) {
+// 🏢 ENTERPRISE: Type-safe props with PropertyStatus
+interface PropertyHoverHeaderProps {
+  name: string;
+  type: string;
+  building: string;
+  statusLabel: string;
+  statusColor: string;
+  status?: PropertyStatus;
+}
+
+export function PropertyHoverHeader({
+  name,
+  type,
+  building,
+  statusLabel,
+  statusColor,
+  status = 'for-sale'
+}: PropertyHoverHeaderProps) {
   return (
     <div className="space-y-2">
       <div className="flex items-start justify-between gap-2">
@@ -13,7 +29,7 @@ export function PropertyHoverHeader({ name, type, building, statusLabel, statusC
           <span className="text-xs font-normal text-muted-foreground">{type} • {building}</span>
         </div>
         <PropertyBadge
-          status={'for-sale' as any}
+          status={status}
           variant="outline"
           size="sm"
           className={cn("text-xs flex-shrink-0", statusColor)}

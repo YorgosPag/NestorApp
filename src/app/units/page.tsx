@@ -365,7 +365,7 @@ function UnitsPageContent() {
         <ListContainer>
           {viewMode === 'list' ? (
             <UnitsSidebar
-              units={searchFilteredProperties as any}
+              units={searchFilteredProperties}
               selectedUnit={selectedUnit || null}
               onSelectUnit={handlePolygonSelect}
               selectedUnitIds={selectedPropertyIds}

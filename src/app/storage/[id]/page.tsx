@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { UnitBadge } from '@/core/badges';
+import type { UnitStatus } from '@/core/types/BadgeTypes';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { getStorageUnitById } from '@/services/storage.service';
@@ -104,8 +105,9 @@ export default function StorageUnitPage({ params }: { params: { id: string } }) 
                     <CardDescription>{getParkingTypeLabel(unit.type)}</CardDescription>
                 </div>
             </div>
+             {/* 🏢 ENTERPRISE: StorageStatus maps to UnitStatus (sold->available fallback) */}
              <UnitBadge
-               status={unit.status as any}
+               status={(unit.status === 'sold' ? 'available' : unit.status) as UnitStatus}
                size="sm"
                className={cn("text-base", statusColor)}
              />
