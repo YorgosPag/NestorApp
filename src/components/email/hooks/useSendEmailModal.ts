@@ -10,7 +10,7 @@ export function useSendEmailModal(lead?: Lead, onClose?: () => void, onEmailSent
     templateType: "custom",
     subject: "",
     message: "",
-    customData: {} as Record<string, any>,
+    customData: {} as Record<string, unknown>,
   });
   const [loading, setLoading] = useState(false);
 
@@ -116,8 +116,8 @@ export function useSendEmailModal(lead?: Lead, onClose?: () => void, onEmailSent
         onEmailSent?.();
       }
       
-    } catch (error: any) {
-      const errorMessage = error?.message || "Άγνωστο σφάλμα";
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Άγνωστο σφάλμα";
       toast.error(`❌ Σφάλμα αποστολής email: ${errorMessage}`);
       console.error("Email send error:", error);
     } finally {

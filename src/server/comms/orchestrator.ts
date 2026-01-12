@@ -8,6 +8,56 @@ export type CommunicationChannel = 'email' | 'telegram' | 'whatsapp' | 'sms';
 export type MessagePriority = 'low' | 'normal' | 'high' | 'urgent';
 export type MessageCategory = 'transactional' | 'marketing' | 'notification' | 'system';
 
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** Template variables for message personalization */
+export type TemplateVariables = Record<string, unknown>;
+
+/** Email attachment type */
+export interface EmailAttachment {
+  filename: string;
+  content: string | Buffer;
+  contentType?: string;
+  encoding?: string;
+}
+
+/** Telegram keyboard type (InlineKeyboard or ReplyKeyboard) */
+export interface TelegramKeyboard {
+  inline_keyboard?: Array<Array<{
+    text: string;
+    callback_data?: string;
+    url?: string;
+  }>>;
+  keyboard?: Array<Array<{
+    text: string;
+  }>>;
+  resize_keyboard?: boolean;
+  one_time_keyboard?: boolean;
+}
+
+/** WhatsApp template parameters */
+export type WhatsAppTemplateParams = Array<string | { type: string; text?: string; image?: { link: string } }>;
+
+/** Channel-specific metadata type */
+export interface ChannelMetadata {
+  chatId?: string;
+  parseMode?: 'HTML' | 'Markdown';
+  templateName?: string;
+  templateParams?: WhatsAppTemplateParams;
+}
+
+/** Firestore helpers interface */
+interface FirestoreHelpers {
+  collection: (db: unknown, path: string) => unknown;
+  addDoc: (collectionRef: unknown, data: Record<string, unknown>) => Promise<{ id: string }>;
+  Timestamp: {
+    now: () => unknown;
+    fromDate: (date: Date) => unknown;
+  };
+}
+
 export interface EnqueueMessageParams {
   // Core message data
   channels: CommunicationChannel[];
@@ -17,7 +67,7 @@ export interface EnqueueMessageParams {
   
   // Template and personalization
   templateId?: string;
-  variables?: Record<string, any>;
+  variables?: TemplateVariables;
   
   // Targeting and context
   entityType?: 'lead' | 'customer' | 'project' | 'task' | 'invoice';
@@ -37,16 +87,16 @@ export interface EnqueueMessageParams {
     email?: {
       from?: string;
       replyTo?: string;
-      attachments?: any[];
+      attachments?: EmailAttachment[];
     };
     telegram?: {
       chatId?: string;
       parseMode?: 'HTML' | 'Markdown';
-      keyboard?: any;
+      keyboard?: TelegramKeyboard;
     };
     whatsapp?: {
       templateName?: string;
-      templateParams?: any[];
+      templateParams?: WhatsAppTemplateParams;
     };
   };
 }
@@ -125,7 +175,7 @@ async function enqueueMessageForChannel(
   channel: CommunicationChannel,
   recipient: string,
   params: EnqueueMessageParams,
-  firestoreHelpers: any
+  firestoreHelpers: FirestoreHelpers
 ): Promise<string | null> {
   return await safeDbOperation(async (database) => {
     const { collection, addDoc, Timestamp } = firestoreHelpers;
@@ -227,8 +277,8 @@ function getPlatformName(channel: CommunicationChannel): string {
 /**
  * Get channel-specific metadata
  */
-function getChannelSpecificMetadata(channel: CommunicationChannel, params: EnqueueMessageParams): any {
-  const channelMeta = params.metadata?.[channel] || {};
+function getChannelSpecificMetadata(channel: CommunicationChannel, params: EnqueueMessageParams): ChannelMetadata {
+  const channelMeta = params.metadata?.[channel] ?? {};
   
   switch (channel) {
     case 'telegram':

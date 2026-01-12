@@ -24,6 +24,8 @@ import { NavigationCardToolbar } from './NavigationCardToolbar';
 import { NAVIGATION_ENTITIES } from '../config';
 import { ContextualNavigationService } from '@/services/navigation/ContextualNavigationService';
 import type { NavigationUnit, NavigationParkingSpot } from '../core/types';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // =============================================================================
 // 🏢 ENTERPRISE TYPE DEFINITIONS
@@ -108,6 +110,13 @@ export function BuildingSpacesTabs({
   defaultTab = 'units',
   className
 }: BuildingSpacesTabsProps) {
+  // ==========================================================================
+  // i18n HOOK
+  // ==========================================================================
+
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('navigation');
+
   // ==========================================================================
   // STATE MANAGEMENT
   // ==========================================================================
@@ -201,7 +210,7 @@ export function BuildingSpacesTabs({
     <section
       className={`bg-white dark:bg-card border border-border rounded-lg p-3 overflow-hidden ${className || ''}`}
       role="region"
-      aria-label="Χώροι Κτιρίου"
+      aria-label={t('buildingSpaces.sectionLabel')}
     >
       <TabsOnlyTriggers
         tabs={tabs}
@@ -228,12 +237,12 @@ export function BuildingSpacesTabs({
           <ul
             className="space-y-2 list-none max-h-48 pr-2 overflow-y-auto mt-2"
             role="list"
-            aria-label="Λίστα Μονάδων"
+            aria-label={t('buildingSpaces.units.listLabel')}
             data-navigation-scroll="true"
           >
             {filteredUnits.length === 0 ? (
               <li className="text-center py-4 text-gray-500 dark:text-muted-foreground text-sm">
-                Δεν υπάρχουν μονάδες
+                {t('buildingSpaces.units.empty')}
               </li>
             ) : (
               filteredUnits.map(unit => (
@@ -243,12 +252,12 @@ export function BuildingSpacesTabs({
                     icon={NAVIGATION_ENTITIES.unit.icon}
                     iconColor={NAVIGATION_ENTITIES.unit.color}
                     title={unit.name}
-                    subtitle={unit.type || 'Μονάδα'}
+                    subtitle={unit.type || t('buildingSpaces.units.defaultSubtitle')}
                     isSelected={isItemSelected(unit.id, 'units')}
                     variant="compact"
                     // 🔗 ENTERPRISE: Navigation to Units page
                     navigationHref={ContextualNavigationService.generateRoute('unit', unit.id, { action: 'select' })}
-                    navigationTooltip="Άνοιγμα στις Μονάδες"
+                    navigationTooltip={t('buildingSpaces.units.openTooltip')}
                   />
                 </li>
               ))
@@ -275,12 +284,12 @@ export function BuildingSpacesTabs({
           <ul
             className="space-y-2 list-none max-h-48 pr-2 overflow-y-auto mt-2"
             role="list"
-            aria-label="Λίστα Αποθηκών"
+            aria-label={t('buildingSpaces.storage.listLabel')}
             data-navigation-scroll="true"
           >
             {filteredStorages.length === 0 ? (
               <li className="text-center py-4 text-gray-500 dark:text-muted-foreground text-sm">
-                Δεν υπάρχουν αποθήκες
+                {t('buildingSpaces.storage.empty')}
               </li>
             ) : (
               filteredStorages.map(storage => (
@@ -290,12 +299,12 @@ export function BuildingSpacesTabs({
                     icon={NAVIGATION_ENTITIES.storage.icon}
                     iconColor={NAVIGATION_ENTITIES.storage.color}
                     title={storage.name}
-                    subtitle={storage.type || 'Αποθήκη'}
+                    subtitle={storage.type || t('buildingSpaces.storage.defaultSubtitle')}
                     isSelected={isItemSelected(storage.id, 'storage')}
                     variant="compact"
                     // 🔗 ENTERPRISE: Navigation to Storage page
                     navigationHref={ContextualNavigationService.generateRoute('storage', storage.id, { action: 'select' })}
-                    navigationTooltip="Άνοιγμα στις Αποθήκες"
+                    navigationTooltip={t('buildingSpaces.storage.openTooltip')}
                   />
                 </li>
               ))
@@ -322,12 +331,12 @@ export function BuildingSpacesTabs({
           <ul
             className="space-y-2 list-none max-h-48 pr-2 overflow-y-auto mt-2"
             role="list"
-            aria-label="Λίστα Θέσεων Στάθμευσης"
+            aria-label={t('buildingSpaces.parking.listLabel')}
             data-navigation-scroll="true"
           >
             {filteredParkingSpots.length === 0 ? (
               <li className="text-center py-4 text-gray-500 dark:text-muted-foreground text-sm">
-                Δεν υπάρχουν θέσεις στάθμευσης
+                {t('buildingSpaces.parking.empty')}
               </li>
             ) : (
               filteredParkingSpots.map(spot => (
@@ -336,13 +345,13 @@ export function BuildingSpacesTabs({
                     onClick={() => onParkingSelect(spot)}
                     icon={NAVIGATION_ENTITIES.parking.icon}
                     iconColor={NAVIGATION_ENTITIES.parking.color}
-                    title={`Θέση ${spot.number}`}
-                    subtitle={spot.location || spot.type || 'Πάρκινγκ'}
+                    title={t('buildingSpaces.parking.spotTitle', { number: spot.number })}
+                    subtitle={spot.location || spot.type || t('buildingSpaces.parking.defaultSubtitle')}
                     isSelected={isItemSelected(spot.id, 'parking')}
                     variant="compact"
                     // 🔗 ENTERPRISE: Navigation to Parking page
                     navigationHref={ContextualNavigationService.generateRoute('parking', spot.id, { action: 'select' })}
-                    navigationTooltip="Άνοιγμα στο Parking"
+                    navigationTooltip={t('buildingSpaces.parking.openTooltip')}
                   />
                 </li>
               ))

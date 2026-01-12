@@ -18,7 +18,7 @@ interface TestResult {
   test: string;
   status: "success" | "failed" | "warning";
   message: string;
-  details?: any;
+  details?: Record<string, unknown>;
   durationMs: number;
 }
 
@@ -64,7 +64,7 @@ function sleep(ms: number): Promise<void> {
 async function measureTest(
   category: string,
   test: string,
-  fn: () => Promise<{ status: "success" | "failed" | "warning"; message: string; details?: any }>
+  fn: () => Promise<{ status: "success" | "failed" | "warning"; message: string; details?: Record<string, unknown> }>
 ): Promise<TestResult> {
   const startTime = performance.now();
 
@@ -80,14 +80,14 @@ async function measureTest(
       details: result.details,
       durationMs
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     const durationMs = Math.round(performance.now() - startTime);
 
     return {
       category,
       test,
       status: "failed",
-      message: err.message || "Unknown error",
+      message: err instanceof Error ? err.message : "Unknown error",
       durationMs
     };
   }
@@ -211,8 +211,8 @@ async function testLegacyMigrationFunction(): Promise<TestResult> {
           lineSpecificDraft: migratedState.line.specific.draft
         }
       };
-    } catch (err: any) {
-      return { status: "failed", message: `❌ Migration error: ${err.message}` };
+    } catch (err: unknown) {
+      return { status: "failed", message: `❌ Migration error: ${err instanceof Error ? err.message : String(err)}` };
     }
   });
 }
@@ -259,8 +259,8 @@ async function testPreviewToDraftAlias(): Promise<TestResult> {
           details: { expected: UI_COLORS.TEST_PREVIEW_RED, actual: draftColor }
         };
       }
-    } catch (err: any) {
-      return { status: "failed", message: `❌ Alias test error: ${err.message}` };
+    } catch (err: unknown) {
+      return { status: "failed", message: `❌ Alias test error: ${err instanceof Error ? err.message : String(err)}` };
     }
   });
 }
@@ -307,8 +307,8 @@ async function testZodValidation(): Promise<TestResult> {
         message: "✅ Zod validation working (runtime type safety)",
         details: { validDataAccepted: true, invalidDataRejected: true }
       };
-    } catch (err: any) {
-      return { status: "failed", message: `❌ Validation error: ${err.message}` };
+    } catch (err: unknown) {
+      return { status: "failed", message: `❌ Validation error: ${err instanceof Error ? err.message : String(err)}` };
     }
   });
 }
@@ -375,8 +375,8 @@ async function testSaveLoadRoundTrip(): Promise<TestResult> {
           details: { expected: 0.789, actual: loadedWidth }
         };
       }
-    } catch (err: any) {
-      return { status: "failed", message: `❌ Round-trip error: ${err.message}` };
+    } catch (err: unknown) {
+      return { status: "failed", message: `❌ Round-trip error: ${err instanceof Error ? err.message : String(err)}` };
     }
   });
 }
@@ -404,8 +404,8 @@ async function testCompressionThreshold(): Promise<TestResult> {
           details: { size: jsonStr.length, threshold: 1024 }
         };
       }
-    } catch (err: any) {
-      return { status: "failed", message: `❌ Compression test error: ${err.message}` };
+    } catch (err: unknown) {
+      return { status: "failed", message: `❌ Compression test error: ${err instanceof Error ? err.message : String(err)}` };
     }
   });
 }
@@ -432,8 +432,8 @@ async function testShadowModeEnabled(): Promise<TestResult> {
           details: { shadowMode: false }
         };
       }
-    } catch (err: any) {
-      return { status: "failed", message: `❌ Feature flag error: ${err.message}` };
+    } catch (err: unknown) {
+      return { status: "failed", message: `❌ Feature flag error: ${err instanceof Error ? err.message : String(err)}` };
     }
   });
 }
@@ -466,8 +466,8 @@ async function testDualProviderArchitecture(): Promise<TestResult> {
           productionMode: EXPERIMENTAL_FEATURES.ENTERPRISE_SETTINGS_PRODUCTION_MODE
         }
       };
-    } catch (err: any) {
-      return { status: "failed", message: `❌ Provider integration error: ${err.message}` };
+    } catch (err: unknown) {
+      return { status: "failed", message: `❌ Provider integration error: ${err instanceof Error ? err.message : String(err)}` };
     }
   });
 }
@@ -517,8 +517,8 @@ async function testFactoryDefaults(): Promise<TestResult> {
           layers: { general: hasGeneral, specific: hasSpecific, overrides: hasOverrides }
         }
       };
-    } catch (err: any) {
-      return { status: "failed", message: `❌ Factory defaults error: ${err.message}` };
+    } catch (err: unknown) {
+      return { status: "failed", message: `❌ Factory defaults error: ${err instanceof Error ? err.message : String(err)}` };
     }
   });
 }
@@ -538,8 +538,8 @@ async function testMetricsTracking(): Promise<TestResult> {
         message: "✅ Metrics system available (production telemetry ready)",
         details: { module: "Metrics" }
       };
-    } catch (err: any) {
-      return { status: "failed", message: `❌ Metrics error: ${err.message}` };
+    } catch (err: unknown) {
+      return { status: "failed", message: `❌ Metrics error: ${err instanceof Error ? err.message : String(err)}` };
     }
   });
 }
@@ -555,8 +555,8 @@ async function testLoggerAvailable(): Promise<TestResult> {
         message: "✅ Logger system available (production logging ready)",
         details: { module: "Logger" }
       };
-    } catch (err: any) {
-      return { status: "failed", message: `❌ Logger error: ${err.message}` };
+    } catch (err: unknown) {
+      return { status: "failed", message: `❌ Logger error: ${err instanceof Error ? err.message : String(err)}` };
     }
   });
 }
@@ -658,6 +658,12 @@ export async function runEnterpriseSettingsTests(): Promise<SettingsTestReport> 
 }
 
 // Browser console integration
+declare global {
+  interface Window {
+    runEnterpriseSettingsTests?: typeof runEnterpriseSettingsTests;
+  }
+}
+
 if (typeof window !== 'undefined') {
-  (window as any).runEnterpriseSettingsTests = runEnterpriseSettingsTests;
+  window.runEnterpriseSettingsTests = runEnterpriseSettingsTests;
 }

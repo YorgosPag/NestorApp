@@ -8,10 +8,19 @@ import { Search } from "lucide-react";
 import type { FilterFieldConfig } from './types';
 import { useIconSizes } from '@/hooks/useIconSizes';
 
+/** Range value for filter fields */
+interface RangeValue {
+  min?: number;
+  max?: number;
+}
+
+/** Possible filter field values */
+type FilterFieldValue = string | string[] | boolean | number | RangeValue | undefined;
+
 interface FilterFieldProps {
   config: FilterFieldConfig;
-  value: any;
-  onValueChange: (value: any) => void;
+  value: FilterFieldValue;
+  onValueChange: (value: FilterFieldValue) => void;
   onRangeChange?: (subKey: 'min' | 'max', value: string) => void;
 }
 

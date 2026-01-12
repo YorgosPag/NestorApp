@@ -90,13 +90,13 @@ export interface FloorPlanViewerLayoutProps {
   onFloorChange?: (floorId: string | null) => void;
   selectedPropertyId?: string | null;
   onPropertySelect?: (propertyId: string) => void;
-  onPropertyCreate?: (property: any) => void;
-  onPropertyUpdate?: (propertyId: string, property: any) => void;
+  onPropertyCreate?: (property: Partial<Property>) => void;
+  onPropertyUpdate?: (propertyId: string, property: Partial<Property>) => void;
   viewMode?: 'view' | 'edit' | 'create';
   onViewModeChange?: (mode: 'view' | 'edit' | 'create') => void;
   showSidebar?: boolean;
   sidebarWidth?: number;
-  connectionPairs?: any[];
-  onConnectionPairsChange?: (pairs: any[]) => void;
+  connectionPairs?: Connection[];
+  onConnectionPairsChange?: (pairs: Connection[]) => void;
   className?: string;
 }

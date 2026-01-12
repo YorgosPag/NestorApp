@@ -9,8 +9,49 @@
 // ============================================================================
 
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { EmailInfo, PhoneInfo, SocialMediaInfo } from '@/types/contacts';
 import { extractPhotoURL, extractMultiplePhotoURLs } from '../extractors/photo-urls';
 import { createEmailsArray, createPhonesArray } from '../extractors/arrays';
+
+/** Mapped individual contact data (partial, without timestamps) */
+interface MappedIndividualContactData {
+  type: 'individual';
+  firstName?: string;
+  lastName?: string;
+  fatherName?: string;
+  motherName?: string;
+  birthDate?: string;
+  birthCountry?: string;
+  gender?: string;
+  amka?: string;
+  documentType?: string;
+  documentIssuer?: string;
+  documentNumber?: string;
+  documentIssueDate?: string;
+  documentExpiryDate?: string;
+  vatNumber?: string;
+  taxOffice?: string;
+  profession?: string;
+  specialty?: string;
+  employer?: string;
+  position?: string;
+  workAddress?: string;
+  workWebsite?: string;
+  socialMedia?: SocialMediaInfo | Record<string, string>;
+  websites?: string;
+  photoURL?: string;
+  multiplePhotoURLs: string[];
+  emails: EmailInfo[];
+  phones: PhoneInfo[];
+  isFavorite: boolean;
+  status: 'active' | 'inactive' | 'archived';
+  notes?: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+  email?: string;
+  phone?: string;
+}
 
 /**
  * Map Individual Contact form data to Contact object
@@ -18,7 +59,7 @@ import { createEmailsArray, createPhonesArray } from '../extractors/arrays';
  * @param formData - Contact form data
  * @returns Individual contact data
  */
-export function mapIndividualFormData(formData: ContactFormData): any {
+export function mapIndividualFormData(formData: ContactFormData): MappedIndividualContactData {
   const multiplePhotoURLs = extractMultiplePhotoURLs(formData);
   const photoURL = extractPhotoURL(formData, 'individual');
 

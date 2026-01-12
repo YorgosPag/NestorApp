@@ -41,7 +41,7 @@ class DebugManagerClass {
    * Conditional console.log replacement
    * Only logs if module is enabled and rate limit not exceeded
    */
-  log(module: string, ...args: any[]) {
+  log(module: string, ...args: unknown[]) {
     if (!this.config.enabled) return;
     if (!this.config.enabledModules.has(module)) return;
 
@@ -63,14 +63,14 @@ class DebugManagerClass {
   /**
    * Force log (bypasses rate limiting) - for critical errors
    */
-  error(module: string, ...args: any[]) {
+  error(module: string, ...args: unknown[]) {
     console.error(`[${module}] ERROR:`, ...args);
   }
 
   /**
    * Warn log (bypasses rate limiting) - for warnings
    */
-  warn(module: string, ...args: any[]) {
+  warn(module: string, ...args: unknown[]) {
     console.warn(`[${module}] WARN:`, ...args);
   }
 
@@ -87,11 +87,13 @@ class DebugManagerClass {
 export const DebugManager = new DebugManagerClass();
 
 // Convenience function for quick access
-export const dlog = (module: string, ...args: any[]) => {
+export const dlog = (module: string, ...args: unknown[]) => {
   DebugManager.log(module, ...args);
 };
 
 // Enable debugging in development
 if (process.env.NODE_ENV === 'development') {
-  (window as any).__DEBUG_MANAGER__ = DebugManager;
+  // 🏢 ENTERPRISE: Type assertion for window global (debug only)
+  const debugWindow = window as Window & { __DEBUG_MANAGER__?: typeof DebugManager };
+  debugWindow.__DEBUG_MANAGER__ = DebugManager;
 }

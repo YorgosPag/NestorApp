@@ -5,6 +5,25 @@ import { mapCompanyContactToFormData } from './fieldMappers/companyMapper';
 import { mapServiceContactToFormData } from './fieldMappers/serviceMapper';
 
 // ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** Generic object type for safe field access */
+export type SafeFieldSource = Record<string, unknown>;
+
+/** Generic field value type */
+export type SafeFieldValue = unknown;
+
+/** Contact with potential unknown type */
+interface UnknownContact extends Omit<Contact, 'type'> {
+  type?: string;
+  firstName?: string;
+  lastName?: string;
+  companyName?: string;
+  serviceName?: string;
+}
+
+// ============================================================================
 // TYPES & INTERFACES
 // ============================================================================
 
@@ -47,11 +66,12 @@ export function mapContactToFormData(contact: Contact): ContactMappingResult {
         break;
 
       default:
-        console.warn('⚠️ MAPPER: Unknown contact type:', (contact as any).type);
-        warnings.push(`Unknown contact type: ${(contact as any).type}`);
+        const unknownContact = contact as UnknownContact;
+        console.warn('⚠️ MAPPER: Unknown contact type:', unknownContact.type);
+        warnings.push(`Unknown contact type: ${unknownContact.type}`);
 
         // Fallback to individual mapping
-        formData = mapIndividualContactToFormData(contact as any);
+        formData = mapIndividualContactToFormData(contact);
         break;
     }
 
@@ -173,21 +193,22 @@ export function validateContactForMapping(contact: Contact): string[] {
   }
 
   // Type-specific validations
+  const unknownContact = contact as UnknownContact;
   switch (contact.type) {
     case 'individual':
-      if (!(contact as any).firstName && !(contact as any).lastName) {
+      if (!unknownContact.firstName && !unknownContact.lastName) {
         warnings.push('Individual contact missing name information');
       }
       break;
 
     case 'company':
-      if (!(contact as any).companyName) {
+      if (!unknownContact.companyName) {
         warnings.push('Company contact missing company name');
       }
       break;
 
     case 'service':
-      if (!(contact as any).serviceName) {
+      if (!unknownContact.serviceName) {
         warnings.push('Service contact missing service name');
       }
       break;
@@ -208,10 +229,10 @@ export function validateContactForMapping(contact: Contact): string[] {
  * @param fallback - Fallback value
  * @returns Safe field value
  */
-export function getSafeFieldValue(obj: any, field: string, fallback: any = ''): any {
+export function getSafeFieldValue<T = SafeFieldValue>(obj: SafeFieldSource | null | undefined, field: string, fallback: T = '' as T): T {
   try {
     const value = obj?.[field];
-    return value !== undefined && value !== null ? value : fallback;
+    return (value !== undefined && value !== null ? value : fallback) as T;
   } catch (error) {
     console.warn(`⚠️ MAPPER: Failed to extract field ${field}:`, error);
     return fallback;
@@ -226,19 +247,19 @@ export function getSafeFieldValue(obj: any, field: string, fallback: any = ''): 
  * @param fallback - Fallback value
  * @returns Safe nested field value
  */
-export function getSafeNestedValue(obj: any, path: string, fallback: any = ''): any {
+export function getSafeNestedValue<T = SafeFieldValue>(obj: SafeFieldSource | null | undefined, path: string, fallback: T = '' as T): T {
   try {
     const keys = path.split('.');
-    let current = obj;
+    let current: unknown = obj;
 
     for (const key of keys) {
       if (current === null || current === undefined) {
         return fallback;
       }
-      current = current[key];
+      current = (current as SafeFieldSource)[key];
     }
 
-    return current !== undefined && current !== null ? current : fallback;
+    return (current !== undefined && current !== null ? current : fallback) as T;
   } catch (error) {
     console.warn(`⚠️ MAPPER: Failed to extract nested field ${path}:`, error);
     return fallback;
@@ -253,7 +274,7 @@ export function getSafeNestedValue(obj: any, path: string, fallback: any = ''): 
  * @param fallback - Fallback array
  * @returns Safe array value
  */
-export function getSafeArrayValue(obj: any, field: string, fallback: any[] = []): any[] {
+export function getSafeArrayValue<T = unknown>(obj: SafeFieldSource | null | undefined, field: string, fallback: T[] = []): T[] {
   try {
     const value = obj?.[field];
     return Array.isArray(value) ? value : fallback;

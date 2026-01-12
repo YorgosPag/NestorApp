@@ -73,13 +73,26 @@ export interface UniversalTabConfig {
 // UNIVERSAL RENDERER PROPS
 // ============================================================================
 
+/** Generic tab component props interface */
+interface TabComponentProps {
+  data?: unknown;
+  project?: unknown;
+  building?: unknown;
+  storage?: unknown;
+  parking?: unknown;
+  unit?: unknown;
+  selectedUnit?: unknown;
+  icon?: React.ComponentType | null;
+  [key: string]: unknown;
+}
+
 export interface UniversalTabsRendererProps<TData = unknown> {
   /** Tab configurations */
   tabs: UniversalTabConfig[];
   /** Primary data object (project, building, storage, κτλ.) */
   data: TData;
   /** Component mapping για την αντιστοίχιση component names σε React components */
-  componentMapping: Record<string, React.ComponentType<any>>;
+  componentMapping: Record<string, React.ComponentType<TabComponentProps>>;
   /** Default tab to show */
   defaultTab?: string;
   /** Theme για τα tabs (default, accent, warning, κτλ.) */
@@ -87,7 +100,7 @@ export interface UniversalTabsRendererProps<TData = unknown> {
   /** Additional data για specific tabs */
   additionalData?: Record<string, unknown>;
   /** Custom component renderers που override το componentMapping */
-  customComponents?: Record<string, React.ComponentType<any>>;
+  customComponents?: Record<string, React.ComponentType<TabComponentProps>>;
   /** Global props που περνάνε σε όλα τα tab components */
   globalProps?: Record<string, unknown>;
 }
@@ -287,22 +300,36 @@ export function UniversalTabsRenderer<TData = unknown>({
  * Type guard για να ελέγξουμε αν το tabs config είναι compatible με Universal format
  */
 export function isUniversalTabConfig(tab: unknown): tab is UniversalTabConfig {
+  if (typeof tab !== 'object' || tab === null) {
+    return false;
+  }
+  const tabObj = tab as Record<string, unknown>;
   return (
-    typeof tab === 'object' &&
-    tab !== null &&
-    typeof (tab as any).id === 'string' &&
-    typeof (tab as any).value === 'string' &&
-    typeof (tab as any).label === 'string' &&
-    typeof (tab as any).component === 'string' &&
-    typeof (tab as any).enabled === 'boolean'
+    typeof tabObj.id === 'string' &&
+    typeof tabObj.value === 'string' &&
+    typeof tabObj.label === 'string' &&
+    typeof tabObj.component === 'string' &&
+    typeof tabObj.enabled === 'boolean'
   );
+}
+
+/** Legacy tab config interface for backward compatibility */
+interface LegacyTabConfig {
+  id?: string;
+  value: string;
+  label: string;
+  icon?: string;
+  component: string;
+  enabled?: boolean;
+  order?: number;
+  componentProps?: Record<string, unknown>;
 }
 
 /**
  * Converter από legacy tab configs σε Universal format
  * Αυτό επιτρέπει backward compatibility με existing configs
  */
-export function convertToUniversalConfig(legacyTab: any): UniversalTabConfig {
+export function convertToUniversalConfig(legacyTab: LegacyTabConfig): UniversalTabConfig {
   return {
     id: legacyTab.id || legacyTab.value,
     value: legacyTab.value,

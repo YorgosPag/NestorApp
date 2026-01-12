@@ -27,7 +27,7 @@ declare global {
     interface Feature {
       type: 'Feature';
       geometry: Geometry;
-      properties: Record<string, any>;
+      properties: Record<string, unknown>;
       id?: string | number;
     }
     interface FeatureCollection {
@@ -36,7 +36,7 @@ declare global {
     }
     interface Geometry {
       type: string;
-      coordinates?: any;
+      coordinates?: number[] | number[][] | number[][][] | number[][][][];
     }
   }
 }
@@ -87,13 +87,27 @@ interface UseAdministrativeBoundariesReturn {
   getRecentSearches: (limit?: number) => SearchHistoryEntry[];
   getPopularQueries: (limit?: number) => Array<{ query: string; count: number; lastUsed: number }>;
   clearSearchHistory: () => void;
-  exportSearchHistory: () => any;
-  importSearchHistory: (data: any) => { imported: number; skipped: number };
+  exportSearchHistory: () => SearchHistoryExport;
+  importSearchHistory: (data: SearchHistoryExport) => { imported: number; skipped: number };
 
   // Utilities
   isWithinGreece: (lat: number, lng: number) => boolean;
   calculateCenter: (geometry: GeoJSON.Geometry) => [number, number] | null;
-  getCacheStats: () => any;
+  getCacheStats: () => CacheStats;
+}
+
+/** Cache statistics interface */
+interface CacheStats {
+  totalEntries: number;
+  searchCacheEntries?: number;
+  [key: string]: unknown;
+}
+
+/** Search history export format */
+interface SearchHistoryExport {
+  version: string;
+  exportedAt: number;
+  entries: SearchHistoryEntry[];
 }
 
 // ============================================================================
@@ -625,7 +639,7 @@ export function useAdministrativeBoundaries(
   /**
    * Import search history
    */
-  const importSearchHistory = useCallback((data: any) => {
+  const importSearchHistory = useCallback((data: SearchHistoryExport) => {
     const result = searchHistoryService.importHistory(data);
 
     // Refresh local state

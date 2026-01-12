@@ -33,11 +33,15 @@ import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { getCompanies, getProjectsList } from './building-services';
 import { AdvancedFiltersPanel, buildingFiltersConfig } from '@/components/core/AdvancedFilters';
 import { ListContainer, PageContainer } from '@/core/containers';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // Re-export Building type for backward compatibility
 export type { Building } from '@/types/building/contracts';
 
 export function BuildingsPageContent() {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
@@ -90,37 +94,37 @@ export function BuildingsPageContent() {
   // Transform stats to UnifiedDashboard format
   const dashboardStats: DashboardStat[] = [
     {
-      title: "Σύνολο Κτιρίων",
+      title: t('pages.buildings.dashboard.totalBuildings'),
       value: buildingsStats.totalBuildings,
       icon: Building,
       color: "blue"
     },
     {
-      title: "Ενεργά Έργα",
+      title: t('pages.buildings.dashboard.activeProjects'),
       value: buildingsStats.activeProjects,
       icon: TrendingUp,
       color: "green"
     },
     {
-      title: "Συνολική Αξία",
+      title: t('pages.buildings.dashboard.totalValue'),
       value: `€${(buildingsStats.totalValue / 1000000).toFixed(1)}M`,
       icon: BarChart3,
       color: "purple"
     },
     {
-      title: "Συνολική Επιφάνεια",
+      title: t('pages.buildings.dashboard.totalArea'),
       value: `${(buildingsStats.totalArea / 1000).toFixed(1)}K m²`,
       icon: MapPin,
       color: "orange"
     },
     {
-      title: "Μέση Πρόοδος",
+      title: t('pages.buildings.dashboard.averageProgress'),
       value: `${buildingsStats.averageProgress}%`,
       icon: Calendar,
       color: "cyan"
     },
     {
-      title: "Σύνολο Μονάδων",
+      title: t('pages.buildings.dashboard.totalUnits'),
       value: buildingsStats.totalUnits,
       icon: NAVIGATION_ENTITIES.unit.icon,
       color: "pink"
@@ -130,6 +134,8 @@ export function BuildingsPageContent() {
   // 🔥 NEW: Handle dashboard card clicks για filtering
   const handleCardClick = (stat: DashboardStat, index: number) => {
     const cardTitle = stat.title;
+    const totalBuildingsTitle = t('pages.buildings.dashboard.totalBuildings');
+    const activeProjectsTitle = t('pages.buildings.dashboard.activeProjects');
 
     // Toggle filter: αν κλικάρουμε την ίδια κάρτα, αφαιρούμε το φίλτρο
     if (activeCardFilter === cardTitle) {
@@ -141,15 +147,15 @@ export function BuildingsPageContent() {
 
       // Apply filter based on card type
       switch (cardTitle) {
-        case 'Σύνολο Κτιρίων':
+        case totalBuildingsTitle:
           // Show all buildings - reset filters
           setFilters({ ...filters, status: [] });
           break;
-        case 'Ενεργά Έργα':
+        case activeProjectsTitle:
           // Filter only active buildings
           setFilters({ ...filters, status: ['active'] });
           break;
-        // Note: Other cards (Συνολική Αξία, Συνολική Επιφάνεια, Μέση Πρόοδος, Σύνολο Μονάδων)
+        // Note: Other cards (Total Value, Total Area, Average Progress, Total Units)
         // are informational and don't apply specific filters
         default:
           // For other stats, just clear active filter without changing data
@@ -166,11 +172,11 @@ export function BuildingsPageContent() {
   if (buildingsLoading) {
     return (
       <TooltipProvider>
-        <PageContainer ariaLabel="Φόρτωση Κτιρίων">
+        <PageContainer ariaLabel={t('pages.buildings.loading')}>
           <section className="flex-1 flex items-center justify-center" role="status" aria-live="polite">
             <div className="text-center">
               <AnimatedSpinner size="large" className="mx-auto mb-4" />
-              <p>Φόρτωση κτιρίων από Firestore...</p>
+              <p>{t('pages.buildings.loadingMessage')}</p>
             </div>
           </section>
         </PageContainer>
@@ -182,10 +188,10 @@ export function BuildingsPageContent() {
   if (buildingsError) {
     return (
       <TooltipProvider>
-        <PageContainer ariaLabel="Σφάλμα Κτιρίων">
-          <section className="flex-1 flex items-center justify-center" role="alert" aria-label="Σφάλμα Φόρτωσης">
+        <PageContainer ariaLabel={t('pages.buildings.error.pageLabel')}>
+          <section className="flex-1 flex items-center justify-center" role="alert" aria-label={t('pages.buildings.error.ariaLabel')}>
             <div className="text-center text-red-500">
-              <p className="mb-4">❌ Σφάλμα φόρτωσης κτιρίων:</p>
+              <p className="mb-4">❌ {t('pages.buildings.error.title')}</p>
               <p className="text-sm">{buildingsError}</p>
             </div>
           </section>
@@ -196,7 +202,7 @@ export function BuildingsPageContent() {
 
   return (
     <TooltipProvider>
-      <PageContainer ariaLabel="Διαχείριση Κτιρίων">
+      <PageContainer ariaLabel={t('pages.buildings.pageLabel')}>
         <BuildingsHeader
           viewMode={viewMode}
           setViewMode={setViewMode}
@@ -207,13 +213,13 @@ export function BuildingsPageContent() {
         />
 
         {showDashboard && (
-          <section role="region" aria-label="Στατιστικά Κτιρίων">
+          <section role="region" aria-label={t('pages.buildings.dashboard.label')}>
             <UnifiedDashboard stats={dashboardStats} columns={6} onCardClick={handleCardClick} />
           </section>
         )}
 
         {/* Advanced Filters Panel - Desktop */}
-        <aside className="hidden md:block" role="complementary" aria-label="Φίλτρα Κτιρίων">
+        <aside className="hidden md:block" role="complementary" aria-label={t('pages.buildings.filters.desktop')}>
           <AdvancedFiltersPanel
             config={buildingFiltersConfig}
             filters={filters}
@@ -223,7 +229,7 @@ export function BuildingsPageContent() {
 
         {/* Advanced Filters Panel - Mobile (conditional) */}
         {showFilters && (
-          <aside className="md:hidden" role="complementary" aria-label="Φίλτρα Κτιρίων Mobile">
+          <aside className="md:hidden" role="complementary" aria-label={t('pages.buildings.filters.mobile')}>
             <AdvancedFiltersPanel
               config={buildingFiltersConfig}
               filters={filters}
@@ -237,7 +243,7 @@ export function BuildingsPageContent() {
           {viewMode === 'list' ? (
             <>
               {/* 🖥️ DESKTOP: Standard split layout */}
-              <section className="hidden md:flex flex-1 gap-4 min-h-0" role="region" aria-label="Προβολή Κτιρίων Desktop">
+              <section className="hidden md:flex flex-1 gap-4 min-h-0" role="region" aria-label={t('pages.buildings.views.desktopView')}>
                 <BuildingsList
                   buildings={baseFilteredBuildings}
                   selectedBuilding={selectedBuilding!}
@@ -247,7 +253,7 @@ export function BuildingsPageContent() {
               </section>
 
               {/* 📱 MOBILE: Show only BuildingsList when no building is selected */}
-              <section className={`md:hidden w-full ${selectedBuilding ? 'hidden' : 'block'}`} role="region" aria-label="Λίστα Κτιρίων Mobile">
+              <section className={`md:hidden w-full ${selectedBuilding ? 'hidden' : 'block'}`} role="region" aria-label={t('pages.buildings.views.mobileList')}>
                 <BuildingsList
                   buildings={baseFilteredBuildings}
                   selectedBuilding={selectedBuilding!}
@@ -259,7 +265,7 @@ export function BuildingsPageContent() {
               <MobileDetailsSlideIn
                 isOpen={!!selectedBuilding}
                 onClose={() => setSelectedBuilding(null)}
-                title={selectedBuilding?.name || 'Λεπτομέρειες Κτιρίου'}
+                title={selectedBuilding?.name || t('pages.buildings.details.title')}
                 actionButtons={
                   <>
                     <button
@@ -269,7 +275,7 @@ export function BuildingsPageContent() {
                         INTERACTIVE_PATTERNS.ACCENT_HOVER,
                         TRANSITION_PRESETS.STANDARD_COLORS
                       )}
-                      aria-label="Επεξεργασία Κτιρίου"
+                      aria-label={t('pages.buildings.details.editBuilding')}
                     >
                       <Edit className={iconSizes.sm} />
                     </button>
@@ -280,7 +286,7 @@ export function BuildingsPageContent() {
                         INTERACTIVE_PATTERNS.ACCENT_HOVER,
                         TRANSITION_PRESETS.STANDARD_COLORS
                       )}
-                      aria-label="Διαγραφή Κτιρίου"
+                      aria-label={t('pages.buildings.details.deleteBuilding')}
                     >
                       <Trash2 className={iconSizes.sm} />
                     </button>

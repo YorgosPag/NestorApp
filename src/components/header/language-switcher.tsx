@@ -36,14 +36,16 @@ export function LanguageSwitcher() {
     setIsChanging(true);
     
     try {
-      
+      // Import type from lazy-config
+      type Language = 'el' | 'en' | 'pseudo';
+
       // Preload critical namespaces for the new language
-      await preloadCriticalNamespaces(languageCode as any);
+      await preloadCriticalNamespaces(languageCode as Language);
 
       // Also preload geo-canvas namespace if we're on that page
       if (window.location.pathname.includes('/geo/canvas')) {
         const { loadNamespace } = await import('@/i18n/lazy-config');
-        await loadNamespace('geo-canvas', languageCode as any);
+        await loadNamespace('geo-canvas', languageCode as Language);
       }
       
       // Change language

@@ -27,14 +27,17 @@ interface SendGridEvent {
   reason?: string;
   status?: string;
   response?: string;
-  [key: string]: any;
+  [key: string]: string | number | boolean | undefined;
 }
+
+/** Firestore field value type (for serverTimestamp) */
+type FirestoreFieldValue = ReturnType<typeof serverTimestamp>;
 
 interface EmailAnalyticsRecord {
   eventType: 'delivered' | 'opened' | 'clicked' | 'bounced' | 'dropped';
   recipientEmail: string;
   propertyId?: string;
-  timestamp: any;
+  timestamp: Date;
   sendgridEventId: string;
   sendgridMessageId: string;
   metadata: {
@@ -43,9 +46,10 @@ interface EmailAnalyticsRecord {
     clickedUrl?: string;
     bounceReason?: string;
     dropReason?: string;
-    [key: string]: any;
+    rawEvent?: { event: string; timestamp: number };
+    [key: string]: string | number | boolean | undefined | { event: string; timestamp: number };
   };
-  createdAt: any;
+  createdAt: FirestoreFieldValue;
 }
 
 // Security utilities
@@ -80,7 +84,7 @@ function sanitizeEventId(eventId: string): string {
   return eventId.replace(/[^a-zA-Z0-9\-_]/g, '');
 }
 
-function validateSendGridEvent(event: any): { isValid: boolean; errors: string[] } {
+function validateSendGridEvent(event: Partial<SendGridEvent>): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
 
   // Required fields
@@ -298,11 +302,11 @@ export async function POST(request: NextRequest) {
 
         // Save to Firestore with timeout
         const savePromise = addDoc(collection(db, COLLECTIONS.ANALYTICS), analyticsRecord);
-        const timeoutPromise = new Promise((_, reject) => 
+        const timeoutPromise = new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error('Firestore timeout')), WEBHOOK_TIMEOUT_MS)
         );
 
-        const docRef = await Promise.race([savePromise, timeoutPromise]) as any;
+        const docRef = await Promise.race([savePromise, timeoutPromise]);
         
         console.log(`✅ Saved ${event.event} event for ${event.email} (${docRef.id})`);
         

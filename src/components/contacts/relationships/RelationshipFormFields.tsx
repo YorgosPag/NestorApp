@@ -23,6 +23,8 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { designSystem } from '@/lib/design-system';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Import centralized types and utilities
 import type { RelationshipType, ContactType } from '@/types/contacts/relationships';
@@ -82,6 +84,8 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
   className,
   fieldConfig = {}
 }) => {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('contacts');
   const iconSizes = useIconSizes();
 
   // ============================================================================
@@ -187,7 +191,7 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
 
         {/* Relationship Type Selection */}
         <div className="md:col-span-1">
-          {renderFieldLabel('Τύπος Σχέσης', finalFieldConfig.required.relationshipType)}
+          {renderFieldLabel(t('relationships.form.labels.relationshipType'), finalFieldConfig.required.relationshipType)}
           <Select
             value={formData.relationshipType}
             onValueChange={(value: string) =>
@@ -203,7 +207,7 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
                   : ""
               )}
             >
-              <SelectValue placeholder="Επιλέξτε τύπο σχέσης" />
+              <SelectValue placeholder={t('relationships.form.placeholders.selectType')} />
             </SelectTrigger>
             <SelectContent>
               {availableRelationshipTypes.map(type => {
@@ -242,11 +246,11 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
         {/* Position Field */}
         {renderInputField(
           'position',
-          'Θέση',
+          t('relationships.form.labels.position'),
           formData.position || '',
           (value) => handleFieldChange('position', value),
           {
-            placeholder: 'π.χ. Διευθυντής Πωλήσεων',
+            placeholder: t('relationships.form.placeholders.position'),
             required: finalFieldConfig.required.position
           }
         )}
@@ -254,11 +258,11 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
         {/* Department Field */}
         {renderInputField(
           'department',
-          'Τμήμα',
+          t('relationships.form.labels.department'),
           formData.department || '',
           (value) => handleFieldChange('department', value),
           {
-            placeholder: 'π.χ. Οικονομικό Τμήμα',
+            placeholder: t('relationships.form.placeholders.department'),
             required: finalFieldConfig.required.department
           }
         )}
@@ -266,7 +270,7 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
         {/* Start Date Field */}
         {finalFieldConfig.showDates && renderInputField(
           'startDate',
-          'Ημερομηνία Έναρξης',
+          t('relationships.form.labels.startDate'),
           formData.startDate || '',
           (value) => handleFieldChange('startDate', value),
           {
@@ -281,18 +285,18 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
               designSystem.getTypographyClass('sm', 'medium'),
               "mb-3 block"
             )}>
-              Επαγγελματικά Στοιχεία Επικοινωνίας
+              {t('relationships.form.labels.professionalInfo')}
             </Label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <Input
-                placeholder="Επαγγελματικό τηλέφωνο"
+                placeholder={t('relationships.form.placeholders.businessPhone')}
                 value={formData.contactInfo?.businessPhone || ''}
                 onChange={(e) => handleContactInfoChange('businessPhone', e.target.value)}
                 disabled={loading}
                 className={designSystem.getFormFieldClass(false, loading)}
               />
               <Input
-                placeholder="Επαγγελματικό email"
+                placeholder={t('relationships.form.placeholders.businessEmail')}
                 type="email"
                 value={formData.contactInfo?.businessEmail || ''}
                 onChange={(e) => handleContactInfoChange('businessEmail', e.target.value)}
@@ -300,14 +304,14 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
                 className={designSystem.getFormFieldClass(false, loading)}
               />
               <Input
-                placeholder="Εσωτερικό τηλέφωνο"
+                placeholder={t('relationships.form.placeholders.extensionNumber')}
                 value={formData.contactInfo?.extensionNumber || ''}
                 onChange={(e) => handleContactInfoChange('extensionNumber', e.target.value)}
                 disabled={loading}
                 className={designSystem.getFormFieldClass(false, loading)}
               />
               <Input
-                placeholder="Διεύθυνση εργασίας"
+                placeholder={t('relationships.form.placeholders.businessAddress')}
                 value={formData.contactInfo?.businessAddress || ''}
                 onChange={(e) => handleContactInfoChange('businessAddress', e.target.value)}
                 disabled={loading}
@@ -320,11 +324,11 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
         {/* Notes Field */}
         {finalFieldConfig.showNotes && (
           <div className="md:col-span-2">
-            {renderFieldLabel('Σημειώσεις')}
+            {renderFieldLabel(t('relationships.form.labels.notes'))}
             <Textarea
               value={formData.notes || ''}
               onChange={(e) => handleFieldChange('notes', e.target.value)}
-              placeholder="Πρόσθετες πληροφορίες..."
+              placeholder={t('relationships.form.placeholders.notes')}
               rows={finalFieldConfig.notesRows}
               disabled={loading}
               className={designSystem.getFormFieldClass(false, loading)}

@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { RealtimeBuilding, SubscriptionStatus } from '../types';
 import { REALTIME_EVENTS } from '../types';
@@ -121,57 +122,81 @@ export function useRealtimeBuildings(): UseRealtimeBuildingsReturn {
   }, []);
 
   // ==========================================================================
-  // MAIN SUBSCRIPTION EFFECT
+  // MAIN SUBSCRIPTION EFFECT - WAITS FOR AUTHENTICATION
   // ==========================================================================
 
   useEffect(() => {
     setStatus('connecting');
     setLoading(true);
 
-    console.log('🔔 [useRealtimeBuildings] Setting up real-time listener for buildings');
+    const auth = getAuth();
+    let firestoreUnsubscribe: (() => void) | null = null;
 
-    const buildingsRef = collection(db, COLLECTIONS.BUILDINGS);
-
-    const unsubscribe = onSnapshot(
-      buildingsRef,
-      (snapshot) => {
-        const buildings: RealtimeBuilding[] = snapshot.docs.map((docSnapshot) => ({
-          id: docSnapshot.id,
-          name: docSnapshot.data().name || '',
-          projectId: docSnapshot.data().projectId || null,
-          address: docSnapshot.data().address,
-          city: docSnapshot.data().city,
-          status: docSnapshot.data().status,
-          totalArea: docSnapshot.data().totalArea,
-          floors: docSnapshot.data().floors,
-          units: docSnapshot.data().units,
-          createdAt: docSnapshot.data().createdAt,
-          updatedAt: docSnapshot.data().updatedAt,
-        }));
-
-        console.log(`📡 [useRealtimeBuildings] Received ${buildings.length} buildings in real-time`);
-
-        // Update state
-        setAllBuildings(buildings);
-        setBuildingsByProject(groupBuildingsByProject(buildings));
-        setLoading(false);
-        setError(null);
-        setStatus('active');
-      },
-      (err) => {
-        console.error('❌ [useRealtimeBuildings] Firestore error:', err);
-        setError(err.message);
-        setLoading(false);
-        setStatus('error');
+    // 🔐 ENTERPRISE: Wait for authentication before subscribing to Firestore
+    const authUnsubscribe = onAuthStateChanged(auth, (user) => {
+      // Cleanup previous Firestore subscription if exists
+      if (firestoreUnsubscribe) {
+        firestoreUnsubscribe();
+        firestoreUnsubscribe = null;
       }
-    );
 
-    unsubscribeRef.current = unsubscribe;
+      if (!user) {
+        console.log('⏳ [useRealtimeBuildings] Waiting for authentication...');
+        setStatus('idle');
+        setLoading(false);
+        setAllBuildings([]);
+        setBuildingsByProject({});
+        return;
+      }
 
-    // Cleanup
+      console.log('🔔 [useRealtimeBuildings] User authenticated, setting up real-time listener');
+
+      const buildingsRef = collection(db, COLLECTIONS.BUILDINGS);
+
+      firestoreUnsubscribe = onSnapshot(
+        buildingsRef,
+        (snapshot) => {
+          const buildings: RealtimeBuilding[] = snapshot.docs.map((docSnapshot) => ({
+            id: docSnapshot.id,
+            name: docSnapshot.data().name || '',
+            projectId: docSnapshot.data().projectId || null,
+            address: docSnapshot.data().address,
+            city: docSnapshot.data().city,
+            status: docSnapshot.data().status,
+            totalArea: docSnapshot.data().totalArea,
+            floors: docSnapshot.data().floors,
+            units: docSnapshot.data().units,
+            createdAt: docSnapshot.data().createdAt,
+            updatedAt: docSnapshot.data().updatedAt,
+          }));
+
+          console.log(`📡 [useRealtimeBuildings] Received ${buildings.length} buildings in real-time`);
+
+          // Update state
+          setAllBuildings(buildings);
+          setBuildingsByProject(groupBuildingsByProject(buildings));
+          setLoading(false);
+          setError(null);
+          setStatus('active');
+        },
+        (err) => {
+          console.error('❌ [useRealtimeBuildings] Firestore error:', err);
+          setError(err.message);
+          setLoading(false);
+          setStatus('error');
+        }
+      );
+
+      unsubscribeRef.current = firestoreUnsubscribe;
+    });
+
+    // Cleanup both subscriptions
     return () => {
-      console.log('🔕 [useRealtimeBuildings] Unsubscribing from buildings listener');
-      unsubscribe();
+      console.log('🔕 [useRealtimeBuildings] Cleaning up subscriptions');
+      authUnsubscribe();
+      if (firestoreUnsubscribe) {
+        firestoreUnsubscribe();
+      }
     };
   }, [refreshTriggerRef.current, groupBuildingsByProject]);
 

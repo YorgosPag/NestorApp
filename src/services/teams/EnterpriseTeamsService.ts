@@ -245,7 +245,7 @@ export interface TeamAuditEntry {
   timestamp: Date;
   action: string;
   userId: string;
-  changes: Record<string, any>;
+  changes: Record<string, unknown>;
   reason: string;
 }
 
@@ -313,7 +313,7 @@ export interface TeamAutomationRule {
   name: string;
   trigger: string;
   action: string;
-  conditions: Record<string, any>;
+  conditions: Record<string, unknown>;
   isActive: boolean;
 }
 
@@ -364,11 +364,14 @@ export interface TeamFeatureFlags {
  * - Efficient relationship queries
  * - Memory-optimized data structures
  */
+// 🏢 ENTERPRISE: Import Firestore type for proper typing
+import type { Firestore } from 'firebase/firestore';
+
 class EnterpriseTeamsService {
   private static instance: EnterpriseTeamsService | null = null;
 
   // Firestore connection
-  private db: any = null;
+  private db: Firestore | null = null;
 
   // Multi-level caching system
   private teamsCache = new Map<string, { teams: EnterpriseTeam[]; cachedAt: number; ttl: number }>();

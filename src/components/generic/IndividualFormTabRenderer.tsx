@@ -16,11 +16,30 @@ import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterprise
 // INTERFACES
 // ============================================================================
 
+/** Form field interface */
+interface FormField {
+  name: string;
+  type: string;
+  label?: string;
+  placeholder?: string;
+  required?: boolean;
+  [key: string]: unknown;
+}
+
+/** Custom renderer function type */
+type IndividualCustomRendererFn = (
+  field: FormField,
+  formData: Record<string, unknown>,
+  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
+  onSelectChange: (name: string, value: string) => void,
+  disabled: boolean
+) => React.ReactNode;
+
 export interface IndividualFormTabRendererProps {
   /** Sections configuration from individual config file */
   sections: IndividualSectionConfig[];
   /** Form data object */
-  formData: Record<string, any>;
+  formData: Record<string, unknown>;
   /** Input change handler */
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   /** Select change handler */
@@ -36,7 +55,7 @@ export interface IndividualFormTabRendererProps {
   /** Profile photo selection handler */
   onProfilePhotoSelection?: (index: number) => void;
   /** Custom field renderers for forms */
-  customRenderers?: Record<string, (field: any, formData: any, onChange: any, onSelectChange: any, disabled: boolean) => React.ReactNode>;
+  customRenderers?: Record<string, IndividualCustomRendererFn>;
   /** Photo click handler για gallery preview */
   onPhotoClick?: (index: number) => void;
 }
@@ -50,7 +69,7 @@ export interface IndividualFormTabRendererProps {
  */
 function createIndividualFormTabsFromConfig(
   sections: IndividualSectionConfig[],
-  formData: Record<string, any>,
+  formData: Record<string, unknown>,
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
   onSelectChange: (name: string, value: string) => void,
   disabled: boolean,
@@ -59,7 +78,7 @@ function createIndividualFormTabsFromConfig(
   onMultiplePhotoUploadComplete?: (index: number, result: FileUploadResult) => void,
   onProfilePhotoSelection?: (index: number) => void,
   // handleEnterpriseMultiplePhotoUpload removed - using centralized handler
-  customRenderers?: Record<string, any>,
+  customRenderers?: Record<string, IndividualCustomRendererFn>,
   onPhotoClick?: (index: number) => void
 ) {
   return sections.map(section => ({

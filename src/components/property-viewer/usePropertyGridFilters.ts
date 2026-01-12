@@ -2,13 +2,24 @@
 import * as React from 'react';
 
 // 🏢 ENTERPRISE: Property filtering utilities
+
+/** Property data for filtering */
+interface PropertyForFilter {
+  id: string;
+  name?: string;
+  type?: string;
+  price?: number;
+  area?: number;
+  [key: string]: unknown;
+}
+
 type Ranges = {
   priceRange: { min: string; max: string };
   areaRange: { min: string; max: string };
 };
 
 function applyFilters(
-  properties: any[],
+  properties: PropertyForFilter[],
   filters: { propertyType: string[] },
   searchTerm: string,
   ranges: Ranges
@@ -25,7 +36,7 @@ function applyFilters(
   });
 }
 
-export function usePropertyGridFilters(allProperties: any[], filters: { propertyType: string[] }) {
+export function usePropertyGridFilters(allProperties: PropertyForFilter[], filters: { propertyType: string[] }) {
   const [viewMode, setViewMode] = React.useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');

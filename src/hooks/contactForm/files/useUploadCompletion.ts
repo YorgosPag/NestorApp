@@ -17,6 +17,18 @@ import { useMemoryCleanup } from './useMemoryCleanup';
 // TYPES & INTERFACES
 // ============================================================================
 
+// 🏢 ENTERPRISE: Type-safe upload result interface
+export interface PhotoUploadResult {
+  url?: string;
+  fileName?: string;
+  storagePath?: string;
+  compressionInfo?: {
+    wasCompressed: boolean;
+    originalSize: number;
+    compressedSize: number;
+  };
+}
+
 export interface UseUploadCompletionReturn {
   // Upload completion handlers
   handleUploadedPhotoURL: (
@@ -31,7 +43,7 @@ export interface UseUploadCompletionReturn {
   ) => void;
   handleMultiplePhotoUploadComplete: (
     index: number,
-    result: any,
+    result: PhotoUploadResult,
     formData: ContactFormData,
     setFormData: (data: ContactFormData) => void
   ) => void;
@@ -148,7 +160,7 @@ export function useUploadCompletion(): UseUploadCompletionReturn {
    */
   const handleMultiplePhotoUploadComplete = useCallback((
     index: number,
-    result: any,
+    result: PhotoUploadResult,
     formData: ContactFormData,
     setFormData: (data: ContactFormData) => void
   ) => {

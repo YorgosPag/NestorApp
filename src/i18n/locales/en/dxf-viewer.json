@@ -93,5 +93,120 @@
     "rectangle": "Rectangle",
     "circle": "Circle",
     "polyline": "Polyline"
+  },
+  "wizard": {
+    "title": "Enhanced DXF Import",
+    "screenReaderDescription": "DXF import wizard. Select company, project, building or unit to import the file.",
+    "steps": {
+      "company": "Step 1: Select Company",
+      "project": "Step 2: Select Project",
+      "building": "Step 3: Select Building",
+      "unit": "Step 4: Select Unit"
+    },
+    "labels": {
+      "selectCompany": "Select Company",
+      "selectProject": "Select Project",
+      "selectBuilding": "Select Building",
+      "selectUnit": "Select Unit",
+      "company": "Company:",
+      "project": "Project:",
+      "building": "Building:"
+    },
+    "placeholders": {
+      "company": "-- Select Company --",
+      "project": "-- Select Project --",
+      "building": "-- Select Building --",
+      "unit": "-- Select Unit --"
+    },
+    "loading": {
+      "companies": "Loading companies...",
+      "projects": "Loading projects...",
+      "error": "Loading error: {{error}}",
+      "projectsError": "Error loading projects: {{error}}",
+      "retry": "Retry"
+    },
+    "empty": {
+      "companies": "No companies found in the system.",
+      "projects": "No projects found for the selected company.",
+      "buildings": "No buildings found for the selected project.",
+      "units": "No units found for the selected building."
+    },
+    "counts": {
+      "buildings": "{{count}} buildings",
+      "floors": "{{count}} floors",
+      "floorOrdinal": "{{floor}}th floor",
+      "companiesFound": "Found {{count}} available companies",
+      "projectsFound": "Found {{count}} projects for the selected company",
+      "buildingsFound": "Found {{count}} buildings for the selected project",
+      "unitsFound": "Found {{count}} units for the selected building"
+    },
+    "floorplanTypes": {
+      "project": "Project Floorplan",
+      "parking": "Parking Floorplan",
+      "building": "Building Floorplan",
+      "storage": "Storage Floorplan",
+      "unit": "Unit Floorplan"
+    },
+    "floorplanSections": {
+      "selectForProject": "Select Floorplan to Load",
+      "selectForBuilding": "Select Building Floorplan to Load",
+      "selectForUnit": "Select Unit Floorplan to Load",
+      "hintProject": "The floorplan will be loaded to the canvas and the corresponding project tab",
+      "hintBuilding": "The floorplan will be loaded to the canvas and building management",
+      "hintUnit": "The floorplan will be loaded to the canvas and unit management"
+    },
+    "navigation": {
+      "cancel": "Cancel",
+      "previous": "← Previous",
+      "next": "Next →",
+      "ready": "Ready"
+    },
+    "replace": {
+      "title": "Replace {{typeLabel}}",
+      "existingWarning": "There is already a saved {{typeLabel}} for this company.",
+      "layerWarning": "The new floorplan you are loading may not match the existing layers that have been drawn on the previous floorplan.",
+      "confirmQuestion": "Do you want to continue and replace the existing floorplan?",
+      "cancel": "Cancel",
+      "confirm": "Replace"
+    }
+  },
+  "import": {
+    "fileDialog": {
+      "title": "Import DXF",
+      "choose": "Choose DXF file",
+      "hint": "Click to select .dxf from your computer",
+      "supported": "Supported types: DXF (Drawing Exchange Format)"
+    },
+    "mode": {
+      "title": "Select import method",
+      "file": "File: {filename}",
+      "enhancedTitle": "Modern Pipeline (Recommended)",
+      "enhancedDesc": "Automatic distribution to projects/buildings/floors with layer management.",
+      "enhancedDisabled": "No destinations available. Create projects first.",
+      "legacyTitle": "Classic Import",
+      "legacyDesc": "Direct import to current level (classic DXF Viewer behavior)."
+    },
+    "common": {
+      "cancel": "Cancel",
+      "destinations": "{count} available destinations",
+      "close": "×"
+    }
+  },
+  "loadingStates": {
+    "retry": "Retry",
+    "loading": "Loading...",
+    "companies": {
+      "loading": "Loading companies...",
+      "error": "Loading error: {{error}}",
+      "retry": "Retry",
+      "empty": "No companies found in the system.",
+      "emptyHint": "Contact management to add companies."
+    },
+    "projects": {
+      "loading": "Loading projects...",
+      "error": "Projects loading error: {{error}}",
+      "empty": "No projects found for the selected company.",
+      "emptyHint": "Select a different company or add new projects."
+    }
   }
 }

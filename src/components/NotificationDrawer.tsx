@@ -26,7 +26,7 @@ const iconMap = {
   info: Info
 };
 
-const getColorClass = (colors: any, type: keyof typeof iconMap) => {
+const getColorClass = (colors: ReturnType<typeof useSemanticColors>, type: keyof typeof iconMap) => {
   switch (type) {
     case 'success': return colors.text.success;
     case 'error': return colors.text.error;

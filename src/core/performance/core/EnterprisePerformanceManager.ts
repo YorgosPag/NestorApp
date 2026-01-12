@@ -27,6 +27,40 @@ import {
   PerformanceSubscription
 } from '../types/performance.types';
 
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** Chrome-specific Performance.memory interface */
+interface PerformanceMemory {
+  usedJSHeapSize: number;
+  totalJSHeapSize: number;
+  jsHeapSizeLimit: number;
+}
+
+/** Extended Performance interface with Chrome-specific memory */
+interface PerformanceWithMemory extends Performance {
+  memory?: PerformanceMemory;
+}
+
+/** Extended PerformanceEntry with loadEventEnd for navigation entries */
+interface PerformanceEntryWithLoad extends PerformanceEntry {
+  loadEventEnd?: number;
+}
+
+/** Performance budget threshold */
+interface BudgetThreshold {
+  metric: string;
+  category: PerformanceCategory;
+  warningThreshold: number;
+  errorThreshold: number;
+}
+
+/** Window with optional gc function (Chrome DevTools) */
+interface WindowWithGC extends Window {
+  gc?: () => void;
+}
+
 export class EnterprisePerformanceManager {
   private static instance: EnterprisePerformanceManager | null = null;
 
@@ -367,9 +401,10 @@ export class EnterprisePerformanceManager {
       const entries = list.getEntries();
 
       entries.forEach(entry => {
+        const entryWithLoad = entry as PerformanceEntryWithLoad;
         this.recordMetric({
           name: entry.name,
-          value: entry.duration || (entry as any).loadEventEnd || 0,
+          value: entry.duration || entryWithLoad.loadEventEnd || 0,
           unit: PerformanceUnit.MILLISECONDS,
           source: PerformanceSource.BROWSER_API,
           category: this.mapEntryTypeToCategory(entry.entryType),
@@ -397,8 +432,9 @@ export class EnterprisePerformanceManager {
 
   private collectSystemMetrics(): void {
     // Memory metrics
-    if ('memory' in performance) {
-      const memory = (performance as any).memory;
+    const perfWithMemory = performance as PerformanceWithMemory;
+    if (perfWithMemory.memory) {
+      const memory = perfWithMemory.memory;
 
       this.recordMetric({
         name: 'heap_used',
@@ -494,7 +530,7 @@ export class EnterprisePerformanceManager {
 
   private triggerAlert(
     metric: PerformanceMetric,
-    threshold: any,
+    threshold: BudgetThreshold,
     severity: PerformanceSeverity
   ): void {
     console.warn(`🚨 Performance Alert: ${metric.name} = ${metric.value}${metric.unit} (threshold: ${threshold.errorThreshold}${metric.unit})`);
@@ -581,15 +617,18 @@ export class EnterprisePerformanceManager {
 
   private scheduleGarbageCollection(): void {
     // Schedule garbage collection if supported
-    if (typeof window !== 'undefined' && 'gc' in window) {
-      setTimeout(() => {
-        try {
-          (window as any).gc();
-          console.log('🗑️ Garbage collection executed');
-        } catch (error) {
-          console.warn('⚠️ Garbage collection failed:', error);
-        }
-      }, 1000);
+    if (typeof window !== 'undefined') {
+      const windowWithGC = window as WindowWithGC;
+      if (windowWithGC.gc) {
+        setTimeout(() => {
+          try {
+            windowWithGC.gc?.();
+            console.log('🗑️ Garbage collection executed');
+          } catch (error) {
+            console.warn('⚠️ Garbage collection failed:', error);
+          }
+        }, 1000);
+      }
     }
   }
 
@@ -644,13 +683,14 @@ export class EnterprisePerformanceManager {
       };
     }
 
+    const perfWithMemory = performance as PerformanceWithMemory;
     return {
       userAgent: navigator.userAgent,
       platform: navigator.platform,
-      memory: 'memory' in performance ? {
-        total: (performance as any).memory.totalJSHeapSize,
-        used: (performance as any).memory.usedJSHeapSize,
-        available: (performance as any).memory.jsHeapSizeLimit
+      memory: perfWithMemory.memory ? {
+        total: perfWithMemory.memory.totalJSHeapSize,
+        used: perfWithMemory.memory.usedJSHeapSize,
+        available: perfWithMemory.memory.jsHeapSizeLimit
       } : undefined,
       screen: {
         width: screen.width,
@@ -661,11 +701,17 @@ export class EnterprisePerformanceManager {
   }
 
   private getApplicationContext(): ApplicationContext {
+    const env = process.env.NODE_ENV;
+    const environment: ApplicationContext['environment'] =
+      env === 'production' ? 'production' :
+      env === 'staging' ? 'staging' :
+      env === 'test' ? 'test' : 'development';
+
     return {
       route: typeof window !== 'undefined' ? window.location.pathname : '/',
       subapp: this.detectSubapp(),
       version: '1.0.0', // Should come from package.json
-      environment: process.env.NODE_ENV as any || 'development',
+      environment,
       sessionId: this.getSessionId()
     };
   }

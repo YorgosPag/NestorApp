@@ -134,6 +134,102 @@ import { GeoAlertMemoryLeakDetector } from './optimization/MemoryLeakDetector';
 import { GeoAlertPerformanceProfiler } from './profiling/PerformanceProfiler';
 import { GeoAlertTestingPipeline } from './automation/TestingPipeline';
 
+// ============================================================================
+// 🏢 ENTERPRISE: System Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/**
+ * Performance snapshot data
+ */
+interface PerformanceSnapshot {
+  memory: {
+    heapUsed: number;
+    heapTotal: number;
+  };
+  metrics: Record<string, unknown>;
+  leaks: Record<string, unknown>;
+  bundleSize: number;
+  testCoverage: number;
+  uptime: number;
+}
+
+/**
+ * Subsystem health status
+ */
+interface SubsystemHealth {
+  status: string;
+  uptime?: number;
+  connections?: number;
+  rules?: number;
+  activeAlerts?: number;
+  themes?: number;
+  overall?: string;
+  passed?: boolean;
+  results?: unknown[];
+}
+
+/**
+ * Quality gate result
+ */
+interface QualityGateResult {
+  gate: string;
+  status: 'passed' | 'failed';
+  actualValue: number;
+  threshold: number;
+  message?: string;
+}
+
+/**
+ * Pipeline execution result
+ */
+interface PipelineExecution {
+  id: string;
+  status: string;
+  stages: unknown[];
+  metrics: {
+    testMetrics: {
+      totalTests: number;
+      passedTests: number;
+      failedTests: number;
+      coverage: number;
+    };
+    performanceMetrics: {
+      overallScore: number;
+      bundleSize?: number;
+      memoryUsage?: number;
+      leaksDetected?: number;
+    };
+  };
+  qualityGates: QualityGateResult[];
+  duration?: number;
+  metadata?: {
+    environment?: string;
+  };
+}
+
+/**
+ * Test execution results
+ */
+interface TestExecutionResults {
+  stages?: number;
+  totalTests?: number;
+  passed?: number;
+  failed?: number;
+  coverage?: number;
+  performanceScore?: number;
+  qualityGates?: number;
+}
+
+/**
+ * System statistics
+ */
+interface SystemStatistics {
+  initialized: boolean;
+  initializationTime?: number;
+  uptime: number;
+  subsystems: number;
+}
+
 /**
  * Master Geo-Alert System Class
  * Unified access point για ολόκληρο το ecosystem
@@ -381,7 +477,7 @@ export class GeoAlertSystem {
     success: boolean;
     duration: number;
     subsystems: Record<string, boolean>;
-    performance: any;
+    performance: PerformanceSnapshot | Record<string, never>;
   }> {
     if (this.isInitialized) {
       return {
@@ -475,19 +571,26 @@ export class GeoAlertSystem {
    */
   public async getSystemHealth(): Promise<{
     overall: 'healthy' | 'warning' | 'critical';
-    subsystems: Record<string, any>;
-    performance: any;
+    subsystems: Record<string, SubsystemHealth>;
+    performance: PerformanceSnapshot;
     recommendations: string[];
   }> {
     const health: {
       overall: 'healthy' | 'warning' | 'critical';
-      subsystems: Record<string, any>;
-      performance: any;
+      subsystems: Record<string, SubsystemHealth>;
+      performance: PerformanceSnapshot;
       recommendations: string[];
     } = {
       overall: 'healthy',
       subsystems: {},
-      performance: {},
+      performance: {
+        memory: { heapUsed: 0, heapTotal: 0 },
+        metrics: {},
+        leaks: {},
+        bundleSize: 0,
+        testCoverage: 0,
+        uptime: 0
+      },
       recommendations: []
     };
 
@@ -527,7 +630,7 @@ export class GeoAlertSystem {
   /**
    * Get performance snapshot
    */
-  private async getPerformanceSnapshot(): Promise<any> {
+  private async getPerformanceSnapshot(): Promise<PerformanceSnapshot> {
     return {
       memory: {
         heapUsed: process.memoryUsage?.()?.heapUsed || 0,
@@ -551,7 +654,7 @@ export class GeoAlertSystem {
   public async runComprehensiveTests(): Promise<{
     success: boolean;
     duration: number;
-    results: any;
+    results: TestExecutionResults;
     report: string;
   }> {
     console.log('🧪 COMPREHENSIVE TESTING - Starting full system test...');
@@ -595,7 +698,7 @@ export class GeoAlertSystem {
     }
   }
 
-  private generateTestReport(execution: any): string {
+  private generateTestReport(execution: PipelineExecution): string {
     return `
 # GEO-ALERT SYSTEM - COMPREHENSIVE TEST REPORT
 
@@ -618,10 +721,10 @@ export class GeoAlertSystem {
 - **Leaks Detected**: ${execution.metrics.performanceMetrics.leaksDetected}
 
 ## Quality Gates
-${execution.qualityGates.map((gate: any) => `- **${gate.gate}**: ${gate.status} (${gate.actualValue}/${gate.threshold})`).join('\n')}
+${execution.qualityGates.map((gate: QualityGateResult) => `- **${gate.gate}**: ${gate.status} (${gate.actualValue}/${gate.threshold})`).join('\n')}
 
 ## Recommendations
-${execution.qualityGates.filter((g: any) => g.status === 'failed').map((g: any) => `- ${g.message}`).join('\n')}
+${execution.qualityGates.filter((g: QualityGateResult) => g.status === 'failed').map((g: QualityGateResult) => `- ${g.message || ''}`).join('\n')}
 
 Generated at: ${new Date().toISOString()}
     `.trim();
@@ -646,7 +749,7 @@ Generated at: ${new Date().toISOString()}
     version: string;
     phases: string[];
     features: string[];
-    statistics: any;
+    statistics: SystemStatistics;
   } {
     return {
       version: '1.0.0',

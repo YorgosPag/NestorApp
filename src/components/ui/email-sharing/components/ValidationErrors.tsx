@@ -19,6 +19,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Types
 import type { ValidationErrorsProps } from '../types';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // VALIDATION ERRORS COMPONENT
@@ -41,6 +43,8 @@ export const ValidationErrors: React.FC<ValidationErrorsProps> = ({
   backendError,
   show = true
 }) => {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -49,10 +53,10 @@ export const ValidationErrors: React.FC<ValidationErrorsProps> = ({
   if (!show || (!error && !backendError)) return null;
 
   return (
-    <section className="space-y-3" role="alert" aria-live="polite" aria-label="Σφάλματα Επικύρωσης">
+    <section className="space-y-3" role="alert" aria-live="polite" aria-label={t('validation.errorsLabel')}>
       {/* Validation Error */}
       {error && (
-        <article className={`p-3 ${colors.bg.warningSubtle} ${quick.card} ${quick.input} ${getStatusBorder('warning')}`} role="alert" aria-label="Σφάλμα Επικύρωσης">
+        <article className={`p-3 ${colors.bg.warningSubtle} ${quick.card} ${quick.input} ${getStatusBorder('warning')}`} role="alert" aria-label={t('validation.validationError')}>
           <header className={designSystem.cn(
             'flex items-start gap-3',
             designSystem.getTypographyClass('sm', 'medium'),
@@ -60,7 +64,7 @@ export const ValidationErrors: React.FC<ValidationErrorsProps> = ({
           )} role="banner">
             <AlertTriangle className={`${iconSizes.md} mt-0.5 flex-shrink-0`} />
             <main>
-              <h4 className="font-medium mb-1">Σφάλμα Επικύρωσης</h4>
+              <h4 className="font-medium mb-1">{t('validation.validationError')}</h4>
               <p className={designSystem.cn(
                 designSystem.getTypographyClass('sm'),
                 `${colors.text.warning}`
@@ -74,7 +78,7 @@ export const ValidationErrors: React.FC<ValidationErrorsProps> = ({
 
       {/* Backend Error */}
       {backendError && (
-        <article className={`p-3 ${colors.bg.errorSubtle} ${quick.card} ${quick.input} ${getStatusBorder('error')}`} role="alert" aria-label="Σφάλμα Συστήματος">
+        <article className={`p-3 ${colors.bg.errorSubtle} ${quick.card} ${quick.input} ${getStatusBorder('error')}`} role="alert" aria-label={t('validation.systemError')}>
           <header className={designSystem.cn(
             'flex items-start gap-3',
             designSystem.getTypographyClass('sm', 'medium'),
@@ -82,7 +86,7 @@ export const ValidationErrors: React.FC<ValidationErrorsProps> = ({
           )} role="banner">
             <XCircle className={`${iconSizes.md} mt-0.5 flex-shrink-0`} />
             <main>
-              <h4 className="font-medium mb-1">Σφάλμα Συστήματος</h4>
+              <h4 className="font-medium mb-1">{t('validation.systemError')}</h4>
               <p className={designSystem.cn(
                 designSystem.getTypographyClass('sm'),
                 `${colors.text.danger}`
@@ -112,6 +116,8 @@ export const CompactValidationErrors: React.FC<ValidationErrorsProps & {
   show = true,
   variant = 'minimal'
 }) => {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -122,7 +128,7 @@ export const CompactValidationErrors: React.FC<ValidationErrorsProps & {
 
   if (variant === 'inline') {
     return (
-      <aside className={`flex items-center gap-2 ${colors.text.danger} text-xs`} role="alert" aria-live="polite" aria-label="Ελλιπής Επικύρωση">
+      <aside className={`flex items-center gap-2 ${colors.text.danger} text-xs`} role="alert" aria-live="polite" aria-label={t('validation.incompleteValidation')}>
         <AlertCircle className={`${iconSizes.xs} flex-shrink-0`} />
         <span>{errorToShow}</span>
       </aside>
@@ -130,7 +136,7 @@ export const CompactValidationErrors: React.FC<ValidationErrorsProps & {
   }
 
   return (
-    <aside className={`p-2 ${colors.bg.errorSubtle} ${quick.card} ${quick.input} ${getStatusBorder('error')}`} role="alert" aria-label="Συμπαγής Επικύρωση">
+    <aside className={`p-2 ${colors.bg.errorSubtle} ${quick.card} ${quick.input} ${getStatusBorder('error')}`} role="alert" aria-label={t('validation.compactValidation')}>
       <p className={`flex items-center gap-2 ${colors.text.danger} text-xs`}>
         <AlertCircle className={`${iconSizes.xs} flex-shrink-0`} />
         <span>{errorToShow}</span>
@@ -155,7 +161,11 @@ export const FieldValidationError: React.FC<{
   show = true,
   fieldId
 }) => {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
+
   if (!show || !error) return null;
 
   return (
@@ -167,7 +177,7 @@ export const FieldValidationError: React.FC<{
         `${colors.text.danger}`
       )}
       role="alert"
-      aria-label="Σφάλμα Πεδίου"
+      aria-label={t('validation.fieldError')}
     >
       <AlertCircle className={`${iconSizes.xs} flex-shrink-0`} />
       <span>{error}</span>
@@ -187,6 +197,8 @@ export const SuccessMessage: React.FC<{
   show = true,
   autoHide = false
 }) => {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('common');
   const { quick, getStatusBorder } = useBorderTokens();
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
@@ -203,13 +215,13 @@ export const SuccessMessage: React.FC<{
   if (!isVisible || !message) return null;
 
   return (
-    <aside className={`p-3 ${colors.bg.successSubtle} ${quick.card} ${quick.input} ${getStatusBorder('success')}`} role="status" aria-live="polite" aria-label="Μήνυμα Επιτυχίας">
+    <aside className={`p-3 ${colors.bg.successSubtle} ${quick.card} ${quick.input} ${getStatusBorder('success')}`} role="status" aria-live="polite" aria-label={t('validation.successMessage')}>
       <p className={designSystem.cn(
         'flex items-center gap-2',
         designSystem.getTypographyClass('sm', 'medium'),
         `${colors.text.success}`
       )}>
-        <figure className={`${iconSizes.md} rounded-full ${colors.bg.success} flex items-center justify-center flex-shrink-0`} role="img" aria-label="Εικονίδιο Επιτυχίας">
+        <figure className={`${iconSizes.md} rounded-full ${colors.bg.success} flex items-center justify-center flex-shrink-0`} role="img" aria-label={t('validation.successIcon')}>
           <div className={`${iconSizes.xs} ${designSystem.getBackgroundColor('primary')} rounded-full`} />
         </figure>
         {message}

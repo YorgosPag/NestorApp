@@ -49,7 +49,7 @@ export interface EmailResponse {
 }
 
 // Legacy sample send for existing functionality
-const sampleSend = async (payload: any) => {
+const sampleSend = async (payload: EmailPayload) => {
     console.log('📧 LEGACY EMAIL:', payload.subject);
     await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network delay
     return { success: true };
@@ -224,7 +224,7 @@ export const emailService = {
         });
     },
 
-    sendAppointmentEmail: async (lead: { fullName: string, email: string }, customData: Record<string, any>) => {
+    sendAppointmentEmail: async (lead: { fullName: string, email: string }, customData: Record<string, unknown>) => {
         return sampleSend({
             to: lead.email,
             toName: lead.fullName,
@@ -234,7 +234,7 @@ export const emailService = {
         });
     },
 
-    sendPropertyProposal: async (lead: { fullName: string, email: string }, customData: Record<string, any>) => {
+    sendPropertyProposal: async (lead: { fullName: string, email: string }, customData: Record<string, unknown>) => {
         return sampleSend({
             to: lead.email,
             toName: lead.fullName,

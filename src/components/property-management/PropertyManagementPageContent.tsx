@@ -8,7 +8,6 @@ import { ReadOnlyPropertyViewerLayout } from '@/features/read-only-viewer';
 
 import { useUrlPreselect } from '@/features/property-management/hooks/useUrlPreselect';
 import { useViewerProps } from '@/features/property-management/hooks/useViewerProps';
-import type { PublicViewerHookShape } from '@/features/property-management/types/publicViewer';
 
 export function PropertyManagementPageContent() {
   const searchParams = useSearchParams();
@@ -26,7 +25,7 @@ export function PropertyManagementPageContent() {
   });
 
   // Viewer props builder (ίδιες τιμές, ίδια διάταξη)
-  const viewerProps = useViewerProps(hookState as PublicViewerHookShape);
+  const viewerProps = useViewerProps(hookState);
 
   // === RENDER (ΑΠΑΡΑΛΛΑΚΤΟ DOM/Tailwind/labels/flows) ===
   return (
@@ -42,17 +41,13 @@ export function PropertyManagementPageContent() {
 
       {/* Updated layout: NO dashboard, more space for properties */}
       <ReadOnlyPropertyViewerLayout
+        {...viewerProps}
         isLoading={hookState.isLoading}
         viewMode={hookState.viewMode}
         showDashboard={false}
         stats={hookState.dashboardStats}
         filteredProperties={hookState.filteredProperties}
-        selectedPropertyIds={hookState.selectedPropertyIds}
-        hoveredPropertyId={hookState.hoveredPropertyId}
-        handlePolygonSelect={hookState.handlePolygonSelect}
-        onSelectFloor={hookState.onSelectFloor}
         handleUpdateProperty={() => {}}
-        {...viewerProps}
       />
       {/* No VersionHistoryPanel for public view */}
     </div>

@@ -295,7 +295,7 @@ export interface EnterpriseSecurityConfiguration {
     action: string;
     userId: string;
     timestamp: Date;
-    changes: Record<string, any>;
+    changes: Record<string, unknown>;
     severity: 'low' | 'medium' | 'high' | 'critical';
   }>;
 }
@@ -328,11 +328,14 @@ interface EnterpriseSecurityCache {
  * Enterprise Security Service
  * Singleton service για διαχείριση security από database
  */
+// 🏢 ENTERPRISE: Import Firestore type for proper typing
+import type { Firestore } from 'firebase/firestore';
+
 export class EnterpriseSecurityService {
   private static instance: EnterpriseSecurityService;
   private cache: EnterpriseSecurityCache;
   private initialized: boolean = false;
-  private db: any; // Firestore instance
+  private db: Firestore | null = null; // Firestore instance
 
   private constructor() {
     this.cache = {
@@ -357,7 +360,7 @@ export class EnterpriseSecurityService {
   /**
    * Initialize service with Firestore instance
    */
-  async initialize(firestore: any): Promise<void> {
+  async initialize(firestore: Firestore): Promise<void> {
     this.db = firestore;
     this.initialized = true;
   }

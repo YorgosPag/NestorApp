@@ -15,14 +15,14 @@ declare global {
   namespace GeoJSON {
     interface Geometry {
       type: string;
-      coordinates?: any;
+      coordinates?: number[] | number[][] | number[][][] | number[][][][];
       geometries?: Geometry[];
     }
 
     interface Feature {
       type: 'Feature';
       geometry: Geometry | null;
-      properties: Record<string, any> | null;
+      properties: Record<string, unknown> | null;
     }
 
     interface FeatureCollection {

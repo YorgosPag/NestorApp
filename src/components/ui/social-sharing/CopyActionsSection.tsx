@@ -16,6 +16,8 @@ import { Copy, ExternalLink, Check, AlertCircle } from 'lucide-react';
 import { designSystem } from '@/lib/design-system';
 import { TRANSITION_PRESETS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -76,6 +78,8 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
   config = {},
   className
 }) => {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
 
   // ============================================================================
@@ -86,15 +90,15 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
     showUrlCopy: true,
     showTextCopy: true,
     labels: {
-      url: 'Αντιγραφή Link',
-      text: 'Αντιγραφή Κειμένου'
+      url: t('copy.copyLink'),
+      text: t('copy.copyText')
     },
     successTimeout: 2000,
     layout: 'horizontal' as const,
     ...config,
     labels: {
-      url: 'Αντιγραφή Link',
-      text: 'Αντιγραφή Κειμένου',
+      url: t('copy.copyLink'),
+      text: t('copy.copyText'),
       ...config.labels
     }
   };
@@ -153,7 +157,7 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
       }, finalConfig.successTimeout);
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Σφάλμα αντιγραφής';
+      const errorMessage = error instanceof Error ? error.message : t('copy.copyError');
       setErrors(prev => ({ ...prev, [type]: errorMessage }));
       onCopyError?.(type, errorMessage);
 
@@ -252,19 +256,19 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
         onClick={isUrl ? handleCopyUrl : handleCopyText}
         className={getButtonClasses(type)}
         aria-label={`${finalConfig.labels[type]} - ${
-          isCopied ? 'Επιτυχής αντιγραφή' :
-          hasError ? 'Σφάλμα αντιγραφής' : 'Κάντε κλικ για αντιγραφή'
+          isCopied ? t('copy.copySuccess') :
+          hasError ? t('copy.copyError') : t('copy.clickToCopy')
         }`}
       >
         {isCopied ? (
           <>
             <Check className={`${iconSizes.sm} mr-2`} />
-            Αντιγράφηκε!
+            {t('copy.copied')}
           </>
         ) : hasError ? (
           <>
             <AlertCircle className={`${iconSizes.sm} mr-2`} />
-            Σφάλμα
+            {t('copy.error')}
           </>
         ) : (
           <>
@@ -306,7 +310,7 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
       className={designSystem.cn("space-y-3", className)}
       aria-live={getAriaLive()}
       role="region"
-      aria-label="Γρήγορες Ενέργειες Αντιγραφής"
+      aria-label={t('copy.quickActionsLabel')}
     >
       {/* Section Header με Design System */}
       <header className={designSystem.cn(
@@ -318,7 +322,7 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
           designSystem.colorScheme.responsive.muted.split(' ')[1], // text-muted-foreground
           "mb-3"
         )}>
-          Γρήγορες Ενέργειες
+          {t('copy.quickActions')}
         </h3>
       </header>
 
@@ -334,7 +338,7 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
           "p-3 rounded-lg",
           designSystem.getStatusColor('error', 'bg'),
           // Enterprise semantic error background
-        )} role="alert" aria-label="Σφάλματα Αντιγραφής">
+        )} role="alert" aria-label={t('copy.copyErrors')}>
           <p className={designSystem.cn(
             designSystem.getTypographyClass('sm'),
             designSystem.getStatusColor('error', 'text'),
@@ -351,7 +355,7 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
           designSystem.getTypographyClass('xs'),
           designSystem.colorScheme.responsive.muted.split(' ')[1], // text-muted-foreground
           "text-center pt-2"
-        )} role="contentinfo" aria-label="Πληροφορίες Ανάπτυξης">
+        )} role="contentinfo" aria-label={t('sharing.devInfo')}>
           🔍 Debug: {finalConfig.layout} layout, {Object.values(copiedStates).filter(Boolean).length} copied
         </footer>
       )}
@@ -373,7 +377,7 @@ export const CompactCopyActions: React.FC<Omit<CopyActionsProps, 'config'>> = (p
       layout: 'vertical',
       labels: {
         url: 'Link',
-        text: 'Κείμενο'
+        text: 'Text'
       }
     }}
   />

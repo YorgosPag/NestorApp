@@ -19,11 +19,14 @@ import {
   type NavigationEnvironment
 } from './smart-navigation-factory';
 
+// 🏢 ENTERPRISE: Import LucideIcon type for proper typing
+import type { LucideIcon } from 'lucide-react';
+
 // 🏢 BACKWARD COMPATIBILITY: Legacy imports maintained
 // Define MenuItem locally για compatibility fix
 interface MenuItem {
   title: string;
-  icon: any; // LucideIcon
+  icon: LucideIcon;
   href: string;
   badge?: string | null;
   subItems?: MenuItem[];

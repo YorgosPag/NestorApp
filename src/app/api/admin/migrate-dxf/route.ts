@@ -16,15 +16,57 @@ import { collection, getDocs, doc, setDoc, Timestamp } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** DXF entity structure */
+interface DxfEntity {
+  type: string;
+  handle?: string;
+  layer?: string;
+  [key: string]: unknown;
+}
+
+/** DXF scene structure */
+interface DxfScene {
+  entities?: DxfEntity[];
+  layers?: Record<string, unknown>;
+  bounds?: {
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+  };
+  units?: string;
+  [key: string]: unknown;
+}
+
 interface LegacyDxfData {
   id: string;
   fileName?: string;
-  scene?: any; // The problematic massive scene object
-  lastModified?: any;
+  scene?: DxfScene;
+  lastModified?: Timestamp;
   version?: number;
   checksum?: string;
   storageUrl?: string;
-  [key: string]: any;
+}
+
+/** Proper file info for already migrated files */
+interface ProperFileInfo {
+  id: string;
+  fileName: string;
+  storageUrl: string;
+}
+
+/** Analysis result structure */
+interface AnalysisResult {
+  totalDocs: number;
+  legacyFiles: FileInfo[];
+  properFiles: ProperFileInfo[];
+  problemFiles: FileInfo[];
+  totalLegacySize: number;
+  logs: string[];
 }
 
 interface FileInfo {
@@ -52,13 +94,13 @@ class DxfMigrationAPI {
     const cadFilesRef = collection(db, COLLECTIONS.CAD_FILES);
     const snapshot = await getDocs(cadFilesRef);
 
-    const analysis = {
+    const analysis: AnalysisResult = {
       totalDocs: snapshot.docs.length,
-      legacyFiles: [] as FileInfo[],
-      properFiles: [] as any[],
-      problemFiles: [] as FileInfo[],
+      legacyFiles: [],
+      properFiles: [],
+      problemFiles: [],
       totalLegacySize: 0,
-      logs: [] as string[]
+      logs: []
     };
 
     analysis.logs.push(`📊 Found ${snapshot.docs.length} documents in CAD_FILES collection`);
@@ -110,7 +152,7 @@ class DxfMigrationAPI {
   /**
    * 🚀 Migrate legacy files to Storage
    */
-  async migrateLegacyFiles(analysisData: any) {
+  async migrateLegacyFiles(analysisData: AnalysisResult) {
     if (analysisData.legacyFiles.length === 0) {
       return {
         migratedCount: 0,
@@ -194,8 +236,9 @@ class DxfMigrationAPI {
         logs.push(`   ✅ ${this.dryRun ? 'Would migrate' : 'Migrated'}: ${fileInfo.fileName}`);
         migratedCount++;
 
-      } catch (error: any) {
-        const errorMsg = `Failed to migrate ${fileInfo.fileName}: ${error.message}`;
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMsg = `Failed to migrate ${fileInfo.fileName}: ${errorMessage}`;
         logs.push(`   ❌ ${errorMsg}`);
         errors.push(errorMsg);
         failedCount++;
@@ -208,7 +251,7 @@ class DxfMigrationAPI {
   /**
    * Generate simple checksum
    */
-  generateChecksum(scene: any): string {
+  generateChecksum(scene: DxfScene): string {
     const data = {
       entityCount: scene.entities?.length || 0,
       layerCount: Object.keys(scene.layers || {}).length,
@@ -258,13 +301,13 @@ export async function GET(request: NextRequest) {
       ...report
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ [API] DRY RUN Analysis failed:', error);
 
     return NextResponse.json({
       success: false,
       error: 'DRY RUN Analysis failed',
-      details: error.message
+      details: error instanceof Error ? error.message : String(error)
     }, { status: 500 });
   }
 }
@@ -330,13 +373,13 @@ export async function POST(request: NextRequest) {
       ...report
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ [API] LIVE Migration failed:', error);
 
     return NextResponse.json({
       success: false,
       error: 'LIVE Migration failed',
-      details: error.message
+      details: error instanceof Error ? error.message : String(error)
     }, { status: 500 });
   }
 }

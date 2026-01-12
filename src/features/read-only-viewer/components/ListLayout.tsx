@@ -7,6 +7,20 @@ import { PropertyList } from '@/components/property-viewer/PropertyList';
 import { PropertyDetailsPanel } from '@/components/property-viewer/PropertyDetailsPanel';
 import { PropertyHoverInfo } from '@/components/property-viewer/PropertyHoverInfo';
 
+/** Property data structure for list layout */
+interface PropertyData {
+  id: string;
+  name?: string;
+  [key: string]: unknown;
+}
+
+/** Viewer props interface */
+interface ViewerPropsType {
+  onSelectFloor?: (floorId: string) => void;
+  properties?: PropertyData[];
+  [key: string]: unknown;
+}
+
 export function ListLayout({
   isLoading,
   filteredProperties,
@@ -17,12 +31,12 @@ export function ListLayout({
   viewerProps,
 }: {
   isLoading: boolean;
-  filteredProperties: any[];
+  filteredProperties: PropertyData[];
   selectedPropertyIds: string[];
   handlePolygonSelect: (id: string, isShiftClick: boolean) => void;
   hoveredPropertyId: string | null;
-  readOnlyViewerProps: any;
-  viewerProps: any;
+  readOnlyViewerProps: ViewerPropsType;
+  viewerProps: ViewerPropsType;
 }) {
   // This component is updated to reflect the new layout
   return (

@@ -9,6 +9,8 @@ import { MobileDetailsSlideIn } from '@/core/layouts';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ProjectViewSwitchProps {
   projects: Project[];
@@ -19,6 +21,8 @@ interface ProjectViewSwitchProps {
 
 export function ProjectViewSwitch({
   iconSizes = useIconSizes(), projects, selectedProject, onSelectProject, companies }: ProjectViewSwitchProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('projects');
   const colors = useSemanticColors();
 
   const getProjectWithCompanyName = (project: Project) => {
@@ -56,20 +60,20 @@ export function ProjectViewSwitch({
       <MobileDetailsSlideIn
         isOpen={!!selectedProject}
         onClose={() => onSelectProject(null)}
-        title={selectedProject ? getProjectWithCompanyName(selectedProject).name : 'Λεπτομέρειες Έργου'}
+        title={selectedProject ? getProjectWithCompanyName(selectedProject).name : t('viewSwitch.detailsTitle')}
         actionButtons={
           <>
             <button
               onClick={() => {/* TODO: Edit project handler */}}
               className={`p-2 rounded-md border ${colors.bg.primary} border-border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
-              aria-label="Επεξεργασία Έργου"
+              aria-label={t('viewSwitch.editLabel')}
             >
               <Edit className={iconSizes.sm} />
             </button>
             <button
               onClick={() => {/* TODO: Delete project handler */}}
               className={`p-2 rounded-md border ${colors.bg.primary} border-border text-destructive ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
-              aria-label="Διαγραφή Έργου"
+              aria-label={t('viewSwitch.deleteLabel')}
             >
               <Trash2 className={iconSizes.sm} />
             </button>

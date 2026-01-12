@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { UserType } from '@/contexts/OptimizedUserRoleContext';
+import type { UserType } from '@/auth';
 import { Users, Briefcase, HardHat } from 'lucide-react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { HOVER_BORDER_EFFECTS, HOVER_SHADOWS } from '@/components/ui/effects';

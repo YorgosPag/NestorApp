@@ -5,6 +5,52 @@
 
 import type { EntityModel, Point2D } from '../types/Types';
 
+// 🏢 ENTERPRISE: Entity-specific type interfaces for safe type casting
+interface LineEntityProperties {
+  start: Point2D;
+  end: Point2D;
+}
+
+interface CircleEntityProperties {
+  center: Point2D;
+  radius: number;
+}
+
+interface PolylineEntityProperties {
+  vertices: Point2D[];
+  points?: Point2D[];
+}
+
+interface EllipseEntityProperties {
+  center: Point2D;
+  radiusX: number;
+  radiusY: number;
+}
+
+interface TextEntityProperties {
+  position: Point2D;
+  text: string;
+  fontSize?: number;
+}
+
+interface SplineEntityProperties {
+  controlPoints?: Point2D[];
+  vertices?: Point2D[];
+}
+
+interface PointEntityProperties {
+  position: Point2D;
+}
+
+// 🏢 ENTERPRISE: Type guard helpers
+type EntityWithLine = EntityModel & LineEntityProperties;
+type EntityWithCircle = EntityModel & CircleEntityProperties;
+type EntityWithPolyline = EntityModel & PolylineEntityProperties;
+type EntityWithEllipse = EntityModel & EllipseEntityProperties;
+type EntityWithText = EntityModel & TextEntityProperties;
+type EntityWithSpline = EntityModel & SplineEntityProperties;
+type EntityWithPoint = EntityModel & PointEntityProperties;
+
 export interface BoundingBox {
   minX: number;
   minY: number;
@@ -58,10 +104,10 @@ export class BoundsCalculator {
    * 🔺 LINE BOUNDS
    */
   private static calculateLineBounds(entity: EntityModel, tolerance: number): BoundingBox {
-    // ✅ ENTERPRISE FIX: Safe type casting for entity-specific properties
-    const lineEntity = entity as any; // Enterprise safe casting for LineEntity properties
-    const start = lineEntity.start as Point2D;
-    const end = lineEntity.end as Point2D;
+    // 🏢 ENTERPRISE: Type-safe casting for LineEntity properties
+    const lineEntity = entity as EntityWithLine;
+    const start = lineEntity.start;
+    const end = lineEntity.end;
 
     const minX = Math.min(start.x, end.x) - tolerance;
     const minY = Math.min(start.y, end.y) - tolerance;
@@ -75,10 +121,10 @@ export class BoundsCalculator {
    * 🔺 CIRCLE BOUNDS
    */
   private static calculateCircleBounds(entity: EntityModel, tolerance: number): BoundingBox {
-    // ✅ ENTERPRISE FIX: Safe type casting for entity-specific properties
-    const circleEntity = entity as any; // Enterprise safe casting for CircleEntity properties
-    const center = circleEntity.center as Point2D;
-    const radius = (circleEntity.radius as number) + tolerance;
+    // 🏢 ENTERPRISE: Type-safe casting for CircleEntity properties
+    const circleEntity = entity as EntityWithCircle;
+    const center = circleEntity.center;
+    const radius = circleEntity.radius + tolerance;
 
     return this.createBoundingBox(
       center.x - radius,
@@ -101,9 +147,9 @@ export class BoundsCalculator {
    * 🔺 POLYLINE BOUNDS
    */
   private static calculatePolylineBounds(entity: EntityModel, tolerance: number): BoundingBox {
-    // ✅ ENTERPRISE FIX: Safe type casting for entity-specific properties
-    const polylineEntity = entity as any; // Enterprise safe casting for PolylineEntity properties
-    const vertices = polylineEntity.vertices as Point2D[];
+    // 🏢 ENTERPRISE: Type-safe casting for PolylineEntity properties
+    const polylineEntity = entity as EntityWithPolyline;
+    const vertices = polylineEntity.vertices;
     if (!vertices || vertices.length === 0) {
       return this.createBoundingBox(0, 0, 0, 0);
     }
@@ -141,11 +187,11 @@ export class BoundsCalculator {
    * Simplified - χρησιμοποιεί το bounding rectangle
    */
   private static calculateEllipseBounds(entity: EntityModel, tolerance: number): BoundingBox {
-    // ✅ ENTERPRISE FIX: Safe type casting for entity-specific properties
-    const ellipseEntity = entity as any; // Enterprise safe casting for EllipseEntity properties
-    const center = ellipseEntity.center as Point2D;
-    const radiusX = (ellipseEntity.radiusX as number) + tolerance;
-    const radiusY = (ellipseEntity.radiusY as number) + tolerance;
+    // 🏢 ENTERPRISE: Type-safe casting for EllipseEntity properties
+    const ellipseEntity = entity as EntityWithEllipse;
+    const center = ellipseEntity.center;
+    const radiusX = ellipseEntity.radiusX + tolerance;
+    const radiusY = ellipseEntity.radiusY + tolerance;
 
     return this.createBoundingBox(
       center.x - radiusX,
@@ -160,11 +206,11 @@ export class BoundsCalculator {
    * Εκτίμηση βάσει font size - θα μπορούσε να βελτιωθεί με measureText
    */
   private static calculateTextBounds(entity: EntityModel, tolerance: number): BoundingBox {
-    // ✅ ENTERPRISE FIX: Safe type casting for entity-specific properties
-    const textEntity = entity as any; // Enterprise safe casting for TextEntity properties
-    const position = textEntity.position as Point2D;
-    const text = textEntity.text as string || '';
-    const fontSize = (textEntity.fontSize as number) || 12;
+    // 🏢 ENTERPRISE: Type-safe casting for TextEntity properties
+    const textEntity = entity as EntityWithText;
+    const position = textEntity.position;
+    const text = textEntity.text || '';
+    const fontSize = textEntity.fontSize || 12;
 
     // Rough estimation - 0.6 * fontSize per character width
     const estimatedWidth = text.length * fontSize * 0.6;
@@ -183,24 +229,28 @@ export class BoundsCalculator {
    * Simplified - χρησιμοποιεί τα control points
    */
   private static calculateSplineBounds(entity: EntityModel, tolerance: number): BoundingBox {
-    // ✅ ENTERPRISE FIX: Safe type casting for entity-specific properties
-    const splineEntity = entity as any; // Enterprise safe casting for SplineEntity properties
-    const controlPoints = splineEntity.controlPoints as Point2D[] || splineEntity.vertices as Point2D[];
+    // 🏢 ENTERPRISE: Type-safe casting for SplineEntity properties
+    const splineEntity = entity as EntityWithSpline;
+    const controlPoints = splineEntity.controlPoints || splineEntity.vertices;
     if (!controlPoints || controlPoints.length === 0) {
       return this.createBoundingBox(0, 0, 0, 0);
     }
 
-    // Use control points bounds (conservative)
-    return this.calculatePolylineBounds({ ...entity, points: controlPoints } as any, tolerance);
+    // Use control points bounds (conservative) - create temporary polyline entity
+    const polylineEntity: EntityModel & PolylineEntityProperties = {
+      ...entity,
+      vertices: controlPoints
+    };
+    return this.calculatePolylineBounds(polylineEntity, tolerance);
   }
 
   /**
    * 🔺 POINT BOUNDS
    */
   private static calculatePointBounds(entity: EntityModel, tolerance: number): BoundingBox {
-    // ✅ ENTERPRISE FIX: Safe type casting for entity-specific properties
-    const pointEntity = entity as any; // Enterprise safe casting for PointEntity properties
-    const position = pointEntity.position as Point2D;
+    // 🏢 ENTERPRISE: Type-safe casting for PointEntity properties
+    const pointEntity = entity as EntityWithPoint;
+    const position = pointEntity.position;
     const pointSize = tolerance || 1; // Minimum size for selection
 
     return this.createBoundingBox(
@@ -330,7 +380,7 @@ export class BoundsOperations {
   /**
    * Transform bounds using transform matrix/function
    */
-  static transform(bounds: BoundingBox, transform: any) {
+  static transform(bounds: BoundingBox, transform: { scale?: number; offsetX?: number; offsetY?: number }): BoundingBox {
     // Basic transform implementation - extend as needed
     return bounds;
   }

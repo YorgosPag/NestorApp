@@ -10,12 +10,17 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
+/** Firestore Timestamp type */
+interface FirestoreTimestamp {
+  toDate: () => Date;
+}
+
 interface TelegramMessage {
   id: string;
   content: string;
   from: string;
   direction: 'inbound' | 'outbound';
-  createdAt: any;
+  createdAt: FirestoreTimestamp | Date | string | null;
   status: string;
 }
 
@@ -80,9 +85,11 @@ export function TelegramNotifications() {
     }
   };
 
-  const formatTime = (timestamp: any) => {
+  const formatTime = (timestamp: FirestoreTimestamp | Date | string | null) => {
     if (!timestamp) return '';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const date = typeof timestamp === 'object' && 'toDate' in timestamp
+      ? timestamp.toDate()
+      : new Date(timestamp as string | Date);
     return date.toLocaleTimeString('el-GR', { 
       hour: '2-digit', 
       minute: '2-digit' 

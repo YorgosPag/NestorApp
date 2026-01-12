@@ -9,6 +9,68 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { BaseMessageInput, SendResult, Channel } from '@/types/communications';
 import { companySettingsService } from '@/services/company/EnterpriseCompanySettingsService';
 
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** Template message input */
+interface TemplateMessageInput {
+  templateType: string;
+  channel: Channel;
+  variables: Record<string, string>;
+  to: string;
+  from?: string;
+  subject?: string;
+  metadata?: Record<string, unknown>;
+}
+
+/** Options for fetching lead communications */
+interface LeadCommunicationsOptions {
+  limit?: number;
+  channel?: Channel | null;
+  direction?: 'inbound' | 'outbound' | null;
+  startDate?: Date | null;
+  endDate?: Date | null;
+}
+
+/** Options for unified inbox */
+interface UnifiedInboxOptions {
+  limit?: number;
+  channel?: Channel | null;
+  status?: string | null;
+  unreadOnly?: boolean;
+}
+
+/** Communication record from Firestore */
+interface CommunicationRecord {
+  id: string;
+  channel: Channel;
+  entityType: string;
+  entityId: string;
+  direction: string;
+  status: string;
+  content: string;
+  createdAt: Date;
+  metadata?: Record<string, unknown>;
+}
+
+/** Channel test result */
+interface ChannelTestResult {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
+/** Template structure */
+interface MessageTemplate {
+  text?: string;
+  subject?: string;
+  [key: string]: string | undefined;
+}
+
+/** Templates collection by channel */
+type MessageTemplatesCollection = Record<string, Record<string, MessageTemplate | string>>;
+
 // 🏢 ENTERPRISE: Centralized Firestore collection configuration
 const COMMUNICATIONS_COLLECTION = COLLECTIONS.COMMUNICATIONS;
 const SYSTEM_COLLECTION = COLLECTIONS.SYSTEM;
@@ -91,7 +153,7 @@ class CommunicationsService {
       this.validateMessageData(messageData);
       const preparedMessage = await this.prepareMessage(messageData);
       return await messageRouter.sendMessage(preparedMessage);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error sending message:', error);
       throw error;
     }
@@ -130,7 +192,7 @@ class CommunicationsService {
   /**
    * Αποστολή template-based μηνύματος
    */
-  async sendTemplateMessage(templateData: any): Promise<SendResult> {
+  async sendTemplateMessage(templateData: TemplateMessageInput): Promise<SendResult> {
     const { templateType, channel, variables, ...otherData } = templateData;
 
     const template = this.getMessageTemplate(channel, templateType);
@@ -155,7 +217,7 @@ class CommunicationsService {
   /**
    * Λήψη ιστορικού επικοινωνιών για έναν lead
    */
-  async getLeadCommunications(leadId: string, options: any = {}) {
+  async getLeadCommunications(leadId: string, options: LeadCommunicationsOptions = {}): Promise<CommunicationRecord[]> {
     try {
       const {
         limit: queryLimit = 50,
@@ -176,11 +238,11 @@ class CommunicationsService {
       if (direction) qConstraints.push(where('direction', '==', direction));
       if (startDate) qConstraints.push(where('createdAt', '>=', startDate));
       if (endDate) qConstraints.push(where('createdAt', '<=', endDate));
-      
+
       const q = query(collection(db, COMMUNICATIONS_COLLECTION), ...qConstraints);
       const querySnapshot = await getDocs(q);
-      const communications: any[] = [];
-      querySnapshot.forEach((doc) => communications.push({ id: doc.id, ...doc.data() }));
+      const communications: CommunicationRecord[] = [];
+      querySnapshot.forEach((docSnap) => communications.push({ id: docSnap.id, ...docSnap.data() } as CommunicationRecord));
       return communications;
     } catch (error) {
       console.error('Error fetching lead communications:', error);
@@ -191,7 +253,7 @@ class CommunicationsService {
   /**
    * Λήψη unified inbox
    */
-  async getUnifiedInbox(options: any = {}) {
+  async getUnifiedInbox(options: UnifiedInboxOptions = {}): Promise<CommunicationRecord[]> {
     try {
       const {
         limit: queryLimit = 50,
@@ -211,8 +273,8 @@ class CommunicationsService {
 
       const q = query(collection(db, COMMUNICATIONS_COLLECTION), ...qConstraints);
       const querySnapshot = await getDocs(q);
-      const messages: any[] = [];
-      querySnapshot.forEach((doc) => messages.push({ id: doc.id, ...doc.data() }));
+      const messages: CommunicationRecord[] = [];
+      querySnapshot.forEach((docSnap) => messages.push({ id: docSnap.id, ...docSnap.data() } as CommunicationRecord));
       return messages;
     } catch (error) {
       console.error('Error fetching unified inbox:', error);
@@ -291,21 +353,22 @@ class CommunicationsService {
   /**
    * Λήψη template μηνύματος
    */
-  getMessageTemplate(channel: string, templateType: string) {
-    const channelTemplates = (MESSAGE_TEMPLATES as any)[channel];
-    return channelTemplates?.[templateType] || null;
+  getMessageTemplate(channel: string, templateType: string): MessageTemplate | string | null {
+    const templates = MESSAGE_TEMPLATES as MessageTemplatesCollection;
+    const channelTemplates = templates[channel];
+    return channelTemplates?.[templateType] ?? null;
   }
 
   /**
    * 🏢 ENTERPRISE: Αντικατάσταση μεταβλητών σε template με enhanced processing
    */
-  replaceTemplateVariables(template: any, variables: any = {}) {
-    let content = typeof template === 'string' ? template : template.text || '';
+  replaceTemplateVariables(template: string | MessageTemplate, variables: Record<string, string> = {}): string {
+    let content = typeof template === 'string' ? template : template.text ?? '';
 
     // Process template variables με case-insensitive matching
     Object.keys(variables).forEach(key => {
       const regex = new RegExp(`{{${key}}}`, 'gi'); // Case-insensitive flag added
-      content = content.replace(regex, variables[key] || '');
+      content = content.replace(regex, variables[key] ?? '');
     });
 
     return content;
@@ -314,8 +377,8 @@ class CommunicationsService {
   /**
    * Test όλων των channels
    */
-  async testAllChannels(): Promise<Record<Channel, { success: boolean; message?: string; error?: string }>> {
-    const results: any = {};
+  async testAllChannels(): Promise<Partial<Record<Channel, ChannelTestResult>>> {
+    const results: Partial<Record<Channel, ChannelTestResult>> = {};
     for (const channel of this.availableChannels) {
       try {
         const provider = messageRouter.providers.get(channel);
@@ -324,8 +387,8 @@ class CommunicationsService {
         } else {
           results[channel] = { success: false, message: 'No test method available' };
         }
-      } catch (error: any) {
-        results[channel] = { success: false, error: error.message };
+      } catch (error: unknown) {
+        results[channel] = { success: false, error: error instanceof Error ? error.message : String(error) };
       }
     }
     return results;

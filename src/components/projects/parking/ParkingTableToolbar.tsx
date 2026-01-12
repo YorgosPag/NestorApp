@@ -20,6 +20,8 @@ import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { ParkingStatsSummary } from './ParkingStatsSummary';
 import { ParkingFilterPanel } from './ParkingFilterPanel';
 import { SortToggleButton } from '@/features/units-toolbar/components/SortToggleButton';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 
 interface ParkingTableToolbarProps {
@@ -47,6 +49,8 @@ export function ParkingTableToolbar({
   onRefresh,
   selectedCount = 0
 }: ParkingTableToolbarProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
 
@@ -58,49 +62,49 @@ export function ParkingTableToolbar({
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
               <ToolbarButton
-                tooltip="Νέα Θέση Στάθμευσης"
+                tooltip={t('spaces.parking.toolbar.newSpot')}
                 className={`text-green-600 dark:text-green-500 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`}
                 onClick={onAdd}
               >
                 <Plus className={iconSizes.sm} />
               </ToolbarButton>
-              
+
               <ToolbarButton
-                tooltip="Διαγραφή Επιλεγμένων"
+                tooltip={t('spaces.parking.toolbar.deleteSelected')}
                 className={`text-red-600 dark:text-red-500 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
                 onClick={onDelete}
                 disabled={selectedCount === 0}
               >
                 <Minus className={iconSizes.sm} />
               </ToolbarButton>
-              
+
               <div className="w-px h-6 bg-border mx-1" />
-              
-              <ToolbarButton 
-                tooltip="Αποθήκευση Αλλαγών"
+
+              <ToolbarButton
+                tooltip={t('spaces.parking.toolbar.saveChanges')}
                 onClick={onSave}
               >
                 <Save className={iconSizes.sm} />
               </ToolbarButton>
-              
-              <ToolbarButton 
-                tooltip="Ανανέωση Δεδομένων"
+
+              <ToolbarButton
+                tooltip={t('spaces.parking.toolbar.refreshData')}
                 onClick={onRefresh}
               >
                 <RefreshCw className={iconSizes.sm} />
               </ToolbarButton>
-              
+
               <div className="w-px h-6 bg-border mx-1" />
-              
-              <ToolbarButton 
-                tooltip="Εξαγωγή Δεδομένων"
+
+              <ToolbarButton
+                tooltip={t('spaces.parking.toolbar.exportData')}
                 onClick={onExport}
               >
                 <Download className={iconSizes.sm} />
               </ToolbarButton>
-              
-              <ToolbarButton 
-                tooltip="Εισαγωγή Δεδομένων"
+
+              <ToolbarButton
+                tooltip={t('spaces.parking.toolbar.importData')}
                 onClick={onImport}
               >
                 <Upload className={iconSizes.sm} />
@@ -110,16 +114,16 @@ export function ParkingTableToolbar({
             {selectedCount > 0 && (
               <CommonBadge
                 status="company"
-                customLabel={`${selectedCount} επιλεγμένες`}
+                customLabel={t('spaces.parking.toolbar.selectedCount', { count: selectedCount })}
                 variant="secondary"
                 className="ml-2"
               />
             )}
           </div>
-          
+
           <div className="flex items-center gap-2">
-            <ToolbarButton 
-              tooltip="Βοήθεια"
+            <ToolbarButton
+              tooltip={t('spaces.parking.toolbar.help')}
             >
               <HelpCircle className={iconSizes.sm} />
             </ToolbarButton>

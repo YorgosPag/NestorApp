@@ -13,6 +13,8 @@ import { FormRowSelect } from './form/FormRowSelect';
 import { FormRowInput } from './form/FormRowInput';
 import { FormRowCoordinates } from './form/FormRowCoordinates';
 import type { StorageUnit } from '@/types/storage';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface Props {
   formData: Partial<StorageUnit>;
@@ -29,6 +31,8 @@ export function StorageFormSpecs({
   isCalculatingPrice,
   availableFloors,
 }: Props) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   return (
     <Card>
@@ -36,33 +40,33 @@ export function StorageFormSpecs({
         <CardTitle className="flex items-center gap-2 text-base">
           {/* 🏢 ENTERPRISE: Using centralized storage icon/color */}
           <NAVIGATION_ENTITIES.storage.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.storage.color)} />
-          Τοποθεσία & Προδιαγραφές
+          {t('storage.form.specs.title')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormRowSelect
-            label="Όροφος"
+            label={t('storage.form.specs.labels.floor')}
             value={formData.floor || ''}
             options={availableFloors}
             onChange={(val) => updateField('floor', val)}
             required
           />
           <FormRowInput
-            label="Επιφάνεια (m²)"
+            label={t('storage.form.specs.labels.area')}
             value={formData.area || ''}
             onChange={(val) => updateField('area', val)}
             type="number"
-            placeholder="0.00"
+            placeholder={t('storage.form.specs.placeholders.area')}
             error={errors.area}
             required
           />
           <FormRowInput
-            label="Τιμή (€)"
+            label={t('storage.form.specs.labels.price')}
             value={formData.price || ''}
             onChange={(val) => updateField('price', val)}
             type="number"
-            placeholder="0.00"
+            placeholder={t('storage.form.specs.placeholders.price')}
             error={errors.price}
             required
             trailingElement={isCalculatingPrice ? (
@@ -78,11 +82,11 @@ export function StorageFormSpecs({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormRowInput
-            label="Συνδεδεμένο Ακίνητο"
+            label={t('storage.form.specs.labels.linkedProperty')}
             value={formData.linkedProperty || ''}
             onChange={(val) => updateField('linkedProperty', val || null)}
-            placeholder="π.χ. Δ2.1"
-            helper="Κωδικός ακινήτου που συνοδεύει αυτή την μονάδα"
+            placeholder={t('storage.form.specs.placeholders.linkedProperty')}
+            helper={t('storage.form.specs.helpers.linkedProperty')}
           />
 
           <FormRowCoordinates

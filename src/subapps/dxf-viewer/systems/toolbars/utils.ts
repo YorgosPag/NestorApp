@@ -373,8 +373,9 @@ export const ToolRunnerUtils = {
 
   /**
    * Validates tool input based on step requirements
+   * 🏢 ENTERPRISE: Using unknown for type-safe input validation
    */
-  validateToolInput: (step: ToolStep, input: any): { valid: boolean; error?: string } => {
+  validateToolInput: (step: ToolStep, input: unknown): { valid: boolean; error?: string } => {
     if (step.required && (input === null || input === undefined)) {
       return { valid: false, error: 'This input is required' };
     }
@@ -409,8 +410,9 @@ export const ToolRunnerUtils = {
 
   /**
    * Checks if tool can proceed to next step
+   * 🏢 ENTERPRISE: Using unknown for type-safe input validation
    */
-  canProceed: (runner: ToolRunner, input?: any): boolean => {
+  canProceed: (runner: ToolRunner, input?: unknown): boolean => {
     const currentStep = ToolRunnerUtils.getCurrentStep(runner);
     if (!currentStep) return false;
 
@@ -431,12 +433,13 @@ export const ToolRunnerUtils = {
 export const CustomizationUtils = {
   /**
    * Creates a new toolbar customization
+   * 🏢 ENTERPRISE: Using unknown for type-safe changes tracking
    */
   createCustomization: (
     name: string,
     description: string,
     toolbarId: string,
-    changes: Record<string, any>,
+    changes: Record<string, unknown>,
     createdBy: string = 'user'
   // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   ): ToolbarCustomization => {
@@ -586,11 +589,12 @@ export const HookPatternUtils = {
 
   /**
    * Creates operation result factory
+   * 🏢 ENTERPRISE: Using unknown for type-safe data passing
    */
   createOperationResult: (
     operation: string,
     success: boolean,
-    data?: any,
+    data?: unknown,
     error?: string,
     toolbarId?: string
   ) => {

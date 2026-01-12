@@ -1,71 +1,61 @@
+// ============================================================================
+// BUILDING PHOTOS TAB - MIGRATED TO PhotosTabBase
+// ============================================================================
+//
+// ADR-018: Upload Systems Centralization
+// This component now uses the centralized PhotosTabBase template.
+//
+// BEFORE: 72 lines of custom code
+// AFTER: ~20 lines using template
+//
+// Benefits:
+// - Zero code duplication
+// - Consistent behavior across all entity types
+// - Type-safe (no `any` types)
+// - Uses centralized hooks and components
+//
+// ============================================================================
 
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import type { Building } from '@/types/building/contracts';
-import { type Photo } from '@/components/generic/utils/PhotoItem';
-import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
-import { PhotoItem } from '@/components/generic/utils/PhotoItem';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { PhotosTabBase } from '@/components/generic/photo-system';
+
+// =============================================================================
+// PROPS
+// =============================================================================
 
 interface PhotosTabContentProps {
+  /** Building entity (for building context) */
   building?: Building;
+  /** Selected unit (for units context via GenericUnitsTabsRenderer) */
+  selectedUnit?: { id: string; name?: string };
 }
 
-const initialPhotos: Photo[] = [
-  {
-    id: 1,
-    src: 'https://placehold.co/400x400.png',
-    alt: 'Building progress',
-    name: 'Πρόοδος Φεβ 2025',
-    aiHint: 'building construction',
-  },
-];
+// =============================================================================
+// COMPONENT
+// =============================================================================
 
-const PhotosTabContent = ({ building }: PhotosTabContentProps) => {
-  const colors = useSemanticColors();
-  const { quick } = useBorderTokens();
-  const [photos, setPhotos] = useState<Photo[]>(initialPhotos);
-  const [currentFile, setCurrentFile] = useState<File | null>(null);
-
-  const handleFileChange = (file: File | null) => {
-    setCurrentFile(file);
-  };
-
-  const handleUploadComplete = (result: any) => {
-    if (currentFile) {
-      // Add the new photo to state
-      const newPhoto: Photo = {
-        id: Date.now(),
-        src: URL.createObjectURL(currentFile),
-        alt: currentFile.name,
-        name: currentFile.name,
-        aiHint: 'newly uploaded',
-      };
-      setPhotos(prevPhotos => [...prevPhotos, newPhoto]);
-      setCurrentFile(null);
-    }
-  };
+/**
+ * Building/Unit Photos Tab - Uses centralized PhotosTabBase
+ *
+ * Migration from 72 lines to ~20 lines using enterprise template.
+ *
+ * Supports both:
+ * - Building context (receives building prop)
+ * - Units context (receives selectedUnit prop from GenericUnitsTabsRenderer)
+ */
+const PhotosTabContent = ({ building, selectedUnit }: PhotosTabContentProps) => {
+  // Support both building and unit contexts
+  const entity = building || selectedUnit || { id: 'placeholder', name: 'Κτίριο' };
 
   return (
-    <div className="space-y-6">
-      <div className={`${colors.bg.primary} ${quick.card} p-6`}>
-        <h3 className="text-lg font-semibold mb-4">Φωτογραφίες Κτιρίου</h3>
-        <EnterprisePhotoUpload
-          purpose="photo"
-          maxSize={10 * 1024 * 1024} // 10MB για κτίρια
-          photoFile={currentFile}
-          onFileChange={handleFileChange}
-          onUploadComplete={handleUploadComplete}
-        />
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {photos.map((photo) => (
-          <PhotoItem key={photo.id} photo={photo} />
-        ))}
-      </div>
-    </div>
+    <PhotosTabBase
+      entity={entity}
+      entityType="building"
+      entityName={entity.name}
+    />
   );
 };
 

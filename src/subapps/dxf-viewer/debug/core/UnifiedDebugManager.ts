@@ -10,9 +10,31 @@ import type {
   DebugStatistics,
   LogLevel,
   LogFunction,
+  Logger,
   DebugModule,
   PerformanceMetrics
 } from './types';
+
+/**
+ * 🏢 ENTERPRISE: Window interface for debug manager globals
+ */
+interface DxfDebugManagerAPI {
+  enable: () => void;
+  disable: () => void;
+  enableModule: (name: string) => void;
+  disableModule: (name: string) => void;
+  emergencySilence: () => void;
+  emergencyRestore: () => void;
+  stats: () => DebugStatistics;
+  modules: () => string[];
+  config: () => { enabled: boolean; level: string; modules: string[]; maxLogsPerSecond: number; enablePerformanceTracking: boolean; enableEmergencySilence: boolean };
+}
+
+declare global {
+  interface Window {
+    dxfDebugManager?: DxfDebugManagerAPI;
+  }
+}
 
 class UnifiedDebugManagerCore {
   private static instance: UnifiedDebugManagerCore;
@@ -103,19 +125,19 @@ class UnifiedDebugManagerCore {
     return module;
   }
 
-  private createModuleLogger(moduleName: string): any {
+  private createModuleLogger(moduleName: string): Logger {
     return {
-      error: (...args: any[]) => this.log('error', moduleName, ...args),
-      warn: (...args: any[]) => this.log('warn', moduleName, ...args),
-      info: (...args: any[]) => this.log('info', moduleName, ...args),
-      debug: (...args: any[]) => this.log('debug', moduleName, ...args),
-      verbose: (...args: any[]) => this.log('verbose', moduleName, ...args)
+      error: (...args: unknown[]) => this.log('error', moduleName, ...args),
+      warn: (...args: unknown[]) => this.log('warn', moduleName, ...args),
+      info: (...args: unknown[]) => this.log('info', moduleName, ...args),
+      debug: (...args: unknown[]) => this.log('debug', moduleName, ...args),
+      verbose: (...args: unknown[]) => this.log('verbose', moduleName, ...args)
     };
   }
 
   // ═══ LOGGING CORE ═══
 
-  private log(level: LogLevel, module: string, ...args: any[]): void {
+  private log(level: LogLevel, module: string, ...args: unknown[]): void {
     if (!this.shouldLog(level, module)) return;
 
     const timestamp = Date.now();
@@ -175,13 +197,13 @@ class UnifiedDebugManagerCore {
     return true;
   }
 
-  private formatMessage(...args: any[]): string {
+  private formatMessage(...args: unknown[]): string {
     return args.map(arg =>
       typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
     ).join(' ');
   }
 
-  private outputToConsole(level: LogLevel, module: string, ...args: any[]): void {
+  private outputToConsole(level: LogLevel, module: string, ...args: unknown[]): void {
     if (this.emergencySilenced && level !== 'error') return;
 
     const prefix = `[${module}]`;
@@ -200,7 +222,7 @@ class UnifiedDebugManagerCore {
 
   // ═══ PERFORMANCE LOGGING ═══
 
-  performanceLog(type: 'render' | 'perf' | 'hot', module: string, ...args: any[]): void {
+  performanceLog(type: 'render' | 'perf' | 'hot', module: string, ...args: unknown[]): void {
     if (!this.config.enablePerformanceTracking) return;
 
     this.performance[type === 'render' ? 'renderCount' : type === 'perf' ? 'perfCount' : 'hotPathCount']++;
@@ -229,7 +251,7 @@ class UnifiedDebugManagerCore {
       error: console.error
     };
 
-    console.log = (...args: any[]) => {
+    console.log = (...args: unknown[]) => {
       const str = String(args[0] || '');
       if (str.includes('⚠') || str.includes('❌') || str.includes('error')) {
         this.originalConsole!.log(...args);
@@ -314,7 +336,7 @@ class UnifiedDebugManagerCore {
 
   private setupGlobalAccess(): void {
     if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
-      (window as any).dxfDebugManager = {
+      window.dxfDebugManager = {
         enable: () => this.configure({ enabled: true }),
         disable: () => this.configure({ enabled: false }),
         enableModule: (name: string) => this.enableModule(name),
@@ -366,27 +388,27 @@ export const getDebugLogger = (module: string) => {
   return UnifiedDebugManager.registerModule(module).logger;
 };
 
-export const dlog = (module: string, ...args: any[]) => {
+export const dlog = (module: string, ...args: unknown[]) => {
   UnifiedDebugManager.registerModule(module).logger.debug(...args);
 };
 
-export const dwarn = (module: string, ...args: any[]) => {
+export const dwarn = (module: string, ...args: unknown[]) => {
   UnifiedDebugManager.registerModule(module).logger.warn(...args);
 };
 
-export const derr = (module: string, ...args: any[]) => {
+export const derr = (module: string, ...args: unknown[]) => {
   UnifiedDebugManager.registerModule(module).logger.error(...args);
 };
 
-export const drender = (module: string, ...args: any[]) => {
+export const drender = (module: string, ...args: unknown[]) => {
   UnifiedDebugManager.performanceLog('render', module, ...args);
 };
 
-export const dperf = (module: string, ...args: any[]) => {
+export const dperf = (module: string, ...args: unknown[]) => {
   UnifiedDebugManager.performanceLog('perf', module, ...args);
 };
 
-export const dhot = (module: string, ...args: any[]) => {
+export const dhot = (module: string, ...args: unknown[]) => {
   UnifiedDebugManager.performanceLog('hot', module, ...args);
 };
 

@@ -56,7 +56,7 @@ export interface GeoAlertEvent {
     duration?: number;
     success?: boolean;
     errorId?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   };
 
   // Performance data
@@ -105,10 +105,15 @@ export interface PerformanceMetrics {
 // ANALYTICS BRIDGE CLASS
 // ============================================================================
 
+/** Placeholder type for future EventAnalyticsEngine */
+interface EventAnalyticsEnginePlaceholder {
+  logEvent?: (event: unknown) => void;
+}
+
 export class AnalyticsBridge {
   // TODO: Temporarily disabled until EventAnalyticsEngine is implemented
   // private analyticsEngine: EventAnalyticsEngine;
-  private analyticsEngine: any; // Temporary placeholder
+  private analyticsEngine: EventAnalyticsEnginePlaceholder | null; // Temporary placeholder
   private currentSession: UserSession | null = null;
   private eventQueue: GeoAlertEvent[] = [];
   private isOnline = true;
@@ -276,7 +281,7 @@ export class AnalyticsBridge {
   /**
    * Track user behavior events
    */
-  trackUserBehavior(action: string, component: string, metadata?: Record<string, any>): string {
+  trackUserBehavior(action: string, component: string, metadata?: Record<string, unknown>): string {
     return this.trackEvent('feature_used', {
       component,
       action,
@@ -288,7 +293,7 @@ export class AnalyticsBridge {
   /**
    * Track polygon drawing events
    */
-  trackPolygonEvent(action: 'start' | 'point_added' | 'completed' | 'cancelled', metadata?: Record<string, any>): string {
+  trackPolygonEvent(action: 'start' | 'point_added' | 'completed' | 'cancelled', metadata?: Record<string, unknown>): string {
     const type = action === 'completed' ? 'polygon_completed' : 'polygon_drawn';
 
     return this.trackEvent(type, {
@@ -307,7 +312,7 @@ export class AnalyticsBridge {
     action: string,
     coordinates?: [number, number],
     zoom?: number,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): string {
     return this.trackEvent('map_interaction', {
       component: 'InteractiveMap',
@@ -416,7 +421,7 @@ export class AnalyticsBridge {
 
   private monitorMemoryUsage(): void {
     if ('memory' in performance) {
-      const memory = (performance as any).memory;
+      const memory = (performance as unknown as { memory: { usedJSHeapSize: number } }).memory;
       const memoryUsage = memory.usedJSHeapSize;
       const threshold = 50 * 1024 * 1024; // 50MB
 
@@ -592,7 +597,7 @@ export class AnalyticsBridge {
     return generateEnterpriseEventId();
   }
 
-  private log(message: string, data?: any): void {
+  private log(message: string, data?: unknown): void {
     if (this.config.debug) {
       // Debug logging removed //(`[AnalyticsBridge] ${message}`, data || '');
     }
@@ -612,7 +617,7 @@ export class AnalyticsBridge {
   /**
    * Get analytics engine instance
    */
-  getAnalyticsEngine(): any { // TODO: Return type to be EventAnalyticsEngine when implemented
+  getAnalyticsEngine(): EventAnalyticsEnginePlaceholder | null { // TODO: Return type to be EventAnalyticsEngine when implemented
     return this.analyticsEngine;
   }
 

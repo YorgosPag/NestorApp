@@ -33,25 +33,25 @@ export function ContactCommunicationTab({
 
   const effectiveFormData = formData || data;
 
-  const handlePhonesChange = React.useCallback((phones: any[]) => {
+  const handlePhonesChange = React.useCallback((phones: Array<{ number: string; type?: string; label?: string }>) => {
     if (setFormData && formData) {
       setFormData({ ...formData, phones });
     }
   }, [setFormData, formData]);
 
-  const handleEmailsChange = React.useCallback((emails: any[]) => {
+  const handleEmailsChange = React.useCallback((emails: Array<{ email: string; type?: string; label?: string }>) => {
     if (setFormData && formData) {
       setFormData({ ...formData, emails });
     }
   }, [setFormData, formData]);
 
-  const handleWebsitesChange = React.useCallback((websites: any[]) => {
+  const handleWebsitesChange = React.useCallback((websites: Array<{ url: string; type?: string; label?: string }>) => {
     if (setFormData && formData) {
       setFormData({ ...formData, websites });
     }
   }, [setFormData, formData]);
 
-  const handleSocialMediaChange = React.useCallback((socialMedia: any[]) => {
+  const handleSocialMediaChange = React.useCallback((socialMedia: Array<{ platform: string; url: string }>) => {
     if (setFormData && formData) {
       setFormData({ ...formData, socialMediaArray: socialMedia });
     }

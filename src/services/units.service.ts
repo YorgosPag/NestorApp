@@ -17,12 +17,13 @@ import {
 } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Property } from '@/types/property-viewer';
+import type { DocumentSnapshot, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 
 const UNITS_COLLECTION = COLLECTIONS.UNITS;
 
-const transformUnit = (doc: any): Property => {
+const transformUnit = (doc: DocumentSnapshot<DocumentData> | QueryDocumentSnapshot<DocumentData>): Property => {
     const data = doc.data();
-    const unit: any = { id: doc.id };
+    const unit: Record<string, unknown> = { id: doc.id };
 
     for (const key in data) {
         if (data[key] instanceof Timestamp) {

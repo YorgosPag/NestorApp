@@ -35,7 +35,18 @@ export function ContactPhotosTab({
 
   const effectiveFormData = formData || data;
 
-  const handlePhotosChange = React.useCallback((photos: any[]) => {
+  /** Photo data structure for photo manager */
+  interface PhotoData {
+    file: File | null;
+    preview?: string;
+    uploadUrl?: string;
+    fileName?: string;
+    isUploading: boolean;
+    uploadProgress: number;
+    error?: string;
+  }
+
+  const handlePhotosChange = React.useCallback((photos: PhotoData[]) => {
     if (setFormData && formData) {
       setFormData({ ...formData, multiplePhotos: photos });
     }
@@ -48,7 +59,7 @@ export function ContactPhotosTab({
     }
 
     // Convert from legacy multiplePhotoURLs
-    const legacyUrls = (effectiveFormData as any).multiplePhotoURLs || [];
+    const legacyUrls = (effectiveFormData as unknown as { multiplePhotoURLs?: string[] }).multiplePhotoURLs || [];
     return legacyUrls.map((url: string) => ({
       file: null,
       preview: undefined,

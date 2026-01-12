@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { type FloorplanData } from '@/services/floorplans/FloorplanService';
+import { useAuth } from '@/hooks/useAuth';
 // ✅ ENTERPRISE: Import pako for decompression (same as FloorplanService)
 // @ts-ignore - Pako module lacks TypeScript definitions
 import pako from 'pako';
@@ -143,6 +144,9 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+  // 🏢 ENTERPRISE: Get authentication state to prevent permission errors
+  const { user, loading: authLoading } = useAuth();
+
   const projectIdStr = projectId.toString();
 
   /**
@@ -155,6 +159,19 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
 
   // ✅ ENTERPRISE: Real-time Firestore listener for PROJECT floorplan
   useEffect(() => {
+    // 🏢 ENTERPRISE: Wait for authentication before setting up Firestore listeners
+    // This prevents "Missing or insufficient permissions" errors
+    if (authLoading) {
+      return; // Wait for auth state to be determined
+    }
+
+    if (!user) {
+      // User not authenticated - don't attempt Firestore operations
+      setLoading(false);
+      setProjectFloorplan(null);
+      return;
+    }
+
     if (!projectIdStr) {
       setLoading(false);
       return;
@@ -209,10 +226,20 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
       console.log('🔕 Unsubscribing from project floorplan listener:', docId);
       unsubscribe();
     };
-  }, [projectIdStr, refreshTrigger]);
+  }, [projectIdStr, refreshTrigger, user, authLoading]);
 
   // ✅ ENTERPRISE: Real-time Firestore listener for PARKING floorplan
   useEffect(() => {
+    // 🏢 ENTERPRISE: Wait for authentication before setting up Firestore listeners
+    if (authLoading) {
+      return;
+    }
+
+    if (!user) {
+      setParkingFloorplan(null);
+      return;
+    }
+
     if (!projectIdStr) {
       return;
     }
@@ -252,7 +279,7 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
       console.log('🔕 Unsubscribing from parking floorplan listener:', docId);
       unsubscribe();
     };
-  }, [projectIdStr, refreshTrigger]);
+  }, [projectIdStr, refreshTrigger, user, authLoading]);
 
   return {
     projectFloorplan,

@@ -48,12 +48,13 @@ export function useCacheBusting() {
         const allImages = document.querySelectorAll('img');
         console.log('🔍 DEBUG: Found', allImages.length, 'total images in page');
 
-        allImages.forEach((img: any, index) => {
+        allImages.forEach((img, index) => {
+          const imgElement = img as HTMLImageElement;
           console.log(`🔍 Image ${index}:`, {
-            src: img.src,
-            isFirebase: img.src.includes('firebasestorage'),
-            isBlob: img.src.startsWith('blob:'),
-            isData: img.src.startsWith('data:')
+            src: imgElement.src,
+            isFirebase: imgElement.src.includes('firebasestorage'),
+            isBlob: imgElement.src.startsWith('blob:'),
+            isData: imgElement.src.startsWith('data:')
           });
         });
 
@@ -70,20 +71,21 @@ export function useCacheBusting() {
         const gridContainer = document.querySelector('[class*="grid-cols-3"]');
         if (gridContainer) {
           const gridImages = gridContainer.querySelectorAll('img');
-          gridImages.forEach((img: any) => {
-            const originalSrc = img.src;
+          gridImages.forEach((img) => {
+            const imgElement = img as HTMLImageElement;
+            const originalSrc = imgElement.src;
             console.log('🔥 Clearing grid image:', originalSrc.substring(0, 50));
 
             // NUCLEAR CLEAR: Διαγραφή όλων των attributes
-            img.removeAttribute('src');
-            img.removeAttribute('alt');
-            img.src = '';
-            img.alt = '';
+            imgElement.removeAttribute('src');
+            imgElement.removeAttribute('alt');
+            imgElement.src = '';
+            imgElement.alt = '';
 
             // Force DOM update
-            img.style.display = 'none';
+            imgElement.style.display = 'none';
             setTimeout(() => {
-              img.style.display = '';
+              imgElement.style.display = '';
               // ΜΗΝ reload - αφήνε άδειο!
             }, 50);
           });

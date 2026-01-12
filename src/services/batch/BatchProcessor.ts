@@ -5,7 +5,7 @@ import { generateJobId, generateOperationId } from '@/services/enterprise-id.ser
 // Batch Processing Service for bulk operations
 export type BatchOperationType = 'create' | 'update' | 'delete' | 'custom';
 
-export interface BatchOperation<T = any> {
+export interface BatchOperation<T = unknown> {
   id: string;
   type: BatchOperationType;
   data: T;
@@ -15,7 +15,7 @@ export interface BatchOperation<T = any> {
   timeout?: number;
 }
 
-export interface BatchJob<T = any> {
+export interface BatchJob<T = unknown> {
   id: string;
   name: string;
   operations: BatchOperation<T>[];
@@ -52,14 +52,14 @@ export interface BatchProgress {
 export interface BatchOperationResult {
   operationId: string;
   status: 'success' | 'failed' | 'skipped';
-  result?: any;
+  result?: unknown;
   error?: string;
   executionTime: number;
   retryCount: number;
 }
 
 export interface BatchProcessor {
-  execute<T>(operation: BatchOperation<T>): Promise<any>;
+  execute<T>(operation: BatchOperation<T>): Promise<unknown>;
 }
 
 class BatchProcessingService {

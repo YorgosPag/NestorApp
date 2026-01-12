@@ -285,7 +285,7 @@ export const enterpriseCanvas = {
     config?: Partial<CanvasProviderConfig>
   ): Promise<{
     provider: ICanvasProvider;
-    createCanvas: (id: string, element: HTMLCanvasElement, canvasConfig?: any) => CanvasInstance;
+    createCanvas: (id: string, element: HTMLCanvasElement, canvasConfig?: Record<string, unknown>) => CanvasInstance;
     utilities: typeof CoordinateUtils;
     ui: typeof canvasUI;
   }> => {
@@ -293,7 +293,7 @@ export const enterpriseCanvas = {
 
     return {
       provider,
-      createCanvas: (id: string, element: HTMLCanvasElement, canvasConfig?: any) =>
+      createCanvas: (id: string, element: HTMLCanvasElement, canvasConfig?: Record<string, unknown>) =>
         provider.createCanvas(id, {
           canvasId: id,
           canvasType: 'layer',

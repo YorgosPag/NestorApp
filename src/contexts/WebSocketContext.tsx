@@ -6,26 +6,38 @@ import WebSocketService, {
   WebSocketMessage,
   WebSocketConnectionState
 } from '@/services/websocket/WebSocketService';
-import { useOptimizedUserRole } from './OptimizedUserRoleContext';
+import { useUserRole } from '@/auth';
 import { useCache } from './CacheProvider';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
+/** WebSocket payload type for type-safe messaging */
+type WebSocketPayload = Record<string, unknown>;
+
+/** WebSocket statistics interface */
+interface WebSocketStats {
+  reconnectAttempts: number;
+  queuedMessages: number;
+  activeListeners: number;
+  connectionAttempts: number;
+  user: { email: string; role: string } | null;
+}
+
 interface WebSocketContextType {
   connectionState: WebSocketConnectionState;
   isConnected: boolean;
-  send: (type: WebSocketEventType, payload: any, options?: {
+  send: (type: WebSocketEventType, payload: WebSocketPayload, options?: {
     targetUsers?: string[];
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }) => boolean;
   addEventListener: (
     type: WebSocketEventType | '*',
-    handler: (message: WebSocketMessage<any>) => void,
+    handler: (message: WebSocketMessage<WebSocketPayload>) => void,
     options?: { once?: boolean }
   ) => string;
   removeEventListener: (listenerId: string) => boolean;
-  getStats: () => any;
+  getStats: () => WebSocketStats | null;
   reconnect: () => Promise<void>;
 }
 
@@ -42,7 +54,7 @@ export function WebSocketProvider({
   wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws',
   enableDevtools = process.env.NODE_ENV === 'development'
 }: WebSocketProviderProps) {
-  const { user, isAuthenticated } = useOptimizedUserRole();
+  const { user, isAuthenticated } = useUserRole();
   const cache = useCache();
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
@@ -181,11 +193,11 @@ export function WebSocketProvider({
 
   // Context methods
   const send = useCallback((
-    type: WebSocketEventType, 
-    payload: any, 
+    type: WebSocketEventType,
+    payload: WebSocketPayload,
     options?: {
       targetUsers?: string[];
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
     }
   ) => {
     if (!wsRef.current) {
@@ -197,7 +209,7 @@ export function WebSocketProvider({
 
   const addEventListener = useCallback((
     type: WebSocketEventType | '*',
-    handler: (message: WebSocketMessage<any>) => void,
+    handler: (message: WebSocketMessage<WebSocketPayload>) => void,
     options?: { once?: boolean }
   ) => {
     if (!wsRef.current) {
@@ -255,9 +267,9 @@ export function useWebSocket() {
 }
 
 // Specialized hooks for different event types
-export function useWebSocketEvent<T = any>(
+export function useWebSocketEvent<T = WebSocketPayload>(
   eventType: WebSocketEventType,
-  handler: (message: WebSocketMessage<any>) => void,
+  handler: (message: WebSocketMessage<T>) => void,
   dependencies: React.DependencyList = []
 ) {
   const { addEventListener, removeEventListener } = useWebSocket();
@@ -268,9 +280,16 @@ export function useWebSocketEvent<T = any>(
   }, [addEventListener, removeEventListener, eventType, ...dependencies]);
 }
 
+/** Notification payload interface */
+interface NotificationPayload {
+  title?: string;
+  message?: string;
+  [key: string]: unknown;
+}
+
 // Hook for real-time notifications
 export function useRealTimeNotifications() {
-  const [notifications, setNotifications] = useState<WebSocketMessage<any>[]>([]);
+  const [notifications, setNotifications] = useState<WebSocketMessage<NotificationPayload>[]>([]);
   const cache = useCache();
 
   useWebSocketEvent('notification', (message) => {
@@ -305,9 +324,18 @@ export function useRealTimeNotifications() {
   };
 }
 
+/** User presence data interface */
+interface UserPresenceData {
+  userId: string;
+  status?: 'online' | 'away' | 'offline';
+  lastSeen: number;
+  role?: string;
+  [key: string]: unknown;
+}
+
 // Hook for user presence
 export function useUserPresence() {
-  const [onlineUsers, setOnlineUsers] = useState<Map<string, any>>(new Map());
+  const [onlineUsers, setOnlineUsers] = useState<Map<string, UserPresenceData>>(new Map());
 
   useWebSocketEvent('user_online', (message) => {
     setOnlineUsers(prev => new Map(prev.set(message.payload.userId, {
@@ -348,7 +376,7 @@ export function useUserPresence() {
 // Development debug component
 export function WebSocketDebugPanel() {
   const { connectionState, getStats, reconnect } = useWebSocket();
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<WebSocketStats | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {

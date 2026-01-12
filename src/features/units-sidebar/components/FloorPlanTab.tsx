@@ -12,12 +12,19 @@ import { FloorplanViewerTab } from '@/components/projects/tabs/FloorplanViewerTa
 import { useUnitFloorplans } from '@/hooks/useUnitFloorplans';
 import { useIconSizes } from '@/hooks/useIconSizes';
 
+/** Viewer props structure */
+interface ViewerProps {
+  onSelectFloor?: (floorId: string) => void;
+  properties?: Property[];
+  [key: string]: unknown;
+}
+
 interface FloorPlanTabProps {
     selectedUnit: Property | null;
     currentFloor: FloorData | null;
     safeFloors: FloorData[];
-    safeViewerProps: any;
-    safeViewerPropsWithFloors: any;
+    safeViewerProps: ViewerProps;
+    safeViewerPropsWithFloors: ViewerProps & { floors?: FloorData[] };
     setShowHistoryPanel: (show: boolean) => void;
     units: Property[];
 }

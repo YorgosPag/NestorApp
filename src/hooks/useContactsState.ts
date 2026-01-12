@@ -150,9 +150,10 @@ export function useContactsState() {
       individuals: data.filter(c => c.type === 'individual').length,
       companies: data.filter(c => c.type === 'company').length,
       services: data.filter(c => c.type === 'service').length,
-      active: data.filter((c: any) => c.status === 'active').length,
+      active: data.filter(c => (c as Contact & { status?: string }).status === 'active').length,
       newThisMonth: data.filter(c => {
-        const d = normalizeToDate((c as any).createdAt);
+        const contactWithCreatedAt = c as Contact & { createdAt?: unknown };
+        const d = normalizeToDate(contactWithCreatedAt.createdAt);
         return d ? d > oneMonthAgo : false;
       }).length,
     };

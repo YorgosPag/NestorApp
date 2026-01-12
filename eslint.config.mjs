@@ -41,6 +41,8 @@ export default defineConfig([
       "design-system/no-hardcoded-spacing": "error",  // Upgraded to error
       "design-system/prefer-design-system-imports": "error",  // Upgraded to error
       "design-system/enforce-semantic-colors": "error",  // Upgraded to error
+      // 🏢 ENTERPRISE: ADR-023 - Enforce centralized Spinner component
+      "design-system/no-direct-loader-import": "warn",  // Warn for now, migrate on touch
       
       // Additional strict rules for component architecture
       "@typescript-eslint/no-unused-vars": "error",

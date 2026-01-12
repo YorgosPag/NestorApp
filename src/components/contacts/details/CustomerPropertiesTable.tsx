@@ -11,6 +11,8 @@ import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { Eye, Plus } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Centralized Unit Icon & Color
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
@@ -22,6 +24,8 @@ interface CustomerPropertiesTableProps {
 }
 
 export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerPropertiesTableProps) {
+    // 🏢 ENTERPRISE: i18n hook for translations
+    const { t } = useTranslation('contacts');
     const iconSizes = useIconSizes();
     const { quick } = useBorderTokens();
     const [properties, setProperties] = useState<Property[]>([]);
@@ -62,27 +66,27 @@ export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerProper
             <div className="flex justify-between items-center mb-2">
                 <h4 className="font-semibold text-sm flex items-center gap-2">
                     <UnitIcon className={`${iconSizes.sm} ${unitColor}`}/>
-                    Ακίνητα Πελάτη ({properties.length})
+                    {t('properties.title', { count: properties.length })}
                 </h4>
                 <Button variant="outline" size="sm" onClick={onAddUnit}>
                     <Plus className={`${iconSizes.sm} mr-2`}/>
-                    Προσθήκη Ακινήτου
+                    {t('properties.addProperty')}
                 </Button>
             </div>
             {properties.length === 0 ? (
                 <div className={`text-center text-sm text-muted-foreground py-4 ${quick.card}`}>
-                    Αυτός ο πελάτης δεν έχει καταχωρημένα ακίνητα.
+                    {t('properties.empty')}
                 </div>
             ) : (
                 <div className={quick.card}>
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Κωδικός</TableHead>
-                                <TableHead>Τύπος</TableHead>
-                                <TableHead>Εμβαδόν</TableHead>
-                                <TableHead>Κτίριο</TableHead>
-                                <TableHead className="text-right">Ενέργειες</TableHead>
+                                <TableHead>{t('properties.table.code')}</TableHead>
+                                <TableHead>{t('properties.table.type')}</TableHead>
+                                <TableHead>{t('properties.table.area')}</TableHead>
+                                <TableHead>{t('properties.table.building')}</TableHead>
+                                <TableHead className="text-right">{t('properties.table.actions')}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -90,7 +94,7 @@ export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerProper
                                 <TableRow key={prop.id}>
                                     <TableCell className="font-medium">{prop.name}</TableCell>
                                     <TableCell>{prop.type}</TableCell>
-                                    <TableCell>{prop.area ? `${prop.area} τ.μ.` : '-'}</TableCell>
+                                    <TableCell>{prop.area ? `${prop.area} ${t('properties.sqm')}` : '-'}</TableCell>
                                     <TableCell>
                                         <CommonBadge
                                           status="company"
@@ -102,7 +106,7 @@ export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerProper
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="sm" onClick={() => handleViewUnit(prop.id)}>
                                             <Eye className={`${iconSizes.sm} mr-2`}/>
-                                            Προβολή
+                                            {t('properties.view')}
                                         </Button>
                                     </TableCell>
                                 </TableRow>

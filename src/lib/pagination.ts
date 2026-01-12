@@ -12,6 +12,16 @@
 import { Query, QuerySnapshot, DocumentSnapshot, limit, startAfter } from 'firebase/firestore';
 
 // =============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// =============================================================================
+
+/** Firestore document data type */
+export type FirestoreDocData = Record<string, unknown>;
+
+/** Document mapper function type */
+export type DocumentMapper<T> = (doc: DocumentSnapshot) => T;
+
+// =============================================================================
 // PAGINATION INTERFACES
 // =============================================================================
 
@@ -28,12 +38,12 @@ export interface PaginatedResult<T> {
   pageSize: number;
 }
 
-export interface PaginationState {
+export interface PaginationState<T = unknown> {
   currentPage: number;
   hasNext: boolean;
   isLoading: boolean;
   lastCursor?: DocumentSnapshot;
-  allItems: any[]; // Accumulated items across pages
+  allItems: T[]; // Accumulated items across pages
 }
 
 // =============================================================================
@@ -81,7 +91,7 @@ export function applyPagination(
 export function processPaginationResult<T>(
   snapshot: QuerySnapshot,
   pageSize: number,
-  mapper: (doc: any) => T
+  mapper: DocumentMapper<T>
 ): PaginatedResult<T> {
   const docs = snapshot.docs;
   const items = docs.map(mapper);
@@ -139,13 +149,13 @@ export function updatePaginationState<T>(
  */
 export class InfiniteScrollPagination<T> {
   private query: Query;
-  private mapper: (doc: any) => T;
+  private mapper: DocumentMapper<T>;
   private pageSize: number;
-  private state: PaginationState;
+  private state: PaginationState<T>;
 
   constructor(
     query: Query,
-    mapper: (doc: any) => T,
+    mapper: DocumentMapper<T>,
     pageSize: number = PAGINATION_DEFAULTS.PAGE_SIZE
   ) {
     this.query = query;
@@ -203,13 +213,13 @@ export class InfiniteScrollPagination<T> {
  */
 export class PageBasedPagination<T> {
   private query: Query;
-  private mapper: (doc: any) => T;
+  private mapper: DocumentMapper<T>;
   private pageSize: number;
   private cursors: Map<number, DocumentSnapshot> = new Map();
 
   constructor(
     query: Query,
-    mapper: (doc: any) => T,
+    mapper: DocumentMapper<T>,
     pageSize: number = PAGINATION_DEFAULTS.PAGE_SIZE
   ) {
     this.query = query;

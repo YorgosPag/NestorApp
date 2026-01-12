@@ -334,7 +334,19 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     return 'warning';
   }
 
-  private formatErrorForEmail(errorDetails: any): string {
+  private formatErrorForEmail(errorDetails: {
+    errorId: string | null;
+    message: string;
+    stack?: string;
+    componentStack?: string | null;
+    timestamp: string;
+    url: string;
+    userAgent: string;
+    userId: string | null;
+    component?: string;
+    severity: string;
+    retryCount: number;
+  }): string {
     return `
 🚨 ERROR REPORT - GEO-ALERT SYSTEM
 
@@ -638,7 +650,7 @@ export function withErrorBoundary<T extends {}>(
 // Hook for manual error reporting με ErrorTracker integration
 export function useErrorReporting() {
   return {
-    reportError: (error: Error, context?: Record<string, any>) => {
+    reportError: (error: Error, context?: Record<string, unknown>) => {
       // **🚀 USE ERRORTRACKER SERVICE**
       const errorId = errorTracker.captureError(
         error,
@@ -671,7 +683,7 @@ export function useErrorReporting() {
     },
 
     // **🆕 NEW: Direct access to ErrorTracker methods**
-    captureUserError: (message: string, action: string, metadata?: any) => {
+    captureUserError: (message: string, action: string, metadata?: Record<string, unknown>) => {
       return errorTracker.captureUserError(message, action, metadata);
     },
 

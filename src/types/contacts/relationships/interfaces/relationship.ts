@@ -178,7 +178,7 @@ export interface ContactRelationship {
   // ========================================================================
 
   /** 📦 Custom fields for organization-specific data */
-  customFields?: Record<string, any>;
+  customFields?: Record<string, unknown>;
 
   /** 📄 Attached documents/contracts */
   attachedDocuments?: {
@@ -194,8 +194,8 @@ export interface ContactRelationship {
     changeDate: string;
     changeType: 'created' | 'updated' | 'status_change' | 'position_change';
     changedBy: string;
-    oldValue?: any;
-    newValue?: any;
+    oldValue?: unknown;
+    newValue?: unknown;
     notes?: string;
   }[];
 

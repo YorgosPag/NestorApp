@@ -1,18 +1,20 @@
 import React from 'react';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { 
-  collection, 
-  doc, 
-  onSnapshot, 
-  updateDoc, 
+import {
+  collection,
+  doc,
+  onSnapshot,
+  updateDoc,
   deleteDoc,
   query,
   where,
   orderBy,
   Timestamp,
   writeBatch,
-  getDocs
+  getDocs,
+  QuerySnapshot,
+  DocumentData
 } from 'firebase/firestore';
 import type { Layer, LayerEvent } from '@/types/layers';
 
@@ -266,11 +268,11 @@ export class LayerSyncManager {
 
   // Private methods
 
-  private handleLayerSnapshot(snapshot: any): void {
+  private handleLayerSnapshot(snapshot: QuerySnapshot<DocumentData>): void {
     const layers: Layer[] = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
-    }));
+    })) as Layer[];
 
     this.log('Received layer snapshot:', layers.length, 'layers');
 
@@ -278,8 +280,8 @@ export class LayerSyncManager {
     this.syncLayersBatch(layers);
   }
 
-  private handleError(message: string, error: any): void {
-    const errorMessage = `${message}: ${error?.message || error}`;
+  private handleError(message: string, error: unknown): void {
+    const errorMessage = `${message}: ${error instanceof Error ? error.message : String(error)}`;
     // Error logging removed
     
     this.updateState({
@@ -315,7 +317,7 @@ export class LayerSyncManager {
     this.callbacks.forEach(callback => callback(this.state));
   }
 
-  private log(message: string, ...args: any[]): void {
+  private log(message: string, ...args: unknown[]): void {
     if (this.options.enableLogging) {
       // Debug logging removed
     }

@@ -24,9 +24,42 @@ const StyleManagerContext = createContext<StyleManagerContextType | null>(null);
 
 // ===== STORE SYNC UTILITIES =====
 
+/** Line settings for store synchronization */
+interface LineSettings {
+  enabled: boolean;
+  color: string;
+  lineWidth: number;
+  opacity: number;
+  lineType?: string;
+}
+
+/** Text settings for store synchronization */
+interface TextSettings {
+  enabled: boolean;
+  fontFamily: string;
+  fontSize: number;
+  color: string;
+  isBold?: boolean;
+  isItalic?: boolean;
+  isUnderline?: boolean;
+  isStrikethrough?: boolean;
+  isSuperscript?: boolean;
+  isSubscript?: boolean;
+  opacity: number;
+}
+
+/** Grip settings for store synchronization */
+interface GripSettings {
+  showGrips: boolean;
+  gripSize: number;
+  pickBoxSize: number;
+  apertureSize: number;
+  colors: Record<string, string>;
+}
+
 // 🔄 MIGRATION NOTE: Type assertion needed because adapter returns Old types
 // but these sync functions expect specific entity types
-const syncLineStore = (settings: any) => {
+const syncLineStore = (settings: LineSettings) => {
   // Use centralized withOpacity function instead of manual rgba construction
   toolStyleStore.set({
     enabled: settings.enabled,
@@ -38,7 +71,7 @@ const syncLineStore = (settings: any) => {
   });
 };
 
-const syncTextStore = (settings: any) => {
+const syncTextStore = (settings: TextSettings) => {
   const getTextDecoration = (): string => {
     const decorations: string[] = [];
     if (settings.isUnderline) decorations.push('underline');
@@ -60,7 +93,7 @@ const syncTextStore = (settings: any) => {
   });
 };
 
-const syncGripStore = (settings: any) => {
+const syncGripStore = (settings: GripSettings) => {
   gripStyleStore.set({
     enabled: settings.showGrips,
     showGrips: settings.showGrips,

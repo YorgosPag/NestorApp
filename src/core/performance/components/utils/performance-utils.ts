@@ -116,27 +116,66 @@ export const PANEL_DIMENSIONS = {
   height: 500
 } as const;
 
-/** Performance thresholds for metric evaluation */
+/**
+ * 🏢 ENTERPRISE: Centralized Performance Thresholds
+ *
+ * SINGLE SOURCE OF TRUTH για όλα τα performance thresholds.
+ * Χρησιμοποιείται από: DxfPerformanceOptimizer, DxfViewerContent, PerformanceDashboard
+ *
+ * @see CLAUDE.md - Rule N.1: Enterprise-grade solutions
+ * @see centralized_systems.md - Performance configuration section
+ */
 export const PERFORMANCE_THRESHOLDS = {
   fps: {
+    /** Excellent: 60+ FPS (smooth animations) */
     excellent: 60,
+    /** Good: 45+ FPS (acceptable for CAD) */
     good: 45,
+    /** Warning: 30+ FPS (noticeable lag) */
     warning: 30,
-    poor: 15
+    /** Poor: <15 FPS (unusable) */
+    poor: 15,
+    /** Minimum target FPS for alerts */
+    minTarget: 45
   },
   memory: {
+    /** Excellent: <128MB */
     excellent: 128,
+    /** Good: <256MB */
     good: 256,
+    /** Warning: <384MB */
     warning: 384,
-    poor: 512
+    /** Poor: >512MB */
+    poor: 512,
+    /** Maximum allowed memory (MB) for DXF Viewer */
+    maxAllowed: 512,
+    /** Trigger GC when above this percentage of maxAllowed */
+    gcTriggerPercent: 0.7
   },
   renderTime: {
+    /** Excellent: <8ms per frame */
     excellent: 8,
-    good: 16,
+    /** Good: <16.67ms (60fps budget) */
+    good: 16.67,
+    /** Warning: <33ms (30fps budget) */
     warning: 33,
+    /** Poor: >50ms */
     poor: 50
+  },
+  loadTime: {
+    /** Excellent: <1000ms */
+    excellent: 1000,
+    /** Good: <2500ms (Lighthouse target) */
+    good: 2500,
+    /** Warning: <5000ms */
+    warning: 5000,
+    /** Poor: >7000ms */
+    poor: 7000
   }
 } as const;
+
+/** TypeScript type for PERFORMANCE_THRESHOLDS */
+export type PerformanceThresholds = typeof PERFORMANCE_THRESHOLDS;
 
 /**
  * Calculates initial panel position (top-right corner).

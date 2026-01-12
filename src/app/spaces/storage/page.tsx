@@ -35,11 +35,15 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AdvancedFiltersPanel, storageFiltersConfig } from '@/components/core/AdvancedFilters';
 import { ListContainer, PageContainer } from '@/core/containers';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // Re-export Storage type for backward compatibility
 export type { Storage } from '@/types/storage/contracts';
 
 function StoragePageContent() {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
   // 🏢 ENTERPRISE: Centralized icon sizes
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
@@ -121,7 +125,7 @@ function StoragePageContent() {
   // Dashboard stats from real data
   const dashboardStats: DashboardStat[] = [
     {
-      title: "Σύνολο Αποθηκών",
+      title: t('pages.storage.dashboard.totalStorages'),
       value: stats.totalStorages,
       icon: Warehouse,
       color: "blue"
@@ -139,19 +143,19 @@ function StoragePageContent() {
       color: "purple"
     },
     {
-      title: "Συνολική Επιφάνεια",
+      title: t('pages.storage.dashboard.totalArea'),
       value: `${(stats.totalArea / 1000).toFixed(1)}K m²`,
       icon: MapPin,
       color: "orange"
     },
     {
-      title: "Ποσοστό Χρήσης",
+      title: t('pages.storage.dashboard.utilizationRate'),
       value: `${stats.utilizationRate}%`,
       icon: BarChart3,
       color: "cyan"
     },
     {
-      title: "Μοναδικά Κτίρια",
+      title: t('pages.storage.dashboard.uniqueBuildings'),
       value: stats.uniqueBuildings,
       icon: NAVIGATION_ENTITIES.building.icon,
       color: "pink"
@@ -164,7 +168,7 @@ function StoragePageContent() {
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
           <Warehouse className={`${iconSizes.xl} animate-spin mx-auto mb-4 text-muted-foreground`} />
-          <p className="text-muted-foreground">Φόρτωση αποθηκών...</p>
+          <p className="text-muted-foreground">{t('pages.storage.loading')}</p>
         </div>
       </div>
     );
@@ -175,13 +179,13 @@ function StoragePageContent() {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
-          <div className="text-red-500 text-lg font-medium mb-2">Σφάλμα φόρτωσης</div>
+          <div className="text-red-500 text-lg font-medium mb-2">{t('pages.storage.error.title')}</div>
           <p className="text-muted-foreground mb-4">{error}</p>
           <button
             onClick={refetch}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
           >
-            Επανάληψη
+            {t('pages.storage.error.retry')}
           </button>
         </div>
       </div>
@@ -190,7 +194,7 @@ function StoragePageContent() {
 
   return (
     <TooltipProvider>
-      <PageContainer ariaLabel="Διαχείριση Αποθηκών">
+      <PageContainer ariaLabel={t('pages.storage.pageLabel')}>
         {/* Header */}
         <StoragesHeader
             viewMode={viewMode}
@@ -205,7 +209,7 @@ function StoragePageContent() {
 
         {/* Dashboard */}
         {showDashboard && (
-          <section role="region" aria-label="Στατιστικά Αποθηκών">
+          <section role="region" aria-label={t('pages.storage.dashboard.label')}>
             <UnifiedDashboard
               stats={dashboardStats}
               columns={6}
@@ -214,14 +218,12 @@ function StoragePageContent() {
                   <div className="bg-card rounded-lg border p-4">
                     <h3 className="font-medium mb-3 flex items-center gap-2">
                       <BarChart3 className={iconSizes.sm} />
-                      Κατανομή Κατάστασης
+                      {t('pages.storage.dashboard.statusDistribution')}
                     </h3>
                     <div className="space-y-2">
                       {Object.entries(stats.storagesByStatus).map(([status, count]) => (
                         <div key={status} className="flex justify-between text-sm">
-                          <span>{status === 'available' ? 'Διαθέσιμες' :
-                                status === 'occupied' ? 'Κατειλημμένες' :
-                                status === 'maintenance' ? 'Συντήρηση' : 'Κρατημένες'}</span>
+                          <span>{t(`pages.storage.statusLabels.${status}`)}</span>
                           <span className="font-medium">{count}</span>
                         </div>
                       ))}
@@ -230,15 +232,12 @@ function StoragePageContent() {
                   <div className="bg-card rounded-lg border p-4">
                     <h3 className="font-medium mb-3 flex items-center gap-2">
                       <MapPin className={iconSizes.sm} />
-                      Κατανομή Τύπων
+                      {t('pages.storage.dashboard.typeDistribution')}
                     </h3>
                     <div className="space-y-2">
                       {Object.entries(stats.storagesByType).map(([type, count]) => (
                         <div key={type} className="flex justify-between text-sm">
-                          <span>{type === 'large' ? 'Μεγάλες' :
-                                type === 'small' ? 'Μικρές' :
-                                type === 'basement' ? 'Υπόγειες' :
-                                type === 'ground' ? 'Ισόγειες' : 'Ειδικές'}</span>
+                          <span>{t(`pages.storage.typeLabels.${type}`)}</span>
                           <span className="font-medium">{count}</span>
                         </div>
                       ))}
@@ -251,7 +250,7 @@ function StoragePageContent() {
         )}
 
         {/* Desktop: Filters */}
-        <aside className="hidden md:block" role="complementary" aria-label="Φίλτρα Αποθηκών">
+        <aside className="hidden md:block" role="complementary" aria-label={t('pages.storage.filters.label')}>
           <AdvancedFiltersPanel
             config={storageFiltersConfig}
             filters={filters}
@@ -276,7 +275,7 @@ function StoragePageContent() {
         <MobileDetailsSlideIn
           isOpen={showMobileFilters}
           onClose={() => setShowMobileFilters(false)}
-          title="Φίλτρα Αποθηκών"
+          title={t('pages.storage.filters.mobileTitle')}
         >
           <AdvancedFiltersPanel
             config={storageFiltersConfig}
@@ -291,6 +290,7 @@ function StoragePageContent() {
 
 /**
  * 🔧 Next.js 15: Page with Suspense boundary for useSearchParams
+ * Note: Suspense fallback uses static Greek text (Server Component constraint)
  */
 export default function StoragePage() {
   return (
@@ -298,7 +298,8 @@ export default function StoragePage() {
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
           <Warehouse className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-          <p className="text-muted-foreground">Φόρτωση αποθηκών...</p>
+          {/* Static fallback text - cannot use hooks in Suspense fallback */}
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     }>

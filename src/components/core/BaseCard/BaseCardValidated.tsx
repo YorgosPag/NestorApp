@@ -86,7 +86,7 @@ export function BaseCardValidated({
 }
 
 // Export validation-enhanced versions of common compositions
-export function ValidatedBuildingCard(props: any) {
+export function ValidatedBuildingCard(props: Omit<ValidatedBaseCardProps, 'validationOptions'>) {
   return (
     <BaseCardValidated
       {...props}
@@ -99,7 +99,7 @@ export function ValidatedBuildingCard(props: any) {
   );
 }
 
-export function ValidatedProjectCard(props: any) {
+export function ValidatedProjectCard(props: Omit<ValidatedBaseCardProps, 'validationOptions'>) {
   return (
     <BaseCardValidated
       {...props}
@@ -110,15 +110,23 @@ export function ValidatedProjectCard(props: any) {
       }}
     />
   );
+}
+
+/** Validation options for HOC */
+interface ValidationHOCOptions {
+  enabled?: boolean;
+  strict?: boolean;
+  showSuggestions?: boolean;
+  trackAnalytics?: boolean;
 }
 
 // HOC for adding validation to any component
 export function withDesignSystemValidation<T extends object>(
   Component: React.ComponentType<T>,
   componentName: string,
-  validationOptions: any = {}
+  validationOptions: ValidationHOCOptions = {}
 ) {
-  const ValidatedComponent = React.forwardRef<any, T>((props, ref) => {
+  const ValidatedComponent = React.forwardRef<HTMLElement, T>((props, ref) => {
     useAdvancedDesignSystemValidation(
       props,
       componentName,
@@ -129,7 +137,7 @@ export function withDesignSystemValidation<T extends object>(
       }
     );
 
-    return <Component {...props} ref={ref} />;
+    return <Component {...props} ref={ref as React.Ref<never>} />;
   });
 
   ValidatedComponent.displayName = `Validated${componentName}`;

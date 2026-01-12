@@ -9,7 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { HOVER_TEXT_EFFECTS, HOVER_BORDER_EFFECTS, TRANSITION_PRESETS } from "@/components/ui/effects";
 
-export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: any) {
+interface SendEmailModalProps {
+  lead: { id: string; fullName: string; email: string } | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onEmailSent?: () => void;
+}
+
+export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: SendEmailModalProps) {
   const iconSizes = useIconSizes();
   const { quick, radius, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();

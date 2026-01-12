@@ -1,7 +1,45 @@
 {
+  "page": {
+    "pageLabel": "Unit Management",
+    "loading": "Loading units...",
+    "dashboard": {
+      "totalUnits": "Total Units",
+      "soldUnits": "Sold",
+      "totalValue": "Total Value",
+      "totalArea": "Total Area",
+      "uniqueBuildings": "Unique Buildings",
+      "unitTypes": "Unit Types",
+      "floorDistribution": "Floor Distribution",
+      "storages": "Storages",
+      "total": "Total"
+    },
+    "statusLabels": {
+      "sold": "Sold",
+      "available": "Available",
+      "reserved": "Reserved",
+      "owner": "Owner",
+      "for-sale": "For Sale",
+      "for-rent": "For Rent",
+      "rented": "Rented"
+    },
+    "typeLabels": {
+      "apartment": "Apartments",
+      "studio": "Studios",
+      "maisonette": "Maisonettes",
+      "shop": "Shops",
+      "office": "Offices",
+      "storage": "Storages"
+    }
+  },
   "management": {
     "title": "Unit Management",
-    "subtitle": "Visual management and analysis of properties on floor plans."
+    "subtitle": "Central directory of all your units"
+  },
+  "header": {
+    "title": "Unit Management",
+    "subtitle": "Central directory of all your units",
+    "searchPlaceholder": "Search units...",
+    "newUnit": "New Unit"
   },
   "tooltips": {
     "dashboard": "Show/Hide Dashboard",
@@ -29,5 +67,26 @@
     "reserved": "Reserved",
     "sold": "Sold",
     "owner": "Owner"
+  },
+  "toolbar": {
+    "actions": {
+      "new": "New Unit (Ctrl+N)",
+      "edit": "Edit Selected (Ctrl+E)",
+      "delete": "Delete Selected (Delete)"
+    }
+  },
+  "dialog": {
+    "deleteConfirmation": {
+      "title": "Delete Confirmation",
+      "message": "Are you sure you want to delete {{count}} unit(s)?",
+      "warning": "This action cannot be undone."
+    },
+    "cancel": "Cancel",
+    "delete": "Delete"
+  },
+  "list": {
+    "ariaLabel": "Units List",
+    "noResults": "No units found",
+    "noResultsForTerm": "for the term \"{{term}}\""
   }
 }

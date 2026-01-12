@@ -12,6 +12,14 @@ import { DynamicContactArrays } from '@/components/contacts/dynamic/DynamicConta
 import { getContactFormConfig, getContactFormSections, getContactTypeDisplayName, getContactFormRenderer } from './utils/ContactFormConfigProvider';
 import { getPhotoUploadHandlers, createUnifiedPhotosChangeHandler, buildRendererPropsForContactType } from './utils/PhotoUploadConfiguration';
 
+/** Custom renderer field interface */
+interface CustomRendererField {
+  name: string;
+  type?: string;
+  label?: string;
+  [key: string]: unknown;
+}
+
 /**
  * 🏢 ENTERPRISE CENTRALIZED CONTACT FORM SECTION
  *
@@ -106,7 +114,7 @@ export function UnifiedContactTabbedSection({
       disabled,
       customRenderers: {
         // 🚀 DYNAMIC COMMUNICATION: Custom renderer for communication & social media
-        communication: (field: any, fieldFormData: any, fieldOnChange: any, fieldOnSelectChange: any, fieldDisabled: boolean) => (
+        communication: (_field: CustomRendererField, _fieldFormData: Record<string, unknown>, _fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, _fieldOnSelectChange: (name: string, value: string) => void, fieldDisabled: boolean) => (
           <div className="w-full max-w-none min-w-full col-span-full">
             <DynamicContactArrays
               phones={formData.phones || []}
@@ -176,7 +184,7 @@ export function UnifiedContactTabbedSection({
 
         // 🏢 ENTERPRISE: Custom renderer για companyPhotos (UnifiedPhotoManager) - only for companies
         ...(contactType === 'company' ? {
-          companyPhotos: (field: any, fieldFormData: any, fieldOnChange: any, fieldOnSelectChange: any, fieldDisabled: boolean) => (
+          companyPhotos: (_field: CustomRendererField, _fieldFormData: Record<string, unknown>, _fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, _fieldOnSelectChange: (name: string, value: string) => void, fieldDisabled: boolean) => (
             <UnifiedPhotoManager
               contactType="company"
               formData={formData}
@@ -194,7 +202,7 @@ export function UnifiedContactTabbedSection({
         } : {}),
 
         // 🏢 ENTERPRISE: Custom renderer for relationships tab - for ALL contact types
-        relationships: (field: any, fieldFormData: any, fieldOnChange: any, fieldOnSelectChange: any, fieldDisabled: boolean) => {
+        relationships: (_field: CustomRendererField, _fieldFormData: Record<string, unknown>, _fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, _fieldOnSelectChange: (name: string, value: string) => void, fieldDisabled: boolean) => {
           // ✅ FIXED: Now formData.id is correctly included from the contact mappers
           const contactId = formData.id || 'new-contact';
 

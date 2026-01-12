@@ -109,7 +109,7 @@ export interface PropertyTypeValidationRule {
   /** Validation operator */
   operator: 'min' | 'max' | 'equals' | 'in' | 'regex' | 'custom';
   /** Expected value */
-  value: any;
+  value: unknown;
   /** Error message (localized) */
   errorMessage: string;
   /** Warning message (optional) */
@@ -194,7 +194,7 @@ export interface PropertyTypesConfiguration {
     action: string;
     userId: string;
     timestamp: Date;
-    changes: Record<string, any>;
+    changes: Record<string, unknown>;
   }>;
 }
 
@@ -228,7 +228,7 @@ export class EnterprisePropertyTypesService {
   private static instance: EnterprisePropertyTypesService;
   private cache: PropertyTypeCache;
   private initialized: boolean = false;
-  private db: any; // Firestore instance
+  private db: ReturnType<typeof import('firebase/firestore').getFirestore> | null = null;
 
   private constructor() {
     this.cache = {
@@ -252,7 +252,7 @@ export class EnterprisePropertyTypesService {
   /**
    * Initialize service with Firestore instance
    */
-  async initialize(firestore: any): Promise<void> {
+  async initialize(firestore: ReturnType<typeof import('firebase/firestore').getFirestore>): Promise<void> {
     this.db = firestore;
     this.initialized = true;
     console.log('🏠 EnterprisePropertyTypesService initialized');
@@ -358,7 +358,7 @@ export class EnterprisePropertyTypesService {
           ...configDoc.data(),
           createdAt: configDoc.data().createdAt?.toDate?.() || new Date(),
           lastUpdated: configDoc.data().lastUpdated?.toDate?.() || new Date(),
-          auditTrail: configDoc.data().auditTrail?.map((entry: any) => ({
+          auditTrail: configDoc.data().auditTrail?.map((entry: { action?: string; userId?: string; timestamp?: { toDate?: () => Date }; changes?: Record<string, unknown> }) => ({
             ...entry,
             timestamp: entry.timestamp?.toDate?.() || new Date()
           })) || []
@@ -499,7 +499,7 @@ export class EnterprisePropertyTypesService {
    */
   async validatePropertyData(
     propertyTypeId: string,
-    propertyData: Record<string, any>,
+    propertyData: Record<string, unknown>,
     tenantId?: string,
     locale?: string,
     environment?: string

@@ -56,6 +56,12 @@ const COMPONENT_MAPPING = {
 // INTERFACES
 // ============================================================================
 
+/** Base props for tab components */
+interface TabComponentProps {
+  selectedPeriod?: string;
+  [key: string]: unknown;
+}
+
 export interface GenericCRMDashboardTabsRendererProps {
   /** CRM Dashboard tabs configuration */
   tabs: CRMDashboardTabConfig[];
@@ -66,12 +72,12 @@ export interface GenericCRMDashboardTabsRendererProps {
   /** Additional data for specific tabs */
   additionalData?: {
     selectedPeriod?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   /** Custom component renderers */
-  customComponents?: Record<string, React.ComponentType<any>>;
+  customComponents?: Record<string, React.ComponentType<TabComponentProps>>;
   /** Additional props to pass to all tab components */
-  globalProps?: Record<string, any>;
+  globalProps?: Record<string, unknown>;
 }
 
 // ============================================================================

@@ -11,24 +11,49 @@ import type { ServiceFieldConfig, ServiceSectionConfig } from '@/config/service-
 import { getIconComponent } from './utils/IconMapping';
 
 // ============================================================================
-// INTERFACES
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
 // ============================================================================
+
+/** Form data type for service forms */
+export type ServiceFormData = Record<string, string | number | boolean | null | undefined>;
+
+/** Photo data structure */
+export interface PhotoData {
+  url: string;
+  name?: string;
+  size?: number;
+}
+
+/** Input change handler type */
+export type InputChangeHandler = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+
+/** Select change handler type */
+export type SelectChangeHandler = (name: string, value: string) => void;
+
+/** Custom field renderer function type */
+export type CustomFieldRenderer = (
+  field: ServiceFieldConfig,
+  formData: ServiceFormData,
+  onChange: InputChangeHandler,
+  onSelectChange: SelectChangeHandler,
+  disabled: boolean
+) => React.ReactNode;
 
 export interface ServiceFormRendererProps {
   /** Sections configuration from service config file */
   sections: ServiceSectionConfig[];
   /** Form data object */
-  formData: Record<string, any>;
+  formData: ServiceFormData;
   /** Input change handler */
-  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onChange: InputChangeHandler;
   /** Select change handler */
-  onSelectChange: (name: string, value: string) => void;
+  onSelectChange: SelectChangeHandler;
   /** Disabled state */
   disabled?: boolean;
   /** Multiple photos change handler (now used for logos too) */
-  onPhotosChange?: (photos: any[]) => void;
+  onPhotosChange?: (photos: PhotoData[]) => void;
   /** Custom field renderers */
-  customRenderers?: Record<string, (field: ServiceFieldConfig, formData: any, onChange: any, onSelectChange: any, disabled: boolean) => React.ReactNode>;
+  customRenderers?: Record<string, CustomFieldRenderer>;
 }
 
 // ============================================================================
@@ -38,8 +63,13 @@ export interface ServiceFormRendererProps {
 /**
  * Renders an input field for services - NOW USING UNIVERSAL CLICKABLE FIELD
  */
-function renderInputField(field: ServiceFieldConfig, formData: any, onChange: any, disabled: boolean): React.ReactNode {
-  const value = formData[field.id] || '';
+function renderInputField(
+  field: ServiceFieldConfig,
+  formData: ServiceFormData,
+  onChange: InputChangeHandler,
+  disabled: boolean
+): React.ReactNode {
+  const value = formData[field.id] ?? '';
 
   // 🎯 DEBUG: Log για contact fields
   if (['phone', 'email', 'website'].includes(field.id)) {
@@ -66,12 +96,17 @@ function renderInputField(field: ServiceFieldConfig, formData: any, onChange: an
 /**
  * Renders a textarea field for services
  */
-function renderTextareaField(field: ServiceFieldConfig, formData: any, onChange: any, disabled: boolean): React.ReactNode {
+function renderTextareaField(
+  field: ServiceFieldConfig,
+  formData: ServiceFormData,
+  onChange: InputChangeHandler,
+  disabled: boolean
+): React.ReactNode {
   return (
     <Textarea
       id={field.id}
       name={field.id}
-      value={formData[field.id] || ''}
+      value={formData[field.id] ?? ''}
       onChange={onChange}
       disabled={disabled}
       required={field.required}
@@ -85,11 +120,19 @@ function renderTextareaField(field: ServiceFieldConfig, formData: any, onChange:
 /**
  * Renders a select field for services
  */
-function renderSelectField(field: ServiceFieldConfig, formData: any, onSelectChange: any, disabled: boolean): React.ReactNode {
+function renderSelectField(
+  field: ServiceFieldConfig,
+  formData: ServiceFormData,
+  onSelectChange: SelectChangeHandler,
+  disabled: boolean
+): React.ReactNode {
+  const currentValue = formData[field.id];
+  const valueStr = currentValue !== null && currentValue !== undefined ? String(currentValue) : (field.defaultValue ?? '');
+
   return (
     <Select
       name={field.id}
-      value={formData[field.id] || field.defaultValue || ''}
+      value={valueStr}
       onValueChange={(value) => onSelectChange(field.id, value)}
       disabled={disabled}
       required={field.required}
@@ -113,11 +156,11 @@ function renderSelectField(field: ServiceFieldConfig, formData: any, onSelectCha
  */
 function renderField(
   field: ServiceFieldConfig,
-  formData: any,
-  onChange: any,
-  onSelectChange: any,
+  formData: ServiceFormData,
+  onChange: InputChangeHandler,
+  onSelectChange: SelectChangeHandler,
   disabled: boolean,
-  customRenderers?: Record<string, any>
+  customRenderers?: Record<string, CustomFieldRenderer>
 ): React.ReactNode {
   // Check for custom renderer first
   if (customRenderers && customRenderers[field.id]) {

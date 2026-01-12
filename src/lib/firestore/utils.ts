@@ -9,13 +9,14 @@ export const getCol = <T = unknown>(path: string, converter?: FirestoreDataConve
   converter ? collection(db, path).withConverter(converter) : collection(db, path);
 
 export const mapDocs = <T>(qs: QuerySnapshot<T>) =>
-  qs.docs.map((d) => ({ id: d.id, ...(d.data() as any) as T }));
+  qs.docs.map((d) => ({ id: d.id, ...(d.data() as T) }));
 
 export const asDate = (v: unknown): Date => {
   if (!v) return new Date(NaN);
   if (v instanceof Date) return v;
   // Firestore Timestamp
-  if (typeof (v as any)?.toDate === 'function') return (v as any as Timestamp).toDate();
+  const timestampCandidate = v as { toDate?: () => Date };
+  if (typeof timestampCandidate?.toDate === 'function') return timestampCandidate.toDate();
   if (typeof v === 'number') return new Date(v);
   if (typeof v === 'string') return new Date(v);
   return new Date(NaN);

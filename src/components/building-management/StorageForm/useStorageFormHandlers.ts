@@ -11,7 +11,7 @@ interface UseStorageFormHandlersProps {
     formType: StorageType;
     setErrors: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>;
     onSave: (unit: StorageUnit) => void;
-    updateField: (field: string, value: any) => void;
+    updateField: (field: keyof StorageUnit, value: StorageUnit[keyof StorageUnit]) => void;
 }
 
 export function useStorageFormHandlers({

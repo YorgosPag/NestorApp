@@ -10,7 +10,7 @@ export interface EmailAnalyticsEvent {
     ip?: string;
     userAgent?: string;
     clickedUrl?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   createdAt: Date;
 }

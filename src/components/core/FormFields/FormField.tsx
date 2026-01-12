@@ -27,6 +27,16 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** Form field value type */
+export type FormFieldValue = string | number | boolean | null | undefined;
+
+/** Form field validation custom function type */
+export type ValidationFunction = (value: FormFieldValue) => string | undefined;
+
 // Types για το unified form field system
 export interface SelectOption {
   value: string;
@@ -42,7 +52,7 @@ export interface FormFieldValidation {
   maxLength?: number;
   min?: number;
   max?: number;
-  custom?: (value: any) => string | undefined;
+  custom?: ValidationFunction;
 }
 
 export interface UnifiedFormFieldProps {
@@ -53,8 +63,8 @@ export interface UnifiedFormFieldProps {
          'textarea' | 'select' | 'multiselect' | 'checkbox' | 'radio' | 'file';
   
   // Value and change handling
-  value?: any;
-  onChange?: (value: any) => void;
+  value?: FormFieldValue;
+  onChange?: (value: FormFieldValue) => void;
   onBlur?: () => void;
   onFocus?: () => void;
   
@@ -115,9 +125,9 @@ export interface UnifiedFormFieldProps {
   className?: string;
   inputClassName?: string;
   labelClassName?: string;
-  
+
   // Additional props
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>(({
@@ -179,9 +189,9 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
   };
   
   // Format value for display
-  const formatValue = (val: any) => {
+  const formatValue = (val: FormFieldValue): string => {
     if (val === undefined || val === null) return '';
-    
+
     if (type === 'number' && typeof val === 'number') {
       if (currency) {
         return new Intl.NumberFormat('el-GR', {
@@ -198,18 +208,18 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
         return val.toLocaleString('el-GR');
       }
     }
-    
-    return val;
+
+    return String(val);
   };
   
   // Handle value change
-  const handleChange = (newValue: any) => {
+  const handleChange = (newValue: string | number): void => {
     if (onChange) {
-      let processedValue = newValue;
+      let processedValue: FormFieldValue = newValue;
       
       // Process number inputs
       if (type === 'number') {
-        const numValue = parseFloat(newValue);
+        const numValue = parseFloat(String(newValue));
         processedValue = isNaN(numValue) ? '' : numValue;
       }
       

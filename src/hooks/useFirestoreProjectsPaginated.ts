@@ -87,21 +87,30 @@ export function useFirestoreProjectsPaginated(
   // DOCUMENT MAPPER
   // ==========================================================================
 
-  const mapDocument = useCallback((doc: any): FirestoreProject => {
+  const mapDocument = useCallback((doc: { id: string; data: () => Record<string, unknown> }): FirestoreProject => {
     const data = doc.data();
 
-    let mappedStatus = data.status;
+    let mappedStatus = data.status as string;
     if (data.status === 'construction' || data.status === 'active') {
       mappedStatus = 'in_progress';
     }
 
     return {
       id: doc.id,
-      ...data,
-      status: mappedStatus,
-      startDate: data.startDate || '',
-      completionDate: data.completionDate || ''
-    } as FirestoreProject;
+      name: data.name as string || '',
+      title: data.title as string || '',
+      status: mappedStatus as FirestoreProject['status'],
+      company: data.company as string || '',
+      companyId: data.companyId as string || '',
+      address: data.address as string || '',
+      city: data.city as string || '',
+      progress: data.progress as number || 0,
+      totalValue: data.totalValue as number || 0,
+      startDate: data.startDate as string || '',
+      completionDate: data.completionDate as string || '',
+      lastUpdate: data.lastUpdate as string || '',
+      totalArea: data.totalArea as number || 0
+    };
   }, []);
 
   // ==========================================================================

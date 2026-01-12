@@ -16,7 +16,102 @@
 
 import { useCallback } from 'react';
 import { mapStyleManager, type MapStyleType } from '../../services/map/MapStyleManager';
-import type { GeoCoordinate, GeoControlPoint } from '../../types';
+import type { GeoCoordinate } from '../../types';
+
+// ============================================================================
+// 🏢 ENTERPRISE: MapLibre Type Definitions
+// ============================================================================
+
+/**
+ * MapLibre event with coordinates
+ */
+export interface MapEvent {
+  lngLat?: { lng: number; lat: number };
+  longitude?: number;
+  latitude?: number;
+  originalEvent?: MouseEvent;
+  preventDefault?: () => void;
+}
+
+/**
+ * MapLibre map instance interface
+ */
+export interface MapInstance {
+  getMap?: () => MapInstance;
+  getCenter?: () => { lng: number; lat: number };
+  getZoom?: () => number;
+  setZoom?: (zoom: number) => void;
+  flyTo?: (options: { center: [number, number]; zoom?: number }) => void;
+  _polygonSystem?: PolygonSystemRef;
+}
+
+/**
+ * Polygon system reference attached to map
+ */
+export interface PolygonSystemRef {
+  polygons: GeoPolygon[];
+  stats: PolygonStats;
+  startDrawing?: () => void;
+  finishDrawing?: () => void;
+  cancelDrawing?: () => void;
+  isDrawing: boolean;
+}
+
+/**
+ * GeoPolygon structure
+ */
+export interface GeoPolygon {
+  id: string;
+  points: Array<{ lng: number; lat: number }>;
+  isClosed?: boolean;
+}
+
+/**
+ * Polygon statistics
+ */
+export interface PolygonStats {
+  totalPolygons?: number;
+  activePolygons?: number;
+}
+
+/**
+ * Drawing data structure
+ */
+export interface DrawingData {
+  points: Array<{ lng: number; lat: number }>;
+  config?: {
+    pointMode?: boolean;
+    freehandMode?: boolean;
+  };
+}
+
+/**
+ * Transform state from parent
+ */
+export interface TransformState {
+  scale: number;
+  offsetX: number;
+  offsetY: number;
+}
+
+/**
+ * Map error event structure
+ */
+export interface MapErrorEvent {
+  error?: {
+    message?: string;
+    url?: string;
+    status?: number;
+  };
+  message?: string;
+}
+
+/**
+ * Map ref type
+ */
+export interface MapRef {
+  current: MapInstance | null;
+}
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
@@ -26,15 +121,15 @@ export interface MapInteractionConfig {
   enablePolygonDrawing?: boolean;
   isPickingCoordinates?: boolean;
   clickMode?: 'off' | 'add_dxf' | 'add_geo';
-  transformState: any; // ✅ From parent - transform state
+  transformState: TransformState;
   onCoordinateClick?: (coordinate: GeoCoordinate) => void;
   isPolygonComplete?: boolean;
 
   // Polygon system integration
   systemIsDrawing?: boolean;
   addPoint?: (lng: number, lat: number) => void;
-  getCurrentDrawing?: () => any;
-  finishDrawing?: () => any;
+  getCurrentDrawing?: () => DrawingData | null;
+  finishDrawing?: () => void;
   isInFreehandMode?: () => boolean;
 
   // Freehand state
@@ -50,13 +145,32 @@ export interface MapInteractionConfig {
 }
 
 export interface MapInteractionHandlers {
-  handleMapClick: (event: any) => void;
-  handleMapMouseMove: (event: any) => void;
-  handleMapMouseDown: (event: any) => void;
+  handleMapClick: (event: MapEvent) => void;
+  handleMapMouseMove: (event: MapEvent) => void;
+  handleMapMouseDown: (event: MapEvent) => void;
   handleMapMouseUp: () => void;
-  handleMapLoad: (onMapReady?: (map: any) => void, enablePolygonDrawing?: boolean, setMapRef?: any, polygons?: any[], stats?: any, startDrawing?: any, finishDrawing?: any, cancelDrawing?: any, systemIsDrawing?: boolean) => void;
-  handleMapError: (error: any, currentMapStyle: MapStyleType, setCurrentMapStyle: (style: MapStyleType) => void, setMapLoaded: (loaded: boolean) => void) => void;
-  handleMapStyleChange: (newStyle: MapStyleType, setCurrentMapStyle: (style: MapStyleType) => void, setMapLoaded: (loaded: boolean) => void) => void;
+  handleMapLoad: (
+    onMapReady?: (map: MapInstance) => void,
+    enablePolygonDrawing?: boolean,
+    setMapRef?: (ref: MapRef) => void,
+    polygons?: GeoPolygon[],
+    stats?: PolygonStats,
+    startDrawing?: () => void,
+    finishDrawing?: () => void,
+    cancelDrawing?: () => void,
+    systemIsDrawing?: boolean
+  ) => (mapRef?: MapRef) => void;
+  handleMapError: (
+    error: MapErrorEvent,
+    currentMapStyle: MapStyleType,
+    setCurrentMapStyle: (style: MapStyleType) => void,
+    setMapLoaded: (loaded: boolean) => void
+  ) => void;
+  handleMapStyleChange: (
+    newStyle: MapStyleType,
+    setCurrentMapStyle: (style: MapStyleType) => void,
+    setMapLoaded: (loaded: boolean) => void
+  ) => void;
 }
 
 // ============================================================================
@@ -72,8 +186,11 @@ export const useMapInteractions = (config: MapInteractionConfig): MapInteraction
   // 🖱️ MAP CLICK HANDLER
   // ========================================================================
 
-  const handleMapClick = useCallback((event: any) => {
-    const { lng, lat } = event.lngLat || { lng: event.longitude, lat: event.latitude };
+  const handleMapClick = useCallback((event: MapEvent) => {
+    const lngLat = event.lngLat || { lng: event.longitude, lat: event.latitude };
+    const lng = lngLat.lng ?? 0;
+    const lat = lngLat.lat ?? 0;
+    if (lng === 0 && lat === 0) return; // Invalid coordinates
     const coordinate: GeoCoordinate = { lng, lat };
 
     // ✅ NEW: Universal Polygon System - Handle polygon drawing
@@ -125,8 +242,11 @@ export const useMapInteractions = (config: MapInteractionConfig): MapInteraction
   // 🖱️ MAP MOUSE MOVE HANDLER
   // ========================================================================
 
-  const handleMapMouseMove = useCallback((event: any) => {
-    const { lng, lat } = event.lngLat || { lng: event.longitude, lat: event.latitude };
+  const handleMapMouseMove = useCallback((event: MapEvent) => {
+    const lngLat = event.lngLat || { lng: event.longitude, lat: event.latitude };
+    const lng = lngLat.lng ?? 0;
+    const lat = lngLat.lat ?? 0;
+    if (lng === 0 && lat === 0) return; // Invalid coordinates
 
     if (config.setHoveredCoordinate) {
       config.setHoveredCoordinate({ lng, lat });
@@ -177,9 +297,10 @@ export const useMapInteractions = (config: MapInteractionConfig): MapInteraction
   // 🖱️ MAP MOUSE DOWN HANDLER (Freehand Drawing)
   // ========================================================================
 
-  const handleMapMouseDown = useCallback((event: any) => {
+  const handleMapMouseDown = useCallback((event: MapEvent) => {
     // Μόνο για freehand mode
     if (!config.isInFreehandMode || !config.isInFreehandMode() || !config.enablePolygonDrawing) return;
+    if (!event.lngLat) return;
 
     const { lng, lat } = event.lngLat;
 
@@ -246,17 +367,17 @@ export const useMapInteractions = (config: MapInteractionConfig): MapInteraction
   // ========================================================================
 
   const handleMapLoad = useCallback((
-    onMapReady?: (map: any) => void,
+    onMapReady?: (map: MapInstance) => void,
     enablePolygonDrawing?: boolean,
-    setMapRef?: any,
-    polygons?: any[],
-    stats?: any,
-    startDrawing?: any,
-    finishDrawing?: any,
-    cancelDrawing?: any,
+    setMapRef?: (ref: MapRef) => void,
+    polygons?: GeoPolygon[],
+    stats?: PolygonStats,
+    startDrawing?: () => void,
+    finishDrawing?: () => void,
+    cancelDrawing?: () => void,
     systemIsDrawing?: boolean
   ) => {
-    return (mapRef?: React.RefObject<any>) => {
+    return (mapRef?: MapRef) => {
       // Initialize polygon system with map instance
       if (enablePolygonDrawing && mapRef?.current) {
         const map = mapRef.current.getMap?.();
@@ -294,7 +415,7 @@ export const useMapInteractions = (config: MapInteractionConfig): MapInteraction
   // ========================================================================
 
   const handleMapError = useCallback((
-    error: any,
+    error: MapErrorEvent,
     currentMapStyle: MapStyleType,
     setCurrentMapStyle: (style: MapStyleType) => void,
     setMapLoaded: (loaded: boolean) => void

@@ -324,16 +324,20 @@ export class LayerRenderer {
     if (options.showSnapIndicators && snapSettings.enabled && options.snapResults.length) {
       // Expose snap results AND viewport for debug overlay
       if (typeof window !== 'undefined') {
-        (window as any).__debugSnapResults = options.snapResults;
-        (window as any).__debugViewport = viewport;
+        // 🏢 ENTERPRISE: Using type assertion for window globals (debugging only)
+        const win = window as Window & { __debugSnapResults?: unknown[]; __debugViewport?: Viewport };
+        win.__debugSnapResults = options.snapResults;
+        win.__debugViewport = viewport;
       }
       // ✅ FIX: Pass actual transform to snapRenderer for correct alignment
       this.snapRenderer.render(options.snapResults, viewport, snapSettings, transform);
     } else {
       // Clear snap results when no snaps active
       if (typeof window !== 'undefined') {
-        (window as any).__debugSnapResults = [];
-        (window as any).__debugViewport = viewport; // Still expose viewport for cursor tracking
+        // 🏢 ENTERPRISE: Using type assertion for window globals (debugging only)
+        const win = window as Window & { __debugSnapResults?: unknown[]; __debugViewport?: Viewport };
+        win.__debugSnapResults = [];
+        win.__debugViewport = viewport; // Still expose viewport for cursor tracking
       }
     }
 
@@ -352,8 +356,13 @@ export class LayerRenderer {
     // This prevents duplicate rendering when using legacy path
 
     // 🛠️ DEBUG: Ruler Debug System (Enterprise Calibration & Verification)
-    if (typeof window !== 'undefined' && (window as any).rulerDebugOverlay) {
-      const rulerDebug = (window as any).rulerDebugOverlay;
+    // 🏢 ENTERPRISE: Type assertion for debug overlay window global
+    interface RulerDebugOverlay {
+      getStatus: () => { enabled: boolean; settings: Record<string, unknown>; features: { calibrationGrid?: boolean } };
+    }
+    const debugWin = window as Window & { rulerDebugOverlay?: RulerDebugOverlay };
+    if (typeof window !== 'undefined' && debugWin.rulerDebugOverlay) {
+      const rulerDebug = debugWin.rulerDebugOverlay;
       const rulerStatus = rulerDebug.getStatus();
 
       if (rulerStatus.enabled && rulerStatus.settings) {
@@ -417,7 +426,13 @@ export class LayerRenderer {
    * Render single polygon
    */
   private renderPolygon(
-    polygon: any,
+    polygon: {
+      vertices: Point2D[];
+      fillColor?: string;
+      strokeColor?: string;
+      strokeWidth: number;
+      selected?: boolean;
+    },
     layer: ColorLayer,
     transform: ViewTransform,
     viewport: Viewport
@@ -815,7 +830,7 @@ export class LayerRenderer {
   /**
    * ✅ ΦΑΣΗ 6: Get performance metrics από centralized system
    */
-  getUIMetrics(): any[] {
+  getUIMetrics(): Array<{ name: string; renderTime?: number; lastRender?: number }> {
     return this.uiComposite.getMetrics();
   }
 
@@ -905,8 +920,13 @@ export class LayerRenderer {
 
     // 🎯 DEBUG: Origin Markers (always check global state)
     // Read from global singleton to get current debug state
-    if (typeof window !== 'undefined' && (window as any).originMarkersDebug) {
-      const debugOverlay = (window as any).originMarkersDebug;
+    // 🏢 ENTERPRISE: Type assertion for debug overlay window global
+    interface OriginMarkersDebug {
+      getStatus: () => { enabled: boolean };
+    }
+    const originWin = window as Window & { originMarkersDebug?: OriginMarkersDebug };
+    if (typeof window !== 'undefined' && originWin.originMarkersDebug) {
+      const debugOverlay = originWin.originMarkersDebug;
       const debugStatus = debugOverlay.getStatus();
 
       if (debugStatus.enabled) {

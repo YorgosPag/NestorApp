@@ -13,7 +13,8 @@ import type {
   ICanvasRegistry,
   ICanvasProvider,
   CanvasPerformanceMetrics,
-  CanvasProviderType
+  CanvasProviderType,
+  CanvasEventData
 } from '../interfaces/ICanvasProvider';
 import type { CanvasInstance } from '../../../subapps/dxf-viewer/rendering/canvas/core/CanvasManager';
 
@@ -24,7 +25,7 @@ import type { CanvasInstance } from '../../../subapps/dxf-viewer/rendering/canva
  */
 export class CanvasRegistry implements ICanvasRegistry {
   private providers = new Map<string, ICanvasProvider>();
-  private globalEventListeners = new Set<(event: string, data: any) => void>();
+  private globalEventListeners = new Set<(event: string, data: CanvasEventData) => void>();
   private performanceMetrics: CanvasPerformanceMetrics;
   private isPerformanceMonitoringEnabled = false;
   private metricsUpdateInterval?: NodeJS.Timeout;
@@ -49,7 +50,7 @@ export class CanvasRegistry implements ICanvasRegistry {
     this.providers.set(provider.id, provider);
 
     // Subscribe to provider events
-    provider.on('*', (event: string, data: any) => {
+    provider.on('*', (event: string, data: CanvasEventData) => {
       this.handleProviderEvent(provider.id, event, data);
     });
 
@@ -126,7 +127,7 @@ export class CanvasRegistry implements ICanvasRegistry {
   /**
    * Broadcast event σε όλους τους providers
    */
-  broadcastEvent(event: string, data?: any): void {
+  broadcastEvent(event: string, data?: CanvasEventData): void {
     // Emit to global listeners
     this.globalEventListeners.forEach(listener => {
       try {
@@ -151,7 +152,7 @@ export class CanvasRegistry implements ICanvasRegistry {
   /**
    * Subscribe to global events
    */
-  subscribeToGlobalEvents(callback: (event: string, data: any) => void): () => void {
+  subscribeToGlobalEvents(callback: (event: string, data: CanvasEventData) => void): () => void {
     this.globalEventListeners.add(callback);
 
     return () => {
@@ -269,7 +270,7 @@ export class CanvasRegistry implements ICanvasRegistry {
   /**
    * Handle events από providers
    */
-  private handleProviderEvent(providerId: string, event: string, data: any): void {
+  private handleProviderEvent(providerId: string, event: string, data: CanvasEventData): void {
     // Update performance metrics
     this.updateMetrics('eventCount');
 
@@ -415,6 +416,6 @@ export const getGlobalCanvas = (canvasId: string): CanvasInstance | undefined =>
   return globalCanvasRegistry.getGlobalCanvas(canvasId);
 };
 
-export const broadcastCanvasEvent = (event: string, data?: any): void => {
+export const broadcastCanvasEvent = (event: string, data?: CanvasEventData): void => {
   globalCanvasRegistry.broadcastEvent(event, data);
 };

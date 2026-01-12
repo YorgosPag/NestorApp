@@ -26,7 +26,7 @@ import { useGeoTransformation } from '../floor-plan-system/hooks/useGeoTransform
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSnapEngine } from '../floor-plan-system/snapping';
-import { useOptimizedUserRole } from '@/contexts/OptimizedUserRoleContext';
+import { useUserRole, useUserType } from '@/auth';
 import { PageErrorBoundary, ComponentErrorBoundary } from '@/components/ui/ErrorBoundary/ErrorBoundary';
 import ErrorReportingDashboard from '@/components/development/ErrorReportingDashboard';
 import { useAnalytics } from '@/services/AnalyticsBridge';
@@ -50,6 +50,35 @@ import type { GeoCanvasAppProps } from '../types';
 import type { GeoCoordinate, DxfCoordinate } from '../types';
 import { generateLayerId } from '@/services/enterprise-id.service';
 
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** MapLibre GL JS map instance type */
+type MapLibreMapInstance = {
+  flyTo: (options: {
+    center: [number, number];
+    zoom: number;
+    duration?: number;
+    essential?: boolean;
+  }) => void;
+} | null;
+
+/** Boundary layer style type */
+interface BoundaryLayerStyle {
+  strokeColor: string;
+  strokeWidth: number;
+  fillColor: string;
+  fillOpacity: number;
+}
+
+/** Administrative boundary result type */
+interface AdminBoundaryResult {
+  name: string;
+  adminLevel: number;
+  [key: string]: unknown;
+}
+
 /**
  * GEO-CANVAS CONTENT COMPONENT
  * Κεντρικό component για το Geo-Alert system interface
@@ -64,7 +93,8 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
-  const { user, setUserType, isCitizen, isProfessional, isTechnical } = useOptimizedUserRole();
+  const { user } = useUserRole();
+  const { setUserType, isCitizen, isProfessional, isTechnical } = useUserType();
   const [activeView, setActiveView] = useState<'foundation' | 'georeferencing' | 'map'>('georeferencing');
   const [showAlertDashboard, setShowAlertDashboard] = useState(false);
 
@@ -103,7 +133,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
     };
     boundary: {
       feature: GeoJSON.Feature | GeoJSON.FeatureCollection;
-      result: any;
+      result: AdminBoundaryResult;
     };
   }>>([]);
 
@@ -185,10 +215,10 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
   // Floor Plan Layer state
   const [floorPlanVisible, setFloorPlanVisible] = useState(true);
   const [floorPlanOpacity, setFloorPlanOpacity] = useState(0.8);
-  const mapRef = useRef<any>(null); // MapLibre map instance
+  const mapRef = useRef<MapLibreMapInstance>(null); // MapLibre map instance
 
   // ✅ NEW: Handle location selection από address search/GPS
-  const handleLocationSelected = useCallback((lat: number, lng: number, address?: any) => {
+  const handleLocationSelected = useCallback((lat: number, lng: number, address?: string | { fullAddress?: string; street?: string; number?: string; area?: string; municipality?: string; display_name?: string }) => {
     console.log('Location selected, centering map:', { lat, lng, address });
 
     // Set search marker
@@ -244,12 +274,12 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
   }, []);
 
   // ✅ NEW: Handle administrative boundary selection (Enhanced for Layer Management)
-  const handleAdminBoundarySelected = useCallback((boundary: GeoJSON.Feature | GeoJSON.FeatureCollection, result: any) => {
+  const handleAdminBoundarySelected = useCallback((boundary: GeoJSON.Feature | GeoJSON.FeatureCollection, result: AdminBoundaryResult) => {
     console.log('🏛️ Administrative boundary selected:', { boundary, result });
 
     // Determine boundary type και default style
     let type: 'region' | 'municipality' | 'municipal_unit' | 'community';
-    let defaultStyle: any;
+    let defaultStyle: BoundaryLayerStyle;
 
     if (result.adminLevel === 4) { // Region
       type = 'region';
@@ -419,7 +449,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
     console.log(`🎨 Layer ${layerId} opacity: ${opacity}`);
   }, []);
 
-  const handleLayerStyleChange = useCallback((layerId: string, styleChanges: any) => {
+  const handleLayerStyleChange = useCallback((layerId: string, styleChanges: Partial<BoundaryLayerStyle>) => {
     setBoundaryLayers(prev =>
       prev.map(layer =>
         layer.id === layerId

@@ -11,6 +11,8 @@ import type { Property } from '@/types/property-viewer';
 import { useUnitsViewerState } from '@/hooks/useUnitsViewerState';
 import { EntityListColumn } from '@/core/containers';
 import { matchesSearchTerm } from '@/lib/search/search';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export type UnitSortKey = 'name' | 'price' | 'area';
 
@@ -21,12 +23,14 @@ interface UnitsListProps {
   onAssignmentSuccess: () => void;
 }
 
-export function UnitsList({ 
-  units, 
-  selectedUnitIds, 
+export function UnitsList({
+  units,
+  selectedUnitIds,
   onSelectUnit,
   onAssignmentSuccess,
 }: UnitsListProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('units');
   const [favorites, setFavorites] = useState<string[]>(['prop-1']);
   const [sortBy, setSortBy] = useState<UnitSortKey>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -136,7 +140,7 @@ export function UnitsList({
   const totalValue = units.reduce((sum, u) => sum + (u.price || 0), 0);
 
   return (
-    <EntityListColumn hasBorder aria-label="Λίστα Μονάδων">
+    <EntityListColumn hasBorder aria-label={t('list.ariaLabel')}>
       <UnitsListHeader
         unitCount={sortedUnits.length}  // 🏢 ENTERPRISE: Δυναμικό count με filtered results
         showToolbar={showToolbar}

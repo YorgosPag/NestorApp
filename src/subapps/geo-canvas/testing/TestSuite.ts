@@ -79,6 +79,87 @@ export interface TestContext {
 }
 
 // ============================================================================
+// 🏢 ENTERPRISE: Testing Utility Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/**
+ * DXF Control Point for transformation tests
+ */
+export interface DxfControlPoint {
+  dxf: { x: number; y: number };
+  geo: { lat: number; lng: number };
+}
+
+/**
+ * Map click event for coordinate tests
+ */
+export interface MapClickEvent {
+  lngLat: { lat: number; lng: number };
+}
+
+/**
+ * Transformation update data
+ */
+export interface TransformationUpdate {
+  dxf: { x: number; y: number };
+  geo: { lat: number; lng: number };
+}
+
+/**
+ * Viewport configuration for synchronization tests
+ */
+export interface ViewportConfig {
+  zoom: number;
+  center: { lat: number; lng: number };
+}
+
+/**
+ * Database connection configuration
+ */
+export interface DatabaseConnectionConfig {
+  host: string;
+  port: number;
+  database: string;
+  username: string;
+  password?: string;
+}
+
+/**
+ * Alert rule configuration for tests
+ */
+export interface TestAlertRule {
+  type: string;
+  condition: string;
+  value: string | string[];
+}
+
+/**
+ * Test event for detection simulation
+ */
+export interface TestDetectionEvent {
+  type: string;
+  data: Record<string, unknown>;
+}
+
+/**
+ * Notification configuration for tests
+ */
+export interface TestNotification {
+  channel: string;
+  priority: string;
+  message: string;
+}
+
+/**
+ * Responsive viewport for layout tests
+ */
+export interface ResponsiveViewport {
+  width: number;
+  height: number;
+  name: string;
+}
+
+// ============================================================================
 // MAIN TEST SUITE CLASS
 // ============================================================================
 
@@ -726,8 +807,9 @@ export class GeoAlertTestSuite {
   // UTILITY METHODS FOR TESTING
   // ========================================================================
 
-  private calculateAffineMatrix(controlPoints: any[]): number[][] {
+  private calculateAffineMatrix(controlPoints: DxfControlPoint[]): number[][] {
     // Mock affine matrix calculation
+    void controlPoints; // Acknowledge parameter usage
     return [
       [1, 0, 0],
       [0, 1, 0],
@@ -740,14 +822,14 @@ export class GeoAlertTestSuite {
     return matrix.length === 3 && matrix[0].length === 3;
   }
 
-  private validateControlPoints(points: any[]): boolean {
+  private validateControlPoints(points: DxfControlPoint[]): boolean {
     return points.every(point =>
       point.geo.lat >= -90 && point.geo.lat <= 90 &&
       point.geo.lng >= -180 && point.geo.lng <= 180
     );
   }
 
-  private testTransformationEdgeCase(points: any[]): string {
+  private testTransformationEdgeCase(points: DxfControlPoint[]): string {
     if (points.length < 2) return 'insufficient-points';
     if (points.length >= 3) {
       // Check για collinear points
@@ -757,7 +839,7 @@ export class GeoAlertTestSuite {
     return 'valid';
   }
 
-  private simulateCoordinatePick(event: any): { lat: number; lng: number } {
+  private simulateCoordinatePick(event: MapClickEvent): { lat: number; lng: number } {
     return { lat: event.lngLat.lat, lng: event.lngLat.lng };
   }
 
@@ -770,18 +852,20 @@ export class GeoAlertTestSuite {
     return validLayers.includes(layerId);
   }
 
-  private simulateRealTimeUpdate(update: any): boolean {
+  private simulateRealTimeUpdate(update: TransformationUpdate): boolean {
     // Mock real-time update validation
+    void update; // Acknowledge parameter usage
     return true;
   }
 
-  private testViewportSynchronization(viewport: any): boolean {
+  private testViewportSynchronization(viewport: ViewportConfig): boolean {
     // Mock viewport sync test
     return viewport.zoom > 0 && viewport.center.lat && viewport.center.lng;
   }
 
-  private async simulateDatabaseConnection(config: any): Promise<boolean> {
+  private async simulateDatabaseConnection(config: DatabaseConnectionConfig): Promise<boolean> {
     // Mock database connection test
+    void config; // Acknowledge parameter usage
     return true;
   }
 
@@ -800,13 +884,13 @@ export class GeoAlertTestSuite {
     return true;
   }
 
-  private createFailedTest(testName: string, category: TestCategory, error: any): TestResult {
+  private createFailedTest(testName: string, category: TestCategory, error: unknown): TestResult {
     return {
       testName,
       category,
       status: 'failed',
       duration: 0,
-      details: `Test failed: ${error}`,
+      details: `Test failed: ${error instanceof Error ? error.message : String(error)}`,
       error: error instanceof Error ? error : new Error(String(error)),
       metadata: {
         phase: 'Unknown',
@@ -967,16 +1051,16 @@ export class GeoAlertTestSuite {
   }
 
   // Helper methods για Alert Engine tests
-  private validateRule(rule: any): boolean {
-    return rule.type && rule.condition && rule.value;
+  private validateRule(rule: TestAlertRule): boolean {
+    return Boolean(rule.type && rule.condition && rule.value);
   }
 
-  private async simulateEventDetection(event: any): Promise<boolean> {
-    return event.type && event.data;
+  private async simulateEventDetection(event: TestDetectionEvent): Promise<boolean> {
+    return Boolean(event.type && event.data);
   }
 
-  private async simulateNotificationSend(notification: any): Promise<boolean> {
-    return notification.channel && notification.message;
+  private async simulateNotificationSend(notification: TestNotification): Promise<boolean> {
+    return Boolean(notification.channel && notification.message);
   }
 
   private validateMonitoringMetric(metric: string): boolean {
@@ -1142,7 +1226,7 @@ export class GeoAlertTestSuite {
     return ['light', 'dark', 'auto'].includes(theme);
   }
 
-  private testResponsiveLayout(viewport: any): boolean {
+  private testResponsiveLayout(viewport: ResponsiveViewport): boolean {
     return viewport.width > 0 && viewport.height > 0;
   }
 

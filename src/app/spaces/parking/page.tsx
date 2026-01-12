@@ -46,8 +46,12 @@ import {
   PARKING_TYPE_LABELS,
   PARKING_STATUS_LABELS
 } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 function ParkingPageContent() {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
@@ -108,7 +112,7 @@ function ParkingPageContent() {
   // Dashboard stats from real data
   const dashboardStats: DashboardStat[] = [
     {
-      title: "Σύνολο Θέσεων",
+      title: t('pages.parking.dashboard.totalSpots'),
       value: stats.totalParkingSpots,
       icon: Car,
       color: "blue"
@@ -126,19 +130,19 @@ function ParkingPageContent() {
       color: "purple"
     },
     {
-      title: "Συνολική Επιφάνεια",
+      title: t('pages.parking.dashboard.totalArea'),
       value: `${stats.totalArea.toFixed(1)} m²`,
       icon: MapPin,
       color: "orange"
     },
     {
-      title: "Συνολική Αξία",
+      title: t('pages.parking.dashboard.totalValue'),
       value: `${(stats.totalValue / 1000).toFixed(0)}K€`,
       icon: TrendingUp,
       color: "cyan"
     },
     {
-      title: "Ποσοστό Πωλήσεων",
+      title: t('pages.parking.dashboard.salesRate'),
       value: `${stats.salesRate}%`,
       icon: BarChart3,
       color: "pink"
@@ -151,7 +155,7 @@ function ParkingPageContent() {
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
           <Car className={`${iconSizes.xl} animate-spin mx-auto mb-4 text-muted-foreground`} />
-          <p className="text-muted-foreground">Φόρτωση θέσεων στάθμευσης...</p>
+          <p className="text-muted-foreground">{t('pages.parking.loading')}</p>
         </div>
       </div>
     );
@@ -162,13 +166,13 @@ function ParkingPageContent() {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
-          <div className="text-red-500 text-lg font-medium mb-2">Σφάλμα φόρτωσης</div>
+          <div className="text-red-500 text-lg font-medium mb-2">{t('pages.parking.error.title')}</div>
           <p className="text-muted-foreground mb-4">{error}</p>
           <button
             onClick={refetch}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
           >
-            Επανάληψη
+            {t('pages.parking.error.retry')}
           </button>
         </div>
       </div>
@@ -177,7 +181,7 @@ function ParkingPageContent() {
 
   return (
     <TooltipProvider>
-      <PageContainer ariaLabel="Διαχείριση Parking">
+      <PageContainer ariaLabel={t('pages.parking.pageLabel')}>
         {/* Header */}
         <ParkingsHeader
             viewMode={viewMode}
@@ -192,7 +196,7 @@ function ParkingPageContent() {
 
         {/* Dashboard */}
         {showDashboard && (
-          <section role="region" aria-label="Στατιστικά Parking">
+          <section role="region" aria-label={t('pages.parking.dashboard.label')}>
             <UnifiedDashboard
               stats={dashboardStats}
               columns={6}
@@ -201,7 +205,7 @@ function ParkingPageContent() {
                   <div className="bg-card rounded-lg border p-4">
                     <h3 className="font-medium mb-3 flex items-center gap-2">
                       <BarChart3 className={iconSizes.sm} />
-                      Κατανομή Κατάστασης
+                      {t('pages.parking.dashboard.statusDistribution')}
                     </h3>
                     <div className="space-y-2">
                       {Object.entries(stats.parkingByStatus).map(([status, count]) => (
@@ -215,7 +219,7 @@ function ParkingPageContent() {
                   <div className="bg-card rounded-lg border p-4">
                     <h3 className="font-medium mb-3 flex items-center gap-2">
                       <Car className={iconSizes.sm} />
-                      Κατανομή Τύπων
+                      {t('pages.parking.dashboard.typeDistribution')}
                     </h3>
                     <div className="space-y-2">
                       {Object.entries(stats.parkingByType).map(([type, count]) => (
@@ -233,7 +237,7 @@ function ParkingPageContent() {
         )}
 
         {/* Desktop: Filters */}
-        <aside className="hidden md:block" role="complementary" aria-label="Φίλτρα Parking">
+        <aside className="hidden md:block" role="complementary" aria-label={t('pages.parking.filters.label')}>
           <AdvancedFiltersPanel
             config={parkingFiltersConfig}
             filters={filters}
@@ -258,7 +262,7 @@ function ParkingPageContent() {
         <MobileDetailsSlideIn
           isOpen={showMobileFilters}
           onClose={() => setShowMobileFilters(false)}
-          title="Φίλτρα Θέσεων Στάθμευσης"
+          title={t('pages.parking.filters.mobileTitle')}
         >
           <AdvancedFiltersPanel
             config={parkingFiltersConfig}
@@ -273,6 +277,7 @@ function ParkingPageContent() {
 
 /**
  * 🔧 Next.js 15: Page with Suspense boundary for useSearchParams
+ * Note: Suspense fallback uses static text (Server Component constraint)
  */
 export default function ParkingPage() {
   return (
@@ -280,7 +285,8 @@ export default function ParkingPage() {
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
           <Car className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-          <p className="text-muted-foreground">Φόρτωση θέσεων στάθμευσης...</p>
+          {/* Static fallback text - cannot use hooks in Suspense fallback */}
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     }>

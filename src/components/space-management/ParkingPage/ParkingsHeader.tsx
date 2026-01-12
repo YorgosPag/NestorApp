@@ -22,6 +22,11 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Breadcrumb navigation
 import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+
+// 🏢 ENTERPRISE: Type for Parkings view modes (avoids `as any`)
+type ParkingsViewMode = 'list' | 'grid' | 'byType' | 'byStatus';
 
 interface ParkingsHeaderProps {
   viewMode: 'list' | 'grid' | 'byType' | 'byStatus';
@@ -46,6 +51,8 @@ export function ParkingsHeader({
   showFilters,
   setShowFilters,
 }: ParkingsHeaderProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
@@ -57,23 +64,23 @@ export function ParkingsHeader({
       spacing="compact"
       title={{
         icon: Car,
-        title: "Θέσεις Στάθμευσης",
-        subtitle: "Διαχείριση και παρακολούθηση θέσεων στάθμευσης"
+        title: t('parkings.header.title'),
+        subtitle: t('parkings.header.subtitle')
       }}
       breadcrumb={<NavigationBreadcrumb />}
       search={{
         value: searchTerm,
         onChange: setSearchTerm,
-        placeholder: "Αναζήτηση θέσεων..."
+        placeholder: t('parkings.header.searchPlaceholder')
       }}
       actions={{
         showDashboard,
         onDashboardToggle: () => setShowDashboard(!showDashboard),
         viewMode: viewMode as ViewMode,
-        onViewModeChange: (mode) => setViewMode(mode as 'list' | 'grid' | 'byType' | 'byStatus'),
+        onViewModeChange: (mode) => setViewMode(mode as ParkingsViewMode),
         viewModes: ['list', 'grid', 'byType', 'byStatus'] as ViewMode[],
         addButton: {
-          label: 'Νέα Θέση',
+          label: t('parkings.header.newParking'),
           onClick: () => onNewParking?.() || console.log('Add parking')
         },
         customActions: setShowFilters ? [
@@ -85,7 +92,7 @@ export function ParkingsHeader({
                 ? `bg-primary text-primary-foreground ${quick.focus}`
                 : `${colors.bg.primary} ${quick.input} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
             }`}
-            aria-label="Toggle filters"
+            aria-label={t('parkings.accessibility.toggleFilters')}
           >
             <Filter className={iconSizes.sm} />
           </button>

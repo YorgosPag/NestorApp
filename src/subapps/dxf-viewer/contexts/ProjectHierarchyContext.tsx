@@ -151,11 +151,11 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
       console.log('✅ [ProjectHierarchy] Companies loaded successfully:', companies.length);
 
       // Remove duplicates by id AND by companyName (multiple deduplication strategies)
-      const uniqueCompanies = companies.reduce((unique: any[], company: any) => {
+      const uniqueCompanies = companies.reduce((unique: CompanyContact[], company: CompanyContact) => {
         // Check for duplicate by ID
-        const duplicateById = unique.find((c: any) => c.id === company.id);
+        const duplicateById = unique.find((c: CompanyContact) => c.id === company.id);
         // Check for duplicate by company name
-        const duplicateByName = unique.find((c: any) => c.companyName === company.companyName);
+        const duplicateByName = unique.find((c: CompanyContact) => c.companyName === company.companyName);
         
         if (!duplicateById && !duplicateByName) {
           unique.push(company);
@@ -257,7 +257,7 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
       const projectsData = result.data?.projects || [];
 
       // Transform to our structure with buildings data
-      const projects: Project[] = projectsData.map((project: any) => {
+      const projects: Project[] = projectsData.map((project: { id: string | number; name: string; company?: string; buildings?: Array<{ id: string; name: string; floors?: unknown[] }> }) => {
 
         // Transform buildings if they exist in the project data
         const buildings: Building[] = (project.buildings || []).map((building: { id: string; name: string; floors?: unknown[] }) => ({

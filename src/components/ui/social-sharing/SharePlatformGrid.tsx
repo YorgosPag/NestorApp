@@ -24,6 +24,8 @@ import {
   generatePlatformLabelStyles
 } from '@/lib/social-sharing/SocialSharingPlatforms';
 import type { SharePlatform } from '@/lib/social-sharing/SocialSharingPlatforms';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -79,6 +81,8 @@ export const SharePlatformGrid: React.FC<SharePlatformGridProps> = ({
   className,
   analytics = {}
 }) => {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('common');
   const colors = useSemanticColors();
 
   // ============================================================================
@@ -192,9 +196,9 @@ export const SharePlatformGrid: React.FC<SharePlatformGridProps> = ({
           'focus:ring-offset-2'
         )}
       >
-        <article className="flex flex-col items-center space-y-2" role="button" aria-label={`Κοινοποίηση σε ${platform.name}`}>
+        <article className="flex flex-col items-center space-y-2" role="button" aria-label={t('sharing.shareOn', { platform: platform.name })}>
           {/* Platform Icon */}
-          <figure role="img" aria-label={`Εικονίδιο ${platform.name}`}>
+          <figure role="img" aria-label={t('sharing.iconAlt', { platform: platform.name })}>
             <IconComponent
               className={designSystem.cn(
                 generatePlatformIconStyles(finalGridConfig.iconSize),
@@ -235,7 +239,7 @@ export const SharePlatformGrid: React.FC<SharePlatformGridProps> = ({
    */
   const getAccessibilityProps = () => ({
     role: 'grid',
-    'aria-label': 'Επιλογή κοινωνικής πλατφόρμας για κοινοποίηση',
+    'aria-label': t('sharing.selectPlatform'),
     'aria-busy': loading
   });
 
@@ -250,12 +254,12 @@ export const SharePlatformGrid: React.FC<SharePlatformGridProps> = ({
         "p-6 text-center",
         designSystem.colorScheme.responsive.muted.split(' ')[0], // border-muted
         "rounded-lg"
-      )} role="status" aria-label="Δεν υπάρχουν Πλατφόρμες">
+      )} role="status" aria-label={t('sharing.noPlatforms')}>
         <p className={designSystem.cn(
           designSystem.getTypographyClass('sm'),
           designSystem.colorScheme.responsive.muted.split(' ')[1] // text-muted-foreground
         )}>
-          Δεν υπάρχουν διαθέσιμες πλατφόρμες κοινοποίησης
+          {t('sharing.noPlatformsMessage')}
         </p>
       </section>
     );
@@ -267,7 +271,7 @@ export const SharePlatformGrid: React.FC<SharePlatformGridProps> = ({
       {...getAccessibilityProps()}
     >
       {/* Platform Grid */}
-      <nav className={getGridClasses()} role="group" aria-label="Πλατφόρμες Κοινωνικής Κοινοποίησης">
+      <nav className={getGridClasses()} role="group" aria-label={t('sharing.socialPlatforms')}>
         {filteredPlatforms.map(renderPlatformButton)}
       </nav>
 
@@ -277,19 +281,19 @@ export const SharePlatformGrid: React.FC<SharePlatformGridProps> = ({
           designSystem.getTypographyClass('xs'),
           designSystem.colorScheme.responsive.muted.split(' ')[1], // text-muted-foreground
           "text-center"
-        )} role="note" aria-label="Πληροφορίες Ανάπτυξης">
+        )} role="note" aria-label={t('sharing.devInfo')}>
           🔍 Debug: {filteredPlatforms.length} platforms, {finalGridConfig.columns} columns
         </aside>
       )}
 
       {/* Loading Overlay */}
       {loading && (
-        <aside className={`absolute inset-0 ${colors.bg.overlay} flex items-center justify-center rounded-lg`} role="status" aria-live="polite" aria-label="Φόρτωση Πλατφορμών">
+        <aside className={`absolute inset-0 ${colors.bg.overlay} flex items-center justify-center rounded-lg`} role="status" aria-live="polite" aria-label={t('sharing.loadingPlatforms')}>
           <p className={designSystem.cn(
             designSystem.getTypographyClass('sm', 'medium'),
             designSystem.colorScheme.responsive.muted.split(' ')[1] // text-muted-foreground
           )}>
-            Φόρτωση...
+            {t('status.loading')}
           </p>
         </aside>
       )}

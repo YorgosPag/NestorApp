@@ -14,14 +14,15 @@ export type WebSocketEventType =
   | 'system_update'
   | 'error';
 
-export interface WebSocketMessage<T = any> {
+// 🏢 ENTERPRISE: Generic interface with unknown default for type safety
+export interface WebSocketMessage<T = unknown> {
   id: string;
   type: WebSocketEventType;
   payload: T;
   timestamp: number;
   userId?: string;
   targetUsers?: string[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface WebSocketConfig {
@@ -35,7 +36,8 @@ export interface WebSocketConfig {
 
 export type WebSocketConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error' | 'reconnecting';
 
-export interface WebSocketListener<T = any> {
+// 🏢 ENTERPRISE: Generic listener with unknown default
+export interface WebSocketListener<T = unknown> {
   id: string;
   type: WebSocketEventType;
   handler: (message: WebSocketMessage<T>) => void;
@@ -179,8 +181,8 @@ class WebSocketService {
   }
 
   private applyMiddleware(message: WebSocketMessage): WebSocketMessage | null {
-    // ✅ ENTERPRISE: Fix reduce callback signature - explicit parameter types
-    return this.middleware.reduce<WebSocketMessage | null>((msg: WebSocketMessage | null, middlewareFunc: (message: WebSocketMessage<any>) => WebSocketMessage<any> | null) => {
+    // 🏢 ENTERPRISE: Fix reduce callback signature - explicit parameter types
+    return this.middleware.reduce<WebSocketMessage | null>((msg: WebSocketMessage | null, middlewareFunc: (message: WebSocketMessage<unknown>) => WebSocketMessage<unknown> | null) => {
       return msg ? middlewareFunc(msg) : null;
     }, message as WebSocketMessage | null);
   }
@@ -193,7 +195,7 @@ class WebSocketService {
   // Send messages
   send<T>(type: WebSocketEventType, payload: T, options: {
     targetUsers?: string[];
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     priority?: 'low' | 'normal' | 'high';
   } = {}): boolean {
     const message: WebSocketMessage<T> = {
@@ -248,8 +250,8 @@ class WebSocketService {
   }
 
   // Event listeners
-  addEventListener<T = any>(
-    type: WebSocketEventType | '*', 
+  addEventListener<T = unknown>(
+    type: WebSocketEventType | '*',
     handler: (message: WebSocketMessage<T>) => void,
     options: { once?: boolean } = {}
   ): string {
@@ -395,7 +397,8 @@ class WebSocketService {
     return generateTempId(); // Listeners are ephemeral, use temp IDs
   }
 
-  private log(...args: any[]): void {
+  // 🏢 ENTERPRISE: Using unknown[] for variadic logging args
+  private log(...args: unknown[]): void {
     if (this.config.enableLogging) {
       // WebSocket logging (console removed for production)
     }

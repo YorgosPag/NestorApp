@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
+
+/** Building document with optional createdAt for sorting */
+interface BuildingDocument {
+  id: string;
+  createdAt?: string | Date | { toDate: () => Date };
+  [key: string]: unknown;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,10 +51,10 @@ export async function GET(request: NextRequest) {
         where('projectId', '==', projectId)
       );
     } else {
-      // Get all buildings
+      // Get all buildings (without orderBy to avoid index requirement)
+      // Sorting will be done client-side
       buildingsQuery = query(
-        collection(db, COLLECTIONS.BUILDINGS),
-        orderBy('createdAt', 'desc')
+        collection(db, COLLECTIONS.BUILDINGS)
       );
     }
 
@@ -55,10 +62,22 @@ export async function GET(request: NextRequest) {
 
     // 🏢 ENTERPRISE: Ensure Firestore document ID is preserved
     // The spread must come BEFORE id to avoid data.id overriding doc.id
-    const buildings = snapshot.docs.map(doc => ({
+    const buildings: BuildingDocument[] = snapshot.docs.map(doc => ({
       ...doc.data(),
       id: doc.id,  // ✅ Firestore document ID (always last to prevent override)
     }));
+
+    // 🔄 ENTERPRISE: Client-side sort by createdAt (fallback for missing index)
+    buildings.sort((a, b) => {
+      const getTime = (val: BuildingDocument['createdAt']): number => {
+        if (!val) return 0;
+        if (typeof val === 'string') return new Date(val).getTime();
+        if (val instanceof Date) return val.getTime();
+        if (typeof val === 'object' && 'toDate' in val) return val.toDate().getTime();
+        return 0;
+      };
+      return getTime(b.createdAt) - getTime(a.createdAt); // desc order
+    });
 
     // 💾 ENTERPRISE CACHING: Store in cache for future requests (only for all buildings)
     if (!projectId) {

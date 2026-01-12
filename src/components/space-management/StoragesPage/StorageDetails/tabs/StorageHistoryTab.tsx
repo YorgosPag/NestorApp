@@ -33,8 +33,8 @@ interface HistoryEvent {
   actor?: string; // Ποιος έκανε την αλλαγή
   status: 'completed' | 'in_progress' | 'pending' | 'cancelled';
   metadata?: {
-    oldValue?: any;
-    newValue?: any;
+    oldValue?: string | number;
+    newValue?: string | number;
     amount?: number;
     tenant?: string;
   };

@@ -25,11 +25,18 @@ function DefaultEmptyState({
   );
 }
 
+/** Generic selected item interface */
+interface SelectedItemBase {
+  id?: string;
+  name?: string;
+  [key: string]: unknown;
+}
+
 interface DetailsContainerProps {
   children?: React.ReactNode;
   header?: React.ReactNode;
   tabsRenderer?: React.ReactNode;
-  selectedItem?: any;
+  selectedItem?: SelectedItemBase | null;
   emptyStateProps?: EmptyStateProps;
 }
 

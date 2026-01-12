@@ -123,7 +123,7 @@ service cloud.firestore {
     // 🏠 BUILDINGS, FLOORS & UNITS - PUBLIC READ ACCESS
     // =========================================================================
     match /buildings/{buildingId} {
-      allow read: if isAuthenticated(); // Authenticated users only
+      allow read: if true; // Public read for API routes (server-side)
       allow write: if false; // Admin/server only
     }
 
@@ -209,6 +209,15 @@ service cloud.firestore {
     match /dxf-viewer-levels/{levelId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
+    }
+
+    // =========================================================================
+    // 🔐 SECURITY_ROLES COLLECTION - ΚΡΙΣΙΜΟ ΓΙΑ LOGIN!
+    // =========================================================================
+    // 🏢 ENTERPRISE: Role-based access control για EnterpriseSecurityService
+    match /security_roles/{roleId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Admin/server only
     }
 
     // =========================================================================

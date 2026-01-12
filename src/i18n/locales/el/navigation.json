@@ -40,5 +40,211 @@
     "title": "Χρήστης",
     "name": "Nestor Pagonis",
     "email": "user@example.com"
+  },
+  "toolbar": {
+    "labels": {
+      "link": "Σύνδεση",
+      "unlink": "Αποσύνδεση",
+      "remove": "Αφαίρεση",
+      "filters": "Φίλτρα",
+      "favorites": "Αγαπημένα",
+      "archive": "Αρχείο",
+      "preview": "Προεπισκόπηση",
+      "copy": "Αντιγραφή",
+      "share": "Διαμοιρασμός",
+      "reports": "Αναφορές",
+      "settings": "Ρυθμίσεις",
+      "favoritesManagement": "Διαχείριση Αγαπημένων",
+      "help": "Βοήθεια",
+      "sorting": "Ταξινόμηση"
+    },
+    "tooltips": {
+      "filters": "Φιλτράρισμα",
+      "favorites": "Αγαπημένα",
+      "archive": "Αρχειοθέτηση",
+      "exportData": "Εξαγωγή δεδομένων",
+      "importData": "Εισαγωγή δεδομένων",
+      "refreshData": "Ανανέωση δεδομένων",
+      "preview": "Προεπισκόπηση",
+      "copy": "Αντιγραφή",
+      "share": "Διαμοιρασμός",
+      "reports": "Αναφορές",
+      "settings": "Ρυθμίσεις",
+      "favoritesManagement": "Διαχείριση Αγαπημένων",
+      "help": "Βοήθεια",
+      "sorting": "Ταξινόμηση"
+    },
+    "search": {
+      "company": "Αναζήτηση εταιρείας...",
+      "project": "Αναζήτηση έργου...",
+      "building": "Αναζήτηση κτιρίου...",
+      "floor": "Αναζήτηση ορόφου...",
+      "unit": "Αναζήτηση μονάδας...",
+      "storage": "Αναζήτηση αποθήκης...",
+      "parking": "Αναζήτηση θέσης στάθμευσης..."
+    },
+    "actions": {
+      "companies": {
+        "new": "Προσθήκη νέας εταιρείας",
+        "edit": "Επεξεργασία εταιρείας",
+        "delete": "Αφαίρεση εταιρείας"
+      },
+      "projects": {
+        "new": "Σύνδεση έργου με επιλεγμένη εταιρεία",
+        "edit": "Επεξεργασία έργου",
+        "delete": "Αποσύνδεση έργου"
+      },
+      "buildings": {
+        "new": "Σύνδεση κτιρίου με επιλεγμένο έργο",
+        "edit": "Επεξεργασία κτιρίου",
+        "delete": "Αποσύνδεση κτιρίου"
+      },
+      "floors": {
+        "new": "Σύνδεση ορόφου με επιλεγμένο κτίριο",
+        "edit": "Επεξεργασία ορόφου",
+        "delete": "Αποσύνδεση ορόφου"
+      },
+      "units": {
+        "new": "Σύνδεση μονάδας με επιλεγμένο όροφο",
+        "edit": "Επεξεργασία μονάδας",
+        "delete": "Αποσύνδεση μονάδας"
+      },
+      "storage": {
+        "new": "Σύνδεση αποθήκης με επιλεγμένο κτίριο",
+        "edit": "Επεξεργασία αποθήκης",
+        "delete": "Αποσύνδεση αποθήκης"
+      },
+      "parking": {
+        "new": "Σύνδεση θέσης στάθμευσης με επιλεγμένο κτίριο",
+        "edit": "Επεξεργασία θέσης στάθμευσης",
+        "delete": "Αποσύνδεση θέσης στάθμευσης"
+      }
+    },
+    "sort": {
+      "nameAsc": "Όνομα (Α-Ω)",
+      "nameDesc": "Όνομα (Ω-Α)",
+      "dateOldest": "Παλαιότερες πρώτα",
+      "dateNewest": "Νεότερες πρώτα",
+      "progressLow": "Πρόοδος (Λίγη-Πολλή)",
+      "progressHigh": "Πρόοδος (Πολλή-Λίγη)",
+      "areaSmall": "Εμβαδόν (Μικρό-Μεγάλο)",
+      "areaLarge": "Εμβαδόν (Μεγάλο-Μικρό)",
+      "roomsFew": "Δωμάτια (Λίγα-Πολλά)",
+      "roomsMany": "Δωμάτια (Πολλά-Λίγα)",
+      "numberAsc": "Αριθμός (Α-Ω)",
+      "numberDesc": "Αριθμός (Ω-Α)",
+      "locationAsc": "Τοποθεσία (Α-Ω)",
+      "locationDesc": "Τοποθεσία (Ω-Α)"
+    }
+  },
+  "buildingSpaces": {
+    "sectionLabel": "Χώροι Κτιρίου",
+    "units": {
+      "listLabel": "Λίστα Μονάδων",
+      "empty": "Δεν υπάρχουν μονάδες",
+      "defaultSubtitle": "Μονάδα",
+      "openTooltip": "Άνοιγμα στις Μονάδες"
+    },
+    "storage": {
+      "listLabel": "Λίστα Αποθηκών",
+      "empty": "Δεν υπάρχουν αποθήκες",
+      "defaultSubtitle": "Αποθήκη",
+      "openTooltip": "Άνοιγμα στις Αποθήκες"
+    },
+    "parking": {
+      "listLabel": "Λίστα Θέσεων Στάθμευσης",
+      "empty": "Δεν υπάρχουν θέσεις στάθμευσης",
+      "spotTitle": "Θέση {{number}}",
+      "defaultSubtitle": "Πάρκινγκ",
+      "openTooltip": "Άνοιγμα στο Parking"
+    }
+  },
+  "filters": {
+    "companies": {
+      "typeLabel": "Τύπος Εταιρείας",
+      "statusLabel": "Κατάσταση",
+      "construction": "Κατασκευαστική",
+      "development": "Αναπτυξιακή",
+      "investment": "Επενδυτική",
+      "management": "Διαχείρισης",
+      "active": "Ενεργή",
+      "withProjects": "Με Έργα",
+      "withoutProjects": "Χωρίς Έργα"
+    },
+    "projects": {
+      "statusLabel": "Κατάσταση Έργου",
+      "typeLabel": "Τύπος Έργου",
+      "planning": "Σχεδίαση",
+      "construction": "Κατασκευή",
+      "completed": "Ολοκληρωμένα",
+      "onHold": "Αναστολή",
+      "residential": "Κατοικίες",
+      "commercial": "Εμπορικά",
+      "mixed": "Μεικτά"
+    },
+    "buildings": {
+      "typeLabel": "Τύπος Κτιρίου",
+      "floorsLabel": "Αριθμός Ορόφων",
+      "residential": "Κατοικίες",
+      "commercial": "Εμπορικό",
+      "office": "Γραφεία",
+      "mixed": "Μεικτό",
+      "floors1to3": "1-3 όροφοι",
+      "floors4to6": "4-6 όροφοι",
+      "floors7plus": "7+ όροφοι"
+    },
+    "floors": {
+      "typeLabel": "Τύπος Ορόφου",
+      "unitsLabel": "Αριθμός Μονάδων",
+      "basement": "Υπόγειο",
+      "ground": "Ισόγειο",
+      "floor": "Όροφος",
+      "penthouse": "Ρετιρέ",
+      "units1to2": "1-2 μονάδες",
+      "units3to5": "3-5 μονάδες",
+      "units6plus": "6+ μονάδες"
+    },
+    "units": {
+      "typeLabel": "Τύπος Μονάδας",
+      "statusLabel": "Κατάσταση",
+      "roomsLabel": "Αριθμός Δωματίων",
+      "apartment": "Διαμέρισμα",
+      "office": "Γραφείο",
+      "shop": "Κατάστημα",
+      "storage": "Αποθήκη",
+      "parking": "Θέση Στάθμευσης",
+      "available": "Διαθέσιμη",
+      "occupied": "Κατειλημμένη",
+      "reserved": "Κρατημένη",
+      "maintenance": "Συντήρηση",
+      "rooms1": "1 δωμάτιο",
+      "rooms2": "2 δωμάτια",
+      "rooms3": "3 δωμάτια",
+      "rooms4plus": "4+ δωμάτια"
+    },
+    "storage": {
+      "typeLabel": "Τύπος Αποθήκης",
+      "statusLabel": "Κατάσταση",
+      "basement": "Υπόγεια",
+      "ground": "Ισόγεια",
+      "external": "Εξωτερική",
+      "available": "Διαθέσιμη",
+      "occupied": "Κατειλημμένη",
+      "reserved": "Κρατημένη"
+    },
+    "parking": {
+      "typeLabel": "Τύπος Θέσης",
+      "locationLabel": "Τοποθεσία",
+      "statusLabel": "Κατάσταση",
+      "standard": "Κανονική",
+      "disabled": "ΑΜΕΑ",
+      "electric": "Ηλεκτρικά",
+      "ground": "Ισόγειο",
+      "basement": "Υπόγειο",
+      "pilotis": "Πυλωτή",
+      "available": "Διαθέσιμη",
+      "occupied": "Κατειλημμένη",
+      "reserved": "Κρατημένη"
+    }
   }
 }

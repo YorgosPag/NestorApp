@@ -1,4 +1,11 @@
 {
+  "header": {
+    "title": "Building Management",
+    "titleWithCount": "Building Management ({{count}})",
+    "subtitle": "Manage and track building projects",
+    "searchPlaceholder": "Search buildings...",
+    "newBuilding": "New Building"
+  },
   "floors": {
     "ground": "Ground Floor",
     "basement": "Basement {{number}}",
@@ -15,9 +22,11 @@
   },
   "status": {
     "active": "Active",
+    "inactive": "Inactive",
     "construction": "Under Construction",
     "planned": "Planned",
-    "completed": "Completed"
+    "completed": "Completed",
+    "maintenance": "Maintenance"
   },
   "units": {
     "pricePerSqm": "€/sq.m",
@@ -37,6 +46,245 @@
       "residential": "Residential",
       "commercial": "Commercial",
       "mixed": "Mixed Use"
+    }
+  },
+  "toolbar": {
+    "actions": {
+      "new": "New Building",
+      "edit": "Edit",
+      "delete": "Delete",
+      "export": "Export",
+      "import": "Import",
+      "refresh": "Refresh",
+      "archive": "Archive",
+      "favorite": "Favorites",
+      "help": "Help"
+    },
+    "tooltips": {
+      "new": "Add new building (Ctrl+N)",
+      "edit": "Edit selected building (Ctrl+E)",
+      "deleteCount": "Delete {{count}} building(s)",
+      "export": "Export data",
+      "import": "Import data",
+      "refresh": "Refresh data (F5)",
+      "archive": "Archive selected",
+      "favorite": "Add to favorites",
+      "help": "Help and instructions (F1)"
+    },
+    "search": {
+      "placeholder": "Search buildings..."
+    },
+    "filters": {
+      "status": "Status",
+      "statusLabel": "Building status",
+      "type": "Type",
+      "typeLabel": "Building type"
+    },
+    "sort": {
+      "label": "Sort",
+      "sortBuildings": "Sort buildings",
+      "ascending": "Ascending (A-Z)",
+      "descending": "Descending (Z-A)",
+      "byDate": "By date",
+      "bySize": "By size"
+    },
+    "selection": {
+      "selected": "{{count}} buildings selected"
+    }
+  },
+  "storages": {
+    "header": {
+      "title": "Storage Management",
+      "subtitle": "Manage and track storage spaces",
+      "searchPlaceholder": "Search storages...",
+      "newStorage": "New Storage"
+    },
+    "list": {
+      "ariaLabel": "Storages List",
+      "noResults": "No storages found",
+      "noResultsForTerm": "for the term \"{{term}}\""
+    },
+    "accessibility": {
+      "toggleFilters": "Toggle filters"
+    }
+  },
+  "parkings": {
+    "header": {
+      "title": "Parking Spaces",
+      "subtitle": "Manage and track parking spaces",
+      "searchPlaceholder": "Search parking spaces...",
+      "newParking": "New Parking"
+    },
+    "list": {
+      "ariaLabel": "Parking Spaces List",
+      "noResults": "No parking spaces found",
+      "noResultsForTerm": "for the term \"{{term}}\""
+    },
+    "accessibility": {
+      "toggleFilters": "Toggle filters"
+    }
+  },
+  "storage": {
+    "form": {
+      "specs": {
+        "title": "Location & Specifications",
+        "labels": {
+          "floor": "Floor",
+          "area": "Area (m²)",
+          "price": "Price (€)",
+          "linkedProperty": "Linked Property"
+        },
+        "placeholders": {
+          "area": "0.00",
+          "price": "0.00",
+          "linkedProperty": "e.g. D2.1"
+        },
+        "helpers": {
+          "linkedProperty": "Property code that accompanies this unit"
+        }
+      },
+      "features": {
+        "title": "Features",
+        "labels": {
+          "commonFeatures": "Common Features",
+          "addFeature": "Add Feature",
+          "selectedFeatures": "Selected Features"
+        },
+        "placeholders": {
+          "newFeature": "New feature..."
+        }
+      }
+    }
+  },
+  "pages": {
+    "buildings": {
+      "pageLabel": "Building Management",
+      "loading": "Loading Buildings",
+      "loadingMessage": "Loading buildings from Firestore...",
+      "error": {
+        "pageLabel": "Buildings Error",
+        "ariaLabel": "Loading Error",
+        "title": "Error loading buildings:"
+      },
+      "dashboard": {
+        "label": "Building Statistics",
+        "totalBuildings": "Total Buildings",
+        "activeProjects": "Active Projects",
+        "totalValue": "Total Value",
+        "totalArea": "Total Area",
+        "averageProgress": "Average Progress",
+        "totalUnits": "Total Units"
+      },
+      "filters": {
+        "desktop": "Building Filters",
+        "mobile": "Building Filters Mobile"
+      },
+      "views": {
+        "desktopView": "Buildings Desktop View",
+        "mobileList": "Buildings Mobile List"
+      },
+      "details": {
+        "title": "Building Details",
+        "editBuilding": "Edit Building",
+        "deleteBuilding": "Delete Building"
+      }
+    },
+    "storage": {
+      "pageLabel": "Storage Management",
+      "loading": "Loading storages...",
+      "error": {
+        "title": "Loading Error",
+        "retry": "Retry"
+      },
+      "dashboard": {
+        "label": "Storage Statistics",
+        "totalStorages": "Total Storages",
+        "totalArea": "Total Area",
+        "utilizationRate": "Utilization Rate",
+        "uniqueBuildings": "Unique Buildings",
+        "statusDistribution": "Status Distribution",
+        "typeDistribution": "Type Distribution"
+      },
+      "filters": {
+        "label": "Storage Filters",
+        "mobileTitle": "Storage Filters"
+      },
+      "statusLabels": {
+        "available": "Available",
+        "occupied": "Occupied",
+        "maintenance": "Maintenance",
+        "reserved": "Reserved"
+      },
+      "typeLabels": {
+        "large": "Large",
+        "small": "Small",
+        "basement": "Basement",
+        "ground": "Ground",
+        "special": "Special"
+      }
+    },
+    "parking": {
+      "pageLabel": "Parking Management",
+      "loading": "Loading parking spaces...",
+      "error": {
+        "title": "Loading Error",
+        "retry": "Retry"
+      },
+      "dashboard": {
+        "label": "Parking Statistics",
+        "totalSpots": "Total Spots",
+        "totalArea": "Total Area",
+        "totalValue": "Total Value",
+        "salesRate": "Sales Rate",
+        "statusDistribution": "Status Distribution",
+        "typeDistribution": "Type Distribution"
+      },
+      "filters": {
+        "label": "Parking Filters",
+        "mobileTitle": "Parking Filters"
+      },
+      "toolbar": {
+        "newSpot": "New Parking Spot",
+        "deleteSelected": "Delete Selected",
+        "saveChanges": "Save Changes",
+        "refreshData": "Refresh Data",
+        "exportData": "Export Data",
+        "importData": "Import Data",
+        "help": "Help",
+        "selectedCount": "{{count}} selected"
+      }
+    }
+  },
+  "list": {
+    "ariaLabel": "Buildings List",
+    "entityName": "Buildings",
+    "searchPlaceholder": "Search buildings..."
+  },
+  "customers": {
+    "title": "Building Customers",
+    "loading": "Loading customers...",
+    "error": {
+      "unknown": "Unknown error",
+      "loadingPrefix": "Error loading:"
+    },
+    "empty": {
+      "message": "No registered customers for this building."
+    },
+    "description": "List of customers who have purchased units in this building ({{count}} customers).",
+    "table": {
+      "name": "Name",
+      "phone": "Phone",
+      "email": "Email",
+      "units": "Units",
+      "actions": "Actions"
+    },
+    "ariaLabel": "Building customers list"
+  },
+  "storages": {
+    "list": {
+      "ariaLabel": "Storages List",
+      "entityName": "Storages",
+      "searchPlaceholder": "Search storages..."
     }
   }
 }

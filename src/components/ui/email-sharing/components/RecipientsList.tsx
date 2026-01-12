@@ -20,6 +20,8 @@ import { Users, Plus, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // Types
 import type { RecipientsListProps } from '../types';
@@ -50,6 +52,8 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
   validateEmails,
   showValidation = true
 }) => {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -158,7 +162,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
     const canRemove = recipients.length > 1;
 
     return (
-      <article key={index} className="flex gap-2 items-start" role="group" aria-label={`Email Παραλήπτης ${index + 1}`}>
+      <article key={index} className="flex gap-2 items-start" role="group" aria-label={t('recipients.recipientLabel', { number: index + 1 })}>
         <section className="flex-1">
           <div className="relative">
             <Input
@@ -179,7 +183,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
 
             {/* Validation Icon */}
             {showValidation && email.trim() && (
-              <aside className="absolute right-2 top-1/2 transform -translate-y-1/2" role="status" aria-label="Κατάσταση Επικύρωσης">
+              <aside className="absolute right-2 top-1/2 transform -translate-y-1/2" role="status" aria-label={t('recipients.validationStatus')}>
                 {validation.isValid ? (
                   <CheckCircle className={`${iconSizes.sm} text-green-500`} />
                 ) : (
@@ -242,10 +246,10 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
           designSystem.getTypographyClass('xs'),
           'text-muted-foreground'
         )}>
-          {validCount} έγκυρα από {totalRecipients} συνολικά
+          {t('recipients.validFromTotal', { valid: validCount, total: totalRecipients })}
           {invalidCount > 0 && (
             <span className="text-red-500 ml-2">
-              ({invalidCount} μη έγκυρα)
+              {t('recipients.invalidCount', { count: invalidCount })}
             </span>
           )}
         </span>
@@ -254,7 +258,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
           designSystem.getTypographyClass('xs'),
           'text-muted-foreground'
         )}>
-          {maxRecipients - totalRecipients} διαθέσιμα
+          {t('recipients.available', { count: maxRecipients - totalRecipients })}
         </span>
       </footer>
     );
@@ -265,7 +269,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
   // ============================================================================
 
   return (
-    <section className="space-y-3" role="region" aria-label="Διαχείριση Παραληπτών Email">
+    <section className="space-y-3" role="region" aria-label={t('recipients.managementLabel')}>
       {/* Header */}
       <header className="flex items-center justify-between" role="banner">
         <Label className={designSystem.cn(
@@ -277,7 +281,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
             iconSizes.sm,
             disabled ? 'text-gray-400' : 'text-blue-600'
           )} />
-          Παραλήπτες Email
+          {t('recipients.emailRecipients')}
         </Label>
 
         {/* Add Button */}
@@ -295,7 +299,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
             )}
           >
             <Plus className={`${iconSizes.sm} mr-1`} />
-            Προσθήκη
+            {t('recipients.add')}
           </Button>
         )}
       </header>
@@ -327,7 +331,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
         'text-muted-foreground',
         disabled && 'text-gray-400'
       )} role="note">
-        Πατήστε Enter για προσθήκη νέου email • Backspace σε άδειο πεδίο για διαγραφή
+        {t('recipients.helperText')}
       </aside>
     </section>
   );
@@ -351,22 +355,24 @@ export const CompactRecipientsList: React.FC<RecipientsListProps & {
   showValidation = true,
   showSummary = true
 }) => {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const validCount = recipients.filter(email => email.trim() && isValidEmail(email)).length;
 
   return (
-    <section className="space-y-2" role="region" aria-label="Compact Recipients Management">
+    <section className="space-y-2" role="region" aria-label={t('recipients.compactLabel')}>
       <Label className={designSystem.cn(
         "flex items-center gap-1.5",
         designSystem.getTypographyClass('xs', 'medium')
       )}>
         <Users className={iconSizes.xs} />
-        Παραλήπτες ({validCount})
+        {t('recipients.recipientsCount', { count: validCount })}
       </Label>
 
-      <nav className="space-y-1.5" role="group" aria-label="Compact Email Inputs">
+      <nav className="space-y-1.5" role="group" aria-label={t('recipients.compactInputsLabel')}>
         {recipients.map((email, index) => (
-          <article key={index} className="flex gap-1.5" role="group" aria-label={`Compact Email ${index + 1}`}>
+          <article key={index} className="flex gap-1.5" role="group" aria-label={t('recipients.compactEmailLabel', { number: index + 1 })}>
             <Input
               type="email"
               placeholder={`Email ${index + 1}`}
@@ -410,7 +416,7 @@ export const CompactRecipientsList: React.FC<RecipientsListProps & {
             )}
           >
             <Plus className={`${iconSizes.xs} mr-1`} />
-            Προσθήκη Email
+            {t('recipients.addEmail')}
           </Button>
         )}
       </nav>
@@ -420,7 +426,7 @@ export const CompactRecipientsList: React.FC<RecipientsListProps & {
           designSystem.getTypographyClass('xs'),
           'text-muted-foreground'
         )} role="status">
-          {validCount} έγκυρα
+          {validCount} {t('recipients.valid')}
         </aside>
       )}
     </section>

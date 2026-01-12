@@ -15,7 +15,7 @@ import { formatDateTime as formatDate } from '@/lib/intl-utils';
 import type { Opportunity } from "@/types/crm";
 import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects/hover-effects';
 
-export default function LeadsList({ refreshTrigger }: { refreshTrigger?: any }) {
+export default function LeadsList({ refreshTrigger }: { refreshTrigger?: number | string | boolean | null }) {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();

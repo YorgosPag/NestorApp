@@ -1,5 +1,24 @@
 'use client';
 
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** Primitive filter value types */
+export type FilterValue = string | number | boolean | Date | null | undefined;
+
+/** Select option type */
+export interface SelectOption {
+  value: FilterValue;
+  label: string;
+}
+
+/** Facet value type */
+export interface FacetEntry {
+  value: FilterValue;
+  count: number;
+}
+
 // Advanced Search Engine with fuzzy search, filters, and sorting
 export interface SearchField {
   key: string;
@@ -8,14 +27,14 @@ export interface SearchField {
   searchable?: boolean;
   filterable?: boolean;
   sortable?: boolean;
-  options?: Array<{ value: any; label: string }>;
+  options?: SelectOption[];
 }
 
 export interface SearchFilter {
   field: string;
   operator: 'equals' | 'contains' | 'startsWith' | 'endsWith' | 'gt' | 'gte' | 'lt' | 'lte' | 'between' | 'in' | 'notIn';
-  value: any;
-  values?: any[]; // For 'between' and 'in' operators
+  value: FilterValue;
+  values?: FilterValue[]; // For 'between' and 'in' operators
 }
 
 export interface SortOption {
@@ -35,15 +54,15 @@ export interface SearchOptions {
   includeScore?: boolean;
 }
 
-export interface SearchResult<T = any> {
+export interface SearchResult<T = Record<string, unknown>> {
   items: Array<T & { _score?: number; _highlights?: Record<string, string[]> }>;
   totalCount: number;
-  facets?: Record<string, Array<{ value: any; count: number }>>;
+  facets?: Record<string, FacetEntry[]>;
   suggestions?: string[];
   executionTime: number;
 }
 
-class AdvancedSearchEngine<T = any> {
+class AdvancedSearchEngine<T extends Record<string, unknown> = Record<string, unknown>> {
   private data: T[] = [];
   private fields: SearchField[] = [];
   private index = new Map<string, Set<number>>();
@@ -115,18 +134,19 @@ class AdvancedSearchEngine<T = any> {
     }
 
     // Add scores and highlights to results
-    const finalResults = results.map((item, index) => {
+    type ResultWithMeta = T & { _score?: number; _highlights?: Record<string, string[]> };
+    const finalResults: ResultWithMeta[] = results.map((item) => {
       const originalIndex = this.data.indexOf(item);
-      const result: any = { ...item };
-      
+      const result: ResultWithMeta = { ...item };
+
       if (options.includeScore && itemScores.has(originalIndex)) {
         result._score = itemScores.get(originalIndex);
       }
-      
+
       if (highlights.has(originalIndex)) {
         result._highlights = highlights.get(originalIndex);
       }
-      
+
       return result;
     });
 
@@ -297,26 +317,26 @@ class AdvancedSearchEngine<T = any> {
     });
   }
 
-  private calculateFacets(results: T[]): Record<string, Array<{ value: any; count: number }>> {
-    const facets: Record<string, Array<{ value: any; count: number }>> = {};
-    
+  private calculateFacets(results: T[]): Record<string, FacetEntry[]> {
+    const facets: Record<string, FacetEntry[]> = {};
+
     this.fields.forEach(field => {
       if (!field.filterable) return;
-      
-      const valueCounts = new Map<any, number>();
-      
+
+      const valueCounts = new Map<FilterValue, number>();
+
       results.forEach(item => {
         const value = this.getFieldValue(item, field.key);
         if (value != null) {
           valueCounts.set(value, (valueCounts.get(value) || 0) + 1);
         }
       });
-      
+
       facets[field.key] = Array.from(valueCounts.entries())
         .map(([value, count]) => ({ value, count }))
         .sort((a, b) => b.count - a.count);
     });
-    
+
     return facets;
   }
 
@@ -374,19 +394,27 @@ class AdvancedSearchEngine<T = any> {
     return (maxLen - matrix[len2][len1]) / maxLen;
   }
 
-  private getFieldValue(item: T, fieldPath: string): any {
+  private getFieldValue(item: T, fieldPath: string): FilterValue {
     const keys = fieldPath.split('.');
-    let value: any = item;
-    
+    let value: unknown = item;
+
     for (const key of keys) {
       if (value && typeof value === 'object') {
-        value = (value as any)[key];
+        value = (value as Record<string, unknown>)[key];
       } else {
         return null;
       }
     }
-    
-    return value;
+
+    // Ensure we return a valid FilterValue
+    if (value === null || value === undefined) return null;
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      return value;
+    }
+    if (value instanceof Date) return value;
+
+    // For other types, convert to string
+    return String(value);
   }
 
   // Public utility methods

@@ -199,7 +199,15 @@ export function isValidIcon(iconName: string): iconName is IconName {
  * const iconElement = createIconElement('file-text', { className: iconSizes.sm });
  * ```
  */
-export function createIconElement(iconName: string, props: any = {}) {
+/** Props for icon elements */
+interface IconElementProps {
+  className?: string;
+  size?: number;
+  color?: string;
+  [key: string]: unknown;
+}
+
+export function createIconElement(iconName: string, props: IconElementProps = {}) {
   const IconComponent = getIconComponent(iconName);
   // Return the component class, not JSX (since this is .ts not .tsx)
   return { IconComponent, props };

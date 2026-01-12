@@ -60,7 +60,7 @@ export interface ShareAnalyticsEvent {
   /** Error message (if failed) */
   error?: string;
   /** Additional metadata */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -294,7 +294,7 @@ export class AnalyticsService {
     contentId: string,
     method: ShareAnalyticsEvent['method'] = 'external_url',
     success: boolean = true,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): void {
     const event: ShareAnalyticsEvent = {
       timestamp: new Date().toISOString(),
@@ -371,11 +371,18 @@ export class AnalyticsService {
    *
    * Sends events to Google Analytics 4
    */
+  // 🏢 ENTERPRISE: Type for Google Analytics gtag function
   static sendToGoogleAnalytics(event: ShareAnalyticsEvent): void {
     try {
       // Check αν Google Analytics is available
-      if (typeof window !== 'undefined' && (window as any).gtag) {
-        (window as any).gtag('event', 'share', {
+      type GtagFunction = (command: string, action: string, params: Record<string, unknown>) => void;
+      interface WindowWithGtag extends Window {
+        gtag?: GtagFunction;
+      }
+      const win = typeof window !== 'undefined' ? window as WindowWithGtag : null;
+
+      if (win?.gtag) {
+        win.gtag('event', 'share', {
           method: event.platform,
           content_type: event.contentType,
           item_id: event.contentId,

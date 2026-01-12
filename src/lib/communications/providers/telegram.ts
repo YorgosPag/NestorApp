@@ -3,17 +3,77 @@
 import { COMMUNICATION_CHANNELS } from '../../config/communications.config';
 import type { BaseMessageInput, SendResult } from '@/types/communications';
 
+// ============================================================================
+// ENTERPRISE TYPES
+// ============================================================================
+
+/** Telegram channel configuration */
+interface TelegramConfig {
+  enabled?: boolean;
+  botToken?: string;
+  webhookSecret?: string;
+}
+
+/** Telegram API payload */
+interface TelegramPayload {
+  chat_id: string;
+  text?: string;
+  photo?: string;
+  caption?: string;
+  parse_mode?: string;
+  reply_markup?: {
+    inline_keyboard: unknown[][];
+  };
+}
+
+/** Telegram webhook user data */
+interface TelegramUser {
+  id: number;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+}
+
+/** Telegram webhook chat data */
+interface TelegramChat {
+  id: number;
+  type: string;
+}
+
+/** Telegram webhook message */
+interface TelegramMessage {
+  message_id: number;
+  from: TelegramUser;
+  chat: TelegramChat;
+  text?: string;
+  caption?: string;
+}
+
+/** Telegram webhook callback query */
+interface TelegramCallbackQuery {
+  id: string;
+  from: TelegramUser;
+  data?: string;
+}
+
+/** Telegram webhook data */
+interface TelegramWebhookData {
+  message?: TelegramMessage;
+  callback_query?: TelegramCallbackQuery;
+}
+
 /**
  * Telegram Bot API Provider
  * Διαχειρίζεται την αποστολή και λήψη μηνυμάτων μέσω Telegram Bot API
  */
 
 class TelegramProvider {
-  config: any;
+  config: TelegramConfig;
   apiUrl: string;
 
   constructor() {
-    this.config = (COMMUNICATION_CHANNELS as any).telegram;
+    const channels = COMMUNICATION_CHANNELS as Record<string, TelegramConfig>;
+    this.config = channels.telegram || {};
     if (this.config && this.config.botToken) {
         this.apiUrl = `https://api.telegram.org/bot${this.config.botToken}`;
     } else {
@@ -33,7 +93,7 @@ class TelegramProvider {
       const { to, content, messageType = 'text', metadata = {} } = messageData;
 
       let apiMethod = 'sendMessage';
-      let payload: any = {
+      let payload: TelegramPayload = {
         chat_id: to,
         text: content
       };
@@ -85,11 +145,12 @@ class TelegramProvider {
         externalId: result.result.message_id.toString(),
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Telegram send error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return {
         success: false,
-        error: error.message,
+        error: errorMessage,
       };
     }
   }
@@ -97,7 +158,7 @@ class TelegramProvider {
   /**
    * Parse εισερχόμενου μηνύματος από Telegram webhook
    */
-  async parseIncomingMessage(webhookData: any) {
+  async parseIncomingMessage(webhookData: TelegramWebhookData) {
     try {
       const { message, callback_query } = webhookData;
 
@@ -163,10 +224,11 @@ class TelegramProvider {
         success: true,
         message: `Connected to Telegram Bot: ${result.result.first_name} (@${result.result.username})`
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return {
         success: false,
-        error: error.message,
+        error: errorMessage,
       };
     }
   }

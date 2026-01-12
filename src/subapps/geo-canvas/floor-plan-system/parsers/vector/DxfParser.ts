@@ -30,6 +30,22 @@ import type { ParserResult } from '../../types';
 import { generateDxfThumbnail } from '../../utils/dxf-thumbnail-generator';
 import { GEO_COLORS } from '../../../config/color-config';
 
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** DXF Entity properties for GeoJSON features */
+export interface DxfEntityProperties {
+  layer: string;
+  color?: number;
+  lineType?: string;
+  entityType: string;
+  closed?: boolean;
+  radius?: number;
+  text?: string;
+  textHeight?: number;
+}
+
 /**
  * DXF Parser Implementation
  */
@@ -201,7 +217,7 @@ export class DxfParser {
   /**
    * Convert LINE entity to GeoJSON LineString
    */
-  private lineToGeoJSON(entity: ILineEntity, properties: any): GeoJSON.Feature {
+  private lineToGeoJSON(entity: ILineEntity, properties: DxfEntityProperties): GeoJSON.Feature {
     const start = entity.vertices[0];
     const end = entity.vertices[1];
 
@@ -223,7 +239,7 @@ export class DxfParser {
    */
   private polylineToGeoJSON(
     entity: IPolylineEntity | ILwpolylineEntity,
-    properties: any
+    properties: DxfEntityProperties
   ): GeoJSON.Feature {
     const coordinates = entity.vertices.map(v => [v.x, v.y]);
 
@@ -260,7 +276,7 @@ export class DxfParser {
   /**
    * Convert ARC to GeoJSON LineString (approximated)
    */
-  private arcToGeoJSON(entity: IArcEntity, properties: any): GeoJSON.Feature {
+  private arcToGeoJSON(entity: IArcEntity, properties: DxfEntityProperties): GeoJSON.Feature {
     const segments = 32; // Number of segments to approximate arc
     const coordinates: number[][] = [];
 
@@ -294,7 +310,7 @@ export class DxfParser {
   /**
    * Convert CIRCLE to GeoJSON Polygon (approximated)
    */
-  private circleToGeoJSON(entity: ICircleEntity, properties: any): GeoJSON.Feature {
+  private circleToGeoJSON(entity: ICircleEntity, properties: DxfEntityProperties): GeoJSON.Feature {
     const segments = 64; // Number of segments for circle
     const coordinates: number[][] = [];
 
@@ -318,7 +334,7 @@ export class DxfParser {
   /**
    * Convert TEXT/MTEXT to GeoJSON Point με text property
    */
-  private textToGeoJSON(entity: ITextEntity | IMtextEntity, properties: any): GeoJSON.Feature {
+  private textToGeoJSON(entity: ITextEntity | IMtextEntity, properties: DxfEntityProperties): GeoJSON.Feature {
     // TEXT uses startPoint, MTEXT uses position
     const isText = entity.type === 'TEXT';
     const position = isText

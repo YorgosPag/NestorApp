@@ -1,8 +1,21 @@
 'use client';
 
 import * as React from 'react';
+
+// ============================================================================
+// ENTERPRISE TYPES FOR MOCK COMPONENTS
+// ============================================================================
+
+/** ClassValue type for cn utility */
+type ClassValue = string | number | boolean | undefined | null | Record<string, boolean>;
+
+/** Props type for mock container components */
+interface MockContainerProps extends React.HTMLAttributes<HTMLDivElement> {
+  children?: React.ReactNode;
+}
+
 // Mock imports for missing dependencies
-const cn = (...args: any[]) => args.filter(Boolean).join(' ');
+const cn = (...args: ClassValue[]) => args.filter(Boolean).join(' ');
 const useBorderTokens = () => ({ quick: 'border-2' });
 const useSemanticColors = () => ({
   bg: { primary: 'bg-white', secondary: 'bg-gray-100' },
@@ -10,10 +23,10 @@ const useSemanticColors = () => ({
 });
 
 // Mock components for missing dependencies
-const SidebarPanel = ({ children, ...props }: any) => <div {...props}>{children}</div>;
-const FloorPlanCanvas = ({ children, ...props }: any) => <div {...props}>{children}</div>;
-const ViewerToolbar = ({ children, ...props }: any) => <div {...props}>{children}</div>;
-const ViewerTools = ({ children, ...props }: any) => <div {...props}>{children}</div>;
+const SidebarPanel = ({ children, ...props }: MockContainerProps) => <div {...props}>{children}</div>;
+const FloorPlanCanvas = ({ children, ...props }: MockContainerProps) => <div {...props}>{children}</div>;
+const ViewerToolbar = ({ children, ...props }: MockContainerProps) => <div {...props}>{children}</div>;
+const ViewerTools = ({ children, ...props }: MockContainerProps) => <div {...props}>{children}</div>;
 import { EmptyState } from './components/EmptyState';
 
 import type { FloorPlanViewerLayoutProps } from './types';

@@ -48,17 +48,20 @@ const BLOCKED_PATTERNS = [
   'completeUnitOfWork',
 ] as const;
 
+/** Console argument type - can be anything that is logged */
+type ConsoleArg = unknown;
+
 /**
  * Ελέγχει αν ένα message περιέχει React stack trace
  */
-function containsReactStack(args: any[]): boolean {
+function containsReactStack(args: ConsoleArg[]): boolean {
   return args.some(arg => {
     if (typeof arg === 'string') {
       return BLOCKED_PATTERNS.some(pattern => arg.includes(pattern));
     }
     // Check stringified objects too
     if (arg && typeof arg === 'object') {
-      const str = arg.toString();
+      const str = String(arg);
       return BLOCKED_PATTERNS.some(pattern => str.includes(pattern));
     }
     return false;
@@ -79,7 +82,7 @@ export function suppressReactStackTraces() {
   const originalDebug = console.debug;
 
   // Override console.error
-  console.error = (...args: any[]) => {
+  console.error = (...args: ConsoleArg[]) => {
     if (containsReactStack(args)) {
       return; // 🚫 BLOCK COMPLETELY
     }
@@ -87,7 +90,7 @@ export function suppressReactStackTraces() {
   };
 
   // Override console.warn
-  console.warn = (...args: any[]) => {
+  console.warn = (...args: ConsoleArg[]) => {
     if (containsReactStack(args)) {
       return; // 🚫 BLOCK COMPLETELY
     }
@@ -95,7 +98,7 @@ export function suppressReactStackTraces() {
   };
 
   // Override console.log (για stack traces που μπαίνουν σε logs)
-  console.log = (...args: any[]) => {
+  console.log = (...args: ConsoleArg[]) => {
     if (containsReactStack(args)) {
       return; // 🚫 BLOCK COMPLETELY
     }
@@ -103,7 +106,7 @@ export function suppressReactStackTraces() {
   };
 
   // Override console.info
-  console.info = (...args: any[]) => {
+  console.info = (...args: ConsoleArg[]) => {
     if (containsReactStack(args)) {
       return; // 🚫 BLOCK COMPLETELY
     }
@@ -111,7 +114,7 @@ export function suppressReactStackTraces() {
   };
 
   // Override console.debug
-  console.debug = (...args: any[]) => {
+  console.debug = (...args: ConsoleArg[]) => {
     if (containsReactStack(args)) {
       return; // 🚫 BLOCK COMPLETELY
     }

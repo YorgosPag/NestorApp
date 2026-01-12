@@ -42,8 +42,9 @@ export function useNotificationStream(opts: StreamOptions) {
         center.ingest(items as Notification[]);
         center.setCursor(cursor);
         center.setStatus('ready');
-      } catch (e: any) {
-        center.setError(String(e?.message ?? e));
+      } catch (e: unknown) {
+        const errorMessage = e instanceof Error ? e.message : String(e);
+        center.setError(errorMessage);
         center.setStatus('error');
       }
     };
@@ -52,8 +53,10 @@ export function useNotificationStream(opts: StreamOptions) {
 
     client.subscribe((evt) => {
       // αναμένουμε { type: 'notification', data: Notification } ή σκέτο Notification
-      const data = (evt as any)?.data ?? evt;
-      if (data && (data as any).id) center.addOrUpdate(data as Notification);
+      const evtRecord = evt as Record<string, unknown>;
+      const data = evtRecord?.data ?? evt;
+      const dataRecord = data as Record<string, unknown>;
+      if (data && dataRecord.id) center.addOrUpdate(data as Notification);
     }, { wsUrl: opts.wsUrl, sseUrl: opts.sseUrl, pollMs: opts.pollMs }).catch(() => {/* noop */ });
 
     return () => { cancelled = true; abort.abort(); };

@@ -51,7 +51,7 @@ export function useErrorHandler() {
   /**
    * Handle HTTP response errors
    */
-  const handleHttpError = useCallback((response: Response, data?: any) => {
+  const handleHttpError = useCallback((response: Response, data?: Record<string, unknown>) => {
     const domainError = mapHttpStatusToError(response.status, data);
     handleError(domainError);
   }, [handleError]);
@@ -61,7 +61,7 @@ export function useErrorHandler() {
    */
   const handleAsyncError = useCallback(async <T>(
     operation: () => Promise<T>,
-    errorContext?: Record<string, any>
+    errorContext?: Record<string, unknown>
   ): Promise<T | null> => {
     try {
       return await operation();
@@ -80,7 +80,7 @@ export function useErrorHandler() {
    * Create error handler for specific domain
    */
   const createDomainErrorHandler = useCallback((domain: string) => {
-    return (code: string, context?: Record<string, any>) => {
+    return (code: string, context?: Record<string, unknown>) => {
       handleError({ code, domain, context });
     };
   }, [handleError]);

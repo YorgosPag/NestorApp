@@ -1,17 +1,46 @@
 'use client';
 
-// Data Import Service with validation and transformation
+/**
+ * 🏢 ENTERPRISE: Data Import Service with Type-Safe Validation
+ *
+ * Generic implementation following SAP/Autodesk/Bentley patterns.
+ * Zero `any` types - fully type-safe import pipeline.
+ *
+ * @template T - The type of records being imported
+ * @template TRaw - The type of raw data before transformation (default: Record<string, unknown>)
+ */
+
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions
+// ============================================================================
+
 export type ImportFormat = 'csv' | 'xlsx' | 'json' | 'xml';
 
-export interface ImportColumn {
+/** Primitive value types that can be imported */
+export type ImportValue = string | number | boolean | Date | null | undefined;
+
+/** Raw record structure before transformation */
+export type RawRecord = Record<string, unknown>;
+
+/** Validated value with optional error/warning */
+export interface ValidatedValue<T = ImportValue> {
+  value: T | null;
+  error?: ImportError;
+  warning?: ImportWarning;
+}
+
+/** Type-safe column configuration */
+export interface ImportColumn<TValue = ImportValue> {
   sourceKey: string;
   targetKey: string;
   label: string;
   type: 'string' | 'number' | 'date' | 'boolean' | 'email';
   required?: boolean;
-  validator?: (value: any) => string | null; // Returns error message or null
-  transformer?: (value: any) => any;
-  defaultValue?: any;
+  /** Validates the converted value, returns error message or null */
+  validator?: (value: TValue) => string | null;
+  /** Transforms raw value before type conversion */
+  transformer?: (value: unknown) => unknown;
+  defaultValue?: TValue;
 }
 
 export interface ImportOptions {
@@ -25,16 +54,17 @@ export interface ImportOptions {
   errorHandling?: 'stop' | 'continue' | 'collect';
 }
 
-export interface ImportResult {
+/** 🏢 ENTERPRISE: Generic import result with full type safety */
+export interface ImportResult<T = RawRecord> {
   success: boolean;
   totalRecords: number;
   processedRecords: number;
   validRecords: number;
   invalidRecords: number;
-  data: any[];
+  data: T[];
   errors: ImportError[];
   warnings: ImportWarning[];
-  duplicates: any[];
+  duplicates: T[];
   executionTime: number;
 }
 
@@ -42,14 +72,14 @@ export interface ImportError {
   row: number;
   field?: string;
   message: string;
-  value?: any;
+  value?: unknown;
 }
 
 export interface ImportWarning {
   row: number;
   field?: string;
   message: string;
-  value?: any;
+  value?: unknown;
 }
 
 export interface ImportProgress {
@@ -113,9 +143,9 @@ class DataImportService {
     }
   }
 
-  private async readFile(file: File, options: ImportOptions): Promise<any[]> {
+  private async readFile(file: File, options: ImportOptions): Promise<RawRecord[]> {
     const text = await file.text();
-    
+
     switch (options.format) {
       case 'csv':
         return this.parseCSV(text, options);
@@ -130,31 +160,31 @@ class DataImportService {
     }
   }
 
-  private parseCSV(text: string, options: ImportOptions): any[] {
+  private parseCSV(text: string, options: ImportOptions): RawRecord[] {
     const lines = text.split('\n').filter(line => line.trim());
     const delimiter = options.delimiter || ',';
-    const data: any[] = [];
-    
-    let startIndex = options.skipFirstRow ? 1 : 0;
-    
+    const data: RawRecord[] = [];
+
+    const startIndex = options.skipFirstRow ? 1 : 0;
+
     // Get headers if skipping first row
-    const headers = options.skipFirstRow 
+    const headers = options.skipFirstRow
       ? this.parseCSVLine(lines[0], delimiter)
       : options.columns.map((_, index) => `column_${index}`);
-    
+
     for (let i = startIndex; i < lines.length; i++) {
       const values = this.parseCSVLine(lines[i], delimiter);
-      const row: any = {};
-      
+      const row: RawRecord = {};
+
       values.forEach((value, index) => {
         if (headers[index]) {
           row[headers[index]] = value;
         }
       });
-      
+
       data.push(row);
     }
-    
+
     return data;
   }
 
@@ -190,34 +220,44 @@ class DataImportService {
     return values;
   }
 
-  private parseJSON(text: string): any[] {
-    const parsed = JSON.parse(text);
-    
+  private parseJSON(text: string): RawRecord[] {
+    const parsed: unknown = JSON.parse(text);
+
     if (Array.isArray(parsed)) {
-      return parsed;
-    } else if (parsed.data && Array.isArray(parsed.data)) {
-      return parsed.data;
-    } else if (typeof parsed === 'object') {
-      return [parsed];
+      return parsed as RawRecord[];
+    } else if (this.isObjectWithDataArray(parsed)) {
+      return parsed.data as RawRecord[];
+    } else if (typeof parsed === 'object' && parsed !== null) {
+      return [parsed as RawRecord];
     }
-    
+
     throw new Error('Invalid JSON structure for import');
   }
 
-  private parseXML(text: string): any[] {
+  /** Type guard for objects with data array property */
+  private isObjectWithDataArray(value: unknown): value is { data: unknown[] } {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      'data' in value &&
+      Array.isArray((value as { data: unknown }).data)
+    );
+  }
+
+  private parseXML(text: string): RawRecord[] {
     // Simple XML parsing - in production, use a proper XML parser
     const parser = new DOMParser();
     const doc = parser.parseFromString(text, 'text/xml');
-    
+
     if (doc.documentElement.nodeName === 'parsererror') {
       throw new Error('Invalid XML format');
     }
-    
+
     const records = doc.querySelectorAll('record');
-    const data: any[] = [];
-    
+    const data: RawRecord[] = [];
+
     records.forEach(record => {
-      const row: any = {};
+      const row: RawRecord = {};
       record.childNodes.forEach(node => {
         if (node.nodeType === Node.ELEMENT_NODE) {
           const element = node as Element;
@@ -226,20 +266,20 @@ class DataImportService {
       });
       data.push(row);
     });
-    
+
     return data;
   }
 
   private async processData(
-    rawData: any[],
+    rawData: RawRecord[],
     options: ImportOptions,
     onProgress?: (progress: ImportProgress) => void
-  ): Promise<ImportResult> {
-    const { columns, maxRecords, validateBeforeImport } = options;
-    const data: any[] = [];
+  ): Promise<ImportResult<RawRecord>> {
+    const { columns, maxRecords } = options;
+    const data: RawRecord[] = [];
     const errors: ImportError[] = [];
     const warnings: ImportWarning[] = [];
-    const duplicates: any[] = [];
+    const duplicates: RawRecord[] = [];
     
     const totalRecords = Math.min(rawData.length, maxRecords || rawData.length);
     let processedRecords = 0;
@@ -323,15 +363,15 @@ class DataImportService {
   }
 
   private processRecord(
-    rawRecord: any,
+    rawRecord: RawRecord,
     columns: ImportColumn[],
     rowNumber: number
   ): {
-    record: any;
+    record: RawRecord;
     recordErrors: ImportError[];
     recordWarnings: ImportWarning[];
   } {
-    const record: any = {};
+    const record: RawRecord = {};
     const recordErrors: ImportError[] = [];
     const recordWarnings: ImportWarning[] = [];
 
@@ -379,14 +419,10 @@ class DataImportService {
   }
 
   private validateAndConvert(
-    value: any,
+    value: unknown,
     column: ImportColumn,
     rowNumber: number
-  ): {
-    value: any;
-    error?: ImportError;
-    warning?: ImportWarning;
-  } {
+  ): ValidatedValue<ImportValue> {
     // Check required
     if (column.required && (value === null || value === undefined || value === '')) {
       return {
@@ -405,39 +441,46 @@ class DataImportService {
       return { value: null };
     }
 
-    let convertedValue = value;
-    let warning: ImportWarning | undefined;
+    let convertedValue: ImportValue;
+    const warning: ImportWarning | undefined = undefined;
 
-    // Type conversion
+    // Type conversion with proper type guards
     try {
       switch (column.type) {
-        case 'number':
-          convertedValue = parseFloat(String(value));
-          if (isNaN(convertedValue)) {
-            throw new Error(`Cannot convert "${value}" to number`);
+        case 'number': {
+          const numValue = parseFloat(String(value));
+          if (isNaN(numValue)) {
+            throw new Error(`Cannot convert "${String(value)}" to number`);
           }
+          convertedValue = numValue;
           break;
-        
-        case 'boolean':
+        }
+
+        case 'boolean': {
           const stringValue = String(value).toLowerCase();
           convertedValue = ['true', '1', 'yes', 'y'].includes(stringValue);
           break;
-        
-        case 'date':
-          convertedValue = new Date(value);
-          if (isNaN(convertedValue.getTime())) {
-            throw new Error(`Cannot convert "${value}" to date`);
+        }
+
+        case 'date': {
+          const dateValue = new Date(String(value));
+          if (isNaN(dateValue.getTime())) {
+            throw new Error(`Cannot convert "${String(value)}" to date`);
           }
+          convertedValue = dateValue;
           break;
-        
-        case 'email':
+        }
+
+        case 'email': {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          if (!emailRegex.test(String(value))) {
-            throw new Error(`Invalid email format: "${value}"`);
+          const emailStr = String(value);
+          if (!emailRegex.test(emailStr)) {
+            throw new Error(`Invalid email format: "${emailStr}"`);
           }
-          convertedValue = String(value).toLowerCase();
+          convertedValue = emailStr.toLowerCase();
           break;
-        
+        }
+
         case 'string':
         default:
           convertedValue = String(value);
@@ -474,9 +517,9 @@ class DataImportService {
     return { value: convertedValue, warning };
   }
 
-  private isDuplicate(record: any, existingData: any[]): boolean {
+  private isDuplicate(record: RawRecord, existingData: RawRecord[]): boolean {
     // Simple duplicate detection - can be enhanced
-    return existingData.some(existing => 
+    return existingData.some(existing =>
       JSON.stringify(existing) === JSON.stringify(record)
     );
   }

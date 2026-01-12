@@ -46,7 +46,7 @@ export interface MultiplePhotosFullProps {
   /** Upload complete handler */
   handleUploadComplete?: (slotIndex: number, result: FileUploadResult) => void;
   /** Photos change callback to update parent state */
-  onPhotosChange?: (photos: any[]) => void;
+  onPhotosChange?: (photos: PhotoSlot[]) => void;
   /** Disabled state */
   disabled?: boolean;
   /** Show progress indicators */
@@ -54,7 +54,7 @@ export interface MultiplePhotosFullProps {
   /** Custom className */
   className?: string;
   /** 🔥 RESTORED: Contact data for FileNamingService */
-  contactData?: any;
+  contactData?: Record<string, unknown>;
   /** 🏢 ENTERPRISE: Photo click handler για gallery preview */
   onPhotoClick?: (index: number) => void;
   /** Show photos even when component is disabled (for read-only views) */
@@ -328,7 +328,7 @@ export function MultiplePhotosFull({
                   dataTransfer: new DataTransfer()
                 });
                 files.forEach(file => dropEvent.dataTransfer!.items.add(file));
-                handleMultipleDrop(dropEvent as any);
+                handleMultipleDrop(dropEvent as unknown as React.DragEvent<HTMLDivElement>);
               }
             };
             input.click();

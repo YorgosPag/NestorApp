@@ -49,7 +49,7 @@ export interface Contact {
     level: number; // -2, -1, 0, 1, 2, etc.
     area: number;
     properties: Property[];
-    storageUnits: any[]; // Using 'any' to avoid circular dependency, assuming StorageUnit comes from another file now.
+    storageUnits: unknown[]; // Using 'unknown' to avoid circular dependency, StorageUnit defined elsewhere
   }
   
   export interface Property {

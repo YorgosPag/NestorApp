@@ -201,7 +201,7 @@ export class QueryExecutionError extends Error {
 export class AuthorizedQueryService {
   private readonly firestore: Firestore;
   private readonly sessionMetadata: SessionMetadata;
-  private readonly queryCache = new Map<string, { data: any; timestamp: Date }>();
+  private readonly queryCache = new Map<string, { data: AuthorizedQueryResult; timestamp: Date }>();
 
   /**
    * Creates a new authorized query service instance

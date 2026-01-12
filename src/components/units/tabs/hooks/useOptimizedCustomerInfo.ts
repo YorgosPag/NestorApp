@@ -25,6 +25,20 @@ interface OptimizedCustomerInfo {
   fetchedAt: number;
 }
 
+/** Contact data shape for helper functions */
+interface ContactData {
+  displayName?: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  primaryPhone?: string;
+  phones?: Array<{ number?: string } | string>;
+  email?: string;
+  primaryEmail?: string;
+  emails?: Array<{ email?: string } | string>;
+}
+
 interface UseOptimizedCustomerInfoReturn {
   customerInfo: OptimizedCustomerInfo | null;
   loading: boolean;
@@ -247,7 +261,7 @@ export function useOptimizedCustomerInfo(
 // HELPER FUNCTIONS
 // ============================================================================
 
-function getDisplayName(contact: any): string {
+function getDisplayName(contact: ContactData): string {
   if (contact.displayName) return contact.displayName;
   if (contact.name) return contact.name;
   if (contact.firstName || contact.lastName) {
@@ -256,20 +270,22 @@ function getDisplayName(contact: any): string {
   return 'Άγνωστος πελάτης';
 }
 
-function getPrimaryPhone(contact: any): string | null {
+function getPrimaryPhone(contact: ContactData): string | null {
   if (contact.phone) return contact.phone;
   if (contact.primaryPhone) return contact.primaryPhone;
   if (contact.phones && contact.phones.length > 0) {
-    return contact.phones[0].number || contact.phones[0];
+    const firstPhone = contact.phones[0];
+    return typeof firstPhone === 'string' ? firstPhone : firstPhone.number ?? null;
   }
   return null;
 }
 
-function getPrimaryEmail(contact: any): string | null {
+function getPrimaryEmail(contact: ContactData): string | null {
   if (contact.email) return contact.email;
   if (contact.primaryEmail) return contact.primaryEmail;
   if (contact.emails && contact.emails.length > 0) {
-    return contact.emails[0].email || contact.emails[0];
+    const firstEmail = contact.emails[0];
+    return typeof firstEmail === 'string' ? firstEmail : firstEmail.email ?? null;
   }
   return null;
 }

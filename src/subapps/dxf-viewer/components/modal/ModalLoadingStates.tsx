@@ -23,6 +23,8 @@ import { MODAL_FLEX_PATTERNS, MODAL_DIMENSIONS, getLoadingSpinner } from '../../
 import { ProjectModalContainer, ErrorModalContainer, SuccessModalContainer } from './ModalContainer';
 // 🏢 ENTERPRISE: Centralized z-index tokens (ADR-013)
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ====================================================================
 // LOADING SPINNER COMPONENTS - 100% CENTRALIZED
@@ -117,10 +119,13 @@ interface ErrorStateProps {
 export const ModalErrorState: React.FC<ErrorStateProps> = ({
   message,
   onRetry,
-  retryText = 'Δοκιμή ξανά',
+  retryText,
   className = ''
 }) => {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('dxf-viewer');
   const typography = useTypography();
+  const displayRetryText = retryText || t('loadingStates.retry');
   return (
     <ErrorModalContainer title="" className={className}>
       <div className={MODAL_FLEX_PATTERNS.COLUMN.stretchWithGap}>
@@ -136,7 +141,7 @@ export const ModalErrorState: React.FC<ErrorStateProps> = ({
             size="sm"
             className="w-auto"
           >
-            {retryText}
+            {displayRetryText}
           </Button>
         )}
       </div>
@@ -231,11 +236,14 @@ interface LoadingOverlayProps {
  */
 export const ModalLoadingOverlay: React.FC<LoadingOverlayProps> = ({
   isVisible,
-  message = 'Φόρτωση...',
+  message,
   className = ''
 }) => {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('dxf-viewer');
   const colors = useSemanticColors();
   const typography = useTypography();
+  const displayMessage = message || t('loadingStates.loading');
 
   if (!isVisible) return null;
 
@@ -244,7 +252,7 @@ export const ModalLoadingOverlay: React.FC<LoadingOverlayProps> = ({
       <div className={MODAL_FLEX_PATTERNS.COLUMN.centerWithGap}>
         <AnimatedSpinner size="large" />
         <span className={`${typography.label.sm} ${colors.text.inverted}`}>
-          {message}
+          {displayMessage}
         </span>
       </div>
     </div>
@@ -271,16 +279,19 @@ export const CompaniesLoadingState: React.FC<CompaniesLoadingProps> = ({
   onRetry,
   isEmpty = false
 }) => {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('dxf-viewer');
+
   if (isLoading) {
-    return <InlineLoading message="Φόρτωση εταιρειών..." type="card" />;
+    return <InlineLoading message={t('loadingStates.companies.loading')} type="card" />;
   }
 
   if (error) {
     return (
       <ModalErrorState
-        message={`Σφάλμα φόρτωσης: ${error}`}
+        message={t('loadingStates.companies.error', { error })}
         onRetry={onRetry}
-        retryText="Ξαναδοκιμή"
+        retryText={t('loadingStates.companies.retry')}
       />
     );
   }
@@ -288,8 +299,8 @@ export const CompaniesLoadingState: React.FC<CompaniesLoadingProps> = ({
   if (isEmpty) {
     return (
       <ModalEmptyState
-        message="Δεν βρέθηκαν εταιρείες στο σύστημα."
-        description="Επικοινωνήστε με τη διαχείριση για προσθήκη εταιρειών."
+        message={t('loadingStates.companies.empty')}
+        description={t('loadingStates.companies.emptyHint')}
       />
     );
   }
@@ -306,14 +317,17 @@ export const ProjectsLoadingState: React.FC<CompaniesLoadingProps> = ({
   onRetry,
   isEmpty = false
 }) => {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('dxf-viewer');
+
   if (isLoading) {
-    return <InlineLoading message="Φόρτωση έργων..." type="card" />;
+    return <InlineLoading message={t('loadingStates.projects.loading')} type="card" />;
   }
 
   if (error) {
     return (
       <ModalErrorState
-        message={`Σφάλμα φόρτωσης έργων: ${error}`}
+        message={t('loadingStates.projects.error', { error })}
         onRetry={onRetry}
       />
     );
@@ -322,8 +336,8 @@ export const ProjectsLoadingState: React.FC<CompaniesLoadingProps> = ({
   if (isEmpty) {
     return (
       <ModalEmptyState
-        message="Δεν βρέθηκαν έργα για την επιλεγμένη εταιρεία."
-        description="Επιλέξτε διαφορετική εταιρεία ή προσθέστε νέα έργα."
+        message={t('loadingStates.projects.empty')}
+        description={t('loadingStates.projects.emptyHint')}
       />
     );
   }

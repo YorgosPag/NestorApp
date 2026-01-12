@@ -1,5 +1,6 @@
 /**
- * BASE MODAL COMPONENT
+ * 🏢 ENTERPRISE BASE MODAL COMPONENT with i18n
+ * ZERO HARDCODED STRINGS - All labels from centralized translations
  * Unified modal component to eliminate duplicate modal patterns across the application
  */
 
@@ -21,6 +22,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { AnimatedSpinner } from '../modal/ModalLoadingStates';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface BaseModalProps {
   isOpen: boolean;
@@ -67,6 +70,8 @@ export const BaseModal: React.FC<BaseModalProps> = ({
   overlayClassName = '',
   zIndex = 9998
 }) => {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('common');
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const modalRef = useRef<HTMLDivElement>(null);
@@ -179,7 +184,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
                     size="sm"
                     icon={X}
                     onClick={onClose}
-                    aria-label="Κλείσιμο modal"
+                    aria-label={t('modal.closeModal')}
                     className="ml-auto"
                   />
                 )}
@@ -222,12 +227,18 @@ export const ConfirmModal: React.FC<{
   onConfirm,
   title,
   message,
-  confirmText = 'Επιβεβαίωση',
-  cancelText = 'Άκυρο',
+  confirmText,
+  cancelText,
   variant = 'info'
 }) => {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('common');
   const colors = useSemanticColors();
   const confirmVariant = variant === 'danger' ? 'primary' : 'secondary';
+
+  // Use translations with fallback to props
+  const resolvedConfirmText = confirmText || t('modal.confirm');
+  const resolvedCancelText = cancelText || t('modal.cancel');
 
   return (
     <BaseModal
@@ -238,10 +249,10 @@ export const ConfirmModal: React.FC<{
       footer={
         <nav className={`flex justify-end ${PANEL_LAYOUT.SPACING.GAP_H_SM}`}>
           <BaseButton variant="ghost" onClick={onClose}>
-            {cancelText}
+            {resolvedCancelText}
           </BaseButton>
           <BaseButton variant={confirmVariant} onClick={onConfirm}>
-            {confirmText}
+            {resolvedConfirmText}
           </BaseButton>
         </nav>
       }
@@ -257,16 +268,23 @@ export const LoadingModal: React.FC<{
   message?: string;
 }> = ({
   isOpen,
-  title = 'Φόρτωση...',
-  message = 'Παρακαλώ περιμένετε...'
+  title,
+  message
 }) => {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+
+  // Use translations with fallback to props
+  const resolvedTitle = title || t('modal.loading');
+  const resolvedMessage = message || t('modal.pleaseWait');
+
   return (
     <BaseModal
       isOpen={isOpen}
       onClose={() => {}} // No close action for loading modal
-      title={title}
+      title={resolvedTitle}
       size="sm"
       closeOnBackdrop={false}
       closeOnEscape={false}
@@ -274,7 +292,7 @@ export const LoadingModal: React.FC<{
     >
       <aside className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
         <AnimatedSpinner size="medium" />
-        <span className={colors.text.secondary}>{message}</span>
+        <span className={colors.text.secondary}>{resolvedMessage}</span>
       </aside>
     </BaseModal>
   );

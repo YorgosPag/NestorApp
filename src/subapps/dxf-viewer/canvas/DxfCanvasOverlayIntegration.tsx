@@ -11,22 +11,36 @@ import { isFeatureEnabled } from '../config/experimental-features';
 // import { OverlayRenderer } from './overlay-renderer';
 // import { dlog, dhotlog } from '../utils/devlog';
 
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** Transform data for canvas rendering */
+interface CanvasTransform {
+  scale: number;
+  offsetX: number;
+  offsetY: number;
+}
+
+/** Log argument type */
+type LogArg = unknown;
+
 // Mock implementations for missing modules
 class OverlayRenderer {
   constructor() {}
-  updateTransform(transform: any) {}
-  resize(width: number, height: number) {}
-  drawDragPreview(entity: any, transform: any) {}
+  updateTransform(_transform: CanvasTransform) {}
+  resize(_width: number, _height: number) {}
+  drawDragPreview(_entity: Entity, _transform: CanvasTransform) {}
   clearDragPreview() {}
   dispose() {}
-  drawHoverOverlay(entity: any, transform: any) {}
+  drawHoverOverlay(_entityId: string, _entity: Entity) {}
   clearHover() {}
   clearAll() {}
 }
 
 // Mock devlog functions
-const dlog = (...args: any[]) => {};
-const dhotlog = (...args: any[]) => {};
+const dlog = (..._args: LogArg[]) => {};
+const dhotlog = (..._args: LogArg[]) => {};
 import type { Entity } from '../types/entities';
 import type { EntityRenderer } from '../utils/entity-renderer';
 import type { SceneModel } from '../types/scene';
@@ -157,9 +171,9 @@ export const useOverlaySystem = (
 
   // ═══ ENTITY FINDING HELPER ═══
   const findEntityById = useCallback((entityId: string): Entity | null => {
-    const entity = currentScene?.entities?.find((e: any) => e.id === entityId);
+    const entity = currentScene?.entities?.find((e: Entity) => e.id === entityId);
     // ✅ ENTERPRISE: Proper type conversion from AnySceneEntity to Entity
-    return entity ? (entity as Entity) : null;
+    return entity ?? null;
   }, [currentScene]);
 
   return {

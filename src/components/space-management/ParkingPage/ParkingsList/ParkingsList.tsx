@@ -14,6 +14,8 @@ import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { EntityListColumn } from '@/core/containers';
 import { matchesSearchTerm } from '@/lib/search/search';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { ParkingsListHeader } from './ParkingsListHeader';
 // 🏢 ENTERPRISE: Using centralized domain card
@@ -32,6 +34,8 @@ export function ParkingsList({
   selectedParking,
   onSelectParking,
 }: ParkingsListProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const [favorites, setFavorites] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'name' | 'area' | 'price' | 'status' | 'floor' | 'type'>('name');
@@ -119,7 +123,7 @@ export function ParkingsList({
   });
 
   return (
-    <EntityListColumn hasBorder aria-label="Λίστα Θέσεων Στάθμευσης">
+    <EntityListColumn hasBorder aria-label={t('parkings.list.ariaLabel')}>
       <ParkingsListHeader
         parkingSpots={sortedParkingSpots}  // 🏢 ENTERPRISE: Περνάμε filtered results για δυναμικό count
         searchTerm={searchTerm}
@@ -192,9 +196,9 @@ export function ParkingsList({
           {sortedParkingSpots.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <Car className={`${iconSizes.xl3} mx-auto mb-2 opacity-50`} />
-              <p>Δεν βρέθηκαν θέσεις στάθμευσης</p>
+              <p>{t('parkings.list.noResults')}</p>
               {searchTerm && (
-                <p className="text-sm">για τον όρο "{searchTerm}"</p>
+                <p className="text-sm">{t('parkings.list.noResultsForTerm', { term: searchTerm })}</p>
               )}
             </div>
           )}

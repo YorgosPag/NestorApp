@@ -7,6 +7,8 @@ import { Check, X, Edit } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface EditableTextProps {
   /** Current text value */
@@ -43,6 +45,8 @@ export function EditableText({
   maxLength,
   required = false
 }: EditableTextProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
@@ -112,7 +116,7 @@ export function EditableText({
           variant="outline"
           onClick={handleSave}
           className={`${iconSizes.xl} p-0`}
-          title="Αποθήκευση"
+          title={t('buttons.save')}
         >
           <Check className={iconSizes.sm} />
         </Button>
@@ -121,7 +125,7 @@ export function EditableText({
           variant="outline"
           onClick={handleCancel}
           className={`${iconSizes.xl} p-0`}
-          title="Ακύρωση"
+          title={t('buttons.cancel')}
         >
           <X className={iconSizes.sm} />
         </Button>
@@ -141,7 +145,7 @@ export function EditableText({
       onMouseLeave={() => setIsHovered(false)}
     >
       <span className={cn("flex-1", !value && "text-muted-foreground")}>
-        {value || placeholder || "Κλικ για επεξεργασία..."}
+        {value || placeholder || t('placeholders.clickToEdit')}
       </span>
 
       {showEditIcon && !disabled && isHovered && !isEditing && (

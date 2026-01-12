@@ -27,7 +27,7 @@ export interface PhotoUploadOptions {
   /** Maximum file size before compression is forced (default: 500KB) */
   maxSizeKB?: number;
   /** Contact data for FileNamingService (optional) */
-  contactData?: any;
+  contactData?: { type?: string; name?: string; id?: string; [key: string]: unknown };
   /** Upload purpose for FileNamingService (optional) */
   purpose?: string;
   /** Photo index for FileNamingService (optional) */

@@ -87,7 +87,7 @@ export const firebaseServer = {
     return await getFirestoreDoc(docRef);
   },
 
-  async getDocs(collectionName: string, queries: Array<{field: string, operator: WhereFilterOp, value: any}> = []) {
+  async getDocs(collectionName: string, queries: Array<{field: string, operator: WhereFilterOp, value: unknown}> = []) {
     if (!db) {
       throw new Error('Firebase Client (API routes) not initialized');
     }

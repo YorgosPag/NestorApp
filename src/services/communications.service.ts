@@ -2,11 +2,11 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  doc, 
+import {
+  collection,
+  addDoc,
+  getDocs,
+  doc,
   updateDoc,
   query,
   where,
@@ -15,7 +15,9 @@ import {
   QueryConstraint,
   Timestamp,
   writeBatch,
-  deleteDoc
+  deleteDoc,
+  QueryDocumentSnapshot,
+  DocumentData
 } from 'firebase/firestore';
 import type { Communication } from '@/types/crm';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -23,15 +25,17 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Centralized collection configuration
 const COMMUNICATIONS_COLLECTION = COLLECTIONS.COMMUNICATIONS;
 
-const transformCommunication = (doc: any): Communication => {
-    const data = doc.data();
-    const communication: any = { id: doc.id };
+// 🏢 ENTERPRISE: Type-safe document transformation
+const transformCommunication = (docSnapshot: QueryDocumentSnapshot<DocumentData>): Communication => {
+    const data = docSnapshot.data();
+    const communication: Partial<Communication> & { id: string } = { id: docSnapshot.id };
 
     for (const key in data) {
-        if (data[key] instanceof Timestamp) {
-            communication[key] = data[key].toDate().toISOString();
+        const value = data[key];
+        if (value instanceof Timestamp) {
+            (communication as Record<string, unknown>)[key] = value.toDate().toISOString();
         } else {
-            communication[key] = data[key];
+            (communication as Record<string, unknown>)[key] = value;
         }
     }
     return communication as Communication;

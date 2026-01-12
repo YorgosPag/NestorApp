@@ -2,6 +2,11 @@ import type { Config } from 'tailwindcss';
 
 export default {
   darkMode: ['class'],
+  // 🏢 ENTERPRISE: Safelist for dynamically generated classes from hooks
+  safelist: [
+    'pl-10', 'pl-11', 'pl-12', 'pr-10', 'pr-11', 'pr-12',  // Input icon padding
+    '!pl-10', '!pl-11', '!pl-12', '!pr-10', '!pr-11', '!pr-12',  // Input icon padding with !important
+  ],
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',

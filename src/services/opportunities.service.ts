@@ -20,12 +20,13 @@ import {
 } from 'firebase/firestore';
 import type { Opportunity, FirestoreishTimestamp } from '@/types/crm';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import type { DocumentSnapshot, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 
 const OPPORTUNITIES_COLLECTION = COLLECTIONS.OPPORTUNITIES;
 
-const transformOpportunity = (doc: any): Opportunity => {
+const transformOpportunity = (doc: DocumentSnapshot<DocumentData> | QueryDocumentSnapshot<DocumentData>): Opportunity => {
     const data = doc.data();
-    const opportunity: any = { id: doc.id };
+    const opportunity: Record<string, unknown> = { id: doc.id };
 
     for (const key in data) {
         if (data[key] instanceof Timestamp) {

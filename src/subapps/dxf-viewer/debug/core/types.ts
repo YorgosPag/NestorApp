@@ -17,7 +17,7 @@ export interface LogEntry {
   level: string;
   module: string;
   message: string;
-  data?: any;
+  data?: unknown;
 }
 
 export interface PerformanceMetrics {
@@ -38,7 +38,7 @@ export interface DebugStatistics {
 }
 
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug' | 'verbose';
-export type LogFunction = (...args: any[]) => void;
+export type LogFunction = (...args: unknown[]) => void;
 
 export interface Logger {
   error: LogFunction;

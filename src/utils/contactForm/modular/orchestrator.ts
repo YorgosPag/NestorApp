@@ -42,7 +42,7 @@ export interface FormDataMappingResult {
  */
 export function mapFormDataToContact(formData: ContactFormData): FormDataMappingResult {
   const warnings: string[] = [];
-  let contactData: any;
+  let contactData: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'> & { photoURL?: string; logoURL?: string; multiplePhotoURLs?: string[] };
   let photoURL = '';
   let logoURL = '';
   let multiplePhotoURLs: string[] = [];
@@ -86,7 +86,7 @@ export function mapFormDataToContact(formData: ContactFormData): FormDataMapping
 
   } catch (error) {
     return {
-      contactData: {} as any,
+      contactData: {} as Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>,
       multiplePhotoURLs: [],
       photoURL: '',
       logoURL: '',

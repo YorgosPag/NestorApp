@@ -1,6 +1,23 @@
 {
   "title": "Projects",
   "description": "Manage projects and construction sites",
+  "projectHeader": {
+    "technicalIdLabel": "Technical ID (for support):",
+    "copied": "Copied!",
+    "residentialBadge": "Residential",
+    "saving": "Saving...",
+    "savedAt": "Saved at {{time}}",
+    "edit": "Edit",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "header": {
+    "title": "Project Management",
+    "titleWithCount": "Project Management ({{count}})",
+    "subtitle": "Track and manage projects",
+    "searchPlaceholder": "Search projects...",
+    "newProject": "New Project"
+  },
   "toolbar": {
     "new": "New Project",
     "edit": "Edit",
@@ -90,5 +107,53 @@
     "exported": "Projects exported successfully",
     "noProjects": "No projects found",
     "loadingError": "Error loading projects"
+  },
+  "plot": {
+    "labels": {
+      "sdNoSocial": "Building Coefficient (Without Social Factor)",
+      "socialFactor": "Social Factor",
+      "sdFinal": "Building Coefficient (Final)",
+      "areaCompleteness": "Plot Area Completeness",
+      "areaCompletenessDerogation": "Plot Area Completeness (Derogation)",
+      "faceCompleteness": "Plot Face Completeness",
+      "faceCompletenessDerogation": "Plot Face Completeness (Derogation)"
+    },
+    "units": {
+      "sqm": "sq.m",
+      "linearMeters": "l.m."
+    }
+  },
+  "page": {
+    "pageLabel": "Project Management",
+    "loading": "Loading Projects",
+    "loadingMessage": "Loading projects from database...",
+    "error": {
+      "pageLabel": "Projects Error",
+      "ariaLabel": "Loading Error",
+      "title": "Error loading projects:",
+      "retry": "Retry"
+    },
+    "dashboard": {
+      "label": "Project Statistics",
+      "totalProjects": "Total Projects",
+      "activeProjects": "Active Projects",
+      "totalValue": "Total Value",
+      "totalArea": "Total Area",
+      "averageProgress": "Average Progress"
+    },
+    "filters": {
+      "desktop": "Project Filters",
+      "mobile": "Project Filters Mobile"
+    }
+  },
+  "list": {
+    "ariaLabel": "Projects List",
+    "entityName": "Projects",
+    "searchPlaceholder": "Search projects..."
+  },
+  "viewSwitch": {
+    "detailsTitle": "Project Details",
+    "editLabel": "Edit Project",
+    "deleteLabel": "Delete Project"
   }
 }

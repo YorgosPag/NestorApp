@@ -10,6 +10,8 @@ import { ProjectListCard } from '@/domain';
 import { CompactToolbar, projectsConfig } from '@/components/core/CompactToolbar';
 import { Briefcase } from 'lucide-react';
 import { EntityListColumn } from '@/core/containers';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ProjectsListProps {
   projects: Project[];
@@ -24,6 +26,8 @@ export function ProjectsList({
   onSelectProject,
   companies,
 }: ProjectsListProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('projects');
   const [favorites, setFavorites] = useState<number[]>([1]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showToolbar, setShowToolbar] = useState(false);
@@ -41,14 +45,14 @@ export function ProjectsList({
 
 
   return (
-    <EntityListColumn hasBorder aria-label="Λίστα Έργων">
+    <EntityListColumn hasBorder aria-label={t('list.ariaLabel')}>
       <GenericListHeader
         icon={Briefcase}
-        entityName="Έργα"
+        entityName={t('list.entityName')}
         itemCount={displayProjects.length}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        searchPlaceholder="Αναζήτηση έργων..."
+        searchPlaceholder={t('list.searchPlaceholder')}
         showToolbar={showToolbar}
         onToolbarToggle={setShowToolbar}
       />

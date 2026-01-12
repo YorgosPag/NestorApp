@@ -11,6 +11,8 @@ import { BuildingsListHeader } from './BuildingsList/BuildingsListHeader';
 // 🏢 ENTERPRISE: Using centralized domain card
 import { BuildingListCard } from '@/domain';
 import { CompactToolbar, buildingsConfig } from '@/components/core/CompactToolbar';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 
 interface BuildingsListProps {
@@ -24,6 +26,8 @@ export function BuildingsList({
   selectedBuilding,
   onSelectBuilding,
 }: BuildingsListProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
   const [favorites, setFavorites] = useState<string[]>(['1']);
   const [sortBy, setSortBy] = useState<'name' | 'progress' | 'value' | 'area' | 'date'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -100,7 +104,7 @@ export function BuildingsList({
   });
 
   return (
-    <EntityListColumn hasBorder aria-label="Λίστα Κτιρίων">
+    <EntityListColumn hasBorder aria-label={t('list.ariaLabel')}>
       <BuildingsListHeader
         buildingCount={sortedBuildings.length}  // 🏢 ENTERPRISE: Δυναμικό count με filtered results
         showToolbar={showToolbar}

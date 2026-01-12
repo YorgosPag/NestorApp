@@ -16,6 +16,8 @@ import { COMPLEX_HOVER_EFFECTS, INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS }
 import type { Property } from '@/types/property-viewer';
 import { formatFloorLabel, formatCurrency } from '@/lib/intl-utils';
 import { brandClasses } from '@/styles/design-tokens';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Import centralized status labels - ZERO HARDCODED VALUES
 import { PROPERTY_STATUS_LABELS } from '@/constants/property-statuses-enterprise';
@@ -45,6 +47,8 @@ const propertyTypeIcons: { [key: string]: React.ElementType } = {
 };
 
 function PropertyCard({ property, onSelect, isSelected }: { property: Property, onSelect: () => void, isSelected: boolean }) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -79,7 +83,7 @@ function PropertyCard({ property, onSelect, isSelected }: { property: Property, 
     },
   };
 
-  const statusInfo = statusConfig[property.status as keyof typeof statusConfig] || { color: `${quick.card}`, label: 'Άγνωστο', textColor: colors.text.muted };
+  const statusInfo = statusConfig[property.status as keyof typeof statusConfig] || { color: `${quick.card}`, label: t('grid.status.unknown'), textColor: colors.text.muted };
   const IconComponent = propertyTypeIcons[property.type] || UnitIcon;
 
   return (
@@ -101,7 +105,7 @@ function PropertyCard({ property, onSelect, isSelected }: { property: Property, 
                 <p className="text-xs text-muted-foreground">{property.type}</p>
             </div>
             <PropertyBadge
-              status={property.status as any}
+              status={property.status}
               variant="outline"
               className={cn("text-xs", statusInfo.color, statusInfo.textColor)}
             />
@@ -128,7 +132,7 @@ function PropertyCard({ property, onSelect, isSelected }: { property: Property, 
                  <div className={`flex items-center gap-1 ${colors.text.muted}`}>
                     {/* 🏢 ENTERPRISE: Using centralized area icon/color */}
                     <NAVIGATION_ENTITIES.area.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.area.color)}/>
-                    {property.area} τ.μ.
+                    {property.area} {t('grid.area.sqm')}
                 </div>
             )}
         </div>
@@ -155,6 +159,8 @@ interface PropertyGridProps {
 }
 
 export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanced }: PropertyGridProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
   const { quick, radius, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -192,8 +198,8 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
     return (
       <div className={`flex flex-col items-center justify-center h-full ${colors.text.muted} p-4`}>
         <UnitIcon className={`${iconSizes.xl} mb-4 ${unitColor}`} />
-        <h2 className="text-xl font-semibold">Δεν βρέθηκαν ακίνητα</h2>
-        <p className="text-sm">Δοκιμάστε να αλλάξετε τα φίλτρα</p>
+        <h2 className="text-xl font-semibold">{t('grid.emptyState.title')}</h2>
+        <p className="text-sm">{t('grid.emptyState.subtitle')}</p>
       </div>
     );
   }
@@ -209,13 +215,13 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
             layout="multi-row"
             title={{
               icon: UnitIcon,
-              title: "Διαθέσιμα Ακίνητα",
-              subtitle: `Βρέθηκαν ${displayProperties.length} ακίνητα`
+              title: t('grid.header.title'),
+              subtitle: t('grid.header.found', { count: displayProperties.length })
             }}
             search={enhanced.withSearch && gridFilters ? {
               value: gridFilters.searchTerm,
               onChange: gridFilters.setSearchTerm,
-              placeholder: "Αναζήτηση ακινήτων..."
+              placeholder: t('grid.search.placeholder')
             } : undefined}
             filters={enhanced.withFilters ? {
               customFilters: [
@@ -237,7 +243,7 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
                   }`}
                 >
                   <SlidersHorizontal className={iconSizes.sm} />
-                  <span className="font-medium">Φίλτρα</span>
+                  <span className="font-medium">{t('grid.filters.button')}</span>
                 </button>
               ]
             } : undefined}
@@ -252,7 +258,7 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
                   className={`px-4 py-2 ${colors.bg.gradient} text-white ${radius.lg} transition-all flex items-center gap-2 font-medium h-8 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
                 >
                   <NAVIGATION_ENTITIES.location.icon className={iconSizes.sm} />
-                  Προβολή σε Κάτοψη
+                  {t('grid.actions.viewFloorPlan')}
                 </button>
               ].filter(Boolean)
             }}
@@ -277,7 +283,7 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
               ? "flex flex-col gap-4"
               : "flex flex-col gap-4"
             }>
-              {displayProperties.map((property: any) => (
+              {displayProperties.map((property: Property) => (
                 <div key={property.id} className="w-full min-w-0 overflow-hidden">
                   <PropertyCard
                     property={property}
@@ -294,16 +300,16 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
         <div className={`${colors.bg.secondary}/30 py-12 mt-12`}>
           <div className="max-w-4xl mx-auto text-center px-4">
             <h2 className={`text-2xl font-bold ${colors.text.foreground} mb-4`}>
-              Θέλετε να δείτε τα ακίνητα στην κάτοψη του ορόφου;
+              {t('grid.cta.title')}
             </h2>
             <p className={`${colors.text.muted} mb-6`}>
-              Δείτε την ακριβή θέση και διάταξη των ακινήτων στην κάτοψη του κτηρίου.
+              {t('grid.cta.subtitle')}
             </p>
             <button
               onClick={handleViewAllFloorPlan}
               className={`px-8 py-3 ${colors.bg.gradient} text-white ${radius.lg} font-medium transition-all ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
             >
-              Προβολή Κάτοψης
+              {t('grid.cta.button')}
             </button>
           </div>
         </div>

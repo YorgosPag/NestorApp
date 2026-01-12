@@ -1,9 +1,20 @@
+/** Property data for filtering */
+interface FilterableProperty {
+  id: string;
+  name?: string;
+  type?: string;
+  price?: number;
+  area?: number;
+  [key: string]: unknown;
+}
+
 type Ranges = {
   priceRange: { min: string; max: string };
   areaRange: { min: string; max: string };
 };
+
 export function applyFilters(
-  properties: any[],
+  properties: FilterableProperty[],
   filters: { propertyType: string[] },
   searchTerm: string,
   ranges: Ranges

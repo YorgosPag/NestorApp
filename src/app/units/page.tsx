@@ -10,6 +10,7 @@ import {
   BarChart3,
   MapPin,
   Package,
+  Building2,
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
@@ -25,35 +26,40 @@ import { PropertyGridViewCompatible as PropertyGridView } from '@/components/pro
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
-// ✅ ENTERPRISE: Helper function using centralized status labels
-const getStatusLabel = (status: string) => {
-  switch (status) {
-    case 'sold': return 'Πουλημένες';
-    case 'available': return UNIFIED_STATUS_FILTER_LABELS.AVAILABLE;
-    case 'reserved': return UNIFIED_STATUS_FILTER_LABELS.RESERVED;
-    case 'owner': return 'Οικοπεδούχου';
-    case 'for-sale': return 'Προς πώληση';
-    case 'for-rent': return 'Προς ενοικίαση';
-    case 'rented': return 'Ενοικιασμένες';
-    default: return status;
+// 🏢 ENTERPRISE: Translation key type for status labels
+type StatusKey = 'sold' | 'available' | 'reserved' | 'owner' | 'for-sale' | 'for-rent' | 'rented';
+// 🏢 ENTERPRISE: Translation key type for type labels
+type TypeKey = 'apartment' | 'studio' | 'maisonette' | 'shop' | 'office' | 'storage';
+
+// ✅ ENTERPRISE: Factory function that creates a status label getter with translation support
+const createStatusLabelGetter = (t: (key: string) => string) => (status: string): string => {
+  const knownStatuses: StatusKey[] = ['sold', 'available', 'reserved', 'owner', 'for-sale', 'for-rent', 'rented'];
+  if (knownStatuses.includes(status as StatusKey)) {
+    return t(`page.statusLabels.${status}`);
   }
+  return status;
 };
 
-const getTypeLabel = (type: string) => {
-  switch (type) {
-    case 'apartment': return 'Διαμερίσματα';
-    case 'studio': return 'Στούντιο';
-    case 'maisonette': return 'Μεζονέτες';
-    case 'shop': return 'Καταστήματα';
-    case 'office': return 'Γραφεία';
-    case 'storage': return 'Αποθήκες';
-    default: return type;
+// ✅ ENTERPRISE: Factory function that creates a type label getter with translation support
+const createTypeLabelGetter = (t: (key: string) => string) => (type: string): string => {
+  const knownTypes: TypeKey[] = ['apartment', 'studio', 'maisonette', 'shop', 'office', 'storage'];
+  if (knownTypes.includes(type as TypeKey)) {
+    return t(`page.typeLabels.${type}`);
   }
+  return type;
 };
 
 function UnitsPageContent() {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('units');
   const colors = useSemanticColors();
+
+  // 🏢 ENTERPRISE: Create label getters with translation support
+  const getStatusLabel = React.useMemo(() => createStatusLabelGetter(t), [t]);
+  const getTypeLabel = React.useMemo(() => createTypeLabelGetter(t), [t]);
 
   // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
   const { companies, projects, syncBreadcrumb } = useNavigation();
@@ -167,7 +173,7 @@ function UnitsPageContent() {
   // Transform dashboardStats object to DashboardStat array
   const unifiedDashboardStats: DashboardStat[] = [
     {
-      title: "Σύνολο Μονάδων",
+      title: t('page.dashboard.totalUnits'),
       value: dashboardStats.totalProperties,
       icon: NAVIGATION_ENTITIES.unit.icon,
       color: "blue"
@@ -179,25 +185,25 @@ function UnitsPageContent() {
       color: "green"
     },
     {
-      title: "Πωληθείσες",
+      title: t('page.dashboard.soldUnits'),
       value: dashboardStats.soldProperties,
       icon: BarChart3,
       color: "purple"
     },
     {
-      title: "Συνολική Αξία",
+      title: t('page.dashboard.totalValue'),
       value: `€${(dashboardStats.totalValue / 1000000).toFixed(1)}M`,
       icon: MapPin,
       color: "orange"
     },
     {
-      title: "Συνολική Επιφάνεια",
+      title: t('page.dashboard.totalArea'),
       value: `${(dashboardStats.totalArea / 1000).toFixed(1)}K m²`,
       icon: Package,
       color: "cyan"
     },
     {
-      title: "Μοναδικά Κτίρια",
+      title: t('page.dashboard.uniqueBuildings'),
       value: dashboardStats.uniqueBuildings,
       icon: NAVIGATION_ENTITIES.building.icon,
       color: "pink"
@@ -207,6 +213,8 @@ function UnitsPageContent() {
   // 🔥 NEW: Handle dashboard card clicks για filtering
   const handleCardClick = (stat: DashboardStat, index: number) => {
     const cardTitle = stat.title;
+    const totalUnitsTitle = t('page.dashboard.totalUnits');
+    const soldUnitsTitle = t('page.dashboard.soldUnits');
 
     // Toggle filter: αν κλικάρουμε την ίδια κάρτα, αφαιρούμε το φίλτρο
     if (activeCardFilter === cardTitle) {
@@ -218,7 +226,7 @@ function UnitsPageContent() {
 
       // Apply filter based on card type
       switch (cardTitle) {
-        case 'Σύνολο Μονάδων':
+        case totalUnitsTitle:
           // Show all units - reset filters
           handleFiltersChange({ ...filters, status: [] });
           break;
@@ -226,11 +234,11 @@ function UnitsPageContent() {
           // Filter only available units
           handleFiltersChange({ ...filters, status: ['available'] });
           break;
-        case 'Πωληθείσες':
+        case soldUnitsTitle:
           // Filter only sold units
           handleFiltersChange({ ...filters, status: ['sold'] });
           break;
-        // Note: Other cards (Συνολική Αξία, Συνολική Επιφάνεια, Μοναδικά Κτίρια)
+        // Note: Other cards (Total Value, Total Area, Unique Buildings)
         // are informational and don't apply specific filters
         default:
           // For other stats, just clear active filter without changing data
@@ -296,7 +304,7 @@ function UnitsPageContent() {
 
   return (
     <TooltipProvider>
-      <PageContainer ariaLabel="Διαχείριση Μονάδων">
+      <PageContainer ariaLabel={t('page.pageLabel')}>
         <UnitsHeader
           viewMode={viewMode as 'list' | 'grid'}
           setViewMode={setViewMode}
@@ -316,15 +324,15 @@ function UnitsPageContent() {
             additionalContainers={
               <>
                 <StatusCard statsByStatus={dashboardStats.propertiesByStatus} getStatusLabel={getStatusLabel} />
-                <DetailsCard title="Τύποι Μονάδων" icon={Building2} data={dashboardStats.propertiesByType} labelFormatter={getTypeLabel} />
-                <DetailsCard title="Κατανομή ανά Όροφο" icon={MapPin} data={dashboardStats.propertiesByFloor} isFloorData={true} />
+                <DetailsCard title={t('page.dashboard.unitTypes')} icon={Building2} data={dashboardStats.propertiesByType} labelFormatter={getTypeLabel} />
+                <DetailsCard title={t('page.dashboard.floorDistribution')} icon={MapPin} data={dashboardStats.propertiesByFloor} isFloorData={true} />
                 <DetailsCard
-                  title="Αποθήκες"
+                  title={t('page.dashboard.storages')}
                   icon={Package}
                   data={{
-                    'Σύνολο': dashboardStats.totalStorageUnits,
+                    [t('page.dashboard.total')]: dashboardStats.totalStorageUnits,
                     [UNIFIED_STATUS_FILTER_LABELS.AVAILABLE]: dashboardStats.availableStorageUnits,
-                    'Πουλημένες': dashboardStats.soldStorageUnits,
+                    [t('page.statusLabels.sold')]: dashboardStats.soldStorageUnits,
                   }}
                   isThreeColumnGrid={true}
                 />
@@ -382,13 +390,14 @@ function UnitsPageContent() {
 }
 
 function UnitsPageFallback() {
+  const { t } = useTranslation('units');
   const colors = useSemanticColors();
 
   return (
     <div className={`min-h-screen ${colors.bg.secondary} dark:${colors.bg.primary} flex items-center justify-center`}>
       <div className="text-center">
         <AnimatedSpinner size="large" className="mx-auto mb-4" />
-        <p className={`${colors.text.muted}`}>Φόρτωση μονάδων...</p>
+        <p className={`${colors.text.muted}`}>{t('page.loading')}</p>
       </div>
     </div>
   );

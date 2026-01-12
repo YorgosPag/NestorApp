@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from 'react';
-import { useTranslation as useI18nextTranslation } from 'react-i18next';
-import { loadNamespace, type Namespace } from '../lazy-config';
+import { useTranslation as useI18nextTranslation, TOptions } from 'react-i18next';
+import { loadNamespace, type Namespace, type Language } from '../lazy-config';
 
 /**
  * Custom translation hook with lazy loading support
@@ -27,7 +27,7 @@ export const useTranslation = (namespace?: string) => {
     i18n,
     ready,
     // Helper function for dynamic key translations
-    translate: (key: string, options?: any) => t(key, options),
+    translate: (key: string, options?: TOptions) => t(key, options),
     // Current language
     currentLanguage: i18n.language,
     // Change language function with namespace loading
@@ -35,7 +35,7 @@ export const useTranslation = (namespace?: string) => {
       try {
         // If we have a namespace, preload it for the new language
         if (namespace && namespace !== 'common') {
-          await loadNamespace(namespace as Namespace, lng as any);
+          await loadNamespace(namespace as Namespace, lng as Language);
         }
         
         await i18n.changeLanguage(lng);

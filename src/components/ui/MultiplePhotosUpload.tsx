@@ -54,7 +54,7 @@ export interface MultiplePhotosUploadProps {
   /** Purpose for validation and compression */
   purpose?: 'photo' | 'logo';
   /** Contact data for FileNamingService (optional) */
-  contactData?: any;
+  contactData?: Record<string, unknown>;
   /** 🆕 Profile selection props */
   showProfileSelector?: boolean;
   selectedProfilePhotoIndex?: number;

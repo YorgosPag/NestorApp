@@ -43,9 +43,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🚫 MOCK DATA ΕΝΤΕΛΩΣ ΑΦΑΙΡΕΜΕΝΑ - Καθαρή εφαρμογή χωρίς seed functionality
 
 export function ContactsPageContent() {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('contacts');
   // 🏢 ENTERPRISE: Centralized icon sizes
   const iconSizes = useIconSizes();
   const { getDirectionalBorder, getStatusBorder } = useBorderTokens();
@@ -128,7 +132,7 @@ export function ContactsPageContent() {
     } catch (err) {
       // Error logging removed
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      setError(`Αποτυχία φόρτωσης επαφών: ${errorMessage}`);
+      setError(`${t('page.error.title')} ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -367,32 +371,42 @@ export function ContactsPageContent() {
     }
 
     // 🔥 NEW: Dashboard card filtering (highest priority)
+    // 🏢 ENTERPRISE: Use translated strings for card filter comparison
+    const totalContactsTitle = t('page.dashboard.totalContacts');
+    const totalPersonnelTitle = t('page.dashboard.totalPersonnel');
+    const legalEntitiesTitle = t('page.dashboard.legalEntities');
+    const activeContactsTitle = t('page.dashboard.activeContacts');
+    const servicesTitle = t('page.dashboard.services');
+    const recentAdditionsTitle = t('page.dashboard.recentAdditions');
+    const favoritesTitle = t('page.dashboard.favorites');
+    const contactsWithRelationsTitle = t('page.dashboard.contactsWithRelations');
+
     if (activeCardFilter) {
       switch (activeCardFilter) {
-        case 'Σύνολο Επαφών':
+        case totalContactsTitle:
           // Show all contacts - no additional filtering needed
           break;
-        case 'Σύνολο Προσωπικού':
+        case totalPersonnelTitle:
           if (contact.type !== 'individual') return false;
           break;
-        case 'Νομικά Πρόσωπα':
+        case legalEntitiesTitle:
           if (contact.type !== 'company') return false;
           break;
-        case 'Ενεργές Επαφές':
-          if ((contact as any).status === 'inactive') return false;
+        case activeContactsTitle:
+          if ((contact as Contact & { status?: string }).status === 'inactive') return false;
           break;
-        case 'Υπηρεσίες':
+        case servicesTitle:
           if (contact.type !== 'service') return false;
           break;
-        case 'Πρόσφατες Προσθήκες':
+        case recentAdditionsTitle:
           const oneMonthAgo = new Date();
           oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
           if (!contact.createdAt || new Date(contact.createdAt) <= oneMonthAgo) return false;
           break;
-        case 'Αγαπημένες':
+        case favoritesTitle:
           if (!contact.isFavorite) return false;
           break;
-        case 'Επαφές με Σχέσεις':
+        case contactsWithRelationsTitle:
           if (contact.type === CONTACT_TYPES.SERVICE) return false;
           break;
       }
@@ -433,14 +447,14 @@ export function ContactsPageContent() {
   const dashboardStats: DashboardStat[] = [
     // 🔝 Πάνω σειρά (4 κάρτες) - Βασικά Στοιχεία
     {
-      title: "Σύνολο Επαφών",
+      title: t('page.dashboard.totalContacts'),
       value: contacts.length,
       icon: Users,
       color: "blue"
     },
     {
-      title: "Σύνολο Προσωπικού",
-      value: contacts.filter((c: any) =>
+      title: t('page.dashboard.totalPersonnel'),
+      value: contacts.filter((c: Contact) =>
         // Count all relationships where someone is an employee
         // This is a placeholder - will be enhanced with relationship data
         c.type === 'individual'
@@ -449,27 +463,27 @@ export function ContactsPageContent() {
       color: "green"
     },
     {
-      title: "Νομικά Πρόσωπα",
+      title: t('page.dashboard.legalEntities'),
       value: contacts.filter(c => c.type === 'company').length,
       icon: Building2,
       color: "purple"
     },
     {
-      title: "Ενεργές Επαφές",
-      value: contacts.filter((c: any) => c.status === 'active' || !c.status).length,
+      title: t('page.dashboard.activeContacts'),
+      value: contacts.filter((c: Contact & { status?: string }) => c.status === 'active' || !c.status).length,
       icon: Activity,
       color: "cyan"
     },
 
     // 🔽 Κάτω σειρά (4 κάρτες) - Λεπτομέρειες
     {
-      title: "Υπηρεσίες",
+      title: t('page.dashboard.services'),
       value: contacts.filter(c => c.type === 'service').length,
       icon: Landmark,
       color: "orange"
     },
     {
-      title: "Πρόσφατες Προσθήκες",
+      title: t('page.dashboard.recentAdditions'),
       value: contacts.filter(c => {
         const oneMonthAgo = new Date();
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
@@ -479,13 +493,13 @@ export function ContactsPageContent() {
       color: "pink"
     },
     {
-      title: "Αγαπημένες",
+      title: t('page.dashboard.favorites'),
       value: contacts.filter(c => c.isFavorite).length,
       icon: Star,
       color: "yellow"
     },
     {
-      title: "Επαφές με Σχέσεις",
+      title: t('page.dashboard.contactsWithRelations'),
       value: contacts.filter(c => {
         // This is a placeholder - will be enhanced with relationship data
         // For now, count non-service contacts (individuals + companies that might have relationships)
@@ -530,19 +544,19 @@ export function ContactsPageContent() {
             <div className="flex items-center space-x-2">
               <Filter className={`${iconSizes.sm} ${colors.text.success}`} />
               <span className={`text-sm ${colors.text.success}`}>
-                Προβολή πελάτη: <strong>{contactName}</strong>
+                {t('page.filterIndicator.viewingCustomer')} <strong>{contactName}</strong>
               </span>
               <span className={`text-xs ${colors.text.success} ${colors.bg.successSubtle} px-2 py-1 rounded`}>
-                Επιλεγμένη επαφή
+                {t('page.filterIndicator.selectedContact')}
               </span>
             </div>
             <button
               onClick={handleClearURLFilter}
               className={`flex items-center space-x-1 px-2 py-1 text-sm ${colors.text.success} rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST}`}
-              title="Επιστροφή στη λίστα επαφών"
+              title={t('page.filterIndicator.backToList')}
             >
               <X className={iconSizes.sm} />
-              <span>Επιστροφή</span>
+              <span>{t('page.filterIndicator.back')}</span>
             </button>
           </div>
         </div>
@@ -558,19 +572,21 @@ export function ContactsPageContent() {
             <div className="flex items-center space-x-2">
               <Filter className={`${iconSizes.sm} ${colors.text.info}`} />
               <span className={`text-sm ${colors.text.info}`}>
-                Φιλτράρισμα για: <strong>"{filterValue}"</strong>
+                {t('page.filterIndicator.filteringFor')} <strong>"{filterValue}"</strong>
               </span>
               <span className={`text-xs ${colors.text.info} ${colors.bg.infoSubtle} px-2 py-1 rounded`}>
-                {filteredContacts.length} επαφή{filteredContacts.length !== 1 ? 'ς' : ''}
+                {filteredContacts.length === 1
+                  ? t('page.filterIndicator.contactsCount', { count: filteredContacts.length })
+                  : t('page.filterIndicator.contactsCountPlural', { count: filteredContacts.length })}
               </span>
             </div>
             <button
               onClick={handleClearURLFilter}
               className={`flex items-center space-x-1 px-2 py-1 text-sm ${colors.text.info} rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST}`}
-              title="Εμφάνιση όλων των επαφών"
+              title={t('page.filterIndicator.showAll')}
             >
               <X className={iconSizes.sm} />
-              <span>Καθάρισμα</span>
+              <span>{t('page.filterIndicator.clear')}</span>
             </button>
           </div>
         </div>
@@ -582,7 +598,7 @@ export function ContactsPageContent() {
 
   return (
     <TooltipProvider>
-      <PageContainer ariaLabel="Διαχείριση Επαφών">
+      <PageContainer ariaLabel={t('page.pageLabel')}>
         {/* Main Header - Works for both desktop and mobile */}
         {/* 🏢 ENTERPRISE: Search removed from header - using unified search in AdvancedFiltersPanel */}
         <ContactsHeader
@@ -601,7 +617,7 @@ export function ContactsPageContent() {
         {renderFilterIndicator()}
 
         {showDashboard && (
-          <section className="w-full overflow-hidden" role="region" aria-label="Στατιστικά Επαφών">
+          <section className="w-full overflow-hidden" role="region" aria-label={t('page.dashboard.label')}>
             <UnifiedDashboard
               stats={dashboardStats}
               columns={4}
@@ -612,7 +628,7 @@ export function ContactsPageContent() {
         )}
 
         {/* Advanced Filters Panel */}
-        <aside className="hidden md:block" role="complementary" aria-label="Φίλτρα Αναζήτησης">
+        <aside className="hidden md:block" role="complementary" aria-label={t('page.filters.desktop')}>
           {/* Desktop: Always visible */}
           <AdvancedFiltersPanel
             config={contactFiltersConfig}
@@ -623,7 +639,7 @@ export function ContactsPageContent() {
 
         {/* Mobile: Show only when showFilters is true */}
         {showFilters && (
-          <aside className="md:hidden" role="complementary" aria-label="Φίλτρα Αναζήτησης Mobile">
+          <aside className="md:hidden" role="complementary" aria-label={t('page.filters.mobile')}>
             <AdvancedFiltersPanel
               config={contactFiltersConfig}
               filters={filters}
@@ -635,19 +651,19 @@ export function ContactsPageContent() {
 
         <ListContainer>
           {error ? (
-            <section className={`w-full text-center p-8 bg-card rounded-lg ${getStatusBorder('error')}`} role="alert" aria-label="Σφάλμα Φόρτωσης">
+            <section className={`w-full text-center p-8 bg-card rounded-lg ${getStatusBorder('error')}`} role="alert" aria-label={t('page.error.ariaLabel')}>
               <p className="text-destructive font-medium">⚠️ {error}</p>
               <button
                 onClick={refreshContacts}
                 className={`mt-2 px-4 py-2 bg-primary text-primary-foreground rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY}`}
               >
-                Επανάληψη
+                {t('page.error.retry')}
               </button>
             </section>
           ) : viewMode === 'list' ? (
             <>
               {/* 🖥️ DESKTOP: Standard split layout - Same as Units/Projects/Buildings */}
-              <section className="hidden md:flex flex-1 gap-4 min-h-0" role="region" aria-label="Λίστα και Λεπτομέρειες Desktop">
+              <section className="hidden md:flex flex-1 gap-4 min-h-0" role="region" aria-label={t('page.views.desktopView')}>
                 <ContactsList
                   contacts={filteredContacts}
                   selectedContact={selectedContact}
@@ -668,7 +684,7 @@ export function ContactsPageContent() {
               </section>
 
               {/* 📱 MOBILE: Show only ContactsList when no contact is selected */}
-              <section className={`md:hidden w-full ${selectedContact ? 'hidden' : 'block'}`} role="region" aria-label="Λίστα Επαφών Mobile">
+              <section className={`md:hidden w-full ${selectedContact ? 'hidden' : 'block'}`} role="region" aria-label={t('page.views.mobileList')}>
                 <ContactsList
                   contacts={filteredContacts}
                   selectedContact={selectedContact}
@@ -686,20 +702,20 @@ export function ContactsPageContent() {
               <MobileDetailsSlideIn
                 isOpen={!!selectedContact}
                 onClose={() => setSelectedContact(null)}
-                title={selectedContact ? getContactDisplayName(selectedContact) : 'Λεπτομέρειες'}
+                title={selectedContact ? getContactDisplayName(selectedContact) : t('page.details.title')}
                 actionButtons={
                   <>
                     <button
                       onClick={() => handleEditContact()}
                       className={`p-2 rounded-md border ${colors.bg.primary} border-border ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-                      aria-label="Επεξεργασία Επαφής"
+                      aria-label={t('page.details.editContact')}
                     >
                       <Edit className={iconSizes.sm} />
                     </button>
                     <button
                       onClick={() => handleDeleteContacts()}
                       className={`p-2 rounded-md border ${colors.bg.primary} border-border text-destructive ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-                      aria-label="Διαγραφή Επαφής"
+                      aria-label={t('page.details.deleteContact')}
                     >
                       <Trash2 className={iconSizes.sm} />
                     </button>
@@ -717,8 +733,8 @@ export function ContactsPageContent() {
               </MobileDetailsSlideIn>
             </>
           ) : (
-            <section className="w-full text-center p-8 bg-card rounded-lg border" role="region" aria-label="Προβολή Πλέγματος">
-                Προβολή πλέγματος (Grid View) θα υλοποιηθεί σύντομα.
+            <section className="w-full text-center p-8 bg-card rounded-lg border" role="region" aria-label={t('page.views.gridPlaceholder')}>
+                {t('page.views.gridPlaceholder')}
             </section>
           )}
         </ListContainer>

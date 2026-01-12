@@ -1,7 +1,45 @@
 {
+  "page": {
+    "pageLabel": "Διαχείριση Μονάδων",
+    "loading": "Φόρτωση μονάδων...",
+    "dashboard": {
+      "totalUnits": "Σύνολο Μονάδων",
+      "soldUnits": "Πωληθείσες",
+      "totalValue": "Συνολική Αξία",
+      "totalArea": "Συνολική Επιφάνεια",
+      "uniqueBuildings": "Μοναδικά Κτίρια",
+      "unitTypes": "Τύποι Μονάδων",
+      "floorDistribution": "Κατανομή ανά Όροφο",
+      "storages": "Αποθήκες",
+      "total": "Σύνολο"
+    },
+    "statusLabels": {
+      "sold": "Πουλημένες",
+      "available": "Διαθέσιμες",
+      "reserved": "Κρατημένες",
+      "owner": "Οικοπεδούχου",
+      "for-sale": "Προς πώληση",
+      "for-rent": "Προς ενοικίαση",
+      "rented": "Ενοικιασμένες"
+    },
+    "typeLabels": {
+      "apartment": "Διαμερίσματα",
+      "studio": "Στούντιο",
+      "maisonette": "Μεζονέτες",
+      "shop": "Καταστήματα",
+      "office": "Γραφεία",
+      "storage": "Αποθήκες"
+    }
+  },
   "management": {
     "title": "Διαχείριση Μονάδων",
-    "subtitle": "Οπτική διαχείριση και ανάλυση ακινήτων σε κάτοψη."
+    "subtitle": "Κεντρικό ευρετήριο όλων των μονάδων σας"
+  },
+  "header": {
+    "title": "Διαχείριση Μονάδων",
+    "subtitle": "Κεντρικό ευρετήριο όλων των μονάδων σας",
+    "searchPlaceholder": "Αναζήτηση μονάδων...",
+    "newUnit": "Νέα Μονάδα"
   },
   "tooltips": {
     "dashboard": "Εμφάνιση/Απόκρυψη Dashboard",
@@ -29,5 +67,26 @@
     "reserved": "Κρατημένο",
     "sold": "Πωληθέν",
     "owner": "Ιδιοκτήτη"
+  },
+  "toolbar": {
+    "actions": {
+      "new": "Νέα Μονάδα (Ctrl+N)",
+      "edit": "Επεξεργασία Επιλεγμένης (Ctrl+E)",
+      "delete": "Διαγραφή Επιλεγμένης (Delete)"
+    }
+  },
+  "dialog": {
+    "deleteConfirmation": {
+      "title": "Επιβεβαίωση Διαγραφής",
+      "message": "Είστε σίγουροι ότι θέλετε να διαγράψετε {{count}} μονάδα/ες;",
+      "warning": "Αυτή η ενέργεια δεν μπορεί να αναιρεθεί."
+    },
+    "cancel": "Ακύρωση",
+    "delete": "Διαγραφή"
+  },
+  "list": {
+    "ariaLabel": "Λίστα Μονάδων",
+    "noResults": "Δεν βρέθηκαν μονάδες",
+    "noResultsForTerm": "για τον όρο \"{{term}}\""
   }
 }

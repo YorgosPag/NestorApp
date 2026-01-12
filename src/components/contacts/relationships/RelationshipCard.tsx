@@ -34,6 +34,8 @@ import { getRelationshipDisplayProps } from './utils/relationship-types';
 import type { RelationshipCardProps } from './types/relationship-manager.types';
 import { useContactName } from './hooks/useContactName';
 import { HOVER_TEXT_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /**
  * 🃏 RelationshipCard Component
@@ -57,9 +59,9 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
   onDelete
 }) => {
   // ============================================================================
-  // 🏢 ENTERPRISE: Use centralized contact name hook
+  // 🏢 ENTERPRISE: Use centralized contact name hook + i18n
   // ============================================================================
-
+  const { t } = useTranslation('contacts');
   const iconSizes = useIconSizes();
   const { quick, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -151,7 +153,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
                     if (onEdit) onEdit();
                   }}
                   className={`${iconSizes.xl} p-0`}
-                  title="Επεξεργασία σχέσης"
+                  title={t('relationships.card.editTitle')}
                 >
                   <Edit className={iconSizes.sm} />
                 </Button>
@@ -166,7 +168,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
                     if (onDelete) onDelete();
                   }}
                   className={`${iconSizes.xl} p-0 ${HOVER_TEXT_EFFECTS.RED}`}
-                  title="Διαγραφή σχέσης"
+                  title={t('relationships.card.deleteTitle')}
                 >
                   <Trash2 className={iconSizes.sm} />
                 </Button>
@@ -194,7 +196,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
               <div className="flex items-center space-x-2">
                 <Calendar className={`${iconSizes.sm} ${colors.text.muted}`} />
                 <span className="text-sm">
-                  Από: {formatDate(relationship.startDate)}
+                  {t('relationships.card.from')} {formatDate(relationship.startDate)}
                 </span>
               </div>
             )}
@@ -239,7 +241,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
               <div className="flex items-center space-x-2">
                 <Calendar className={`${iconSizes.sm} ${colors.text.error}`} />
                 <span className={`text-sm ${colors.text.error}`}>
-                  Έως: {formatDate(relationship.endDate)}
+                  {t('relationships.card.to')} {formatDate(relationship.endDate)}
                 </span>
               </div>
             )}
@@ -248,7 +250,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             {relationship.notes && (
               <div className="md:col-span-2">
                 <p className={`text-sm ${colors.text.muted} ${colors.bg.secondary} p-3 ${quick.table}`}>
-                  <strong>Σημειώσεις:</strong> {relationship.notes}
+                  <strong>{t('relationships.card.notes')}</strong> {relationship.notes}
                 </p>
               </div>
             )}
@@ -256,15 +258,15 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             {/* Relationship Metadata */}
             <div className={`md:col-span-2 text-xs ${colors.text.light} ${quick.borderT} pt-2`}>
               <span>
-                Δημιουργήθηκε: {
+                {t('relationships.card.createdAt')} {
                   relationship.createdAt
                     ? formatDate(relationship.createdAt.seconds ? relationship.createdAt.seconds * 1000 : relationship.createdAt)
-                    : 'Πρόσφατα'
+                    : t('relationships.card.recently')
                 }
               </span>
               {relationship.updatedAt && relationship.updatedAt !== relationship.createdAt && (
                 <span className="ml-4">
-                  Ενημερώθηκε: {
+                  {t('relationships.card.updatedAt')} {
                     formatDate(relationship.updatedAt.seconds ? relationship.updatedAt.seconds * 1000 : relationship.updatedAt)
                   }
                 </span>

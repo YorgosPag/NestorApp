@@ -46,10 +46,10 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
     if (fieldId.includes('Range')) {
       return filters.ranges?.[fieldId] || { min: undefined, max: undefined };
     }
-    return (filters as any)[fieldId];
+    return (filters as Record<string, unknown>)[fieldId];
   };
 
-  const handleFieldChange = (fieldId: string, value: any) => {
+  const handleFieldChange = (fieldId: string, value: unknown) => {
     if (fieldId.includes('Range')) {
       // Range fields are handled by handleRangeChange
       return;

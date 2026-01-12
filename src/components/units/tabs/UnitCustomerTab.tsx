@@ -46,13 +46,27 @@ import { UnifiedCustomerCard } from '@/components/shared/customer-info';
 import { useOptimizedCustomerInfo } from './hooks/useOptimizedCustomerInfo';
 import type { Property } from '@/types/property-viewer';
 
+/** Additional data passed from parent component */
+interface AdditionalTabData {
+  buildingId?: string;
+  projectId?: string;
+  [key: string]: unknown;
+}
+
+/** Global props from the tabs system */
+interface GlobalTabProps {
+  isEditing?: boolean;
+  canEdit?: boolean;
+  [key: string]: unknown;
+}
+
 export interface UnitCustomerTabProps {
   /** The unit/property object από τη real Firebase database */
   selectedUnit: Property;
   /** Additional data from the parent component */
-  additionalData?: any;
+  additionalData?: AdditionalTabData;
   /** Global props from the tabs system */
-  globalProps?: any;
+  globalProps?: GlobalTabProps;
 }
 
 /**

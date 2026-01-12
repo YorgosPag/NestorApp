@@ -5,6 +5,8 @@ import { Warehouse, CheckCircle, DollarSign, TrendingUp } from 'lucide-react';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import type { Storage } from '@/types/storage/contracts';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface StoragesListHeaderProps {
     storages: Storage[];
@@ -21,6 +23,8 @@ export function StoragesListHeader({
     showToolbar = false,
     onToolbarToggle
 }: StoragesListHeaderProps) {
+    // 🏢 ENTERPRISE: i18n hook for translations
+    const { t } = useTranslation('building');
     const iconSizes = useIconSizes();
     // Calculate statistics
     const availableCount = storages.filter(storage => storage.status === 'available').length;
@@ -34,11 +38,11 @@ export function StoragesListHeader({
             {/* 🏢 ENTERPRISE CENTRALIZED GenericListHeader - ΜΙΑ ΠΗΓΗ ΑΛΗΘΕΙΑΣ */}
             <GenericListHeader
                 icon={Warehouse}
-                entityName="Αποθήκες"
+                entityName={t('storages.list.entityName')}
                 itemCount={storages.length}
                 searchTerm={searchTerm}
                 onSearchChange={onSearchChange}
-                searchPlaceholder="Αναζήτηση αποθηκών..."
+                searchPlaceholder={t('storages.list.searchPlaceholder')}
                 showToolbar={showToolbar}
                 onToolbarToggle={onToolbarToggle}
                 hideSearch={true}  // 🏢 ENTERPRISE: Κρύβουμε το search - χρησιμοποιούμε το CompactToolbar search

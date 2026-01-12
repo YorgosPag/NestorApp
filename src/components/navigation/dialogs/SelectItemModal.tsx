@@ -19,7 +19,8 @@ import { NAVIGATION_ENTITIES, type NavigationEntityType } from '../config';
 interface Item {
   id: string;
   name: string;
-  [key: string]: any;
+  subtitle?: string;
+  [key: string]: unknown;
 }
 
 interface SelectItemModalProps {

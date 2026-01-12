@@ -199,7 +199,7 @@ import {
 
 // Legacy SocialSharingPlatforms.tsx compatibility
 export const SOCIAL_SHARING_PLATFORMS = getSharingPlatforms();
-export const generatePlatformButtonStyles = (platform: any, variant: any) => {
+export const generatePlatformButtonStyles = (platform: string, variant: string) => {
   // Legacy function - would need actual implementation
   console.warn('generatePlatformButtonStyles is deprecated, use unified platform system');
   return '';
@@ -245,7 +245,7 @@ export const MigrationHelpers = {
   /**
    * Convert legacy share options προς unified format
    */
-  convertLegacyShareOptions: (legacyOptions: any) => {
+  convertLegacyShareOptions: (legacyOptions: { source?: string; medium?: string; campaign?: string }) => {
     return {
       utm: {
         source: legacyOptions.source || 'legacy',

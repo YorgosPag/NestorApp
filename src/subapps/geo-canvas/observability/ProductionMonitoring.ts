@@ -14,6 +14,515 @@ import { generateTraceId as generateEnterpriseTraceId, generateSpanId as generat
 // TYPE DEFINITIONS
 // ============================================================================
 
+// ============================================================================
+// 🏢 ENTERPRISE: Configuration Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/**
+ * Email alert channel configuration
+ */
+export interface EmailAlertConfig {
+  recipients: string[];
+  subject: string;
+  from?: string;
+  replyTo?: string;
+  smtpServer?: string;
+  port?: number;
+  secure?: boolean;
+}
+
+/**
+ * Slack alert channel configuration
+ */
+export interface SlackAlertConfig {
+  webhook: string;
+  channel: string;
+  username?: string;
+  iconEmoji?: string;
+  iconUrl?: string;
+}
+
+/**
+ * PagerDuty alert channel configuration
+ */
+export interface PagerDutyAlertConfig {
+  integrationKey: string;
+  severity: 'critical' | 'error' | 'warning' | 'info';
+  routingKey?: string;
+  dedupKey?: string;
+}
+
+/**
+ * Webhook alert channel configuration
+ */
+export interface WebhookAlertConfig {
+  url: string;
+  method?: 'POST' | 'PUT';
+  headers?: Record<string, string>;
+  timeout?: number;
+  retries?: number;
+}
+
+/**
+ * SMS alert channel configuration
+ */
+export interface SmsAlertConfig {
+  phoneNumbers: string[];
+  provider: string;
+  apiKey?: string;
+  from?: string;
+}
+
+/**
+ * Union type for alert channel configurations
+ */
+export type AlertChannelConfig =
+  | EmailAlertConfig
+  | SlackAlertConfig
+  | PagerDutyAlertConfig
+  | WebhookAlertConfig
+  | SmsAlertConfig;
+
+/**
+ * File log source configuration
+ */
+export interface FileLogSourceConfig {
+  path: string;
+  encoding?: string;
+  multiline?: boolean;
+  startPosition?: 'beginning' | 'end';
+}
+
+/**
+ * Syslog source configuration
+ */
+export interface SyslogSourceConfig {
+  protocol: 'udp' | 'tcp';
+  port: number;
+  facility?: number;
+}
+
+/**
+ * Journald source configuration
+ */
+export interface JournaldSourceConfig {
+  units?: string[];
+  identifier?: string;
+  since?: string;
+}
+
+/**
+ * Docker log source configuration
+ */
+export interface DockerLogSourceConfig {
+  container?: string;
+  containerLabels?: Record<string, string>;
+  stream?: 'stdout' | 'stderr' | 'both';
+}
+
+/**
+ * Kubernetes log source configuration
+ */
+export interface KubernetesLogSourceConfig {
+  namespace: string;
+  labelSelector?: string;
+  containerName?: string;
+  podName?: string;
+}
+
+/**
+ * Union type for log source configurations
+ */
+export type LogSourceConfig =
+  | FileLogSourceConfig
+  | SyslogSourceConfig
+  | JournaldSourceConfig
+  | DockerLogSourceConfig
+  | KubernetesLogSourceConfig;
+
+/**
+ * Grok processor configuration
+ */
+export interface GrokProcessorConfig {
+  pattern?: string;
+  customPatterns?: Record<string, string>;
+}
+
+/**
+ * JSON processor configuration
+ */
+export interface JsonProcessorConfig {
+  sourceField?: string;
+  targetField?: string;
+  parseNested?: boolean;
+}
+
+/**
+ * Regex processor configuration
+ */
+export interface RegexProcessorConfig {
+  pattern: string;
+  captureGroups?: string[];
+  ignoreCase?: boolean;
+}
+
+/**
+ * Multiline processor configuration
+ */
+export interface MultilineProcessorConfig {
+  pattern: string;
+  negate?: boolean;
+  match?: 'after' | 'before';
+}
+
+/**
+ * Timestamp processor configuration
+ */
+export interface TimestampProcessorConfig {
+  field: string;
+  formats: string[];
+  timezone?: string;
+}
+
+/**
+ * Union type for log processor configurations
+ */
+export type LogProcessorConfig =
+  | GrokProcessorConfig
+  | JsonProcessorConfig
+  | RegexProcessorConfig
+  | MultilineProcessorConfig
+  | TimestampProcessorConfig;
+
+/**
+ * Elasticsearch destination configuration
+ */
+export interface ElasticsearchDestinationConfig {
+  hosts: string[];
+  index: string;
+  username?: string;
+  password?: string;
+  pipeline?: string;
+}
+
+/**
+ * CloudWatch destination configuration
+ */
+export interface CloudWatchDestinationConfig {
+  region: string;
+  logGroup: string;
+  logStream?: string;
+  accessKeyId?: string;
+  secretAccessKey?: string;
+}
+
+/**
+ * Datadog destination configuration
+ */
+export interface DatadogDestinationConfig {
+  apiKey: string;
+  site?: string;
+  service?: string;
+  source?: string;
+}
+
+/**
+ * Splunk destination configuration
+ */
+export interface SplunkDestinationConfig {
+  host: string;
+  port: number;
+  token: string;
+  index?: string;
+  sourcetype?: string;
+}
+
+/**
+ * File destination configuration
+ */
+export interface FileDestinationConfig {
+  path: string;
+  maxSize?: number;
+  maxFiles?: number;
+  compress?: boolean;
+}
+
+/**
+ * Union type for log destination configurations
+ */
+export type LogDestinationConfig =
+  | ElasticsearchDestinationConfig
+  | CloudWatchDestinationConfig
+  | DatadogDestinationConfig
+  | SplunkDestinationConfig
+  | FileDestinationConfig;
+
+/**
+ * GeoIP enrichment configuration
+ */
+export interface GeoIpEnrichmentConfig {
+  databasePath?: string;
+  fields?: string[];
+}
+
+/**
+ * User-Agent enrichment configuration
+ */
+export interface UserAgentEnrichmentConfig {
+  parseDevice?: boolean;
+  parseOs?: boolean;
+  parseBrowser?: boolean;
+}
+
+/**
+ * Timestamp enrichment configuration
+ */
+export interface TimestampEnrichmentConfig {
+  format?: string;
+  timezone?: string;
+}
+
+/**
+ * Lookup enrichment configuration
+ */
+export interface LookupEnrichmentConfig {
+  file?: string;
+  keyField: string;
+  valueField: string;
+  defaultValue?: string;
+}
+
+/**
+ * Union type for log enrichment configurations
+ */
+export type LogEnrichmentConfig =
+  | GeoIpEnrichmentConfig
+  | UserAgentEnrichmentConfig
+  | TimestampEnrichmentConfig
+  | LookupEnrichmentConfig;
+
+/**
+ * Jaeger exporter configuration
+ */
+export interface JaegerExporterConfig {
+  endpoint: string;
+  username?: string;
+  password?: string;
+}
+
+/**
+ * Zipkin exporter configuration
+ */
+export interface ZipkinExporterConfig {
+  endpoint: string;
+  encoding?: 'json' | 'protobuf';
+}
+
+/**
+ * Datadog tracing exporter configuration
+ */
+export interface DatadogTracingExporterConfig {
+  apiKey: string;
+  site?: string;
+  service?: string;
+}
+
+/**
+ * New Relic tracing exporter configuration
+ */
+export interface NewRelicTracingExporterConfig {
+  apiKey: string;
+  endpoint?: string;
+}
+
+/**
+ * Stdout exporter configuration
+ */
+export interface StdoutExporterConfig {
+  pretty?: boolean;
+  timestamps?: boolean;
+}
+
+/**
+ * Union type for tracing exporter configurations
+ */
+export type TracingExporterConfig =
+  | JaegerExporterConfig
+  | ZipkinExporterConfig
+  | DatadogTracingExporterConfig
+  | NewRelicTracingExporterConfig
+  | StdoutExporterConfig;
+
+/**
+ * Prometheus collector configuration
+ */
+export interface PrometheusCollectorConfig {
+  endpoint: string;
+  scrapeInterval?: number;
+  honorLabels?: boolean;
+}
+
+/**
+ * StatsD collector configuration
+ */
+export interface StatsdCollectorConfig {
+  host: string;
+  port: number;
+  protocol?: 'udp' | 'tcp';
+}
+
+/**
+ * InfluxDB collector configuration
+ */
+export interface InfluxdbCollectorConfig {
+  url: string;
+  database: string;
+  username?: string;
+  password?: string;
+}
+
+/**
+ * CloudWatch metrics collector configuration
+ */
+export interface CloudWatchMetricsCollectorConfig {
+  region: string;
+  namespace: string;
+  dimensions?: Record<string, string>;
+}
+
+/**
+ * Custom collector configuration
+ */
+export interface CustomCollectorConfig {
+  handler: string;
+  options?: Record<string, string | number | boolean>;
+}
+
+/**
+ * Union type for metric collector configurations
+ */
+export type MetricCollectorConfig =
+  | PrometheusCollectorConfig
+  | StatsdCollectorConfig
+  | InfluxdbCollectorConfig
+  | CloudWatchMetricsCollectorConfig
+  | CustomCollectorConfig;
+
+/**
+ * Filter processor configuration
+ */
+export interface FilterProcessorConfig {
+  include?: string[];
+  exclude?: string[];
+  regex?: string;
+}
+
+/**
+ * Transform processor configuration
+ */
+export interface TransformProcessorConfig {
+  rate_interval?: string;
+  aggregation?: 'sum' | 'avg' | 'min' | 'max';
+  groupBy?: string[];
+}
+
+/**
+ * Aggregate processor configuration
+ */
+export interface AggregateProcessorConfig {
+  interval: string;
+  function: 'sum' | 'avg' | 'min' | 'max' | 'count';
+  dimensions?: string[];
+}
+
+/**
+ * Enrich processor configuration
+ */
+export interface EnrichProcessorConfig {
+  labels?: Record<string, string>;
+  metadata?: Record<string, string>;
+}
+
+/**
+ * Union type for metric processor configurations
+ */
+export type MetricProcessorConfig =
+  | FilterProcessorConfig
+  | TransformProcessorConfig
+  | AggregateProcessorConfig
+  | EnrichProcessorConfig;
+
+/**
+ * Prometheus exporter configuration
+ */
+export interface PrometheusExporterConfig {
+  endpoint: string;
+  pushInterval?: number;
+  jobName?: string;
+}
+
+/**
+ * Datadog metrics exporter configuration
+ */
+export interface DatadogMetricsExporterConfig {
+  api_key: string;
+  site?: string;
+  prefix?: string;
+}
+
+/**
+ * New Relic metrics exporter configuration
+ */
+export interface NewRelicMetricsExporterConfig {
+  apiKey: string;
+  endpoint?: string;
+  serviceName?: string;
+}
+
+/**
+ * CloudWatch metrics exporter configuration
+ */
+export interface CloudWatchMetricsExporterConfig {
+  region: string;
+  namespace: string;
+  dimensions?: Record<string, string>;
+}
+
+/**
+ * Union type for metric exporter configurations
+ */
+export type MetricExporterConfig =
+  | PrometheusExporterConfig
+  | DatadogMetricsExporterConfig
+  | NewRelicMetricsExporterConfig
+  | CloudWatchMetricsExporterConfig;
+
+/**
+ * Log/condition filter value types
+ */
+export type FilterValue = string | string[] | number | boolean | { from: number; to: number };
+
+/**
+ * Field default value types
+ */
+export type FieldDefaultValue = string | number | boolean | null;
+
+/**
+ * Field matcher options
+ */
+export interface FieldMatcherOptions {
+  name?: string;
+  regex?: string;
+  prefix?: string;
+  suffix?: string;
+  type?: string;
+}
+
+/**
+ * Field property value
+ */
+export type FieldPropertyValue = string | number | boolean | Record<string, string | number | boolean>;
+
 /**
  * Monitoring dashboard configuration
  */
@@ -48,7 +557,7 @@ export interface AlertChannel {
   id: string;
   type: 'email' | 'slack' | 'pagerduty' | 'webhook' | 'sms';
   name: string;
-  config: any;
+  config: AlertChannelConfig;
   enabled: boolean;
   filters: AlertFilter[];
 }
@@ -163,7 +672,7 @@ export interface LogAggregationConfig {
 export interface LogSource {
   id: string;
   type: 'file' | 'syslog' | 'journald' | 'docker' | 'kubernetes';
-  config: any;
+  config: LogSourceConfig;
   filters: LogFilter[];
   tags: Record<string, string>;
 }
@@ -174,7 +683,7 @@ export interface LogSource {
 export interface LogProcessor {
   id: string;
   type: 'grok' | 'json' | 'regex' | 'multiline' | 'timestamp';
-  config: any;
+  config: LogProcessorConfig;
   conditions: LogCondition[];
 }
 
@@ -184,7 +693,7 @@ export interface LogProcessor {
 export interface LogDestination {
   id: string;
   type: 'elasticsearch' | 'cloudwatch' | 'datadog' | 'splunk' | 'file';
-  config: any;
+  config: LogDestinationConfig;
   filters: LogFilter[];
 }
 
@@ -194,7 +703,7 @@ export interface LogDestination {
 export interface LogFilter {
   field: string;
   operator: 'equals' | 'contains' | 'regex' | 'exists' | 'range';
-  value: any;
+  value: FilterValue;
 }
 
 /**
@@ -203,7 +712,7 @@ export interface LogFilter {
 export interface LogCondition {
   field: string;
   operator: string;
-  value: any;
+  value: FilterValue;
 }
 
 /**
@@ -232,7 +741,7 @@ export interface LogField {
   name: string;
   type: 'string' | 'number' | 'boolean' | 'timestamp' | 'ip' | 'geo';
   required: boolean;
-  defaultValue?: any;
+  defaultValue?: FieldDefaultValue;
 }
 
 /**
@@ -243,7 +752,7 @@ export interface LogEnrichment {
   type: 'geoip' | 'user-agent' | 'timestamp' | 'lookup';
   sourceField: string;
   targetFields: string[];
-  config: any;
+  config: LogEnrichmentConfig;
 }
 
 /**
@@ -314,7 +823,7 @@ export interface TracingConfig {
 export interface TracingExporter {
   id: string;
   type: 'jaeger' | 'zipkin' | 'datadog' | 'newrelic' | 'stdout';
-  config: any;
+  config: TracingExporterConfig;
   enabled: boolean;
 }
 
@@ -365,7 +874,7 @@ export interface MetricsConfig {
 export interface MetricCollector {
   id: string;
   type: 'prometheus' | 'statsd' | 'influxdb' | 'cloudwatch' | 'custom';
-  config: any;
+  config: MetricCollectorConfig;
   interval: number;
   enabled: boolean;
 }
@@ -376,7 +885,7 @@ export interface MetricCollector {
 export interface MetricProcessor {
   id: string;
   type: 'filter' | 'transform' | 'aggregate' | 'enrich';
-  config: any;
+  config: MetricProcessorConfig;
   enabled: boolean;
 }
 
@@ -386,7 +895,7 @@ export interface MetricProcessor {
 export interface MetricExporter {
   id: string;
   type: 'prometheus' | 'datadog' | 'newrelic' | 'cloudwatch';
-  config: any;
+  config: MetricExporterConfig;
   enabled: boolean;
 }
 
@@ -548,7 +1057,7 @@ export interface FieldOverride {
  */
 export interface FieldMatcher {
   id: string;
-  options: any;
+  options: FieldMatcherOptions;
 }
 
 /**
@@ -556,7 +1065,7 @@ export interface FieldMatcher {
  */
 export interface FieldProperty {
   id: string;
-  value: any;
+  value: FieldPropertyValue;
 }
 
 /**
@@ -792,7 +1301,7 @@ export interface LogEntry {
   level: string;
   message: string;
   source: string;
-  fields: Record<string, any>;
+  fields: Record<string, unknown>;
   tags: Record<string, string>;
 }
 
@@ -806,7 +1315,7 @@ export interface TraceData {
   operationName: string;
   startTime: number;
   duration: number;
-  tags: Record<string, any>;
+  tags: Record<string, unknown>;
   logs: TraceLog[];
 }
 
@@ -815,7 +1324,7 @@ export interface TraceData {
  */
 export interface TraceLog {
   timestamp: number;
-  fields: Record<string, any>;
+  fields: Record<string, unknown>;
 }
 
 /**

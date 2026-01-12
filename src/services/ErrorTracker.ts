@@ -23,6 +23,12 @@ import { generateSessionId, generateErrorId } from '@/services/enterprise-id.ser
 export type ErrorSeverity = 'critical' | 'error' | 'warning' | 'info';
 export type ErrorCategory = 'user' | 'system' | 'network' | 'validation' | 'performance' | 'security';
 
+/**
+ * 🏢 ENTERPRISE: Type-safe metadata value types for error context
+ */
+export type MetadataValue = string | number | boolean | null | undefined | MetadataValue[] | { [key: string]: MetadataValue };
+export type MetadataRecord = Record<string, MetadataValue>;
+
 export interface ErrorContext {
   // User context
   userId?: string;
@@ -41,7 +47,7 @@ export interface ErrorContext {
   buildVersion?: string;
 
   // Additional context
-  metadata?: Record<string, any>;
+  metadata?: MetadataRecord;
 }
 
 export interface ErrorReport {
@@ -282,7 +288,7 @@ export class ErrorTracker {
   /**
    * Capture user action errors
    */
-  captureUserError(message: string, action: string, metadata?: any): string {
+  captureUserError(message: string, action: string, metadata?: MetadataRecord): string {
     return this.captureError(
       new Error(message),
       'warning',
@@ -336,7 +342,7 @@ export class ErrorTracker {
   // ERROR HANDLING UTILITIES
   // ============================================================================
 
-  private handleGlobalError(error: any, context: Partial<ErrorContext>): void {
+  private handleGlobalError(error: unknown, context: Partial<ErrorContext>): void {
     if (error instanceof Error) {
       this.captureError(error, 'error', 'system', context);
     } else if (typeof error === 'string') {
@@ -585,7 +591,7 @@ ${context.metadata ? `\n📊 ADDITIONAL METADATA:\n${JSON.stringify(context.meta
   /**
    * ✅ ENTERPRISE: Safe JSON stringify with circular reference handling
    */
-  private safeStringify(obj: any): string {
+  private safeStringify(obj: unknown): string {
     try {
       // Simple types - no need for JSON.stringify
       if (obj === null || obj === undefined) return String(obj);
@@ -595,23 +601,24 @@ ${context.metadata ? `\n📊 ADDITIONAL METADATA:\n${JSON.stringify(context.meta
 
       // Handle circular references with replacer function
       const seen = new WeakSet();
-      return JSON.stringify(obj, (key, value) => {
+      return JSON.stringify(obj, (key, value: unknown) => {
         // Skip common circular reference properties
         if (key === '_map' || key === '_controls' || key === 'map' || key === 'target') {
           return '[Circular Reference]';
         }
 
         if (value !== null && typeof value === 'object') {
-          if (seen.has(value)) {
+          if (seen.has(value as object)) {
             return '[Circular Reference]';
           }
-          seen.add(value);
+          seen.add(value as object);
         }
         return value;
       });
-    } catch (error) {
+    } catch {
       // Fallback: return object type and basic info
-      return `[Object: ${obj?.constructor?.name || 'Unknown'}]`;
+      const objWithConstructor = obj as { constructor?: { name?: string } };
+      return `[Object: ${objWithConstructor?.constructor?.name || 'Unknown'}]`;
     }
   }
 
@@ -699,7 +706,7 @@ ${context.metadata ? `\n📊 ADDITIONAL METADATA:\n${JSON.stringify(context.meta
   // UTILITIES
   // ============================================================================
 
-  private log(message: string, data?: any): void {
+  private log(message: string, data?: unknown): void {
     if (this.config.debug) {
       // Debug logging removed //(`[ErrorTracker] ${message}`, data || '');
     }
@@ -808,7 +815,7 @@ export function useErrorTracker() {
     return errorTracker.captureError(error, 'error', 'user', context);
   };
 
-  const captureUserAction = (action: string, metadata?: any) => {
+  const captureUserAction = (action: string, metadata?: MetadataRecord) => {
     return errorTracker.captureUserError('User action completed', action, metadata);
   };
 
@@ -833,7 +840,7 @@ export function useErrorTracker() {
 /**
  * Wrapper για async functions με automatic error capture
  */
-export function withErrorTracking<T extends any[], R>(
+export function withErrorTracking<T extends unknown[], R>(
   fn: (...args: T) => Promise<R>,
   context?: Partial<ErrorContext>
 ) {
@@ -854,21 +861,27 @@ export function withErrorTracking<T extends any[], R>(
 
 /**
  * Decorator για class methods
+ * 🏢 ENTERPRISE: Type-safe decorator with proper TypeScript types
  */
 export function TrackErrors(context?: Partial<ErrorContext>) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-    const originalMethod = descriptor.value;
+  return function <T extends object>(
+    target: T,
+    propertyKey: string,
+    descriptor: PropertyDescriptor
+  ) {
+    const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>;
 
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (this: T, ...args: unknown[]) {
       try {
         return await originalMethod.apply(this, args);
       } catch (error) {
+        const targetWithConstructor = target as { constructor: { name: string } };
         errorTracker.captureError(
           error instanceof Error ? error : new Error(String(error)),
           'error',
           'system',
           {
-            component: target.constructor.name,
+            component: targetWithConstructor.constructor.name,
             action: propertyKey,
             ...context
           }

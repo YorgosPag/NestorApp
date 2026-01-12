@@ -23,6 +23,8 @@ import type { RelationshipFormProps } from './types/relationship-manager.types';
 import { ContactSearchManager } from './ContactSearchManager';
 import { RelationshipFormFields, validateRelationshipFormData } from './RelationshipFormFields';
 import { designSystem } from '@/lib/design-system';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /**
  * 📝 RelationshipForm Component
@@ -50,6 +52,8 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
   // LOCAL STATE - SIMPLIFIED με κεντρικοποιημένα components
   // ============================================================================
 
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('contacts');
   const iconSizes = useIconSizes();
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
@@ -83,11 +87,11 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
 
     // Validate required fields
     if (!formData.targetContactId) {
-      errors.targetContactId = 'Η επιλογή επαφής είναι υποχρεωτική';
+      errors.targetContactId = t('relationships.form.validation.contactRequired');
     }
 
     if (!formData.relationshipType) {
-      errors.relationshipType = 'Ο τύπος σχέσης είναι υποχρεωτικός';
+      errors.relationshipType = t('relationships.form.validation.relationshipTypeRequired');
     }
 
     // Add form fields validation
@@ -125,7 +129,7 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
           designSystem.presets.text.subtitle
         )}>
           <Plus className={iconSizes.md} />
-          <span>{editingId ? 'Επεξεργασία Σχέσης' : 'Προσθήκη Νέας Σχέσης'}</span>
+          <span>{editingId ? t('relationships.form.editTitle') : t('relationships.form.title')}</span>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -137,13 +141,13 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
               onContactSelect={handleContactSelect}
               excludeContactIds={[currentContactId]}
               allowedContactTypes={['individual', 'company', 'service']}
-              label="Επαφή*"
-              placeholder="Αναζήτηση επαφής..."
+              label={`${t('relationships.form.labels.contact')}*`}
+              placeholder={t('relationships.form.placeholders.searchContact')}
               required
               error={validationErrors.targetContactId}
               disabled={loading}
               searchConfig={{
-                debug: false, // Set to true για debugging
+                debug: false,
                 autoLoadContacts: true,
                 maxResults: 50
               }}
@@ -192,7 +196,7 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
               disabled={loading}
               className={designSystem.presets.button.outline}
             >
-              Ακύρωση
+              {t('relationships.form.buttons.cancel')}
             </Button>
             <Button
               type="button"
@@ -200,7 +204,7 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
               onClick={handleSubmit}
               className={designSystem.presets.button.primary}
             >
-              {loading ? 'Αποθήκευση...' : (editingId ? 'Ενημέρωση' : 'Προσθήκη')}
+              {loading ? t('relationships.form.buttons.save') : (editingId ? t('relationships.form.buttons.update') : t('relationships.form.buttons.add'))}
             </Button>
           </div>
         </form>

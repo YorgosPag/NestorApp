@@ -2,15 +2,50 @@
 
 import communicationsService from './CommunicationsService';
 import messageRouter from './core/messageRouter';
-import { 
-  COMMUNICATION_CHANNELS, 
-  MESSAGE_TYPES, 
-  MESSAGE_DIRECTIONS, 
-  MESSAGE_STATUSES, 
+import {
+  COMMUNICATION_CHANNELS,
+  MESSAGE_TYPES,
+  MESSAGE_DIRECTIONS,
+  MESSAGE_STATUSES,
   MESSAGE_TEMPLATES,
-  isChannelEnabled 
+  isChannelEnabled
 } from '../config/communications.config';
 import type { BaseMessageInput, SendResult, Channel, TemplateSendInput } from '@/types/communications';
+
+// ============================================================================
+// ENTERPRISE TYPES
+// ============================================================================
+
+/** Lead data for communication functions */
+interface LeadData {
+  id: string;
+  email?: string;
+  phone?: string;
+  fullName?: string;
+}
+
+/** Appointment data for confirmation messages */
+interface AppointmentData {
+  id: string;
+  date: string;
+  time: string;
+  location?: string;
+}
+
+/** Campaign data for bulk messaging */
+interface CampaignData extends Partial<BaseMessageInput> {
+  channel: Channel;
+  variables?: Record<string, string>;
+  metadata?: Record<string, unknown>;
+}
+
+/** Channel configuration with optional fields */
+interface ChannelConfig {
+  provider?: string;
+  apiKey?: string;
+  botToken?: string;
+  enabled?: boolean;
+}
 
 
 /**
@@ -38,10 +73,11 @@ export const initializeCommunications = async () => {
 export const getChannelsStatus = async (): Promise<Record<string, { enabled: boolean; configured: boolean; provider?: string }>> => {
     const status: Record<string, { enabled: boolean; configured: boolean; provider?: string }> = {};
     for (const [channelName, cfg] of Object.entries(COMMUNICATION_CHANNELS)) {
+      const config = cfg as ChannelConfig;
       status[channelName] = {
         enabled: isChannelEnabled(channelName as Channel),
-        configured: Boolean((cfg as any).provider || (cfg as any).apiKey || (cfg as any).botToken),
-        provider: (cfg as any).provider,
+        configured: Boolean(config.provider || config.apiKey || config.botToken),
+        provider: config.provider,
       };
     }
     return status;
@@ -65,7 +101,7 @@ export const sendTemplateMessage = (templateData: TemplateSendInput): Promise<Se
 /**
  * Helper functions για CRM integration
  */
-export const sendWelcomeMessage = (leadData: any, channel: Channel = 'email'): Promise<SendResult> => {
+export const sendWelcomeMessage = (leadData: LeadData, channel: Channel = 'email'): Promise<SendResult> => {
   const to = channel === 'email' ? leadData.email : leadData.phone;
   return communicationsService.sendTemplateMessage({
     templateType: 'welcome',
@@ -79,7 +115,7 @@ export const sendWelcomeMessage = (leadData: any, channel: Channel = 'email'): P
 };
 
 export const sendFollowUpMessage = (
-  leadData: any,
+  leadData: LeadData,
   channel: Channel,
   customContent: string | null = null
 ): Promise<SendResult> => {
@@ -99,7 +135,7 @@ export const sendFollowUpMessage = (
 };
 
 
-export const sendAppointmentConfirmation = async (leadData: any, appointmentData: any, channel: Channel = 'email'): Promise<SendResult> => {
+export const sendAppointmentConfirmation = async (leadData: LeadData, appointmentData: AppointmentData, channel: Channel = 'email'): Promise<SendResult> => {
   try {
     const appointmentMessage: TemplateSendInput = {
       templateType: 'appointment',
@@ -130,7 +166,7 @@ export const sendBulkMessages = (messages: BaseMessageInput[]) =>
   messageRouter.sendBulkMessages(messages);
 
 
-export const sendCampaignToLeads = async (leads: any[], campaignData: any) => {
+export const sendCampaignToLeads = async (leads: LeadData[], campaignData: CampaignData) => {
   try {
     const messages: BaseMessageInput[] = leads.map(lead => ({
       ...campaignData,
@@ -183,7 +219,7 @@ export const testChannel = (channelName: Channel) => {
  * Configuration helpers
  */
 export const getChannelTemplates = (channel: string) => {
-  const templates = (MESSAGE_TEMPLATES as any)[channel];
+  const templates = (MESSAGE_TEMPLATES as Record<string, Record<string, string>>)[channel];
   if (!templates) return [];
   return Object.keys(templates).map(key => ({
     value: key,

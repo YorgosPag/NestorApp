@@ -10,6 +10,106 @@ import { GEO_COLORS } from '../../../config/color-config';
 import { colors, spacing, typography, shadows, animation, borders } from '../../../../../styles/design-tokens/core';
 import { semanticColors } from '../../../../../styles/design-tokens';
 
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** Extended background colors with inverse and disabled */
+interface ExtendedBackgroundColors {
+  primary?: string;
+  secondary?: string;
+  tertiary?: string;
+  inverse?: string;
+  overlay?: string;
+  disabled?: string;
+}
+
+/** Extended text colors with disabled field */
+interface ExtendedTextColors {
+  primary?: string;
+  secondary?: string;
+  tertiary?: string;
+  muted?: string;
+  inverse?: string;
+  disabled?: string;
+  link?: string;
+  linkHover?: string;
+}
+
+/** Semantic color variant */
+interface SemanticColorVariant {
+  main?: string;
+  light?: string;
+  dark?: string;
+}
+
+/** Extended semantic colors */
+interface ExtendedSemanticColors {
+  success?: SemanticColorVariant;
+  warning?: SemanticColorVariant;
+  error?: SemanticColorVariant;
+  info?: SemanticColorVariant;
+  status?: Record<string, string>;
+  propertyStatus?: Record<string, string>;
+  buildingStatus?: Record<string, string>;
+}
+
+/** Extended typography with font family variants */
+interface ExtendedTypography {
+  fontFamily?: {
+    body?: string;
+    heading?: string;
+    sans?: string[];
+    mono?: string[];
+    serif?: string[];
+  };
+  fontSize?: Record<string, string>;
+}
+
+/** Extended shadows with all variants */
+interface ExtendedShadows {
+  sm?: string;
+  base?: string;
+  md?: string;
+  lg?: string;
+  xl?: string;
+  '2xl'?: string;
+  inner?: string;
+  focus?: string;
+  card?: string;
+  modal?: string;
+  dropdown?: string;
+}
+
+/** Extended border radius */
+interface ExtendedBorderRadius {
+  sm?: string;
+  base?: string;
+  md?: string;
+  lg?: string;
+  xl?: string;
+  '2xl'?: string;
+  '3xl'?: string;
+  full?: string;
+}
+
+/** Extended animations */
+interface ExtendedAnimations {
+  duration?: {
+    fast?: string;
+    base?: string;
+    normal?: string;
+    slow?: string;
+    slower?: string;
+  };
+  easing?: {
+    easeIn?: string;
+    easeOut?: string;
+    easeInOut?: string;
+    bounce?: string;
+  };
+}
+
 // ✅ ENTERPRISE: Base theme colors with consistent structure
 const themeColors = {
   ...colors,
@@ -322,15 +422,15 @@ const generateCSSVariables = (
     '--color-bg-primary': currentThemeColors.background?.primary || '#ffffff',
     '--color-bg-secondary': currentThemeColors.background?.secondary || '#f8fafc',
     '--color-bg-tertiary': currentThemeColors.background?.tertiary || '#f1f5f9',
-    '--color-bg-inverse': (currentThemeColors.background as any)?.inverse || currentThemeColors.text?.primary || '#1e293b',
+    '--color-bg-inverse': (currentThemeColors.background as ExtendedBackgroundColors)?.inverse || currentThemeColors.text?.primary || '#1e293b',
     '--color-bg-overlay': currentThemeColors.background?.overlay || 'rgba(0, 0, 0, 0.5)',
-    '--color-bg-disabled': (currentThemeColors.background as any)?.disabled || '#f8fafc',
+    '--color-bg-disabled': (currentThemeColors.background as ExtendedBackgroundColors)?.disabled || '#f8fafc',
 
     '--color-text-primary': currentThemeColors.text?.primary || '#1e293b',
     '--color-text-secondary': currentThemeColors.text?.secondary || '#64748b',
     '--color-text-tertiary': currentThemeColors.text?.tertiary || currentThemeColors.text?.muted || '#94a3b8',
     '--color-text-inverse': currentThemeColors.text?.inverse || '#ffffff',
-    '--color-text-disabled': (currentThemeColors.text as any)?.disabled || currentThemeColors.text?.muted || '#94a3b8',
+    '--color-text-disabled': (currentThemeColors.text as ExtendedTextColors)?.disabled || currentThemeColors.text?.muted || '#94a3b8',
     '--color-text-link': currentThemeColors.primary?.[500] || currentThemeColors.blue?.[500] || '#3b82f6',
     '--color-text-link-hover': currentThemeColors.primary?.[600] || currentThemeColors.blue?.[600] || '#2563eb',
 
@@ -343,18 +443,18 @@ const generateCSSVariables = (
     '--color-border-warning': currentThemeColors.orange?.[500] || '#f97316',
 
     // Semantic colors
-    '--color-success': (currentThemeColors.semantic as any)?.success?.main || currentThemeColors.green?.[500] || '#22c55e',
-    '--color-success-light': (currentThemeColors.semantic as any)?.success?.light || currentThemeColors.green?.[300] || '#86efac',
-    '--color-success-dark': (currentThemeColors.semantic as any)?.success?.dark || currentThemeColors.green?.[600] || '#16a34a',
-    '--color-warning': (currentThemeColors.semantic as any)?.warning?.main || currentThemeColors.orange?.[500] || '#f97316',
-    '--color-warning-light': (currentThemeColors.semantic as any)?.warning?.light || currentThemeColors.orange?.[300] || '#fdba74',
-    '--color-warning-dark': (currentThemeColors.semantic as any)?.warning?.dark || currentThemeColors.orange?.[600] || '#ea580c',
-    '--color-error': (currentThemeColors.semantic as any)?.error?.main || currentThemeColors.red?.[500] || '#ef4444',
-    '--color-error-light': (currentThemeColors.semantic as any)?.error?.light || currentThemeColors.red?.[300] || '#fca5a5',
-    '--color-error-dark': (currentThemeColors.semantic as any)?.error?.dark || currentThemeColors.red?.[600] || '#dc2626',
-    '--color-info': (currentThemeColors.semantic as any)?.info?.main || currentThemeColors.blue?.[500] || '#3b82f6',
-    '--color-info-light': (currentThemeColors.semantic as any)?.info?.light || currentThemeColors.blue?.[300] || '#93c5fd',
-    '--color-info-dark': (currentThemeColors.semantic as any)?.info?.dark || currentThemeColors.blue?.[600] || '#2563eb',
+    '--color-success': (currentThemeColors.semantic as ExtendedSemanticColors)?.success?.main || currentThemeColors.green?.[500] || '#22c55e',
+    '--color-success-light': (currentThemeColors.semantic as ExtendedSemanticColors)?.success?.light || currentThemeColors.green?.[300] || '#86efac',
+    '--color-success-dark': (currentThemeColors.semantic as ExtendedSemanticColors)?.success?.dark || currentThemeColors.green?.[600] || '#16a34a',
+    '--color-warning': (currentThemeColors.semantic as ExtendedSemanticColors)?.warning?.main || currentThemeColors.orange?.[500] || '#f97316',
+    '--color-warning-light': (currentThemeColors.semantic as ExtendedSemanticColors)?.warning?.light || currentThemeColors.orange?.[300] || '#fdba74',
+    '--color-warning-dark': (currentThemeColors.semantic as ExtendedSemanticColors)?.warning?.dark || currentThemeColors.orange?.[600] || '#ea580c',
+    '--color-error': (currentThemeColors.semantic as ExtendedSemanticColors)?.error?.main || currentThemeColors.red?.[500] || '#ef4444',
+    '--color-error-light': (currentThemeColors.semantic as ExtendedSemanticColors)?.error?.light || currentThemeColors.red?.[300] || '#fca5a5',
+    '--color-error-dark': (currentThemeColors.semantic as ExtendedSemanticColors)?.error?.dark || currentThemeColors.red?.[600] || '#dc2626',
+    '--color-info': (currentThemeColors.semantic as ExtendedSemanticColors)?.info?.main || currentThemeColors.blue?.[500] || '#3b82f6',
+    '--color-info-light': (currentThemeColors.semantic as ExtendedSemanticColors)?.info?.light || currentThemeColors.blue?.[300] || '#93c5fd',
+    '--color-info-dark': (currentThemeColors.semantic as ExtendedSemanticColors)?.info?.dark || currentThemeColors.blue?.[600] || '#2563eb',
 
     // Severity colors
     '--color-severity-critical-bg': currentThemeColors.severity?.critical?.background || currentThemeColors.red?.[500] || '#ef4444',
@@ -383,9 +483,9 @@ const generateCSSVariables = (
     '--color-severity-info-icon': currentThemeColors.severity?.info?.icon || currentThemeColors.blue?.[500] || '#3b82f6',
 
     // Typography
-    '--font-family-sans': (themeTypography as any).fontFamily?.sans?.join?.(', ') || (themeTypography as any).fontFamily?.body || 'system-ui, sans-serif',
-    '--font-family-mono': (themeTypography as any).fontFamily?.mono?.join?.(', ') || 'Monaco, Menlo, monospace',
-    '--font-family-serif': (themeTypography as any).fontFamily?.serif?.join?.(', ') || 'Georgia, serif',
+    '--font-family-sans': (themeTypography as ExtendedTypography).fontFamily?.sans?.join?.(', ') || (themeTypography as ExtendedTypography).fontFamily?.body || 'system-ui, sans-serif',
+    '--font-family-mono': (themeTypography as ExtendedTypography).fontFamily?.mono?.join?.(', ') || 'Monaco, Menlo, monospace',
+    '--font-family-serif': (themeTypography as ExtendedTypography).fontFamily?.serif?.join?.(', ') || 'Georgia, serif',
 
     // Spacing (adjusted for density)
     '--spacing-1': `${densityConfig.baseUnit * 0.25 * densityConfig.multiplier}px`,
@@ -403,36 +503,36 @@ const generateCSSVariables = (
 
     // Shadows
     '--shadow-sm': themeShadows?.sm || '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-    '--shadow-base': (themeShadows as any)?.base || '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+    '--shadow-base': (themeShadows as ExtendedShadows)?.base || '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
     '--shadow-md': themeShadows?.md || '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-    '--shadow-lg': (themeShadows as any)?.lg || '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-    '--shadow-xl': (themeShadows as any)?.xl || '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-    '--shadow-2xl': (themeShadows as any)?.['2xl'] || '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-    '--shadow-inner': (themeShadows as any)?.inner || 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.06)',
-    '--shadow-focus': (themeShadows as any)?.focus || '0 0 0 3px rgba(59, 130, 246, 0.5)',
-    '--shadow-card': (themeShadows as any)?.card || themeShadows?.md || '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-    '--shadow-modal': (themeShadows as any)?.modal || (themeShadows as any)?.xl || '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-    '--shadow-dropdown': (themeShadows as any)?.dropdown || (themeShadows as any)?.lg || '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+    '--shadow-lg': (themeShadows as ExtendedShadows)?.lg || '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+    '--shadow-xl': (themeShadows as ExtendedShadows)?.xl || '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+    '--shadow-2xl': (themeShadows as ExtendedShadows)?.['2xl'] || '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '--shadow-inner': (themeShadows as ExtendedShadows)?.inner || 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.06)',
+    '--shadow-focus': (themeShadows as ExtendedShadows)?.focus || '0 0 0 3px rgba(59, 130, 246, 0.5)',
+    '--shadow-card': (themeShadows as ExtendedShadows)?.card || themeShadows?.md || '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    '--shadow-modal': (themeShadows as ExtendedShadows)?.modal || (themeShadows as ExtendedShadows)?.xl || '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+    '--shadow-dropdown': (themeShadows as ExtendedShadows)?.dropdown || (themeShadows as ExtendedShadows)?.lg || '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
 
     // Border radius
     '--radius-sm': themeBorderRadius?.sm || '4px',
-    '--radius-base': (themeBorderRadius as any)?.base || '6px',
+    '--radius-base': (themeBorderRadius as ExtendedBorderRadius)?.base || '6px',
     '--radius-md': themeBorderRadius?.md || '8px',
     '--radius-lg': themeBorderRadius?.lg || '12px',
-    '--radius-xl': (themeBorderRadius as any)?.xl || '16px',
-    '--radius-2xl': (themeBorderRadius as any)?.['2xl'] || '20px',
-    '--radius-3xl': (themeBorderRadius as any)?.['3xl'] || '24px',
-    '--radius-full': (themeBorderRadius as any)?.full || '9999px',
+    '--radius-xl': (themeBorderRadius as ExtendedBorderRadius)?.xl || '16px',
+    '--radius-2xl': (themeBorderRadius as ExtendedBorderRadius)?.['2xl'] || '20px',
+    '--radius-3xl': (themeBorderRadius as ExtendedBorderRadius)?.['3xl'] || '24px',
+    '--radius-full': (themeBorderRadius as ExtendedBorderRadius)?.full || '9999px',
 
     // Animation
-    '--duration-fast': (themeAnimations as any)?.duration?.fast || '150ms',
-    '--duration-base': (themeAnimations as any)?.duration?.base || (themeAnimations as any)?.duration?.normal || '300ms',
-    '--duration-slow': (themeAnimations as any)?.duration?.slow || '500ms',
-    '--duration-slower': (themeAnimations as any)?.duration?.slower || '750ms',
-    '--easing-ease-in': (themeAnimations as any)?.easing?.easeIn || 'cubic-bezier(0.4, 0, 1, 1)',
-    '--easing-ease-out': (themeAnimations as any)?.easing?.easeOut || 'cubic-bezier(0, 0, 0.2, 1)',
-    '--easing-ease-in-out': (themeAnimations as any)?.easing?.easeInOut || 'cubic-bezier(0.4, 0, 0.2, 1)',
-    '--easing-bounce': (themeAnimations as any)?.easing?.bounce || 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+    '--duration-fast': (themeAnimations as ExtendedAnimations)?.duration?.fast || '150ms',
+    '--duration-base': (themeAnimations as ExtendedAnimations)?.duration?.base || (themeAnimations as ExtendedAnimations)?.duration?.normal || '300ms',
+    '--duration-slow': (themeAnimations as ExtendedAnimations)?.duration?.slow || '500ms',
+    '--duration-slower': (themeAnimations as ExtendedAnimations)?.duration?.slower || '750ms',
+    '--easing-ease-in': (themeAnimations as ExtendedAnimations)?.easing?.easeIn || 'cubic-bezier(0.4, 0, 1, 1)',
+    '--easing-ease-out': (themeAnimations as ExtendedAnimations)?.easing?.easeOut || 'cubic-bezier(0, 0, 0.2, 1)',
+    '--easing-ease-in-out': (themeAnimations as ExtendedAnimations)?.easing?.easeInOut || 'cubic-bezier(0.4, 0, 0.2, 1)',
+    '--easing-bounce': (themeAnimations as ExtendedAnimations)?.easing?.bounce || 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
 
     // Theme metadata
     '--theme-mode': mode,

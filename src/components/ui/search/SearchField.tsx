@@ -1,8 +1,8 @@
 /**
- * 🏢 ENTERPRISE Unified Search Field Component
- * Αντικαθιστά τα διπλότυπα SearchField implementations
+ * 🏢 ENTERPRISE Unified Search Field Component with i18n
+ * ZERO HARDCODED STRINGS - All labels from centralized translations
  *
- * @version 1.0.0
+ * @version 1.1.0
  * @author Enterprise Team
  * @compliance CLAUDE.md Protocol - Eliminates duplicates, centralized system
  *
@@ -15,6 +15,7 @@
  * - 🏗️ Consolidated logic από διπλότυπα components
  * - 🎨 Exact same markup structure
  * - 📝 Improved TypeScript typing
+ * - 🌐 Full i18n support
  */
 
 'use client';
@@ -26,6 +27,8 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { SearchFieldProps } from './types';
 import { SEARCH_UI, LEGACY_PATTERNS } from './constants';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /**
  * 🏢 Enterprise Search Field με Label
@@ -36,13 +39,19 @@ import { SEARCH_UI, LEGACY_PATTERNS } from './constants';
 export function SearchField({
   value,
   onChange,
-  placeholder = 'Αναζήτηση ακινήτου...', // Default από existing implementation
-  label = 'Αναζήτηση',
+  placeholder,
+  label,
   labelIcon = true,
   disabled = false,
   className,
   id = 'search',
 }: SearchFieldProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('common');
+
+  // Use translations with fallback to props
+  const resolvedPlaceholder = placeholder || t('placeholders.searchProperty');
+  const resolvedLabel = label || t('labels.search');
   // 📝 Handle value changes - support both string and ChangeEvent
   const handleChange = (newValue: string | React.ChangeEvent<HTMLInputElement>) => {
     if (!onChange) return; // 🛡️ Guard check - prevent crash when onChange is undefined
@@ -65,7 +74,7 @@ export function SearchField({
         )}
       >
         {labelIcon && <Search className={SEARCH_UI.ICON.SIZE} />}
-        {label}
+        {resolvedLabel}
       </Label>
 
       {/* 🔍 Search Input Container - exact same structure */}
@@ -76,7 +85,7 @@ export function SearchField({
         <Input
           id={id}
           type="text"
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           value={value}
           onChange={(e) => handleChange(e.target.value)}
           disabled={disabled}
@@ -91,25 +100,23 @@ export function SearchField({
 /**
  * 🏢 Backward Compatibility Exports
  * Για smooth transition από τα existing implementations
+ * Note: Variants now use i18n internally via SearchField
  */
 
 // Property Search variant - exact same interface as existing
 export function PropertySearchField(props: Omit<SearchFieldProps, 'placeholder'>) {
-  return (
-    <SearchField
-      {...props}
-      placeholder="Αναζήτηση ακινήτου..."
-    />
-  );
+  // SearchField will use t('placeholders.searchProperty') by default
+  return <SearchField {...props} />;
 }
 
 // Company Search variant - για το navigation modal
 export function CompanySearchField(props: Omit<SearchFieldProps, 'placeholder' | 'label'>) {
+  const { t } = useTranslation('common');
   return (
     <SearchField
       {...props}
-      placeholder="Αναζήτηση εταιρείας..."
-      label="Αναζήτηση Εταιρείας"
+      placeholder={t('placeholders.searchCompany')}
+      label={t('labels.searchCompany')}
       labelIcon={false} // Company search δεν έχει label icon
     />
   );

@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 
 // Cache entry interface
-interface CacheEntry<T = any> {
+interface CacheEntry<T = unknown> {
   data: T;
   timestamp: number;
   expiresAt: number;
@@ -103,7 +103,7 @@ export function CacheProvider({
     };
   }, [cache]);
 
-  const set = useCallback<CacheContextType['set']>((key: string, data: any, config: CacheConfig = {}) => {
+  const set = useCallback<CacheContextType['set']>(<T,>(key: string, data: T, config: CacheConfig = {}) => {
     const ttl = config.ttl ?? defaultTTL;
     const now = Date.now();
     
@@ -168,9 +168,9 @@ export function CacheProvider({
     };
   }, [cache]);
 
-  const prefetch = useCallback<CacheContextType['prefetch']>(async (
-    key: string, 
-    fetcher: () => Promise<any>, 
+  const prefetch = useCallback<CacheContextType['prefetch']>(async <T,>(
+    key: string,
+    fetcher: () => Promise<T>,
     config: CacheConfig = {}
   ) => {
     try {
@@ -290,10 +290,10 @@ export function useCachedData<T>(
 export function useOptimisticUpdate<T>() {
   const cache = useCache();
   
-  return useCallback(async (
+  return useCallback(async <T,>(
     key: string,
-    optimisticData: any,
-    mutationFn: () => Promise<any>,
+    optimisticData: T,
+    mutationFn: () => Promise<T>,
     config: { rollbackOnError?: boolean } = {}
   ) => {
     const { rollbackOnError = true } = config;

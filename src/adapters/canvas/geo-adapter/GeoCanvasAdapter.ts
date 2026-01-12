@@ -220,7 +220,7 @@ export class GeoCanvasAdapter implements ICanvasProvider {
 
       // Store metadata αν υπάρχουν
       if (config.metadata) {
-        (canvasInstance as any).metadata = config.metadata;
+        (canvasInstance as unknown as { metadata: Record<string, unknown> }).metadata = config.metadata;
       }
 
       // Emit creation event
@@ -422,7 +422,7 @@ export class GeoCanvasAdapter implements ICanvasProvider {
   /**
    * Emit event
    */
-  emit(event: string, data?: any): void {
+  emit(event: string, data?: unknown): void {
     const listeners = this.eventListeners.get(event) || this.eventListeners.get('*') || [];
     listeners.forEach(listener => {
       try {
@@ -529,7 +529,7 @@ export class GeoCanvasAdapter implements ICanvasProvider {
   private applyMiddlewareHooks(
     hookName: keyof CanvasMiddleware,
     canvas?: CanvasInstance | null,
-    data?: any
+    data?: { event?: string; data?: unknown } | CanvasCreationConfig
   ): void {
     const sortedMiddlewares = this.middlewares
       .slice()

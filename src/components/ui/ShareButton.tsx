@@ -1,5 +1,10 @@
 'use client';
 
+/**
+ * 🏢 ENTERPRISE ShareButton with i18n support
+ * ZERO HARDCODED STRINGS - All labels from centralized translations
+ */
+
 import React, { useState } from 'react';
 import { Share2, Copy, Check, MapPin, Euro, Ruler } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,6 +14,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { ShareModal, useShareModal } from '@/components/ui/ShareModal';
 import { type ShareData } from '@/lib/share-utils';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export interface ShareButtonProps {
   /** Data to share */
@@ -39,6 +46,8 @@ export function ShareButton({
   onShareSuccess,
   onShareError,
 }: ShareButtonProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
@@ -62,10 +71,10 @@ export function ShareButton({
   };
 
   const handleShareError = (platform: string, error: string) => {
-    onShareError?.(`Αποτυχία κοινοποίησης μέσω ${platform}: ${error}`);
+    onShareError?.(t('share.shareError', { platform, error }));
   };
 
-  const buttonLabel = label || 'Κοινοποίηση';
+  const buttonLabel = label || t('share.share');
   const icon = justCopied ? Check : Share2;
   
   return (
@@ -89,7 +98,7 @@ export function ShareButton({
         })}
         {showLabel && (
           <span className={cn('transition-all duration-200')}>
-            {justCopied ? 'Αντιγράφηκε!' : buttonLabel}
+            {justCopied ? t('share.copied') : buttonLabel}
           </span>
         )}
       </Button>

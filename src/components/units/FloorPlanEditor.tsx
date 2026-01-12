@@ -6,9 +6,20 @@ import { FloorPlanViewer } from '@/components/property-viewer/FloorPlanViewer';
 import { ViewerTools } from '@/components/property-viewer/ViewerTools';
 import type { Property } from '@/types/property-viewer';
 
-interface FloorPlanEditorProps {
+/** Viewer props that can be passed through */
+interface ViewerPassthroughProps {
+  viewMode?: string;
+  onViewModeChange?: (mode: string) => void;
+  selectedPropertyId?: string | null;
+  onPropertySelect?: (id: string | null) => void;
+  isConnecting?: boolean;
+  onConnectingChange?: (connecting: boolean) => void;
+  setShowHistoryPanel: (show: boolean) => void;
+  [key: string]: unknown;
+}
+
+interface FloorPlanEditorProps extends ViewerPassthroughProps {
   filteredProperties: Property[];
-  [key: string]: any; // Accept all other viewer props
 }
 
 export function FloorPlanEditor({ filteredProperties, ...viewerProps }: FloorPlanEditorProps) {

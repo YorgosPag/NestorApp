@@ -6,12 +6,16 @@ import { CustomerInfoCompact } from '@/components/shared/customer-info';
 import { Users } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ProjectCustomer } from "@/types/project";
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface BuildingCustomersTabProps {
   buildingId: string;
 }
 
 export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const [customers, setCustomers] = useState<ProjectCustomer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +38,7 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
       } catch (e) {
         console.error("Failed to fetch building customers:", e);
         if (mounted) {
-          setError(e instanceof Error ? e.message : 'Άγνωστο σφάλμα');
+          setError(e instanceof Error ? e.message : t('customers.error.unknown'));
         }
       } finally {
         if (mounted) setLoading(false);
@@ -49,11 +53,11 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className={iconSizes.md} />
-            Πελάτες Κτιρίου
+            {t('customers.title')}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8">Φόρτωση πελατών...</div>
+          <div className="text-center py-8">{t('customers.loading')}</div>
         </CardContent>
       </Card>
     );
@@ -65,12 +69,12 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className={iconSizes.md} />
-            Πελάτες Κτιρίου
+            {t('customers.title')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-red-600">
-            Σφάλμα κατά τη φόρτωση: {error}
+            {t('customers.error.loadingPrefix')} {error}
           </div>
         </CardContent>
       </Card>
@@ -83,14 +87,14 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className={iconSizes.md} />
-            Πελάτες Κτιρίου
+            {t('customers.title')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
             <Users className={`${iconSizes.xl3} mx-auto text-muted-foreground mb-4`} />
             <p className="text-sm text-muted-foreground">
-              Δεν υπάρχουν καταχωρημένοι πελάτες για αυτό το κτίριο.
+              {t('customers.empty.message')}
             </p>
           </div>
         </CardContent>
@@ -103,24 +107,24 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className={iconSizes.md} />
-          Πελάτες Κτιρίου
+          {t('customers.title')}
         </CardTitle>
         <CardDescription>
-          Λίστα των πελατών που έχουν αγοράσει μονάδες σε αυτό το κτίριο ({customers.length} πελάτες).
+          {t('customers.description', { count: customers.length })}
         </CardDescription>
       </CardHeader>
       <CardContent>
         {/* Table Headers */}
         <div className="grid grid-cols-[2fr_1fr_1.8fr_auto_auto] gap-3 pb-2 mb-4 border-b border-border text-sm font-medium text-muted-foreground">
-          <div>Ονοματεπώνυμο</div>
-          <div>Τηλέφωνο</div>
-          <div>Email</div>
-          <div className="text-right pr-3">Μονάδες</div>
-          <div className="text-right">Ενέργειες</div>
+          <div>{t('customers.table.name')}</div>
+          <div>{t('customers.table.phone')}</div>
+          <div>{t('customers.table.email')}</div>
+          <div className="text-right pr-3">{t('customers.table.units')}</div>
+          <div className="text-right">{t('customers.table.actions')}</div>
         </div>
 
         {/* Table Content */}
-        <section className="space-y-1" aria-label="Λίστα πελατών κτιρίου">
+        <section className="space-y-1" aria-label={t('customers.ariaLabel')}>
           {customers.map((customer) => (
             <CustomerInfoCompact
               key={customer.contactId}

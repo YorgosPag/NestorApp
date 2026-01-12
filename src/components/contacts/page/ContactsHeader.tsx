@@ -1,5 +1,10 @@
 'use client';
 
+/**
+ * 🏢 ENTERPRISE ContactsHeader with i18n support
+ * ZERO HARDCODED STRINGS - All labels from centralized translations
+ */
+
 import React from 'react';
 import { Users, Filter } from 'lucide-react';
 import { PageHeader } from '@/core/headers';
@@ -9,6 +14,8 @@ import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effect
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 
 interface ContactsHeaderProps {
@@ -35,9 +42,16 @@ export function ContactsHeader({
   setShowFilters,
   contactCount,
 }: ContactsHeaderProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('contacts');
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+
+  // 🏢 ENTERPRISE: Dynamic title with optional count
+  const headerTitle = contactCount !== undefined
+    ? t('header.titleWithCount', { count: contactCount })
+    : t('header.title');
 
   return (
     <PageHeader
@@ -46,8 +60,8 @@ export function ContactsHeader({
       spacing="compact"
       title={{
         icon: Users,
-        title: `Διαχείριση Επαφών${contactCount !== undefined ? ` (${contactCount})` : ''}`,
-        subtitle: "Κεντρικό ευρετήριο όλων των επαφών σας"
+        title: headerTitle,
+        subtitle: t('header.subtitle')
       }}
       // 🏢 ENTERPRISE: Search removed from header - using unified search in AdvancedFiltersPanel
       actions={{
@@ -57,7 +71,7 @@ export function ContactsHeader({
         onViewModeChange: (mode) => setViewMode(mode as ViewMode),
         viewModes: ['list', 'grid'] as CoreViewMode[],
         addButton: {
-          label: 'Νέα Επαφή',
+          label: t('header.newContact'),
           onClick: () => onNewContact?.()
         },
         customActions: setShowFilters ? [

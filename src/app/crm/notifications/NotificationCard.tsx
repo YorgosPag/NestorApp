@@ -4,7 +4,17 @@ import { useNotificationUtils } from './notification-utils';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
-export const NotificationCard = ({ notification }: { notification: any }) => {
+/** Notification data structure for CRM notifications */
+interface NotificationData {
+  id?: string;
+  title: string;
+  type: string;
+  description: string;
+  time: string;
+  read: boolean;
+}
+
+export const NotificationCard = ({ notification }: { notification: NotificationData }) => {
   const { quick } = useBorderTokens();
   const { getTypeStyles, getTypeLabel } = useNotificationUtils();
   const colors = useSemanticColors();

@@ -9,6 +9,8 @@ import { CommonBadge } from '@/core/badges';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { Plus, Trash2, CheckCircle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface StorageFormFeaturesProps {
   features: string[];
@@ -29,18 +31,20 @@ export function StorageFormFeatures({
   addCommonFeature,
   commonFeaturesForType,
 }: StorageFormFeaturesProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <CheckCircle className={iconSizes.md} />
-          Χαρακτηριστικά
+          {t('storage.form.features.title')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <Label className="text-sm font-medium mb-2 block">Συνήθη Χαρακτηριστικά</Label>
+          <Label className="text-sm font-medium mb-2 block">{t('storage.form.features.labels.commonFeatures')}</Label>
           <div className="flex flex-wrap gap-2">
             {commonFeaturesForType.map(feature => (
               <Button
@@ -60,12 +64,12 @@ export function StorageFormFeatures({
         </div>
 
         <div>
-          <Label className="text-sm font-medium mb-2 block">Προσθήκη Χαρακτηριστικού</Label>
+          <Label className="text-sm font-medium mb-2 block">{t('storage.form.features.labels.addFeature')}</Label>
           <div className="flex gap-2">
             <Input
               value={newFeature}
               onChange={(e) => setNewFeature(e.target.value)}
-              placeholder="Νέο χαρακτηριστικό..."
+              placeholder={t('storage.form.features.placeholders.newFeature')}
               onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addFeature())}
             />
             <Button type="button" onClick={addFeature} variant="outline">
@@ -76,7 +80,7 @@ export function StorageFormFeatures({
 
         {features.length > 0 && (
           <div>
-            <Label className="text-sm font-medium mb-2 block">Επιλεγμένα Χαρακτηριστικά</Label>
+            <Label className="text-sm font-medium mb-2 block">{t('storage.form.features.labels.selectedFeatures')}</Label>
             <div className="flex flex-wrap gap-2">
               {features.map((feature, index) => (
                 <CommonBadge

@@ -360,7 +360,7 @@ export default function NewObligationPage() {
     [projects]
   );
 
-  const handleInputChange = useCallback((field: keyof ObligationFormData, value: any) => {
+  const handleInputChange = useCallback((field: keyof ObligationFormData, value: ObligationFormData[keyof ObligationFormData]) => {
     setFormData(prev => ({
       ...prev,
       [field]: value

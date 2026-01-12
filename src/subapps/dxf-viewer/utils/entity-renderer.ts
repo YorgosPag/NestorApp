@@ -13,7 +13,7 @@ import { UI_COLORS } from '../config/color-config';
 
 // ✅ ENTERPRISE: EntityModel now imported from centralized entity system
 // ✅ REMOVED DUPLICATE: No need for local EntityModel interface
-import type { EntityModel } from '../types/entities';
+import type { EntityModel, Entity } from '../types/entities';
 
 
 /**
@@ -45,7 +45,7 @@ export class EntityRenderer {
   }
 
   render(entity: EntityModel, options: { strokeOverride?: string; isSelected?: boolean; showGrips?: boolean } = {}) {
-    this.composite.render(entity as any, options);
+    this.composite.render(entity as Entity, options);
   }
 
   // Alias for backward compatibility with scene-render.ts
@@ -77,7 +77,7 @@ export class EntityRenderer {
 
     }
 
-    this.composite.render(entity as any, options);
+    this.composite.render(entity as Entity, options);
   }
 
   // ✅ Helper function to check if entity is selected and hovered
@@ -87,19 +87,19 @@ export class EntityRenderer {
   }
 
   renderEntities(entities: EntityModel[], options: { strokeOverride?: string; isSelected?: boolean; showGrips?: boolean } = {}) {
-    this.composite.renderEntities(entities as any[], options);
+    this.composite.renderEntities(entities as Entity[], options);
   }
 
   findGripAtPoint(entity: EntityModel, screenPoint: Point2D, tolerance: number = 8): GripInfo | null {
-    return this.composite.findGripAtPoint(entity as any, screenPoint, tolerance);
+    return this.composite.findGripAtPoint(entity as Entity, screenPoint, tolerance);
   }
 
   getEntityGrips(entity: EntityModel): GripInfo[] {
-    return this.composite.getEntityGrips(entity as any);
+    return this.composite.getEntityGrips(entity as Entity);
   }
 
   hitTest(entities: EntityModel[], point: Point2D, tolerance: number): EntityModel | null {
-    return this.composite.hitTest(entities as any[], point, tolerance);
+    return this.composite.hitTest(entities as Entity[], point, tolerance);
   }
 
   clear() {

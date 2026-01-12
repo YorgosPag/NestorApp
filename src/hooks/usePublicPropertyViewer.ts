@@ -7,6 +7,7 @@ import type { FilterState } from '@/types/property-viewer';
 
 // Allowed statuses for public viewing
 const PUBLIC_ALLOWED_STATUSES = ['for-sale', 'for-rent', 'reserved'] as const;
+type PublicAllowedStatus = typeof PUBLIC_ALLOWED_STATUSES[number];
 
 const DEFAULT_PUBLIC_FILTERS: FilterState = {
   searchTerm: '',
@@ -42,8 +43,8 @@ export function usePublicPropertyViewer() {
   const publicProperties = useMemo(() => {
     if (!Array.isArray(allProperties)) return [];
     
-    return allProperties.filter((property: Property) => 
-      PUBLIC_ALLOWED_STATUSES.includes(property.status as any)
+    return allProperties.filter((property: Property) =>
+      PUBLIC_ALLOWED_STATUSES.includes(property.status as PublicAllowedStatus)
     );
   }, [allProperties]);
 

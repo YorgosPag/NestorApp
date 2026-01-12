@@ -21,15 +21,31 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
+import type { LucideIcon } from 'lucide-react';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 type ViewMode = 'view' | 'create' | 'measure' | 'edit';
 type ToolId = 'select' | 'create' | 'measure' | 'move' | 'connect' | 'rectangle' | 'circle' | 'polygon' | 'delete';
 
 interface Tool {
   id: ToolId;
-  icon: any;
+  icon: LucideIcon;
   label: string;
   shortcut?: string;
+}
+
+/** Connection pair between two property IDs */
+interface ConnectionPair {
+  from: string;
+  to: string;
+}
+
+/** Property data for viewer */
+interface ViewerProperty {
+  id: string;
+  name?: string;
+  [key: string]: unknown;
 }
 
 interface ViewerToolsProps {
@@ -39,22 +55,23 @@ interface ViewerToolsProps {
   onPropertySelect?: (id: string | null) => void;
   isConnecting?: boolean;
   onConnectingChange?: (connecting: boolean) => void;
-  connectionPairs?: any[];
-  onConnectionPairsChange?: (pairs: any[]) => void;
-  properties?: any[];
+  connectionPairs?: ConnectionPair[];
+  onConnectionPairsChange?: (pairs: ConnectionPair[]) => void;
+  properties?: ViewerProperty[];
   isReadOnly?: boolean;
   className?: string;
 }
 
-const TOOLS: Tool[] = [
-  { id: 'select', icon: MousePointer, label: 'Επιλογή', shortcut: 'V' },
-  { id: 'create', icon: Plus, label: 'Δημιουργία', shortcut: 'C' },
-  { id: 'measure', icon: Ruler, label: 'Μέτρηση', shortcut: 'M' },
-  { id: 'move', icon: Move, label: 'Μετακίνηση', shortcut: 'G' },
-  { id: 'connect', icon: Link, label: 'Σύνδεση', shortcut: 'L' },
-  { id: 'rectangle', icon: Square, label: 'Ορθογώνιο', shortcut: 'R' },
-  { id: 'circle', icon: Circle, label: 'Κύκλος', shortcut: 'O' },
-  { id: 'polygon', icon: Triangle, label: 'Πολύγωνο', shortcut: 'P' },
+// 🏢 ENTERPRISE: Tool definitions (labels come from i18n)
+const TOOL_DEFINITIONS: Array<{ id: ToolId; icon: LucideIcon; shortcut: string }> = [
+  { id: 'select', icon: MousePointer, shortcut: 'V' },
+  { id: 'create', icon: Plus, shortcut: 'C' },
+  { id: 'measure', icon: Ruler, shortcut: 'M' },
+  { id: 'move', icon: Move, shortcut: 'G' },
+  { id: 'connect', icon: Link, shortcut: 'L' },
+  { id: 'rectangle', icon: Square, shortcut: 'R' },
+  { id: 'circle', icon: Circle, shortcut: 'O' },
+  { id: 'polygon', icon: Triangle, shortcut: 'P' },
 ];
 
 export function ViewerTools({
@@ -70,9 +87,17 @@ export function ViewerTools({
   isReadOnly = false,
   className
 }: ViewerToolsProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+
+  // 🏢 ENTERPRISE: Build tools with translated labels
+  const TOOLS: Tool[] = TOOL_DEFINITIONS.map(def => ({
+    ...def,
+    label: t(`viewer.tools.${def.id}`)
+  }));
 
   // Local state για active tool
   const [activeTool, setActiveTool] = useState<ToolId>('select');
@@ -120,7 +145,7 @@ export function ViewerTools({
   const handleDeleteSelected = () => {
     if (!selectedPropertyId || isReadOnly) return;
     
-    if (confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε το επιλεγμένο ακίνητο;')) {
+    if (confirm(t('viewer.confirm.deleteProperty'))) {
       onPropertySelect?.(null);
       // TODO: Implement actual deletion
       console.log('🗑️ Delete property:', selectedPropertyId);
@@ -192,7 +217,7 @@ export function ViewerTools({
           className={`${iconSizes.xl} p-0`}
           onClick={handleCopySelected}
           disabled={!selectedPropertyId || isReadOnly}
-          title="Αντιγραφή επιλεγμένου"
+          title={t('viewer.actions.copySelected')}
         >
           <Copy className={iconSizes.sm} />
         </Button>
@@ -203,7 +228,7 @@ export function ViewerTools({
           className={cn(`${iconSizes.xl} p-0`, HOVER_TEXT_EFFECTS.RED)}
           onClick={handleDeleteSelected}
           disabled={!selectedPropertyId || isReadOnly}
-          title="Διαγραφή επιλεγμένου"
+          title={t('viewer.actions.deleteSelected')}
         >
           <Trash2 className={iconSizes.sm} />
         </Button>
@@ -213,7 +238,7 @@ export function ViewerTools({
           size="sm"
           className={`${iconSizes.xl} p-0`}
           onClick={handleResetView}
-          title="Επαναφορά"
+          title={t('viewer.actions.reset')}
         >
           <RotateCcw className={iconSizes.sm} />
         </Button>
@@ -221,11 +246,11 @@ export function ViewerTools({
 
       {/* STATUS INFO */}
       <div className={`ml-auto flex items-center gap-4 text-xs ${colors.text.muted}`}>
-        <span>Tool: {TOOLS.find(t => t.id === activeTool)?.label}</span>
-        <span>Mode: {viewMode}</span>
-        {isConnecting && <span className={colors.text.info}>• Connecting</span>}
-        {selectedPropertyId && <span className={colors.text.success}>• Selected: {selectedPropertyId}</span>}
-        {isReadOnly && <span className={colors.text.warning}>• Read-Only</span>}
+        <span>{t('viewer.status.tool')}: {TOOLS.find(tool => tool.id === activeTool)?.label}</span>
+        <span>{t('viewer.status.mode')}: {viewMode}</span>
+        {isConnecting && <span className={colors.text.info}>• {t('viewer.status.connecting')}</span>}
+        {selectedPropertyId && <span className={colors.text.success}>• {t('viewer.status.selected')}: {selectedPropertyId}</span>}
+        {isReadOnly && <span className={colors.text.warning}>• {t('viewer.status.readOnly')}</span>}
       </div>
     </div>
   );

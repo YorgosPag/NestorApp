@@ -47,6 +47,14 @@ export interface UseContactSubmissionReturn {
 // VALIDATION FUNCTIONS
 // ============================================================================
 
+/** Notification service interface */
+interface NotificationService {
+  error: (message: string, options?: { duration?: number }) => void;
+  success: (message: string, options?: { duration?: number }) => void;
+  warning: (message: string, options?: { duration?: number }) => void;
+  info: (message: string, options?: { duration?: number }) => void;
+}
+
 /**
  * Validate individual contact form data με Enterprise Date Validation
  *
@@ -54,7 +62,7 @@ export interface UseContactSubmissionReturn {
  * @param notifications - Notification service για user feedback
  * @returns true if valid, false if invalid
  */
-function validateIndividualContact(formData: ContactFormData, notifications: any): boolean {
+function validateIndividualContact(formData: ContactFormData, notifications: NotificationService): boolean {
   // 🔧 Βασικά πεδία (υπάρχουν ήδη)
   if (!formData.firstName.trim() || !formData.lastName.trim()) {
     notifications.error("Συμπληρώστε όνομα και επώνυμο.");
@@ -116,7 +124,7 @@ function validateIndividualContact(formData: ContactFormData, notifications: any
  * @param notifications - Notification service για user feedback
  * @returns true if valid, false if invalid
  */
-function validateCompanyContact(formData: ContactFormData, notifications: any): boolean {
+function validateCompanyContact(formData: ContactFormData, notifications: NotificationService): boolean {
   // 🔧 FIX: Support both vatNumber and companyVatNumber field names
   const vatNumber = formData.companyVatNumber?.trim() || formData.vatNumber?.trim() || '';
 
@@ -134,7 +142,7 @@ function validateCompanyContact(formData: ContactFormData, notifications: any): 
  * @param notifications - Notification service για user feedback
  * @returns true if valid, false if invalid
  */
-function validateServiceContact(formData: ContactFormData, notifications: any): boolean {
+function validateServiceContact(formData: ContactFormData, notifications: NotificationService): boolean {
   // 🔧 FIX: Support both serviceName (old) and name (service-config) fields
   const serviceName = formData.serviceName?.trim() || formData.name?.trim() || '';
 

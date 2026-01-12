@@ -55,7 +55,7 @@ export interface FilterPanelConfig {
 
 // Generic filter state
 export interface GenericFilterState {
-  [key: string]: any;
+  [key: string]: unknown;
   searchTerm?: string;
   selectedOptions?: string[];
   advancedFeatures?: string[];

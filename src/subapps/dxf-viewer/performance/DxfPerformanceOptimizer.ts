@@ -19,6 +19,42 @@
  */
 
 import { performanceMonitor } from '../../../utils/performanceMonitor';
+import { PERFORMANCE_THRESHOLDS } from '../../../core/performance/components/utils/performance-utils';
+
+// ============================================================================
+// 🏢 ENTERPRISE: TypeScript Types for Browser Memory API
+// ============================================================================
+
+/**
+ * Chrome-specific Performance Memory Info
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/Performance/memory
+ */
+interface PerformanceMemoryInfo {
+  readonly jsHeapSizeLimit: number;
+  readonly totalJSHeapSize: number;
+  readonly usedJSHeapSize: number;
+}
+
+/**
+ * Extended Performance interface with Chrome memory API
+ */
+interface PerformanceWithMemory extends Performance {
+  memory?: PerformanceMemoryInfo;
+}
+
+/**
+ * Type guard to check if performance has memory API
+ */
+function hasMemoryAPI(perf: Performance): perf is PerformanceWithMemory {
+  return 'memory' in perf && perf.memory !== undefined;
+}
+
+/**
+ * Window with optional garbage collection (Chrome DevTools)
+ */
+interface WindowWithGC extends Window {
+  gc?: () => void;
+}
 
 export interface DxfPerformanceConfig {
   /** Canvas rendering optimization */
@@ -158,20 +194,23 @@ export class DxfPerformanceOptimizer {
 
   /**
    * 📊 Get default configuration
+   *
+   * 🏢 ENTERPRISE: Uses centralized PERFORMANCE_THRESHOLDS
+   * @see src/core/performance/components/utils/performance-utils.ts
    */
   private getDefaultConfig(): DxfPerformanceConfig {
     return {
       rendering: {
         enableRequestAnimationFrame: true,
-        maxFPS: 60,
+        maxFPS: PERFORMANCE_THRESHOLDS.fps.excellent, // 60 FPS
         enableCanvasBuffering: true,
         enableViewportCulling: true,
         enableLOD: true,
-        debounceDelay: 16, // ~60fps
+        debounceDelay: Math.round(1000 / PERFORMANCE_THRESHOLDS.fps.excellent), // ~16ms for 60fps
       },
       memory: {
         enableGarbageCollection: true,
-        maxMemoryUsage: 512, // 512MB
+        maxMemoryUsage: PERFORMANCE_THRESHOLDS.memory.maxAllowed, // 512MB
         enableMemoryProfiling: true,
         memoryCheckInterval: 5000, // 5 seconds
       },
@@ -190,10 +229,10 @@ export class DxfPerformanceOptimizer {
       monitoring: {
         enableRealTimeMonitoring: true,
         performanceThresholds: {
-          maxLoadTime: 3000, // 3 seconds
-          maxRenderTime: 16.67, // 60fps
-          maxMemoryUsage: 256, // 256MB
-          minFPS: 30,
+          maxLoadTime: PERFORMANCE_THRESHOLDS.loadTime.good, // 2500ms
+          maxRenderTime: PERFORMANCE_THRESHOLDS.renderTime.good, // 16.67ms
+          maxMemoryUsage: PERFORMANCE_THRESHOLDS.memory.warning, // 384MB (alert threshold)
+          minFPS: PERFORMANCE_THRESHOLDS.fps.minTarget, // 45 FPS
         },
         enableAlerts: true,
       }
@@ -242,20 +281,25 @@ export class DxfPerformanceOptimizer {
 
   /**
    * 💾 Memory Monitoring
+   *
+   * 🏢 ENTERPRISE: Type-safe Chrome Memory API access
+   * Uses type guard instead of `as any`
    */
   private setupMemoryMonitoring(): void {
     if (!this.config.memory.enableMemoryProfiling) return;
 
     setInterval(() => {
-      const memory = (performance as any).memory;
-      if (memory) {
-        const memoryUsage = memory.usedJSHeapSize / (1024 * 1024); // MB
+      // 🏢 ENTERPRISE: Type-safe memory access (Chrome-only API)
+      const perf = performance;
+      if (hasMemoryAPI(perf) && perf.memory) {
+        const memoryUsage = perf.memory.usedJSHeapSize / (1024 * 1024); // MB
 
         if (this.currentMetrics) {
           this.currentMetrics.memoryUsage = Math.round(memoryUsage * 100) / 100;
 
-          // Trigger GC if memory usage is high
-          if (memoryUsage > this.config.memory.maxMemoryUsage * 0.8) {
+          // Trigger GC if memory usage exceeds threshold
+          const gcThreshold = this.config.memory.maxMemoryUsage * PERFORMANCE_THRESHOLDS.memory.gcTriggerPercent;
+          if (memoryUsage > gcThreshold) {
             this.triggerGarbageCollection();
           }
         }
@@ -326,23 +370,25 @@ export class DxfPerformanceOptimizer {
 
   /**
    * 🎯 Calculate performance grade
+   *
+   * 🏢 ENTERPRISE: Uses centralized PERFORMANCE_THRESHOLDS
    */
   private calculatePerformanceGrade(metrics: PerformanceMetrics): 'excellent' | 'good' | 'fair' | 'poor' {
     let score = 100;
 
-    // FPS scoring
-    if (metrics.fps < 30) score -= 30;
-    else if (metrics.fps < 45) score -= 15;
-    else if (metrics.fps < 55) score -= 5;
+    // FPS scoring (using centralized thresholds)
+    if (metrics.fps < PERFORMANCE_THRESHOLDS.fps.warning) score -= 30;      // <30 FPS
+    else if (metrics.fps < PERFORMANCE_THRESHOLDS.fps.good) score -= 15;    // <45 FPS
+    else if (metrics.fps < PERFORMANCE_THRESHOLDS.fps.excellent - 5) score -= 5; // <55 FPS
 
-    // Memory scoring
-    if (metrics.memoryUsage > 512) score -= 25;
-    else if (metrics.memoryUsage > 256) score -= 10;
-    else if (metrics.memoryUsage > 128) score -= 5;
+    // Memory scoring (using centralized thresholds)
+    if (metrics.memoryUsage > PERFORMANCE_THRESHOLDS.memory.poor) score -= 25;      // >512MB
+    else if (metrics.memoryUsage > PERFORMANCE_THRESHOLDS.memory.good) score -= 10; // >256MB
+    else if (metrics.memoryUsage > PERFORMANCE_THRESHOLDS.memory.excellent) score -= 5; // >128MB
 
-    // Render time scoring
-    if (metrics.renderTime > 33) score -= 20; // Slower than 30fps
-    else if (metrics.renderTime > 16.67) score -= 10; // Slower than 60fps
+    // Render time scoring (using centralized thresholds)
+    if (metrics.renderTime > PERFORMANCE_THRESHOLDS.renderTime.warning) score -= 20; // >33ms
+    else if (metrics.renderTime > PERFORMANCE_THRESHOLDS.renderTime.good) score -= 10; // >16.67ms
 
     if (score >= 90) return 'excellent';
     if (score >= 75) return 'good';
@@ -502,6 +548,8 @@ export class DxfPerformanceOptimizer {
 
   /**
    * ✅ Check if optimization should be applied
+   *
+   * 🏢 ENTERPRISE: Uses centralized PERFORMANCE_THRESHOLDS
    */
   private shouldApplyOptimization(action: OptimizationAction): boolean {
     if (!this.currentMetrics) return false;
@@ -510,13 +558,13 @@ export class DxfPerformanceOptimizer {
 
     switch (action.id) {
       case 'gc_trigger':
-        return metrics.memoryUsage > this.config.memory.maxMemoryUsage * 0.7;
+        return metrics.memoryUsage > this.config.memory.maxMemoryUsage * PERFORMANCE_THRESHOLDS.memory.gcTriggerPercent;
 
       case 'canvas_buffer':
-        return metrics.fps < 45 || metrics.renderTime > 20;
+        return metrics.fps < PERFORMANCE_THRESHOLDS.fps.minTarget || metrics.renderTime > 20;
 
       case 'viewport_culling':
-        return metrics.canvasElements > 1000 && metrics.renderTime > 16.67;
+        return metrics.canvasElements > 1000 && metrics.renderTime > PERFORMANCE_THRESHOLDS.renderTime.good;
 
       default:
         return false;
@@ -541,10 +589,16 @@ export class DxfPerformanceOptimizer {
 
   /**
    * 🗑️ Trigger garbage collection
+   *
+   * 🏢 ENTERPRISE: Type-safe GC trigger (Chrome DevTools only)
+   * Note: window.gc() is only available when Chrome runs with --js-flags="--expose-gc"
    */
   private triggerGarbageCollection(): void {
-    if (typeof window !== 'undefined' && (window as any).gc) {
-      (window as any).gc();
+    if (typeof window !== 'undefined') {
+      const windowWithGC = window as WindowWithGC;
+      if (typeof windowWithGC.gc === 'function') {
+        windowWithGC.gc();
+      }
     }
   }
 

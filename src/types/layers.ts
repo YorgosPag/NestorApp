@@ -44,7 +44,8 @@ export interface LayerStyle {
 export interface LayerElement {
   id: string;
   type: 'property' | 'annotation' | 'measurement' | 'line' | 'circle' | 'rectangle';
-  data: any; // Flexible data structure based on type
+  /** Flexible data structure - refined by specialized element interfaces */
+  data: unknown;
   style?: Partial<LayerStyle>;
   isVisible: boolean;
   isLocked: boolean;
@@ -168,8 +169,10 @@ export interface LayerHistoryEntry {
   action: 'create' | 'update' | 'delete' | 'move' | 'copy' | 'paste';
   layerId: string;
   elementId?: string;
-  beforeState?: any;
-  afterState?: any;
+  /** Layer state before the action */
+  beforeState?: unknown;
+  /** Layer state after the action */
+  afterState?: unknown;
   description: string;
 }
 
@@ -400,7 +403,8 @@ export interface LayerEvent {
         'element:created' | 'element:updated' | 'element:deleted' | 'element:selected';
   layerId: string;
   elementId?: string;
-  data?: any;
+  /** Event-specific payload data */
+  data?: unknown;
   timestamp: string;
   userId?: string;
 }

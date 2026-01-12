@@ -28,8 +28,12 @@ import { ProjectViewSwitch } from './ProjectViewSwitch';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Import from canonical location (not DXF Viewer)
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function ProjectsPageContent() {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
@@ -79,31 +83,31 @@ export function ProjectsPageContent() {
   // Transform stats to UnifiedDashboard format
   const dashboardStats: DashboardStat[] = [
     {
-      title: "Σύνολο Έργων",
+      title: t('page.dashboard.totalProjects'),
       value: projectsStats.totalProjects,
       icon: Briefcase,
       color: "blue"
     },
     {
-      title: "Ενεργά Έργα",
+      title: t('page.dashboard.activeProjects'),
       value: projectsStats.activeProjects,
       icon: TrendingUp,
       color: "green"
     },
     {
-      title: "Συνολική Αξία",
+      title: t('page.dashboard.totalValue'),
       value: `€${(projectsStats.totalValue / 1000000).toFixed(1)}M`,
       icon: BarChart3,
       color: "purple"
     },
     {
-      title: "Συνολική Επιφάνεια",
+      title: t('page.dashboard.totalArea'),
       value: `${(projectsStats.totalArea / 1000).toFixed(1)}K m²`,
       icon: NAVIGATION_ENTITIES.area.icon,
       color: "orange"
     },
     {
-      title: "Μέση Πρόοδος",
+      title: t('page.dashboard.averageProgress'),
       value: `${projectsStats.averageProgress}%`,
       icon: Calendar,
       color: "cyan"
@@ -113,6 +117,8 @@ export function ProjectsPageContent() {
   // 🔥 NEW: Handle dashboard card clicks για filtering
   const handleCardClick = (stat: DashboardStat, index: number) => {
     const cardTitle = stat.title;
+    const totalProjectsTitle = t('page.dashboard.totalProjects');
+    const activeProjectsTitle = t('page.dashboard.activeProjects');
 
     // Toggle filter: αν κλικάρουμε την ίδια κάρτα, αφαιρούμε το φίλτρο
     if (activeCardFilter === cardTitle) {
@@ -124,15 +130,15 @@ export function ProjectsPageContent() {
 
       // Apply filter based on card type
       switch (cardTitle) {
-        case 'Σύνολο Έργων':
+        case totalProjectsTitle:
           // Show all projects - reset filters
           setFilters({ ...filters, status: [] });
           break;
-        case 'Ενεργά Έργα':
+        case activeProjectsTitle:
           // Filter only active projects (in_progress)
           setFilters({ ...filters, status: ['in_progress'] });
           break;
-        // Note: Other cards (Συνολική Αξία, Συνολική Επιφάνεια, Μέση Πρόοδος)
+        // Note: Other cards (Total Value, Total Area, Average Progress)
         // are informational and don't apply specific filters
         default:
           // For other stats, just clear active filter without changing data
@@ -148,10 +154,10 @@ export function ProjectsPageContent() {
   // Εμφάνιση loading state
   if (loading) {
     return (
-      <PageContainer ariaLabel="Φόρτωση Έργων" className="items-center justify-center">
+      <PageContainer ariaLabel={t('page.loading')} className="items-center justify-center">
         <section className="text-center" role="status" aria-live="polite">
           <AnimatedSpinner size="large" className="mx-auto mb-4" />
-          <p>Φόρτωση έργων από βάση δεδομένων...</p>
+          <p>{t('page.loadingMessage')}</p>
         </section>
       </PageContainer>
     );
@@ -160,14 +166,14 @@ export function ProjectsPageContent() {
   // Εμφάνιση error state
   if (error) {
     return (
-      <PageContainer ariaLabel="Σφάλμα Έργων" className="items-center justify-center">
-        <section className="text-center text-red-600" role="alert" aria-label="Σφάλμα Φόρτωσης">
-          <p>Σφάλμα φόρτωσης έργων: {error}</p>
+      <PageContainer ariaLabel={t('page.error.pageLabel')} className="items-center justify-center">
+        <section className="text-center text-red-600" role="alert" aria-label={t('page.error.ariaLabel')}>
+          <p>{t('page.error.title')} {error}</p>
           <button
             onClick={() => window.location.reload()}
             className={`mt-2 px-4 py-2 bg-primary text-primary-foreground rounded ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
           >
-            Δοκιμή ξανά
+            {t('page.error.retry')}
           </button>
         </section>
       </PageContainer>
@@ -176,7 +182,7 @@ export function ProjectsPageContent() {
   
   return (
     <TooltipProvider>
-      <PageContainer ariaLabel="Διαχείριση Έργων">
+      <PageContainer ariaLabel={t('page.pageLabel')}>
         <ProjectsHeader
             viewMode={viewMode}
             setViewMode={setViewMode}
@@ -191,13 +197,13 @@ export function ProjectsPageContent() {
         />
 
         {showDashboard && (
-          <section role="region" aria-label="Στατιστικά Έργων">
+          <section role="region" aria-label={t('page.dashboard.label')}>
             <UnifiedDashboard stats={dashboardStats} columns={5} onCardClick={handleCardClick} />
           </section>
         )}
 
         {/* Advanced Filters Panel - Desktop */}
-        <aside className="hidden md:block" role="complementary" aria-label="Φίλτρα Έργων">
+        <aside className="hidden md:block" role="complementary" aria-label={t('page.filters.desktop')}>
           <AdvancedFiltersPanel
             config={projectFiltersConfig}
             filters={filters}
@@ -207,7 +213,7 @@ export function ProjectsPageContent() {
 
         {/* Advanced Filters Panel - Mobile (conditional) */}
         {showFilters && (
-          <aside className="md:hidden" role="complementary" aria-label="Φίλτρα Έργων Mobile">
+          <aside className="md:hidden" role="complementary" aria-label={t('page.filters.mobile')}>
             <AdvancedFiltersPanel
               config={projectFiltersConfig}
               filters={filters}

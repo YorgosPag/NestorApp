@@ -9,7 +9,7 @@
 import { generateAlertId } from '@/services/enterprise-id.service';
 
 // ============================================================================
-// PERFORMANCE TYPES
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
 // ============================================================================
 
 /**
@@ -22,6 +22,34 @@ interface PerformanceEventTimingEntry extends PerformanceEntry {
   cancelable?: boolean;
   target?: EventTarget | null;
 }
+
+/** Chrome-specific Performance.memory interface */
+interface PerformanceMemory {
+  usedJSHeapSize: number;
+  totalJSHeapSize: number;
+  jsHeapSizeLimit: number;
+}
+
+/** Extended Performance interface with Chrome-specific memory */
+interface PerformanceWithMemory extends Performance {
+  memory?: PerformanceMemory;
+}
+
+/** Performance report summary type */
+interface PerformanceReportSummary {
+  currentMemory: number;
+  currentFPS: number;
+  totalAlerts: number;
+  criticalAlerts: number;
+  slowestComponents: Array<{
+    name: string;
+    avgRenderTime: number;
+  }>;
+}
+
+// ============================================================================
+// PERFORMANCE TYPES
+// ============================================================================
 
 export interface PerformanceMetrics {
   timestamp: number;
@@ -176,7 +204,7 @@ export class PerformanceMonitor {
 
     // Set memory baseline
     // ✅ ENTERPRISE FIX: Use type assertion for Chrome-specific Performance.memory
-    const perfWithMemory = performance as any;
+    const perfWithMemory = performance as PerformanceWithMemory;
     if (perfWithMemory.memory) {
       this.memoryBaseline = perfWithMemory.memory.usedJSHeapSize;
     }
@@ -319,7 +347,8 @@ export class PerformanceMonitor {
   }
 
   private collectRuntimeMetrics(): PerformanceMetrics['runtime'] {
-    const memory = (performance as any).memory;
+    const perfWithMemory = performance as PerformanceWithMemory;
+    const memory = perfWithMemory.memory;
 
     return {
       heapUsed: memory ? Math.round(memory.usedJSHeapSize / 1024 / 1024) : 0,
@@ -400,7 +429,8 @@ export class PerformanceMonitor {
   }
 
   private collectMemoryLeakMetrics(): PerformanceMetrics['memoryLeaks'] {
-    const currentMemory = (performance as any).memory?.usedJSHeapSize || 0;
+    const perfWithMemory = performance as PerformanceWithMemory;
+    const currentMemory = perfWithMemory.memory?.usedJSHeapSize ?? 0;
     const memoryGrowth = currentMemory - this.memoryBaseline;
 
     this.memoryGrowthHistory.push(memoryGrowth);
@@ -473,9 +503,10 @@ export class PerformanceMonitor {
   // ========================================================================
 
   private detectMemoryLeaks(): void {
-    if (!(performance as any).memory) return;
+    const perfWithMemory = performance as PerformanceWithMemory;
+    if (!perfWithMemory.memory) return;
 
-    const currentMemory = (performance as any).memory.usedJSHeapSize;
+    const currentMemory = perfWithMemory.memory.usedJSHeapSize;
     const growthSinceBaseline = currentMemory - this.memoryBaseline;
     const growthMB = growthSinceBaseline / 1024 / 1024;
 
@@ -667,7 +698,7 @@ export class PerformanceMonitor {
   }
 
   public generateReport(): {
-    summary: any;
+    summary: PerformanceReportSummary;
     recommendations: string[];
     criticalIssues: PerformanceAlert[];
   } {

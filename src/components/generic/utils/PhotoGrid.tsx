@@ -12,6 +12,8 @@ import {
   PHOTO_COMBINED_EFFECTS
 } from '../config/photo-config';
 import { HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface PhotoGridProps {
   /** Array of photos to display in grid layout */
@@ -56,7 +58,7 @@ export function PhotoGrid({
   photos,
   maxPlaceholders = 4,
   showPlaceholders = true,
-  placeholderText = "Προσθήκη Φωτογραφίας",
+  placeholderText,
   gridCols = {
     mobile: 2,
     tablet: 3,
@@ -64,8 +66,13 @@ export function PhotoGrid({
   },
   onUploadClick
 }: PhotoGridProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+
+  // Use translation as default if placeholderText not provided
+  const displayPlaceholderText = placeholderText ?? t('photos.addPhoto');
 
   // Calculate number of placeholders to show (enterprise logic)
   const placeholderCount = showPlaceholders
@@ -89,7 +96,7 @@ export function PhotoGrid({
   }`;
 
   return (
-    <section className={gridClasses} role="grid" aria-label="Photo gallery">
+    <section className={gridClasses} role="grid" aria-label={t('photos.galleryLabel')}>
       {/* Photo Items */}
       {photos.map((photo) => (
         <PhotoItem key={photo.id} photo={photo} />
@@ -126,7 +133,7 @@ export function PhotoGrid({
               aria-hidden="true"
             />
             <p className={`text-sm ${PHOTO_TEXT_COLORS.FOREGROUND_MUTED}`}>
-              {placeholderText}
+              {displayPlaceholderText}
             </p>
           </div>
         </button>

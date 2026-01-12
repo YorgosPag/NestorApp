@@ -8,15 +8,33 @@
  */
 
 // ✅ ENTERPRISE FIX: Define GeoJSON types locally to avoid module dependency
+
+/** GeoJSON coordinate types - supports all geometry types */
+type GeoJSONPosition = [number, number] | [number, number, number];
+type GeoJSONCoordinates =
+  | GeoJSONPosition                           // Point
+  | GeoJSONPosition[]                         // LineString, MultiPoint
+  | GeoJSONPosition[][]                       // Polygon, MultiLineString
+  | GeoJSONPosition[][][];                    // MultiPolygon
+
 interface Geometry {
   type: string;
-  coordinates?: any;
+  coordinates?: GeoJSONCoordinates;
 }
 
 interface Feature {
   type: 'Feature';
-  properties: Record<string, any> | null;
+  properties: Record<string, unknown> | null;
   geometry: Geometry | null;
+}
+
+/** Categories for search suggestions */
+interface SuggestionCategories {
+  history: string[];
+  municipalities: string[];
+  regions: string[];
+  postalCodes: string[];
+  contextual: string[];
 }
 
 interface FeatureCollection {
@@ -785,10 +803,10 @@ export class AdministrativeBoundaryService {
         categories: {
           history: [],
           municipalities: basicSuggestions.filter(s =>
-            Object.values(MajorGreekMunicipalities).includes(s as any)
+            (Object.values(MajorGreekMunicipalities) as string[]).includes(s)
           ),
           regions: basicSuggestions.filter(s =>
-            Object.values(MajorGreekRegions).includes(s as any)
+            (Object.values(MajorGreekRegions) as string[]).includes(s)
           ),
           postalCodes: [],
           contextual: []
@@ -1338,7 +1356,7 @@ export class AdministrativeBoundaryService {
   private prioritizeSuggestions(
     suggestions: string[],
     query: string,
-    categories: any
+    categories: SuggestionCategories
   ): string[] {
     return suggestions.sort((a, b) => {
       const queryLower = query.toLowerCase();

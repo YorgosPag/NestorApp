@@ -9,6 +9,24 @@
 import React from 'react';
 
 // ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** Color value type for design tokens */
+export type ColorValue = string | Record<string | number, string>;
+
+/** Component variant styles type */
+export type ComponentVariantStyles = Record<string, unknown>;
+
+/** Design documentation type */
+export interface DesignDocumentation {
+  colors: typeof import('./tokens/design-tokens').colors;
+  typography: typeof import('./tokens/design-tokens').typography;
+  spacing: typeof import('./tokens/design-tokens').spacing;
+  components: string[];
+}
+
+// ============================================================================
 // DESIGN TOKENS
 // ============================================================================
 
@@ -230,15 +248,17 @@ export class GeoAlertDesignSystem {
    */
   public getColor(color: string, shade?: number): string {
     const colorPath = color.split('.');
-    let value: any = this.tokens.colors;
+    let value: ColorValue = this.tokens.colors as ColorValue;
 
     for (const path of colorPath) {
-      value = value[path];
+      if (typeof value === 'object' && value !== null) {
+        value = (value as Record<string, ColorValue>)[path];
+      }
       if (!value) return color; // Return original if not found
     }
 
-    if (shade && typeof value === 'object') {
-      return value[shade] || color;
+    if (shade && typeof value === 'object' && value !== null) {
+      return (value as Record<number, string>)[shade] || color;
     }
 
     return typeof value === 'string' ? value : color;
@@ -298,7 +318,7 @@ export class GeoAlertDesignSystem {
   /**
    * Get component variant styles
    */
-  public getComponentVariant(component: string, variant: string, size?: string): any {
+  public getComponentVariant(component: string, variant: string, size?: string): ComponentVariantStyles {
     // This would return pre-defined component styles
     // Implementation would depend on specific component needs
     return {};
@@ -341,12 +361,7 @@ export class GeoAlertDesignSystem {
   /**
    * Generate design system documentation
    */
-  public generateDocumentation(): {
-    colors: any;
-    typography: any;
-    spacing: any;
-    components: string[];
-  } {
+  public generateDocumentation(): DesignDocumentation {
     return {
       colors: this.tokens.colors,
       typography: this.tokens.typography,

@@ -1,11 +1,16 @@
 'use client';
 
+/**
+ * 🏢 ENTERPRISE: EnterprisePhotoUpload with full i18n support
+ * ZERO HARDCODED STRINGS - All labels from centralized translations
+ */
+
 import React, { useEffect } from 'react';
 import { Camera, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { useEnterpriseFileUpload } from '@/hooks/useEnterpriseFileUpload';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import type { UseEnterpriseFileUploadConfig, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
+import type { UseEnterpriseFileUploadConfig, FileUploadResult, FileUploadProgress } from '@/hooks/useEnterpriseFileUpload';
 import { UI_COLORS } from '@/subapps/dxf-viewer/config/color-config';
 import { PhotoPreview } from './utils/PhotoPreview';
 import { usePhotoUploadLogic } from './utils/usePhotoUploadLogic';
@@ -24,6 +29,8 @@ import {
   PHOTO_COMBINED_EFFECTS,
   PHOTO_BORDERS
 } from '@/components/generic/config/photo-config';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -41,7 +48,7 @@ export interface EnterprisePhotoUploadProps extends Omit<UseEnterpriseFileUpload
   /** Disabled state */
   disabled?: boolean;
   /** Custom upload handler */
-  uploadHandler?: (file: File, onProgress: (progress: any) => void) => Promise<FileUploadResult>;
+  uploadHandler?: (file: File, onProgress: (progress: FileUploadProgress) => void) => Promise<FileUploadResult>;
   /** Custom CSS classes */
   className?: string;
   /** Show upload progress (default: true) */
@@ -51,7 +58,7 @@ export interface EnterprisePhotoUploadProps extends Omit<UseEnterpriseFileUpload
   /** External loading state (για sync με parent state) */
   isLoading?: boolean;
   /** 🔥 RESTORED: Contact data for FileNamingService */
-  contactData?: any;
+  contactData?: Record<string, unknown>;
   /** 🔥 RESTORED: Photo index for FileNamingService */
   photoIndex?: number;
   /** 🔥 RESTORED: Custom filename override */
@@ -101,6 +108,8 @@ export function EnterprisePhotoUpload({
   // HOOKS & STATE
   // ========================================================================
 
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
 
@@ -259,8 +268,10 @@ export function EnterprisePhotoUpload({
           ) : (
             <div className="flex flex-col items-center justify-center">
               <Camera className={`${iconSizes.xl} ${PHOTO_TEXT_COLORS.MUTED} mb-3`} />
-              <span className={`${PHOTO_TYPOGRAPHY.BODY} ${PHOTO_TEXT_COLORS.LIGHT_MUTED} mb-2`}>Προσθήκη {purpose === 'logo' ? 'λογοτύπου' : 'φωτογραφίας'}</span>
-              <span className={`${PHOTO_TYPOGRAPHY.CAPTION} ${PHOTO_TEXT_COLORS.MUTED}`}>Κλικ ή σύρετε αρχείο</span>
+              <span className={`${PHOTO_TYPOGRAPHY.BODY} ${PHOTO_TEXT_COLORS.LIGHT_MUTED} mb-2`}>
+                {purpose === 'logo' ? t('upload.addLogo') : t('upload.addPhoto')}
+              </span>
+              <span className={`${PHOTO_TYPOGRAPHY.CAPTION} ${PHOTO_TEXT_COLORS.MUTED}`}>{t('upload.clickOrDrag')}</span>
             </div>
           )}
 
@@ -305,9 +316,9 @@ export function EnterprisePhotoUpload({
             <div className="text-center">
               <Loader2 className={`${iconSizes.lg} animate-spin ${PHOTO_SEMANTIC_COLORS.LOADING} mx-auto mb-2`} />
               <p className={`${PHOTO_TYPOGRAPHY.LOADING} ${PHOTO_SEMANTIC_COLORS.INFO}`}>
-                {upload.uploadPhase === 'upload' && 'Ανέβασμα...'}
-                {upload.uploadPhase === 'processing' && 'Επεξεργασία...'}
-                {upload.uploadPhase === 'complete' && 'Ολοκληρώθηκε!'}
+                {upload.uploadPhase === 'upload' && t('upload.phases.uploading')}
+                {upload.uploadPhase === 'processing' && t('upload.phases.processing')}
+                {upload.uploadPhase === 'complete' && t('upload.phases.complete')}
               </p>
               {showProgress && (
                 <div className={`${iconSizes.xl8} ${PHOTO_COLORS.PROGRESS_BACKGROUND} rounded-full h-2 mt-2 mx-auto`}>
@@ -341,17 +352,17 @@ export function EnterprisePhotoUpload({
             {hasError ? (
               <>
                 <AlertCircle className={`${iconSizes.xl} ${PHOTO_SEMANTIC_COLORS.ERROR} mx-auto mb-2`} />
-                <p className={`${PHOTO_TYPOGRAPHY.BODY} ${PHOTO_SEMANTIC_COLORS.ERROR} mb-1`}>Σφάλμα επιλογής αρχείου</p>
+                <p className={`${PHOTO_TYPOGRAPHY.BODY} ${PHOTO_SEMANTIC_COLORS.ERROR} mb-1`}>{t('upload.errors.fileSelection')}</p>
                 <p className={`${PHOTO_TYPOGRAPHY.ERROR} ${PHOTO_SEMANTIC_COLORS.ERROR}`}>{hasError}</p>
               </>
             ) : (
               <>
                 <Camera className={`${iconSizes.xl} ${PHOTO_TEXT_COLORS.ICON_LIGHT} mx-auto mb-2`} />
                 <p className={`${PHOTO_TYPOGRAPHY.BODY} ${PHOTO_TEXT_COLORS.ICON_LIGHT} mb-1`}>
-                  Κάντε κλικ ή σύρετε {purpose === 'logo' ? 'λογότυπο' : 'φωτογραφία'} εδώ
+                  {purpose === 'logo' ? t('upload.clickOrDragLogo') : t('upload.clickOrDragPhoto')}
                 </p>
                 <p className={`text-xs ${PHOTO_TEXT_COLORS.ICON_LIGHT}`}>
-                  Υποστηρίζονται JPG, PNG (μέγιστο {maxSize ? `${Math.round(maxSize / 1024 / 1024)}MB` : '5MB'})
+                  {t('upload.supportedFormats', { size: maxSize ? Math.round(maxSize / 1024 / 1024) : 5 })}
                 </p>
               </>
             )}
@@ -366,7 +377,7 @@ export function EnterprisePhotoUpload({
         <div className="text-center">
           <p className={`${PHOTO_TYPOGRAPHY.SUCCESS} ${PHOTO_SEMANTIC_COLORS.SUCCESS} flex items-center justify-center gap-1`}>
             <CheckCircle className={iconSizes.sm} />
-            Το {purpose === 'logo' ? 'λογότυπο' : 'φωτογραφία'} ανέβηκε επιτυχώς!
+            {purpose === 'logo' ? t('upload.success.logoUploaded') : t('upload.success.photoUploaded')}
           </p>
         </div>
       )}
@@ -379,7 +390,7 @@ export function EnterprisePhotoUpload({
             onClick={upload.cancelUpload}
             className={`px-3 py-1 ${PHOTO_COLORS.CANCEL_BUTTON} ${PHOTO_TEXT_COLORS.LABEL} text-xs rounded ${PHOTO_HOVER_EFFECTS.CANCEL_BUTTON}`}
           >
-            Ακύρωση
+            {t('buttons.cancel')}
           </button>
         </div>
       )}

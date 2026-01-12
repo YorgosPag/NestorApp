@@ -153,7 +153,7 @@ export class BadgeFactory {
   /**
    * ✅ ENTERPRISE PROFESSIONAL: Βρίσκει την κατάλληλη badge configuration με dependency injection
    */
-  private static getBadgeConfig(domain: DomainType, status: string, badgeSystem: any): BadgeDefinition | null {
+  private static getBadgeConfig(domain: DomainType, status: string, badgeSystem: { domains: Record<string, Record<string, BadgeDefinition>> }): BadgeDefinition | null {
     const domainConfig = badgeSystem.domains[domain];
     return domainConfig?.[status as keyof typeof domainConfig] || null;
   }

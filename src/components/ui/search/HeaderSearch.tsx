@@ -24,6 +24,8 @@ import { TRANSITION_PRESETS, HOVER_BACKGROUND_EFFECTS } from "@/components/ui/ef
 import { useKeyboardShortcut } from "@/hooks/useKeyboardShortcuts";
 import { SEARCH_UI } from "./constants"; // 🏢 ENTERPRISE search constants
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface HeaderSearchProps {
   placeholder?: string;
@@ -38,12 +40,15 @@ interface HeaderSearchProps {
  * Διατηρεί την ίδια ακριβώς εμφάνιση με το existing HeaderSearchBar
  */
 export function HeaderSearch({
-  placeholder = "Αναζήτηση επαφών... (⌘K)",
+  placeholder,
   onSearch,
   className,
   showShortcut = true,
   shortcutKey = "k"
 }: HeaderSearchProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('common');
+  const defaultPlaceholder = `${t('placeholders.searchContacts')} (⌘K)`;
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const [searchFocused, setSearchFocused] = useState(false);
@@ -102,7 +107,7 @@ export function HeaderSearch({
         <Input
           ref={searchInputRef}
           type="search"
-          placeholder={placeholder}
+          placeholder={placeholder || defaultPlaceholder}
           value={searchValue}
           onChange={handleInputChange}
           onFocus={handleFocus}

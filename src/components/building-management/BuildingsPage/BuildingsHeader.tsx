@@ -1,5 +1,9 @@
-
 'use client';
+
+/**
+ * 🏢 ENTERPRISE BuildingsHeader with i18n support
+ * ZERO HARDCODED STRINGS - All labels from centralized translations
+ */
 
 import React from 'react';
 import { Filter } from 'lucide-react';
@@ -14,10 +18,15 @@ import { PageHeader } from '@/core/headers';
 import { CompactToolbar, buildingsConfig } from '@/components/core/CompactToolbar';
 import type { ViewMode } from '@/core/headers';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+
+// 🏢 ENTERPRISE: Type for Buildings view modes (avoids `as any`)
+type BuildingsViewMode = 'list' | 'grid' | 'byType' | 'byStatus';
 
 interface BuildingsHeaderProps {
-  viewMode: 'list' | 'grid' | 'byType' | 'byStatus';
-  setViewMode: (mode: 'list' | 'grid' | 'byType' | 'byStatus') => void;
+  viewMode: BuildingsViewMode;
+  setViewMode: (mode: BuildingsViewMode) => void;
   showDashboard: boolean;
   setShowDashboard: (show: boolean) => void;
   onNewBuilding?: () => void;
@@ -35,6 +44,8 @@ export function BuildingsHeader({
   showFilters,
   setShowFilters,
 }: BuildingsHeaderProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { quick, radius } = useBorderTokens();
@@ -45,8 +56,8 @@ export function BuildingsHeader({
       spacing="compact"
       title={{
         icon: NAVIGATION_ENTITIES.building.icon,
-        title: "Διαχείριση Κτιρίων",
-        subtitle: "Διαχείριση και παρακολούθηση κτιριακών έργων"
+        title: t('header.title'),
+        subtitle: t('header.subtitle')
       }}
       // 🏢 ENTERPRISE: Breadcrumb για ιεραρχική πλοήγηση
       breadcrumb={<NavigationBreadcrumb />}
@@ -54,10 +65,10 @@ export function BuildingsHeader({
         showDashboard,
         onDashboardToggle: () => setShowDashboard(!showDashboard),
         viewMode: viewMode as ViewMode,
-        onViewModeChange: (mode) => setViewMode(mode as any),
+        onViewModeChange: (mode) => setViewMode(mode as BuildingsViewMode),
         viewModes: ['list', 'grid', 'byType', 'byStatus'] as ViewMode[],
         addButton: {
-          label: 'Νέο Κτίριο',
+          label: t('header.newBuilding'),
           onClick: () => onNewBuilding?.() || console.log('Add building')
         },
         // Mobile-only filter button

@@ -53,7 +53,7 @@ export interface ApiErrorContext {
   entityType?: string;
 
   // Additional metadata
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ApiErrorResponse {
@@ -63,20 +63,20 @@ export interface ApiErrorResponse {
   errorId?: string;
   timestamp: string;
   requestId?: string;
-  details?: any;
-  context?: Record<string, any>;
+  details?: unknown;
+  context?: Record<string, unknown>;
 }
 
-export interface ApiSuccessResponse<T = any> {
+export interface ApiSuccessResponse<T = unknown> {
   success: true;
   data?: T;
   message?: string;
   timestamp: string;
   requestId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
-export type ApiResponse<T = any> = ApiErrorResponse | ApiSuccessResponse<T>;
+export type ApiResponse<T = unknown> = ApiErrorResponse | ApiSuccessResponse<T>;
 
 export interface ErrorMappingRule {
   pattern: string | RegExp;
@@ -261,7 +261,7 @@ export class ApiErrorHandler {
    * 🚨 MAIN ERROR HANDLER - Handle any error και return NextResponse
    */
   async handleError(
-    error: Error | string | any,
+    error: Error | string | unknown,
     request: NextRequest,
     additionalContext: Partial<ApiErrorContext> = {}
   ): Promise<NextResponse<ApiErrorResponse>> {
@@ -356,7 +356,7 @@ export class ApiErrorHandler {
   static success<T>(
     data?: T,
     message?: string,
-    metadata?: Record<string, any>,
+    metadata?: Record<string, unknown>,
     status: number = 200
   ): NextResponse<ApiSuccessResponse<T>> {
     const requestId = ApiErrorHandler.getInstance().generateRequestId();
@@ -382,7 +382,7 @@ export class ApiErrorHandler {
   /**
    * 🔍 ASYNC WRAPPER - Wrap async functions με automatic error handling
    */
-  static withErrorHandling<T extends any[], R>(
+  static withErrorHandling<T extends unknown[], R>(
     handler: (request: NextRequest, ...args: T) => Promise<NextResponse<R>>,
     context?: Partial<ApiErrorContext>
   ) {
@@ -401,11 +401,16 @@ export class ApiErrorHandler {
   // PRIVATE HELPER METHODS
   // ============================================================================
 
-  private extractErrorMessage(error: any): string {
+  private extractErrorMessage(error: unknown): string {
     if (typeof error === 'string') return error;
     if (error instanceof Error) return error.message;
-    if (error?.message) return error.message;
-    if (error?.error) return error.error;
+
+    // Type guard for objects with message property
+    if (error !== null && typeof error === 'object') {
+      const errorObj = error as Record<string, unknown>;
+      if (typeof errorObj.message === 'string') return errorObj.message;
+      if (typeof errorObj.error === 'string') return errorObj.error;
+    }
 
     try {
       return JSON.stringify(error);
@@ -514,7 +519,7 @@ export class ApiErrorHandler {
     return process.env.NODE_ENV === 'development';
   }
 
-  private sanitizeErrorDetails(error: any): any {
+  private sanitizeErrorDetails(error: unknown): Record<string, unknown> | unknown {
     if (error instanceof Error) {
       return {
         name: error.name,
@@ -575,7 +580,7 @@ export class ApiErrorHandler {
 export const apiErrorHandler = ApiErrorHandler.getInstance();
 
 // Shorthand functions
-export const handleApiError = (error: any, request: NextRequest, context?: Partial<ApiErrorContext>) =>
+export const handleApiError = (error: unknown, request: NextRequest, context?: Partial<ApiErrorContext>) =>
   apiErrorHandler.handleError(error, request, context);
 
 export const apiSuccess = ApiErrorHandler.success;
@@ -587,21 +592,27 @@ export const withErrorHandling = ApiErrorHandler.withErrorHandling;
 
 /**
  * Method decorator για automatic error handling
+ * 🏢 ENTERPRISE: Using proper decorator types
  */
 export function HandleApiErrors(context?: Partial<ApiErrorContext>) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-    const originalMethod = descriptor.value;
+  return function <T>(
+    _target: object,
+    propertyKey: string | symbol,
+    descriptor: TypedPropertyDescriptor<T>
+  ): TypedPropertyDescriptor<T> | void {
+    const originalMethod = descriptor.value as ((...args: unknown[]) => Promise<NextResponse<unknown>>) | undefined;
+    if (!originalMethod) return;
 
-    descriptor.value = async function (request: NextRequest, ...args: any[]) {
+    descriptor.value = async function (this: unknown, request: NextRequest, ...args: unknown[]) {
       try {
         return await originalMethod.apply(this, [request, ...args]);
       } catch (error) {
         return await apiErrorHandler.handleError(error, request, {
-          operation: propertyKey,
+          operation: String(propertyKey),
           ...context
         });
       }
-    };
+    } as T;
 
     return descriptor;
   };
@@ -609,18 +620,22 @@ export function HandleApiErrors(context?: Partial<ApiErrorContext>) {
 
 /**
  * Class decorator για API route classes
+ * 🏢 ENTERPRISE: Using proper class decorator types
  */
+type Constructor<T = object> = new (...args: unknown[]) => T;
+
 export function ApiErrorHandling(baseContext?: Partial<ApiErrorContext>) {
-  return function <T extends { new(...args: any[]): {} }>(constructor: T) {
+  return function <T extends Constructor>(constructor: T): T {
     return class extends constructor {
-      constructor(...args: any[]) {
+      constructor(...args: unknown[]) {
         super(...args);
 
         // Auto-wrap όλες τις methods
+        const self = this as Record<string, unknown>;
         Object.getOwnPropertyNames(constructor.prototype).forEach(methodName => {
-          if (methodName !== 'constructor' && typeof this[methodName] === 'function') {
-            const originalMethod = this[methodName];
-            this[methodName] = async function(request: NextRequest, ...methodArgs: any[]) {
+          if (methodName !== 'constructor' && typeof self[methodName] === 'function') {
+            const originalMethod = self[methodName] as (...args: unknown[]) => Promise<unknown>;
+            self[methodName] = async function(request: NextRequest, ...methodArgs: unknown[]) {
               try {
                 return await originalMethod.apply(this, [request, ...methodArgs]);
               } catch (error) {
@@ -633,7 +648,7 @@ export function ApiErrorHandling(baseContext?: Partial<ApiErrorContext>) {
           }
         });
       }
-    };
+    } as T;
   };
 }
 
@@ -641,12 +656,24 @@ export function ApiErrorHandling(baseContext?: Partial<ApiErrorContext>) {
 // TYPE GUARDS & VALIDATION
 // ============================================================================
 
-export function isApiErrorResponse(response: any): response is ApiErrorResponse {
-  return response && response.success === false && typeof response.error === 'string';
+export function isApiErrorResponse(response: unknown): response is ApiErrorResponse {
+  return (
+    response !== null &&
+    typeof response === 'object' &&
+    'success' in response &&
+    response.success === false &&
+    'error' in response &&
+    typeof (response as ApiErrorResponse).error === 'string'
+  );
 }
 
-export function isApiSuccessResponse<T>(response: any): response is ApiSuccessResponse<T> {
-  return response && response.success === true;
+export function isApiSuccessResponse<T>(response: unknown): response is ApiSuccessResponse<T> {
+  return (
+    response !== null &&
+    typeof response === 'object' &&
+    'success' in response &&
+    response.success === true
+  );
 }
 
 export default ApiErrorHandler;

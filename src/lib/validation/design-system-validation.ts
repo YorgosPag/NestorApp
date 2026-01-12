@@ -87,10 +87,20 @@ export interface ValidatedComponentProps {
   style?: Record<string, never>; // Discourage inline styles
 }
 
+// Component props interface for validation
+interface ComponentPropsToValidate {
+  className?: string;
+  style?: Record<string, unknown>;
+  color?: string;
+  backgroundColor?: string;
+  borderColor?: string;
+  [key: string]: unknown;
+}
+
 // Validation helper for component development
-export const validateComponentProps = (props: any, componentName: string): boolean => {
+export const validateComponentProps = (props: ComponentPropsToValidate, componentName: string): boolean => {
   let isValid = true;
-  
+
   // Check for hardcoded colors in className
   if (props.className && typeof props.className === 'string') {
     const classNames = props.className.split(' ');

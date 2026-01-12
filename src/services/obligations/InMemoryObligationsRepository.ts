@@ -5,7 +5,7 @@
  * Όλα τα δεδομένα προέρχονται από production βάση δεδομένων.
  */
 
-import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, limit, QueryConstraint } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { ObligationDocument, ObligationTemplate, ObligationStatus } from '@/types/obligations';
 import { DEFAULT_TEMPLATE_SECTIONS } from '@/types/obligation-services';
@@ -157,8 +157,9 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
         }))
       };
 
-      delete (duplicate as any).id; // Remove ID so Firebase creates a new one
-      return await this.create(duplicate);
+      // 🏢 ENTERPRISE: Type-safe ID removal using destructuring
+      const { id: _removedId, ...duplicateWithoutId } = duplicate;
+      return await this.create(duplicateWithoutId);
     } catch (error) {
       console.error('❌ Error duplicating obligation in Firebase:', error);
       return null;
@@ -213,8 +214,9 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
   async search(query: string, filters?: SearchFilters): Promise<ObligationDocument[]> {
     try {
       // Start with base query
-      let baseQuery = collection(db, COLLECTIONS.OBLIGATIONS);
-      let constraints: any[] = [];
+      const baseQuery = collection(db, COLLECTIONS.OBLIGATIONS);
+      // 🏢 ENTERPRISE: Type-safe query constraints
+      const constraints: QueryConstraint[] = [];
 
       // Add status filter if provided
       if (filters?.status && filters.status !== "all") {

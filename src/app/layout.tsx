@@ -3,26 +3,20 @@ import { Roboto } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { AppSidebar } from "@/components/app-sidebar";
-import { AppHeader } from "@/components/app-header";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { NotificationDrawer } from "@/components/NotificationDrawer.enterprise";
 // 🔧 TEMPORARY: Keep react-hot-toast Toaster until full migration to NotificationProvider
 import { ToasterClient } from "@/components/ToasterClient";
 import { NotificationProvider } from "../providers/NotificationProvider";
 import { SharedPropertiesProvider } from "@/contexts/SharedPropertiesProvider";
-import { FirebaseAuthProvider } from "@/contexts/FirebaseAuthContext";
-import { UserRoleProvider } from "@/contexts/UserRoleContext";
+import { AuthProvider, UserRoleProvider } from "@/auth";
 import { FloorplanProvider } from "@/contexts/FloorplanContext";
 import { cn } from "@/lib/utils";
 import { I18nProvider } from '@/components/providers/I18nProvider';
-import { NavigationProvider } from '@/components/navigation';
-import { PhotoPreviewProvider } from '@/providers/PhotoPreviewProvider';
 // 🏢 ENTERPRISE: Performance Monitor moved to DXF Viewer only (Bentley/Autodesk pattern)
 // import { PerformanceCategory } from '@/core/performance/types/performance.types';
 // import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/ClientOnlyPerformanceDashboard';
 import { GlobalErrorSetup } from '@/components/GlobalErrorSetup';
-import { MainContentBridge } from './components/MainContentBridge';
+import { ConditionalAppShell } from './components/ConditionalAppShell';
 
 const roboto = Roboto({
   subsets: ["latin", "greek"],
@@ -72,27 +66,18 @@ export default function RootLayout({
           storageKey="theme-preference"
         >
           <I18nProvider>
-            <FirebaseAuthProvider>
+            <AuthProvider>
               <UserRoleProvider>
                 <FloorplanProvider>
                 {/* 🏢 ENTERPRISE: Κεντρικοποιημένο Notification System */}
                 <NotificationProvider>
                   <SharedPropertiesProvider>
-                    <NavigationProvider>
-                      <PhotoPreviewProvider>
-                        <SidebarProvider>
-                      <div className="flex h-screen w-full max-w-full overflow-hidden">
-                        <AppSidebar />
-                        <SidebarInset className="flex flex-1 flex-col w-full max-w-full overflow-hidden">
-                          <AppHeader />
-                          <MainContentBridge>
-                              {children}
-                          </MainContentBridge>
-                        </SidebarInset>
-                      </div>
-                        </SidebarProvider>
-                      </PhotoPreviewProvider>
-                    </NavigationProvider>
+                    {/* 🏢 ENTERPRISE: ConditionalAppShell handles layout based on route type
+                        - Auth routes (/login): Standalone layout (no sidebar/header)
+                        - App routes: Full layout (sidebar + header + content) */}
+                    <ConditionalAppShell>
+                      {children}
+                    </ConditionalAppShell>
                   </SharedPropertiesProvider>
 
                 {/* ✅ Notification Drawer - Outside all containers for proper z-index */}
@@ -112,7 +97,7 @@ export default function RootLayout({
                 </NotificationProvider>
                 </FloorplanProvider>
               </UserRoleProvider>
-            </FirebaseAuthProvider>
+            </AuthProvider>
           </I18nProvider>
         </ThemeProvider>
       </body>

@@ -33,16 +33,35 @@ export const PolygonSystemContext = createContext<PolygonSystemContextType | nul
 /**
  * Polygon system actions
  */
+/** Drawing configuration options */
+interface DrawingConfig {
+  fillColor?: string;
+  strokeColor?: string;
+  strokeWidth?: number;
+  [key: string]: unknown;
+}
+
+/** Completed polygon point */
+interface CompletedPolygonPoint {
+  lng: number;
+  lat: number;
+}
+
+/** Map reference interface */
+interface MapRef {
+  getMap?: () => unknown;
+}
+
 type PolygonSystemAction =
   | { type: 'SET_ROLE'; payload: UserRole }
   | { type: 'SET_POLYGONS'; payload: UniversalPolygon[] }
-  | { type: 'START_DRAWING'; payload: { type: PolygonType; config?: any } }
+  | { type: 'START_DRAWING'; payload: { type: PolygonType; config?: DrawingConfig } }
   | { type: 'FINISH_DRAWING'; payload?: UniversalPolygon }
   | { type: 'CANCEL_DRAWING' }
   | { type: 'CLEAR_ALL' }
   | { type: 'SET_POLYGON_COMPLETE'; payload: boolean }
-  | { type: 'SET_COMPLETED_POLYGON'; payload: any[] | null }
-  | { type: 'SET_MAP_REF'; payload: React.RefObject<any> | null }
+  | { type: 'SET_COMPLETED_POLYGON'; payload: CompletedPolygonPoint[] | null }
+  | { type: 'SET_MAP_REF'; payload: React.RefObject<MapRef> | null }
   | { type: 'SET_MAP_LOADED'; payload: boolean }
   | { type: 'SET_COORDINATE_PICKING'; payload: boolean }
   | { type: 'BLOCK_COORDINATE_PICKING'; payload: boolean };
@@ -214,7 +233,7 @@ export function PolygonSystemProvider({
     dispatch({ type: 'SET_ROLE', payload: role });
   }, []);
 
-  const startDrawing = useCallback((type: PolygonType, drawingConfig?: any) => {
+  const startDrawing = useCallback((type: PolygonType, drawingConfig?: DrawingConfig) => {
     // Start drawing with core system
     corePolygonSystem.startDrawing(type, {
       fillColor: drawingConfig?.fillColor || config.visualFeedback.lines.drawing.color + '40',
@@ -265,7 +284,7 @@ export function PolygonSystemProvider({
     showNotification('Πολύγωνο κλείστηκε επιτυχώς!', 'success');
   }, [state.currentRole]);
 
-  const setMapRef = useCallback((ref: React.RefObject<any> | null) => {
+  const setMapRef = useCallback((ref: React.RefObject<MapRef> | null) => {
     dispatch({ type: 'SET_MAP_REF', payload: ref });
   }, []);
 

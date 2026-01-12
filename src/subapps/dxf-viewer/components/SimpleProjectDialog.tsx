@@ -60,6 +60,8 @@ import { getSelectStyles, getSelectPlaceholder, MODAL_SELECT_ITEM_PATTERNS } fro
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 import { CompaniesLoadingState, ProjectsLoadingState, ModalEmptyState, InlineLoading, ModalErrorState } from './modal/ModalLoadingStates';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface SimpleProjectDialogProps {
   isOpen: boolean;
@@ -70,6 +72,9 @@ interface SimpleProjectDialogProps {
 type DialogStep = 'company' | 'project' | 'building' | 'unit';
 
 export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimpleProjectDialogProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('dxf-viewer');
+
   const {
     companies,
     selectedCompany,
@@ -468,11 +473,11 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
       // ✅ ENTERPRISE: If floorplan exists, show controlled AlertDialog for confirmation
       if (hasExisting) {
         const typeLabels = {
-          project: 'Κάτοψη Έργου',
-          parking: 'Κάτοψη Θ.Σ.',
-          building: 'Κάτοψη Κτηρίου',
-          storage: 'Κάτοψη Αποθηκών',
-          unit: 'Κάτοψη Μονάδας'
+          project: t('wizard.floorplanTypes.project'),
+          parking: t('wizard.floorplanTypes.parking'),
+          building: t('wizard.floorplanTypes.building'),
+          storage: t('wizard.floorplanTypes.storage'),
+          unit: t('wizard.floorplanTypes.unit')
         };
 
         // Store pending data and show confirmation dialog
@@ -522,11 +527,11 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
       // If floorplan exists, show confirmation dialog (reuse existing confirmation flow)
       if (hasExisting) {
         const typeLabels = {
-          project: 'Κάτοψη Έργου',
-          parking: 'Κάτοψη Θ.Σ.',
-          building: 'Κάτοψη Κτηρίου',
-          storage: 'Κάτοψη Αποθηκών',
-          unit: 'Κάτοψη Μονάδας'
+          project: t('wizard.floorplanTypes.project'),
+          parking: t('wizard.floorplanTypes.parking'),
+          building: t('wizard.floorplanTypes.building'),
+          storage: t('wizard.floorplanTypes.storage'),
+          unit: t('wizard.floorplanTypes.unit')
         };
 
         // Store pending data with special marker for PDF
@@ -690,11 +695,9 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
             <DialogTitle className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
               <Triangle className={`${getIconSize('title')} ${getModalIconColor('dxf_technical')}`} />
               <section>
-                <h1 className={typography.heading.lg}>Enhanced DXF Import</h1>
+                <h1 className={typography.heading.lg}>{t('wizard.title')}</h1>
                 <p className={`${typography.body.sm}`}>
-                  {currentStep === 'company' ? 'Βήμα 1: Επιλογή Εταιρείας' :
-                   currentStep === 'project' ? 'Βήμα 2: Επιλογή Έργου' :
-                   currentStep === 'building' ? 'Βήμα 3: Επιλογή Κτιρίου' : 'Βήμα 4: Επιλογή Μονάδας'}
+                  {t(`wizard.steps.${currentStep}`)}
                 </p>
               </section>
             </DialogTitle>
@@ -702,7 +705,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
           {/* 🏢 ENTERPRISE: Accessibility - Screen reader description */}
           <DialogDescription className="sr-only">
-            Wizard εισαγωγής DXF αρχείων. Επιλέξτε εταιρεία, έργο, κτίριο ή μονάδα για να εισάγετε το αρχείο.
+            {t('wizard.screenReaderDescription')}
           </DialogDescription>
 
         {/* Content */}
@@ -712,26 +715,26 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           {currentStep === 'company' && (
             <fieldset className={MODAL_SPACING.SECTIONS.betweenSections}>
               <legend className={`block ${typography.label.sm} ${MODAL_SPACING.SECTIONS.betweenItems}`}>
-                Επιλογή Εταιρείας
+                {t('wizard.labels.selectCompany')}
               </legend>
-            
+
             {loading ? (
-              <InlineLoading message="Φόρτωση εταιρειών..." type="card" />
+              <InlineLoading message={t('wizard.loading.companies')} type="card" />
             ) : error ? (
               <ErrorModalContainer title="">
-                <p className={`${typography.body.sm} ${MODAL_SPACING.CONTAINER.paddingSmall}`}>Σφάλμα φόρτωσης: {error}</p>
+                <p className={`${typography.body.sm} ${MODAL_SPACING.CONTAINER.paddingSmall}`}>{t('wizard.loading.error', { error })}</p>
                 <Button
                   onClick={loadCompanies}
                   variant="destructive"
                   size="sm"
                 >
-                  Ξαναδοκιμή
+                  {t('wizard.loading.retry')}
                 </Button>
               </ErrorModalContainer>
             ) : (
               <Select value={selectedCompanyId} onValueChange={handleCompanyChange}>
                 <SelectTrigger className={getSelectStyles().trigger}>
-                  <SelectValue placeholder="-- Επιλέξτε Εταιρεία --" />
+                  <SelectValue placeholder={t('wizard.placeholders.company')} />
                 </SelectTrigger>
                 <SelectContent>
                   {companies?.map(company => (
@@ -751,7 +754,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
             
               {(!companies || companies.length === 0) && !loading && !error && (
                 <ProjectModalContainer title="" className={getModalContainerBorder('default')}>
-                  <p className={`${typography.body.sm}`}>Δεν βρέθηκαν εταιρείες στο σύστημα.</p>
+                  <p className={`${typography.body.sm}`}>{t('wizard.empty.companies')}</p>
                 </ProjectModalContainer>
               )}
             </fieldset>
@@ -761,7 +764,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           {currentStep === 'project' && (
             <div className={MODAL_SPACING.SECTIONS.betweenSections}>
               <label className={`block ${typography.label.sm} ${MODAL_SPACING.SECTIONS.betweenItems}`}>
-                Επιλογή Έργου
+                {t('wizard.labels.selectProject')}
               </label>
 
               {/* Selected Company Info */}
@@ -778,13 +781,13 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               )}
 
               {loading ? (
-                <InlineLoading message="Φόρτωση έργων..." type="card" />
+                <InlineLoading message={t('wizard.loading.projects')} type="card" />
               ) : error ? (
-                <ModalErrorState message={`Σφάλμα φόρτωσης έργων: ${error}`} />
+                <ModalErrorState message={t('wizard.loading.projectsError', { error })} />
               ) : (
                 <Select value={selectedProjectId} onValueChange={handleProjectChange}>
                   <SelectTrigger className={getSelectStyles().trigger}>
-                    <SelectValue placeholder="-- Επιλέξτε Έργο --" />
+                    <SelectValue placeholder={t('wizard.placeholders.project')} />
                   </SelectTrigger>
                   <SelectContent>
                     {projects?.map(project => (
@@ -793,7 +796,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                           <Folder className={`${getIconSize('field')} ${getModalIconColor('info')}`} />
                           <span>{project.name}</span>
                           {project.buildings?.length > 0 && (
-                            <span className={typography.body.sm}>({project.buildings.length} κτίρια)</span>
+                            <span className={typography.body.sm}>({t('wizard.counts.buildings', { count: project.buildings.length })})</span>
                           )}
                         </div>
                       </SelectItem>
@@ -804,7 +807,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
               {(!projects || projects.length === 0) && !loading && !error && selectedCompany && (
                 <ProjectModalContainer title="" className={getModalContainerBorder('default')}>
-                  <p className={`${typography.body.sm}`}>Δεν βρέθηκαν έργα για την επιλεγμένη εταιρεία.</p>
+                  <p className={`${typography.body.sm}`}>{t('wizard.empty.projects')}</p>
                 </ProjectModalContainer>
               )}
             </div>
@@ -814,7 +817,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           {currentStep === 'building' && (
             <div className={MODAL_SPACING.SECTIONS.betweenSections}>
               <label className={`block ${typography.label.sm} ${MODAL_SPACING.SECTIONS.betweenItems}`}>
-                Επιλογή Κτιρίου
+                {t('wizard.labels.selectBuilding')}
               </label>
 
               {/* Selected Company & Project Info */}
@@ -840,7 +843,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                       <Building2 className={`${getIconSize('title')} ${getModalIconColor('success')}`} />
                       <div>
                         <p className={typography.heading.md}>{selectedProject.name}</p>
-                        <p className={`${typography.body.sm}`}>{selectedProject.buildings?.length || 0} κτίρια</p>
+                        <p className={`${typography.body.sm}`}>{t('wizard.counts.buildings', { count: selectedProject.buildings?.length || 0 })}</p>
                       </div>
                     </div>
                   </ProjectModalContainer>
@@ -850,7 +853,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               {buildings.length > 0 ? (
                 <Select value={selectedBuildingId} onValueChange={handleBuildingChange}>
                   <SelectTrigger className={getSelectStyles().trigger}>
-                    <SelectValue placeholder="-- Επιλέξτε Κτίριο --" />
+                    <SelectValue placeholder={t('wizard.placeholders.building')} />
                   </SelectTrigger>
                   <SelectContent>
                     {buildings?.map(building => (
@@ -859,7 +862,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                           <Building2 className={`${getIconSize('field')} ${getModalIconColor('warning')}`} />
                           <span>{building.name}</span>
                           {building.floors && (
-                            <span className={typography.body.sm}>({building.floors.length} όροφοι)</span>
+                            <span className={typography.body.sm}>({t('wizard.counts.floors', { count: building.floors.length })})</span>
                           )}
                         </div>
                       </SelectItem>
@@ -868,7 +871,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                 </Select>
               ) : (
                 <ProjectModalContainer title="" className={getModalContainerBorder('default')}>
-                  <p className={`${typography.body.sm}`}>Δεν βρέθηκαν κτίρια για το επιλεγμένο έργο.</p>
+                  <p className={`${typography.body.sm}`}>{t('wizard.empty.buildings')}</p>
                 </ProjectModalContainer>
               )}
             </div>
@@ -877,22 +880,22 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           {/* Status */}
           <div className={MODAL_FLEX_PATTERNS.COLUMN.center}>
             {currentStep === 'company' && companies.length > 0 && !loading && (
-              <p className={`${typography.body.sm}`}>Βρέθηκαν {companies.length} διαθέσιμες εταιρείες</p>
+              <p className={`${typography.body.sm}`}>{t('wizard.counts.companiesFound', { count: companies.length })}</p>
             )}
             {currentStep === 'project' && projects.length > 0 && !loading && (
-              <p className={`${typography.body.sm}`}>Βρέθηκαν {projects.length} έργα για την επιλεγμένη εταιρεία</p>
+              <p className={`${typography.body.sm}`}>{t('wizard.counts.projectsFound', { count: projects.length })}</p>
             )}
             {currentStep === 'building' && buildings.length > 0 && (
-              <p className={`${typography.body.sm}`}>Βρέθηκαν {buildings.length} κτίρια για το επιλεγμένο έργο</p>
+              <p className={`${typography.body.sm}`}>{t('wizard.counts.buildingsFound', { count: buildings.length })}</p>
             )}
             {currentStep === 'unit' && units.length > 0 && (
-              <p className={`${typography.body.sm}`}>Βρέθηκαν {units.length} μονάδες για το επιλεγμένο κτίριο</p>
+              <p className={`${typography.body.sm}`}>{t('wizard.counts.unitsFound', { count: units.length })}</p>
             )}
           </div>
 
           {/* Floorplan Options - Only shown when project is selected */}
           {currentStep === 'project' && selectedProjectId && (
-            <ProjectModalContainer title="Επιλέξτε Κάτοψη για Φόρτωση" className={`${MODAL_SPACING.SECTIONS.betweenBlocks} ${getModalContainerBorder('default')}`}>
+            <ProjectModalContainer title={t('wizard.floorplanSections.selectForProject')} className={`${MODAL_SPACING.SECTIONS.betweenBlocks} ${getModalContainerBorder('default')}`}>
               <ModalActions alignment="center">
                 <Button
                   onClick={() => handleLoadFloorplan('project')}
@@ -900,7 +903,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   size="default"
                   className={MODAL_DIMENSIONS.BUTTONS.flex}
                 >
-                  Κάτοψη Έργου
+                  {t('wizard.floorplanTypes.project')}
                 </Button>
                 <Button
                   onClick={() => handleLoadFloorplan('parking')}
@@ -908,18 +911,18 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   size="default"
                   className={MODAL_DIMENSIONS.BUTTONS.flex}
                 >
-                  Κάτοψη Θ.Σ.
+                  {t('wizard.floorplanTypes.parking')}
                 </Button>
               </ModalActions>
               <p className={`${typography.body.sm} ${MODAL_FLEX_PATTERNS.COLUMN.center} ${MODAL_SPACING.CONTAINER.paddingSmall}`}>
-                Η κάτοψη θα φορτωθεί στον καμβά και στην αντίστοιχη καρτέλα του έργου
+                {t('wizard.floorplanSections.hintProject')}
               </p>
             </ProjectModalContainer>
           )}
 
           {/* Building Floorplan Options - Only shown when building is selected */}
           {currentStep === 'building' && selectedBuildingId && (
-            <ProjectModalContainer title="Επιλέξτε Κάτοψη Κτιρίου για Φόρτωση" className={`${MODAL_SPACING.SECTIONS.betweenBlocks} ${getModalContainerBorder('default')}`}>
+            <ProjectModalContainer title={t('wizard.floorplanSections.selectForBuilding')} className={`${MODAL_SPACING.SECTIONS.betweenBlocks} ${getModalContainerBorder('default')}`}>
               <ModalActions alignment="center">
                 <Button
                   onClick={() => handleLoadFloorplan('building')}
@@ -927,7 +930,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   size="default"
                   className={MODAL_DIMENSIONS.BUTTONS.flex}
                 >
-                  Κάτοψη Κτιρίου
+                  {t('wizard.floorplanTypes.building')}
                 </Button>
                 <Button
                   onClick={() => handleLoadFloorplan('storage')}
@@ -935,11 +938,11 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   size="default"
                   className={MODAL_DIMENSIONS.BUTTONS.flex}
                 >
-                  Κάτοψη Αποθηκών
+                  {t('wizard.floorplanTypes.storage')}
                 </Button>
               </ModalActions>
               <p className={`${typography.body.sm} ${MODAL_FLEX_PATTERNS.COLUMN.center} ${MODAL_SPACING.CONTAINER.paddingSmall}`}>
-                Η κάτοψη θα φορτωθεί στον καμβά και στη διαχείριση κτιρίων
+                {t('wizard.floorplanSections.hintBuilding')}
               </p>
             </ProjectModalContainer>
           )}
@@ -947,20 +950,20 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           {/* Step 4: Unit Selection - Only shown when in unit step */}
           {currentStep === 'unit' && (
             <div className={MODAL_SPACING.SECTIONS.betweenBlocks}>
-              <h3 className={`${typography.heading.md} ${MODAL_SPACING.SECTIONS.betweenItems}`}>Βήμα 4: Επιλογή Μονάδας</h3>
-              
+              <h3 className={`${typography.heading.md} ${MODAL_SPACING.SECTIONS.betweenItems}`}>{t('wizard.steps.unit')}</h3>
+
               {/* Hierarchy Display */}
               <div className={`${MODAL_SPACING.SPACE.blockMedium} ${MODAL_SPACING.SECTIONS.betweenSections}`}>
                 <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
-                  <span className={`${typography.label.sm}`}>Εταιρεία:</span>
+                  <span className={`${typography.label.sm}`}>{t('wizard.labels.company')}</span>
                   <span className={getModalIconColor('info')}>{companies?.find(c => c.id === selectedCompanyId)?.companyName}</span>
                 </div>
                 <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
-                  <span className={`${typography.label.sm}`}>Έργο:</span>
+                  <span className={`${typography.label.sm}`}>{t('wizard.labels.project')}</span>
                   <span className={getModalIconColor('success')}>{projects?.find(p => p.id === selectedProjectId)?.name}</span>
                 </div>
                 <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
-                  <span className={`${typography.label.sm}`}>Κτίριο:</span>
+                  <span className={`${typography.label.sm}`}>{t('wizard.labels.building')}</span>
                   <span className={getModalIconColor('warning')}>{buildings?.find(b => b.id === selectedBuildingId)?.name}</span>
                 </div>
               </div>
@@ -969,7 +972,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               {units.length > 0 ? (
                 <Select value={selectedUnitId} onValueChange={handleUnitChange}>
                   <SelectTrigger className={getSelectStyles().trigger}>
-                    <SelectValue placeholder="-- Επιλέξτε Μονάδα --" />
+                    <SelectValue placeholder={t('wizard.placeholders.unit')} />
                   </SelectTrigger>
                   <SelectContent>
                     {units?.map(unit => (
@@ -981,7 +984,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                             <span className={typography.body.sm}>({unit.type})</span>
                           )}
                           {unit.floor && (
-                            <span className={typography.body.sm}>- {unit.floor}ος όροφος</span>
+                            <span className={typography.body.sm}>- {t('wizard.counts.floorOrdinal', { floor: unit.floor })}</span>
                           )}
                         </div>
                       </SelectItem>
@@ -990,7 +993,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                 </Select>
               ) : (
                 <ProjectModalContainer title="" className={getModalContainerBorder('default')}>
-                  <p className={`${typography.body.sm}`}>Δεν βρέθηκαν μονάδες για το επιλεγμένο κτίριο.</p>
+                  <p className={`${typography.body.sm}`}>{t('wizard.empty.units')}</p>
                 </ProjectModalContainer>
               )}
             </div>
@@ -998,7 +1001,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
           {/* Unit Floorplan Options - Only shown when unit is selected */}
           {currentStep === 'unit' && selectedUnitId && (
-            <ProjectModalContainer title="Επιλέξτε Κάτοψη Μονάδας για Φόρτωση" className={`${MODAL_SPACING.SECTIONS.betweenBlocks} ${getModalContainerBorder('default')}`}>
+            <ProjectModalContainer title={t('wizard.floorplanSections.selectForUnit')} className={`${MODAL_SPACING.SECTIONS.betweenBlocks} ${getModalContainerBorder('default')}`}>
               <ModalActions alignment="center">
                 <Button
                   onClick={() => handleLoadFloorplan('unit')}
@@ -1006,11 +1009,11 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   size="default"
                   className={MODAL_DIMENSIONS.BUTTONS.flex}
                 >
-                  Κάτοψη Μονάδας
+                  {t('wizard.floorplanTypes.unit')}
                 </Button>
               </ModalActions>
               <p className={`${typography.body.sm} ${MODAL_FLEX_PATTERNS.COLUMN.center} ${MODAL_SPACING.CONTAINER.paddingSmall}`}>
-                Η κάτοψη θα φορτωθεί στον καμβά και στη διαχείριση μονάδων
+                {t('wizard.floorplanSections.hintUnit')}
               </p>
             </ProjectModalContainer>
           )}
@@ -1022,7 +1025,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               size="default"
               onClick={currentStep === 'company' ? handleClose : handleBack}
             >
-              {currentStep === 'company' ? 'Ακύρωση' : '← Προηγούμενο'}
+              {currentStep === 'company' ? t('wizard.navigation.cancel') : t('wizard.navigation.previous')}
             </Button>
 
             {currentStep === 'company' && (
@@ -1032,7 +1035,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                 onClick={handleNext}
                 disabled={!selectedCompanyId}
               >
-                Επόμενο →
+                {t('wizard.navigation.next')}
               </Button>
             )}
 
@@ -1043,7 +1046,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                 onClick={handleNext}
                 disabled={!selectedProjectId}
               >
-                Επόμενο →
+                {t('wizard.navigation.next')}
               </Button>
             )}
 
@@ -1054,7 +1057,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                 onClick={handleNext}
                 disabled={!selectedBuildingId}
               >
-                Επόμενο →
+                {t('wizard.navigation.next')}
               </Button>
             )}
 
@@ -1065,7 +1068,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                 onClick={() => console.log('Ready for unit floorplan selection:', selectedUnitId)}
                 disabled={!selectedUnitId}
               >
-                Έτοιμο
+                {t('wizard.navigation.ready')}
               </Button>
             )}
           </DialogFooter>
@@ -1086,29 +1089,28 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Αντικατάσταση {pendingImportData?.typeLabel}
+              {t('wizard.replace.title', { typeLabel: pendingImportData?.typeLabel })}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className={`${PANEL_LAYOUT.SPACING.GAP_MD} ${PANEL_LAYOUT.TYPOGRAPHY.SM} text-muted-foreground`}>
                 <p>
-                  Υπάρχει ήδη αποθηκευμένη {pendingImportData?.typeLabel} για αυτή την εταιρεία.
+                  {t('wizard.replace.existingWarning', { typeLabel: pendingImportData?.typeLabel })}
                 </p>
                 <p>
-                  Η νέα κάτοψη που θα φορτώσετε ενδέχεται να μην ταιριάζει με τα υπάρχοντα
-                  layers που έχουν σχεδιαστεί πάνω στην προηγούμενη κάτοψη.
+                  {t('wizard.replace.layerWarning')}
                 </p>
                 <p className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>
-                  Θέλετε να συνεχίσετε και να αντικαταστήσετε την υπάρχουσα κάτοψη;
+                  {t('wizard.replace.confirmQuestion')}
                 </p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={handleCancelImport}>
-              Ακύρωση
+              {t('wizard.replace.cancel')}
             </AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmedImport}>
-              Αντικατάσταση
+              {t('wizard.replace.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

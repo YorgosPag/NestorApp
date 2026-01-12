@@ -20,7 +20,7 @@ export function LeadCard({
   onEdit: (lead: Opportunity) => void;
   onView: (id: string) => void;
   onDelete: (id: string, name: string) => void;
-  formatDate: (ts: any) => string;
+  formatDate: (ts: Date | string | number | { seconds: number; nanoseconds: number } | null | undefined) => string;
   getStatusColor: (status: string) => string;
 }) {
   const iconSizes = useIconSizes();

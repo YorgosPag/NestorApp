@@ -18,6 +18,13 @@ import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
 
 type Point = { x:number; y:number };
 
+/** Canvas transform state */
+interface TransformState {
+  scale: number;
+  offsetX: number;
+  offsetY: number;
+}
+
 interface Props {
   scene?: SceneModel | null;
   selectedEntityIds?: string[];
@@ -27,7 +34,7 @@ interface Props {
   showCalibration?: boolean;
   onCalibrationToggle?: (show: boolean) => void;
   onSceneChange?: (scene: SceneModel) => void;
-  onTransformChange?: (transform: any) => void;
+  onTransformChange?: (transform: TransformState) => void;
   isZoomWindowActive?: boolean;
   onZoomWindowModeChange?: (active: boolean) => void;
 }
@@ -62,14 +69,36 @@ const DxfCanvasComponent = forwardRef<DxfCanvasRef, Props>(function DxfCanvas({
   onZoomWindowModeChange,
 }: Props, ref) {
 
-  const rendererRef = useRef<any | null>(null);
+  /** Renderer interface */
+  interface RendererInstance {
+    getCanvas?: () => HTMLCanvasElement | null;
+    setScene: (scene: SceneModel) => void;
+    fitToView: (scene: SceneModel | null) => void;
+    zoomIn: () => void;
+    zoomOut: () => void;
+    getTransform: () => TransformState;
+    findEntityAt: (point: Point, tolerance: number) => { id: string } | null;
+    setSelectedEntityIds?: (ids: string[]) => void;
+    clearCanvas?: () => void;
+    activateZoomWindow: () => void;
+    deactivateZoomWindow: () => void;
+    undo: () => boolean;
+    redo: () => boolean;
+    canUndo: () => boolean;
+    canRedo: () => boolean;
+    getCoordinateManager?: () => {
+      screenToWorld?: (point: Point) => Point | null;
+    };
+  }
+
+  const rendererRef = useRef<RendererInstance | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [currentScene, setCurrentScene] = useState<SceneModel | null>(scene ?? null);
   const [canvasRect, setCanvasRect] = useState<DOMRect | null>(null);
   const [mouseCss, setMouseCss] = useState<Point | null>(null);
   const [mouseWorld, setMouseWorld] = useState<Point | null>(null);
 
-  const handleRendererReady = (renderer: any) => {
+  const handleRendererReady = (renderer: RendererInstance) => {
     rendererRef.current = renderer;
     if (renderer.getCanvas) {
       canvasRef.current = renderer.getCanvas();

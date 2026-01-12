@@ -704,8 +704,32 @@ export const smartDialogEngine = SmartDialogEngine.getInstance();
 interface SmartDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  onSubmit?: () => Promise<void> | void;
+  onSubmit?: (data?: Record<string, unknown>) => Promise<void> | void;
   [key: string]: unknown;
+}
+
+/** Entity-specific dialog props with common callback patterns */
+interface DialogEntityProps extends SmartDialogProps {
+  /** Contact data for dialog context */
+  contact?: {
+    name?: string;
+    firstName?: string;
+    lastName?: string;
+    companyName?: string;
+    [key: string]: unknown;
+  };
+  /** Callback when contact is added */
+  onContactAdded?: () => void;
+  /** Callback when contacts are deleted */
+  onContactsDeleted?: () => void;
+  /** Callback when contacts are archived */
+  onContactsArchived?: () => void;
+  /** Callback when unit is added */
+  onUnitAdded?: () => void;
+  /** Callback when task is created */
+  onTaskCreated?: () => void;
+  /** Callback when company is selected */
+  onCompanySelected?: (contact: Record<string, unknown>) => void;
 }
 
 export function createSmartDialog(config: {
@@ -801,7 +825,7 @@ function getDialogSizeClass(size: 'sm' | 'md' | 'lg' | 'xl' | 'full'): string {
 /**
  * Generate content based on entity type and operation
  */
-function getContentForEntity(entityType: DialogEntityType, operationType: DialogOperationType, props: any): React.ReactElement {
+function getContentForEntity(entityType: DialogEntityType, operationType: DialogOperationType, props: DialogEntityProps): React.ReactElement {
   // Use imported React
 
   if (operationType === 'delete' || operationType === 'archive') {
@@ -827,7 +851,7 @@ function getContentForEntity(entityType: DialogEntityType, operationType: Dialog
 /**
  * Handle primary action based on entity type and operation
  */
-function handlePrimaryAction(entityType: DialogEntityType, operationType: DialogOperationType, props: any): void {
+function handlePrimaryAction(entityType: DialogEntityType, operationType: DialogOperationType, props: DialogEntityProps): void {
   console.log(`🏭 Smart Factory: ${operationType} ${entityType}`);
 
   // Call the appropriate prop callback
@@ -854,7 +878,7 @@ function handlePrimaryAction(entityType: DialogEntityType, operationType: Dialog
 /**
  * Get display name for entity
  */
-function getEntityDisplayName(props: any): string {
+function getEntityDisplayName(props: DialogEntityProps): string {
   if (props.contact?.name) return props.contact.name;
   if (props.contact?.firstName && props.contact.lastName) {
     return `${props.contact.firstName} ${props.contact.lastName}`;

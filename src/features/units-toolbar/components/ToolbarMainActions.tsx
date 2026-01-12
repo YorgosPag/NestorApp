@@ -1,5 +1,10 @@
 'use client';
 
+/**
+ * 🏢 ENTERPRISE: UnitsToolbarMainActions with full i18n support
+ * ZERO HARDCODED STRINGS - All labels from centralized translations
+ */
+
 import React from 'react';
 import {
   AlertDialog,
@@ -17,12 +22,16 @@ import { Plus, Edit, Trash2 } from 'lucide-react';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ToolbarMainActionsProps {
   selectedItemsCount: number;
 }
 
 export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('units');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const handleNew = () => console.log('Creating new unit...');
@@ -32,7 +41,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
   return (
     <div className="flex items-center gap-1 mr-3">
       <ToolbarButton
-        tooltip="Νέα Μονάδα (Ctrl+N)"
+        tooltip={t('toolbar.actions.new')}
         onClick={handleNew}
         className={`${colors.text.success} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`} // ✅ SEMANTIC: green -> success
       >
@@ -40,7 +49,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
       </ToolbarButton>
 
       <ToolbarButton
-        tooltip="Επεξεργασία Επιλεγμένης (Ctrl+E)"
+        tooltip={t('toolbar.actions.edit')}
         onClick={handleEdit}
         className={`${colors.text.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`} // ✅ SEMANTIC: blue -> info
         disabled={selectedItemsCount === 0}
@@ -52,7 +61,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
         <AlertDialogTrigger asChild>
           <div>
             <ToolbarButton
-              tooltip="Διαγραφή Επιλεγμένης (Delete)"
+              tooltip={t('toolbar.actions.delete')}
               className={`${colors.text.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`} // ✅ SEMANTIC: red -> error
               disabled={selectedItemsCount === 0}
             >
@@ -62,19 +71,19 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Επιβεβαίωση Διαγραφής</AlertDialogTitle>
+            <AlertDialogTitle>{t('dialog.deleteConfirmation.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Είστε σίγουροι ότι θέλετε να διαγράψετε {selectedItemsCount} μονάδα/ες;
-              Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.
+              {t('dialog.deleteConfirmation.message', { count: selectedItemsCount })}
+              {t('dialog.deleteConfirmation.warning')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Ακύρωση</AlertDialogCancel>
+            <AlertDialogCancel>{t('dialog.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className={`${colors.bg.error} ${HOVER_BACKGROUND_EFFECTS.MUTED}`}
             >
-              Διαγραφή
+              {t('dialog.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

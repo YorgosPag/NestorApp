@@ -4,9 +4,16 @@
 import React, { useEffect, useRef, useContext, createContext } from 'react';
 import { validateComponentProps, checkDesignSystemCompliance } from './design-system-validation';
 
+/** Component props with optional className and style */
+interface ComponentProps {
+  className?: string;
+  style?: React.CSSProperties;
+  [key: string]: unknown;
+}
+
 // Hook for validating component props in development
 export const useDesignSystemValidation = (
-  props: any, 
+  props: ComponentProps,
   componentName: string,
   enabled: boolean = process.env.NODE_ENV === 'development'
 ) => {
@@ -72,7 +79,7 @@ export const useDesignSystemAnalytics = (
 
 // Enhanced validation hook with automatic fixes suggestions
 export const useAdvancedDesignSystemValidation = (
-  props: any,
+  props: ComponentProps,
   componentName: string,
   options: {
     enabled?: boolean;

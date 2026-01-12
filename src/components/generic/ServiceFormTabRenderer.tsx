@@ -13,11 +13,38 @@ import type { ServiceSectionConfig } from '@/config/service-config';
 // INTERFACES
 // ============================================================================
 
+/** Photo slot data structure */
+interface PhotoSlot {
+  uploadUrl?: string;
+  url?: string;
+  fileName?: string;
+  [key: string]: unknown;
+}
+
+/** Form field data structure */
+interface FormField {
+  name: string;
+  type: string;
+  label?: string;
+  placeholder?: string;
+  required?: boolean;
+  [key: string]: unknown;
+}
+
+/** Custom renderer function type */
+type CustomRendererFn = (
+  field: FormField,
+  formData: Record<string, unknown>,
+  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
+  onSelectChange: (name: string, value: string) => void,
+  disabled: boolean
+) => React.ReactNode;
+
 export interface ServiceFormTabRendererProps {
   /** Sections configuration from service config file */
   sections: ServiceSectionConfig[];
   /** Form data object */
-  formData: Record<string, any>;
+  formData: Record<string, unknown>;
   /** Input change handler */
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   /** Select change handler */
@@ -25,9 +52,9 @@ export interface ServiceFormTabRendererProps {
   /** Disabled state */
   disabled?: boolean;
   /** Multiple photos change handler (now used for logos too) */
-  onPhotosChange?: (photos: any[]) => void;
+  onPhotosChange?: (photos: PhotoSlot[]) => void;
   /** Custom field renderers for forms */
-  customRenderers?: Record<string, (field: any, formData: any, onChange: any, onSelectChange: any, disabled: boolean) => React.ReactNode>;
+  customRenderers?: Record<string, CustomRendererFn | (() => React.ReactNode)>;
 }
 
 // ============================================================================
@@ -39,12 +66,12 @@ export interface ServiceFormTabRendererProps {
  */
 function createServiceFormTabsFromConfig(
   sections: ServiceSectionConfig[],
-  formData: Record<string, any>,
+  formData: Record<string, unknown>,
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
   onSelectChange: (name: string, value: string) => void,
   disabled: boolean,
-  onPhotosChange?: (photos: any[]) => void,
-  customRenderers?: Record<string, any>
+  onPhotosChange?: (photos: PhotoSlot[]) => void,
+  customRenderers?: Record<string, CustomRendererFn | (() => React.ReactNode)>
 ) {
   return sections.map(section => {
     // ========================================================================

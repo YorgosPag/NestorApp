@@ -29,7 +29,7 @@ export const getDirectionLabel = (direction: string) =>
   direction === 'inbound' ? 'Εισερχόμενο' : 'Εξερχόμενο';
 
 
-export const getRelativeTime = (timestamp: any) => {
+export const getRelativeTime = (timestamp: Date | string | number | { toDate?: () => Date } | null | undefined) => {
   if (!timestamp) return '';
   try {
     const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);

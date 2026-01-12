@@ -1,11 +1,13 @@
 import {
   collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc, query, where,
   orderBy, limit, startAfter, DocumentSnapshot, QueryConstraint, Timestamp,
-  writeBatch, serverTimestamp, onSnapshot, Unsubscribe, deleteField,
+  writeBatch, serverTimestamp, onSnapshot, Unsubscribe, deleteField, FieldValue,
+  QuerySnapshot,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import {
-  Contact, ContactType, isIndividualContact, isCompanyContact, isServiceContact,
+  Contact, ContactType, ContactStatus, isIndividualContact, isCompanyContact, isServiceContact,
+  AddressInfo, PhoneInfo, EmailInfo,
 } from '@/types/contacts';
 import { EnterpriseContactSaver } from '@/utils/contacts/EnterpriseContactSaver';
 import type { ContactFormData } from '@/types/ContactFormTypes';
@@ -15,6 +17,50 @@ import { sanitizeContactData, validateContactData } from '@/utils/contactForm/ut
 import { getCol, mapDocs, chunk, asDate, startAfterDocId } from '@/lib/firestore/utils';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import type { Unit } from '@/types/unit';
+
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions for Firestore Operations
+// ============================================================================
+
+/**
+ * Extended Contact fields for archive operations
+ * These fields are added when archiving/restoring contacts
+ */
+interface ContactArchiveFields {
+  archivedAt?: FieldValue;
+  archivedBy?: string;
+  archivedReason?: string;
+  restoredAt?: FieldValue;
+  restoredBy?: string;
+}
+
+/**
+ * Photo fields that exist on IndividualContact
+ * Used for updates that include photo changes
+ */
+interface ContactPhotoFields {
+  photoURL?: string;
+  multiplePhotoURLs?: string[] | FieldValue;
+}
+
+/**
+ * Contact data for Firestore operations (create/update)
+ * Includes timestamp fields that use FieldValue
+ */
+type ContactFirestoreData = Omit<Contact, 'createdAt' | 'updatedAt'> & {
+  createdAt?: FieldValue;
+  updatedAt?: FieldValue;
+} & ContactArchiveFields;
+
+/**
+ * Update data structure for contact modifications
+ * Allows partial Contact with archive fields, photo fields, and timestamps
+ * Uses Record<string, unknown> for Firestore compatibility
+ */
+type ContactUpdatePayload = Partial<Contact> & ContactArchiveFields & ContactPhotoFields & {
+  updatedAt?: FieldValue;
+};
 
 // 🏢 ENTERPRISE: Centralized Firestore collection configuration
 const CONTACTS_COLLECTION = COLLECTIONS.CONTACTS;
@@ -148,11 +194,13 @@ export class ContactsService {
       console.log('✅ DUPLICATE CHECK PASSED: Proceeding με safe contact creation...');
 
       const colRef = getCol<Contact>(CONTACTS_COLLECTION, contactConverter);
-      const docRef = await addDoc(colRef, {
+      const createData: ContactFirestoreData = {
         ...sanitizedData,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      } as any);
+      };
+      // Type assertion needed for addDoc compatibility with FieldValue timestamps
+      const docRef = await addDoc(colRef, createData as unknown as Contact);
 
       console.log('✅ CONTACT CREATED SUCCESSFULLY:', {
         contactId: docRef.id,
@@ -204,7 +252,7 @@ export class ContactsService {
       const snap = await getDocs(q);
       const ownerIds = new Set<string>();
       snap.forEach((d) => {
-        const unit = d.data() as any;
+        const unit = d.data() as Partial<Unit>;
         if (unit?.soldTo && typeof unit.soldTo === 'string') ownerIds.add(unit.soldTo);
       });
       return Array.from(ownerIds);
@@ -241,17 +289,18 @@ export class ContactsService {
       console.log('📥 CONTACTSSERVICE: getAllContacts called with options:', options);
       const q = await buildContactsQuery(options);
       const qs = await getDocs(q);
-      const contacts = mapDocs<Contact>(qs); // thanks to converter, dates normalized
+      // Type assertion: converter ensures data is Contact type
+      const contacts = mapDocs<Contact>(qs as unknown as QuerySnapshot<Contact>);
 
       console.log('📊 RAW FIRESTORE RESULTS:', contacts.length, 'contacts');
       console.log('📊 RAW CONTACTS FROM FIRESTORE:', contacts.map(c => ({
         id: c.id,
-        firstName: c.firstName,
-        lastName: c.lastName,
-        companyName: c.companyName,
-        serviceName: c.serviceName,
+        firstName: isIndividualContact(c) ? c.firstName : undefined,
+        lastName: isIndividualContact(c) ? c.lastName : undefined,
+        companyName: isCompanyContact(c) ? c.companyName : undefined,
+        serviceName: isServiceContact(c) ? c.serviceName : undefined,
         type: c.type,
-        status: (c as any).status || 'no-status'
+        status: c.status || 'no-status'
       })));
 
       // Client-side filtering (status & search)
@@ -261,7 +310,7 @@ export class ContactsService {
       if (options?.includeArchived === true) {
         // Δείχνει ΜΟΝΟ archived επαφές
         console.log('🔍 FILTERING FOR ARCHIVED CONTACTS ONLY');
-        filtered = filtered.filter((contact: any) =>
+        filtered = filtered.filter((contact) =>
           contact.status === 'archived'
         );
       } else {
@@ -270,14 +319,20 @@ export class ContactsService {
         console.log('🔍 BEFORE ARCHIVED FILTER:', filtered.length, 'contacts');
 
         const beforeFilter = filtered.length;
-        filtered = filtered.filter((contact: any) => {
+        filtered = filtered.filter((contact) => {
           const isArchived = contact.status === 'archived';
           const hasNoStatus = !contact.status;
           const shouldInclude = hasNoStatus || contact.status !== 'archived';
 
           if (isArchived) {
+            // Get display name based on contact type
+            const displayName = isIndividualContact(contact)
+              ? contact.firstName
+              : isCompanyContact(contact)
+                ? contact.companyName
+                : contact.serviceName;
             console.log('❌ FILTERING OUT ARCHIVED CONTACT:', contact.id,
-              contact.firstName || contact.companyName || contact.serviceName, 'status:', contact.status);
+              displayName, 'status:', contact.status);
           }
 
           return shouldInclude;
@@ -360,7 +415,7 @@ export class ContactsService {
   }
 
   // Update
-  static async updateContact(id: string, updates: Partial<Contact>): Promise<void> {
+  static async updateContact(id: string, updates: ContactUpdatePayload): Promise<void> {
     console.log('🚨 CONTACTS SERVICE: updateContact called for ID:', id);
     console.log('🚨 CONTACTS SERVICE: Received updates:', {
       hasMultiplePhotoURLs: 'multiplePhotoURLs' in updates,
@@ -374,7 +429,8 @@ export class ContactsService {
       const docRef = doc(getCol<Contact>(CONTACTS_COLLECTION, contactConverter), id);
 
       // 🔥 ΚΡΙΣΙΜΗ ΔΙΟΡΘΩΣΗ: Εξασφαλίζουμε ότι κενό array στέλνεται ως κενό array
-      const updateData: any = { ...updates, updatedAt: serverTimestamp() };
+      // Spread into new object and add timestamp - Firestore accepts FieldValue for updatedAt
+      const updateData = { ...updates, updatedAt: serverTimestamp() } as ContactUpdatePayload;
 
       // Εάν υπάρχει το multiplePhotoURLs και είναι κενό array, το στέλνουμε ρητά
       if ('multiplePhotoURLs' in updates) {
@@ -394,7 +450,8 @@ export class ContactsService {
         fullUpdateDataKeys: Object.keys(updateData)
       });
 
-      await updateDoc(docRef, updateData);
+      // Type assertion needed for Firestore updateDoc compatibility
+      await updateDoc(docRef, updateData as Record<string, unknown>);
 
       console.log('✅ CONTACTS SERVICE: 🔥 Firebase UPDATE COMPLETED! 🔥 Check the database now!', {
         id,
@@ -410,7 +467,7 @@ export class ContactsService {
 
   static async toggleFavorite(id: string, currentStatus: boolean): Promise<void> {
     try {
-      await this.updateContact(id, { isFavorite: !currentStatus } as any);
+      await this.updateContact(id, { isFavorite: !currentStatus });
     } catch (error) {
       // Error logging removed //('Error toggling favorite:', error);
       throw new Error('Failed to toggle favorite');
@@ -420,8 +477,8 @@ export class ContactsService {
   // Archive functionality
   static async archiveContact(id: string, reason?: string): Promise<void> {
     try {
-      const updateData: any = {
-        status: 'archived',
+      const updateData: ContactUpdatePayload = {
+        status: 'archived' as ContactStatus,
         archivedAt: serverTimestamp(),
         archivedBy: process.env.NEXT_PUBLIC_DEFAULT_USER_ID || 'current-user' // TODO: Get actual user ID
       };
@@ -440,11 +497,12 @@ export class ContactsService {
 
   static async restoreContact(id: string): Promise<void> {
     try {
-      await this.updateContact(id, {
-        status: 'active',
+      const updateData: ContactUpdatePayload = {
+        status: 'active' as ContactStatus,
         restoredAt: serverTimestamp(),
         restoredBy: process.env.NEXT_PUBLIC_DEFAULT_USER_ID || 'current-user' // TODO: Get actual user ID
-      } as any);
+      };
+      await this.updateContact(id, updateData);
     } catch (error) {
       // Error logging removed //('Error restoring contact:', error);
       throw new Error('Failed to restore contact');
@@ -458,19 +516,21 @@ export class ContactsService {
         group.forEach((id) => {
           const docRef = doc(db, CONTACTS_COLLECTION, id);
 
-          const updateData: any = {
-            status: 'archived',
+          // Object literal with serverTimestamp() - type assertion needed for FieldValue compatibility
+          const updateData = {
+            status: 'archived' as ContactStatus,
             archivedAt: serverTimestamp(),
             archivedBy: process.env.NEXT_PUBLIC_DEFAULT_USER_ID || 'current-user', // TODO: Get actual user ID
             updatedAt: serverTimestamp()
-          };
+          } as ContactUpdatePayload;
 
           // Only add archivedReason if it's provided
           if (reason && reason.trim()) {
             updateData.archivedReason = reason.trim();
           }
 
-          batch.update(docRef, updateData);
+          // Type assertion needed for Firestore batch.update compatibility
+          batch.update(docRef, updateData as Record<string, unknown>);
         });
         await batch.commit();
       }
@@ -516,7 +576,8 @@ export class ContactsService {
       limitCount: BATCH_SIZE,
     });
     return onSnapshot(q, (snapshot) => {
-      callback(mapDocs<Contact>(snapshot));
+      // Type assertion: converter ensures data is Contact type
+      callback(mapDocs<Contact>(snapshot as unknown as QuerySnapshot<Contact>));
     });
   }
 
@@ -529,7 +590,7 @@ export class ContactsService {
       let individuals = 0, companies = 0, services = 0, favorites = 0;
 
       qs.forEach((d) => {
-        const data = d.data() as any;
+        const data = d.data() as Contact;
         switch (data.type) {
           case 'individual': individuals++; break;
           case 'company': companies++; break;
@@ -553,11 +614,12 @@ export class ContactsService {
 
       for (const contact of contacts) {
         const ref = doc(collection(db, CONTACTS_COLLECTION));
-        batch.set(ref, {
+        const createData: ContactFirestoreData = {
           ...contact,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
-        } as any);
+        };
+        batch.set(ref, createData);
         countInBatch++;
 
         if (countInBatch >= MAX_BATCH) {
@@ -583,7 +645,8 @@ export class ContactsService {
       if (type) constraints.push(where('type', '==', type));
       const q = query(getCol<Contact>(CONTACTS_COLLECTION, contactConverter), ...constraints);
       const snapshot = await getDocs(q);
-      return mapDocs<Contact>(snapshot);
+      // Type assertion: converter ensures data is Contact type
+      return mapDocs<Contact>(snapshot as unknown as QuerySnapshot<Contact>);
     } catch (error) {
       // Error logging removed //('Error exporting contacts:', error);
       throw new Error('Failed to export contacts');
@@ -601,7 +664,8 @@ export class ContactsService {
 
       const q = query(getCol<Contact>(CONTACTS_COLLECTION, contactConverter), ...constraints);
       const snapshot = await getDocs(q);
-      let contacts = mapDocs<Contact>(snapshot);
+      // Type assertion: converter ensures data is Contact type
+      let contacts = mapDocs<Contact>(snapshot as unknown as QuerySnapshot<Contact>);
 
       const term = (searchOptions.searchTerm || '').toLowerCase();
 
@@ -610,33 +674,37 @@ export class ContactsService {
       }
 
       if (searchOptions.tags?.length) {
-        contacts = contacts.filter((c: any) => (c.tags ?? []).some((t: string) => searchOptions.tags!.includes(t)));
+        contacts = contacts.filter((c) => (c.tags ?? []).some((t: string) => searchOptions.tags!.includes(t)));
       }
 
       if (searchOptions.city) {
         const cityTerm = searchOptions.city.toLowerCase();
-        contacts = contacts.filter((c: any) =>
-          (c.addresses ?? []).some((a: any) => (a.city || '').toLowerCase().includes(cityTerm))
-        );
+        contacts = contacts.filter((c) => {
+          // All contact types have addresses property
+          const addresses = c.addresses ?? [];
+          return addresses.some((a: AddressInfo) => (a.city || '').toLowerCase().includes(cityTerm));
+        });
       }
 
       if (searchOptions.hasPhone !== undefined) {
-        contacts = contacts.filter((c: any) =>
-          searchOptions.hasPhone ? (c.phones?.length ?? 0) > 0 : (c.phones?.length ?? 0) === 0
-        );
+        contacts = contacts.filter((c) => {
+          const phonesLength = c.phones?.length ?? 0;
+          return searchOptions.hasPhone ? phonesLength > 0 : phonesLength === 0;
+        });
       }
 
       if (searchOptions.hasEmail !== undefined) {
-        contacts = contacts.filter((c: any) =>
-          searchOptions.hasEmail ? (c.emails?.length ?? 0) > 0 : (c.emails?.length ?? 0) === 0
-        );
+        contacts = contacts.filter((c) => {
+          const emailsLength = c.emails?.length ?? 0;
+          return searchOptions.hasEmail ? emailsLength > 0 : emailsLength === 0;
+        });
       }
 
       if (searchOptions.createdAfter) {
-        contacts = contacts.filter((c: any) => asDate(c.createdAt) >= searchOptions.createdAfter!);
+        contacts = contacts.filter((c) => asDate(c.createdAt) >= searchOptions.createdAfter!);
       }
       if (searchOptions.createdBefore) {
-        contacts = contacts.filter((c: any) => asDate(c.createdAt) <= searchOptions.createdBefore!);
+        contacts = contacts.filter((c) => asDate(c.createdAt) <= searchOptions.createdBefore!);
       }
 
       return contacts;

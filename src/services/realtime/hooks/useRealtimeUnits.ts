@@ -15,6 +15,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { RealtimeUnit, SubscriptionStatus } from '../types';
 import { REALTIME_EVENTS } from '../types';
@@ -133,48 +134,72 @@ export function useRealtimeUnits(): UseRealtimeUnitsReturn {
     setStatus('connecting');
     setLoading(true);
 
-    console.log('🔔 [useRealtimeUnits] Setting up real-time listener for units');
+    const auth = getAuth();
+    let firestoreUnsubscribe: (() => void) | null = null;
 
-    const unitsRef = collection(db, COLLECTIONS.UNITS);
-
-    const unsubscribe = onSnapshot(
-      unitsRef,
-      (snapshot) => {
-        const units: RealtimeUnit[] = snapshot.docs.map((docSnapshot) => ({
-          id: docSnapshot.id,
-          name: docSnapshot.data().name || '',
-          buildingId: docSnapshot.data().buildingId || null,
-          type: docSnapshot.data().type,
-          status: docSnapshot.data().status,
-          area: docSnapshot.data().area,
-          floor: docSnapshot.data().floor,
-          createdAt: docSnapshot.data().createdAt,
-          updatedAt: docSnapshot.data().updatedAt,
-        }));
-
-        console.log(`📡 [useRealtimeUnits] Received ${units.length} units in real-time`);
-
-        // Update state
-        setAllUnits(units);
-        setUnitsByBuilding(groupUnitsByBuilding(units));
-        setLoading(false);
-        setError(null);
-        setStatus('active');
-      },
-      (err) => {
-        console.error('❌ [useRealtimeUnits] Firestore error:', err);
-        setError(err.message);
-        setLoading(false);
-        setStatus('error');
+    // 🔐 ENTERPRISE: Wait for authentication before subscribing to Firestore
+    const authUnsubscribe = onAuthStateChanged(auth, (user) => {
+      // Cleanup previous Firestore subscription if exists
+      if (firestoreUnsubscribe) {
+        firestoreUnsubscribe();
+        firestoreUnsubscribe = null;
       }
-    );
 
-    unsubscribeRef.current = unsubscribe;
+      if (!user) {
+        console.log('⏳ [useRealtimeUnits] Waiting for authentication...');
+        setStatus('idle');
+        setLoading(false);
+        setAllUnits([]);
+        setUnitsByBuilding({});
+        return;
+      }
 
-    // Cleanup
+      console.log('🔔 [useRealtimeUnits] User authenticated, setting up real-time listener');
+
+      const unitsRef = collection(db, COLLECTIONS.UNITS);
+
+      firestoreUnsubscribe = onSnapshot(
+        unitsRef,
+        (snapshot) => {
+          const units: RealtimeUnit[] = snapshot.docs.map((docSnapshot) => ({
+            id: docSnapshot.id,
+            name: docSnapshot.data().name || '',
+            buildingId: docSnapshot.data().buildingId || null,
+            type: docSnapshot.data().type,
+            status: docSnapshot.data().status,
+            area: docSnapshot.data().area,
+            floor: docSnapshot.data().floor,
+            createdAt: docSnapshot.data().createdAt,
+            updatedAt: docSnapshot.data().updatedAt,
+          }));
+
+          console.log(`📡 [useRealtimeUnits] Received ${units.length} units in real-time`);
+
+          // Update state
+          setAllUnits(units);
+          setUnitsByBuilding(groupUnitsByBuilding(units));
+          setLoading(false);
+          setError(null);
+          setStatus('active');
+        },
+        (err) => {
+          console.error('❌ [useRealtimeUnits] Firestore error:', err);
+          setError(err.message);
+          setLoading(false);
+          setStatus('error');
+        }
+      );
+
+      unsubscribeRef.current = firestoreUnsubscribe;
+    });
+
+    // Cleanup both subscriptions
     return () => {
-      console.log('🔕 [useRealtimeUnits] Unsubscribing from units listener');
-      unsubscribe();
+      console.log('🔕 [useRealtimeUnits] Cleaning up subscriptions');
+      authUnsubscribe();
+      if (firestoreUnsubscribe) {
+        firestoreUnsubscribe();
+      }
     };
   }, [refreshTriggerRef.current, groupUnitsByBuilding]);
 

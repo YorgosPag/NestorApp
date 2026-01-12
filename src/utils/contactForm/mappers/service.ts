@@ -9,8 +9,40 @@
 // ============================================================================
 
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { EmailInfo, PhoneInfo } from '@/types/contacts';
 import { extractPhotoURL, extractLogoURL, extractMultiplePhotoURLs } from '../extractors/photo-urls';
 import { createEmailsArray, createPhonesArray } from '../extractors/arrays';
+
+/** Mapped service contact data (partial, without timestamps) */
+interface MappedServiceContactData {
+  type: 'service';
+  serviceName: string;
+  serviceType?: string;
+  shortName?: string;
+  category?: string;
+  supervisionMinistry?: string;
+  legalStatus?: string;
+  establishmentLaw?: string;
+  headTitle?: string;
+  headName?: string;
+  logoURL?: string;
+  photoURL?: string;
+  multiplePhotoURLs: string[];
+  address?: string;
+  postalCode?: string;
+  city?: string;
+  fax?: string;
+  website?: string;
+  mainResponsibilities?: string;
+  citizenServices?: string;
+  onlineServices?: string;
+  serviceHours?: string;
+  emails: EmailInfo[];
+  phones: PhoneInfo[];
+  isFavorite: boolean;
+  status: 'active' | 'inactive' | 'archived';
+  notes?: string;
+}
 
 /**
  * Map Service Contact form data to Contact object
@@ -18,7 +50,7 @@ import { createEmailsArray, createPhonesArray } from '../extractors/arrays';
  * @param formData - Contact form data
  * @returns Service contact data
  */
-export function mapServiceFormData(formData: ContactFormData): any {
+export function mapServiceFormData(formData: ContactFormData): MappedServiceContactData {
   const logoURL = extractLogoURL(formData, 'service');
   const photoURL = extractPhotoURL(formData, 'service representative');
   const multiplePhotoURLs = extractMultiplePhotoURLs(formData); // 📸 Multiple photos για services

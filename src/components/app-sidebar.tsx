@@ -5,13 +5,12 @@ import { useIconSizes } from '@/hooks/useIconSizes'
 import {
     Sidebar,
     SidebarContent,
-    SidebarFooter,
     SidebarHeader,
     SidebarRail,
 } from "@/components/ui/sidebar"
 import { SidebarLogo } from "@/components/sidebar/sidebar-logo"
 import { SidebarMenuSection } from "@/components/sidebar/sidebar-menu-section"
-import { SidebarUserFooter } from "@/components/sidebar/sidebar-user-footer"
+// 🗑️ REMOVED (2026-01-11): SidebarUserFooter - User management moved to header dropdown only
 import { mainMenuItems, toolsMenuItems, settingsMenuItem } from "@/config/navigation"
 import { useSidebarState } from "@/hooks/useSidebarState"
 import { useTranslationLazy } from "@/i18n/hooks/useTranslationLazy"
@@ -52,7 +51,7 @@ export function AppSidebar() {
                     <a
                         href="/navigation"
                         onClick={handleNavigationClick}
-                        className={`flex items-center gap-2 text-gray-700 dark:text-gray-300 py-2 px-1 w-full text-left rounded-md ${HOVER_TEXT_EFFECTS.GRAY_TO_BLACK} ${HOVER_BACKGROUND_EFFECTS.MUTED} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                        className={`flex items-center gap-2 text-gray-700 dark:text-gray-300 py-2 px-1 w-full text-left rounded-md ${HOVER_TEXT_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                     >
                         <MapPin className={iconSizes.sm} />
                         <span className="font-medium">Πλοήγηση</span>
@@ -76,9 +75,8 @@ export function AppSidebar() {
                 />
             </SidebarContent>
 
-            <SidebarFooter className="border-t border-sidebar-border">
-                <SidebarUserFooter />
-            </SidebarFooter>
+            {/* 🗑️ REMOVED (2026-01-11): SidebarFooter with user info
+                Enterprise pattern: User management handled exclusively via header dropdown */}
 
             <SidebarRail />
         </Sidebar>

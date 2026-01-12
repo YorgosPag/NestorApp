@@ -2,12 +2,26 @@
 
 import * as React from 'react';
 const { useState, useCallback, useEffect } = React;
+
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** GeoJSON Geometry types */
+interface GeoJSONGeometry {
+  type: 'Point' | 'LineString' | 'Polygon' | 'MultiPoint' | 'MultiLineString' | 'MultiPolygon' | 'GeometryCollection';
+  coordinates: number[] | number[][] | number[][][] | number[][][][];
+}
+
+/** GeoJSON Properties */
+type GeoJSONProperties = Record<string, string | number | boolean | null | undefined>;
+
 // ✅ ENTERPRISE FIX: Mock GeoJSON namespace for compilation
 declare namespace GeoJSON {
   interface Feature {
     type: 'Feature';
-    geometry: any;
-    properties: any;
+    geometry: GeoJSONGeometry;
+    properties: GeoJSONProperties;
   }
   interface FeatureCollection {
     type: 'FeatureCollection';
@@ -15,8 +29,16 @@ declare namespace GeoJSON {
   }
 }
 
-// ✅ ENTERPRISE FIX: Use React.RefObject<any> to avoid mapbox-gl type dependency
-type MapboxMap = any;
+/** Mapbox Map interface (minimal for ref typing) */
+interface MapboxMapRef {
+  getCenter?: () => { lat: number; lng: number };
+  setCenter?: (center: { lat: number; lng: number }) => void;
+  getZoom?: () => number;
+  setZoom?: (zoom: number) => void;
+}
+
+// ✅ ENTERPRISE FIX: Proper type instead of any
+type MapboxMap = MapboxMapRef;
 import { MapPin, Hexagon, Hand, Trash2, Check, X, Bell, Search, Building2, Settings } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import {
@@ -66,17 +88,50 @@ import { useIconSizes } from '../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useSemanticColors } from '../../../ui-adapters/react/useSemanticColors';
 
+/** Polygon point structure */
+interface PolygonPoint {
+  x?: number;
+  y?: number;
+  lat?: number;
+  lng?: number;
+}
+
+/** Universal polygon structure from centralized system */
+interface UniversalPolygon {
+  id: string;
+  points: PolygonPoint[];
+  config?: PolygonConfig;
+  timestamp?: number;
+}
+
+/** Polygon drawing configuration */
+interface PolygonConfig {
+  fillColor?: string;
+  strokeColor?: string;
+  strokeWidth?: number;
+  pointMode?: boolean;
+  radius?: number;
+}
+
+/** Real estate statistics */
+interface RealEstateStats {
+  totalPolygons: number;
+  totalAlerts: number;
+  activeAlerts: number;
+  totalMatches?: number;
+}
+
 // ✅ ENTERPRISE FIX: Mock centralized polygon system για compilation
 const useCentralizedPolygonSystem = () => ({
-  polygons: [] as any[],
+  polygons: [] as UniversalPolygon[],
   stats: { totalPolygons: 0, activePolygons: 0 },
-  startDrawing: (_mode: string, _config?: any) => {},
-  finishDrawing: () => null,
+  startDrawing: (_mode: string, _config?: PolygonConfig) => {},
+  finishDrawing: () => null as UniversalPolygon | null,
   cancelDrawing: () => {},
   clearAll: () => {},
   isDrawing: false,
   currentRole: 'citizen' as const,
-  updatePolygonConfig: (_id: string, _config: any) => {}
+  updatePolygonConfig: (_id: string, _config: PolygonConfig) => {}
 });
 
 // ✅ ENTERPRISE FIX: Mock color config για compilation
@@ -93,8 +148,15 @@ const GEO_COLORS = {
   }
 };
 
+/** Address search panel props */
+interface AddressSearchPanelProps {
+  onLocationSelected: (lat: number, lng: number, address?: Record<string, unknown>) => void;
+  onAdminBoundarySelected?: (boundary: GeoJSON.Feature | GeoJSON.FeatureCollection, result: Record<string, unknown>) => void;
+  onClose: () => void;
+}
+
 // ✅ ENTERPRISE FIX: Mock components για compilation
-const AddressSearchPanel = ({ onLocationSelected, onAdminBoundarySelected, onClose }: any) => (
+const AddressSearchPanel = ({ onLocationSelected, onAdminBoundarySelected, onClose }: AddressSearchPanelProps) => (
   React.createElement('div', { className: 'p-4 bg-blue-50 rounded-md' },
     React.createElement('p', null, 'Address Search Panel - Mock Implementation'),
     React.createElement('button', { onClick: onClose, className: 'mt-2 px-3 py-1 bg-blue-500 text-white rounded' }, 'Close')
@@ -107,15 +169,28 @@ const AdminBoundaryDemo = () => (
   )
 );
 
+/** Boundary layer style */
+type BoundaryLayerStyle = Record<string, string | number | boolean>;
+
 interface BoundaryLayer {
   id: string;
   name: string;
   visible: boolean;
   opacity: number;
-  style: Record<string, any>;
+  style: BoundaryLayerStyle;
 }
 
-const BoundaryLayerControlPanel = ({ layers, onLayerToggle, onLayerOpacityChange, onLayerStyleChange, onLayerRemove, onAddNewBoundary }: any) => (
+/** Boundary layer control panel props */
+interface BoundaryLayerControlPanelProps {
+  layers: BoundaryLayer[];
+  onLayerToggle: (layerId: string, visible: boolean) => void;
+  onLayerOpacityChange: (layerId: string, opacity: number) => void;
+  onLayerStyleChange: (layerId: string, style: Partial<BoundaryLayerStyle>) => void;
+  onLayerRemove: (layerId: string) => void;
+  onAddNewBoundary: () => void;
+}
+
+const BoundaryLayerControlPanel = ({ layers }: BoundaryLayerControlPanelProps) => (
   React.createElement('div', { className: 'p-4 bg-purple-50 rounded-md' },
     React.createElement('p', null, 'Boundary Layer Control Panel - Mock Implementation'),
     React.createElement('p', { className: 'text-sm text-gray-600' }, `${layers?.length || 0} layers available`)
@@ -304,7 +379,7 @@ export function CitizenDrawingInterface({
         // ✅ ENTERPRISE FIX: Convert UniversalPolygon to RealEstatePolygon
         const realEstatePolygon: RealEstatePolygon = {
           id: polygon.id,
-          polygon: polygon.points.map((p: any) => [p.lat || p.x || 0, p.lng || p.y || 0] as [number, number]),
+          polygon: polygon.points.map((p: PolygonPoint) => [p.lat ?? p.x ?? 0, p.lng ?? p.y ?? 0] as [number, number]),
           settings: {},
           createdAt: new Date().toISOString(),
           type: 'real-estate'
@@ -314,7 +389,7 @@ export function CitizenDrawingInterface({
         // ✅ ENTERPRISE FIX: Convert UniversalPolygon to RealEstatePolygon
         const normalPolygon: RealEstatePolygon = {
           id: polygon.id,
-          polygon: polygon.points.map((p: any) => [p.lat || p.x || 0, p.lng || p.y || 0] as [number, number]),
+          polygon: polygon.points.map((p: PolygonPoint) => [p.lat ?? p.x ?? 0, p.lng ?? p.y ?? 0] as [number, number]),
           settings: {},
           createdAt: new Date().toISOString()
         };
@@ -338,8 +413,8 @@ export function CitizenDrawingInterface({
   useEffect(() => {
     // ✅ ENTERPRISE FIX: Find the most recent point mode polygon with safe property access
     const pointPolygon = polygons
-      .filter(p => (p as any).config?.pointMode === true && p.points.length === 1)
-      .sort((a, b) => ((a as any).timestamp || 0) - ((b as any).timestamp || 0))[0];
+      .filter(p => p.config?.pointMode === true && p.points.length === 1)
+      .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))[0];
 
     if (pointPolygon && pointPolygon.id !== lastPointPolygonId) {
       setLastPointPolygonId(pointPolygon.id);
@@ -760,9 +835,9 @@ export function CitizenDrawingInterface({
               <p>
                 <span className="font-medium">🏠 Ειδοποιήσεις Ακινήτων:</span> {realEstateStats.totalAlerts}
               </p>
-              {(realEstateStats as any).totalMatches > 0 && (
+              {realEstateStats.totalMatches !== undefined && realEstateStats.totalMatches > 0 && (
                 <p>
-                  <span className="font-medium">🎯 Βρέθηκαν:</span> {(realEstateStats as any).totalMatches} ακίνητα
+                  <span className="font-medium">🎯 Βρέθηκαν:</span> {realEstateStats.totalMatches} ακίνητα
                 </p>
               )}
             </div>

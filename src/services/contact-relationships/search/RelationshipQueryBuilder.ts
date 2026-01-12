@@ -34,10 +34,24 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 // QUERY BUILDER TYPES
 // ============================================================================
 
+/**
+ * 🏢 ENTERPRISE: Type-safe query filter value types
+ * Supports all Firestore-compatible primitive and array types
+ */
+export type QueryFilterValue =
+  | string
+  | number
+  | boolean
+  | Date
+  | null
+  | string[]
+  | number[]
+  | boolean[];
+
 export interface QueryFilter {
   field: string;
   operator: WhereFilterOp;
-  value: any;
+  value: QueryFilterValue;
 }
 
 export interface QuerySort {
@@ -134,7 +148,7 @@ export class RelationshipQueryBuilder {
   /**
    * 📝 Add Where Filter
    */
-  where(field: string, operator: WhereFilterOp, value: any): RelationshipQueryBuilder {
+  where(field: string, operator: WhereFilterOp, value: QueryFilterValue): RelationshipQueryBuilder {
     this.filters.push({ field, operator, value });
     return this;
   }
@@ -142,7 +156,7 @@ export class RelationshipQueryBuilder {
   /**
    * 📝 Add OR Where Filter (simulated με separate query)
    */
-  orWhere(field: string, operator: WhereFilterOp, value: any): RelationshipQueryBuilder {
+  orWhere(field: string, operator: WhereFilterOp, value: QueryFilterValue): RelationshipQueryBuilder {
     // Note: Firestore doesn't support OR directly, so this is για future implementation
     // που θα combine multiple queries
     console.warn('⚠️ OR queries require special handling με multiple Firestore queries');
@@ -152,44 +166,44 @@ export class RelationshipQueryBuilder {
   /**
    * 🎯 Where Equal
    */
-  whereEqual(field: string, value: any): RelationshipQueryBuilder {
+  whereEqual(field: string, value: QueryFilterValue): RelationshipQueryBuilder {
     return this.where(field, '==', value);
   }
 
   /**
    * 🎯 Where In Array
    */
-  whereIn(field: string, values: any[]): RelationshipQueryBuilder {
+  whereIn(field: string, values: QueryFilterValue[]): RelationshipQueryBuilder {
     if (values.length === 0) return this;
     if (values.length === 1) return this.where(field, '==', values[0]);
-    return this.where(field, 'in', values);
+    return this.where(field, 'in', values as QueryFilterValue);
   }
 
   /**
    * 🎯 Where Not Equal
    */
-  whereNotEqual(field: string, value: any): RelationshipQueryBuilder {
+  whereNotEqual(field: string, value: QueryFilterValue): RelationshipQueryBuilder {
     return this.where(field, '!=', value);
   }
 
   /**
    * 🎯 Where Greater Than
    */
-  whereGreaterThan(field: string, value: any): RelationshipQueryBuilder {
+  whereGreaterThan(field: string, value: QueryFilterValue): RelationshipQueryBuilder {
     return this.where(field, '>', value);
   }
 
   /**
    * 🎯 Where Less Than
    */
-  whereLessThan(field: string, value: any): RelationshipQueryBuilder {
+  whereLessThan(field: string, value: QueryFilterValue): RelationshipQueryBuilder {
     return this.where(field, '<', value);
   }
 
   /**
    * 🎯 Where Array Contains
    */
-  whereArrayContains(field: string, value: any): RelationshipQueryBuilder {
+  whereArrayContains(field: string, value: QueryFilterValue): RelationshipQueryBuilder {
     return this.where(field, 'array-contains', value);
   }
 

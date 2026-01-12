@@ -9,6 +9,22 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Map, FileText, Camera, Video, User } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** Unit data type for the tabs renderer */
+export type UnitData = Record<string, unknown>;
+
+/** Floor data type */
+export type FloorData = Record<string, unknown>;
+
+/** Viewer props type */
+export type ViewerProps = Record<string, unknown>;
+
+/** Generic component props type */
+export type GenericComponentProps = Record<string, unknown>;
+
 // 🏢 ENTERPRISE: Centralized Unit Icon & Color
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 const unitColor = NAVIGATION_ENTITIES.unit.color;
@@ -79,22 +95,22 @@ export interface GenericUnitsTabsRendererProps {
   /** Units tabs configuration */
   tabs: UnitsTabConfig[];
   /** Selected unit data */
-  selectedUnit?: any;
+  selectedUnit?: UnitData;
   /** Default tab to show */
   defaultTab?: string;
   /** Additional data for specific tabs */
   additionalData?: {
-    safeFloors?: any[];
-    currentFloor?: any;
-    safeViewerProps?: any;
-    safeViewerPropsWithFloors?: any;
+    safeFloors?: FloorData[];
+    currentFloor?: FloorData;
+    safeViewerProps?: ViewerProps;
+    safeViewerPropsWithFloors?: ViewerProps;
     setShowHistoryPanel?: (show: boolean) => void;
-    units?: any[];
+    units?: UnitData[];
   };
   /** Custom component renderers */
-  customComponents?: Record<string, React.ComponentType<any>>;
+  customComponents?: Record<string, React.ComponentType<GenericComponentProps>>;
   /** Additional props to pass to all tab components */
-  globalProps?: Record<string, any>;
+  globalProps?: GenericComponentProps;
 }
 
 // ============================================================================

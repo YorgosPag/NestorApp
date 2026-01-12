@@ -32,8 +32,39 @@ import {
   orderBy,
   DocumentSnapshot,
   QuerySnapshot,
-  DocumentData
+  DocumentData,
+  Firestore
 } from 'firebase/firestore';
+
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** Rule logic parameters type */
+export type RuleParameters = Record<string, unknown>;
+
+/** Audit trail changes type */
+export type AuditChanges = Record<string, unknown>;
+
+/** Raw Firestore document data for legal forms */
+interface RawLegalFormData {
+  effectiveDate?: { toDate?: () => Date };
+  expiryDate?: { toDate?: () => Date };
+  [key: string]: unknown;
+}
+
+/** Raw Firestore document data for business rules */
+interface RawBusinessRuleData {
+  lastReviewed?: { toDate?: () => Date };
+  nextReview?: { toDate?: () => Date };
+  [key: string]: unknown;
+}
+
+/** Raw Firestore document data for audit trail */
+interface RawAuditTrailEntry {
+  timestamp?: { toDate?: () => Date };
+  [key: string]: unknown;
+}
 
 // 🏢 ENTERPRISE: Import centralized legal forms - NO MORE DUPLICATES
 import { getLegalFormOptions, getGemiStatusOptions } from '@/subapps/dxf-viewer/config/modal-select';
@@ -203,7 +234,7 @@ export interface BusinessRule {
     /** Action to take */
     action: string;
     /** Parameters for action */
-    parameters: Record<string, any>;
+    parameters: RuleParameters;
   };
   /** Priority level */
   priority: number;
@@ -311,7 +342,7 @@ export interface BusinessRulesConfiguration {
     action: string;
     userId: string;
     timestamp: Date;
-    changes: Record<string, any>;
+    changes: AuditChanges;
   }>;
 }
 
@@ -345,7 +376,7 @@ export class EnterpriseBusinessRulesService {
   private static instance: EnterpriseBusinessRulesService;
   private cache: BusinessRulesCache;
   private initialized: boolean = false;
-  private db: any; // Firestore instance
+  private db: Firestore | null = null;
 
   private constructor() {
     this.cache = {
@@ -369,7 +400,7 @@ export class EnterpriseBusinessRulesService {
   /**
    * Initialize service with Firestore instance
    */
-  async initialize(firestore: any): Promise<void> {
+  async initialize(firestore: Firestore): Promise<void> {
     this.db = firestore;
     this.initialized = true;
     console.log('🏢 EnterpriseBusinessRulesService initialized');
@@ -471,21 +502,22 @@ export class EnterpriseBusinessRulesService {
       const configDoc = await getDoc(configRef);
 
       if (configDoc.exists()) {
+        const docData = configDoc.data();
         const config = {
-          ...configDoc.data(),
-          createdAt: configDoc.data().createdAt?.toDate?.() || new Date(),
-          lastUpdated: configDoc.data().lastUpdated?.toDate?.() || new Date(),
-          legalForms: configDoc.data().legalForms?.map((lf: any) => ({
+          ...docData,
+          createdAt: docData.createdAt?.toDate?.() || new Date(),
+          lastUpdated: docData.lastUpdated?.toDate?.() || new Date(),
+          legalForms: (docData.legalForms as RawLegalFormData[] | undefined)?.map((lf: RawLegalFormData) => ({
             ...lf,
             effectiveDate: lf.effectiveDate?.toDate?.() || new Date(),
             expiryDate: lf.expiryDate?.toDate?.() || undefined
           })) || [],
-          businessRules: configDoc.data().businessRules?.map((br: any) => ({
+          businessRules: (docData.businessRules as RawBusinessRuleData[] | undefined)?.map((br: RawBusinessRuleData) => ({
             ...br,
             lastReviewed: br.lastReviewed?.toDate?.() || new Date(),
             nextReview: br.nextReview?.toDate?.() || new Date()
           })) || [],
-          auditTrail: configDoc.data().auditTrail?.map((entry: any) => ({
+          auditTrail: (docData.auditTrail as RawAuditTrailEntry[] | undefined)?.map((entry: RawAuditTrailEntry) => ({
             ...entry,
             timestamp: entry.timestamp?.toDate?.() || new Date()
           })) || []

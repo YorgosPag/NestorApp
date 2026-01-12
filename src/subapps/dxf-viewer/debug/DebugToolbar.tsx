@@ -27,6 +27,53 @@ import type { ToolType } from '../ui/toolbar/types';
 import { runAllTests, formatReportForCopy, type UnifiedTestReport } from './unified-test-runner';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** Workflow test step result */
+interface WorkflowTestStep {
+  status: 'success' | 'failure' | 'warning';
+  name: string;
+  duration?: number;
+}
+
+/** Layering workflow test result */
+interface LayeringWorkflowResult {
+  success: boolean;
+  steps: WorkflowTestStep[];
+  layerDisplayed: boolean;
+}
+
+/** Enterprise cursor test results */
+interface EnterpriseCursorTestResults {
+  overallStatus: 'PASS' | 'FAIL' | 'WARNING';
+  passedScenarios: number;
+  totalScenarios: number;
+  avgPerformance: number;
+  maxError: number;
+  minPassRate: number;
+}
+
+/** Enterprise cursor test module */
+interface EnterpriseCursorTestModule {
+  runEnterpriseMouseCrosshairTests: () => EnterpriseCursorTestResults;
+  startEnterpriseInteractiveTest: () => void;
+}
+
+/** DOM inspection result */
+interface DOMInspectionResult {
+  floatingPanels: Array<{ found: boolean; element?: HTMLElement }>;
+  tabs: HTMLElement[];
+  cards: HTMLElement[];
+  canvases: HTMLCanvasElement[];
+}
+
+/** Window with layering test function */
+interface WindowWithLayeringTest extends Window {
+  runLayeringWorkflowTest?: () => Promise<LayeringWorkflowResult>;
+}
+
 interface DebugToolbarProps {
   showCopyableNotification: (message: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
   showGrid: boolean;
@@ -90,10 +137,11 @@ export const DebugToolbar: React.FC<DebugToolbarProps> = ({
         console.log('🎯 Ctrl+F2 SHORTCUT: LAYERING WORKFLOW TEST TRIGGERED');
 
         // Direct call to window function
-        if ((window as any).runLayeringWorkflowTest) {
-          (window as any).runLayeringWorkflowTest().then((result: any) => {
+        const windowWithTest = window as WindowWithLayeringTest;
+        if (windowWithTest.runLayeringWorkflowTest) {
+          windowWithTest.runLayeringWorkflowTest().then((result: LayeringWorkflowResult) => {
             console.log('📊 LAYERING WORKFLOW RESULT:', result);
-            const successSteps = result.steps.filter((s: any) => s.status === 'success').length;
+            const successSteps = result.steps.filter((s: WorkflowTestStep) => s.status === 'success').length;
             const totalSteps = result.steps.length;
             const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
             showCopyableNotification(summary, result.success ? 'success' : 'error');
@@ -102,9 +150,9 @@ export const DebugToolbar: React.FC<DebugToolbarProps> = ({
           // Fallback to import
           import('./layering-workflow-test').then(module => {
             const runLayeringWorkflowTest = module.runLayeringWorkflowTest;
-            runLayeringWorkflowTest().then((result: any) => {
+            runLayeringWorkflowTest().then((result: LayeringWorkflowResult) => {
               console.log('📊 LAYERING WORKFLOW RESULT:', result);
-              const successSteps = result.steps.filter((s: any) => s.status === 'success').length;
+              const successSteps = result.steps.filter((s: WorkflowTestStep) => s.status === 'success').length;
               const totalSteps = result.steps.length;
               const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
               showCopyableNotification(summary, result.success ? 'success' : 'error');
@@ -118,10 +166,11 @@ export const DebugToolbar: React.FC<DebugToolbarProps> = ({
       if (event.ctrlKey && event.shiftKey && event.key === 'T') {
         event.preventDefault();
         console.log('🎯 Ctrl+Shift+T SHORTCUT: LAYERING WORKFLOW TEST TRIGGERED');
-        if ((window as any).runLayeringWorkflowTest) {
-          (window as any).runLayeringWorkflowTest().then((result: any) => {
+        const windowWithTest = window as WindowWithLayeringTest;
+        if (windowWithTest.runLayeringWorkflowTest) {
+          windowWithTest.runLayeringWorkflowTest().then((result: LayeringWorkflowResult) => {
             console.log('📊 LAYERING WORKFLOW RESULT:', result);
-            const successSteps = result.steps.filter((s: any) => s.status === 'success').length;
+            const successSteps = result.steps.filter((s: WorkflowTestStep) => s.status === 'success').length;
             const totalSteps = result.steps.length;
             const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
             showCopyableNotification(summary, result.success ? 'success' : 'error');
@@ -138,7 +187,7 @@ export const DebugToolbar: React.FC<DebugToolbarProps> = ({
         console.log('🎯 F3 SHORTCUT: CURSOR-CROSSHAIR ALIGNMENT TEST TRIGGERED');
 
         import('./enterprise-cursor-crosshair-test').then(module => {
-          const defaultExport = module.default as any; // ✅ ENTERPRISE FIX: Type assertion for module.default
+          const defaultExport = module.default as EnterpriseCursorTestModule;
           const { runEnterpriseMouseCrosshairTests, startEnterpriseInteractiveTest } = defaultExport;
 
           console.log('🔍 Running enterprise cursor-crosshair alignment tests...');
@@ -298,11 +347,12 @@ Check console for detailed metrics`;
             console.log('📊 Showing detailed DOM info...');
             showDetailedDOMInfo();
 
+            const typedInspection = inspection as DOMInspectionResult;
             const summary = `DOM Inspection Complete!\n\n` +
-              `Floating Panels Found: ${inspection.floatingPanels.filter((p: any) => p.found).length}\n` +
-              `Tabs Found: ${inspection.tabs.length}\n` +
-              `Cards Found: ${inspection.cards.length}\n` +
-              `Canvases Found: ${inspection.canvases.length}\n` +
+              `Floating Panels Found: ${typedInspection.floatingPanels.filter((p) => p.found).length}\n` +
+              `Tabs Found: ${typedInspection.tabs.length}\n` +
+              `Cards Found: ${typedInspection.cards.length}\n` +
+              `Canvases Found: ${typedInspection.canvases.length}\n` +
               `Advanced Panel Detection: ${panel ? '✅ SUCCESS' : '❌ FAILED'}\n\n` +
               `Check console for detailed results.`;
 
@@ -322,7 +372,7 @@ Check console for detailed metrics`;
         onClick={() => {
           console.log('🏢 ENTERPRISE CURSOR-CROSSHAIR ALIGNMENT TEST TRIGGERED');
           import('./enterprise-cursor-crosshair-test').then(module => {
-            const defaultExport = module.default as any; // ✅ ENTERPRISE FIX: Type assertion for module.default
+            const defaultExport = module.default as EnterpriseCursorTestModule;
             const { runEnterpriseMouseCrosshairTests, startEnterpriseInteractiveTest } = defaultExport;
 
             console.log('🔍 Running enterprise cursor-crosshair alignment tests...');

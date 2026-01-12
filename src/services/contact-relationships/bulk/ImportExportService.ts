@@ -11,9 +11,22 @@
 // ============================================================================
 
 import { ContactRelationship, RelationshipType } from '@/types/contacts/relationships';
-import { Contact } from '@/types/contacts';
+import { Contact, IndividualContact, CompanyContact, ServiceContact } from '@/types/contacts';
 import { BulkRelationshipService, BulkOperationResult } from './BulkRelationshipService';
 import { ContactsService } from '@/services/contacts.service';
+
+// 🏢 ENTERPRISE: Type guards for Contact union type
+function isIndividualContact(contact: Contact): contact is IndividualContact {
+  return contact.type === 'individual';
+}
+
+function isCompanyContact(contact: Contact): contact is CompanyContact {
+  return contact.type === 'company';
+}
+
+function isServiceContact(contact: Contact): contact is ServiceContact {
+  return contact.type === 'service';
+}
 
 // ============================================================================
 // IMPORT/EXPORT TYPES
@@ -25,7 +38,7 @@ export interface ImportResult {
   createdContacts: number;
   errors: Array<{
     row: number;
-    data: any;
+    data: Record<string, unknown>;
     error: string;
   }>;
   summary: {
@@ -403,7 +416,7 @@ export class ImportExportService {
       department: row.department,
       startDate: row.startDate || new Date().toISOString(),
       endDate: row.endDate,
-      status: (row.status as any) || 'active',
+      status: (row.status as 'active' | 'inactive' | 'pending') || 'active',
       relationshipNotes: row.notes
     };
 
@@ -476,11 +489,20 @@ export class ImportExportService {
   private static getContactDisplayName(contact: Contact | null): string {
     if (!contact) return 'Unknown';
 
-    if (contact.type === 'individual') {
-      return `${(contact as any).firstName || ''} ${(contact as any).lastName || ''}`.trim();
+    // 🏢 ENTERPRISE: Type-safe access using type guards
+    if (isIndividualContact(contact)) {
+      return `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
     }
 
-    return (contact as any).companyName || (contact as any).serviceName || 'Unknown';
+    if (isCompanyContact(contact)) {
+      return contact.companyName || 'Unknown';
+    }
+
+    if (isServiceContact(contact)) {
+      return contact.serviceName || 'Unknown';
+    }
+
+    return 'Unknown';
   }
 
   private static generateDownloadUrl(content: string, fileName: string): string {

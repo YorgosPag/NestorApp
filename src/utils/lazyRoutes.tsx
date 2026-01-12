@@ -7,28 +7,32 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Import from canonical location (not DXF Viewer)
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // Generic loading components for different types of pages
 export const PageLoadingSpinner = () => {
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const { quick, radius } = useBorderTokens();
   const colors = useSemanticColors();
   return (
-  <main className={`min-h-screen ${colors.bg.primary} flex items-center justify-center`} role="status" aria-label="Φόρτωση σελίδας">
+  <main className={`min-h-screen ${colors.bg.primary} flex items-center justify-center`} role="status" aria-label={t('loading.ariaLabel')}>
     <section className="text-center">
       <AnimatedSpinner size="large" className="mx-auto mb-6" aria-hidden="true" />
-      <p className="text-muted-foreground">Φόρτωση σελίδας...</p>
+      <p className="text-muted-foreground">{t('loading.page')}</p>
     </section>
   </main>
   );
 };
 
 export const DashboardLoadingSkeleton = () => {
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const { quick, radius, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
   return (
-  <main className={`min-h-screen ${colors.bg.primary}`} role="status" aria-label="Φόρτωση dashboard">
+  <main className={`min-h-screen ${colors.bg.primary}`} role="status" aria-label={t('loading.dashboard')}>
     <header className={`${getDirectionalBorder('muted', 'bottom')} ${colors.bg.card}`}>
       <section className="p-6">
         <div className="flex items-center justify-between mb-6">
@@ -41,7 +45,7 @@ export const DashboardLoadingSkeleton = () => {
             <div className={`${iconSizes.xl} bg-muted ${radius.md}animate-pulse`} aria-hidden="true"></div>
           </div>
         </div>
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Φόρτωση στατιστικών">
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" aria-label={t('loading.statistics')}>
           {Array.from({ length: 4 }).map((_, i) => (
             <article key={i} className={`${colors.bg.primary} ${quick.card} p-4`}>
               <div className="space-y-2">
@@ -54,7 +58,7 @@ export const DashboardLoadingSkeleton = () => {
         </section>
       </section>
     </header>
-    <section className="p-6" aria-label="Φόρτωση περιεχομένου">
+    <section className="p-6" aria-label={t('loading.content')}>
       <div className="h-64 bg-muted ${radius.md}animate-pulse" aria-hidden="true"></div>
     </section>
   </main>
@@ -62,11 +66,12 @@ export const DashboardLoadingSkeleton = () => {
 };
 
 export const FormLoadingSkeleton = () => {
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const { quick, radius } = useBorderTokens();
   const colors = useSemanticColors();
   return (
-  <main className={`min-h-screen ${colors.bg.primary} p-6`} role="status" aria-label="Φόρτωση φόρμας">
+  <main className={`min-h-screen ${colors.bg.primary} p-6`} role="status" aria-label={t('loading.form')}>
     <section className="max-w-4xl mx-auto">
       <form className={`bg-card ${quick.card} p-6`}>
         <fieldset className="space-y-6">
@@ -95,11 +100,12 @@ export const FormLoadingSkeleton = () => {
 };
 
 export const ListLoadingSkeleton = () => {
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const { quick, radius, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
   return (
-  <main className={`min-h-screen ${colors.bg.primary}`} role="status" aria-label="Φόρτωση λίστας">
+  <main className={`min-h-screen ${colors.bg.primary}`} role="status" aria-label={t('loading.list')}>
     <header className={`${getDirectionalBorder('muted', 'bottom')} bg-card p-6`}>
       <div className="flex items-center justify-between">
         <div className={`${iconSizes.lg} bg-muted ${radius.md}w-32 animate-pulse`} aria-hidden="true"></div>
@@ -127,9 +133,12 @@ export const ListLoadingSkeleton = () => {
   );
 };
 
+/** Type for lazy-loaded component modules */
+type LazyComponentModule = { default: ComponentType<Record<string, unknown>> };
+
 // Utility function to create lazy routes with different loading states
 export function createLazyRoute(
-  importFn: () => Promise<{ default: any }>,
+  importFn: () => Promise<LazyComponentModule>,
   options: {
     loadingType?: 'spinner' | 'dashboard' | 'form' | 'list';
     ssr?: boolean;
@@ -220,5 +229,5 @@ export const LazyRoutes = {
 } as const;
 
 // Export types for TypeScript support
-export type LazyRouteComponent = ComponentType<any>;
+export type LazyRouteComponent = ComponentType<Record<string, unknown>>;
 export type LoadingType = 'spinner' | 'dashboard' | 'form' | 'list';

@@ -34,6 +34,8 @@ import {
   type LucideIcon
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // =============================================================================
 // 🏢 ENTERPRISE: Type Definitions
@@ -104,10 +106,16 @@ export function TypeQuickFilters({
   onTypeChange,
   className,
   compact = false,
-  label = 'Τύπος:',
-  ariaLabel = 'Φίλτρα τύπου'
+  label,
+  ariaLabel
 }: TypeQuickFiltersProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('common');
   const colors = useSemanticColors();
+
+  // Use translations as defaults if props not provided
+  const displayLabel = label ?? t('filters.typeLabel');
+  const displayAriaLabel = ariaLabel ?? t('filters.typeAriaLabel');
 
   // 🎯 Handle filter selection
   const handleFilterClick = (typeValue: string) => {
@@ -142,13 +150,13 @@ export function TypeQuickFilters({
         'border-b border-border/50',
         className
       )}
-      aria-label={ariaLabel}
+      aria-label={displayAriaLabel}
       role="group"
     >
       {/* 📋 Filter Label (desktop only) */}
-      {!compact && label && (
+      {!compact && displayLabel && (
         <span className={cn('text-xs font-medium mr-2', colors.text.muted)}>
-          {label}
+          {displayLabel}
         </span>
       )}
 
@@ -176,7 +184,7 @@ export function TypeQuickFilters({
                       )
                 )}
                 aria-pressed={active}
-                aria-label={`Φιλτράρισμα: ${option.tooltip}`}
+                aria-label={`${t('filters.filterBy')} ${option.tooltip}`}
               >
                 <Icon
                   className={cn(
@@ -188,7 +196,7 @@ export function TypeQuickFilters({
                   <span className="hidden sm:inline">{option.label}</span>
                 )}
                 {compact && option.value === 'all' && (
-                  <span className="ml-1">Όλες</span>
+                  <span className="ml-1">{t('filters.all')}</span>
                 )}
               </Button>
             </TooltipTrigger>
@@ -209,12 +217,14 @@ export function TypeQuickFilters({
 /**
  * Unit Type Quick Filters - Pre-configured for Units/Apartments
  */
-export function UnitTypeQuickFilters(props: Omit<TypeQuickFiltersProps, 'options' | 'ariaLabel'>) {
+export function UnitTypeQuickFilters(props: Omit<TypeQuickFiltersProps, 'options'>) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('common');
   return (
     <TypeQuickFilters
       {...props}
       options={UNIT_TYPE_OPTIONS}
-      ariaLabel="Φίλτρα τύπου μονάδας"
+      ariaLabel={props.ariaLabel ?? t('filters.unitTypes.ariaLabel')}
     />
   );
 }
@@ -222,12 +232,14 @@ export function UnitTypeQuickFilters(props: Omit<TypeQuickFiltersProps, 'options
 /**
  * Contact Type Quick Filters - Pre-configured for Contacts
  */
-export function ContactTypeQuickFilters(props: Omit<TypeQuickFiltersProps, 'options' | 'ariaLabel'>) {
+export function ContactTypeQuickFilters(props: Omit<TypeQuickFiltersProps, 'options'>) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('common');
   return (
     <TypeQuickFilters
       {...props}
       options={CONTACT_TYPE_OPTIONS}
-      ariaLabel="Φίλτρα τύπου επαφής"
+      ariaLabel={props.ariaLabel ?? t('filters.contactTypes.ariaLabel')}
     />
   );
 }

@@ -3,11 +3,12 @@
  * ✅ ΦΑΣΗ 7: Unified event system που αντικαθιστά canvas-v2/shared/events.ts
  */
 
+// 🏢 ENTERPRISE: Type-safe canvas event interface
 export interface CanvasEvent {
   readonly type: string;
   readonly timestamp: number;
   readonly canvasId?: string;
-  readonly data?: any;
+  readonly data?: unknown;
 }
 
 export interface TransformChangeEvent extends CanvasEvent {
@@ -39,7 +40,8 @@ export interface RenderEvent extends CanvasEvent {
   readonly totalTime?: number;
 }
 
-export type EventCallback<T = any> = (event: T) => void;
+// 🏢 ENTERPRISE: Type-safe event callback with unknown default
+export type EventCallback<T = unknown> = (event: T) => void;
 
 /**
  * 🔺 CENTRALIZED CANVAS EVENT SYSTEM
@@ -87,8 +89,9 @@ export class CanvasEventSystem {
 
   /**
    * Emit event με automatic timestamping
+   * 🏢 ENTERPRISE: Type-safe emit with unknown default
    */
-  emit<T = any>(eventType: string, data: T, canvasId?: string): void {
+  emit<T = unknown>(eventType: string, data: T, canvasId?: string): void {
     const event: CanvasEvent = {
       type: eventType,
       timestamp: performance.now(),

@@ -14,10 +14,23 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { adminDb } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
+
+// ============================================================================
+// 🏢 ENTERPRISE: Admin SDK Parking Endpoint
+// ============================================================================
+//
+// ARCHITECTURE DECISION:
+// Χρησιμοποιεί Admin SDK (server-side) αντί για Client SDK
+//
+// ΑΙΤΙΟΛΟΓΗΣΗ:
+// 1. Τα Firestore Security Rules απαιτούν authentication (request.auth != null)
+// 2. Το Client SDK στον server ΔΕΝ έχει authentication context
+// 3. Μόνο το Admin SDK μπορεί να παρακάμψει τα security rules
+//
+// ============================================================================
 
 /**
  * 🅿️ Enterprise Parking Spot interface
@@ -97,26 +110,26 @@ export async function GET(request: NextRequest): Promise<NextResponse<ParkingAPI
       }
     }
 
-    console.log('🔍 API: Cache miss - Fetching from Firestore...');
+    console.log('🔍 API: Cache miss - Fetching from Firestore with Admin SDK...');
 
-    // 🎯 ENTERPRISE: Build query με optional buildingId filter
-    let parkingQuery;
+    // =========================================================================
+    // Query Firestore using Admin SDK
+    // =========================================================================
+    let snapshot;
 
     if (buildingId) {
-      // 🎯 ENTERPRISE: Filter parking by buildingId (local_4.log architecture)
-      parkingQuery = query(
-        collection(db, COLLECTIONS.PARKING_SPACES),
-        where('buildingId', '==', buildingId)
-      );
+      // Filter by buildingId
+      snapshot = await adminDb
+        .collection(COLLECTIONS.PARKING_SPACES)
+        .where('buildingId', '==', buildingId)
+        .get();
     } else {
-      // Get all parking spots
-      parkingQuery = query(
-        collection(db, COLLECTIONS.PARKING_SPACES),
-        orderBy('createdAt', 'desc')
-      );
+      // Get all parking spots, ordered by createdAt
+      snapshot = await adminDb
+        .collection(COLLECTIONS.PARKING_SPACES)
+        .orderBy('createdAt', 'desc')
+        .get();
     }
-
-    const snapshot = await getDocs(parkingQuery);
 
     const parkingSpots: FirestoreParkingSpot[] = snapshot.docs.map(doc => {
       const data = doc.data() as Record<string, unknown>;

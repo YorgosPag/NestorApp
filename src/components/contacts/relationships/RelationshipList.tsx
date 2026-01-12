@@ -17,6 +17,8 @@ import { Users } from 'lucide-react';
 import type { ContactRelationship } from '@/types/contacts/relationships';
 import { RelationshipCard } from './RelationshipCard';
 import type { RelationshipListProps } from './types/relationship-manager.types';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /**
  * 📋 RelationshipList Component
@@ -42,6 +44,11 @@ export const RelationshipList: React.FC<RelationshipListProps> = ({
   onDelete
 }) => {
   // ============================================================================
+  // 🏢 ENTERPRISE: i18n hook for translations
+  // ============================================================================
+  const { t } = useTranslation('contacts');
+
+  // ============================================================================
   // STATE COMPUTATION
   // ============================================================================
 
@@ -61,14 +68,13 @@ export const RelationshipList: React.FC<RelationshipListProps> = ({
       <CardContent className="pt-6">
         <div className="text-center text-gray-500">
           <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-          <p className="font-medium">Δημιουργία σχέσεων</p>
+          <p className="font-medium">{t('relationships.list.newContact.title')}</p>
           <p className="text-sm mt-2">
-            Για να δημιουργήσετε σχέσεις, πρώτα αποθηκεύστε την επαφή.
-            Μετά την αποθήκευση θα μπορείτε να προσθέσετε επαγγελματικές σχέσεις.
+            {t('relationships.list.newContact.description')}
           </p>
           <div className="mt-4 p-3 bg-blue-50 rounded-lg">
             <p className="text-xs text-blue-600">
-              💡 <strong>Συμβουλή:</strong> Συμπληρώστε τα βασικά στοιχεία και κάντε κλικ "Ενημέρωση Επαφής"
+              💡 <strong>{t('relationships.list.newContact.tip')}</strong> {t('relationships.list.newContact.tipText')}
             </p>
           </div>
         </div>
@@ -82,7 +88,7 @@ export const RelationshipList: React.FC<RelationshipListProps> = ({
   const renderLoadingState = () => (
     <Card>
       <CardContent className="pt-6">
-        <p className="text-center text-gray-500">Φόρτωση σχέσεων...</p>
+        <p className="text-center text-gray-500">{t('relationships.list.loading')}</p>
       </CardContent>
     </Card>
   );
@@ -95,10 +101,10 @@ export const RelationshipList: React.FC<RelationshipListProps> = ({
       <CardContent className="pt-6">
         <div className="text-center text-gray-500">
           <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-          <p>Δεν υπάρχουν καταχωρημένες σχέσεις</p>
+          <p>{t('relationships.list.empty.title')}</p>
           {!readonly && (
             <p className="text-sm">
-              Κάντε κλικ στο κουμπί "Προσθήκη Σχέσης" για να προσθέσετε την πρώτη σχέση.
+              {t('relationships.list.empty.addHint')}
             </p>
           )}
         </div>

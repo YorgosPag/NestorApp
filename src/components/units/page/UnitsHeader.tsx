@@ -1,5 +1,10 @@
 'use client';
 
+/**
+ * 🏢 ENTERPRISE UnitsHeader with i18n support
+ * ZERO HARDCODED STRINGS - All labels from centralized translations
+ */
+
 import React from 'react';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { Filter } from 'lucide-react';
@@ -11,6 +16,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { ViewMode as CoreViewMode } from '@/core/headers';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export type UnitsViewMode = 'list' | 'grid';
 
@@ -38,6 +45,8 @@ export function UnitsHeader({
   showFilters,
   setShowFilters,
 }: UnitsHeaderProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('units');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
@@ -48,15 +57,15 @@ export function UnitsHeader({
         spacing="compact"
         title={{
           icon: NAVIGATION_ENTITIES.unit.icon,
-          title: "Διαχείριση Μονάδων",
-          subtitle: "Κεντρικό ευρετήριο όλων των μονάδων σας"
+          title: t('header.title'),
+          subtitle: t('header.subtitle')
         }}
         // 🏢 ENTERPRISE: Breadcrumb για ιεραρχική πλοήγηση
         breadcrumb={<NavigationBreadcrumb />}
         search={{
           value: searchTerm,
           onChange: setSearchTerm,
-          placeholder: "Αναζήτηση μονάδων..."
+          placeholder: t('header.searchPlaceholder')
         }}
         actions={{
           showDashboard,
@@ -65,7 +74,7 @@ export function UnitsHeader({
           onViewModeChange: (mode) => setViewMode(mode as UnitsViewMode),
           viewModes: ['list', 'grid'] as CoreViewMode[],
           addButton: {
-            label: 'Νέα Μονάδα',
+            label: t('header.newUnit'),
             onClick: () => onNewUnit?.()
           },
           // Mobile-only filter button

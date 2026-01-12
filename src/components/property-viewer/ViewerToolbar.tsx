@@ -24,6 +24,19 @@ import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 type ViewMode = 'view' | 'create' | 'measure' | 'edit';
 
+/** Floor data structure */
+interface FloorData {
+  id: string;
+  name?: string;
+  floorPlanUrl?: string;
+  metadata?: {
+    lastPDFUpdate?: string;
+    pdfFileName?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 interface ViewerToolbarProps {
   viewMode?: ViewMode;
   onViewModeChange?: (mode: ViewMode) => void;
@@ -33,8 +46,8 @@ interface ViewerToolbarProps {
   onResetView?: () => void;
   scale?: number;
   isReadOnly?: boolean;
-  currentFloor?: any;
-  onFloorChange?: (floor: any) => void;
+  currentFloor?: FloorData;
+  onFloorChange?: (floor: FloorData) => void;
 }
 
 export function ViewerToolbar({

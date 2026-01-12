@@ -1,4 +1,86 @@
 {
+  "header": {
+    "title": "Contact Management",
+    "titleWithCount": "Contact Management ({{count}})",
+    "subtitle": "Central directory of all your contacts",
+    "searchPlaceholder": "Search contacts...",
+    "newContact": "New Contact"
+  },
+  "page": {
+    "pageLabel": "Contact Management",
+    "loading": "Loading Contacts",
+    "loadingMessage": "Loading contacts from database...",
+    "error": {
+      "pageLabel": "Contacts Error",
+      "ariaLabel": "Loading Error",
+      "title": "Failed to load contacts:",
+      "retry": "Retry"
+    },
+    "dashboard": {
+      "label": "Contact Statistics",
+      "totalContacts": "Total Contacts",
+      "totalPersonnel": "Total Personnel",
+      "legalEntities": "Legal Entities",
+      "activeContacts": "Active Contacts",
+      "services": "Services",
+      "recentAdditions": "Recent Additions",
+      "favorites": "Favorites",
+      "contactsWithRelations": "Contacts with Relations"
+    },
+    "filters": {
+      "desktop": "Search Filters",
+      "mobile": "Search Filters Mobile"
+    },
+    "views": {
+      "desktopView": "List and Details Desktop",
+      "mobileList": "Contacts Mobile List",
+      "gridPlaceholder": "Grid View will be implemented soon."
+    },
+    "details": {
+      "title": "Details",
+      "editContact": "Edit Contact",
+      "deleteContact": "Delete Contact"
+    },
+    "filterIndicator": {
+      "viewingCustomer": "Viewing customer:",
+      "selectedContact": "Selected contact",
+      "back": "Back",
+      "backToList": "Back to contacts list",
+      "filteringFor": "Filtering for:",
+      "contactsCount": "{{count}} contact",
+      "contactsCountPlural": "{{count}} contacts",
+      "clear": "Clear",
+      "showAll": "Show all contacts"
+    }
+  },
+  "list": {
+    "ariaLabel": "Contacts List",
+    "entityName": "Contacts",
+    "searchPlaceholder": "Search contacts...",
+    "favorites": {
+      "added": "Added to favorites: {{name}}",
+      "removed": "Removed from favorites: {{name}}",
+      "error": "Failed to update favorite"
+    },
+    "empty": {
+      "title": "No contacts found",
+      "subtitle": "Add your first contact"
+    }
+  },
+  "properties": {
+    "title": "Customer Properties ({{count}})",
+    "addProperty": "Add Property",
+    "empty": "This customer has no registered properties.",
+    "table": {
+      "code": "Code",
+      "type": "Type",
+      "area": "Area",
+      "building": "Building",
+      "actions": "Actions"
+    },
+    "sqm": "sq.m",
+    "view": "View"
+  },
   "details": {
     "contactInfo": {
       "title": "Contact Information",
@@ -8,6 +90,83 @@
       "title": "Tax Information",
       "vatNumber": "VAT Number:",
       "notSet": "Not set"
+    }
+  },
+  "toolbar": {
+    "actions": {
+      "new": "New Contact (Ctrl+N)",
+      "edit": "Edit Selected (Ctrl+E)",
+      "delete": "Delete Selected (Delete)"
+    }
+  },
+  "dialog": {
+    "deleteConfirmation": {
+      "title": "Delete Confirmation",
+      "message": "Are you sure you want to delete {{count}} contact(s)?",
+      "warning": "This action cannot be undone."
+    },
+    "cancel": "Cancel",
+    "delete": "Delete"
+  },
+  "relationships": {
+    "form": {
+      "title": "Add New Relationship",
+      "editTitle": "Edit Relationship",
+      "labels": {
+        "contact": "Contact",
+        "relationshipType": "Relationship Type",
+        "position": "Position",
+        "department": "Department",
+        "startDate": "Start Date",
+        "notes": "Notes",
+        "professionalInfo": "Professional Contact Information"
+      },
+      "placeholders": {
+        "searchContact": "Search contact...",
+        "selectType": "Select relationship type",
+        "position": "e.g. Sales Director",
+        "department": "e.g. Finance Department",
+        "businessPhone": "Business phone",
+        "businessEmail": "Business email",
+        "extensionNumber": "Extension number",
+        "businessAddress": "Business address",
+        "notes": "Additional information..."
+      },
+      "validation": {
+        "contactRequired": "Contact selection is required",
+        "relationshipTypeRequired": "Relationship type is required",
+        "positionRequired": "Position is required",
+        "departmentRequired": "Department is required"
+      },
+      "buttons": {
+        "cancel": "Cancel",
+        "save": "Saving...",
+        "add": "Add",
+        "update": "Update"
+      }
+    },
+    "card": {
+      "editTitle": "Edit relationship",
+      "deleteTitle": "Delete relationship",
+      "from": "From:",
+      "to": "To:",
+      "notes": "Notes:",
+      "createdAt": "Created:",
+      "updatedAt": "Updated:",
+      "recently": "Recently"
+    },
+    "list": {
+      "newContact": {
+        "title": "Create relationships",
+        "description": "To create relationships, first save the contact. After saving, you will be able to add professional relationships.",
+        "tip": "Tip:",
+        "tipText": "Fill in the basic information and click \"Update Contact\""
+      },
+      "loading": "Loading relationships...",
+      "empty": {
+        "title": "No registered relationships",
+        "addHint": "Click the \"Add Relationship\" button to add the first relationship."
+      }
     }
   }
 }

@@ -24,6 +24,69 @@ import {
   RelationshipSearchCriteria,
   RelationshipType
 } from '@/types/contacts/relationships';
+import type { Contact, ContactType } from '@/types/contacts';
+
+// Import enterprise ID generation
+import { generateRelationshipId } from '@/services/enterprise-id.service';
+
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions for ContactRelationshipService
+// ============================================================================
+
+/**
+ * Minimal contact for placeholder usage when full Contact is not loaded
+ */
+interface MinimalContact {
+  id: string;
+}
+
+/**
+ * Import error type for organizational structure import
+ */
+interface ImportError {
+  message: string;
+  row?: number;
+  field?: string;
+}
+
+/**
+ * Department head information
+ */
+interface DepartmentHeadInfo {
+  contactId: string;
+  name?: string;
+  position?: string;
+}
+
+/**
+ * Bulk operation options
+ */
+interface BulkOperationOptions {
+  validateBeforeCreate?: boolean;
+  skipDuplicates?: boolean;
+  batchSize?: number;
+  onProgress?: (progress: number) => void;
+}
+
+/**
+ * Export filters for organization data
+ */
+interface ExportFilters {
+  includeInactive?: boolean;
+  departments?: string[];
+  relationshipTypes?: RelationshipType[];
+  dateRange?: { start: Date; end: Date };
+}
+
+/**
+ * Cache configuration options
+ */
+interface CacheConfig {
+  enabled?: boolean;
+  defaultTTL?: number;
+  maxEntries?: number;
+  cleanupInterval?: number;
+}
 
 // Import specialized services
 import { RelationshipCRUDService } from './core/RelationshipCRUDService';
@@ -40,8 +103,25 @@ import { OrganizationHierarchyService } from './hierarchy/OrganizationHierarchyS
 import { DepartmentManagementService } from './hierarchy/DepartmentManagementService';
 
 // Import bulk services
-import { BulkRelationshipService } from './bulk/BulkRelationshipService';
-import { ImportExportService } from './bulk/ImportExportService';
+import { BulkRelationshipService, BulkOperationResult as ServiceBulkOperationResult } from './bulk/BulkRelationshipService';
+import { ImportExportService, ExportResult as ServiceExportResult } from './bulk/ImportExportService';
+
+// Import types from specialized services
+import { DepartmentMetrics as ServiceDepartmentMetrics } from './hierarchy/DepartmentManagementService';
+import { CacheStats } from './adapters/RelationshipCacheAdapter';
+import type { ExportResult } from './bulk/ImportExportService';
+
+// Re-export CacheStats as CacheStatistics for backward compatibility
+export type CacheStatistics = CacheStats;
+
+/**
+ * Import error format from ImportExportService
+ */
+interface ServiceImportError {
+  row: number;
+  data: unknown;
+  error: string;
+}
 
 // ============================================================================
 // MAIN ORCHESTRATOR SERVICE
@@ -154,13 +234,14 @@ export class ContactRelationshipService {
       if (cached) {
         console.log('🎯 ORCHESTRATOR: Organization employees cache hit');
         // Convert cached relationships to ContactWithRelationship format
+        // Note: Contact object is minimal placeholder - full contact loaded separately
         return cached.map(relationship => ({
-          contact: { id: relationship.sourceContactId } as any,
+          contact: { id: relationship.sourceContactId } as MinimalContact as Contact,
           relationship,
           organizationContext: {
             organizationId,
             organizationName: 'Organization Name', // Placeholder
-            organizationType: 'company' // Placeholder
+            organizationType: 'company' as ContactType
           }
         }));
       }
@@ -188,13 +269,14 @@ export class ContactRelationshipService {
       );
 
       // Convert to ContactWithRelationship format
+      // Note: Contact object is minimal placeholder - full contact loaded separately
       return filteredRelationships.map(relationship => ({
-        contact: { id: relationship.sourceContactId } as any, // Placeholder
+        contact: { id: relationship.sourceContactId } as MinimalContact as Contact,
         relationship,
         organizationContext: {
           organizationId,
           organizationName: 'Organization Name', // Placeholder
-          organizationType: 'company' // Placeholder
+          organizationType: 'company' as ContactType
         }
       }));
 
@@ -229,13 +311,14 @@ export class ContactRelationshipService {
       console.log('✅ ORCHESTRATOR: Found employment relationship:', employmentRel.relationshipType);
 
       // Return employer info
+      // Note: Contact object is minimal placeholder - full contact loaded separately
       return {
-        contact: { id: employmentRel.targetContactId } as any, // Placeholder
+        contact: { id: employmentRel.targetContactId } as MinimalContact as Contact,
         relationship: employmentRel,
         organizationContext: {
           organizationId: employmentRel.targetContactId,
           organizationName: 'Organization Name', // Placeholder
-          organizationType: 'company' // Placeholder
+          organizationType: 'company' as ContactType
         }
       };
 
@@ -262,8 +345,21 @@ export class ContactRelationshipService {
       return cached;
     }
 
-    // Delegate to specialized search service
-    const results = await RelationshipSearchService.searchRelationships(criteria);
+    // Delegate to specialized search service using advancedSearch
+    // Pass through the criteria which already uses plural property names
+    const searchResult = await RelationshipSearchService.advancedSearch({
+      sourceContactIds: criteria.sourceContactIds,
+      targetContactIds: criteria.targetContactIds,
+      relationshipTypes: criteria.relationshipTypes,
+      departments: criteria.departments,
+      statuses: criteria.statuses,
+      textSearch: criteria.textSearch
+    }, {
+      // Note: includeInactive not in RelationshipSearchCriteria, using default behavior
+      includeInactive: false
+    });
+
+    const results = searchResult.items;
 
     // Cache results
     RelationshipCacheAdapter.cacheSearchResults(criteria, results);
@@ -348,7 +444,7 @@ export class ContactRelationshipService {
       manager?: string;
       startDate?: string;
     }>
-  ): Promise<{ success: ContactRelationship[]; errors: any[] }> {
+  ): Promise<{ success: ContactRelationship[]; errors: ServiceImportError[] }> {
     console.log('📋 ORCHESTRATOR: Starting organizational structure import', {
       organizationId,
       employeeCount: employeeData.length
@@ -377,7 +473,12 @@ export class ContactRelationshipService {
 
     } catch (error) {
       console.error('❌ ORCHESTRATOR: Organization import failed:', error);
-      return { success: [], errors: [error] };
+      const importError: ServiceImportError = {
+        row: 0,
+        data: null,
+        error: error instanceof Error ? error.message : 'Unknown import error'
+      };
+      return { success: [], errors: [importError] };
     }
   }
 
@@ -425,16 +526,30 @@ export class ContactRelationshipService {
   static async createDepartment(
     organizationId: string,
     departmentName: string,
-    departmentHead: any,
+    departmentHead: DepartmentHeadInfo,
     budget?: number
   ): Promise<{ success: boolean; departmentId: string }> {
     console.log('🏗️ ORCHESTRATOR: Creating department', departmentName);
 
     try {
+      // Convert DepartmentHeadInfo to minimal IndividualContact format for service compatibility
+      const headAsContact: Contact = {
+        id: departmentHead.contactId,
+        type: 'individual',
+        firstName: departmentHead.name?.split(' ')[0] || 'Department',
+        lastName: departmentHead.name?.split(' ').slice(1).join(' ') || 'Head',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isFavorite: false,
+        status: 'active',
+        // Add position from DepartmentHeadInfo if available
+        jobTitle: departmentHead.position
+      };
+
       const result = await DepartmentManagementService.createDepartment(
         organizationId,
         departmentName,
-        departmentHead,
+        headAsContact,
         budget
       );
 
@@ -487,13 +602,13 @@ export class ContactRelationshipService {
   static async getDepartmentMetrics(
     organizationId: string,
     departmentName: string
-  ): Promise<any> {
+  ): Promise<ServiceDepartmentMetrics> {
     console.log('📊 ORCHESTRATOR: Getting department metrics', departmentName);
 
     try {
       // Check cache first για metrics
       const cacheKey = { type: 'department' as const, id: departmentName, params: { organizationId, metrics: true } };
-      const cached = RelationshipCacheAdapter.get(cacheKey);
+      const cached = RelationshipCacheAdapter.get<ServiceDepartmentMetrics>(cacheKey);
       if (cached) {
         console.log('🎯 ORCHESTRATOR: Department metrics cache hit');
         return cached;
@@ -522,8 +637,8 @@ export class ContactRelationshipService {
    */
   static async bulkCreateRelationshipsEnhanced(
     relationships: Partial<ContactRelationship>[],
-    options: any = {}
-  ): Promise<any> {
+    options: BulkOperationOptions = {}
+  ): Promise<ServiceBulkOperationResult> {
     console.log('🔄 ORCHESTRATOR: Enhanced bulk creating relationships', { count: relationships.length });
 
     try {
@@ -566,8 +681,8 @@ export class ContactRelationshipService {
   static async exportOrganizationData(
     organizationId: string,
     format: 'csv' | 'json' | 'xml' = 'csv',
-    filters?: any
-  ): Promise<any> {
+    filters?: ExportFilters
+  ): Promise<ExportResult> {
     console.log('📤 ORCHESTRATOR: Exporting organization data', { organizationId, format });
 
     try {
@@ -597,14 +712,14 @@ export class ContactRelationshipService {
   /**
    * 📊 Get Cache Statistics
    */
-  static getCacheStats(): any {
+  static getCacheStats(): CacheStatistics {
     return RelationshipCacheAdapter.getStatistics();
   }
 
   /**
    * ⚙️ Configure Cache Settings
    */
-  static configureCaching(config: any): void {
+  static configureCaching(config: CacheConfig): void {
     console.log('⚙️ ORCHESTRATOR: Configuring cache settings', config);
     RelationshipCacheAdapter.configure(config);
   }
@@ -617,7 +732,7 @@ export class ContactRelationshipService {
    * 🔧 Generate ID (Legacy compatibility)
    */
   static generateId(): string {
-    return FirestoreRelationshipAdapter.generateRelationshipId();
+    return generateRelationshipId();
   }
 
   /**
@@ -629,8 +744,9 @@ export class ContactRelationshipService {
 
   /**
    * 🔍 Query Database (Legacy compatibility)
+   * @deprecated Use specific methods like getContactRelationships, getOrganizationEmployees instead
    */
-  static async queryDatabase(sqlQuery: string, params: any[]): Promise<ContactRelationship[]> {
+  static async queryDatabase(sqlQuery: string, params: string[]): Promise<ContactRelationship[]> {
     console.warn('⚠️ ORCHESTRATOR: queryDatabase is deprecated - use specific methods instead');
 
     // Enhanced legacy support με caching
@@ -641,7 +757,9 @@ export class ContactRelationshipService {
       }
 
       if (sqlQuery.includes('target_contact_id = ?') && params.length >= 1) {
-        return await this.getOrganizationEmployees(params[0]);
+        // getOrganizationEmployees returns ContactWithRelationship[], extract relationships
+        const employees = await this.getOrganizationEmployees(params[0]);
+        return employees.map(e => e.relationship);
       }
 
       // Try to parse query για advanced search

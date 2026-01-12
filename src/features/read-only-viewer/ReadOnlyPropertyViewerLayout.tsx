@@ -63,7 +63,7 @@ export function ReadOnlyPropertyViewerLayout({
                 <CardContent className="p-3 pt-0 flex-1 min-h-0">
                   <PropertyDetailsPanel
                     propertyIds={selectedPropertyIds}
-                    onSelectFloor={viewerProps.onSelectFloor}
+                    onSelectFloor={onSelectFloor}
                     properties={viewerProps.properties}
                     onUpdateProperty={() => {}}
                     isReadOnly={true}

@@ -168,7 +168,7 @@ export function useDesignSystem(): DesignSystemAPI {
       // ✅ USE: Direct import from useTypography instead
       get: () => {
         console.warn('⚠️ DEPRECATED: typography.bridge.get() - Use SEMANTIC_TYPOGRAPHY_TOKENS from useTypography.ts');
-        return {} as any; // Placeholder to prevent crashes
+        return {} as TypographyTokenBridge; // Placeholder to prevent crashes
       },
       fullClass: () => {
         console.warn('⚠️ DEPRECATED: typography.bridge.fullClass() - Use SEMANTIC_TYPOGRAPHY_TOKENS from useTypography.ts');

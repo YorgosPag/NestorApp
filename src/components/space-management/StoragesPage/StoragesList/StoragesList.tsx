@@ -7,6 +7,8 @@ import type { Storage } from '@/types/storage/contracts';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { EntityListColumn } from '@/core/containers';
 import { matchesSearchTerm } from '@/lib/search/search';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { StoragesListHeader } from './StoragesListHeader';
 // 🏢 ENTERPRISE: Using centralized domain card
@@ -25,6 +27,8 @@ export function StoragesList({
   selectedStorage,
   onSelectStorage,
 }: StoragesListProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const [favorites, setFavorites] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'name' | 'area' | 'price' | 'status' | 'building' | 'type'>('name');
@@ -106,7 +110,7 @@ export function StoragesList({
   });
 
   return (
-    <EntityListColumn hasBorder aria-label="Λίστα Αποθηκών">
+    <EntityListColumn hasBorder aria-label={t('storages.list.ariaLabel')}>
       <StoragesListHeader
         storages={sortedStorages}  // 🏢 ENTERPRISE: Περνάμε filtered results για δυναμικό count
         searchTerm={searchTerm}
@@ -179,9 +183,9 @@ export function StoragesList({
           {sortedStorages.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <Warehouse className={`${iconSizes.xl3} mx-auto mb-2 opacity-50`} />
-              <p>Δεν βρέθηκαν αποθήκες</p>
+              <p>{t('storages.list.noResults')}</p>
               {searchTerm && (
-                <p className="text-sm">για τον όρο "{searchTerm}"</p>
+                <p className="text-sm">{t('storages.list.noResultsForTerm', { term: searchTerm })}</p>
               )}
             </div>
           )}

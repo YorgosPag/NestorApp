@@ -108,7 +108,7 @@ export function useCanvasEvents({
             );
     
             if (distance < 10) {
-              onPolygonCreated({vertices: creatingVertices} as any);
+              onPolygonCreated({ vertices: creatingVertices } as Omit<Property, 'id'>);
               setCreatingVertices([]);
               return;
             }
@@ -129,7 +129,7 @@ export function useCanvasEvents({
 
     const handleCanvasDoubleClick = useCallback(() => {
         if (activeTool === 'create' && creatingVertices.length >= 3) {
-            onPolygonCreated({vertices: creatingVertices} as any);
+            onPolygonCreated({ vertices: creatingVertices } as Omit<Property, 'id'>);
             setCreatingVertices([]);
         } else if(activeTool === 'polyline' && polylinePoints.length > 1) {
             setCurrentPolylines(prev => [...prev, polylinePoints]);

@@ -24,7 +24,7 @@ export interface UseFormStateReturn {
   // Field handlers
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
-  handleNestedChange: (path: string, value: any) => void;
+  handleNestedChange: (path: string, value: unknown) => void;
 }
 
 // ============================================================================
@@ -90,14 +90,14 @@ export function useFormState(): UseFormStateReturn {
   /**
    * Handle nested object field changes (π.χ. serviceAddress.street)
    */
-  const handleNestedChange = useCallback((path: string, value: any) => {
+  const handleNestedChange = useCallback((path: string, value: unknown) => {
     const keys = path.split('.');
     setFormData(prev => {
       const newFormData = { ...prev };
-      let current: any = newFormData;
+      let current: Record<string, unknown> = newFormData as unknown as Record<string, unknown>;
 
       for (let i = 0; i < keys.length - 1; i++) {
-        current = current[keys[i]];
+        current = current[keys[i]] as Record<string, unknown>;
       }
       current[keys[keys.length - 1]] = value;
 

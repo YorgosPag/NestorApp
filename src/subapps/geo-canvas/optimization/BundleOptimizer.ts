@@ -143,6 +143,73 @@ export interface PerformanceBudget {
 }
 
 // ============================================================================
+// 🏢 ENTERPRISE: Visualization Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/**
+ * Treemap node structure
+ */
+export interface TreemapNode {
+  name: string;
+  value?: number;
+  type?: string;
+  children?: TreemapNode[];
+}
+
+/**
+ * Timeline data point
+ */
+export interface TimelineDataPoint {
+  bundle: string;
+  loadTime: number;
+  size: number;
+  criticalPath: boolean;
+}
+
+/**
+ * Visualization data structure
+ */
+export interface VisualizationData {
+  treemap: TreemapNode;
+  sunburst: TreemapNode;
+  timeline: TimelineDataPoint[];
+}
+
+/**
+ * Bundle summary for reports
+ */
+export interface BundleSummary {
+  summary: {
+    totalBundles: number;
+    totalSize: number;
+    totalSizeFormatted: string;
+    totalRecommendations: number;
+    potentialSavings: number;
+    potentialSavingsFormatted: string;
+    budgetCompliance: {
+      passed: boolean;
+      violations: string[];
+      totalSize: number;
+      recommendations: string[];
+    };
+  };
+  bundles: BundleReportEntry[];
+  visualization: VisualizationData;
+}
+
+/**
+ * Bundle report entry
+ */
+export interface BundleReportEntry extends BundleAnalysis {
+  name: string;
+  sizeFormatted: {
+    raw: string;
+    gzipped: string;
+    brotli?: string;
+  };
+}
+
+// ============================================================================
 // MAIN BUNDLE OPTIMIZER CLASS
 // ============================================================================
 
@@ -700,11 +767,7 @@ export class GeoAlertBundleOptimizer {
   /**
    * Generate bundle visualization data
    */
-  public generateVisualization(): {
-    treemap: any;
-    sunburst: any;
-    timeline: any;
-  } {
+  public generateVisualization(): VisualizationData {
     const treemapData = this.generateTreemapData();
     const sunburstData = this.generateSunburstData();
     const timelineData = this.generateTimelineData();
@@ -716,7 +779,7 @@ export class GeoAlertBundleOptimizer {
     };
   }
 
-  private generateTreemapData(): any {
+  private generateTreemapData(): TreemapNode {
     const children = Array.from(this.analysisResults.entries()).map(([bundleName, analysis]) => ({
       name: bundleName,
       value: analysis.size.raw,
@@ -733,12 +796,12 @@ export class GeoAlertBundleOptimizer {
     };
   }
 
-  private generateSunburstData(): any {
+  private generateSunburstData(): TreemapNode {
     // Similar structure but optimized για sunburst visualization
     return this.generateTreemapData();
   }
 
-  private generateTimelineData(): any {
+  private generateTimelineData(): TimelineDataPoint[] {
     return Array.from(this.analysisResults.entries()).map(([bundleName, analysis]) => ({
       bundle: bundleName,
       loadTime: analysis.loadTime.estimated,
@@ -763,7 +826,7 @@ export class GeoAlertBundleOptimizer {
     }
   }
 
-  private generateSummary(): any {
+  private generateSummary(): BundleSummary {
     const totalSize = Array.from(this.analysisResults.values())
       .reduce((sum, analysis) => sum + analysis.size.raw, 0);
 
@@ -798,7 +861,7 @@ export class GeoAlertBundleOptimizer {
     };
   }
 
-  private generateHTMLReport(summary: any): string {
+  private generateHTMLReport(summary: BundleSummary): string {
     return `
     <!DOCTYPE html>
     <html>
@@ -834,7 +897,7 @@ export class GeoAlertBundleOptimizer {
       </div>
 
       <h2>📦 Bundle Details</h2>
-      ${summary.bundles.map((bundle: any) => `
+      ${summary.bundles.map((bundle: BundleReportEntry) => `
         <div class="bundle">
           <h3>${bundle.name}</h3>
           <p><strong>Size:</strong> ${bundle.sizeFormatted.raw} (${bundle.sizeFormatted.gzipped} gzipped)</p>
@@ -844,7 +907,7 @@ export class GeoAlertBundleOptimizer {
 
           ${bundle.recommendations.length > 0 ? `
             <h4>💡 Recommendations</h4>
-            ${bundle.recommendations.map((rec: any) => `
+            ${bundle.recommendations.map((rec: OptimizationRecommendation) => `
               <div class="recommendation ${rec.priority}">
                 <strong>${rec.type}</strong> (${rec.priority}): ${rec.description}
                 <br><em>Savings: ${this.formatBytes(rec.estimatedSavings)}</em>
@@ -858,9 +921,9 @@ export class GeoAlertBundleOptimizer {
     `;
   }
 
-  private generateCSVReport(summary: any): string {
+  private generateCSVReport(summary: BundleSummary): string {
     const headers = 'Bundle,Size (Raw),Size (Gzipped),Chunks,Dependencies,Load Time,Recommendations\n';
-    const rows = summary.bundles.map((bundle: any) =>
+    const rows = summary.bundles.map((bundle: BundleReportEntry) =>
       `"${bundle.name}","${bundle.sizeFormatted.raw}","${bundle.sizeFormatted.gzipped}",${bundle.chunks.length},${bundle.dependencies.length},${bundle.loadTime.estimated.toFixed(0)}ms,${bundle.recommendations.length}`
     ).join('\n');
 

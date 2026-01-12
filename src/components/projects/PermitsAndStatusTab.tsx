@@ -10,31 +10,34 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { FileText, Settings } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 
+/** Permit data structure */
+interface PermitData {
+    buildingBlock: string;
+    protocolNumber: string;
+    licenseNumber: string;
+    issuingAuthority: string;
+    status: string;
+    showOnWeb: boolean;
+}
+
 interface PermitsAndStatusTabProps {
-    data: {
-        buildingBlock: string;
-        protocolNumber: string;
-        licenseNumber: string;
-        issuingAuthority: string;
-        status: string;
-        showOnWeb: boolean;
-    };
-    setData: React.Dispatch<React.SetStateAction<any>>;
+    data: PermitData;
+    setData: React.Dispatch<React.SetStateAction<PermitData>>;
     isEditing: boolean;
 }
 
 export function PermitsAndStatusTab({ data, setData, isEditing }: PermitsAndStatusTabProps) {
     const iconSizes = useIconSizes();
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setData((prev: any) => ({...prev, [e.target.name]: e.target.value}));
+        setData((prev: PermitData) => ({...prev, [e.target.name]: e.target.value}));
     };
 
     const handleSelectChange = (value: string) => {
-        setData((prev: any) => ({...prev, status: value}));
+        setData((prev: PermitData) => ({...prev, status: value}));
     };
 
     const handleCheckboxChange = (checked: boolean | "indeterminate") => {
-        setData((prev: any) => ({...prev, showOnWeb: checked}));
+        setData((prev: PermitData) => ({...prev, showOnWeb: checked === true}));
     };
 
     return (

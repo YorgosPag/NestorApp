@@ -17,6 +17,8 @@ import { ContactsService } from '@/services/contacts.service';
 import toast from 'react-hot-toast';
 import { EntityListColumn } from '@/core/containers';
 import { matchesSearchTerm } from '@/lib/search/search';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 
 interface ContactsListProps {
@@ -42,6 +44,8 @@ export function ContactsList({
   onArchiveContact,
   onContactUpdated
 }: ContactsListProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('contacts');
   const [sortBy, setSortBy] = useState<string>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [togglingFavorites, setTogglingFavorites] = useState<Set<string>>(new Set());
@@ -67,9 +71,10 @@ export function ContactsList({
       await ContactsService.toggleFavorite(contactId, contact.isFavorite || false);
 
       // Show success message
+      const contactName = getContactDisplayName(contact);
       const message = contact.isFavorite
-        ? `Αφαιρέθηκε από τα αγαπημένα: ${getContactDisplayName(contact)}`
-        : `Προστέθηκε στα αγαπημένα: ${getContactDisplayName(contact)}`;
+        ? t('list.favorites.removed', { name: contactName })
+        : t('list.favorites.added', { name: contactName });
       toast.success(message);
 
       // Refresh contacts list
@@ -77,7 +82,7 @@ export function ContactsList({
 
     } catch (error) {
       // Error logging removed
-      toast.error('Αποτυχία ενημέρωσης αγαπημένου');
+      toast.error(t('list.favorites.error'));
     } finally {
       // Remove from loading set
       setTogglingFavorites(prev => {
@@ -124,18 +129,18 @@ export function ContactsList({
   });
 
   return (
-    <EntityListColumn hasBorder aria-label="Λίστα Επαφών">
+    <EntityListColumn hasBorder aria-label={t('list.ariaLabel')}>
 
 
       {/* Header with conditional CompactToolbar */}
       <div>
         <GenericListHeader
           icon={Users}
-          entityName="Επαφές"
+          entityName={t('list.entityName')}
           itemCount={filteredContacts.length}  // 🏢 ENTERPRISE: Δυναμικό count με filtered results
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
-          searchPlaceholder="Αναζήτηση επαφών..."
+          searchPlaceholder={t('list.searchPlaceholder')}
           showToolbar={showToolbar}
           onToolbarToggle={setShowToolbar}
           hideSearch={true}  // 🏢 ENTERPRISE: Κρύβουμε το search - χρησιμοποιούμε το CompactToolbar search
@@ -237,8 +242,8 @@ export function ContactsList({
             ))
           ) : contacts.length === 0 ? (
             <div className="text-center p-8 text-muted-foreground">
-              <p>Δεν υπάρχουν επαφές</p>
-              <p className="text-sm mt-1">Προσθέστε την πρώτη σας επαφή</p>
+              <p>{t('list.empty.title')}</p>
+              <p className="text-sm mt-1">{t('list.empty.subtitle')}</p>
             </div>
           ) : (
             sortedContacts.map((contact) => (

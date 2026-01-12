@@ -25,7 +25,7 @@ interface CacheStats {
 
 export class EnterpriseAPICache {
   private static instance: EnterpriseAPICache | null = null;
-  private cache = new Map<string, CacheEntry<any>>();
+  private cache = new Map<string, CacheEntry<unknown>>();
   private stats: CacheStats = {
     hits: 0,
     misses: 0,
@@ -215,66 +215,66 @@ export class CacheHelpers {
   /**
    * 🏢 Cache companies data
    */
-  static cacheCompanies(companies: any[]): void {
+  static cacheCompanies(companies: unknown[]): void {
     this.cache.set('api:companies', companies);
   }
 
-  static getCachedCompanies(): any[] | null {
+  static getCachedCompanies(): unknown[] | null {
     return this.cache.get('api:companies');
   }
 
   /**
    * 🏗️ Cache projects data για specific company
    */
-  static cacheProjectsByCompany(companyId: string, projects: any[]): void {
+  static cacheProjectsByCompany(companyId: string, projects: unknown[]): void {
     this.cache.set(`api:projects:company:${companyId}`, projects);
   }
 
-  static getCachedProjectsByCompany(companyId: string): any[] | null {
+  static getCachedProjectsByCompany(companyId: string): unknown[] | null {
     return this.cache.get(`api:projects:company:${companyId}`);
   }
 
   /**
    * 🏢 Cache buildings για specific project
    */
-  static cacheBuildingsByProject(projectId: string, buildings: any[]): void {
+  static cacheBuildingsByProject(projectId: string, buildings: unknown[]): void {
     this.cache.set(`api:buildings:project:${projectId}`, buildings);
   }
 
-  static getCachedBuildingsByProject(projectId: string): any[] | null {
+  static getCachedBuildingsByProject(projectId: string): unknown[] | null {
     return this.cache.get(`api:buildings:project:${projectId}`);
   }
 
   /**
    * 🏢 Cache all buildings data
    */
-  static cacheAllBuildings(buildings: any[]): void {
+  static cacheAllBuildings(buildings: unknown[]): void {
     this.cache.set('api:buildings:all', buildings);
   }
 
-  static getCachedAllBuildings(): any[] | null {
+  static getCachedAllBuildings(): unknown[] | null {
     return this.cache.get('api:buildings:all');
   }
 
   /**
    * 📦 Cache storages για specific project
    */
-  static cacheStoragesByProject(projectId: string, storages: any[]): void {
+  static cacheStoragesByProject(projectId: string, storages: unknown[]): void {
     this.cache.set(`api:storages:project:${projectId}`, storages);
   }
 
-  static getCachedStoragesByProject(projectId: string): any[] | null {
+  static getCachedStoragesByProject(projectId: string): unknown[] | null {
     return this.cache.get(`api:storages:project:${projectId}`);
   }
 
   /**
    * 📦 Cache all storages data
    */
-  static cacheAllStorages(storages: any[]): void {
+  static cacheAllStorages(storages: unknown[]): void {
     this.cache.set('api:storages:all', storages);
   }
 
-  static getCachedAllStorages(): any[] | null {
+  static getCachedAllStorages(): unknown[] | null {
     return this.cache.get('api:storages:all');
   }
 

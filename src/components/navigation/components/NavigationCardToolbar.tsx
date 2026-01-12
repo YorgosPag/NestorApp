@@ -4,6 +4,8 @@
  * Navigation Card Toolbar Component
  * Compact toolbar for navigation cards using centralized CompactToolbar
  * Different actions per navigation level (companies, projects, buildings, floors)
+ *
+ * 🏢 ENTERPRISE: Full i18n support - ZERO HARDCODED STRINGS
  */
 
 import React from 'react';
@@ -13,6 +15,8 @@ import type { CompactToolbarConfig } from '@/components/core/CompactToolbar/type
 import { NAVIGATION_ENTITIES, NAVIGATION_ACTIONS } from '../config';
 // 🏢 ENTERPRISE: Centralized labels - ZERO HARDCODED VALUES
 import { getNavigationFilterCategories } from '@/subapps/dxf-viewer/config/modal-select/core/labels/navigation';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /**
  * 🏢 ENTERPRISE: Extended navigation levels
@@ -132,84 +136,91 @@ interface NavigationCardToolbarProps {
   onHelp?: () => void;
 }
 
-// Configuration per navigation level
-const getToolbarConfig = (level: NavigationLevel): CompactToolbarConfig => {
+// 🏢 ENTERPRISE: Type for translation function
+type TranslationFn = (key: string) => string;
+
+// Configuration per navigation level - accepts t() for i18n support
+const getToolbarConfig = (
+  level: NavigationLevel,
+  t: TranslationFn,
+  tCommon: TranslationFn
+): CompactToolbarConfig => {
   const baseConfig = {
     labels: {
-      newItem: level === 'companies' ? 'Προσθήκη' : 'Σύνδεση',
-      editItem: 'Επεξεργασία',
-      deleteItems: level === 'companies' ? 'Αφαίρεση' : 'Αποσύνδεση',
-      filters: 'Φίλτρα',
-      favorites: 'Αγαπημένα',
-      archive: 'Αρχείο',
-      export: 'Εξαγωγή',
-      import: 'Εισαγωγή',
-      refresh: 'Ανανέωση',
-      preview: 'Προεπισκόπηση',
-      copy: 'Αντιγραφή',
-      share: 'Διαμοιρασμός',
-      reports: 'Αναφορές',
-      settings: 'Ρυθμίσεις',
-      favoritesManagement: 'Διαχείριση Αγαπημένων',
-      help: 'Βοήθεια',
-      sorting: 'Ταξινόμηση'
+      newItem: level === 'companies' ? tCommon('buttons.add') : t('toolbar.labels.link'),
+      editItem: tCommon('buttons.edit'),
+      deleteItems: level === 'companies' ? t('toolbar.labels.remove') : t('toolbar.labels.unlink'),
+      filters: t('toolbar.labels.filters'),
+      favorites: t('toolbar.labels.favorites'),
+      archive: t('toolbar.labels.archive'),
+      export: tCommon('buttons.export'),
+      import: tCommon('buttons.import'),
+      refresh: tCommon('buttons.refresh'),
+      preview: t('toolbar.labels.preview'),
+      copy: t('toolbar.labels.copy'),
+      share: t('toolbar.labels.share'),
+      reports: t('toolbar.labels.reports'),
+      settings: t('toolbar.labels.settings'),
+      favoritesManagement: t('toolbar.labels.favoritesManagement'),
+      help: t('toolbar.labels.help'),
+      sorting: t('toolbar.labels.sorting')
     },
     tooltips: {
       newItem: '',
       editItem: '',
       deleteItems: '',
-      filters: 'Φιλτράρισμα',
-      favorites: 'Αγαπημένα',
-      archive: 'Αρχειοθέτηση',
-      export: 'Εξαγωγή δεδομένων',
-      import: 'Εισαγωγή δεδομένων',
-      refresh: 'Ανανέωση δεδομένων',
-      preview: 'Προεπισκόπηση',
-      copy: 'Αντιγραφή',
-      share: 'Διαμοιρασμός',
-      reports: 'Αναφορές',
-      settings: 'Ρυθμίσεις',
-      favoritesManagement: 'Διαχείριση Αγαπημένων',
-      help: 'Βοήθεια',
-      sorting: 'Ταξινόμηση'
+      filters: t('toolbar.tooltips.filters'),
+      favorites: t('toolbar.tooltips.favorites'),
+      archive: t('toolbar.tooltips.archive'),
+      export: t('toolbar.tooltips.exportData'),
+      import: t('toolbar.tooltips.importData'),
+      refresh: t('toolbar.tooltips.refreshData'),
+      preview: t('toolbar.tooltips.preview'),
+      copy: t('toolbar.tooltips.copy'),
+      share: t('toolbar.tooltips.share'),
+      reports: t('toolbar.tooltips.reports'),
+      settings: t('toolbar.tooltips.settings'),
+      favoritesManagement: t('toolbar.tooltips.favoritesManagement'),
+      help: t('toolbar.tooltips.help'),
+      sorting: t('toolbar.tooltips.sorting')
     }
   };
 
   switch (level) {
     case 'companies':
       return {
-        searchPlaceholder: 'Αναζήτηση εταιρείας...',
+        searchPlaceholder: t('toolbar.search.company'),
         ...baseConfig,
         tooltips: {
           ...baseConfig.tooltips,
-          newItem: 'Προσθήκη νέας εταιρείας',
-          editItem: 'Επεξεργασία εταιρείας',
-          deleteItems: 'Αφαίρεση εταιρείας'
+          newItem: t('toolbar.actions.companies.new'),
+          editItem: t('toolbar.actions.companies.edit'),
+          deleteItems: t('toolbar.actions.companies.delete')
         },
         filterCategories: [
           {
             id: 'type',
-            label: getNavigationFilterCategories().company_type_label,
+            label: t('filters.companies.typeLabel'),
             options: [
-              { value: 'construction', label: getNavigationFilterCategories().company_construction },
-              { value: 'development', label: getNavigationFilterCategories().company_development },
-              { value: 'investment', label: getNavigationFilterCategories().company_investment },
-              { value: 'management', label: getNavigationFilterCategories().company_management }
+              { value: 'construction', label: t('filters.companies.construction') },
+              { value: 'development', label: t('filters.companies.development') },
+              { value: 'investment', label: t('filters.companies.investment') },
+              { value: 'management', label: t('filters.companies.management') }
             ]
           },
           {
             id: 'status',
-            label: getNavigationFilterCategories().company_status_label,
+            label: t('filters.companies.statusLabel'),
             options: [
-              { value: 'active', label: getNavigationFilterCategories().company_active },
-              { value: 'with_projects', label: getNavigationFilterCategories().company_with_projects },
-              { value: 'without_projects', label: getNavigationFilterCategories().company_without_projects }
+              { value: 'active', label: t('filters.companies.active') },
+              { value: 'with_projects', label: t('filters.companies.withProjects') },
+              { value: 'without_projects', label: t('filters.companies.withoutProjects') }
             ]
           }
         ],
         sortOptions: [
-          { field: 'name', ascLabel: 'Όνομα (Α-Ω)', descLabel: 'Όνομα (Ω-Α)' },
-          { field: 'date', ascLabel: 'Παλαιότερες πρώτα', descLabel: 'Νεότερες πρώτα' }
+          { field: 'name', ascLabel: t('toolbar.sort.nameAsc'), descLabel: t('toolbar.sort.nameDesc') },
+          { field: 'date', ascLabel: t('toolbar.sort.dateOldest'), descLabel: t('toolbar.sort.dateNewest') }
         ],
         availableActions: {
           newItem: true,
@@ -228,39 +239,39 @@ const getToolbarConfig = (level: NavigationLevel): CompactToolbarConfig => {
 
     case 'projects':
       return {
-        searchPlaceholder: 'Αναζήτηση έργου...',
+        searchPlaceholder: t('toolbar.search.project'),
         ...baseConfig,
         tooltips: {
           ...baseConfig.tooltips,
-          newItem: 'Σύνδεση έργου με επιλεγμένη εταιρεία',
-          editItem: 'Επεξεργασία έργου',
-          deleteItems: 'Αποσύνδεση έργου'
+          newItem: t('toolbar.actions.projects.new'),
+          editItem: t('toolbar.actions.projects.edit'),
+          deleteItems: t('toolbar.actions.projects.delete')
         },
         filterCategories: [
           {
             id: 'status',
-            label: 'Κατάσταση Έργου',
+            label: t('filters.projects.statusLabel'),
             options: [
-              { value: 'planning', label: 'Σχεδίαση' },
-              { value: 'construction', label: 'Κατασκευή' },
-              { value: 'completed', label: 'Ολοκληρωμένα' },
-              { value: 'on_hold', label: 'Αναστολή' }
+              { value: 'planning', label: t('filters.projects.planning') },
+              { value: 'construction', label: t('filters.projects.construction') },
+              { value: 'completed', label: t('filters.projects.completed') },
+              { value: 'on_hold', label: t('filters.projects.onHold') }
             ]
           },
           {
             id: 'type',
-            label: 'Τύπος Έργου',
+            label: t('filters.projects.typeLabel'),
             options: [
-              { value: 'residential', label: 'Κατοικίες' },
-              { value: 'commercial', label: 'Εμπορικά' },
-              { value: 'mixed', label: 'Μεικτά' }
+              { value: 'residential', label: t('filters.projects.residential') },
+              { value: 'commercial', label: t('filters.projects.commercial') },
+              { value: 'mixed', label: t('filters.projects.mixed') }
             ]
           }
         ],
         sortOptions: [
-          { field: 'name', ascLabel: 'Όνομα (Α-Ω)', descLabel: 'Όνομα (Ω-Α)' },
-          { field: 'progress', ascLabel: 'Πρόοδος (Λίγη-Πολλή)', descLabel: 'Πρόοδος (Πολλή-Λίγη)' },
-          { field: 'date', ascLabel: 'Παλαιότερα πρώτα', descLabel: 'Νεότερα πρώτα' }
+          { field: 'name', ascLabel: t('toolbar.sort.nameAsc'), descLabel: t('toolbar.sort.nameDesc') },
+          { field: 'progress', ascLabel: t('toolbar.sort.progressLow'), descLabel: t('toolbar.sort.progressHigh') },
+          { field: 'date', ascLabel: t('toolbar.sort.dateOldest'), descLabel: t('toolbar.sort.dateNewest') }
         ],
         availableActions: {
           newItem: true,
@@ -278,38 +289,38 @@ const getToolbarConfig = (level: NavigationLevel): CompactToolbarConfig => {
 
     case 'buildings':
       return {
-        searchPlaceholder: 'Αναζήτηση κτιρίου...',
+        searchPlaceholder: t('toolbar.search.building'),
         ...baseConfig,
         tooltips: {
           ...baseConfig.tooltips,
-          newItem: 'Σύνδεση κτιρίου με επιλεγμένο έργο',
-          editItem: 'Επεξεργασία κτιρίου',
-          deleteItems: 'Αποσύνδεση κτιρίου'
+          newItem: t('toolbar.actions.buildings.new'),
+          editItem: t('toolbar.actions.buildings.edit'),
+          deleteItems: t('toolbar.actions.buildings.delete')
         },
         filterCategories: [
           {
             id: 'type',
-            label: 'Τύπος Κτιρίου',
+            label: t('filters.buildings.typeLabel'),
             options: [
-              { value: 'residential', label: 'Κατοικίες' },
-              { value: 'commercial', label: 'Εμπορικό' },
-              { value: 'office', label: 'Γραφεία' },
-              { value: 'mixed', label: 'Μεικτό' }
+              { value: 'residential', label: t('filters.buildings.residential') },
+              { value: 'commercial', label: t('filters.buildings.commercial') },
+              { value: 'office', label: t('filters.buildings.office') },
+              { value: 'mixed', label: t('filters.buildings.mixed') }
             ]
           },
           {
             id: 'floors',
-            label: 'Αριθμός Ορόφων',
+            label: t('filters.buildings.floorsLabel'),
             options: [
-              { value: '1-3', label: '1-3 όροφοι' },
-              { value: '4-6', label: '4-6 όροφοι' },
-              { value: '7+', label: '7+ όροφοι' }
+              { value: '1-3', label: t('filters.buildings.floors1to3') },
+              { value: '4-6', label: t('filters.buildings.floors4to6') },
+              { value: '7+', label: t('filters.buildings.floors7plus') }
             ]
           }
         ],
         sortOptions: [
-          { field: 'name', ascLabel: 'Όνομα (Α-Ω)', descLabel: 'Όνομα (Ω-Α)' },
-          { field: 'area', ascLabel: 'Εμβαδόν (Μικρό-Μεγάλο)', descLabel: 'Εμβαδόν (Μεγάλο-Μικρό)' }
+          { field: 'name', ascLabel: t('toolbar.sort.nameAsc'), descLabel: t('toolbar.sort.nameDesc') },
+          { field: 'area', ascLabel: t('toolbar.sort.areaSmall'), descLabel: t('toolbar.sort.areaLarge') }
         ],
         availableActions: {
           newItem: true,
@@ -326,38 +337,38 @@ const getToolbarConfig = (level: NavigationLevel): CompactToolbarConfig => {
 
     case 'floors':
       return {
-        searchPlaceholder: 'Αναζήτηση ορόφου...',
+        searchPlaceholder: t('toolbar.search.floor'),
         ...baseConfig,
         tooltips: {
           ...baseConfig.tooltips,
-          newItem: 'Σύνδεση ορόφου με επιλεγμένο κτίριο',
-          editItem: 'Επεξεργασία ορόφου',
-          deleteItems: 'Αποσύνδεση ορόφου'
+          newItem: t('toolbar.actions.floors.new'),
+          editItem: t('toolbar.actions.floors.edit'),
+          deleteItems: t('toolbar.actions.floors.delete')
         },
         filterCategories: [
           {
             id: 'type',
-            label: 'Τύπος Ορόφου',
+            label: t('filters.floors.typeLabel'),
             options: [
-              { value: 'basement', label: 'Υπόγειο' },
-              { value: 'ground', label: 'Ισόγειο' },
-              { value: 'floor', label: 'Όροφος' },
-              { value: 'penthouse', label: 'Ρετιρέ' }
+              { value: 'basement', label: t('filters.floors.basement') },
+              { value: 'ground', label: t('filters.floors.ground') },
+              { value: 'floor', label: t('filters.floors.floor') },
+              { value: 'penthouse', label: t('filters.floors.penthouse') }
             ]
           },
           {
             id: 'units',
-            label: 'Αριθμός Μονάδων',
+            label: t('filters.floors.unitsLabel'),
             options: [
-              { value: '1-2', label: '1-2 μονάδες' },
-              { value: '3-5', label: '3-5 μονάδες' },
-              { value: '6+', label: '6+ μονάδες' }
+              { value: '1-2', label: t('filters.floors.units1to2') },
+              { value: '3-5', label: t('filters.floors.units3to5') },
+              { value: '6+', label: t('filters.floors.units6plus') }
             ]
           }
         ],
         sortOptions: [
-          { field: 'name', ascLabel: 'Όνομα (Α-Ω)', descLabel: 'Όνομα (Ω-Α)' },
-          { field: 'area', ascLabel: 'Εμβαδόν (Μικρό-Μεγάλο)', descLabel: 'Εμβαδόν (Μεγάλο-Μικρό)' }
+          { field: 'name', ascLabel: t('toolbar.sort.nameAsc'), descLabel: t('toolbar.sort.nameDesc') },
+          { field: 'area', ascLabel: t('toolbar.sort.areaSmall'), descLabel: t('toolbar.sort.areaLarge') }
         ],
         availableActions: {
           newItem: true,
@@ -374,51 +385,51 @@ const getToolbarConfig = (level: NavigationLevel): CompactToolbarConfig => {
 
     case 'units':
       return {
-        searchPlaceholder: 'Αναζήτηση μονάδας...',
+        searchPlaceholder: t('toolbar.search.unit'),
         ...baseConfig,
         tooltips: {
           ...baseConfig.tooltips,
-          newItem: 'Σύνδεση μονάδας με επιλεγμένο όροφο',
-          editItem: 'Επεξεργασία μονάδας',
-          deleteItems: 'Αποσύνδεση μονάδας'
+          newItem: t('toolbar.actions.units.new'),
+          editItem: t('toolbar.actions.units.edit'),
+          deleteItems: t('toolbar.actions.units.delete')
         },
         filterCategories: [
           {
             id: 'type',
-            label: 'Τύπος Μονάδας',
+            label: t('filters.units.typeLabel'),
             options: [
-              { value: 'apartment', label: 'Διαμέρισμα' },
-              { value: 'office', label: 'Γραφείο' },
-              { value: 'shop', label: 'Κατάστημα' },
-              { value: 'storage', label: 'Αποθήκη' },
-              { value: 'parking', label: 'Θέση Στάθμευσης' }
+              { value: 'apartment', label: t('filters.units.apartment') },
+              { value: 'office', label: t('filters.units.office') },
+              { value: 'shop', label: t('filters.units.shop') },
+              { value: 'storage', label: t('filters.units.storage') },
+              { value: 'parking', label: t('filters.units.parking') }
             ]
           },
           {
             id: 'status',
-            label: 'Κατάσταση',
+            label: t('filters.units.statusLabel'),
             options: [
-              { value: 'available', label: 'Διαθέσιμη' },
-              { value: 'occupied', label: 'Κατειλημμένη' },
-              { value: 'reserved', label: 'Κρατημένη' },
-              { value: 'maintenance', label: 'Συντήρηση' }
+              { value: 'available', label: t('filters.units.available') },
+              { value: 'occupied', label: t('filters.units.occupied') },
+              { value: 'reserved', label: t('filters.units.reserved') },
+              { value: 'maintenance', label: t('filters.units.maintenance') }
             ]
           },
           {
             id: 'rooms',
-            label: 'Αριθμός Δωματίων',
+            label: t('filters.units.roomsLabel'),
             options: [
-              { value: '1', label: '1 δωμάτιο' },
-              { value: '2', label: '2 δωμάτια' },
-              { value: '3', label: '3 δωμάτια' },
-              { value: '4+', label: '4+ δωμάτια' }
+              { value: '1', label: t('filters.units.rooms1') },
+              { value: '2', label: t('filters.units.rooms2') },
+              { value: '3', label: t('filters.units.rooms3') },
+              { value: '4+', label: t('filters.units.rooms4plus') }
             ]
           }
         ],
         sortOptions: [
-          { field: 'name', ascLabel: 'Όνομα (Α-Ω)', descLabel: 'Όνομα (Ω-Α)' },
-          { field: 'area', ascLabel: 'Εμβαδόν (Μικρό-Μεγάλο)', descLabel: 'Εμβαδόν (Μεγάλο-Μικρό)' },
-          { field: 'rooms', ascLabel: 'Δωμάτια (Λίγα-Πολλά)', descLabel: 'Δωμάτια (Πολλά-Λίγα)' }
+          { field: 'name', ascLabel: t('toolbar.sort.nameAsc'), descLabel: t('toolbar.sort.nameDesc') },
+          { field: 'area', ascLabel: t('toolbar.sort.areaSmall'), descLabel: t('toolbar.sort.areaLarge') },
+          { field: 'rooms', ascLabel: t('toolbar.sort.roomsFew'), descLabel: t('toolbar.sort.roomsMany') }
         ],
         availableActions: {
           newItem: true,
@@ -436,37 +447,37 @@ const getToolbarConfig = (level: NavigationLevel): CompactToolbarConfig => {
     // 🏢 ENTERPRISE: Storage configuration (parallel category to units per local_4.log)
     case 'storage':
       return {
-        searchPlaceholder: 'Αναζήτηση αποθήκης...',
+        searchPlaceholder: t('toolbar.search.storage'),
         ...baseConfig,
         tooltips: {
           ...baseConfig.tooltips,
-          newItem: 'Σύνδεση αποθήκης με επιλεγμένο κτίριο',
-          editItem: 'Επεξεργασία αποθήκης',
-          deleteItems: 'Αποσύνδεση αποθήκης'
+          newItem: t('toolbar.actions.storage.new'),
+          editItem: t('toolbar.actions.storage.edit'),
+          deleteItems: t('toolbar.actions.storage.delete')
         },
         filterCategories: [
           {
             id: 'type',
-            label: 'Τύπος Αποθήκης',
+            label: t('filters.storage.typeLabel'),
             options: [
-              { value: 'basement', label: 'Υπόγεια' },
-              { value: 'ground', label: 'Ισόγεια' },
-              { value: 'external', label: 'Εξωτερική' }
+              { value: 'basement', label: t('filters.storage.basement') },
+              { value: 'ground', label: t('filters.storage.ground') },
+              { value: 'external', label: t('filters.storage.external') }
             ]
           },
           {
             id: 'status',
-            label: 'Κατάσταση',
+            label: t('filters.storage.statusLabel'),
             options: [
-              { value: 'available', label: 'Διαθέσιμη' },
-              { value: 'occupied', label: 'Κατειλημμένη' },
-              { value: 'reserved', label: 'Κρατημένη' }
+              { value: 'available', label: t('filters.storage.available') },
+              { value: 'occupied', label: t('filters.storage.occupied') },
+              { value: 'reserved', label: t('filters.storage.reserved') }
             ]
           }
         ],
         sortOptions: [
-          { field: 'name', ascLabel: 'Όνομα (Α-Ω)', descLabel: 'Όνομα (Ω-Α)' },
-          { field: 'area', ascLabel: 'Εμβαδόν (Μικρό-Μεγάλο)', descLabel: 'Εμβαδόν (Μεγάλο-Μικρό)' }
+          { field: 'name', ascLabel: t('toolbar.sort.nameAsc'), descLabel: t('toolbar.sort.nameDesc') },
+          { field: 'area', ascLabel: t('toolbar.sort.areaSmall'), descLabel: t('toolbar.sort.areaLarge') }
         ],
         availableActions: {
           newItem: true,
@@ -484,46 +495,46 @@ const getToolbarConfig = (level: NavigationLevel): CompactToolbarConfig => {
     // 🏢 ENTERPRISE: Parking configuration (parallel category to units per local_4.log)
     case 'parking':
       return {
-        searchPlaceholder: 'Αναζήτηση θέσης στάθμευσης...',
+        searchPlaceholder: t('toolbar.search.parking'),
         ...baseConfig,
         tooltips: {
           ...baseConfig.tooltips,
-          newItem: 'Σύνδεση θέσης στάθμευσης με επιλεγμένο κτίριο',
-          editItem: 'Επεξεργασία θέσης στάθμευσης',
-          deleteItems: 'Αποσύνδεση θέσης στάθμευσης'
+          newItem: t('toolbar.actions.parking.new'),
+          editItem: t('toolbar.actions.parking.edit'),
+          deleteItems: t('toolbar.actions.parking.delete')
         },
         filterCategories: [
           {
             id: 'type',
-            label: 'Τύπος Θέσης',
+            label: t('filters.parking.typeLabel'),
             options: [
-              { value: 'standard', label: 'Κανονική' },
-              { value: 'disabled', label: 'ΑΜΕΑ' },
-              { value: 'electric', label: 'Ηλεκτρικά' }
+              { value: 'standard', label: t('filters.parking.standard') },
+              { value: 'disabled', label: t('filters.parking.disabled') },
+              { value: 'electric', label: t('filters.parking.electric') }
             ]
           },
           {
             id: 'location',
-            label: 'Τοποθεσία',
+            label: t('filters.parking.locationLabel'),
             options: [
-              { value: 'ground', label: 'Ισόγειο' },
-              { value: 'basement', label: 'Υπόγειο' },
-              { value: 'pilotis', label: 'Πυλωτή' }
+              { value: 'ground', label: t('filters.parking.ground') },
+              { value: 'basement', label: t('filters.parking.basement') },
+              { value: 'pilotis', label: t('filters.parking.pilotis') }
             ]
           },
           {
             id: 'status',
-            label: 'Κατάσταση',
+            label: t('filters.parking.statusLabel'),
             options: [
-              { value: 'available', label: 'Διαθέσιμη' },
-              { value: 'occupied', label: 'Κατειλημμένη' },
-              { value: 'reserved', label: 'Κρατημένη' }
+              { value: 'available', label: t('filters.parking.available') },
+              { value: 'occupied', label: t('filters.parking.occupied') },
+              { value: 'reserved', label: t('filters.parking.reserved') }
             ]
           }
         ],
         sortOptions: [
-          { field: 'number', ascLabel: 'Αριθμός (Α-Ω)', descLabel: 'Αριθμός (Ω-Α)' },
-          { field: 'location', ascLabel: 'Τοποθεσία (Α-Ω)', descLabel: 'Τοποθεσία (Ω-Α)' }
+          { field: 'number', ascLabel: t('toolbar.sort.numberAsc'), descLabel: t('toolbar.sort.numberDesc') },
+          { field: 'location', ascLabel: t('toolbar.sort.locationAsc'), descLabel: t('toolbar.sort.locationDesc') }
         ],
         availableActions: {
           newItem: true,
@@ -563,7 +574,12 @@ export function NavigationCardToolbar({
   onShare,
   onHelp
 }: NavigationCardToolbarProps) {
-  const config = getToolbarConfig(level);
+  // 🏢 ENTERPRISE: i18n hooks - navigation for entity-specific labels, common for shared buttons
+  const { t } = useTranslation('navigation');
+  const { t: tCommon } = useTranslation('common');
+
+  // Get config with i18n translations
+  const config = getToolbarConfig(level, t, tCommon);
 
   return (
     <CompactToolbar

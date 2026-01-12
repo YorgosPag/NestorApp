@@ -7,20 +7,32 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatDate } from '@/lib/intl-utils';
 
 // ============================================================================
-// INTERFACES
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
 // ============================================================================
+
+/** Data record type for tab display */
+export type TabDataRecord = Record<string, string | number | boolean | Date | null | undefined | Record<string, unknown>>;
+
+/** Field value type */
+export type FieldValue = string | number | boolean | Date | null | undefined;
+
+/** Custom field renderer function */
+export type CustomFieldRenderer = (field: FieldConfig, data: TabDataRecord) => React.ReactNode;
+
+/** Custom value formatter function */
+export type ValueFormatter = (value: FieldValue, field: FieldConfig) => string;
 
 export interface GenericTabRendererProps {
   /** Section configuration */
   section: SectionConfig;
   /** Data object to display */
-  data: Record<string, any>;
+  data: TabDataRecord;
   /** Display mode */
   mode?: 'display' | 'compact';
   /** Custom field renderers for complex data */
-  customRenderers?: Record<string, (field: FieldConfig, data: any) => React.ReactNode>;
+  customRenderers?: Record<string, CustomFieldRenderer>;
   /** Custom value formatters */
-  valueFormatters?: Record<string, (value: any, field: FieldConfig) => string>;
+  valueFormatters?: Record<string, ValueFormatter>;
 }
 
 // ============================================================================
@@ -31,11 +43,11 @@ export interface GenericTabRendererProps {
  * ✅ ENTERPRISE MIGRATION: Using centralized formatDate for consistent formatting
  * Formats a date value for display
  */
-function formatDateValue(value: any): string {
+function formatDateValue(value: FieldValue): string {
   if (!value) return 'Δεν έχει οριστεί';
 
   try {
-    const date = new Date(value);
+    const date = value instanceof Date ? value : new Date(String(value));
     return formatDate(date); // ✅ Using centralized function
   } catch {
     return 'Άκυρη ημερομηνία';
@@ -45,7 +57,7 @@ function formatDateValue(value: any): string {
 /**
  * Formats a number value for display
  */
-function formatNumberValue(value: any, field: FieldConfig): string {
+function formatNumberValue(value: FieldValue, field: FieldConfig): string {
   if (!value && value !== 0) return 'Δεν έχει οριστεί';
 
   const numValue = Number(value);
@@ -62,14 +74,12 @@ function formatNumberValue(value: any, field: FieldConfig): string {
 /**
  * Formats a select value for display
  */
-function formatSelectValue(value: any, field: FieldConfig): string {
+function formatSelectValue(value: FieldValue, field: FieldConfig): string {
   if (!value) return 'Δεν έχει οριστεί';
 
   if (field.options) {
     const option = field.options.find(opt => opt.value === value);
-
-
-    return option ? option.label : value;
+    return option ? option.label : String(value);
   }
 
   return String(value);
@@ -78,7 +88,11 @@ function formatSelectValue(value: any, field: FieldConfig): string {
 /**
  * Formats any field value for display
  */
-function formatFieldValue(value: any, field: FieldConfig, customFormatters?: Record<string, any>): string {
+function formatFieldValue(
+  value: FieldValue,
+  field: FieldConfig,
+  customFormatters?: Record<string, ValueFormatter>
+): string {
   // Check for custom formatter
   if (customFormatters && customFormatters[field.id]) {
     return customFormatters[field.id](value, field);
@@ -120,9 +134,9 @@ function DisplayField({
   valueFormatters
 }: {
   field: FieldConfig;
-  data: any;
-  customRenderers?: Record<string, any>;
-  valueFormatters?: Record<string, any>;
+  data: TabDataRecord;
+  customRenderers?: Record<string, CustomFieldRenderer>;
+  valueFormatters?: Record<string, ValueFormatter>;
 }) {
   // Check for custom renderer
   if (customRenderers && customRenderers[field.id]) {
@@ -130,13 +144,13 @@ function DisplayField({
   }
 
   // 🔍 Enhanced value lookup: Check both root level and customFields
-  let value = data[field.id];
+  let value = data[field.id] as FieldValue;
 
   // If value not found at root level, check customFields
   if ((value === undefined || value === null || value === '') && data.customFields) {
-    value = data.customFields[field.id];
+    const customFields = data.customFields as Record<string, FieldValue>;
+    value = customFields[field.id];
   }
-
 
   const formattedValue = formatFieldValue(value, field, valueFormatters);
 
@@ -161,9 +175,9 @@ function CompactSectionRenderer({
   valueFormatters
 }: {
   section: SectionConfig;
-  data: any;
-  customRenderers?: Record<string, any>;
-  valueFormatters?: Record<string, any>;
+  data: TabDataRecord;
+  customRenderers?: Record<string, CustomFieldRenderer>;
+  valueFormatters?: Record<string, ValueFormatter>;
 }) {
   const iconSizes = useIconSizes();
   const IconComponent = getIconComponent(section.icon);
@@ -199,9 +213,9 @@ function FullSectionRenderer({
   valueFormatters
 }: {
   section: SectionConfig;
-  data: any;
-  customRenderers?: Record<string, any>;
-  valueFormatters?: Record<string, any>;
+  data: TabDataRecord;
+  customRenderers?: Record<string, CustomFieldRenderer>;
+  valueFormatters?: Record<string, ValueFormatter>;
 }) {
   const iconSizes = useIconSizes();
   const IconComponent = getIconComponent(section.icon);

@@ -46,12 +46,45 @@ export interface PipelineStage {
 }
 
 /**
+ * Task configuration - type-safe config structure
+ */
+export interface TaskConfig {
+  rules?: string;
+  threshold?: number | string;
+  scanType?: string;
+  severity?: string;
+  target?: string;
+  optimization?: boolean;
+  detailed?: boolean;
+  visualization?: boolean;
+  coverage?: boolean;
+  parallel?: boolean;
+  components?: string;
+  mocking?: boolean;
+  apis?: string;
+  database?: string;
+  systems?: string[];
+  real?: boolean;
+  duration?: number;
+  scenarios?: string;
+  monitoring?: number;
+  users?: number;
+  browser?: string;
+  headless?: boolean;
+  baseline?: string;
+  standard?: string;
+  tools?: string;
+  gates?: string;
+  strict?: boolean;
+}
+
+/**
  * Pipeline task definition
  */
 export interface PipelineTask {
   name: string;
   type: TaskType;
-  config: any;
+  config: TaskConfig;
   criticalPath: boolean;
   allowFailure: boolean;
   artifacts: string[];
@@ -78,11 +111,21 @@ export type TaskType =
   | 'visual-regression';
 
 /**
+ * Trigger condition configuration
+ */
+export interface TriggerCondition {
+  cron?: string;
+  target?: string[];
+  patterns?: string[];
+  webhook?: string;
+}
+
+/**
  * Pipeline trigger conditions
  */
 export interface PipelineTrigger {
   type: 'manual' | 'schedule' | 'webhook' | 'file-change' | 'merge-request';
-  condition: any;
+  condition: TriggerCondition;
   branches: string[];
   enabled: boolean;
 }
@@ -102,7 +145,7 @@ export interface RetryPolicy {
  */
 export interface StageCondition {
   type: 'previous-stage-success' | 'environment' | 'branch' | 'custom';
-  value: any;
+  value: string | string[] | boolean;
   operator: 'equals' | 'contains' | 'regex';
 }
 
@@ -116,11 +159,21 @@ export interface NotificationConfig {
 }
 
 /**
+ * Notification channel configuration
+ */
+export interface NotificationChannelConfig {
+  to?: string[];
+  webhook?: string;
+  channel?: string;
+  url?: string;
+}
+
+/**
  * Notification channel
  */
 export interface NotificationChannel {
   type: 'email' | 'slack' | 'teams' | 'webhook';
-  config: any;
+  config: NotificationChannelConfig;
   enabled: boolean;
   conditions: string[];
 }
@@ -163,11 +216,23 @@ export interface ReportingConfig {
 export type ReportFormat = 'html' | 'json' | 'junit' | 'allure' | 'sonar' | 'dashboard';
 
 /**
+ * Storage provider configuration
+ */
+export interface StorageProviderConfig {
+  path?: string;
+  bucket?: string;
+  region?: string;
+  accessKey?: string;
+  secretKey?: string;
+  container?: string;
+}
+
+/**
  * Storage configuration
  */
 export interface StorageConfig {
   type: 'local' | 's3' | 'azure' | 'gcp';
-  config: any;
+  config: StorageProviderConfig;
   encryption: boolean;
 }
 
@@ -240,6 +305,53 @@ export interface StageExecution {
 /**
  * Task execution result
  */
+/**
+ * Task execution result types
+ */
+export interface TaskResult {
+  totalTests?: number;
+  passed?: number;
+  failed?: number;
+  coverage?: number;
+  totalSuites?: number;
+  passedSuites?: number;
+  failedSuites?: number;
+  scenarios?: number;
+  successRate?: number;
+  performanceScore?: number;
+  memoryHealth?: string;
+  leaksDetected?: number;
+  totalSize?: number;
+  chunkCount?: number;
+  budgetPassed?: boolean;
+  recommendations?: number;
+  vulnerabilities?: number;
+  riskScore?: string;
+  scannedFiles?: number;
+  issues?: string[];
+  score?: number;
+  violations?: number;
+  standard?: string;
+  testedPages?: number;
+  screenshots?: number;
+  changes?: number;
+  threshold?: number;
+  overallScore?: number;
+  complexity?: number;
+  duplication?: number;
+  maintainability?: number;
+  technicalDebt?: number;
+  success?: boolean;
+  duration?: number;
+  outputSize?: number;
+  warnings?: number;
+  errors?: number;
+  virtualUsers?: number;
+  requests?: number;
+  averageResponse?: number;
+  throughput?: number;
+}
+
 export interface TaskExecution {
   task: string;
   type: TaskType;
@@ -247,11 +359,21 @@ export interface TaskExecution {
   endTime?: number;
   duration?: number;
   status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
-  result: any;
+  result: TaskResult | null;
   artifacts: string[];
   metrics: Record<string, number>;
   logs: string[];
   error?: string;
+}
+
+/**
+ * Artifact metadata
+ */
+export interface ArtifactMetadata {
+  format?: string;
+  generated?: number;
+  version?: string;
+  contentType?: string;
 }
 
 /**
@@ -263,7 +385,7 @@ export interface PipelineArtifact {
   path: string;
   size: number;
   checksum: string;
-  metadata: any;
+  metadata: ArtifactMetadata;
 }
 
 /**
@@ -929,9 +1051,9 @@ export class GeoAlertTestingPipeline {
 
       console.log(`  ✅ Task completed: ${task.name} (${taskExecution.duration.toFixed(2)}ms)`);
 
-    } catch (error) {
+    } catch (error: unknown) {
       taskExecution.status = 'failed';
-      taskExecution.error = error.toString();
+      taskExecution.error = error instanceof Error ? error.message : String(error);
       taskExecution.endTime = performance.now();
       taskExecution.duration = taskExecution.endTime - taskExecution.startTime;
 
@@ -948,7 +1070,7 @@ export class GeoAlertTestingPipeline {
   /**
    * Execute task based on its type
    */
-  private async executeTaskByType(task: PipelineTask, execution: TaskExecution): Promise<any> {
+  private async executeTaskByType(task: PipelineTask, execution: TaskExecution): Promise<TaskResult> {
     switch (task.type) {
       case 'unit-tests':
         return await this.executeUnitTests(task, execution);
@@ -981,7 +1103,7 @@ export class GeoAlertTestingPipeline {
   // TASK IMPLEMENTATIONS
   // ========================================================================
 
-  private async executeUnitTests(task: PipelineTask, execution: TaskExecution): Promise<any> {
+  private async executeUnitTests(task: PipelineTask, execution: TaskExecution): Promise<TaskResult> {
     console.log('    🧪 Running unit tests...');
 
     // Execute test suite
@@ -1006,7 +1128,7 @@ export class GeoAlertTestingPipeline {
     };
   }
 
-  private async executeIntegrationTests(task: PipelineTask, execution: TaskExecution): Promise<any> {
+  private async executeIntegrationTests(task: PipelineTask, execution: TaskExecution): Promise<TaskResult> {
     console.log('    🔗 Running integration tests...');
 
     // Mock integration test execution
@@ -1028,7 +1150,7 @@ export class GeoAlertTestingPipeline {
     return integrationResults;
   }
 
-  private async executeE2ETests(task: PipelineTask, execution: TaskExecution): Promise<any> {
+  private async executeE2ETests(task: PipelineTask, execution: TaskExecution): Promise<TaskResult> {
     console.log('    🌐 Running E2E tests...');
 
     // Mock E2E test execution
@@ -1049,7 +1171,7 @@ export class GeoAlertTestingPipeline {
     return e2eResults;
   }
 
-  private async executePerformanceTests(task: PipelineTask, execution: TaskExecution): Promise<any> {
+  private async executePerformanceTests(task: PipelineTask, execution: TaskExecution): Promise<TaskResult> {
     console.log('    ⚡ Running performance tests...');
 
     // Start performance profiling
@@ -1082,7 +1204,7 @@ export class GeoAlertTestingPipeline {
     };
   }
 
-  private async executeBundleAnalysis(task: PipelineTask, execution: TaskExecution): Promise<any> {
+  private async executeBundleAnalysis(task: PipelineTask, execution: TaskExecution): Promise<TaskResult> {
     console.log('    📦 Running bundle analysis...');
 
     // Execute bundle analysis
@@ -1113,7 +1235,7 @@ export class GeoAlertTestingPipeline {
     };
   }
 
-  private async executeSecurityTests(task: PipelineTask, execution: TaskExecution): Promise<any> {
+  private async executeSecurityTests(task: PipelineTask, execution: TaskExecution): Promise<TaskResult> {
     console.log('    🔒 Running security tests...');
 
     // Mock security scan
@@ -1135,7 +1257,7 @@ export class GeoAlertTestingPipeline {
     return securityResults;
   }
 
-  private async executeAccessibilityTests(task: PipelineTask, execution: TaskExecution): Promise<any> {
+  private async executeAccessibilityTests(task: PipelineTask, execution: TaskExecution): Promise<TaskResult> {
     console.log('    ♿ Running accessibility tests...');
 
     // Mock accessibility testing
@@ -1157,7 +1279,7 @@ export class GeoAlertTestingPipeline {
     return a11yResults;
   }
 
-  private async executeVisualRegression(task: PipelineTask, execution: TaskExecution): Promise<any> {
+  private async executeVisualRegression(task: PipelineTask, execution: TaskExecution): Promise<TaskResult> {
     console.log('    👁️  Running visual regression tests...');
 
     // Mock visual regression testing
@@ -1178,7 +1300,7 @@ export class GeoAlertTestingPipeline {
     return visualResults;
   }
 
-  private async executeCodeQuality(task: PipelineTask, execution: TaskExecution): Promise<any> {
+  private async executeCodeQuality(task: PipelineTask, execution: TaskExecution): Promise<TaskResult> {
     console.log('    📊 Running code quality analysis...');
 
     // Mock code quality analysis
@@ -1202,7 +1324,7 @@ export class GeoAlertTestingPipeline {
     return qualityResults;
   }
 
-  private async executeBuild(task: PipelineTask, execution: TaskExecution): Promise<any> {
+  private async executeBuild(task: PipelineTask, execution: TaskExecution): Promise<TaskResult> {
     console.log('    🏗️  Running build...');
 
     // Mock build process
@@ -1226,7 +1348,7 @@ export class GeoAlertTestingPipeline {
     return buildResults;
   }
 
-  private async executeLoadTests(task: PipelineTask, execution: TaskExecution): Promise<any> {
+  private async executeLoadTests(task: PipelineTask, execution: TaskExecution): Promise<TaskResult> {
     console.log('    🚀 Running load tests...');
 
     // Mock load testing
@@ -1480,7 +1602,7 @@ export class GeoAlertTestingPipeline {
     }
   }
 
-  private async sendFailureNotifications(execution: PipelineExecution, error: any): Promise<void> {
+  private async sendFailureNotifications(execution: PipelineExecution, error: unknown): Promise<void> {
     console.log('📬 Sending failure notifications...');
 
     for (const channel of this.config.notifications.channels) {
@@ -1504,7 +1626,7 @@ export class GeoAlertTestingPipeline {
     channel: NotificationChannel,
     event: NotificationEvent,
     execution: PipelineExecution,
-    error?: any
+    error?: unknown
   ): Promise<NotificationResult> {
     // Mock notification sending
     console.log(`  📨 Sending ${event} notification via ${channel.type}`);
@@ -1512,13 +1634,15 @@ export class GeoAlertTestingPipeline {
     const template = this.config.notifications.templates.find(t => t.event === event);
     const message = template ? template.body : `Pipeline ${event}`;
 
+    const errorMessage = error instanceof Error ? error.message : error ? String(error) : undefined;
+
     return {
       channel: channel.type,
       event,
       status: 'sent',
       timestamp: Date.now(),
       message,
-      error: error ? error.toString() : undefined
+      error: errorMessage
     };
   }
 

@@ -3,7 +3,7 @@
 import React, { Suspense } from 'react';
 import { NotificationProvider } from '@/providers/NotificationProvider';
 import { CacheProvider } from '@/contexts/CacheProvider';
-import { OptimizedUserRoleProvider } from '@/contexts/OptimizedUserRoleContext';
+import { UserTypeProvider } from '@/auth';
 import { GeoCanvasContent } from './app/GeoCanvasContent';
 import ErrorBoundary from '@/components/ui/ErrorBoundary/ErrorBoundary';
 // 🚀 ENTERPRISE: Performance Dashboard is rendered globally in layout.tsx (no duplicate imports needed)
@@ -26,7 +26,7 @@ export function GeoCanvasApp(props: GeoCanvasAppProps) {
   return (
     <NotificationProvider>
       <CacheProvider>
-        <OptimizedUserRoleProvider>
+        <UserTypeProvider>
           <ErrorBoundary
             componentName="GeoCanvas"
             enableRetry={true}
@@ -55,7 +55,7 @@ export function GeoCanvasApp(props: GeoCanvasAppProps) {
             {/* 🚀 ENTERPRISE: Performance Dashboard is rendered globally in layout.tsx */}
 
           </ErrorBoundary>
-        </OptimizedUserRoleProvider>
+        </UserTypeProvider>
       </CacheProvider>
     </NotificationProvider>
   );

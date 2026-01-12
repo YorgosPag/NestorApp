@@ -19,7 +19,7 @@ export interface TestResult {
   status: 'success' | 'warning' | 'error' | 'info';
   duration: number; // milliseconds
   summary: string;
-  details?: any;
+  details?: Record<string, unknown>;
   timestamp: string;
 }
 
@@ -47,7 +47,7 @@ export interface UnifiedTestReport {
  */
 async function safeExecuteTest(
   testName: string,
-  testFunction: () => Promise<any>
+  testFunction: () => Promise<Record<string, unknown>>
 ): Promise<TestResult> {
   const startTime = performance.now();
   const timestamp = new Date().toISOString();
@@ -125,7 +125,7 @@ async function runLayeringWorkflowTest(): Promise<TestResult> {
       success: result.success,
       steps: result.steps,
       layerDisplayed: result.layerDisplayed,
-      summary: `${result.steps.filter((s: any) => s.status === 'success').length}/${result.steps.length} βήματα πέρασαν`
+      summary: `${result.steps.filter((s: { status: string }) => s.status === 'success').length}/${result.steps.length} βήματα πέρασαν`
     };
   });
 }
@@ -142,7 +142,7 @@ async function runDOMInspectorTest(): Promise<TestResult> {
     const panel = findFloatingPanelAdvanced();
 
     return {
-      floatingPanelsFound: inspection.floatingPanels.filter((p: any) => p.found).length,
+      floatingPanelsFound: inspection.floatingPanels.filter((p: { found: boolean }) => p.found).length,
       tabsFound: inspection.tabs.length,
       cardsFound: inspection.cards.length,
       canvasesFound: inspection.canvases.length,
@@ -265,7 +265,10 @@ async function runTransformStatusTest(): Promise<TestResult> {
     }
 
     const rect = canvasElement.getBoundingClientRect();
-    const transform = (window as any).dxfTransform || { scale: 1, offsetX: 0, offsetY: 0 };
+    // 🏢 ENTERPRISE: Type assertion for window global (debug only)
+    interface DxfTransform { scale: number; offsetX: number; offsetY: number; }
+    const debugWin = window as Window & { dxfTransform?: DxfTransform };
+    const transform = debugWin.dxfTransform || { scale: 1, offsetX: 0, offsetY: 0 };
 
     return {
       viewport: {

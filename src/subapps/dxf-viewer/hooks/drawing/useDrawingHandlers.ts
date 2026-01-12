@@ -62,9 +62,10 @@ import { useRulersGridContext } from '../../systems/rulers-grid/RulersGridSystem
 
 type Pt = { x: number, y: number };
 
+// 🏢 ENTERPRISE: Type-safe entity created callback
 export function useDrawingHandlers(
   activeTool: ToolType,
-  onEntityCreated: (entity: any) => void,
+  onEntityCreated: (entity: Entity) => void,
   onToolChange: (tool: ToolType) => void,
   currentScene?: SceneModel
 ) {

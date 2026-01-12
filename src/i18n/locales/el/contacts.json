@@ -1,4 +1,86 @@
 {
+  "header": {
+    "title": "Διαχείριση Επαφών",
+    "titleWithCount": "Διαχείριση Επαφών ({{count}})",
+    "subtitle": "Κεντρικό ευρετήριο όλων των επαφών σας",
+    "searchPlaceholder": "Αναζήτηση επαφών...",
+    "newContact": "Νέα Επαφή"
+  },
+  "page": {
+    "pageLabel": "Διαχείριση Επαφών",
+    "loading": "Φόρτωση Επαφών",
+    "loadingMessage": "Φόρτωση επαφών από βάση δεδομένων...",
+    "error": {
+      "pageLabel": "Σφάλμα Επαφών",
+      "ariaLabel": "Σφάλμα Φόρτωσης",
+      "title": "Αποτυχία φόρτωσης επαφών:",
+      "retry": "Επανάληψη"
+    },
+    "dashboard": {
+      "label": "Στατιστικά Επαφών",
+      "totalContacts": "Σύνολο Επαφών",
+      "totalPersonnel": "Σύνολο Προσωπικού",
+      "legalEntities": "Νομικά Πρόσωπα",
+      "activeContacts": "Ενεργές Επαφές",
+      "services": "Υπηρεσίες",
+      "recentAdditions": "Πρόσφατες Προσθήκες",
+      "favorites": "Αγαπημένες",
+      "contactsWithRelations": "Επαφές με Σχέσεις"
+    },
+    "filters": {
+      "desktop": "Φίλτρα Αναζήτησης",
+      "mobile": "Φίλτρα Αναζήτησης Mobile"
+    },
+    "views": {
+      "desktopView": "Λίστα και Λεπτομέρειες Desktop",
+      "mobileList": "Λίστα Επαφών Mobile",
+      "gridPlaceholder": "Προβολή πλέγματος (Grid View) θα υλοποιηθεί σύντομα."
+    },
+    "details": {
+      "title": "Λεπτομέρειες",
+      "editContact": "Επεξεργασία Επαφής",
+      "deleteContact": "Διαγραφή Επαφής"
+    },
+    "filterIndicator": {
+      "viewingCustomer": "Προβολή πελάτη:",
+      "selectedContact": "Επιλεγμένη επαφή",
+      "back": "Επιστροφή",
+      "backToList": "Επιστροφή στη λίστα επαφών",
+      "filteringFor": "Φιλτράρισμα για:",
+      "contactsCount": "{{count}} επαφή",
+      "contactsCountPlural": "{{count}} επαφές",
+      "clear": "Καθάρισμα",
+      "showAll": "Εμφάνιση όλων των επαφών"
+    }
+  },
+  "list": {
+    "ariaLabel": "Λίστα Επαφών",
+    "entityName": "Επαφές",
+    "searchPlaceholder": "Αναζήτηση επαφών...",
+    "favorites": {
+      "added": "Προστέθηκε στα αγαπημένα: {{name}}",
+      "removed": "Αφαιρέθηκε από τα αγαπημένα: {{name}}",
+      "error": "Αποτυχία ενημέρωσης αγαπημένου"
+    },
+    "empty": {
+      "title": "Δεν υπάρχουν επαφές",
+      "subtitle": "Προσθέστε την πρώτη σας επαφή"
+    }
+  },
+  "properties": {
+    "title": "Ακίνητα Πελάτη ({{count}})",
+    "addProperty": "Προσθήκη Ακινήτου",
+    "empty": "Αυτός ο πελάτης δεν έχει καταχωρημένα ακίνητα.",
+    "table": {
+      "code": "Κωδικός",
+      "type": "Τύπος",
+      "area": "Εμβαδόν",
+      "building": "Κτίριο",
+      "actions": "Ενέργειες"
+    },
+    "sqm": "τ.μ.",
+    "view": "Προβολή"
+  },
   "details": {
     "contactInfo": {
       "title": "Στοιχεία Επικοινωνίας",
@@ -8,6 +90,83 @@
       "title": "Φορολογικά Στοιχεία",
       "vatNumber": "ΑΦΜ:",
       "notSet": "Δεν έχει οριστεί"
+    }
+  },
+  "toolbar": {
+    "actions": {
+      "new": "Νέα Επαφή (Ctrl+N)",
+      "edit": "Επεξεργασία Επιλεγμένης (Ctrl+E)",
+      "delete": "Διαγραφή Επιλεγμένης (Delete)"
+    }
+  },
+  "dialog": {
+    "deleteConfirmation": {
+      "title": "Επιβεβαίωση Διαγραφής",
+      "message": "Είστε σίγουροι ότι θέλετε να διαγράψετε {{count}} επαφή/ές;",
+      "warning": "Αυτή η ενέργεια δεν μπορεί να αναιρεθεί."
+    },
+    "cancel": "Ακύρωση",
+    "delete": "Διαγραφή"
+  },
+  "relationships": {
+    "form": {
+      "title": "Προσθήκη Νέας Σχέσης",
+      "editTitle": "Επεξεργασία Σχέσης",
+      "labels": {
+        "contact": "Επαφή",
+        "relationshipType": "Τύπος Σχέσης",
+        "position": "Θέση",
+        "department": "Τμήμα",
+        "startDate": "Ημερομηνία Έναρξης",
+        "notes": "Σημειώσεις",
+        "professionalInfo": "Επαγγελματικά Στοιχεία Επικοινωνίας"
+      },
+      "placeholders": {
+        "searchContact": "Αναζήτηση επαφής...",
+        "selectType": "Επιλέξτε τύπο σχέσης",
+        "position": "π.χ. Διευθυντής Πωλήσεων",
+        "department": "π.χ. Οικονομικό Τμήμα",
+        "businessPhone": "Επαγγελματικό τηλέφωνο",
+        "businessEmail": "Επαγγελματικό email",
+        "extensionNumber": "Εσωτερικό τηλέφωνο",
+        "businessAddress": "Διεύθυνση εργασίας",
+        "notes": "Πρόσθετες πληροφορίες..."
+      },
+      "validation": {
+        "contactRequired": "Η επιλογή επαφής είναι υποχρεωτική",
+        "relationshipTypeRequired": "Ο τύπος σχέσης είναι υποχρεωτικός",
+        "positionRequired": "Η θέση είναι υποχρεωτική",
+        "departmentRequired": "Το τμήμα είναι υποχρεωτικό"
+      },
+      "buttons": {
+        "cancel": "Ακύρωση",
+        "save": "Αποθήκευση...",
+        "add": "Προσθήκη",
+        "update": "Ενημέρωση"
+      }
+    },
+    "card": {
+      "editTitle": "Επεξεργασία σχέσης",
+      "deleteTitle": "Διαγραφή σχέσης",
+      "from": "Από:",
+      "to": "Έως:",
+      "notes": "Σημειώσεις:",
+      "createdAt": "Δημιουργήθηκε:",
+      "updatedAt": "Ενημερώθηκε:",
+      "recently": "Πρόσφατα"
+    },
+    "list": {
+      "newContact": {
+        "title": "Δημιουργία σχέσεων",
+        "description": "Για να δημιουργήσετε σχέσεις, πρώτα αποθηκεύστε την επαφή. Μετά την αποθήκευση θα μπορείτε να προσθέσετε επαγγελματικές σχέσεις.",
+        "tip": "Συμβουλή:",
+        "tipText": "Συμπληρώστε τα βασικά στοιχεία και κάντε κλικ \"Ενημέρωση Επαφής\""
+      },
+      "loading": "Φόρτωση σχέσεων...",
+      "empty": {
+        "title": "Δεν υπάρχουν καταχωρημένες σχέσεις",
+        "addHint": "Κάντε κλικ στο κουμπί \"Προσθήκη Σχέσης\" για να προσθέσετε την πρώτη σχέση."
+      }
     }
   }
 }

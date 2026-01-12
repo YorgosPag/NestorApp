@@ -68,7 +68,7 @@ export class FloorplanService {
   /**
    * Compress scene data using gzip
    */
-  private static compressScene(scene: any): { compressedData: string; originalSize: number; compressedSize: number } {
+  private static compressScene(scene: DxfSceneData | null | undefined): { compressedData: string; originalSize: number; compressedSize: number } {
     try {
       const jsonString = JSON.stringify(scene);
       const originalSize = new TextEncoder().encode(jsonString).length;
@@ -92,7 +92,7 @@ export class FloorplanService {
   /**
    * Decompress scene data
    */
-  private static decompressScene(compressedData: string): any {
+  private static decompressScene(compressedData: string): DxfSceneData {
     try {
       // Convert from base64
       const binaryString = atob(compressedData);

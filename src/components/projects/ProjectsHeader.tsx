@@ -1,5 +1,10 @@
 'use client';
 
+/**
+ * 🏢 ENTERPRISE ProjectsHeader with i18n support
+ * ZERO HARDCODED STRINGS - All labels from centralized translations
+ */
+
 import React from 'react';
 import { Filter } from 'lucide-react';
 // 🏢 ENTERPRISE: Using centralized entity config for Building icon
@@ -12,6 +17,8 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import type { ViewMode } from '@/core/headers';
 // 🏢 ENTERPRISE: Breadcrumb navigation
 import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ProjectsHeaderProps {
   viewMode: 'list' | 'byType' | 'byStatus';
@@ -28,6 +35,9 @@ interface ProjectsHeaderProps {
   projectCount?: number;
 }
 
+// 🏢 ENTERPRISE: Type for Projects view modes (avoids `as any`)
+type ProjectsViewMode = 'list' | 'byType' | 'byStatus';
+
 export function ProjectsHeader({
   viewMode,
   setViewMode,
@@ -40,9 +50,17 @@ export function ProjectsHeader({
   setShowFilters,
   projectCount,
 }: ProjectsHeaderProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+
+  // 🏢 ENTERPRISE: Dynamic title with optional count
+  const headerTitle = projectCount !== undefined
+    ? t('header.titleWithCount', { count: projectCount })
+    : t('header.title');
+
   return (
     <PageHeader
       variant="sticky-rounded"
@@ -50,23 +68,23 @@ export function ProjectsHeader({
       spacing="compact"
       title={{
         icon: NAVIGATION_ENTITIES.building.icon,
-        title: `Διαχείριση Έργων${projectCount !== undefined ? ` (${projectCount})` : ''}`,
-        subtitle: "Παρακολούθηση και διαχείριση έργων"
+        title: headerTitle,
+        subtitle: t('header.subtitle')
       }}
       breadcrumb={<NavigationBreadcrumb />}
       search={searchTerm !== undefined && setSearchTerm ? {
         value: searchTerm,
         onChange: setSearchTerm,
-        placeholder: "Αναζήτηση έργων..."
+        placeholder: t('header.searchPlaceholder')
       } : undefined}
       actions={{
         showDashboard,
         onDashboardToggle: () => setShowDashboard(!showDashboard),
         viewMode: viewMode as ViewMode,
-        onViewModeChange: (mode) => setViewMode(mode as any),
+        onViewModeChange: (mode) => setViewMode(mode as ProjectsViewMode),
         viewModes: ['list', 'byType', 'byStatus'] as ViewMode[],
         addButton: {
-          label: 'Νέο Έργο',
+          label: t('header.newProject'),
           onClick: () => onNewProject?.() || console.log('Add project')
         },
         // Mobile-only filter button

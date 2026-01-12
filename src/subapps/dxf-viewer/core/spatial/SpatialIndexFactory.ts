@@ -24,8 +24,12 @@ import type {
   ISpatialIndex,
   ISpatialIndexFactory,
   SpatialIndexConfig,
-  SpatialBounds
+  SpatialBounds,
+  SpatialIndexStats,
+  SpatialQueryResult,
+  SpatialQueryOptions
 } from './ISpatialIndex';
+import type { Point2D } from '../../rendering/types/Types';
 import { SpatialIndexType } from './ISpatialIndex';
 import { SpatialUtils } from './SpatialUtils';
 import { QuadTreeSpatialIndex } from './QuadTreeSpatialIndex';
@@ -225,37 +229,37 @@ class PlaceholderSpatialIndex implements ISpatialIndex {
     console.warn('🚧 PlaceholderSpatialIndex.clear() - not implemented');
   }
 
-  queryNear(): any[] {
+  queryNear(_center: Point2D, _radius: number, _options?: SpatialQueryOptions): SpatialQueryResult[] {
     console.warn('🚧 PlaceholderSpatialIndex.queryNear() - not implemented');
     return [];
   }
 
-  queryBounds(): any[] {
+  queryBounds(_bounds: SpatialBounds, _options?: SpatialQueryOptions): SpatialQueryResult[] {
     console.warn('🚧 PlaceholderSpatialIndex.queryBounds() - not implemented');
     return [];
   }
 
-  queryClosest(): any {
+  queryClosest(_point: Point2D, _options?: SpatialQueryOptions): SpatialQueryResult | null {
     console.warn('🚧 PlaceholderSpatialIndex.queryClosest() - not implemented');
     return null;
   }
 
-  hitTest(): any {
+  hitTest(_point: Point2D, _tolerance?: number): SpatialQueryResult | null {
     console.warn('🚧 PlaceholderSpatialIndex.hitTest() - not implemented');
     return null;
   }
 
-  querySnap(): any[] {
+  querySnap(_point: Point2D, _tolerance: number, _snapType: 'endpoint' | 'midpoint' | 'center'): SpatialQueryResult[] {
     console.warn('🚧 PlaceholderSpatialIndex.querySnap() - not implemented');
     return [];
   }
 
-  querySelection(): any[] {
+  querySelection(_bounds: SpatialBounds, _selectionType: 'window' | 'crossing'): SpatialQueryResult[] {
     console.warn('🚧 PlaceholderSpatialIndex.querySelection() - not implemented');
     return [];
   }
 
-  getStats(): any {
+  getStats(): SpatialIndexStats {
     return {
       itemCount: this.itemCount,
       queryTime: 0,
@@ -268,7 +272,7 @@ class PlaceholderSpatialIndex implements ISpatialIndex {
     console.warn('🚧 PlaceholderSpatialIndex.optimize() - not implemented');
   }
 
-  debug(): any {
+  debug(): Record<string, unknown> {
     return {
       type: 'placeholder',
       indexType: this.indexType,

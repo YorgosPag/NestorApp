@@ -1599,6 +1599,445 @@ const pdfResult = await UnifiedUploadService.uploadPDF(file, {
 
 ---
 
+#### 📋 ADR-018.1: PHOTOS TAB BASE TEMPLATE SYSTEM (2026-01-11) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Extension to ADR-018** | **Date**: 2026-01-11
+
+**Context**:
+Εντοπίστηκαν **4 διαφορετικά PhotosTab implementations** με διπλότυπο κώδικα:
+- `ProjectPhotosTab` (106 lines) - Project photos
+- `PhotosTabContent` (72 lines) - Building photos
+- `StoragePhotosTab` (244 lines) - Storage photos με categories
+- `ContactPhotosTab` (76 lines) - Contact photos (form-controlled)
+
+**Προβλήματα (ΕΠΙΛΥΘΗΚΑΝ)**:
+- ✅ ~~Διπλότυπος κώδικας (498 lines)~~ → Template pattern με ~30 lines ανά entity
+- ✅ ~~Inconsistent behavior~~ → Ενιαίο UX με PhotosTabBase
+- ✅ ~~Scattered category logic~~ → Centralized στο photos-tab-config
+- ✅ ~~Hardcoded values~~ → Config-driven per entity type
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **CANONICAL** | `PhotosTabBase` (`@/components/generic/photo-system`) είναι το ΜΟΝΑΔΙΚΟ template για PhotosTabs |
+| **PATTERN** | Template Method Pattern (Enterprise Standard) |
+| **MIGRATION** | Existing PhotosTabs MUST use PhotosTabBase |
+| **NEW** | All new PhotosTabs MUST use PhotosTabBase |
+
+**Architecture**:
+```
+PhotosTabBase<TEntity>
+         │
+    ┌────┴────┐
+    │ Config  │
+    │ per     │
+    │ entity  │
+    └────┬────┘
+         │
+   ┌─────┼─────┬─────┐
+   ▼     ▼     ▼     ▼
+Project Build. Storage Unit
+  Tab    Tab    Tab    Tab
+```
+
+**Files Structure**:
+```
+src/components/generic/photo-system/
+├── components/
+│   └── PhotosTabBase.tsx         # Template component
+├── config/
+│   ├── photos-tab-types.ts       # Type definitions (re-exports Photo)
+│   └── photos-tab-config.ts      # Entity configurations
+├── hooks/
+│   ├── usePhotosTabState.ts      # State management
+│   ├── usePhotosTabUpload.ts     # Upload logic (thin wrapper)
+│   └── usePhotosCategories.ts    # Category filtering
+└── index.ts                      # Public API
+```
+
+**Usage**:
+```typescript
+// Simple usage (Project, Building)
+<PhotosTabBase
+  entity={project}
+  entityType="project"
+  entityName={project.name}
+/>
+
+// With categories (Storage)
+<PhotosTabBase
+  entity={storage}
+  entityType="storage"  // Config auto-enables stats/categories
+  entityName={storage.name}
+/>
+
+// Form-controlled mode (Contact)
+<PhotosTabBase
+  entity={contact}
+  entityType="contact"
+  photos={formData.photos}
+  onPhotosChange={(photos) => setFormData({ ...formData, photos })}
+  disabled={isViewMode}
+/>
+```
+
+**Key Features**:
+- ✅ **Zero duplication**: Uses existing EnterprisePhotoUpload, PhotoItem
+- ✅ **Config-driven**: Entity configs define behavior (stats, categories)
+- ✅ **Type-safe**: Full TypeScript generics, zero `any`
+- ✅ **Semantic HTML**: article, section, nav elements
+
+**Migration Results**:
+| Component | Before | After | Reduction |
+|-----------|--------|-------|-----------|
+| ProjectPhotosTab | 106 lines | ~30 lines | **72%** |
+| PhotosTabContent | 72 lines | ~30 lines | **58%** |
+| StoragePhotosTab | 244 lines | ~30 lines | **88%** |
+| **Total** | 422 lines | ~90 lines | **79%** |
+
+**Enforcement**:
+- ❌ **NO NEW** standalone PhotosTab implementations
+- ✅ **MIGRATE ON TOUCH**: Replace with PhotosTabBase usage
+- ✅ **NEW ENTITIES**: Use PhotosTabBase with config
+
+**References**:
+- Source: `src/components/generic/photo-system/`
+- Re-uses: EnterprisePhotoUpload, PhotoItem, useEnterpriseFileUpload
+- Pattern: Template Method (SAP, Salesforce, Microsoft, Oracle)
+
+---
+
+### 📋 ADR-019: CENTRALIZED PERFORMANCE THRESHOLDS (2026-01-11) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-11
+
+**Context**:
+Εντοπίστηκαν **πολλαπλά hardcoded performance thresholds** σε διάφορα αρχεία:
+- `DxfPerformanceOptimizer.ts` - Default config με διπλές τιμές (256MB vs 512MB)
+- `DxfViewerContent.tsx` - Override config με hardcoded 384MB, 45 FPS
+- `performance-utils.ts` - Partial thresholds χωρίς πλήρη κάλυψη
+
+**Προβλήματα (ΕΠΙΛΥΘΗΚΑΝ)**:
+- ✅ ~~Ασυνέπεια: Memory threshold 256MB vs 384MB vs 512MB~~ → Single source of truth
+- ✅ ~~Hardcoded values παντού~~ → Centralized PERFORMANCE_THRESHOLDS
+- ✅ ~~`as any` για Chrome Memory API~~ → Type-safe με interface & type guard
+- ✅ ~~Missing FPS minTarget~~ → Added στο centralized config
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **CANONICAL** | `PERFORMANCE_THRESHOLDS` (`@/core/performance/components/utils/performance-utils.ts`) |
+| **SINGLE SOURCE** | Όλα τα performance thresholds σε ένα αρχείο |
+| **TYPE-SAFE** | Zero `as any` - proper TypeScript interfaces |
+| **ENTERPRISE** | Chrome Memory API με type guards |
+
+**Structure**:
+```typescript
+export const PERFORMANCE_THRESHOLDS = {
+  fps: {
+    excellent: 60,      // Smooth animations
+    good: 45,           // Acceptable for CAD
+    warning: 30,        // Noticeable lag
+    poor: 15,           // Unusable
+    minTarget: 45       // Alert threshold
+  },
+  memory: {
+    excellent: 128,     // <128MB
+    good: 256,          // <256MB
+    warning: 384,       // <384MB (alert threshold)
+    poor: 512,          // >512MB
+    maxAllowed: 512,    // Maximum for DXF Viewer
+    gcTriggerPercent: 0.7 // Trigger GC at 70%
+  },
+  renderTime: {
+    excellent: 8,       // <8ms per frame
+    good: 16.67,        // 60fps budget
+    warning: 33,        // 30fps budget
+    poor: 50            // >50ms
+  },
+  loadTime: {
+    excellent: 1000,    // <1s
+    good: 2500,         // Lighthouse target
+    warning: 5000,      // Acceptable
+    poor: 7000          // Too slow
+  }
+} as const;
+```
+
+**Usage**:
+```typescript
+import { PERFORMANCE_THRESHOLDS } from '@/core/performance/components/utils/performance-utils';
+
+// Memory check
+if (memoryMB > PERFORMANCE_THRESHOLDS.memory.warning) {
+  triggerAlert();
+}
+
+// FPS check
+if (fps < PERFORMANCE_THRESHOLDS.fps.minTarget) {
+  optimizeRendering();
+}
+```
+
+**Files Changed**:
+- `performance-utils.ts` - Extended with full thresholds
+- `DxfPerformanceOptimizer.ts` - Uses centralized config, type-safe Memory API
+- `DxfViewerContent.tsx` - Uses centralized config
+
+**Consequences**:
+- ✅ Single source of truth για performance thresholds
+- ✅ Type-safe Chrome Memory API access
+- ✅ Consistent alerts across the application
+- ✅ Easy tuning σε ένα σημείο
+
+**References**:
+- Source: `src/core/performance/components/utils/performance-utils.ts`
+- Consumers: `DxfPerformanceOptimizer.ts`, `DxfViewerContent.tsx`
+- Pattern: Centralized Constants (Google, Microsoft, Autodesk CAD standards)
+
+---
+
+### 📋 ADR-020: CENTRALIZED AUTH MODULE (2026-01-11) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-11
+
+**Context**:
+Εντοπίστηκαν **πολλαπλά authentication systems** διάσπαρτα στην εφαρμογή:
+- ~~`FirebaseAuthContext.tsx`~~ - ✅ **DELETED** (2026-01-11) - Migrated to `src/auth/`
+- ~~`UserRoleContext.tsx`~~ - ✅ **DELETED** (2026-01-11) - Migrated to `src/auth/`
+- ~~`OptimizedUserRoleContext.tsx`~~ - ✅ **DELETED** (localStorage-based, hardcoded admin emails)
+- ~~`LoginForm.tsx`~~ - ✅ **DELETED** - Replaced by AuthForm
+- ~~`FirebaseLoginForm.tsx`~~ - ✅ **DELETED** (2026-01-11) - Replaced by AuthForm
+
+**Προβλήματα (ΕΠΙΛΥΘΗΚΑΝ)**:
+- ✅ ~~Dual authentication systems (Firebase vs localStorage)~~ → Single Firebase-based system
+- ✅ ~~Hardcoded admin emails~~ → EnterpriseSecurityService (database-driven)
+- ✅ ~~Duplicate login forms~~ → Single AuthForm component
+- ✅ ~~Scattered auth logic~~ → Centralized `src/auth/` module
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **CANONICAL** | `src/auth/` module είναι το ΜΟΝΑΔΙΚΟ auth module |
+| **IMPORT PATH** | `import { AuthProvider, useAuth } from '@/auth'` |
+| **DELETED (2026-01-11)** | `@/contexts/FirebaseAuthContext.tsx` - No longer exists |
+| **DELETED (2026-01-11)** | `@/contexts/UserRoleContext.tsx` - No longer exists |
+| **DELETED (2026-01-11)** | `@/components/auth/*` - Entire folder deleted |
+
+**New Structure**:
+```
+src/auth/
+├── contexts/
+│   ├── AuthContext.tsx       # Firebase Auth (main)
+│   ├── UserRoleContext.tsx   # Role management
+│   └── UserTypeContext.tsx   # GEO-ALERT user types
+├── components/
+│   ├── AuthForm.tsx          # Unified auth form (signin/signup/reset)
+│   └── ProtectedRoute.tsx    # Route guard
+├── hooks/
+│   └── useAuth.ts            # Simple auth hook
+├── types/
+│   └── auth.types.ts         # Centralized types
+└── index.ts                  # Public API
+```
+
+**Public API** (`src/auth/index.ts`):
+```typescript
+// Providers
+export { AuthProvider, UserRoleProvider, UserTypeProvider } from './contexts/...';
+
+// Hooks
+export { useAuth, useUserRole, useUserType } from './hooks/...';
+
+// Components
+export { AuthForm, ProtectedRoute } from './components/...';
+
+// Types
+export type { UserRole, UserType, User, FirebaseAuthUser } from './types/...';
+```
+
+**Usage**:
+```typescript
+// ✅ CORRECT - Use centralized module (ONLY WAY)
+import { AuthProvider, useUserRole, AuthForm } from '@/auth';
+
+// ❌ DELETED (2026-01-11) - These files no longer exist
+// import { FirebaseAuthProvider } from '@/contexts/FirebaseAuthContext'; // DELETED
+// import { useUserRole } from '@/contexts/UserRoleContext'; // DELETED
+```
+
+**Features**:
+- ✅ Firebase Auth integration
+- ✅ Database-driven roles via EnterpriseSecurityService
+- ✅ Type-safe (zero `any`)
+- ✅ Localized error messages (Greek)
+- ✅ Password visibility toggle
+- ✅ Multi-mode form (signin/signup/reset)
+- ✅ Backward compatibility re-exports
+
+**Consequences**:
+- ✅ Single source of truth for authentication
+- ✅ No more hardcoded admin emails
+- ✅ Enterprise-grade security (database-driven roles)
+- ✅ Clean separation: Auth vs UserType (GEO-ALERT)
+- ✅ Consistent API across the application
+
+**References**:
+- Source: `src/auth/` module
+- Pattern: SAP, Salesforce, Microsoft Dynamics auth architecture
+- Security: EnterpriseSecurityService for role management
+
+---
+
+#### 📋 ADR-020.1: CONDITIONAL APP SHELL LAYOUT (2026-01-11) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Extension to ADR-020** | **Date**: 2026-01-11
+
+**Context**:
+Η σελίδα login εμφανιζόταν με sidebar και header (μη επαγγελματικό):
+- ❌ Sidebar visible στη login page
+- ❌ Header visible στη login page
+- ❌ Μη enterprise-grade εμφάνιση
+
+**Προβλήματα (ΕΠΙΛΥΘΗΚΑΝ)**:
+- ✅ ~~Login page με sidebar/header~~ → Standalone layout για auth routes
+- ✅ ~~Hardcoded layout σε root layout~~ → Conditional rendering με ConditionalAppShell
+- ✅ ~~Μη επαγγελματική εμφάνιση~~ → Enterprise standalone auth pages
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **CANONICAL** | `ConditionalAppShell` (`src/app/components/ConditionalAppShell.tsx`) |
+| **AUTH ROUTES** | `/login`, `/register`, `/forgot-password`, `/reset-password` |
+| **BEHAVIOR** | Auth routes: Standalone (no sidebar/header) • App routes: Full layout |
+| **PATTERN** | SAP, Salesforce, Microsoft Azure Portal, Google Cloud Console |
+
+**Architecture**:
+```
+ConditionalAppShell
+        │
+        ├── isAuthRoute(pathname)?
+        │         │
+        │    ┌────┴────┐
+        │    │  YES    │
+        │    └────┬────┘
+        │         ▼
+        │   Standalone Layout
+        │   (no sidebar/header)
+        │
+        └── else?
+                  │
+             ┌────┴────┐
+             │   NO    │
+             └────┬────┘
+                  ▼
+            Full App Layout
+            (sidebar + header)
+```
+
+**Files**:
+```
+src/app/components/ConditionalAppShell.tsx   # Conditional layout component
+src/app/layout.tsx                            # Uses ConditionalAppShell
+```
+
+**Usage**:
+```typescript
+// Root layout - automatic conditional rendering
+<ConditionalAppShell>
+  {children}
+</ConditionalAppShell>
+
+// Auth routes: /login, /register, etc. → Standalone layout
+// App routes: /dashboard, /projects, etc. → Full layout with sidebar/header
+```
+
+**Key Features**:
+- ✅ **Route-based detection**: Uses `usePathname()` for route detection
+- ✅ **Zero config**: Automatic detection based on AUTH_ROUTES array
+- ✅ **Enterprise pattern**: Same approach as SAP, Salesforce, Microsoft Azure
+- ✅ **Semantic HTML**: Uses `<main>` for standalone layout
+
+**Consequences**:
+- ✅ Professional standalone login page
+- ✅ No sidebar/header clutter on auth pages
+- ✅ Clean enterprise appearance
+- ✅ Single point of configuration for auth routes
+
+**References**:
+- Source: `src/app/components/ConditionalAppShell.tsx`
+- Related: ADR-020 (Centralized Auth Module)
+- Pattern: Enterprise Portal Architecture (SAP, Salesforce, Microsoft)
+
+---
+
+### 📋 ADR-023: CENTRALIZED SPINNER COMPONENT (2026-01-11) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Type**: Component Centralization | **Date**: 2026-01-11
+
+**Context**:
+- The codebase had **28 files** importing `Loader2` directly from `lucide-react`
+- This bypassed the centralized `Spinner` component at `@/components/ui/spinner`
+- Each direct import meant inconsistent sizing, styling, and animation
+- No single source of truth for loading indicators
+
+**Decision**:
+```
+🏢 CANONICAL: import { Spinner } from '@/components/ui/spinner';
+❌ PROHIBITED: import { Loader2 } from 'lucide-react'; (in components)
+```
+
+**Architecture**:
+```typescript
+// ✅ CANONICAL - Use this everywhere
+import { Spinner } from '@/components/ui/spinner';
+
+// Usage
+<Spinner size="small" />   // 16px - inline buttons
+<Spinner size="medium" />  // 24px - cards, sections
+<Spinner size="large" />   // 32px - full-page loading
+<Spinner size="xl" />      // 48px - hero loading states
+```
+
+**ESLint Enforcement**:
+```javascript
+// eslint.config.mjs
+"design-system/no-direct-loader-import": "warn"  // Warn for now, migrate on touch
+```
+
+**Rule Location**: `eslint/rules/design-system-rules.js`
+
+**Exceptions** (allowed to import Loader2 directly):
+1. `src/components/ui/spinner.tsx` - The canonical implementation itself
+2. `src/components/ui/ModalLoadingStates.tsx` - Enterprise modal loading patterns
+3. `**/loading.tsx` - Next.js App Router loading files (Server Components)
+
+**Migration Strategy**: **MIGRATE ON TOUCH**
+- When touching any file with direct Loader2 import → Replace with Spinner
+- No big-bang migration required
+- Gradual adoption as files are modified
+
+**Files to Migrate** (28 files identified):
+- Will be migrated incrementally when files are touched for other changes
+- ESLint warning ensures visibility of deprecated pattern
+
+**Consequences**:
+- ✅ Consistent loading indicators across entire application
+- ✅ Single point of change for size/animation updates
+- ✅ Design system compliance enforced via ESLint
+- ✅ Zero breaking changes (gradual migration)
+
+**References**:
+- Canonical: `src/components/ui/spinner.tsx`
+- ESLint Rule: `eslint/rules/design-system-rules.js` (no-direct-loader-import)
+- Pattern: Enterprise Component Centralization (Google Material, Microsoft Fluent)
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

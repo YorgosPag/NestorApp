@@ -9,6 +9,7 @@
 // ============================================================================
 
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
+import type { ContactFormData } from '@/types/ContactFormTypes';
 import { useFormState } from '../core/useFormState';
 import { useFormReset } from '../core/useFormReset';
 import { useFileUploads } from '../files/useFileUploads';
@@ -20,17 +21,23 @@ import { useDragAndDrop } from '../interactions/useDragAndDrop';
 // TYPES & INTERFACES
 // ============================================================================
 
+/** Result from multiple photo upload operation */
+interface MultiplePhotoUploadResult {
+  url?: string;
+  fileName?: string;
+}
+
 export interface UseContactFormStateReturn {
   // State
-  formData: any;
+  formData: ContactFormData;
 
   // Basic setters
-  setFormData: (data: any) => void;
+  setFormData: (data: ContactFormData) => void;
 
   // Field handlers
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
-  handleNestedChange: (path: string, value: any) => void;
+  handleNestedChange: (path: string, value: unknown) => void;
 
   // File handlers
   handleFileChange: (file: File | null) => void;
@@ -40,7 +47,7 @@ export interface UseContactFormStateReturn {
   // Upload completion handlers
   handleUploadedPhotoURL: (photoURL: string) => void;
   handleUploadedLogoURL: (logoURL: string) => void;
-  handleMultiplePhotoUploadComplete: (index: number, result: any) => void;
+  handleMultiplePhotoUploadComplete: (index: number, result: MultiplePhotoUploadResult) => void;
 
   // Profile photo selection
   handleProfilePhotoSelection: (index: number) => void;

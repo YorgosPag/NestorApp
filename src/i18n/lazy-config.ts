@@ -36,8 +36,11 @@ export const SUPPORTED_NAMESPACES = [
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
 
+/** Translation data structure */
+type TranslationData = Record<string, string | Record<string, unknown>>;
+
 // Cache for loaded translations
-const translationCache = new Map<string, any>();
+const translationCache = new Map<string, TranslationData>();
 
 /**
  * Dynamic translation loader με webpack-compatible imports
@@ -51,7 +54,7 @@ async function loadTranslations(language: Language, namespace: Namespace) {
 
   try {
     // Webpack-compatible dynamic import με explicit paths
-    let translations: any;
+    let translations: { default?: TranslationData } & TranslationData;
 
     if (language === 'el') {
       switch (namespace) {
@@ -120,7 +123,7 @@ async function loadTranslations(language: Language, namespace: Namespace) {
           return {};
       }
     } else if (language === 'en') {
-      // English translations (if available)
+      // English translations - Full support for all namespaces
       switch (namespace) {
         case 'common':
           translations = await import('./locales/en/common.json');
@@ -131,9 +134,60 @@ async function loadTranslations(language: Language, namespace: Namespace) {
         case 'geo-canvas':
           translations = await import('./locales/en/geo-canvas.json');
           break;
+        case 'forms':
+          translations = await import('./locales/en/forms.json');
+          break;
+        case 'toasts':
+          translations = await import('./locales/en/toasts.json');
+          break;
+        case 'errors':
+          translations = await import('./locales/en/errors.json');
+          break;
+        case 'properties':
+          translations = await import('./locales/en/properties.json');
+          break;
+        case 'crm':
+          translations = await import('./locales/en/crm.json');
+          break;
+        case 'navigation':
+          translations = await import('./locales/en/navigation.json');
+          break;
+        case 'auth':
+          translations = await import('./locales/en/auth.json');
+          break;
+        case 'dashboard':
+          translations = await import('./locales/en/dashboard.json');
+          break;
+        case 'projects':
+          translations = await import('./locales/en/projects.json');
+          break;
+        case 'toolbars':
+          translations = await import('./locales/en/toolbars.json');
+          break;
+        case 'compositions':
+          translations = await import('./locales/en/compositions.json');
+          break;
+        case 'tasks':
+          translations = await import('./locales/en/tasks.json');
+          break;
+        case 'users':
+          translations = await import('./locales/en/users.json');
+          break;
+        case 'building':
+          translations = await import('./locales/en/building.json');
+          break;
+        case 'contacts':
+          translations = await import('./locales/en/contacts.json');
+          break;
+        case 'units':
+          translations = await import('./locales/en/units.json');
+          break;
+        case 'landing':
+          translations = await import('./locales/en/landing.json');
+          break;
         default:
-          // Fallback to Greek for missing English translations
-          return loadTranslations('el', namespace);
+          console.warn(`Namespace ${namespace} not found for language ${language}`);
+          return {};
       }
     } else {
       // Other languages fallback to Greek
@@ -164,7 +218,7 @@ async function loadTranslations(language: Language, namespace: Namespace) {
  */
 export async function initI18n(defaultLanguage: Language = 'el') {
   // Load initial translations for default language
-  const initialResources: Record<string, Record<string, any>> = {};
+  const initialResources: Record<string, Record<string, TranslationData>> = {};
   
   // Load common namespace first (required for app boot)
   initialResources[defaultLanguage] = {
@@ -222,8 +276,9 @@ export async function loadNamespace(namespace: Namespace, language?: Language) {
  * Preload critical namespaces
  */
 export async function preloadCriticalNamespaces(language: Language = 'el') {
-  const critical: Namespace[] = ['common', 'errors', 'toasts'];
-  
+  // 🏢 ENTERPRISE: auth is critical for login page language switching
+  const critical: Namespace[] = ['common', 'errors', 'toasts', 'auth'];
+
   await Promise.all(
     critical.map(namespace => loadNamespace(namespace, language))
   );

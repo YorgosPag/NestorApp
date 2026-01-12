@@ -10,6 +10,11 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Breadcrumb navigation
 import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+
+// 🏢 ENTERPRISE: Type for Storages view modes (avoids `as any`)
+type StoragesViewMode = 'list' | 'grid' | 'byType' | 'byStatus';
 
 interface StoragesHeaderProps {
   viewMode: 'list' | 'grid' | 'byType' | 'byStatus';
@@ -35,6 +40,8 @@ export function StoragesHeader({
   showFilters,
   setShowFilters,
 }: StoragesHeaderProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
@@ -46,23 +53,23 @@ export function StoragesHeader({
       spacing="compact"
       title={{
         icon: Warehouse,
-        title: "Διαχείριση Αποθηκών",
-        subtitle: "Διαχείριση και παρακολούθηση χώρων αποθήκευσης"
+        title: t('storages.header.title'),
+        subtitle: t('storages.header.subtitle')
       }}
       breadcrumb={<NavigationBreadcrumb />}
       search={{
         value: searchTerm,
         onChange: setSearchTerm,
-        placeholder: "Αναζήτηση αποθηκών..."
+        placeholder: t('storages.header.searchPlaceholder')
       }}
       actions={{
         showDashboard,
         onDashboardToggle: () => setShowDashboard(!showDashboard),
         viewMode: viewMode as ViewMode,
-        onViewModeChange: (mode) => setViewMode(mode as any),
+        onViewModeChange: (mode) => setViewMode(mode as StoragesViewMode),
         viewModes: ['list', 'grid', 'byType', 'byStatus'] as ViewMode[],
         addButton: {
-          label: 'Νέα Αποθήκη',
+          label: t('storages.header.newStorage'),
           onClick: () => onNewStorage?.() || console.log('Add storage')
         },
         // Mobile-only filter button
@@ -75,7 +82,7 @@ export function StoragesHeader({
                 ? `bg-primary text-primary-foreground ${quick.focus}`
                 : `${colors.bg.primary} ${quick.input} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
             }`}
-            aria-label="Toggle filters"
+            aria-label={t('storages.accessibility.toggleFilters')}
           >
             <Filter className={iconSizes.sm} />
           </button>

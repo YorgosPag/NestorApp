@@ -12,6 +12,22 @@
 import type { CanvasInstance, CanvasManagerOptions } from '../../../subapps/dxf-viewer/rendering/canvas/core/CanvasManager';
 import type { CanvasRenderSettings } from '../../../subapps/dxf-viewer/rendering/canvas/core/CanvasSettings';
 
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** Event data type for canvas events */
+export type CanvasEventData = Record<string, unknown> | unknown;
+
+/** Canvas rendering context type */
+export type CanvasRenderContext = CanvasRenderingContext2D | WebGLRenderingContext | unknown;
+
+/** Canvas configuration type for domain-specific configs */
+export type CanvasConfig = Record<string, unknown>;
+
+/** Canvas metadata type */
+export type CanvasMetadata = Record<string, unknown>;
+
 /**
  * 🎯 ENTERPRISE CANVAS PROVIDER CONTRACT
  * Unified interface για όλους τους canvas providers
@@ -38,7 +54,7 @@ export interface ICanvasProvider {
   // Event handling
   on(event: string, callback: Function): void;
   off(event: string, callback: Function): void;
-  emit(event: string, data?: any): void;
+  emit(event: string, data?: CanvasEventData): void;
 }
 
 /**
@@ -90,7 +106,7 @@ export interface CanvasCreationConfig {
   element: HTMLCanvasElement;
 
   // Canvas-specific configuration
-  config: any; // Extends από DXF CanvasConfig
+  config: CanvasConfig; // Extends από DXF CanvasConfig
 
   // Z-index management
   zIndex?: number;
@@ -99,7 +115,7 @@ export interface CanvasCreationConfig {
   isActive?: boolean;
 
   // Custom properties
-  metadata?: Record<string, any>;
+  metadata?: CanvasMetadata;
 }
 
 /**
@@ -113,10 +129,10 @@ export interface CanvasMiddleware {
   // Lifecycle hooks
   onCanvasCreate?(canvas: CanvasInstance, config: CanvasCreationConfig): void;
   onCanvasDestroy?(canvas: CanvasInstance): void;
-  onCanvasRender?(canvas: CanvasInstance, context: any): void;
+  onCanvasRender?(canvas: CanvasInstance, context: CanvasRenderContext): void;
 
   // Event hooks
-  onEvent?(event: string, data: any, canvas: CanvasInstance): boolean | void;
+  onEvent?(event: string, data: CanvasEventData, canvas: CanvasInstance): boolean | void;
 }
 
 /**
@@ -166,8 +182,8 @@ export interface ICanvasRegistry {
   listGlobalCanvases(): CanvasInstance[];
 
   // Cross-provider communication
-  broadcastEvent(event: string, data?: any): void;
-  subscribeToGlobalEvents(callback: (event: string, data: any) => void): () => void;
+  broadcastEvent(event: string, data?: CanvasEventData): void;
+  subscribeToGlobalEvents(callback: (event: string, data: CanvasEventData) => void): () => void;
 
   // Performance monitoring
   getPerformanceMetrics(): CanvasPerformanceMetrics;

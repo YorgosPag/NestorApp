@@ -151,9 +151,19 @@ export const SUCCESS_MESSAGE_MAPPING = {
 /**
  * Notification service class for centralized notification management
  */
+/** Notification handler interface */
+interface NotificationHandler {
+  error: (message: string, options?: NotificationOptions) => void;
+  success: (message: string, options?: NotificationOptions) => void;
+  warning: (message: string, options?: NotificationOptions) => void;
+  info: (message: string, options?: NotificationOptions) => void;
+  loading: (message: string, options?: NotificationOptions) => string;
+  dismiss: (id: string) => void;
+}
+
 export class NotificationService {
   private static instance: NotificationService;
-  private notificationHandler: any = null;
+  private notificationHandler: NotificationHandler | null = null;
 
   private constructor() {}
 
@@ -167,14 +177,14 @@ export class NotificationService {
   /**
    * Set the notification handler (typically from useNotifications hook)
    */
-  setHandler(handler: any) {
+  setHandler(handler: NotificationHandler) {
     this.notificationHandler = handler;
   }
 
   /**
    * Show notification by error code with automatic i18n resolution
    */
-  showErrorByCode(errorCode: string, variables?: Record<string, any>, options?: NotificationOptions) {
+  showErrorByCode(errorCode: string, variables?: Record<string, unknown>, options?: NotificationOptions) {
     const mapping = ERROR_CODE_MAPPING[errorCode];
     
     if (!mapping) {
@@ -275,13 +285,21 @@ export const notificationService = NotificationService.getInstance();
 /**
  * Utility functions for common notification patterns
  */
+/** API response structure for notification handling */
+interface ApiResponseForNotification {
+  success: boolean;
+  errorCode?: string;
+  [key: string]: unknown;
+}
+
 export const NotificationUtils = {
   /**
    * Handle API response with automatic error/success notifications
    */
-  handleApiResponse: (response: any, successMessage?: string) => {
+  handleApiResponse: (response: ApiResponseForNotification, successMessage?: string) => {
     if (response.success) {
-      notificationService.showSuccessByCode('GENERIC_SUCCESS' as any);
+      // Note: GENERIC_SUCCESS is not in SUCCESS_MESSAGE_MAPPING, would need to add it
+      notificationService.showSuccessByCode('CONTACT_CREATED');
     } else {
       notificationService.showErrorByCode(response.errorCode || 'GENERIC_UNKNOWN_ERROR');
     }

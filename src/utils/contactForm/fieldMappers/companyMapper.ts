@@ -1,19 +1,24 @@
-import type { Contact } from '@/types/contacts';
+import type { Contact, CompanyContact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { getSafeFieldValue } from '../contactMapper';
+
+/** Extended company contact with custom fields access */
+interface ExtendedCompanyContact extends CompanyContact {
+  customFields?: Record<string, unknown>;
+}
 
 /**
  * Get value from contact object or customFields
  * Tries root level first, then customFields
  */
-function getContactValue(contact: any, fieldName: string): string {
+function getContactValue(contact: ExtendedCompanyContact, fieldName: string): string {
   // Try root level first
   const rootValue = getSafeFieldValue(contact, fieldName);
   if (rootValue) return rootValue;
 
   // Try customFields
   const customValue = contact.customFields?.[fieldName];
-  return customValue || '';
+  return typeof customValue === 'string' ? customValue : '';
 }
 
 // ============================================================================
@@ -30,8 +35,8 @@ function getContactValue(contact: any, fieldName: string): string {
  * @returns ContactFormData for company
  */
 export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
-
-  const companyContact = contact as any; // Cast for company fields access
+  // Type-safe cast for company fields access
+  const companyContact = contact as ExtendedCompanyContact;
 
 
   const formData: ContactFormData = {

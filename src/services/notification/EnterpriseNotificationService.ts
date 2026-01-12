@@ -76,7 +76,7 @@ export interface EnterpriseChannelConfig {
   environmentConfigs: {
     [environment: string]: {
       isEnabled: boolean;
-      config: Record<string, any>; // Environment-specific config
+      config: Record<string, unknown>; // Environment-specific config
     };
   };
 
@@ -249,7 +249,7 @@ class EnterpriseNotificationService {
   private static instance: EnterpriseNotificationService | null = null;
 
   // Firestore connection
-  private db: any = null;
+  private db: ReturnType<typeof getFirestore> | null = null;
 
   // Multi-level caching system
   private configCache = new Map<string, { config: EnterpriseNotificationConfig; cachedAt: number; ttl: number }>();
@@ -964,7 +964,7 @@ class EnterpriseNotificationService {
   /**
    * Default defaults configuration
    */
-  private getDefaultDefaults(): any {
+  private getDefaultDefaults(): EnterpriseNotificationConfig['defaults'] {
     return {
       priorityId: 'normal',
       channelIds: ['email', 'in_app'],
@@ -975,7 +975,7 @@ class EnterpriseNotificationService {
   /**
    * Default feature flags
    */
-  private getDefaultFeatures(): any {
+  private getDefaultFeatures(): EnterpriseNotificationConfig['features'] {
     return {
       enableAdaptiveRetry: true,
       enablePriorityBoost: true,

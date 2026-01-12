@@ -8,6 +8,15 @@ import { buildNavigationUrl, resetNavigationState, updateNavigationLevel } from 
 import type { NavigationState, NavigationLevel } from '../types';
 import { NavigationApiService } from '../services/navigationApi';
 
+/** Navigation filter options */
+interface NavigationFilters {
+  companyId?: string;
+  projectId?: string;
+  buildingId?: string;
+  floorId?: string;
+  [key: string]: string | undefined;
+}
+
 interface UseNavigationActionsReturn {
   selectCompany: (companyId: string, state: NavigationState, setState: (updates: Partial<NavigationState>) => void) => void;
   selectProject: (projectId: string, state: NavigationState, setState: (updates: Partial<NavigationState>) => void) => Promise<void>;
@@ -18,7 +27,7 @@ interface UseNavigationActionsReturn {
   navigateToExistingPages: (
     type: 'properties' | 'projects' | 'buildings' | 'floorplan',
     state: NavigationState,
-    filters?: any
+    filters?: NavigationFilters
   ) => void;
 }
 
@@ -133,7 +142,7 @@ export function useNavigationActions(): UseNavigationActionsReturn {
   const navigateToExistingPages = (
     type: 'properties' | 'projects' | 'buildings' | 'floorplan',
     state: NavigationState,
-    filters?: any
+    filters?: NavigationFilters
   ) => {
     const url = buildNavigationUrl(type, state, filters);
     router.push(url);

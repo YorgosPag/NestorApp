@@ -22,7 +22,7 @@ export interface UsePhotoUploadLogicProps {
   /** Purpose για logging */
   purpose?: string;
   /** 🔥 RESTORED: Contact data για FileNamingService */
-  contactData?: any;
+  contactData?: Record<string, unknown>;
   /** 🔥 RESTORED: Photo index για multiple photos */
   photoIndex?: number;
   /** 🔥 RESTORED: Custom filename override */
@@ -102,13 +102,8 @@ export function usePhotoUploadLogic({
    */
   const handleFileSelection = useCallback((file: File | null) => {
     if (!file) {
-      // File cleared - cleanup state
-      upload.uploadFile(file as any, () => Promise.resolve({
-        success: true,
-        url: '',
-        fileName: '',
-        compressionInfo: { originalSize: 0, compressedSize: 0, compressionRatio: 1, quality: 1 }
-      }));
+      // File cleared - cleanup state handled elsewhere
+      console.log('📤 LOGIC: File cleared, no upload action needed');
       return;
     }
 

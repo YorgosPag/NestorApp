@@ -17,27 +17,28 @@ import { getSafeFieldValue, getSafeArrayValue, getSafeNestedValue } from '../con
  */
 export function mapServiceContactToFormData(contact: Contact): ContactFormData {
 
-  const serviceContact = contact as any; // Cast for service fields access
+  // Cast for service-specific field access using type-safe approach
+  const serviceContact = contact as unknown as Record<string, unknown>;
 
   // 🔍 QUICK FIX: Find email/phone/website from any possible location
-  const contactAny = contact as any;
+  const contactRecord = contact as unknown as Record<string, unknown>;
 
   // Try multiple sources for email
   const foundEmail = contact.emails?.[0]?.email ||
-                    contactAny.email ||
-                    contactAny.contactEmail ||
-                    contactAny.officialEmail || '';
+                    (contactRecord.email as string) ||
+                    (contactRecord.contactEmail as string) ||
+                    (contactRecord.officialEmail as string) || '';
 
   // Try multiple sources for phone
   const foundPhone = contact.phones?.[0]?.number ||
-                    contactAny.phone ||
-                    contactAny.telephone ||
-                    contactAny.centralPhone || '';
+                    (contactRecord.phone as string) ||
+                    (contactRecord.telephone as string) ||
+                    (contactRecord.centralPhone as string) || '';
 
   // Try multiple sources for website
-  const foundWebsite = contactAny.website ||
-                      contactAny.officialWebsite ||
-                      contactAny.url || '';
+  const foundWebsite = (contactRecord.website as string) ||
+                      (contactRecord.officialWebsite as string) ||
+                      (contactRecord.url as string) || '';
 
   console.log('🔧 QUICK FIX - FOUND DATA:', {
     contactId: contact.id,
@@ -45,7 +46,7 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
     foundEmail,
     foundPhone,
     foundWebsite,
-    rawContact: JSON.stringify(contactAny, null, 2)
+    rawContact: JSON.stringify(contactRecord, null, 2)
   });
 
   const formData: ContactFormData = {

@@ -1,5 +1,9 @@
-
 'use client';
+
+/**
+ * 🏢 ENTERPRISE: BuildingToolbar with full i18n support
+ * ZERO HARDCODED STRINGS - All labels from centralized translations
+ */
 
 import React, { useState } from 'react';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -14,8 +18,6 @@ import {
   Download,
   Upload,
   RefreshCw,
-  FileText,
-  BarChart3,
   Archive,
   Star,
   HelpCircle
@@ -28,6 +30,8 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { UNIFIED_STATUS_FILTER_LABELS, PROPERTY_BUILDING_TYPE_LABELS } from '@/constants/property-statuses-enterprise';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface BuildingToolbarProps {
   selectedItems?: number[];
@@ -56,6 +60,8 @@ export function BuildingToolbar({
   onExport,
   onRefresh
 }: BuildingToolbarProps) {
+  // 🏢 ENTERPRISE: i18n hooks
+  const { t } = useTranslation('building');
   const colors = useSemanticColors();
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
@@ -71,114 +77,114 @@ export function BuildingToolbar({
     }
   };
 
-  // Primary actions (main operations)
+  // Primary actions (main operations) - 🏢 ENTERPRISE: Using i18n translations
   const primaryActions: ToolbarAction[] = [
     {
       id: 'new-building',
-      label: 'Νέο Κτίριο',
+      label: t('toolbar.actions.new'),
       icon: Plus,
       onClick: () => onNewBuilding?.(),
       variant: 'default',
-      tooltip: 'Προσθήκη νέου κτιρίου (Ctrl+N)',
+      tooltip: t('toolbar.tooltips.new'),
       shortcut: 'Ctrl+N'
     },
     {
       id: 'edit-building',
-      label: 'Επεξεργασία',
+      label: t('toolbar.actions.edit'),
       icon: Edit,
       onClick: () => selectedItems[0] && onEditBuilding?.(selectedItems[0]),
       variant: 'outline',
       disabled: selectedItems.length !== 1,
-      tooltip: 'Επεξεργασία επιλεγμένου κτιρίου (Ctrl+E)',
+      tooltip: t('toolbar.tooltips.edit'),
       shortcut: 'Ctrl+E'
     },
     {
       id: 'delete-building',
-      label: 'Διαγραφή',
+      label: t('toolbar.actions.delete'),
       icon: Trash2,
       onClick: () => onDeleteBuilding?.(selectedItems),
       variant: 'destructive',
       disabled: selectedItems.length === 0,
-      tooltip: `Διαγραφή ${selectedItems.length} κτιρίου/ων`,
+      tooltip: t('toolbar.tooltips.deleteCount', { count: selectedItems.length }),
       badge: selectedItems.length > 0 ? selectedItems.length : undefined
     }
   ];
 
-  // Secondary actions (utility functions)
+  // Secondary actions (utility functions) - 🏢 ENTERPRISE: Using i18n translations
   const secondaryActions: ToolbarAction[] = [
     {
       id: 'export',
-      label: 'Εξαγωγή',
+      label: t('toolbar.actions.export'),
       icon: Download,
       onClick: () => onExport?.(),
       variant: 'ghost',
-      tooltip: 'Εξαγωγή δεδομένων'
+      tooltip: t('toolbar.tooltips.export')
     },
     {
       id: 'import',
-      label: 'Εισαγωγή',
+      label: t('toolbar.actions.import'),
       icon: Upload,
       onClick: () => console.log('Import data...'),
       variant: 'ghost',
-      tooltip: 'Εισαγωγή δεδομένων'
+      tooltip: t('toolbar.tooltips.import')
     },
     {
       id: 'refresh',
-      label: 'Ανανέωση',
+      label: t('toolbar.actions.refresh'),
       icon: RefreshCw,
       onClick: () => onRefresh?.(),
       variant: 'ghost',
-      tooltip: 'Ανανέωση δεδομένων (F5)',
+      tooltip: t('toolbar.tooltips.refresh'),
       shortcut: 'F5'
     },
     {
       id: 'archive',
-      label: 'Αρχειοθέτηση',
+      label: t('toolbar.actions.archive'),
       icon: Archive,
       onClick: () => console.log('Archive selected...'),
       variant: 'ghost',
       disabled: selectedItems.length === 0,
-      tooltip: 'Αρχειοθέτηση επιλεγμένων'
+      tooltip: t('toolbar.tooltips.archive')
     },
     {
       id: 'favorite',
-      label: 'Αγαπημένα',
+      label: t('toolbar.actions.favorite'),
       icon: Star,
       onClick: () => console.log('Add to favorites...'),
       variant: 'ghost',
       disabled: selectedItems.length === 0,
-      tooltip: 'Προσθήκη στα αγαπημένα'
+      tooltip: t('toolbar.tooltips.favorite')
     },
     {
       id: 'help',
-      label: 'Βοήθεια',
+      label: t('toolbar.actions.help'),
       icon: HelpCircle,
       onClick: () => console.log('Show help...'),
       variant: 'ghost',
-      tooltip: 'Βοήθεια και οδηγίες (F1)',
+      tooltip: t('toolbar.tooltips.help'),
       shortcut: 'F1'
     }
   ];
 
-  // Search configuration
+  // Search configuration - 🏢 ENTERPRISE: Using i18n translations
   const search: ToolbarSearch = {
-    placeholder: 'Αναζήτηση κτιρίων...',
+    placeholder: t('toolbar.search.placeholder'),
     value: searchTerm,
     onChange: onSearchChange,
     onClear: () => onSearchChange?.('')
   };
 
-  // Filters configuration
+  // Filters configuration - 🏢 ENTERPRISE: Using i18n translations
   const filters: ToolbarFilter[] = [
     {
       id: 'status-filter',
-      label: 'Κατάσταση',
+      label: t('toolbar.filters.status'),
       icon: Filter,
       active: activeFilters.some(f => ['active', 'inactive', 'maintenance'].includes(f)),
       count: activeFilters.filter(f => ['active', 'inactive', 'maintenance'].includes(f)).length,
       children: (
         <>
-          <DropdownMenuLabel>Κατάσταση κτιρίου</DropdownMenuLabel>
+          <DropdownMenuLabel>{t('toolbar.filters.statusLabel')}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {[
             { value: 'active', label: UNIFIED_STATUS_FILTER_LABELS.ACTIVE },
@@ -198,13 +204,13 @@ export function BuildingToolbar({
     },
     {
       id: 'type-filter',
-      label: 'Τύπος',
+      label: t('toolbar.filters.type'),
       icon: NAVIGATION_ENTITIES.building.icon,
       active: activeFilters.some(f => ['residential', 'commercial', 'mixed'].includes(f)),
       count: activeFilters.filter(f => ['residential', 'commercial', 'mixed'].includes(f)).length,
       children: (
         <>
-          <DropdownMenuLabel>Τύπος κτιρίου</DropdownMenuLabel>
+          <DropdownMenuLabel>{t('toolbar.filters.typeLabel')}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {[
             { value: 'residential', label: PROPERTY_BUILDING_TYPE_LABELS.residential },
@@ -224,25 +230,25 @@ export function BuildingToolbar({
     },
     {
       id: 'sort',
-      label: `Ταξινόμηση ${sortDirection === 'asc' ? '↑' : '↓'}`,
+      label: `${t('toolbar.sort.label')} ${sortDirection === 'asc' ? '↑' : '↓'}`,
       icon: ArrowUpDown,
       active: true,
       children: (
         <>
-          <DropdownMenuLabel>Ταξινόμηση κτιρίων</DropdownMenuLabel>
+          <DropdownMenuLabel>{t('toolbar.sort.sortBuildings')}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setSortDirection('asc')}>
-            Αύξουσα (A-Z)
+            {t('toolbar.sort.ascending')}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setSortDirection('desc')}>
-            Φθίνουσα (Z-A)
+            {t('toolbar.sort.descending')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => console.log('Sort by date...')}>
-            Κατά ημερομηνία
+            {t('toolbar.sort.byDate')}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => console.log('Sort by size...')}>
-            Κατά μέγεθος
+            {t('toolbar.sort.bySize')}
           </DropdownMenuItem>
         </>
       )
@@ -262,7 +268,7 @@ export function BuildingToolbar({
       leftContent={
         selectedItems.length > 0 && (
           <div className="text-sm text-muted-foreground">
-            {selectedItems.length} επιλεγμένα κτίρια
+            {t('toolbar.selection.selected', { count: selectedItems.length })}
           </div>
         )
       }

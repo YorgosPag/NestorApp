@@ -7,11 +7,19 @@ import { mapContactToFormData } from '@/utils/contactForm/contactMapper';
 // TYPES & INTERFACES
 // ============================================================================
 
+/** Photo slot structure for multiple photos */
+interface PhotoSlotData {
+  uploadUrl?: string;
+  url?: string;
+  fileName?: string;
+  [key: string]: unknown;
+}
+
 interface UseContactDataLoaderProps {
   editContact?: Contact | null;
   isModalOpen?: boolean;
   setFormData: (data: ContactFormData) => void;
-  handleMultiplePhotosChange: (photos: any[]) => void;
+  handleMultiplePhotosChange: (photos: PhotoSlotData[]) => void;
   resetForm: () => void;
 }
 

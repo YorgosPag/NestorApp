@@ -33,8 +33,9 @@ export class EnterpriseGeoEventBus implements GeoCanvasEventBus {
 
   /**
    * Subscribe to events με enterprise error handling
+   * 🏢 ENTERPRISE: Type-safe generic with unknown default
    */
-  subscribe<T = any>(
+  subscribe<T = unknown>(
     eventType: GeoCanvasEventType,
     handler: GeoCanvasEventHandler<T>
   ): () => void {
@@ -56,8 +57,9 @@ export class EnterpriseGeoEventBus implements GeoCanvasEventBus {
 
   /**
    * Unsubscribe από events
+   * 🏢 ENTERPRISE: Type-safe generic with unknown default
    */
-  unsubscribe<T = any>(
+  unsubscribe<T = unknown>(
     eventType: GeoCanvasEventType,
     handler: GeoCanvasEventHandler<T>
   ): void {
@@ -72,8 +74,9 @@ export class EnterpriseGeoEventBus implements GeoCanvasEventBus {
 
   /**
    * Emit events με enterprise reliability
+   * 🏢 ENTERPRISE: Type-safe generic with unknown default
    */
-  emit<T = any>(event: GeoCanvasEvent<T>): void {
+  emit<T = unknown>(event: GeoCanvasEvent<T>): void {
     // Add to history
     this.addToHistory(event);
 

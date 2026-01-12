@@ -1,6 +1,23 @@
 {
   "title": "Έργα",
   "description": "Διαχείριση έργων και εργοταξίων",
+  "projectHeader": {
+    "technicalIdLabel": "Technical ID (για support):",
+    "copied": "Αντιγράφηκε!",
+    "residentialBadge": "Οικιστικό",
+    "saving": "Αποθήκευση...",
+    "savedAt": "Αποθηκεύτηκε {{time}}",
+    "edit": "Επεξεργασία",
+    "cancel": "Ακύρωση",
+    "save": "Αποθήκευση"
+  },
+  "header": {
+    "title": "Διαχείριση Έργων",
+    "titleWithCount": "Διαχείριση Έργων ({{count}})",
+    "subtitle": "Παρακολούθηση και διαχείριση έργων",
+    "searchPlaceholder": "Αναζήτηση έργων...",
+    "newProject": "Νέο Έργο"
+  },
   "toolbar": {
     "new": "Νέο Έργο",
     "edit": "Επεξεργασία",
@@ -90,5 +107,53 @@
     "exported": "Τα έργα εξήχθησαν επιτυχώς",
     "noProjects": "Δεν βρέθηκαν έργα",
     "loadingError": "Σφάλμα κατά τη φόρτωση των έργων"
+  },
+  "plot": {
+    "labels": {
+      "sdNoSocial": "Συντελεστής Δόμησης (Χωρίς Κοιν. Συντελ.)",
+      "socialFactor": "Κοινωνικός Συντελεστής",
+      "sdFinal": "Συντελεστής Δόμησης (Τελικός)",
+      "areaCompleteness": "Εμβαδόν Αρτιότητας",
+      "areaCompletenessDerogation": "Εμβαδόν Αρτιότητας Κατά Παρέκκλιση",
+      "faceCompleteness": "Πρόσωπο Αρτιότητας",
+      "faceCompletenessDerogation": "Πρόσωπο Αρτιότητας Κατά Παρέκκλιση"
+    },
+    "units": {
+      "sqm": "τ.μ.",
+      "linearMeters": "μ.μ."
+    }
+  },
+  "page": {
+    "pageLabel": "Διαχείριση Έργων",
+    "loading": "Φόρτωση Έργων",
+    "loadingMessage": "Φόρτωση έργων από βάση δεδομένων...",
+    "error": {
+      "pageLabel": "Σφάλμα Έργων",
+      "ariaLabel": "Σφάλμα Φόρτωσης",
+      "title": "Σφάλμα φόρτωσης έργων:",
+      "retry": "Δοκιμή ξανά"
+    },
+    "dashboard": {
+      "label": "Στατιστικά Έργων",
+      "totalProjects": "Σύνολο Έργων",
+      "activeProjects": "Ενεργά Έργα",
+      "totalValue": "Συνολική Αξία",
+      "totalArea": "Συνολική Επιφάνεια",
+      "averageProgress": "Μέση Πρόοδος"
+    },
+    "filters": {
+      "desktop": "Φίλτρα Έργων",
+      "mobile": "Φίλτρα Έργων Mobile"
+    }
+  },
+  "list": {
+    "ariaLabel": "Λίστα Έργων",
+    "entityName": "Έργα",
+    "searchPlaceholder": "Αναζήτηση έργων..."
+  },
+  "viewSwitch": {
+    "detailsTitle": "Λεπτομέρειες Έργου",
+    "editLabel": "Επεξεργασία Έργου",
+    "deleteLabel": "Διαγραφή Έργου"
   }
 }

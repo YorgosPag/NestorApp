@@ -8,6 +8,21 @@
 //
 // ============================================================================
 
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** Contact data type for cleaning/sanitization */
+export type ContactDataValue = string | number | boolean | null | undefined | Date | ContactDataValue[] | ContactDataRecord;
+export type ContactDataRecord = Record<string, ContactDataValue>;
+
+/** Validation result type */
+export interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
 /**
  * 🏢 ENTERPRISE: Detect if URL is Firebase Storage URL
  */
@@ -19,7 +34,7 @@ export function isFirebaseStorageURL(url: string | undefined | null): boolean {
 /**
  * 🏢 ENTERPRISE: Detect if URL requires special deletion handling
  */
-export function requiresSpecialDeletion(key: string, value: any): boolean {
+export function requiresSpecialDeletion(key: string, value: ContactDataValue): boolean {
   // Always preserve photoURL fields (Base64 or Firebase Storage)
   if (key === 'photoURL') return true;
 
@@ -46,8 +61,8 @@ export function requiresSpecialDeletion(key: string, value: any): boolean {
  * @param obj - Object to clean
  * @returns Cleaned object
  */
-export function cleanUndefinedValues(obj: any): any {
-  const cleaned: any = {};
+export function cleanUndefinedValues(obj: ContactDataRecord): ContactDataRecord {
+  const cleaned: ContactDataRecord = {};
 
   Object.keys(obj).forEach(key => {
     const value = obj[key];
@@ -109,7 +124,7 @@ export function cleanUndefinedValues(obj: any): any {
  * @param contactData - Contact object πριν την αποθήκευση στη βάση
  * @returns Sanitized contact object με cleaned fields
  */
-export function sanitizeContactData(contactData: any): any {
+export function sanitizeContactData(contactData: ContactDataRecord): ContactDataRecord {
   console.log('🧹 ENTERPRISE SANITIZER: Starting contact data sanitization...');
 
   const sanitized = { ...contactData };
@@ -215,11 +230,7 @@ export function sanitizeContactData(contactData: any): any {
  * @param contactData - Contact object to validate
  * @returns Validation result με errors array
  */
-export function validateContactData(contactData: any): {
-  isValid: boolean;
-  errors: string[];
-  warnings: string[];
-} {
+export function validateContactData(contactData: ContactDataRecord): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 

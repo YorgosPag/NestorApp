@@ -11,15 +11,24 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { BuildingModel } from '../types';
 
+/** Unit model for type safety */
+interface UnitData {
+  id: string;
+  status?: string;
+  area?: number;
+  [key: string]: unknown;
+}
+
 export const BuildingNode = ({ building }: { building: BuildingModel }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
 
-  const soldUnits = building.units.filter((u: any) => u.status === 'sold').length;
-  const totalUnits = building.units.length;
-  const totalArea = building.units.reduce((sum: number, u: any) => sum + (u.area || 0), 0);
-  const soldArea = building.units.filter((u: any) => u.status === 'sold').reduce((sum: number, u: any) => sum + (u.area || 0), 0);
+  const units = building.units as UnitData[];
+  const soldUnits = units.filter((u) => u.status === 'sold').length;
+  const totalUnits = units.length;
+  const totalArea = units.reduce((sum: number, u) => sum + (u.area || 0), 0);
+  const soldArea = units.filter((u) => u.status === 'sold').reduce((sum: number, u) => sum + (u.area || 0), 0);
 
   return (
     <div className={`ml-4 pl-4 border-l-2 ${quick.muted}`}>

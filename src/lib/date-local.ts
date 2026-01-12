@@ -14,13 +14,14 @@ export function combineLocalDateTime(dateStr: string, timeStr: string): Date {
   return dt;
 }
 
-export function normalizeToDate(val: any): Date | null {
+export function normalizeToDate(val: unknown): Date | null {
   if (!val) return null;
   // Firestore Timestamp
-  if (val && typeof val.toDate === 'function') return val.toDate();
+  const timestampCandidate = val as { toDate?: () => Date };
+  if (timestampCandidate && typeof timestampCandidate.toDate === 'function') return timestampCandidate.toDate();
   // JS Date
   if (val instanceof Date) return val;
   // ISO string / epoch
-  const d = new Date(val);
+  const d = new Date(val as string | number);
   return isNaN(d.getTime()) ? null : d;
 }

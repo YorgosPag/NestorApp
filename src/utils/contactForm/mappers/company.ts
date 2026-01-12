@@ -9,8 +9,51 @@
 // ============================================================================
 
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { EmailInfo, PhoneInfo } from '@/types/contacts';
 import { extractPhotoURL, extractLogoURL, extractMultiplePhotoURLs } from '../extractors/photo-urls';
 import { createEmailsArray, createPhonesArray } from '../extractors/arrays';
+
+/** Custom fields for company contact */
+interface CompanyCustomFields {
+  gemiStatus?: string;
+  gemiStatusDate?: string;
+  activityCodeKAD?: string;
+  activityDescription?: string;
+  activityType?: string;
+  chamber?: string;
+  capitalAmount?: string;
+  currency?: string;
+  extraordinaryCapital?: string;
+  registrationDate?: string;
+  lastUpdateDate?: string;
+  gemiDepartment?: string;
+  prefecture?: string;
+  municipality?: string;
+}
+
+/** Mapped company contact data (partial, without timestamps) */
+interface MappedCompanyContactData {
+  type: 'company';
+  companyName?: string;
+  vatNumber?: string;
+  logoURL?: string;
+  photoURL?: string;
+  multiplePhotoURLs: string[];
+  emails: EmailInfo[];
+  phones: PhoneInfo[];
+  isFavorite: boolean;
+  status: 'active' | 'inactive' | 'archived';
+  notes?: string;
+  registrationNumber?: string;
+  gemiNumber?: string;
+  tradeName?: string;
+  legalForm?: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+  website?: string;
+  customFields: CompanyCustomFields;
+}
 
 /**
  * Map Company Contact form data to Contact object
@@ -18,7 +61,7 @@ import { createEmailsArray, createPhonesArray } from '../extractors/arrays';
  * @param formData - Contact form data
  * @returns Company contact data
  */
-export function mapCompanyFormData(formData: ContactFormData): any {
+export function mapCompanyFormData(formData: ContactFormData): MappedCompanyContactData {
   const logoURL = extractLogoURL(formData, 'company');
   const photoURL = extractPhotoURL(formData, 'company representative'); // 🔧 FIX: Εξαγωγή φωτογραφίας εκπροσώπου
   const multiplePhotoURLs = extractMultiplePhotoURLs(formData); // 📸 Multiple photos για companies

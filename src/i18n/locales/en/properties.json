@@ -138,5 +138,62 @@
         "volume": "Plot Area (P.A.) * Maximum Volume Coefficient (V.C.)"
       }
     }
+  },
+  "grid": {
+    "emptyState": {
+      "title": "No properties found",
+      "subtitle": "Try changing the filters"
+    },
+    "area": {
+      "sqm": "sq.m"
+    },
+    "header": {
+      "title": "Available Properties",
+      "found": "Found {{count}} properties"
+    },
+    "search": {
+      "placeholder": "Search properties..."
+    },
+    "filters": {
+      "button": "Filters"
+    },
+    "actions": {
+      "viewFloorPlan": "View Floor Plan"
+    },
+    "cta": {
+      "title": "Want to see the properties on the floor plan?",
+      "subtitle": "See the exact location and layout of properties on the building floor plan.",
+      "button": "View Floor Plan"
+    },
+    "status": {
+      "unknown": "Unknown"
+    }
+  },
+  "viewer": {
+    "tools": {
+      "select": "Select",
+      "create": "Create",
+      "measure": "Measure",
+      "move": "Move",
+      "connect": "Connect",
+      "rectangle": "Rectangle",
+      "circle": "Circle",
+      "polygon": "Polygon"
+    },
+    "actions": {
+      "copySelected": "Copy selected",
+      "deleteSelected": "Delete selected",
+      "reset": "Reset"
+    },
+    "status": {
+      "tool": "Tool",
+      "mode": "Mode",
+      "connecting": "Connecting",
+      "selected": "Selected",
+      "readOnly": "Read-Only"
+    },
+    "confirm": {
+      "deleteProperty": "Are you sure you want to delete the selected property?"
+    }
   }
 }

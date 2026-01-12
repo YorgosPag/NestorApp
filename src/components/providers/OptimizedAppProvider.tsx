@@ -2,7 +2,7 @@
 
 import React, { useEffect, Suspense } from 'react';
 import { CacheProvider } from '@/contexts/CacheProvider';
-import { OptimizedUserRoleProvider } from '@/contexts/OptimizedUserRoleContext';
+import { UserRoleProvider, AuthProvider } from '@/auth';
 import ErrorBoundary from '@/components/ui/ErrorBoundary/ErrorBoundary';
 import { performanceMonitor, enablePerformanceLogging } from '@/utils/performanceMonitor';
 import { memoryLeakDetector, enableMemoryMonitoring } from '@/utils/memoryLeakDetector';
@@ -221,8 +221,9 @@ export function OptimizedAppProvider({
   return (
     <AppErrorBoundary>
       <CacheProvider {...cacheConfig}>
-        <OptimizedUserRoleProvider>
-          <PerformanceWrapper>
+        <AuthProvider>
+          <UserRoleProvider>
+            <PerformanceWrapper>
             <MemoryWrapper>
               <AppInitializer>
                 <Suspense 
@@ -241,7 +242,8 @@ export function OptimizedAppProvider({
               </AppInitializer>
             </MemoryWrapper>
           </PerformanceWrapper>
-        </OptimizedUserRoleProvider>
+          </UserRoleProvider>
+        </AuthProvider>
       </CacheProvider>
     </AppErrorBoundary>
   );

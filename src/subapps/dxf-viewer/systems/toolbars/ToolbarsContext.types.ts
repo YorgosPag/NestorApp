@@ -14,6 +14,34 @@ import type {
 } from './config';
 import type { Point2D } from '../../rendering/types/Types';
 
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** Action parameters for executeAction */
+export type ActionParameters = Record<string, unknown>;
+
+/** Tool parameters for startTool */
+export type ToolParameters = Record<string, unknown>;
+
+/** Tool completion result */
+export type ToolResult = Record<string, unknown> | undefined;
+
+/** Tool input data */
+export type ToolInput = { point?: Point2D; value?: unknown; [key: string]: unknown };
+
+/** Toolbar layout information */
+export interface ToolbarLayout {
+  position: Point2D;
+  size: { width: number; height: number };
+  docked: boolean;
+  visible: boolean;
+  collapsed: boolean;
+}
+
+/** Event callback function type */
+export type EventCallback = (...args: unknown[]) => void;
+
 // ===== CONTEXT TYPE DEFINITION =====
 export interface ToolbarsContextType {
   // State
@@ -24,7 +52,7 @@ export interface ToolbarsContextType {
   activateTool: (toolId: ToolType) => void;
   deactivateTool: (toolId?: ToolType) => void;
   toggleTool: (toolId: ToolType) => void;
-  executeAction: (actionId: string, parameters?: any) => void;
+  executeAction: (actionId: string, parameters?: ActionParameters) => void;
   getActiveTool: () => ToolType | null;
   isToolActive: (toolId: ToolType) => boolean;
   isToolEnabled: (toolId: ToolType) => boolean;
@@ -78,10 +106,10 @@ export interface ToolbarsContextType {
   hideAction: (actionId: string) => void;
   
   // Tool Runner Functions
-  startTool: (toolId: ToolType, parameters?: any) => void;
+  startTool: (toolId: ToolType, parameters?: ToolParameters) => void;
   cancelTool: () => void;
-  completeTool: (result?: any) => void;
-  addToolInput: (input: any) => void;
+  completeTool: (result?: ToolResult) => void;
+  addToolInput: (input: ToolInput) => void;
   removeLastInput: () => void;
   clearToolInputs: () => void;
   getToolProgress: () => { current: number; total: number; percentage: number };
@@ -106,13 +134,13 @@ export interface ToolbarsContextType {
   getSettings: () => ToolbarSettings;
   
   // Layout and Positioning
-  getToolbarLayout: (toolbarId: string) => any;
+  getToolbarLayout: (toolbarId: string) => ToolbarLayout | undefined;
   optimizeLayout: () => void;
   resetLayout: () => void;
-  
+
   // Event Management
-  addEventListener: (event: keyof ToolEvents, callback: (...args: any[]) => void) => void;
-  removeEventListener: (event: keyof ToolEvents, callback: (...args: any[]) => void) => void;
+  addEventListener: (event: keyof ToolEvents, callback: EventCallback) => void;
+  removeEventListener: (event: keyof ToolEvents, callback: EventCallback) => void;
   
   // Utility Functions
   searchTools: (query: string) => ToolDefinition[];

@@ -1,5 +1,26 @@
 'use client';
 
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** Primitive export value types */
+export type ExportValue = string | number | boolean | Date | null | undefined;
+
+/** Export record type */
+export type ExportRecord = Record<string, ExportValue | Record<string, unknown>>;
+
+/** Cell style properties */
+export interface CellStyle {
+  backgroundColor?: string;
+  color?: string;
+  fontWeight?: 'normal' | 'bold';
+  fontSize?: number;
+  textAlign?: 'left' | 'center' | 'right';
+  border?: string;
+  padding?: string;
+}
+
 // Data Export Service with multiple formats
 export type ExportFormat = 'csv' | 'xlsx' | 'json' | 'pdf' | 'xml';
 
@@ -7,7 +28,7 @@ export interface ExportColumn {
   key: string;
   label: string;
   type?: 'string' | 'number' | 'date' | 'boolean';
-  formatter?: (value: any) => string;
+  formatter?: (value: ExportValue) => string;
   width?: number;
 }
 
@@ -15,7 +36,7 @@ export interface ExportOptions {
   format: ExportFormat;
   filename?: string;
   columns: ExportColumn[];
-  data: any[];
+  data: ExportRecord[];
   metadata?: {
     title?: string;
     description?: string;
@@ -23,9 +44,9 @@ export interface ExportOptions {
     company?: string;
   };
   styling?: {
-    headerStyle?: any;
-    rowStyle?: any;
-    alternateRowStyle?: any;
+    headerStyle?: CellStyle;
+    rowStyle?: CellStyle;
+    alternateRowStyle?: CellStyle;
   };
 }
 
@@ -118,8 +139,8 @@ class DataExportService {
     onProgress?.({ processed: 0, total: data.length, percentage: 0, stage: 'Processing JSON data' });
     
     const processedData = data.map((item, index) => {
-      const processedItem: any = {};
-      
+      const processedItem: Record<string, ExportValue | string> = {};
+
       columns.forEach(col => {
         const value = this.getValueByPath(item, col.key);
         processedItem[col.key] = col.formatter ? col.formatter(value) : value;
@@ -253,8 +274,21 @@ class DataExportService {
       .replace(/'/g, '&#39;');
   }
 
-  private getValueByPath(obj: any, path: string): any {
-    return path.split('.').reduce((current, key) => current?.[key], obj);
+  private getValueByPath(obj: ExportRecord, path: string): ExportValue {
+    const result = path.split('.').reduce<unknown>((current, key) => {
+      if (current && typeof current === 'object') {
+        return (current as Record<string, unknown>)[key];
+      }
+      return undefined;
+    }, obj);
+
+    // Ensure we return a valid ExportValue
+    if (result === null || result === undefined) return null;
+    if (typeof result === 'string' || typeof result === 'number' || typeof result === 'boolean') {
+      return result;
+    }
+    if (result instanceof Date) return result;
+    return String(result);
   }
 
   // Download helper

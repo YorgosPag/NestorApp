@@ -519,18 +519,9 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
                 }
               }
             ]
-          },
-          {
-            icon: LogIn,
-            href: "/login",
-            badge: null,
-            smartConfig: {
-              priority: 'low',
-              displayOrder: 220,
-              analyticsKey: 'nav_login',
-              environments: ['development']
-            }
           }
+          // 🗑️ REMOVED (2026-01-11): Login menu item - moved to header user-menu only
+          // Enterprise pattern: Login/logout handled exclusively via header dropdown
         ],
         conditionalItems: {
           development: [

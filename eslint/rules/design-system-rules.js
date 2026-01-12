@@ -1,7 +1,59 @@
 // ESLint Custom Rules for Design System Compliance
 // Prevents hardcoded values and enforces design token usage
+// 🏢 ENTERPRISE: ADR-023 - Centralized Component Imports
 
 module.exports = {
+  // ==========================================================================
+  // 🔄 NO-DIRECT-LOADER-IMPORT - Enforce Spinner usage (ADR-023)
+  // ==========================================================================
+  'no-direct-loader-import': {
+    meta: {
+      type: 'problem',
+      docs: {
+        description: 'Disallow direct Loader2 import from lucide-react. Use centralized Spinner component.',
+        category: 'Design System',
+        recommended: true,
+      },
+      messages: {
+        useSpinner: 'Direct import of Loader2 from lucide-react is not allowed. Use the centralized Spinner component instead: import { Spinner } from "@/components/ui/spinner"',
+      }
+    },
+    create(context) {
+      return {
+        ImportDeclaration(node) {
+          // Check if importing from lucide-react
+          if (node.source.value === 'lucide-react') {
+            // Check if Loader2 is being imported
+            const hasLoader2 = node.specifiers.some(spec =>
+              spec.type === 'ImportSpecifier' &&
+              spec.imported &&
+              spec.imported.name === 'Loader2'
+            );
+
+            if (hasLoader2) {
+              // Allow only in the Spinner component itself
+              const filename = context.getFilename();
+              const isSpinnerComponent = filename.includes('components/ui/spinner');
+              const isModalLoadingStates = filename.includes('ModalLoadingStates');
+              const isLoadingTsx = filename.endsWith('loading.tsx');
+
+              // Allow in canonical locations
+              if (isSpinnerComponent || isModalLoadingStates || isLoadingTsx) {
+                return;
+              }
+
+              context.report({
+                node,
+                messageId: 'useSpinner',
+              });
+            }
+          }
+        }
+      };
+    }
+  },
+
+
   'no-hardcoded-colors': {
     meta: {
       type: 'problem',

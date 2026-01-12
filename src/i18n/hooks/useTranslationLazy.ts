@@ -1,6 +1,6 @@
-import { useTranslation as useI18nextTranslation } from 'react-i18next';
+import { useTranslation as useI18nextTranslation, TOptions } from 'react-i18next';
 import { useEffect, useState } from 'react';
-import { loadNamespace, type Namespace } from '../lazy-config';
+import { loadNamespace, type Namespace, type Language } from '../lazy-config';
 
 /**
  * Enhanced translation hook with lazy loading support
@@ -22,7 +22,7 @@ export const useTranslationLazy = (namespace?: Namespace) => {
     }
 
     // Load namespace asynchronously
-    loadNamespace(namespace, i18n.language as any)
+    loadNamespace(namespace, i18n.language as Language)
       .then(() => {
         setIsNamespaceLoaded(true);
       })
@@ -38,13 +38,13 @@ export const useTranslationLazy = (namespace?: Namespace) => {
     ready: ready && isNamespaceLoaded,
     isLoading: !isNamespaceLoaded,
     // Helper function for dynamic key translations
-    translate: (key: string, options?: any) => t(key, options),
+    translate: (key: string, options?: TOptions) => t(key, options),
     // Current language
     currentLanguage: i18n.language,
     // Change language function with namespace preloading
     changeLanguage: async (lng: string) => {
       if (namespace) {
-        await loadNamespace(namespace, lng as any);
+        await loadNamespace(namespace, lng as Language);
       }
       return i18n.changeLanguage(lng);
     },

@@ -6,14 +6,14 @@
 export interface DomainError {
   code: string;
   domain?: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 export interface ErrorMapping {
   key: string;
   namespace?: string;
   fallback?: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 /**
@@ -162,7 +162,7 @@ export function registerErrorMapping(errorCode: string, mapping: ErrorMapping): 
 /**
  * HTTP status code to domain error mapping
  */
-export function mapHttpStatusToError(status: number, response?: any): DomainError {
+export function mapHttpStatusToError(status: number, response?: Record<string, unknown>): DomainError {
   const statusMappings: Record<number, DomainError> = {
     400: { code: 'BAD_REQUEST', domain: 'HTTP' },
     401: { code: 'INVALID_CREDENTIALS', domain: 'AUTH' },

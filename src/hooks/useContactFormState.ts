@@ -8,6 +8,12 @@ import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 // TYPES & INTERFACES
 // ============================================================================
 
+/** Result from multiple photo upload operation */
+interface MultiplePhotoUploadResult {
+  url?: string;
+  fileName?: string;
+}
+
 export interface UseContactFormStateReturn {
   // State
   formData: ContactFormData;
@@ -18,7 +24,7 @@ export interface UseContactFormStateReturn {
   // Field handlers
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
-  handleNestedChange: (path: string, value: any) => void;
+  handleNestedChange: (path: string, value: unknown) => void;
 
   // File handlers
   handleFileChange: (file: File | null) => void;
@@ -28,7 +34,7 @@ export interface UseContactFormStateReturn {
   // Upload completion handlers
   handleUploadedPhotoURL: (photoURL: string) => void;
   handleUploadedLogoURL: (logoURL: string) => void;
-  handleMultiplePhotoUploadComplete: (index: number, result: any) => void;
+  handleMultiplePhotoUploadComplete: (index: number, result: MultiplePhotoUploadResult) => void;
 
   // Profile photo selection
   handleProfilePhotoSelection: (index: number) => void;
@@ -107,14 +113,14 @@ export function useContactFormState(): UseContactFormStateReturn {
   /**
    * Handle nested object field changes (π.χ. serviceAddress.street)
    */
-  const handleNestedChange = useCallback((path: string, value: any) => {
+  const handleNestedChange = useCallback((path: string, value: unknown) => {
     const keys = path.split('.');
     setFormData(prev => {
       const newFormData = { ...prev };
-      let current: any = newFormData;
+      let current: Record<string, unknown> = newFormData as Record<string, unknown>;
 
       for (let i = 0; i < keys.length - 1; i++) {
-        current = current[keys[i]];
+        current = current[keys[i]] as Record<string, unknown>;
       }
       current[keys[keys.length - 1]] = value;
 
@@ -308,7 +314,7 @@ export function useContactFormState(): UseContactFormStateReturn {
   /**
    * Handle single multiple photo upload completion
    */
-  const handleMultiplePhotoUploadComplete = useCallback((index: number, result: any) => {
+  const handleMultiplePhotoUploadComplete = useCallback((index: number, result: MultiplePhotoUploadResult) => {
     setFormData(prev => {
       const newPhotos = JSON.parse(JSON.stringify([...prev.multiplePhotos])); // 🔥 Deep copy για να force re-render
 

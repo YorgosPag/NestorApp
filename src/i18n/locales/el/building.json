@@ -1,4 +1,11 @@
 {
+  "header": {
+    "title": "Διαχείριση Κτιρίων",
+    "titleWithCount": "Διαχείριση Κτιρίων ({{count}})",
+    "subtitle": "Διαχείριση και παρακολούθηση κτιριακών έργων",
+    "searchPlaceholder": "Αναζήτηση κτιρίων...",
+    "newBuilding": "Νέο Κτίριο"
+  },
   "floors": {
     "ground": "Ισόγειο",
     "basement": "Υπόγειο {{number}}",
@@ -15,9 +22,11 @@
   },
   "status": {
     "active": "Ενεργό",
+    "inactive": "Ανενεργό",
     "construction": "Υπό Κατασκευή",
     "planned": "Σχεδιασμένο",
-    "completed": "Ολοκληρωμένο"
+    "completed": "Ολοκληρωμένο",
+    "maintenance": "Συντήρηση"
   },
   "units": {
     "pricePerSqm": "€/τμ",
@@ -37,6 +46,245 @@
       "residential": "Κατοικίες",
       "commercial": "Εμπορικά",
       "mixed": "Μικτής Χρήσης"
+    }
+  },
+  "toolbar": {
+    "actions": {
+      "new": "Νέο Κτίριο",
+      "edit": "Επεξεργασία",
+      "delete": "Διαγραφή",
+      "export": "Εξαγωγή",
+      "import": "Εισαγωγή",
+      "refresh": "Ανανέωση",
+      "archive": "Αρχειοθέτηση",
+      "favorite": "Αγαπημένα",
+      "help": "Βοήθεια"
+    },
+    "tooltips": {
+      "new": "Προσθήκη νέου κτιρίου (Ctrl+N)",
+      "edit": "Επεξεργασία επιλεγμένου κτιρίου (Ctrl+E)",
+      "deleteCount": "Διαγραφή {{count}} κτιρίου/ων",
+      "export": "Εξαγωγή δεδομένων",
+      "import": "Εισαγωγή δεδομένων",
+      "refresh": "Ανανέωση δεδομένων (F5)",
+      "archive": "Αρχειοθέτηση επιλεγμένων",
+      "favorite": "Προσθήκη στα αγαπημένα",
+      "help": "Βοήθεια και οδηγίες (F1)"
+    },
+    "search": {
+      "placeholder": "Αναζήτηση κτιρίων..."
+    },
+    "filters": {
+      "status": "Κατάσταση",
+      "statusLabel": "Κατάσταση κτιρίου",
+      "type": "Τύπος",
+      "typeLabel": "Τύπος κτιρίου"
+    },
+    "sort": {
+      "label": "Ταξινόμηση",
+      "sortBuildings": "Ταξινόμηση κτιρίων",
+      "ascending": "Αύξουσα (A-Z)",
+      "descending": "Φθίνουσα (Z-A)",
+      "byDate": "Κατά ημερομηνία",
+      "bySize": "Κατά μέγεθος"
+    },
+    "selection": {
+      "selected": "{{count}} επιλεγμένα κτίρια"
+    }
+  },
+  "storages": {
+    "header": {
+      "title": "Διαχείριση Αποθηκών",
+      "subtitle": "Διαχείριση και παρακολούθηση χώρων αποθήκευσης",
+      "searchPlaceholder": "Αναζήτηση αποθηκών...",
+      "newStorage": "Νέα Αποθήκη"
+    },
+    "list": {
+      "ariaLabel": "Λίστα Αποθηκών",
+      "noResults": "Δεν βρέθηκαν αποθήκες",
+      "noResultsForTerm": "για τον όρο \"{{term}}\""
+    },
+    "accessibility": {
+      "toggleFilters": "Εναλλαγή φίλτρων"
+    }
+  },
+  "parkings": {
+    "header": {
+      "title": "Θέσεις Στάθμευσης",
+      "subtitle": "Διαχείριση και παρακολούθηση θέσεων στάθμευσης",
+      "searchPlaceholder": "Αναζήτηση θέσεων...",
+      "newParking": "Νέα Θέση"
+    },
+    "list": {
+      "ariaLabel": "Λίστα Θέσεων Στάθμευσης",
+      "noResults": "Δεν βρέθηκαν θέσεις στάθμευσης",
+      "noResultsForTerm": "για τον όρο \"{{term}}\""
+    },
+    "accessibility": {
+      "toggleFilters": "Εναλλαγή φίλτρων"
+    }
+  },
+  "storage": {
+    "form": {
+      "specs": {
+        "title": "Τοποθεσία & Προδιαγραφές",
+        "labels": {
+          "floor": "Όροφος",
+          "area": "Επιφάνεια (m²)",
+          "price": "Τιμή (€)",
+          "linkedProperty": "Συνδεδεμένο Ακίνητο"
+        },
+        "placeholders": {
+          "area": "0.00",
+          "price": "0.00",
+          "linkedProperty": "π.χ. Δ2.1"
+        },
+        "helpers": {
+          "linkedProperty": "Κωδικός ακινήτου που συνοδεύει αυτή την μονάδα"
+        }
+      },
+      "features": {
+        "title": "Χαρακτηριστικά",
+        "labels": {
+          "commonFeatures": "Συνήθη Χαρακτηριστικά",
+          "addFeature": "Προσθήκη Χαρακτηριστικού",
+          "selectedFeatures": "Επιλεγμένα Χαρακτηριστικά"
+        },
+        "placeholders": {
+          "newFeature": "Νέο χαρακτηριστικό..."
+        }
+      }
+    }
+  },
+  "pages": {
+    "buildings": {
+      "pageLabel": "Διαχείριση Κτιρίων",
+      "loading": "Φόρτωση Κτιρίων",
+      "loadingMessage": "Φόρτωση κτιρίων από Firestore...",
+      "error": {
+        "pageLabel": "Σφάλμα Κτιρίων",
+        "ariaLabel": "Σφάλμα Φόρτωσης",
+        "title": "Σφάλμα φόρτωσης κτιρίων:"
+      },
+      "dashboard": {
+        "label": "Στατιστικά Κτιρίων",
+        "totalBuildings": "Σύνολο Κτιρίων",
+        "activeProjects": "Ενεργά Έργα",
+        "totalValue": "Συνολική Αξία",
+        "totalArea": "Συνολική Επιφάνεια",
+        "averageProgress": "Μέση Πρόοδος",
+        "totalUnits": "Σύνολο Μονάδων"
+      },
+      "filters": {
+        "desktop": "Φίλτρα Κτιρίων",
+        "mobile": "Φίλτρα Κτιρίων Mobile"
+      },
+      "views": {
+        "desktopView": "Προβολή Κτιρίων Desktop",
+        "mobileList": "Λίστα Κτιρίων Mobile"
+      },
+      "details": {
+        "title": "Λεπτομέρειες Κτιρίου",
+        "editBuilding": "Επεξεργασία Κτιρίου",
+        "deleteBuilding": "Διαγραφή Κτιρίου"
+      }
+    },
+    "storage": {
+      "pageLabel": "Διαχείριση Αποθηκών",
+      "loading": "Φόρτωση αποθηκών...",
+      "error": {
+        "title": "Σφάλμα φόρτωσης",
+        "retry": "Επανάληψη"
+      },
+      "dashboard": {
+        "label": "Στατιστικά Αποθηκών",
+        "totalStorages": "Σύνολο Αποθηκών",
+        "totalArea": "Συνολική Επιφάνεια",
+        "utilizationRate": "Ποσοστό Χρήσης",
+        "uniqueBuildings": "Μοναδικά Κτίρια",
+        "statusDistribution": "Κατανομή Κατάστασης",
+        "typeDistribution": "Κατανομή Τύπων"
+      },
+      "filters": {
+        "label": "Φίλτρα Αποθηκών",
+        "mobileTitle": "Φίλτρα Αποθηκών"
+      },
+      "statusLabels": {
+        "available": "Διαθέσιμες",
+        "occupied": "Κατειλημμένες",
+        "maintenance": "Συντήρηση",
+        "reserved": "Κρατημένες"
+      },
+      "typeLabels": {
+        "large": "Μεγάλες",
+        "small": "Μικρές",
+        "basement": "Υπόγειες",
+        "ground": "Ισόγειες",
+        "special": "Ειδικές"
+      }
+    },
+    "parking": {
+      "pageLabel": "Διαχείριση Parking",
+      "loading": "Φόρτωση θέσεων στάθμευσης...",
+      "error": {
+        "title": "Σφάλμα φόρτωσης",
+        "retry": "Επανάληψη"
+      },
+      "dashboard": {
+        "label": "Στατιστικά Parking",
+        "totalSpots": "Σύνολο Θέσεων",
+        "totalArea": "Συνολική Επιφάνεια",
+        "totalValue": "Συνολική Αξία",
+        "salesRate": "Ποσοστό Πωλήσεων",
+        "statusDistribution": "Κατανομή Κατάστασης",
+        "typeDistribution": "Κατανομή Τύπων"
+      },
+      "filters": {
+        "label": "Φίλτρα Parking",
+        "mobileTitle": "Φίλτρα Θέσεων Στάθμευσης"
+      },
+      "toolbar": {
+        "newSpot": "Νέα Θέση Στάθμευσης",
+        "deleteSelected": "Διαγραφή Επιλεγμένων",
+        "saveChanges": "Αποθήκευση Αλλαγών",
+        "refreshData": "Ανανέωση Δεδομένων",
+        "exportData": "Εξαγωγή Δεδομένων",
+        "importData": "Εισαγωγή Δεδομένων",
+        "help": "Βοήθεια",
+        "selectedCount": "{{count}} επιλεγμένες"
+      }
+    }
+  },
+  "list": {
+    "ariaLabel": "Λίστα Κτιρίων",
+    "entityName": "Κτίρια",
+    "searchPlaceholder": "Αναζήτηση κτιρίων..."
+  },
+  "customers": {
+    "title": "Πελάτες Κτιρίου",
+    "loading": "Φόρτωση πελατών...",
+    "error": {
+      "unknown": "Άγνωστο σφάλμα",
+      "loadingPrefix": "Σφάλμα κατά τη φόρτωση:"
+    },
+    "empty": {
+      "message": "Δεν υπάρχουν καταχωρημένοι πελάτες για αυτό το κτίριο."
+    },
+    "description": "Λίστα των πελατών που έχουν αγοράσει μονάδες σε αυτό το κτίριο ({{count}} πελάτες).",
+    "table": {
+      "name": "Ονοματεπώνυμο",
+      "phone": "Τηλέφωνο",
+      "email": "Email",
+      "units": "Μονάδες",
+      "actions": "Ενέργειες"
+    },
+    "ariaLabel": "Λίστα πελατών κτιρίου"
+  },
+  "storages": {
+    "list": {
+      "ariaLabel": "Λίστα Αποθηκών",
+      "entityName": "Αποθήκες",
+      "searchPlaceholder": "Αναζήτηση αποθηκών..."
     }
   }
 }

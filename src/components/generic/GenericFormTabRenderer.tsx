@@ -13,11 +13,27 @@ import type { SectionConfig } from '@/config/company-gemi';
 // INTERFACES
 // ============================================================================
 
+/** Photo slot data for multiple photos */
+interface PhotoSlotData {
+  uploadUrl?: string;
+  url?: string;
+  fileName?: string;
+  [key: string]: unknown;
+}
+
+/** Form field data for custom renderers */
+interface FormFieldData {
+  name: string;
+  type?: string;
+  label?: string;
+  [key: string]: unknown;
+}
+
 export interface GenericFormTabRendererProps {
   /** Sections configuration from config file */
   sections: SectionConfig[];
   /** Form data object */
-  formData: Record<string, any>;
+  formData: Record<string, unknown>;
   /** Input change handler */
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   /** Select change handler */
@@ -25,9 +41,9 @@ export interface GenericFormTabRendererProps {
   /** Disabled state */
   disabled?: boolean;
   /** Multiple photos change handler (now used for logos too) */
-  onPhotosChange?: (photos: any[]) => void;
+  onPhotosChange?: (photos: PhotoSlotData[]) => void;
   /** Custom field renderers for forms */
-  customRenderers?: Record<string, (field: any, formData: any, onChange: any, onSelectChange: any, disabled: boolean) => React.ReactNode>;
+  customRenderers?: Record<string, (field: FormFieldData, formData: Record<string, unknown>, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, onSelectChange: (name: string, value: string) => void, disabled: boolean) => React.ReactNode>;
 }
 
 // ============================================================================
@@ -39,12 +55,12 @@ export interface GenericFormTabRendererProps {
  */
 function createFormTabsFromConfig(
   sections: SectionConfig[],
-  formData: Record<string, any>,
+  formData: Record<string, unknown>,
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
   onSelectChange: (name: string, value: string) => void,
   disabled: boolean,
-  onPhotosChange?: (photos: any[]) => void,
-  customRenderers?: Record<string, any>
+  onPhotosChange?: (photos: PhotoSlotData[]) => void,
+  customRenderers?: Record<string, unknown>
 ) {
   return sections.map(section => {
     // ========================================================================

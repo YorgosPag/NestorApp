@@ -35,6 +35,16 @@ import {
 import { cn } from '@/lib/utils';
 
 // ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** Search item metadata type */
+export type SearchMetadata = Record<string, unknown>;
+
+/** Filter value type */
+export type FilterValue = string | string[] | number | boolean | { min: number; max: number } | null;
+
+// ============================================================================
 // SEARCH TYPES και INTERFACES
 // ============================================================================
 
@@ -45,7 +55,7 @@ export interface SearchableItem {
   description?: string;
   category?: string;
   tags?: string[];
-  metadata?: Record<string, any>;
+  metadata?: SearchMetadata;
   searchableText?: string;
 }
 
@@ -73,13 +83,13 @@ export interface FilterConfig {
   max?: number;
   step?: number;
   placeholder?: string;
-  defaultValue?: any;
+  defaultValue?: FilterValue;
 }
 
 export interface ActiveFilter {
   id: string;
   type: string;
-  value: any;
+  value: FilterValue;
   label: string;
 }
 
@@ -443,8 +453,8 @@ const SearchInput: React.FC<SearchInputProps> = ({
 
 interface FilterProps {
   config: FilterConfig;
-  value: any;
-  onChange: (value: any) => void;
+  value: FilterValue;
+  onChange: (value: FilterValue) => void;
   className?: string;
 }
 
@@ -700,7 +710,7 @@ export const SearchSystem: React.FC<SearchSystemProps> = ({
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
-  const [filterValues, setFilterValues] = useState<Record<string, any>>({});
+  const [filterValues, setFilterValues] = useState<Record<string, FilterValue>>({});
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
 
@@ -754,7 +764,7 @@ export const SearchSystem: React.FC<SearchSystemProps> = ({
   }, [debouncedQuery, activeFilters, searchEngine, searchConfig.minQueryLength, searchConfig.maxResults]);
 
   // Filter change handler
-  const handleFilterChange = (filterId: string, value: any) => {
+  const handleFilterChange = (filterId: string, value: FilterValue) => {
     const newFilterValues = { ...filterValues, [filterId]: value };
     setFilterValues(newFilterValues);
 

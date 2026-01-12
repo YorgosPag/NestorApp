@@ -9,6 +9,13 @@ import type { UniversalPolygon } from '@geo-alert/core';
 import { GEO_COLORS } from '../../../config/color-config';
 
 // ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** Potential legacy source data type */
+export type LegacySourceData = LegacyPolygonData | LegacyControlPoint[] | Record<string, unknown> | unknown;
+
+// ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
 
@@ -81,22 +88,25 @@ export function createPolygonFromLegacy(legacyData: LegacyPolygonData): Universa
  * @param source Potential source of legacy data
  * @returns LegacyPolygonData or null if no valid data
  */
-export function extractLegacyData(source: any): LegacyPolygonData | null {
+export function extractLegacyData(source: LegacySourceData): LegacyPolygonData | null {
+  // Type guard for object with controlPoints
+  const sourceObj = source as Record<string, unknown> | null | undefined;
+
   // Check for InteractiveMap transformState structure
-  if (source?.controlPoints && Array.isArray(source.controlPoints)) {
+  if (sourceObj && typeof sourceObj === 'object' && 'controlPoints' in sourceObj && Array.isArray(sourceObj.controlPoints)) {
     return {
-      controlPoints: source.controlPoints,
-      isComplete: source.isCalibrated || false,
-      completedAt: source.completedAt ? new Date(source.completedAt) : undefined
+      controlPoints: sourceObj.controlPoints as LegacyControlPoint[],
+      isComplete: Boolean(sourceObj.isCalibrated) || false,
+      completedAt: sourceObj.completedAt ? new Date(String(sourceObj.completedAt)) : undefined
     };
   }
 
   // Check for direct control points array
   if (Array.isArray(source) && source.length > 0) {
-    const firstPoint = source[0];
-    if (firstPoint?.geoPoint) {
+    const firstPoint = source[0] as Record<string, unknown>;
+    if (firstPoint && typeof firstPoint === 'object' && 'geoPoint' in firstPoint) {
       return {
-        controlPoints: source,
+        controlPoints: source as LegacyControlPoint[],
         isComplete: source.length >= 3,
         completedAt: new Date()
       };
@@ -112,7 +122,7 @@ export function extractLegacyData(source: any): LegacyPolygonData | null {
  * @param legacySources Array of potential legacy data sources
  * @returns Array of UniversalPolygon objects
  */
-export function migrateLegacyPolygons(legacySources: any[]): UniversalPolygon[] {
+export function migrateLegacyPolygons(legacySources: LegacySourceData[]): UniversalPolygon[] {
   const polygons: UniversalPolygon[] = [];
 
   for (const source of legacySources) {
@@ -131,16 +141,26 @@ export function migrateLegacyPolygons(legacySources: any[]): UniversalPolygon[] 
  * @param data Potential legacy data
  * @returns boolean indicating if data is legacy format
  */
-export function isLegacyFormat(data: any): boolean {
-  return !!(
-    data &&
-    (
-      // TransformState format
-      (data.controlPoints && Array.isArray(data.controlPoints)) ||
-      // Direct control points array
-      (Array.isArray(data) && data[0]?.geoPoint)
-    )
-  );
+export function isLegacyFormat(data: LegacySourceData): boolean {
+  if (!data) return false;
+
+  // Type guard for object with controlPoints
+  const dataObj = data as Record<string, unknown>;
+
+  // TransformState format
+  if (dataObj && typeof dataObj === 'object' && 'controlPoints' in dataObj && Array.isArray(dataObj.controlPoints)) {
+    return true;
+  }
+
+  // Direct control points array
+  if (Array.isArray(data) && data.length > 0) {
+    const firstItem = data[0] as Record<string, unknown>;
+    if (firstItem && typeof firstItem === 'object' && 'geoPoint' in firstItem) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**
@@ -149,13 +169,17 @@ export function isLegacyFormat(data: any): boolean {
  * @param controlPoint Potential control point object
  * @returns boolean indicating if valid control point
  */
-export function isValidLegacyControlPoint(controlPoint: any): controlPoint is LegacyControlPoint {
-  return !!(
-    controlPoint &&
-    typeof controlPoint.id === 'string' &&
-    controlPoint.geoPoint &&
-    typeof controlPoint.geoPoint.lat === 'number' &&
-    typeof controlPoint.geoPoint.lng === 'number'
+export function isValidLegacyControlPoint(controlPoint: unknown): controlPoint is LegacyControlPoint {
+  if (!controlPoint || typeof controlPoint !== 'object') return false;
+
+  const cp = controlPoint as Record<string, unknown>;
+
+  return (
+    typeof cp.id === 'string' &&
+    cp.geoPoint !== null &&
+    typeof cp.geoPoint === 'object' &&
+    typeof (cp.geoPoint as Record<string, unknown>).lat === 'number' &&
+    typeof (cp.geoPoint as Record<string, unknown>).lng === 'number'
   );
 }
 
@@ -176,7 +200,7 @@ export interface MigrationReport {
  * @param legacySources Array of potential legacy data sources
  * @returns MigrationReport with detailed results
  */
-export function performLegacyMigration(legacySources: any[]): MigrationReport {
+export function performLegacyMigration(legacySources: LegacySourceData[]): MigrationReport {
   const report: MigrationReport = {
     success: true,
     migratedPolygons: 0,

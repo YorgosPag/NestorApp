@@ -103,7 +103,7 @@ export interface SpatialEntity {
   id: string;
   type: SpatialEntityType;
   geometry: GeoJSONGeometry;
-  properties: Record<string, any>;
+  properties: Record<string, unknown>;
   bbox?: BoundingBox;
   metadata: {
     source: 'dxf' | 'external' | 'user_input';
@@ -214,7 +214,7 @@ export interface GeoAlert {
   context: {
     distance?: number;          // For proximity alerts
     intersectionArea?: number;  // For intersection alerts
-    attributeValues?: Record<string, any>;
+    attributeValues?: Record<string, unknown>;
   };
 }
 
@@ -236,8 +236,8 @@ export interface GeoMapLayer {
   maxZoom: number;
 
   // Styling
-  paint?: Record<string, any>;
-  layout?: Record<string, any>;
+  paint?: Record<string, unknown>;
+  layout?: Record<string, unknown>;
 
   // Data source
   sourceData?: {
@@ -292,13 +292,13 @@ export interface GeoServiceConfig {
 /**
  * API Response Types
  */
-export interface GeoApiResponse<T = any> {
+export interface GeoApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: {
     code: string;
     message: string;
-    details?: any;
+    details?: unknown;
   };
   metadata?: {
     timestamp: Date;

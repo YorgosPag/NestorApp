@@ -14,21 +14,46 @@ import { getIconComponent } from './utils/IconMapping';
 // INTERFACES
 // ============================================================================
 
+/** Form data type - flexible string values for form fields */
+export type FormDataRecord = Record<string, string | number | boolean | null | undefined>;
+
+/** Change handler type for input/textarea elements */
+export type FormChangeHandler = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+
+/** Select change handler type */
+export type SelectChangeHandler = (name: string, value: string) => void;
+
+/** Photo data type */
+export interface PhotoData {
+  url: string;
+  name?: string;
+  size?: number;
+}
+
+/** Custom renderer function type */
+export type CustomRendererFn = (
+  field: FieldConfig,
+  formData: FormDataRecord,
+  onChange: FormChangeHandler,
+  onSelectChange: SelectChangeHandler,
+  disabled: boolean
+) => React.ReactNode;
+
 export interface GenericFormRendererProps {
   /** Sections configuration from config file */
   sections: SectionConfig[];
   /** Form data object */
-  formData: Record<string, any>;
+  formData: FormDataRecord;
   /** Input change handler */
-  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onChange: FormChangeHandler;
   /** Select change handler */
-  onSelectChange: (name: string, value: string) => void;
+  onSelectChange: SelectChangeHandler;
   /** Disabled state */
   disabled?: boolean;
   /** Multiple photos change handler */
-  onPhotosChange?: (photos: any[]) => void;
+  onPhotosChange?: (photos: PhotoData[]) => void;
   /** Custom field renderers */
-  customRenderers?: Record<string, (field: FieldConfig, formData: any, onChange: any, onSelectChange: any, disabled: boolean) => React.ReactNode>;
+  customRenderers?: Record<string, CustomRendererFn>;
 }
 
 // ============================================================================
@@ -38,7 +63,7 @@ export interface GenericFormRendererProps {
 /**
  * Renders an input field - NOW USING UNIVERSAL CLICKABLE FIELD
  */
-function renderInputField(field: FieldConfig, formData: any, onChange: any, disabled: boolean): React.ReactNode {
+function renderInputField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean): React.ReactNode {
   const value = formData[field.id] || '';
 
   // 🏢 ENTERPRISE: Use Universal Clickable Field - ZERO διασπορά!
@@ -61,7 +86,7 @@ function renderInputField(field: FieldConfig, formData: any, onChange: any, disa
 /**
  * Renders a select field
  */
-function renderSelectField(field: FieldConfig, formData: any, onSelectChange: any, disabled: boolean): React.ReactNode {
+function renderSelectField(field: FieldConfig, formData: FormDataRecord, onSelectChange: SelectChangeHandler, disabled: boolean): React.ReactNode {
   if (!field.options || field.options.length === 0) {
     console.warn(`Select field ${field.id} has no options defined`);
     return renderInputField(field, formData, () => {}, disabled);
@@ -91,7 +116,7 @@ function renderSelectField(field: FieldConfig, formData: any, onSelectChange: an
 /**
  * Renders a textarea field
  */
-function renderTextareaField(field: FieldConfig, formData: any, onChange: any, disabled: boolean): React.ReactNode {
+function renderTextareaField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean): React.ReactNode {
   return (
     <Textarea
       id={field.id}
@@ -110,7 +135,7 @@ function renderTextareaField(field: FieldConfig, formData: any, onChange: any, d
 /**
  * Renders a date field - NOW USING UNIVERSAL CLICKABLE FIELD
  */
-function renderDateField(field: FieldConfig, formData: any, onChange: any, disabled: boolean): React.ReactNode {
+function renderDateField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean): React.ReactNode {
   const value = formData[field.id] || '';
 
   return (
@@ -130,7 +155,7 @@ function renderDateField(field: FieldConfig, formData: any, onChange: any, disab
 /**
  * Renders a number field - NOW USING UNIVERSAL CLICKABLE FIELD
  */
-function renderNumberField(field: FieldConfig, formData: any, onChange: any, disabled: boolean): React.ReactNode {
+function renderNumberField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean): React.ReactNode {
   const value = formData[field.id] || '';
 
   return (
@@ -151,7 +176,7 @@ function renderNumberField(field: FieldConfig, formData: any, onChange: any, dis
 /**
  * Renders an email field - NOW USING UNIVERSAL CLICKABLE FIELD
  */
-function renderEmailField(field: FieldConfig, formData: any, onChange: any, disabled: boolean): React.ReactNode {
+function renderEmailField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean): React.ReactNode {
   const value = formData[field.id] || '';
 
   return (
@@ -172,7 +197,7 @@ function renderEmailField(field: FieldConfig, formData: any, onChange: any, disa
 /**
  * Renders a tel field - NOW USING UNIVERSAL CLICKABLE FIELD
  */
-function renderTelField(field: FieldConfig, formData: any, onChange: any, disabled: boolean): React.ReactNode {
+function renderTelField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean): React.ReactNode {
   const value = formData[field.id] || '';
 
   return (
@@ -196,11 +221,11 @@ function renderTelField(field: FieldConfig, formData: any, onChange: any, disabl
  */
 function renderField(
   field: FieldConfig,
-  formData: any,
-  onChange: any,
-  onSelectChange: any,
+  formData: FormDataRecord,
+  onChange: FormChangeHandler,
+  onSelectChange: SelectChangeHandler,
   disabled: boolean,
-  customRenderers?: Record<string, any>
+  customRenderers?: Record<string, CustomRendererFn>
 ): React.ReactNode {
   // Check for custom renderer first
   if (customRenderers && customRenderers[field.id]) {

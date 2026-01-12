@@ -153,11 +153,20 @@ export interface BadgeFactoryOptions {
 
 // ===== STATUS TRANSITION TYPES =====
 
+/** Context for status transition validation */
+interface TransitionContext {
+  userId?: string;
+  currentStatus?: string;
+  targetStatus?: string;
+  entityId?: string;
+  [key: string]: unknown;
+}
+
 export interface StatusTransitionRule {
   from: string;
   to: string[];
   permission?: string;
-  validation?: (context: any) => boolean;
+  validation?: (context: TransitionContext) => boolean;
 }
 
 export interface DomainTransitionRules {

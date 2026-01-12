@@ -6,7 +6,7 @@ import { getOpportunities, deleteOpportunity } from "@/services/opportunities.se
 import toast from "react-hot-toast";
 import type { Opportunity } from "@/types/crm";
 
-export function useLeadsList(refreshTrigger?: any) {
+export function useLeadsList(refreshTrigger?: number | string | boolean | null) {
   const router = useRouter();
   const [leads, setLeads] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);

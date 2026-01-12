@@ -1,6 +1,6 @@
 'use client';
 
-import { useUserRole } from '@/contexts/UserRoleContext';
+import { useUserRole } from '@/auth';
 import dynamic from 'next/dynamic';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';

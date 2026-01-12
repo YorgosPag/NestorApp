@@ -10,27 +10,71 @@
  * @updated 2025-12-28 - Split from CloudInfrastructure.ts
  */
 
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** Alert severity levels */
+type AlertSeverity = 'low' | 'medium' | 'high' | 'critical' | 'info';
+
+/** Alert data structure */
+interface AlertData {
+  id?: string;
+  type: string;
+  title?: string;
+  message?: string;
+  description?: string;
+  severity?: AlertSeverity;
+  source?: string;
+  timestamp?: Date;
+  acknowledged?: boolean;
+  assignee?: string;
+  estimatedResolution?: Date;
+  metadata?: Record<string, unknown>;
+}
+
+/** Analytics event structure */
+interface AnalyticsEvent {
+  id: string;
+  type: string;
+  timestamp: Date;
+  message: string;
+  severity: AlertSeverity;
+  source: string;
+  metadata?: Record<string, unknown>;
+}
+
+/** Alert creation arguments */
+type CreateAlertArgs = [
+  type: string,
+  title: string,
+  description: string,
+  severity: AlertSeverity,
+  source: string,
+  metadata?: Record<string, unknown>
+];
+
 // ENTERPRISE: Mock Alert Engine για compilation - θα συνδεθεί με πραγματικό Alert Engine
 const geoAlertEngine = {
-  reportAlert: (alert: any) => console.log('🚨 Alert Engine:', alert),
-  processAlert: (alert: any) => ({ processed: true, alert }),
+  reportAlert: (alert: AlertData) => console.log('🚨 Alert Engine:', alert),
+  processAlert: (alert: AlertData) => ({ processed: true, alert }),
   getActiveAlerts: () => ({
-    active: [],
+    active: [] as AlertData[],
     total: 0,
-    bySeverity: {},
-    byType: {},
+    bySeverity: {} as Record<string, number>,
+    byType: {} as Record<string, number>,
     escalations: 0
   }),
-  createAlert: (...args: any[]) => ({ id: Date.now().toString(), type: args[0] }),
+  createAlert: (...args: CreateAlertArgs) => ({ id: Date.now().toString(), type: args[0] }),
   isSystemInitialized: true,
   initialize: () => ({ success: true, error: null }),
   generateQuickReport: () => ({
     status: 'ok',
     alerts: {
-      active: [],
+      active: [] as AlertData[],
       total: 0,
-      bySeverity: {},
-      byType: {},
+      bySeverity: {} as Record<string, number>,
+      byType: {} as Record<string, number>,
       escalations: 0
     },
     metrics: {
@@ -39,9 +83,9 @@ const geoAlertEngine = {
     }
   }),
   analytics: {
-    track: (event: any) => console.log('📊 Analytics:', event),
+    track: (event: AnalyticsEvent) => console.log('📊 Analytics:', event),
     getMetrics: () => ({ totalAlerts: 0, resolvedAlerts: 0 }),
-    ingestEvent: (event: any) => console.log('📊 Analytics:', event)
+    ingestEvent: (event: AnalyticsEvent) => console.log('📊 Analytics:', event)
   }
 };
 
@@ -221,7 +265,7 @@ export class AlertService {
         'security-incident',
         title,
         description,
-        incident.severity as any,
+        incident.severity as AlertSeverity,
         'cloud-infrastructure',
         {
           incidentId: incident.id,
@@ -388,20 +432,20 @@ export class AlertService {
 
       // Apply filters
       if (filterType) {
-        alerts = alerts.filter((alert: any) => alert.type === filterType);
+        alerts = alerts.filter((alert: AlertData) => alert.type === filterType);
       }
 
       if (severity) {
-        alerts = alerts.filter((alert: any) => alert.severity === severity);
+        alerts = alerts.filter((alert: AlertData) => alert.severity === severity);
       }
 
       // Convert to ActiveAlert format
-      return alerts.map((alert: any) => ({
-        id: alert.id,
+      return alerts.map((alert: AlertData) => ({
+        id: alert.id ?? '',
         type: alert.type || 'infrastructure',
         severity: alert.severity || 'medium',
-        title: alert.title || alert.message,
-        description: alert.description || alert.message,
+        title: alert.title || alert.message || '',
+        description: alert.description || alert.message || '',
         source: alert.source || 'cloud-infrastructure',
         timestamp: alert.timestamp || new Date(),
         acknowledged: alert.acknowledged || false,

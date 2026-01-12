@@ -6,6 +6,7 @@ const DEBUG_DXF_VIEWER_CONTENT = false;
 import { useNotifications } from '../../../providers/NotificationProvider';
 import { UI_COLORS } from '../config/color-config';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
+import { PERFORMANCE_THRESHOLDS } from '../../../core/performance/components/utils/performance-utils';
 
 // ✅ React stack suppression handled globally in layout.tsx via public/suppress-console.js
 
@@ -143,12 +144,13 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const { isEnabled: perfMonitorEnabled, toggle: togglePerfMonitor } = usePerformanceMonitorToggle();
 
   // ⚡ ENTERPRISE: Initialize DXF Performance Optimizer
+  // 🏢 Uses centralized PERFORMANCE_THRESHOLDS from performance-utils.ts
   React.useEffect(() => {
     // 🎯 LIGHTHOUSE OPTIMIZATION: Target 7.0s → <2.5s LCP
     dxfPerformanceOptimizer.updateConfig({
       rendering: {
         enableRequestAnimationFrame: true,
-        maxFPS: 60,
+        maxFPS: PERFORMANCE_THRESHOLDS.fps.excellent, // 60 FPS
         enableCanvasBuffering: true,
         enableViewportCulling: true,
         enableLOD: true,
@@ -156,7 +158,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       },
       memory: {
         enableGarbageCollection: true,
-        maxMemoryUsage: 384, // Increased for better performance
+        maxMemoryUsage: PERFORMANCE_THRESHOLDS.memory.warning, // 384MB for better performance
         enableMemoryProfiling: true,
         memoryCheckInterval: 3000, // More frequent checks
       },
@@ -169,10 +171,10 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       monitoring: {
         enableRealTimeMonitoring: true,
         performanceThresholds: {
-          maxLoadTime: 2500,    // Target: <2.5s (from 7.0s Lighthouse)
-          maxRenderTime: 12.0,  // More aggressive than 16.67ms
-          maxMemoryUsage: 384,  // Match memory config
-          minFPS: 45            // Higher target FPS
+          maxLoadTime: PERFORMANCE_THRESHOLDS.loadTime.good, // 2500ms
+          maxRenderTime: PERFORMANCE_THRESHOLDS.renderTime.excellent, // 8ms for aggressive optimization
+          maxMemoryUsage: PERFORMANCE_THRESHOLDS.memory.warning, // 384MB
+          minFPS: PERFORMANCE_THRESHOLDS.fps.minTarget // 45 FPS
         },
         enableAlerts: true
       }

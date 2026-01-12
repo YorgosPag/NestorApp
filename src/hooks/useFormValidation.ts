@@ -9,7 +9,7 @@ export function useFormValidation<TFieldValues extends FieldValues = FieldValues
   schema: z.ZodSchema<TFieldValues>,
   options?: Omit<UseFormProps<TFieldValues>, 'resolver'>
 ): UseFormReturn<TFieldValues> & {
-  validateField: (field: keyof TFieldValues, value: any) => string | undefined;
+  validateField: (field: keyof TFieldValues, value: unknown) => string | undefined;
   validateAll: () => boolean;
   getFieldError: (field: keyof TFieldValues) => string | undefined;
 } {
@@ -22,10 +22,11 @@ export function useFormValidation<TFieldValues extends FieldValues = FieldValues
   });
 
   // Single field validation
-  const validateField = useCallback((field: keyof TFieldValues, value: any) => {
+  const validateField = useCallback((field: keyof TFieldValues, value: unknown) => {
     try {
       // Get the field schema from the full schema
-      const fieldSchema = (schema as any).shape?.[field];
+      const schemaWithShape = schema as z.ZodObject<Record<string, z.ZodType>>;
+      const fieldSchema = schemaWithShape.shape?.[field as string];
       if (fieldSchema) {
         fieldSchema.parse(value);
         return undefined;
@@ -89,7 +90,7 @@ export function useConditionalFormValidation<TFieldValues extends FieldValues>(
       return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const errors: Record<string, any> = {};
+        const errors: Record<string, { message: string }> = {};
         error.errors.forEach((err) => {
           const path = err.path.join('.');
           errors[path] = { message: err.message };

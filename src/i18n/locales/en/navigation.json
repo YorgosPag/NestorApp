@@ -40,5 +40,211 @@
     "title": "User",
     "name": "Nestor Pagonis",
     "email": "user@example.com"
+  },
+  "toolbar": {
+    "labels": {
+      "link": "Link",
+      "unlink": "Unlink",
+      "remove": "Remove",
+      "filters": "Filters",
+      "favorites": "Favorites",
+      "archive": "Archive",
+      "preview": "Preview",
+      "copy": "Copy",
+      "share": "Share",
+      "reports": "Reports",
+      "settings": "Settings",
+      "favoritesManagement": "Favorites Management",
+      "help": "Help",
+      "sorting": "Sorting"
+    },
+    "tooltips": {
+      "filters": "Filter items",
+      "favorites": "Favorites",
+      "archive": "Archive",
+      "exportData": "Export data",
+      "importData": "Import data",
+      "refreshData": "Refresh data",
+      "preview": "Preview",
+      "copy": "Copy",
+      "share": "Share",
+      "reports": "Reports",
+      "settings": "Settings",
+      "favoritesManagement": "Favorites Management",
+      "help": "Help",
+      "sorting": "Sorting"
+    },
+    "search": {
+      "company": "Search company...",
+      "project": "Search project...",
+      "building": "Search building...",
+      "floor": "Search floor...",
+      "unit": "Search unit...",
+      "storage": "Search storage...",
+      "parking": "Search parking space..."
+    },
+    "actions": {
+      "companies": {
+        "new": "Add new company",
+        "edit": "Edit company",
+        "delete": "Remove company"
+      },
+      "projects": {
+        "new": "Link project to selected company",
+        "edit": "Edit project",
+        "delete": "Unlink project"
+      },
+      "buildings": {
+        "new": "Link building to selected project",
+        "edit": "Edit building",
+        "delete": "Unlink building"
+      },
+      "floors": {
+        "new": "Link floor to selected building",
+        "edit": "Edit floor",
+        "delete": "Unlink floor"
+      },
+      "units": {
+        "new": "Link unit to selected floor",
+        "edit": "Edit unit",
+        "delete": "Unlink unit"
+      },
+      "storage": {
+        "new": "Link storage to selected building",
+        "edit": "Edit storage",
+        "delete": "Unlink storage"
+      },
+      "parking": {
+        "new": "Link parking space to selected building",
+        "edit": "Edit parking space",
+        "delete": "Unlink parking space"
+      }
+    },
+    "sort": {
+      "nameAsc": "Name (A-Z)",
+      "nameDesc": "Name (Z-A)",
+      "dateOldest": "Oldest first",
+      "dateNewest": "Newest first",
+      "progressLow": "Progress (Low-High)",
+      "progressHigh": "Progress (High-Low)",
+      "areaSmall": "Area (Small-Large)",
+      "areaLarge": "Area (Large-Small)",
+      "roomsFew": "Rooms (Few-Many)",
+      "roomsMany": "Rooms (Many-Few)",
+      "numberAsc": "Number (A-Z)",
+      "numberDesc": "Number (Z-A)",
+      "locationAsc": "Location (A-Z)",
+      "locationDesc": "Location (Z-A)"
+    }
+  },
+  "buildingSpaces": {
+    "sectionLabel": "Building Spaces",
+    "units": {
+      "listLabel": "Units List",
+      "empty": "No units available",
+      "defaultSubtitle": "Unit",
+      "openTooltip": "Open in Units"
+    },
+    "storage": {
+      "listLabel": "Storage List",
+      "empty": "No storage available",
+      "defaultSubtitle": "Storage",
+      "openTooltip": "Open in Storage"
+    },
+    "parking": {
+      "listLabel": "Parking Spaces List",
+      "empty": "No parking spaces available",
+      "spotTitle": "Spot {{number}}",
+      "defaultSubtitle": "Parking",
+      "openTooltip": "Open in Parking"
+    }
+  },
+  "filters": {
+    "companies": {
+      "typeLabel": "Company Type",
+      "statusLabel": "Status",
+      "construction": "Construction",
+      "development": "Development",
+      "investment": "Investment",
+      "management": "Management",
+      "active": "Active",
+      "withProjects": "With Projects",
+      "withoutProjects": "Without Projects"
+    },
+    "projects": {
+      "statusLabel": "Project Status",
+      "typeLabel": "Project Type",
+      "planning": "Planning",
+      "construction": "Construction",
+      "completed": "Completed",
+      "onHold": "On Hold",
+      "residential": "Residential",
+      "commercial": "Commercial",
+      "mixed": "Mixed"
+    },
+    "buildings": {
+      "typeLabel": "Building Type",
+      "floorsLabel": "Number of Floors",
+      "residential": "Residential",
+      "commercial": "Commercial",
+      "office": "Office",
+      "mixed": "Mixed",
+      "floors1to3": "1-3 floors",
+      "floors4to6": "4-6 floors",
+      "floors7plus": "7+ floors"
+    },
+    "floors": {
+      "typeLabel": "Floor Type",
+      "unitsLabel": "Number of Units",
+      "basement": "Basement",
+      "ground": "Ground Floor",
+      "floor": "Floor",
+      "penthouse": "Penthouse",
+      "units1to2": "1-2 units",
+      "units3to5": "3-5 units",
+      "units6plus": "6+ units"
+    },
+    "units": {
+      "typeLabel": "Unit Type",
+      "statusLabel": "Status",
+      "roomsLabel": "Number of Rooms",
+      "apartment": "Apartment",
+      "office": "Office",
+      "shop": "Shop",
+      "storage": "Storage",
+      "parking": "Parking Space",
+      "available": "Available",
+      "occupied": "Occupied",
+      "reserved": "Reserved",
+      "maintenance": "Maintenance",
+      "rooms1": "1 room",
+      "rooms2": "2 rooms",
+      "rooms3": "3 rooms",
+      "rooms4plus": "4+ rooms"
+    },
+    "storage": {
+      "typeLabel": "Storage Type",
+      "statusLabel": "Status",
+      "basement": "Basement",
+      "ground": "Ground Level",
+      "external": "External",
+      "available": "Available",
+      "occupied": "Occupied",
+      "reserved": "Reserved"
+    },
+    "parking": {
+      "typeLabel": "Parking Type",
+      "locationLabel": "Location",
+      "statusLabel": "Status",
+      "standard": "Standard",
+      "disabled": "Disabled",
+      "electric": "Electric Vehicle",
+      "ground": "Ground Level",
+      "basement": "Basement",
+      "pilotis": "Pilotis",
+      "available": "Available",
+      "occupied": "Occupied",
+      "reserved": "Reserved"
+    }
   }
 }

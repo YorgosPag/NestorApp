@@ -62,7 +62,8 @@ export function useGenericFilters<T extends GenericFilterState>(
     key: string,
     value: string
   ) => {
-    const currentValues = (filters as any)[key] || [];
+    const filtersRecord = filters as Record<string, unknown>;
+    const currentValues = (Array.isArray(filtersRecord[key]) ? filtersRecord[key] : []) as string[];
     let newValues: string[];
 
     if (value === 'all') {
@@ -91,29 +92,31 @@ export function useGenericFilters<T extends GenericFilterState>(
   }, [filters, onFiltersChange]);
 
   const clearAllFilters = useCallback(() => {
-    const clearedFilters = Object.keys(filters).reduce((acc, key) => {
+    const filtersRecord = filters as Record<string, unknown>;
+    const clearedFilters = Object.keys(filters).reduce<Record<string, unknown>>((acc, key) => {
       if (key === 'searchTerm') {
         acc[key] = '';
       } else if (key === 'ranges') {
         acc[key] = {};
       } else if (key === 'advancedFeatures') {
         acc[key] = [];
-      } else if (Array.isArray((filters as any)[key])) {
+      } else if (Array.isArray(filtersRecord[key])) {
         acc[key] = [];
-      } else if (typeof (filters as any)[key] === 'object' && (filters as any)[key] !== null) {
+      } else if (typeof filtersRecord[key] === 'object' && filtersRecord[key] !== null) {
         acc[key] = {};
       } else {
         acc[key] = '';
       }
       return acc;
-    }, {} as any);
+    }, {});
 
     onFiltersChange(clearedFilters as T);
   }, [filters, onFiltersChange]);
 
   const hasActiveFilters = useCallback(() => {
+    const filtersRecord = filters as Record<string, unknown>;
     return Object.keys(filters).some(key => {
-      const value = (filters as any)[key];
+      const value = filtersRecord[key];
 
       if (key === 'searchTerm') {
         return value !== '';
@@ -122,14 +125,16 @@ export function useGenericFilters<T extends GenericFilterState>(
         return value.length > 0;
       }
       if (key === 'ranges') {
-        return Object.keys(value || {}).some(rangeKey => {
-          const range = value[rangeKey];
+        const rangesValue = value as Record<string, { min?: number; max?: number }> | undefined;
+        return Object.keys(rangesValue || {}).some(rangeKey => {
+          const range = rangesValue?.[rangeKey];
           return range?.min !== undefined || range?.max !== undefined;
         });
       }
       if (typeof value === 'object' && value !== null) {
-        return Object.keys(value).some(subKey => {
-          const subValue = value[subKey];
+        const objectValue = value as Record<string, unknown>;
+        return Object.keys(objectValue).some(subKey => {
+          const subValue = objectValue[subKey];
           return subValue !== undefined && subValue !== null && subValue !== '';
         });
       }

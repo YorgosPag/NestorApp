@@ -10,6 +10,28 @@ import type { IndividualFieldConfig, IndividualSectionConfig } from '@/config/in
 import { getIconComponent } from './utils/IconMapping';
 
 // ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** Form data type for individual forms */
+export type IndividualFormData = Record<string, string | number | boolean | null | undefined>;
+
+/** Input change handler type */
+export type InputChangeHandler = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+
+/** Select change handler type */
+export type SelectChangeHandler = (name: string, value: string) => void;
+
+/** Custom field renderer function type */
+export type CustomFieldRenderer = (
+  field: IndividualFieldConfig,
+  formData: IndividualFormData,
+  onChange: InputChangeHandler,
+  onSelectChange: SelectChangeHandler,
+  disabled: boolean
+) => React.ReactNode;
+
+// ============================================================================
 // INTERFACES
 // ============================================================================
 
@@ -17,15 +39,15 @@ export interface IndividualFormRendererProps {
   /** Sections configuration from individual config file */
   sections: IndividualSectionConfig[];
   /** Form data object */
-  formData: Record<string, any>;
+  formData: IndividualFormData;
   /** Input change handler */
-  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onChange: InputChangeHandler;
   /** Select change handler */
-  onSelectChange: (name: string, value: string) => void;
+  onSelectChange: SelectChangeHandler;
   /** Disabled state */
   disabled?: boolean;
   /** Custom field renderers */
-  customRenderers?: Record<string, (field: IndividualFieldConfig, formData: any, onChange: any, onSelectChange: any, disabled: boolean) => React.ReactNode>;
+  customRenderers?: Record<string, CustomFieldRenderer>;
 }
 
 // ============================================================================
@@ -35,8 +57,13 @@ export interface IndividualFormRendererProps {
 /**
  * Renders an input field for individuals
  */
-function renderInputField(field: IndividualFieldConfig, formData: any, onChange: any, disabled: boolean): React.ReactNode {
-  const value = formData[field.id] || '';
+function renderInputField(
+  field: IndividualFieldConfig,
+  formData: IndividualFormData,
+  onChange: InputChangeHandler,
+  disabled: boolean
+): React.ReactNode {
+  const value = formData[field.id] ?? '';
 
   // 🏢 ENTERPRISE: Use Universal Clickable Field - ZERO διασπορά!
   return (
@@ -58,12 +85,17 @@ function renderInputField(field: IndividualFieldConfig, formData: any, onChange:
 /**
  * Renders a textarea field for individuals
  */
-function renderTextareaField(field: IndividualFieldConfig, formData: any, onChange: any, disabled: boolean): React.ReactNode {
+function renderTextareaField(
+  field: IndividualFieldConfig,
+  formData: IndividualFormData,
+  onChange: InputChangeHandler,
+  disabled: boolean
+): React.ReactNode {
   return (
     <Textarea
       id={field.id}
       name={field.id}
-      value={formData[field.id] || ''}
+      value={formData[field.id] ?? ''}
       onChange={onChange}
       disabled={disabled}
       required={field.required}
@@ -77,11 +109,19 @@ function renderTextareaField(field: IndividualFieldConfig, formData: any, onChan
 /**
  * Renders a select field for individuals
  */
-function renderSelectField(field: IndividualFieldConfig, formData: any, onSelectChange: any, disabled: boolean): React.ReactNode {
+function renderSelectField(
+  field: IndividualFieldConfig,
+  formData: IndividualFormData,
+  onSelectChange: SelectChangeHandler,
+  disabled: boolean
+): React.ReactNode {
+  const currentValue = formData[field.id];
+  const valueStr = currentValue !== null && currentValue !== undefined ? String(currentValue) : (field.defaultValue ?? '');
+
   return (
     <Select
       name={field.id}
-      value={formData[field.id] || field.defaultValue || ''}
+      value={valueStr}
       onValueChange={(value) => onSelectChange(field.id, value)}
       disabled={disabled}
       required={field.required}
@@ -105,11 +145,11 @@ function renderSelectField(field: IndividualFieldConfig, formData: any, onSelect
  */
 function renderField(
   field: IndividualFieldConfig,
-  formData: any,
-  onChange: any,
-  onSelectChange: any,
+  formData: IndividualFormData,
+  onChange: InputChangeHandler,
+  onSelectChange: SelectChangeHandler,
   disabled: boolean,
-  customRenderers?: Record<string, any>
+  customRenderers?: Record<string, CustomFieldRenderer>
 ): React.ReactNode {
   // Check for custom renderer first
   if (customRenderers && customRenderers[field.id]) {
@@ -171,7 +211,7 @@ export function IndividualFormRenderer({
             {/* Check if this section has a custom renderer for the whole section */}
             {customRenderers && customRenderers[section.id] ? (
               <div className="w-full col-span-full">
-                {customRenderers[section.id]({} as any, formData, onChange, onSelectChange, disabled)}
+                {customRenderers[section.id]({} as IndividualFieldConfig, formData, onChange, onSelectChange, disabled)}
               </div>
             ) : (
               section.fields.map((field) => (

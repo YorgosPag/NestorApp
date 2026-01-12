@@ -12,6 +12,33 @@
  * drender('Performance', 'Frame rendered');
  */
 
+import type { Logger } from './core/types';
+
+/**
+ * 🏢 ENTERPRISE: Window interface for debug globals
+ */
+interface DxfDebugAPI {
+  enable: () => string;
+  disable: () => string;
+  manager: () => Window['dxfDebugManager'];
+  canvas: () => Logger;
+  rendering: () => Logger;
+  snap: () => Logger;
+  performance: () => Logger;
+  testSettings: () => Promise<unknown> | undefined;
+  testStoreSync: () => Promise<unknown> | undefined;
+  help: () => void;
+}
+
+declare global {
+  interface Window {
+    __DXF_DEBUG__?: boolean;
+    runEnterpriseSettingsTests?: () => Promise<unknown>;
+    runStoreSyncTests?: () => Promise<unknown>;
+    dxfDebug?: DxfDebugAPI;
+  }
+}
+
 // ═══ CORE EXPORTS ═══
 export {
   UnifiedDebugManager,
@@ -70,34 +97,34 @@ export const DxfLogger = getDebugLogger('DxfViewer');
 /**
  * Quick canvas logging
  */
-export const canvasLog = (...args: any[]) => CanvasLogger.debug(...args);
-export const canvasWarn = (...args: any[]) => CanvasLogger.warn(...args);
-export const canvasError = (...args: any[]) => CanvasLogger.error(...args);
+export const canvasLog = (...args: unknown[]) => CanvasLogger.debug(...args);
+export const canvasWarn = (...args: unknown[]) => CanvasLogger.warn(...args);
+export const canvasError = (...args: unknown[]) => CanvasLogger.error(...args);
 
 /**
  * Quick rendering logging
  */
-export const renderLog = (...args: any[]) => RenderingLogger.debug(...args);
-export const renderWarn = (...args: any[]) => RenderingLogger.warn(...args);
-export const renderError = (...args: any[]) => RenderingLogger.error(...args);
+export const renderLog = (...args: unknown[]) => RenderingLogger.debug(...args);
+export const renderWarn = (...args: unknown[]) => RenderingLogger.warn(...args);
+export const renderError = (...args: unknown[]) => RenderingLogger.error(...args);
 
 /**
  * Quick performance logging
  */
-export const perfLog = (...args: any[]) => PerformanceLogger.debug(...args);
-export const perfWarn = (...args: any[]) => PerformanceLogger.warn(...args);
+export const perfLog = (...args: unknown[]) => PerformanceLogger.debug(...args);
+export const perfWarn = (...args: unknown[]) => PerformanceLogger.warn(...args);
 
 /**
  * Quick snap logging
  */
-export const snapLog = (...args: any[]) => SnapLogger.debug(...args);
-export const snapWarn = (...args: any[]) => SnapLogger.warn(...args);
+export const snapLog = (...args: unknown[]) => SnapLogger.debug(...args);
+export const snapWarn = (...args: unknown[]) => SnapLogger.warn(...args);
 
 /**
  * Quick hit test logging
  */
-export const hitTestLog = (...args: any[]) => HitTestLogger.debug(...args);
-export const hitTestWarn = (...args: any[]) => HitTestLogger.warn(...args);
+export const hitTestLog = (...args: unknown[]) => HitTestLogger.debug(...args);
+export const hitTestWarn = (...args: unknown[]) => HitTestLogger.warn(...args);
 
 // ═══ ENTERPRISE TESTS ═══
 export { runEnterpriseSettingsTests } from './settings-enterprise-test';
@@ -111,27 +138,27 @@ export { runStoreSyncTests } from './store-sync-test';
 if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
   // Enterprise Settings Tests
   import('./settings-enterprise-test').then(({ runEnterpriseSettingsTests }) => {
-    (window as any).runEnterpriseSettingsTests = runEnterpriseSettingsTests;
+    window.runEnterpriseSettingsTests = runEnterpriseSettingsTests;
   });
 
   // Store Sync Tests (Ports & Adapters Architecture)
   import('./store-sync-test').then(({ runStoreSyncTests }) => {
-    (window as any).runStoreSyncTests = runStoreSyncTests;
+    window.runStoreSyncTests = runStoreSyncTests;
   });
 
-  (window as any).dxfDebug = {
+  window.dxfDebug = {
     // Legacy compatibility
     enable: () => {
-      (window as any).__DXF_DEBUG__ = true;
+      window.__DXF_DEBUG__ = true;
       return 'DXF Debug enabled (legacy mode)';
     },
     disable: () => {
-      (window as any).__DXF_DEBUG__ = false;
+      window.__DXF_DEBUG__ = false;
       return 'DXF Debug disabled (legacy mode)';
     },
 
     // New unified system
-    manager: () => (window as any).dxfDebugManager,
+    manager: () => window.dxfDebugManager,
     canvas: () => CanvasLogger,
     rendering: () => RenderingLogger,
     snap: () => SnapLogger,
@@ -139,19 +166,21 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
 
     // 🆕 Enterprise Settings Tests
     testSettings: () => {
-      if ((window as any).runEnterpriseSettingsTests) {
-        return (window as any).runEnterpriseSettingsTests();
+      if (window.runEnterpriseSettingsTests) {
+        return window.runEnterpriseSettingsTests();
       } else {
         console.error('Enterprise Settings Tests not loaded yet');
+        return undefined;
       }
     },
 
     // 🆕 Store Sync Tests (Ports & Adapters Architecture)
     testStoreSync: () => {
-      if ((window as any).runStoreSyncTests) {
-        return (window as any).runStoreSyncTests();
+      if (window.runStoreSyncTests) {
+        return window.runStoreSyncTests();
       } else {
         console.error('Store Sync Tests not loaded yet');
+        return undefined;
       }
     },
 

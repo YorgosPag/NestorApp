@@ -120,10 +120,10 @@ export interface PolygonSystemState {
 
   /** Legacy compatibility */
   isPolygonComplete: boolean;
-  completedPolygon: any[] | null;
+  completedPolygon: Array<[number, number]> | null;
 
   /** Map integration */
-  mapRef: React.RefObject<any> | null;
+  mapRef: React.RefObject<unknown> | null;
   mapLoaded: boolean;
 
   /** Coordinate picking */
@@ -172,7 +172,7 @@ export interface PolygonSystemActions {
   handlePolygonClosure: () => void;
 
   /** Map integration */
-  setMapRef: (ref: React.RefObject<any>) => void;
+  setMapRef: (ref: React.RefObject<unknown>) => void;
   setMapLoaded: (loaded: boolean) => void;
 
   /** Coordinate picking */
@@ -236,7 +236,14 @@ export interface CentralizedPolygonSystemHook {
   };
 
   /** Actions */
-  startDrawing: (type: PolygonType, config?: any) => void;
+  startDrawing: (type: PolygonType, config?: {
+    fillColor?: string;
+    strokeColor?: string;
+    strokeWidth?: number;
+    pointMode?: boolean;
+    radius?: number;
+    [key: string]: unknown;
+  }) => void;
   finishDrawing: () => UniversalPolygon | null;
   cancelDrawing: () => void;
   clearAll: () => void;
@@ -259,7 +266,7 @@ export interface CentralizedPolygonSystemHook {
   getCurrentDrawing: () => UniversalPolygon | null;
 
   /** Map integration */
-  setMapRef: (ref: React.RefObject<any>) => void;
+  setMapRef: (ref: React.RefObject<unknown>) => void;
 
   /** Legacy compatibility */
   handlePolygonClosure: () => void;

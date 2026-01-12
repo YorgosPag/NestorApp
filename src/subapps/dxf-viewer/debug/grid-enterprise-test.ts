@@ -10,12 +10,58 @@
 
 import { UI_COLORS } from '../config/color-config';
 
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions for Grid Testing
+// ============================================================================
+
+/**
+ * Grid visual settings structure
+ */
+interface GridVisualSettings {
+  enabled?: boolean;
+  step?: number;
+  opacity?: number;
+  color?: string;
+  style?: 'lines' | 'dots' | 'crosses';
+  majorGridColor?: string;
+  minorGridColor?: string;
+  majorGridWeight?: number;
+  minorGridWeight?: number;
+  subDivisions?: number;
+}
+
+/**
+ * Window grid settings object
+ */
+interface WindowGridSettings {
+  visual?: GridVisualSettings;
+}
+
+/**
+ * Extended window interface for grid settings
+ */
+declare global {
+  interface Window {
+    __GRID_SETTINGS__?: WindowGridSettings;
+  }
+}
+
+/**
+ * Test details - type-safe structure for test results
+ */
+type TestDetails = Record<string, string | number | boolean | string[] | Record<string, unknown>>;
+
+/**
+ * Test result status
+ */
+type TestStatus = "success" | "failed" | "warning";
+
 interface TestResult {
   category: string;
   test: string;
-  status: "success" | "failed" | "warning";
+  status: TestStatus;
   message: string;
-  details?: any;
+  details?: TestDetails;
   durationMs: number;
 }
 
@@ -68,12 +114,21 @@ function querySelector(selector: string): HTMLElement | null {
 }
 
 /**
+ * Test function result type
+ */
+interface TestFunctionResult {
+  status: TestStatus;
+  message: string;
+  details?: TestDetails;
+}
+
+/**
  * Utility: Measure test duration
  */
 async function measureTest(
   category: string,
   test: string,
-  fn: () => Promise<{ status: "success" | "failed" | "warning"; message: string; details?: any }>
+  fn: () => Promise<TestFunctionResult>
 ): Promise<TestResult> {
   const startTime = performance.now();
 
@@ -89,14 +144,15 @@ async function measureTest(
       details: result.details,
       durationMs
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     const durationMs = Math.round(performance.now() - startTime);
+    const errorMessage = err instanceof Error ? err.message : "Unknown error";
 
     return {
       category,
       test,
       status: "failed",
-      message: err.message || "Unknown error",
+      message: errorMessage,
       durationMs
     };
   }
@@ -107,11 +163,11 @@ async function measureTest(
 /**
  * TEST 1.1: Grid Context Existence
  */
-async function testGridContextExists(): Promise<{ status: "success" | "failed"; message: string; details?: any }> {
+async function testGridContextExists(): Promise<TestFunctionResult> {
   await sleep(50);
 
   // Check window object for grid settings
-  const gridSettings = (window as any).__GRID_SETTINGS__;
+  const gridSettings = window.__GRID_SETTINGS__;
 
   if (gridSettings) {
     return {
@@ -130,10 +186,10 @@ async function testGridContextExists(): Promise<{ status: "success" | "failed"; 
 /**
  * TEST 1.2: Grid Settings Structure Validation
  */
-async function testGridSettingsStructure(): Promise<{ status: "success" | "failed"; message: string; details?: any }> {
+async function testGridSettingsStructure(): Promise<TestFunctionResult> {
   await sleep(50);
 
-  const gridSettings = (window as any).__GRID_SETTINGS__;
+  const gridSettings = window.__GRID_SETTINGS__;
 
   if (!gridSettings || !gridSettings.visual) {
     return {
@@ -142,8 +198,9 @@ async function testGridSettingsStructure(): Promise<{ status: "success" | "faile
     };
   }
 
+  const visual = gridSettings.visual;
   const requiredFields = ['enabled', 'step', 'opacity', 'color'];
-  const missingFields = requiredFields.filter(field => !(field in gridSettings.visual));
+  const missingFields = requiredFields.filter(field => !(field in visual));
 
   if (missingFields.length > 0) {
     return {
@@ -155,17 +212,17 @@ async function testGridSettingsStructure(): Promise<{ status: "success" | "faile
   return {
     status: "success",
     message: "Grid settings structure valid",
-    details: { fields: Object.keys(gridSettings.visual) }
+    details: { fields: Object.keys(visual) }
   };
 }
 
 /**
  * TEST 1.3: Major/Minor Grid Configuration (CAD Standard)
  */
-async function testMajorMinorConfiguration(): Promise<{ status: "success" | "failed" | "warning"; message: string; details?: any }> {
+async function testMajorMinorConfiguration(): Promise<TestFunctionResult> {
   await sleep(50);
 
-  const gridSettings = (window as any).__GRID_SETTINGS__;
+  const gridSettings = window.__GRID_SETTINGS__;
 
   if (!gridSettings || !gridSettings.visual) {
     return {
@@ -204,10 +261,10 @@ async function testMajorMinorConfiguration(): Promise<{ status: "success" | "fai
 /**
  * TEST 1.4: Grid Style Configuration
  */
-async function testGridStyleConfiguration(): Promise<{ status: "success" | "failed" | "warning"; message: string; details?: any }> {
+async function testGridStyleConfiguration(): Promise<TestFunctionResult> {
   await sleep(50);
 
-  const gridSettings = (window as any).__GRID_SETTINGS__;
+  const gridSettings = window.__GRID_SETTINGS__;
 
   if (!gridSettings || !gridSettings.visual) {
     return {
@@ -246,7 +303,7 @@ async function testGridStyleConfiguration(): Promise<{ status: "success" | "fail
 /**
  * TEST 2.1: Canvas Elements Detection
  */
-async function testCanvasElements(): Promise<{ status: "success" | "failed" | "warning"; message: string; details?: any }> {
+async function testCanvasElements(): Promise<TestFunctionResult> {
   await sleep(50);
 
   const dxfCanvas = querySelector('canvas[data-canvas-type="dxf"]');
@@ -286,7 +343,7 @@ async function testCanvasElements(): Promise<{ status: "success" | "failed" | "w
 /**
  * TEST 2.2: Grid Rendering Detection
  */
-async function testGridRendering(): Promise<{ status: "success" | "failed" | "warning"; message: string; details?: any }> {
+async function testGridRendering(): Promise<TestFunctionResult> {
   await sleep(50);
 
   const canvases = document.querySelectorAll('canvas');
@@ -358,10 +415,10 @@ async function testGridRendering(): Promise<{ status: "success" | "failed" | "wa
 /**
  * TEST 2.3: Grid Color Accuracy
  */
-async function testGridColorAccuracy(): Promise<{ status: "success" | "failed" | "warning"; message: string; details?: any }> {
+async function testGridColorAccuracy(): Promise<TestFunctionResult> {
   await sleep(50);
 
-  const gridSettings = (window as any).__GRID_SETTINGS__;
+  const gridSettings = window.__GRID_SETTINGS__;
 
   if (!gridSettings || !gridSettings.visual) {
     return {
@@ -370,8 +427,8 @@ async function testGridColorAccuracy(): Promise<{ status: "success" | "failed" |
     };
   }
 
-  const majorColor = gridSettings.visual.majorGridColor;
-  const minorColor = gridSettings.visual.minorGridColor;
+  const majorColor = gridSettings.visual.majorGridColor ?? '';
+  const minorColor = gridSettings.visual.minorGridColor ?? '';
 
   // Validate color format (hex)
   const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
@@ -379,7 +436,7 @@ async function testGridColorAccuracy(): Promise<{ status: "success" | "failed" |
   const majorValid = hexColorRegex.test(majorColor);
   const minorValid = hexColorRegex.test(minorColor);
 
-  const details = {
+  const details: TestDetails = {
     majorColor,
     minorColor,
     majorValid,
@@ -406,7 +463,7 @@ async function testGridColorAccuracy(): Promise<{ status: "success" | "failed" |
 /**
  * TEST 3.1: Grid Toggle Functionality
  */
-async function testGridToggle(): Promise<{ status: "success" | "failed" | "warning"; message: string; details?: any }> {
+async function testGridToggle(): Promise<TestFunctionResult> {
   await sleep(50);
 
   const gridButton = Array.from(document.querySelectorAll('button'))
@@ -432,7 +489,7 @@ async function testGridToggle(): Promise<{ status: "success" | "failed" | "warni
 /**
  * TEST 3.2: Grid Panel Integration
  */
-async function testGridPanelIntegration(): Promise<{ status: "success" | "failed" | "warning"; message: string; details?: any }> {
+async function testGridPanelIntegration(): Promise<TestFunctionResult> {
   await sleep(50);
 
   // Check for floating panel existence
@@ -462,7 +519,7 @@ async function testGridPanelIntegration(): Promise<{ status: "success" | "failed
 /**
  * TEST 4.1: Coordinate System Validation (CAD Standard)
  */
-async function testCoordinatePrecision(): Promise<{ status: "success" | "failed" | "warning"; message: string; details?: any }> {
+async function testCoordinatePrecision(): Promise<TestFunctionResult> {
   await sleep(50);
 
   // CAD Standard: Elements should be within 10 miles (16km) of origin
@@ -505,10 +562,10 @@ async function testCoordinatePrecision(): Promise<{ status: "success" | "failed"
 /**
  * TEST 4.2: Grid Spacing Accuracy
  */
-async function testGridSpacingAccuracy(): Promise<{ status: "success" | "failed" | "warning"; message: string; details?: any }> {
+async function testGridSpacingAccuracy(): Promise<TestFunctionResult> {
   await sleep(50);
 
-  const gridSettings = (window as any).__GRID_SETTINGS__;
+  const gridSettings = window.__GRID_SETTINGS__;
 
   if (!gridSettings || !gridSettings.visual) {
     return {
@@ -517,14 +574,14 @@ async function testGridSpacingAccuracy(): Promise<{ status: "success" | "failed"
     };
   }
 
-  const step = gridSettings.visual.step;
-  const subDivisions = gridSettings.visual.subDivisions || 5;
+  const step = gridSettings.visual.step ?? 0;
+  const subDivisions = gridSettings.visual.subDivisions ?? 5;
 
   // Validate spacing values
   const stepValid = step > 0 && step < 1000; // Reasonable range
   const subdivisionsValid = subDivisions > 0 && subDivisions < 100;
 
-  const details = {
+  const details: TestDetails = {
     step,
     subDivisions,
     majorInterval: step * subDivisions,
@@ -552,10 +609,10 @@ async function testGridSpacingAccuracy(): Promise<{ status: "success" | "failed"
 /**
  * TEST 5.1: Grid-Canvas Integration
  */
-async function testGridCanvasIntegration(): Promise<{ status: "success" | "failed" | "warning"; message: string; details?: any }> {
+async function testGridCanvasIntegration(): Promise<TestFunctionResult> {
   await sleep(50);
 
-  const gridSettings = (window as any).__GRID_SETTINGS__;
+  const gridSettings = window.__GRID_SETTINGS__;
   const dxfCanvas = querySelector('canvas[data-canvas-type="dxf"]');
   const layerCanvas = querySelector('canvas[data-canvas-type="layer"]');
 
@@ -614,10 +671,10 @@ async function testGridCanvasIntegration(): Promise<{ status: "success" | "faile
 /**
  * TEST 5.2: Context-Settings Synchronization
  */
-async function testContextSync(): Promise<{ status: "success" | "failed" | "warning"; message: string; details?: any }> {
+async function testContextSync(): Promise<TestFunctionResult> {
   await sleep(50);
 
-  const gridSettings = (window as any).__GRID_SETTINGS__;
+  const gridSettings = window.__GRID_SETTINGS__;
 
   if (!gridSettings) {
     return {
@@ -627,10 +684,11 @@ async function testContextSync(): Promise<{ status: "success" | "failed" | "warn
   }
 
   // Check if settings are synchronized (non-null, non-undefined)
-  const visual = gridSettings.visual || {};
+  const visual = gridSettings.visual ?? {};
+  const visualRecord = visual as Record<string, unknown>;
 
-  const syncedFields = Object.keys(visual).filter(key =>
-    visual[key] !== null && visual[key] !== undefined
+  const syncedFields = Object.keys(visualRecord).filter(key =>
+    visualRecord[key] !== null && visualRecord[key] !== undefined
   );
 
   const totalFields = Object.keys(visual).length;
@@ -705,7 +763,7 @@ export async function runGridEnterpriseTests(): Promise<GridTestReport> {
   const totalTests = results.length;
 
   // Extract grid state
-  const gridSettings = (window as any).__GRID_SETTINGS__;
+  const gridSettings = window.__GRID_SETTINGS__;
   const gridState = gridSettings ? {
     enabled: gridSettings.visual?.enabled || false,
     visible: gridSettings.visual?.enabled || false,
@@ -725,24 +783,24 @@ export async function runGridEnterpriseTests(): Promise<GridTestReport> {
   const canvasState = {
     dxfCanvasFound: !!dxfCanvas,
     layerCanvasFound: !!layerCanvas,
-    gridPixelsDetected: gridRenderingTest?.details?.gridPixelsDetected || 0
+    gridPixelsDetected: (gridRenderingTest?.details?.gridPixelsDetected as number) ?? 0
   };
 
   // Extract precision data
   const precisionTest = results.find(r => r.test === 'Coordinate System Validation');
   const coordinatePrecision = {
-    withinTolerance: precisionTest?.details?.withinTolerance || false,
-    maxDistance: precisionTest?.details?.maxDistance || 0
+    withinTolerance: (precisionTest?.details?.withinTolerance as boolean) ?? false,
+    maxDistance: (precisionTest?.details?.maxDistance as number) ?? 0
   };
 
   // Extract topology data
   const topologyTest = results.find(r => r.test === 'Grid-Canvas Integration');
+  const integrityScore = (topologyTest?.details?.integrityScore as number) ?? 0;
+  const maxScore = (topologyTest?.details?.maxScore as number) ?? 4;
   const topologicalIntegrity = {
-    score: topologyTest?.details?.integrityScore || 0,
-    maxScore: topologyTest?.details?.maxScore || 4,
-    percentage: topologyTest?.details?.integrityScore
-      ? (topologyTest.details.integrityScore / topologyTest.details.maxScore * 100)
-      : 0
+    score: integrityScore,
+    maxScore,
+    percentage: maxScore > 0 ? (integrityScore / maxScore * 100) : 0
   };
 
   const success = failed === 0;

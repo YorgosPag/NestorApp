@@ -134,7 +134,7 @@ export interface EnterpriseCompanySettings {
       [key: string]: {
         enabled: boolean;
         apiKey?: string;
-        settings?: Record<string, any>;
+        settings?: Record<string, unknown>;
       };
     };
   };
@@ -233,7 +233,7 @@ const FALLBACK_COMPANY_SETTINGS: EnterpriseCompanySettings = {
 
   businessSettings: {
     industry: process.env.NEXT_PUBLIC_COMPANY_INDUSTRY || 'Professional Services',
-    businessType: (process.env.NEXT_PUBLIC_BUSINESS_TYPE as any) || 'corporation',
+    businessType: (process.env.NEXT_PUBLIC_BUSINESS_TYPE as 'corporation' | 'llc' | 'partnership' | 'sole_proprietorship' | 'nonprofit' | 'other') || 'corporation',
     defaultCurrency: process.env.NEXT_PUBLIC_DEFAULT_CURRENCY || 'EUR',
     defaultLanguage: process.env.NEXT_PUBLIC_DEFAULT_LANGUAGE || 'el'
   },
@@ -393,7 +393,40 @@ export class EnterpriseCompanySettingsService {
    * 🔄 Convert legacy contact document to enterprise settings
    */
   private convertLegacyContactToSettings(
-    contactData: any,
+    contactData: {
+      tenantId?: string;
+      companyName?: string;
+      name?: string;
+      displayName?: string;
+      legalName?: string;
+      description?: string;
+      notes?: string;
+      website?: string;
+      companyWebsite?: string;
+      email?: string;
+      companyEmail?: string;
+      phone?: string;
+      companyPhone?: string;
+      supportEmail?: string;
+      salesEmail?: string;
+      address?: string;
+      street?: string;
+      city?: string;
+      region?: string;
+      postalCode?: string;
+      zipCode?: string;
+      country?: string;
+      brandColor?: string;
+      primaryColor?: string;
+      logo?: string;
+      logoUrl?: string;
+      defaultFromEmail?: string;
+      defaultFromName?: string;
+      industry?: string;
+      businessType?: string;
+      domain?: string;
+      createdAt?: { toDate?: () => Date };
+    },
     contactId: string
   ): EnterpriseCompanySettings {
     return {
@@ -606,7 +639,7 @@ export class EnterpriseCompanySettingsService {
   /**
    * ✅ Check if settings are valid for environment
    */
-  private isValidForEnvironment(data: any, environment?: string): boolean {
+  private isValidForEnvironment(data: { environment?: string }, environment?: string): boolean {
     if (!environment) return true;
 
     const dataEnv = data.environment;

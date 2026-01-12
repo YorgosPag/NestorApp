@@ -20,9 +20,49 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, getDocs, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, updateDoc, doc, serverTimestamp, FieldValue, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/** Firebase timestamp type */
+type FirebaseTimestamp = Timestamp | FieldValue;
+
+/** Navigation document data */
+interface NavigationDocumentData {
+  contactId?: string;
+  addedAt?: FirebaseTimestamp;
+  addedBy?: string;
+  createdAt?: FirebaseTimestamp;
+  updatedAt?: FirebaseTimestamp;
+  version?: number;
+  status?: 'active' | 'inactive';
+  source?: 'system' | 'manual' | 'migration' | 'auto-fix';
+  schemaVersion?: string;
+  lastVerified?: FirebaseTimestamp;
+  complianceLevel?: string;
+  fixedBy?: string;
+  fixReason?: string;
+  migrationInfo?: MigrationInfo;
+}
+
+/** Migration info structure */
+interface MigrationInfo {
+  migratedAt: FirebaseTimestamp;
+  migratedBy: string;
+  reason: string;
+  previousSchema: PreviousSchemaInfo;
+}
+
+/** Previous schema info */
+interface PreviousSchemaInfo {
+  fieldCount: number;
+  fields: string[];
+  timestamp: FirebaseTimestamp;
+}
 
 interface UniformSchemaResult {
   success: boolean;
@@ -50,10 +90,10 @@ interface EnterpriseUniformNavigationSchema {
   contactId: string;                    // Company reference ID
 
   // AUDIT METADATA (MANDATORY)
-  addedAt: any;                        // When added to navigation
+  addedAt: FirebaseTimestamp;          // When added to navigation
   addedBy: string;                     // Who/what added it
-  createdAt: any;                      // Enterprise creation timestamp
-  updatedAt: any;                      // Enterprise update timestamp
+  createdAt: FirebaseTimestamp;        // Enterprise creation timestamp
+  updatedAt: FirebaseTimestamp;        // Enterprise update timestamp
 
   // ENTERPRISE CONTROL (MANDATORY)
   version: number;                     // Document version
@@ -62,16 +102,11 @@ interface EnterpriseUniformNavigationSchema {
 
   // ENTERPRISE METADATA (MANDATORY)
   schemaVersion: string;               // Schema version for future migrations
-  lastVerified: any;                   // Last verification timestamp
+  lastVerified: FirebaseTimestamp;     // Last verification timestamp
   complianceLevel: 'enterprise';       // Always 'enterprise'
 
   // CHANGE TRACKING (CONDITIONAL - Only if document was modified)
-  migrationInfo?: {
-    migratedAt: any;
-    migratedBy: string;
-    reason: string;
-    previousSchema: any;
-  };
+  migrationInfo?: MigrationInfo;
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<UniformSchemaResult>> {
@@ -111,7 +146,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<UniformSc
     for (const navDoc of navigationSnapshot.docs) {
       try {
         const docId = navDoc.id;
-        const currentData = navDoc.data();
+        const currentData = navDoc.data() as NavigationDocumentData;
         const beforeFields = Object.keys(currentData);
 
         console.log(`   🔄 STANDARDIZING document ${docId}:`);
@@ -130,7 +165,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<UniformSc
 
           // FORCE ENTERPRISE CONTROL
           version: getNextVersion(currentData),
-          status: (currentData.status as any) || 'active',
+          status: currentData.status || 'active',
           source: detectAndStandardizeSource(currentData),
 
           // MANDATORY ENTERPRISE METADATA
@@ -248,7 +283,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<UniformSc
 /**
  * Calculate next version number
  */
-function getNextVersion(currentData: any): number {
+function getNextVersion(currentData: NavigationDocumentData): number {
   if (currentData.version && typeof currentData.version === 'number') {
     return currentData.version + 1;
   }
@@ -258,7 +293,7 @@ function getNextVersion(currentData: any): number {
 /**
  * Detect and standardize source field
  */
-function detectAndStandardizeSource(currentData: any): 'system' | 'manual' | 'migration' | 'auto-fix' {
+function detectAndStandardizeSource(currentData: NavigationDocumentData): 'system' | 'manual' | 'migration' | 'auto-fix' {
   if (currentData.source) return currentData.source;
   if (currentData.fixedBy || currentData.fixReason) return 'auto-fix';
   if (currentData.migrationInfo) return 'migration';

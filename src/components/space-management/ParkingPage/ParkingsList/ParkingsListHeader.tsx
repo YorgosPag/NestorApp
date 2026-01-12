@@ -12,6 +12,8 @@ import { Car, CheckCircle, DollarSign, TrendingUp } from 'lucide-react';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ParkingsListHeaderProps {
   parkingSpots: ParkingSpot[];
@@ -28,6 +30,8 @@ export function ParkingsListHeader({
   showToolbar = false,
   onToolbarToggle
 }: ParkingsListHeaderProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
 
   // Calculate statistics
@@ -41,11 +45,11 @@ export function ParkingsListHeader({
     <div>
       <GenericListHeader
         icon={Car}
-        entityName="Θέσεις Στάθμευσης"
+        entityName={t('parkings.header.title')}
         itemCount={parkingSpots.length}
         searchTerm={searchTerm}
         onSearchChange={onSearchChange}
-        searchPlaceholder="Αναζήτηση θέσεων..."
+        searchPlaceholder={t('parkings.header.searchPlaceholder')}
         showToolbar={showToolbar}
         onToolbarToggle={onToolbarToggle}
         hideSearch={true}  // 🏢 ENTERPRISE: Κρύβουμε το search - χρησιμοποιούμε το CompactToolbar search
