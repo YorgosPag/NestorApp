@@ -274,10 +274,21 @@ export async function loadNamespace(namespace: Namespace, language?: Language) {
 
 /**
  * Preload critical namespaces
+ * 🏢 ENTERPRISE: These namespaces are loaded at app startup for instant availability
  */
 export async function preloadCriticalNamespaces(language: Language = 'el') {
-  // 🏢 ENTERPRISE: auth is critical for login page language switching
-  const critical: Namespace[] = ['common', 'errors', 'toasts', 'auth'];
+  // 🏢 ENTERPRISE: Core namespaces loaded at startup (SAP/Salesforce pattern)
+  const critical: Namespace[] = [
+    'common',
+    'errors',
+    'toasts',
+    'auth',
+    'building',      // Building management - core module
+    'navigation',    // Navigation labels
+    'projects',      // Projects module
+    'contacts',      // Contacts module
+    'units',         // Units module
+  ];
 
   await Promise.all(
     critical.map(namespace => loadNamespace(namespace, language))

@@ -394,6 +394,40 @@
     "totalSoldArea": "Συνολικό Εμβαδόν Πωληθέντων"
   },
   "tabs": {
+    "labels": {
+      "general": "Γενικά",
+      "floorplan": "Κάτοψη Κτιρίου",
+      "timeline": "Χρονοδιάγραμμα",
+      "analytics": "Αναλυτικά",
+      "storage": "Αποθήκες",
+      "contracts": "Συμβόλαια",
+      "protocols": "Πρωτόκολλα",
+      "photos": "Φωτογραφίες",
+      "customers": "Πελάτες",
+      "videos": "Videos",
+      "details": "Λεπτομέρειες",
+      "properties": "Ιδιότητες",
+      "units": "Μονάδες",
+      "floors": "Όροφοι",
+      "amenities": "Ανέσεις",
+      "documents": "Έγγραφα",
+      "notes": "Σημειώσεις",
+      "history": "Ιστορικό",
+      "buildings": "Κτίρια",
+      "projects": "Έργα",
+      "contacts": "Επαφές",
+      "dashboard": "Dashboard",
+      "leads": "Leads",
+      "opportunities": "Ευκαιρίες",
+      "companies": "Εταιρείες",
+      "tasks": "Εργασίες",
+      "reports": "Αναφορές",
+      "settings": "Ρυθμίσεις",
+      "basicInfo": "Βασικές Πληροφορίες",
+      "customer": "Πελάτης",
+      "floorplans": "Κατόψεις",
+      "statistics": "Στατιστικά"
+    },
     "general": {
       "header": {
         "edit": "Επεξεργασία",
@@ -479,6 +513,17 @@
           "finishing": "Ολοκληρώσεις",
           "delivery": "Παράδοση"
         }
+      }
+    },
+    "floorplan": {
+      "title": "Κάτοψη",
+      "addFloorplan": "Προσθήκη Κάτοψης",
+      "editFloorplan": "Επεξεργασία Κάτοψης",
+      "loading": "Φόρτωση κάτοψης...",
+      "pdfAlt": "PDF Κάτοψη: {{fileName}}",
+      "noFloorplan": {
+        "title": "Δεν υπάρχει κάτοψη",
+        "description": "Πατήστε \"Προσθήκη Κάτοψης\" για να φορτώσετε κάτοψη"
       }
     },
     "timeline": {
@@ -794,99 +839,6 @@
     "parkingSpaces": "Θέσεις Στάθμευσης",
     "available": "Διαθέσιμα",
     "totalValue": "Συνολική Αξία"
-  },
-  "tabs": {
-    "labels": {
-      "general": "Γενικά",
-      "floorplan": "Κάτοψη Κτιρίου",
-      "timeline": "Χρονοδιάγραμμα",
-      "analytics": "Αναλυτικά",
-      "storage": "Αποθήκες",
-      "contracts": "Συμβόλαια",
-      "protocols": "Πρωτόκολλα",
-      "photos": "Φωτογραφίες",
-      "customers": "Πελάτες",
-      "videos": "Videos",
-      "details": "Λεπτομέρειες",
-      "properties": "Ιδιότητες",
-      "units": "Μονάδες",
-      "floors": "Όροφοι",
-      "amenities": "Ανέσεις",
-      "documents": "Έγγραφα",
-      "notes": "Σημειώσεις",
-      "history": "Ιστορικό",
-      "buildings": "Κτίρια",
-      "projects": "Έργα",
-      "contacts": "Επαφές",
-      "dashboard": "Dashboard",
-      "leads": "Leads",
-      "opportunities": "Ευκαιρίες",
-      "companies": "Εταιρείες",
-      "tasks": "Εργασίες",
-      "reports": "Αναφορές",
-      "settings": "Ρυθμίσεις",
-      "basicInfo": "Βασικές Πληροφορίες",
-      "customer": "Πελάτης",
-      "floorplans": "Κατόψεις",
-      "statistics": "Στατιστικά"
-    },
-    "timeline": {
-      "header": {
-        "title": "Χρονοδιάγραμμα Έργου",
-        "subtitle": "Παρακολούθηση προόδου και ορόσημων κατασκευής",
-        "completedCount": "{{completed}}/{{total}} Ολοκληρωμένα"
-      },
-      "milestones": {
-        "title": "Ορόσημα Κατασκευής",
-        "projectStart": "Έναρξη Έργου",
-        "projectStartDesc": "Υπογραφή συμβολαίου και έναρξη εργασιών",
-        "foundation": "Θεμέλια & Υπόγειο",
-        "foundationDesc": "Ολοκλήρωση εκσκαφών και κατασκευή θεμελίων",
-        "structure": "Κατασκευή Φέροντα Οργανισμού",
-        "structureDesc": "Σκελετός κτιρίου - όροφοι 1-7",
-        "walls": "Τοιχοποιίες & Στεγανοποίηση",
-        "wallsDesc": "Κλείσιμο κτιρίου και στεγανότητα",
-        "systems": "Ηλ/Μηχ Εγκαταστάσεις",
-        "systemsDesc": "Ηλεκτρολογικές και μηχανολογικές εγκαταστάσεις",
-        "finishing": "Τελικές Εργασίες",
-        "finishingDesc": "Χρωματισμοί, δάπεδα, διακοσμητικά στοιχεία",
-        "delivery": "Παράδοση Έργου",
-        "deliveryDesc": "Τελικός έλεγχος και παράδοση στον πελάτη"
-      },
-      "status": {
-        "completed": "Ολοκληρώθηκε",
-        "inProgress": "Σε εξέλιξη",
-        "pending": "Εκκρεμεί",
-        "delayed": "Καθυστέρηση",
-        "unknown": "Άγνωστο"
-      },
-      "overallProgress": {
-        "title": "Συνολική Πρόοδος",
-        "label": "Πρόοδος κατασκευής",
-        "completed": "Ολοκληρωμένα",
-        "inProgress": "Σε Εξέλιξη",
-        "pending": "Εκκρεμούν",
-        "daysRemaining": "Ημέρες"
-      },
-      "criticalPath": {
-        "title": "Κρίσιμη Διαδρομή",
-        "mecInstallations": "Η/Μ Εγκαταστάσεις",
-        "affectsDelivery": "Επηρεάζει την παράδοση",
-        "daysDelay": "+{{days}} ημέρες",
-        "finalWorks": "Τελικές Εργασίες",
-        "dependsOnPrevious": "Εξαρτάται από προηγούμενο",
-        "waiting": "Αναμονή"
-      },
-      "forecast": {
-        "title": "Πρόβλεψη Ολοκλήρωσης",
-        "originalSchedule": "Αρχικό Πρόγραμμα",
-        "currentForecast": "Τρέχουσα Πρόβλεψη",
-        "delay": "Καθυστέρηση",
-        "days": "+{{days}} ημέρες",
-        "tip": "Συμβουλή",
-        "tipContent": "Επιτάχυνση των Η/Μ εργασιών μπορεί να μειώσει την καθυστέρηση."
-      }
-    }
   },
   "map": {
     "interactiveMap": "Διαδραστικός Χάρτης"

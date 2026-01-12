@@ -1,26 +1,51 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation as useI18nextTranslation, TOptions } from 'react-i18next';
 import { loadNamespace, type Namespace, type Language } from '../lazy-config';
 
 /**
  * Custom translation hook with lazy loading support
- * 
+ *
  * @param namespace - Translation namespace (e.g., 'dxf-viewer', 'forms')
  * @returns Translation function and i18n utilities
  */
 export const useTranslation = (namespace?: string) => {
   const { t, i18n, ready } = useI18nextTranslation(namespace);
 
+  // 🏢 ENTERPRISE: Track if this specific namespace is loaded
+  const [namespaceLoaded, setNamespaceLoaded] = useState(() => {
+    // Check if namespace is already loaded on mount
+    if (!namespace || namespace === 'common') {
+      return true;
+    }
+    return i18n.hasResourceBundle(i18n.language, namespace);
+  });
+
   // Lazy load namespace if specified
   useEffect(() => {
     if (namespace && namespace !== 'common') {
-      loadNamespace(namespace as Namespace).catch(error => {
-        console.error(`Failed to load namespace: ${namespace}`, error);
-      });
+      // Check if already loaded
+      if (i18n.hasResourceBundle(i18n.language, namespace)) {
+        setNamespaceLoaded(true);
+        return;
+      }
+
+      // Load namespace asynchronously
+      setNamespaceLoaded(false);
+      loadNamespace(namespace as Namespace)
+        .then(() => {
+          setNamespaceLoaded(true);
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`✅ [i18n] Namespace "${namespace}" loaded for language "${i18n.language}"`);
+          }
+        })
+        .catch(error => {
+          console.error(`Failed to load namespace: ${namespace}`, error);
+          setNamespaceLoaded(true); // Mark as loaded to prevent infinite loading
+        });
     }
-  }, [namespace]);
+  }, [namespace, i18n, i18n.language]);
 
   return {
     t,
@@ -48,8 +73,9 @@ export const useTranslation = (namespace?: string) => {
         console.error('Failed to change language:', error);
       }
     },
-    // Loading state for namespace
-    isNamespaceReady: ready,
+    // 🏢 ENTERPRISE: Loading state for this specific namespace (not just ready)
+    // This ensures re-render when lazy-loaded namespace becomes available
+    isNamespaceReady: ready && namespaceLoaded,
   };
 };
 

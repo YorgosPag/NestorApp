@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Map, Plus, Edit, FileText } from 'lucide-react';
+import { Map, Plus, Edit } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -12,6 +12,8 @@ import { canvasUtilities } from '@/styles/design-tokens';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: Import FloorplanData type for proper typing
 import type { FloorplanData, DxfSceneData, FloorplanFileType } from '@/services/floorplans/FloorplanService';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface FloorplanViewerTabProps {
   title: string;
@@ -27,6 +29,8 @@ export function FloorplanViewerTab({
   onAddFloorplan,
   onEditFloorplan
 }: FloorplanViewerTabProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -228,24 +232,24 @@ export function FloorplanViewerTab({
             {title}
           </CardTitle>
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={onAddFloorplan}
               className="flex items-center gap-1"
             >
               <Plus className={iconSizes.sm} />
-              Προσθήκη Κάτοψη Έργου
+              {t('tabs.floorplan.addFloorplan')}
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={onEditFloorplan}
               disabled={!floorplanData}
               className="flex items-center gap-1"
             >
               <Edit className={iconSizes.sm} />
-              Επεξεργασία Κάτοψη Έργου
+              {t('tabs.floorplan.editFloorplan')}
             </Button>
           </div>
         </div>
@@ -255,7 +259,7 @@ export function FloorplanViewerTab({
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <AnimatedSpinner size="large" />
-            <span className="ml-3">Φόρτωση κάτοψης...</span>
+            <span className="ml-3">{t('tabs.floorplan.loading')}</span>
           </div>
         ) : floorplanData ? (
           <div className={`w-full h-full ${colors.bg.secondary} ${getStatusBorder('info')} overflow-hidden relative min-h-[450px]`}>
@@ -270,7 +274,7 @@ export function FloorplanViewerTab({
             {isPdf && floorplanData.pdfImageUrl && (
               <img
                 src={floorplanData.pdfImageUrl}
-                alt={`PDF Κάτοψη: ${floorplanData.fileName}`}
+                alt={t('tabs.floorplan.pdfAlt', { fileName: floorplanData.fileName })}
                 className="w-full h-full object-contain"
               />
             )}

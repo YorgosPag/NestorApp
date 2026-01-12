@@ -4,8 +4,6 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { TabsOnlyTriggers, TabsContent, type TabDefinition } from "@/components/ui/navigation/TabsComponents";
 import { getIconComponent } from './utils/IconMapping';
 import PlaceholderTab from '../building-management/tabs/PlaceholderTab';
-// 🏢 ENTERPRISE: i18n - Full internationalization support
-import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Lazy Tab Content Wrapper
@@ -149,23 +147,8 @@ export function UniversalTabsRenderer<TData = unknown>({
   globalProps = {},
   translationNamespace = 'common',
 }: UniversalTabsRendererProps<TData>) {
-  // 🏢 ENTERPRISE: i18n hook for tab label translations
-  const { t } = useTranslation(translationNamespace);
-
   // Φιλτράρισμα enabled tabs
   const enabledTabs = tabs.filter(tab => tab.enabled);
-
-  // 🌐 i18n: Helper to translate label (checks if it's a translation key)
-  const translateLabel = useCallback((label: string): string => {
-    // If label starts with 'tabs.labels.' it's a translation key
-    if (label.startsWith('tabs.labels.')) {
-      const translated = t(label);
-      // If translation returns the key itself, it means no translation found - use fallback
-      return translated === label ? label.replace('tabs.labels.', '').charAt(0).toUpperCase() + label.replace('tabs.labels.', '').slice(1) : translated;
-    }
-    // Otherwise return as-is (backward compatibility for hardcoded labels)
-    return label;
-  }, [t]);
 
   // 🏢 ENTERPRISE: Track active tab for lazy rendering
   const computedDefaultTab = defaultTab || enabledTabs[0]?.value;
@@ -178,10 +161,10 @@ export function UniversalTabsRenderer<TData = unknown>({
     return orderA - orderB;
   });
 
-  // 🌐 i18n: Memoize tab definitions with translated labels
+  // 🏢 ENTERPRISE: Memoize tab definitions
   const tabDefinitions: TabDefinition[] = useMemo(() => sortedTabs.map(tabConfig => {
-    // 🌐 i18n: Translate the label
-    const translatedLabel = translateLabel(tabConfig.label);
+    // 🏢 ENTERPRISE: Direct label from centralized config (SAP/Salesforce pattern)
+    const displayLabel = tabConfig.label;
 
     // Get component από custom components ή componentMapping
     const ComponentToRender = customComponents[tabConfig.component] ||
@@ -194,11 +177,11 @@ export function UniversalTabsRenderer<TData = unknown>({
       // Fallback to PlaceholderTab
       return {
         id: tabConfig.value,
-        label: translatedLabel,
+        label: displayLabel,
         icon: getIconComponent(tabConfig.icon),
         content: (
           <PlaceholderTab
-            title={`${translatedLabel} - Coming Soon`}
+            title={`${displayLabel} - Coming Soon`}
             icon={getIconComponent(tabConfig.icon) || (() => null)}
             building={data}
             {...globalProps}
@@ -267,7 +250,7 @@ export function UniversalTabsRenderer<TData = unknown>({
     // Render actual component
     return {
       id: tabConfig.value,
-      label: translatedLabel, // 🌐 i18n: Use translated label
+      label: displayLabel,
       icon: getIconComponent(tabConfig.icon),
       content: (
         <ComponentToRender
@@ -288,7 +271,7 @@ export function UniversalTabsRenderer<TData = unknown>({
         />
       )
     };
-  }), [sortedTabs, translateLabel, customComponents, componentMapping, data, additionalData, globalProps]); // 🌐 i18n: Added translateLabel dependency
+  }), [sortedTabs, customComponents, componentMapping, data, additionalData, globalProps]);
 
   // 🏢 ENTERPRISE: Handle tab change for controlled mode
   const handleTabChange = useCallback((tabId: string) => {

@@ -31,7 +31,7 @@ import {
   signInWithPopup
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import type { FirebaseAuthUser } from '../types/auth.types';
+import type { FirebaseAuthUser, SignUpData } from '../types/auth.types';
 
 // =============================================================================
 // CONTEXT TYPES
@@ -46,17 +46,20 @@ interface AuthContextType {
   // Authentication methods
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  signUp: (email: string, password: string, displayName?: string) => Promise<void>;
+  signUp: (data: SignUpData) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
 
   // User management
-  updateUserProfile: (displayName: string) => Promise<void>;
+  updateUserProfile: (givenName: string, familyName: string) => Promise<void>;
+  completeProfile: (givenName: string, familyName: string) => Promise<void>;
   sendVerificationEmail: () => Promise<void>;
 
   // Utilities
   clearError: () => void;
   isAuthenticated: boolean;
+  /** True if user needs to complete their profile (e.g., Google sign-in) */
+  needsProfileCompletion: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -129,15 +132,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
-      console.log('🔐 [AuthContext] Auth state changed:', firebaseUser?.uid || 'No user');
+      console.log('[ENTERPRISE] [AuthContext] Auth state changed:', firebaseUser?.uid || 'No user');
 
       if (firebaseUser) {
+        // Extract givenName and familyName from displayName if available
+        // NOTE: We do NOT auto-split - we only use what Firebase provides
+        // For email/password signups, we store these explicitly
+        // For Google sign-in, displayName comes as "First Last" but we mark profile as incomplete
+        const displayName = firebaseUser.displayName;
+
+        // Check if this is a Google sign-in without explicit name data
+        // Google provides displayName but not separate given/family names
+        const isGoogleProvider = firebaseUser.providerData.some(
+          (provider) => provider.providerId === 'google.com'
+        );
+
+        // Profile is incomplete if we don't have structured name data
+        // This will be set to false once user completes their profile
+        const profileIncomplete = isGoogleProvider && !localStorage.getItem(`profile_complete_${firebaseUser.uid}`);
+
         const authUser: FirebaseAuthUser = {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
-          displayName: firebaseUser.displayName,
+          displayName: displayName,
+          // These will be null for Google sign-in until profile completion
+          givenName: localStorage.getItem(`givenName_${firebaseUser.uid}`) || null,
+          familyName: localStorage.getItem(`familyName_${firebaseUser.uid}`) || null,
           emailVerified: firebaseUser.emailVerified,
-          photoURL: firebaseUser.photoURL
+          photoURL: firebaseUser.photoURL,
+          profileIncomplete
         };
         setUser(authUser);
       } else {
@@ -217,29 +240,48 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const signUp = async (
-    email: string,
-    password: string,
-    displayName?: string
-  ): Promise<void> => {
+  const signUp = async (data: SignUpData): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
 
-      console.log('🔐 [AuthContext] Signing up:', email);
+      const { email, password, givenName, familyName } = data;
+
+      console.log('[ENTERPRISE] [AuthContext] Signing up:', email);
       const result = await createUserWithEmailAndPassword(auth, email, password);
 
-      if (displayName && result.user) {
-        await updateProfile(result.user, { displayName });
-        console.log('✅ [AuthContext] Profile updated with display name');
-      }
-
       if (result.user) {
+        // Create displayName from givenName + familyName
+        const displayName = `${givenName} ${familyName}`.trim();
+
+        // Update Firebase profile with displayName
+        await updateProfile(result.user, { displayName });
+        console.log('[OK] [AuthContext] Profile updated with display name:', displayName);
+
+        // Store givenName and familyName separately in localStorage
+        // (Firebase Auth doesn't have separate fields for these)
+        localStorage.setItem(`givenName_${result.user.uid}`, givenName);
+        localStorage.setItem(`familyName_${result.user.uid}`, familyName);
+        localStorage.setItem(`profile_complete_${result.user.uid}`, 'true');
+
+        // Send verification email
         await sendEmailVerification(result.user);
-        console.log('📧 [AuthContext] Verification email sent');
+        console.log('[OK] [AuthContext] Verification email sent');
+
+        // Update local state with the new user data
+        setUser({
+          uid: result.user.uid,
+          email: result.user.email,
+          displayName,
+          givenName,
+          familyName,
+          emailVerified: result.user.emailVerified,
+          photoURL: result.user.photoURL,
+          profileIncomplete: false
+        });
       }
 
-      console.log('✅ [AuthContext] Sign up successful');
+      console.log('[OK] [AuthContext] Sign up successful');
     } catch (error) {
       handleError(error);
       throw error;
@@ -282,7 +324,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const updateUserProfileFn = async (displayName: string): Promise<void> => {
+  /**
+   * Update user profile with separate givenName and familyName
+   * Enterprise pattern: Store structured name data
+   */
+  const updateUserProfileFn = async (givenName: string, familyName: string): Promise<void> => {
     try {
       if (!auth.currentUser) {
         throw new Error('No authenticated user');
@@ -290,9 +336,51 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       setError(null);
 
+      const displayName = `${givenName} ${familyName}`.trim();
       await updateProfile(auth.currentUser, { displayName });
-      setUser(prev => prev ? { ...prev, displayName } : null);
-      console.log('✅ [AuthContext] Profile updated');
+
+      // Store in localStorage (Firebase doesn't have separate fields)
+      localStorage.setItem(`givenName_${auth.currentUser.uid}`, givenName);
+      localStorage.setItem(`familyName_${auth.currentUser.uid}`, familyName);
+
+      setUser(prev => prev ? { ...prev, displayName, givenName, familyName } : null);
+      console.log('✅ [AuthContext] Profile updated:', displayName);
+    } catch (error) {
+      handleError(error);
+      throw error;
+    }
+  };
+
+  /**
+   * Complete profile for Google Sign-In users
+   * Called after first Google login to collect structured name data
+   */
+  const completeProfileFn = async (givenName: string, familyName: string): Promise<void> => {
+    try {
+      if (!auth.currentUser) {
+        throw new Error('No authenticated user');
+      }
+
+      setError(null);
+
+      const displayName = `${givenName} ${familyName}`.trim();
+      await updateProfile(auth.currentUser, { displayName });
+
+      // Store structured name data
+      localStorage.setItem(`givenName_${auth.currentUser.uid}`, givenName);
+      localStorage.setItem(`familyName_${auth.currentUser.uid}`, familyName);
+      localStorage.setItem(`profile_complete_${auth.currentUser.uid}`, 'true');
+
+      // Update local state - profile is now complete
+      setUser(prev => prev ? {
+        ...prev,
+        displayName,
+        givenName,
+        familyName,
+        profileIncomplete: false
+      } : null);
+
+      console.log('✅ [AuthContext] Profile completed for Google user:', displayName);
     } catch (error) {
       handleError(error);
       throw error;
@@ -329,9 +417,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signOut,
     resetPassword,
     updateUserProfile: updateUserProfileFn,
+    completeProfile: completeProfileFn,
     sendVerificationEmail: sendVerificationEmailFn,
     clearError,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
+    needsProfileCompletion: user?.profileIncomplete ?? false
   }), [user, loading, error]);
 
   return (

@@ -394,6 +394,40 @@
     "totalSoldArea": "Total Sold Area"
   },
   "tabs": {
+    "labels": {
+      "general": "General",
+      "floorplan": "Floor Plan",
+      "timeline": "Timeline",
+      "analytics": "Analytics",
+      "storage": "Storages",
+      "contracts": "Contracts",
+      "protocols": "Protocols",
+      "photos": "Photos",
+      "customers": "Customers",
+      "videos": "Videos",
+      "details": "Details",
+      "properties": "Properties",
+      "units": "Units",
+      "floors": "Floors",
+      "amenities": "Amenities",
+      "documents": "Documents",
+      "notes": "Notes",
+      "history": "History",
+      "buildings": "Buildings",
+      "projects": "Projects",
+      "contacts": "Contacts",
+      "dashboard": "Dashboard",
+      "leads": "Leads",
+      "opportunities": "Opportunities",
+      "companies": "Companies",
+      "tasks": "Tasks",
+      "reports": "Reports",
+      "settings": "Settings",
+      "basicInfo": "Basic Info",
+      "customer": "Customer",
+      "floorplans": "Floor Plans",
+      "statistics": "Statistics"
+    },
     "general": {
       "header": {
         "edit": "Edit",
@@ -479,6 +513,17 @@
           "finishing": "Finishing",
           "delivery": "Delivery"
         }
+      }
+    },
+    "floorplan": {
+      "title": "Floor Plan",
+      "addFloorplan": "Add Floor Plan",
+      "editFloorplan": "Edit Floor Plan",
+      "loading": "Loading floor plan...",
+      "pdfAlt": "PDF Floor Plan: {{fileName}}",
+      "noFloorplan": {
+        "title": "No floor plan available",
+        "description": "Click \"Add Floor Plan\" to upload a floor plan"
       }
     },
     "timeline": {
@@ -794,104 +839,6 @@
     "parkingSpaces": "Parking Spaces",
     "available": "Available",
     "totalValue": "Total Value"
-  },
-  "tabs": {
-    "labels": {
-      "general": "General",
-      "floorplan": "Floor Plan",
-      "timeline": "Timeline",
-      "analytics": "Analytics",
-      "storage": "Storages",
-      "contracts": "Contracts",
-      "protocols": "Protocols",
-      "photos": "Photos",
-      "customers": "Customers",
-      "videos": "Videos",
-      "details": "Details",
-      "properties": "Properties",
-      "units": "Units",
-      "floors": "Floors",
-      "amenities": "Amenities",
-      "documents": "Documents",
-      "notes": "Notes",
-      "history": "History",
-      "buildings": "Buildings",
-      "projects": "Projects",
-      "contacts": "Contacts",
-      "dashboard": "Dashboard",
-      "leads": "Leads",
-      "opportunities": "Opportunities",
-      "companies": "Companies",
-      "tasks": "Tasks",
-      "reports": "Reports",
-      "settings": "Settings",
-      "basicInfo": "Basic Info",
-      "customer": "Customer",
-      "floorplans": "Floor Plans",
-      "statistics": "Statistics"
-    },
-    "timeline": {
-      "header": {
-        "title": "Project Timeline",
-        "subtitle": "Track construction progress and milestones",
-        "completedCount": "{{completed}}/{{total}} Completed"
-      },
-      "milestones": {
-        "title": "Construction Milestones",
-        "projectStart": "Project Start",
-        "projectStartDesc": "Contract signing and work commencement",
-        "foundation": "Foundation & Basement",
-        "foundationDesc": "Excavation completion and foundation construction",
-        "structure": "Structural Framework",
-        "structureDesc": "Building skeleton - floors 1-7",
-        "walls": "Walls & Waterproofing",
-        "wallsDesc": "Building enclosure and waterproofing",
-        "systems": "MEP Installations",
-        "systemsDesc": "Electrical and mechanical installations",
-        "finishing": "Final Works",
-        "finishingDesc": "Painting, flooring, decorative elements",
-        "delivery": "Project Delivery",
-        "deliveryDesc": "Final inspection and handover to client"
-      },
-      "milestone": {
-        "progressLabel": "Milestone progress",
-        "nextSteps": "Next steps:",
-        "completedAt": "Completed on {{date}}"
-      },
-      "status": {
-        "completed": "Completed",
-        "inProgress": "In Progress",
-        "pending": "Pending",
-        "delayed": "Delayed",
-        "unknown": "Unknown"
-      },
-      "overallProgress": {
-        "title": "Overall Progress",
-        "label": "Construction progress",
-        "completed": "Completed",
-        "inProgress": "In Progress",
-        "pending": "Pending",
-        "daysRemaining": "Days"
-      },
-      "criticalPath": {
-        "title": "Critical Path",
-        "mecInstallations": "MEP Installations",
-        "affectsDelivery": "Affects delivery",
-        "daysDelay": "+{{days}} days",
-        "finalWorks": "Final Works",
-        "dependsOnPrevious": "Depends on previous",
-        "waiting": "Waiting"
-      },
-      "forecast": {
-        "title": "Completion Forecast",
-        "originalSchedule": "Original Schedule",
-        "currentForecast": "Current Forecast",
-        "delay": "Delay",
-        "days": "+{{days}} days",
-        "tip": "Tip",
-        "tipContent": "Accelerating MEP work may reduce the delay."
-      }
-    }
   },
   "map": {
     "interactiveMap": "Interactive Map"

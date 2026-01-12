@@ -94,7 +94,8 @@ import { ThemeToggle } from '@/components/header/theme-toggle';
 interface FormData {
   email: string;
   password: string;
-  displayName: string;
+  givenName: string;
+  familyName: string;
   confirmPassword: string;
 }
 
@@ -124,7 +125,8 @@ export function AuthForm({
   const [formData, setFormData] = useState<FormData>({
     email: '',
     password: '',
-    displayName: '',
+    givenName: '',
+    familyName: '',
     confirmPassword: ''
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -152,7 +154,7 @@ export function AuthForm({
   };
 
   const validateForm = (): string | null => {
-    const { email, password, displayName, confirmPassword } = formData;
+    const { email, password, givenName, familyName, confirmPassword } = formData;
 
     if (!email.trim()) {
       return t('validation.emailRequired');
@@ -175,8 +177,12 @@ export function AuthForm({
         return t('validation.passwordMismatch');
       }
 
-      if (!displayName.trim()) {
-        return t('validation.displayNameRequired');
+      if (!givenName.trim()) {
+        return t('validation.givenNameRequired');
+      }
+
+      if (!familyName.trim()) {
+        return t('validation.familyNameRequired');
       }
     }
 
@@ -197,7 +203,7 @@ export function AuthForm({
     setValidationError(null);
 
     try {
-      const { email, password, displayName } = formData;
+      const { email, password, givenName, familyName } = formData;
 
       if (mode === 'signin') {
         console.log('🔐 [AuthForm] Sign in attempt');
@@ -214,7 +220,8 @@ export function AuthForm({
         return; // Exit early, no need to continue
       } else if (mode === 'signup') {
         console.log('🔐 [AuthForm] Sign up attempt');
-        await signUp(email, password, displayName);
+        // 🏢 ENTERPRISE: Pass SignUpData object with structured name data
+        await signUp({ email, password, givenName, familyName });
         setSuccessMessage(t('messages.signupSuccess'));
         onSuccess?.();
       } else if (mode === 'reset') {
@@ -228,7 +235,8 @@ export function AuthForm({
       setFormData({
         email: mode === 'reset' ? formData.email : '',
         password: '',
-        displayName: '',
+        givenName: '',
+        familyName: '',
         confirmPassword: ''
       });
     } catch (err) {
@@ -402,24 +410,47 @@ export function AuthForm({
             </div>
           </fieldset>
 
-          {/* Display Name Field (Sign Up Only) */}
+          {/* Name Fields (Sign Up Only) - Enterprise: givenName + familyName */}
           {mode === 'signup' && (
-            <fieldset className={layout.flexColGap2}>
-              <label htmlFor="displayName" className={typography.label.sm}>{t('form.labels.displayName')}</label>
-              <div className={layout.inputContainer}>
-                <User className={`${layout.inputIconLeft} ${iconSizes.sm} ${colors.text.muted}`} />
-                <Input
-                  id="displayName"
-                  type="text"
-                  placeholder={t('form.placeholders.displayName')}
-                  value={formData.displayName}
-                  onChange={handleInputChange('displayName')}
-                  disabled={isLoading}
-                  hasLeftIcon
-                  required
-                />
-              </div>
-            </fieldset>
+            <>
+              {/* Given Name (Όνομα) */}
+              <fieldset className={layout.flexColGap2}>
+                <label htmlFor="givenName" className={typography.label.sm}>{t('form.labels.givenName')}</label>
+                <div className={layout.inputContainer}>
+                  <User className={`${layout.inputIconLeft} ${iconSizes.sm} ${colors.text.muted}`} />
+                  <Input
+                    id="givenName"
+                    type="text"
+                    placeholder={t('form.placeholders.givenName')}
+                    value={formData.givenName}
+                    onChange={handleInputChange('givenName')}
+                    disabled={isLoading}
+                    hasLeftIcon
+                    required
+                    autoComplete="given-name"
+                  />
+                </div>
+              </fieldset>
+
+              {/* Family Name (Επώνυμο) */}
+              <fieldset className={layout.flexColGap2}>
+                <label htmlFor="familyName" className={typography.label.sm}>{t('form.labels.familyName')}</label>
+                <div className={layout.inputContainer}>
+                  <User className={`${layout.inputIconLeft} ${iconSizes.sm} ${colors.text.muted}`} />
+                  <Input
+                    id="familyName"
+                    type="text"
+                    placeholder={t('form.placeholders.familyName')}
+                    value={formData.familyName}
+                    onChange={handleInputChange('familyName')}
+                    disabled={isLoading}
+                    hasLeftIcon
+                    required
+                    autoComplete="family-name"
+                  />
+                </div>
+              </fieldset>
+            </>
           )}
 
           {/* Password Field */}

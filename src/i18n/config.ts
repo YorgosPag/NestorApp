@@ -61,16 +61,24 @@ i18n
 
 // Preload critical namespaces after initialization
 if (typeof window !== 'undefined') {
-  // Client-side only
-  setTimeout(async () => {
-    // 🏢 ENTERPRISE: Type-safe namespace and language arrays
-    const criticalNamespaces: Namespace[] = ['errors', 'toasts', 'navigation', 'dxf-viewer', 'geo-canvas'];
+  // Client-side only - 🏢 ENTERPRISE: Immediate preload (no delay)
+  (async () => {
+    // 🏢 ENTERPRISE: Core namespaces - loaded at startup (SAP/Salesforce pattern)
+    const criticalNamespaces: Namespace[] = [
+      'errors',
+      'toasts',
+      'navigation',
+      'building',      // Building management - core module
+      'projects',      // Projects module
+      'contacts',      // Contacts module
+      'units',         // Units module
+      'dxf-viewer',
+      'geo-canvas',
+    ];
     const currentLang = i18n.language as Language;
 
     // Validate language is supported, fallback to 'el'
     const validLang: Language = SUPPORTED_LANGUAGES.includes(currentLang as Language) ? currentLang : 'el';
-
-    // console.log('🚀 Preloading critical namespaces...');
 
     try {
       await Promise.all(
@@ -78,12 +86,10 @@ if (typeof window !== 'undefined') {
           await loadNamespace(ns, validLang);
         })
       );
-
-      // console.log('✅ Critical namespaces preloaded');
     } catch (error) {
       console.error('❌ Failed to preload namespaces:', error);
     }
-  }, 100);
+  })();
 }
 
 export default i18n;

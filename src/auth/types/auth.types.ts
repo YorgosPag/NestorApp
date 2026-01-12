@@ -24,13 +24,21 @@ export type UserType = 'citizen' | 'professional' | 'technical';
 
 /**
  * Firebase authenticated user interface
+ * Enterprise pattern: givenName + familyName + displayName
  */
 export interface FirebaseAuthUser {
   uid: string;
   email: string | null;
+  /** Combined display name (givenName + familyName) */
   displayName: string | null;
+  /** First name / Given name */
+  givenName: string | null;
+  /** Last name / Family name */
+  familyName: string | null;
   photoURL: string | null;
   emailVerified: boolean;
+  /** True if profile needs completion (e.g., Google sign-in without name details) */
+  profileIncomplete?: boolean;
 }
 
 /**
@@ -42,7 +50,19 @@ export interface User {
   isAuthenticated: boolean;
   uid?: string;
   displayName?: string | null;
+  givenName?: string | null;
+  familyName?: string | null;
   userType?: UserType;
+}
+
+/**
+ * Sign-up data interface for email/password registration
+ */
+export interface SignUpData {
+  email: string;
+  password: string;
+  givenName: string;
+  familyName: string;
 }
 
 /**
@@ -59,11 +79,14 @@ export interface AuthContextState {
  */
 export interface AuthContextActions {
   signIn: (email: string, password: string) => Promise<boolean>;
-  signUp: (email: string, password: string, displayName?: string) => Promise<boolean>;
+  signInWithGoogle: () => Promise<void>;
+  signUp: (data: SignUpData) => Promise<boolean>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<boolean>;
-  updateUserProfile: (displayName: string) => Promise<boolean>;
+  updateUserProfile: (givenName: string, familyName: string) => Promise<boolean>;
   sendVerificationEmail: () => Promise<boolean>;
+  /** Complete profile for users who signed up via Google without full name details */
+  completeProfile: (givenName: string, familyName: string) => Promise<boolean>;
 }
 
 /**
@@ -83,7 +106,7 @@ export interface UserRoleContextType {
   isPublic: boolean;
   isAuthenticated: boolean;
   firebaseUser: FirebaseAuthUser | null;
-  signUp: (email: string, password: string, displayName?: string) => Promise<boolean>;
+  signUp: (data: SignUpData) => Promise<boolean>;
   resetPassword: (email: string) => Promise<boolean>;
 }
 
