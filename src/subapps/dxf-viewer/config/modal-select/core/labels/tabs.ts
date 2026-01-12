@@ -133,116 +133,123 @@ export interface ParkingTabLabelsConfig {
 /**
  * Building Tab Labels - Centralized για Building detail views
  * ✅ ENTERPRISE: Single source of truth για όλα τα building tab labels
+ * 🌐 i18n: Values are translation keys, translated at render time
  */
 export const MODAL_SELECT_BUILDING_TAB_LABELS: BuildingTabLabelsConfig = {
-  // ✅ ENTERPRISE: Πλήρης λίστα building tabs από backup configuration
-  general: "Γενικά",
-  floorplan: "Κάτοψη Κτιρίου",
-  timeline: "Timeline",
-  analytics: "Analytics",
-  storage: "Αποθήκες",
-  contracts: "Συμβόλαια",
-  protocols: "Πρωτόκολλα",
-  photos: "Φωτογραφίες",
-  customers: "Πελάτες",
-  videos: "Videos",
+  // ✅ ENTERPRISE: Translation keys for building tabs
+  general: "tabs.labels.general",
+  floorplan: "tabs.labels.floorplan",
+  timeline: "tabs.labels.timeline",
+  analytics: "tabs.labels.analytics",
+  storage: "tabs.labels.storage",
+  contracts: "tabs.labels.contracts",
+  protocols: "tabs.labels.protocols",
+  photos: "tabs.labels.photos",
+  customers: "tabs.labels.customers",
+  videos: "tabs.labels.videos",
 
-  // 🔧 LEGACY: Παλιές ετικέτες για backward compatibility
-  details: "Λεπτομέρειες",
-  properties: "Ιδιότητες",
-  units: "Μονάδες",
-  floors: "Όροφοι",
-  amenities: "Ανέσεις",
-  documents: "Έγγραφα",
-  notes: "Σημειώσεις",
-  history: "Ιστορικό"
+  // 🔧 LEGACY: Translation keys for backward compatibility
+  details: "tabs.labels.details",
+  properties: "tabs.labels.properties",
+  units: "tabs.labels.units",
+  floors: "tabs.labels.floors",
+  amenities: "tabs.labels.amenities",
+  documents: "tabs.labels.documents",
+  notes: "tabs.labels.notes",
+  history: "tabs.labels.history"
 } as const;
 
 /**
  * Contact Tab Labels - Centralized για Contact detail views
  * ✅ ENTERPRISE: Single source of truth για όλα τα contact tab labels
+ * 🌐 i18n: Values are translation keys
  */
 export const MODAL_SELECT_CONTACT_TAB_LABELS: ContactTabLabelsConfig = {
-  general: "Γενικά",
-  details: "Λεπτομέρειες",
-  properties: "Ιδιότητες",
-  units: "Μονάδες",
-  buildings: "Κτίρια",
-  projects: "Έργα",
-  documents: "Έγγραφα",
-  notes: "Σημειώσεις",
-  history: "Ιστορικό"
+  general: "tabs.labels.general",
+  details: "tabs.labels.details",
+  properties: "tabs.labels.properties",
+  units: "tabs.labels.units",
+  buildings: "tabs.labels.buildings",
+  projects: "tabs.labels.projects",
+  documents: "tabs.labels.documents",
+  notes: "tabs.labels.notes",
+  history: "tabs.labels.history"
 } as const;
 
 /**
  * Project Tab Labels - Centralized για Project detail views
  * ✅ ENTERPRISE: Single source of truth για όλα τα project tab labels
+ * 🌐 i18n: Values are translation keys
  */
 export const MODAL_SELECT_PROJECT_TAB_LABELS: ProjectTabLabelsConfig = {
-  general: "Γενικά",
-  details: "Λεπτομέρειες",
-  buildings: "Κτίρια",
-  units: "Μονάδες",
-  contacts: "Επαφές",
-  documents: "Έγγραφα",
-  photos: "Φωτογραφίες",
-  notes: "Σημειώσεις",
-  history: "Ιστορικό"
+  general: "tabs.labels.general",
+  details: "tabs.labels.details",
+  buildings: "tabs.labels.buildings",
+  units: "tabs.labels.units",
+  contacts: "tabs.labels.contacts",
+  documents: "tabs.labels.documents",
+  photos: "tabs.labels.photos",
+  notes: "tabs.labels.notes",
+  history: "tabs.labels.history"
 } as const;
 
 /**
  * CRM Dashboard Tab Labels - Centralized για CRM Dashboard views
  * ✅ ENTERPRISE: Single source of truth για όλα τα CRM dashboard tab labels
+ * 🌐 i18n: Values are translation keys
  */
 export const MODAL_SELECT_CRM_DASHBOARD_TAB_LABELS: CRMDashboardTabLabelsConfig = {
-  dashboard: "Dashboard",
-  leads: "Leads",
-  opportunities: "Ευκαιρίες",
-  contacts: "Επαφές",
-  companies: "Εταιρείες",
-  tasks: "Εργασίες",
-  reports: "Αναφορές",
-  settings: "Ρυθμίσεις"
+  dashboard: "tabs.labels.dashboard",
+  leads: "tabs.labels.leads",
+  opportunities: "tabs.labels.opportunities",
+  contacts: "tabs.labels.contacts",
+  companies: "tabs.labels.companies",
+  tasks: "tabs.labels.tasks",
+  reports: "tabs.labels.reports",
+  settings: "tabs.labels.settings"
 } as const;
 
 /**
  * Units Tab Labels - Centralized για Units detail views
  * ✅ ENTERPRISE: Single source of truth για όλα τα units tab labels
+ * 🌐 i18n: Values are translation keys
  */
 export const MODAL_SELECT_UNITS_TAB_LABELS: UnitsTabLabelsConfig = {
-  general: "Βασικές Πληροφορίες", // Using actual data from original
-  details: "Πελάτης",              // Using actual data from original
-  files: "Κάτοψη",                 // Using actual data from original
-  photos: "Φωτογραφίες",
-  documents: "Έγγραφα",
-  notes: "Videos",                 // Using actual data from original
-  history: "Ιστορικό",
-  contracts: "Συμβόλαια"
+  general: "tabs.labels.basicInfo",
+  details: "tabs.labels.customer",
+  files: "tabs.labels.floorplan",
+  photos: "tabs.labels.photos",
+  documents: "tabs.labels.documents",
+  notes: "tabs.labels.videos",
+  history: "tabs.labels.history",
+  contracts: "tabs.labels.contracts"
 } as const;
 
 /**
  * Storage Tab Labels - Centralized για Storage detail views
  * ✅ ENTERPRISE: Single source of truth για όλα τα storage tab labels
+ * 🌐 i18n: Values are translation keys
  */
 export const MODAL_SELECT_STORAGE_TAB_LABELS: StorageTabLabelsConfig = {
-  general: "Γενικά",
-  details: "Στατιστικά",          // Using actual data from original
-  units: "Κατόψεις",              // Using actual data from original (floorplans)
-  documents: "Έγγραφα",
-  notes: "Φωτογραφίες",           // Using actual data from original
-  history: "Ιστορικό"             // Using actual data from original (activity)
+  general: "tabs.labels.general",
+  details: "tabs.labels.statistics",
+  units: "tabs.labels.floorplans",
+  documents: "tabs.labels.documents",
+  notes: "tabs.labels.photos",
+  history: "tabs.labels.history"
 } as const;
 
 /**
  * Parking Tab Labels - Centralized για Parking detail views
  * ✅ ENTERPRISE: Single source of truth για όλα τα parking tab labels
+ * 🌐 i18n: Values are translation keys
  */
 export const MODAL_SELECT_PARKING_TAB_LABELS: ParkingTabLabelsConfig = {
-  general: "Γενικά",
-  statistics: "Στατιστικά",
-  documents: "Έγγραφα",
-  photos: "Φωτογραφίες",
-  history: "Ιστορικό"
+  general: "tabs.labels.general",
+  statistics: "tabs.labels.statistics",
+  documents: "tabs.labels.documents",
+  photos: "tabs.labels.photos",
+  history: "tabs.labels.history"
 } as const;
 
 // ====================================================================
@@ -328,13 +335,14 @@ export function getAllTabLabels() {
 /**
  * Get common tab labels (appearing across multiple domains)
  * ✅ CENTRALIZED: Cross-cutting concerns accessor
+ * 🌐 i18n: Values are translation keys
  */
 export function getCommonTabLabels() {
   return {
-    general: "Γενικά",
-    details: "Λεπτομέρειες",
-    documents: "Έγγραφα",
-    notes: "Σημειώσεις",
-    history: "Ιστορικό"
+    general: "tabs.labels.general",
+    details: "tabs.labels.details",
+    documents: "tabs.labels.documents",
+    notes: "tabs.labels.notes",
+    history: "tabs.labels.history"
   } as const;
 }

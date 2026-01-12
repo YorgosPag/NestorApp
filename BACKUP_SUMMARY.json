@@ -1,51 +1,48 @@
 {
-  "category": "PERFORMANCE",
-  "timestamp": "20260112_1530",
-  "shortDescription": "Turbopack optimization + encoding fixes + missing dependencies",
-  "problem": "Dev server was slow (10-30s per navigation), invalid CSS selectors, missing @react-aria/focus package, emoji characters causing webpack parsing errors",
-  "cause": "Webpack being used instead of Turbopack, optimizePackageImports only had 2 packages, non-ASCII emoji in comments, invalid CSS pseudo-classes (:has-text, :contains)",
+  "category": "FIX",
+  "timestamp": "20260112_1545",
+  "shortDescription": "Batch 6 - remaining any types + service fixes",
+  "problem": "Remaining any types in API routes, services, components; contact relationships types incomplete",
+  "cause": "Parallel agent work on any types removal not fully committed; service fixes pending",
   "filesChanged": [
-    "next.config.js - Turbopack + 35 packages in optimizePackageImports",
-    "package.json - @react-aria/focus dependency added, dev scripts updated",
-    "src/app/globals.css - Removed invalid :has-text and :contains selectors",
-    "src/components/building-management/*.tsx - Emoji to ASCII conversion (70+ files)",
-    "src/components/core/AdvancedFilters/configs.ts - Emoji cleanup",
-    "src/hooks/useBuildingsPageState.ts - Emoji cleanup",
-    "src/hooks/useFirestoreBuildings.ts - Emoji cleanup",
-    "src/i18n/locales/el/building.json - Added loading translations",
-    "src/i18n/locales/en/building.json - Added loading translations",
-    "scripts/setup-defender-exclusions.ps1 - NEW: Windows Defender optimization script"
+    "src/api/notificationClient.ts",
+    "src/app/api/* - Multiple API route fixes",
+    "src/components/contacts/* - Contact relationships and details",
+    "src/components/crm/* - Dashboard and hooks",
+    "src/components/property-viewer/* - FloorPlan and PropertyMeta",
+    "src/services/pdf/* - JSPDFAdapter and Loader",
+    "src/services/property-status/* - PropertyStatusEngine",
+    "src/services/real-estate-monitor/* - AddressResolver, WebScrapingEngine",
+    "src/i18n/config.ts - i18n configuration",
+    "src/types/contacts/helpers.ts - Contact type helpers"
   ],
   "solution": {
-    "phase1": "Enabled Turbopack via --turbopack flag in dev scripts",
-    "phase2": "Extended optimizePackageImports from 2 to 35+ packages (Radix, React Aria, etc.)",
-    "phase3": "Replaced all emoji comments with ASCII equivalents [ENTERPRISE], [OK], [ERROR]",
-    "phase4": "Removed invalid CSS selectors (:has-text, :contains)",
-    "phase5": "Added missing @react-aria/focus dependency"
+    "phase1": "Committed remaining changes from parallel agent work",
+    "phase2": "Fixed any types in API routes and services",
+    "phase3": "Updated contact relationships types",
+    "phase4": "Fixed CRM dashboard components",
+    "phase5": "Pushed to Vercel for deployment"
   },
   "technicalDetails": {
-    "turbopack": "Enabled via --turbopack flag - 10x faster dev compilation",
-    "optimizedPackages": "35+ packages including Radix UI, React Aria, date-fns, recharts, firebase",
-    "cssFixed": "Removed :has-text() and :contains() pseudo-classes (not valid CSS)",
-    "encodingFixed": "All emoji replaced with ASCII: [ENTERPRISE], [OK], [ERROR], [NEW]",
-    "dependencyAdded": "@react-aria/focus 3.21.3"
+    "filesModified": 56,
+    "insertions": 517,
+    "deletions": 204,
+    "categories": ["API routes", "Components", "Services", "Types", "i18n"]
   },
   "verification": {
-    "gitCommit": "c7c3707 - perf: Turbopack optimization + encoding fixes + missing deps",
+    "gitCommit": "d1b5cf6 - fix: batch 6 - remaining any types + service fixes",
+    "gitTag": "v2026.01.12-batch6-fixes",
     "vercelPush": "Successful - auto-deployment triggered",
-    "preCommitChecks": "Passed",
-    "devServerStart": "Ready in 3.2s (Turbopack)"
+    "preCommitChecks": "Passed"
   },
   "testing": {
-    "devServer": "Starts in 3.2s with Turbopack",
-    "loginPage": "Compiles successfully",
-    "buildErrors": "None after CSS and dependency fixes"
+    "preCommitHooks": "All checks passed",
+    "typeCheck": "Reduced any types further"
   },
   "notes": [
-    "Windows Defender exclusion script available at scripts/setup-defender-exclusions.ps1",
-    "Run as Administrator for 2-5x additional speed improvement",
-    "Next.js 15.5.7 has security vulnerability - upgrade recommended",
-    "Turbopack ignores webpack config (used only for production)"
+    "This commit includes work from parallel agents (i18n, any types)",
+    "Combined with previous Turbopack optimization commit",
+    "Total session commits: c7c3707 (perf) + d1b5cf6 (fix)"
   ],
   "contributors": {
     "user": "Giorgos Pagonis",
@@ -53,10 +50,11 @@
     "sessionDate": "2026-01-12"
   },
   "relatedBackups": [
-    "d02118c - Enterprise cleanup - any types removal",
-    "v2026.01.12-enterprise-cleanup - Safety checkpoint tag"
+    "c7c3707 - perf: Turbopack optimization",
+    "v2026.01.12-turbopack-perf - Previous safety tag"
   ],
   "commits": [
-    "c7c3707 - perf: Turbopack optimization + encoding fixes + missing deps"
+    "c7c3707 - perf: Turbopack optimization + encoding fixes + missing deps",
+    "d1b5cf6 - fix: batch 6 - remaining any types + service fixes"
   ]
 }
