@@ -63,7 +63,7 @@ export function GeneralTabContent({ building }: { building: Building }) {
     }
   };
 
-  const updateField = (field: string, value: any) => {
+  const updateField = (field: string, value: string | number) => {
     setFormData(prev => {
         const newState = { ...prev, [field]: value };
         if (field === 'totalArea' && value > 0 && prev.builtArea === 0) {

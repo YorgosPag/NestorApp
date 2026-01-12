@@ -3,10 +3,18 @@
 import { collection, doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
+// 🏢 ENTERPRISE: DXF scene data structure
+interface DxfSceneData {
+  entities?: unknown[];
+  layers?: Record<string, unknown>;
+  bounds?: { minX: number; minY: number; maxX: number; maxY: number };
+  [key: string]: unknown;
+}
+
 export interface UnitFloorplanData {
   unitId: string;
   type: 'unit';
-  scene: any; // DXF scene data
+  scene: DxfSceneData;
   fileName: string;
   timestamp: number;
 }

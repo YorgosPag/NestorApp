@@ -342,7 +342,7 @@ export class DuplicatePreventionService {
    * 🧹 Normalize Value
    */
   private static normalizeValue(
-    value: any,
+    value: unknown,
     field: string,
     config: DuplicateDetectionConfig
   ): string | null {

@@ -8,7 +8,7 @@ interface UseFeatureLogicProps {
   formData: Partial<StorageUnit>;
   newFeature: string;
   setNewFeature: (value: string) => void;
-  updateField: (field: string, value: any) => void;
+  updateField: (field: string, value: string[] | string | number) => void;
 }
 
 export function useFeatureLogic({ formData, newFeature, setNewFeature, updateField }: UseFeatureLogicProps) {

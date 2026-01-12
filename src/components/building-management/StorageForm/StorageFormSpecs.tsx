@@ -19,7 +19,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 interface Props {
   formData: Partial<StorageUnit>;
   errors: { [key: string]: string };
-  updateField: (field: string, value: any) => void;
+  updateField: (field: string, value: string | number) => void;
   isCalculatingPrice: boolean;
   availableFloors: string[];
 }

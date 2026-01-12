@@ -10,6 +10,8 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-e
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface BasicInfoCardProps {
     formData: { name: string; description: string };
@@ -19,6 +21,8 @@ interface BasicInfoCardProps {
 }
 
 export function BasicInfoCard({ formData, updateField, isEditing, errors }: BasicInfoCardProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   return (
@@ -26,13 +30,13 @@ export function BasicInfoCard({ formData, updateField, isEditing, errors }: Basi
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
-          Βασικές Πληροφορίες
+          {t('tabs.general.basicInfo.title')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label>Τίτλος Κτιρίου *</Label>
-          <Input 
+          <Label>{t('tabs.general.basicInfo.buildingTitle')}</Label>
+          <Input
             value={formData.name}
             onChange={(e) => updateField('name', e.target.value)}
             disabled={!isEditing}
@@ -40,19 +44,19 @@ export function BasicInfoCard({ formData, updateField, isEditing, errors }: Basi
           />
           {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
         </div>
-        
+
         <div className="space-y-2">
-          <Label>Περιγραφή Κτιρίου</Label>
-          <Textarea 
+          <Label>{t('tabs.general.basicInfo.description')}</Label>
+          <Textarea
             value={formData.description}
             onChange={(e) => updateField('description', e.target.value)}
             disabled={!isEditing}
             className={cn(!isEditing && "bg-muted")}
             rows={3}
-            placeholder="Περιγράψτε το κτίριο..."
+            placeholder={t('tabs.general.basicInfo.descriptionPlaceholder')}
           />
           <div className="text-xs text-muted-foreground text-right">
-            {formData.description.length}/500 χαρακτήρες
+            {t('tabs.general.basicInfo.charactersCount', { count: formData.description.length })}
           </div>
         </div>
       </CardContent>

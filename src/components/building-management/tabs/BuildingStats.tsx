@@ -11,6 +11,8 @@ import type { BuildingStats as StatsType } from '@/types/building';
 import { getBuildingStats } from '@/services/buildings.service';
 import { formatNumber } from '@/lib/intl-utils';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Centralized Unit Icon
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
@@ -47,6 +49,8 @@ const StatCard = ({ icon: Icon, value, label, loading, colorClass }: { icon: Rea
 };
 
 export function BuildingStats({ buildingId }: BuildingStatsProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
   const [stats, setStats] = useState<StatsType | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -72,21 +76,21 @@ export function BuildingStats({ buildingId }: BuildingStatsProps) {
         <StatCard
             icon={UnitIcon}
             value={loading ? '...' : stats?.totalUnits ?? 0}
-            label="Σύνολο Μονάδων"
+            label={t('stats.totalUnits')}
             loading={loading}
             colorClass="bg-blue-50 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300"
         />
-        <StatCard 
+        <StatCard
             icon={CheckCircle}
             value={loading ? '...' : stats?.soldUnits ?? 0}
-            label="Πωλημένες Μονάδες"
+            label={t('stats.soldUnits')}
             loading={loading}
             colorClass="bg-green-50 text-green-800 dark:bg-green-950/50 dark:text-green-300"
         />
-        <StatCard 
+        <StatCard
             icon={Ruler}
             value={loading ? '...' : `${formatNumber(stats?.totalSoldArea ?? 0)} m²`}
-            label="Συνολικό Εμβαδόν Πωληθέντων"
+            label={t('stats.totalSoldArea')}
             loading={loading}
             colorClass="bg-purple-50 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300"
         />

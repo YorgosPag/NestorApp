@@ -10,14 +10,31 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatDateTime as formatDate } from '@/lib/intl-utils';
 
+// 🏢 ENTERPRISE: Version history item type
+export interface VersionHistoryItem {
+  id: string;
+  message: string;
+  type: 'milestone' | 'auto' | 'manual';
+  timestamp: string | Date;
+  author?: { name: string; id?: string };
+  stats: { polygons: number; objects: number };
+  size: number;
+  thumbnail?: string;
+  diff?: {
+    added: unknown[];
+    modified: unknown[];
+    removed: unknown[];
+  };
+}
+
 export function VersionList({
   versions,
   selectedVersionId,
   onSelect,
 }: {
-  versions: any[];
+  versions: VersionHistoryItem[];
   selectedVersionId: string | null;
-  onSelect: (v: any) => void;
+  onSelect: (v: VersionHistoryItem) => void;
 }) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();

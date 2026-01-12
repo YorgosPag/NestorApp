@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { formatSize } from './version-utils';
 import { formatDateTime as formatDate } from '@/lib/intl-utils';
+import type { VersionHistoryItem } from './VersionList';
 
 export function VersionDetails({
   version,
   onRestore
 }: {
-  version: any;
+  version: VersionHistoryItem | null;
   onRestore: (id: string) => void;
 }) {
   const { quick } = useBorderTokens();

@@ -12,8 +12,16 @@ import { addCompanyToNavigation, getNavigationCompanyIds } from '@/services/navi
 import { NavigationApiService } from '../core/services/navigationApi';
 import { useNavigation } from '../core/NavigationContext';
 
+// 🏢 ENTERPRISE: Company type for navigation
+interface NavigationCompany {
+  id: string;
+  name?: string;
+  contactId?: string;
+  [key: string]: unknown;
+}
+
 interface NavigationCompanyManagerProps {
-  companies: any[];
+  companies: NavigationCompany[];
   children: (props: NavigationCompanyManagerRenderProps) => React.ReactNode;
 }
 

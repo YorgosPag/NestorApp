@@ -12,9 +12,28 @@ import type { ContactType } from '@/types/ContactFormTypes';
 // TYPES & INTERFACES
 // ============================================================================
 
+// 🏢 ENTERPRISE: Section configuration type
+interface FormSection {
+  id: string;
+  label: string;
+  icon?: React.ComponentType;
+  order?: number;
+  fields?: unknown[];
+  [key: string]: unknown;
+}
+
+// 🏢 ENTERPRISE: Form tab renderer component type
+type FormTabRendererComponent = React.ComponentType<{
+  sections: FormSection[];
+  formData: unknown;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onSelectChange?: (name: string, value: string) => void;
+  [key: string]: unknown;
+}>;
+
 export interface ContactFormConfig {
-  getSections: () => any[];
-  renderer: any;
+  getSections: () => FormSection[];
+  renderer: FormTabRendererComponent;
   name: string;
 }
 
