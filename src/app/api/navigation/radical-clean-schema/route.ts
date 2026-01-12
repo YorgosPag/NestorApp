@@ -19,9 +19,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, getDocs, deleteDoc, setDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, setDoc, doc, serverTimestamp, Timestamp, FieldValue } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+
+/** Firestore Timestamp type */
+type FirestoreTimestamp = Timestamp | FieldValue | Date;
 
 interface RadicalCleanupResult {
   success: boolean;
@@ -44,19 +47,19 @@ interface RadicalCleanupResult {
 interface PureEnterpriseNavigationSchema {
   // CORE FIELDS (4)
   contactId: string;
-  addedAt: any;
+  addedAt: FirestoreTimestamp;
   addedBy: string;
   status: 'active';
 
   // ENTERPRISE METADATA (4)
   version: number;
   schemaVersion: string;
-  createdAt: any;
-  updatedAt: any;
+  createdAt: FirestoreTimestamp;
+  updatedAt: FirestoreTimestamp;
 
   // COMPLIANCE TRACKING (2)
   complianceLevel: 'enterprise';
-  lastCleaned: any;
+  lastCleaned: FirestoreTimestamp;
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<RadicalCleanupResult>> {

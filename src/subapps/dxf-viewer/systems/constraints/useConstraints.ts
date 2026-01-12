@@ -22,7 +22,7 @@ import type {
 
 // ✅ ENTERPRISE FIX: Fixed circular reference - use generic interface to break cycle
 interface ConstraintsContextType {
-  [key: string]: any; // Generic interface to break circular reference
+  [key: string]: unknown; // Generic interface to break circular reference
 }
 
 export function useConstraints(): ConstraintsContextType {

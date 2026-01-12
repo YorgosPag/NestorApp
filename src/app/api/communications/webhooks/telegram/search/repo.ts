@@ -4,7 +4,8 @@ import { isFirebaseAvailable } from '../firebase/availability';
 import { getFirestoreHelpers } from '../firebase/helpers-lazy';
 import { safeDbOperation } from '../firebase/safe-op';
 import { extractSearchCriteria, applyAdvancedFilters } from './criteria';
-import type { SearchResult } from '../shared/types';
+import type { SearchResult, TelegramProperty } from '../shared/types';
+import type { Query, DocumentData, QuerySnapshot } from 'firebase/firestore';
 
 export async function searchProperties(searchText: string): Promise<SearchResult> {
   if (!isFirebaseAvailable()) {
@@ -34,10 +35,10 @@ export async function searchProperties(searchText: string): Promise<SearchResult
     const criteria = extractSearchCriteria(searchText);
     console.log('📋 Extracted criteria:', criteria);
 
-    let properties: any[] = [];
+    let properties: TelegramProperty[] = [];
 
     try {
-      let q: any = collection(database, COLLECTIONS.UNITS);
+      let q: Query<DocumentData> = collection(database, COLLECTIONS.UNITS);
       q = query(q, where('status', '==', 'available'));
       if (criteria.type) {
         q = query(q, where('type', '==', criteria.type));

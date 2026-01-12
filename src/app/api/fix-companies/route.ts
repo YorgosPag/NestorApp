@@ -3,6 +3,13 @@ import { collection, query, where, getDocs, writeBatch, updateDoc, deleteDoc } f
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
+/** Result of company fix operation */
+interface CompanyFixResult {
+  id: string;
+  name: string;
+  action: 'none' | 'updated' | 'deleted';
+}
+
 export async function POST(req: NextRequest) {
   console.log('🔧 Starting company fix process...');
 
@@ -18,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     const batch = writeBatch(db);
     let changesCount = 0;
-    const results: any[] = [];
+    const results: CompanyFixResult[] = [];
 
     snapshot.docs.forEach((doc, index) => {
       const data = doc.data();

@@ -27,6 +27,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import communicationsService from '../../lib/communications';
 import { MESSAGE_TYPES, MESSAGE_STATUSES, MESSAGE_DIRECTIONS } from '../../lib/config/communications.config.js';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // --- Constants defined outside the component for performance ---
 
@@ -47,6 +49,8 @@ const getChannelColors = (colors: ReturnType<typeof useSemanticColors>) => ({
 const safeToLowerCase = (value) => (value || '').toLowerCase();
 
 const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) => {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const channelColors = getChannelColors(colors);
@@ -146,9 +150,9 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
     const diffHours = (now - date) / (1000 * 60 * 60);
 
     let relative = formatDateTime(date);
-    if (diffHours < 1) relative = 'Τώρα';
-    else if (diffHours < 24) relative = `${Math.floor(diffHours)}ω`;
-    else if (diffHours < 48) relative = 'Χθες';
+    if (diffHours < 1) relative = t('inbox.time.now');
+    else if (diffHours < 24) relative = t('inbox.time.hoursAgo', { hours: Math.floor(diffHours) });
+    else if (diffHours < 48) relative = t('inbox.time.yesterday');
 
     return {
       relative,
@@ -163,7 +167,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
         <CardContent className="p-6">
           <div className="flex items-center justify-center">
             <RefreshCw className={`${iconSizes.lg} animate-spin mr-2`} />
-            Φόρτωση μηνυμάτων...
+            {t('inbox.loading')}
           </div>
         </CardContent>
       </Card>
@@ -176,12 +180,12 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className={iconSizes.md} />
-            {leadId ? 'Ιστορικό Επικοινωνιών' : 'Unified Inbox'}
+            {leadId ? t('inbox.historyTitle') : t('inbox.title')}
           </CardTitle>
           <div className="flex items-center gap-2">
             <CommonBadge
               status="company"
-              customLabel={`${filteredMessages.length} μηνύματα`}
+              customLabel={t('inbox.messagesCount', { count: filteredMessages.length })}
               variant="secondary"
             />
             <Button
@@ -201,7 +205,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
               <div className="relative">
                 <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} ${colors.text.muted}`} />
                 <Input
-                  placeholder="Αναζήτηση μηνυμάτων..."
+                  placeholder={t('inbox.search')}
                   value={filters.searchTerm}
                   onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
                   className="pl-9"
@@ -211,10 +215,10 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
 
             <Select value={filters.selectedChannel} onValueChange={(val) => handleFilterChange('selectedChannel', val)}>
               <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Channel" />
+                <SelectValue placeholder={t('inbox.filters.channel')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Όλα</SelectItem>
+                <SelectItem value="all">{t('inbox.filters.all')}</SelectItem>
                 {Object.keys(MESSAGE_TYPES).map(channel => (
                   <SelectItem key={channel} value={channel}>{channel.toUpperCase()}</SelectItem>
                 ))}
@@ -223,21 +227,21 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
 
             <Select value={filters.selectedDirection} onValueChange={(val) => handleFilterChange('selectedDirection', val)}>
               <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Κατεύθυνση" />
+                <SelectValue placeholder={t('inbox.filters.direction')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Όλα</SelectItem>
-                <SelectItem value={MESSAGE_DIRECTIONS.INBOUND}>Εισερχόμενα</SelectItem>
-                <SelectItem value={MESSAGE_DIRECTIONS.OUTBOUND}>Εξερχόμενα</SelectItem>
+                <SelectItem value="all">{t('inbox.filters.all')}</SelectItem>
+                <SelectItem value={MESSAGE_DIRECTIONS.INBOUND}>{t('inbox.direction.inbound')}</SelectItem>
+                <SelectItem value={MESSAGE_DIRECTIONS.OUTBOUND}>{t('inbox.direction.outbound')}</SelectItem>
               </SelectContent>
             </Select>
 
             <Select value={filters.selectedStatus} onValueChange={(val) => handleFilterChange('selectedStatus', val)}>
               <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Κατάσταση" />
+                <SelectValue placeholder={t('inbox.filters.status')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Όλα</SelectItem>
+                <SelectItem value="all">{t('inbox.filters.all')}</SelectItem>
                 {Object.keys(MESSAGE_STATUSES).filter(key => key !== 'default').map(status => (
                   <SelectItem key={status} value={status}>{status}</SelectItem>
                 ))}
@@ -252,7 +256,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
           {filteredMessages.length === 0 ? (
             <div className={`text-center py-8 ${colors.text.muted}`}>
               <MessageSquare className={`${iconSizes.xl} mx-auto mb-2 opacity-30`} />
-              <p>Δεν βρέθηκαν μηνύματα</p>
+              <p>{t('inbox.noMessages')}</p>
             </div>
           ) : (
             filteredMessages.map((message) => {
@@ -276,7 +280,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
                           />
                           <CommonBadge
                             status="company"
-                            customLabel={message.direction === MESSAGE_DIRECTIONS.INBOUND ? 'Εισερχόμενο' : 'Εξερχόμενο'}
+                            customLabel={message.direction === MESSAGE_DIRECTIONS.INBOUND ? t('inbox.direction.inbound') : t('inbox.direction.outbound')}
                             variant={message.direction === MESSAGE_DIRECTIONS.INBOUND ? "default" : "secondary"}
                             className="text-xs"
                           />
@@ -290,9 +294,9 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
                       <div className="flex items-center gap-2 mb-2 text-sm">
                         <User className={iconSizes.xs} />
                         <span className="font-medium">
-                          {message.direction === MESSAGE_DIRECTIONS.INBOUND 
-                            ? `Από: ${message.from}` 
-                            : `Προς: ${message.to}`
+                          {message.direction === MESSAGE_DIRECTIONS.INBOUND
+                            ? `${t('inbox.message.from')}: ${message.from}`
+                            : `${t('inbox.message.to')}: ${message.to}`
                           }
                         </span>
                       </div>
@@ -311,7 +315,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
                         <div className="mt-2">
                           <CommonBadge
                             status="company"
-                            customLabel={`📎 ${message.attachments.length} συνημμένα`}
+                            customLabel={`📎 ${t('inbox.message.attachments', { count: message.attachments.length })}`}
                             variant="outline"
                             className="text-xs"
                           />

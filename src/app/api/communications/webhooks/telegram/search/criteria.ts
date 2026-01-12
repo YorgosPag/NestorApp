@@ -1,6 +1,6 @@
 // /home/user/studio/src/app/api/communications/webhooks/telegram/search/criteria.ts
 
-import type { SearchCriteria } from "../shared/types";
+import type { SearchCriteria, TelegramProperty } from "../shared/types";
 
 export function extractSearchCriteria(text: string): SearchCriteria {
   const criteria: SearchCriteria = {};
@@ -30,7 +30,7 @@ export function extractSearchCriteria(text: string): SearchCriteria {
   return criteria;
 }
 
-export function applyAdvancedFilters(properties: any[], criteria: SearchCriteria): any[] {
+export function applyAdvancedFilters(properties: TelegramProperty[], criteria: SearchCriteria): TelegramProperty[] {
   return properties.filter(property => {
     if (criteria.maxPrice && property.price > criteria.maxPrice) {
       return false;

@@ -16,7 +16,7 @@ interface FloorDocument {
   name?: string;
   buildingId: string;
   projectId?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export const GET = withErrorHandling(async (request: NextRequest) => {

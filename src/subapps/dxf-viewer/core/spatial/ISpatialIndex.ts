@@ -206,7 +206,7 @@ export interface ISpatialIndex {
   /**
    * Get spatial index statistics
    */
-  getStatistics?(): { itemCount: number; nodeCount?: number; depth?: number; [key: string]: any };
+  getStatistics?(): { itemCount: number; nodeCount?: number; depth?: number; [key: string]: unknown };
 
   /**
    * Get node count (για debugging/monitoring)

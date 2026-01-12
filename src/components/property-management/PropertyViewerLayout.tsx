@@ -22,7 +22,7 @@ interface PropertyViewerLayoutProps {
   handlePolygonSelect: (propertyId: string, isShiftClick: boolean) => void;
   onSelectFloor: (floorId: string | null) => void;
   handleUpdateProperty: (propertyId: string, updates: Partial<Property>) => void;
-  [key: string]: any; // Catch-all for other props
+  [key: string]: unknown; // Catch-all for other props
 }
 
 export function PropertyViewerLayout({

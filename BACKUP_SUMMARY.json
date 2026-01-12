@@ -1,64 +1,62 @@
 {
-  "category": "FIX",
-  "timestamp": "20260111_1600",
-  "shortDescription": "ESLint Smart Exclusions - Enterprise i18n Configuration",
-  "problem": "ESLint no-hardcoded-strings rule was too aggressive, flagging import paths, console logs, CSS classes, and Next.js directives",
-  "cause": "Rule didn't distinguish between user-facing strings and technical code",
+  "category": "FEATURE",
+  "timestamp": "20260112_1400",
+  "shortDescription": "Enterprise Cleanup - Any Types Removal + Buildings API Fix + Auth Refactor",
+  "problem": "Codebase had ~417 'any' TypeScript types, buildings API failing with Internal Server Error, auth system needed refactoring",
+  "cause": "Legacy code with weak typing, Firestore orderBy requiring missing index, scattered auth components",
   "filesChanged": [
-    "MODIFIED: eslint-rules/no-hardcoded-strings.js (+91 lines)",
-    "MODIFIED: eslint.config.mjs (+28 lines)"
+    "MODIFIED: 366 files total (+14280 insertions, -5713 deletions)",
+    "MAJOR: Any types removed from 30+ files across components, services, hooks",
+    "FIXED: src/app/api/buildings/route.ts - client-side sorting",
+    "FIXED: firestore.rules - buildings public read for API routes",
+    "NEW: src/auth/ - centralized auth system",
+    "NEW: src/components/generic/photo-system/ - centralized photo components",
+    "DELETED: src/components/auth/ - old scattered auth components",
+    "DELETED: src/contexts/FirebaseAuthContext.tsx, UserRoleContext.tsx"
   ],
   "solution": {
-    "phase1": "Analyzed ESLint errors in local_31_GIT.txt",
-    "phase2": "Added isInImportOrRequireContext() to skip imports/exports",
-    "phase3": "Added isInConsoleCall() to skip debug messages",
-    "phase4": "Added isTechnicalString() for paths, URLs, IDs, CSS classes",
-    "phase5": "Added exclusion paths for non-user-facing code"
+    "phase1": "Analyzed codebase for 'any' types - found ~417 instances",
+    "phase2": "Replaced Record<string, any> with Record<string, unknown> across geo-canvas, components",
+    "phase3": "Added proper interfaces: ViewerPassthroughProps, FilterableProperty, FirestoreTimestamp",
+    "phase4": "Fixed buildings API: removed orderBy, added client-side sorting with proper typing",
+    "phase5": "Updated Firestore rules: buildings allow read: if true for server API routes"
   },
   "technicalDetails": {
-    "ruleEnhancements": [
-      "Skip import/export declarations",
-      "Skip console.* calls",
-      "Skip 'use client'/'use server' directives",
-      "Skip CSS class strings (Tailwind)",
-      "Skip module paths, URLs, MIME types, HTTP methods",
-      "Skip technical IDs (bld_xxx, prj_xxx)"
-    ],
-    "exclusionPaths": [
-      "src/app/api/**/*",
-      "src/services/**/*",
-      "src/hooks/**/*",
-      "src/lib/**/*",
-      "src/adapters/**/*",
-      "src/ai/**/*",
-      "src/subapps/**/*",
-      "src/api/**/*",
-      "src/app/admin/**/*",
-      "src/app/**/layout.tsx"
-    ],
-    "architecture": "Enterprise-grade i18n enforcement - Fortune 500 patterns"
+    "anyTypesRemoved": "~350 instances (88% reduction)",
+    "apiFixed": "/api/buildings - client-side sort instead of Firestore orderBy",
+    "firestoreRules": "buildings collection: allow read: if true (for server-side API)",
+    "authRefactor": "New centralized auth system in src/auth/",
+    "photoSystem": "New centralized photo components in src/components/generic/photo-system/",
+    "typeSafety": [
+      "Record<string, any> → Record<string, unknown>",
+      "Added ViewerPassthroughProps interface",
+      "Added FilterableProperty interface",
+      "Added FirestoreTimestamp interface",
+      "GeoJSON coordinate typing improvements"
+    ]
   },
   "verification": {
-    "eslintRuns": "Rule no longer flags technical strings",
-    "remainingErrors": "Legitimate i18n warnings for Greek text in UI",
-    "typeScriptCheck": "Pre-existing errors in packages/core/ unrelated to this change"
+    "gitCommit": "d02118c - feat: enterprise cleanup",
+    "gitTag": "v2026.01.12-enterprise-cleanup",
+    "vercelPush": "Successful - auto-deployment triggered",
+    "preCommitChecks": "Passed"
   },
   "testing": {
-    "eslintExecution": "Passed - reduced false positives by 90%+",
-    "preCommitChecks": "Passed",
-    "vercelDeployment": "Pushed to origin/main for auto-deployment"
+    "buildingsAPI": "10 buildings loaded successfully after fix",
+    "typeCheck": "Reduced any types from ~417 to ~48",
+    "vercelDeployment": "Pushed to origin/main"
   },
-  "notes": "Τα εναπομείναντα ESLint errors είναι σωστά i18n warnings για ελληνικό κείμενο που χρειάζεται διεθνοποίηση. Αυτό είναι η σωστή συμπεριφορά.",
+  "notes": "Major cleanup session. Buildings API was failing due to missing Firestore index - solved with client-side sorting. Auth system centralized under src/auth/. Photo system centralized under src/components/generic/photo-system/.",
   "contributors": {
     "user": "Giorgos Pagonis",
     "assistant": "Claude Opus 4.5",
-    "sessionDate": "2026-01-11"
+    "sessionDate": "2026-01-12"
   },
   "relatedBackups": [
-    "20260111_2359 - CLEANUP - Dead Code (usePDFUpload, SimplePDFUploader)",
-    "20260111_2200 - ADR-017 Phase 2 - Enterprise ID Migration"
+    "20260111_1600 - FIX - ESLint Smart Exclusions",
+    "v2026.01.12-enterprise-cleanup - Safety checkpoint tag"
   ],
   "commits": [
-    "2c1ba06 - fix(eslint): add smart exclusions for no-hardcoded-strings rule"
+    "d02118c - feat: enterprise cleanup - any types removal, buildings API fix, auth refactor"
   ]
 }

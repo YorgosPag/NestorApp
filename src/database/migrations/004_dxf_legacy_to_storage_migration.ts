@@ -37,7 +37,7 @@ interface LegacyDxfData {
   lastModified: Timestamp;
   version?: number;
   checksum?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface MigrationStats {

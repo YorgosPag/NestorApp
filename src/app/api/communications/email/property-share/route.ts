@@ -88,8 +88,26 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
+/** Input data for email validation */
+interface EmailValidationInput {
+  propertyTitle?: string;
+  propertyUrl?: string;
+  recipients?: string[];
+  recipientEmail?: string;
+  recipientName?: string;
+  propertyDescription?: string;
+  propertyPrice?: number;
+  propertyArea?: number;
+  propertyLocation?: string;
+  photoUrl?: string;
+  senderName?: string;
+  senderEmail?: string;
+  personalMessage?: string;
+  templateType?: string;
+}
+
 // Enhanced validation function
-function validateEmailRequest(data: any): { isValid: boolean; errors: string[]; sanitizedData?: PropertyShareEmailRequest } {
+function validateEmailRequest(data: EmailValidationInput): { isValid: boolean; errors: string[]; sanitizedData?: PropertyShareEmailRequest } {
   const errors: string[] = [];
 
   // Required fields validation

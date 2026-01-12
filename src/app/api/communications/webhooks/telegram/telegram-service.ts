@@ -3,11 +3,12 @@
 import { db, isFirebaseAvailable } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import type { TelegramSendPayload, TelegramSendResult, TelegramMessageObject } from './telegram/types';
 
 /**
  * Sends a message to the Telegram API.
  */
-export async function sendTelegramMessage(messageData: any) {
+export async function sendTelegramMessage(messageData: TelegramSendPayload): Promise<TelegramSendResult> {
   try {
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     if (!botToken) {
@@ -42,10 +43,19 @@ export async function sendTelegramMessage(messageData: any) {
   }
 }
 
+/** Message data for CRM storage */
+interface CRMMessageInput {
+  from?: { id: number; first_name?: string };
+  chat?: { id: number };
+  chat_id?: number;
+  text?: string;
+  message_id?: number;
+}
+
 /**
  * Stores a message record in the Firestore COLLECTIONS.COMMUNICATIONS collection.
  */
-export async function storeMessageInCRM(message: any, direction: 'inbound' | 'outbound') {
+export async function storeMessageInCRM(message: CRMMessageInput, direction: 'inbound' | 'outbound') {
   if (!isFirebaseAvailable()) {
     console.warn('⚠️ Firebase not available, skipping CRM storage');
     return null;

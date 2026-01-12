@@ -27,7 +27,7 @@ import { GEO_COLORS } from '../../config/color-config';
 export interface DrawingPoint {
   x: number;
   y: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface CurrentDrawing {
@@ -35,9 +35,9 @@ export interface CurrentDrawing {
   config?: {
     pointMode?: boolean;
     radius?: number;
-    [key: string]: any;
+    [key: string]: unknown;
   };
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface LiveDrawingPreviewProps {

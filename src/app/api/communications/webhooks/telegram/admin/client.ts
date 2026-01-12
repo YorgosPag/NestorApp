@@ -44,13 +44,13 @@ export async function sendMessageToTelegram(
 
         return { success: true, result: json.result };
 
-    } catch (error: any) {
+    } catch (error) {
         clearTimeout(timeoutId);
-        if (error.name === 'AbortError') {
+        if (error instanceof Error && error.name === 'AbortError') {
             console.error('Telegram API request timed out');
             return { success: false, error: 'Request timed out' };
         }
         console.error('Error sending message to Telegram:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
 }

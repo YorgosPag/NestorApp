@@ -1,6 +1,26 @@
 // /home/user/studio/src/app/api/communications/webhooks/telegram/shared/types.ts
 
+import type { Timestamp } from 'firebase/firestore';
+
 export type Direction = 'inbound' | 'outbound';
+
+/** Firestore Timestamp type for server-side operations */
+export type FirestoreTimestamp = Timestamp | { toDate: () => Date } | Date;
+
+/** Property data from Firestore for search results */
+export interface TelegramProperty {
+  id: string;
+  name?: string;
+  code?: string;
+  type?: string;
+  price?: number;
+  rooms?: number;
+  area?: number;
+  address?: string;
+  status?: string;
+  building?: string;
+  [key: string]: unknown;
+}
 
 export interface CRMMessage {
   type: 'telegram';
@@ -18,8 +38,8 @@ export interface CRMMessage {
     platform: 'telegram';
     chatId: number | string;
   };
-  createdAt: any; // Firestore Timestamp
-  updatedAt: any; // Firestore Timestamp
+  createdAt: FirestoreTimestamp;
+  updatedAt: FirestoreTimestamp;
 }
 
 export interface SearchCriteria {
@@ -30,7 +50,7 @@ export interface SearchCriteria {
 
 export interface SearchResult {
   success: boolean;
-  properties: any[];
+  properties: TelegramProperty[];
   totalCount: number;
   criteria: Partial<SearchCriteria>;
   message: string;

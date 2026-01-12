@@ -3,9 +3,9 @@
 import { createSearchMenuResponse, createContactResponse } from './responses';
 import { handleEnhancedPropertySearch } from '../search/service';
 import { createStatsResponse } from '../stats/service';
-import type { TelegramSendPayload } from '../telegram/types';
+import type { TelegramSendPayload, TelegramCallbackQuery } from '../telegram/types';
 
-export async function handleCallbackQuery(callbackQuery: any): Promise<TelegramSendPayload> {
+export async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery): Promise<TelegramSendPayload | null> {
   const data = callbackQuery.data;
   const chatId = callbackQuery.message.chat.id;
   const userId = callbackQuery.from.id.toString();
@@ -42,6 +42,6 @@ export async function handleCallbackQuery(callbackQuery: any): Promise<TelegramS
 
     default:
         // This is handled by the ack above, we return null to signify no further message to send
-        return null as any; 
+        return null;
   }
 }

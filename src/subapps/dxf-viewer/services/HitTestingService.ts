@@ -16,7 +16,7 @@ import type { DxfScene, DxfEntityUnion, DxfLine, DxfCircle, DxfPolyline, DxfArc,
 
 export interface HitTestResult {
   entityId: string | null;
-  entity?: { type: string; layer?: string; [key: string]: any };  // ✅ ENTERPRISE FIX: Added entity property for accessing entity data
+  entity?: { type: string; layer?: string; [key: string]: unknown };  // ✅ ENTERPRISE FIX: Added entity property for accessing entity data
   entityType?: string;
   layer?: string;
   distance?: number;

@@ -27,10 +27,17 @@ export async function getPropertySummary(): Promise<PropertySummary> {
 
     const q = query(collection(database, COLLECTIONS.UNITS));
     const querySnapshot = await getDocs(q);
-    
-    const properties: any[] = [];
+
+    interface PropertyDoc {
+      id: string;
+      status?: string;
+      price?: number;
+      [key: string]: unknown;
+    }
+
+    const properties: PropertyDoc[] = [];
     querySnapshot.forEach((doc) => {
-      properties.push({ id: doc.id, ...doc.data() });
+      properties.push({ id: doc.id, ...doc.data() } as PropertyDoc);
     });
 
     const summary = {

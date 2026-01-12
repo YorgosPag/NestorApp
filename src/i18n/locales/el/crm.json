@@ -8,6 +8,14 @@
     }
   },
   "opportunities": {
+    "unknownDate": "Άγνωστη ημερομηνία",
+    "deleteDialog": {
+      "title": "Επιβεβαίωση Διαγραφής",
+      "message": "Είστε σίγουροι ότι θέλετε να διαγράψετε την ευκαιρία \"{{name}}\";",
+      "warning": "Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.",
+      "cancel": "Ακύρωση",
+      "confirm": "Διαγραφή"
+    },
     "stages": {
       "initial_contact": "Αρχική Επαφή",
       "qualification": "Αξιολόγηση",
@@ -93,6 +101,44 @@
       "deleteError": "❌ Σφάλμα κατά τη διαγραφή εργασίας",
       "loadError": "Σφάλμα κατά τη φόρτωση εργασιών",
       "deleteConfirm": "Είστε σίγουροι ότι θέλετε να διαγράψετε την εργασία \"{{title}}\"?"
+    }
+  },
+  "inbox": {
+    "title": "Unified Inbox",
+    "historyTitle": "Ιστορικό Επικοινωνιών",
+    "loading": "Φόρτωση μηνυμάτων...",
+    "messagesCount": "{{count}} μηνύματα",
+    "noMessages": "Δεν βρέθηκαν μηνύματα",
+    "search": "Αναζήτηση μηνυμάτων...",
+    "filters": {
+      "all": "Όλα",
+      "channel": "Κανάλι",
+      "direction": "Κατεύθυνση",
+      "status": "Κατάσταση"
+    },
+    "direction": {
+      "inbound": "Εισερχόμενο",
+      "outbound": "Εξερχόμενο"
+    },
+    "time": {
+      "now": "Τώρα",
+      "hoursAgo": "{{hours}}ω",
+      "yesterday": "Χθες"
+    },
+    "message": {
+      "from": "Από",
+      "to": "Προς",
+      "attachments": "{{count}} συνημμένα"
+    }
+  },
+  "leads": {
+    "title": "Leads",
+    "loading": "Φόρτωση leads...",
+    "retry": "Δοκιμή ξανά",
+    "refresh": "Ανανέωση",
+    "empty": {
+      "title": "Δεν υπάρχουν leads",
+      "subtitle": "Προσθέστε το πρώτο σας lead για να ξεκινήσετε!"
     }
   },
   "errors": {

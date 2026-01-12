@@ -34,8 +34,16 @@ export interface InlineKeyboardMarkup {
     inline_keyboard: InlineKeyboardButton[][];
 }
 
+/** Telegram API message result */
+export interface TelegramMessageResult {
+    message_id: number;
+    chat: { id: number; type: string };
+    date: number;
+    text?: string;
+}
+
 export interface TelegramResponse {
     success: boolean;
-    result?: any;
+    result?: TelegramMessageResult | boolean;
     error?: string;
 }

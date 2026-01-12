@@ -8,6 +8,14 @@
     }
   },
   "opportunities": {
+    "unknownDate": "Unknown date",
+    "deleteDialog": {
+      "title": "Confirm Deletion",
+      "message": "Are you sure you want to delete the opportunity \"{{name}}\"?",
+      "warning": "This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
     "stages": {
       "initial_contact": "Initial Contact",
       "qualification": "Qualification",
@@ -93,6 +101,44 @@
       "deleteError": "❌ Error deleting task",
       "loadError": "Error loading tasks",
       "deleteConfirm": "Are you sure you want to delete task \"{{title}}\"?"
+    }
+  },
+  "inbox": {
+    "title": "Unified Inbox",
+    "historyTitle": "Communication History",
+    "loading": "Loading messages...",
+    "messagesCount": "{{count}} messages",
+    "noMessages": "No messages found",
+    "search": "Search messages...",
+    "filters": {
+      "all": "All",
+      "channel": "Channel",
+      "direction": "Direction",
+      "status": "Status"
+    },
+    "direction": {
+      "inbound": "Inbound",
+      "outbound": "Outbound"
+    },
+    "time": {
+      "now": "Now",
+      "hoursAgo": "{{hours}}h",
+      "yesterday": "Yesterday"
+    },
+    "message": {
+      "from": "From",
+      "to": "To",
+      "attachments": "{{count}} attachments"
+    }
+  },
+  "leads": {
+    "title": "Leads",
+    "loading": "Loading leads...",
+    "retry": "Try again",
+    "refresh": "Refresh",
+    "empty": {
+      "title": "No leads found",
+      "subtitle": "Add your first lead to get started!"
     }
   },
   "errors": {

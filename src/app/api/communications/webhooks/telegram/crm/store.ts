@@ -4,8 +4,19 @@ import { isFirebaseAvailable } from '../firebase/availability';
 import { getFirestoreHelpers } from '../firebase/helpers-lazy';
 import { safeDbOperation } from '../firebase/safe-op';
 import type { Direction } from '../shared/types';
+import type { TelegramMessageObject } from '../telegram/types';
+import type { DocumentReference } from 'firebase/firestore';
 
-export async function storeMessageInCRM(message: any, direction: Direction): Promise<any> {
+/** Message input for CRM storage */
+interface CRMStoreMessage {
+  from: { id: number; first_name?: string };
+  chat: { id: number };
+  chat_id?: number;
+  text?: string;
+  message_id?: number;
+}
+
+export async function storeMessageInCRM(message: CRMStoreMessage, direction: Direction): Promise<DocumentReference | null> {
   if (!isFirebaseAvailable()) {
     console.warn('⚠️ Firebase not available, skipping CRM storage');
     return null;

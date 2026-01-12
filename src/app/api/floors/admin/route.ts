@@ -8,6 +8,16 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
+/** Floor document from Firestore */
+interface AdminFloorDocument {
+  id: string;
+  number?: number;
+  name?: string;
+  buildingId: string;
+  projectId?: string;
+  [key: string]: unknown;
+}
+
 // Initialize Admin SDK if not already initialized
 let adminDb: FirebaseFirestore.Firestore;
 
@@ -48,7 +58,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`📋 [Admin] Loading floors for: ${buildingId ? `building ${buildingId}` : `project ${projectId}`}`);
 
-    let floors: any[] = [];
+    let floors: AdminFloorDocument[] = [];
 
     if (buildingId) {
       // Query floors by buildingId (Enterprise foreign key relationship)
@@ -59,7 +69,7 @@ export async function GET(request: NextRequest) {
       floors = floorsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      } as AdminFloorDocument));
 
       // Sort by floor number in code (to avoid index requirements)
       floors.sort((a, b) => (a.number || 0) - (b.number || 0));
@@ -73,7 +83,7 @@ export async function GET(request: NextRequest) {
       floors = floorsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      } as AdminFloorDocument));
 
       // Sort by building and then by floor number
       floors.sort((a, b) => {
@@ -89,14 +99,14 @@ export async function GET(request: NextRequest) {
     // Group floors by building if querying by projectId
     let response;
     if (projectId) {
-      const floorsByBuilding = floors.reduce((groups: any, floor: any) => {
+      const floorsByBuilding = floors.reduce((groups: Record<string, AdminFloorDocument[]>, floor: AdminFloorDocument) => {
         const bId = floor.buildingId;
         if (!groups[bId]) {
           groups[bId] = [];
         }
         groups[bId].push(floor);
         return groups;
-      }, {});
+      }, {} as Record<string, AdminFloorDocument[]>);
 
       response = {
         success: true,

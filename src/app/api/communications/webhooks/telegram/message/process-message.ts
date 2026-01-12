@@ -6,11 +6,11 @@ import { isPropertySearchQuery } from '../search/detect';
 import { createRateLimitResponse, createStartResponse, createHelpResponse, createContactResponse, createSearchMenuResponse, createDefaultResponse } from './responses';
 import { checkRateLimit } from './rate-limit';
 import { security } from './security-adapter';
-import type { TelegramSendPayload } from '../telegram/types';
+import type { TelegramSendPayload, TelegramMessageObject } from '../telegram/types';
 import { createStatsResponse } from '../stats/service';
 import { isFirebaseAvailable } from '../firebase/availability';
 
-export async function processMessage(message: any): Promise<TelegramSendPayload> {
+export async function processMessage(message: TelegramMessageObject): Promise<TelegramSendPayload> {
   const text = message.text?.toLowerCase() || '';
   const originalText = message.text || '';
   const chatId = message.chat.id;

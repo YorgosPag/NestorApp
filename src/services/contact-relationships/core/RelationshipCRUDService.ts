@@ -80,26 +80,29 @@ export class RelationshipCRUDService {
       if (existing) {
         throw new Error('Relationship already exists');
       }
-    } catch (error: any) {
+    } catch (error) {
       // 🔧 If Firebase index is missing, log warning but continue with creation
       // This prevents the relationship creation from failing due to missing composite index
-      const isIndexError = error?.message?.includes('query requires an index') ||
-                          error?.message?.includes('FirebaseError') ||
-                          error?.code === 'failed-precondition' ||
-                          error?.toString()?.includes('index');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorCode = (error as { code?: string })?.code;
+
+      const isIndexError = errorMessage.includes('query requires an index') ||
+                          errorMessage.includes('FirebaseError') ||
+                          errorCode === 'failed-precondition' ||
+                          errorMessage.includes('index');
 
       if (isIndexError) {
         console.warn('⚠️ Firebase index missing for duplicate check - proceeding with relationship creation');
         console.warn('📋 Create the composite index at Firebase Console for better performance');
-        console.warn('🔗 Index URL:', error?.message?.match(/https:\/\/[^\s]+/)?.[0] || 'Check Firebase Console');
+        console.warn('🔗 Index URL:', errorMessage.match(/https:\/\/[^\s]+/)?.[0] || 'Check Firebase Console');
         console.log('✅ Skipping duplicate check due to missing index - relationship creation will continue');
         // DO NOT re-throw this error - just continue with relationship creation
-      } else if (error?.message?.includes('already exists')) {
+      } else if (errorMessage.includes('already exists')) {
         // This is an actual duplicate relationship error
         throw error;
       } else {
         // For any other error, also log but continue (don't block relationship creation)
-        console.warn('⚠️ Duplicate check failed with unexpected error - continuing with creation:', error?.message);
+        console.warn('⚠️ Duplicate check failed with unexpected error - continuing with creation:', errorMessage);
       }
     }
 

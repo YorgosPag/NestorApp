@@ -31,9 +31,9 @@ interface BuildingRecord {
     name: string;
     number: number;
     units?: number;
-    [key: string]: any;
+    [key: string]: unknown;
   }>;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface FloorRecord {
@@ -52,7 +52,7 @@ interface FloorRecord {
     sourceType: 'buildingFloors_embedded_array';
     originalBuildingId: string;
   };
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface MigrationData {

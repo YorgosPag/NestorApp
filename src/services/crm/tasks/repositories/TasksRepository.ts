@@ -71,9 +71,9 @@ export class TasksRepository implements ITasksRepository {
   }
 
   async update(id: string, updates: Partial<CrmTask>): Promise<void> {
-    const updatePayload: any = { ...updates, updatedAt: serverTimestamp() };
+    const updatePayload: Record<string, unknown> = { ...updates, updatedAt: serverTimestamp() };
     if (updates.dueDate && !(updates.dueDate instanceof Timestamp)) {
-      updatePayload.dueDate = Timestamp.fromDate(new Date(updates.dueDate));
+      updatePayload.dueDate = Timestamp.fromDate(new Date(updates.dueDate as string | Date));
     }
     await updateDoc(doc(db, this.collectionName, id), updatePayload);
   }

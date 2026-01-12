@@ -1,6 +1,6 @@
 // /home/user/studio/src/app/api/communications/webhooks/telegram/search/format.ts
 
-import type { SearchResult } from "../shared/types";
+import type { SearchResult, TelegramProperty } from "../shared/types";
 
 export function getPropertyTypeInGreek(type?: string): string {
   switch (type) {
@@ -26,7 +26,7 @@ export function formatSearchResultsForTelegram(searchResult: SearchResult): stri
   let text = `🔍 <b>Βρήκα ${searchResult.totalCount} ακίνητα που ταιριάζουν:</b>\n\n`;
 
   const displayProperties = searchResult.properties.slice(0, 3);
-  displayProperties.forEach((property: any, index: number) => {
+  displayProperties.forEach((property: TelegramProperty, index: number) => {
     text += `${index + 1}. 🏠 <b>${property.code || `ID: ${property.id.slice(-6)}`}</b>\n`;
     
     if (property.type) text += `🏠 Τύπος: ${getPropertyTypeInGreek(property.type)}\n`;

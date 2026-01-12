@@ -152,10 +152,10 @@ export async function POST() {
       createdContacts
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('❌ Admin SDK error:', error);
     return NextResponse.json({
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
       details: 'Check server logs for more info'
     }, { status: 500 });
   }

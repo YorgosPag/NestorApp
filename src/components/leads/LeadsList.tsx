@@ -14,8 +14,12 @@ import { getStatusColor } from "./utils/formatters";
 import { formatDateTime as formatDate } from '@/lib/intl-utils';
 import type { Opportunity } from "@/types/crm";
 import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects/hover-effects';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export default function LeadsList({ refreshTrigger }: { refreshTrigger?: number | string | boolean | null }) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -31,7 +35,7 @@ export default function LeadsList({ refreshTrigger }: { refreshTrigger?: number 
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <AnimatedSpinner size="large" className="mx-auto mb-2" />
-          <p className={`${colors.text.muted}`}>Φόρτωση leads...</p>
+          <p className={`${colors.text.muted}`}>{t('leads.loading')}</p>
         </div>
       </div>
     );
@@ -42,7 +46,7 @@ export default function LeadsList({ refreshTrigger }: { refreshTrigger?: number 
       <div className={`${colors.bg.error} ${getStatusBorder('error')} rounded-lg p-4`}>
         <p className={`${colors.text.error}`}>{error}</p>
         <button onClick={fetchLeads} className={`mt-2 px-3 py-1 ${colors.bg.error} ${colors.text.inverted} rounded text-sm transition-colors ${HOVER_BACKGROUND_EFFECTS.RED_BUTTON}`}>
-          Δοκιμή ξανά
+          {t('leads.retry')}
         </button>
       </div>
     );
@@ -52,8 +56,8 @@ export default function LeadsList({ refreshTrigger }: { refreshTrigger?: number 
     return (
       <div className="text-center py-12">
         <User className={`${iconSizes.xl3} ${colors.text.muted} mx-auto mb-4`} />
-        <h3 className={`text-lg font-medium ${colors.text.foreground} mb-2`}>Δεν υπάρχουν leads</h3>
-        <p className={`${colors.text.muted}`}>Προσθέστε το πρώτο σας lead για να ξεκινήσετε!</p>
+        <h3 className={`text-lg font-medium ${colors.text.foreground} mb-2`}>{t('leads.empty.title')}</h3>
+        <p className={`${colors.text.muted}`}>{t('leads.empty.subtitle')}</p>
       </div>
     );
   }
@@ -63,7 +67,7 @@ export default function LeadsList({ refreshTrigger }: { refreshTrigger?: number 
       <div className="space-y-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Leads ({leads.length})</h3>
-          <button onClick={fetchLeads} className={`text-sm ${HOVER_TEXT_EFFECTS.BLUE}`}>Ανανέωση</button>
+          <button onClick={fetchLeads} className={`text-sm ${HOVER_TEXT_EFFECTS.BLUE}`}>{t('leads.refresh')}</button>
         </div>
 
         <div className="grid gap-4">

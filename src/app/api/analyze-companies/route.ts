@@ -3,6 +3,17 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
+/** Company data for analysis */
+interface CompanyData {
+  id: string;
+  name: string;
+  industry?: string;
+  vatNumber?: string;
+  status?: string;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+}
+
 export async function GET(req: NextRequest) {
   console.log('🔍 Starting company analysis...');
 
@@ -16,7 +27,7 @@ export async function GET(req: NextRequest) {
     const snapshot = await getDocs(companiesQuery);
     console.log(`📊 Found ${snapshot.size} companies total`);
 
-    const companies: any[] = [];
+    const companies: CompanyData[] = [];
     const companyNameCounts: Record<string, number> = {};
 
     snapshot.docs.forEach((doc) => {

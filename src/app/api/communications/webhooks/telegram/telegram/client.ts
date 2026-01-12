@@ -33,8 +33,8 @@ export async function sendTelegramMessage(payload: TelegramSendPayload): Promise
     console.log('✅ Telegram message sent successfully');
     return { success: true, result };
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('❌ Error sending Telegram message:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }

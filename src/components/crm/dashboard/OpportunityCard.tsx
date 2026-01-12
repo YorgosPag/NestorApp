@@ -29,6 +29,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Centralized stage colors function
 const getStageColors = (colors: ReturnType<typeof useSemanticColors>): Record<NonNullable<Opportunity['stage']>, string> => ({
@@ -49,25 +51,27 @@ const getStatusColor = (status?: Opportunity['stage'], colors?: ReturnType<typeo
 };
 
 // ✅ ENTERPRISE MIGRATION: Using centralized formatDateTime for consistent date formatting
-const formatDate = (timestamp: FirestoreishTimestamp): string => {
-    if (!timestamp) return 'Άγνωστη ημερομηνία';
+const formatDate = (timestamp: FirestoreishTimestamp, unknownLabel: string): string => {
+    if (!timestamp) return unknownLabel;
 
     try {
       const date = timestamp instanceof Date
         ? timestamp
-        : typeof (timestamp as any).toDate === 'function'
-        ? (timestamp as any).toDate()
+        : typeof (timestamp as unknown as { toDate: () => Date }).toDate === 'function'
+        ? (timestamp as unknown as { toDate: () => Date }).toDate()
         : new Date(timestamp);
 
-      if (isNaN(date.getTime())) return 'Άγνωστη ημερομηνία';
+      if (isNaN(date.getTime())) return unknownLabel;
 
       return formatDateTime(date); // ✅ Using centralized function
-    } catch (err) {
-      return 'Άγνωστη ημερομηνία';
+    } catch {
+      return unknownLabel;
     }
 };
 
 export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity: Opportunity, onEdit: (opportunity: Opportunity) => void, onDelete: (opportunityId: string, opportunityName: string) => void }) {
+    // 🏢 ENTERPRISE: i18n hook for translations
+    const { t } = useTranslation('crm');
     const iconSizes = useIconSizes();
     const colors = useSemanticColors();
     const router = useRouter();
@@ -112,7 +116,7 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
                 )}
                 <div className="flex items-center gap-2">
                     <Calendar className={iconSizes.xs} />
-                    <span>{formatDate(opportunity.createdAt)}</span>
+                    <span>{formatDate(opportunity.createdAt, t('opportunities.unknownDate'))}</span>
                 </div>
             </div>
 
@@ -142,13 +146,13 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
                                 e.stopPropagation();
                                 onEdit(opportunity);
                             }}
-                            aria-label="Επεξεργασία"
+                            aria-label={t('opportunities.actions.edit')}
                         >
                             <Edit className={iconSizes.xs} />
                         </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                        <p>Επεξεργασία</p>
+                        <p>{t('opportunities.actions.edit')}</p>
                     </TooltipContent>
                 </Tooltip>
                 
@@ -161,31 +165,31 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
                                     size="sm"
                                     className={`${iconSizes.xl} p-0 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
                                     onClick={(e) => e.stopPropagation()}
-                                    aria-label="Διαγραφή"
+                                    aria-label={t('opportunities.actions.delete')}
                                 >
                                     <Trash2 className={iconSizes.xs} />
                                 </Button>
                             </AlertDialogTrigger>
                         </TooltipTrigger>
                          <TooltipContent>
-                            <p>Διαγραφή</p>
+                            <p>{t('opportunities.actions.delete')}</p>
                         </TooltipContent>
                     </Tooltip>
                     <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                         <AlertDialogHeader>
-                        <AlertDialogTitle>Επιβεβαίωση Διαγραφής</AlertDialogTitle>
+                        <AlertDialogTitle>{t('opportunities.deleteDialog.title')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Είστε σίγουροι ότι θέλετε να διαγράψετε την ευκαιρία "{opportunity.fullName || opportunity.title}"&#59;
-                            Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.
+                            {t('opportunities.deleteDialog.message', { name: opportunity.fullName || opportunity.title })}
+                            {' '}{t('opportunities.deleteDialog.warning')}
                         </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                        <AlertDialogCancel>Ακύρωση</AlertDialogCancel>
+                        <AlertDialogCancel>{t('opportunities.deleteDialog.cancel')}</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={() => opportunity.id && onDelete(opportunity.id, opportunity.fullName || opportunity.title)}
                             className={`bg-destructive ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
                         >
-                            Διαγραφή
+                            {t('opportunities.deleteDialog.confirm')}
                         </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>

@@ -21,9 +21,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, getDocs, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, updateDoc, doc, serverTimestamp, Timestamp, FieldValue } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+
+/** Firestore Timestamp type for navigation documents */
+type FirestoreTimestamp = Timestamp | FieldValue | Date;
 
 interface SchemaNormalizationResult {
   success: boolean;
@@ -50,7 +53,7 @@ interface SchemaNormalizationResult {
 interface NavigationCompanySchema {
   // MANDATORY CORE FIELDS (Enterprise Standard)
   contactId: string;                    // Reference to contacts collection
-  addedAt: any;                        // Firestore Timestamp - when added to navigation
+  addedAt: FirestoreTimestamp;         // Firestore Timestamp - when added to navigation
   addedBy: string;                     // System/user identifier who added
 
   // ENTERPRISE METADATA (Optional but recommended)
@@ -59,12 +62,12 @@ interface NavigationCompanySchema {
   status?: 'active' | 'inactive';     // Navigation status
 
   // AUDIT TRAIL (For documents that have been modified)
-  fixedAt?: any;                       // When last fixed/updated
+  fixedAt?: FirestoreTimestamp;        // When last fixed/updated
   fixedBy?: string;                    // System that performed fix
   fixReason?: string;                  // Reason for fix
   previousContactId?: string;          // Previous contactId if changed
   migrationInfo?: {                    // Migration metadata
-    migratedAt: any;
+    migratedAt: FirestoreTimestamp;
     migratedBy: string;
     reason: string;
   };
@@ -246,10 +249,20 @@ export async function POST(request: NextRequest): Promise<NextResponse<SchemaNor
   }
 }
 
+/** Navigation document data for validation */
+interface NavigationDocData {
+  contactId?: string;
+  addedAt?: FirestoreTimestamp;
+  addedBy?: string;
+  fixedBy?: string;
+  migrationInfo?: { migratedAt: FirestoreTimestamp; migratedBy: string; reason: string };
+  [key: string]: unknown;
+}
+
 /**
  * Check if document has compliant enterprise schema
  */
-function hasCompliantSchema(docData: any): boolean {
+function hasCompliantSchema(docData: NavigationDocData): boolean {
   const requiredFields = ['contactId', 'addedAt', 'addedBy'];
 
   // Check if all required fields exist
@@ -266,7 +279,7 @@ function hasCompliantSchema(docData: any): boolean {
 /**
  * Detect source based on document characteristics
  */
-function detectSource(docData: any): 'system' | 'manual' | 'migration' | 'auto-fix' {
+function detectSource(docData: NavigationDocData): 'system' | 'manual' | 'migration' | 'auto-fix' {
   if (docData.fixedBy) return 'auto-fix';
   if (docData.addedBy === 'system') return 'system';
   if (docData.migrationInfo) return 'migration';

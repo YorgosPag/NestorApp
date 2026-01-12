@@ -22,13 +22,13 @@ interface ProjectRecord {
   name: string;
   company: string;
   companyId: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface CompanyRecord {
   id: string;
   companyName: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface MigrationData {
