@@ -38,7 +38,7 @@ export async function POST(request: Request) {
           industry: contact.industry || '',
 
           // Phone formatting
-          phones: contact.phones ? contact.phones.map((phone: any) => ({
+          phones: contact.phones ? contact.phones.map((phone: { countryCode?: string; phone?: string; number?: string; type?: string; isPrimary?: boolean }) => ({
             countryCode: phone.countryCode || '+30',
             number: phone.phone ? phone.phone.replace(/[\s+()-]/g, '') : phone.number?.replace(/[\s+()-]/g, '') || '',
             type: phone.type || 'mobile',
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
           })) : [],
 
           // Email formatting
-          emails: contact.emails ? contact.emails.map((email: any) => ({
+          emails: contact.emails ? contact.emails.map((email: { email?: string; type?: string; isPrimary?: boolean }) => ({
             email: email.email || '',
             type: email.type || 'personal',
             label: 'Προσωπικό',

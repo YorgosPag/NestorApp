@@ -15,6 +15,8 @@ import { Search, BarChart3 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { StorageType, StorageStatus } from '@/types/storage';
 import { STORAGE_FILTER_LABELS, STORAGE_STATUS_LABELS, STORAGE_TYPE_LABELS } from '@/constants/property-statuses-enterprise';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface StorageTabFiltersProps {
     searchTerm: string;
@@ -33,6 +35,8 @@ export function StorageTabFilters({
     filterStatus,
     onFilterStatusChange,
 }: StorageTabFiltersProps) {
+    // 🏢 ENTERPRISE: i18n hook for translations
+    const { t } = useTranslation('building');
     const iconSizes = useIconSizes();
     return (
         <Card>
@@ -41,7 +45,7 @@ export function StorageTabFilters({
                     <div className="relative md:col-span-2">
                         <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground ${iconSizes.sm}`} />
                         <Input
-                            placeholder="Αναζήτηση κωδικού ή περιγραφής..."
+                            placeholder={t('tabs.storageTab.searchPlaceholder')}
                             value={searchTerm}
                             onChange={(e) => onSearchChange(e.target.value)}
                             className="pl-10"
@@ -74,7 +78,7 @@ export function StorageTabFilters({
 
                     <Button variant="outline" className="flex items-center gap-2">
                         <BarChart3 className={iconSizes.sm} />
-                        Εξαγωγή Αναφοράς
+                        {t('tabs.storageTab.exportReport')}
                     </Button>
                 </div>
             </CardContent>

@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
           id: p.id,
           name: p.name,
           buildings: p.buildings ? p.buildings.length : 0,
-          buildingNames: p.buildings ? p.buildings.map((b: any) => b.name) : []
+          buildingNames: p.buildings ? p.buildings.map((b: { name?: string }) => b.name) : []
         }))
       }
     });

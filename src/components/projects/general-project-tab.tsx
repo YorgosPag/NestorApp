@@ -1,13 +1,13 @@
 'use client';
 import React from 'react';
-import { GeneralProjectTab as GeneralTab } from './general-tab';
+import { GeneralProjectTab as GeneralTab, type GeneralProjectTabProps } from './general-tab';
 
 // Named export που χρειάζεται το project-details.tsx
-export function GeneralProjectTab(props: any) {
+export function GeneralProjectTab(props: GeneralProjectTabProps) {
     return <GeneralTab {...props} />
 }
 
 // Υπάρχων wrapper - διατηρείται για backward compatibility
-export function GeneralProjectTabWrapper(props: any) {
+export function GeneralProjectTabWrapper(props: GeneralProjectTabProps) {
     return <GeneralProjectTab {...props} />
 }

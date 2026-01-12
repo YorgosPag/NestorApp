@@ -9,6 +9,8 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 const nearbyProjects = [
     {
@@ -38,16 +40,36 @@ const nearbyProjects = [
 ];
 
 export function NearbyProjectsList() {
+    // 🏢 ENTERPRISE: i18n hook for translations
+    const { t } = useTranslation('building');
     const iconSizes = useIconSizes();
     const { quick } = useBorderTokens();
     const { bg } = useSemanticColors();
+
+    const getTypeLabel = (type: string) => {
+        const types: Record<string, string> = {
+            commercial: t('tabs.map.nearbyProjects.types.commercial'),
+            residential: t('tabs.map.nearbyProjects.types.residential'),
+            office: t('tabs.map.nearbyProjects.types.office')
+        };
+        return types[type] || type;
+    };
+
+    const getStatusLabel = (status: string) => {
+        const statuses: Record<string, string> = {
+            active: t('tabs.map.nearbyProjects.statuses.active'),
+            completed: t('tabs.map.nearbyProjects.statuses.completed'),
+            planning: t('tabs.map.nearbyProjects.statuses.planning')
+        };
+        return statuses[status] || status;
+    };
 
     return (
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
-                    Γειτονικά Έργα
+                    {t('tabs.map.nearbyProjects.title')}
                 </CardTitle>
             </CardHeader>
             <CardContent>
@@ -64,17 +86,14 @@ export function NearbyProjectsList() {
                                 <div>
                                     <p className="font-medium">{project.name}</p>
                                     <p className="text-sm text-muted-foreground">
-                                        {project.distance} απόσταση • {project.type === 'commercial' ? 'Εμπορικό' :
-                                            project.type === 'residential' ? 'Κατοικίες' : 'Γραφεία'}
+                                        {project.distance} {t('tabs.map.nearbyProjects.distance')} • {getTypeLabel(project.type)}
                                     </p>
                                 </div>
                             </div>
                             <div className="text-right">
                                 <div className="text-sm font-medium">{project.progress}%</div>
                                 <div className="text-xs text-muted-foreground">
-                                    {project.status === 'active' ? 'Σε εξέλιξη' :
-                                        project.status === 'completed' ? 'Ολοκληρωμένο' :
-                                            'Σχεδιασμός'}
+                                    {getStatusLabel(project.status)}
                                 </div>
                             </div>
                         </div>

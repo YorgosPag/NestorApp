@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Ruler, ZoomIn, ZoomOut } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { PROPERTY_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface MapControlsProps {
     showNearbyProjects: boolean;
@@ -22,6 +24,8 @@ export function MapControls({
     selectedLayer,
     setSelectedLayer,
 }: MapControlsProps) {
+    // 🏢 ENTERPRISE: i18n hook for translations
+    const { t } = useTranslation('building');
     const iconSizes = useIconSizes();
     return (
         <div className="mt-4 flex items-center justify-between">
@@ -33,20 +37,20 @@ export function MapControls({
                         onCheckedChange={(checked) => setShowNearbyProjects(!!checked)}
                     />
                     <Label htmlFor="nearby-projects" className="text-sm">
-                        Εμφάνιση γειτονικών έργων
+                        {t('tabs.map.controls.showNearby')}
                     </Label>
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <Label className="text-sm">Φίλτρο:</Label>
-                    <Select value={selectedLayer} onValueChange={(value) => setSelectedLayer(value as any)}>
+                    <Label className="text-sm">{t('tabs.map.controls.filter')}</Label>
+                    <Select value={selectedLayer} onValueChange={(value) => setSelectedLayer(value as 'all' | 'active' | 'completed')}>
                         <SelectTrigger className={`w-[180px] ${iconSizes.xl} text-sm`}>
-                            <SelectValue placeholder="Επιλογή φίλτρου" />
+                            <SelectValue placeholder={t('tabs.map.controls.selectFilter')} />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">{PROPERTY_FILTER_LABELS.ALL_PROJECTS}</SelectItem>
-                            <SelectItem value="active">Ενεργά μόνο</SelectItem>
-                            <SelectItem value="completed">Ολοκληρωμένα μόνο</SelectItem>
+                            <SelectItem value="active">{t('tabs.map.controls.activeOnly')}</SelectItem>
+                            <SelectItem value="completed">{t('tabs.map.controls.completedOnly')}</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -60,7 +64,7 @@ export function MapControls({
                     <ZoomOut className={`${iconSizes.sm} mr-2`} /> Zoom Out
                 </Button>
                 <Button variant="outline" size="sm">
-                    <Ruler className={`${iconSizes.sm} mr-2`} /> Μέτρηση απόστασης
+                    <Ruler className={`${iconSizes.sm} mr-2`} /> {t('tabs.map.controls.measureDistance')}
                 </Button>
             </div>
         </div>

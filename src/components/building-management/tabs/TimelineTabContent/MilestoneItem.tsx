@@ -9,6 +9,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatDate } from '@/lib/intl-utils';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Proper type safety - Zero 'any' tolerance
 export interface Milestone {
@@ -29,6 +31,8 @@ interface MilestoneItemProps {
 }
 
 export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTypeIcon }: MilestoneItemProps) {
+    // 🏢 ENTERPRISE: i18n hook for translations
+    const { t } = useTranslation('building');
     const iconSizes = useIconSizes();
     const { quick, getStatusBorder } = useBorderTokens();
     const colors = useSemanticColors();
@@ -77,7 +81,7 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
 
                 <ThemeProgressBar
                     progress={milestone.progress}
-                    label="Πρόοδος milestone"
+                    label={t('tabs.timeline.milestone.progressLabel')}
                     size="sm"
                     showPercentage={true}
                 />
@@ -86,12 +90,10 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
                     <div className={`mt-4 p-3 ${colors.bg.info} ${quick.card} ${getStatusBorder('info')}`}>
                         <div className={`flex items-center gap-2 text-sm ${colors.text.info}`}>
                             <Clock className={iconSizes.sm} />
-                            <span className="font-medium">Επόμενα βήματα:</span>
+                            <span className="font-medium">{t('tabs.timeline.milestone.nextSteps')}</span>
                         </div>
                         <ul className={`mt-2 text-sm ${colors.text.info} space-y-1`}>
-                            <li>• Ολοκλήρωση κεντρικού θερμικού συστήματος</li>
-                            <li>• Εγκατάσταση ανελκυστήρων</li>
-                            <li>• Τελικός έλεγχος ηλεκτρολογικών</li>
+                            <li>• {milestone.description}</li>
                         </ul>
                     </div>
                 )}
@@ -99,7 +101,7 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
                 {milestone.status === 'completed' && (
                     <div className={`mt-4 flex items-center gap-2 text-sm ${colors.text.success}`}>
                         <CheckCircle className={iconSizes.sm} />
-                        <span>Ολοκληρώθηκε στις {formatDate(milestone.date)}</span>
+                        <span>{t('tabs.timeline.milestone.completedAt', { date: formatDate(milestone.date) })}</span>
                     </div>
                 )}
             </div>

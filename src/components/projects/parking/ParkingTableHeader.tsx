@@ -8,9 +8,16 @@ import { cn } from '@/lib/utils';
 import { ParkingColumnHeader } from './ParkingColumnHeader';
 import { ParkingColumnFilter } from './ParkingColumnFilter';
 
+// 🏢 ENTERPRISE: Column configuration type
+interface TableColumn {
+  key: string;
+  label: string;
+  format?: (value: unknown) => string;
+}
+
 // Τύποι για τις props
 interface ParkingTableHeaderProps {
-  columns: Array<{ key: string; label: string; format?: (value: any) => string }>;
+  columns: TableColumn[];
   columnWidths: number[];
   onColumnResize: (newWidths: number[]) => void;
   filters: { [key: string]: string };

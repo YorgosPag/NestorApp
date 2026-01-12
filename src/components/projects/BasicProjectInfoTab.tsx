@@ -11,21 +11,24 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { cn } from '@/lib/utils';
 
+// 🏢 ENTERPRISE: Project basic info data type
+interface ProjectBasicInfo {
+    name: string;
+    licenseTitle: string;
+    description: string;
+    companyName: string;
+}
+
 interface BasicProjectInfoTabProps {
-    data: {
-        name: string;
-        licenseTitle: string;
-        description: string;
-        companyName: string;
-    };
-    setData: React.Dispatch<React.SetStateAction<any>>;
+    data: ProjectBasicInfo;
+    setData: React.Dispatch<React.SetStateAction<ProjectBasicInfo>>;
     isEditing: boolean;
 }
 
 export function BasicProjectInfoTab({ data, setData, isEditing }: BasicProjectInfoTabProps) {
     const iconSizes = useIconSizes();
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setData((prev: any) => ({...prev, [e.target.name]: e.target.value}));
+        setData((prev: ProjectBasicInfo) => ({...prev, [e.target.name]: e.target.value}));
     };
 
     return (
