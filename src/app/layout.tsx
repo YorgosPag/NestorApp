@@ -18,6 +18,13 @@ import { I18nProvider } from '@/components/providers/I18nProvider';
 import { GlobalErrorSetup } from '@/components/GlobalErrorSetup';
 import { ConditionalAppShell } from './components/ConditionalAppShell';
 
+// 🏢 ENTERPRISE: Type-safe Window extension for arc patch diagnostic
+declare global {
+  interface Window {
+    __ARC_PATCHED__?: boolean;
+  }
+}
+
 const roboto = Roboto({
   subsets: ["latin", "greek"],
   weight: ["400", "700"],
@@ -35,8 +42,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   // ⛔️ Kill-switch διάγνωση για εντοπισμό κυκλάκι
-  if (typeof window !== 'undefined' && !(window as any).__ARC_PATCHED__) {
-    (window as any).__ARC_PATCHED__ = true;
+  if (typeof window !== 'undefined' && !window.__ARC_PATCHED__) {
+    window.__ARC_PATCHED__ = true;
     const proto = CanvasRenderingContext2D.prototype;
     const origArc = proto.arc;
 

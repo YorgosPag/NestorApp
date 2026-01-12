@@ -15,6 +15,7 @@ import { portalComponents, layoutUtilities } from '@/styles/design-tokens';
 
 // Import relationship types
 import type { RelationshipType } from '@/types/contacts/relationships';
+import type { ContactType } from '@/types/contacts';
 import { getRelationshipTypeConfig, getAvailableRelationshipTypes } from './utils/relationship-types';
 
 interface CustomRelationshipSelectProps {
@@ -41,8 +42,8 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Get available relationship types
-  const availableTypes = getAvailableRelationshipTypes(contactType as any);
+  // 🏢 ENTERPRISE: Get available relationship types with proper type casting
+  const availableTypes = getAvailableRelationshipTypes(contactType as ContactType);
 
   // Get selected option config
   const selectedConfig = value ? getRelationshipTypeConfig(value) : null;

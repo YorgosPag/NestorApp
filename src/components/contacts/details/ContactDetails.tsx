@@ -6,8 +6,16 @@ import { useEmptyStateMessages, useActionMessages } from '@/hooks/useEnterpriseM
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { Button } from '@/components/ui/button';
-import type { Contact } from '@/types/contacts';
+import type { Contact, IndividualContact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes'; // 🏢 ENTERPRISE: Type-safe form data
+
+// 🏢 ENTERPRISE: Type guard for contacts with multiple photo URLs
+const getMultiplePhotoURLs = (contact: Contact): string[] => {
+  if ('multiplePhotoURLs' in contact && Array.isArray((contact as IndividualContact).multiplePhotoURLs)) {
+    return (contact as IndividualContact).multiplePhotoURLs || [];
+  }
+  return [];
+};
 import { ContactDetailsHeader } from './ContactDetailsHeader';
 import { AddUnitToContactDialog } from './AddUnitToContactDialog';
 import { openGalleryPhotoModal } from '@/core/modals';
@@ -56,7 +64,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
     });
 
     // Additional multiplePhotoURLs conversion for backward compatibility
-    const multiplePhotoURLs = (contact as any).multiplePhotoURLs || [];
+    const multiplePhotoURLs = getMultiplePhotoURLs(contact);
     if (multiplePhotoURLs.length > 0) {
       const multiplePhotos = multiplePhotoURLs.map((url: string) => ({
         file: null,
@@ -129,7 +137,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
       contactExists: !!contact,
       photoModalExists: !!photoModal,
       openModalExists: !!photoModal?.openModal,
-      multiplePhotoURLs: (contact as any)?.multiplePhotoURLs?.length || 0
+      multiplePhotoURLs: contact ? getMultiplePhotoURLs(contact).length : 0
     });
 
     if (contact) {

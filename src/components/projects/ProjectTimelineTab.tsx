@@ -9,10 +9,19 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-e
 import { cn } from '@/lib/utils';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { BuildingBadge } from '@/core/badges';
+import type { BuildingStatus } from '@/core/types/BadgeTypes';
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { getStatusColor, getStatusLabel } from '@/lib/project-utils';
 
-const mockBuildings = [
+// 🏢 ENTERPRISE: Typed mock building data
+interface MockBuilding {
+    id: number;
+    name: string;
+    progress: number;
+    status: BuildingStatus;
+}
+
+const mockBuildings: MockBuilding[] = [
     { id: 1, name: 'Κτίριο Α', progress: 100, status: 'completed' },
     { id: 2, name: 'Κτίριο Β', progress: 60, status: 'in_progress' },
     { id: 3, name: 'Κτίριο Γ', progress: 15, status: 'planning' },
@@ -54,7 +63,7 @@ export function ProjectTimelineTab({ project }: { project: Project }) {
                             <span className="font-medium">{building.name}</span>
                         </div>
                         <BuildingBadge
-                          status={building.status as any}
+                          status={building.status}
                           variant="secondary"
                           size="sm"
                           className="text-xs"

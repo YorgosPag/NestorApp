@@ -333,6 +333,17 @@ export const ConfigurationAdminInterface: React.FC = () => {
       setAdminState(prev => ({ ...prev, isDirty: true }));
     };
 
+    // 🏢 ENTERPRISE: Type-safe handler for tax fields
+    const handleTaxChange = (field: keyof CompanyConfiguration['tax'], value: string) => {
+      if (!editedCompany) return;
+
+      setEditedCompany(prev => prev ? {
+        ...prev,
+        tax: { ...prev.tax, [field]: value }
+      } : null);
+      setAdminState(prev => ({ ...prev, isDirty: true }));
+    };
+
     const handleSave = () => {
       if (editedCompany) {
         void updateCompanyConfiguration(editedCompany);
@@ -410,7 +421,7 @@ export const ConfigurationAdminInterface: React.FC = () => {
                 <Input
                   id="vat-number"
                   value={editedCompany.tax.vatNumber}
-                  onChange={(e) => handleAddressChange('vatNumber' as any, e.target.value)}
+                  onChange={(e) => handleTaxChange('vatNumber', e.target.value)}
                   placeholder="Enter VAT number"
                   type={showSensitiveData ? 'text' : 'password'}
                 />

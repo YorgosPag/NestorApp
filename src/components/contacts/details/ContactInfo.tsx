@@ -5,8 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: Centralized entity icons (ZERO hardcoded values)
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-import type { Contact } from '@/types/contacts';
-import { getPrimaryEmail, getPrimaryPhone } from '@/types/contacts';
+import type { Contact, IndividualContact, CompanyContact } from '@/types/contacts';
+import { getPrimaryEmail, getPrimaryPhone, isIndividualContact, isCompanyContact } from '@/types/contacts';
 import { CompanyProjectsTable } from './CompanyProjectsTable';
 import { CONTACT_TYPES } from '@/constants/contacts';
 import { CustomerStats } from './CustomerStats';
@@ -66,7 +66,14 @@ export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps)
             <div className={`p-4 ${quick.card}`}>
                 <h4 className="font-semibold mb-2 text-sm">{t('details.taxInfo.title')}</h4>
                 <div className="text-sm">
-                    <strong>{t('details.taxInfo.vatNumber')}</strong> {(contact as any).vatNumber || (contact as any).taxNumber || t('details.taxInfo.notSet')}
+                    <strong>{t('details.taxInfo.vatNumber')}</strong> {
+                      // 🏢 ENTERPRISE: Type-safe VAT number access using type guards
+                      isCompanyContact(contact)
+                        ? contact.vatNumber
+                        : isIndividualContact(contact)
+                          ? (contact.vatNumber || contact.taxNumber)
+                          : null
+                    || t('details.taxInfo.notSet')}
                 </div>
             </div>
          )}

@@ -1,7 +1,8 @@
 import type { IPDFDoc } from '../contracts';
+import type { jsPDF } from 'jspdf';
 
 export class JSPDFAdapter implements IPDFDoc {
-  constructor(private doc: any) {}
+  constructor(private doc: jsPDF) {}
 
   get pageSize() {
     return this.doc.internal.pageSize;

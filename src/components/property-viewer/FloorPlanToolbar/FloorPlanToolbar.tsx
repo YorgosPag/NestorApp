@@ -104,7 +104,7 @@ export function FloorPlanToolbar({
     disabled = false,
     variant = "outline"
   }: {
-    icon: any;
+    icon: React.ComponentType<{ className?: string }>;
     label: string;
     active?: boolean;
     onClick?: () => void;

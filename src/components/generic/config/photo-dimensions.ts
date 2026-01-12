@@ -84,18 +84,25 @@ import {
   getPhotoLayout as _getPhotoLayout,
   buildResponsivePhotoClass as _buildResponsivePhotoClass,
   getPhotoConfig,
-  getPhotoContextConfig
+  getPhotoContextConfig,
+  PHOTO_LAYOUTS
 } from './photo-config';
+import type { PhotoContext } from './photo-config';
+
+// 🏢 ENTERPRISE: Define layout key type for type-safe casting
+type PhotoLayoutKey = keyof typeof PHOTO_LAYOUTS;
 
 // Legacy function exports for backward compatibility
 export function getPhotoDimensions(context: string): string {
   console.warn('⚠️ getPhotoDimensions is deprecated. Use getPhotoConfig from photo-config instead.');
-  return _getPhotoDimensions(context as any);
+  // 🏢 ENTERPRISE: Cast to PhotoContext for type safety (legacy string input)
+  return _getPhotoDimensions(context as PhotoContext);
 }
 
 export function getPhotoLayout(layout: string) {
   console.warn('⚠️ getPhotoLayout is deprecated. Use photo-config layouts directly.');
-  return _getPhotoLayout(layout as any);
+  // 🏢 ENTERPRISE: Cast to PhotoLayoutKey for type safety (legacy string input)
+  return _getPhotoLayout(layout as PhotoLayoutKey);
 }
 
 export function buildResponsivePhotoClass(

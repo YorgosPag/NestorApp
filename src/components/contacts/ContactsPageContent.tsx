@@ -5,8 +5,13 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
-import type { Contact } from '@/types/contacts';
+import type { Contact, IndividualContact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
+
+// 🏢 ENTERPRISE: Type guard for contacts with photo URLs
+const hasMultiplePhotoURLs = (contact: Contact): contact is IndividualContact & { multiplePhotoURLs: string[] } => {
+  return 'multiplePhotoURLs' in contact && Array.isArray((contact as IndividualContact).multiplePhotoURLs);
+};
 import { ContactsService } from '@/services/contacts.service';
 import { CONTACT_TYPES } from '@/constants/contacts';
 import { ContactsHeader } from './page/ContactsHeader';
@@ -123,7 +128,7 @@ export function ContactsPageContent() {
       // 🔄 CACHE INVALIDATION: Log fresh contact data
       console.log('🔄 CONTACTS PAGE: Loaded fresh contacts from database', {
         count: contactsResult.contacts.length,
-        contactsWithPhotos: contactsResult.contacts.filter(c => (c as any).multiplePhotoURLs?.length > 0).length
+        contactsWithPhotos: contactsResult.contacts.filter(c => hasMultiplePhotoURLs(c) && c.multiplePhotoURLs.length > 0).length
       });
       setContacts(contactsResult.contacts);
 
@@ -253,15 +258,17 @@ export function ContactsPageContent() {
     if (selectedContact?.id) {
       const updatedContact = contacts.find(c => c.id === selectedContact.id);
       if (updatedContact && JSON.stringify(updatedContact) !== JSON.stringify(selectedContact)) {
+        const oldPhotoCount = hasMultiplePhotoURLs(selectedContact) ? selectedContact.multiplePhotoURLs.length : 0;
+        const newPhotoCount = hasMultiplePhotoURLs(updatedContact) ? updatedContact.multiplePhotoURLs.length : 0;
         console.log('🔄 CONTACTS PAGE: Updating selectedContact with fresh data', {
           contactId: selectedContact.id,
-          oldPhotos: (selectedContact as any).multiplePhotoURLs?.length || 0,
-          newPhotos: (updatedContact as any).multiplePhotoURLs?.length || 0
+          oldPhotos: oldPhotoCount,
+          newPhotos: newPhotoCount
         });
         setSelectedContact(updatedContact);
 
         // 🔥 FORCE RE-RENDER: Avatar components need key-based invalidation
-        const photoCount = (updatedContact as any).multiplePhotoURLs?.length || 0;
+        const photoCount = newPhotoCount;
         window.dispatchEvent(new CustomEvent('forceAvatarRerender', {
           detail: {
             contactId: selectedContact.id,

@@ -18,10 +18,21 @@ export async function POST(request: NextRequest) {
     const unitsResponse = await fetch(unitsUrl);
     const unitsData = await unitsResponse.json();
 
+    // 🏢 ENTERPRISE: Firestore REST API document structure
+    interface FirestoreDocument {
+      name: string;
+      fields?: {
+        status?: { stringValue?: string };
+        soldTo?: { stringValue?: string };
+        name?: { stringValue?: string };
+        [key: string]: { stringValue?: string; integerValue?: string } | undefined;
+      };
+    }
+
     // Find sold units without customers
-    const soldUnitsToUpdate = [];
+    const soldUnitsToUpdate: Array<{ id: string; name: string; path: string }> = [];
     if (unitsData.documents) {
-      unitsData.documents.forEach((doc: any) => {
+      unitsData.documents.forEach((doc: FirestoreDocument) => {
         const status = doc.fields?.status?.stringValue;
         const soldTo = doc.fields?.soldTo?.stringValue;
         const name = doc.fields?.name?.stringValue;

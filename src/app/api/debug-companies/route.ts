@@ -3,6 +3,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase-admin/firestore';
+import { COLLECTIONS } from '@/config/firestore-collections';
+
+// 🏢 ENTERPRISE: Type-safe interfaces for debug data
+interface CompanyInfo {
+  id: string;
+  companyName: string;
+  status: string;
+  type: string;
+}
+
+interface ProjectInfo {
+  projectId: string;
+  name: string;
+  companyId: string;
+  company: string;
+}
+
+interface DebugResult {
+  totalContacts: number;
+  totalCompanies: number;
+  specificCompany: CompanyInfo | null;
+  projectsForSpecificCompany: number;
+  allProjectCompanyIds: ProjectInfo[];
+  companyIdCounts: Record<string, number>;
+  allCompanies: CompanyInfo[];
+  primaryCompany?: {
+    id: string;
+    exists: boolean;
+    companyName?: string;
+    type?: string;
+    status?: string;
+  } | { exists: false };
+  projectsForPrimaryCompany?: number;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,14 +47,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Firebase admin not initialized' }, { status: 500 });
     }
 
-    const result = {
+    const result: DebugResult = {
       totalContacts: 0,
       totalCompanies: 0,
       specificCompany: null,
       projectsForSpecificCompany: 0,
-      allProjectCompanyIds: [] as any[],
-      companyIdCounts: {} as { [key: string]: number },
-      allCompanies: [] as any[]
+      allProjectCompanyIds: [],
+      companyIdCounts: {},
+      allCompanies: []
     };
 
     // 1. Παίρνουμε όλα τα contacts
@@ -135,6 +169,8 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }

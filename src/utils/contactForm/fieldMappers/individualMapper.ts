@@ -1,4 +1,5 @@
-import type { Contact } from '@/types/contacts';
+import type { Contact, IndividualContact } from '@/types/contacts';
+import { isIndividualContact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import { getSafeFieldValue, getSafeArrayValue } from '../contactMapper';
@@ -20,7 +21,13 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
 
   console.log('🔍 INDIVIDUAL MAPPER: Starting mapping for contact', contact.id);
 
-  const individualContact = contact as any; // Cast for individual fields access
+  // 🏢 ENTERPRISE: Type-safe access to individual contact fields
+  if (!isIndividualContact(contact)) {
+    console.warn('🔍 INDIVIDUAL MAPPER: Contact is not an individual, returning minimal form data');
+    return {} as ContactFormData;
+  }
+
+  const individualContact: IndividualContact = contact;
 
   // 📸 MULTIPLE PHOTOS - ENTERPRISE SOLUTION (2025 STANDARD)
   const rawUrls = getSafeArrayValue(individualContact, 'multiplePhotoURLs') || [];

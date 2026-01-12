@@ -190,7 +190,8 @@ export function TasksTab() {
   }, [tasks, filters]);
 
   const handleFilterChange = useCallback((key: keyof TaskFilters, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value as any }));
+    // 🏢 ENTERPRISE: Type-safe filter update using TaskFilters type
+    setFilters(prev => ({ ...prev, [key]: value as TaskFilters[typeof key] }));
   }, []);
 
   const handleCompleteTask = useCallback(async (taskId?: string, taskTitle?: string) => {

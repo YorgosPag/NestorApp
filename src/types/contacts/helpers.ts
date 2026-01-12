@@ -1,5 +1,21 @@
 import { Contact, IndividualContact, CompanyContact, ServiceContact, AddressInfo, isIndividualContact, isCompanyContact, isServiceContact } from './contracts';
 
+// 🏢 ENTERPRISE: Type-safe interface for legacy service contact fields
+// These fields may exist in older service contacts but are not in the standard schema
+interface LegacyServiceContactFields {
+  email?: string;
+  contactEmail?: string;
+  officialEmail?: string;
+  phone?: string;
+  telephone?: string;
+  centralPhone?: string;
+}
+
+// 🏢 ENTERPRISE: Type guard for legacy service contact fields
+function hasLegacyServiceFields(contact: Contact): contact is ServiceContact & LegacyServiceContactFields {
+  return isServiceContact(contact);
+}
+
 // Validation schemas (για χρήση με zod αργότερα)
 export const contactValidationRules = {
   individual: {
@@ -42,9 +58,6 @@ export function getContactInitials(contact: Contact): string {
 }
 
 export function getPrimaryEmail(contact: Contact): string | undefined {
-  // 🔄 QUICK FIX: Enhanced data search for service contacts
-  const contactAny = contact as any;
-
   // Try standard structure first (Individual, Company with emails array)
   const emails = contact.emails || [];
   const primaryEmail = emails.find(e => e.isPrimary);
@@ -54,11 +67,11 @@ export function getPrimaryEmail(contact: Contact): string | undefined {
     return standardEmail;
   }
 
-  // 🏛️ SERVICE CONTACT: Try service-specific fields
-  if (contact.type === 'service' || contactAny.serviceName) {
-    return contactAny.email ||
-           contactAny.contactEmail ||
-           contactAny.officialEmail ||
+  // 🏛️ SERVICE CONTACT: Try service-specific legacy fields with type safety
+  if (hasLegacyServiceFields(contact)) {
+    return contact.email ||
+           contact.contactEmail ||
+           contact.officialEmail ||
            undefined;
   }
 
@@ -66,9 +79,6 @@ export function getPrimaryEmail(contact: Contact): string | undefined {
 }
 
 export function getPrimaryPhone(contact: Contact): string | undefined {
-  // 🔄 QUICK FIX: Enhanced data search for service contacts
-  const contactAny = contact as any;
-
   // Try standard structure first (Individual, Company with phones array)
   const phones = contact.phones || [];
   const primaryPhone = phones.find(p => p.isPrimary);
@@ -78,11 +88,11 @@ export function getPrimaryPhone(contact: Contact): string | undefined {
     return standardPhone;
   }
 
-  // 🏛️ SERVICE CONTACT: Try service-specific fields
-  if (contact.type === 'service' || contactAny.serviceName) {
-    return contactAny.phone ||
-           contactAny.telephone ||
-           contactAny.centralPhone ||
+  // 🏛️ SERVICE CONTACT: Try service-specific legacy fields with type safety
+  if (hasLegacyServiceFields(contact)) {
+    return contact.phone ||
+           contact.telephone ||
+           contact.centralPhone ||
            undefined;
   }
 

@@ -8,12 +8,20 @@
  */
 
 import { useEffect } from 'react';
+import type { ErrorTracker } from '@/services/ErrorTracker';
+
+// 🏢 ENTERPRISE: Extend Window interface for type-safe global access
+declare global {
+  interface Window {
+    errorTracker?: ErrorTracker;
+  }
+}
 
 export function GlobalErrorSetup() {
   useEffect(() => {
     // Make errorTracker globally available for console testing
     import('@/services/ErrorTracker').then(({ errorTracker }) => {
-      (window as any).errorTracker = errorTracker;
+      window.errorTracker = errorTracker;
       // Debug disabled: ErrorTracker initialization message
     });
   }, []);

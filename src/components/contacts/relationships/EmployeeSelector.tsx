@@ -27,12 +27,14 @@ import { PHOTO_COLORS } from '@/components/generic/config/photo-config';
 // 🏢 ENTERPRISE: Centralized entity icons (ZERO hardcoded values)
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
-// 🏢 ENTERPRISE: Import centralized contact types
+// 🏢 ENTERPRISE: Import centralized contact types and type guards
 import type {
   ContactType,
   IndividualContact,
   CompanyContact,
-  ServiceContact,
+  ServiceContact
+} from '@/types/contacts';
+import {
   isIndividualContact,
   isCompanyContact,
   isServiceContact
@@ -111,15 +113,13 @@ const realContactSearch = async (query: string, filters: {
       let company: string | undefined;
       let department: string | undefined;
 
-      // Type-safe name extraction
+      // 🏢 ENTERPRISE: Type-safe name extraction using type guards
       if (isIndividualContact(contact)) {
-        const extendedContact = contact as any; // Legacy fields
-        name = `${extendedContact.firstName || ''} ${extendedContact.lastName || ''}`.trim();
-        company = extendedContact.employer || '';
-        department = extendedContact.position || '';
+        name = `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
+        company = contact.employer || '';
+        department = contact.position || '';
       } else if (isCompanyContact(contact)) {
-        const extendedContact = contact as any; // Legacy fields
-        name = extendedContact.companyName || '';
+        name = contact.companyName || '';
       } else if (isServiceContact(contact)) {
         name = contact.serviceName || '';
       }

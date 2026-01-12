@@ -84,7 +84,10 @@ const getPriorityLabel = (priority: string) => {
   return priorityLabels[priority] || priority;
 };
 
-const getPriorityColor = (priority: string) => {
+// 🏢 ENTERPRISE: Badge variant type for priority colors
+type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'error' | 'purple' | 'light' | 'muted' | 'subtle';
+
+const getPriorityColor = (priority: string): BadgeVariant => {
   switch (priority) {
     case 'urgent': return 'error';
     case 'high': return 'warning';
@@ -177,9 +180,9 @@ export function TaskCard({
         },
         {
           label: `${getPriorityLabel(task.priority)} προτεραιότητα`,
-          className: badgeVariants({ 
-            variant: getPriorityColor(task.priority) as any,
-            size: 'sm' 
+          className: badgeVariants({
+            variant: getPriorityColor(task.priority),
+            size: 'sm'
           })
         }
       ]}

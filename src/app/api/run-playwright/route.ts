@@ -52,13 +52,32 @@ export async function POST(request: Request) {
 
     console.log('✅ Playwright tests completed');
 
+    // 🏢 ENTERPRISE: Playwright test result types
+    interface PlaywrightTest {
+      status: 'passed' | 'failed' | 'skipped' | 'timedOut';
+      title?: string;
+      duration?: number;
+    }
+
+    interface PlaywrightSuite {
+      title?: string;
+      tests?: PlaywrightTest[];
+      suites?: PlaywrightSuite[];
+    }
+
+    interface TestSummary {
+      total: number;
+      passed: number;
+      failed: number;
+    }
+
     // Extract summary from Playwright results
-    const summary = results.suites?.reduce((acc: any, suite: any) => {
+    const summary = results.suites?.reduce((acc: TestSummary, suite: PlaywrightSuite) => {
       acc.total += suite.tests?.length || 0;
-      acc.passed += suite.tests?.filter((t: any) => t.status === 'passed').length || 0;
-      acc.failed += suite.tests?.filter((t: any) => t.status === 'failed').length || 0;
+      acc.passed += suite.tests?.filter((t: PlaywrightTest) => t.status === 'passed').length || 0;
+      acc.failed += suite.tests?.filter((t: PlaywrightTest) => t.status === 'failed').length || 0;
       return acc;
-    }, { total: 0, passed: 0, failed: 0 });
+    }, { total: 0, passed: 0, failed: 0 } as TestSummary);
 
     return NextResponse.json({
       success: summary?.failed === 0,

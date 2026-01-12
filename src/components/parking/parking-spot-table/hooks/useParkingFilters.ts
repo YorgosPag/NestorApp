@@ -12,9 +12,12 @@ export function useParkingFilters(spots: ParkingSpot[]) {
     let out = [...spots];
     for (const [key, value] of Object.entries(activeFilters)) {
       if (!value) continue;
-      out = out.filter(spot =>
-        String((spot as any)[key] ?? "").toLowerCase().includes(value.toLowerCase())
-      );
+      // 🏢 ENTERPRISE: Type-safe dynamic property access using keyof
+      out = out.filter(spot => {
+        const spotKey = key as keyof ParkingSpot;
+        const spotValue = spot[spotKey];
+        return String(spotValue ?? "").toLowerCase().includes(value.toLowerCase());
+      });
     }
     return out;
   }, [spots, activeFilters]);

@@ -2,6 +2,13 @@
 
 import React from 'react';
 
+// 🏢 ENTERPRISE: Extend Window interface for type-safe global debug access
+declare global {
+  interface Window {
+    __memoryDetector?: MemoryLeakDetector;
+  }
+}
+
 // Memory leak detection and prevention utilities
 
 interface MemorySnapshot {
@@ -326,10 +333,10 @@ export function useEventListenerCleanup() {
 export function enableMemoryMonitoring() {
   if (process.env.NODE_ENV === 'development') {
     memoryLeakDetector.start();
-    
-    // Add to window for debugging
-    (window as any).__memoryDetector = memoryLeakDetector;
-    
+
+    // 🏢 ENTERPRISE: Type-safe window debug helper
+    window.__memoryDetector = memoryLeakDetector;
+
     // Memory monitoring enabled and available via window.__memoryDetector
   }
 }

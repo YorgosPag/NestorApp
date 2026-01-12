@@ -443,8 +443,9 @@ export class AddressResolver {
 
   /**
    * Determine accuracy level από result
+   * @param result - Geocoding API result from Nominatim/OpenStreetMap
    */
-  private determineAccuracy(result: any): GeocodingResult['accuracy'] {
+  private determineAccuracy(result: { type?: string; class?: string; display_name?: string }): GeocodingResult['accuracy'] {
     const type = result.type || result.class;
 
     if (type === 'house' || type === 'building') {
@@ -460,8 +461,9 @@ export class AddressResolver {
 
   /**
    * Calculate confidence score
+   * @param result - Geocoding API result
    */
-  private calculateConfidence(result: any, address: GreekAddress): number {
+  private calculateConfidence(result: { display_name?: string }, address: GreekAddress): number {
     let confidence = 0.5;
 
     // Check if street και number match

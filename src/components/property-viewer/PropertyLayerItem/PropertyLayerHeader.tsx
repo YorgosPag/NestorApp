@@ -7,6 +7,7 @@ import { PropertyBadge } from "@/core/badges";
 import { Eye, EyeOff, Lock, Unlock, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Property } from '@/types/property-viewer';
+import type { PropertyStatus } from '@/core/types/BadgeTypes';
 import type { LayerState } from '../useLayerStates';
 import { PROPERTY_STATUS_CONFIG, PROPERTY_TYPE_ICONS } from "@/lib/property-utils";
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -61,7 +62,7 @@ export function PropertyLayerHeader({
       <div className="flex items-center justify-between text-xs pl-7">
         <span className="text-muted-foreground">{property.type}</span>
         <PropertyBadge
-          status={property.status as any}
+          status={property.status as PropertyStatus}
           variant="outline"
           className={cn("text-xs", statusInfo.color)}
         />

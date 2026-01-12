@@ -1,3 +1,4 @@
+import type React from 'react';
 import type { ContactFormData, ContactType } from '@/types/ContactFormTypes';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
@@ -121,9 +122,20 @@ export function createUnifiedPhotosChangeHandler(handlers: UnifiedPhotoHandlers)
  * 🔥 ΚΡΙΣΙΜΗ ΣΥΝΑΡΤΗΣΗ: Χτίζει τα σωστά props για κάθε renderer.
  * Extracted από το μεγάλο rendererProps useMemo.
  */
+// 🏢 ENTERPRISE: Base props interface for renderer configuration
+interface RendererBaseProps {
+  sections: unknown[];
+  formData: ContactFormData;
+  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onSelectChange: (name: string, value: string) => void;
+  disabled?: boolean;
+  customRenderers?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export function buildRendererPropsForContactType(
   contactType: ContactType,
-  baseProps: any,
+  baseProps: RendererBaseProps,
   photoHandlers: {
     handleLogoChange?: (file: File | null) => void;
     handleFileChange?: (file: File | null) => void;

@@ -7,15 +7,33 @@ import { formatDateTime } from '@/lib/intl-utils';
 import type { FirestoreishTimestamp } from '@/types/crm';
 import { hardcodedColorValues } from '@/design-system/tokens/colors';
 
+// 🏢 ENTERPRISE: Type guard for Firestore timestamps with toDate() method
+interface FirestoreTimestampLike {
+  toDate: () => Date;
+}
+
+function isFirestoreTimestamp(value: unknown): value is FirestoreTimestampLike {
+  return value !== null &&
+         typeof value === 'object' &&
+         'toDate' in value &&
+         typeof (value as FirestoreTimestampLike).toDate === 'function';
+}
+
 // ✅ ENTERPRISE MIGRATION COMPLETE: formatDate now uses centralized intl-utils
 export const formatDate = (timestamp?: FirestoreishTimestamp) => {
   if (!timestamp) return 'Άγνωστη ημερομηνία';
   try {
-    const date = timestamp instanceof Date
-        ? timestamp
-        : typeof timestamp === 'string'
-        ? new Date(timestamp)
-        : (timestamp as any).toDate();
+    // 🏢 ENTERPRISE: Type-safe timestamp conversion
+    let date: Date;
+    if (timestamp instanceof Date) {
+      date = timestamp;
+    } else if (typeof timestamp === 'string') {
+      date = new Date(timestamp);
+    } else if (isFirestoreTimestamp(timestamp)) {
+      date = timestamp.toDate();
+    } else {
+      return 'Άγνωστη ημερομηνία';
+    }
     return formatDateTime(date);
   } catch (err) {
     return 'Άγνωστη ημερομηνία';

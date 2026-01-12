@@ -29,7 +29,7 @@ interface MigrationResult {
   success: boolean;
   affectedRecords: number;
   executionTimeMs: number;
-  details: any;
+  details: Record<string, unknown>;
 }
 
 export async function POST(request: NextRequest): Promise<Response> {

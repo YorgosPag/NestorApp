@@ -54,7 +54,8 @@ export class NotificationClient {
     const parsed = ListResponseSchema.parse(json);
     // runtime validate items too
     parsed.items.forEach(i => NotificationSchema.parse(i));
-    return { items: parsed.items, cursor: parsed.cursor as any, etag } as ListResponse;
+    // 🏢 ENTERPRISE: Type-safe cursor handling (cursor is string | undefined)
+    return { items: parsed.items, cursor: parsed.cursor as string | undefined, etag } as ListResponse;
   }
 
   async ack(body: AckRequest) {

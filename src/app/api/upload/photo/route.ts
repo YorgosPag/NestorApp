@@ -4,6 +4,14 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { FileNamingService } from '@/services/FileNamingService';
 import { generateTempId } from '@/services/enterprise-id.service';
 
+// 🏢 ENTERPRISE: Type-safe error interface for Firebase Admin errors
+interface FirebaseAdminError {
+  message?: string;
+  code?: string;
+  details?: string;
+  stack?: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
     console.log('🚀 SERVER: Starting Firebase Admin server-side upload...');
@@ -154,19 +162,21 @@ export async function POST(request: NextRequest) {
     console.error('❌ ADMIN STORAGE: Upload failed:', error);
 
     // 🔍 DETAILED ERROR LOGGING for Firebase Admin Storage debugging
-    if (error && typeof error === 'object') {
+    // 🏢 ENTERPRISE: Type-safe error handling
+    const firebaseError = error as FirebaseAdminError | null;
+    if (firebaseError && typeof firebaseError === 'object') {
       console.error('📋 ADMIN ERROR DETAILS:', {
-        message: (error as any).message,
-        code: (error as any).code,
-        details: (error as any).details,
-        stack: (error as any).stack?.substring(0, 200)
+        message: firebaseError.message,
+        code: firebaseError.code,
+        details: firebaseError.details,
+        stack: firebaseError.stack?.substring(0, 200)
       });
     }
 
     return NextResponse.json({
       error: 'Firebase Admin Storage upload failed',
       details: error instanceof Error ? error.message : String(error),
-      errorCode: (error as any)?.code
+      errorCode: firebaseError?.code
     }, { status: 500 });
   }
 }

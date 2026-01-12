@@ -8,7 +8,7 @@ import { Building2, User, Camera, X } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
 import { MultiplePhotosUpload } from './MultiplePhotosUpload';
-import type { ContactType } from '@/types/contacts';
+import type { ContactType, Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import type { PhotoSlot } from './MultiplePhotosUpload';
@@ -90,21 +90,28 @@ function IndividualPhotoManager({
       photo.uploadUrl || photo.preview || null
     );
 
-    // Μετατρέπουμε το formData σε Contact-like object για το modal
-    const contactLike = {
-      ...formData,
-      type: formData.type || 'individual',
-      multiplePhotoURLs: galleryPhotos.filter(url => url !== null)
+    // 🏢 ENTERPRISE: Μετατρέπουμε το formData σε Contact-compatible object για το modal
+    // Using type assertion to Partial<Contact> since modal only uses specific fields
+    const contactLike: Partial<Contact> & { multiplePhotoURLs: string[] } = {
+      id: formData.id,
+      type: (formData.type || 'individual') as ContactType,
+      status: formData.status || 'active',
+      isFavorite: formData.isFavorite || false,
+      createdAt: formData.createdAt || new Date(),
+      updatedAt: formData.updatedAt || new Date(),
+      multiplePhotoURLs: galleryPhotos.filter((url): url is string => url !== null)
     };
 
     console.log('🖼️ IndividualPhotoManager: Opening gallery modal with:', {
       photoIndex,
       totalPhotos: galleryPhotos.length,
       photoUrl: galleryPhotos[photoIndex],
-      contact: contactLike.firstName + ' ' + contactLike.lastName
+      contact: formData.firstName + ' ' + formData.lastName
     });
 
-    openGalleryPhotoModal(photoPreviewModal, contactLike as any, photoIndex, galleryPhotos);
+    // 🏢 ENTERPRISE: Cast to Contact since openGalleryPhotoModal expects Contact type
+    // The modal primarily uses multiplePhotoURLs for gallery navigation
+    openGalleryPhotoModal(photoPreviewModal, contactLike as Contact, photoIndex, galleryPhotos);
   }, [formData, photoPreviewModal]);
   return (
     <Card className="mt-4">

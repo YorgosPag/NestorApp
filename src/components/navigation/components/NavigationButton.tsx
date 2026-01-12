@@ -207,7 +207,14 @@ function NavigationLinkOverlay({ href, tooltip = 'Άνοιγμα στις Επα
             onClick={handleNavigation}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
-                handleNavigation(e as any);
+                // 🏢 ENTERPRISE: Create synthetic mouse event for keyboard activation
+                const syntheticEvent = {
+                  stopPropagation: () => e.stopPropagation(),
+                  preventDefault: () => e.preventDefault(),
+                  ctrlKey: e.ctrlKey,
+                  metaKey: e.metaKey
+                } as React.MouseEvent<HTMLSpanElement>;
+                handleNavigation(syntheticEvent);
               }
             }}
             className={cn(

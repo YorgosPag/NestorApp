@@ -44,7 +44,7 @@ interface FirestoreDiagnosticResult {
       documentCount?: number;
       latency?: number;
       errorMessage?: string;
-      sampleDocument?: any;
+      sampleDocument?: Record<string, unknown> | null;
     };
   };
   specificTests: {
@@ -186,8 +186,8 @@ export async function GET(): Promise<NextResponse<FirestoreDiagnosticResult>> {
     try {
       const floorsSnapshot = await Promise.race([
         getDocs(query(collection(db, COLLECTIONS.FLOORS), limit(10))),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout after 10 seconds')), 10000))
-      ]) as any;
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout after 10 seconds')), 10000))
+      ]);
 
       const floorsLatency = Date.now() - floorsNormalizedStart;
 
@@ -218,8 +218,8 @@ export async function GET(): Promise<NextResponse<FirestoreDiagnosticResult>> {
     try {
       const buildingsSnapshot = await Promise.race([
         getDocs(query(collection(db, COLLECTIONS.BUILDINGS), limit(5))),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout after 5 seconds')), 5000))
-      ]) as any;
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout after 5 seconds')), 5000))
+      ]);
 
       const buildingsLatency = Date.now() - buildingsStart;
 
@@ -240,8 +240,8 @@ export async function GET(): Promise<NextResponse<FirestoreDiagnosticResult>> {
           const firstBuilding = buildingsSnapshot.docs[0];
           const subcollectionSnapshot = await Promise.race([
             getDocs(collection(db, COLLECTIONS.BUILDINGS, firstBuilding.id, 'floors')),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout after 5 seconds')), 5000))
-          ]) as any;
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout after 5 seconds')), 5000))
+          ]);
 
           const subcollectionLatency = Date.now() - subcollectionStart;
 

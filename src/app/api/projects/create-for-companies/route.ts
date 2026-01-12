@@ -114,8 +114,14 @@ export async function POST(request: NextRequest) {
     }));
 
     // 🏢 ENTERPRISE: Δημιούργησε projects για κάθε εταιρεία - configurable starting index
+    interface CreatedProject {
+      id: string;
+      name: string;
+      company: string;
+      companyId: string;
+    }
     let projectIndex = BUILDING_IDS.PROJECT_ID + 1; // Starting after configured base project
-    const createdProjects: any[] = [];
+    const createdProjects: CreatedProject[] = [];
 
     for (const company of companies) {
       console.log(`\n🏢 Creating project for: ${company.companyName}`);

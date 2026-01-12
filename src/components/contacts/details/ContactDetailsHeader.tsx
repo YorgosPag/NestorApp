@@ -13,12 +13,12 @@ import { Users, Building2, Landmark, Edit, Trash2, Check, X } from 'lucide-react
 import type {
   Contact,
   ContactType,
-  ContactStatus,
   IndividualContact,
   CompanyContact,
   ServiceContact
 } from '@/types/contacts';
-import { getContactDisplayName, getContactInitials } from '@/types/contacts';
+import type { ContactStatus } from '@/core/types/BadgeTypes';
+import { getContactDisplayName, getContactInitials, isIndividualContact, isCompanyContact, isServiceContact } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
 import { cn } from '@/lib/utils';
 import { CONTACT_TYPES, getContactIcon, getContactLabel } from '@/constants/contacts';
@@ -76,14 +76,13 @@ export function ContactDetailsHeader({
   }, [contact.id]);
   const { icon: Icon, name: typeName } = getTypeInfo(type);
 
-  // ✅ ENTERPRISE: Direct property access with type safety
-  const contactAny = contact as any; // Controlled usage for legacy fields
-  const status: ContactStatus | undefined = contactAny.status;
+  // ✅ ENTERPRISE: Type-safe property access using type guards
+  const status: ContactStatus | undefined = contact.status;
 
-  // Safe property accessors based on contact type
-  const photoURL = type === 'individual' ? contactAny.photoURL : undefined;
-  const logoURL = (type === 'company' || type === 'service') ? contactAny.logoURL : undefined;
-  const multiplePhotoURLs = type === 'individual' ? contactAny.multiplePhotoURLs : undefined;
+  // 🏢 ENTERPRISE: Safe property accessors based on contact type using type guards
+  const photoURL = isIndividualContact(contact) ? contact.photoURL : undefined;
+  const logoURL = (isCompanyContact(contact) || isServiceContact(contact)) ? contact.logoURL : undefined;
+  const multiplePhotoURLs = isIndividualContact(contact) ? contact.multiplePhotoURLs : undefined;
   const displayName = getContactDisplayName(contact);
   const initials = getContactInitials(contact);
 
@@ -251,7 +250,8 @@ export function ContactDetailsHeader({
       {/* 📱 MOBILE: Show only badges (no header duplication) */}
       <div className="md:hidden p-4">
         <div className="flex gap-2">
-          <ContactBadge status={type as any} variant="outline" size="sm" />
+          {/* 🏢 ENTERPRISE: ContactType badge uses status prop - type is valid ContactType */}
+          <ContactBadge status={type} variant="outline" size="sm" />
           {status && <ContactBadge status={status} size="sm" />}
         </div>
       </div>

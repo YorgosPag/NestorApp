@@ -63,7 +63,8 @@ export interface StatusTransitionRule {
 export interface ValidationRule {
   field: keyof EnhancedProperty;
   condition: 'required' | 'positive' | 'within-range' | 'custom';
-  value?: any;
+  /** Validation value: number for positive, [min, max] for within-range */
+  value?: number | [number, number] | string | boolean;
   customValidator?: (property: EnhancedProperty) => boolean;
   errorMessage: string;
 }

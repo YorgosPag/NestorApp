@@ -51,7 +51,10 @@ const getTypeLabel = (type: string) => {
   return typeLabels[type] || type;
 };
 
-const getPriorityColor = (priority: string = 'medium') => {
+// 🏢 ENTERPRISE: Badge variant type for priority colors
+type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'error' | 'purple' | 'light' | 'muted' | 'subtle';
+
+const getPriorityColor = (priority: string = 'medium'): BadgeVariant => {
   switch (priority) {
     case 'high': return 'error';
     case 'medium': return 'warning';
@@ -163,9 +166,9 @@ export function NotificationCard({
         },
         notification.priority && notification.priority !== 'medium' && {
           label: `${notification.priority === 'high' ? 'Υψηλή' : 'Χαμηλή'} Προτεραιότητα`,
-          className: badgeVariants({ 
-            variant: getPriorityColor(notification.priority) as any,
-            size: 'sm' 
+          className: badgeVariants({
+            variant: getPriorityColor(notification.priority),
+            size: 'sm'
           })
         },
         {

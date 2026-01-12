@@ -10,6 +10,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
 import { NAVIGATION_ENTITIES, NAVIGATION_ACTIONS } from '@/components/navigation/config/navigation-entities';
 import type { ExtendedPropertyDetails, Property } from '@/types/property-viewer';
+import type { PropertyStatus } from '@/core/types/BadgeTypes';
 import { PROPERTY_STATUS_CONFIG } from '@/lib/property-utils';
 import { formatFloorLabel, formatCurrency } from '@/lib/intl-utils';
 
@@ -36,7 +37,7 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-semibold text-sm leading-tight">{property.name}</h3>
           <PropertyBadge
-            status={property.status as any}
+            status={property.status as PropertyStatus}
             variant="outline"
             size="sm"
             className="text-xs flex-shrink-0"

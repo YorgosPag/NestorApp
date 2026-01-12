@@ -234,8 +234,9 @@ export const OBLIGATION_STATUS_LABELS = {
 } as const;
 
 // Obligation status label getter function (migrated)
+// 🏢 ENTERPRISE: Type-safe status label lookup
 export const getObligationStatusLabel = (status: string): string => {
-  return (OBLIGATION_STATUS_LABELS as any)[status] || status;
+  return OBLIGATION_STATUS_LABELS[status as keyof typeof OBLIGATION_STATUS_LABELS] || status;
 };
 
 // ============================================================================
@@ -1074,9 +1075,10 @@ export const LEGACY_DROPDOWN_SUPPORT = {
  * 🔧 Legacy String Resolver
  *
  * Helper function για migration από hardcoded strings
+ * 🏢 ENTERPRISE: Type-safe legacy string lookup
  */
 export const resolveLegacyDropdownString = (hardcodedString: string): string => {
-  return (LEGACY_DROPDOWN_SUPPORT as any)[hardcodedString] || hardcodedString;
+  return LEGACY_DROPDOWN_SUPPORT[hardcodedString as keyof typeof LEGACY_DROPDOWN_SUPPORT] || hardcodedString;
 };
 
 // ============================================================================

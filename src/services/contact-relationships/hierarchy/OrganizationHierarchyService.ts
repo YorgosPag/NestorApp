@@ -16,8 +16,19 @@ import {
   OrganizationHierarchyNode,
   ContactWithRelationship
 } from '@/types/contacts/relationships';
-import { Contact } from '@/types/contacts';
+import { Contact, isCompanyContact, isServiceContact } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
+
+// 🏢 ENTERPRISE: Helper function to get organization name with type safety
+function getOrganizationName(organization: Contact): string {
+  if (isCompanyContact(organization)) {
+    return organization.companyName;
+  }
+  if (isServiceContact(organization)) {
+    return organization.serviceName;
+  }
+  return 'Unknown Organization';
+}
 import { FirestoreRelationshipAdapter } from '../adapters/FirestoreRelationshipAdapter';
 import { RelationshipQueryBuilder } from '../search/RelationshipQueryBuilder';
 
@@ -101,7 +112,7 @@ export class OrganizationHierarchyService {
         throw new Error(`Organization not found: ${organizationId}`);
       }
 
-      console.log('🏢 HIERARCHY: Organization found:', organization.type, (organization as any).companyName || (organization as any).serviceName);
+      console.log('🏢 HIERARCHY: Organization found:', organization.type, getOrganizationName(organization));
 
       // Get all REAL employees από Firebase
       const employees = await this.getOrganizationEmployees(organizationId);

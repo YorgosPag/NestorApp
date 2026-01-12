@@ -327,8 +327,9 @@ export class WebScrapingEngine {
 
   /**
    * Normalize API data to standard format
+   * @param data - Raw API response data (structure varies by provider)
    */
-  private async normalizeAPIData(data: any, target: ScrapingTarget): Promise<ScrapedProperty[]> {
+  private async normalizeAPIData(data: unknown, target: ScrapingTarget): Promise<ScrapedProperty[]> {
     // This would be customized per API
     // Debug logging removed - Normalizing data
 
@@ -474,7 +475,7 @@ export const webScrapingEngine = new WebScrapingEngine();
  * Scraping error handler
  */
 export class ScrapingErrorHandler {
-  static logError(target: ScrapingTarget, error: Error, context?: any): void {
+  static logError(target: ScrapingTarget, error: Error, context?: Record<string, unknown>): void {
     // Error logging removed - Scraping Error
 
     // Could integrate with ErrorTracker service

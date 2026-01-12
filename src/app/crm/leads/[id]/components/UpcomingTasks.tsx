@@ -9,10 +9,11 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { getTaskDateColor, formatTaskDate } from '../utils/dates';
+import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 
 interface UpcomingTasksProps {
   tasks: CrmTask[];
-  router: any;
+  router: AppRouterInstance;
 }
 
 export function UpcomingTasks({ tasks, router }: UpcomingTasksProps) {

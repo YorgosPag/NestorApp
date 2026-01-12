@@ -6,7 +6,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import ICU from 'i18next-icu';
-import { loadNamespace } from './lazy-config';
+import { loadNamespace, type Namespace, type Language, SUPPORTED_LANGUAGES } from './lazy-config';
 
 // Load essential translations for initial boot
 import commonEl from './locales/el/common.json';
@@ -63,15 +63,19 @@ i18n
 if (typeof window !== 'undefined') {
   // Client-side only
   setTimeout(async () => {
-    const criticalNamespaces = ['errors', 'toasts', 'navigation', 'dxf-viewer', 'geo-canvas'];
-    const currentLang = i18n.language;
-    
+    // 🏢 ENTERPRISE: Type-safe namespace and language arrays
+    const criticalNamespaces: Namespace[] = ['errors', 'toasts', 'navigation', 'dxf-viewer', 'geo-canvas'];
+    const currentLang = i18n.language as Language;
+
+    // Validate language is supported, fallback to 'el'
+    const validLang: Language = SUPPORTED_LANGUAGES.includes(currentLang as Language) ? currentLang : 'el';
+
     // console.log('🚀 Preloading critical namespaces...');
 
     try {
       await Promise.all(
         criticalNamespaces.map(async (ns) => {
-          await loadNamespace(ns as any, currentLang as any);
+          await loadNamespace(ns, validLang);
         })
       );
 

@@ -819,6 +819,11 @@
         "delivery": "Project Delivery",
         "deliveryDesc": "Final inspection and handover to client"
       },
+      "milestone": {
+        "progressLabel": "Milestone progress",
+        "nextSteps": "Next steps:",
+        "completedAt": "Completed on {{date}}"
+      },
       "status": {
         "completed": "Completed",
         "inProgress": "In Progress",

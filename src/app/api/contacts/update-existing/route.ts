@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
+// 🏢 ENTERPRISE: Type-safe interface for contact assignments
+interface ContactAssignment {
+  tags: string[];
+  role: string;
+}
+
 export async function POST(request: Request) {
   try {
     const { contactAssignments } = await request.json();
@@ -21,16 +27,18 @@ export async function POST(request: Request) {
 
     for (const [contactId, assignment] of Object.entries(contactAssignments)) {
       try {
+        // 🏢 ENTERPRISE: Type-safe assignment access
+        const typedAssignment = assignment as ContactAssignment;
         const updateData = {
-          tags: (assignment as any).tags,
-          role: (assignment as any).role,
+          tags: typedAssignment.tags,
+          role: typedAssignment.role,
           updatedAt: new Date()
         };
 
         await adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId).update(updateData);
         updatedContacts.push(contactId);
 
-        console.log(`✅ Updated contact: ${contactId} → ${(assignment as any).role} (${(assignment as any).tags.join(', ')})`);
+        console.log(`✅ Updated contact: ${contactId} → ${typedAssignment.role} (${typedAssignment.tags.join(', ')})`);
 
       } catch (contactError) {
         const errorMessage = contactError instanceof Error ? contactError.message : 'Unknown error';

@@ -12,7 +12,8 @@ export function useSectionEditorState(
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const updateSection = useCallback((field: keyof ObligationSection, value: unknown) => {
-    setEditedSection(prev => ({ ...prev, [field]: value as any }));
+    // 🏢 ENTERPRISE: Type-safe section update using ObligationSection field type
+    setEditedSection(prev => ({ ...prev, [field]: value as ObligationSection[typeof field] }));
     setHasUnsavedChanges(true);
   }, []);
 

@@ -7,6 +7,7 @@ import { EntityDetailsHeader } from '@/core/entity-headers';
 import { UnitBadge, CommonBadge } from '@/core/badges/UnifiedBadgeSystem';
 import { cn } from '@/lib/utils';
 import type { Storage } from '@/types/storage/contracts';
+import type { UnitStatus } from '@/core/types/BadgeTypes';
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 
 interface StorageDetailsHeaderProps {
@@ -58,7 +59,7 @@ export function StorageDetailsHeader({ storage }: StorageDetailsHeaderProps) {
           <div className="flex gap-2 mt-2 flex-wrap">
             {/* Status Badge using UnitBadge (similar statuses) */}
             <UnitBadge
-              status={storage.status as any}
+              status={storage.status as UnitStatus}
               size="sm"
             />
 

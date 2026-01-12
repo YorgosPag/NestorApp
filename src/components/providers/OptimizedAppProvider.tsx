@@ -15,6 +15,19 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
+// 🏢 ENTERPRISE: Extend Window interface for type-safe global debug access
+interface AppOptimizations {
+  performance: typeof performanceMonitor;
+  memory: typeof memoryLeakDetector;
+  clearCache: () => void;
+}
+
+declare global {
+  interface Window {
+    __appOptimizations?: AppOptimizations;
+  }
+}
+
 interface OptimizedAppProviderProps {
   children: React.ReactNode;
   enableDevTools?: boolean;
@@ -197,8 +210,8 @@ export function OptimizedAppProvider({
       // console.log('✅ Lazy route loading');
       // console.groupEnd();
 
-      // Add debug helpers to window
-      (window as any).__appOptimizations = {
+      // 🏢 ENTERPRISE: Add type-safe debug helpers to window
+      window.__appOptimizations = {
         performance: performanceMonitor,
         memory: memoryLeakDetector,
         clearCache: () => {

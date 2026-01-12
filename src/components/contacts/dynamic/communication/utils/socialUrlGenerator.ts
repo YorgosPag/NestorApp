@@ -130,7 +130,9 @@ export function validateSocialUrl(url: string, platform?: SocialPlatform): boole
   // BACKWARDS COMPATIBLE: Same interface, enterprise implementation
   try {
     const { validateSocialUrl: enterpriseValidator } = require('@/lib/social-platform-system');
-    return enterpriseValidator(url, platform as any); // Type mapping handled internally
+    // 🏢 ENTERPRISE: Type mapping between legacy SocialPlatform and enterprise SocialPlatformType
+    // Both types have the same string values, so casting is safe
+    return enterpriseValidator(url, platform as string | undefined);
   } catch (error) {
     console.warn('Enterprise social validator not available, using fallback');
     if (!url?.trim()) return false;

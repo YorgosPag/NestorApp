@@ -110,7 +110,7 @@ export const useRelationshipForm = (
 
       // 🔧 FIX: Contact object uses 'type' field, not 'contactType'
       const sourceType = sourceContact.type || sourceContact.contactType;
-      const targetType = (targetContact as any).type || targetContact.contactType;
+      const targetType = targetContact.type || targetContact.contactType;
 
       console.log('🚨 VALIDATION: Contact details for centralized validation:', {
         source: {

@@ -4,9 +4,17 @@ import React from 'react';
 import { ContactBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
+import type { ContactStatus } from '@/core/types/BadgeTypes';
+
+// 🏢 ENTERPRISE: Typed contact interface for demo data
+interface DemoContact {
+    name: string;
+    company: string;
+    status: ContactStatus;
+}
 
 export function ContactsList() {
-    const contacts = [
+    const contacts: DemoContact[] = [
         { name: 'Γιώργος Παπαδόπουλος', company: 'Tech Solutions', status: 'active' },
         { name: 'Μαρία Ιωάννου', company: 'Creative Designs', status: 'active' },
         { name: 'Κώστας Βασιλείου', company: 'BuildCo', status: 'inactive' },
@@ -30,7 +38,7 @@ export function ContactsList() {
                             <td className="p-3 text-gray-600 dark:text-gray-400">{contact.company}</td>
                             <td className="p-3">
                                 <ContactBadge
-                                  status={contact.status as any}
+                                  status={contact.status}
                                   size="sm"
                                 />
                             </td>

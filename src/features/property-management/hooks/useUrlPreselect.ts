@@ -2,9 +2,16 @@
 
 import * as React from 'react';
 
+// 🏢 ENTERPRISE: Property type for URL preselection
+interface SelectableProperty {
+  id: string;
+  floorId?: string;
+  [key: string]: unknown;
+}
+
 type Args = {
   selectedId: string | null;
-  properties: any[];
+  properties: SelectableProperty[];
   onSelectFloor?: (id: string) => void;
   setSelectedProperties: (ids: string[]) => void;
 };

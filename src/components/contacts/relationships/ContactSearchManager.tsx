@@ -116,9 +116,9 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
             id: c.id,
             firstName: c.firstName,
             lastName: c.lastName,
-            name: (c as any).name || `${c.firstName || ''} ${c.lastName || ''}`.trim(),
+            name: `${c.firstName || ''} ${c.lastName || ''}`.trim(),
             type: c.type,
-            status: (c as any).status
+            status: c.status
           })));
         }
       } else {
@@ -134,9 +134,9 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
             id: c.id,
             firstName: c.firstName,
             lastName: c.lastName,
-            name: (c as any).name || `${c.firstName || ''} ${c.lastName || ''}`.trim(),
+            name: `${c.firstName || ''} ${c.lastName || ''}`.trim(),
             type: c.type,
-            status: (c as any).status
+            status: c.status
           })));
         }
       }

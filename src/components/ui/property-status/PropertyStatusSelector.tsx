@@ -171,8 +171,9 @@ export function PropertyStatusSelector({
       const category = getStatusCategory(status);
       const label = getEnhancedStatusLabel(status);
 
-      // Filter by allowed categories
-      if (allowedCategories && !allowedCategories.includes(category as any)) {
+      // 🏢 ENTERPRISE: Filter by allowed categories with proper type casting
+      // getStatusCategory returns string, but allowedCategories expects keyof typeof STATUS_CATEGORIES
+      if (allowedCategories && !allowedCategories.includes(category as keyof typeof STATUS_CATEGORIES)) {
         continue;
       }
 
