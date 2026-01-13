@@ -120,7 +120,10 @@ export const COLLECTIONS = {
   LOCALES: process.env.NEXT_PUBLIC_LOCALES_COLLECTION || 'locales',
 
   // 🔢 COUNTERS (Enterprise Sequential ID Generation)
-  COUNTERS: process.env.NEXT_PUBLIC_COUNTERS_COLLECTION || 'counters'
+  COUNTERS: process.env.NEXT_PUBLIC_COUNTERS_COLLECTION || 'counters',
+
+  // ⚙️ USER PREFERENCES
+  USER_NOTIFICATION_SETTINGS: process.env.NEXT_PUBLIC_USER_NOTIFICATION_SETTINGS_COLLECTION || 'user_notification_settings'
 } as const;
 
 // ============================================================================

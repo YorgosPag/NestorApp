@@ -1,0 +1,22 @@
+{
+  "policy": {
+    "allowedRegression": 0,
+    "warnThreshold": 10,
+    "criticalThreshold": 50
+  },
+  "baseline": {
+    "file": ".ts-error-baseline.json",
+    "requireApprovalForUpdate": true,
+    "approvalTokenEnvVar": "TS_BASELINE_APPROVAL_TOKEN"
+  },
+  "governance": {
+    "updateRestrictions": {
+      "requireToken": true,
+      "allowedEnvironments": ["ci", "release"]
+    },
+    "auditLog": {
+      "enabled": true,
+      "logFile": ".ts-error-audit.log"
+    }
+  }
+}

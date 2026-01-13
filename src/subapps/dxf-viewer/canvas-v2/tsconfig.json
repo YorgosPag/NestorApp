@@ -1,10 +1,7 @@
 {
   "extends": "../../../../tsconfig.json",
   "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["../../*"]
-    }
+    "tsBuildInfoFile": ".tsbuildinfo"
   },
   "include": [
     "**/*.ts",

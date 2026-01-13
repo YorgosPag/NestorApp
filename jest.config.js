@@ -12,12 +12,26 @@ const config = {
     'visual-cross-browser'
   ],
   moduleNameMapper: {
-    // Monorepo workspace packages
-    '^@geo-alert/core$': '<rootDir>/packages/core/index.ts',
-    // Path aliases
+    // =================================================================
+    // PATH ALIASES - Aligned with tsconfig.base.json (SSoT)
+    // =================================================================
+    // Main app source
     '^@/(.*)$': '<rootDir>/src/$1',
+    // DXF viewer systems (legacy compatibility)
+    '^@/systems/(.*)$': '<rootDir>/src/subapps/dxf-viewer/systems/$1',
+    // Monorepo workspace packages
+    '^@geo-alert/core$': '<rootDir>/packages/core/src/index.ts',
+    '^@geo-alert/core/(.*)$': '<rootDir>/packages/core/src/$1',
+    // Core subsystems
+    '^@core/polygon-system$': '<rootDir>/packages/core/polygon-system/index.ts',
+    '^@core/polygon-system/(.*)$': '<rootDir>/packages/core/polygon-system/$1',
+    '^@core/alert-engine$': '<rootDir>/packages/core/alert-engine/index.ts',
+    '^@core/alert-engine/(.*)$': '<rootDir>/packages/core/alert-engine/$1',
+    // Legacy alias (deprecated)
     '^@subapps/(.*)$': '<rootDir>/src/subapps/$1',
+    // =================================================================
     // Asset mocks
+    // =================================================================
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '\\.(jpg|jpeg|png|gif|webp|svg)$': '<rootDir>/__mocks__/fileStub.js'
   },

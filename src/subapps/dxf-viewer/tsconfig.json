@@ -1,57 +1,19 @@
 {
+  "extends": "../../../tsconfig.json",
   "compilerOptions": {
-    "target": "ES2017",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
     "types": ["node"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
-    "incremental": true,
-    "composite": false,
-    "tsBuildInfoFile": ".next/cache/tsconfig.tsbuildinfo",
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": [
-        "../../*"
-      ],
-      "@/systems/*": [
-        "./systems/*"
-      ]
-    }
+    "tsBuildInfoFile": ".tsbuildinfo"
   },
   "include": [
-    "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts",
-    "src/subapps/dxf-viewer/types/dxf-modules.d.ts",
+    "types/dxf-modules.d.ts",
     "types/jest-globals.d.ts"
   ],
   "exclude": [
     "node_modules",
-    ".next",
-    "src/subapps/dxf-viewer/patches/**",
-    "src/subapps/dxf-viewer/archive/**",
-    "src/subapps/dxf-viewer-10-backup/**",
-    "src/app/test.BACK/**",
-    "src/subapps/dxf-viewer/test.BACK/**",
-    "src/ai/**",
-    "src/ai.back/**",
-    "DxfViewerApp.tsx"
+    "patches/**",
+    "archive/**",
+    "test.BACK/**"
   ]
 }

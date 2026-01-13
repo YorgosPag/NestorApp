@@ -3,10 +3,39 @@
 import { isFirebaseAvailable } from '../../app/api/communications/webhooks/telegram/firebase/availability';
 import { getFirestoreHelpers } from '../../app/api/communications/webhooks/telegram/firebase/helpers-lazy';
 import { safeDbOperation } from '../../app/api/communications/webhooks/telegram/firebase/safe-op';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
-export type CommunicationChannel = 'email' | 'telegram' | 'whatsapp' | 'sms';
-export type MessagePriority = 'low' | 'normal' | 'high' | 'urgent';
-export type MessageCategory = 'transactional' | 'marketing' | 'notification' | 'system';
+// ============================================================================
+// 🏢 ENTERPRISE: Import from canonical SSoT (for local use)
+// ============================================================================
+
+import {
+  COMMUNICATION_CHANNELS,
+  MESSAGE_PRIORITIES,
+  MESSAGE_CATEGORIES,
+  IMPLEMENTED_CHANNELS,
+  isChannelImplemented,
+  getImplementedChannels,
+  type CommunicationChannel,
+  type MessagePriority,
+  type MessageCategory,
+  type ImplementedChannel,
+} from '@/types/communications';
+
+// Re-export for consumers of this module
+// @see src/types/communications.ts (CANONICAL)
+export {
+  COMMUNICATION_CHANNELS,
+  MESSAGE_PRIORITIES,
+  MESSAGE_CATEGORIES,
+  IMPLEMENTED_CHANNELS,
+  isChannelImplemented,
+  getImplementedChannels,
+  type CommunicationChannel,
+  type MessagePriority,
+  type MessageCategory,
+  type ImplementedChannel,
+};
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -134,6 +163,23 @@ export async function enqueueMessage(params: EnqueueMessageParams): Promise<Enqu
   const recipients = Array.isArray(params.to) ? params.to : [params.to];
   const messageIds: string[] = [];
   const errors: string[] = [];
+
+  // 🏢 ENTERPRISE FAIL-FAST: Validate all channels have implementations
+  // Uses static imports from canonical SSoT (re-exported at top of file)
+  const unimplementedChannels = params.channels.filter(ch => !isChannelImplemented(ch));
+
+  if (unimplementedChannels.length > 0) {
+    const supported = getImplementedChannels().join(', ');
+    const errorMsg = `❌ FAIL-FAST: Cannot dispatch to unimplemented channels: ${unimplementedChannels.join(', ')}. ` +
+      `Implemented channels: ${supported}. ` +
+      `See src/types/communications.ts IMPLEMENTED_CHANNELS for the canonical list.`;
+    console.error(errorMsg);
+    return {
+      success: false,
+      messageIds: [],
+      errors: [errorMsg]
+    };
+  }
 
   // Process each channel and recipient combination
   for (const channel of params.channels) {

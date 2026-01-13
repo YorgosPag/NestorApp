@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "_comment": "ENTERPRISE SSoT - All tsconfigs must extend from this base",
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "composite": false,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/systems/*": ["./src/subapps/dxf-viewer/systems/*"],
+      "@geo-alert/core": ["./packages/core/src"],
+      "@geo-alert/core/*": ["./packages/core/src/*"],
+      "@core/polygon-system": ["./packages/core/polygon-system"],
+      "@core/polygon-system/*": ["./packages/core/polygon-system/*"],
+      "@core/alert-engine": ["./packages/core/alert-engine"],
+      "@core/alert-engine/*": ["./packages/core/alert-engine/*"]
+    }
+  }
+}
