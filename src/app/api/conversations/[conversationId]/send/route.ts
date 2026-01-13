@@ -15,6 +15,8 @@ import { NextRequest } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { withErrorHandling, apiSuccess, ApiError } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { requireAdminContext, audit } from '@/server/admin/admin-guards';
+import { generateRequestId } from '@/services/enterprise-id.service';
 import { COMMUNICATION_CHANNELS } from '@/types/communications';
 import { MESSAGE_DIRECTION, DELIVERY_STATUS } from '@/types/conversations';
 import {
@@ -121,13 +123,23 @@ export const POST = withErrorHandling(async (
   { params }: { params: Promise<{ conversationId: string }> }
 ) => {
   const startTime = Date.now();
+  const operationId = generateRequestId();
+
+  // 🔒 SECURITY: Staff-only access (admin/broker/builder)
+  const authResult = await requireAdminContext(request, operationId);
+  if (!authResult.success) {
+    audit(operationId, 'SEND_MESSAGE_DENIED', { error: authResult.error });
+    throw new ApiError(403, authResult.error || 'Staff access required', 'STAFF_REQUIRED');
+  }
+
   const { conversationId } = await params;
 
   if (!conversationId) {
     throw new ApiError(400, 'Conversation ID is required');
   }
 
-  console.log(`📤 [Send] Sending message to conversation: ${conversationId}`);
+  audit(operationId, 'SEND_MESSAGE_START', { user: authResult.context?.email, conversationId });
+  console.log(`📤 [Send] User ${authResult.context?.email} sending message to: ${conversationId}`);
 
   // Parse request body
   const body: SendMessageRequest = await request.json();

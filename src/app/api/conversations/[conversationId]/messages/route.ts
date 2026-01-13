@@ -14,6 +14,8 @@ import { NextRequest } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { withErrorHandling, apiSuccess, ApiError } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { requireAdminContext, audit } from '@/server/admin/admin-guards';
+import { generateRequestId } from '@/services/enterprise-id.service';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { type MessageDirection, type DeliveryStatus } from '@/types/conversations';
 import { type CommunicationChannel } from '@/types/communications';
@@ -128,13 +130,23 @@ export const GET = withErrorHandling(async (
   { params }: { params: Promise<{ conversationId: string }> }
 ) => {
   const startTime = Date.now();
+  const operationId = generateRequestId();
+
+  // 🔒 SECURITY: Staff-only access (admin/broker/builder)
+  const authResult = await requireAdminContext(request, operationId);
+  if (!authResult.success) {
+    audit(operationId, 'LIST_MESSAGES_DENIED', { error: authResult.error });
+    throw new ApiError(403, authResult.error || 'Staff access required', 'STAFF_REQUIRED');
+  }
+
   const { conversationId } = await params;
 
   if (!conversationId) {
     throw new ApiError(400, 'Conversation ID is required');
   }
 
-  console.log(`📨 [Messages/List] Loading messages for conversation: ${conversationId}`);
+  audit(operationId, 'LIST_MESSAGES_START', { user: authResult.context?.email, conversationId });
+  console.log(`📨 [Messages/List] Loading messages for ${conversationId} (user: ${authResult.context?.email})`);
 
   // Parse query parameters
   const searchParams = request.nextUrl.searchParams;

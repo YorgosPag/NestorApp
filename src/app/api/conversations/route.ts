@@ -12,8 +12,10 @@
 
 import { NextRequest } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
-import { withErrorHandling, apiSuccess } from '@/lib/api/ApiErrorHandler';
+import { withErrorHandling, apiSuccess, ApiError } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { requireAdminContext, audit } from '@/server/admin/admin-guards';
+import { generateRequestId } from '@/services/enterprise-id.service';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import {
   CONVERSATION_STATUS,
@@ -148,7 +150,17 @@ export const dynamic = 'force-dynamic';
 
 export const GET = withErrorHandling(async (request: NextRequest) => {
   const startTime = Date.now();
-  console.log('💬 [Conversations/List] Starting conversations load...');
+  const operationId = generateRequestId();
+
+  // 🔒 SECURITY: Staff-only access (admin/broker/builder)
+  const authResult = await requireAdminContext(request, operationId);
+  if (!authResult.success) {
+    audit(operationId, 'LIST_CONVERSATIONS_DENIED', { error: authResult.error });
+    throw new ApiError(403, authResult.error || 'Staff access required', 'STAFF_REQUIRED');
+  }
+
+  audit(operationId, 'LIST_CONVERSATIONS_START', { user: authResult.context?.email });
+  console.log(`💬 [Conversations/List] Starting load for user: ${authResult.context?.email}...`);
 
   // Parse query parameters
   const searchParams = request.nextUrl.searchParams;

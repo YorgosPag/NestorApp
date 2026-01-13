@@ -35,6 +35,27 @@ export interface AdminContext {
 }
 
 /**
+ * User context returned after successful authentication (no admin role required)
+ * @enterprise Used for endpoints that require authenticated users but not admin privileges
+ */
+export interface UserContext {
+  uid: string;
+  email: string;
+  role: AdminRole | null;
+  operationId: string;
+  environment: string;
+}
+
+/**
+ * User authentication result
+ */
+export interface UserAuthResult {
+  success: boolean;
+  error?: string;
+  context?: UserContext;
+}
+
+/**
  * Supported admin roles from Firebase custom claims
  */
 export type AdminRole = 'admin' | 'broker' | 'builder';
@@ -337,6 +358,81 @@ export async function requireAdminContext(
       uid: decodedToken.uid,
       email: decodedToken.email || 'unknown',
       role,
+      operationId,
+      environment,
+    },
+  };
+}
+
+// ============================================================================
+// USER AUTHENTICATION (NO ADMIN ROLE REQUIRED)
+// ============================================================================
+
+/**
+ * Require user authentication for a request (no admin role required)
+ *
+ * This function:
+ * 1. Checks environment allowlist
+ * 2. Extracts Bearer token from Authorization header
+ * 3. Verifies token with Firebase Auth
+ * 4. Returns UserContext on success (does NOT require admin role)
+ *
+ * @param request - NextRequest object
+ * @param operationId - Unique operation ID for audit trail
+ * @returns UserAuthResult with success status and context or error
+ *
+ * @enterprise Use this for endpoints that require authenticated users but not admin privileges
+ * @example
+ * ```typescript
+ * const authResult = await requireUserContext(request, operationId);
+ * if (!authResult.success) {
+ *   return NextResponse.json({ error: authResult.error }, { status: 401 });
+ * }
+ * const { uid, email } = authResult.context!;
+ * ```
+ */
+export async function requireUserContext(
+  request: NextRequest,
+  operationId: string
+): Promise<UserAuthResult> {
+  const environment = process.env.NODE_ENV || 'development';
+
+  // Gate 1: Environment check
+  if (!isAllowedEnvironment()) {
+    return {
+      success: false,
+      error: `Operation not allowed in ${environment} environment`,
+    };
+  }
+
+  // Gate 2: Extract token (NO BYPASS - always require valid token)
+  const token = extractBearerToken(request);
+
+  if (!token) {
+    return {
+      success: false,
+      error: 'Missing Authorization header with Bearer token',
+    };
+  }
+
+  // Gate 3: Verify token
+  const decodedToken = await verifyIdToken(token);
+  if (!decodedToken) {
+    return {
+      success: false,
+      error: 'Invalid or expired authentication token',
+    };
+  }
+
+  // Success - return user context (role is optional, can be null)
+  const role = hasAdminRole(decodedToken);
+
+  return {
+    success: true,
+    context: {
+      uid: decodedToken.uid,
+      email: decodedToken.email || 'unknown',
+      role, // Can be null if user has no admin role
       operationId,
       environment,
     },

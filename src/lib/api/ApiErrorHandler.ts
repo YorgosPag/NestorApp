@@ -78,6 +78,38 @@ export interface ApiSuccessResponse<T = unknown> {
 
 export type ApiResponse<T = unknown> = ApiErrorResponse | ApiSuccessResponse<T>;
 
+// ============================================================================
+// CUSTOM API ERROR CLASS
+// ============================================================================
+
+/**
+ * Custom Error class for API operations
+ * @enterprise Use this to throw typed HTTP errors in API routes
+ */
+export class ApiError extends Error {
+  public readonly statusCode: number;
+  public readonly errorCode?: string;
+
+  constructor(statusCode: number, message: string, errorCode?: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.statusCode = statusCode;
+    this.errorCode = errorCode;
+
+    // Maintain proper stack trace
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, ApiError);
+    }
+  }
+
+  /**
+   * Check if error is an ApiError instance
+   */
+  static isApiError(error: unknown): error is ApiError {
+    return error instanceof ApiError;
+  }
+}
+
 export interface ErrorMappingRule {
   pattern: string | RegExp;
   httpStatus: number;
@@ -268,6 +300,29 @@ export class ApiErrorHandler {
     const startTime = Date.now();
 
     try {
+      // 🔒 ENTERPRISE: Check for typed ApiError first
+      if (ApiError.isApiError(error)) {
+        const requestId = this.generateRequestId();
+        const errorResponse: ApiErrorResponse = {
+          success: false,
+          error: error.message,
+          errorCode: error.errorCode || `HTTP_${error.statusCode}`,
+          timestamp: new Date().toISOString(),
+          requestId,
+        };
+
+        console.log(`🚨 [API] ${error.statusCode}: ${error.message}`);
+
+        return NextResponse.json(errorResponse, {
+          status: error.statusCode,
+          headers: {
+            'X-Request-ID': requestId,
+            'X-Error-Code': errorResponse.errorCode || '',
+            'Cache-Control': 'no-cache, no-store, must-revalidate'
+          }
+        });
+      }
+
       // Extract error information
       const errorMessage = this.extractErrorMessage(error);
       const errorMapping = this.mapErrorToRule(errorMessage);
