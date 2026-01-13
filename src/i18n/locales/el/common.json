@@ -157,6 +157,59 @@
       "notAvailable": "Δεν είναι διαθέσιμο ακόμα",
       "comingSoon": "Οι ρυθμίσεις ειδοποιήσεων θα είναι σύντομα διαθέσιμες"
     },
+    "notificationSettings": {
+      "title": "Ρυθμίσεις Ειδοποιήσεων",
+      "description": "Διαχειριστείτε τι ειδοποιήσεις θέλετε να λαμβάνετε",
+      "loading": "Φόρτωση ρυθμίσεων...",
+      "loadError": "Σφάλμα φόρτωσης ρυθμίσεων",
+      "globalToggle": "Ειδοποιήσεις",
+      "globalToggleDescription": "Ενεργοποίηση/απενεργοποίηση όλων των ειδοποιήσεων",
+      "deliveryMethods": "Μέθοδοι Παράδοσης",
+      "inApp": "Ειδοποιήσεις στην εφαρμογή",
+      "email": "Ειδοποιήσεις email",
+      "emailFrequency": "Συχνότητα email",
+      "disabledMessage": "Οι ειδοποιήσεις είναι απενεργοποιημένες. Ενεργοποιήστε τις για να διαχειριστείτε τις κατηγορίες.",
+      "frequency": {
+        "realtime": "Άμεσα",
+        "daily": "Ημερήσια σύνοψη",
+        "weekly": "Εβδομαδιαία σύνοψη",
+        "disabled": "Απενεργοποιημένο"
+      },
+      "categories": {
+        "crm": {
+          "title": "CRM",
+          "description": "Ειδοποιήσεις για leads και επαφές",
+          "newLead": "Νέο lead",
+          "leadStatusChange": "Αλλαγή κατάστασης lead",
+          "taskAssigned": "Ανάθεση εργασίας",
+          "newCommunication": "Νέα επικοινωνία"
+        },
+        "properties": {
+          "title": "Ακίνητα",
+          "description": "Ειδοποιήσεις για ακίνητα και μονάδες",
+          "statusChange": "Αλλαγή κατάστασης ακινήτου",
+          "newProperty": "Νέο ακίνητο",
+          "priceChange": "Αλλαγή τιμής",
+          "viewingScheduled": "Προγραμματισμένη επίσκεψη"
+        },
+        "tasks": {
+          "title": "Εργασίες",
+          "description": "Ειδοποιήσεις για εργασίες και υπενθυμίσεις",
+          "dueToday": "Λήξη σήμερα",
+          "overdue": "Εκπρόθεσμες εργασίες",
+          "assigned": "Ανάθεση εργασίας",
+          "completed": "Ολοκλήρωση εργασίας"
+        },
+        "security": {
+          "title": "Ασφάλεια",
+          "description": "Ειδοποιήσεις ασφαλείας λογαριασμού",
+          "newDeviceLogin": "Σύνδεση από νέα συσκευή",
+          "passwordChange": "Αλλαγή κωδικού",
+          "twoFactorChange": "Αλλαγή 2FA",
+          "suspiciousActivity": "Ύποπτη δραστηριότητα"
+        }
+      }
+    },
     "security": {
       "passwordTitle": "Κωδικός Πρόσβασης",
       "passwordDescription": "Διαχειριστείτε τον κωδικό πρόσβασής σας",
@@ -172,6 +225,16 @@
       "sessionsTitle": "Ενεργές Συνεδρίες",
       "sessionsDescription": "Διαχειριστείτε τις συνδεδεμένες συσκευές",
       "sessionsNotAvailable": "Η διαχείριση συνεδριών θα είναι σύντομα διαθέσιμη",
+      "sessionsLoadError": "Σφάλμα φόρτωσης συνεδριών",
+      "noSessions": "Δεν βρέθηκαν ενεργές συνεδρίες",
+      "thisDevice": "Αυτή η συσκευή",
+      "revokeSession": "Αποσύνδεση",
+      "revokeSessionTitle": "Αποσύνδεση Συσκευής",
+      "revokeSessionDescription": "Η συσκευή θα αποσυνδεθεί. Ο χρήστης θα χρειαστεί να συνδεθεί ξανά.",
+      "revokeAllOther": "Αποσύνδεση άλλων συσκευών",
+      "revokeAllTitle": "Αποσύνδεση Όλων των Συσκευών",
+      "revokeAllDescription": "Θα αποσυνδεθούν όλες οι συσκευές εκτός από αυτή. Οι χρήστες θα χρειαστεί να συνδεθούν ξανά.",
+      "revokeAll": "Αποσύνδεση όλων",
       "comingSoon": "Σύντομα"
     },
     "privacy": {
@@ -293,5 +356,36 @@
     "compactLabel": "Compact Recipients Management",
     "compactEmailLabel": "Compact Email {{number}}",
     "compactInputsLabel": "Compact Email Inputs"
+  },
+  "twoFactor": {
+    "description": "Προστατεύστε τον λογαριασμό σας με επιπλέον επίπεδο ασφάλειας χρησιμοποιώντας εφαρμογή επαλήθευσης όπως το Google Authenticator.",
+    "enableButton": "Ενεργοποίηση Επαλήθευσης Δύο Παραγόντων",
+    "scanQrCode": "Σαρώστε τον κωδικό QR με την εφαρμογή επαλήθευσης",
+    "manualEntry": "Χειροκίνητη καταχώρηση",
+    "continue": "Συνέχεια",
+    "enterCode": "Εισαγάγετε τον 6-ψήφιο κωδικό από την εφαρμογή επαλήθευσης",
+    "verificationCode": "Κωδικός Επαλήθευσης",
+    "verify": "Επαλήθευση",
+    "enrollmentSuccess": "Η επαλήθευση δύο παραγόντων ενεργοποιήθηκε επιτυχώς!",
+    "backupCodes": "Εφεδρικοί Κωδικοί",
+    "codes": "κωδικοί",
+    "backupCodesWarning": "Αποθηκεύστε αυτούς τους κωδικούς σε ασφαλές μέρος. Κάθε κωδικός μπορεί να χρησιμοποιηθεί μόνο μία φορά.",
+    "download": "Λήψη",
+    "complete": "Ολοκλήρωση",
+    "enabled": "Ενεργό",
+    "enabledDescription": "Ο λογαριασμός σας προστατεύεται με επαλήθευση δύο παραγόντων",
+    "active": "Ενεργό",
+    "method": "Μέθοδος",
+    "enrolledAt": "Ενεργοποιήθηκε",
+    "backupCodesRemaining": "Εναπομένοντες κωδικοί",
+    "disable": "Απενεργοποίηση 2FA",
+    "disableTitle": "Απενεργοποίηση Επαλήθευσης Δύο Παραγόντων",
+    "disableDescription": "Είστε σίγουροι ότι θέλετε να απενεργοποιήσετε την επαλήθευση δύο παραγόντων; Αυτό θα μειώσει την ασφάλεια του λογαριασμού σας.",
+    "errors": {
+      "startFailed": "Αποτυχία εκκίνησης εγγραφής 2FA",
+      "invalidCodeLength": "Ο κωδικός πρέπει να είναι 6 ψηφία",
+      "verifyFailed": "Μη έγκυρος κωδικός επαλήθευσης",
+      "disableFailed": "Αποτυχία απενεργοποίησης 2FA"
+    }
   }
 }

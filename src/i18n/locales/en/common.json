@@ -149,6 +149,59 @@
       "notAvailable": "Not available yet",
       "comingSoon": "Notification settings will be available soon"
     },
+    "notificationSettings": {
+      "title": "Notification Settings",
+      "description": "Manage what notifications you want to receive",
+      "loading": "Loading settings...",
+      "loadError": "Error loading settings",
+      "globalToggle": "Notifications",
+      "globalToggleDescription": "Enable/disable all notifications",
+      "deliveryMethods": "Delivery Methods",
+      "inApp": "In-app notifications",
+      "email": "Email notifications",
+      "emailFrequency": "Email frequency",
+      "disabledMessage": "Notifications are disabled. Enable them to manage categories.",
+      "frequency": {
+        "realtime": "Real-time",
+        "daily": "Daily digest",
+        "weekly": "Weekly summary",
+        "disabled": "Disabled"
+      },
+      "categories": {
+        "crm": {
+          "title": "CRM",
+          "description": "Notifications for leads and contacts",
+          "newLead": "New lead",
+          "leadStatusChange": "Lead status change",
+          "taskAssigned": "Task assigned",
+          "newCommunication": "New communication"
+        },
+        "properties": {
+          "title": "Properties",
+          "description": "Notifications for properties and units",
+          "statusChange": "Property status change",
+          "newProperty": "New property",
+          "priceChange": "Price change",
+          "viewingScheduled": "Viewing scheduled"
+        },
+        "tasks": {
+          "title": "Tasks",
+          "description": "Notifications for tasks and reminders",
+          "dueToday": "Due today",
+          "overdue": "Overdue tasks",
+          "assigned": "Task assigned",
+          "completed": "Task completed"
+        },
+        "security": {
+          "title": "Security",
+          "description": "Account security notifications",
+          "newDeviceLogin": "New device login",
+          "passwordChange": "Password change",
+          "twoFactorChange": "2FA change",
+          "suspiciousActivity": "Suspicious activity"
+        }
+      }
+    },
     "security": {
       "passwordTitle": "Password",
       "passwordDescription": "Manage your password",
@@ -164,6 +217,16 @@
       "sessionsTitle": "Active Sessions",
       "sessionsDescription": "Manage connected devices",
       "sessionsNotAvailable": "Session management will be available soon",
+      "sessionsLoadError": "Error loading sessions",
+      "noSessions": "No active sessions found",
+      "thisDevice": "This device",
+      "revokeSession": "Revoke",
+      "revokeSessionTitle": "Revoke Session",
+      "revokeSessionDescription": "This will sign out this device. The user will need to sign in again.",
+      "revokeAllOther": "Sign out all other devices",
+      "revokeAllTitle": "Sign Out All Other Devices",
+      "revokeAllDescription": "This will sign out all devices except this one. Other users will need to sign in again.",
+      "revokeAll": "Sign out all",
       "comingSoon": "Coming Soon"
     },
     "privacy": {
@@ -293,5 +356,36 @@
     "compactLabel": "Compact Recipients Management",
     "compactEmailLabel": "Compact Email {{number}}",
     "compactInputsLabel": "Compact Email Inputs"
+  },
+  "twoFactor": {
+    "description": "Protect your account with an extra layer of security using an authenticator app like Google Authenticator.",
+    "enableButton": "Enable Two-Factor Authentication",
+    "scanQrCode": "Scan the QR code with your authenticator app",
+    "manualEntry": "Manual entry",
+    "continue": "Continue",
+    "enterCode": "Enter the 6-digit code from your authenticator app",
+    "verificationCode": "Verification Code",
+    "verify": "Verify",
+    "enrollmentSuccess": "Two-factor authentication has been enabled successfully!",
+    "backupCodes": "Backup Codes",
+    "codes": "codes",
+    "backupCodesWarning": "Save these codes in a safe place. Each code can only be used once.",
+    "download": "Download",
+    "complete": "Complete",
+    "enabled": "Enabled",
+    "enabledDescription": "Your account is protected with two-factor authentication",
+    "active": "Active",
+    "method": "Method",
+    "enrolledAt": "Enabled on",
+    "backupCodesRemaining": "Remaining codes",
+    "disable": "Disable 2FA",
+    "disableTitle": "Disable Two-Factor Authentication",
+    "disableDescription": "Are you sure you want to disable two-factor authentication? This will reduce the security of your account.",
+    "errors": {
+      "startFailed": "Failed to start 2FA enrollment",
+      "invalidCodeLength": "Code must be 6 digits",
+      "verifyFailed": "Invalid verification code",
+      "disableFailed": "Failed to disable 2FA"
+    }
   }
 }
