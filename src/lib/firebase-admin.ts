@@ -22,36 +22,47 @@ function initializeFirebaseAdmin() {
   }
 
   // DEBUG: Log env var status
-  const hasServiceAccountKey = !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  const keyLength = process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.length || 0;
-  console.log(`🔑 DEBUG: FIREBASE_SERVICE_ACCOUNT_KEY exists: ${hasServiceAccountKey}, length: ${keyLength}`);
+  const hasB64Key = !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY_B64;
+  const hasJsonKey = !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  console.log(`🔑 DEBUG: B64 key exists: ${hasB64Key}, JSON key exists: ${hasJsonKey}`);
 
   try {
     // Check for required environment variables - fallback to client env if server env missing
     const projectId =
       process.env.FIREBASE_PROJECT_ID ||
       process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-    
-    
+
     if (!projectId) {
       console.warn('⚠️ No FIREBASE_PROJECT_ID or NEXT_PUBLIC_FIREBASE_PROJECT_ID found, skipping Firebase Admin initialization');
       return null;
     }
 
-    // Initialize with service account if available
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+    // PRIORITY 1: Base64 encoded service account (Enterprise-safe for Vercel)
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY_B64) {
       try {
-        // Parse JSON - handle Vercel newline conversion issue
-        // Vercel converts \n in env vars to actual newline characters (ASCII 10)
-        // This breaks JSON.parse() - we need to escape them BEFORE parsing
+        console.log('🔐 Using Base64 encoded service account...');
+        const decoded = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_KEY_B64, 'base64').toString('utf-8');
+        const serviceAccount = JSON.parse(decoded);
+
+        adminApp = initializeApp({
+          credential: cert(serviceAccount),
+          projectId: projectId
+        });
+        console.log('✅ Firebase Admin initialized with Base64 service account');
+      } catch (b64Error) {
+        console.error('❌ Base64 service account error:', b64Error instanceof Error ? b64Error.message : String(b64Error));
+        // Continue to try other methods
+      }
+    }
+
+    // PRIORITY 2: Plain JSON service account (fallback)
+    if (!adminApp && process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+      try {
+        console.log('🔄 Trying plain JSON service account...');
         const rawKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-        const sanitizedKey = rawKey.replace(/\n/g, '\\n');
-        console.log('🔧 DEBUG: Sanitized key length:', sanitizedKey.length);
+        const serviceAccount = JSON.parse(rawKey);
 
-        const serviceAccount = JSON.parse(sanitizedKey);
-
-        // Now convert escaped newlines back to actual newlines in private_key
-        // (required for RSA key format)
+        // Fix private_key newlines if needed
         if (serviceAccount.private_key && typeof serviceAccount.private_key === 'string') {
           serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
         }
@@ -60,13 +71,14 @@ function initializeFirebaseAdmin() {
           credential: cert(serviceAccount),
           projectId: projectId
         });
-        console.log('✅ Firebase Admin initialized with service account');
+        console.log('✅ Firebase Admin initialized with JSON service account');
       } catch (parseError) {
-        console.error('❌ Service account parse error:', parseError instanceof Error ? parseError.message : String(parseError));
-        console.warn('⚠️ Falling back to default credentials');
-        adminApp = initializeApp({ projectId });
+        console.error('❌ JSON service account parse error:', parseError instanceof Error ? parseError.message : String(parseError));
       }
-    } else {
+    }
+
+    // PRIORITY 3: Default credentials (development)
+    if (!adminApp) {
       // Fallback to default credentials (for development)
       console.log('🔄 Trying to initialize Firebase Admin with default credentials...');
       try {
