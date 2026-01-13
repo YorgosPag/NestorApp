@@ -127,7 +127,12 @@ export const COLLECTIONS = {
   COUNTERS: process.env.NEXT_PUBLIC_COUNTERS_COLLECTION || 'counters',
 
   // ⚙️ USER PREFERENCES
-  USER_NOTIFICATION_SETTINGS: process.env.NEXT_PUBLIC_USER_NOTIFICATION_SETTINGS_COLLECTION || 'user_notification_settings'
+  USER_NOTIFICATION_SETTINGS: process.env.NEXT_PUBLIC_USER_NOTIFICATION_SETTINGS_COLLECTION || 'user_notification_settings',
+
+  // 🤖 BOT CONFIGURATIONS (PR1: Telegram Enterprise Refactor)
+  BOT_CONFIGS: process.env.NEXT_PUBLIC_BOT_CONFIGS_COLLECTION || 'bot_configs',
+  BOT_CATALOGS: process.env.NEXT_PUBLIC_BOT_CATALOGS_COLLECTION || 'bot_catalogs',
+  BOT_INTENTS: process.env.NEXT_PUBLIC_BOT_INTENTS_COLLECTION || 'bot_intents'
 } as const;
 
 // ============================================================================

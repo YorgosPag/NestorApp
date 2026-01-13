@@ -32,7 +32,8 @@ export const SUPPORTED_NAMESPACES = [
   'building',
   'contacts',
   'units',
-  'landing'
+  'landing',
+  'telegram'  // Telegram bot templates - PR1 centralization
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
 
@@ -118,6 +119,9 @@ async function loadTranslations(language: Language, namespace: Namespace) {
         case 'landing':
           translations = await import('./locales/el/landing.json');
           break;
+        case 'telegram':
+          translations = await import('./locales/el/telegram.json');
+          break;
         default:
           console.warn(`Namespace ${namespace} not found for language ${language}`);
           return {};
@@ -184,6 +188,9 @@ async function loadTranslations(language: Language, namespace: Namespace) {
           break;
         case 'landing':
           translations = await import('./locales/en/landing.json');
+          break;
+        case 'telegram':
+          translations = await import('./locales/en/telegram.json');
           break;
         default:
           console.warn(`Namespace ${namespace} not found for language ${language}`);
@@ -288,6 +295,7 @@ export async function preloadCriticalNamespaces(language: Language = 'el') {
     'projects',      // Projects module
     'contacts',      // Contacts module
     'units',         // Units module
+    // Note: 'crm' loads on-demand via useTranslation('crm')
   ];
 
   await Promise.all(

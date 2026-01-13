@@ -7,6 +7,13 @@ import type { TelegramSendPayload, TelegramCallbackQuery } from '../telegram/typ
 
 export async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery): Promise<TelegramSendPayload | null> {
   const data = callbackQuery.data;
+
+  // 🏢 ENTERPRISE: Safe access with undefined checks
+  if (!callbackQuery.message) {
+    console.warn('⚠️ Callback query without message');
+    return null;
+  }
+
   const chatId = callbackQuery.message.chat.id;
   const userId = callbackQuery.from.id.toString();
 

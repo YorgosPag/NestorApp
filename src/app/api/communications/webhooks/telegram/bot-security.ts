@@ -1,6 +1,18 @@
-// bot-security.ts - Security & Access Control for Telegram Bot
+/**
+ * 🔒 TELEGRAM BOT SECURITY & ACCESS CONTROL
+ *
+ * Security checks and rate limiting for Telegram bot.
+ * Uses centralized templates for all user-facing messages.
+ *
+ * @enterprise PR1 - Zero hardcoded strings centralization
+ * @created 2026-01-13
+ */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import {
+  getTemplateResolver,
+  type TelegramLocale
+} from './templates/template-resolver';
 
 export const ALLOWED_COLLECTIONS = [
     COLLECTIONS.UNITS,
@@ -29,15 +41,20 @@ export interface SecurityCheckResult {
   message?: string;
 }
 
-export function containsForbiddenKeywords(text: string): SecurityCheckResult {
+export function containsForbiddenKeywords(
+  text: string,
+  locale: TelegramLocale = 'el'
+): SecurityCheckResult {
+  const t = getTemplateResolver(locale);
   const lowerText = text.toLowerCase();
+
   for (const keyword of FORBIDDEN_KEYWORDS) {
     if (lowerText.includes(keyword)) {
       return {
         forbidden: true,
         type: 'mass_data_extraction',
         keyword,
-        message: "Δεν παρέχω συγκεντρωτικά δεδομένα. Παρακαλώ ρωτήστε για συγκεκριμένο ακίνητο."
+        message: t.getText('security.forbidden')
       };
     }
   }
@@ -53,11 +70,25 @@ export function exceedsResultLimit(resultCount: number): boolean {
     return resultCount > SECURITY_RULES.MAX_RESULTS;
 }
 
-export const SECURITY_MESSAGES = {
-  TOO_GENERIC: `🔍 Η αναζήτησή σας είναι πολύ γενική. Παρακαλώ προσθέστε περισσότερες λεπτομέρειες (π.χ. τύπο, τιμή, περιοχή).`,
-  TOO_MANY_RESULTS: `📊 Βρέθηκαν πολλά αποτελέσματα. Παρακαλώ περιορίστε την αναζήτησή σας ή επικοινωνήστε μαζί μας.`,
-  ACCESS_DENIED: `🚫 Δεν έχω πρόσβαση σε αυτού του τύπου τις πληροφορίες.`
-};
+/**
+ * Get security messages for specified locale
+ * @enterprise PR1 - Zero hardcoded strings
+ */
+export function getSecurityMessages(locale: TelegramLocale = 'el') {
+  const t = getTemplateResolver(locale);
+
+  return {
+    TOO_GENERIC: `🔍 ${t.getText('security.tooGeneric')}`,
+    TOO_MANY_RESULTS: `📊 ${t.getText('security.tooManyResults')}`,
+    ACCESS_DENIED: `🚫 ${t.getText('security.accessDenied')}`
+  };
+}
+
+/**
+ * @deprecated Use getSecurityMessages(locale) instead
+ * Kept for backward compatibility during migration
+ */
+export const SECURITY_MESSAGES = getSecurityMessages('el');
 
 export function logSecurityEvent(event: { type: string; query: string; reason: string; userId: string; }): void {
   console.warn('🔒 Security Event:', {

@@ -45,7 +45,9 @@ export interface CRMMessage {
 export interface SearchCriteria {
   maxPrice?: number;
   rooms?: number;
-  type?: 'apartment' | 'maisonette' | 'store';
+  area?: number;
+  type?: string;
+  floor?: number;
 }
 
 export interface SearchResult {

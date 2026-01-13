@@ -1,218 +1,368 @@
-// /home/user/studio/src/app/api/communications/webhooks/telegram/message/responses.ts
+/**
+ * 🤖 TELEGRAM BOT RESPONSE BUILDERS
+ *
+ * Creates Telegram message payloads using centralized templates.
+ * All user-facing text comes from i18n templates (zero hardcoded strings).
+ *
+ * @enterprise PR1 - Zero hardcoded strings centralization
+ * @created 2026-01-13
+ */
 
-import type { TelegramSendPayload } from "../telegram/types";
+import type { TelegramSendPayload } from '../telegram/types';
+import {
+  TelegramTemplateResolver,
+  getTemplateResolver,
+  type TelegramLocale
+} from '../templates/template-resolver';
+import { getActiveTypes, type TypeCatalogEntry } from '../catalogs/type-catalog';
 
-export function createStartResponse(chatId: string | number): TelegramSendPayload {
+// ============================================================================
+// CONFIGURATION (from environment - NO hardcoded company values)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Company config from environment variables
+ * Missing values are logged server-side and display generic placeholders
+ */
+const getCompanyConfig = () => {
+  const config = {
+    name: process.env.NEXT_PUBLIC_COMPANY_NAME,
+    email: process.env.NEXT_PUBLIC_COMPANY_EMAIL,
+    phone: process.env.NEXT_PUBLIC_COMPANY_PHONE,
+    hours: process.env.NEXT_PUBLIC_COMPANY_HOURS,
+    city: process.env.NEXT_PUBLIC_DEFAULT_CITY,
+    website: process.env.NEXT_PUBLIC_COMPANY_WEBSITE
+  };
+
+  // Log missing config (server-side only)
+  const missingKeys = Object.entries(config)
+    .filter(([, value]) => !value)
+    .map(([key]) => key);
+
+  if (missingKeys.length > 0) {
+    console.warn(`[TelegramBot] Missing company config: ${missingKeys.join(', ')}`);
+  }
+
+  // Return safe defaults for missing values (no real company info exposed)
+  return {
+    name: config.name || '-',
+    email: config.email || '-',
+    phone: config.phone || '-',
+    hours: config.hours || '-',
+    city: config.city || '-',
+    website: config.website || '-'
+  };
+};
+
+// ============================================================================
+// RESPONSE BUILDERS
+// ============================================================================
+
+/**
+ * Create welcome/start response
+ */
+export function createStartResponse(
+  chatId: string | number,
+  locale: TelegramLocale = 'el'
+): TelegramSendPayload {
+  const t = getTemplateResolver(locale);
+
+  const welcomeText = `${t.getText('start.welcome')} 🏠
+
+🤖 <b>${t.getText('start.description')}</b>
+
+🎯 <b>${t.getText('start.callToAction')}</b>`;
+
   return {
     method: 'sendMessage',
     chat_id: chatId,
-    text: `${process.env.NEXT_PUBLIC_TELEGRAM_WELCOME_MSG || `Καλωσήρθατε στην ${process.env.NEXT_PUBLIC_COMPANY_NAME || 'Real Estate Company'}! 🏠
-
-🤖 <b>Είμαι ο έξυπνος βοηθός σας για ακίνητα!</b>
-
-💬 <b>Στείλτε μου μηνύματα όπως:</b>
-- "Θέλω διαμέρισμα 2 δωματίων"
-- "Δείξε μου μεζονέτες στο κέντρο"
-- "Υπάρχει κάτι με 65 τ.μ.;"
-
-🎯 <b>Ή χρησιμοποιήστε τα buttons:</b>`}`,
+    text: welcomeText,
     parse_mode: 'HTML',
     reply_markup: {
       inline_keyboard: [
         [
-          { text: process.env.NEXT_PUBLIC_TELEGRAM_SEARCH_BTN || '🔍 Αναζήτηση Ακινήτων', callback_data: 'property_search' },
-          { text: process.env.NEXT_PUBLIC_TELEGRAM_CONTACT_BTN || '📞 Επικοινωνία', callback_data: 'contact_agent' }
+          { text: `🔍 ${t.getText('buttons.search')}`, callback_data: 'property_search' },
+          { text: `📞 ${t.getText('buttons.contact')}`, callback_data: 'contact_agent' }
         ]
       ]
     }
   };
 }
 
-export function createSearchMenuResponse(chatId: string | number): TelegramSendPayload {
+/**
+ * Create search menu response with property type buttons
+ */
+export function createSearchMenuResponse(
+  chatId: string | number,
+  locale: TelegramLocale = 'el'
+): TelegramSendPayload {
+  const t = getTemplateResolver(locale);
+  const types = getActiveTypes();
+
+  // Build type buttons dynamically from catalog
+  const residentialTypes = types.filter(type => type.category === 'residential');
+  const commercialTypes = types.filter(type => type.category === 'commercial');
+
+  const menuText = `🔍 <b>${t.getText('search.menu.title')}</b>
+
+💬 <b>${t.getText('search.menu.description')}</b>
+
+🎯 <b>${t.getText('help.tips.title')}</b>`;
+
+  // Build keyboard rows
+  const keyboard: Array<Array<{ text: string; callback_data: string }>> = [];
+
+  // Add residential types row
+  if (residentialTypes.length > 0) {
+    const row = residentialTypes.slice(0, 2).map(type => ({
+      text: `${type.emoji} ${locale === 'el' ? type.labelEl : type.labelEn}`,
+      callback_data: `search_${type.canonical}`
+    }));
+    keyboard.push(row);
+  }
+
+  // Add commercial types + stats row
+  const commercialRow: Array<{ text: string; callback_data: string }> = [];
+  if (commercialTypes.length > 0) {
+    commercialRow.push({
+      text: `${commercialTypes[0].emoji} ${locale === 'el' ? commercialTypes[0].labelEl : commercialTypes[0].labelEn}`,
+      callback_data: `search_${commercialTypes[0].canonical}`
+    });
+  }
+  commercialRow.push({
+    text: `📊 ${t.getText('buttons.stats')}`,
+    callback_data: 'property_stats'
+  });
+  keyboard.push(commercialRow);
+
   return {
     method: 'sendMessage',
     chat_id: chatId,
-    text: `🔍 <b>Έξυπνη Αναζήτηση Ακινήτων</b>
+    text: menuText,
+    parse_mode: 'HTML',
+    reply_markup: {
+      inline_keyboard: keyboard
+    }
+  };
+}
 
-💬 <b>Μιλήστε μου φυσικά! Παραδείγματα:</b>
+/**
+ * Create help response
+ */
+export function createHelpResponse(
+  chatId: string | number,
+  locale: TelegramLocale = 'el'
+): TelegramSendPayload {
+  const t = getTemplateResolver(locale);
 
-🏠 "Διαμέρισμα 2 δωματίων"
-🏘️ "Μεζονέτα με parking"
-📐 "Κάτι με 65 τετραγωνικά"
+  const helpText = `❓ <b>${t.getText('help.title')}</b>
 
-🎯 <b>Ή επιλέξτε κατηγορία:</b>`,
+📋 <b>${t.getText('help.commands.start')}</b>
+${t.getText('help.commands.help')}
+${t.getText('help.commands.search')}
+${t.getText('help.commands.stats')}
+${t.getText('help.commands.contact')}
+
+💡 <b>${t.getText('help.tips.title')}</b>
+${(t.getText('help.tips.examples') as unknown as string[]).map((ex: string) => `• ${ex}`).join('\n')}`;
+
+  return {
+    method: 'sendMessage',
+    chat_id: chatId,
+    text: helpText,
+    parse_mode: 'HTML'
+  };
+}
+
+/**
+ * Create contact information response
+ */
+export function createContactResponse(
+  chatId: string | number,
+  locale: TelegramLocale = 'el'
+): TelegramSendPayload {
+  const t = getTemplateResolver(locale);
+  const company = getCompanyConfig();
+
+  const contactText = `📞 <b>${t.getText('contact.title')}</b>
+
+🏢 <b>${t.getText('contact.company', { companyName: company.name })}</b>
+📧 <b>${t.getText('contact.email', { email: company.email })}</b>
+📱 <b>${t.getText('contact.phone', { phone: company.phone })}</b>
+🌐 <b>${t.getText('contact.website', { website: company.website })}</b>
+
+💬 ${t.getText('contact.callToAction')}`;
+
+  return {
+    method: 'sendMessage',
+    chat_id: chatId,
+    text: contactText,
+    parse_mode: 'HTML'
+  };
+}
+
+/**
+ * Create default/fallback response when intent is unclear
+ */
+export function createDefaultResponse(
+  chatId: string | number,
+  _text: string,
+  locale: TelegramLocale = 'el'
+): TelegramSendPayload {
+  const t = getTemplateResolver(locale);
+
+  const defaultText = `🤔 ${t.getText('errors.notUnderstood')}
+
+💡 <b>${t.getText('search.tooGeneric.suggestion')}</b>`;
+
+  return {
+    method: 'sendMessage',
+    chat_id: chatId,
+    text: defaultText,
     parse_mode: 'HTML',
     reply_markup: {
       inline_keyboard: [
         [
-          { text: process.env.NEXT_PUBLIC_TELEGRAM_APARTMENTS_BTN || '🏠 Διαμερίσματα', callback_data: 'search_apartments' },
-          { text: process.env.NEXT_PUBLIC_TELEGRAM_MAISONETTES_BTN || '🏘️ Μεζονέτες', callback_data: 'search_maisonettes' }
-        ],
-        [
-          { text: process.env.NEXT_PUBLIC_TELEGRAM_STORES_BTN || '🏪 Καταστήματα', callback_data: 'search_stores' },
-          { text: process.env.NEXT_PUBLIC_TELEGRAM_STATS_BTN || '📊 Στατιστικά', callback_data: 'property_stats' }
+          { text: `🔍 ${t.getText('buttons.search')}`, callback_data: 'property_search' },
+          { text: `📞 ${t.getText('buttons.contact')}`, callback_data: 'contact_agent' }
         ]
       ]
     }
   };
 }
 
-export function createHelpResponse(chatId: string | number): TelegramSendPayload {
+/**
+ * Create error response
+ */
+export function createErrorResponse(
+  chatId: string | number,
+  locale: TelegramLocale = 'el'
+): TelegramSendPayload {
+  const t = getTemplateResolver(locale);
+  const company = getCompanyConfig();
+
+  const errorText = `😅 ${t.getText('errors.generic')}
+
+📞 <b>${t.getText('contact.phone', { phone: company.phone })}</b>`;
+
   return {
     method: 'sendMessage',
     chat_id: chatId,
-    text: `❓ <b>Βοήθεια - Πώς να χρησιμοποιήσετε τον Bot</b>
-
-🗣️ <b>Φυσική Ομιλία:</b>
-Μπορείτε να μου μιλάτε φυσικά! Καταλαβαίνω:
-- Τύπους ακινήτων (διαμέρισμα, μεζονέτα, κατάστημα)
-- Τιμές ("κάτω από 100.000€")
-- Εμβαδόν ("65 τ.μ.")
-- Δωμάτια ("2 δωματίων")
-
-📋 <b>Εντολές:</b>
-/start - Αρχική οθόνη
-/search - Μενού αναζήτησης
-/contact - Στοιχεία επικοινωνίας
-/help - Αυτή η βοήθεια`,
+    text: errorText,
     parse_mode: 'HTML'
   };
 }
 
-export function createContactResponse(chatId: string | number): TelegramSendPayload {
+/**
+ * Create rate limit response
+ */
+export function createRateLimitResponse(
+  chatId: string | number,
+  locale: TelegramLocale = 'el'
+): TelegramSendPayload {
+  const t = getTemplateResolver(locale);
+  const company = getCompanyConfig();
+
   return {
     method: 'sendMessage',
     chat_id: chatId,
-    text: `📞 <b>Στοιχεία Επικοινωνίας</b>
+    text: `⏱️ ${t.getText('errors.rateLimit')}
 
-🏢 <b>Εταιρεία:</b> ${process.env.NEXT_PUBLIC_COMPANY_NAME || 'Real Estate Company'}
-📧 <b>Email:</b> ${process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'info@company.gr'}
-📱 <b>Τηλέφωνο:</b> ${process.env.NEXT_PUBLIC_COMPANY_PHONE || '+30 210 000 0000'}
+📞 ${t.getText('contact.phone', { phone: company.phone })}`
+  };
+}
 
-⏰ <b>Ωράριο:</b> ${process.env.NEXT_PUBLIC_COMPANY_HOURS || 'Δευτέρα - Παρασκευή: 09:00 - 18:00'}
-📍 <b>Διεύθυνση:</b> ${process.env.NEXT_PUBLIC_DEFAULT_CITY || 'Αθήνα'}, Ελλάδα
+/**
+ * Create database unavailable response
+ */
+export function createDatabaseUnavailableResponse(
+  chatId: string | number,
+  locale: TelegramLocale = 'el'
+): TelegramSendPayload {
+  const t = getTemplateResolver(locale);
+  const company = getCompanyConfig();
 
-💬 Ένας εξειδικευμένος σύμβουλος θα επικοινωνήσει μαζί σας!`,
+  const dbErrorText = `⚠️ ${t.getText('errors.database')}
+
+📞 <b>${t.getText('contact.phone', { phone: company.phone })}</b>
+📧 <b>${t.getText('contact.email', { email: company.email })}</b>`;
+
+  return {
+    method: 'sendMessage',
+    chat_id: chatId,
+    text: dbErrorText,
     parse_mode: 'HTML'
   };
 }
 
-export function createDefaultResponse(chatId: string | number, text: string): TelegramSendPayload {
+/**
+ * Create no results response
+ */
+export function createNoResultsResponse(
+  chatId: string | number,
+  locale: TelegramLocale = 'el'
+): TelegramSendPayload {
+  const t = getTemplateResolver(locale);
+
+  const noResultsText = `🔍 ${t.getText('search.noResults.title')}
+
+💡 <b>${t.getText('search.noResults.suggestion')}</b>`;
+
   return {
     method: 'sendMessage',
     chat_id: chatId,
-    text: `🤔 Κατάλαβα ότι ενδιαφέρεστε για ακίνητα!
-
-💡 <b>Δοκιμάστε να μου πείτε:</b>
-- Τι τύπο ακινήτου ψάχνετε
-- Σε ποια τιμή ή εμβαδόν
-
-📝 <b>Παράδειγμα:</b> "Θέλω διαμέρισμα 2 δωματίων"`,
+    text: noResultsText,
     parse_mode: 'HTML',
     reply_markup: {
       inline_keyboard: [
         [
-          { text: '🔍 Παραδείγματα', callback_data: 'search_examples' },
-          { text: '📞 Επικοινωνία', callback_data: 'contact_agent' }
+          { text: `📞 ${t.getText('buttons.contact')}`, callback_data: 'contact_agent' },
+          { text: `🔍 ${t.getText('buttons.newSearch')}`, callback_data: 'new_search' }
         ]
       ]
     }
   };
 }
 
-export function createErrorResponse(chatId: string | number): TelegramSendPayload {
+/**
+ * Create too generic search response
+ */
+export function createTooGenericResponse(
+  chatId: string | number,
+  locale: TelegramLocale = 'el'
+): TelegramSendPayload {
+  const t = getTemplateResolver(locale);
+
+  const tooGenericText = `🔍 ${t.getText('search.tooGeneric.title')}
+
+💡 ${t.getText('search.tooGeneric.suggestion')}`;
+
   return {
     method: 'sendMessage',
     chat_id: chatId,
-    text: `😅 Ουπς! Κάτι πήγε στραβά.
-
-🔧 <b>Δοκιμάστε:</b>
-- Πιο απλή αναζήτηση
-- Λιγότερα κριτήρια
-
-📞 <b>Άμεση βοήθεια:</b> ${process.env.NEXT_PUBLIC_COMPANY_PHONE || '+30 210 000 0000'}`,
+    text: tooGenericText,
     parse_mode: 'HTML'
   };
 }
 
-export function createRateLimitResponse(chatId: string | number): TelegramSendPayload {
+/**
+ * Create too many results response
+ */
+export function createTooManyResultsResponse(
+  chatId: string | number,
+  count: number = 0,
+  locale: TelegramLocale = 'el'
+): TelegramSendPayload {
+  const t = getTemplateResolver(locale);
+
+  const tooManyText = `📊 ${t.getText('search.tooManyResults.title', { count })}
+
+💡 ${t.getText('search.tooManyResults.suggestion')}`;
+
   return {
     method: 'sendMessage',
     chat_id: chatId,
-    text: `⏱️ Πολλές ερωτήσεις σε σύντομο χρονικό διάστημα!
-
-💡 Παρακαλώ περιμένετε λίγο και δοκιμάστε ξανά.
-
-📞 Για άμεση εξυπηρέτηση: ${process.env.NEXT_PUBLIC_COMPANY_PHONE || '+30 210 000 0000'}`
-  };
-}
-
-export function createDatabaseUnavailableResponse(chatId: string | number): TelegramSendPayload {
-  return {
-    method: 'sendMessage',
-    chat_id: chatId,
-    text: `⚠️ Η βάση δεδομένων δεν είναι διαθέσιμη αυτή τη στιγμή.
-
-📞 <b>Για άμεση εξυπηρέτηση επικοινωνήστε μαζί μας:</b>
-- Τηλέφωνο: ${process.env.NEXT_PUBLIC_COMPANY_PHONE || '+30 210 000 0000'}
-- Email: ${process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'info@company.gr'}
-
-🔄 Δοκιμάστε ξανά σε λίγα λεπτά.`,
-    parse_mode: 'HTML'
-  };
-}
-
-export function createNoResultsResponse(chatId: string | number): TelegramSendPayload {
-  return {
-    method: 'sendMessage',
-    chat_id: chatId,
-    text: `🔍 Δεν βρέθηκαν ακίνητα για την αναζήτησή σας.
-
-💡 <b>Δοκιμάστε:</b>
-- "Διαμέρισμα 2 δωματίων"
-- "Μεζονέτα στο κέντρο"
-- "Κατάστημα για ενοικίαση"
-
-📞 Ή επικοινωνήστε μαζί μας για προσωπική εξυπηρέτηση!`,
-    parse_mode: 'HTML',
-    reply_markup: {
-      inline_keyboard: [
-        [
-          { text: '📞 Επικοινωνία', callback_data: 'contact_agent' },
-          { text: '🔍 Νέα Αναζήτηση', callback_data: 'new_search' }
-        ]
-      ]
-    }
-  };
-}
-
-export function createTooGenericResponse(chatId: string | number): TelegramSendPayload {
-  return {
-    method: 'sendMessage',
-    chat_id: chatId,
-    text: `🔍 Η αναζήτησή σας είναι πολύ γενική.
-
-Παρακαλώ συγκεκριμενοποιήστε:
-- Τύπο ακινήτου (διαμέρισμα, μεζονέτα)
-- Περιοχή ή κτίριο
-- Τιμή ή εμβαδόν
-
-📝 Παράδειγμα: "Διαμέρισμα 2Δ κάτω από €100,000"`,
-    parse_mode: 'HTML'
-  };
-}
-
-export function createTooManyResultsResponse(chatId: string | number): TelegramSendPayload {
-  return {
-    method: 'sendMessage',
-    chat_id: chatId,
-    text: `📊 Βρέθηκαν πολλά αποτελέσματα για την αναζήτησή σας.
-
-💡 Για καλύτερη εξυπηρέτηση, παρακαλώ:
-- Προσδιορίστε περισσότερα κριτήρια
-- Ή επικοινωνήστε μαζί μας για εξατομικευμένη βοήθεια
-
-📞 Τηλέφωνο: +30 231 012 3456`,
+    text: tooManyText,
     parse_mode: 'HTML'
   };
 }

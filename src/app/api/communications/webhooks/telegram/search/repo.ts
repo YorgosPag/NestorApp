@@ -1,4 +1,12 @@
-// /home/user/studio/src/app/api/communications/webhooks/telegram/search/repo.ts
+/**
+ * 🔍 TELEGRAM BOT SEARCH REPOSITORY
+ *
+ * Handles property search operations for Telegram bot.
+ * Uses centralized templates for all user-facing strings.
+ *
+ * @enterprise PR1 - Zero hardcoded strings centralization
+ * @created 2026-01-13
+ */
 
 import { isFirebaseAvailable } from '../firebase/availability';
 import { getFirestoreHelpers } from '../firebase/helpers-lazy';
@@ -6,15 +14,24 @@ import { safeDbOperation } from '../firebase/safe-op';
 import { extractSearchCriteria, applyAdvancedFilters } from './criteria';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { SearchResult, TelegramProperty } from '../shared/types';
+import {
+  getTemplateResolver,
+  type TelegramLocale
+} from '../templates/template-resolver';
 
-export async function searchProperties(searchText: string): Promise<SearchResult> {
+export async function searchProperties(
+  searchText: string,
+  locale: TelegramLocale = 'el'
+): Promise<SearchResult> {
+  const t = getTemplateResolver(locale);
+
   if (!isFirebaseAvailable()) {
     return {
       success: false,
       properties: [],
       totalCount: 0,
       criteria: {},
-      message: 'Database not available'
+      message: t.getText('errors.database')
     };
   }
 
@@ -25,7 +42,7 @@ export async function searchProperties(searchText: string): Promise<SearchResult
       properties: [],
       totalCount: 0,
       criteria: {},
-      message: 'Database helpers not available'
+      message: t.getText('errors.database')
     };
   }
 
@@ -49,7 +66,7 @@ export async function searchProperties(searchText: string): Promise<SearchResult
       q = q.orderBy('price').limit(10);
 
       const querySnapshot = await getDocs(q);
-      
+
       querySnapshot.forEach((doc) => {
         properties.push({ id: doc.id, ...doc.data() });
       });
@@ -58,21 +75,33 @@ export async function searchProperties(searchText: string): Promise<SearchResult
 
       properties = applyAdvancedFilters(properties, criteria);
 
+      const message = properties.length === 1
+        ? t.getText('search.results.foundOne')
+        : t.getText('search.results.found', { count: properties.length });
+
       return {
         success: true,
         properties,
         totalCount: properties.length,
         criteria,
-        message: `Βρέθηκαν ${properties.length} ακίνητα`
+        message
       };
 
     } catch (error) {
       console.error('❌ Property search error:', error);
       return {
-        success: false, properties: [], totalCount: 0, criteria: {}, message: 'Σφάλμα κατά την αναζήτηση'
+        success: false,
+        properties: [],
+        totalCount: 0,
+        criteria: {},
+        message: t.getText('errors.searchError')
       };
     }
   }, {
-    success: false, properties: [], totalCount: 0, criteria: {}, message: 'Database operation failed'
+    success: false,
+    properties: [],
+    totalCount: 0,
+    criteria: {},
+    message: t.getText('errors.generic')
   });
 }

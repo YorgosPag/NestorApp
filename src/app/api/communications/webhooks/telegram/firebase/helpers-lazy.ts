@@ -11,7 +11,7 @@ type CollectionRef = ReturnType<import('firebase-admin/firestore').Firestore['co
 
 /** Firestore query constraint */
 interface QueryConstraint {
-  field: string;
+  field?: string;  // Optional for limit constraints
   op?: string;
   value?: unknown;
   direction?: string;
@@ -27,8 +27,11 @@ type QueryFn = (ref: CollectionRef, ...constraints: QueryConstraint[]) => Collec
 /** Firestore where constraint builder */
 type WhereFn = (field: string, op: string, value: unknown) => QueryConstraint;
 
-/** Firestore getDocs function */
-type GetDocsFn = (query: CollectionRef) => Promise<import('firebase-admin/firestore').QuerySnapshot>;
+/** Firestore query type - result of where/orderBy/limit chaining */
+type QueryRef = import('firebase-admin/firestore').Query;
+
+/** Firestore getDocs function - accepts both CollectionRef and Query */
+type GetDocsFn = (query: CollectionRef | QueryRef) => Promise<import('firebase-admin/firestore').QuerySnapshot>;
 
 /** Firestore orderBy constraint builder */
 type OrderByFn = (field: string, direction?: string) => QueryConstraint;
@@ -82,7 +85,7 @@ export async function getFirestoreHelpers(): Promise<FirestoreHelpers | null> {
     const collection: CollectionFn = (path: string) => db.collection(path);
     const query: QueryFn = (ref: CollectionRef) => ref;
     const where: WhereFn = (field: string, op: string, value: unknown) => ({ field, op, value });
-    const getDocs: GetDocsFn = (queryRef: CollectionRef) => queryRef.get();
+    const getDocs: GetDocsFn = (queryRef: CollectionRef | QueryRef) => queryRef.get();
     const orderBy: OrderByFn = (field: string, direction?: string) => ({ field, direction });
     const firestoreLimit: LimitFn = (count: number) => ({ count });
     const addDoc: AddDocFn = (ref: CollectionRef, data: Record<string, unknown>) => ref.add(data);

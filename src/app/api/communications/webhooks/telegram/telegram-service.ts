@@ -54,20 +54,32 @@ interface CRMMessageInput {
 
 /**
  * Stores a message record in the Firestore COLLECTIONS.COMMUNICATIONS collection.
+ * @deprecated Use storeMessageInCRM from crm/store.ts instead (enterprise conversation model)
  */
 export async function storeMessageInCRM(message: CRMMessageInput, direction: 'inbound' | 'outbound') {
   if (!isFirebaseAvailable()) {
     console.warn('⚠️ Firebase not available, skipping CRM storage');
     return null;
   }
-  
+
+  // 🏢 ENTERPRISE: Get database instance
+  const database = db();
+  if (!database) {
+    console.warn('⚠️ Database not available');
+    return null;
+  }
+
+  // 🏢 ENTERPRISE: Safe access with undefined checks
+  const fromId = message.from?.id?.toString() || 'unknown';
+  const chatId = message.chat?.id?.toString() || message.chat_id?.toString() || 'unknown';
+
   try {
     const messageRecord = {
       type: 'telegram',
       direction,
       channel: 'telegram',
-      from: direction === 'inbound' ? message.from.id.toString() : 'bot',
-      to: direction === 'inbound' ? 'bot' : message.chat.id.toString(),
+      from: direction === 'inbound' ? fromId : 'bot',
+      to: direction === 'inbound' ? 'bot' : chatId,
       content: message.text || '[Media Message]',
       status: direction === 'inbound' ? 'received' : 'sent',
       entityType: 'lead',
@@ -82,7 +94,7 @@ export async function storeMessageInCRM(message: CRMMessageInput, direction: 'in
       updatedAt: Timestamp.now()
     };
 
-    const docRef = await db.collection(COLLECTIONS.COMMUNICATIONS).add(messageRecord);
+    const docRef = await database.collection(COLLECTIONS.COMMUNICATIONS).add(messageRecord);
     console.log(`✅ Message stored in CRM with ID: ${docRef.id}`);
     return docRef;
 

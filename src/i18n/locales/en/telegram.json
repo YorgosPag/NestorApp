@@ -1,0 +1,108 @@
+{
+  "start": {
+    "welcome": "Welcome to Layera Bot!",
+    "description": "I'm here to help you find the ideal property.",
+    "callToAction": "Press Search to start or Contact to call us."
+  },
+  "help": {
+    "title": "Available commands:",
+    "commands": {
+      "start": "/start - Start conversation",
+      "help": "/help - Show help",
+      "search": "/search - Search properties",
+      "stats": "/stats - Property statistics",
+      "contact": "/contact - Contact us"
+    },
+    "tips": {
+      "title": "Search tips:",
+      "examples": [
+        "Apartment under 100000",
+        "Maisonette 3 rooms",
+        "Shop in center"
+      ]
+    }
+  },
+  "search": {
+    "menu": {
+      "title": "What type of property are you looking for?",
+      "description": "Select a category or type your search."
+    },
+    "results": {
+      "found": "Found {{count}} properties",
+      "foundOne": "Found 1 property",
+      "showing": "Showing {{shown}} of {{total}}",
+      "criteria": "Criteria: {{criteria}}"
+    },
+    "noResults": {
+      "title": "No properties found",
+      "suggestion": "Try changing your search criteria or contact us for help."
+    },
+    "tooGeneric": {
+      "title": "Your search is too generic",
+      "suggestion": "Please specify the property type, area, or budget."
+    },
+    "tooManyResults": {
+      "title": "Too many results found ({{count}})",
+      "suggestion": "Add more filters for more accurate results."
+    }
+  },
+  "stats": {
+    "title": "Property Statistics",
+    "total": "Total properties: {{count}}",
+    "available": "Available: {{count}}",
+    "sold": "Sold: {{count}}",
+    "reserved": "Reserved: {{count}}",
+    "averagePrice": "Average price: {{price}}",
+    "noData": "No statistics available"
+  },
+  "contact": {
+    "title": "Contact Us",
+    "company": "{{companyName}}",
+    "phone": "Phone: {{phone}}",
+    "email": "Email: {{email}}",
+    "website": "Website: {{website}}",
+    "callToAction": "We'll be happy to assist you!"
+  },
+  "errors": {
+    "generic": "An error occurred. Please try again.",
+    "database": "Temporary connection issue. Please try again later.",
+    "rateLimit": "Too many requests. Please wait a moment.",
+    "notUnderstood": "I didn't understand your search. Try /help for instructions.",
+    "searchError": "Error during search"
+  },
+  "security": {
+    "forbidden": "I cannot provide bulk data. Please ask about a specific property.",
+    "tooGeneric": "Your search is too generic. Please add more details (e.g., type, price, area).",
+    "tooManyResults": "Too many results found. Please narrow down your search or contact us.",
+    "accessDenied": "I don't have access to this type of information."
+  },
+  "buttons": {
+    "search": "Search",
+    "contact": "Contact",
+    "newSearch": "New Search",
+    "apartments": "Apartments",
+    "maisonettes": "Maisonettes",
+    "shops": "Shops",
+    "stats": "Statistics",
+    "back": "Back",
+    "next": "Next",
+    "details": "Details",
+    "filters": "Filters"
+  },
+  "property": {
+    "type": "Type",
+    "price": "Price",
+    "area": "Area",
+    "rooms": "Rooms",
+    "floor": "Floor",
+    "status": "Status",
+    "location": "Location",
+    "features": "Features",
+    "code": "Code"
+  },
+  "formatting": {
+    "currency": "€",
+    "areaUnit": "sqm",
+    "roomsUnit": "rooms"
+  }
+}

@@ -14,15 +14,28 @@ export async function processMessage(message: TelegramMessageObject): Promise<Te
   const text = message.text?.toLowerCase() || '';
   const originalText = message.text || '';
   const chatId = message.chat.id;
-  const userId = message.from.id.toString();
-  const userName = message.from.first_name || 'User';
+
+  // 🏢 ENTERPRISE: Safe access with undefined checks
+  const userId = message.from?.id?.toString() || 'unknown';
+  const userName = message.from?.first_name || 'User';
 
   console.log(`💬 Processing message from ${userName} (${userId}): "${originalText}"`);
 
   // Store inbound message if Firebase is available
-  if (isFirebaseAvailable()) {
+  if (isFirebaseAvailable() && message.from) {
     try {
-      await storeMessageInCRM(message, 'inbound');
+      // 🏢 ENTERPRISE: Convert to CRMStoreMessage format
+      const crmMessage = {
+        from: {
+          id: message.from.id,
+          first_name: message.from.first_name,
+          username: message.from.username
+        },
+        chat: { id: message.chat.id },
+        text: message.text,
+        message_id: message.message_id
+      };
+      await storeMessageInCRM(crmMessage, 'inbound');
       console.log('✅ Inbound message stored in CRM');
     } catch (error) {
       console.error('⚠️ Failed to store inbound message:', error);

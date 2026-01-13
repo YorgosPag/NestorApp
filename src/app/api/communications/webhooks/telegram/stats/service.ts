@@ -1,40 +1,55 @@
-// /home/user/studio/src/app/api/communications/webhooks/telegram/stats/service.ts
+/**
+ * 📊 TELEGRAM BOT STATS SERVICE
+ *
+ * Creates statistics responses for Telegram bot.
+ * Uses centralized templates (zero hardcoded strings).
+ *
+ * @enterprise PR1 - Zero hardcoded strings centralization
+ * @created 2026-01-13
+ */
 
 import { isFirebaseAvailable } from "../firebase/availability";
 import { createDatabaseUnavailableResponse } from "../message/responses";
 import { getPropertySummary } from "./repo";
 import type { TelegramSendPayload } from "../telegram/types";
+import {
+  getTemplateResolver,
+  formatCurrency,
+  type TelegramLocale
+} from '../templates/template-resolver';
 
-export async function createStatsResponse(chatId: string | number): Promise<TelegramSendPayload> {
+// ============================================================================
+// STATS RESPONSE
+// ============================================================================
+
+export async function createStatsResponse(
+  chatId: string | number,
+  locale: TelegramLocale = 'el'
+): Promise<TelegramSendPayload> {
+  const t = getTemplateResolver(locale);
+
   if (!isFirebaseAvailable()) {
-    return {
-      method: 'sendMessage',
-      chat_id: chatId,
-      text: `📊 <b>Στατιστικά Ακινήτων</b>
-
-⚠️ Η βάση δεδομένων δεν είναι διαθέσιμη αυτή τη στιγμή.
-
-📞 Για ακριβή στοιχεία επικοινωνήστε μαζί μας!
-- Τηλέφωνο: ${process.env.NEXT_PUBLIC_COMPANY_PHONE || '+30 210 000 0000'}
-- Email: ${process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'info@company.gr'}`,
-      parse_mode: 'HTML'
-    };
+    return createDatabaseUnavailableResponse(chatId, locale);
   }
 
   try {
     const stats = await getPropertySummary();
-    
-    let statsText = `📊 <b>Στατιστικά Ακινήτων - ${process.env.NEXT_PUBLIC_COMPANY_NAME || 'Real Estate Company'}</b>\n\n`;
-    statsText += `🏠 <b>Συνολικά Ακίνητα:</b> ${stats.totalProperties}\n`;
-    statsText += `✅ <b>Διαθέσιμα:</b> ${stats.availableCount}\n`;
-    statsText += `📋 <b>Κρατημένα:</b> ${stats.reservedCount}\n`;
-    statsText += `🔒 <b>Πωλημένα:</b> ${stats.soldCount}\n\n`;
-    
+
+    // Build stats text using templates
+    let statsText = `📊 <b>${t.getText('stats.title')}</b>\n\n`;
+    statsText += `🏠 <b>${t.getText('stats.total', { count: stats.totalProperties })}</b>\n`;
+    statsText += `✅ <b>${t.getText('stats.available', { count: stats.availableCount })}</b>\n`;
+    statsText += `📋 <b>${t.getText('stats.reserved', { count: stats.reservedCount })}</b>\n`;
+    statsText += `🔒 <b>${t.getText('stats.sold', { count: stats.soldCount })}</b>\n\n`;
+
     if (stats.averagePrice > 0) {
-      statsText += `💰 <b>Μέση Τιμή:</b> €${Math.round(stats.averagePrice).toLocaleString('el-GR')}\n\n`;
+      statsText += `💰 <b>${t.getText('stats.averagePrice', { price: formatCurrency(Math.round(stats.averagePrice), locale) })}</b>\n\n`;
     }
-    
-    statsText += `🕐 <b>Τελευταία ενημέρωση:</b> ${new Date().toLocaleString('el-GR')}`;
+
+    // Format date based on locale
+    const dateLocale = locale === 'el' ? 'el-GR' : 'en-US';
+    const lastUpdate = new Date().toLocaleString(dateLocale);
+    statsText += `🕐 <i>${lastUpdate}</i>`;
 
     return {
       method: 'sendMessage',
@@ -44,15 +59,15 @@ export async function createStatsResponse(chatId: string | number): Promise<Tele
       reply_markup: {
         inline_keyboard: [
           [
-            { text: process.env.NEXT_PUBLIC_TELEGRAM_SEARCH_LABEL || '🔍 Αναζήτηση', callback_data: 'property_search' },
-            { text: process.env.NEXT_PUBLIC_TELEGRAM_CONTACT_LABEL || '📞 Επικοινωνία', callback_data: 'contact_agent' }
+            { text: `🔍 ${t.getText('buttons.search')}`, callback_data: 'property_search' },
+            { text: `📞 ${t.getText('buttons.contact')}`, callback_data: 'contact_agent' }
           ]
         ]
       }
     };
 
   } catch (error) {
-    console.error('Error creating stats response:', error);
-    return createDatabaseUnavailableResponse(chatId);
+    console.error('❌ Error creating stats response:', error);
+    return createDatabaseUnavailableResponse(chatId, locale);
   }
 }
