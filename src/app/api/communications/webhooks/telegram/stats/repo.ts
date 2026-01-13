@@ -23,11 +23,12 @@ export async function getPropertySummary(): Promise<PropertySummary> {
     return { totalProperties: 0, availableCount: 0, soldCount: 0, reservedCount: 0, averagePrice: 0 };
   }
 
-  return safeDbOperation(async (database) => {
-    const { collection, query, getDocs } = firestoreHelpers;
+  return safeDbOperation(async () => {
+    const { collection, getDocs } = firestoreHelpers;
 
-    const q = query(collection(database, COLLECTIONS.UNITS));
-    const querySnapshot = await getDocs(q);
+    // Firebase Admin SDK: collection() returns a CollectionReference directly
+    const unitsCollection = collection(COLLECTIONS.UNITS);
+    const querySnapshot = await getDocs(unitsCollection);
 
     interface PropertyDoc {
       id: string;
