@@ -103,6 +103,9 @@ local_*.txt
 local_*.log
 Local_*.txt
 
+# Generated metrics reports
+reports/metrics/**
+
 # Generic local pattern
 *.local.json
 *.local.yaml
