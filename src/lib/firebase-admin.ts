@@ -41,11 +41,17 @@ function initializeFirebaseAdmin() {
     // Initialize with service account if available
     if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
       try {
-        // Parse JSON - handle potential newline escaping issues
+        // Parse JSON - handle Vercel newline conversion issue
+        // Vercel converts \n in env vars to actual newline characters (ASCII 10)
+        // This breaks JSON.parse() - we need to escape them BEFORE parsing
         const rawKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-        const serviceAccount = JSON.parse(rawKey);
+        const sanitizedKey = rawKey.replace(/\n/g, '\\n');
+        console.log('🔧 DEBUG: Sanitized key length:', sanitizedKey.length);
 
-        // Fix private_key newlines if they're double-escaped
+        const serviceAccount = JSON.parse(sanitizedKey);
+
+        // Now convert escaped newlines back to actual newlines in private_key
+        // (required for RSA key format)
         if (serviceAccount.private_key && typeof serviceAccount.private_key === 'string') {
           serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
         }
