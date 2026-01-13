@@ -106,6 +106,9 @@ Local_*.txt
 # Generated metrics reports
 reports/metrics/**
 
+# Generated visual reports
+reports/visual/**
+
 # Generic local pattern
 *.local.json
 *.local.yaml
