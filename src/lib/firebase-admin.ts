@@ -41,14 +41,23 @@ function initializeFirebaseAdmin() {
     // Initialize with service account if available
     if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
       try {
-        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+        // Parse JSON - handle potential newline escaping issues
+        const rawKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+        const serviceAccount = JSON.parse(rawKey);
+
+        // Fix private_key newlines if they're double-escaped
+        if (serviceAccount.private_key && typeof serviceAccount.private_key === 'string') {
+          serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+        }
+
         adminApp = initializeApp({
           credential: cert(serviceAccount),
           projectId: projectId
         });
         console.log('✅ Firebase Admin initialized with service account');
       } catch (parseError) {
-        console.warn('⚠️ Failed to parse service account, falling back to default credentials');
+        console.error('❌ Service account parse error:', parseError instanceof Error ? parseError.message : String(parseError));
+        console.warn('⚠️ Falling back to default credentials');
         adminApp = initializeApp({ projectId });
       }
     } else {
