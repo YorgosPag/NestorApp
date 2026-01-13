@@ -21,10 +21,15 @@ function initializeFirebaseAdmin() {
     return db;
   }
 
+  // DEBUG: Log env var status
+  const hasServiceAccountKey = !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  const keyLength = process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.length || 0;
+  console.log(`🔑 DEBUG: FIREBASE_SERVICE_ACCOUNT_KEY exists: ${hasServiceAccountKey}, length: ${keyLength}`);
+
   try {
     // Check for required environment variables - fallback to client env if server env missing
-    const projectId = 
-      process.env.FIREBASE_PROJECT_ID || 
+    const projectId =
+      process.env.FIREBASE_PROJECT_ID ||
       process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
     
     
