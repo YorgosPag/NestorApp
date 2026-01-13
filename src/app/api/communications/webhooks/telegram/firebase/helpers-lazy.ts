@@ -39,6 +39,21 @@ type LimitFn = (count: number) => QueryConstraint;
 /** Firestore addDoc function */
 type AddDocFn = (ref: CollectionRef, data: Record<string, unknown>) => Promise<import('firebase-admin/firestore').DocumentReference>;
 
+/** Firestore document reference */
+type DocumentRef = import('firebase-admin/firestore').DocumentReference;
+
+/** Firestore doc function - gets a document reference */
+type DocFn = (collectionRef: CollectionRef, docId: string) => DocumentRef;
+
+/** Firestore getDoc function - gets a document snapshot */
+type GetDocFn = (docRef: DocumentRef) => Promise<import('firebase-admin/firestore').DocumentSnapshot>;
+
+/** Firestore setDoc function - sets document data */
+type SetDocFn = (docRef: DocumentRef, data: Record<string, unknown>) => Promise<void>;
+
+/** Firestore updateDoc function - updates document data */
+type UpdateDocFn = (docRef: DocumentRef, data: Record<string, unknown>) => Promise<void>;
+
 export interface FirestoreHelpers {
   collection: CollectionFn;
   query: QueryFn;
@@ -47,6 +62,10 @@ export interface FirestoreHelpers {
   orderBy: OrderByFn;
   firestoreLimit: LimitFn;
   addDoc: AddDocFn;
+  doc: DocFn;
+  getDoc: GetDocFn;
+  setDoc: SetDocFn;
+  updateDoc: UpdateDocFn;
   Timestamp: typeof import('firebase-admin/firestore').Timestamp;
 }
 
@@ -68,6 +87,12 @@ export async function getFirestoreHelpers(): Promise<FirestoreHelpers | null> {
     const firestoreLimit: LimitFn = (count: number) => ({ count });
     const addDoc: AddDocFn = (ref: CollectionRef, data: Record<string, unknown>) => ref.add(data);
 
+    // 🏢 ENTERPRISE: Document-level operations for conversation model
+    const doc: DocFn = (collectionRef: CollectionRef, docId: string) => collectionRef.doc(docId);
+    const getDoc: GetDocFn = (docRef) => docRef.get();
+    const setDoc: SetDocFn = async (docRef, data) => { await docRef.set(data); };
+    const updateDoc: UpdateDocFn = async (docRef, data) => { await docRef.update(data); };
+
     return {
       collection,
       query,
@@ -76,6 +101,10 @@ export async function getFirestoreHelpers(): Promise<FirestoreHelpers | null> {
       orderBy,
       firestoreLimit,
       addDoc,
+      doc,
+      getDoc,
+      setDoc,
+      updateDoc,
       Timestamp
     };
   } catch (error) {

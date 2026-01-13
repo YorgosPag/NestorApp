@@ -30,6 +30,10 @@ export const COLLECTIONS = {
   MESSAGES: process.env.NEXT_PUBLIC_MESSAGES_COLLECTION || 'messages',
   NOTIFICATIONS: process.env.NEXT_PUBLIC_NOTIFICATIONS_COLLECTION || 'notifications',
 
+  // 🌐 OMNICHANNEL CONVERSATIONS (Enterprise)
+  CONVERSATIONS: process.env.NEXT_PUBLIC_CONVERSATIONS_COLLECTION || 'conversations',
+  EXTERNAL_IDENTITIES: process.env.NEXT_PUBLIC_EXTERNAL_IDENTITIES_COLLECTION || 'external_identities',
+
   // 🎯 LEADS & CRM
   LEADS: process.env.NEXT_PUBLIC_LEADS_COLLECTION || 'leads',
   OPPORTUNITIES: process.env.NEXT_PUBLIC_OPPORTUNITIES_COLLECTION || 'opportunities',
