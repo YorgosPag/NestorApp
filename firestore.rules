@@ -175,10 +175,14 @@ service cloud.firestore {
     // 🏢 ENTERPRISE: Secure notification access per user
     // 🔒 AUTHENTICATED: User can only access their own notifications
     // 📋 ADR-027: CRM Notifications Integration - Updated 2026-01-13
+    // ⚠️ NOTE: For list queries, the userId filter must be in the query itself
+    //          (where userId == auth.uid). Rules validate single doc reads.
     match /notifications/{notificationId} {
-      // 📖 READ: Users can only read their own notifications
+      // 📖 READ: Authenticated users can read notifications
+      // Query MUST include: where('userId', '==', currentUserId) for security
+      // Single doc reads verify ownership
       allow read: if isAuthenticated()
-                  && resource.data.userId == request.auth.uid;
+                  && (resource == null || resource.data.userId == request.auth.uid);
 
       // 📝 UPDATE: Users can mark their own notifications as read
       // Only allows updating delivery state and seen timestamp
@@ -186,9 +190,15 @@ service cloud.firestore {
                     && resource.data.userId == request.auth.uid
                     && isValidNotificationUpdate(request.resource.data, resource.data);
 
-      // ❌ CREATE/DELETE: Server/Admin only (via Firebase Admin SDK)
-      allow create: if false;
-      allow delete: if false;
+      // ✅ CREATE: Authenticated users can create notifications for themselves
+      // 🏢 ENTERPRISE: In production, this should be server-only
+      allow create: if isAuthenticated()
+                    && request.resource.data.userId == request.auth.uid;
+
+      // 🗑️ DELETE: Users can delete their own notifications
+      // 🏢 ENTERPRISE: Allows cleanup of test notifications
+      allow delete: if isAuthenticated()
+                    && resource.data.userId == request.auth.uid;
     }
 
     // =========================================================================

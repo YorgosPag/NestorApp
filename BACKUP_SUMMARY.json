@@ -1,55 +1,64 @@
 {
   "category": "FEATURE",
-  "timestamp": "20260113_1830",
-  "shortDescription": "Enterprise i18n Building Features Translation System",
-  "problem": "Building features displayed in Greek even when English language selected - labels stored as Greek strings in Firestore database needed reverse lookup translation.",
-  "cause": "Database stores Greek feature strings, but no centralized reverse lookup system existed to translate them to i18n keys for proper localization.",
+  "timestamp": "20260113_2100",
+  "shortDescription": "Enterprise Security - Sessions, 2FA & Notification Settings",
+  "problem": "Application lacked enterprise-grade security features: session management, two-factor authentication, and granular notification preferences.",
+  "cause": "Security features were not implemented - needed for production readiness and enterprise compliance.",
   "filesChanged": [
-    "src/utils/building-features-i18n.ts - NEW: Centralized translation utility (80+ Greek mappings)",
-    "src/components/building-management/BuildingCard/BuildingCardContent/BuildingCardFeatures.tsx - Refactored to use central utility",
-    "src/components/building-management/BuildingToolbar/ToolbarFiltersDisplay.tsx - Refactored to use central utility",
-    "src/app/api/buildings/populate/route.ts - Thin wrapper using shared handler",
-    "src/app/api/buildings/seed/route.ts - Thin wrapper using shared handler",
-    "src/server/admin/admin-guards.ts - NEW: Centralized admin module with SERVER_COLLECTIONS",
-    "src/server/admin/building-instantiation-handler.ts - NEW: Shared handler for seed/populate",
-    "src/services/admin-building-templates.service.ts - NEW: Templates service with Admin SDK",
-    "firestore.indexes.json - Added composite indexes for admin_building_templates",
-    "src/i18n/locales/el/common.json - New translations",
-    "src/i18n/locales/en/common.json - New translations"
+    "src/services/session/EnterpriseSessionService.ts - NEW: Device tracking, session management",
+    "src/services/session/session.types.ts - NEW: Session type definitions",
+    "src/services/session/index.ts - NEW: Service exports",
+    "src/services/two-factor/EnterpriseTwoFactorService.ts - NEW: TOTP/SMS/email 2FA",
+    "src/services/two-factor/two-factor.types.ts - NEW: 2FA type definitions",
+    "src/services/two-factor/index.ts - NEW: Service exports",
+    "src/services/user-notification-settings/UserNotificationSettingsService.ts - NEW: Notification preferences",
+    "src/services/user-notification-settings/user-notification-settings.types.ts - NEW: Settings types",
+    "src/services/user-notification-settings/index.ts - NEW: Service exports",
+    "src/components/account/SessionsList.tsx - NEW: Active sessions UI",
+    "src/components/account/TwoFactorEnrollment.tsx - NEW: 2FA setup wizard",
+    "src/components/account/NotificationSettings.tsx - NEW: Notification preferences UI",
+    "src/app/account/security/page.tsx - Security settings page",
+    "src/app/account/notifications/page.tsx - Notification settings page",
+    "src/auth/contexts/AuthContext.tsx - Enhanced session handling",
+    "src/auth/components/AuthForm.tsx - 2FA support in login flow",
+    "firestore.rules - New rules for sessions, 2fa, notification_settings collections",
+    "src/app/crm/notifications/ - CRM notification updates",
+    "src/services/crm/tasks/ - Task service updates",
+    "src/services/tasks.service.ts - Task service enhancements"
   ],
   "solution": {
-    "phase1": "Created centralized building-features-i18n.ts utility as single source of truth",
-    "phase2": "Added 80+ Greek-to-English feature mappings with case-insensitive lookup",
-    "phase3": "Refactored components to use translateBuildingFeature() utility",
-    "phase4": "Created shared building-instantiation-handler for DRY API routes",
-    "phase5": "Added SERVER_COLLECTIONS registry to eliminate hardcoded collection names"
+    "phase1": "Created EnterpriseSessionService with device fingerprinting and session tracking",
+    "phase2": "Created EnterpriseTwoFactorService supporting TOTP, SMS, and email verification",
+    "phase3": "Created UserNotificationSettingsService for granular channel preferences",
+    "phase4": "Built account security and notification settings UI components",
+    "phase5": "Updated Firestore rules for new security collections"
   },
   "technicalDetails": {
-    "translationPattern": "Greek DB string -> getBuildingFeatureKey() -> i18n key -> t() translation",
-    "caseInsensitive": "FEATURE_GREEK_TO_KEY_LOWER map for flexible matching",
-    "enterpriseArchitecture": "Shared handlers, centralized constants, Admin SDK services",
-    "filesCreated": 4,
-    "filesModified": 7,
-    "linesChanged": "+1596/-680"
+    "sessionManagement": "Device tracking, concurrent session limits, remote revocation",
+    "twoFactorAuth": "TOTP with QR codes, SMS/email backup, recovery codes",
+    "notificationSettings": "Per-channel preferences, quiet hours, digest options",
+    "filesCreated": 12,
+    "filesModified": 15,
+    "linesChanged": "+5249/-257"
   },
   "verification": {
     "commits": [
-      "dabeb1c3 - feat(i18n): enterprise building features translation system"
+      "4bbf3db3 - feat(enterprise): account security, sessions, 2FA & notification settings"
     ],
-    "checkpointTag": "checkpoint-2026-01-13-i18n-enterprise",
+    "checkpointTag": "checkpoint-2026-01-13-enterprise-security",
     "vercelPush": "Successful",
     "preCommitChecks": "All passed"
   },
   "testing": {
-    "i18nTranslation": "Building features now translate based on selected language",
-    "caseInsensitiveMatching": "Multiple Greek variations map to same i18n key",
-    "backwardCompatibility": "Falls back to original string if no mapping found"
+    "sessionService": "Device tracking and session management ready",
+    "twoFactorService": "TOTP enrollment flow implemented",
+    "notificationSettings": "Preference storage and retrieval working"
   },
   "notes": [
-    "SINGLE SOURCE OF TRUTH: All Greek-to-key mappings in building-features-i18n.ts",
-    "Case-insensitive lookup handles database variations",
-    "New features: Add mapping to FEATURE_GREEK_TO_KEY and translation to building.json",
-    "SERVER_COLLECTIONS registry prevents hardcoded collection names"
+    "SECURITY: Enterprise-grade session management with device fingerprinting",
+    "2FA: Supports TOTP (authenticator apps), SMS, and email verification",
+    "NOTIFICATIONS: Granular per-channel preferences with quiet hours",
+    "FIRESTORE: New rules for sessions, two_factor_auth, notification_settings"
   ],
   "contributors": {
     "user": "Giorgos Pagonis",
@@ -57,11 +66,11 @@
     "sessionDate": "2026-01-13"
   },
   "relatedBackups": [
+    "checkpoint-2026-01-13-enterprise-security",
     "checkpoint-2026-01-13-i18n-enterprise",
-    "checkpoint-enterprise-cleanup-2026-01-12",
-    "checkpoint-session-validation-2026-01-12"
+    "checkpoint-enterprise-cleanup-2026-01-12"
   ],
   "commits": [
-    "dabeb1c3 - feat(i18n): enterprise building features translation system"
+    "4bbf3db3 - feat(enterprise): account security, sessions, 2FA & notification settings"
   ]
 }

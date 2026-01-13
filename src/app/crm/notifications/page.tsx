@@ -1,14 +1,21 @@
 'use client';
 
+import { useState, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Bell, CheckCheck, Filter, Loader2, AlertCircle, Inbox } from 'lucide-react';
+import { Bell, CheckCheck, Filter, Loader2, AlertCircle, Inbox, FlaskConical, Trash2 } from 'lucide-react';
 import { useNotifications } from './useNotifications';
 import { NotificationCard } from './NotificationCard';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useAuth } from '@/auth/contexts/AuthContext';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 
 export default function CrmNotificationsPage() {
   const iconSizes = useIconSizes();
+  const { user } = useAuth();
+  const [testNotificationId, setTestNotificationId] = useState<string | null>(null);
+  const [isCreatingTest, setIsCreatingTest] = useState(false);
   const {
     notifications,
     loading,
@@ -16,6 +23,45 @@ export default function CrmNotificationsPage() {
     unreadCount,
     markAllAsRead,
   } = useNotifications();
+
+  // 🧪 Create test notification (for development testing)
+  const createTestNotification = useCallback(async () => {
+    if (!user?.uid) return;
+
+    setIsCreatingTest(true);
+    try {
+      const docRef = await addDoc(collection(db, 'notifications'), {
+        userId: user.uid,
+        tenantId: 'default',
+        title: '🧪 Test: Νέο Lead από Website',
+        body: 'Ο Γιάννης Παπαδόπουλος έδειξε ενδιαφέρον για το έργο Κέντρο. (Αυτή είναι δοκιμαστική ειδοποίηση)',
+        severity: 'info',
+        channel: 'inapp',
+        delivery: { state: 'delivered', attempts: 1 },
+        source: { service: 'test', feature: 'lead', env: 'dev' },
+        createdAt: Timestamp.now()
+      });
+      setTestNotificationId(docRef.id);
+      console.log('✅ Test notification created:', docRef.id);
+    } catch (err) {
+      console.error('Failed to create test notification:', err);
+    } finally {
+      setIsCreatingTest(false);
+    }
+  }, [user?.uid]);
+
+  // 🗑️ Delete test notification
+  const deleteTestNotification = useCallback(async () => {
+    if (!testNotificationId) return;
+
+    try {
+      await deleteDoc(doc(db, 'notifications', testNotificationId));
+      setTestNotificationId(null);
+      console.log('🗑️ Test notification deleted');
+    } catch (err) {
+      console.error('Failed to delete test notification:', err);
+    }
+  }, [testNotificationId]);
 
   return (
     <div className="p-8">
@@ -35,6 +81,31 @@ export default function CrmNotificationsPage() {
               <CardDescription>Όλες οι ενημερώσεις σας σε ένα μέρος.</CardDescription>
             </div>
             <div className="flex items-center gap-2">
+              {/* 🧪 Test Buttons - Development Only */}
+              {process.env.NODE_ENV === 'development' && (
+                <>
+                  {!testNotificationId ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => void createTestNotification()}
+                      disabled={isCreatingTest || !user}
+                      className="border-dashed"
+                    >
+                      <FlaskConical className={`${iconSizes.sm} mr-2`} />
+                      {isCreatingTest ? 'Δημιουργία...' : '🧪 Test'}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={() => void deleteTestNotification()}
+                      className="border-dashed text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className={`${iconSizes.sm} mr-2`} />
+                      Διαγραφή Test
+                    </Button>
+                  )}
+                </>
+              )}
               <Button variant="outline">
                 <Filter className={`${iconSizes.sm} mr-2`} />
                 Φίλτρα

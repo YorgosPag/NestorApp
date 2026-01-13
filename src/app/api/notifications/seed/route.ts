@@ -3,12 +3,23 @@
 
 import { NextResponse } from 'next/server';
 import { createSampleNotifications } from '@/services/notificationService';
-import { CONTACT_INFO } from '@/config/contact-info-config';
+
+interface SeedRequestBody {
+  userId?: string;
+}
 
 export async function POST(request: Request) {
   try {
-    // Get user ID (same as main API)
-    const userId = CONTACT_INFO.DEMO_EMAIL_PERSONAL;
+    // Get user ID from request body (Firebase Auth UID)
+    const body = await request.json() as SeedRequestBody;
+    const userId = body.userId;
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'userId is required in request body' },
+        { status: 400 }
+      );
+    }
 
     console.log('🌱 Creating sample notifications for user:', userId);
 
