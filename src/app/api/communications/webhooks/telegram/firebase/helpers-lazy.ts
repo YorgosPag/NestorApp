@@ -64,6 +64,7 @@ export interface FirestoreHelpers {
   getDocs: GetDocsFn;
   orderBy: OrderByFn;
   firestoreLimit: LimitFn;
+  limit: LimitFn;  // Alias for firestoreLimit (backward compatibility)
   addDoc: AddDocFn;
   doc: DocFn;
   getDoc: GetDocFn;
@@ -103,6 +104,7 @@ export async function getFirestoreHelpers(): Promise<FirestoreHelpers | null> {
       getDocs,
       orderBy,
       firestoreLimit,
+      limit: firestoreLimit,  // Alias for backward compatibility
       addDoc,
       doc,
       getDoc,
