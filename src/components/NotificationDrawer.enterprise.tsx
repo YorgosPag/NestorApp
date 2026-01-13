@@ -4,12 +4,13 @@
 'use client';
 
 import { create } from 'zustand';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { X, CheckCircle, AlertCircle, AlertTriangle, Info, RefreshCw } from 'lucide-react';
 import { useNotificationCenter } from '@/stores/notificationCenter';
 import { useTranslation } from '@/i18n';
 import type { Notification, Severity, UserPreferences } from '@/types/notification';
 import { NotificationClient } from '@/api/notificationClient';
+import { markNotificationsAsRead } from '@/services/notificationService';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -40,7 +41,28 @@ const colorMap: Record<Severity, string> = {
 
 export function NotificationDrawer() {
   const { isOpen, close } = useNotificationDrawer();
-  const { items, order, markRead, status, error: storeError, ingest, setStatus, setError, cursor, setCursor } = useNotificationCenter();
+  const { items, order, markRead: markReadLocal, status, error: storeError, ingest, setStatus, setError, cursor, setCursor } = useNotificationCenter();
+
+  // 🏢 ENTERPRISE: Mark as read with Firestore persistence
+  const markRead = useCallback(async (ids?: string[]) => {
+    // 1. Optimistic local update
+    markReadLocal(ids);
+
+    // 2. Persist to Firestore
+    const targetIds = ids ?? order.filter(id => {
+      const n = items.get(id);
+      return n && n.delivery.state !== 'seen';
+    });
+
+    if (targetIds.length > 0) {
+      try {
+        await markNotificationsAsRead(targetIds);
+      } catch (error) {
+        console.error('[NotificationDrawer] Failed to persist mark as read:', error);
+        // Note: The real-time subscription will sync the correct state
+      }
+    }
+  }, [markReadLocal, order, items]);
   const { t, i18n } = useTranslation('common');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
@@ -226,9 +248,7 @@ export function NotificationDrawer() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => {
-                markRead();
-              }}
+              onClick={() => void markRead()}
               className={`text-sm px-3 py-1.5 rounded-md ${HOVER_BACKGROUND_EFFECTS.ACCENT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
             >
               {t('notifications.markAllRead', { defaultValue: 'Mark all read' })}
@@ -314,7 +334,7 @@ export function NotificationDrawer() {
                     {n.delivery.state !== 'seen' && (
                       <button
                         type="button"
-                        onClick={() => markRead([n.id])}
+                        onClick={() => void markRead([n.id])}
                         className={`text-xs px-2 py-1 rounded-md flex-shrink-0 ${HOVER_BACKGROUND_EFFECTS.ACCENT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                       >
                         {t('notifications.markRead', { defaultValue: 'Mark read' })}

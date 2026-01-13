@@ -28,9 +28,12 @@ import {
   sendEmailVerification,
   AuthError,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  MultiFactorResolver
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { sessionService } from '@/services/session';
+import { twoFactorService } from '@/services/two-factor/EnterpriseTwoFactorService';
 import type {
   FirebaseAuthUser,
   SignUpData,
@@ -60,6 +63,14 @@ interface AuthContextType {
   updateUserProfile: (givenName: string, familyName: string) => Promise<void>;
   completeProfile: (givenName: string, familyName: string) => Promise<void>;
   sendVerificationEmail: () => Promise<void>;
+
+  // 🔐 MFA/2FA Support (Enterprise)
+  /** True if MFA verification is required during sign-in */
+  mfaRequired: boolean;
+  /** Verify MFA code to complete sign-in */
+  verifyMfaCode: (code: string) => Promise<void>;
+  /** Cancel MFA verification and return to login */
+  cancelMfaVerification: () => void;
 
   // Utilities
   clearError: () => void;
@@ -113,7 +124,10 @@ function getErrorMessage(error: unknown): string {
     'auth/popup-closed-by-user': 'Η σύνδεση ακυρώθηκε. Το παράθυρο έκλεισε.',
     'auth/popup-blocked': 'Το παράθυρο σύνδεσης αποκλείστηκε. Ενεργοποιήστε τα popups.',
     'auth/cancelled-popup-request': 'Η αίτηση σύνδεσης ακυρώθηκε.',
-    'auth/account-exists-with-different-credential': 'Υπάρχει λογαριασμός με αυτό το email αλλά με διαφορετική μέθοδο σύνδεσης.'
+    'auth/account-exists-with-different-credential': 'Υπάρχει λογαριασμός με αυτό το email αλλά με διαφορετική μέθοδο σύνδεσης.',
+    // 🔐 MFA/2FA specific errors
+    'auth/multi-factor-auth-required': 'Απαιτείται επαλήθευση δύο παραγόντων.',
+    'auth/invalid-verification-code': 'Μη έγκυρος κωδικός επαλήθευσης.'
   };
 
   return errorMessages[error.code] || error.message || 'Άγνωστο σφάλμα authentication.';
@@ -241,6 +255,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 🔐 MFA/2FA State (Enterprise)
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
+
   // ==========================================================================
   // AUTH STATE LISTENER
   // ==========================================================================
@@ -307,6 +325,39 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         console.log('✅ [AuthContext] Valid session established:', authUser.email);
         setUser(authUser);
+
+        // 🔐 ENTERPRISE: Create/Update session in Firestore for Active Sessions management
+        try {
+          // Initialize session service with Firestore instance
+          if (db) {
+            sessionService.initialize(db);
+
+            // Check if we already have a session for this browser (avoid duplicates on page refresh)
+            const existingSessionId = typeof sessionStorage !== 'undefined'
+              ? sessionStorage.getItem('currentSessionId')
+              : null;
+
+            if (existingSessionId) {
+              // Session already exists for this browser tab - just update activity
+              await sessionService.updateSessionActivity(firebaseUser.uid, existingSessionId);
+              console.log('🔐 [AuthContext] Session activity updated:', existingSessionId);
+            } else {
+              // No existing session - create new one
+              const loginMethod = firebaseUser.providerData.some(
+                (provider) => provider.providerId === 'google.com'
+              ) ? 'google' : 'email';
+
+              await sessionService.createSession({
+                userId: firebaseUser.uid,
+                loginMethod
+              });
+              console.log('🔐 [AuthContext] New session created for Active Sessions tracking');
+            }
+          }
+        } catch (sessionError) {
+          // Don't block login if session creation fails - just log
+          console.warn('⚠️ [AuthContext] Failed to manage session (non-blocking):', sessionError);
+        }
       } else {
         setUser(null);
       }
@@ -351,7 +402,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   // ==========================================================================
-  // GOOGLE SIGN-IN - Enterprise OAuth 2.0
+  // GOOGLE SIGN-IN - Enterprise OAuth 2.0 with MFA Support
   // ==========================================================================
 
   const signInWithGoogleFn = async (): Promise<void> => {
@@ -377,11 +428,76 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       console.log('[OK] [AuthContext] Google Sign-In successful:', result.user.email);
     } catch (error) {
+      // 🔐 ENTERPRISE: Check if MFA is required
+      const resolver = twoFactorService.getMfaResolver(error);
+
+      if (resolver) {
+        console.log('🔐 [AuthContext] MFA required - showing verification UI');
+        setMfaResolver(resolver);
+        setMfaRequired(true);
+        setLoading(false);
+        // Don't throw - we're handling MFA flow
+        return;
+      }
+
       handleError(error);
       throw error;
     } finally {
+      if (!mfaRequired) {
+        setLoading(false);
+      }
+    }
+  };
+
+  // ==========================================================================
+  // MFA VERIFICATION - Enterprise 2FA Support
+  // ==========================================================================
+
+  /**
+   * Verify MFA code to complete sign-in
+   * Called after user enters their TOTP code
+   */
+  const verifyMfaCodeFn = async (code: string): Promise<void> => {
+    if (!mfaResolver) {
+      setError('Δεν υπάρχει ενεργή διαδικασία MFA');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      console.log('🔐 [AuthContext] Verifying MFA code...');
+
+      const result = await twoFactorService.verifyTotpForSignIn(mfaResolver, code, 0);
+
+      if (result.result === 'success') {
+        console.log('✅ [AuthContext] MFA verification successful');
+        // Clear MFA state - auth state listener will handle the rest
+        setMfaResolver(null);
+        setMfaRequired(false);
+      } else {
+        // Handle verification errors
+        const errorMessage = result.error || 'Μη έγκυρος κωδικός επαλήθευσης';
+        setError(errorMessage);
+        console.error('❌ [AuthContext] MFA verification failed:', errorMessage);
+      }
+    } catch (error) {
+      handleError(error);
+    } finally {
       setLoading(false);
     }
+  };
+
+  /**
+   * Cancel MFA verification and return to login screen
+   */
+  const cancelMfaVerificationFn = (): void => {
+    console.log('🔐 [AuthContext] MFA verification cancelled');
+    setMfaResolver(null);
+    setMfaRequired(false);
+    setError(null);
+    setLoading(false);
   };
 
   const signUp = async (data: SignUpData): Promise<void> => {
@@ -563,10 +679,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     updateUserProfile: updateUserProfileFn,
     completeProfile: completeProfileFn,
     sendVerificationEmail: sendVerificationEmailFn,
+    // 🔐 MFA/2FA Support
+    mfaRequired,
+    verifyMfaCode: verifyMfaCodeFn,
+    cancelMfaVerification: cancelMfaVerificationFn,
     clearError,
     isAuthenticated: !!user,
     needsProfileCompletion: user?.profileIncomplete ?? false
-  }), [user, loading, error]);
+  }), [user, loading, error, mfaRequired]);
 
   return (
     <AuthContext.Provider value={value}>

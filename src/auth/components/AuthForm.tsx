@@ -118,7 +118,19 @@ export function AuthForm({
   const colors = useSemanticColors();
   const typography = useTypography();
   const layout = useLayoutClasses();
-  const { signIn, signInWithGoogle, signUp, resetPassword, loading, error, clearError } = useAuth();
+  const {
+    signIn,
+    signInWithGoogle,
+    signUp,
+    resetPassword,
+    loading,
+    error,
+    clearError,
+    // 🔐 MFA/2FA Support
+    mfaRequired,
+    verifyMfaCode,
+    cancelMfaVerification
+  } = useAuth();
 
   // Form state
   const [mode, setMode] = useState<AuthFormMode>(defaultMode);
@@ -136,6 +148,8 @@ export function AuthForm({
   const [validationError, setValidationError] = useState<string | null>(null);
   // 🏢 ENTERPRISE: Redirect loading state for client-side navigation
   const [isRedirecting, setIsRedirecting] = useState(false);
+  // 🔐 MFA/2FA verification state
+  const [mfaCode, setMfaCode] = useState('');
 
   // ==========================================================================
   // FORM HANDLERS
@@ -276,6 +290,42 @@ export function AuthForm({
     }
   };
 
+  // ==========================================================================
+  // MFA VERIFICATION HANDLER
+  // ==========================================================================
+
+  const handleMfaVerification = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!mfaCode.trim() || mfaCode.length !== 6) {
+      setValidationError(t('mfa.invalidCodeLength', 'Ο κωδικός πρέπει να είναι 6 ψηφία'));
+      return;
+    }
+
+    setLocalLoading(true);
+    setValidationError(null);
+
+    try {
+      await verifyMfaCode(mfaCode);
+      // If successful, auth state listener will handle the redirect
+      setSuccessMessage(t('mfa.verificationSuccess', 'Επαλήθευση επιτυχής!'));
+      setIsRedirecting(true);
+      setTimeout(() => {
+        router.push(redirectTo);
+      }, 100);
+    } catch (err) {
+      console.error('[ERROR] [AuthForm] MFA verification error:', err);
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
+  const handleCancelMfa = () => {
+    cancelMfaVerification();
+    setMfaCode('');
+    setValidationError(null);
+  };
+
   const isLoading = loading || localLoading || googleLoading;
   const displayError = validationError || error;
 
@@ -326,7 +376,7 @@ export function AuthForm({
           </figure>
 
           {/* App Name */}
-          <h1 className={`${typography.heading.xl} ${colors.text.primary}`}>
+          <h1 className={`${typography.heading.lg} ${colors.text.primary}`}>
             Nestor Pagonis
           </h1>
 
@@ -341,6 +391,119 @@ export function AuthForm({
           </p>
         </section>
       </main>
+    );
+  }
+
+  // ==========================================================================
+  // 🔐 MFA VERIFICATION UI
+  // ==========================================================================
+  // Enterprise 2FA verification screen when MFA is required
+  if (mfaRequired) {
+    return (
+      <>
+        {/* 🏢 ENTERPRISE: Auth Toolbar - Language & Theme */}
+        <nav
+          className={layout.authToolbar}
+          aria-label={t('navigation.settingsToolbar', 'Ρυθμίσεις εμφάνισης')}
+        >
+          <LanguageSwitcher />
+          <ThemeToggle />
+        </nav>
+
+        <section className={layout.flexColGap4}>
+          {/* 🏢 ENTERPRISE: App Branding */}
+          <header className={`${layout.flexColGap2} ${layout.textCenter}`}>
+            <figure className={layout.centerHorizontal}>
+              <LogoPagonis className={`${iconSizes.xl4} ${colors.text.primary}`} />
+            </figure>
+            <h1 className={`${typography.heading.lg} ${colors.text.primary}`}>
+              Nestor Pagonis
+            </h1>
+          </header>
+
+          <Card className={layout.cardAuthWidth}>
+            <CardHeader className={layout.flexColGap2}>
+              <CardTitle className={`${typography.heading.lg} ${layout.textCenter}`}>
+                {t('mfa.title', 'Επαλήθευση δύο παραγόντων')}
+              </CardTitle>
+              <CardDescription className={layout.textCenter}>
+                {t('mfa.description', 'Εισάγετε τον 6-ψήφιο κωδικό από την εφαρμογή αυθεντικοποίησης')}
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent>
+              <form onSubmit={handleMfaVerification} className={layout.flexColGap4}>
+                {/* Error Message */}
+                {displayError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{displayError}</AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Success Message */}
+                {successMessage && (
+                  <Alert className={`${getStatusBorder('success')} ${colors.bg.success}`}>
+                    <AlertDescription className={colors.text.success}>
+                      {successMessage}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* MFA Code Input */}
+                <fieldset className={layout.flexColGap2}>
+                  <label htmlFor="mfaCode" className={typography.label.sm}>
+                    {t('mfa.codeLabel', 'Κωδικός επαλήθευσης')}
+                  </label>
+                  <div className={layout.inputContainer}>
+                    <Lock className={`${layout.inputIconLeft} ${iconSizes.sm} ${colors.text.muted}`} />
+                    <Input
+                      id="mfaCode"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      placeholder={t('mfa.codePlaceholder', '000000')}
+                      value={mfaCode}
+                      onChange={(e) => {
+                        // Only allow digits
+                        const value = e.target.value.replace(/\D/g, '');
+                        setMfaCode(value);
+                        setValidationError(null);
+                        clearError();
+                      }}
+                      disabled={isLoading}
+                      hasLeftIcon
+                      required
+                      autoComplete="one-time-code"
+                      autoFocus
+                    />
+                  </div>
+                  <p className={`${typography.body.sm} ${colors.text.muted}`}>
+                    {t('mfa.codeHint', 'Ο κωδικός αλλάζει κάθε 30 δευτερόλεπτα')}
+                  </p>
+                </fieldset>
+
+                {/* Submit Button */}
+                <Button type="submit" className={layout.widthFull} disabled={isLoading}>
+                  {isLoading && <Spinner size="small" className={layout.buttonIconSpacing} />}
+                  {t('mfa.verifyButton', 'Επαλήθευση')}
+                </Button>
+
+                {/* Cancel Button */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={layout.widthFull}
+                  onClick={handleCancelMfa}
+                  disabled={isLoading}
+                >
+                  {t('mfa.cancelButton', 'Ακύρωση')}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </section>
+      </>
     );
   }
 
@@ -361,7 +524,7 @@ export function AuthForm({
           <figure className={layout.centerHorizontal}>
             <LogoPagonis className={`${iconSizes.xl4} ${colors.text.primary}`} />
           </figure>
-          <h1 className={`${typography.heading.xl} ${colors.text.primary}`}>
+          <h1 className={`${typography.heading.lg} ${colors.text.primary}`}>
             Nestor Pagonis
           </h1>
         </header>

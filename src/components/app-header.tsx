@@ -10,13 +10,17 @@ import { HelpButton } from "@/components/header/help-button"
 import { NotificationBell } from "@/components/NotificationBell.enterprise"
 import { useFirestoreNotifications } from "@/hooks/useFirestoreNotifications"
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors"
+import { useAuth } from "@/auth/contexts/AuthContext"
 
 export function AppHeader() {
+  // 🔐 Get authenticated user
+  const { user } = useAuth();
+
   // ✅ FIRESTORE: Real-time notifications με onSnapshot
-  // User ID από UserRoleContext (auto-login: user@example.com)
+  // 🏢 ENTERPRISE: Uses authenticated user ID, disabled when not logged in
   useFirestoreNotifications({
-    userId: 'user@example.com',
-    enabled: true
+    userId: user?.uid ?? '',
+    enabled: Boolean(user?.uid)
   });
 
   // 🌉 BRIDGE: Semantic colors

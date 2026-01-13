@@ -1,64 +1,67 @@
 {
-  "category": "CLEANUP",
-  "timestamp": "20260112_1545",
-  "shortDescription": "Enterprise Improvements + Gitignore Cleanup",
-  "problem": "Tmpclaude-* temp files πρόσθεταν 80+ phantom αλλαγές στο git status.",
-  "cause": "Claude CLI δημιουργεί temporary files που δεν ήταν στο .gitignore.",
+  "category": "FEATURE",
+  "timestamp": "20260113_1830",
+  "shortDescription": "Enterprise i18n Building Features Translation System",
+  "problem": "Building features displayed in Greek even when English language selected - labels stored as Greek strings in Firestore database needed reverse lookup translation.",
+  "cause": "Database stores Greek feature strings, but no centralized reverse lookup system existed to translate them to i18n keys for proper localization.",
   "filesChanged": [
-    ".gitignore - Added tmpclaude-* pattern",
-    "src/app/admin/database-update/page.tsx - Admin page updates",
-    "src/components/core/AdvancedFilters/configs.ts - Filter configuration",
-    "src/constants/property-statuses-enterprise.ts - Enterprise status constants",
-    "src/core/geo-alert-unified/database/types.ts - GeoAlert database types",
-    "src/core/headers/enterprise-system/index.ts - Header system index",
-    "src/core/headers/enterprise-system/types/index.ts - Header types",
-    "src/core/performance/hooks/useEnterprisePerformance.ts - Performance hook",
-    "src/core/performance/integrations/CachePerformanceIntegration.ts - Cache integration",
-    "src/database/migrations/003_enterprise_database_architecture_consolidation.ts",
-    "src/database/migrations/004_dxf_legacy_to_storage_migration.ts",
-    "src/database/migrations/MigrationEngine.ts - Migration engine updates",
-    "src/database/migrations/types.ts - Migration types"
+    "src/utils/building-features-i18n.ts - NEW: Centralized translation utility (80+ Greek mappings)",
+    "src/components/building-management/BuildingCard/BuildingCardContent/BuildingCardFeatures.tsx - Refactored to use central utility",
+    "src/components/building-management/BuildingToolbar/ToolbarFiltersDisplay.tsx - Refactored to use central utility",
+    "src/app/api/buildings/populate/route.ts - Thin wrapper using shared handler",
+    "src/app/api/buildings/seed/route.ts - Thin wrapper using shared handler",
+    "src/server/admin/admin-guards.ts - NEW: Centralized admin module with SERVER_COLLECTIONS",
+    "src/server/admin/building-instantiation-handler.ts - NEW: Shared handler for seed/populate",
+    "src/services/admin-building-templates.service.ts - NEW: Templates service with Admin SDK",
+    "firestore.indexes.json - Added composite indexes for admin_building_templates",
+    "src/i18n/locales/el/common.json - New translations",
+    "src/i18n/locales/en/common.json - New translations"
   ],
   "solution": {
-    "phase1": "Added tmpclaude-* to .gitignore to prevent temp file tracking",
-    "phase2": "Committed all pending code changes (13 files)",
-    "phase3": "Cleaned up repository from phantom changes",
-    "phase4": "Updated database migration types and engine",
-    "phase5": "Refined enterprise constants and performance hooks"
+    "phase1": "Created centralized building-features-i18n.ts utility as single source of truth",
+    "phase2": "Added 80+ Greek-to-English feature mappings with case-insensitive lookup",
+    "phase3": "Refactored components to use translateBuildingFeature() utility",
+    "phase4": "Created shared building-instantiation-handler for DRY API routes",
+    "phase5": "Added SERVER_COLLECTIONS registry to eliminate hardcoded collection names"
   },
   "technicalDetails": {
-    "gitignoreAddition": "tmpclaude-* pattern blocks Claude CLI temp files",
-    "filesCommitted": 13,
-    "linesChanged": "+297/-156"
+    "translationPattern": "Greek DB string -> getBuildingFeatureKey() -> i18n key -> t() translation",
+    "caseInsensitive": "FEATURE_GREEK_TO_KEY_LOWER map for flexible matching",
+    "enterpriseArchitecture": "Shared handlers, centralized constants, Admin SDK services",
+    "filesCreated": 4,
+    "filesModified": 7,
+    "linesChanged": "+1596/-680"
   },
   "verification": {
     "commits": [
-      "f00d6c9 - feat: enterprise improvements + gitignore tmpclaude files"
+      "dabeb1c3 - feat(i18n): enterprise building features translation system"
     ],
-    "checkpointTag": "checkpoint-enterprise-cleanup-2026-01-12",
+    "checkpointTag": "checkpoint-2026-01-13-i18n-enterprise",
     "vercelPush": "Successful",
     "preCommitChecks": "All passed"
   },
   "testing": {
-    "gitStatus": "Clean after commit - no phantom changes",
-    "gitignore": "tmpclaude-* files now ignored"
+    "i18nTranslation": "Building features now translate based on selected language",
+    "caseInsensitiveMatching": "Multiple Greek variations map to same i18n key",
+    "backwardCompatibility": "Falls back to original string if no mapping found"
   },
   "notes": [
-    "IMPORTANT: tmpclaude-* files are now in .gitignore",
-    "These are Claude CLI temporary files - should never be committed",
-    "Repository is now clean from phantom changes"
+    "SINGLE SOURCE OF TRUTH: All Greek-to-key mappings in building-features-i18n.ts",
+    "Case-insensitive lookup handles database variations",
+    "New features: Add mapping to FEATURE_GREEK_TO_KEY and translation to building.json",
+    "SERVER_COLLECTIONS registry prevents hardcoded collection names"
   ],
   "contributors": {
     "user": "Giorgos Pagonis",
     "assistant": "Claude Opus 4.5",
-    "sessionDate": "2026-01-12"
+    "sessionDate": "2026-01-13"
   },
   "relatedBackups": [
+    "checkpoint-2026-01-13-i18n-enterprise",
     "checkpoint-enterprise-cleanup-2026-01-12",
-    "checkpoint-session-validation-2026-01-12",
-    "checkpoint-auth-custom-domain-2026-01-12"
+    "checkpoint-session-validation-2026-01-12"
   ],
   "commits": [
-    "f00d6c9 - feat: enterprise improvements + gitignore tmpclaude files"
+    "dabeb1c3 - feat(i18n): enterprise building features translation system"
   ]
 }

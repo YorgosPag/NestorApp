@@ -15,9 +15,18 @@ export class TasksRepository implements ITasksRepository {
   private collectionName = TASKS_COLLECTION;
 
   async add(data: Omit<CrmTask, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderSent'>): Promise<{ id: string; }> {
-    let dueDateTimestamp = data.dueDate;
-    if (dueDateTimestamp && !(dueDateTimestamp instanceof Timestamp)) {
-      dueDateTimestamp = Timestamp.fromDate(new Date(dueDateTimestamp));
+    // 🏢 ENTERPRISE: Proper FirestoreishTimestamp → Timestamp conversion
+    let dueDateTimestamp: Timestamp | null = null;
+    if (data.dueDate) {
+      if (data.dueDate instanceof Timestamp) {
+        dueDateTimestamp = data.dueDate;
+      } else if (data.dueDate instanceof Date) {
+        dueDateTimestamp = Timestamp.fromDate(data.dueDate);
+      } else if (typeof data.dueDate === 'string') {
+        dueDateTimestamp = Timestamp.fromDate(new Date(data.dueDate));
+      } else if (typeof data.dueDate === 'object' && 'toDate' in data.dueDate) {
+        dueDateTimestamp = Timestamp.fromDate(data.dueDate.toDate());
+      }
     }
     
     const docRef = await addDoc(collection(db, this.collectionName), {
@@ -72,9 +81,22 @@ export class TasksRepository implements ITasksRepository {
 
   async update(id: string, updates: Partial<CrmTask>): Promise<void> {
     const updatePayload: Record<string, unknown> = { ...updates, updatedAt: serverTimestamp() };
-    if (updates.dueDate && !(updates.dueDate instanceof Timestamp)) {
-      updatePayload.dueDate = Timestamp.fromDate(new Date(updates.dueDate as string | Date));
+
+    // 🏢 ENTERPRISE: Proper FirestoreishTimestamp → Timestamp conversion for updates
+    if (updates.dueDate !== undefined) {
+      if (updates.dueDate === null) {
+        updatePayload.dueDate = null;
+      } else if (updates.dueDate instanceof Timestamp) {
+        updatePayload.dueDate = updates.dueDate;
+      } else if (updates.dueDate instanceof Date) {
+        updatePayload.dueDate = Timestamp.fromDate(updates.dueDate);
+      } else if (typeof updates.dueDate === 'string') {
+        updatePayload.dueDate = Timestamp.fromDate(new Date(updates.dueDate));
+      } else if (typeof updates.dueDate === 'object' && 'toDate' in updates.dueDate) {
+        updatePayload.dueDate = Timestamp.fromDate(updates.dueDate.toDate());
+      }
     }
+
     await updateDoc(doc(db, this.collectionName, id), updatePayload);
   }
   

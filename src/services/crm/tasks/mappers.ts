@@ -1,6 +1,17 @@
-'use server';
+/**
+ * =============================================================================
+ * TASK MAPPERS - FIRESTORE DOCUMENT TRANSFORMATION
+ * =============================================================================
+ *
+ * Enterprise Pattern: Pure utility functions for data transformation
+ * Used by TasksRepository to convert Firestore documents to CrmTask objects
+ *
+ * @module services/crm/tasks/mappers
+ * @enterprise ADR-026 - CRM Tasks Backend Fix (2026-01-13)
+ */
+
 import type { CrmTask } from '@/types/crm';
-import type { QueryDocumentSnapshot, Timestamp } from 'firebase/firestore';
+import type { QueryDocumentSnapshot } from 'firebase/firestore';
 
 /** Intermediate type for task transformation */
 type TaskTransformOutput = Partial<CrmTask> & { id: string; [key: string]: unknown };

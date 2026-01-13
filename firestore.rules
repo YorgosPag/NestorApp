@@ -170,11 +170,52 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 🔔 NOTIFICATIONS COLLECTION - PUBLIC READ ACCESS
+    // 🔔 NOTIFICATIONS COLLECTION - USER-SCOPED ACCESS
     // =========================================================================
+    // 🏢 ENTERPRISE: Secure notification access per user
+    // 🔒 AUTHENTICATED: User can only access their own notifications
+    // 📋 ADR-027: CRM Notifications Integration - Updated 2026-01-13
     match /notifications/{notificationId} {
-      allow read: if true; // Public read access for notifications
-      allow write: if false; // Admin/server only
+      // 📖 READ: Users can only read their own notifications
+      allow read: if isAuthenticated()
+                  && resource.data.userId == request.auth.uid;
+
+      // 📝 UPDATE: Users can mark their own notifications as read
+      // Only allows updating delivery state and seen timestamp
+      allow update: if isAuthenticated()
+                    && resource.data.userId == request.auth.uid
+                    && isValidNotificationUpdate(request.resource.data, resource.data);
+
+      // ❌ CREATE/DELETE: Server/Admin only (via Firebase Admin SDK)
+      allow create: if false;
+      allow delete: if false;
+    }
+
+    // =========================================================================
+    // ✅ TASKS COLLECTION - CRM TASK MANAGEMENT
+    // =========================================================================
+    // 🏢 ENTERPRISE: Task management για CRM leads, projects, και users
+    // 🔒 AUTHENTICATED: Μόνο authenticated users έχουν πρόσβαση
+    // 📋 ADR-026: CRM Tasks Backend Fix - Added 2026-01-13
+    match /tasks/{taskId} {
+
+      // 📖 READ: Authenticated users can read tasks
+      // TODO: Future enhancement - filter by assignedTo or leadId ownership
+      allow read: if isAuthenticated();
+
+      // ✍️ CREATE: Authenticated users can create tasks
+      allow create: if isAuthenticated()
+                    && isValidTaskData(request.resource.data)
+                    && resource == null;
+
+      // 📝 UPDATE: Authenticated users can update tasks
+      allow update: if isAuthenticated()
+                    && isValidTaskData(request.resource.data)
+                    && resource != null;
+
+      // 🗑️ DELETE: Authenticated users can delete tasks
+      allow delete: if isAuthenticated()
+                    && resource != null;
     }
 
     // =========================================================================
@@ -218,6 +259,42 @@ service cloud.firestore {
     match /security_roles/{roleId} {
       allow read: if isAuthenticated();
       allow write: if false; // Admin/server only
+    }
+
+    // =========================================================================
+    // 👤 USERS COLLECTION & SESSIONS SUBCOLLECTION
+    // =========================================================================
+    // 🏢 ENTERPRISE: User profile και active sessions management
+    // 🔒 OWNERSHIP-BASED: Κάθε χρήστης μπορεί να διαχειρίζεται ΜΟΝΟ τα δικά του
+    match /users/{userId} {
+      // 📖 READ/WRITE: Μόνο ο ίδιος ο χρήστης
+      allow read, write: if isOwner(userId);
+
+      // 🔐 SESSIONS SUBCOLLECTION - Enterprise Active Sessions Management
+      match /sessions/{sessionId} {
+        // Ο χρήστης μπορεί να διαβάζει και να γράφει ΜΟΝΟ τα δικά του sessions
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // =========================================================================
+    // 🔐 USER_2FA_SETTINGS COLLECTION - Two-Factor Authentication
+    // =========================================================================
+    // 🏢 ENTERPRISE: 2FA settings και backup codes storage
+    // 🔒 OWNERSHIP-BASED: Κάθε χρήστης μπορεί να διαχειρίζεται ΜΟΝΟ τα δικά του 2FA settings
+    match /user_2fa_settings/{userId} {
+      // Ο χρήστης μπορεί να διαβάζει και να γράφει ΜΟΝΟ τα δικά του 2FA settings
+      allow read, write: if isOwner(userId);
+    }
+
+    // =========================================================================
+    // 🔔 USER_NOTIFICATION_SETTINGS COLLECTION - Notification Preferences
+    // =========================================================================
+    // 🏢 ENTERPRISE: User notification preferences management
+    // 🔒 OWNERSHIP-BASED: Κάθε χρήστης μπορεί να διαχειρίζεται ΜΟΝΟ τις δικές του ρυθμίσεις
+    match /user_notification_settings/{userId} {
+      // Ο χρήστης μπορεί να διαβάζει και να γράφει ΜΟΝΟ τις δικές του ρυθμίσεις ειδοποιήσεων
+      allow read, write: if isOwner(userId);
     }
 
     // =========================================================================
@@ -296,6 +373,53 @@ service cloud.firestore {
       return data.keys().hasAll(['email'])
              && data.email is string
              && data.email.matches('.*@.*\\..*'); // Basic email validation
+    }
+
+    // ✅ Task Data Validation (ADR-026: CRM Tasks Backend Fix)
+    // 🏢 ENTERPRISE: Validates CrmTask structure for Firestore operations
+    function isValidTaskData(data) {
+      return data.keys().hasAll(['title', 'type', 'assignedTo', 'status', 'priority'])
+             // 📝 Title validation
+             && data.title is string && data.title.size() > 0
+             // 📋 Type validation (enum)
+             && data.type in ['call', 'email', 'meeting', 'viewing', 'document', 'follow_up', 'other']
+             // 👤 AssignedTo validation (User ID)
+             && data.assignedTo is string && data.assignedTo.size() > 0
+             // 📊 Status validation (enum)
+             && data.status in ['pending', 'in_progress', 'completed', 'cancelled']
+             // ⚡ Priority validation (enum)
+             && data.priority in ['low', 'medium', 'high', 'urgent']
+             // 🔗 Optional leadId validation
+             && (!data.keys().hasAny(['leadId']) || (data.leadId is string))
+             // 🔗 Optional contactId validation
+             && (!data.keys().hasAny(['contactId']) || (data.contactId is string))
+             // 🔗 Optional projectId validation
+             && (!data.keys().hasAny(['projectId']) || (data.projectId is string))
+             // 📝 Optional description validation
+             && (!data.keys().hasAny(['description']) || (data.description is string));
+    }
+
+    // =========================================================================
+    // 🔔 NOTIFICATION UPDATE VALIDATION
+    // =========================================================================
+    // 📋 ADR-027: CRM Notifications Integration - Added 2026-01-13
+    // 🔒 ENTERPRISE: Only allows updating delivery state fields
+    function isValidNotificationUpdate(newData, existingData) {
+      // List of fields that users are allowed to modify
+      let allowedFields = ['delivery', 'seenAt', 'actedAt', 'actionId'];
+
+      // Get the fields that changed
+      let changedKeys = newData.diff(existingData).affectedKeys();
+
+      // All changed fields must be in the allowed list
+      return changedKeys.hasOnly(allowedFields)
+             // Ensure delivery state is valid if being updated
+             && (!changedKeys.hasAny(['delivery'])
+                 || newData.delivery.state in ['queued', 'sent', 'delivered', 'seen', 'acted', 'failed', 'expired'])
+             // Ensure userId is never changed
+             && newData.userId == existingData.userId
+             // Ensure title is never changed
+             && newData.title == existingData.title;
     }
 
     // System Fields Protection

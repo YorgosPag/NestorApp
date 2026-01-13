@@ -16,7 +16,9 @@
  */
 
 import React, { useState } from 'react';
-import { Shield, Key, Smartphone, AlertTriangle, Mail } from 'lucide-react';
+import { Key, AlertTriangle, Mail } from 'lucide-react';
+import { SessionsList } from '@/components/account/SessionsList';
+import { TwoFactorEnrollment } from '@/components/account/TwoFactorEnrollment';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -133,49 +135,26 @@ export default function SecurityPage() {
         </CardContent>
       </Card>
 
-      {/* 2FA Section */}
-      <Card className={borders.getElementBorder('card', 'default')}>
-        <CardHeader>
-          <CardTitle className={layout.flexCenterGap2}>
-            <Smartphone className={iconSizes.md} aria-hidden="true" />
-            {t('account.security.twoFactorTitle')}
-            <Badge variant="outline" className={cn(colors.text.muted)}>
-              {t('account.security.comingSoon')}
-            </Badge>
-          </CardTitle>
-          <CardDescription>
-            {t('account.security.twoFactorDescription')}
-          </CardDescription>
-        </CardHeader>
+      {/* 2FA Section - Enterprise Two-Factor Authentication */}
+      {user?.uid && (
+        <TwoFactorEnrollment
+          userId={user.uid}
+          onStatusChange={(status) => {
+            console.log('2FA status changed:', status.status);
+          }}
+        />
+      )}
 
-        <CardContent>
-          <p className={cn(typography.body.sm, colors.text.muted)}>
-            {t('account.security.twoFactorNotAvailable')}
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Sessions Section */}
-      <Card className={borders.getElementBorder('card', 'default')}>
-        <CardHeader>
-          <CardTitle className={layout.flexCenterGap2}>
-            <Shield className={iconSizes.md} aria-hidden="true" />
-            {t('account.security.sessionsTitle')}
-            <Badge variant="outline" className={cn(colors.text.muted)}>
-              {t('account.security.comingSoon')}
-            </Badge>
-          </CardTitle>
-          <CardDescription>
-            {t('account.security.sessionsDescription')}
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent>
-          <p className={cn(typography.body.sm, colors.text.muted)}>
-            {t('account.security.sessionsNotAvailable')}
-          </p>
-        </CardContent>
-      </Card>
+      {/* Sessions Section - Enterprise Active Sessions Management */}
+      {user?.uid && (
+        <SessionsList
+          userId={user.uid}
+          onSessionsChange={() => {
+            // Optional: Handle session changes (e.g., refresh data)
+            console.log('Sessions updated');
+          }}
+        />
+      )}
     </section>
   );
 }
