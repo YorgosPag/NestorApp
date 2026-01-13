@@ -164,3 +164,13 @@ export const DEFAULTS = {
   /** Default conversation subject */
   NO_SUBJECT: '(No Subject)',
 } as const;
+
+// ============================================================================
+// UI CONSTANTS
+// ============================================================================
+
+/**
+ * Conversation preview length for lastMessage.content
+ * @enterprise Used in conversation list views
+ */
+export const CONVERSATION_PREVIEW_LENGTH = 100;
