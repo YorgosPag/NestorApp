@@ -1,11 +1,13 @@
 // bot-security.ts - Security & Access Control for Telegram Bot
 
+import { COLLECTIONS } from '@/config/firestore-collections';
+
 export const ALLOWED_COLLECTIONS = [
     COLLECTIONS.UNITS,
-    COLLECTIONS.BUILDINGS, 
+    COLLECTIONS.BUILDINGS,
     COLLECTIONS.PROJECTS,
-    'parking_spots',
-    'storage_units'
+    COLLECTIONS.PARKING_SPACES,
+    COLLECTIONS.STORAGE
 ];
 
 export const FORBIDDEN_KEYWORDS = [

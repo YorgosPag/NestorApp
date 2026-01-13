@@ -4,6 +4,7 @@ import { isFirebaseAvailable } from '../firebase/availability';
 import { getFirestoreHelpers } from '../firebase/helpers-lazy';
 import { safeDbOperation } from '../firebase/safe-op';
 import { extractSearchCriteria, applyAdvancedFilters } from './criteria';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import type { SearchResult, TelegramProperty } from '../shared/types';
 import type { Query, DocumentData, QuerySnapshot } from 'firebase/firestore';
 

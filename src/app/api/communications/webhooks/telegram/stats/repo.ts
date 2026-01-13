@@ -3,6 +3,7 @@
 import { isFirebaseAvailable } from "../firebase/availability";
 import { getFirestoreHelpers } from "../firebase/helpers-lazy";
 import { safeDbOperation } from "../firebase/safe-op";
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 interface PropertySummary {
     totalProperties: number;
