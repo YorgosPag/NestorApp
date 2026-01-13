@@ -15,7 +15,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { PolygonType, PolygonStyle } from '../../packages/core/polygon-system/types';
+import type { PolygonType, PolygonStyle } from '@core/polygon-system/types';
 import { polygonStyleService } from '@/services/polygon/EnterprisePolygonStyleService';
 
 // ============================================================================

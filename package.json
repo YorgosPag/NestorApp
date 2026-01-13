@@ -65,7 +65,10 @@
     "enterprise:workspace:check": "pnpm -r ls --depth=0",
     "enterprise:clean": "pnpm store prune && rm -rf node_modules && rm -rf .next && pnpm install",
     "enterprise:security": "pnpm audit --audit-level moderate",
-    "enterprise:validate": "pnpm run typecheck && pnpm run lint && pnpm run enterprise:security"
+    "enterprise:validate": "pnpm run typecheck && pnpm run lint && pnpm run enterprise:security",
+    "enterprise:ts-gate": "node scripts/enterprise-ts-gate.js",
+    "enterprise:ts-gate:update": "node scripts/enterprise-ts-gate.js --update",
+    "enterprise:ts-gate:report": "node scripts/enterprise-ts-gate.js --report"
   },
   "dependencies": {
     "@floating-ui/react": "^0.27.16",

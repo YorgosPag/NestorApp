@@ -1,64 +1,47 @@
 {
   "category": "FEATURE",
-  "timestamp": "20260113_2100",
-  "shortDescription": "Enterprise Security - Sessions, 2FA & Notification Settings",
-  "problem": "Application lacked enterprise-grade security features: session management, two-factor authentication, and granular notification preferences.",
-  "cause": "Security features were not implemented - needed for production readiness and enterprise compliance.",
+  "timestamp": "20260113_0345",
+  "shortDescription": "CRM Notifications Firestore Integration & Test System",
+  "problem": "CRM Notifications page showed mock data instead of real Firestore data. Header notification bell used hardcoded userId. No way to test notification system.",
+  "cause": "useNotifications hook returned hardcoded mock array. app-header.tsx used 'user@example.com' instead of authenticated user. Firestore rules didn't allow CRUD operations for notifications.",
   "filesChanged": [
-    "src/services/session/EnterpriseSessionService.ts - NEW: Device tracking, session management",
-    "src/services/session/session.types.ts - NEW: Session type definitions",
-    "src/services/session/index.ts - NEW: Service exports",
-    "src/services/two-factor/EnterpriseTwoFactorService.ts - NEW: TOTP/SMS/email 2FA",
-    "src/services/two-factor/two-factor.types.ts - NEW: 2FA type definitions",
-    "src/services/two-factor/index.ts - NEW: Service exports",
-    "src/services/user-notification-settings/UserNotificationSettingsService.ts - NEW: Notification preferences",
-    "src/services/user-notification-settings/user-notification-settings.types.ts - NEW: Settings types",
-    "src/services/user-notification-settings/index.ts - NEW: Service exports",
-    "src/components/account/SessionsList.tsx - NEW: Active sessions UI",
-    "src/components/account/TwoFactorEnrollment.tsx - NEW: 2FA setup wizard",
-    "src/components/account/NotificationSettings.tsx - NEW: Notification preferences UI",
-    "src/app/account/security/page.tsx - Security settings page",
-    "src/app/account/notifications/page.tsx - Notification settings page",
-    "src/auth/contexts/AuthContext.tsx - Enhanced session handling",
-    "src/auth/components/AuthForm.tsx - 2FA support in login flow",
-    "firestore.rules - New rules for sessions, 2fa, notification_settings collections",
-    "src/app/crm/notifications/ - CRM notification updates",
-    "src/services/crm/tasks/ - Task service updates",
-    "src/services/tasks.service.ts - Task service enhancements"
+    "firestore.rules - Updated notifications rules with user-scoped CRUD",
+    "src/app/crm/notifications/useNotifications.ts - Real-time Firestore subscription",
+    "src/app/crm/notifications/page.tsx - Loading/error/empty states, test button",
+    "src/app/crm/notifications/NotificationCard.tsx - Type imports update",
+    "src/app/crm/communications/page.tsx - ContactSearchManager integration",
+    "src/components/app-header.tsx - Fixed hardcoded userId to use auth",
+    "src/components/NotificationDrawer.enterprise.tsx - Firestore persist for markAsRead",
+    "src/app/api/notifications/seed/route.ts - Accepts userId from request body"
   ],
   "solution": {
-    "phase1": "Created EnterpriseSessionService with device fingerprinting and session tracking",
-    "phase2": "Created EnterpriseTwoFactorService supporting TOTP, SMS, and email verification",
-    "phase3": "Created UserNotificationSettingsService for granular channel preferences",
-    "phase4": "Built account security and notification settings UI components",
-    "phase5": "Updated Firestore rules for new security collections"
+    "phase1": "Rewrote useNotifications hook with real-time Firestore subscription using subscribeToNotifications",
+    "phase2": "Updated CRM notifications page with loading/error/empty states and test button",
+    "phase3": "Fixed app-header.tsx to use authenticated user ID from useAuth()",
+    "phase4": "Added Firestore persist for markAsRead in NotificationDrawer.enterprise.tsx",
+    "phase5": "Updated Firestore rules with user-scoped CRUD for notifications collection"
   },
   "technicalDetails": {
-    "sessionManagement": "Device tracking, concurrent session limits, remote revocation",
-    "twoFactorAuth": "TOTP with QR codes, SMS/email backup, recovery codes",
-    "notificationSettings": "Per-channel preferences, quiet hours, digest options",
-    "filesCreated": 12,
-    "filesModified": 15,
-    "linesChanged": "+5249/-257"
+    "notificationHook": "Real-time onSnapshot listener with automatic cleanup",
+    "firestoreRules": "User-scoped read/create/update/delete for notifications",
+    "testSystem": "Development-only test button creates and deletes test notifications",
+    "optimisticUpdates": "markAsRead uses optimistic local update + Firestore persist"
   },
   "verification": {
     "commits": [
-      "4bbf3db3 - feat(enterprise): account security, sessions, 2FA & notification settings"
+      "b1ae3af0 - feat(crm): CRM notifications Firestore integration & test system"
     ],
-    "checkpointTag": "checkpoint-2026-01-13-enterprise-security",
+    "checkpointTag": "checkpoint-2026-01-13-crm-notifications",
     "vercelPush": "Successful",
     "preCommitChecks": "All passed"
   },
-  "testing": {
-    "sessionService": "Device tracking and session management ready",
-    "twoFactorService": "TOTP enrollment flow implemented",
-    "notificationSettings": "Preference storage and retrieval working"
-  },
+  "testing": "Created test notification via UI button, verified real-time display, tested mark as read, tested delete - all working",
   "notes": [
-    "SECURITY: Enterprise-grade session management with device fingerprinting",
-    "2FA: Supports TOTP (authenticator apps), SMS, and email verification",
-    "NOTIFICATIONS: Granular per-channel preferences with quiet hours",
-    "FIRESTORE: New rules for sessions, two_factor_auth, notification_settings"
+    "Test button only appears in development mode",
+    "Notifications use real-time onSnapshot listener",
+    "Mark as read persists to Firestore with optimistic updates",
+    "Communications page now has ContactSearchManager integration",
+    "Header notification bell uses authenticated user ID"
   ],
   "contributors": {
     "user": "Giorgos Pagonis",
@@ -67,10 +50,9 @@
   },
   "relatedBackups": [
     "checkpoint-2026-01-13-enterprise-security",
-    "checkpoint-2026-01-13-i18n-enterprise",
-    "checkpoint-enterprise-cleanup-2026-01-12"
+    "4bbf3db3 - feat(enterprise): account security, sessions, 2FA & notification settings"
   ],
   "commits": [
-    "4bbf3db3 - feat(enterprise): account security, sessions, 2FA & notification settings"
+    "b1ae3af0 - feat(crm): CRM notifications Firestore integration & test system"
   ]
 }

@@ -35,7 +35,7 @@ node scripts/migrate-polygon-styles.js --themes=default,dark,high-contrast
 
 ```typescript
 import { usePolygonStyles, usePolygonStyle } from '@/hooks/usePolygonStyles';
-import type { PolygonType } from '../../../packages/core/polygon-system/types';
+import type { PolygonType } from '@core/polygon-system/types';
 
 // Full styles hook
 function PolygonRenderer() {

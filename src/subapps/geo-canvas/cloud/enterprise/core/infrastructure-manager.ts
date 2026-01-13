@@ -10,9 +10,9 @@
  * @updated 2025-12-28 - Split from CloudInfrastructure.ts
  */
 
-// ✅ ENTERPRISE FIX: Import existing Alert Engine - Use relative path
+// ✅ ENTERPRISE FIX: Import existing Alert Engine - Use canonical path alias
 // TODO: Verify correct path to alert engine
-// import { geoAlertEngine } from '../../../../../packages/core/alert-engine';
+// import { geoAlertEngine } from '@core/alert-engine';
 // TEMPORARY: Comment out until we verify the correct alert engine path
 
 import type {

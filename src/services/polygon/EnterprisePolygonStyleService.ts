@@ -18,9 +18,9 @@ import { collection, doc, getDoc, getDocs, setDoc, updateDoc, query, where, orde
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
-// Re-export types from core package
-export type { PolygonType, PolygonStyle } from '../../../packages/core/polygon-system/types';
-import type { PolygonType, PolygonStyle } from '../../../packages/core/polygon-system/types';
+// Re-export types from core package (canonical path alias)
+export type { PolygonType, PolygonStyle } from '@core/polygon-system/types';
+import type { PolygonType, PolygonStyle } from '@core/polygon-system/types';
 
 // ============================================================================
 // ENTERPRISE STYLE TYPES
