@@ -106,9 +106,13 @@
   "inbox": {
     "title": "Unified Inbox",
     "historyTitle": "Communication History",
+    "selectContactTitle": "Select Contact",
     "loading": "Loading messages...",
+    "loadingConversations": "Loading conversations...",
     "messagesCount": "{{count}} messages",
+    "conversationsCount": "{{count}} conversations",
     "noMessages": "No messages found",
+    "noConversations": "No conversations found",
     "search": "Search messages...",
     "filters": {
       "all": "All",
@@ -129,6 +133,47 @@
       "from": "From",
       "to": "To",
       "attachments": "{{count}} attachments"
+    },
+    "tabs": {
+      "conversations": "Conversations",
+      "contactHistory": "Contact History"
+    },
+    "status": {
+      "active": "Active",
+      "closed": "Closed",
+      "archived": "Archived",
+      "spam": "Spam"
+    },
+    "thread": {
+      "title": "Conversation",
+      "loadEarlier": "Load earlier messages",
+      "noMessages": "No messages in this conversation",
+      "selectConversation": "Select a conversation to view messages",
+      "participants": "Participants",
+      "unread": "{{count}} unread"
+    },
+    "composer": {
+      "placeholder": "Type your message...",
+      "send": "Send",
+      "sending": "Sending...",
+      "error": "Failed to send",
+      "success": "Message sent",
+      "shortcutHint": "Ctrl+Enter to send"
+    },
+    "channels": {
+      "telegram": "Telegram",
+      "email": "Email",
+      "whatsapp": "WhatsApp",
+      "sms": "SMS"
+    },
+    "pagination": {
+      "loadMore": "Load more",
+      "page": "Page {{current}} of {{total}}"
+    },
+    "errors": {
+      "loadFailed": "Failed to load",
+      "sendFailed": "Failed to send message",
+      "notAuthenticated": "Not authenticated"
     }
   },
   "leads": {

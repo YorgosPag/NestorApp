@@ -174,3 +174,27 @@ export const DEFAULTS = {
  * @enterprise Used in conversation list views
  */
 export const CONVERSATION_PREVIEW_LENGTH = 100;
+
+// ============================================================================
+// INBOX UI CONSTANTS - EPIC Δ
+// ============================================================================
+
+/**
+ * Inbox polling intervals
+ * @enterprise Near-realtime updates without WebSocket
+ */
+export const INBOX_POLL_MS = 15000; // 15 seconds for inbox list
+export const THREAD_POLL_MS = 5000; // 5 seconds for active thread
+
+/**
+ * Inbox pagination defaults
+ * @enterprise Optimized for performance
+ */
+export const INBOX_PAGE_SIZE = 20;
+export const MESSAGES_PAGE_SIZE = 50;
+
+/**
+ * UI display limits
+ * @enterprise Consistent truncation across components
+ */
+export const MESSAGE_PREVIEW_LENGTH = 120;

@@ -1,173 +1,224 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+/**
+ * =============================================================================
+ * UNIFIED INBOX - EPIC Δ (REFACTORED)
+ * =============================================================================
+ *
+ * Enterprise Inbox UI using staff-only API endpoints.
+ * NO FIRESTORE DIRECT ACCESS - All data through API.
+ *
+ * @module components/crm/UnifiedInbox
+ * @enterprise ADR-030 - Zero Hardcoded Values
+ * @security Staff-only Bearer token authentication
+ */
+
+import React, { useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { CommonBadge } from '@/core/badges';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatDateTime } from '@/lib/intl-utils';
-import { truncateText } from '@/lib/obligations-utils'; // ✅ Using centralized function
+import { truncateText } from '@/lib/obligations-utils';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
-import { createDynamicHeightConfig } from '@/components/ui/enterprise-portal/migration-utilities';
-import { 
-  MessageSquare, 
-  Mail, 
-  Phone, 
-  Send, 
-  Search, 
+import {
+  MessageSquare,
+  Mail,
+  Search,
   RefreshCw,
-  User,
-  Clock,
-  CheckCircle,
   AlertCircle,
-  ExternalLink
+  ChevronRight,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import communicationsService from '../../lib/communications';
-import { MESSAGE_TYPES, MESSAGE_STATUSES, MESSAGE_DIRECTIONS } from '../../lib/config/communications.config.js';
-// 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { Spinner } from '@/components/ui/spinner';
 
-// --- Constants defined outside the component for performance ---
+// 🏢 ENTERPRISE: API hooks instead of Firestore direct
+import {
+  useConversations,
+  useConversationMessages,
+  useSendMessage,
+} from '@/hooks/inbox/useInboxApi';
 
-// Note: CHANNEL_ICONS will use iconSizes within component context
+// 🏢 ENTERPRISE: Centralized constants
+import {
+  MESSAGE_PREVIEW_LENGTH,
+} from '@/config/domain-constants';
 
-const getChannelColors = (colors: ReturnType<typeof useSemanticColors>) => ({
-  [MESSAGE_TYPES.EMAIL]: `${colors.bg.infoSubtle} ${colors.text.info}`,
-  [MESSAGE_TYPES.TELEGRAM]: `${colors.bg.accentSubtle} ${colors.text.accent}`,
-  [MESSAGE_TYPES.WHATSAPP]: `${colors.bg.successSubtle} ${colors.text.success}`,
-  [MESSAGE_TYPES.MESSENGER]: `${colors.bg.accentSubtle} ${colors.text.accent}`,
-  [MESSAGE_TYPES.SMS]: `${colors.bg.warningSubtle} ${colors.text.warning}`,
-  [MESSAGE_TYPES.CALL]: `${colors.bg.muted} ${colors.text.muted}`,
-  default: `${colors.bg.muted} ${colors.text.muted}`,
-});
+import { CONVERSATION_STATUS } from '@/types/conversations';
+import { COMMUNICATION_CHANNELS } from '@/types/communications';
 
-// Note: STATUS_ICONS will use iconSizes within component context
+// 🏢 ENTERPRISE: Inbox sub-components
+import { ThreadView } from './inbox/ThreadView';
+import { ReplyComposer } from './inbox/ReplyComposer';
 
-const safeToLowerCase = (value) => (value || '').toLowerCase();
+// ============================================================================
+// TYPES
+// ============================================================================
 
-const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) => {
-  // 🏢 ENTERPRISE: i18n hook for translations
+interface UnifiedInboxProps {
+  /** Show filters panel */
+  showFilters?: boolean;
+  /** Enable polling for real-time updates */
+  enablePolling?: boolean;
+}
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Get channel icon component
+ */
+function getChannelIcon(channel: string, iconSizes: ReturnType<typeof useIconSizes>) {
+  switch (channel) {
+    case COMMUNICATION_CHANNELS.EMAIL:
+      return <Mail className={iconSizes.sm} />;
+    case COMMUNICATION_CHANNELS.TELEGRAM:
+    case COMMUNICATION_CHANNELS.WHATSAPP:
+    case COMMUNICATION_CHANNELS.MESSENGER:
+    case COMMUNICATION_CHANNELS.SMS:
+      return <MessageSquare className={iconSizes.sm} />;
+    default:
+      return <MessageSquare className={iconSizes.sm} />;
+  }
+}
+
+/**
+ * Get channel color classes
+ */
+function getChannelColorClasses(channel: string, colors: ReturnType<typeof useSemanticColors>) {
+  switch (channel) {
+    case COMMUNICATION_CHANNELS.EMAIL:
+      return `${colors.bg.infoSubtle} ${colors.text.info}`;
+    case COMMUNICATION_CHANNELS.TELEGRAM:
+      return `${colors.bg.infoSubtle} ${colors.text.info}`;
+    case COMMUNICATION_CHANNELS.WHATSAPP:
+      return `${colors.bg.successSubtle} ${colors.text.success}`;
+    default:
+      return `${colors.bg.muted} ${colors.text.muted}`;
+  }
+}
+
+/**
+ * Format relative time
+ */
+function getRelativeTime(timestamp: string, t: (key: string, options?: Record<string, unknown>) => string): string {
+  if (!timestamp) return '';
+
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+
+  if (diffHours < 1) return t('inbox.time.now');
+  if (diffHours < 24) return t('inbox.time.hoursAgo', { hours: Math.floor(diffHours) });
+  if (diffHours < 48) return t('inbox.time.yesterday');
+
+  return formatDateTime(date);
+}
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
+
+export function UnifiedInbox({
+  showFilters = true,
+  enablePolling = true,
+}: UnifiedInboxProps) {
   const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const channelColors = getChannelColors(colors);
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [filters, setFilters] = useState({
-    searchTerm: '',
-    selectedChannel: 'all',
-    selectedStatus: 'all',
-    selectedDirection: 'all',
+
+  // State
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [channelFilter, setChannelFilter] = useState<string>('all');
+
+  // 🏢 ENTERPRISE: API hooks (NO FIRESTORE DIRECT)
+  const {
+    conversations,
+    loading: conversationsLoading,
+    error: conversationsError,
+    totalCount,
+    hasMore,
+    refresh: refreshConversations,
+    loadMore: loadMoreConversations,
+  } = useConversations({
+    status: statusFilter !== 'all' ? statusFilter as typeof CONVERSATION_STATUS[keyof typeof CONVERSATION_STATUS] : undefined,
+    channel: channelFilter !== 'all' ? channelFilter as typeof COMMUNICATION_CHANNELS[keyof typeof COMMUNICATION_CHANNELS] : undefined,
+    polling: enablePolling,
   });
 
-  const loadMessages = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = leadId
-        ? await communicationsService.getLeadCommunications(leadId, { limit: 100 })
-        : await communicationsService.getUnifiedInbox({ limit: 100 });
-      setMessages(data);
-    } catch (error) {
-      console.error('Error loading messages:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [leadId]);
+  const selectedConversation = useMemo(
+    () => conversations.find(c => c.id === selectedConversationId) ?? null,
+    [conversations, selectedConversationId]
+  );
 
-  useEffect(() => {
-    loadMessages();
-  }, []); // 🔧 FIX: Removed loadMessages to prevent infinite loop - load once on mount
+  const {
+    messages,
+    loading: messagesLoading,
+    error: messagesError,
+    hasMore: hasMoreMessages,
+    refresh: refreshMessages,
+    loadMore: loadMoreMessages,
+  } = useConversationMessages(selectedConversationId, {
+    polling: enablePolling && !!selectedConversationId,
+  });
 
-  const filteredMessages = useMemo(() => {
-    let filtered = [...messages];
-    const searchTermLower = safeToLowerCase(filters.searchTerm);
+  const {
+    send,
+    sending,
+    error: sendError,
+    clearError: clearSendError,
+  } = useSendMessage(selectedConversationId);
 
-    if (filters.searchTerm) {
-      filtered = filtered.filter(msg =>
-        safeToLowerCase(msg.content).includes(searchTermLower) ||
-        safeToLowerCase(msg.subject).includes(searchTermLower) ||
-        safeToLowerCase(msg.from).includes(searchTermLower) ||
-        safeToLowerCase(msg.to).includes(searchTermLower)
+  // Filter conversations by search term (client-side)
+  const filteredConversations = useMemo(() => {
+    if (!searchTerm) return conversations;
+
+    const searchLower = searchTerm.toLowerCase();
+    return conversations.filter(conv => {
+      const participantMatch = conv.participants.some(p =>
+        p.displayName.toLowerCase().includes(searchLower)
       );
+      const lastMessageMatch = conv.lastMessage?.content.toLowerCase().includes(searchLower);
+      return participantMatch || lastMessageMatch;
+    });
+  }, [conversations, searchTerm]);
+
+  // Handlers
+  const handleSelectConversation = useCallback((conversationId: string) => {
+    setSelectedConversationId(conversationId);
+  }, []);
+
+  const handleSendMessage = useCallback(async (text: string): Promise<boolean> => {
+    const result = await send({ text });
+    if (result?.success) {
+      // Refresh messages after successful send
+      await refreshMessages();
+      return true;
     }
-    if (filters.selectedChannel !== 'all') {
-      filtered = filtered.filter(msg => msg.channel === filters.selectedChannel);
+    return false;
+  }, [send, refreshMessages]);
+
+  const handleRefreshAll = useCallback(async () => {
+    await refreshConversations();
+    if (selectedConversationId) {
+      await refreshMessages();
     }
-    if (filters.selectedStatus !== 'all') {
-      filtered = filtered.filter(msg => msg.status === filters.selectedStatus);
-    }
-    if (filters.selectedDirection !== 'all') {
-      filtered = filtered.filter(msg => msg.direction === filters.selectedDirection);
-    }
+  }, [refreshConversations, refreshMessages, selectedConversationId]);
 
-    return filtered;
-  }, [messages, filters]);
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadMessages();
-    setRefreshing(false);
-  };
-  
-  const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  };
-
-  // Dynamic icon creation functions
-  const getChannelIcon = (type) => {
-    switch(type) {
-      case MESSAGE_TYPES.EMAIL: return <Mail className={iconSizes.sm} />;
-      case MESSAGE_TYPES.TELEGRAM: return <MessageSquare className={iconSizes.sm} />;
-      case MESSAGE_TYPES.WHATSAPP: return <MessageSquare className={iconSizes.sm} />;
-      case MESSAGE_TYPES.MESSENGER: return <MessageSquare className={iconSizes.sm} />;
-      case MESSAGE_TYPES.SMS: return <MessageSquare className={iconSizes.sm} />;
-      case MESSAGE_TYPES.CALL: return <Phone className={iconSizes.sm} />;
-      default: return <MessageSquare className={iconSizes.sm} />;
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch(status) {
-      case MESSAGE_STATUSES.SENT: return <CheckCircle className={`${iconSizes.sm} ${colors.text.success}`} />;
-      case MESSAGE_STATUSES.DELIVERED: return <CheckCircle className={`${iconSizes.sm} ${colors.text.success}`} />;
-      case MESSAGE_STATUSES.COMPLETED: return <CheckCircle className={`${iconSizes.sm} ${colors.text.success}`} />;
-      case MESSAGE_STATUSES.FAILED: return <AlertCircle className={`${iconSizes.sm} ${colors.text.error}`} />;
-      case MESSAGE_STATUSES.PENDING: return <Clock className={`${iconSizes.sm} ${colors.text.warning}`} />;
-      default: return <Clock className={`${iconSizes.sm} ${colors.text.muted}`} />;
-    }
-  };
-
-  // ✅ ENTERPRISE MIGRATION: Using centralized formatDateTime for consistent formatting
-  const formatDate = (timestamp) => {
-    if (!timestamp) return { relative: '', full: '' };
-
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    const now = new Date();
-    const diffHours = (now - date) / (1000 * 60 * 60);
-
-    let relative = formatDateTime(date);
-    if (diffHours < 1) relative = t('inbox.time.now');
-    else if (diffHours < 24) relative = t('inbox.time.hoursAgo', { hours: Math.floor(diffHours) });
-    else if (diffHours < 48) relative = t('inbox.time.yesterday');
-
-    return {
-      relative,
-      full: formatDateTime(date) // ✅ Using centralized function
-    };
-  };
-
-
-  if (loading) {
+  // Loading state for initial load
+  if (conversationsLoading && conversations.length === 0) {
     return (
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-center">
-            <RefreshCw className={`${iconSizes.lg} animate-spin mr-2`} />
-            {t('inbox.loading')}
+            <Spinner size="medium" className="mr-2" />
+            <span>{t('inbox.loadingConversations')}</span>
           </div>
         </CardContent>
       </Card>
@@ -175,173 +226,208 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className={iconSizes.md} />
-            {leadId ? t('inbox.historyTitle') : t('inbox.title')}
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <CommonBadge
-              status="company"
-              customLabel={t('inbox.messagesCount', { count: filteredMessages.length })}
-              variant="secondary"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresh}
-              disabled={refreshing}
-            >
-              <RefreshCw className={`${iconSizes.sm} ${refreshing ? 'animate-spin' : ''}`} />
-            </Button>
-          </div>
-        </div>
-
-        {showFilters && (
-          <div className="flex flex-wrap gap-2 mt-4">
-            <div className="flex-1 min-w-[200px]">
-              <div className="relative">
-                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} ${colors.text.muted}`} />
-                <Input
-                  placeholder={t('inbox.search')}
-                  value={filters.searchTerm}
-                  onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
-                  className="pl-9"
-                />
-              </div>
+    <section className="flex gap-4 h-full min-h-0" aria-label="Unified Inbox">
+      {/* Left Panel: Conversations List */}
+      <Card className="w-1/3 flex flex-col">
+        <CardHeader className="flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className={iconSizes.md} />
+              {t('inbox.title')}
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <CommonBadge
+                status="company"
+                customLabel={t('inbox.conversationsCount', { count: totalCount })}
+                variant="secondary"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefreshAll}
+                disabled={conversationsLoading}
+                aria-label="Refresh"
+              >
+                <RefreshCw className={`${iconSizes.sm} ${conversationsLoading ? 'animate-spin' : ''}`} />
+              </Button>
             </div>
-
-            <Select value={filters.selectedChannel} onValueChange={(val) => handleFilterChange('selectedChannel', val)}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder={t('inbox.filters.channel')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('inbox.filters.all')}</SelectItem>
-                {Object.keys(MESSAGE_TYPES).map(channel => (
-                  <SelectItem key={channel} value={channel}>{channel.toUpperCase()}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filters.selectedDirection} onValueChange={(val) => handleFilterChange('selectedDirection', val)}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder={t('inbox.filters.direction')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('inbox.filters.all')}</SelectItem>
-                <SelectItem value={MESSAGE_DIRECTIONS.INBOUND}>{t('inbox.direction.inbound')}</SelectItem>
-                <SelectItem value={MESSAGE_DIRECTIONS.OUTBOUND}>{t('inbox.direction.outbound')}</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filters.selectedStatus} onValueChange={(val) => handleFilterChange('selectedStatus', val)}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder={t('inbox.filters.status')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('inbox.filters.all')}</SelectItem>
-                {Object.keys(MESSAGE_STATUSES).filter(key => key !== 'default').map(status => (
-                  <SelectItem key={status} value={status}>{status}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
-        )}
-      </CardHeader>
 
-      <CardContent>
-        <div className={`space-y-2 overflow-y-auto`} style={createDynamicHeightConfig(height).containerStyle}>
-          {filteredMessages.length === 0 ? (
-            <div className={`text-center py-8 ${colors.text.muted}`}>
-              <MessageSquare className={`${iconSizes.xl} mx-auto mb-2 opacity-30`} />
-              <p>{t('inbox.noMessages')}</p>
+          {showFilters && (
+            <nav className="flex flex-wrap gap-2 mt-4" aria-label="Filters">
+              {/* Search */}
+              <div className="flex-1 min-w-[150px]">
+                <div className="relative">
+                  <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} ${colors.text.muted}`} />
+                  <Input
+                    placeholder={t('inbox.search')}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                    aria-label={t('inbox.search')}
+                  />
+                </div>
+              </div>
+
+              {/* Channel filter */}
+              <Select value={channelFilter} onValueChange={setChannelFilter}>
+                <SelectTrigger className="w-[120px]" aria-label={t('inbox.filters.channel')}>
+                  <SelectValue placeholder={t('inbox.filters.channel')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('inbox.filters.all')}</SelectItem>
+                  <SelectItem value={COMMUNICATION_CHANNELS.TELEGRAM}>{t('inbox.channels.telegram')}</SelectItem>
+                  <SelectItem value={COMMUNICATION_CHANNELS.EMAIL}>{t('inbox.channels.email')}</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Status filter */}
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[120px]" aria-label={t('inbox.filters.status')}>
+                  <SelectValue placeholder={t('inbox.filters.status')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('inbox.filters.all')}</SelectItem>
+                  <SelectItem value={CONVERSATION_STATUS.ACTIVE}>{t('inbox.status.active')}</SelectItem>
+                  <SelectItem value={CONVERSATION_STATUS.CLOSED}>{t('inbox.status.closed')}</SelectItem>
+                  <SelectItem value={CONVERSATION_STATUS.ARCHIVED}>{t('inbox.status.archived')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </nav>
+          )}
+        </CardHeader>
+
+        <CardContent className="flex-1 overflow-y-auto p-2">
+          {/* Error display */}
+          {conversationsError && (
+            <div className={`p-3 mb-2 rounded ${colors.bg.errorSubtle} ${colors.text.error}`} role="alert">
+              <AlertCircle className={`${iconSizes.sm} inline mr-2`} />
+              {conversationsError}
+            </div>
+          )}
+
+          {/* Conversations list */}
+          {filteredConversations.length === 0 ? (
+            <div className="text-center py-8">
+              <MessageSquare className={`${iconSizes.xl} ${colors.text.muted} mx-auto mb-2 opacity-30`} />
+              <p className={colors.text.muted}>{t('inbox.noConversations')}</p>
             </div>
           ) : (
-            filteredMessages.map((message) => {
-              const { relative: relativeTime, full: fullTime } = formatDate(message.createdAt);
-              return (
-              <Card key={message.id} className={`${HOVER_BACKGROUND_EFFECTS.LIGHT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className={`p-2 rounded-full ${channelColors[message.channel] || channelColors.default}`}>
-                      {getChannelIcon(message.channel)}
-                    </div>
+            <ul className="space-y-2" role="listbox" aria-label="Conversations">
+              {filteredConversations.map((conversation) => {
+                const isSelected = conversation.id === selectedConversationId;
+                const externalParticipant = conversation.participants.find(p => !p.isInternal);
+                const relativeTime = getRelativeTime(conversation.audit.updatedAt, t);
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <CommonBadge
-                            status="company"
-                            customLabel={message.channel?.toUpperCase()}
-                            variant="outline"
-                            className="text-xs"
-                          />
-                          <CommonBadge
-                            status="company"
-                            customLabel={message.direction === MESSAGE_DIRECTIONS.INBOUND ? t('inbox.direction.inbound') : t('inbox.direction.outbound')}
-                            variant={message.direction === MESSAGE_DIRECTIONS.INBOUND ? "default" : "secondary"}
-                            className="text-xs"
-                          />
+                return (
+                  <li key={conversation.id}>
+                    <button
+                      onClick={() => handleSelectConversation(conversation.id)}
+                      className={`
+                        w-full text-left p-3 rounded-lg
+                        ${TRANSITION_PRESETS.STANDARD_COLORS}
+                        ${isSelected
+                          ? `${colors.bg.accent} ring-2 ring-ring`
+                          : `${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                        }
+                      `}
+                      role="option"
+                      aria-selected={isSelected}
+                    >
+                      <article className="flex items-start gap-3">
+                        {/* Channel icon */}
+                        <div className={`p-2 rounded-full flex-shrink-0 ${getChannelColorClasses(conversation.channel, colors)}`}>
+                          {getChannelIcon(conversation.channel, iconSizes)}
                         </div>
-                        <div className={`flex items-center gap-2 text-sm ${colors.text.muted}`} title={fullTime}>
-                          {getStatusIcon(message.status)}
-                          <span>{relativeTime}</span>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <header className="flex items-center justify-between mb-1">
+                            <span className="font-medium truncate">
+                              {externalParticipant?.displayName || 'Unknown'}
+                            </span>
+                            <time className={`text-xs ${colors.text.muted} flex-shrink-0`}>
+                              {relativeTime}
+                            </time>
+                          </header>
+
+                          <p className={`text-sm ${colors.text.muted} truncate`}>
+                            {conversation.lastMessage
+                              ? truncateText(conversation.lastMessage.content, MESSAGE_PREVIEW_LENGTH)
+                              : t('inbox.thread.noMessages')
+                            }
+                          </p>
+
+                          <footer className="flex items-center gap-2 mt-1">
+                            <CommonBadge
+                              status="company"
+                              customLabel={conversation.channel.toUpperCase()}
+                              variant="outline"
+                              className="text-xs"
+                            />
+                            {conversation.unreadCount > 0 && (
+                              <CommonBadge
+                                status="company"
+                                customLabel={String(conversation.unreadCount)}
+                                variant="destructive"
+                                className="text-xs"
+                              />
+                            )}
+                          </footer>
                         </div>
-                      </div>
 
-                      <div className="flex items-center gap-2 mb-2 text-sm">
-                        <User className={iconSizes.xs} />
-                        <span className="font-medium">
-                          {message.direction === MESSAGE_DIRECTIONS.INBOUND
-                            ? `${t('inbox.message.from')}: ${message.from}`
-                            : `${t('inbox.message.to')}: ${message.to}`
-                          }
-                        </span>
-                      </div>
-
-                      {message.subject && (
-                        <div className="font-medium mb-1">
-                          {truncateText(message.subject, 80)}
-                        </div>
-                      )}
-
-                      <div className={colors.text.primary}>
-                        {truncateText(message.content, 120)}
-                      </div>
-
-                      {message.attachments && message.attachments.length > 0 && (
-                        <div className="mt-2">
-                          <CommonBadge
-                            status="company"
-                            customLabel={`📎 ${t('inbox.message.attachments', { count: message.attachments.length })}`}
-                            variant="outline"
-                            className="text-xs"
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      {message.externalId && (
-                        <Button asChild variant="ghost" size="sm" className={`${iconSizes.md} p-0`}>
-                           <a href="#" target="_blank" rel="noopener noreferrer" aria-label="Open original message">
-                              <ExternalLink className={iconSizes.xs} />
-                           </a>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-            })
+                        {/* Arrow indicator */}
+                        <ChevronRight className={`${iconSizes.sm} ${colors.text.muted} flex-shrink-0`} />
+                      </article>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           )}
+
+          {/* Load more button */}
+          {hasMore && (
+            <nav className="flex justify-center mt-4" aria-label="Pagination">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadMoreConversations}
+                disabled={conversationsLoading}
+              >
+                {t('inbox.pagination.loadMore')}
+              </Button>
+            </nav>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Right Panel: Thread View + Composer */}
+      <div className="flex-1 flex flex-col">
+        {/* Thread View */}
+        <div className="flex-1 overflow-hidden">
+          <ThreadView
+            conversation={selectedConversation}
+            messages={messages}
+            loading={messagesLoading}
+            error={messagesError}
+            hasMore={hasMoreMessages}
+            onLoadMore={loadMoreMessages}
+            onRefresh={refreshMessages}
+          />
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Reply Composer */}
+        <ReplyComposer
+          disabled={!selectedConversationId}
+          sending={sending}
+          error={sendError}
+          onSend={handleSendMessage}
+          onClearError={clearSendError}
+        />
+      </div>
+    </section>
   );
-};
+}
 
 export default UnifiedInbox;

@@ -106,9 +106,13 @@
   "inbox": {
     "title": "Unified Inbox",
     "historyTitle": "Ιστορικό Επικοινωνιών",
+    "selectContactTitle": "Επιλογή Επαφής",
     "loading": "Φόρτωση μηνυμάτων...",
+    "loadingConversations": "Φόρτωση συνομιλιών...",
     "messagesCount": "{{count}} μηνύματα",
+    "conversationsCount": "{{count}} συνομιλίες",
     "noMessages": "Δεν βρέθηκαν μηνύματα",
+    "noConversations": "Δεν βρέθηκαν συνομιλίες",
     "search": "Αναζήτηση μηνυμάτων...",
     "filters": {
       "all": "Όλα",
@@ -129,6 +133,47 @@
       "from": "Από",
       "to": "Προς",
       "attachments": "{{count}} συνημμένα"
+    },
+    "tabs": {
+      "conversations": "Συνομιλίες",
+      "contactHistory": "Ιστορικό Επαφής"
+    },
+    "status": {
+      "active": "Ενεργή",
+      "closed": "Κλειστή",
+      "archived": "Αρχειοθετημένη",
+      "spam": "Ανεπιθύμητη"
+    },
+    "thread": {
+      "title": "Συνομιλία",
+      "loadEarlier": "Φόρτωση παλαιότερων",
+      "noMessages": "Δεν υπάρχουν μηνύματα σε αυτή τη συνομιλία",
+      "selectConversation": "Επιλέξτε μια συνομιλία για να δείτε τα μηνύματα",
+      "participants": "Συμμετέχοντες",
+      "unread": "{{count}} αδιάβαστα"
+    },
+    "composer": {
+      "placeholder": "Γράψτε το μήνυμά σας...",
+      "send": "Αποστολή",
+      "sending": "Αποστολή...",
+      "error": "Αποτυχία αποστολής",
+      "success": "Το μήνυμα στάλθηκε",
+      "shortcutHint": "Ctrl+Enter για αποστολή"
+    },
+    "channels": {
+      "telegram": "Telegram",
+      "email": "Email",
+      "whatsapp": "WhatsApp",
+      "sms": "SMS"
+    },
+    "pagination": {
+      "loadMore": "Φόρτωση περισσότερων",
+      "page": "Σελίδα {{current}} από {{total}}"
+    },
+    "errors": {
+      "loadFailed": "Αποτυχία φόρτωσης",
+      "sendFailed": "Αποτυχία αποστολής μηνύματος",
+      "notAuthenticated": "Δεν είστε συνδεδεμένοι"
     }
   },
   "leads": {

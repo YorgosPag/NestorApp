@@ -1,7 +1,7 @@
 // /home/user/studio/src/server/comms/orchestrator.ts
 
 import { isFirebaseAvailable } from '../../app/api/communications/webhooks/telegram/firebase/availability';
-import { getFirestoreHelpers } from '../../app/api/communications/webhooks/telegram/firebase/helpers-lazy';
+import { getFirestoreHelpers, type FirestoreHelpers } from '../../app/api/communications/webhooks/telegram/firebase/helpers-lazy';
 import { safeDbOperation } from '../../app/api/communications/webhooks/telegram/firebase/safe-op';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
@@ -77,15 +77,8 @@ export interface ChannelMetadata {
   templateParams?: WhatsAppTemplateParams;
 }
 
-/** Firestore helpers interface */
-interface FirestoreHelpers {
-  collection: (db: unknown, path: string) => unknown;
-  addDoc: (collectionRef: unknown, data: Record<string, unknown>) => Promise<{ id: string }>;
-  Timestamp: {
-    now: () => unknown;
-    fromDate: (date: Date) => unknown;
-  };
-}
+// 🏢 ENTERPRISE: FirestoreHelpers type imported from canonical module
+// @see src/app/api/communications/webhooks/telegram/firebase/helpers-lazy.ts
 
 export interface EnqueueMessageParams {
   // Core message data
@@ -274,7 +267,9 @@ async function enqueueMessageForChannel(
     };
 
     // Store in communications collection (same as Telegram)
-    const docRef = await addDoc(collection(database, COLLECTIONS.COMMUNICATIONS), messageRecord);
+    // 🏢 ENTERPRISE: Use canonical helpers-lazy API (no database param needed)
+    const collectionRef = collection(COLLECTIONS.COMMUNICATIONS);
+    const docRef = await addDoc(collectionRef, messageRecord);
     
     // Log for debugging
     console.log(`📝 ${channel.toUpperCase()} message queued:`, {

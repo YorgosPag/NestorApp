@@ -440,6 +440,75 @@ export async function requireUserContext(
 }
 
 // ============================================================================
+// STAFF AUTHENTICATION (ADMIN/BROKER/BUILDER ROLES REQUIRED)
+// ============================================================================
+
+/**
+ * Staff context returned after successful authentication
+ * @enterprise EPIC Δ - Staff-only Inbox endpoints
+ */
+export interface StaffContext {
+  uid: string;
+  email: string;
+  role: AdminRole;
+  operationId: string;
+  environment: string;
+}
+
+/**
+ * Staff authentication result
+ */
+export interface StaffAuthResult {
+  success: boolean;
+  error?: string;
+  context?: StaffContext;
+}
+
+/**
+ * Require staff authentication for a request (admin/broker/builder roles)
+ *
+ * This is a thin wrapper around requireAdminContext that provides:
+ * - Staff-specific error semantics (STAFF_REQUIRED)
+ * - 403 status for denial (instead of generic auth errors)
+ *
+ * @param request - NextRequest object
+ * @param operationId - Unique operation ID for audit trail
+ * @returns StaffAuthResult with success status and context or error
+ *
+ * @enterprise EPIC Δ - Staff-only Inbox endpoints
+ * @example
+ * ```typescript
+ * const authResult = await requireStaffContext(request, operationId);
+ * if (!authResult.success) {
+ *   throw new ApiError(403, authResult.error || 'Staff access required', 'STAFF_REQUIRED');
+ * }
+ * const { uid, role } = authResult.context!;
+ * ```
+ */
+export async function requireStaffContext(
+  request: NextRequest,
+  operationId: string
+): Promise<StaffAuthResult> {
+  // Delegate to existing requireAdminContext (which checks admin/broker/builder roles)
+  const adminResult = await requireAdminContext(request, operationId);
+
+  if (!adminResult.success) {
+    // Map error to staff-specific semantics
+    const isRoleError = adminResult.error?.includes('admin privileges');
+    return {
+      success: false,
+      error: isRoleError ? 'Staff access required' : adminResult.error,
+    };
+  }
+
+  // Success - return staff context
+  return {
+    success: true,
+    context: adminResult.context,
+  };
+}
+
+// ============================================================================
 // AUDIT LOGGING
 // ============================================================================
 

@@ -14,7 +14,7 @@ import { NextRequest } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { withErrorHandling, apiSuccess, ApiError } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { requireAdminContext, audit } from '@/server/admin/admin-guards';
+import { requireStaffContext, audit } from '@/server/admin/admin-guards';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { type MessageDirection, type DeliveryStatus } from '@/types/conversations';
@@ -132,8 +132,8 @@ export const GET = withErrorHandling(async (
   const startTime = Date.now();
   const operationId = generateRequestId();
 
-  // 🔒 SECURITY: Staff-only access (admin/broker/builder)
-  const authResult = await requireAdminContext(request, operationId);
+  // 🔒 SECURITY: Staff-only access (admin/broker/builder roles)
+  const authResult = await requireStaffContext(request, operationId);
   if (!authResult.success) {
     audit(operationId, 'LIST_MESSAGES_DENIED', { error: authResult.error });
     throw new ApiError(403, authResult.error || 'Staff access required', 'STAFF_REQUIRED');
