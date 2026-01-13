@@ -6,7 +6,6 @@ import { safeDbOperation } from '../firebase/safe-op';
 import { extractSearchCriteria, applyAdvancedFilters } from './criteria';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { SearchResult, TelegramProperty } from '../shared/types';
-import type { Query, DocumentData, QuerySnapshot } from 'firebase/firestore';
 
 export async function searchProperties(searchText: string): Promise<SearchResult> {
   if (!isFirebaseAvailable()) {
@@ -30,8 +29,8 @@ export async function searchProperties(searchText: string): Promise<SearchResult
     };
   }
 
-  return safeDbOperation(async (database) => {
-    const { collection, query, where, orderBy, firestoreLimit, getDocs } = firestoreHelpers;
+  return safeDbOperation(async () => {
+    const { collection, getDocs } = firestoreHelpers;
 
     const criteria = extractSearchCriteria(searchText);
     console.log('📋 Extracted criteria:', criteria);
@@ -39,12 +38,15 @@ export async function searchProperties(searchText: string): Promise<SearchResult
     let properties: TelegramProperty[] = [];
 
     try {
-      let q: Query<DocumentData> = collection(database, COLLECTIONS.UNITS);
-      q = query(q, where('status', '==', 'available'));
+      // Firebase Admin SDK: use collection(path) then chain .where().orderBy().limit()
+      let q = collection(COLLECTIONS.UNITS)
+        .where('status', '==', 'available');
+
       if (criteria.type) {
-        q = query(q, where('type', '==', criteria.type));
+        q = q.where('type', '==', criteria.type);
       }
-      q = query(q, orderBy('price'), firestoreLimit(10));
+
+      q = q.orderBy('price').limit(10);
 
       const querySnapshot = await getDocs(q);
       
