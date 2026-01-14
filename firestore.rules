@@ -467,5 +467,60 @@ service cloud.firestore {
     function isOwner(userId) {
       return request.auth != null && request.auth.uid == userId;
     }
+
+    // =========================================================================
+    // 🔐 RFC v6 AUTHORIZATION HELPERS (PHASE 1 PREPARATION)
+    // =========================================================================
+    // These helpers enable future tenant-scoped access control.
+    // Path migration: /collection/{id} → /companies/{companyId}/collection/{id}
+    //
+    // @see docs/rfc/authorization-rbac.md
+
+    // Get user's companyId from custom claims
+    function getUserCompanyId() {
+      return request.auth.token.companyId;
+    }
+
+    // Get user's globalRole from custom claims
+    function getGlobalRole() {
+      return request.auth.token.globalRole;
+    }
+
+    // Check if user is super_admin (system-wide access)
+    function isSuperAdminOnly() {
+      return isAuthenticated() && getGlobalRole() == 'super_admin';
+    }
+
+    // Check if user is company_admin or higher
+    function isCompanyAdmin() {
+      return isAuthenticated() && getGlobalRole() in ['super_admin', 'company_admin'];
+    }
+
+    // Check if user is internal_user or higher
+    function isInternalUser() {
+      return isAuthenticated() && getGlobalRole() in ['super_admin', 'company_admin', 'internal_user'];
+    }
+
+    // Check if user belongs to a specific company (tenant isolation)
+    function belongsToCompany(companyId) {
+      return isAuthenticated() && getUserCompanyId() == companyId;
+    }
+
+    // P0-B FIX: Tenant-bound company admin (prevents cross-tenant writes)
+    function isCompanyAdminOfCompany(companyId) {
+      return isSuperAdminOnly() ||
+             (getGlobalRole() == 'company_admin' && belongsToCompany(companyId));
+    }
+
+    // P0-B FIX: Tenant-bound internal user (prevents cross-tenant reads)
+    function isInternalUserOfCompany(companyId) {
+      return isSuperAdminOnly() ||
+             (isInternalUser() && belongsToCompany(companyId));
+    }
+
+    // Validate parent document exists (for subcollections - prevents injection)
+    function parentExists(path) {
+      return exists(path);
+    }
   }
 }
