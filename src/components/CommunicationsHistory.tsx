@@ -7,13 +7,44 @@ import {
   getTypeIcon, getTypeColor, getStatusIcon, getStatusColor,
   getDirectionLabel, getRelativeTime
 } from './communications/utils/formatters';
-import { formatDateTime as formatDate } from '@/lib/intl-utils';
+import { formatDateTime as formatDateTimeBase } from '@/lib/intl-utils';
 import { useCommunicationsHistory } from './communications/hooks/useCommunicationsHistory';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 
-export default function CommunicationsHistory({ contactId }) {
+// 🏢 ENTERPRISE: Type-safe timestamp conversion
+type FirestoreTimestampLike = Date | string | { toDate(): Date } | null | undefined;
+
+/**
+ * Convert Firestore timestamp to Date for formatting
+ * @enterprise Handles Firestore timestamp format with toDate() method
+ */
+const toDateSafe = (timestamp: FirestoreTimestampLike): Date | null => {
+  if (!timestamp) return null;
+  if (timestamp instanceof Date) return timestamp;
+  if (typeof timestamp === 'object' && 'toDate' in timestamp && typeof timestamp.toDate === 'function') {
+    return timestamp.toDate();
+  }
+  if (typeof timestamp === 'string') return new Date(timestamp);
+  return null;
+};
+
+/**
+ * Format date/timestamp for display
+ * @enterprise Wrapper that handles Firestore timestamps
+ */
+const formatDate = (timestamp: FirestoreTimestampLike): string => {
+  const date = toDateSafe(timestamp);
+  return date ? formatDateTimeBase(date) : '-';
+};
+
+/** Props for CommunicationsHistory component */
+interface CommunicationsHistoryProps {
+  contactId: string;
+}
+
+export default function CommunicationsHistory({ contactId }: CommunicationsHistoryProps) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -31,7 +62,7 @@ export default function CommunicationsHistory({ contactId }) {
   if (error) return (
     <section className={`${colors.bg.error} ${getStatusBorder('error')} p-4`} role="alert" aria-label="Error loading communications">
       <p className={`${colors.text.error} text-sm`}>{error}</p>
-      <button onClick={fetchCommunications} className={`mt-2 px-3 py-1 ${colors.bg.error} text-white rounded text-sm ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE}`}>
+      <button onClick={fetchCommunications} className={`mt-2 px-3 py-1 ${colors.bg.error} text-white rounded text-sm ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}>
         Δοκιμή ξανά
       </button>
     </section>
@@ -100,11 +131,11 @@ export default function CommunicationsHistory({ contactId }) {
                     </section>
                   )}
 
-                  {comm.attachments?.length > 0 && (
+                  {Array.isArray(comm.attachments) && comm.attachments.length > 0 && (
                     <aside className="mt-2 pt-2 border-t" aria-label="Attachments">
                       <p className={`text-xs ${colors.text.muted} mb-1`}>Συνημμένα:</p>
                       <ul className="flex gap-2 list-none">
-                        {comm.attachments.map((attachment, idx) => (
+                        {comm.attachments.map((attachment: string, idx: number) => (
                           <li key={idx} className={`text-xs ${colors.bg.info} ${colors.text.info} px-2 py-1 rounded`}>
                             📎 {attachment}
                           </li>
@@ -116,7 +147,7 @@ export default function CommunicationsHistory({ contactId }) {
                   {comm.metadata && Object.keys(comm.metadata).length > 0 && (
                     <footer className="mt-2 pt-2 border-t">
                       <details className="text-xs">
-                        <summary className={`${colors.text.muted} cursor-pointer ${INTERACTIVE_PATTERNS.TEXT_SUBTLE}`}>Λεπτομέρειες</summary>
+                        <summary className={`${colors.text.muted} cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}>Λεπτομέρειες</summary>
                         <dl className={`mt-1 space-y-1 ${colors.text.muted}`}>
                           {Object.entries(comm.metadata).map(([key, value]) => (
                             <div key={key}>

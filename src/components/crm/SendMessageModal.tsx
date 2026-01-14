@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ReactNode } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { CONTACT_INFO } from '@/config/contact-info-config';
@@ -16,28 +16,75 @@ import {
   Mail,
   Phone,
   Loader2,
-  CheckCircle,
-  AlertCircle,
-  User,
   X
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Card, CardContent } from '../ui/card';
-import communicationsService from '../../lib/communications';
+import communications, { communicationsService } from '../../lib/communications';
 import { MESSAGE_TYPES, MESSAGE_TEMPLATES } from '../../lib/config/communications.config';
+import type { CommunicationChannel } from '@/types/communications';
 import { toast } from 'sonner';
+
+// 🏢 ENTERPRISE: Type for template channels (channels that have templates defined)
+type TemplateChannel = 'email' | 'telegram' | 'whatsapp';
+
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
+// ============================================================================
+
+/**
+ * Message channel type
+ * @enterprise Uses canonical CommunicationChannel from @/types/communications
+ */
+export type MessageChannel = CommunicationChannel;
+
+/** Lead data for message context */
+export interface SendMessageLeadData {
+  id: string;
+  fullName?: string;
+  email?: string;
+  phone?: string;
+}
+
+/** Result from sending a message */
+export interface SendMessageResult {
+  success: boolean;
+  messageId?: string;
+  error?: string;
+}
+
+/** Callback type for message sent event */
+export type OnMessageSentCallback = (result: SendMessageResult) => void;
+
+/** Props for SendMessageModal */
+export interface SendMessageModalProps {
+  /** Trigger element that opens the modal */
+  trigger?: ReactNode;
+  /** Lead data for pre-filling recipient info */
+  leadData?: SendMessageLeadData | null;
+  /** Default channel to select */
+  defaultChannel?: MessageChannel;
+  /** Default template to load */
+  defaultTemplate?: string | null;
+  /** Callback when message is sent successfully */
+  onMessageSent?: OnMessageSentCallback | null;
+  /** Controlled open state */
+  open?: boolean;
+  /** Callback when open state changes */
+  onOpenChange?: (open: boolean) => void;
+}
 
 /**
  * Send Message Modal Component
  * Επιτρέπει την αποστολή μηνυμάτων μέσω διαφόρων channels
+ * @enterprise ADR-compliant typed component
  */
 
-const SendMessageModal = ({
+const SendMessageModal: React.FC<SendMessageModalProps> = ({
   trigger,
   leadData = null,
-  defaultChannel = MESSAGE_TYPES.EMAIL,
+  defaultChannel = MESSAGE_TYPES.EMAIL as MessageChannel,
   defaultTemplate = null,
   onMessageSent = null,
   open,
@@ -46,12 +93,25 @@ const SendMessageModal = ({
   const iconSizes = useIconSizes();
   const [isOpen, setIsOpen] = useState(false);
   const [sending, setSending] = useState(false);
-  const [selectedChannel, setSelectedChannel] = useState(defaultChannel);
-  const [selectedTemplate, setSelectedTemplate] = useState(defaultTemplate);
-  const [availableChannels, setAvailableChannels] = useState([]);
-  
+  const [selectedChannel, setSelectedChannel] = useState<MessageChannel>(defaultChannel);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(defaultTemplate);
+  const [availableChannels, setAvailableChannels] = useState<MessageChannel[]>([]);
+
+  // 🏢 ENTERPRISE: Typed form data interface
+  interface FormData {
+    to: string;
+    subject: string;
+    content: string;
+    templateVariables: Record<string, string>;
+  }
+
+  interface CustomVariable {
+    key: string;
+    value: string;
+  }
+
   // Form data
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     to: '',
     subject: '',
     content: '',
@@ -59,7 +119,7 @@ const SendMessageModal = ({
   });
 
   // Προσθήκη custom template variables
-  const [customVariables, setCustomVariables] = useState([]);
+  const [customVariables, setCustomVariables] = useState<CustomVariable[]>([]);
 
   useEffect(() => {
     checkAvailableChannels();
@@ -102,10 +162,11 @@ const SendMessageModal = ({
 
   /**
    * Λήψη default recipient βάσει channel
+   * @enterprise Typed channel parameter
    */
-  const getDefaultRecipient = (channel) => {
+  const getDefaultRecipient = (channel: MessageChannel): string => {
     if (!leadData) return '';
-    
+
     switch (channel) {
       case MESSAGE_TYPES.EMAIL:
         return leadData.email || '';
@@ -120,8 +181,11 @@ const SendMessageModal = ({
 
   /**
    * Φόρτωση περιεχομένου template
+   * @enterprise Null-safe template loading
    */
   const loadTemplateContent = () => {
+    if (!selectedTemplate) return;
+
     const template = communicationsService.getMessageTemplate(selectedChannel, selectedTemplate);
     if (template) {
       if (typeof template === 'string') {
@@ -129,8 +193,8 @@ const SendMessageModal = ({
       } else if (template.subject && template.template) {
         setFormData(prev => ({
           ...prev,
-          subject: template.subject,
-          content: template.template
+          subject: template.subject ?? prev.subject,
+          content: template.template ?? prev.content
         }));
       }
     }
@@ -138,8 +202,9 @@ const SendMessageModal = ({
 
   /**
    * Χειρισμός αλλαγής channel
+   * @enterprise Typed channel parameter
    */
-  const handleChannelChange = (channel) => {
+  const handleChannelChange = (channel: MessageChannel): void => {
     setSelectedChannel(channel);
     setSelectedTemplate(null);
     setFormData(prev => ({
@@ -159,8 +224,9 @@ const SendMessageModal = ({
 
   /**
    * Ενημέρωση custom variable
+   * @enterprise Typed parameters
    */
-  const updateCustomVariable = (index, field, value) => {
+  const updateCustomVariable = (index: number, field: keyof CustomVariable, value: string): void => {
     setCustomVariables(prev => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
@@ -170,8 +236,9 @@ const SendMessageModal = ({
 
   /**
    * Διαγραφή custom variable
+   * @enterprise Typed index parameter
    */
-  const removeCustomVariable = (index) => {
+  const removeCustomVariable = (index: number): void => {
     setCustomVariables(prev => prev.filter((_, i) => i !== index));
   };
 
@@ -204,13 +271,14 @@ const SendMessageModal = ({
       };
 
       // Προετοιμασία δεδομένων μηνύματος
+      // @enterprise Type-safe message data preparation
       const messageData = {
         channel: selectedChannel,
         to: formData.to.trim(),
         content: formData.content,
         subject: formData.subject?.trim() || undefined,
-        entityType: leadData ? 'lead' : null,
-        entityId: leadData?.id || null,
+        entityType: (leadData ? 'lead' : null) as 'lead' | 'contact' | 'unit' | null,
+        entityId: leadData?.id ?? null,
         metadata: {
           templateType: selectedTemplate,
           templateVariables: allVariables,
@@ -227,11 +295,11 @@ const SendMessageModal = ({
       // Αποστολή μηνύματος
       let result;
       if (selectedTemplate) {
+        // messageData already has channel, so we spread it and add template-specific fields
         result = await communicationsService.sendTemplateMessage({
+          ...messageData,
           templateType: selectedTemplate,
-          channel: selectedChannel,
-          variables: allVariables,
-          ...messageData
+          variables: allVariables
         });
       } else {
         result = await communicationsService.sendMessage(messageData);
@@ -272,21 +340,27 @@ const SendMessageModal = ({
 
   /**
    * Λήψη διαθέσιμων templates για το επιλεγμένο channel
+   * @enterprise Type-safe template lookup
    */
-  const getAvailableTemplates = () => {
-    const templates = MESSAGE_TEMPLATES[selectedChannel];
+  const getAvailableTemplates = (): Array<{ value: string; label: string }> => {
+    // Only certain channels have templates defined
+    if (selectedChannel !== 'email' && selectedChannel !== 'telegram' && selectedChannel !== 'whatsapp') {
+      return [];
+    }
+    const templates = MESSAGE_TEMPLATES[selectedChannel as TemplateChannel];
     if (!templates) return [];
-    
+
     return Object.keys(templates).map(key => ({
       value: key,
-      label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+      label: key.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
     }));
   };
 
   /**
    * Λήψη icon για κάθε channel
+   * @enterprise Typed channel parameter
    */
-  const getChannelIcon = (channel) => {
+  const getChannelIcon = (channel: MessageChannel): ReactNode => {
     switch (channel) {
       case MESSAGE_TYPES.EMAIL:
         return <Mail className={iconSizes.sm} />;
