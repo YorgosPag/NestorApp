@@ -900,6 +900,94 @@ export const defaultProjectFilters: ProjectFilterState = {
   hasIssues: false
 };
 
+// Communications Filters Configuration
+// [ENTERPRISE]: 100% centralized labels - ZERO hardcoded values
+export const communicationsFiltersConfig: FilterPanelConfig = {
+  title: 'filters.communicationsTitle',
+  searchPlaceholder: 'filters.placeholders.communicationsSearch',
+  rows: [
+    {
+      id: 'communications-basic',
+      fields: [
+        {
+          id: 'searchTerm',
+          type: 'search',
+          label: FL.search,
+          placeholder: 'filters.placeholders.communicationsSearch',
+          ariaLabel: 'Search communications',
+          width: 2
+        },
+        {
+          id: 'channel',
+          type: 'select',
+          label: 'filters.channel',
+          placeholder: 'filters.placeholders.selectChannel',
+          ariaLabel: 'Channel filter',
+          width: 1,
+          options: [
+            { value: 'all', label: 'filters.allChannels' },
+            { value: 'email', label: 'filters.channels.email' },
+            { value: 'sms', label: 'filters.channels.sms' },
+            { value: 'telegram', label: 'filters.channels.telegram' }
+          ]
+        },
+        {
+          id: 'status',
+          type: 'select',
+          label: FL.status,
+          placeholder: SP.status_placeholder,
+          ariaLabel: 'Communication status filter',
+          width: 1,
+          options: [
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
+            { value: 'sent', label: 'filters.status.sent' },
+            { value: 'received', label: 'filters.status.received' },
+            { value: 'pending', label: 'filters.status.pending' },
+            { value: 'failed', label: 'filters.status.failed' }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'communications-date',
+      fields: [
+        {
+          id: 'dateFrom',
+          type: 'date',
+          label: 'filters.dateFrom',
+          ariaLabel: 'From date filter',
+          width: 1
+        },
+        {
+          id: 'dateTo',
+          type: 'date',
+          label: 'filters.dateTo',
+          ariaLabel: 'To date filter',
+          width: 1
+        }
+      ]
+    }
+  ]
+};
+
+// Communications Filter State Interface
+export interface CommunicationsFilterState {
+  searchTerm: string;
+  channel: string;
+  status: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
+// Default Communications Filters
+export const defaultCommunicationsFilters: CommunicationsFilterState = {
+  searchTerm: '',
+  channel: 'all',
+  status: 'all',
+  dateFrom: '',
+  dateTo: ''
+};
+
 // ====================================================================
 // [ENTERPRISE] SUCCESS METRICS
 // ====================================================================
