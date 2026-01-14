@@ -1,8 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { EmailService } from '@/services/email.service';
-import type { EmailTemplateType, EmailRequest } from '@/services/email.service';
+import { EmailService, type EmailResponse } from '@/services/email.service';
+import type { EmailRequest } from '@/services/email.service';
+import type { EmailTemplateType } from '@/types/email-templates';
+import { withAuth, logAuditEvent, extractRequestMetadata } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
+// Ensure Firebase Admin is initialized
+import '@/server/admin/admin-guards';
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
+
+/**
+ * Response type for property share endpoint - RFC v6 type safety
+ */
+interface PropertyShareResponse {
+  error?: string;
+  message?: string;
+  details?: string[];
+  success?: boolean;
+  recipients?: number;
+  templateUsed?: string;
+  emailId?: string;
+}
 
 // Rate limiting (simple in-memory for demo - use Redis in production)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
@@ -176,7 +194,7 @@ function validateEmailRequest(data: EmailValidationInput): { isValid: boolean; e
     }
   }
 
-  if (data.templateType && !VALIDATION_RULES.ALLOWED_TEMPLATE_TYPES.includes(data.templateType)) {
+  if (data.templateType && !VALIDATION_RULES.ALLOWED_TEMPLATE_TYPES.includes(data.templateType as EmailTemplateType)) {
     errors.push(`Template type must be one of: ${VALIDATION_RULES.ALLOWED_TEMPLATE_TYPES.join(', ')}`);
   }
 
@@ -184,18 +202,18 @@ function validateEmailRequest(data: EmailValidationInput): { isValid: boolean; e
     return { isValid: false, errors };
   }
 
-  // Sanitize data
+  // Sanitize data - propertyTitle and propertyUrl are validated above
   const sanitizedData: PropertyShareEmailRequest = {
     recipients: recipients.map(email => email.trim().toLowerCase()),
-    propertyTitle: sanitizeString(data.propertyTitle),
-    propertyUrl: data.propertyUrl,
+    propertyTitle: sanitizeString(data.propertyTitle as string),
+    propertyUrl: data.propertyUrl as string,
     photoUrl: data.photoUrl || undefined,
     propertyDescription: data.propertyDescription ? sanitizeString(data.propertyDescription) : undefined,
     personalMessage: data.personalMessage ? sanitizeString(data.personalMessage) : undefined,
     propertyPrice: data.propertyPrice,
     propertyArea: data.propertyArea,
     propertyLocation: data.propertyLocation ? sanitizeString(data.propertyLocation) : undefined,
-    templateType: data.templateType || 'residential',
+    templateType: (data.templateType || 'residential') as EmailTemplateType,
     senderName: data.senderName ? sanitizeString(data.senderName) : undefined,
     recipientName: data.recipientName ? sanitizeString(data.recipientName) : undefined
   };
@@ -216,7 +234,7 @@ function logEmailAttempt(
     ip,
     success,
     recipientCount: (data.recipients?.length || 1),
-    templateType: data.templateType || 'residential',
+    templateType: (data.templateType || 'residential') as EmailTemplateType,
     propertyTitle: data.propertyTitle?.substring(0, 50) || 'unknown',
     error: error?.substring(0, 100),
     duration,
@@ -230,122 +248,152 @@ function logEmailAttempt(
   }
 }
 
-export async function POST(request: NextRequest) {
-  const startTime = Date.now();
-  const clientIP = getClientIP(request);
-  
-  try {
-    // Rate limiting check
-    if (!checkRateLimit(clientIP)) {
-      logEmailAttempt(clientIP, false, {}, 'Rate limit exceeded');
-      return NextResponse.json(
-        { 
-          error: 'Rate limit exceeded',
-          message: `Maximum ${RATE_LIMIT_MAX_REQUESTS} emails per minute allowed`
-        },
-        { 
-          status: 429,
-          headers: {
-            'Retry-After': '60',
-            'X-RateLimit-Limit': RATE_LIMIT_MAX_REQUESTS.toString(),
-            'X-RateLimit-Remaining': '0'
+/**
+ * Property share email endpoint - requires authentication and comm:messages:send permission.
+ * RFC v6 Authorization: Communications vertical slice.
+ */
+export const POST = withAuth<PropertyShareResponse>(
+  async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+    const startTime = Date.now();
+    const clientIP = getClientIP(request);
+
+    try {
+      // Rate limiting check
+      if (!checkRateLimit(clientIP)) {
+        logEmailAttempt(clientIP, false, {}, 'Rate limit exceeded');
+        return NextResponse.json(
+          {
+            error: 'Rate limit exceeded',
+            message: `Maximum ${RATE_LIMIT_MAX_REQUESTS} emails per minute allowed`
+          },
+          {
+            status: 429,
+            headers: {
+              'Retry-After': '60',
+              'X-RateLimit-Limit': RATE_LIMIT_MAX_REQUESTS.toString(),
+              'X-RateLimit-Remaining': '0'
+            }
           }
-        }
-      );
-    }
+        );
+      }
 
-    // Parse and validate request body FIRST
-    let requestData;
-    try {
-      requestData = await request.json();
-    } catch (parseError) {
-      logEmailAttempt(clientIP, false, {}, 'Invalid JSON in request body');
-      return NextResponse.json(
-        { error: 'Invalid JSON in request body' },
-        { status: 400 }
-      );
-    }
+      // Parse and validate request body FIRST
+      let requestData;
+      try {
+        requestData = await request.json();
+      } catch (parseError) {
+        logEmailAttempt(clientIP, false, {}, 'Invalid JSON in request body');
+        return NextResponse.json(
+          { error: 'Invalid JSON in request body' },
+          { status: 400 }
+        );
+      }
 
-    // Check EmailService status
-    const emailServiceStatus = EmailService.getStatus();
-    console.log('📧 EmailService status:', emailServiceStatus);
+      // Check EmailService status
+      const emailServiceStatus = EmailService.getStatus();
+      console.log('📧 EmailService status:', emailServiceStatus);
 
-    // Enhanced validation
-    const { isValid, errors, sanitizedData } = validateEmailRequest(requestData);
-    
-    if (!isValid) {
-      logEmailAttempt(clientIP, false, requestData, `Validation failed: ${errors.join(', ')}`);
-      return NextResponse.json(
-        { 
-          error: 'Validation failed',
-          details: errors
-        },
-        { status: 400 }
-      );
-    }
+      // Enhanced validation
+      const { isValid, errors, sanitizedData } = validateEmailRequest(requestData);
 
-    const data = sanitizedData!;
-    console.log('📧 Email API called:', {
-      ip: clientIP,
-      recipientCount: data.recipients!.length,
-      templateType: data.templateType,
-      propertyTitle: data.propertyTitle
-    });
+      if (!isValid) {
+        logEmailAttempt(clientIP, false, requestData, `Validation failed: ${errors.join(', ')}`);
+        return NextResponse.json(
+          {
+            error: 'Validation failed',
+            details: errors
+          },
+          { status: 400 }
+        );
+      }
 
-    // Convert local interface to EmailService interface
-    const emailRequest: EmailRequest = {
-      recipients: data.recipients!,
-      recipientName: data.recipientName,
-      propertyTitle: data.propertyTitle,
-      propertyDescription: data.propertyDescription,
-      propertyPrice: data.propertyPrice,
-      propertyArea: data.propertyArea,
-      propertyLocation: data.propertyLocation,
-      propertyUrl: data.propertyUrl,
-      photoUrl: data.photoUrl,
-      senderName: data.senderName,
-      personalMessage: data.personalMessage,
-      templateType: data.templateType
-    };
+      const data = sanitizedData!;
+      console.log('📧 Property Share Email API called:', {
+        ip: clientIP,
+        recipientCount: data.recipients!.length,
+        templateType: data.templateType,
+        propertyTitle: data.propertyTitle,
+        companyId: ctx.companyId,
+        userId: ctx.uid,
+      });
 
-    // Send via Enterprise EmailService
-    try {
-      const result = await EmailService.sendPropertyShareEmail(emailRequest);
+      // Convert local interface to EmailService interface
+      const emailRequest: EmailRequest = {
+        recipients: data.recipients!,
+        recipientName: data.recipientName,
+        propertyTitle: data.propertyTitle,
+        propertyDescription: data.propertyDescription,
+        propertyPrice: data.propertyPrice,
+        propertyArea: data.propertyArea,
+        propertyLocation: data.propertyLocation,
+        propertyUrl: data.propertyUrl,
+        photoUrl: data.photoUrl,
+        senderName: data.senderName,
+        personalMessage: data.personalMessage,
+        templateType: data.templateType
+      };
 
-      const duration = Date.now() - startTime;
-      logEmailAttempt(clientIP, true, data, undefined, duration);
+      // Send via Enterprise EmailService
+      try {
+        const result = await EmailService.sendPropertyShareEmail(emailRequest);
 
-      return NextResponse.json(result);
+        const duration = Date.now() - startTime;
+        logEmailAttempt(clientIP, true, data, undefined, duration);
+
+        // Audit log for property share email
+        await logAuditEvent(
+          ctx,
+          'email_sent',
+          'communications.property-share.send',
+          'api',
+          {
+            newValue: {
+              type: 'status',
+              value: {
+                recipients: data.recipients!.length,
+                propertyTitle: data.propertyTitle,
+                templateType: data.templateType
+              }
+            },
+            metadata: extractRequestMetadata(request),
+          }
+        );
+
+        return NextResponse.json(result);
+
+      } catch (error) {
+        const duration = Date.now() - startTime;
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logEmailAttempt(clientIP, false, data, errorMessage, duration);
+
+        return NextResponse.json(
+          {
+            error: 'Failed to send emails',
+            message: 'Our email service is temporarily unavailable. Please try again later.'
+          },
+          { status: 500 }
+        );
+      }
 
     } catch (error) {
       const duration = Date.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logEmailAttempt(clientIP, false, data, errorMessage, duration);
+
+      logEmailAttempt(clientIP, false, {}, errorMessage, duration);
 
       return NextResponse.json(
         {
-          error: 'Failed to send emails',
-          message: 'Our email service is temporarily unavailable. Please try again later.'
+          error: 'Internal server error',
+          message: 'An unexpected error occurred. Please try again later.'
         },
         { status: 500 }
       );
     }
-
-  } catch (error) {
-    const duration = Date.now() - startTime;
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
-    logEmailAttempt(clientIP, false, {}, errorMessage, duration);
-    
-    return NextResponse.json(
-      { 
-        error: 'Internal server error',
-        message: 'An unexpected error occurred. Please try again later.'
-      },
-      { status: 500 }
-    );
+  },
+  {
+    permissions: 'comm:messages:send',
   }
-}
+);
 
 // Helper function for logging
 function extractPropertyId(url: string): string {
