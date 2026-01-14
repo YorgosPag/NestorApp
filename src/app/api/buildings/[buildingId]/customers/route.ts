@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { firebaseServer } from '@/lib/firebase-server';
-import { getContactDisplayName, getPrimaryPhone, getPrimaryEmail } from '@/types/contacts';
+import { db as getAdminDb } from '@/lib/firebase-admin';
+import { getContactDisplayName, getPrimaryPhone, getPrimaryEmail, type Contact } from '@/types/contacts';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -27,6 +27,9 @@ interface BuildingCustomersResponse {
   error?: string;
 }
 
+// Firestore 'in' query limit
+const FIRESTORE_IN_LIMIT = 10;
+
 // Dynamic route handler wrapper
 export async function GET(
   request: NextRequest,
@@ -38,26 +41,27 @@ export async function GET(
   const handler = withAuth<BuildingCustomersResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
-        // 🔒 TENANT ISOLATION: Log tenant context
-        const tenantCompanyId = ctx.companyId;
-        console.log(`🏠 API: Loading building customers for buildingId: ${buildingId} (tenant: ${tenantCompanyId})`);
-
-        // Firebase Check
-        if (!firebaseServer.getFirestore()) {
-          console.error('❌ Firebase not initialized properly');
-          console.error('🔄 Returning empty customers list as fallback');
+        // 🔐 ADMIN SDK: Get server-side Firestore instance
+        const adminDb = getAdminDb();
+        if (!adminDb) {
+          console.error('❌ Firebase Admin not initialized');
           return NextResponse.json({
             success: true,
             customers: [],
             buildingId,
             summary: { customersCount: 0, soldUnitsCount: 0 },
-            warning: 'Database connection not available - Firebase not initialized'
+            warning: 'Database connection not available - Firebase Admin not initialized'
           });
         }
 
+        // 🔒 TENANT ISOLATION: Get tenant context
+        const tenantCompanyId = ctx.companyId;
+        console.log(`🏠 API: Loading building customers for buildingId: ${buildingId} (tenant: ${tenantCompanyId})`);
+
         // 🔒 TENANT ISOLATION: First verify building belongs to tenant's company
-        const buildingSnapshot = await firebaseServer.getDoc(COLLECTIONS.BUILDINGS, buildingId);
-        if (!buildingSnapshot.exists()) {
+        const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
+
+        if (!buildingDoc.exists) {
           return NextResponse.json({
             success: false,
             customers: [],
@@ -67,7 +71,7 @@ export async function GET(
           }, { status: 404 });
         }
 
-        const buildingData = buildingSnapshot.data();
+        const buildingData = buildingDoc.data();
         if (buildingData?.companyId !== tenantCompanyId) {
           console.warn(`❌ Tenant isolation violation: User ${ctx.uid} (company: ${tenantCompanyId}) tried to access building ${buildingId} (company: ${buildingData?.companyId})`);
           return NextResponse.json({
@@ -79,15 +83,16 @@ export async function GET(
           }, { status: 403 });
         }
 
-        // Get all units for this building (now verified to belong to tenant)
+        // 🔒 TENANT ISOLATION: Query units with both companyId AND buildingId filters
         console.log(`🏠 Fetching units for buildingId: ${buildingId}`);
-        const unitsSnapshot = await firebaseServer.getDocs(COLLECTIONS.UNITS, [
-          { field: 'buildingId', operator: '==', value: buildingId }
-        ]);
+        const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS)
+          .where('companyId', '==', tenantCompanyId)
+          .where('buildingId', '==', buildingId)
+          .get();
 
-        const units = unitsSnapshot.docs.map(unitDoc => ({
-          id: unitDoc.id,
-          ...unitDoc.data()
+        const units = unitsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
         }));
 
         console.log(`🏠 Total units found: ${units.length}`);
@@ -127,21 +132,32 @@ export async function GET(
           });
         }
 
-        // Get contact details for customers (Firestore limit: max 10 in array)
-        const contactsSnapshot = await firebaseServer.getDocs(COLLECTIONS.CONTACTS, [
-          { field: '__name__', operator: 'in', value: customerIds.slice(0, 10) }
-        ]);
+        // 🔒 TENANT ISOLATION: Get contacts with tenant filter
+        // Note: Firestore 'in' query has limit of 10 items
+        // For enterprise scale, implement chunking or denormalization
+        const contactIdsToQuery = customerIds.slice(0, FIRESTORE_IN_LIMIT);
+        if (customerIds.length > FIRESTORE_IN_LIMIT) {
+          console.warn(`⚠️ Customer IDs exceed Firestore 'in' limit (${FIRESTORE_IN_LIMIT}). Only first ${FIRESTORE_IN_LIMIT} will be fetched.`);
+        }
+
+        // Query contacts with tenant isolation
+        const contactsSnapshot = await adminDb.collection(COLLECTIONS.CONTACTS)
+          .where('companyId', '==', tenantCompanyId)
+          .where('__name__', 'in', contactIdsToQuery)
+          .get();
 
         console.log(`📇 Contacts found: ${contactsSnapshot.docs.length}`);
 
-        const customers: CustomerInfo[] = contactsSnapshot.docs.map(contactDoc => {
-          const contact = { id: contactDoc.id, ...contactDoc.data() };
+        const customers: CustomerInfo[] = contactsSnapshot.docs.map(doc => {
+          // Cast Firestore data to Contact type for helper functions
+          const contactData = doc.data() as Omit<Contact, 'id'>;
+          const contact: Contact = { id: doc.id, ...contactData } as Contact;
           return {
-            contactId: contact.id,
+            contactId: doc.id,
             name: getContactDisplayName(contact),
             phone: getPrimaryPhone(contact) || null,
             email: getPrimaryEmail(contact) || null,
-            unitsCount: customerUnitCount[contact.id] || 0,
+            unitsCount: customerUnitCount[doc.id] || 0,
           };
         });
 
