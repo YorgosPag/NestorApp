@@ -3,6 +3,8 @@ import { collection, getDocs, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 
 /** Building document with optional createdAt for sorting */
 interface BuildingDocument {
@@ -11,50 +13,55 @@ interface BuildingDocument {
   [key: string]: unknown;
 }
 
-export async function GET(request: NextRequest) {
+/** Response type for buildings API */
+interface BuildingsResponse {
+  success: boolean;
+  buildings?: BuildingDocument[];
+  count?: number;
+  cached?: boolean;
+  projectId?: string;
+  error?: string;
+  details?: string;
+}
+
+export const GET = withAuth<BuildingsResponse>(
+  async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
   try {
     // 🏗️ ENTERPRISE: Extract projectId parameter for filtering
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get('projectId');
 
+    // 🔒 TENANT ISOLATION: Always scope to user's company
+    const tenantCompanyId = ctx.companyId;
+
     if (projectId) {
-      console.log(`🏗️ API: Loading buildings for project ${projectId}...`);
+      console.log(`🏗️ API: Loading buildings for project ${projectId} (tenant: ${tenantCompanyId})...`);
     } else {
-      console.log('🏗️ API: Loading all buildings...');
+      console.log(`🏗️ API: Loading all buildings for tenant ${tenantCompanyId}...`);
     }
 
-    // 🚀 ENTERPRISE CACHING: Check cache first (only for all buildings)
-    if (!projectId) {
-      const cachedBuildings = CacheHelpers.getCachedAllBuildings();
-      if (cachedBuildings) {
-        console.log(`⚡ API: CACHE HIT - Returning ${cachedBuildings.length} cached buildings`);
-        return NextResponse.json({
-          success: true,
-          buildings: cachedBuildings,
-          count: cachedBuildings.length,
-          cached: true
-        });
-      }
-    }
+    // 🚀 ENTERPRISE CACHING: Check cache first (tenant-scoped key)
+    // Note: Cache disabled for now - tenant-scoped caching requires refactor
+    // TODO: Implement tenant-scoped cache keys
 
-    console.log('🔍 API: Cache miss - Fetching from Firestore...');
+    console.log('🔍 API: Fetching from Firestore with tenant isolation...');
 
-    // 🎯 ENTERPRISE: Build query with optional projectId filter
+    // 🎯 ENTERPRISE: Build query with MANDATORY tenant filter + optional projectId
+    const { where } = await import('firebase/firestore');
     let buildingsQuery;
 
     if (projectId) {
-      // 🎯 ENTERPRISE: Filter buildings by projectId relationship
-      // Note: Removed orderBy to avoid composite index requirement
-      const { where } = await import('firebase/firestore');
+      // 🔒 TENANT + PROJECT: Filter by both companyId AND projectId
       buildingsQuery = query(
         collection(db, COLLECTIONS.BUILDINGS),
+        where('companyId', '==', tenantCompanyId),
         where('projectId', '==', projectId)
       );
     } else {
-      // Get all buildings (without orderBy to avoid index requirement)
-      // Sorting will be done client-side
+      // 🔒 TENANT ONLY: Filter by companyId (company-wide list)
       buildingsQuery = query(
-        collection(db, COLLECTIONS.BUILDINGS)
+        collection(db, COLLECTIONS.BUILDINGS),
+        where('companyId', '==', tenantCompanyId)
       );
     }
 
@@ -79,16 +86,10 @@ export async function GET(request: NextRequest) {
       return getTime(b.createdAt) - getTime(a.createdAt); // desc order
     });
 
-    // 💾 ENTERPRISE CACHING: Store in cache for future requests (only for all buildings)
-    if (!projectId) {
-      CacheHelpers.cacheAllBuildings(buildings);
-    }
+    // 💾 ENTERPRISE CACHING: Disabled until tenant-scoped cache is implemented
+    // TODO: Implement tenant-scoped cache keys: `buildings:${tenantCompanyId}:${projectId || 'all'}`
 
-    if (projectId) {
-      console.log(`✅ API: Found ${buildings.length} buildings for project ${projectId}`);
-    } else {
-      console.log(`✅ API: Found ${buildings.length} buildings (cached for 2 minutes)`);
-    }
+    console.log(`✅ API: Found ${buildings.length} buildings for tenant ${tenantCompanyId}${projectId ? ` (project: ${projectId})` : ''}`);
 
     return NextResponse.json({
       success: true,
@@ -107,4 +108,6 @@ export async function GET(request: NextRequest) {
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
-}
+  },
+  { permissions: 'buildings:buildings:view' }
+);
