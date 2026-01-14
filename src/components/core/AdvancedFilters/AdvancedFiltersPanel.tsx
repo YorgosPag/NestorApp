@@ -81,7 +81,8 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
           <Button variant="ghost" className="w-full justify-start p-4 text-sm font-semibold">
             <Filter className={`${iconSizes.sm} mr-2`} />
             {/* 🏢 ENTERPRISE: Support both translation keys and direct labels */}
-            {config.title.startsWith('filters.') ? t(config.title) : config.title}
+            {/* Keys with ':' are namespaced i18n keys (e.g., 'crm:inbox.filters.title') */}
+            {config.title.includes(':') || config.title.startsWith('filters.') ? t(config.title) : config.title}
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent>

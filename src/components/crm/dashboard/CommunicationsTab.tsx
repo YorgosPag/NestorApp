@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import UnifiedInbox from '../UnifiedInbox';
+import UnifiedInbox from '../UnifiedInbox_OLD';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 

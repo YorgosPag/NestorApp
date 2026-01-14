@@ -104,17 +104,23 @@
     }
   },
   "inbox": {
-    "title": "Unified Inbox",
+    "title": "Ενοποιημένα Εισερχόμενα",
     "historyTitle": "Ιστορικό Επικοινωνιών",
     "selectContactTitle": "Επιλογή Επαφής",
     "loading": "Φόρτωση μηνυμάτων...",
     "loadingConversations": "Φόρτωση συνομιλιών...",
     "messagesCount": "{{count}} μηνύματα",
     "conversationsCount": "{{count}} συνομιλίες",
+    "dashboard": {
+      "total": "Σύνολο Συνομιλιών",
+      "active": "Ενεργές",
+      "unread": "Αδιάβαστα"
+    },
     "noMessages": "Δεν βρέθηκαν μηνύματα",
     "noConversations": "Δεν βρέθηκαν συνομιλίες",
     "search": "Αναζήτηση μηνυμάτων...",
     "filters": {
+      "title": "Φίλτρα Επικοινωνιών",
       "all": "Όλα",
       "channel": "Κανάλι",
       "direction": "Κατεύθυνση",
@@ -189,7 +195,8 @@
   "errors": {
     "contactNotFound": "Η επαφή δεν βρέθηκε",
     "invalidStage": "Μη έγκυρο στάδιο ευκαιρίας",
-    "deadlinePassed": "Η προθεσμία έχει παρέλθει"
+    "deadlinePassed": "Η προθεσμία έχει παρέλθει",
+    "staffAccessRequired": "Απαιτείται πρόσβαση προσωπικού"
   },
   "success": {
     "contactCreated": "Η επαφή δημιουργήθηκε επιτυχώς",

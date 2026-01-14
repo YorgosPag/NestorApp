@@ -31,6 +31,8 @@ import {
   Store,
   Briefcase,
   Users,
+  Mail,
+  MessageSquare,
   type LucideIcon
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
@@ -94,6 +96,22 @@ export const CONTACT_TYPE_OPTIONS: TypeFilterOption[] = [
   { value: 'individual', label: 'Φυσικό', icon: NAVIGATION_ENTITIES.contactIndividual.icon, tooltip: NAVIGATION_ENTITIES.contactIndividual.label },
   { value: 'company', label: 'Εταιρεία', icon: NAVIGATION_ENTITIES.contactCompany.icon, tooltip: NAVIGATION_ENTITIES.contactCompany.label },
   { value: 'service', label: 'Υπηρεσία', icon: NAVIGATION_ENTITIES.contactService.icon, tooltip: NAVIGATION_ENTITIES.contactService.label },
+];
+
+/**
+ * Channel Type Options (για Communications Inbox)
+ * 🏢 ENTERPRISE: Quick filters for communication channels
+ * - telegram: Telegram messages
+ * - email: Email messages
+ * - whatsapp: WhatsApp messages
+ * - sms: SMS messages
+ */
+export const CHANNEL_TYPE_OPTIONS: TypeFilterOption[] = [
+  { value: 'all', label: 'Όλα', icon: MessageSquare, tooltip: 'Εμφάνιση όλων των καναλιών' },
+  { value: 'telegram', label: 'Telegram', icon: MessageSquare, tooltip: 'Telegram μηνύματα' },
+  { value: 'email', label: 'Email', icon: Mail, tooltip: 'Email μηνύματα' },
+  { value: 'whatsapp', label: 'WhatsApp', icon: MessageSquare, tooltip: 'WhatsApp μηνύματα' },
+  { value: 'sms', label: 'SMS', icon: MessageSquare, tooltip: 'SMS μηνύματα' },
 ];
 
 // =============================================================================
@@ -240,6 +258,21 @@ export function ContactTypeQuickFilters(props: Omit<TypeQuickFiltersProps, 'opti
       {...props}
       options={CONTACT_TYPE_OPTIONS}
       ariaLabel={props.ariaLabel ?? t('filters.contactTypes.ariaLabel')}
+    />
+  );
+}
+
+/**
+ * Channel Quick Filters - Pre-configured for Communications Inbox
+ */
+export function ChannelQuickFilters(props: Omit<TypeQuickFiltersProps, 'options'>) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('crm');
+  return (
+    <TypeQuickFilters
+      {...props}
+      options={CHANNEL_TYPE_OPTIONS}
+      ariaLabel={props.ariaLabel ?? t('inbox.filters.channel')}
     />
   );
 }

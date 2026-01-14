@@ -21,6 +21,12 @@ export {
   defaultStorageFilters
 } from './configs/storageFiltersConfig';
 
+// Communications Configurations
+export {
+  communicationsFiltersConfig,
+  defaultCommunicationsFilters
+} from './configs/communicationsFiltersConfig';
+
 // Types
 export type {
   FilterFieldType,
@@ -41,3 +47,8 @@ export type {
 export type {
   StorageFilterState
 } from './configs/storageFiltersConfig';
+
+// Communications Types
+export type {
+  CommunicationsFilterState
+} from './configs/communicationsFiltersConfig';

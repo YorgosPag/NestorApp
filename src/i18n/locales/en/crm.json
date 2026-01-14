@@ -111,10 +111,16 @@
     "loadingConversations": "Loading conversations...",
     "messagesCount": "{{count}} messages",
     "conversationsCount": "{{count}} conversations",
+    "dashboard": {
+      "total": "Total Conversations",
+      "active": "Active",
+      "unread": "Unread"
+    },
     "noMessages": "No messages found",
     "noConversations": "No conversations found",
     "search": "Search messages...",
     "filters": {
+      "title": "Communication Filters",
       "all": "All",
       "channel": "Channel",
       "direction": "Direction",
@@ -189,7 +195,8 @@
   "errors": {
     "contactNotFound": "Contact not found",
     "invalidStage": "Invalid opportunity stage",
-    "deadlinePassed": "Deadline has passed"
+    "deadlinePassed": "Deadline has passed",
+    "staffAccessRequired": "Staff access required"
   },
   "success": {
     "contactCreated": "Contact created successfully",

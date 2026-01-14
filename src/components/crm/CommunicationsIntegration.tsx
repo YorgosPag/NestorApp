@@ -23,7 +23,7 @@ import {
   Clock
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import UnifiedInbox from './UnifiedInbox';
+import UnifiedInbox from './UnifiedInbox_OLD';
 import SendMessageModal from './SendMessageModal';
 import {
   initializeCommunications,
