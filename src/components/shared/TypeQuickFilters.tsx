@@ -31,6 +31,9 @@ import {
   Store,
   Briefcase,
   Users,
+  Mail,
+  MessageSquare,
+  Phone,
   type LucideIcon
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
@@ -94,6 +97,21 @@ export const CONTACT_TYPE_OPTIONS: TypeFilterOption[] = [
   { value: 'individual', label: 'Φυσικό', icon: NAVIGATION_ENTITIES.contactIndividual.icon, tooltip: NAVIGATION_ENTITIES.contactIndividual.label },
   { value: 'company', label: 'Εταιρεία', icon: NAVIGATION_ENTITIES.contactCompany.icon, tooltip: NAVIGATION_ENTITIES.contactCompany.label },
   { value: 'service', label: 'Υπηρεσία', icon: NAVIGATION_ENTITIES.contactService.icon, tooltip: NAVIGATION_ENTITIES.contactService.label },
+];
+
+/**
+ * Channel Type Options (για Communications)
+ * 🏢 ENTERPRISE: Channels for filtering communications
+ * - all: Όλα τα κανάλια
+ * - email: Email
+ * - sms: SMS
+ * - telegram: Telegram
+ */
+export const CHANNEL_OPTIONS: TypeFilterOption[] = [
+  { value: 'all', label: 'Όλα', icon: LayoutGrid, tooltip: 'Εμφάνιση όλων των καναλιών' },
+  { value: 'email', label: 'Email', icon: Mail, tooltip: 'Email μηνύματα' },
+  { value: 'sms', label: 'SMS', icon: Phone, tooltip: 'SMS μηνύματα' },
+  { value: 'telegram', label: 'Telegram', icon: MessageSquare, tooltip: 'Telegram μηνύματα' },
 ];
 
 // =============================================================================
@@ -240,6 +258,21 @@ export function ContactTypeQuickFilters(props: Omit<TypeQuickFiltersProps, 'opti
       {...props}
       options={CONTACT_TYPE_OPTIONS}
       ariaLabel={props.ariaLabel ?? t('filters.contactTypes.ariaLabel')}
+    />
+  );
+}
+
+/**
+ * Channel Quick Filters - Pre-configured for Communications
+ */
+export function ChannelQuickFilters(props: Omit<TypeQuickFiltersProps, 'options'>) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('common');
+  return (
+    <TypeQuickFilters
+      {...props}
+      options={CHANNEL_OPTIONS}
+      ariaLabel={props.ariaLabel ?? t('filters.channels.ariaLabel', 'Φίλτρα καναλιών')}
     />
   );
 }

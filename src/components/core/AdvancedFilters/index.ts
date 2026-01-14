@@ -9,10 +9,12 @@ export {
   contactFiltersConfig,
   buildingFiltersConfig,
   projectFiltersConfig,
+  communicationsFiltersConfig,
   defaultUnitFilters,
   defaultContactFilters,
   defaultBuildingFilters,
-  defaultProjectFilters
+  defaultProjectFilters,
+  defaultCommunicationsFilters
 } from './configs';
 
 // Storage Configurations
@@ -36,6 +38,9 @@ export type {
   BuildingFilterState,
   ProjectFilterState
 } from './types';
+
+// Communications Types (from configs.ts)
+export type { CommunicationsFilterState } from './configs';
 
 // Storage Types
 export type {

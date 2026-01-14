@@ -31,8 +31,24 @@ const searchPlaceholders = getCompactToolbarSearchPlaceholders();
 const newItemLabels = getCompactToolbarNewItemLabels();
 const tooltips = getCompactToolbarTooltips();
 
+// 🏢 ENTERPRISE: Communications channel labels
+const COMMUNICATIONS_CHANNEL_LABELS = {
+  all: 'Όλα',
+  email: 'Email',
+  sms: 'SMS',
+  telegram: 'Telegram'
+} as const;
+
+const COMMUNICATIONS_STATUS_LABELS = {
+  all: 'Όλα',
+  sent: 'Απεσταλμένα',
+  received: 'Ληφθέντα',
+  pending: 'Σε αναμονή',
+  failed: 'Αποτυχημένα'
+} as const;
+
 // 🚀 ENTERPRISE: Helper functions για filter categories και sort options
-function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' | 'units' | 'storages' | 'parking') {
+function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' | 'units' | 'storages' | 'parking' | 'communications') {
   const baseCategories = [
     {
       id: 'status',
@@ -97,12 +113,43 @@ function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' 
           ]
         }
       ];
+    case 'communications':
+      return [
+        {
+          id: 'channel',
+          label: 'Κανάλι',
+          options: [
+            { value: 'all', label: COMMUNICATIONS_CHANNEL_LABELS.all },
+            { value: 'email', label: COMMUNICATIONS_CHANNEL_LABELS.email },
+            { value: 'sms', label: COMMUNICATIONS_CHANNEL_LABELS.sms },
+            { value: 'telegram', label: COMMUNICATIONS_CHANNEL_LABELS.telegram }
+          ]
+        },
+        {
+          id: 'status',
+          label: 'Κατάσταση',
+          options: [
+            { value: 'all', label: COMMUNICATIONS_STATUS_LABELS.all },
+            { value: 'sent', label: COMMUNICATIONS_STATUS_LABELS.sent },
+            { value: 'received', label: COMMUNICATIONS_STATUS_LABELS.received },
+            { value: 'pending', label: COMMUNICATIONS_STATUS_LABELS.pending },
+            { value: 'failed', label: COMMUNICATIONS_STATUS_LABELS.failed }
+          ]
+        }
+      ];
     default:
       return baseCategories;
   }
 }
 
-function getSortOptionsForType(type: 'buildings' | 'projects' | 'contacts' | 'units' | 'storages' | 'parking') {
+function getSortOptionsForType(type: 'buildings' | 'projects' | 'contacts' | 'units' | 'storages' | 'parking' | 'communications') {
+  if (type === 'communications') {
+    return [
+      { field: 'date' as const, ascLabel: 'Ημερομηνία (Παλαιά → Νέα)', descLabel: 'Ημερομηνία (Νέα → Παλαιά)' },
+      { field: 'channel' as const, ascLabel: 'Κανάλι (Α-Ζ)', descLabel: 'Κανάλι (Ζ-Α)' },
+      { field: 'status' as const, ascLabel: 'Κατάσταση (Α-Ζ)', descLabel: 'Κατάσταση (Ζ-Α)' }
+    ];
+  }
   return [
     { field: 'name' as const, ascLabel: 'Όνομα (Α-Ζ)', descLabel: 'Όνομα (Ζ-Α)' },
     { field: 'date' as const, ascLabel: 'Ημερομηνία (Παλαιά → Νέα)', descLabel: 'Ημερομηνία (Νέα → Παλαιά)' },
@@ -112,7 +159,7 @@ function getSortOptionsForType(type: 'buildings' | 'projects' | 'contacts' | 'un
 
 // 🚀 ENTERPRISE: Smart Configuration Factory - No duplicated labels!
 function createToolbarConfig(
-  type: 'buildings' | 'projects' | 'contacts' | 'units' | 'storages' | 'parking'
+  type: 'buildings' | 'projects' | 'contacts' | 'units' | 'storages' | 'parking' | 'communications'
 ): CompactToolbarConfig {
   return {
     searchPlaceholder: searchPlaceholders[type],
@@ -200,3 +247,77 @@ export const storagesToolbarConfig: CompactToolbarConfig = createToolbarConfig('
 
 // 🅿️ ENTERPRISE: Parking Configuration - Using Smart Factory (100+ lines → 1 line!)
 export const parkingToolbarConfig: CompactToolbarConfig = createToolbarConfig('parking');
+
+// 📧 ENTERPRISE: Communications Configuration - WORKFLOW ACTIONS ONLY (not CRUD)
+// Per ChatGPT guidance: Inbox toolbar = WORKFLOW, not CRUD
+// Workflow actions: refresh, filters, sorting, favorites, archive, export, reports, settings, help
+// NO CRUD actions: newItem, editItem, deleteItems, import, preview, copy, share, favoritesManagement
+export const communicationsConfig: CompactToolbarConfig = {
+  searchPlaceholder: searchPlaceholders.communications,
+
+  labels: {
+    newItem: '', // Not used - workflow only
+    editItem: '', // Not used - workflow only
+    deleteItems: '', // Not used - workflow only
+    filters: 'Φίλτρα',
+    favorites: 'Σημαντικά',
+    archive: 'Αρχειοθέτηση',
+    export: 'Εξαγωγή',
+    import: '', // Not used - workflow only
+    refresh: 'Ανανέωση',
+    preview: '', // Not used - workflow only
+    copy: '', // Not used - workflow only
+    share: '', // Not used - workflow only
+    reports: 'Αναφορές',
+    settings: 'Ρυθμίσεις',
+    favoritesManagement: '', // Not used - workflow only
+    help: 'Βοήθεια',
+    sorting: 'Ταξινόμηση'
+  },
+
+  tooltips: {
+    newItem: '',
+    editItem: '',
+    deleteItems: '',
+    filters: tooltips.filters,
+    favorites: 'Σήμανση ως σημαντικό',
+    archive: tooltips.archive,
+    export: tooltips.export,
+    import: '',
+    refresh: tooltips.refresh,
+    preview: '',
+    copy: '',
+    share: '',
+    reports: tooltips.reports,
+    settings: tooltips.settings,
+    favoritesManagement: '',
+    help: tooltips.help,
+    sorting: tooltips.sorting
+  },
+
+  filterCategories: getFilterCategoriesForType('communications'),
+  sortOptions: getSortOptionsForType('communications'),
+
+  // 📧 WORKFLOW ACTIONS ONLY - No CRUD for inbox
+  availableActions: {
+    // ✅ WORKFLOW ACTIONS (enabled)
+    refresh: true,
+    filters: true,
+    sorting: true,
+    favorites: true, // For "Important" marking
+    archive: true,
+    export: true,
+    reports: true,
+    settings: true,
+    help: true,
+    // ❌ CRUD ACTIONS (disabled - not for inbox)
+    newItem: false,
+    editItem: false,
+    deleteItems: false,
+    import: false,
+    preview: false,
+    copy: false,
+    share: false,
+    favoritesManagement: false
+  }
+};
