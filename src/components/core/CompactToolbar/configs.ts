@@ -248,5 +248,76 @@ export const storagesToolbarConfig: CompactToolbarConfig = createToolbarConfig('
 // 🅿️ ENTERPRISE: Parking Configuration - Using Smart Factory (100+ lines → 1 line!)
 export const parkingToolbarConfig: CompactToolbarConfig = createToolbarConfig('parking');
 
-// 📧 ENTERPRISE: Communications Configuration - Using Smart Factory
-export const communicationsConfig: CompactToolbarConfig = createToolbarConfig('communications');
+// 📧 ENTERPRISE: Communications Configuration - WORKFLOW ACTIONS ONLY (not CRUD)
+// Per ChatGPT guidance: Inbox toolbar = WORKFLOW, not CRUD
+// Workflow actions: refresh, filters, sorting, favorites, archive, export, reports, settings, help
+// NO CRUD actions: newItem, editItem, deleteItems, import, preview, copy, share, favoritesManagement
+export const communicationsConfig: CompactToolbarConfig = {
+  searchPlaceholder: searchPlaceholders.communications,
+
+  labels: {
+    newItem: '', // Not used - workflow only
+    editItem: '', // Not used - workflow only
+    deleteItems: '', // Not used - workflow only
+    filters: 'Φίλτρα',
+    favorites: 'Σημαντικά',
+    archive: 'Αρχειοθέτηση',
+    export: 'Εξαγωγή',
+    import: '', // Not used - workflow only
+    refresh: 'Ανανέωση',
+    preview: '', // Not used - workflow only
+    copy: '', // Not used - workflow only
+    share: '', // Not used - workflow only
+    reports: 'Αναφορές',
+    settings: 'Ρυθμίσεις',
+    favoritesManagement: '', // Not used - workflow only
+    help: 'Βοήθεια',
+    sorting: 'Ταξινόμηση'
+  },
+
+  tooltips: {
+    newItem: '',
+    editItem: '',
+    deleteItems: '',
+    filters: tooltips.filters,
+    favorites: 'Σήμανση ως σημαντικό',
+    archive: tooltips.archive,
+    export: tooltips.export,
+    import: '',
+    refresh: tooltips.refresh,
+    preview: '',
+    copy: '',
+    share: '',
+    reports: tooltips.reports,
+    settings: tooltips.settings,
+    favoritesManagement: '',
+    help: tooltips.help,
+    sorting: tooltips.sorting
+  },
+
+  filterCategories: getFilterCategoriesForType('communications'),
+  sortOptions: getSortOptionsForType('communications'),
+
+  // 📧 WORKFLOW ACTIONS ONLY - No CRUD for inbox
+  availableActions: {
+    // ✅ WORKFLOW ACTIONS (enabled)
+    refresh: true,
+    filters: true,
+    sorting: true,
+    favorites: true, // For "Important" marking
+    archive: true,
+    export: true,
+    reports: true,
+    settings: true,
+    help: true,
+    // ❌ CRUD ACTIONS (disabled - not for inbox)
+    newItem: false,
+    editItem: false,
+    deleteItems: false,
+    import: false,
+    preview: false,
+    copy: false,
+    share: false,
+    favoritesManagement: false
+  }
+};
