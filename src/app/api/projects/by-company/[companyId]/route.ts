@@ -1,83 +1,129 @@
-// Alternative API route using Client SDK (same as seed scripts)
+/**
+ * 🏗️ PROJECTS BY COMPANY ENDPOINT
+ *
+ * @module api/projects/by-company/[companyId]
+ * @version 2.0.0
+ * @updated 2026-01-15 - AUTHZ PHASE 2: CRITICAL SECURITY FIX
+ *
+ * 🚨 SECURITY FIX:
+ * - Migrated from Client SDK to Admin SDK
+ * - Added withAuth + RBAC protection
+ * - CRITICAL: URL param [companyId] is IGNORED for security
+ * - Always uses ctx.companyId from authenticated user
+ * - Prevents cross-tenant data breach via URL manipulation
+ *
+ * 🔒 SECURITY:
+ * - Permission: projects:projects:view
+ * - Tenant isolation: Uses ctx.companyId ONLY (URL param ignored)
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { withErrorHandling, apiSuccess } from '@/lib/api/ApiErrorHandler';
+import { adminDb } from '@/lib/firebaseAdmin';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { apiSuccess } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
 
-// ✅ ENTERPRISE FIX: Force dynamic rendering to prevent static generation errors
-// This API route depends on runtime data (companyId parameter + Firestore queries)
 export const dynamic = 'force-dynamic';
 
-export const GET = withErrorHandling(async (
+/**
+ * 🏗️ GET projects for authenticated user's company
+ *
+ * @security URL param [companyId] is IGNORED - uses ctx.companyId for security
+ */
+export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ companyId: string }> }
-) => {
-    // 🚀 Next.js 15: params must be awaited before accessing properties
-    const { companyId } = await params;
+  segmentData: { params: Promise<{ companyId: string }> }
+) {
+  // Extract URL param (for logging only - NOT used for query)
+  const { companyId: urlCompanyId } = await segmentData.params;
 
-    // 🎯 PRODUCTION: Reduced API logging για καθαρότερη κονσόλα
-    // console.log(`🏗️ API (Client SDK): Loading projects for companyId: "${companyId}"`);
+  const handler = withAuth(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      // 🔒 SECURITY: Use authenticated user's companyId ONLY
+      const companyId = ctx.companyId;
 
-    try {
-      // 🚀 ENTERPRISE CACHING: Check cache first
-      const cachedProjects = CacheHelpers.getCachedProjectsByCompany(companyId);
-      if (cachedProjects) {
-        // 🎯 PRODUCTION: Reduced cache logging
-        // console.log(`⚡ API: CACHE HIT - Returning ${cachedProjects.length} cached projects for company ${companyId}`);
-        return apiSuccess({
-          projects: cachedProjects,
-          companyId: companyId,
-          source: 'cache',
-          cached: true
-        }, `Found ${cachedProjects.length} cached projects for company ${companyId}`);
+      console.log(`🏗️ [Projects/ByCompany] Loading projects for company: ${companyId}`);
+      console.log(`🔒 Auth Context: User ${ctx.uid}, Company ${companyId}`);
+
+      // 🚨 SECURITY WARNING: Log if URL param doesn't match authenticated companyId
+      if (urlCompanyId !== companyId) {
+        console.warn(`🚫 SECURITY: URL param mismatch - URL: ${urlCompanyId}, Auth: ${companyId} (using Auth companyId)`);
       }
 
-      // 🎯 PRODUCTION: Reduced verbosity
-      // console.log('🔍 API: Cache miss - Fetching from Firestore...');
+      try {
+        // ============================================================================
+        // 1. CHECK CACHE FIRST (tenant-scoped)
+        // ============================================================================
 
-      // 🚀 PERFORMANCE: Skip the debugging "fetch ALL projects" - go directly to specific query
-      const projectsQuery = query(
-        collection(db, COLLECTIONS.PROJECTS),
-        where('companyId', '==', companyId)
-      );
+        const cachedProjects = CacheHelpers.getCachedProjectsByCompany(companyId);
+        if (cachedProjects) {
+          console.log(`⚡ [Projects/ByCompany] CACHE HIT - ${cachedProjects.length} projects for company ${companyId}`);
+          return apiSuccess({
+            projects: cachedProjects,
+            companyId: companyId,
+            source: 'cache',
+            cached: true
+          }, `Found ${cachedProjects.length} cached projects`);
+        }
 
-      const snapshot = await getDocs(projectsQuery);
-      console.log(`🏗️ API (Client SDK): Found ${snapshot.docs.length} projects for companyId "${companyId}"`);
+        console.log('🔍 [Projects/ByCompany] Cache miss - Fetching from Firestore...');
 
-      const projects = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+        // ============================================================================
+        // 2. FETCH FROM FIRESTORE (Admin SDK + Tenant Isolation)
+        // ============================================================================
 
-      // 💾 ENTERPRISE CACHING: Store in cache for future requests
-      CacheHelpers.cacheProjectsByCompany(companyId, projects);
+        const snapshot = await adminDb
+          .collection(COLLECTIONS.PROJECTS)
+          .where('companyId', '==', companyId)
+          .get();
 
-      console.log(`✅ API: Found ${projects.length} projects for company ${companyId} (cached for 3 minutes)`);
+        console.log(`🏗️ [Projects/ByCompany] Found ${snapshot.docs.length} projects for tenant ${companyId}`);
 
-      return apiSuccess({
-        projects,
-        companyId: companyId,
-        source: 'firestore',
-        cached: false
-      }, `Found ${projects.length} projects for company ${companyId}`);
+        const projects = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
 
-    } catch (error: unknown) {
-      console.error('❌ [Projects API] Error details:', {
-        companyId: companyId,
-        error: error instanceof Error ? {
-          name: error.name,
-          message: error.message,
-          stack: error.stack
-        } : { message: String(error) },
-        timestamp: new Date().toISOString()
-      });
+        // ============================================================================
+        // 3. CACHE FOR FUTURE REQUESTS
+        // ============================================================================
 
-      throw error; // Re-throw for withErrorHandling
-    }
-}, {
-  operation: 'loadProjectsByCompany',
-  entityType: COLLECTIONS.PROJECTS,
-  entityId: 'companyId'
-});
+        CacheHelpers.cacheProjectsByCompany(companyId, projects);
+        console.log(`✅ [Projects/ByCompany] Complete: ${projects.length} projects (cached for 3 minutes)`);
+
+        return apiSuccess({
+          projects,
+          companyId: companyId,
+          source: 'firestore',
+          cached: false
+        }, `Found ${projects.length} projects`);
+
+      } catch (error: unknown) {
+        console.error('❌ [Projects/ByCompany] Error:', {
+          companyId: companyId,
+          userId: ctx.uid,
+          error: error instanceof Error ? {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          } : { message: String(error) },
+          timestamp: new Date().toISOString()
+        });
+
+        return NextResponse.json(
+          {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to load projects',
+            companyId: companyId
+          },
+          { status: 500 }
+        );
+      }
+    },
+    { permissions: 'projects:projects:view' }
+  );
+
+  return handler(request);
+}

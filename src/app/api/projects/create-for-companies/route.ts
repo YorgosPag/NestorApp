@@ -1,6 +1,21 @@
+/**
+ * 🛠️ UTILITY: CREATE PROJECTS FOR ALL COMPANIES
+ *
+ * Break-glass utility for bulk project generation.
+ *
+ * @module api/projects/create-for-companies
+ * @version 2.0.0
+ * @updated 2026-01-15 - AUTHZ PHASE 2: Added super_admin protection
+ *
+ * 🔒 SECURITY:
+ * - Global Role: super_admin (break-glass utility)
+ * - Admin SDK for secure server-side operations
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { adminDb } from '@/lib/firebaseAdmin';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { BUILDING_IDS } from '@/config/building-ids-config';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
@@ -88,108 +103,132 @@ const getProjectTemplates = () => {
 const projectTemplates = getProjectTemplates();
 
 export async function POST(request: NextRequest) {
-  try {
-    console.log('🏗️ Creating projects for all companies...');
-
-    // 1. Πάρε όλες τις εταιρείες
-    const contactsQuery = query(
-      collection(db, COLLECTIONS.CONTACTS),
-      where('type', '==', 'company'),
-      where('status', '==', 'active')
-    );
-    const contactsSnapshot = await getDocs(contactsQuery);
-
-    if (contactsSnapshot.docs.length === 0) {
-      return NextResponse.json({
-        success: false,
-        message: 'No companies found'
-      });
-    }
-
-    console.log(`🏢 Found ${contactsSnapshot.docs.length} companies`);
-
-    const companies = contactsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-
-    // 🏢 ENTERPRISE: Δημιούργησε projects για κάθε εταιρεία - configurable starting index
-    interface CreatedProject {
-      id: string;
-      name: string;
-      company: string;
-      companyId: string;
-    }
-    let projectIndex = BUILDING_IDS.PROJECT_ID + 1; // Starting after configured base project
-    const createdProjects: CreatedProject[] = [];
-
-    for (const company of companies) {
-      console.log(`\n🏢 Creating project for: ${company.companyName}`);
-
-      // Επέλεξε template based on company index
-      const template = projectTemplates[createdProjects.length % projectTemplates.length];
-      const projectId = `${projectIndex}`;
-
-      const project = {
-        ...template,
-        companyId: company.id, // ΣΩΣΤΟ company ID!
-        company: company.companyName,
-        lastUpdate: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        name: `${template.name} ${company.companyName}`,
-        title: `${template.title} - ${company.companyName}`,
-      };
+  const handler = withAuth(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      console.log('🏗️ [Projects/CreateForCompanies] Starting bulk project creation...');
+      console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
 
       try {
-        await setDoc(doc(db, COLLECTIONS.PROJECTS, projectId), project);
-        console.log(`✅ Created project: ${project.name} (ID: ${projectId})`);
+        // ============================================================================
+        // STEP 1: GET ALL ACTIVE COMPANIES (Admin SDK)
+        // ============================================================================
 
-        createdProjects.push({
-          id: projectId,
-          name: project.name,
-          company: company.companyName,
-          companyId: company.id
+        const contactsSnapshot = await adminDb
+          .collection(COLLECTIONS.CONTACTS)
+          .where('type', '==', 'company')
+          .where('status', '==', 'active')
+          .get();
+
+        if (contactsSnapshot.docs.length === 0) {
+          return NextResponse.json({
+            success: false,
+            message: 'No companies found'
+          });
+        }
+
+        console.log(`🏢 Found ${contactsSnapshot.docs.length} companies`);
+
+        const companies = contactsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Record<string, unknown> & { id: string; companyName?: string }));
+
+        // ============================================================================
+        // STEP 2: CREATE PROJECTS FOR EACH COMPANY (Admin SDK)
+        // ============================================================================
+
+        interface CreatedProject {
+          id: string;
+          name: string;
+          company: string;
+          companyId: string;
+        }
+        let projectIndex = BUILDING_IDS.PROJECT_ID + 1;
+        const createdProjects: CreatedProject[] = [];
+
+        for (const company of companies) {
+          console.log(`🏢 Creating project for: ${company.companyName}`);
+
+          const template = projectTemplates[createdProjects.length % projectTemplates.length];
+          const projectId = `${projectIndex}`;
+
+          const project = {
+            ...template,
+            companyId: company.id,
+            company: company.companyName,
+            lastUpdate: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            name: `${template.name} ${company.companyName}`,
+            title: `${template.title} - ${company.companyName}`,
+          };
+
+          try {
+            await adminDb
+              .collection(COLLECTIONS.PROJECTS)
+              .doc(projectId)
+              .set(project);
+
+            console.log(`✅ Created project: ${project.name} (ID: ${projectId})`);
+
+            createdProjects.push({
+              id: projectId,
+              name: project.name,
+              company: company.companyName || 'Unknown Company',
+              companyId: company.id
+            });
+
+            projectIndex++;
+          } catch (error) {
+            console.error(`❌ Failed to create project for ${company.companyName}:`, error);
+          }
+        }
+
+        // ============================================================================
+        // STEP 3: VERIFICATION
+        // ============================================================================
+
+        console.log('📊 Verification...');
+        const allProjectsSnapshot = await adminDb
+          .collection(COLLECTIONS.PROJECTS)
+          .get();
+
+        const allProjects = allProjectsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          name: doc.data().name,
+          company: doc.data().company,
+          companyId: doc.data().companyId
+        }));
+
+        console.log(`✅ [Projects/CreateForCompanies] Complete: Created ${createdProjects.length}/${companies.length} projects`);
+        console.log(`📊 Total projects in database: ${allProjects.length}`);
+
+        return NextResponse.json({
+          success: true,
+          message: `Created ${createdProjects.length} projects successfully`,
+          createdProjects,
+          allProjects,
+          stats: {
+            companiesFound: companies.length,
+            projectsCreated: createdProjects.length,
+            totalProjectsInDb: allProjects.length
+          }
         });
 
-        projectIndex++;
       } catch (error) {
-        console.error(`❌ Failed to create project for ${company.companyName}:`, error);
+        console.error('❌ [Projects/CreateForCompanies] Error:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          userId: ctx.uid,
+          companyId: ctx.companyId
+        });
+
+        return NextResponse.json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
       }
-    }
+    },
+    { requiredGlobalRoles: 'super_admin' }
+  );
 
-    // 3. Επαλήθευση
-    console.log('\n📊 Verification:');
-    const allProjectsSnapshot = await getDocs(collection(db, COLLECTIONS.PROJECTS));
-
-    const allProjects = allProjectsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      name: doc.data().name,
-      company: doc.data().company,
-      companyId: doc.data().companyId
-    }));
-
-    console.log(`🏗️ Total projects in database: ${allProjects.length}`);
-
-    return NextResponse.json({
-      success: true,
-      message: `Created ${createdProjects.length} projects successfully`,
-      createdProjects,
-      allProjects,
-      stats: {
-        companiesFound: companies.length,
-        projectsCreated: createdProjects.length,
-        totalProjectsInDb: allProjects.length
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Error creating projects:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
-  }
+  return handler(request);
 }

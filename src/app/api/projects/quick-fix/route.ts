@@ -1,22 +1,34 @@
+/**
+ * 🛠️ UTILITY: QUICK FIX PROJECTS
+ *
+ * Break-glass utility for quick project fixes and creation.
+ *
+ * @module api/projects/quick-fix
+ * @version 2.0.0
+ * @updated 2026-01-15 - AUTHZ PHASE 2: Added super_admin protection
+ *
+ * 🔒 SECURITY:
+ * - Global Role: super_admin (break-glass utility)
+ * - Admin SDK for secure server-side operations
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { doc, updateDoc, setDoc, collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-// Direct import to avoid React hooks re-export from index.ts
+import { adminDb } from '@/lib/firebaseAdmin';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { EnterpriseConfigurationManager } from '@/core/configuration/enterprise-config-management';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**
- * 🏢 ENTERPRISE: Database-driven company lookup (NO MORE HARDCODED IDs)
- * Loads company IDs από database αντί για hardcoded values
+ * Database-driven company lookup (Admin SDK)
  */
 async function getCompanyIdByName(companyName: string): Promise<string | null> {
   try {
-    const companiesQuery = query(
-      collection(db, COLLECTIONS.CONTACTS),
-      where('type', '==', 'company'),
-      where('companyName', '==', companyName)
-    );
-    const snapshot = await getDocs(companiesQuery);
+    const snapshot = await adminDb
+      .collection(COLLECTIONS.CONTACTS)
+      .where('type', '==', 'company')
+      .where('companyName', '==', companyName)
+      .get();
 
     if (snapshot.empty) {
       console.warn(`⚠️  Company not found in database: ${companyName}`);
@@ -31,30 +43,40 @@ async function getCompanyIdByName(companyName: string): Promise<string | null> {
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    console.log('🔧 Enterprise project company ID fixing (database-driven)...');
+  const handler = withAuth(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      console.log('🔧 [Projects/QuickFix] Starting quick fix operations...');
+      console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
 
-    // 🏢 ENTERPRISE: Load company IDs από database
-    const configManager = EnterpriseConfigurationManager.getInstance();
+      try {
 
-    // 🏢 ENTERPRISE: Load company names from environment configuration
-    const mainCompanyName = process.env.NEXT_PUBLIC_COMPANY_NAME || 'Main Company';
-    const companyNames = (process.env.NEXT_PUBLIC_PARTNER_COMPANIES ||
-      'Company A,Company B,Company C,Company D,Company E,Company F'
-    ).split(',').map(name => name.trim());
+        // ============================================================================
+        // STEP 1: LOAD COMPANY IDs FROM DATABASE
+        // ============================================================================
 
-    const pagonisCompanyId = await getCompanyIdByName(mainCompanyName);
-    const [alysidaCompanyId, jpAvaxCompanyId, mytilineosCompanyId, ternaCompanyId, aktorCompanyId] =
-      await Promise.all(companyNames.slice(0, 5).map(name => getCompanyIdByName(name)));
+        const configManager = EnterpriseConfigurationManager.getInstance();
 
-    if (!pagonisCompanyId) {
-      return NextResponse.json({
-        error: `Primary company "${mainCompanyName}" not found in database`,
-        suggestion: 'Please ensure company data exists in database before running fixes'
-      }, { status: 404 });
-    }
+        const mainCompanyName = process.env.NEXT_PUBLIC_COMPANY_NAME || 'Main Company';
+        const companyNames = (process.env.NEXT_PUBLIC_PARTNER_COMPANIES ||
+          'Company A,Company B,Company C,Company D,Company E,Company F'
+        ).split(',').map(name => name.trim());
 
-    const fixes = [
+        const pagonisCompanyId = await getCompanyIdByName(mainCompanyName);
+        const [alysidaCompanyId, jpAvaxCompanyId, mytilineosCompanyId, ternaCompanyId, aktorCompanyId] =
+          await Promise.all(companyNames.slice(0, 5).map(name => getCompanyIdByName(name)));
+
+        if (!pagonisCompanyId) {
+          return NextResponse.json({
+            error: `Primary company "${mainCompanyName}" not found in database`,
+            suggestion: 'Please ensure company data exists in database before running fixes'
+          }, { status: 404 });
+        }
+
+        // ============================================================================
+        // STEP 2: PREPARE FIX OPERATIONS
+        // ============================================================================
+
+        const fixes = [
       // Fix existing project 1001 - Database-driven
       {
         projectId: '1001',
@@ -106,29 +128,36 @@ export async function POST(request: NextRequest) {
       }] : [])
     ];
 
-    console.log(`🏗️ Enterprise fixes prepared: ${fixes.length} database-driven operations`);
+        console.log(`🏗️ Enterprise fixes prepared: ${fixes.length} database-driven operations`);
 
-    const results = [];
+        // ============================================================================
+        // STEP 3: EXECUTE FIX OPERATIONS (Admin SDK)
+        // ============================================================================
 
-    for (const fix of fixes) {
-      try {
-        if (fix.action === 'update') {
-          // Update existing project
-          const projectRef = doc(db, COLLECTIONS.PROJECTS, fix.projectId);
-          await updateDoc(projectRef, {
-            companyId: fix.companyId,
-            updatedAt: new Date().toISOString()
-          });
-          console.log(`✅ Updated project ${fix.projectId} with companyId ${fix.companyId}`);
-          results.push({
-            projectId: fix.projectId,
-            action: 'updated',
-            companyId: fix.companyId
-          });
+        const results = [];
 
-        } else if (fix.action === 'create') {
-          // Create new project
-          const newProject = {
+        for (const fix of fixes) {
+          try {
+            if (fix.action === 'update') {
+              // Update existing project (Admin SDK)
+              await adminDb
+                .collection(COLLECTIONS.PROJECTS)
+                .doc(fix.projectId)
+                .update({
+                  companyId: fix.companyId,
+                  updatedAt: new Date().toISOString()
+                });
+
+              console.log(`✅ Updated project ${fix.projectId} with companyId ${fix.companyId}`);
+              results.push({
+                projectId: fix.projectId,
+                action: 'updated',
+                companyId: fix.companyId
+              });
+
+            } else if (fix.action === 'create') {
+              // Create new project (Admin SDK)
+              const newProject = {
             name: `Εμπορικό Κέντρο ${fix.companyName}`,
             title: `Ανάπτυξη εμπορικού κέντρου - ${fix.companyName}`,
             address: `Κεντρική Λεωφόρος, ${process.env.NEXT_PUBLIC_DEFAULT_CITY || 'Αθήνα'}`,
@@ -170,41 +199,53 @@ export async function POST(request: NextRequest) {
             ]
           };
 
-          const projectRef = doc(db, COLLECTIONS.PROJECTS, fix.projectId);
-          await setDoc(projectRef, newProject);
-          console.log(`✅ Created project ${fix.projectId} for ${fix.companyName}`);
-          results.push({
-            projectId: fix.projectId,
-            action: 'created',
-            companyId: fix.companyId,
-            companyName: fix.companyName
-          });
+              await adminDb
+                .collection(COLLECTIONS.PROJECTS)
+                .doc(fix.projectId)
+                .set(newProject);
+
+              console.log(`✅ Created project ${fix.projectId} for ${fix.companyName}`);
+              results.push({
+                projectId: fix.projectId,
+                action: 'created',
+                companyId: fix.companyId,
+                companyName: fix.companyName
+              });
+            }
+
+          } catch (error) {
+            console.error(`❌ Failed to process ${fix.action} for project ${fix.projectId}:`, error);
+            results.push({
+              projectId: fix.projectId,
+              action: 'failed',
+              error: error instanceof Error ? error.message : 'Unknown error'
+            });
+          }
         }
 
-      } catch (error) {
-        console.error(`❌ Failed to process ${fix.action} for project ${fix.projectId}:`, error);
-        results.push({
-          projectId: fix.projectId,
-          action: 'failed',
-          error: error instanceof Error ? error.message : 'Unknown error'
+        console.log(`✅ [Projects/QuickFix] Complete: Processed ${results.length} operations`);
+
+        return NextResponse.json({
+          success: true,
+          message: `Processed ${results.length} project fixes`,
+          results
         });
+
+      } catch (error) {
+        console.error('❌ [Projects/QuickFix] Error:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          userId: ctx.uid,
+          companyId: ctx.companyId
+        });
+
+        return NextResponse.json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
       }
-    }
+    },
+    { requiredGlobalRoles: 'super_admin' }
+  );
 
-    return NextResponse.json({
-      success: true,
-      message: `Processed ${results.length} project fixes`,
-      results
-    });
-
-  } catch (error) {
-    console.error('❌ Error in quick fix:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
-  }
+  return handler(request);
 }
