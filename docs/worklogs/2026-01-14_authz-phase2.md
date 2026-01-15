@@ -289,6 +289,194 @@ Note: TypeScript warnings are related to generic type inference in withAuth wrap
 
 ---
 
+## Projects Domain - COMPLETE ✅
+
+### Commits Summary
+
+| # | Hash | Message |
+|---|------|------------|
+| 1 | TBD | feat(authz): protect projects/list with Admin SDK + tenant isolation |
+| 2 | TBD | feat(authz): CRITICAL FIX - by-company route URL param ignored for security |
+| 3 | TBD | feat(authz): protect projects customers route with multi-level tenant isolation |
+| 4 | TBD | feat(authz): protect projects structure route with Admin SDK + tenant isolation |
+| 5 | TBD | feat(authz): protect 4 projects utility routes with super_admin role |
+
+### Routes Matrix
+
+| Route | SDK | Auth | Tenant Isolation | Status |
+|-------|-----|------|------------------|--------|
+| `list/route.ts` | Admin SDK | `projects:projects:view` | Query filter | ✅ |
+| `by-company/[companyId]/route.ts` | Admin SDK | `projects:projects:view` | **CRITICAL**: Uses ctx.companyId ONLY | ✅ |
+| `[projectId]/customers/route.ts` | Admin SDK | `projects:projects:view` | Multi-level (Project + Buildings + Units + Contacts) | ✅ |
+| `structure/[projectId]/route.ts` | Admin SDK | `projects:projects:view` | Project ownership + Buildings + Units filter | ✅ |
+| `add-buildings/route.ts` | Admin SDK | `requiredGlobalRoles: 'super_admin'` | N/A (break-glass utility) | ✅ |
+| `create-for-companies/route.ts` | Admin SDK | `requiredGlobalRoles: 'super_admin'` | N/A (break-glass utility) | ✅ |
+| `fix-company-ids/route.ts` | Admin SDK | `requiredGlobalRoles: 'super_admin'` | N/A (break-glass utility) | ✅ |
+| `quick-fix/route.ts` | Admin SDK | `requiredGlobalRoles: 'super_admin'` | N/A (break-glass utility) | ✅ |
+
+---
+
+## Implementation Details - Projects Domain
+
+### 1. CRITICAL Security Fix: by-company Route
+
+**BEFORE** (SEVERE VULNERABILITY):
+```typescript
+// ❌ Used URL param directly - anyone could query any company's projects!
+export const GET = async (req, { params }) => {
+  const { companyId } = await params;
+
+  // Client SDK with NO authentication
+  const projectsQuery = query(
+    collection(db, COLLECTIONS.PROJECTS),
+    where('companyId', '==', companyId)  // Uses URL param!
+  );
+
+  const snapshot = await getDocs(projectsQuery);
+  // Returns ALL projects for ANY company ID in URL!
+};
+```
+
+**Attack Scenario:**
+```
+User from Company A → GET /api/projects/by-company/company_B_id
+→ Returns ALL projects from Company B! 💀
+```
+
+**AFTER** (SECURE):
+```typescript
+// ✅ Admin SDK + withAuth + Ignores URL param
+export async function GET(request, segmentData) {
+  const { companyId: urlCompanyId } = await segmentData.params;
+
+  const handler = withAuth(
+    async (_req, ctx, _cache) => {
+      // 🔒 SECURITY: Use authenticated user's companyId ONLY
+      const companyId = ctx.companyId;
+
+      // 🚨 SECURITY WARNING: Log if URL param doesn't match
+      if (urlCompanyId !== companyId) {
+        console.warn(`🚫 SECURITY: URL param mismatch - using Auth companyId`);
+      }
+
+      const snapshot = await adminDb
+        .collection(COLLECTIONS.PROJECTS)
+        .where('companyId', '==', companyId)  // Uses ctx.companyId ONLY
+        .get();
+
+      return apiSuccess({ projects, companyId });
+    },
+    { permissions: 'projects:projects:view' }
+  );
+
+  return handler(request);
+}
+```
+
+**Impact**: Prevented cross-tenant data breach - users can ONLY see their own company's projects.
+
+### 2. Client SDK → Admin SDK Migration
+
+**Problem**: All 4 core routes + 4 utility routes used Client SDK with NO authentication
+
+**Files with Client SDK removed**:
+- `list/route.ts` - Already had Admin SDK, added withAuth + tenant filter
+- `by-company/[companyId]/route.ts` - Client SDK → Admin SDK (most critical!)
+- `[projectId]/customers/route.ts` - Used `firebaseServer` wrapper
+- `structure/[projectId]/route.ts` - Used `firebaseServer` wrapper
+- All 4 utility routes - Client SDK → Admin SDK
+
+**Solution**: All routes now use `@/lib/firebaseAdmin` exclusively
+
+### 3. Multi-Level Tenant Isolation (Customers Route)
+
+The `/projects/[projectId]/customers` route implements **4 levels** of tenant isolation:
+
+1. **Project ownership verification**:
+   ```typescript
+   const projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
+   if (projectData?.companyId !== ctx.companyId) {
+     return 403; // Access denied
+   }
+   ```
+
+2. **Buildings query filter**:
+   ```typescript
+   const buildingsSnapshot = await adminDb
+     .collection(COLLECTIONS.BUILDINGS)
+     .where('projectId', '==', projectId)
+     .where('companyId', '==', ctx.companyId)  // Tenant filter
+     .get();
+   ```
+
+3. **Units query filter**:
+   ```typescript
+   const unitsSnapshot = await adminDb
+     .collection(COLLECTIONS.UNITS)
+     .where('buildingId', '==', buildingId)
+     .where('companyId', '==', ctx.companyId)  // Tenant filter
+     .get();
+   ```
+
+4. **Contacts filtering**:
+   ```typescript
+   const tenantContacts = contactsSnapshot.docs.filter(doc => {
+     const data = doc.data();
+     return data.companyId === ctx.companyId;
+   });
+   ```
+
+### 4. Utility Routes Protection
+
+Four utility routes protected with `requiredGlobalRoles: 'super_admin'`:
+
+- **add-buildings**: Bulk building assignment (break-glass utility)
+- **create-for-companies**: Bulk project generation from templates
+- **fix-company-ids**: Corrects project companyId references
+- **quick-fix**: Quick project fixes and creation
+
+All use Admin SDK and enforce server-side operations only.
+
+### 5. Tenant-Specific Caching
+
+**Projects list route** uses tenant-specific cache keys:
+
+```typescript
+const CACHE_KEY_PREFIX = 'api:projects:list';
+
+function getTenantCacheKey(companyId: string): string {
+  return `${CACHE_KEY_PREFIX}:${companyId}`;
+}
+
+// Usage
+const tenantCacheKey = getTenantCacheKey(ctx.companyId);
+const cachedData = cache.get<ProjectListResponse>(tenantCacheKey);
+// ...
+cache.set(tenantCacheKey, response, CACHE_TTL_MS);
+```
+
+This prevents cache pollution between tenants.
+
+---
+
+## Quality Gates Evidence - Projects Domain
+
+### Lint Check
+```bash
+$ pnpm run lint 2>&1 | grep -E "api/projects"
+# Result: (no output - no lint errors in modified files)
+```
+
+### TypeScript Check
+```bash
+$ npx tsc --noEmit 2>&1 | grep "api/projects" | wc -l
+# Result: 7 minor withAuth signature warnings (pre-existing pattern, no security impact)
+```
+
+Note: TypeScript warnings are related to generic type inference in withAuth wrapper and do not affect runtime security or functionality. Same pattern as Buildings and Contacts domains.
+
+---
+
 ## Remaining Work
 
 ### Buildings Domain
@@ -305,14 +493,24 @@ Note: TypeScript warnings are related to generic type inference in withAuth wrap
 - Tenant isolation (query-level filtering + ownership verification)
 - CRITICAL security fix: list-companies from public to tenant-scoped
 
+### Projects Domain
+**✅ COMPLETE!** All 8 Projects routes are now protected with enterprise-grade security:
+- Admin SDK exclusively (eliminated all Client SDK usage)
+- Centralized role gating (withAuth + requiredGlobalRoles)
+- Tenant isolation (query-level filtering + ownership verification)
+- **CRITICAL security fix**: by-company route from URL param to ctx.companyId
+- Multi-level tenant isolation (customers route)
+- Tenant-specific caching
+
 ### Other Domains (Future PRs)
 | Domain | Routes | Status | Priority |
 |--------|--------|--------|----------|
-| Projects | 8 | 🔜 Next | HIGH |
-| Units | 8 | Pending | HIGH |
+| Units | 8 | 🔜 Next | HIGH |
 | Conversations | 3 | Pending | HIGH |
 | Notifications | 5 | Pending | MEDIUM |
 | Admin/Debug | ~30 | Pending | LOW |
+
+**Progress**: 19/84 routes protected (23%) - Buildings (5), Contacts (6), Projects (8)
 
 ---
 
@@ -342,7 +540,7 @@ ADMIN_TARGET_PROJECT_ID=your-project-id
 - [x] Quality gates passed (lint + typecheck) - zero new errors
 - [x] PR merged to main
 
-### Contacts Domain (PR #2 - Ready for Review)
+### Contacts Domain (PR #2 - Merged)
 - [x] Contacts [contactId] route protected with Admin SDK + tenant isolation
 - [x] Contacts [contactId]/units route protected with Admin SDK + dual tenant isolation
 - [x] Contacts list-companies route - CRITICAL FIX from public to tenant-scoped
@@ -351,5 +549,19 @@ ADMIN_TARGET_PROJECT_ID=your-project-id
 - [x] Contacts update-existing route protected with super_admin + tenant verification
 - [x] Zero Client SDK in Contacts API routes (eliminated firebaseServer wrapper)
 - [x] Quality gates passed (lint clean, 7 minor TS warnings - no security impact)
-- [ ] PR: `authz/contacts-domain` → `main` (ready for review)
+- [x] PR merged to main
+- [x] This work log updated
+
+### Projects Domain (PR #3 - Ready for Review)
+- [x] Projects list route protected with Admin SDK + tenant isolation
+- [x] Projects by-company route - CRITICAL FIX from URL param to ctx.companyId
+- [x] Projects [projectId]/customers route protected with multi-level tenant isolation
+- [x] Projects structure route protected with Admin SDK + tenant isolation
+- [x] Projects add-buildings utility route protected with super_admin role
+- [x] Projects create-for-companies utility route protected with super_admin role
+- [x] Projects fix-company-ids utility route protected with super_admin role
+- [x] Projects quick-fix utility route protected with super_admin role
+- [x] Zero Client SDK in Projects API routes (eliminated all Client SDK usage)
+- [x] Quality gates passed (lint clean, 7 minor TS warnings - no security impact)
+- [ ] PR: `authz/projects-domain` → `main` (ready for review)
 - [x] This work log updated
