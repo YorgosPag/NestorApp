@@ -1,5 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**
@@ -127,9 +129,18 @@ function generateEnterpriseSecureId(): string {
   ).join('');
 }
 
-export async function POST() {
-  try {
-    console.log('📇 Creating real contacts with proper random IDs...');
+/**
+ * @updated 2026-01-15 - AUTHZ PHASE 2: Added super_admin protection
+ * @security Admin SDK + withAuth + requiredGlobalRoles: super_admin
+ * @permission GLOBAL: super_admin only (break-glass utility)
+ */
+
+export async function POST(request: NextRequest) {
+  const handler = withAuth(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      try {
+        console.log('📇 Creating real contacts with proper random IDs...');
+        console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole || 'none'}), Company ${ctx.companyId}`);
 
     if (!adminDb) {
       return NextResponse.json({
@@ -304,12 +315,17 @@ export async function POST() {
       mapping: oldToNewMapping
     });
 
-  } catch (error) {
-    console.error('❌ Error creating sample contacts:', error);
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      details: 'Failed to create contacts in database'
-    }, { status: 500 });
-  }
+      } catch (error) {
+        console.error('❌ Error creating sample contacts:', error);
+        return NextResponse.json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          details: 'Failed to create contacts in database'
+        }, { status: 500 });
+      }
+    },
+    { requiredGlobalRoles: 'super_admin' }
+  );
+
+  return handler(request);
 }
