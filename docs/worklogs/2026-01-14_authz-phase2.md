@@ -2,7 +2,7 @@
 
 **Date**: 2026-01-14
 **Topic**: RBAC Rollout to All API Endpoints
-**Status**: IN PROGRESS (Buildings Domain Complete)
+**Status**: ✅ BUILDINGS DOMAIN COMPLETE (5/5 routes protected)
 **RFC Reference**: `docs/rfc/authorization-rbac.md` (v6)
 **Previous Phase**: `docs/worklogs/2026-01-14_authz-phase1.md`
 
@@ -40,8 +40,8 @@ Phase 2 extends the RBAC engine (created in Phase 1) to protect ALL API endpoint
 | `buildings/route.ts` | Admin SDK | `buildings:buildings:view` | Query filter | ✅ |
 | `buildings/[id]/customers/route.ts` | Admin SDK | `buildings:buildings:view` | Building + Units + Contacts filter | ✅ |
 | `buildings/fix-project-ids/route.ts` | Admin SDK | `requiredGlobalRoles: 'super_admin'` | N/A (break-glass) | ✅ |
-| `buildings/populate/route.ts` | Existing | Handler auth | Handler auth | ⏳ |
-| `buildings/seed/route.ts` | Existing | Handler auth | Handler auth | ⏳ |
+| `buildings/populate/route.ts` | Admin SDK (handler) | `requiredGlobalRoles: 'super_admin'` | Handler auth | ✅ |
+| `buildings/seed/route.ts` | Admin SDK (handler) | `requiredGlobalRoles: 'super_admin'` | Handler auth | ✅ |
 
 ---
 
@@ -104,6 +104,47 @@ Three-level tenant isolation:
 2. **Units query**: `where('companyId', '==', ctx.companyId)`
 3. **Contacts query**: `where('companyId', '==', ctx.companyId)`
 
+### 5. Populate/Seed Routes Protection (Commit #5)
+
+**Routes**: `buildings/populate/route.ts`, `buildings/seed/route.ts`
+
+Both routes use the shared `handleBuildingInstantiation` handler which already uses Admin SDK and has authentication checks.
+
+**Solution**: Wrapped both GET and POST exports with `withAuth` + `requiredGlobalRoles: 'super_admin'`
+
+```typescript
+export const POST = withAuth<PopulateResponse>(
+  async (request: NextRequest, _ctx: AuthContext, _cache: PermissionCache) => {
+    const response = await handleBuildingInstantiation(request, { /* config */ });
+    return NextResponse.json({ /* response */ }, { status: response.statusCode });
+  },
+  { requiredGlobalRoles: 'super_admin' }
+);
+```
+
+### 6. Firestore Query Limits Centralization (Commit #5)
+
+**Problem**: `FIRESTORE_IN_LIMIT = 10` was duplicated in 2 files:
+- `buildings/[buildingId]/customers/route.ts`
+- `audit/bootstrap/route.ts`
+
+**Solution**: Centralized in `config/firestore-collections.ts`
+
+```typescript
+export const FIRESTORE_LIMITS = {
+  IN_QUERY_MAX_ITEMS: 10,
+  MAX_COMPOSITE_FILTERS: 30,
+  BATCH_WRITE_LIMIT: 500
+} as const;
+```
+
+**Usage**: `FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS`
+
+**Files Updated**:
+- `config/firestore-collections.ts` - Added FIRESTORE_LIMITS constant
+- `buildings/[buildingId]/customers/route.ts` - Replaced local constant
+- `audit/bootstrap/route.ts` - Replaced local constant
+
 ---
 
 ## Quality Gates Evidence
@@ -126,9 +167,12 @@ Note: Pre-existing TypeScript errors exist in other files (not introduced by thi
 
 ## Remaining Work
 
-### Buildings Domain (populate/seed)
-The `populate` and `seed` routes use `handleBuildingInstantiation` handler.
-Need to verify handler auth and potentially wrap with `withAuth`.
+### Buildings Domain
+**✅ COMPLETE!** All 5 Buildings routes are now protected with enterprise-grade security:
+- Admin SDK exclusively
+- Centralized role gating
+- Tenant isolation (where applicable)
+- Zero hardcoded defaults
 
 ### Other Domains (Future PRs)
 | Domain | Routes | Priority |
@@ -158,8 +202,12 @@ ADMIN_TARGET_PROJECT_ID=your-project-id
 - [x] Buildings main route protected with Admin SDK + tenant isolation
 - [x] Buildings customers route protected with Admin SDK + tenant isolation
 - [x] Buildings fix-project-ids protected with Admin SDK + super_admin role
+- [x] Buildings populate route protected with withAuth + super_admin
+- [x] Buildings seed route protected with withAuth + super_admin
 - [x] Middleware enhanced with `requiredGlobalRoles` option
 - [x] Zero hardcoded defaults in server routes
 - [x] Zero Client SDK in API routes (for buildings)
-- [ ] PR: `authz/phase2-rollout` → `main` (ready after populate/seed)
+- [x] Centralized Firestore query limits (FIRESTORE_LIMITS)
+- [x] Quality gates passed (lint + typecheck) - zero new errors
+- [ ] PR: `authz/phase2-rollout` → `main` (ready for review)
 - [x] This work log completed

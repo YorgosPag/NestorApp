@@ -186,6 +186,42 @@ export const SYSTEM_DOCS = {
 } as const;
 
 // ============================================================================
+// FIRESTORE QUERY LIMITS
+// ============================================================================
+
+/**
+ * Firestore query operation limits
+ *
+ * @see https://firebase.google.com/docs/firestore/query-data/queries#in_not-in_and_array-contains-any
+ */
+export const FIRESTORE_LIMITS = {
+  /**
+   * Maximum items in 'in', 'not-in', and 'array-contains-any' queries
+   * Firestore hard limit: 10 items
+   *
+   * Usage:
+   * ```typescript
+   * import { FIRESTORE_LIMITS } from '@/config/firestore-collections';
+   *
+   * const chunks = chunkArray(ids, FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS);
+   * ```
+   */
+  IN_QUERY_MAX_ITEMS: 10,
+
+  /**
+   * Maximum composite filters in a query
+   * Firestore hard limit: 30 filters
+   */
+  MAX_COMPOSITE_FILTERS: 30,
+
+  /**
+   * Recommended batch size for write operations
+   * Firestore hard limit: 500 operations per batch
+   */
+  BATCH_WRITE_LIMIT: 500
+} as const;
+
+// ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 

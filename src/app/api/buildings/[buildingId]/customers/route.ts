@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db as getAdminDb } from '@/lib/firebase-admin';
 import { getContactDisplayName, getPrimaryPhone, getPrimaryEmail, type Contact } from '@/types/contacts';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS, FIRESTORE_LIMITS } from '@/config/firestore-collections';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 
@@ -26,9 +26,6 @@ interface BuildingCustomersResponse {
   warning?: string;
   error?: string;
 }
-
-// Firestore 'in' query limit
-const FIRESTORE_IN_LIMIT = 10;
 
 // Dynamic route handler wrapper
 export async function GET(
@@ -135,9 +132,9 @@ export async function GET(
         // 🔒 TENANT ISOLATION: Get contacts with tenant filter
         // Note: Firestore 'in' query has limit of 10 items
         // For enterprise scale, implement chunking or denormalization
-        const contactIdsToQuery = customerIds.slice(0, FIRESTORE_IN_LIMIT);
-        if (customerIds.length > FIRESTORE_IN_LIMIT) {
-          console.warn(`⚠️ Customer IDs exceed Firestore 'in' limit (${FIRESTORE_IN_LIMIT}). Only first ${FIRESTORE_IN_LIMIT} will be fetched.`);
+        const contactIdsToQuery = customerIds.slice(0, FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS);
+        if (customerIds.length > FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS) {
+          console.warn(`⚠️ Customer IDs exceed Firestore 'in' limit (${FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS}). Only first ${FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS} will be fetched.`);
         }
 
         // Query contacts with tenant isolation
