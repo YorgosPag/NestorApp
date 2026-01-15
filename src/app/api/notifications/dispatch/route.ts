@@ -7,10 +7,18 @@
  * Thin adapter που καλεί το centralized notification orchestrator.
  *
  * @module api/notifications/dispatch
+ * @version 2.0.0
+ * @updated 2026-01-16 - AUTHZ PHASE 2: Added super_admin protection
  * @enterprise Protocol-compliant (ZERO hardcoded, ZERO any, ZERO duplicates)
+ *
+ * 🔒 SECURITY:
+ * - Global Role: super_admin (break-glass utility)
+ * - Admin SDK for secure server-side operations
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
 import {
   NOTIFICATION_EVENT_TYPES,
@@ -79,10 +87,26 @@ function validateRequest(body: unknown): body is DispatchNotificationRequest {
 /**
  * POST /api/notifications/dispatch
  *
- * Dispatch notification για νέο message από realtime listener
+ * Dispatch notification για νέο message από realtime listener.
+ *
+ * 🔒 SECURITY: Protected with super_admin role (AUTHZ Phase 2)
  */
-export async function POST(request: NextRequest): Promise<NextResponse<DispatchNotificationResponse>> {
+export async function POST(request: NextRequest) {
+  const handler = withAuth<DispatchNotificationResponse>(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      return handleDispatch(req, ctx);
+    },
+    { requiredGlobalRoles: 'super_admin' }
+  );
+
+  return handler(request);
+}
+
+async function handleDispatch(request: NextRequest, ctx: AuthContext): Promise<NextResponse<DispatchNotificationResponse>> {
   try {
+    console.log(`🔔 [Notifications/Dispatch] Starting dispatch...`);
+    console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
+
     // Parse request body
     const body = await request.json();
 
