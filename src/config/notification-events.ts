@@ -224,15 +224,8 @@ export type NotificationEntityType = typeof NOTIFICATION_ENTITY_TYPES[keyof type
 
 /**
  * Message priority levels (for comms orchestrator)
+ * @see Line 273 - Re-exported from @/types/communications (canonical source)
  */
-export const MESSAGE_PRIORITIES = {
-  LOW: 'low',
-  NORMAL: 'normal',
-  HIGH: 'high',
-  URGENT: 'urgent',
-} as const;
-
-export type MessagePriority = typeof MESSAGE_PRIORITIES[keyof typeof MESSAGE_PRIORITIES];
 
 // ============================================================================
 // DELIVERY STATE CONSTANTS
