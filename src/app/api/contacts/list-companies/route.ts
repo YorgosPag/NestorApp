@@ -1,46 +1,76 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db as getAdminDb } from '@/lib/firebase-admin';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
-export async function GET(request: NextRequest) {
-  try {
-    console.log('📋 Listing all companies...');
+/**
+ * 🏢 ENTERPRISE COMPANIES LIST ENDPOINT
+ *
+ * @route GET /api/contacts/list-companies
+ * @returns Tenant-scoped companies list
+ * @updated 2026-01-15 - AUTHZ PHASE 2: Added RBAC + Tenant Isolation
+ * @security Admin SDK + withAuth + Tenant Isolation
+ * @permission contacts:contacts:view
+ */
 
-    const contactsQuery = query(
-      collection(db, COLLECTIONS.CONTACTS),
-      where('type', '==', 'company'),
-      where('status', '==', 'active')
-    );
-    const contactsSnapshot = await getDocs(contactsQuery);
+export async function GET(request: NextRequest) {
+  const handler = withAuth(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      try {
+        console.log(`📋 Listing companies for companyId: ${ctx.companyId}`);
+        console.log(`🔒 Auth Context: User ${ctx.uid}, Company ${ctx.companyId}`);
+
+        const adminDb = getAdminDb();
+        if (!adminDb) {
+          console.error('❌ Firebase Admin not initialized');
+          return NextResponse.json({
+            success: false,
+            error: 'Database connection not available'
+          }, { status: 503 });
+        }
+    const contactsSnapshot = await adminDb
+      .collection(COLLECTIONS.CONTACTS)
+      .where('type', '==', 'company')
+      .where('status', '==', 'active')
+      .where('companyId', '==', ctx.companyId)
+      .get();
 
     const companies = contactsSnapshot.docs.map(doc => ({
       id: doc.id,
       companyName: doc.data().companyName,
       industry: doc.data().industry,
       vatNumber: doc.data().vatNumber,
-      status: doc.data().status
+      status: doc.data().status,
+      companyId: doc.data().companyId
     }));
 
-    console.log(`🏢 Found ${companies.length} companies:`);
+    console.log(`🏢 Found ${companies.length} companies for tenant ${ctx.companyId}`);
     companies.forEach(company => {
       console.log(`  - ${company.companyName} (ID: ${company.id})`);
     });
+    console.log(`✅ Tenant isolation enforced: all companies.companyId === ${ctx.companyId}`);
 
     return NextResponse.json({
       success: true,
       companies,
-      count: companies.length
+      count: companies.length,
+      tenantId: ctx.companyId
     });
 
-  } catch (error) {
-    console.error('❌ Error listing companies:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
-  }
+      } catch (error) {
+        console.error('❌ Error listing companies:', error);
+        return NextResponse.json(
+          {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          },
+          { status: 500 }
+        );
+      }
+    },
+    { permissions: 'contacts:contacts:view' }
+  );
+
+  return handler(request);
 }

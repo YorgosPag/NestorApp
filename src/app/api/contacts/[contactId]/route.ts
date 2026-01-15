@@ -1,7 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { firebaseServer } from '@/lib/firebase-server';
-import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts/helpers';
+import { db as getAdminDb } from '@/lib/firebase-admin';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts';
 import { COLLECTIONS } from '@/config/firestore-collections';
+
+// 🏢 ENTERPRISE: Firestore contact data type (includes legacy fields for backward compatibility)
+type FirestoreContactData = Record<string, any> & {
+  id: string;
+  companyId?: string;
+};
+
+/** Response type for contact API */
+interface ContactResponse {
+  success: boolean;
+  contact?: {
+    id: string;
+    contactId: string;
+    displayName: string;
+    firstName: string;
+    lastName: string;
+    primaryPhone: string | null;
+    primaryEmail: string | null;
+    status: string;
+    profession: string | null;
+    city: string | null;
+    avatarUrl: string | null;
+    companyName: string | null;
+    serviceType: string;
+    createdAt: any;
+    updatedAt: any;
+    lastContactDate: any;
+  };
+  contactId?: string;
+  timestamp?: string;
+  error?: string;
+}
 
 // ✅ ENTERPRISE FIX: Force dynamic rendering to prevent static generation errors
 export const dynamic = 'force-dynamic';
@@ -15,16 +49,24 @@ export const dynamic = 'force-dynamic';
  * @route GET /api/contacts/[contactId]
  * @returns Contact basic information
  * @created 2025-12-14
+ * @updated 2026-01-15 - AUTHZ PHASE 2: Added RBAC protection
+ * @security Admin SDK + withAuth + Tenant Isolation
+ * @permission contacts:contacts:view
  * @author Claude AI Assistant
  */
 
+// Dynamic route handler wrapper
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ contactId: string }> }
+  segmentData: { params: Promise<{ contactId: string }> }
 ) {
-  try {
-    const { contactId } = await params;
-    console.log(`📇 API: Loading contact for contactId: ${contactId}`);
+  const { contactId } = await segmentData.params;
+
+  // Create authenticated handler
+  const handler = withAuth<ContactResponse>(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      try {
+        console.log(`📇 API: Loading contact for contactId: ${contactId}`);
 
     // ========================================================================
     // VALIDATION
@@ -47,27 +89,28 @@ export async function GET(
     }
 
     // ========================================================================
-    // FIREBASE CONNECTION CHECK
+    // FETCH CONTACT FROM FIRESTORE (ADMIN SDK)
     // ========================================================================
 
-    if (!firebaseServer.getFirestore()) {
-      console.error('❌ Firebase not initialized properly');
+    console.log(`🔍 Fetching contact document: ${contactId}`);
+    console.log(`🔒 Auth Context: User ${ctx.uid}, Company ${ctx.companyId}`);
+
+    const adminDb = getAdminDb();
+    if (!adminDb) {
+      console.error('❌ Firebase Admin not initialized');
       return NextResponse.json({
         success: false,
-        error: 'Database connection not available - Firebase not initialized',
+        error: 'Database connection not available - Firebase Admin not initialized',
         contactId
       }, { status: 503 });
     }
 
-    // ========================================================================
-    // FETCH CONTACT FROM FIRESTORE
-    // ========================================================================
+    const contactDoc = await adminDb
+      .collection(COLLECTIONS.CONTACTS)
+      .doc(contactId)
+      .get();
 
-    console.log(`🔍 Fetching contact document: ${contactId}`);
-
-    const contactDoc = await firebaseServer.getDoc(COLLECTIONS.CONTACTS, contactId);
-
-    if (!contactDoc.exists()) {
+    if (!contactDoc.exists) {
       console.log(`⚠️ Contact not found: ${contactId}`);
       return NextResponse.json({
         success: false,
@@ -76,15 +119,32 @@ export async function GET(
       }, { status: 404 });
     }
 
-    const contactData = { id: contactDoc.id, ...contactDoc.data() };
+    const contactData = { id: contactDoc.id, ...contactDoc.data() } as FirestoreContactData;
+
+    // ========================================================================
+    // TENANT ISOLATION - CRITICAL SECURITY CHECK
+    // ========================================================================
+
+    if (contactData.companyId !== ctx.companyId) {
+      console.warn(`🚫 TENANT ISOLATION VIOLATION: User ${ctx.uid} (company ${ctx.companyId}) attempted to access contact ${contactId} (company ${contactData.companyId})`);
+      return NextResponse.json({
+        success: false,
+        error: 'Access denied - Contact not found',
+        contactId
+      }, { status: 403 });
+    }
+
+    console.log(`✅ Tenant isolation check passed: contact.companyId === ctx.companyId (${ctx.companyId})`);
 
     // ========================================================================
     // PROCESS CONTACT DATA
     // ========================================================================
 
     // Extract primary contact information using centralized helpers
-    const displayName = getContactDisplayName(contactData);
-    const primaryPhone = getPrimaryPhone(contactData);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const displayName = getContactDisplayName(contactData as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const primaryPhone = getPrimaryPhone(contactData as any);
 
     // Extract primary email using enterprise logic
     let primaryEmail: string | null = null;
@@ -184,10 +244,16 @@ export async function GET(
         success: false,
         error: error instanceof Error ? error.message : 'Άγνωστο σφάλμα φόρτωσης επαφής',
         errorCategory,
-        contactId: (await params).contactId || null,
+        contactId: contactId || null,
         timestamp: new Date().toISOString()
       },
       { status: statusCode }
     );
   }
+    },
+    { permissions: 'contacts:contacts:view' }
+  );
+
+  // Execute authenticated handler
+  return handler(request);
 }
