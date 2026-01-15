@@ -1,158 +1,181 @@
+/**
+ * 🛠️ UTILITY: FORCE UPDATE UNITS
+ *
+ * Force updates sold units without customers by linking them to available contacts.
+ *
+ * @module api/units/force-update
+ * @version 2.0.0
+ * @updated 2026-01-15 - AUTHZ PHASE 2: Added super_admin protection
+ *
+ * 🔒 SECURITY:
+ * - Global Role: super_admin (break-glass utility)
+ * - Admin SDK for secure server-side operations
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
+import { adminDb } from '@/lib/firebaseAdmin';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
+// Response types for type-safe withAuth
+type ForceUpdateSuccess = {
+  success: true;
+  message: string;
+  updatesApplied: number;
+  updatesFailed: number;
+  successfulUpdates: Array<{
+    unitId: string;
+    unitName: string;
+    contactId: string;
+    previousSoldTo: string;
+  }>;
+  failedUpdates: Array<{
+    unitId: string;
+    unitName: string;
+    error: string;
+  }>;
+};
+
+type ForceUpdateError = {
+  success: false;
+  error: string;
+  details?: string;
+  suggestion?: string;
+};
+
+type ForceUpdateResponse = ForceUpdateSuccess | ForceUpdateError;
+
 export async function POST(request: NextRequest) {
-  try {
-    console.log('💥 FORCE UPDATE: Εξαναγκασμένη ενημέρωση βάσης δεδομένων!');
-
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-
-    // STEP 1: Βρίσκουμε τα sold units που χρειάζονται update
-    const unitsUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/units`;
-    const unitsResponse = await fetch(unitsUrl);
-
-    if (!unitsResponse.ok) {
-      throw new Error(`Failed to fetch units: ${unitsResponse.status}`);
-    }
-
-    const unitsData = await unitsResponse.json();
-    console.log('📊 Raw units data:', unitsData);
-
-    // Βρίσκουμε sold units χωρίς customers
-    const unitsToUpdate = [];
-    if (unitsData.documents) {
-      unitsData.documents.forEach((doc, index) => {
-        const fields = doc.fields || {};
-        const status = fields.status?.stringValue;
-        const soldTo = fields.soldTo?.stringValue;
-        const name = fields.name?.stringValue;
-
-        if (status === 'sold' && (!soldTo || soldTo === UNIT_SALE_STATUS.NOT_SOLD)) {
-          unitsToUpdate.push({
-            documentPath: doc.name,
-            id: doc.name.split('/').pop(),
-            name: name || `Unit ${index + 1}`,
-            currentSoldTo: soldTo || 'null'
-          });
-        }
-      });
-    }
-
-    console.log(`🎯 Βρέθηκαν ${unitsToUpdate.length} units για update`);
-    console.log('📋 Units to update:', unitsToUpdate);
-
-    if (unitsToUpdate.length === 0) {
-      return NextResponse.json({
-        success: true,
-        message: 'Δεν βρέθηκαν units που χρειάζονται update',
-        updatesApplied: 0
-      });
-    }
-
-    // 🏢 ENTERPRISE: Database-driven contact loading (NO MORE HARDCODED IDs)
-    console.log('🔍 Loading available contact IDs from database...');
-
-    const contactsSnapshot = await adminDb
-      .collection(COLLECTIONS.CONTACTS)
-      .where('type', '==', 'individual')
-      .limit(8)
-      .get();
-
-    if (contactsSnapshot.empty) {
-      return NextResponse.json({
-        error: 'No individual contacts found in database',
-        suggestion: 'Create contacts before linking units'
-      }, { status: 404 });
-    }
-
-    const contactIds = contactsSnapshot.docs.map(doc => doc.id);
-    console.log(`✅ Loaded ${contactIds.length} contact IDs from database:`, contactIds);
-
-    const successfulUpdates = [];
-    const failedUpdates = [];
-
-    // STEP 3: Κάνουμε τα updates ένα προς ένα
-    for (let i = 0; i < unitsToUpdate.length; i++) {
-      const unit = unitsToUpdate[i];
-      const contactId = contactIds[i % contactIds.length];
-
+  const handler = withAuth<ForceUpdateResponse>(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<ForceUpdateResponse>> => {
       try {
-        console.log(`🔄 Updating unit ${unit.name} (${unit.id}) → ${contactId}`);
+        console.log('💥 [Units/ForceUpdate] Starting Admin SDK operations...');
+        console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
 
-        const updateUrl = `https://firestore.googleapis.com/v1/${unit.documentPath}?updateMask.fieldPaths=soldTo`;
+        // ============================================================================
+        // STEP 1: FIND SOLD UNITS THAT NEED UPDATE (Admin SDK)
+        // ============================================================================
 
-        const updatePayload = {
-          fields: {
-            soldTo: {
-              stringValue: contactId
-            }
+        console.log('🔍 Finding sold units without customers...');
+        const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS).get();
+
+        const unitsToUpdate = [];
+        unitsSnapshot.docs.forEach((doc, index) => {
+          const fields = doc.data();
+          const status = fields.status;
+          const soldTo = fields.soldTo;
+          const name = fields.name;
+
+          if (status === 'sold' && (!soldTo || soldTo === UNIT_SALE_STATUS.NOT_SOLD)) {
+            unitsToUpdate.push({
+              id: doc.id,
+              name: name || `Unit ${index + 1}`,
+              currentSoldTo: soldTo || 'null'
+            });
           }
-        };
-
-        console.log(`📤 UPDATE REQUEST:`, {
-          url: updateUrl,
-          payload: updatePayload
         });
 
-        const updateResponse = await fetch(updateUrl, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(updatePayload)
-        });
+        console.log(`🎯 Found ${unitsToUpdate.length} units to update`);
 
-        const responseText = await updateResponse.text();
-        console.log(`📥 UPDATE RESPONSE (${updateResponse.status}):`, responseText);
-
-        if (updateResponse.ok) {
-          successfulUpdates.push({
-            unitId: unit.id,
-            unitName: unit.name,
-            contactId: contactId,
-            previousSoldTo: unit.currentSoldTo
+        if (unitsToUpdate.length === 0) {
+          return NextResponse.json({
+            success: true,
+            message: 'No units need update',
+            updatesApplied: 0,
+            updatesFailed: 0,
+            successfulUpdates: [],
+            failedUpdates: []
           });
-          console.log(`✅ SUCCESS: Unit ${unit.name} updated successfully!`);
-        } else {
-          failedUpdates.push({
-            unitId: unit.id,
-            unitName: unit.name,
-            error: `HTTP ${updateResponse.status}: ${responseText}`
-          });
-          console.log(`❌ FAILED: Unit ${unit.name} update failed: ${updateResponse.status}`);
         }
+
+        // ============================================================================
+        // STEP 2: LOAD AVAILABLE CONTACT IDS (Admin SDK)
+        // ============================================================================
+
+        console.log('🔍 Loading available contact IDs from database...');
+        const contactsSnapshot = await adminDb
+          .collection(COLLECTIONS.CONTACTS)
+          .where('type', '==', 'individual')
+          .limit(8)
+          .get();
+
+        if (contactsSnapshot.empty) {
+          return NextResponse.json({
+            success: false,
+            error: 'No individual contacts found in database',
+            suggestion: 'Create contacts before linking units'
+          }, { status: 404 });
+        }
+
+        const contactIds = contactsSnapshot.docs.map(doc => doc.id);
+        console.log(`✅ Loaded ${contactIds.length} contact IDs from database`);
+
+        // ============================================================================
+        // STEP 3: UPDATE UNITS ONE BY ONE (Admin SDK)
+        // ============================================================================
+
+        const successfulUpdates = [];
+        const failedUpdates = [];
+
+        for (let i = 0; i < unitsToUpdate.length; i++) {
+          const unit = unitsToUpdate[i];
+          const contactId = contactIds[i % contactIds.length];
+
+          try {
+            console.log(`🔄 Updating unit ${unit.name} (${unit.id}) → ${contactId}`);
+
+            await adminDb.collection(COLLECTIONS.UNITS).doc(unit.id).update({
+              soldTo: contactId
+            });
+
+            successfulUpdates.push({
+              unitId: unit.id,
+              unitName: unit.name,
+              contactId: contactId,
+              previousSoldTo: unit.currentSoldTo
+            });
+
+            console.log(`✅ SUCCESS: Unit ${unit.name} updated successfully!`);
+
+          } catch (error) {
+            console.error(`❌ ERROR updating unit ${unit.name}:`, error);
+            failedUpdates.push({
+              unitId: unit.id,
+              unitName: unit.name,
+              error: error instanceof Error ? error.message : 'Unknown error'
+            });
+          }
+        }
+
+        console.log(`✅ [Units/ForceUpdate] Complete: ${successfulUpdates.length} successful, ${failedUpdates.length} failed`);
+
+        return NextResponse.json({
+          success: true,
+          message: `FORCE UPDATE: ${successfulUpdates.length} units updated successfully!`,
+          updatesApplied: successfulUpdates.length,
+          updatesFailed: failedUpdates.length,
+          successfulUpdates: successfulUpdates,
+          failedUpdates: failedUpdates
+        });
 
       } catch (error) {
-        console.error(`💥 ERROR updating unit ${unit.name}:`, error);
-        failedUpdates.push({
-          unitId: unit.id,
-          unitName: unit.name,
-          error: error instanceof Error ? error.message : 'Unknown error'
+        console.error('❌ [Units/ForceUpdate] Error:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          userId: ctx.uid,
+          companyId: ctx.companyId
         });
+
+        return NextResponse.json({
+          success: false,
+          error: 'Force update failed',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
       }
-    }
+    },
+    { requiredGlobalRoles: 'super_admin' }
+  );
 
-    console.log(`🎉 FORCE UPDATE COMPLETE:`);
-    console.log(`  ✅ Successful: ${successfulUpdates.length}`);
-    console.log(`  ❌ Failed: ${failedUpdates.length}`);
-
-    return NextResponse.json({
-      success: true,
-      message: `FORCE UPDATE: ${successfulUpdates.length} units updated successfully!`,
-      updatesApplied: successfulUpdates.length,
-      updatesFailed: failedUpdates.length,
-      successfulUpdates: successfulUpdates,
-      failedUpdates: failedUpdates
-    });
-
-  } catch (error) {
-    console.error('💥 FORCE UPDATE ERROR:', error);
-
-    return NextResponse.json({
-      success: false,
-      error: 'Force update failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
-  }
+  return handler(request);
 }

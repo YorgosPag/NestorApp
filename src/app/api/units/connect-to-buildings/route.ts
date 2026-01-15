@@ -1,111 +1,198 @@
+/**
+ * 🛠️ UTILITY: CONNECT UNITS TO BUILDINGS
+ *
+ * Connects units to configured primary project buildings based on legacy IDs.
+ *
+ * @module api/units/connect-to-buildings
+ * @version 2.0.0
+ * @updated 2026-01-15 - AUTHZ PHASE 2: Added super_admin protection
+ *
+ * 🔒 SECURITY:
+ * - Global Role: super_admin (break-glass utility)
+ * - Admin SDK for secure server-side operations
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { adminDb } from '@/lib/firebaseAdmin';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { BUILDING_IDS, BuildingIdUtils } from '@/config/building-ids-config';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
+// Response types for type-safe withAuth
+type ConnectUnitsSuccess = {
+  success: true;
+  message: string;
+  results: Array<{
+    unitId: string;
+    unitName: string;
+    buildingId: string;
+    buildingName: string;
+    status: string;
+  }>;
+  summary: {
+    totalUnitsConnected: number;
+    buildings: Array<{ id: string; name: string }>;
+  };
+};
+
+type ConnectUnitsError = {
+  success: false;
+  error: string;
+  details?: string;
+};
+
+type ConnectUnitsResponse = ConnectUnitsSuccess | ConnectUnitsError;
+
 export async function POST(request: NextRequest) {
-  try {
-    console.log('🔗 Connecting units to configured primary project buildings...');
+  const handler = withAuth<ConnectUnitsResponse>(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<ConnectUnitsResponse>> => {
+      try {
+        console.log('🔗 [Units/ConnectToBuildings] Starting Admin SDK operations...');
+        console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
 
-    // 🏢 ENTERPRISE: Get buildings for configured project ID
-    const buildingsQuery = query(
-      collection(db, COLLECTIONS.BUILDINGS),
-      where('projectId', '==', BUILDING_IDS.PROJECT_ID)
-    );
-    
-    const buildingsSnapshot = await getDocs(buildingsQuery);
-    const buildings = buildingsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+        // ============================================================================
+        // STEP 1: GET BUILDINGS FOR CONFIGURED PROJECT (Admin SDK)
+        // ============================================================================
 
-    console.log(`Found ${buildings.length} buildings for project ${BUILDING_IDS.PROJECT_ID}`);
+        console.log(`🏢 Getting buildings for project ${BUILDING_IDS.PROJECT_ID}...`);
+        const buildingsSnapshot = await adminDb
+          .collection(COLLECTIONS.BUILDINGS)
+          .where('projectId', '==', BUILDING_IDS.PROJECT_ID)
+          .get();
 
-    if (buildings.length === 0) {
-      throw new Error(`No buildings found for project ${BUILDING_IDS.PROJECT_ID}`);
-    }
+        const buildings = buildingsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          name: doc.data().name || 'Unknown Building'
+        }));
 
-    // Get all units that might belong to this project
-    const unitsQuery = query(collection(db, COLLECTIONS.UNITS));
-    const unitsSnapshot = await getDocs(unitsQuery);
-    const units = unitsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+        console.log(`Found ${buildings.length} buildings for project ${BUILDING_IDS.PROJECT_ID}`);
 
-    console.log(`Found ${units.length} total units in database`);
+        if (buildings.length === 0) {
+          return NextResponse.json({
+            success: false,
+            error: `No buildings found for project ${BUILDING_IDS.PROJECT_ID}`,
+            details: 'Ensure project has buildings configured'
+          }, { status: 404 });
+        }
 
-    // 🏢 ENTERPRISE: Find units that should be connected using configurable building IDs
-    const unitsToConnect = units.filter(unit =>
-      BuildingIdUtils.isLegacyBuildingId(unit.buildingId) || // Legacy building IDs
-      !unit.buildingId ||
-      unit.buildingId === '' ||
-      (unit.name && unit.name.toLowerCase().includes(process.env.NEXT_PUBLIC_PROJECT_SEARCH_KEYWORD?.toLowerCase() || 'παλαιολόγου')) ||
-      (unit.unitName && unit.unitName.toLowerCase().includes(process.env.NEXT_PUBLIC_PROJECT_SEARCH_KEYWORD?.toLowerCase() || 'παλαιολόγου'))
-    );
+        // ============================================================================
+        // STEP 2: GET ALL UNITS (Admin SDK)
+        // ============================================================================
 
-    console.log(`Found ${unitsToConnect.length} units to potentially connect`);
+        console.log('🏠 Getting all units from database...');
+        const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS).get();
 
-    // 🏢 ENTERPRISE: Connect units to buildings based on configurable patterns
-    const buildingAPattern = process.env.NEXT_PUBLIC_BUILDING_A_SEARCH_PATTERN || 'ΚΤΙΡΙΟ Α';
-    const buildingBPattern = process.env.NEXT_PUBLIC_BUILDING_B_SEARCH_PATTERN || 'ΚΤΙΡΙΟ Β';
+        const units = unitsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          buildingId: doc.data().buildingId,
+          name: doc.data().name,
+          unitName: doc.data().unitName
+        }));
 
-    const buildingA = buildings.find(b => b.name.includes(buildingAPattern));
-    const buildingB = buildings.find(b => b.name.includes(buildingBPattern));
+        console.log(`Found ${units.length} total units in database`);
 
-    const results = [];
-    
-    for (const unit of unitsToConnect) {
-      // 🏢 ENTERPRISE: Map legacy building IDs to new building IDs
-      let targetBuilding;
-      if (unit.buildingId === BUILDING_IDS.LEGACY_BUILDING_1) {
-        targetBuilding = buildingA; // legacy building-1 -> ΚΤΙΡΙΟ Α
-      } else if (unit.buildingId === BUILDING_IDS.LEGACY_BUILDING_2) {
-        targetBuilding = buildingB; // legacy building-2 -> ΚΤΙΡΙΟ Β
-      } else {
-        // For units without buildingId, alternate between buildings
-        targetBuilding = results.length % 2 === 0 ? buildingA : buildingB;
-      }
-      
-      if (targetBuilding) {
-        console.log(`Connecting unit ${unit.id} to building ${targetBuilding.id}`);
-        
-        await updateDoc(doc(db, COLLECTIONS.UNITS, unit.id), {
-          buildingId: targetBuilding.id,
-          projectId: BUILDING_IDS.PROJECT_ID,
-          updatedAt: new Date().toISOString()
+        // ============================================================================
+        // STEP 3: FIND UNITS TO CONNECT (Admin SDK)
+        // ============================================================================
+
+        const projectSearchKeyword = process.env.NEXT_PUBLIC_PROJECT_SEARCH_KEYWORD?.toLowerCase() || 'παλαιολόγου';
+
+        const unitsToConnect = units.filter(unit => {
+          const isLegacy = BuildingIdUtils.isLegacyBuildingId(unit.buildingId);
+          const hasNoBuildingId = !unit.buildingId || unit.buildingId === '';
+          const matchesKeyword =
+            (unit.name && unit.name.toLowerCase().includes(projectSearchKeyword)) ||
+            (unit.unitName && unit.unitName.toLowerCase().includes(projectSearchKeyword));
+
+          return isLegacy || hasNoBuildingId || matchesKeyword;
         });
 
-        results.push({
-          unitId: unit.id,
-          unitName: unit.name || unit.unitName,
-          buildingId: targetBuilding.id,
-          buildingName: targetBuilding.name,
-          status: 'connected'
+        console.log(`Found ${unitsToConnect.length} units to potentially connect`);
+
+        if (unitsToConnect.length === 0) {
+          return NextResponse.json({
+            success: true,
+            message: 'No units need connecting',
+            results: [],
+            summary: {
+              totalUnitsConnected: 0,
+              buildings: buildings
+            }
+          });
+        }
+
+        // ============================================================================
+        // STEP 4: CONNECT UNITS TO BUILDINGS (Admin SDK)
+        // ============================================================================
+
+        const buildingAPattern = process.env.NEXT_PUBLIC_BUILDING_A_SEARCH_PATTERN || 'ΚΤΙΡΙΟ Α';
+        const buildingBPattern = process.env.NEXT_PUBLIC_BUILDING_B_SEARCH_PATTERN || 'ΚΤΙΡΙΟ Β';
+
+        const buildingA = buildings.find(b => b.name.includes(buildingAPattern));
+        const buildingB = buildings.find(b => b.name.includes(buildingBPattern));
+
+        const results = [];
+
+        for (const unit of unitsToConnect) {
+          // 🏢 ENTERPRISE: Map legacy building IDs to new building IDs
+          let targetBuilding;
+          if (unit.buildingId === BUILDING_IDS.LEGACY_BUILDING_1) {
+            targetBuilding = buildingA; // legacy building-1 -> ΚΤΙΡΙΟ Α
+          } else if (unit.buildingId === BUILDING_IDS.LEGACY_BUILDING_2) {
+            targetBuilding = buildingB; // legacy building-2 -> ΚΤΙΡΙΟ Β
+          } else {
+            // For units without buildingId, alternate between buildings
+            targetBuilding = results.length % 2 === 0 ? buildingA : buildingB;
+          }
+
+          if (targetBuilding) {
+            console.log(`Connecting unit ${unit.id} to building ${targetBuilding.id}`);
+
+            await adminDb.collection(COLLECTIONS.UNITS).doc(unit.id).update({
+              buildingId: targetBuilding.id,
+              projectId: BUILDING_IDS.PROJECT_ID,
+              updatedAt: new Date().toISOString()
+            });
+
+            results.push({
+              unitId: unit.id,
+              unitName: unit.name || unit.unitName || 'Unknown Unit',
+              buildingId: targetBuilding.id,
+              buildingName: targetBuilding.name,
+              status: 'connected'
+            });
+          }
+        }
+
+        console.log(`✅ [Units/ConnectToBuildings] Complete: Connected ${results.length} units`);
+
+        return NextResponse.json({
+          success: true,
+          message: 'Units connected to buildings successfully',
+          results,
+          summary: {
+            totalUnitsConnected: results.length,
+            buildings: buildings
+          }
         });
+
+      } catch (error) {
+        console.error('❌ [Units/ConnectToBuildings] Error:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          userId: ctx.uid,
+          companyId: ctx.companyId
+        });
+
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to connect units to buildings',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
       }
-    }
+    },
+    { requiredGlobalRoles: 'super_admin' }
+  );
 
-    console.log('🎉 Unit connections completed!');
-
-    return NextResponse.json({
-      success: true,
-      message: 'Units connected to buildings successfully',
-      results,
-      summary: {
-        totalUnitsConnected: results.length,
-        buildings: buildings.map(b => ({ id: b.id, name: b.name }))
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Error connecting units to buildings:', error);
-    
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to connect units to buildings',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
-  }
+  return handler(request);
 }
