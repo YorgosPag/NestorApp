@@ -24,7 +24,7 @@ import { NextRequest } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withErrorHandling, apiSuccess } from '@/lib/api/ApiErrorHandler';
+import { withErrorHandling, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 
@@ -147,7 +147,7 @@ export const dynamic = 'force-dynamic';
 // ============================================================================
 
 export async function GET(request: NextRequest) {
-  const handler = withAuth<ProjectListResponse>(
+  const handler = withAuth<ApiSuccessResponse<ProjectListResponse>>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       const startTime = Date.now();
       console.log('🏗️ [Projects/List] Starting projects list load...');

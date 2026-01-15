@@ -102,9 +102,29 @@ const getProjectTemplates = () => {
 
 const projectTemplates = getProjectTemplates();
 
+// Response types for type-safe withAuth
+type CreateForCompaniesSuccess = {
+  success: true;
+  message: string;
+  createdProjects: Array<{ id: string; name: string; company: string; companyId: string }>;
+  allProjects: Array<{ id: string; name?: unknown; company?: unknown; companyId?: unknown }>;
+  stats: {
+    companiesFound: number;
+    projectsCreated: number;
+    totalProjectsInDb: number;
+  };
+};
+
+type CreateForCompaniesError = {
+  success: false;
+  error: string;
+};
+
+type CreateForCompaniesResponse = CreateForCompaniesSuccess | CreateForCompaniesError;
+
 export async function POST(request: NextRequest) {
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+  const handler = withAuth<CreateForCompaniesResponse>(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<CreateForCompaniesResponse>> => {
       console.log('🏗️ [Projects/CreateForCompanies] Starting bulk project creation...');
       console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
 
@@ -122,7 +142,7 @@ export async function POST(request: NextRequest) {
         if (contactsSnapshot.docs.length === 0) {
           return NextResponse.json({
             success: false,
-            message: 'No companies found'
+            error: 'No companies found'
           });
         }
 

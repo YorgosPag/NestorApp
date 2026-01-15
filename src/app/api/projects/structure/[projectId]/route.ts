@@ -21,14 +21,40 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 
 export const dynamic = 'force-dynamic';
 
+// Response types for type-safe withAuth
+type StructureSuccess = {
+  success: true;
+  structure: {
+    project: Record<string, unknown> & { id: string; name?: string };
+    buildings: Array<{
+      units: Array<{ id: string }>;
+      id: string;
+      name?: string;
+    }>;
+  };
+  projectId: string;
+  summary: {
+    buildingsCount: number;
+    totalUnits: number;
+  };
+};
+
+type StructureError = {
+  success: false;
+  error: string;
+  projectId: string;
+};
+
+type StructureResponse = StructureSuccess | StructureError;
+
 export async function GET(
   request: NextRequest,
   segmentData: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await segmentData.params;
 
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+  const handler = withAuth<StructureResponse>(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<StructureResponse>> => {
       console.log(`🏗️ [Projects/Structure] Loading structure for projectId: ${projectId}`);
       console.log(`🔒 Auth Context: User ${ctx.uid}, Company ${ctx.companyId}`);
 

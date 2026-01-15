@@ -19,6 +19,7 @@ import { adminDb } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getContactDisplayName, getPrimaryPhone, getPrimaryEmail } from '@/types/contacts';
+import type { Contact } from '@/types/contacts';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIRESTORE_LIMITS } from '@/config/firestore-collections';
 
@@ -215,16 +216,18 @@ export async function GET(
         // ============================================================================
 
         const customers = tenantContacts.map(contactDoc => {
-          const contact = { id: contactDoc.id, ...contactDoc.data() };
+          // Firestore returns unknown, we assert it matches Contact structure
+          const contactData = { id: contactDoc.id, ...contactDoc.data() } as Record<string, unknown> & { id: string };
+
+          // Type assertion to Contact (safer than 'as any')
+          const contact = contactData as unknown as Contact;
+
           return {
-            contactId: contact.id,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            name: getContactDisplayName(contact as any),
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            phone: getPrimaryPhone(contact as any) || null,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            email: getPrimaryEmail(contact as any) || null,
-            unitsCount: customerUnitCount[contact.id] || 0,
+            contactId: contactData.id,
+            name: getContactDisplayName(contact),
+            phone: getPrimaryPhone(contact) || null,
+            email: getPrimaryEmail(contact) || null,
+            unitsCount: customerUnitCount[contactData.id] || 0,
           };
         });
 

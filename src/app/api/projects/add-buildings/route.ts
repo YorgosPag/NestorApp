@@ -19,9 +19,26 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { BUILDING_IDS } from '@/config/building-ids-config';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
+// Response types for type-safe withAuth
+type AddBuildingsSuccess = {
+  success: true;
+  message: string;
+  projectId: number;
+  buildings: Array<{ id: string; name: string | undefined }>;
+  summary: { buildingsCount: number };
+};
+
+type AddBuildingsError = {
+  success: false;
+  error: string;
+  details?: string;
+};
+
+type AddBuildingsResponse = AddBuildingsSuccess | AddBuildingsError;
+
 export async function POST(request: NextRequest) {
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+  const handler = withAuth<AddBuildingsResponse>(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<AddBuildingsResponse>> => {
       console.log('🏗️ [Projects/AddBuildings] Starting building assignment...');
       console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
 

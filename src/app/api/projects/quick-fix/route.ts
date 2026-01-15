@@ -19,6 +19,26 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { EnterpriseConfigurationManager } from '@/core/configuration/enterprise-config-management';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
+// Response types for type-safe withAuth
+type QuickFixSuccess = {
+  success: true;
+  message: string;
+  results: Array<{
+    projectId: string;
+    action: string;
+    companyId?: string;
+    companyName?: string;
+    error?: string;
+  }>;
+};
+
+type QuickFixError = {
+  success: false;
+  error: string;
+};
+
+type QuickFixResponse = QuickFixSuccess | QuickFixError;
+
 /**
  * Database-driven company lookup (Admin SDK)
  */
@@ -43,8 +63,8 @@ async function getCompanyIdByName(companyName: string): Promise<string | null> {
 }
 
 export async function POST(request: NextRequest) {
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+  const handler = withAuth<QuickFixResponse>(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<QuickFixResponse>> => {
       console.log('🔧 [Projects/QuickFix] Starting quick fix operations...');
       console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
 
@@ -67,8 +87,8 @@ export async function POST(request: NextRequest) {
 
         if (!pagonisCompanyId) {
           return NextResponse.json({
-            error: `Primary company "${mainCompanyName}" not found in database`,
-            suggestion: 'Please ensure company data exists in database before running fixes'
+            success: false,
+            error: `Primary company "${mainCompanyName}" not found in database. Please ensure company data exists in database before running fixes`
           }, { status: 404 });
         }
 

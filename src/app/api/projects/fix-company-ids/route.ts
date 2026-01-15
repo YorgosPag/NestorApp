@@ -18,9 +18,41 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
+// Response types for type-safe withAuth
+type FixCompanyIdsSuccess = {
+  success: true;
+  message: string;
+  companyMapping: Record<string, string>;
+  updates: Array<{
+    projectId: string;
+    projectName: string;
+    companyName: string;
+    oldCompanyId: string;
+    newCompanyId: string;
+  }>;
+  finalProjects: Array<{
+    id: string;
+    name?: unknown;
+    company?: unknown;
+    companyId?: unknown;
+  }>;
+  stats: {
+    companiesFound: number;
+    projectsFound: number;
+    projectsUpdated: number;
+  };
+};
+
+type FixCompanyIdsError = {
+  success: false;
+  error: string;
+};
+
+type FixCompanyIdsResponse = FixCompanyIdsSuccess | FixCompanyIdsError;
+
 export async function POST(request: NextRequest) {
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+  const handler = withAuth<FixCompanyIdsResponse>(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<FixCompanyIdsResponse>> => {
       console.log('🔧 [Projects/FixCompanyIds] Starting company ID correction...');
       console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
 

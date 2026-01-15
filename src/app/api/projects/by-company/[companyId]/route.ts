@@ -21,11 +21,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { apiSuccess } from '@/lib/api/ApiErrorHandler';
+import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
 
 export const dynamic = 'force-dynamic';
+
+// Response types for type-safe withAuth
+type ByCompanyData = {
+  projects: unknown[];
+  companyId: string;
+  source: string;
+  cached: boolean;
+};
+
+type ByCompanySuccess = ApiSuccessResponse<ByCompanyData>;
+
+type ByCompanyError = {
+  success: false;
+  error: string;
+  companyId: string;
+};
+
+type ByCompanyResponse = ByCompanySuccess | ByCompanyError;
 
 /**
  * 🏗️ GET projects for authenticated user's company
@@ -39,8 +57,8 @@ export async function GET(
   // Extract URL param (for logging only - NOT used for query)
   const { companyId: urlCompanyId } = await segmentData.params;
 
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+  const handler = withAuth<ByCompanyResponse>(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<ByCompanyResponse>> => {
       // 🔒 SECURITY: Use authenticated user's companyId ONLY
       const companyId = ctx.companyId;
 
