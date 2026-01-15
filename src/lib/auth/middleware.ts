@@ -15,8 +15,8 @@ import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
 
-import type { AuthContext, PermissionId, RequestContext } from './types';
-import { isAuthenticated } from './types';
+import type { AuthContext, GlobalRole, PermissionId, RequestContext } from './types';
+import { isAuthenticated, GLOBAL_ROLES } from './types';
 import { buildRequestContext } from './auth-context';
 import {
   hasPermission,
@@ -47,12 +47,16 @@ export interface WithAuthOptions {
   permissions?: PermissionId | PermissionId[];
   /** Permission check options (projectId, unitId, etc.) */
   permissionOptions?: PermissionCheckOptions | ((request: NextRequest) => PermissionCheckOptions);
+  /** Required global role(s) - user must have at least one of these roles */
+  requiredGlobalRoles?: GlobalRole | GlobalRole[];
   /** Allow unauthenticated access (handler receives RequestContext) */
   allowUnauthenticated?: boolean;
   /** Custom error response for unauthorized */
   unauthorizedResponse?: (reason: string) => NextResponse;
   /** Custom error response for forbidden */
   forbiddenResponse?: (permission: PermissionId) => NextResponse;
+  /** Custom error response for role requirement failure */
+  roleRequiredResponse?: (requiredRoles: GlobalRole[]) => NextResponse;
 }
 
 /**
@@ -91,6 +95,20 @@ function createForbiddenResponse(permission?: PermissionId): NextResponse<ErrorR
       error: 'Permission denied',
       code: 'FORBIDDEN',
       details: permission ? { requiredPermission: permission } : undefined,
+    },
+    { status: 403 }
+  );
+}
+
+/**
+ * Create 403 response for role requirement failure.
+ */
+function createRoleRequiredResponse(requiredRoles: GlobalRole[]): NextResponse<ErrorResponse> {
+  return NextResponse.json(
+    {
+      error: 'Insufficient role',
+      code: 'ROLE_REQUIRED',
+      details: { requiredRoles },
     },
     { status: 403 }
   );
@@ -171,7 +189,28 @@ export function withAuth<T = unknown>(
     // Step 3: Create permission cache
     const cache = createPermissionCache();
 
-    // Step 4: Check permissions if specified
+    // Step 4: Check global role requirement if specified
+    if (options.requiredGlobalRoles) {
+      const requiredRoles = Array.isArray(options.requiredGlobalRoles)
+        ? options.requiredGlobalRoles
+        : [options.requiredGlobalRoles];
+
+      // User must have at least one of the required roles
+      const hasRequiredRole = requiredRoles.includes(ctx.globalRole);
+      if (!hasRequiredRole) {
+        console.warn(
+          `[withAuth] Role denied: user ${ctx.uid} (role: ${ctx.globalRole}) ` +
+          `tried to access route requiring one of: ${requiredRoles.join(', ')}`
+        );
+        const errorResponse = options.roleRequiredResponse
+          ? options.roleRequiredResponse(requiredRoles)
+          : createRoleRequiredResponse(requiredRoles);
+
+        return errorResponse as NextResponse<ErrorResponse>;
+      }
+    }
+
+    // Step 5: Check permissions if specified
     if (options.permissions) {
       const permissions = Array.isArray(options.permissions)
         ? options.permissions
@@ -195,7 +234,7 @@ export function withAuth<T = unknown>(
       }
     }
 
-    // Step 5: Call handler with authenticated context
+    // Step 6: Call handler with authenticated context
     return handler(request, ctx, cache);
   };
 }

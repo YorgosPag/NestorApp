@@ -1,8 +1,11 @@
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 import { handleBuildingInstantiation } from '@/server/admin/building-instantiation-handler';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 
 /**
  * ENTERPRISE SEED ROUTE: Create Buildings from Templates
@@ -14,19 +17,47 @@ import { handleBuildingInstantiation } from '@/server/admin/building-instantiati
  * Both routes use the same shared handler. The distinction is maintained
  * for backward compatibility and semantic clarity (seed vs populate naming).
  *
- * GATES:
+ * SECURITY GATES:
  * - server-only (import 'server-only')
- * - Environment allowlist (dev/staging only)
- * - Firebase Auth ID token with admin role claim
+ * - withAuth + requiredGlobalRoles: 'super_admin'
+ * - Admin SDK only (via handleBuildingInstantiation)
  *
  * @method POST - Create buildings from templates
  * @requires ADMIN_COMPANY_NAME - Server-only env var
- * @requires Authorization: Bearer <idToken>
+ * @requires super_admin role
  *
  * @author Enterprise Architecture Team
  */
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+// ============================================================================
+// TYPES
+// ============================================================================
+
+/** Response type for seed POST */
+interface SeedResponse {
+  success: boolean;
+  error?: string;
+  suggestion?: string;
+  operationId: string;
+  message?: string;
+  summary?: {
+    totalTemplates: number;
+    created: number;
+    skipped: number;
+    errors: number;
+    companyId: string;
+    companyName: string;
+  };
+  results?: unknown[];
+  companyId?: string;
+}
+
+// ============================================================================
+// API ENDPOINT
+// ============================================================================
+
+export const POST = withAuth<SeedResponse>(
+  async (request: NextRequest, _ctx: AuthContext, _cache: PermissionCache) => {
   const response = await handleBuildingInstantiation(request, {
     source: 'api/buildings/seed',
     operationPrefix: 'SEED_BUILDINGS',
@@ -34,17 +65,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     includeEnterpriseFields: true,
   });
 
-  return NextResponse.json(
-    {
-      success: response.success,
-      error: response.error,
-      suggestion: response.suggestion,
-      operationId: response.operationId,
-      message: response.message,
-      summary: response.summary,
-      results: response.results,
-      companyId: response.companyId,
-    },
-    { status: response.statusCode }
-  );
-}
+    return NextResponse.json(
+      {
+        success: response.success,
+        error: response.error,
+        suggestion: response.suggestion,
+        operationId: response.operationId,
+        message: response.message,
+        summary: response.summary,
+        results: response.results,
+        companyId: response.companyId,
+      },
+      { status: response.statusCode }
+    );
+  },
+  { requiredGlobalRoles: 'super_admin' }
+);
