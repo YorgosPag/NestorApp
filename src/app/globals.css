@@ -2,6 +2,9 @@
 /* ⚠️ @import MUST be at the very top (CSS spec requirement) */
 @import '../styles/design-system/generated/variables.css';
 
+/* 🏢 ENTERPRISE: Message Content Styling (Telegram-compatible HTML rendering) */
+@import '../styles/design-system/components/message-content.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

@@ -334,6 +334,61 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 💬 CONVERSATIONS - CRM COMMUNICATIONS
+    // =========================================================================
+    // 🏢 ENTERPRISE: Telegram/email conversations για CRM
+    // 🔒 DEV-FRIENDLY: Authenticated users έχουν πρόσβαση (για development/testing)
+    // 📅 Added: 2026-01-15
+    // ⚠️ TODO (PHASE 2): Μετάβαση σε isInternalUser() όταν setup custom claims (globalRole)
+    match /conversations/{conversationId} {
+      // 📖 READ: Authenticated users (dev-friendly για realtime listener)
+      // TODO: Change to isInternalUser() after custom claims setup
+      allow read: if isAuthenticated();
+
+      // ✍️ CREATE: Authenticated users can create new conversations
+      allow create: if isAuthenticated()
+                    && isValidConversationData(request.resource.data)
+                    && resource == null;
+
+      // 📝 UPDATE: Authenticated users can update conversation metadata
+      allow update: if isAuthenticated()
+                    && isValidConversationData(request.resource.data)
+                    && resource != null;
+
+      // 🗑️ DELETE: Authenticated users (prevent accidental deletions by guests)
+      allow delete: if isAuthenticated()
+                    && resource != null;
+    }
+
+    // =========================================================================
+    // 💬 MESSAGES (ROOT COLLECTION) - CRM COMMUNICATIONS
+    // =========================================================================
+    // 🏢 ENTERPRISE: Messages stored in ROOT collection (not subcollection)
+    // Architecture: messages/{messageId} with conversationId field
+    // 🔒 DEV-FRIENDLY: Authenticated users έχουν πρόσβαση
+    // 📋 REAL-TIME UPDATES: Supports Firestore onSnapshot για instant message updates
+    // 📅 Added: 2026-01-15
+    match /messages/{messageId} {
+      // 📖 READ: Authenticated users (supports real-time listener)
+      // TODO: Change to isInternalUser() after custom claims setup
+      allow read: if isAuthenticated();
+
+      // ✍️ CREATE: Authenticated users can send messages
+      allow create: if isAuthenticated()
+                    && isValidMessageData(request.resource.data)
+                    && resource == null;
+
+      // 📝 UPDATE: Authenticated users can update message delivery status
+      allow update: if isAuthenticated()
+                    && isValidMessageData(request.resource.data)
+                    && resource != null;
+
+      // 🗑️ DELETE: Authenticated users
+      allow delete: if isAuthenticated()
+                    && resource != null;
+    }
+
+    // =========================================================================
     // 🔒 HELPER FUNCTIONS - VALIDATION & SECURITY
     // =========================================================================
 
@@ -407,6 +462,48 @@ service cloud.firestore {
              && (!data.keys().hasAny(['projectId']) || (data.projectId is string))
              // 📝 Optional description validation
              && (!data.keys().hasAny(['description']) || (data.description is string));
+    }
+
+    // =========================================================================
+    // 💬 CONVERSATION & MESSAGE DATA VALIDATION
+    // =========================================================================
+    // 📋 CRM Communications - Added 2026-01-15
+    // 🏢 ENTERPRISE: Validates Conversation and Message structures for Firestore operations
+
+    // Conversation Data Validation
+    function isValidConversationData(data) {
+      return data.keys().hasAll(['channel', 'status'])
+             // 📡 Channel validation (enum: telegram | email | whatsapp | sms)
+             && data.channel in ['telegram', 'email', 'whatsapp', 'sms']
+             // 📊 Status validation (enum)
+             && data.status in ['active', 'archived', 'closed', 'spam']
+             // 🔢 Optional messageCount validation
+             && (!data.keys().hasAny(['messageCount']) || (data.messageCount is int && data.messageCount >= 0))
+             // 🔔 Optional unreadCount validation
+             && (!data.keys().hasAny(['unreadCount']) || (data.unreadCount is int && data.unreadCount >= 0))
+             // 👤 Optional assignedTo validation
+             && (!data.keys().hasAny(['assignedTo']) || (data.assignedTo == null || data.assignedTo is string));
+    }
+
+    // Message Data Validation
+    function isValidMessageData(data) {
+      return data.keys().hasAll(['conversationId', 'direction', 'channel', 'content'])
+             // 🔗 ConversationId validation
+             && data.conversationId is string && data.conversationId.size() > 0
+             // ↔️ Direction validation (enum: inbound | outbound)
+             && data.direction in ['inbound', 'outbound']
+             // 📡 Channel validation (enum)
+             && data.channel in ['telegram', 'email', 'whatsapp', 'sms']
+             // 📝 Content validation (must have text field)
+             && data.content is map
+             && data.content.keys().hasAll(['text'])
+             && data.content.text is string
+             // 👤 Optional sender fields validation
+             && (!data.keys().hasAny(['senderId']) || (data.senderId is string))
+             && (!data.keys().hasAny(['senderName']) || (data.senderName is string))
+             // 📊 Optional deliveryStatus validation
+             && (!data.keys().hasAny(['deliveryStatus'])
+                 || data.deliveryStatus in ['queued', 'sent', 'delivered', 'read', 'failed']);
     }
 
     // =========================================================================

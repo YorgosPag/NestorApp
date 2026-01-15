@@ -32,8 +32,9 @@
   --color-semantic-info: #2563eb;
   --color-background-primary: #ffffff;
   --color-background-secondary: #f9fafb;
-  --color-background-muted: #f3f4f6;
+  --color-background-muted: #21405f;
   --color-background-hover: #f9fafb;
+  --color-background-info-subtle: #182633;
   --color-text-primary: #111827;
   --color-text-secondary: #6b7280;
   --color-text-muted: #9ca3af;
@@ -86,7 +87,7 @@
   --performance-component-info-background: color-mix(in srgb, {color.brand.info.600} 10%, transparent);
   --performance-component-info-border: color-mix(in srgb, {color.brand.info.600} 20%, transparent);
   --performance-component-info-hover: color-mix(in srgb, {color.brand.info.600} 30%, transparent);
-  --performance-component-card-background: color-mix(in srgb, #f3f4f6 50%, transparent);
+  --performance-component-card-background: color-mix(in srgb, #21405f 50%, transparent);
   --performance-component-card-border: #f3f4f6;
   --performance-component-card-padding: 12px;
   --interactive-states-focus-ring-color: #3b82f6;
