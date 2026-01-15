@@ -25,6 +25,7 @@ import {
 import type { ConversationStatus, MessageDirection, DeliveryStatus } from '@/types/conversations';
 import type { CommunicationChannel } from '@/types/communications';
 import type { SenderType } from '@/config/domain-constants';
+import { useRealtimeMessages } from './useRealtimeMessages';
 
 // ============================================================================
 // API RESPONSE TYPES
@@ -311,6 +312,8 @@ interface UseConversationMessagesOptions {
   pageSize?: number;
   order?: 'asc' | 'desc';
   polling?: boolean;
+  /** 🔥 Use Firestore realtime listener instead of polling (recommended) */
+  realtime?: boolean;
 }
 
 interface UseConversationMessagesResult {
@@ -326,7 +329,7 @@ interface UseConversationMessagesResult {
 
 /**
  * Hook for fetching messages in a conversation
- * @enterprise Uses staff-only API endpoint with polling support
+ * @enterprise Uses staff-only API endpoint with polling support OR Firestore realtime
  */
 export function useConversationMessages(
   conversationId: string | null,
@@ -337,10 +340,22 @@ export function useConversationMessages(
     pageSize = MESSAGES_PAGE_SIZE,
     order = 'asc',
     polling = false,
+    realtime = false, // 🔥 NEW: Realtime option
   } = options;
 
   // 🏢 ENTERPRISE: Wait for auth state before fetching
   const { user, loading: authLoading } = useAuth();
+
+  // 🔥 REALTIME: Use Firestore listener when realtime=true
+  const {
+    messages: realtimeMessages,
+    loading: realtimeLoading,
+    error: realtimeError,
+    connected,
+  } = useRealtimeMessages(conversationId, {
+    enabled: realtime && !!user && !authLoading,
+    limitCount: pageSize,
+  });
 
   const [messages, setMessages] = useState<MessageListItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -351,6 +366,15 @@ export function useConversationMessages(
 
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const mountedRef = useRef(true);
+
+  // 🔥 REALTIME: Update messages when realtime data changes
+  useEffect(() => {
+    if (realtime) {
+      setMessages(realtimeMessages);
+      setLoading(realtimeLoading);
+      setError(realtimeError);
+    }
+  }, [realtime, realtimeMessages, realtimeLoading, realtimeError]);
 
   const fetchMessages = useCallback(async (pageNum: number = currentPage, append: boolean = false) => {
     if (!conversationId) return;
@@ -422,21 +446,21 @@ export function useConversationMessages(
     setError(null);
   }, [conversationId]);
 
-  // Fetch when conversation changes - wait for auth
+  // Fetch when conversation changes - wait for auth (SKIP if realtime mode)
   useEffect(() => {
     mountedRef.current = true;
-    if (conversationId && user && !authLoading) {
+    if (!realtime && conversationId && user && !authLoading) {
       fetchMessages(1, false);
     }
 
     return () => {
       mountedRef.current = false;
     };
-  }, [conversationId, pageSize, order, user, authLoading]);
+  }, [conversationId, pageSize, order, user, authLoading, realtime, fetchMessages]);
 
-  // Polling - only when authenticated
+  // Polling - only when authenticated (SKIP if realtime mode)
   useEffect(() => {
-    if (polling && conversationId && user && !authLoading) {
+    if (!realtime && polling && conversationId && user && !authLoading) {
       pollingRef.current = setInterval(() => {
         fetchMessages(1, false);
       }, THREAD_POLL_MS);
@@ -448,7 +472,7 @@ export function useConversationMessages(
         pollingRef.current = null;
       }
     };
-  }, [polling, conversationId, fetchMessages]);
+  }, [polling, conversationId, fetchMessages, realtime]);
 
   return {
     messages,

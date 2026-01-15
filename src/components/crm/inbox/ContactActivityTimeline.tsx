@@ -32,6 +32,7 @@ import {
   Activity as ActivityIcon
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { COMMUNICATION_CHANNELS, type CommunicationChannel } from '@/types/communications';
 import { MESSAGE_DIRECTION } from '@/types/conversations';
@@ -252,6 +253,7 @@ export function ContactActivityTimeline({
 }: ContactActivityTimelineProps) {
   const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
+  const spacing = useSpacingTokens();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
 
@@ -295,27 +297,27 @@ export function ContactActivityTimeline({
   }
 
   return (
-    <div className="space-y-6">
+    <div className={`${spacing.padding.md} ${spacing.margin.top.xs} ${spacing.margin.bottom.md} ${spacing.spaceBetween.md}`}>
       {/* Statistics Overview */}
       <section>
-        <h3 className="font-semibold mb-4 flex items-center gap-2">
+        <h3 className={`font-semibold ${spacing.margin.bottom.sm} flex items-center ${spacing.gap.sm}`}>
           <ActivityIcon className={iconSizes.md} />
           {t('inbox.activity.overview')}
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className={`bg-card ${quick.card} p-4 text-center`}>
+        <div className={`grid grid-cols-2 md:grid-cols-4 ${spacing.gap.md}`}>
+          <div className={`bg-card ${quick.card} ${spacing.padding.md} text-center`}>
             <div className={`text-2xl font-bold ${colors.text.muted}`}>{stats.total}</div>
             <div className="text-sm text-muted-foreground">{t('inbox.activity.totalEvents')}</div>
           </div>
-          <div className={`bg-card ${quick.card} p-4 text-center`}>
+          <div className={`bg-card ${quick.card} ${spacing.padding.md} text-center`}>
             <div className={`text-2xl font-bold ${colors.text.info}`}>{stats.inbound}</div>
             <div className="text-sm text-muted-foreground">{t('inbox.activity.received')}</div>
           </div>
-          <div className={`bg-card ${quick.card} p-4 text-center`}>
+          <div className={`bg-card ${quick.card} ${spacing.padding.md} text-center`}>
             <div className={`text-2xl font-bold ${colors.text.success}`}>{stats.outbound}</div>
             <div className="text-sm text-muted-foreground">{t('inbox.activity.sent')}</div>
           </div>
-          <div className={`bg-card ${quick.card} p-4 text-center`}>
+          <div className={`bg-card ${quick.card} ${spacing.padding.md} text-center`}>
             <div className={`text-2xl font-bold ${colors.text.warning}`}>{stats.assignments}</div>
             <div className="text-sm text-muted-foreground">{t('inbox.activity.assignments')}</div>
           </div>
@@ -324,11 +326,11 @@ export function ContactActivityTimeline({
 
       {/* Timeline */}
       <section>
-        <h3 className="font-semibold mb-4 flex items-center gap-2">
+        <h3 className={`font-semibold ${spacing.margin.bottom.sm} flex items-center ${spacing.gap.sm}`}>
           <Clock className={iconSizes.md} />
           {t('inbox.activity.timeline')}
         </h3>
-        <div className="space-y-4">
+        <div className={spacing.spaceBetween.md}>
           {activityEvents.map((event, index) => {
             const EventIcon = getEventIcon(event.type, event.channel);
             const StatusIcon = getStatusIcon(event.status);
@@ -346,7 +348,7 @@ export function ContactActivityTimeline({
                   <div className="absolute left-6 top-12 w-0.5 h-16 bg-border" />
                 )}
 
-                <div className="flex gap-4">
+                <div className={`flex ${spacing.gap.md}`}>
                   {/* Icon */}
                   <figure
                     className={`flex-shrink-0 ${iconSizes.xl2} rounded-full flex items-center justify-center ${getEventColor(event.type, colors)}`}
@@ -356,20 +358,20 @@ export function ContactActivityTimeline({
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className={`bg-card ${quick.card} p-4`}>
-                      <header className="flex items-start justify-between mb-2">
+                    <div className={`bg-card ${quick.card} ${spacing.padding.md}`}>
+                      <header className={`flex items-start justify-between ${spacing.margin.bottom.sm}`}>
                         <div className="flex-1">
-                          <div className="flex items-center gap-2">
+                          <div className={`flex items-center ${spacing.gap.sm}`}>
                             <h4 className="font-medium text-sm">{event.title}</h4>
                             {DirectionIcon && (
                               <DirectionIcon className={`${iconSizes.xs} ${colors.text.muted}`} />
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground mt-1">
+                          <p className={`text-sm text-muted-foreground ${spacing.margin.top.xs}`}>
                             {event.description}
                           </p>
                         </div>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground ml-4">
+                        <div className={`flex items-center ${spacing.gap.xs} text-xs text-muted-foreground ${spacing.margin.left.md}`}>
                           <StatusIcon className={iconSizes.xs} />
                           <span>
                             {event.status === 'completed'
@@ -384,13 +386,13 @@ export function ContactActivityTimeline({
                       </header>
 
                       <footer className="flex items-center justify-between text-xs text-muted-foreground">
-                        <div className="flex items-center gap-4">
-                          <time className="flex items-center gap-1">
+                        <div className={`flex items-center ${spacing.gap.md}`}>
+                          <time className={`flex items-center ${spacing.gap.xs}`}>
                             <Clock className={iconSizes.xs} />
                             {formatDateTime(event.date)}
                           </time>
                           {event.actor && (
-                            <span className="flex items-center gap-1">
+                            <span className={`flex items-center ${spacing.gap.xs}`}>
                               <User className={iconSizes.xs} />
                               {event.actor}
                             </span>
@@ -416,12 +418,12 @@ export function ContactActivityTimeline({
       {/* Conversation Summary */}
       {conversation && (
         <section>
-          <h3 className="font-semibold mb-4">{t('inbox.activity.summary')}</h3>
-          <div className={`bg-card ${quick.card} p-4`}>
-            <dl className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <h3 className={`font-semibold ${spacing.margin.bottom.md}`}>{t('inbox.activity.summary')}</h3>
+          <div className={`bg-card ${quick.card} ${spacing.padding.md}`}>
+            <dl className={`grid grid-cols-1 md:grid-cols-3 ${spacing.gap.md} text-sm`}>
               <div>
                 <dt className="font-medium text-muted-foreground">{t('inbox.activity.channel')}:</dt>
-                <dd className="ml-2">{conversation.channel.toUpperCase()}</dd>
+                <dd className={spacing.margin.left.sm}>{conversation.channel.toUpperCase()}</dd>
               </div>
               <div>
                 <dt className="font-medium text-muted-foreground">{t('inbox.activity.status')}:</dt>
@@ -429,21 +431,21 @@ export function ContactActivityTimeline({
               </div>
               <div>
                 <dt className="font-medium text-muted-foreground">{t('inbox.activity.created')}:</dt>
-                <dd className="ml-2">{formatDateTime(new Date(conversation.audit.createdAt))}</dd>
+                <dd className={spacing.margin.left.sm}>{formatDateTime(new Date(conversation.audit.createdAt))}</dd>
               </div>
               {conversation.assignedTo && (
                 <div>
                   <dt className="font-medium text-muted-foreground">{t('inbox.activity.assignedTo')}:</dt>
-                  <dd className="ml-2">{conversation.assignedTo}</dd>
+                  <dd className={spacing.margin.left.sm}>{conversation.assignedTo}</dd>
                 </div>
               )}
               <div>
                 <dt className="font-medium text-muted-foreground">{t('inbox.activity.lastUpdated')}:</dt>
-                <dd className="ml-2">{formatDateTime(new Date(conversation.audit.updatedAt))}</dd>
+                <dd className={spacing.margin.left.sm}>{formatDateTime(new Date(conversation.audit.updatedAt))}</dd>
               </div>
               <div>
                 <dt className="font-medium text-muted-foreground">{t('inbox.activity.participants')}:</dt>
-                <dd className="ml-2">{conversation.participants.length}</dd>
+                <dd className={spacing.margin.left.sm}>{conversation.participants.length}</dd>
               </div>
             </dl>
           </div>

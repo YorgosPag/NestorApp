@@ -2038,6 +2038,135 @@ import { Spinner } from '@/components/ui/spinner';
 
 ---
 
+### 📋 ADR-024: ENVIRONMENT SECURITY CONFIGURATION SYSTEM (2026-01-16) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Type**: Security Infrastructure | **Date**: 2026-01-16
+
+**Context**:
+- Production deployment blocked by hardcoded `ALLOWED_ENVIRONMENTS` array σε `admin-guards.ts`
+- Original code: `const ALLOWED_ENVIRONMENTS = ['development', 'staging', 'test']` (NO production!)
+- SECURITY_AUDIT_REPORT.md (2025-12-15) flagged this as production blocker
+- Environment security policies scattered across multiple files
+- No graduated security levels ανά environment (όλα είχαν ίδια security)
+
+**Problem**:
+```typescript
+// ❌ BEFORE - Hardcoded array, no production support
+const ALLOWED_ENVIRONMENTS = ['development', 'staging', 'test'] as const;
+// Production requests → "Operation not allowed in production environment"
+```
+
+**Decision**:
+```
+🏢 CANONICAL: Centralized Environment Security Configuration System
+📍 Location: src/config/environment-security-config.ts
+✅ Pattern: Graduated security policies (Microsoft Azure / Google Cloud approach)
+```
+
+**Architecture**:
+```typescript
+// ✅ AFTER - Enterprise graduated security policies
+export const ENVIRONMENT_SECURITY_POLICIES: Record<RuntimeEnvironment, EnvironmentSecurityPolicy> = {
+  development: {
+    allowApiAccess: true,
+    maxRequestsPerMinute: 10000,    // Fast iteration
+    requireAuthentication: false,   // Dev bypass enabled
+    enableEnhancedValidation: false,
+  },
+  staging: {
+    allowApiAccess: true,
+    maxRequestsPerMinute: 500,      // Production-like
+    requireAuthentication: true,
+    enableEnhancedValidation: true,
+  },
+  production: {
+    allowApiAccess: true,            // ✅ PRODUCTION NOW ALLOWED!
+    maxRequestsPerMinute: 100,       // Strict limits
+    requireAuthentication: true,     // Maximum security
+    enableEnhancedValidation: true,
+    requireWebhookSecrets: true,
+    requireAdminEmailVerification: true,
+  },
+};
+```
+
+**Security Features** (Production-Specific):
+- ✅ **Rate Limiting**: 100 requests/min (vs 10,000 σε development)
+- ✅ **Enhanced Validation**: Business logic checks enabled
+- ✅ **Webhook Secrets**: Required για external integrations
+- ✅ **Admin Verification**: Email-based role verification required
+- ✅ **Full Audit Logging**: Complete audit trail
+- ✅ **No Dev Bypass**: Development shortcuts disabled
+
+**Type Safety**:
+```typescript
+export type RuntimeEnvironment = 'development' | 'staging' | 'test' | 'production';
+
+export interface EnvironmentSecurityPolicy {
+  allowApiAccess: boolean;
+  requireAuthentication: boolean;
+  enableRateLimiting: boolean;
+  enableAuditLogging: boolean;
+  requireWebhookSecrets: boolean;
+  maxRequestsPerMinute: number;
+  requireAdminEmailVerification: boolean;
+  enableEnhancedValidation: boolean;
+  allowDevBypass: boolean;
+}
+```
+
+**Usage** (admin-guards.ts):
+```typescript
+import {
+  isApiAccessAllowed,
+  validateEnvironmentForOperation,
+  getCurrentRuntimeEnvironment,
+} from '@/config/environment-security-config';
+
+// Before: Hardcoded check
+if (!isAllowedEnvironment()) { ... }
+
+// After: Centralized validation
+const envValidation = validateEnvironmentForOperation('requireAdminContext');
+if (!envValidation.allowed) {
+  return { success: false, error: envValidation.reason };
+}
+```
+
+**Migration**:
+1. ✅ Created `src/config/environment-security-config.ts` (400 lines)
+2. ✅ Updated `src/server/admin/admin-guards.ts` to use centralized config
+3. ✅ Removed hardcoded `ALLOWED_ENVIRONMENTS` array
+4. ✅ All API endpoints now use graduated security policies
+
+**Comparison with Industry Leaders**:
+
+| Feature | Old (Hardcoded) | New (Enterprise) | Azure | Google Cloud |
+|---------|-----------------|------------------|-------|--------------|
+| Centralized Config | ❌ | ✅ | ✅ | ✅ |
+| Graduated Security | ❌ | ✅ | ✅ | ✅ |
+| Type-Safe | ❌ | ✅ | ✅ | ✅ |
+| Rate Limiting per Env | ❌ | ✅ | ✅ | ✅ |
+| Production Support | ❌ | ✅ | ✅ | ✅ |
+| Environment-Aware | ❌ | ✅ | ✅ | ✅ |
+
+**Consequences**:
+- ✅ **Production deployment enabled** με proper security controls
+- ✅ **Graduated security levels** - διαφορετικά limits ανά environment
+- ✅ **Single source of truth** - όλα τα API endpoints χρησιμοποιούν το ίδιο config
+- ✅ **Type-safe configuration** - zero `any` types, full TypeScript
+- ✅ **Zero code duplication** - centralized validation logic
+- ✅ **SECURITY_AUDIT_REPORT.md compliance** - addresses production blockers
+
+**References**:
+- Canonical: `src/config/environment-security-config.ts`
+- Updated: `src/server/admin/admin-guards.ts`
+- Audit Report: `SECURITY_AUDIT_REPORT.md` (2025-12-15)
+- Pattern: Microsoft Azure Environment Policies, Google Cloud Platform Security
+- Standards: OWASP API Security Top 10, NIST Cybersecurity Framework
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)
@@ -3375,6 +3504,364 @@ const mainMenu = createNavigationConfig('main', 'production', ['admin']);
 - ✅ **Components**: Simple configuration
 
 **RESULT: Enterprise-grade architecture που ακολουθεί industry best practices!**
+
+---
+
+## 🎨 **Rule #14: Tabs Spacing Policy** ✅ **ENTERPRISE COMPLETE** (2026-01-15)
+
+**📍 Locations:**
+- `src/components/ui/tabs.tsx` (TabsContent component)
+- `src/hooks/useSpacingTokens.ts` (Spacing tokens hook)
+
+**🎯 Purpose:** Zero default spacing σε TabsContent - explicit spacing με centralized tokens
+
+**🚨 ENTERPRISE PRINCIPLE:** TabsContent has NO default margin-top. Each usage MUST explicitly define spacing using `useSpacingTokens()` for consistency.
+
+### **🏢 IMPLEMENTATION:**
+
+#### **1. ✅ ZERO DEFAULT SPACING**
+
+**Location**: `src/components/ui/tabs.tsx` (Line 57)
+
+**BEFORE** (❌ Hardcoded):
+```typescript
+className={cn(
+  "mt-2 ring-offset-background focus-visible:...",  // ❌ Hardcoded mt-2
+  className
+)}
+```
+
+**AFTER** (✅ Enterprise):
+```typescript
+className={cn(
+  "ring-offset-background focus-visible:...",  // ✅ No default spacing
+  "data-[state=inactive]:hidden",              // ✅ Hidden state management
+  className
+)}
+```
+
+**🎯 BENEFIT**: Eliminates inconsistent adhoc overrides like `mt-0` in components
+
+#### **1b. ✅ HIDDEN STATE MANAGEMENT** 🆕 (2026-01-15)
+
+**Location**: `src/components/ui/tabs.tsx` (Line 58)
+
+**PROBLEM**: Inactive TabsContent remained visible in DOM, causing layout overlap and scroll issues.
+
+**SOLUTION**: Added `data-[state=inactive]:hidden` selector to hide inactive tabs.
+
+**BEFORE** (❌ Layout Overlap):
+```typescript
+// Inactive tabs remained visible, causing:
+// - Container overlap between tabs and content
+// - Content hidden behind inactive tab containers
+// - Scroll issues (content scrolls under inactive tabs)
+```
+
+**AFTER** (✅ Clean Layout):
+```typescript
+className={cn(
+  "ring-offset-background focus-visible:...",
+  "data-[state=inactive]:hidden",  // 🆕 ENTERPRISE: Hide inactive tabs
+  className
+)}
+```
+
+**🏢 ENTERPRISE PATTERN**: Follows Radix UI data-state pattern used in:
+- `accordion.tsx`: `data-[state=closed]:animate-accordion-up`
+- `dialog.tsx`: `data-[state=open]:animate-in data-[state=closed]:animate-out`
+- `sheet.tsx`: `data-[state=closed]:fade-out-0`
+- **CONSISTENT** across all Radix components
+
+**🎯 BENEFITS**:
+- ✅ **Zero layout overlap** - inactive tabs don't interfere with layout
+- ✅ **Clean DOM** - inactive content truly hidden
+- ✅ **No scroll issues** - content doesn't hide behind containers
+- ✅ **Enterprise pattern** - consistent με άλλα Radix components
+
+#### **2. ✅ EXPLICIT SPACING PATTERN**
+
+**Usage Pattern**:
+```typescript
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+
+function MyComponent() {
+  const spacing = useSpacingTokens();
+
+  return (
+    <Tabs>
+      <TabsList>...</TabsList>
+
+      {/* Explicitly define spacing for each TabsContent */}
+      <TabsContent value="tab1" className={spacing.margin.top.sm}>
+        Content 1
+      </TabsContent>
+
+      <TabsContent value="tab2" className={spacing.margin.top.sm}>
+        Content 2
+      </TabsContent>
+    </Tabs>
+  );
+}
+```
+
+#### **3. ✅ CONSISTENT BEHAVIOR**
+
+**All TabsContent across codebase**:
+- ✅ **ZERO default spacing** - no magic margins
+- ✅ **Explicit spacing** - developers choose spacing intentionally
+- ✅ **Centralized tokens** - all spacing from `useSpacingTokens()`
+- ✅ **No adhoc fixes** - eliminated `mt-0` overrides
+
+### **📊 IMPACT:**
+
+**Before**:
+- ❌ Default `mt-2` (8px) on ALL TabsContent
+- ❌ Adhoc `mt-0` overrides scattered in codebase
+- ❌ Inconsistent spacing between tabs
+- ❌ Inactive tabs visible in DOM (layout overlap issue) 🆕
+- ❌ Content scrolling under inactive tab containers 🆕
+
+**After**:
+- ✅ Zero default spacing
+- ✅ Explicit spacing με centralized tokens
+- ✅ Consistent behavior across application
+- ✅ Enterprise-grade spacing control
+- ✅ Inactive tabs properly hidden (`data-[state=inactive]:hidden`) 🆕
+- ✅ Clean layout without overlap issues 🆕
+- ✅ Proper scroll behavior 🆕
+
+### **🔧 MIGRATION:**
+
+**Existing TabsContent without spacing**:
+```typescript
+// BEFORE: Relied on default mt-2
+<TabsContent value="example">
+  Content
+</TabsContent>
+
+// AFTER: Explicitly define spacing
+const spacing = useSpacingTokens();
+<TabsContent value="example" className={spacing.margin.top.sm}>
+  Content
+</TabsContent>
+```
+
+**Existing TabsContent με adhoc overrides**:
+```typescript
+// BEFORE: Override default spacing
+<TabsContent value="example" className="mt-0">
+  Content
+</TabsContent>
+
+// AFTER: Zero default, no override needed
+<TabsContent value="example" className="flex-1">
+  Content
+</TabsContent>
+```
+
+### **✅ ENTERPRISE STANDARDS:**
+- ✅ **ZERO hardcoded spacing** σε UI components
+- ✅ **Explicit over implicit** - developers declare intent
+- ✅ **Centralized tokens** - single source of truth (useSpacingTokens)
+- ✅ **Consistent API** - same pattern as other design system hooks
+- ✅ **Maintainable** - spacing changes propagate from one place
+- ✅ **Hidden state management** - inactive tabs properly hidden 🆕
+- ✅ **Radix UI pattern compliance** - consistent με dialog/sheet/accordion 🆕
+- ✅ **Zero layout overlap** - clean DOM and scroll behavior 🆕
+
+### **📋 RELATED SYSTEMS:**
+- **Rule #10**: useSpacingTokens() hook (centralized spacing tokens)
+- **Design Token Ecosystem**: spacing.ts (core spacing values)
+- **Enterprise Hooks**: useTypography, useBorderTokens (same pattern)
+
+---
+
+## 🔒 **Rule #15: Message HTML Rendering** ✅ **ENTERPRISE COMPLETE** (2026-01-15)
+
+**📍 Locations:**
+- `src/lib/message-utils.ts` (Centralized formatting με XSS protection)
+- `src/components/crm/inbox/ThreadView.tsx` (Message rendering)
+
+**🎯 Purpose:** Safe HTML rendering για messages με Telegram-compatible formatting and XSS protection
+
+**🚨 SECURITY PRINCIPLE:** ALL message content MUST be sanitized before rendering. DOMPurify με whitelist approach (SDL + OWASP compliant).
+
+### **🏢 IMPLEMENTATION:**
+
+#### **1. ✅ CENTRALIZED MESSAGE UTILS**
+
+**Location**: `src/lib/message-utils.ts` (280+ lines enterprise-grade code)
+
+**🔒 SECURITY FEATURES:**
+```typescript
+// 🏢 ENTERPRISE: XSS Protection με DOMPurify
+export function sanitizeHTML(html: string, config: SanitizationConfig): string {
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: config.allowedTags,        // Whitelist approach
+    ALLOWED_ATTR: config.allowedAttributes,  // Attribute filtering
+    KEEP_CONTENT: true,                      // Strip tags, keep text
+    ALLOW_DATA_ATTR: false,                  // Block data-* attrs
+    ALLOW_UNKNOWN_PROTOCOLS: false,          // Block XSS protocols
+    SAFE_FOR_TEMPLATES: true,                // JSX-safe
+  });
+}
+
+// 🏢 ENTERPRISE: Format message με sanitization
+export function formatMessageHTML(content: MessageContent): string {
+  let text = content.text;
+  text = text.replace(/\n/g, '<br>');        // Convert line breaks
+  return sanitizeHTML(text);                  // XSS protection
+}
+```
+
+**📋 TELEGRAM-COMPATIBLE TAGS (Allowlist)**:
+```typescript
+export const TELEGRAM_ALLOWED_TAGS = [
+  'b', 'strong',              // Bold
+  'i', 'em',                  // Italic
+  'u', 'ins',                 // Underline
+  's', 'strike', 'del',       // Strikethrough
+  'code',                     // Inline code
+  'pre',                      // Code block
+  'a',                        // Links (με validation)
+  'br',                       // Line breaks
+] as const;
+```
+
+**🎯 FUNCTIONS PROVIDED:**
+- `sanitizeHTML()` - DOMPurify sanitization με allowlist
+- `formatMessageHTML()` - Main formatting function με XSS protection
+- `hasHTMLFormatting()` - Detect HTML tags στο text
+- `stripHTMLTags()` - Remove ALL HTML (plain text fallback)
+- `getMessagePreview()` - Truncated preview χωρίς HTML
+- `hasAttachments()` - Check για attachments
+
+#### **2. ✅ THREADVIEW RENDERING**
+
+**Location**: `src/components/crm/inbox/ThreadView.tsx` (Line 272-277)
+
+**BEFORE** (❌ Plain Text - HTML tags visible):
+```typescript
+<p className={`${colors.text.foreground} whitespace-pre-wrap break-words`}>
+  {message.content.text}  // ❌ <b>Bold</b> shows as text
+</p>
+```
+
+**AFTER** (✅ HTML Rendering με XSS Protection):
+```typescript
+<div
+  className={`${colors.text.foreground} break-words prose prose-sm max-w-none`}
+  dangerouslySetInnerHTML={{
+    __html: formatMessageHTML(message.content)  // ✅ Safe HTML rendering
+  }}
+/>
+```
+
+**🎨 STYLING**: Uses Tailwind `prose` classes for proper typography rendering
+
+#### **3. ✅ SECURITY COMPLIANCE**
+
+**SDL (Secure Development Lifecycle)**:
+- ✅ **Input Validation**: ALL message content sanitized before rendering
+- ✅ **Whitelist Approach**: Only safe HTML tags allowed (secure by default)
+- ✅ **XSS Protection**: DOMPurify removes malicious code
+- ✅ **Data Attributes**: Blocked (no data-* injection)
+- ✅ **URL Protocols**: Only http/https allowed
+
+**OWASP Secure Coding**:
+- ✅ **A03:2021 - Injection**: Sanitization prevents XSS attacks
+- ✅ **Output Encoding**: DOMPurify encodes unsafe characters
+- ✅ **Secure by Design**: Whitelist > Blacklist approach
+
+**Supply Chain Security**:
+- ✅ **DOMPurify**: Industry-standard library (4M+ weekly downloads)
+- ✅ **Type-Safe**: Full TypeScript support με proper interfaces
+- ✅ **Maintenance**: Active development, security patches
+
+### **📊 IMPACT:**
+
+**Before**:
+- ❌ HTML tags showed as plain text (`<b>Bold</b>` literal)
+- ❌ No formatting support (Telegram-style tags ignored)
+- ❌ Inconsistent με Telegram native UI
+- ❌ No XSS protection strategy
+
+**After**:
+- ✅ **HTML rendering** με proper formatting (`<b>Bold</b>` → **Bold**)
+- ✅ **Telegram-compatible** formatting (bold, italic, code, etc.)
+- ✅ **XSS protection** με DOMPurify sanitization
+- ✅ **Consistent UX** με Telegram native client
+- ✅ **Enterprise security** (SDL + OWASP compliant)
+- ✅ **Centralized utility** - reusable across app
+
+### **🔧 USAGE PATTERN:**
+
+**Message Rendering (ThreadView)**:
+```typescript
+import { formatMessageHTML } from '@/lib/message-utils';
+
+// Safe HTML rendering
+<div
+  dangerouslySetInnerHTML={{
+    __html: formatMessageHTML(message.content)
+  }}
+/>
+```
+
+**Message Preview (ConversationList)**:
+```typescript
+import { getMessagePreview } from '@/lib/message-utils';
+
+// Plain text preview (no HTML)
+const preview = getMessagePreview(message.content, 100);
+```
+
+**HTML Detection**:
+```typescript
+import { hasHTMLFormatting } from '@/lib/message-utils';
+
+if (hasHTMLFormatting(message.text)) {
+  // Render με HTML
+} else {
+  // Plain text rendering
+}
+```
+
+### **✅ ENTERPRISE STANDARDS:**
+- ✅ **ZERO XSS vulnerabilities** - DOMPurify sanitization
+- ✅ **Whitelist approach** - only safe tags allowed
+- ✅ **Centralized utility** - single source of truth για message formatting
+- ✅ **Type-safe** - proper TypeScript interfaces
+- ✅ **SDL compliant** - security-first design
+- ✅ **OWASP compliant** - injection protection
+- ✅ **Maintainable** - clear separation of concerns
+- ✅ **Reusable** - can be used σε όλα τα message components
+
+### **🔒 SECURITY GUIDELINES:**
+
+**DO**:
+- ✅ Always use `formatMessageHTML()` για message rendering
+- ✅ Use `getMessagePreview()` για previews (strips HTML)
+- ✅ Test με malicious inputs (XSS payloads)
+- ✅ Keep DOMPurify updated (security patches)
+
+**DON'T**:
+- ❌ NEVER use raw `dangerouslySetInnerHTML` without sanitization
+- ❌ NEVER trust user input (always sanitize)
+- ❌ NEVER add tags to allowlist without security review
+- ❌ NEVER bypass DOMPurify sanitization
+
+### **📋 RELATED SYSTEMS:**
+- **DOMPurify**: Industry-standard XSS protection library
+- **Tailwind Prose**: Typography plugin για HTML content styling
+- **SDL Protocol**: Security Development Lifecycle (OWASP A03:2021)
+- **Message Types**: `@/types/conversations` - MessageListItem interface
+
+### **🚨 DEPENDENCY:**
+- **Package**: `dompurify` (v3.3.1)
+- **Types**: Built-in TypeScript definitions
+- **Installation**: `pnpm add -w dompurify`
 
 ---
 

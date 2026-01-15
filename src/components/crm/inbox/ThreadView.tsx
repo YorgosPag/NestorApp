@@ -20,6 +20,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDateTime } from '@/lib/intl-utils';
+import { formatMessageHTML } from '@/lib/message-utils';
 import { TRANSITION_PRESETS } from '@/components/ui/effects';
 import { MESSAGE_DIRECTION } from '@/types/conversations';
 import {
@@ -249,12 +250,11 @@ export function ThreadView({
                 >
                   <article
                     className={`
-                      max-w-[75%] rounded-lg p-3
+                      ds-messageBubble
+                      ${isOutbound ? 'ds-messageBubble--outbound' : 'ds-messageBubble--inbound'}
+                      max-w-[75%]
                       ${TRANSITION_PRESETS.STANDARD_COLORS}
-                      ${isOutbound
-                        ? `${colors.bg.infoSubtle} ml-auto`
-                        : `${colors.bg.secondary}`
-                      }
+                      ${isOutbound ? 'ml-auto' : ''}
                     `}
                   >
                     {/* Message header */}
@@ -267,10 +267,13 @@ export function ThreadView({
                       {isOutbound && getStatusIcon(message.deliveryStatus, iconSizes, colors)}
                     </header>
 
-                    {/* Message content */}
-                    <p className={`${colors.text.foreground} whitespace-pre-wrap break-words`}>
-                      {message.content.text}
-                    </p>
+                    {/* Message content - HTML formatted με XSS protection */}
+                    <div
+                      className="ds-messageContent"
+                      dangerouslySetInnerHTML={{
+                        __html: formatMessageHTML(message.content)
+                      }}
+                    />
 
                     {/* Attachments */}
                     {message.content.attachments && message.content.attachments.length > 0 && (

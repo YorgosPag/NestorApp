@@ -4,6 +4,12 @@ import { getApps, initializeApp, cert, App } from 'firebase-admin/app';
 import { getAuth, DecodedIdToken } from 'firebase-admin/auth';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import type { NextRequest } from 'next/server';
+import {
+  isApiAccessAllowed,
+  validateEnvironmentForOperation,
+  getCurrentRuntimeEnvironment,
+  type RuntimeEnvironment,
+} from '@/config/environment-security-config';
 
 /**
  * ENTERPRISE: Centralized Admin Guards Module
@@ -11,12 +17,18 @@ import type { NextRequest } from 'next/server';
  * Server-only module providing:
  * - Firebase Admin SDK initialization (Auth + Firestore)
  * - ID token verification with role claim gating
- * - Environment allowlist enforcement
+ * - Environment security enforcement (via centralized config)
  * - Structured audit logging
  * - Server-only collection names (zero hardcoded strings in routes)
  *
  * @serverOnly This module must only be used in server-side code (API routes)
  * @author Enterprise Architecture Team
+ *
+ * ARCHITECTURE UPDATE (2026-01-16):
+ * - Migrated to centralized environment-security-config.ts
+ * - Removed hardcoded ALLOWED_ENVIRONMENTS array
+ * - Implements graduated security policies (development/staging/test/production)
+ * - Enables production deployment με proper security controls
  */
 
 // ============================================================================
@@ -86,7 +98,6 @@ export interface AuditEntry {
 // CONSTANTS
 // ============================================================================
 
-const ALLOWED_ENVIRONMENTS = ['development', 'staging', 'test'] as const;
 const ADMIN_ROLES: AdminRole[] = ['admin', 'broker', 'builder'];
 const AUTHORIZATION_HEADER = 'authorization';
 
@@ -189,20 +200,24 @@ export function getAdminFirestore(): Firestore {
 // ============================================================================
 
 /**
- * Check if current environment is in allowlist
+ * Check if current environment allows API access
+ * @enterprise Uses centralized environment-security-config
+ * @deprecated Use isApiAccessAllowed() from environment-security-config directly
  */
 export function isAllowedEnvironment(): boolean {
-  const env = process.env.NODE_ENV || 'development';
-  return (ALLOWED_ENVIRONMENTS as readonly string[]).includes(env);
+  return isApiAccessAllowed();
 }
 
 /**
- * Assert environment is allowed, throws if not
+ * Assert environment allows operation, throws if not
+ * @enterprise Uses centralized environment-security-config
+ * @deprecated Use validateEnvironmentForOperation() from environment-security-config
  */
 export function assertAllowedEnvironment(): void {
-  if (!isAllowedEnvironment()) {
+  const result = validateEnvironmentForOperation('API_ACCESS');
+  if (!result.allowed) {
     throw new Error(
-      `[ADMIN_GUARDS] Operation not allowed in ${process.env.NODE_ENV} environment`
+      `[ADMIN_GUARDS] ${result.reason || 'Operation not allowed in current environment'}`
     );
   }
 }
@@ -250,18 +265,39 @@ async function verifyIdToken(token: string): Promise<DecodedIdToken | null> {
 
 /**
  * Check if decoded token has admin role claim
+ * 🏢 ENTERPRISE: Email-based role checking (matches EnterpriseSecurityService)
  */
 function hasAdminRole(decodedToken: DecodedIdToken): AdminRole | null {
-  // Check custom claims for role
+  // Check custom claims for role (legacy support)
   const role = decodedToken.role as string | undefined;
 
   if (role && ADMIN_ROLES.includes(role as AdminRole)) {
     return role as AdminRole;
   }
 
-  // Fallback: check if user has admin claim
+  // Fallback: check if user has admin claim (legacy support)
   if (decodedToken.admin === true) {
     return 'admin';
+  }
+
+  // 🏢 ENTERPRISE: Email-based admin check (PRIMARY METHOD)
+  // This matches the behavior of EnterpriseSecurityService.checkUserRole()
+  const email = decodedToken.email;
+  if (!email) {
+    return null;
+  }
+
+  const envAdminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
+  if (envAdminEmails) {
+    const adminEmails = envAdminEmails
+      .split(',')
+      .map(e => e.trim().toLowerCase())
+      .filter(Boolean);
+
+    if (adminEmails.includes(email.toLowerCase())) {
+      console.log(`🔐 [admin-guards] Admin access granted for: ${email}`);
+      return 'admin';
+    }
   }
 
   return null;
@@ -298,13 +334,14 @@ export async function requireAdminContext(
   request: NextRequest,
   operationId: string
 ): Promise<AuthResult> {
-  const environment = process.env.NODE_ENV || 'development';
+  const environment = getCurrentRuntimeEnvironment();
 
-  // Gate 1: Environment check
-  if (!isAllowedEnvironment()) {
+  // Gate 1: Environment check (uses centralized security config)
+  const envValidation = validateEnvironmentForOperation('requireAdminContext');
+  if (!envValidation.allowed) {
     return {
       success: false,
-      error: `Operation not allowed in ${environment} environment`,
+      error: envValidation.reason || `Operation not allowed in ${environment} environment`,
     };
   }
 
@@ -395,13 +432,14 @@ export async function requireUserContext(
   request: NextRequest,
   operationId: string
 ): Promise<UserAuthResult> {
-  const environment = process.env.NODE_ENV || 'development';
+  const environment = getCurrentRuntimeEnvironment();
 
-  // Gate 1: Environment check
-  if (!isAllowedEnvironment()) {
+  // Gate 1: Environment check (uses centralized security config)
+  const envValidation = validateEnvironmentForOperation('requireUserContext');
+  if (!envValidation.allowed) {
     return {
       success: false,
-      error: `Operation not allowed in ${environment} environment`,
+      error: envValidation.reason || `Operation not allowed in ${environment} environment`,
     };
   }
 

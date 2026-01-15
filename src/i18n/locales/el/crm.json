@@ -219,7 +219,8 @@
   "errors": {
     "contactNotFound": "Η επαφή δεν βρέθηκε",
     "invalidStage": "Μη έγκυρο στάδιο ευκαιρίας",
-    "deadlinePassed": "Η προθεσμία έχει παρέλθει"
+    "deadlinePassed": "Η προθεσμία έχει παρέλθει",
+    "staffAccessRequired": "Απαιτείται πρόσβαση προσωπικού (staff)"
   },
   "success": {
     "contactCreated": "Η επαφή δημιουργήθηκε επιτυχώς",

@@ -15,3 +15,7 @@ export {
   type ConversationListItem,
   type MessageListItem,
 } from './useInboxApi';
+
+export {
+  useRealtimeMessages,
+} from './useRealtimeMessages';
