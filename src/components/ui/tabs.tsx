@@ -54,12 +54,34 @@ const TabsContent = React.forwardRef<
   <TabsPrimitive.Content
     ref={ref}
     className={cn(
-      "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      "ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      "data-[state=inactive]:hidden",
       className
     )}
     {...props}
   />
 ))
 TabsContent.displayName = TabsPrimitive.Content.displayName
+
+/**
+ * 🏢 ENTERPRISE: TabsContent Design Principles
+ *
+ * 1. ZERO DEFAULT SPACING
+ *    - No default margin-top
+ *    - Use useSpacingTokens() hook for explicit spacing
+ *
+ * 2. HIDDEN STATE MANAGEMENT
+ *    - Inactive tabs are hidden via data-[state=inactive]:hidden
+ *    - Follows Radix UI data-state pattern (consistent με dialog/sheet/accordion)
+ *    - Prevents layout overlap and scroll issues
+ *
+ * @example
+ * ```tsx
+ * const spacing = useSpacingTokens();
+ * <TabsContent value="tab1" className={spacing.margin.top.sm}>
+ *   Content 1
+ * </TabsContent>
+ * ```
+ */
 
 export { Tabs, TabsList, TabsTrigger, TabsContent }
