@@ -157,8 +157,9 @@ export default function CrmCommunicationsPage() {
   } = useConversations({
     status: filters.status !== 'all' ? (filters.status as typeof CONVERSATION_STATUS[keyof typeof CONVERSATION_STATUS]) : undefined,
     channel: filters.channel !== 'all' ? (filters.channel as typeof COMMUNICATION_CHANNELS[keyof typeof COMMUNICATION_CHANNELS]) : undefined,
-    // 🔐 ENTERPRISE: Only poll when authorized - prevents flicker
-    polling: authReady && hasStaffAccess,
+    // 🔐 ENTERPRISE: Disable auto-polling to prevent infinite refresh
+    // User can manually refresh with the refresh button
+    polling: false,
   });
 
   const selectedConversation = useMemo(
@@ -174,8 +175,10 @@ export default function CrmCommunicationsPage() {
     refresh: refreshMessages,
     loadMore: loadMoreMessages,
   } = useConversationMessages(selectedConversationId, {
-    // 🔐 ENTERPRISE: Only poll when authorized and conversation selected
-    polling: authReady && hasStaffAccess && !!selectedConversationId,
+    // 🔥 ENTERPRISE: Realtime updates από Firestore (αντί για polling)
+    // Τα νέα μηνύματα εμφανίζονται αυτόματα χωρίς refresh
+    realtime: true,
+    polling: false,
   });
 
   const {
@@ -545,7 +548,7 @@ export default function CrmCommunicationsPage() {
                   </TabsList>
 
                   {/* Tab 1: Συνομιλία (Thread + Composer) */}
-                  <TabsContent value="conversation" className="flex-1 flex flex-col min-h-0 mt-0">
+                  <TabsContent value="conversation" className="flex-1 flex flex-col min-h-0">
                     {/* Thread View */}
                     <div className="flex-1 overflow-hidden">
                       <ThreadView
@@ -570,7 +573,7 @@ export default function CrmCommunicationsPage() {
                   </TabsContent>
 
                   {/* Tab 2: Ιστορικό Επαφής (Activity Timeline) */}
-                  <TabsContent value="history" className="flex-1 overflow-auto p-4">
+                  <TabsContent value="history" className="flex-1 overflow-auto">
                     <ContactActivityTimeline
                       conversation={selectedConversation}
                       messages={messages}
