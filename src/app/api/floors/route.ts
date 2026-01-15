@@ -1,12 +1,22 @@
 /**
- * Floors API - Enterprise Normalized Collection
- * Provides access to floors using foreign key relationships
+ * 🏢 FLOORS API - ENTERPRISE NORMALIZED COLLECTION
+ *
+ * Provides access to floors using foreign key relationships.
+ *
+ * @module api/floors
+ * @version 2.0.0
+ * @updated 2026-01-15 - AUTHZ PHASE 2: Added RBAC protection
+ *
+ * 🔒 SECURITY:
+ * - Permission: floors:floors:view
+ * - Admin SDK for secure server-side operations
+ * - Tenant isolation: Query filtered by ctx.companyId
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { withErrorHandling, apiSuccess } from '@/lib/api/ApiErrorHandler';
+import { adminDb } from '@/lib/firebaseAdmin';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // 🏢 ENTERPRISE INTERFACES - Proper TypeScript typing
@@ -16,119 +26,154 @@ interface FloorDocument {
   name?: string;
   buildingId: string;
   projectId?: string;
+  companyId?: string;
   [key: string]: unknown;
 }
 
-export const GET = withErrorHandling(async (request: NextRequest) => {
-    const { searchParams } = new URL(request.url);
-    const buildingId = searchParams.get('buildingId');
-    const projectId = searchParams.get('projectId');
+// Response types for type-safe withAuth
+type FloorsListSuccess = {
+  success: true;
+  floors: FloorDocument[];
+  floorsByBuilding?: Record<string, FloorDocument[]>;
+  stats: {
+    totalFloors: number;
+    buildingId?: string;
+    projectId?: string;
+    buildingsWithFloors?: number;
+  };
+  message?: string;
+};
 
-    // For testing: Show ALL floors if no parameters (temporary debug)
-    if (!buildingId && !projectId) {
-      console.log('🔧 DEBUG MODE: Loading ALL floors (no parameters provided)');
-      const allFloorsQuery = query(collection(db, COLLECTIONS.FLOORS));
-      const allSnapshot = await getDocs(allFloorsQuery);
+type FloorsListError = {
+  success: false;
+  error: string;
+  details?: string;
+};
 
-      console.log(`🔧 DEBUG: Found ${allSnapshot.docs.length} total floors`);
-      allSnapshot.docs.forEach(doc => {
-        console.log(`🔧 DEBUG: Floor ID=${doc.id}, data:`, doc.data());
-      });
+type FloorsListResponse = FloorsListSuccess | FloorsListError;
 
-      const allFloors = allSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+export const GET = async (request: NextRequest) => {
+  const handler = withAuth<FloorsListResponse>(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<FloorsListResponse>> => {
+      try {
+        const { searchParams } = new URL(request.url);
+        const buildingId = searchParams.get('buildingId');
+        const projectId = searchParams.get('projectId');
 
-      return apiSuccess({
-        floors: allFloors,
-        debug: true,
-        message: 'Debug mode: All floors returned'
-      }, `DEBUG: Found ${allFloors.length} floors total`);
-    }
+        console.log(`🏢 [Floors/List] Fetching floors for tenant ${ctx.companyId}...`);
+        console.log(`🔒 Auth Context: User ${ctx.uid}, Company ${ctx.companyId}`);
+        console.log(`📋 Filters: buildingId=${buildingId || 'all'}, projectId=${projectId || 'all'}`);
 
-    console.log(`📋 Loading floors for: ${buildingId ? `building ${buildingId}` : `project ${projectId}`}`);
+        // ============================================================================
+        // TENANT-SCOPED QUERY (Admin SDK + Tenant Isolation)
+        // ============================================================================
 
-    // Build query based on parameters (Enterprise foreign key relationships)
-    let floorsQuery;
-    if (buildingId) {
-      // Query floors by buildingId (most common use case)
-      floorsQuery = query(
-        collection(db, COLLECTIONS.FLOORS),
-        where('buildingId', '==', buildingId)
-      );
-    } else if (projectId) {
-      // Query floors by projectId (for project-level floor listing)
-      // Handle both string and number projectId values
-      const projectIdValue = isNaN(Number(projectId)) ? projectId : Number(projectId);
-      console.log(`🔧 DEBUG: projectId="${projectId}" converted to:`, projectIdValue);
+        let floorsQuery = adminDb
+          .collection(COLLECTIONS.FLOORS)
+          .where('companyId', '==', ctx.companyId);
 
-      floorsQuery = query(
-        collection(db, COLLECTIONS.FLOORS),
-        where('projectId', '==', projectIdValue)
-      );
-    }
-
-    // Execute query
-    const floorsSnapshot = await getDocs(floorsQuery!);
-    let floors: FloorDocument[] = floorsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as FloorDocument));
-
-    console.log(`   Found ${floors.length} floors`);
-
-    // 🚀 ENTERPRISE SORTING: JavaScript-based sorting to avoid Firestore index requirements
-    if (buildingId) {
-      // Sort floors by number for single building
-      floors.sort((a: FloorDocument, b: FloorDocument) => {
-        const numA = typeof a.number === 'number' ? a.number : parseInt(String(a.number)) || 0;
-        const numB = typeof b.number === 'number' ? b.number : parseInt(String(b.number)) || 0;
-        return numA - numB;
-      });
-    } else if (projectId) {
-      // Sort by building first, then by floor number for project-level queries
-      floors.sort((a: FloorDocument, b: FloorDocument) => {
-        // First sort by building ID
-        if (a.buildingId !== b.buildingId) {
-          return a.buildingId.localeCompare(b.buildingId);
+        // Apply additional filters
+        if (buildingId) {
+          // Query floors by buildingId (most common use case)
+          floorsQuery = floorsQuery.where('buildingId', '==', buildingId);
+        } else if (projectId) {
+          // Query floors by projectId (for project-level floor listing)
+          // Handle both string and number projectId values
+          const projectIdValue = isNaN(Number(projectId)) ? projectId : Number(projectId);
+          floorsQuery = floorsQuery.where('projectId', '==', projectIdValue);
         }
-        // Then by floor number
-        const numA = typeof a.number === 'number' ? a.number : parseInt(String(a.number)) || 0;
-        const numB = typeof b.number === 'number' ? b.number : parseInt(String(b.number)) || 0;
-        return numA - numB;
-      });
-    }
 
-    // Group floors by building if querying by projectId
-    if (projectId) {
-      const floorsByBuilding = floors.reduce((groups: Record<string, FloorDocument[]>, floor: FloorDocument) => {
-        const buildingId = floor.buildingId;
-        if (!groups[buildingId]) {
-          groups[buildingId] = [];
-        }
-        groups[buildingId].push(floor);
-        return groups;
-      }, {} as Record<string, FloorDocument[]>);
+        // Execute query
+        const floorsSnapshot = await floorsQuery.get();
+        let floors: FloorDocument[] = floorsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as FloorDocument));
 
-      return apiSuccess({
-        floors,
-        floorsByBuilding,
-        stats: {
-          totalFloors: floors.length,
-          buildingsWithFloors: Object.keys(floorsByBuilding).length
+        console.log(`🏢 Found ${floors.length} floors for tenant ${ctx.companyId}`);
+
+        // ============================================================================
+        // ENTERPRISE SORTING - JavaScript-based sorting to avoid Firestore index requirements
+        // ============================================================================
+
+        if (buildingId) {
+          // Sort floors by number for single building
+          floors.sort((a: FloorDocument, b: FloorDocument) => {
+            const numA = typeof a.number === 'number' ? a.number : parseInt(String(a.number)) || 0;
+            const numB = typeof b.number === 'number' ? b.number : parseInt(String(b.number)) || 0;
+            return numA - numB;
+          });
+        } else if (projectId) {
+          // Sort by building first, then by floor number for project-level queries
+          floors.sort((a: FloorDocument, b: FloorDocument) => {
+            // First sort by building ID
+            if (a.buildingId !== b.buildingId) {
+              return a.buildingId.localeCompare(b.buildingId);
+            }
+            // Then by floor number
+            const numA = typeof a.number === 'number' ? a.number : parseInt(String(a.number)) || 0;
+            const numB = typeof b.number === 'number' ? b.number : parseInt(String(b.number)) || 0;
+            return numA - numB;
+          });
         }
-      }, `Found ${floors.length} floors in ${Object.keys(floorsByBuilding).length} buildings`);
-    } else {
-      return apiSuccess({
-        floors,
-        stats: {
-          totalFloors: floors.length,
-          buildingId
+
+        // ============================================================================
+        // GROUP BY BUILDING (if querying by projectId)
+        // ============================================================================
+
+        if (projectId) {
+          const floorsByBuilding = floors.reduce((groups: Record<string, FloorDocument[]>, floor: FloorDocument) => {
+            const buildingId = floor.buildingId;
+            if (!groups[buildingId]) {
+              groups[buildingId] = [];
+            }
+            groups[buildingId].push(floor);
+            return groups;
+          }, {} as Record<string, FloorDocument[]>);
+
+          console.log(`✅ [Floors/List] Complete: ${floors.length} floors in ${Object.keys(floorsByBuilding).length} buildings`);
+
+          return NextResponse.json({
+            success: true,
+            floors,
+            floorsByBuilding,
+            stats: {
+              totalFloors: floors.length,
+              buildingsWithFloors: Object.keys(floorsByBuilding).length,
+              projectId
+            },
+            message: `Found ${floors.length} floors in ${Object.keys(floorsByBuilding).length} buildings`
+          });
+        } else {
+          console.log(`✅ [Floors/List] Complete: ${floors.length} floors returned`);
+
+          return NextResponse.json({
+            success: true,
+            floors,
+            stats: {
+              totalFloors: floors.length,
+              buildingId
+            },
+            message: `Found ${floors.length} floors${buildingId ? ` for building ${buildingId}` : ''}`
+          });
         }
-      }, `Found ${floors.length} floors for building ${buildingId}`);
-    }
-}, {
-  operation: 'loadFloors',
-  entityType: 'floors'
-});
+
+      } catch (error) {
+        console.error('❌ [Floors/List] Error:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          userId: ctx.uid,
+          companyId: ctx.companyId
+        });
+
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to fetch floors',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
+      }
+    },
+    { permissions: 'floors:floors:view' }
+  );
+
+  return handler(request);
+};
