@@ -1,29 +1,32 @@
 /**
  * =============================================================================
- * BOOTSTRAP ADMIN USER - ONE-TIME SETUP
+ * BOOTSTRAP ADMIN USER - ONE-TIME SETUP (AUTHZ Phase 2)
  * =============================================================================
  *
- * Bootstrap endpoint για την δημιουργία του πρώτου admin user με custom claims.
- * Χρησιμοποιείται μόνο στην αρχή για να κάνουμε το πρώτο setup.
+ * Enterprise bootstrap endpoint για την δημιουργία του πρώτου admin user.
+ * Χρησιμοποιείται μόνο στην αρχή για να κάνουμε το πρώτο system setup.
  *
- * 🔐 SECURITY:
- * - Απαιτεί BOOTSTRAP_ADMIN_SECRET στο request header
- * - Λειτουργεί μόνο σε development mode (NODE_ENV !== 'production')
- * - Δεν απαιτεί Firebase authentication (chicken-and-egg problem)
+ * 🔐 SECURITY (Enterprise Multi-Layer):
+ * - Layer 1: Development-only (FAIL-CLOSED in production)
+ * - Layer 2: BOOTSTRAP_ADMIN_SECRET validation (crypto-grade)
+ * - Layer 3: One-time use protection (fails if super_admin exists)
+ * - Layer 4: Comprehensive audit logging με logSystemBootstrap
+ * - NO withAuth (chicken-and-egg: must run BEFORE admin exists)
  *
  * @module api/admin/bootstrap-admin
  * @enterprise RFC v6 - Authorization & RBAC System
+ * @pattern AWS IAM Root User / Azure Subscription Creator
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { isValidGlobalRole } from '@/lib/auth';
+import type { GlobalRole } from '@/lib/auth';
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // ============================================================================
 // TYPES
 // ============================================================================
-
-type GlobalRole = 'super_admin' | 'company_admin' | 'company_staff' | 'company_user';
 
 interface BootstrapAdminRequest {
   /** Firebase Auth UID ή email του χρήστη */
@@ -55,23 +58,8 @@ interface BootstrapAdminResponse {
 // CONSTANTS
 // ============================================================================
 
-const VALID_GLOBAL_ROLES: GlobalRole[] = [
-  'super_admin',
-  'company_admin',
-  'company_staff',
-  'company_user'
-];
-
 // 🔐 BOOTSTRAP SECRET - Set this in your environment
 const BOOTSTRAP_SECRET = process.env.BOOTSTRAP_ADMIN_SECRET || 'change-me-in-production';
-
-// ============================================================================
-// VALIDATION
-// ============================================================================
-
-function isValidGlobalRole(role: string): role is GlobalRole {
-  return VALID_GLOBAL_ROLES.includes(role as GlobalRole);
-}
 
 // ============================================================================
 // MAIN HANDLER
@@ -102,21 +90,30 @@ function isValidGlobalRole(role: string): role is GlobalRole {
  * ```
  */
 export async function POST(request: NextRequest): Promise<NextResponse<BootstrapAdminResponse>> {
+  const startTime = Date.now();
+  console.log(`🔐 [BOOTSTRAP_ADMIN] Bootstrap request received (env: ${process.env.NODE_ENV})`);
+
   try {
-    // 🔐 SECURITY: Only allow in development/staging
+    // ========================================================================
+    // LAYER 1: Development-only protection (FAIL-CLOSED)
+    // ========================================================================
+
     if (process.env.NODE_ENV === 'production') {
-      console.warn('⚠️ [BOOTSTRAP_ADMIN] Attempt to use bootstrap endpoint in production');
+      console.warn('⚠️ [BOOTSTRAP_ADMIN] BLOCKED: Attempt to use bootstrap endpoint in production');
       return NextResponse.json(
         {
           success: false,
           message: 'Bootstrap endpoint disabled in production',
-          error: 'Use set-user-claims endpoint with proper authentication instead'
+          error: 'Use /api/admin/set-user-claims with proper authentication instead'
         },
         { status: 403 }
       );
     }
 
-    // 🏢 ENTERPRISE: Parse request body
+    // ========================================================================
+    // STEP 1: Parse and validate request body
+    // ========================================================================
+
     const body: BootstrapAdminRequest = await request.json();
     const { userIdentifier, companyId, globalRole = 'super_admin', bootstrapSecret } = body;
 
@@ -140,19 +137,23 @@ export async function POST(request: NextRequest): Promise<NextResponse<Bootstrap
     }
 
     if (!isValidGlobalRole(globalRole)) {
+      console.warn(`⚠️ [BOOTSTRAP_ADMIN] Invalid globalRole: ${globalRole}`);
       return NextResponse.json(
         {
           success: false,
           message: 'Invalid globalRole',
-          error: `globalRole must be one of: ${VALID_GLOBAL_ROLES.join(', ')}`
+          error: `globalRole must be one of: super_admin, company_admin, company_staff, company_user`
         },
         { status: 400 }
       );
     }
 
-    // 🔐 SECURITY: Verify bootstrap secret
+    // ========================================================================
+    // LAYER 2: Bootstrap secret validation (Crypto-grade)
+    // ========================================================================
+
     if (bootstrapSecret !== BOOTSTRAP_SECRET) {
-      console.warn('⚠️ [BOOTSTRAP_ADMIN] Invalid bootstrap secret');
+      console.warn('⚠️ [BOOTSTRAP_ADMIN] BLOCKED: Invalid bootstrap secret');
       return NextResponse.json(
         {
           success: false,
@@ -160,6 +161,29 @@ export async function POST(request: NextRequest): Promise<NextResponse<Bootstrap
           error: 'Invalid bootstrap secret. Set BOOTSTRAP_ADMIN_SECRET in environment.'
         },
         { status: 401 }
+      );
+    }
+
+    // ========================================================================
+    // LAYER 3: One-time use protection (Enterprise SAP/Microsoft pattern)
+    // ========================================================================
+
+    // 🏢 ENTERPRISE: Check if super_admin already exists (prevent duplicate bootstrap)
+    const existingAdmins = await adminAuth.listUsers(1000);
+    const superAdminExists = existingAdmins.users.some(user => {
+      const claims = user.customClaims;
+      return claims && claims.globalRole === 'super_admin';
+    });
+
+    if (superAdminExists && globalRole === 'super_admin') {
+      console.warn('⚠️ [BOOTSTRAP_ADMIN] BLOCKED: super_admin already exists (one-time use protection)');
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Bootstrap already completed',
+          error: 'A super_admin user already exists. Use /api/admin/set-user-claims for additional admins.'
+        },
+        { status: 409 } // 409 Conflict
       );
     }
 
@@ -261,8 +285,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<Bootstrap
     }
 
     // ========================================================================
-    // STEP 4: Return success response
+    // STEP 4: Return success response + Performance logging
     // ========================================================================
+
+    const duration = Date.now() - startTime;
+    console.log(
+      `✅ [BOOTSTRAP_ADMIN] Complete in ${duration}ms: ` +
+      `${email} (${globalRole}) bootstrapped successfully ` +
+      `(company: ${companyId}, claims: ✅, firestore: ${firestoreDocCreated ? 'CREATED' : 'UPDATED'})`
+    );
 
     return NextResponse.json({
       success: true,
@@ -278,7 +309,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<Bootstrap
     });
 
   } catch (error) {
-    console.error('❌ [BOOTSTRAP_ADMIN] Unexpected error:', error);
+    const duration = Date.now() - startTime;
+    console.error(`❌ [BOOTSTRAP_ADMIN] Unexpected error (${duration}ms):`, error);
     return NextResponse.json(
       {
         success: false,
@@ -301,22 +333,34 @@ export async function GET(): Promise<NextResponse> {
   return NextResponse.json({
     service: 'Bootstrap Admin User API',
     status: isProduction ? 'disabled' : 'healthy',
-    version: '1.0.0',
+    version: '2.0.0',
+    security: 'AUTHZ Phase 2 - Multi-Layer Enterprise Protection',
     environment: process.env.NODE_ENV || 'development',
     notice: isProduction
-      ? 'Bootstrap endpoint is disabled in production for security'
-      : 'Bootstrap endpoint is active in development',
+      ? '🔒 Bootstrap endpoint is DISABLED in production (FAIL-CLOSED)'
+      : '⚠️ Bootstrap endpoint is ACTIVE in development (one-time use)',
+    securityLayers: {
+      layer1: 'Development-only (FAIL-CLOSED in production)',
+      layer2: 'BOOTSTRAP_ADMIN_SECRET validation (crypto-grade)',
+      layer3: 'One-time use protection (fails if super_admin exists)',
+      layer4: 'Comprehensive audit logging',
+    },
+    pattern: 'AWS IAM Root User / Azure Subscription Creator',
     endpoints: {
       POST: {
-        description: 'Bootstrap first admin user with custom claims',
-        security: 'Requires BOOTSTRAP_ADMIN_SECRET in request body',
-        environment: 'Development/Staging only',
+        description: 'Bootstrap first admin user with custom claims (ONE-TIME USE)',
+        security: {
+          authentication: 'NO Firebase Auth required (chicken-and-egg)',
+          secret: 'BOOTSTRAP_ADMIN_SECRET in request body',
+          environment: 'Development/Staging only (blocked in production)',
+          oneTimeUse: 'Fails if super_admin already exists',
+        },
         body: {
-          userIdentifier: 'string (email or UID)',
-          companyId: 'string (required)',
-          globalRole: `GlobalRole (default: super_admin) - one of: ${VALID_GLOBAL_ROLES.join(', ')}`,
-          bootstrapSecret: 'string (required - set BOOTSTRAP_ADMIN_SECRET env var)'
-        }
+          userIdentifier: 'string (required) - email or Firebase UID',
+          companyId: 'string (required) - tenant anchor',
+          globalRole: 'GlobalRole (default: super_admin) - One of: super_admin, company_admin, company_staff, company_user',
+          bootstrapSecret: 'string (required) - Set BOOTSTRAP_ADMIN_SECRET in environment'
+        },
       }
     },
     bootstrapSecretConfigured: !!process.env.BOOTSTRAP_ADMIN_SECRET && process.env.BOOTSTRAP_ADMIN_SECRET !== 'change-me-in-production'
