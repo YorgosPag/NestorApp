@@ -10,6 +10,7 @@
 
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 import { getCurrentRuntimeEnvironment, type RuntimeEnvironment } from '@/config/environment-security-config';
 
 // ============================================================================
@@ -150,6 +151,12 @@ if (!getApps().length) {
  * @enterprise Will be undefined if initialization failed
  */
 export const adminDb = getFirestore();
+
+/**
+ * 🔐 Admin Firebase Auth Instance
+ * @enterprise Will be undefined if initialization failed
+ */
+export const adminAuth = getAuth();
 
 /**
  * 🔐 Admin Firebase App Instance

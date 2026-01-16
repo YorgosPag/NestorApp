@@ -1,0 +1,70 @@
+## UNPROTECTED ROUTES ANALYSIS (45 routes)
+
+### 🏢 CORE BUSINESS DOMAINS (Priority 1):
+1. companies/route.ts - Company management
+2. parking/route.ts - Parking spaces management
+3. storages/route.ts - Storage spaces management
+4. relationships/children/route.ts - Entity relationships
+5. relationships/create/route.ts - Entity relationships
+
+### 📧 COMMUNICATIONS DOMAIN (Priority 2):
+6. communications/webhooks/telegram/route.ts - Telegram webhook
+7. v2/projects/[projectId]/customers/route.ts - V2 API endpoint
+
+### 📤 UPLOAD DOMAIN (Priority 3):
+8. upload/photo/route.ts - Photo upload (user content!)
+
+### 🔧 ADMIN UTILITIES (Priority 4 - super_admin protection):
+9-21. admin/* (13 routes):
+   - admin/telegram/webhook/route.ts
+   - admin/seed-parking/route.ts
+   - admin/migrations/execute/route.ts
+   - admin/migrations/normalize-floors/route.ts
+   - admin/migrations/execute-admin/route.ts
+   - admin/migrate-units/route.ts
+   - admin/migrate-dxf/route.ts
+   - admin/fix-unit-project/route.ts
+   - admin/migrate-building-features/route.ts
+   - admin/fix-projects-direct/route.ts
+   - admin/fix-building-project/route.ts
+   - admin/create-clean-projects/route.ts
+   - admin/cleanup-duplicates/route.ts
+
+### 🧭 NAVIGATION DOMAIN (Priority 5):
+22-27. navigation/* (6 routes):
+   - navigation/radical-clean-schema/route.ts
+   - navigation/normalize-schema/route.ts
+   - navigation/force-uniform-schema/route.ts
+   - navigation/fix-contact-id/route.ts
+   - navigation/auto-fix-missing-companies/route.ts
+   - navigation/add-companies/route.ts
+
+### 🐛 DEBUG UTILITIES (Priority 6):
+28-35. debug/* (8 routes):
+   - debug/projects-analysis/route.ts
+   - debug/firestore-data/route.ts
+   - debug/buildings-floors-analysis/route.ts
+   - debug/buildings-floors-admin/route.ts
+   - debug-unit-floorplans/route.ts
+   - debug-projects/route.ts
+   - debug-companies/route.ts
+   - analyze-companies/route.ts
+
+### 🔧 LEGACY FIX UTILITIES (Priority 7):
+36-39. Fix utilities (4 routes):
+   - fix-projects/route.ts
+   - fix-companies/route.ts
+   - enterprise-ids/migrate/route.ts
+   - download/route.ts
+
+### 🧪 TESTING UTILITIES (Priority 8):
+40-42. Testing (3 routes):
+   - run-vitest/route.ts
+   - run-playwright/route.ts
+   - run-jest/route.ts
+
+### ⚙️ SYSTEM UTILITIES (Priority 9):
+43-45. System (3 routes):
+   - setup/firebase-collections/route.ts
+   - webhooks/sendgrid/route.ts
+   - audit/bootstrap/route.ts
