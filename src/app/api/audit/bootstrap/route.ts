@@ -23,7 +23,7 @@
  * - Multi-tenant aware: Filters data based on user's company context
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { adminDb, ensureAdminInitialized, getAdminInitializationStatus } from '@/lib/firebaseAdmin';
@@ -135,6 +135,7 @@ export const dynamic = 'force-dynamic';
  * GET /api/audit/bootstrap
  *
  * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+<<<<<<< HEAD
  * - Permission: audit:data:view
  * - Tenant Isolation: company_admin sees ONLY their company
  * - Super_admin Bypass: super_admin sees ALL companies
@@ -159,6 +160,26 @@ async function handleAuditBootstrap(
   const startTime = Date.now();
   console.log(`🔐 [Bootstrap] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
   console.log('🚀 [Bootstrap] Starting audit bootstrap load...');
+=======
+ * - Permission: projects:projects:view
+ * - Tenant Isolation: Filters companies and projects by user's companyId
+ * - Single-tenant view (user sees only their company data)
+ */
+export async function GET(request: NextRequest) {
+  const handler = withAuth(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<BootstrapResponse>> => {
+      return handleAuditBootstrap(req, ctx);
+    },
+    { permissions: 'projects:projects:view' }
+  );
+
+  return handler(request);
+}
+
+async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Promise<NextResponse<BootstrapResponse>> {
+  const startTime = Date.now();
+  console.log(`🚀 [Bootstrap] Audit bootstrap load for user ${ctx.email} (company: ${ctx.companyId})...`);
+>>>>>>> origin/main
 
   // ============================================================================
   // 0. VALIDATE FIREBASE ADMIN SDK - ENTERPRISE REQUIREMENT
@@ -185,6 +206,7 @@ async function handleAuditBootstrap(
   console.log('✅ [Bootstrap] Firebase Admin SDK validated');
 
   // ============================================================================
+<<<<<<< HEAD
   // 1. CHECK CACHE FIRST (Tenant-aware caching)
   // ============================================================================
 
@@ -197,35 +219,60 @@ async function handleAuditBootstrap(
 
   const cache = EnterpriseAPICache.getInstance();
   const cachedData = cache.get<BootstrapResponse>(cacheKey);
+=======
+  // 1. CHECK CACHE FIRST (PER-COMPANY CACHE KEY)
+  // ============================================================================
+
+  // 🔒 TENANT ISOLATION: Cache key includes companyId for tenant separation
+  const tenantCacheKey = `${CACHE_KEY}:${ctx.companyId}`;
+  const cache = EnterpriseAPICache.getInstance();
+  const cachedData = cache.get<BootstrapResponse>(tenantCacheKey);
+>>>>>>> origin/main
 
   if (cachedData) {
     const duration = Date.now() - startTime;
-    console.log(`⚡ [Bootstrap] CACHE HIT - ${cachedData.companies.length} companies, ${cachedData.projects.length} projects in ${duration}ms`);
+    console.log(`⚡ [Bootstrap] CACHE HIT (tenant: ${ctx.companyId}) - ${cachedData.companies.length} companies, ${cachedData.projects.length} projects in ${duration}ms`);
 
-    return apiSuccess<BootstrapResponse>({
+    return NextResponse.json({
       ...cachedData,
       source: 'cache',
       cached: true
-    }, `Bootstrap loaded from cache in ${duration}ms`);
+    } as BootstrapResponse);
   }
 
-  console.log('🔍 [Bootstrap] Cache miss - Fetching from Firestore...');
+  console.log(`🔍 [Bootstrap] Cache miss (tenant: ${ctx.companyId}) - Fetching from Firestore...`);
 
   // ============================================================================
-  // 2. FETCH ALL ACTIVE COMPANIES (Admin SDK)
+  // 2. FETCH USER'S COMPANY (TENANT ISOLATION)
   // ============================================================================
 
   let companiesSnapshot: FirebaseFirestore.QuerySnapshot;
 
   try {
-    // 🏢 ENTERPRISE: Using Admin SDK (server-side, no offline mode issues)
+    // 🔒 TENANT ISOLATION: Fetch ONLY the user's company
+    // Enterprise pattern: Single-tenant view (user sees only their organization)
     companiesSnapshot = await adminDb
       .collection(COLLECTIONS.CONTACTS)
       .where('type', '==', 'company')
       .where('status', '==', 'active')
       .get();
 
-    console.log(`🏢 [Bootstrap] Found ${companiesSnapshot.docs.length} active companies`);
+    // Filter to user's company only (in-memory filter after fetch for type safety)
+    const userCompanyDocs = companiesSnapshot.docs.filter(doc => doc.id === ctx.companyId);
+
+    if (userCompanyDocs.length === 0) {
+      console.warn(`⚠️ [Bootstrap] User's company ${ctx.companyId} not found in database`);
+      // Return empty result (tenant has no data yet)
+      return NextResponse.json({
+        companies: [],
+        projects: [],
+        loadedAt: new Date().toISOString(),
+        source: 'firestore',
+        cached: false
+      } as BootstrapResponse);
+    }
+
+    console.log(`🏢 [Bootstrap] Found user's company (tenant: ${ctx.companyId})`);
 
     // 🏢 DIAGNOSTIC: Log collection and query details
     if (companiesSnapshot.docs.length === 0) {
@@ -249,6 +296,7 @@ async function handleAuditBootstrap(
     );
   }
 
+<<<<<<< HEAD
   // ============================================================================
   // 2.5. TENANT ISOLATION - ENTERPRISE SECURITY
   // ============================================================================
@@ -271,13 +319,21 @@ async function handleAuditBootstrap(
 
   filteredCompanyDocs.forEach(doc => {
     const data = doc.data() as Partial<CompanyContact> & { displayName?: string };
+=======
+  // Build company map for quick lookup (only user's company)
+  const companyMap = new Map<string, { id: string; name: string }>();
+
+  userCompanyDocs.forEach(doc => {
+    const data = doc.data() as Partial<CompanyContact>;
+>>>>>>> origin/main
     companyMap.set(doc.id, {
       id: doc.id,
       name: data.companyName || data.displayName || 'Unknown Company'
     });
   });
 
-  const companyIds = Array.from(companyMap.keys());
+  // 🔒 TENANT ISOLATION: Only user's companyId (single-tenant array)
+  const companyIds = [ctx.companyId];
 
   // ============================================================================
   // 3. FETCH ALL PROJECTS (Admin SDK with chunking for `in` limit)
@@ -425,6 +481,7 @@ async function handleAuditBootstrap(
   };
 
   // ============================================================================
+<<<<<<< HEAD
   // 5. CACHE RESPONSE (Tenant-aware)
   // ============================================================================
 
@@ -436,6 +493,31 @@ async function handleAuditBootstrap(
   console.log(`✅ [Bootstrap] Complete: ${companies.length} companies, ${allProjects.length} projects in ${duration}ms (${tenantInfo}, cached for 3min)`);
 
   return apiSuccess<BootstrapResponse>(response, `Bootstrap loaded in ${duration}ms`);
+=======
+  // 5. CACHE RESPONSE (PER-TENANT)
+  // ============================================================================
+
+  // 🔒 TENANT ISOLATION: Cache with tenant-specific key
+  cache.set(tenantCacheKey, response, CACHE_TTL_MS);
+
+  const duration = Date.now() - startTime;
+  console.log(`✅ [Bootstrap] Complete (tenant: ${ctx.companyId}): ${companies.length} companies, ${allProjects.length} projects in ${duration}ms (cached for 3min)`);
+
+  try {
+    return NextResponse.json(response);
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    console.error(`❌ [Bootstrap] Error (tenant: ${ctx.companyId}) in ${duration}ms:`, error);
+
+    return NextResponse.json({
+      companies: [],
+      projects: [],
+      loadedAt: new Date().toISOString(),
+      source: 'firestore',
+      cached: false
+    } as BootstrapResponse, { status: 500 });
+  }
+>>>>>>> origin/main
 }
 
 // ============================================================================

@@ -10,6 +10,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { adminDb } from '@/lib/firebaseAdmin';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { EnterpriseRelationshipEngine } from '@/services/relationships/enterprise-relationship-engine';
 import type {
   EntityType,
@@ -21,7 +25,27 @@ import type {
 // CREATE RELATIONSHIP ENDPOINT
 // ============================================================================
 
-export async function POST(request: NextRequest): Promise<NextResponse<RelationshipOperationResult>> {
+/**
+ * POST /api/relationships/create
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: projects:projects:update
+ * - Only authenticated users can create relationships
+ */
+export async function POST(request: NextRequest) {
+  const handler = withAuth(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<RelationshipOperationResult>> => {
+      return handleCreateRelationship(req, ctx);
+    },
+    { permissions: 'projects:projects:update' }
+  );
+
+  return handler(request);
+}
+
+async function handleCreateRelationship(request: NextRequest, ctx: AuthContext): Promise<NextResponse<RelationshipOperationResult>> {
+  console.log(`🔗 API: Create relationship request from user ${ctx.email} (company: ${ctx.companyId})`);
+
   try {
     // 1️⃣ PARSE & VALIDATE REQUEST
     const body = await request.json();
@@ -71,7 +95,62 @@ export async function POST(request: NextRequest): Promise<NextResponse<Relations
       } as RelationshipOperationResult, { status: 400 });
     }
 
-    // 2️⃣ ENTERPRISE RELATIONSHIP CREATION
+    // 2️⃣ TENANT ISOLATION - Validate both parent and child entity ownership
+    const parentAccess = await validateEntityOwnership(
+      parentType as EntityType,
+      parentId,
+      ctx.companyId
+    );
+
+    if (!parentAccess) {
+      console.warn(`🚫 TENANT ISOLATION: User ${ctx.uid} attempted to access unauthorized parent ${parentType} ${parentId}`);
+      return NextResponse.json({
+        success: false,
+        entityId: parentId,
+        affectedRelationships: [],
+        metadata: {
+          operationType: 'CREATE',
+          timestamp: new Date(),
+          performedBy: ctx.email,
+          cascadeCount: 0
+        },
+        errors: [{
+          code: 'FORBIDDEN',
+          message: 'Parent entity not found or access denied',
+          entityType: parentType,
+          entityId: parentId
+        }]
+      } as RelationshipOperationResult, { status: 403 });
+    }
+
+    const childAccess = await validateEntityOwnership(
+      childType as EntityType,
+      childId,
+      ctx.companyId
+    );
+
+    if (!childAccess) {
+      console.warn(`🚫 TENANT ISOLATION: User ${ctx.uid} attempted to access unauthorized child ${childType} ${childId}`);
+      return NextResponse.json({
+        success: false,
+        entityId: childId,
+        affectedRelationships: [],
+        metadata: {
+          operationType: 'CREATE',
+          timestamp: new Date(),
+          performedBy: ctx.email,
+          cascadeCount: 0
+        },
+        errors: [{
+          code: 'FORBIDDEN',
+          message: 'Child entity not found or access denied',
+          entityType: childType,
+          entityId: childId
+        }]
+      } as RelationshipOperationResult, { status: 403 });
+    }
+
+    // 3️⃣ ENTERPRISE RELATIONSHIP CREATION
     const relationshipEngine = new EnterpriseRelationshipEngine();
 
     const result = await relationshipEngine.createRelationship(
@@ -82,7 +161,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<Relations
       options as CreateRelationshipOptions || {}
     );
 
-    // 3️⃣ RETURN RESULT
+    // 4️⃣ RETURN RESULT
     const statusCode = result.success ? 200 : 400;
     return NextResponse.json(result, { status: statusCode });
 
@@ -116,6 +195,63 @@ export async function POST(request: NextRequest): Promise<NextResponse<Relations
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
+
+/**
+ * 🔒 TENANT ISOLATION: Validate entity ownership
+ *
+ * Validates that the specified entity belongs to the user's company.
+ * Currently implements validation for project and company entities.
+ *
+ * TODO: Add comprehensive validation for all entity types:
+ * - building → project → companyId
+ * - floor → building → project → companyId
+ * - unit → floor → building → project → companyId
+ * - contact → companyId (direct)
+ */
+async function validateEntityOwnership(
+  entityType: EntityType,
+  entityId: string,
+  companyId: string
+): Promise<boolean> {
+  try {
+    switch (entityType) {
+      case 'company':
+        // Direct ownership: entity must be the user's company
+        return entityId === companyId;
+
+      case 'project':
+        // Validate project belongs to user's company
+        const projectDoc = await adminDb
+          .collection(COLLECTIONS.PROJECTS)
+          .doc(entityId)
+          .get();
+
+        if (!projectDoc.exists) {
+          return false;
+        }
+
+        const projectData = projectDoc.data();
+        return projectData?.companyId === companyId;
+
+      case 'building':
+      case 'floor':
+      case 'unit':
+      case 'contact':
+        // TODO: Implement multi-level validation for these entity types
+        console.warn(`⚠️ PARTIAL VALIDATION: ${entityType} ownership validation not yet implemented`);
+        // For now, allow these (relationships engine will handle basic validation)
+        // This should be hardened before production use
+        return true;
+
+      default:
+        console.error(`❌ UNKNOWN ENTITY TYPE: ${entityType}`);
+        return false;
+    }
+  } catch (error) {
+    console.error(`❌ Error validating entity ownership for ${entityType} ${entityId}:`, error);
+    return false;
+  }
+}
 
 function isValidEntityType(type: string): type is EntityType {
   return ['company', 'project', 'building', 'floor', 'unit', 'contact'].includes(type);

@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { adminDb } from '@/lib/firebaseAdmin';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { Pool } from 'pg';
 import { generateRequestId } from '@/services/enterprise-id.service';
 
@@ -80,17 +84,45 @@ interface ProjectCustomersResponse {
   };
 }
 
-// 🚀 MAIN API HANDLER
+// ============================================================================
+// V2 CUSTOMERS API ENDPOINT
+// ============================================================================
+
+/**
+ * GET /api/v2/projects/[projectId]/customers
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: crm:contacts:view
+ * - Tenant Isolation: Validates project belongs to user's company
+ * - PostgreSQL-based query (100x faster than Firebase)
+ */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> }
+  context: { params: Promise<{ projectId: string }> }
+) {
+  const handler = withAuth(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      return handleGetCustomers(req, ctx, context.params);
+    },
+    { permissions: 'crm:contacts:view' }
+  );
+
+  return handler(request);
+}
+
+async function handleGetCustomers(
+  request: NextRequest,
+  ctx: AuthContext,
+  paramsPromise: Promise<{ projectId: string }>
 ) {
   const startTime = Date.now();
   // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   const requestId = generateRequestId();
 
+  console.log(`👥 API: V2 Customers request from user ${ctx.email} (company: ${ctx.companyId})`);
+
   try {
-    const { projectId } = await params;
+    const { projectId } = await paramsPromise;
 
     // 🔒 Input Validation
     if (!projectId || projectId.trim() === '') {
@@ -101,6 +133,31 @@ export async function GET(
       }, { status: 400 });
     }
 
+    // 🔒 TENANT ISOLATION - Validate project ownership
+    console.log(`🔍 [${requestId}] Validating project ownership...`);
+    const projectDoc = await adminDb
+      .collection(COLLECTIONS.PROJECTS)
+      .doc(projectId)
+      .get();
+
+    if (!projectDoc.exists) {
+      console.warn(`🚫 [${requestId}] Project not found: ${projectId}`);
+      return NextResponse.json({
+        success: false,
+        error: 'Project not found'
+      }, { status: 404 });
+    }
+
+    const firestoreProject = projectDoc.data();
+    if (firestoreProject?.companyId !== ctx.companyId) {
+      console.warn(`🚫 TENANT ISOLATION: User ${ctx.uid} attempted to access unauthorized project ${projectId}`);
+      return NextResponse.json({
+        success: false,
+        error: 'Project not found or access denied'
+      }, { status: 403 });
+    }
+
+    console.log(`✅ [${requestId}] Project ownership validated`);
     console.log(`🏢 [${requestId}] Loading enterprise customers for project: ${projectId}`);
 
     // ⚡ ENTERPRISE QUERY - Single JOIN query αντί 20+ Firebase calls
@@ -246,6 +303,7 @@ export async function GET(
 
     // 🎯 Performance Logging
     console.log(`✅ [${requestId}] Enterprise API completed successfully:`);
+    console.log(`📊 [${requestId}] User: ${ctx.email} (company: ${ctx.companyId})`);
     console.log(`📊 [${requestId}] Performance: ${totalTime}ms total (${queryEndTime - queryStartTime}ms query)`);
     console.log(`👥 [${requestId}] Results: ${response.summary.totalCustomers} customers, ${response.summary.totalUnitsSold} units`);
     console.log(`💰 [${requestId}] Sales: €${response.summary.totalSalesValue.toLocaleString()}`);
