@@ -171,14 +171,39 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
   // 2. FETCH ALL ACTIVE COMPANIES (Admin SDK)
   // ============================================================================
 
-  // 🏢 ENTERPRISE: Using Admin SDK (server-side, no offline mode issues)
-  const companiesSnapshot = await adminDb
-    .collection(COLLECTIONS.CONTACTS)
-    .where('type', '==', 'company')
-    .where('status', '==', 'active')
-    .get();
+  let companiesSnapshot: FirebaseFirestore.QuerySnapshot;
 
-  console.log(`🏢 [Bootstrap] Found ${companiesSnapshot.docs.length} active companies`);
+  try {
+    // 🏢 ENTERPRISE: Using Admin SDK (server-side, no offline mode issues)
+    companiesSnapshot = await adminDb
+      .collection(COLLECTIONS.CONTACTS)
+      .where('type', '==', 'company')
+      .where('status', '==', 'active')
+      .get();
+
+    console.log(`🏢 [Bootstrap] Found ${companiesSnapshot.docs.length} active companies`);
+
+    // 🏢 DIAGNOSTIC: Log collection and query details
+    if (companiesSnapshot.docs.length === 0) {
+      console.warn('⚠️ [Bootstrap] No companies found - checking database state');
+      console.warn('📋 [Bootstrap] Collection:', COLLECTIONS.CONTACTS);
+      console.warn('📋 [Bootstrap] Query filters: type=company, status=active');
+    }
+  } catch (error) {
+    console.error('❌ [Bootstrap] Failed to fetch companies from Firestore');
+    console.error('📍 [Bootstrap] Collection:', COLLECTIONS.CONTACTS);
+    console.error('📋 [Bootstrap] Error details:', error instanceof Error ? error.message : String(error));
+
+    if (error instanceof Error && error.stack) {
+      console.error('📚 [Bootstrap] Stack trace:', error.stack);
+    }
+
+    throw new Error(
+      `Failed to fetch companies from Firestore: ${error instanceof Error ? error.message : 'Unknown error'}. ` +
+      `Collection: ${COLLECTIONS.CONTACTS}. ` +
+      `Check Firestore security rules and Admin SDK permissions.`
+    );
+  }
 
   // Build company map for quick lookup
   const companyMap = new Map<string, { id: string; name: string }>();
@@ -201,35 +226,55 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
 
   if (companyIds.length === 0) {
     console.log('⚠️ [Bootstrap] No companies found - returning empty projects');
-  } else if (companyIds.length <= FIRESTORE_IN_LIMIT) {
-    // 🏢 ENTERPRISE: Single query - under the limit (Admin SDK)
-    const projectsSnapshot = await adminDb
-      .collection(COLLECTIONS.PROJECTS)
-      .where('companyId', 'in', companyIds)
-      .get();
-
-    allProjects = projectsSnapshot.docs.map(doc => mapProjectDocument(doc));
-
   } else {
-    // 🏢 ENTERPRISE: Chunked queries - over the limit (Admin SDK)
-    console.log(`📦 [Bootstrap] Chunking ${companyIds.length} companies into ${Math.ceil(companyIds.length / FIRESTORE_IN_LIMIT)} queries`);
-
-    const chunks = chunkArray(companyIds, FIRESTORE_IN_LIMIT);
-
-    const chunkResults = await Promise.all(
-      chunks.map(async (chunk) => {
-        const snapshot = await adminDb
+    try {
+      if (companyIds.length <= FIRESTORE_IN_LIMIT) {
+        // 🏢 ENTERPRISE: Single query - under the limit (Admin SDK)
+        const projectsSnapshot = await adminDb
           .collection(COLLECTIONS.PROJECTS)
-          .where('companyId', 'in', chunk)
+          .where('companyId', 'in', companyIds)
           .get();
-        return snapshot.docs.map(doc => mapProjectDocument(doc));
-      })
-    );
 
-    allProjects = chunkResults.flat();
+        allProjects = projectsSnapshot.docs.map(doc => mapProjectDocument(doc));
+
+      } else {
+        // 🏢 ENTERPRISE: Chunked queries - over the limit (Admin SDK)
+        console.log(`📦 [Bootstrap] Chunking ${companyIds.length} companies into ${Math.ceil(companyIds.length / FIRESTORE_IN_LIMIT)} queries`);
+
+        const chunks = chunkArray(companyIds, FIRESTORE_IN_LIMIT);
+
+        const chunkResults = await Promise.all(
+          chunks.map(async (chunk) => {
+            const snapshot = await adminDb
+              .collection(COLLECTIONS.PROJECTS)
+              .where('companyId', 'in', chunk)
+              .get();
+            return snapshot.docs.map(doc => mapProjectDocument(doc));
+          })
+        );
+
+        allProjects = chunkResults.flat();
+      }
+
+      console.log(`🏗️ [Bootstrap] Found ${allProjects.length} total projects`);
+
+    } catch (error) {
+      console.error('❌ [Bootstrap] Failed to fetch projects from Firestore');
+      console.error('📍 [Bootstrap] Collection:', COLLECTIONS.PROJECTS);
+      console.error('📋 [Bootstrap] Company IDs count:', companyIds.length);
+      console.error('📋 [Bootstrap] Error details:', error instanceof Error ? error.message : String(error));
+
+      if (error instanceof Error && error.stack) {
+        console.error('📚 [Bootstrap] Stack trace:', error.stack);
+      }
+
+      throw new Error(
+        `Failed to fetch projects from Firestore: ${error instanceof Error ? error.message : 'Unknown error'}. ` +
+        `Collection: ${COLLECTIONS.PROJECTS}. ` +
+        `Check Firestore security rules and indexes.`
+      );
+    }
   }
-
-  console.log(`🏗️ [Bootstrap] Found ${allProjects.length} total projects`);
 
   // ============================================================================
   // 3.5 FETCH BUILDING COUNTS PER PROJECT (PERF-001)
@@ -239,31 +284,46 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
   const buildingCountByProject = new Map<string, number>();
 
   if (projectIds.length > 0) {
-    // 🏢 ENTERPRISE: Fetch all buildings and count per project
-    // This eliminates the need for realtime listeners in NavigationContext
-    const buildingChunks = chunkArray(projectIds, FIRESTORE_IN_LIMIT);
+    try {
+      // 🏢 ENTERPRISE: Fetch all buildings and count per project
+      // This eliminates the need for realtime listeners in NavigationContext
+      const buildingChunks = chunkArray(projectIds, FIRESTORE_IN_LIMIT);
 
-    const buildingResults = await Promise.all(
-      buildingChunks.map(async (chunk) => {
-        const snapshot = await adminDb
-          .collection(COLLECTIONS.BUILDINGS)
-          .where('projectId', 'in', chunk)
-          .get();
-        return snapshot.docs;
-      })
-    );
+      const buildingResults = await Promise.all(
+        buildingChunks.map(async (chunk) => {
+          const snapshot = await adminDb
+            .collection(COLLECTIONS.BUILDINGS)
+            .where('projectId', 'in', chunk)
+            .get();
+          return snapshot.docs;
+        })
+      );
 
-    const allBuildingDocs = buildingResults.flat();
-    console.log(`🏗️ [Bootstrap] Found ${allBuildingDocs.length} total buildings`);
+      const allBuildingDocs = buildingResults.flat();
+      console.log(`🏗️ [Bootstrap] Found ${allBuildingDocs.length} total buildings`);
 
-    // Count buildings per project
-    allBuildingDocs.forEach(doc => {
-      const projectId = doc.data().projectId;
-      if (projectId) {
-        const count = buildingCountByProject.get(projectId) || 0;
-        buildingCountByProject.set(projectId, count + 1);
+      // Count buildings per project
+      allBuildingDocs.forEach(doc => {
+        const projectId = doc.data().projectId;
+        if (projectId) {
+          const count = buildingCountByProject.get(projectId) || 0;
+          buildingCountByProject.set(projectId, count + 1);
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ [Bootstrap] Failed to fetch buildings from Firestore');
+      console.error('📍 [Bootstrap] Collection:', COLLECTIONS.BUILDINGS);
+      console.error('📋 [Bootstrap] Project IDs count:', projectIds.length);
+      console.error('📋 [Bootstrap] Error details:', error instanceof Error ? error.message : String(error));
+
+      if (error instanceof Error && error.stack) {
+        console.error('📚 [Bootstrap] Stack trace:', error.stack);
       }
-    });
+
+      // 🏢 NON-BLOCKING: Buildings are optional - continue with zero counts
+      console.warn('⚠️ [Bootstrap] Continuing with zero building counts (non-critical failure)');
+    }
   }
 
   // Add buildingCount to each project

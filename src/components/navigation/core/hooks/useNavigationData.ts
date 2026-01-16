@@ -119,13 +119,37 @@ export function useNavigationData(): UseNavigationDataReturn {
         const response = await fetch('/api/audit/bootstrap');
 
         if (!response.ok) {
-          throw new Error(`Bootstrap failed: ${response.status}`);
+          // 🏢 ENTERPRISE: Enhanced error diagnostics - read actual error from server
+          let errorMessage = `Bootstrap API returned HTTP ${response.status}`;
+          let serverError: unknown = null;
+
+          try {
+            serverError = await response.json();
+
+            // Extract detailed error message from server response
+            if (serverError && typeof serverError === 'object' && 'error' in serverError) {
+              const error = (serverError as { error: string }).error;
+              errorMessage = `${errorMessage}: ${error}`;
+
+              console.error('❌ [Navigation] Server error details:', {
+                status: response.status,
+                statusText: response.statusText,
+                error: serverError,
+                timestamp: new Date().toISOString()
+              });
+            }
+          } catch (parseError) {
+            // If we can't parse JSON, use generic message
+            console.error('❌ [Navigation] Could not parse server error response');
+          }
+
+          throw new Error(errorMessage);
         }
 
         const result = await response.json();
 
         if (!result.success || !result.data) {
-          throw new Error('Bootstrap returned invalid data');
+          throw new Error('Bootstrap returned invalid data structure');
         }
 
         const bootstrapData = result.data as BootstrapResponse;
