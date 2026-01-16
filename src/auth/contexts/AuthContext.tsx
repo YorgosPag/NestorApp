@@ -77,6 +77,10 @@ interface AuthContextType {
   isAuthenticated: boolean;
   /** True if user needs to complete their profile (e.g., Google sign-in) */
   needsProfileCompletion: boolean;
+
+  // 🔐 ENTERPRISE: Force token refresh (for permission updates)
+  /** Force refresh Firebase ID token (useful after permission changes) */
+  refreshToken: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -664,6 +668,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   // ==========================================================================
+  // 🔐 ENTERPRISE: FORCE TOKEN REFRESH
+  // ==========================================================================
+  // Used after admin permission updates to get fresh custom claims
+  // Pattern: Microsoft/SAP/Google - Force token refresh after role changes
+  // ==========================================================================
+
+  const refreshTokenFn = async (): Promise<void> => {
+    try {
+      if (!auth.currentUser) {
+        throw new Error('No authenticated user');
+      }
+
+      setError(null);
+      console.log('🔄 [AuthContext] Force refreshing ID token...');
+
+      // Force refresh (getIdToken with forceRefresh=true)
+      await auth.currentUser.getIdToken(true);
+
+      console.log('✅ [AuthContext] Token refreshed successfully - new permissions loaded');
+    } catch (error) {
+      console.error('❌ [AuthContext] Token refresh failed:', error);
+      handleError(error);
+      throw error;
+    }
+  };
+
+  // ==========================================================================
   // CONTEXT VALUE
   // ==========================================================================
 
@@ -683,6 +714,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     mfaRequired,
     verifyMfaCode: verifyMfaCodeFn,
     cancelMfaVerification: cancelMfaVerificationFn,
+    // 🔐 ENTERPRISE: Token refresh
+    refreshToken: refreshTokenFn,
     clearError,
     isAuthenticated: !!user,
     needsProfileCompletion: user?.profileIncomplete ?? false
