@@ -1,17 +1,82 @@
 /**
- * Enterprise Migration Execution API
- * Production-grade endpoint for database migrations
+ * =============================================================================
+ * ENTERPRISE MIGRATION EXECUTION API - PROTECTED (AUTHZ Phase 2)
+ * =============================================================================
+ *
+ * Production-grade endpoint for database migrations with RBAC protection.
+ *
+ * @module api/admin/migrations/execute
+ * @enterprise RFC v6 - Authorization & RBAC System
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: admin:migrations:execute (super_admin ONLY)
+ * - System-Level Operation: NOT tenant-scoped (affects all companies)
+ * - Multi-Layer Security: withAuth + explicit super_admin check
+ * - Comprehensive audit logging with logMigrationExecuted
+ * - Enterprise patterns: SAP/Microsoft migration safeguards
+ *
+ * 🏢 ENTERPRISE: Migrations are CRITICAL SYSTEM OPERATIONS
+ * - Only super_admin can execute migrations
+ * - All migrations are logged to /companies/{companyId}/audit_logs
+ * - Request metadata tracked (IP, User-Agent, Path)
+ * - Performance logging με duration tracking
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth, logMigrationExecuted, extractRequestMetadata } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { MigrationEngine } from '@/database/migrations/MigrationEngine';
 import { createProjectCompanyRelationshipsMigration } from '@/database/migrations/001_fix_project_company_relationships';
 import { createFloorsNormalizationMigration } from '@/database/migrations/002_normalize_floors_collection';
 import { createEnterpriseArchitectureConsolidationMigration } from '@/database/migrations/003_enterprise_database_architecture_consolidation';
 import { migration as projectCodesMigration, executeDryRun as projectCodesDryRun, executeMigration as projectCodesExecute } from '@/database/migrations/005_assign_project_codes';
 
+/**
+ * POST /api/admin/migrations/execute
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: admin:migrations:execute
+ * - Super_admin ONLY (explicit check below)
+ */
 export async function POST(request: NextRequest) {
+  const handler = withAuth(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      return handleMigrationExecution(req, ctx);
+    },
+    { permissions: 'admin:migrations:execute' }
+  );
+
+  return handler(request);
+}
+
+async function handleMigrationExecution(
+  request: NextRequest,
+  ctx: AuthContext
+): Promise<NextResponse> {
   const startTime = Date.now();
+
+  // ========================================================================
+  // LAYER 1: Super_admin ONLY check (EXTRA security layer)
+  // ========================================================================
+
+  // 🔐 ENTERPRISE: Migrations are SYSTEM-LEVEL operations (NOT tenant-scoped)
+  // Only super_admin can execute migrations (company_admin does NOT have access)
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [MIGRATION] BLOCKED: Non-super_admin attempted migration execution: ` +
+      `${ctx.email} (${ctx.globalRole})`
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden: Only super_admin can execute migrations',
+        message: 'Migrations are system-level operations restricted to super_admin'
+      },
+      { status: 403 }
+    );
+  }
+
+  console.log(`🔐 [MIGRATION] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
 
   try {
     const { migrationId, dryRun = false } = await request.json();
@@ -72,6 +137,25 @@ export async function POST(request: NextRequest) {
             system: 'Nestor Pagonis Enterprise Platform'
           }
         };
+
+        // 🏢 ENTERPRISE: Audit logging (non-blocking)
+        if (!dryRun) {
+          const metadata = extractRequestMetadata(request);
+          await logMigrationExecuted(
+            ctx,
+            projectCodesMigration.id,
+            {
+              migrationName: projectCodesMigration.name,
+              mode: 'PRODUCTION',
+              totalTimeMs: Date.now() - startTime,
+              result: 'success',
+              metadata,
+            },
+            `Migration executed by ${ctx.globalRole} ${ctx.email}`
+          ).catch((err: unknown) => {
+            console.error('⚠️ [MIGRATION] Audit logging failed (non-blocking):', err);
+          });
+        }
 
         return NextResponse.json(projectCodesResponse, { status: 200 });
 
@@ -135,6 +219,27 @@ export async function POST(request: NextRequest) {
       console.log(`📊 Affected Records: ${result.affectedRecords}`);
       console.log(`⏱️ Execution Time: ${result.executionTimeMs}ms`);
       console.log(`⏱️ Total Time: ${totalExecutionTime}ms`);
+
+      // 🏢 ENTERPRISE: Audit logging (non-blocking, ONLY for successful production migrations)
+      if (!dryRun) {
+        const metadata = extractRequestMetadata(request);
+        await logMigrationExecuted(
+          ctx,
+          migration.id,
+          {
+            migrationName: migration.name,
+            mode: 'PRODUCTION',
+            affectedRecords: result.affectedRecords,
+            executionTimeMs: result.executionTimeMs,
+            totalTimeMs: totalExecutionTime,
+            result: 'success',
+            metadata,
+          },
+          `Migration executed by ${ctx.globalRole} ${ctx.email}`
+        ).catch((err: unknown) => {
+          console.error('⚠️ [MIGRATION] Audit logging failed (non-blocking):', err);
+        });
+      }
     } else {
       console.log(`❌ MIGRATION FAILED`);
       console.log(`🔍 Errors: ${result.errors?.length || 0}`);
@@ -171,6 +276,12 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * GET /api/admin/migrations/execute
+ *
+ * Public endpoint for listing available migrations (discovery).
+ * Execution requires POST με admin:migrations:execute permission.
+ */
 export async function GET(request: NextRequest) {
   try {
     // Return available migrations and system status
@@ -205,7 +316,8 @@ export async function GET(request: NextRequest) {
       success: true,
       system: {
         name: 'Enterprise Migration System',
-        version: '1.0.0',
+        version: '2.0.0',
+        security: 'AUTHZ Phase 2 - RBAC Protected (super_admin ONLY)',
         environment: process.env.NODE_ENV,
         timestamp: new Date().toISOString()
       },
@@ -217,6 +329,13 @@ export async function GET(request: NextRequest) {
         validation: true,
         batchProcessing: true,
         timeoutProtection: true
+      },
+      security: {
+        authentication: 'Firebase Auth + withAuth middleware',
+        permission: 'admin:migrations:execute',
+        roles: ['super_admin'],
+        auditLogging: 'All migrations logged to /companies/{companyId}/audit_logs',
+        tenantScope: 'System-level (NOT tenant-scoped)',
       }
     });
 

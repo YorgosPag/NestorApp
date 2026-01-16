@@ -283,6 +283,25 @@ export async function logSystemBootstrap(
   });
 }
 
+/**
+ * Log a migration execution event.
+ *
+ * Use this when database migrations are executed.
+ * 🏢 ENTERPRISE: Critical system-level operation audit trail.
+ */
+export async function logMigrationExecuted(
+  ctx: AuthContext,
+  migrationId: string,
+  details: Record<string, unknown>,
+  reason?: string
+): Promise<void> {
+  await logAuditEvent(ctx, 'migration_executed', migrationId, 'migration', {
+    previousValue: null,
+    newValue: { type: 'status', value: details },
+    metadata: { reason: reason || 'Database migration executed' },
+  });
+}
+
 // =============================================================================
 // REQUEST METADATA EXTRACTION
 // =============================================================================

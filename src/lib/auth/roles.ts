@@ -75,6 +75,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       'settings:settings:view',
       'settings:settings:manage',
       'notifications:notifications:view',
+      'audit:data:view',
     ],
     level: 1,
     isProjectRole: false

@@ -1,9 +1,31 @@
 /**
- * Enterprise Migration with Admin SDK
- * Production-grade migration using Firebase Admin SDK for elevated permissions
+ * =============================================================================
+ * ADMIN SDK MIGRATION - PROTECTED (AUTHZ Phase 2)
+ * =============================================================================
+ *
+ * Enterprise migration using Firebase Admin SDK for elevated permissions.
+ * Fixes project-company relationships με batch operations.
+ *
+ * @module api/admin/migrations/execute-admin
+ * @enterprise RFC v6 - Authorization & RBAC System
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: admin:migrations:execute (super_admin ONLY)
+ * - System-Level Operation: Cross-tenant database migration
+ * - Multi-Layer Security: withAuth + explicit super_admin check
+ * - Comprehensive audit logging with logMigrationExecuted
+ * - Enterprise patterns: SAP/Microsoft migration safeguards
+ *
+ * 🏢 ENTERPRISE: Admin SDK Batch Operations
+ * - Uses Firebase Admin SDK for elevated permissions
+ * - Atomic batch operations for consistency
+ * - Full verification με integrity score
+ * - All operations logged to audit trail
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth, logMigrationExecuted, extractRequestMetadata } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -32,8 +54,51 @@ interface MigrationResult {
   details: Record<string, unknown>;
 }
 
+/**
+ * POST /api/admin/migrations/execute-admin
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: admin:migrations:execute
+ * - Super_admin ONLY (explicit check below)
+ */
 export async function POST(request: NextRequest): Promise<Response> {
+  const handler = withAuth(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      return handleAdminSdkMigration(req, ctx);
+    },
+    { permissions: 'admin:migrations:execute' }
+  );
+
+  return handler(request);
+}
+
+async function handleAdminSdkMigration(
+  request: NextRequest,
+  ctx: AuthContext
+): Promise<NextResponse> {
   const startTime = Date.now();
+
+  // ========================================================================
+  // LAYER 1: Super_admin ONLY check (EXTRA security layer)
+  // ========================================================================
+
+  // 🔐 ENTERPRISE: Admin SDK migrations are SYSTEM-LEVEL (cross-tenant)
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [MIGRATION_ADMIN] BLOCKED: Non-super_admin attempted Admin SDK migration: ` +
+      `${ctx.email} (${ctx.globalRole})`
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden: Only super_admin can execute Admin SDK migrations',
+        message: 'Admin SDK migrations are system-level operations restricted to super_admin'
+      },
+      { status: 403 }
+    );
+  }
+
+  console.log(`🔐 [MIGRATION_ADMIN] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
 
   try {
     console.log('🏢 ENTERPRISE ADMIN MIGRATION STARTING...');
@@ -149,6 +214,28 @@ export async function POST(request: NextRequest): Promise<Response> {
     console.log(`   - Data integrity: ${integrityScore.toFixed(1)}%`);
 
     const executionTime = Date.now() - startTime;
+
+    // 🏢 ENTERPRISE: Audit logging (non-blocking)
+    const metadata = extractRequestMetadata(request);
+    await logMigrationExecuted(
+      ctx,
+      '001_fix_project_company_relationships_admin',
+      {
+        migrationName: 'Fix Project-Company Relationships (Admin SDK)',
+        method: 'firebase_admin_batch',
+        affectedRecords: updateCount,
+        executionTimeMs: executionTime,
+        integrityScore: parseFloat(integrityScore.toFixed(1)),
+        totalProjects: updatedProjects.length,
+        validProjects,
+        orphanProjects,
+        result: 'success',
+        metadata,
+      },
+      `Admin SDK migration executed by ${ctx.globalRole} ${ctx.email}`
+    ).catch((err: unknown) => {
+      console.error('⚠️ [MIGRATION_ADMIN] Audit logging failed (non-blocking):', err);
+    });
 
     return NextResponse.json({
       success: true,

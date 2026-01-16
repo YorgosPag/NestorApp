@@ -129,6 +129,12 @@ export const PERMISSIONS = {
   'settings:settings:view': true,
   'settings:settings:manage': true,
 
+  // Admin & System Operations
+  'admin:migrations:execute': true,
+
+  // Audit
+  'audit:data:view': true,
+
   // Reports
   'reports:reports:view': true,
   'reports:reports:create': true,
@@ -189,6 +195,7 @@ export const AUDIT_ACTIONS = {
   'claims_updated': true,
   'ownership_changed': true,
   'system_bootstrap': true,
+  'migration_executed': true,
   // Communications domain events (Phase 1)
   'email_sent': true,
   'message_sent': true,
@@ -209,6 +216,7 @@ export const AUDIT_TARGET_TYPES = {
   'role': true,
   'grant': true,
   'api': true,
+  'migration': true,
 } as const;
 
 /**

@@ -151,8 +151,12 @@ async function upsertConversation(
     } else {
       // Create new conversation - using domain constants (B3 fix)
       // B4: Type-safe Firestore document with satisfies
+      // 🏢 TENANT ISOLATION: Use environment variable for companyId (AUTHZ Phase 2)
+      const companyId = process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID || 'pagonis-company';
+
       const newConversation = {
         id: conversationId,
+        companyId, // 🏢 CRITICAL: Tenant isolation field
         channel: COMMUNICATION_CHANNELS.TELEGRAM,
         participants: [
           {

@@ -225,14 +225,19 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
 
       const data: { data: ConversationsResponse } = await response.json();
 
+      // 🏢 ENTERPRISE: Null safety check (Defense-in-Depth)
+      if (!data || !data.data || !Array.isArray(data.data.conversations)) {
+        throw new Error('Invalid API response format');
+      }
+
       if (mountedRef.current) {
         if (append) {
           setConversations(prev => [...prev, ...data.data.conversations]);
         } else {
           setConversations(data.data.conversations);
         }
-        setTotalCount(data.data.totalCount);
-        setHasMore(data.data.hasMore);
+        setTotalCount(data.data.totalCount ?? 0);
+        setHasMore(data.data.hasMore ?? false);
         setCurrentPage(pageNum);
       }
     } catch (err) {

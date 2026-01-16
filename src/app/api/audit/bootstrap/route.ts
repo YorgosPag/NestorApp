@@ -1,19 +1,31 @@
 /**
- * 🚀 AUDIT BOOTSTRAP ENDPOINT
+ * =============================================================================
+ * AUDIT BOOTSTRAP ENDPOINT - PROTECTED (AUTHZ Phase 2)
+ * =============================================================================
  *
  * Enterprise-grade aggregated data loading για /audit page
  * Αντικαθιστά 85+ N+1 cascade API calls με 1 single request
  *
  * @module api/audit/bootstrap
- * @version 1.1.0
- * @enterprise Phase 1 - Performance Fix
+ * @version 2.0.0
+ * @enterprise Phase 2 - RBAC Protection + Tenant Isolation
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: audit:data:view (company_admin or super_admin)
+ * - Tenant Isolation: company_admin sees ONLY their company data
+ * - Super Admin Bypass: super_admin sees ALL companies (cross-tenant audit)
+ * - Comprehensive audit logging with logAuditEvent
+ * - Enterprise patterns: SAP/Salesforce tenant isolation
  *
  * 🏢 ENTERPRISE FIX: Uses Admin SDK (not Client SDK)
  * - Admin SDK: Server-side, no offline mode, consistent latency
  * - Client SDK: Was causing 40-50s timeouts and "offline mode" errors
+ * - Multi-tenant aware: Filters data based on user's company context
  */
 
 import { NextRequest } from 'next/server';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { adminDb, ensureAdminInitialized, getAdminInitializationStatus } from '@/lib/firebaseAdmin';
 import { withErrorHandling, apiSuccess } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -119,8 +131,33 @@ export const dynamic = 'force-dynamic';
 // MAIN HANDLER
 // ============================================================================
 
-export const GET = withErrorHandling(async (request: NextRequest) => {
+/**
+ * GET /api/audit/bootstrap
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: audit:data:view
+ * - Tenant Isolation: company_admin sees ONLY their company
+ * - Super_admin Bypass: super_admin sees ALL companies
+ */
+export const GET = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+    return withErrorHandling(async (request: NextRequest) => {
+      return handleAuditBootstrap(request, ctx);
+    }, {
+      operation: 'auditBootstrap',
+      entityType: 'audit',
+      entityId: 'bootstrap'
+    })(req);
+  },
+  { permissions: 'audit:data:view' }
+);
+
+async function handleAuditBootstrap(
+  request: NextRequest,
+  ctx: AuthContext
+) {
   const startTime = Date.now();
+  console.log(`🔐 [Bootstrap] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
   console.log('🚀 [Bootstrap] Starting audit bootstrap load...');
 
   // ============================================================================
@@ -148,11 +185,18 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
   console.log('✅ [Bootstrap] Firebase Admin SDK validated');
 
   // ============================================================================
-  // 1. CHECK CACHE FIRST
+  // 1. CHECK CACHE FIRST (Tenant-aware caching)
   // ============================================================================
 
+  // 🏢 ENTERPRISE: Tenant-specific cache keys
+  // Super_admin: Global cache (sees all companies)
+  // Company_admin: Tenant-specific cache (sees only their company)
+  const cacheKey = ctx.globalRole === 'super_admin'
+    ? CACHE_KEY
+    : `${CACHE_KEY}:${ctx.companyId}`;
+
   const cache = EnterpriseAPICache.getInstance();
-  const cachedData = cache.get<BootstrapResponse>(CACHE_KEY);
+  const cachedData = cache.get<BootstrapResponse>(cacheKey);
 
   if (cachedData) {
     const duration = Date.now() - startTime;
@@ -205,11 +249,28 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
     );
   }
 
+  // ============================================================================
+  // 2.5. TENANT ISOLATION - ENTERPRISE SECURITY
+  // ============================================================================
+
+  // 🏢 ENTERPRISE: Tenant isolation for company_admin
+  // Super_admin: Sees ALL companies (cross-tenant audit)
+  // Company_admin: Sees ONLY their company (tenant-scoped)
+  let filteredCompanyDocs = companiesSnapshot.docs;
+
+  if (ctx.globalRole !== 'super_admin') {
+    // Filter to only this user's company
+    filteredCompanyDocs = companiesSnapshot.docs.filter(doc => doc.id === ctx.companyId);
+    console.log(`🔒 [Bootstrap] Tenant isolation: Filtered to company ${ctx.companyId} (${filteredCompanyDocs.length} companies)`);
+  } else {
+    console.log(`🔓 [Bootstrap] Super_admin bypass: Showing all ${filteredCompanyDocs.length} companies`);
+  }
+
   // Build company map for quick lookup
   const companyMap = new Map<string, { id: string; name: string }>();
 
-  companiesSnapshot.docs.forEach(doc => {
-    const data = doc.data() as Partial<CompanyContact>;
+  filteredCompanyDocs.forEach(doc => {
+    const data = doc.data() as Partial<CompanyContact> & { displayName?: string };
     companyMap.set(doc.id, {
       id: doc.id,
       name: data.companyName || data.displayName || 'Unknown Company'
@@ -364,21 +425,18 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
   };
 
   // ============================================================================
-  // 5. CACHE RESPONSE
+  // 5. CACHE RESPONSE (Tenant-aware)
   // ============================================================================
 
-  cache.set(CACHE_KEY, response, CACHE_TTL_MS);
+  // 🏢 ENTERPRISE: Tenant-specific caching (same key logic as cache.get above)
+  cache.set(cacheKey, response, CACHE_TTL_MS);
 
   const duration = Date.now() - startTime;
-  console.log(`✅ [Bootstrap] Complete: ${companies.length} companies, ${allProjects.length} projects in ${duration}ms (cached for 3min)`);
+  const tenantInfo = ctx.globalRole === 'super_admin' ? 'all companies' : `company ${ctx.companyId}`;
+  console.log(`✅ [Bootstrap] Complete: ${companies.length} companies, ${allProjects.length} projects in ${duration}ms (${tenantInfo}, cached for 3min)`);
 
   return apiSuccess<BootstrapResponse>(response, `Bootstrap loaded in ${duration}ms`);
-
-}, {
-  operation: 'auditBootstrap',
-  entityType: 'audit',
-  entityId: 'bootstrap'
-});
+}
 
 // ============================================================================
 // DOCUMENT MAPPER

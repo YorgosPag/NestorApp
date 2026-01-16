@@ -166,5 +166,6 @@ export {
   logClaimsUpdated,
   logOwnershipChanged,
   logSystemBootstrap,
+  logMigrationExecuted,
   extractRequestMetadata,
 } from './audit';

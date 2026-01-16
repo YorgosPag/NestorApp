@@ -1,9 +1,32 @@
 /**
- * Enterprise Database Normalization: Floors Collection (Admin SDK)
- * Extracts embedded buildingFloors to normalized floors collection
+ * =============================================================================
+ * DATABASE NORMALIZATION MIGRATION - PROTECTED (AUTHZ Phase 2)
+ * =============================================================================
+ *
+ * Enterprise database normalization (3NF) using Firebase Admin SDK.
+ * Extracts embedded buildingFloors arrays to normalized floors collection.
+ *
+ * @module api/admin/migrations/normalize-floors
+ * @enterprise RFC v6 - Authorization & RBAC System
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: admin:migrations:execute (super_admin ONLY)
+ * - System-Level Operation: Cross-tenant database normalization
+ * - Multi-Layer Security: withAuth + explicit super_admin check
+ * - Comprehensive audit logging with logMigrationExecuted
+ * - Enterprise patterns: SAP/Microsoft data normalization
+ *
+ * 🏢 ENTERPRISE: Database Normalization (3NF)
+ * - Third Normal Form (3NF) compliance
+ * - Foreign key relationship establishment
+ * - Referential integrity verification
+ * - Batch operations με consistency guarantees
+ * - All operations logged to audit trail
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth, logMigrationExecuted, extractRequestMetadata } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -57,8 +80,51 @@ interface FloorRecord {
   };
 }
 
+/**
+ * POST /api/admin/migrations/normalize-floors
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: admin:migrations:execute
+ * - Super_admin ONLY (explicit check below)
+ */
 export async function POST(request: NextRequest): Promise<Response> {
+  const handler = withAuth(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      return handleFloorsNormalization(req, ctx);
+    },
+    { permissions: 'admin:migrations:execute' }
+  );
+
+  return handler(request);
+}
+
+async function handleFloorsNormalization(
+  request: NextRequest,
+  ctx: AuthContext
+): Promise<NextResponse> {
   const startTime = Date.now();
+
+  // ========================================================================
+  // LAYER 1: Super_admin ONLY check (EXTRA security layer)
+  // ========================================================================
+
+  // 🔐 ENTERPRISE: Database normalization is SYSTEM-LEVEL (cross-tenant)
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [MIGRATION_NORMALIZE] BLOCKED: Non-super_admin attempted database normalization: ` +
+      `${ctx.email} (${ctx.globalRole})`
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden: Only super_admin can execute database normalization migrations',
+        message: 'Database normalization is a system-level operation restricted to super_admin'
+      },
+      { status: 403 }
+    );
+  }
+
+  console.log(`🔐 [MIGRATION_NORMALIZE] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
 
   try {
     console.log('🏢 ENTERPRISE DATABASE NORMALIZATION STARTING...');
@@ -205,6 +271,32 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     const executionTime = Date.now() - startTime;
+
+    // 🏢 ENTERPRISE: Audit logging (non-blocking)
+    const metadata = extractRequestMetadata(request);
+    await logMigrationExecuted(
+      ctx,
+      '002_normalize_floors_collection_admin',
+      {
+        migrationName: 'Floors Collection Normalization (Enterprise 3NF)',
+        method: 'firebase_admin_batch_normalization',
+        affectedRecords: successfulInserts,
+        executionTimeMs: executionTime,
+        buildingsWithFloors: stats.buildingsWithFloors,
+        totalFloorsExtracted: stats.totalFloorsToExtract,
+        integrityScore: parseFloat(integrityScore.toFixed(1)),
+        referentialIntegrity: {
+          totalFloors: integrityResults.totalFloors,
+          validFloors: integrityResults.floorsWithValidBuildingIds,
+          orphanFloors: integrityResults.orphanFloors,
+        },
+        result: 'success',
+        metadata,
+      },
+      `Database normalization executed by ${ctx.globalRole} ${ctx.email}`
+    ).catch((err: unknown) => {
+      console.error('⚠️ [MIGRATION_NORMALIZE] Audit logging failed (non-blocking):', err);
+    });
 
     return NextResponse.json({
       success: true,

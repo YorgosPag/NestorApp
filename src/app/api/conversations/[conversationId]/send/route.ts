@@ -257,5 +257,6 @@ async function handleSendMessage(request: NextRequest, ctx: AuthContext, convers
     sentAt: new Date().toISOString(),
   };
 
-  return NextResponse.json(response);
+  // 🏢 ENTERPRISE: Wrap response με data envelope (consistency με frontend hooks)
+  return NextResponse.json({ data: response });
 }
