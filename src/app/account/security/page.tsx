@@ -16,7 +16,7 @@
  */
 
 import React, { useState } from 'react';
-import { Key, AlertTriangle, Mail } from 'lucide-react';
+import { Key, AlertTriangle, Mail, RefreshCw } from 'lucide-react';
 import { SessionsList } from '@/components/account/SessionsList';
 import { TwoFactorEnrollment } from '@/components/account/TwoFactorEnrollment';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,7 +32,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export default function SecurityPage() {
-  const { user, resetPassword } = useAuth();
+  const { user, resetPassword, refreshToken } = useAuth();
   const { t } = useTranslation('common');
   const colors = useSemanticColors();
   const borders = useBorderTokens();
@@ -45,6 +45,10 @@ export default function SecurityPage() {
 
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // 🔐 ENTERPRISE: Token refresh state (for permission updates)
+  const [isRefreshingToken, setIsRefreshingToken] = useState(false);
+  const [refreshMessage, setRefreshMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const handleResetPassword = async () => {
     if (!user?.email) return;
@@ -60,6 +64,31 @@ export default function SecurityPage() {
       setMessage({ type: 'error', text: t('account.security.resetError') });
     } finally {
       setIsResettingPassword(false);
+    }
+  };
+
+  // 🔐 ENTERPRISE: Handle token refresh (force reload permissions)
+  const handleRefreshToken = async () => {
+    setIsRefreshingToken(true);
+    setRefreshMessage(null);
+
+    try {
+      await refreshToken();
+      setRefreshMessage({
+        type: 'success',
+        text: 'Permissions refreshed successfully! Reloading page...'
+      });
+
+      // Auto-reload after 1.5 seconds to apply new permissions
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      setRefreshMessage({
+        type: 'error',
+        text: 'Failed to refresh permissions. Please try again.'
+      });
+    } finally {
+      setIsRefreshingToken(false);
     }
   };
 
@@ -155,6 +184,60 @@ export default function SecurityPage() {
           }}
         />
       )}
+
+      {/* 🔐 ENTERPRISE: Admin Token Refresh Section */}
+      <Card className={borders.getElementBorder('card', 'default')}>
+        <CardHeader>
+          <CardTitle className={layout.flexCenterGap2}>
+            <RefreshCw className={iconSizes.md} aria-hidden="true" />
+            Refresh Permissions
+          </CardTitle>
+          <CardDescription>
+            Force refresh your ID token to load updated permissions after admin changes
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className={layout.flexColGap4}>
+          <p className={cn(typography.body.sm, colors.text.muted)}>
+            Use this after an administrator updates your roles or permissions.
+            This will reload your access token with the latest custom claims.
+          </p>
+
+          {/* Status message */}
+          {refreshMessage && (
+            <output
+              role="status"
+              className={cn(
+                layout.padding3,
+                borders.radiusClass.md,
+                typography.body.sm,
+                refreshMessage.type === 'success'
+                  ? cn(colors.bg.success, colors.text.success)
+                  : cn(colors.bg.error, colors.text.error)
+              )}
+            >
+              {refreshMessage.text}
+            </output>
+          )}
+
+          {/* Refresh permissions button */}
+          <Button
+            onClick={handleRefreshToken}
+            disabled={isRefreshingToken}
+            variant="outline"
+            className={layout.flexCenterGap2}
+          >
+            <RefreshCw
+              className={cn(
+                iconSizes.sm,
+                isRefreshingToken && 'animate-spin'
+              )}
+              aria-hidden="true"
+            />
+            {isRefreshingToken ? 'Refreshing...' : 'Refresh Permissions'}
+          </Button>
+        </CardContent>
+      </Card>
     </section>
   );
 }
