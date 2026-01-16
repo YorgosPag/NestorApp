@@ -1,28 +1,38 @@
+/**
+ * =============================================================================
+ * BUILDING FEATURES MIGRATION - PROTECTED (AUTHZ Phase 2)
+ * =============================================================================
+ *
+ * @purpose Migrate legacy Greek building feature strings to BuildingFeatureKey
+ * @author Enterprise Architecture Team
+ * @date 2026-01-12
+ * @protection withAuth + super_admin + audit logging
+ * @classification System-level operation (manual migration)
+ *
+ * This endpoint performs a one-time migration of legacy Greek feature labels
+ * stored in Firestore to type-safe BuildingFeatureKey values.
+ *
+ * @method GET - Preview/dry run (shows what would be migrated)
+ * @method POST - Execute migration (updates Firestore documents)
+ *
+ * @security Multi-layer protection:
+ *   - Layer 1: withAuth (admin:migrations:execute permission)
+ *   - Layer 2: super_admin role check (explicit)
+ *   - Layer 3: Audit logging (logMigrationExecuted)
+ *
+ * IMPORTANT: Delete this file after successful migration!
+ * =============================================================================
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, getDocs, doc, updateDoc, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { isBuildingFeatureKey, type BuildingFeatureKey } from '@/types/building/features';
 
-/**
- * ============================================================================
- * REMOVE AFTER MIGRATION - ONE-TIME SERVER-ONLY MIGRATION SCRIPT
- * ============================================================================
- *
- * @purpose Migrate legacy Greek building feature strings to BuildingFeatureKey
- * @author Enterprise Architecture Team
- * @date 2026-01-12
- *
- * This script converts legacy Greek labels stored in Firestore to type-safe
- * BuildingFeatureKey values. The mapping below is ONLY for server-side migration
- * and MUST NOT be imported in UI/runtime components.
- *
- * @method GET - Dry run / Preview (shows what would be migrated)
- * @method POST - Execute migration (updates Firestore documents)
- *
- * IMPORTANT: Delete this file after successful migration!
- * ============================================================================
- */
+// 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
+import { withAuth, logMigrationExecuted, extractRequestMetadata } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 
 // ============================================================================
 // LEGACY MAPPING - REMOVE AFTER MIGRATION - DO NOT IMPORT IN UI
@@ -226,14 +236,44 @@ function analyzeBuilding(building: BuildingDoc): MigrationPreview {
 }
 
 // ============================================================================
-// API ENDPOINTS
+// API ENDPOINTS - PROTECTED (AUTHZ Phase 2)
 // ============================================================================
 
 /**
- * GET - Dry run / Preview mode
+ * GET - Preview/Dry Run (withAuth protected)
  * Shows what would be migrated without making changes.
+ *
+ * @security withAuth + super_admin check + existing permission: admin:migrations:execute
  */
-export async function GET() {
+export const GET = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return handleMigrateBuildingFeaturesPreview(req, ctx);
+  },
+  { permissions: 'admin:migrations:execute' }
+);
+
+/**
+ * Internal handler for GET (preview mode).
+ */
+async function handleMigrateBuildingFeaturesPreview(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
+  const startTime = Date.now();
+
+  // 🏢 ENTERPRISE: Super_admin-only check (explicit)
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [GET /api/admin/migrate-building-features] BLOCKED: Non-super_admin attempted building features preview`,
+      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden: This operation requires super_admin role',
+        code: 'SUPER_ADMIN_REQUIRED',
+      },
+      { status: 403 }
+    );
+  }
+
   try {
     console.log('[MIGRATE] Analyzing buildings for feature migration...');
 
@@ -258,6 +298,8 @@ export async function GET() {
     const allUnmapped = new Set<string>();
     previews.forEach(p => p.unmappedFeatures.forEach(f => allUnmapped.add(f)));
 
+    const duration = Date.now() - startTime;
+
     return NextResponse.json({
       success: true,
       mode: 'preview',
@@ -269,18 +311,22 @@ export async function GET() {
       },
       unmappedFeatures: Array.from(allUnmapped),
       buildingPreviews: previews,
+      executionTimeMs: duration,
       message: `Found ${needsMigration.length} buildings that need migration. Use POST to execute.`,
       warning: allUnmapped.size > 0
         ? `WARNING: ${allUnmapped.size} features could not be mapped. Add them to LEGACY_GREEK_TO_KEY before migration.`
         : undefined,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[MIGRATE] Error analyzing buildings:', error);
+    const duration = Date.now() - startTime;
+
     return NextResponse.json(
       {
         success: false,
         error: 'Failed to analyze buildings',
         details: error instanceof Error ? error.message : 'Unknown error',
+        executionTimeMs: duration,
       },
       { status: 500 }
     );
@@ -288,10 +334,40 @@ export async function GET() {
 }
 
 /**
- * POST - Execute migration
+ * POST - Execute Migration (withAuth protected)
  * Converts legacy Greek labels to BuildingFeatureKey in Firestore.
+ *
+ * @security withAuth + super_admin check + audit logging + existing permission: admin:migrations:execute
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return handleMigrateBuildingFeaturesExecute(req, ctx);
+  },
+  { permissions: 'admin:migrations:execute' }
+);
+
+/**
+ * Internal handler for POST (live migration).
+ */
+async function handleMigrateBuildingFeaturesExecute(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
+  const startTime = Date.now();
+
+  // 🏢 ENTERPRISE: Super_admin-only check (explicit)
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [POST /api/admin/migrate-building-features] BLOCKED: Non-super_admin attempted building features migration`,
+      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden: This operation requires super_admin role',
+        code: 'SUPER_ADMIN_REQUIRED',
+      },
+      { status: 403 }
+    );
+  }
+
   try {
     console.log('[MIGRATE] Starting building features migration...');
 
@@ -375,6 +451,36 @@ export async function POST(request: NextRequest) {
     const skipped = results.filter(r => r.status === 'skipped').length;
     const errors = results.filter(r => r.status === 'error').length;
 
+    const duration = Date.now() - startTime;
+
+    // 🏢 ENTERPRISE: Audit logging (non-blocking)
+    const metadata = extractRequestMetadata(request);
+    await logMigrationExecuted(
+      ctx,
+      'migrate_building_features_greek_to_keys',
+      {
+        operation: 'migrate-building-features',
+        totalBuildings: results.length,
+        buildingsUpdated: updated,
+        buildingsSkipped: skipped,
+        buildingsErrored: errors,
+        unmappedFeaturesDropped: allUnmapped.size,
+        forceFlag: force,
+        updatedBuildings: results.filter(r => r.status === 'updated').map(r => ({
+          id: r.id,
+          name: r.name,
+          oldFeaturesCount: r.oldFeatures?.length || 0,
+          newFeaturesCount: r.newFeatures?.length || 0,
+        })),
+        executionTimeMs: duration,
+        result: errors === 0 ? 'success' : 'partial_success',
+        metadata,
+      },
+      `Building features migration (Greek→Keys) by ${ctx.globalRole} ${ctx.email}`
+    ).catch((err: unknown) => {
+      console.error('⚠️ Audit logging failed (non-blocking):', err);
+    });
+
     return NextResponse.json({
       success: errors === 0,
       message: `Migration complete! Updated: ${updated}, Skipped: ${skipped}, Errors: ${errors}`,
@@ -386,17 +492,21 @@ export async function POST(request: NextRequest) {
         droppedUnmapped: allUnmapped.size,
       },
       results,
+      executionTimeMs: duration,
       warning: allUnmapped.size > 0
         ? `WARNING: ${allUnmapped.size} unmapped features were dropped: ${Array.from(allUnmapped).join(', ')}`
         : undefined,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[MIGRATE] Error during migration:', error);
+    const duration = Date.now() - startTime;
+
     return NextResponse.json(
       {
         success: false,
         error: 'Failed to migrate building features',
         details: error instanceof Error ? error.message : 'Unknown error',
+        executionTimeMs: duration,
       },
       { status: 500 }
     );

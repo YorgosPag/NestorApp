@@ -4,6 +4,9 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import crypto from 'crypto';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
+// 🏢 ENTERPRISE: Audit logging for webhook events
+import { logWebhookEvent } from '@/lib/auth';
+
 // Environment configuration
 const SENDGRID_WEBHOOK_SECRET = process.env.SENDGRID_WEBHOOK_SECRET;
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -324,12 +327,29 @@ export async function POST(request: NextRequest) {
     }
 
     const duration = Date.now() - startTime;
-    
+
     if (validationErrors.length > 0) {
       console.warn('⚠️ Some events had validation errors:', validationErrors);
     }
 
     logWebhookAttempt(clientIP, true, processedEvents.length, undefined, duration);
+
+    // 🏢 ENTERPRISE: Audit logging for webhook events (non-blocking)
+    logWebhookEvent(
+      'sendgrid',
+      events[0]?.sg_event_id || 'batch-webhook',
+      {
+        eventsReceived: events.length,
+        eventsProcessed: processedEvents.length,
+        validationErrors: validationErrors.length,
+        duration,
+        clientIP,
+        success: true,
+      },
+      request
+    ).catch((err: unknown) => {
+      console.error('⚠️ Audit logging failed (non-blocking):', err);
+    });
 
     return NextResponse.json({
       success: true,
@@ -342,13 +362,28 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
+
     logWebhookAttempt(clientIP, false, 0, errorMessage, duration);
-    
+
+    // 🏢 ENTERPRISE: Audit logging for failed webhook (non-blocking)
+    logWebhookEvent(
+      'sendgrid',
+      'error-webhook',
+      {
+        error: errorMessage,
+        duration,
+        clientIP,
+        success: false,
+      },
+      request
+    ).catch((err: unknown) => {
+      console.error('⚠️ Audit logging failed (non-blocking):', err);
+    });
+
     console.error('❌ SendGrid webhook error:', error);
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Webhook processing failed',
         message: 'Internal server error'
       },

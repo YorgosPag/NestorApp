@@ -167,5 +167,9 @@ export {
   logOwnershipChanged,
   logSystemBootstrap,
   logMigrationExecuted,
+  logDataFix,
+  logDirectOperation,
+  logSystemOperation,
+  logWebhookEvent,
   extractRequestMetadata,
 } from './audit';

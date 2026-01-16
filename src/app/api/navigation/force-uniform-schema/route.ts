@@ -1,28 +1,48 @@
 /**
- * 🚨 ENTERPRISE CRITICAL: FORCE UNIFORM SCHEMA
+ * =============================================================================
+ * FORCE UNIFORM SCHEMA - PROTECTED (AUTHZ Phase 2)
+ * =============================================================================
  *
- * ΜΗΔΕΝΙΚΗ ΑΝΟΧΗ ΣΤΗ ΑΣΥΝΟΧΗ!
+ * @purpose Forces all navigation documents to have identical schema structure
+ * @author Enterprise Architecture Team
+ * @protection withAuth + super_admin + audit logging
+ * @classification Data fix operation (mass update)
  *
- * ΜΠΑΚΑΛΙΚΟ ΠΡΟΒΛΗΜΑ:
- * - 7 πεδία σε κάποια documents
- * - 3 πεδία σε άλλα documents
- * - 9 πεδία σε άλλα documents
- * - ΚΑΜΙΑ ΣΥΝΟΧΗ = ΑΠΑΡΑΔΕΚΤΟ!
+ * This endpoint:
+ * - Forces uniform schema on ALL navigation documents
+ * - Updates documents to have exactly the same fields
+ * - Eliminates schema inconsistencies
  *
- * ENTERPRISE ΛΥΣΗ:
- * - ΟΛΟΙ θα έχουν ΑΚΡΙΒΩΣ τα ίδια πεδία
- * - ΥΠΟΧΡΕΩΤΙΚΗ ενιαία δομή
- * - ΜΗΔΕΝ εξαιρέσεις - Fortune 500 standards
+ * PROBLEM:
+ * - Documents have 3, 7, 9 different field counts
+ * - Total schema inconsistency
+ * - Violates enterprise standards
  *
- * @author Claude Enterprise Force Normalization System
- * @date 2025-12-17
- * @priority CRITICAL - ΜΗΔΕΝΙΚΗ ΑΝΟΧΗ ΣΤΗΝ ΑΣΥΝΕΠΕΙΑ
+ * SOLUTION:
+ * - MANDATORY uniform schema for ALL documents
+ * - Zero tolerance for inconsistency
+ * - Fortune 500 compliance
+ *
+ * @method GET - Info endpoint (read-only)
+ * @method POST - Execute schema enforcement (updates ALL documents)
+ *
+ * @security Multi-layer protection:
+ *   - Layer 1: withAuth (admin:data:fix permission)
+ *   - Layer 2: super_admin role check (explicit)
+ *   - Layer 3: Audit logging (logDataFix)
+ *
+ * @classification CRITICAL - Mass schema update operation
+ * =============================================================================
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, getDocs, updateDoc, doc, serverTimestamp, FieldValue, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+
+// 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
+import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -109,7 +129,46 @@ interface EnterpriseUniformNavigationSchema {
   migrationInfo?: MigrationInfo;
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse<UniformSchemaResult>> {
+/**
+ * POST - Execute Schema Enforcement (withAuth protected)
+ * Forces uniform schema on ALL navigation documents.
+ *
+ * @security withAuth + super_admin check + audit logging + admin:data:fix permission
+ */
+export const POST = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<UniformSchemaResult>> => {
+    return handleForceUniformSchemaExecute(req, ctx);
+  },
+  { permissions: 'admin:data:fix' }
+);
+
+/**
+ * Internal handler for POST (execute schema enforcement).
+ */
+async function handleForceUniformSchemaExecute(request: NextRequest, ctx: AuthContext): Promise<NextResponse<UniformSchemaResult>> {
+  const startTime = Date.now();
+
+  // 🏢 ENTERPRISE: Super_admin-only check (explicit)
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [POST /api/navigation/force-uniform-schema] BLOCKED: Non-super_admin attempted schema enforcement`,
+      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
+    );
+
+    const errorResult: UniformSchemaResult = {
+      success: false,
+      message: 'Forbidden: This CRITICAL mass update operation requires super_admin role',
+      transformations: [],
+      stats: {
+        documentsProcessed: 0,
+        documentsStandardized: 0,
+        errors: 1
+      }
+    };
+
+    return NextResponse.json(errorResult, { status: 403 });
+  }
+
   try {
     console.log('🚨 ENTERPRISE FORCE UNIFORM SCHEMA: STARTING TOTAL STANDARDIZATION...');
     console.log('📋 TARGET: ALL documents will have EXACTLY the same fields');
@@ -153,7 +212,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<UniformSc
         console.log(`      Before: ${beforeFields.length} fields [${beforeFields.join(', ')}]`);
 
         // 🏢 CREATE ENTERPRISE UNIFORM SCHEMA - FORCED STANDARDIZATION
-        const uniformSchema: EnterpriseUniformNavigationSchema = {
+        // Type inference για Firestore compatibility
+        const uniformSchema = {
           // PRESERVE CORE DATA (required)
           contactId: currentData.contactId || 'MISSING_CONTACT_ID',
 
@@ -262,10 +322,34 @@ export async function POST(request: NextRequest): Promise<NextResponse<UniformSc
       result.message = `❌ STANDARDIZATION FAILED: ${stats.errors} documents failed to standardize.`;
     }
 
-    return NextResponse.json(result);
+    const duration = Date.now() - startTime;
 
-  } catch (error) {
+    // 🏢 ENTERPRISE: Audit logging (non-blocking)
+    const metadata = extractRequestMetadata(request);
+    await logDataFix(
+      ctx,
+      'force_uniform_schema_navigation',
+      {
+        operation: 'force-uniform-schema',
+        documentsProcessed: result.stats.documentsProcessed,
+        documentsStandardized: result.stats.documentsStandardized,
+        errors: result.stats.errors,
+        uniqueFieldCounts: uniqueFieldCounts,
+        schemaUniformity: isUniform ? 'achieved' : 'failed',
+        executionTimeMs: duration,
+        result: result.success ? 'success' : 'failed',
+        metadata,
+      },
+      `Schema enforcement by ${ctx.globalRole} ${ctx.email}`
+    ).catch((err: unknown) => {
+      console.error('⚠️ Audit logging failed (non-blocking):', err);
+    });
+
+    return NextResponse.json({ ...result, executionTimeMs: duration });
+
+  } catch (error: unknown) {
     console.error('❌ ENTERPRISE FORCE UNIFORM SCHEMA FAILED:', error);
+    const duration = Date.now() - startTime;
 
     return NextResponse.json({
       success: false,
@@ -275,7 +359,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<UniformSc
         documentsProcessed: 0,
         documentsStandardized: 0,
         errors: 1
-      }
+      },
+      executionTimeMs: duration
     }, { status: 500 });
   }
 }
@@ -301,22 +386,36 @@ function detectAndStandardizeSource(currentData: NavigationDocumentData): 'syste
   return 'manual';
 }
 
-export async function GET(): Promise<NextResponse> {
-  return NextResponse.json({
-    endpoint: 'Enterprise Force Uniform Schema - Navigation Companies',
-    description: 'FORCES ALL documents to have IDENTICAL schema structure',
-    problem: 'Documents have 3, 7, 9 different field counts - TOTAL inconsistency',
-    solution: 'MANDATORY uniform schema - ALL documents get EXACTLY the same fields',
-    enterpriseStandard: 'Zero tolerance for schema inconsistency',
-    enforcement: 'FORCED standardization - no exceptions',
-    targetSchema: {
-      mandatoryFields: 10,
-      fieldNames: ['contactId', 'addedAt', 'addedBy', 'createdAt', 'updatedAt', 'version', 'status', 'source', 'schemaVersion', 'lastVerified', 'complianceLevel'],
-      conditionalFields: ['migrationInfo']
-    },
-    usage: 'POST to enforce uniform schema on ALL navigation companies',
-    warning: 'This OVERWRITES existing document structures',
-    methods: ['POST'],
-    author: 'Claude Enterprise Force Normalization System'
-  });
-}
+/**
+ * GET - Info Endpoint (withAuth protected)
+ * Returns endpoint information.
+ *
+ * @security withAuth + admin:data:fix permission
+ */
+export const GET = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return NextResponse.json({
+      endpoint: 'Enterprise Force Uniform Schema - Navigation Companies',
+      description: 'FORCES ALL documents to have IDENTICAL schema structure',
+      problem: 'Documents have 3, 7, 9 different field counts - TOTAL inconsistency',
+      solution: 'MANDATORY uniform schema - ALL documents get EXACTLY the same fields',
+      enterpriseStandard: 'Zero tolerance for schema inconsistency',
+      enforcement: 'FORCED standardization - no exceptions',
+      targetSchema: {
+        mandatoryFields: 10,
+        fieldNames: ['contactId', 'addedAt', 'addedBy', 'createdAt', 'updatedAt', 'version', 'status', 'source', 'schemaVersion', 'lastVerified', 'complianceLevel'],
+        conditionalFields: ['migrationInfo']
+      },
+      usage: 'POST to enforce uniform schema on ALL navigation companies',
+      warning: 'This OVERWRITES existing document structures - CRITICAL OPERATION',
+      methods: ['POST'],
+      security: 'Requires super_admin role',
+      requester: {
+        email: ctx.email,
+        globalRole: ctx.globalRole,
+        hasAccess: ctx.globalRole === 'super_admin'
+      }
+    });
+  },
+  { permissions: 'admin:data:fix' }
+);

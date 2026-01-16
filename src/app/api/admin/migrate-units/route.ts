@@ -1,19 +1,38 @@
+/**
+ * =============================================================================
+ * MIGRATE UNITS - PROTECTED (AUTHZ Phase 2)
+ * =============================================================================
+ *
+ * @purpose Migrates units from legacy IDs to enterprise structure
+ * @author Enterprise Architecture Team
+ * @protection withAuth + super_admin + audit logging
+ * @classification Data migration operation (DELETE + CREATE)
+ *
+ * This endpoint performs unit migration:
+ * 1. DELETES units with legacy buildingIds
+ * 2. CREATES new units with Firebase auto-generated IDs
+ * 3. Links them to enterprise buildings
+ *
+ * @method GET - Preview migration (dry run, read-only)
+ * @method POST - Execute migration (DELETE + CREATE)
+ *
+ * @security Multi-layer protection:
+ *   - Layer 1: withAuth (admin:data:fix permission)
+ *   - Layer 2: super_admin role check (explicit)
+ *   - Layer 3: Audit logging (logDataFix)
+ *
+ * @classification CRITICAL - Mass deletion + creation operation
+ * =============================================================================
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, getDocs, deleteDoc, doc, addDoc, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
-/**
- * 🏢 ENTERPRISE: API για μετάπτωση μονάδων από legacy σε enterprise
- *
- * Αυτό το endpoint:
- * 1. Διαγράφει μονάδες με legacy buildingIds
- * 2. Δημιουργεί νέες μονάδες με Firebase auto-generated IDs
- * 3. Τις συνδέει με enterprise buildings
- *
- * @method GET - Προεπισκόπηση (dry run)
- * @method POST - Εκτέλεση μετάπτωσης
- */
+// 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
+import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 
 // 🏢 ENTERPRISE: Enterprise building για τις νέες μονάδες
 const TARGET_ENTERPRISE_BUILDING = {
@@ -103,7 +122,41 @@ interface UnitData {
   [key: string]: unknown;
 }
 
-export async function GET() {
+/**
+ * GET - Preview Migration (withAuth protected)
+ * Read-only preview of units to be migrated.
+ *
+ * @security withAuth + super_admin check + admin:data:fix permission
+ */
+export const GET = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return handleMigrateUnitsPreview(req, ctx);
+  },
+  { permissions: 'admin:data:fix' }
+);
+
+/**
+ * Internal handler for GET (preview migration).
+ */
+async function handleMigrateUnitsPreview(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
+  const startTime = Date.now();
+
+  // 🏢 ENTERPRISE: Super_admin-only check (explicit)
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [GET /api/admin/migrate-units] BLOCKED: Non-super_admin attempted unit migration preview`,
+      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden: This operation requires super_admin role',
+        code: 'SUPER_ADMIN_REQUIRED',
+      },
+      { status: 403 }
+    );
+  }
+
   try {
     console.log('🔍 Analyzing units for migration...');
 
@@ -133,6 +186,8 @@ export async function GET() {
       return !bid.startsWith('building_') && bid.length >= 20;
     });
 
+    const duration = Date.now() - startTime;
+
     return NextResponse.json({
       success: true,
       mode: 'preview',
@@ -147,21 +202,59 @@ export async function GET() {
       newUnitsToCreate: UNIT_TEMPLATES.length,
       targetBuilding: TARGET_ENTERPRISE_BUILDING,
       message: `Found ${legacyUnits.length} legacy units to delete. Will create ${UNIT_TEMPLATES.length} new enterprise units. Use POST to execute.`,
+      executionTimeMs: duration,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Error analyzing units:', error);
+    const duration = Date.now() - startTime;
+
     return NextResponse.json(
       {
         success: false,
         error: 'Failed to analyze units',
         details: error instanceof Error ? error.message : 'Unknown error',
+        executionTimeMs: duration,
       },
       { status: 500 }
     );
   }
 }
 
-export async function POST(request: NextRequest) {
+/**
+ * POST - Execute Migration (withAuth protected)
+ * DELETES legacy units + CREATES new enterprise units.
+ *
+ * @security withAuth + super_admin check + audit logging + admin:data:fix permission
+ */
+export const POST = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return handleMigrateUnitsExecute(req, ctx);
+  },
+  { permissions: 'admin:data:fix' }
+);
+
+/**
+ * Internal handler for POST (execute migration).
+ */
+async function handleMigrateUnitsExecute(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
+  const startTime = Date.now();
+
+  // 🏢 ENTERPRISE: Super_admin-only check (explicit)
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [POST /api/admin/migrate-units] BLOCKED: Non-super_admin attempted unit migration execution`,
+      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden: This operation requires super_admin role',
+        code: 'SUPER_ADMIN_REQUIRED',
+      },
+      { status: 403 }
+    );
+  }
+
   try {
     console.log('🚀 Starting unit migration...');
 
@@ -224,6 +317,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const duration = Date.now() - startTime;
+
+    // 🏢 ENTERPRISE: Audit logging (non-blocking)
+    const metadata = extractRequestMetadata(request);
+    await logDataFix(
+      ctx,
+      'migrate_units_legacy_to_enterprise',
+      {
+        operation: 'migrate-units',
+        deleted: deletedCount,
+        created: createdUnits.length,
+        targetBuilding: TARGET_ENTERPRISE_BUILDING,
+        createdUnits: createdUnits.map(u => ({ id: u.id, name: u.name })),
+        executionTimeMs: duration,
+        result: 'success',
+        metadata,
+      },
+      `Unit migration by ${ctx.globalRole} ${ctx.email}`
+    ).catch((err: unknown) => {
+      console.error('⚠️ Audit logging failed (non-blocking):', err);
+    });
+
     return NextResponse.json({
       success: true,
       message: `Migration complete! Deleted ${deletedCount} legacy units, created ${createdUnits.length} enterprise units.`,
@@ -231,14 +346,18 @@ export async function POST(request: NextRequest) {
       created: createdUnits.length,
       createdUnits,
       targetBuilding: TARGET_ENTERPRISE_BUILDING,
+      executionTimeMs: duration,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Error during migration:', error);
+    const duration = Date.now() - startTime;
+
     return NextResponse.json(
       {
         success: false,
         error: 'Failed to migrate units',
         details: error instanceof Error ? error.message : 'Unknown error',
+        executionTimeMs: duration,
       },
       { status: 500 }
     );

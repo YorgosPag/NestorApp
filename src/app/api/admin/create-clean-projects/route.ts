@@ -1,12 +1,37 @@
 /**
- * CLEAN PROJECT CREATION - Fresh Start for Development
- * Creates clean projects with proper companyIds and structure
+ * =============================================================================
+ * CLEAN PROJECT CREATION - PROTECTED (AUTHZ Phase 2)
+ * =============================================================================
+ *
+ * @purpose Creates clean projects with proper structure for development
+ * @author Enterprise Architecture Team
+ * @protection withAuth + super_admin + audit logging
+ * @classification System-level operation (data seeding)
+ *
+ * This endpoint uses Firebase Admin SDK to create fresh normalized projects
+ * with proper companyIds, buildings, and floors structure.
+ *
+ * @method GET - System information
+ * @method POST - Execute clean project creation
+ *
+ * @security Multi-layer protection:
+ *   - Layer 1: withAuth (admin:direct:operations permission)
+ *   - Layer 2: super_admin role check (explicit)
+ *   - Layer 3: Audit logging (logDirectOperation)
+ *   - Layer 4: Firebase Admin SDK (elevated permissions)
+ *
+ * @technology Firebase Admin SDK (bypasses Firestore rules)
+ * =============================================================================
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { COLLECTIONS } from '@/config/firestore-collections';
+
+// 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
+import { withAuth, logDirectOperation, extractRequestMetadata } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 
 // Initialize Admin SDK if not already initialized
 let adminDb: FirebaseFirestore.Firestore;
@@ -24,8 +49,40 @@ try {
   console.error('Failed to initialize Admin SDK:', error);
 }
 
-export async function POST(request: NextRequest) {
+/**
+ * POST - Execute Clean Project Creation (withAuth protected)
+ * Creates clean projects with proper structure using Firebase Admin SDK.
+ *
+ * @security withAuth + super_admin check + audit logging + admin:direct:operations permission
+ */
+export const POST = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return handleCreateCleanProjectsExecute(req, ctx);
+  },
+  { permissions: 'admin:direct:operations' }
+);
+
+/**
+ * Internal handler for POST (clean project creation).
+ */
+async function handleCreateCleanProjectsExecute(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
   const startTime = Date.now();
+
+  // 🏢 ENTERPRISE: Super_admin-only check (explicit)
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [POST /api/admin/create-clean-projects] BLOCKED: Non-super_admin attempted clean project creation`,
+      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden: This operation requires super_admin role',
+        code: 'SUPER_ADMIN_REQUIRED',
+      },
+      { status: 403 }
+    );
+  }
 
   try {
     if (!adminDb) {
@@ -228,9 +285,35 @@ export async function POST(request: NextRequest) {
     console.log(`   Floors: ${response.summary.floorsCreated}`);
     console.log(`   Total execution time: ${totalExecutionTime}ms`);
 
+    // 🏢 ENTERPRISE: Audit logging (non-blocking)
+    const metadata = extractRequestMetadata(request);
+    await logDirectOperation(
+      ctx,
+      'create_clean_projects',
+      {
+        operation: 'create-clean-projects',
+        projectsCreated: results.length,
+        buildingsCreated: response.summary.buildingsCreated,
+        floorsCreated: response.summary.floorsCreated,
+        targetCompanyId: correctCompanyId,
+        createdProjects: results.map(r => ({
+          projectId: r.projectId,
+          projectName: r.projectName,
+          buildings: r.buildingsCreated,
+          floors: r.floorsCreated,
+        })),
+        executionTimeMs: totalExecutionTime,
+        result: 'success',
+        metadata,
+      },
+      `Clean projects creation by ${ctx.globalRole} ${ctx.email}`
+    ).catch((err: unknown) => {
+      console.error('⚠️ Audit logging failed (non-blocking):', err);
+    });
+
     return NextResponse.json(response, { status: 200 });
 
-  } catch (error) {
+  } catch (error: unknown) {
     const totalExecutionTime = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
@@ -254,7 +337,25 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+/**
+ * GET - System Information (withAuth protected)
+ * Returns endpoint information and capabilities.
+ *
+ * @security withAuth + admin:direct:operations permission
+ */
+export const GET = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return handleCreateCleanProjectsInfo(req, ctx);
+  },
+  { permissions: 'admin:direct:operations' }
+);
+
+/**
+ * Internal handler for GET (system info).
+ */
+async function handleCreateCleanProjectsInfo(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
+  const correctCompanyId = process.env.NEXT_PUBLIC_MAIN_COMPANY_ID || 'default-company-id';
+
   return NextResponse.json({
     success: true,
     system: {
@@ -269,6 +370,11 @@ export async function GET(request: NextRequest) {
       method: 'Firebase Admin SDK creation',
       target: `Create clean normalized projects with companyId: ${correctCompanyId}`,
       features: ['Normalized structure', 'Buildings & Floors', 'Clean IDs']
+    },
+    requester: {
+      email: ctx.email,
+      globalRole: ctx.globalRole,
+      hasAccess: ctx.globalRole === 'super_admin'
     }
   });
 }

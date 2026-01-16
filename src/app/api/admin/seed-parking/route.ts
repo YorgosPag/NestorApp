@@ -1,5 +1,18 @@
 /**
- * 🅿️ ENTERPRISE: API για seeding parking spots
+ * =============================================================================
+ * SEED PARKING SPOTS - PROTECTED (AUTHZ Phase 2)
+ * =============================================================================
+ *
+ * API για seeding parking spots με enterprise IDs (manual seeding).
+ *
+ * @module api/admin/seed-parking
+ * @enterprise RFC v6 - Authorization & RBAC System
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: admin:migrations:execute (super_admin ONLY)
+ * - Manual Seeding: Mass deletion + mass creation
+ * - Multi-Layer Security: withAuth + explicit super_admin check
+ * - Comprehensive audit logging
  *
  * Αυτό το endpoint:
  * 1. Διαγράφει παλιά parking spots με legacy IDs (1,2,3...)
@@ -17,6 +30,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth, logMigrationExecuted, extractRequestMetadata } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { collection, getDocs, deleteDoc, doc, setDoc, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -172,9 +187,71 @@ const PARKING_TEMPLATES: ParkingSpotTemplate[] = [
 
 /**
  * GET /api/admin/seed-parking
- * Preview - δείχνει τι θα γίνει χωρίς να αλλάξει τίποτα
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: admin:migrations:execute
+ * - Super_admin ONLY (explicit check below)
  */
-export async function GET(): Promise<NextResponse> {
+export const GET = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return handleSeedParkingPreview(req, ctx);
+  },
+  { permissions: 'admin:migrations:execute' }
+);
+
+/**
+ * POST /api/admin/seed-parking
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: admin:migrations:execute
+ * - Super_admin ONLY (explicit check below)
+ */
+export const POST = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return handleSeedParkingExecute(req, ctx);
+  },
+  { permissions: 'admin:migrations:execute' }
+);
+
+/**
+ * DELETE /api/admin/seed-parking
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: admin:migrations:execute
+ * - Super_admin ONLY (explicit check below)
+ */
+export const DELETE = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return handleSeedParkingDelete(req, ctx);
+  },
+  { permissions: 'admin:migrations:execute' }
+);
+
+async function handleSeedParkingPreview(
+  request: NextRequest,
+  ctx: AuthContext
+): Promise<NextResponse> {
+  // ========================================================================
+  // LAYER 1: Super_admin ONLY check (EXTRA security layer)
+  // ========================================================================
+
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [SEED_PARKING_PREVIEW] BLOCKED: Non-super_admin attempted seeding preview: ` +
+      `${ctx.email} (${ctx.globalRole})`
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden: Only super_admin can preview parking seeding',
+        message: 'Parking seeding is a system-level operation restricted to super_admin'
+      },
+      { status: 403 }
+    );
+  }
+
+  console.log(`🔐 [SEED_PARKING_PREVIEW] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
+
   try {
     // Fetch existing parking spots
     const parkingRef = collection(db, COLLECTIONS.PARKING_SPACES);
@@ -193,6 +270,8 @@ export async function GET(): Promise<NextResponse> {
       type: template.type,
       status: template.status,
     }));
+
+    console.log(`📊 Preview: ${existingSpots.length} existing spots, ${PARKING_TEMPLATES.length} to create`);
 
     return NextResponse.json({
       success: true,
@@ -224,11 +303,33 @@ export async function GET(): Promise<NextResponse> {
   }
 }
 
-/**
- * POST /api/admin/seed-parking
- * Εκτέλεση seeding - διαγράφει τα παλιά και δημιουργεί νέα
- */
-export async function POST(): Promise<NextResponse> {
+async function handleSeedParkingExecute(
+  request: NextRequest,
+  ctx: AuthContext
+): Promise<NextResponse> {
+  const startTime = Date.now();
+
+  // ========================================================================
+  // LAYER 1: Super_admin ONLY check (EXTRA security layer)
+  // ========================================================================
+
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [SEED_PARKING_EXECUTE] BLOCKED: Non-super_admin attempted seeding execution: ` +
+      `${ctx.email} (${ctx.globalRole})`
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden: Only super_admin can execute parking seeding',
+        message: 'Mass deletion and creation are system-level operations restricted to super_admin'
+      },
+      { status: 403 }
+    );
+  }
+
+  console.log(`🔐 [SEED_PARKING_EXECUTE] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
+
   try {
     const parkingRef = collection(db, COLLECTIONS.PARKING_SPACES);
 
@@ -287,6 +388,29 @@ export async function POST(): Promise<NextResponse> {
 
     console.log(`✅ Δημιουργήθηκαν ${createdSpots.length} parking spots`);
 
+    const duration = Date.now() - startTime;
+
+    // 🏢 ENTERPRISE: Audit logging (non-blocking)
+    const metadata = extractRequestMetadata(request);
+    await logMigrationExecuted(
+      ctx,
+      'seed_parking_spots',
+      {
+        operation: 'seed-parking',
+        deletedCount: deletedIds.length,
+        createdCount: createdSpots.length,
+        targetBuilding: TARGET_BUILDING,
+        deletedIds,
+        createdSpots,
+        executionTimeMs: duration,
+        result: 'success',
+        metadata,
+      },
+      `Parking spots seeding by ${ctx.globalRole} ${ctx.email}`
+    ).catch((err: unknown) => {
+      console.error('⚠️ [SEED_PARKING_EXECUTE] Audit logging failed (non-blocking):', err);
+    });
+
     return NextResponse.json({
       success: true,
       message: `Seeding ολοκληρώθηκε! Διαγράφηκαν ${deletedIds.length}, δημιουργήθηκαν ${createdSpots.length} parking spots`,
@@ -299,6 +423,7 @@ export async function POST(): Promise<NextResponse> {
         targetBuilding: TARGET_BUILDING,
         spots: createdSpots,
       },
+      executionTimeMs: duration,
     });
 
   } catch (error) {
@@ -311,11 +436,33 @@ export async function POST(): Promise<NextResponse> {
   }
 }
 
-/**
- * DELETE /api/admin/seed-parking
- * Διαγραφή όλων των parking spots
- */
-export async function DELETE(): Promise<NextResponse> {
+async function handleSeedParkingDelete(
+  request: NextRequest,
+  ctx: AuthContext
+): Promise<NextResponse> {
+  const startTime = Date.now();
+
+  // ========================================================================
+  // LAYER 1: Super_admin ONLY check (EXTRA security layer)
+  // ========================================================================
+
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [SEED_PARKING_DELETE] BLOCKED: Non-super_admin attempted mass deletion: ` +
+      `${ctx.email} (${ctx.globalRole})`
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden: Only super_admin can delete all parking spots',
+        message: 'Mass deletion is a system-level operation restricted to super_admin'
+      },
+      { status: 403 }
+    );
+  }
+
+  console.log(`🔐 [SEED_PARKING_DELETE] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
+
   try {
     const parkingRef = collection(db, COLLECTIONS.PARKING_SPACES);
     const snapshot = await getDocs(query(parkingRef));
@@ -327,6 +474,28 @@ export async function DELETE(): Promise<NextResponse> {
       deletedIds.push(docSnapshot.id);
     }
 
+    const duration = Date.now() - startTime;
+
+    console.log(`✅ Διαγράφηκαν ${deletedIds.length} parking spots`);
+
+    // 🏢 ENTERPRISE: Audit logging (non-blocking)
+    const metadata = extractRequestMetadata(request);
+    await logMigrationExecuted(
+      ctx,
+      'delete_all_parking_spots',
+      {
+        operation: 'delete-parking',
+        deletedCount: deletedIds.length,
+        deletedIds,
+        executionTimeMs: duration,
+        result: 'success',
+        metadata,
+      },
+      `Mass deletion of all parking spots by ${ctx.globalRole} ${ctx.email}`
+    ).catch((err: unknown) => {
+      console.error('⚠️ [SEED_PARKING_DELETE] Audit logging failed (non-blocking):', err);
+    });
+
     return NextResponse.json({
       success: true,
       message: `Διαγράφηκαν ${deletedIds.length} parking spots`,
@@ -334,6 +503,7 @@ export async function DELETE(): Promise<NextResponse> {
         count: deletedIds.length,
         ids: deletedIds,
       },
+      executionTimeMs: duration,
     });
 
   } catch (error) {

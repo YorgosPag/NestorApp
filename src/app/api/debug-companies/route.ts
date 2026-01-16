@@ -1,8 +1,38 @@
-// Debug API endpoint για να εξετάσουμε το company ID issue
+/**
+ * =============================================================================
+ * DEBUG COMPANIES - PROTECTED (AUTHZ Phase 2)
+ * =============================================================================
+ *
+ * @purpose Debugs company data and relationships (contacts, projects, companyIds)
+ * @author Enterprise Architecture Team
+ * @protection withAuth + super_admin
+ * @classification Debug utility (read-only data inspection)
+ *
+ * This endpoint inspects company data for debugging purposes:
+ * - Lists all companies
+ * - Shows project-company relationships
+ * - Identifies primary company
+ * - Counts projects per company
+ *
+ * @method GET - Debug company data (read-only)
+ *
+ * @security Multi-layer protection:
+ *   - Layer 1: withAuth (admin:debug:read permission)
+ *   - Layer 2: super_admin role check (explicit)
+ *   - NO audit logging (read-only operation)
+ *
+ * @technology Firebase Admin SDK (elevated read access)
+ * @classification Debug utility (read-only)
+ * =============================================================================
+ */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+
+// 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 
 // 🏢 ENTERPRISE: Type-safe interfaces for debug data
 interface CompanyInfo {
@@ -37,7 +67,41 @@ interface DebugResult {
   projectsForPrimaryCompany?: number;
 }
 
-export async function GET(request: NextRequest) {
+/**
+ * GET - Debug Companies (withAuth protected)
+ * Read-only inspection of company data and relationships.
+ *
+ * @security withAuth + super_admin check + admin:debug:read permission
+ */
+export const GET = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return handleDebugCompanies(req, ctx);
+  },
+  { permissions: 'admin:debug:read' }
+);
+
+/**
+ * Internal handler for GET (debug companies).
+ */
+async function handleDebugCompanies(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
+  const startTime = Date.now();
+
+  // 🏢 ENTERPRISE: Super_admin-only check (explicit)
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [GET /api/debug-companies] BLOCKED: Non-super_admin attempted company debug`,
+      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden: This operation requires super_admin role',
+        code: 'SUPER_ADMIN_REQUIRED',
+      },
+      { status: 403 }
+    );
+  }
+
   try {
     console.log('🔍 Debugging Companies in Database...\n');
 
@@ -159,12 +223,20 @@ export async function GET(request: NextRequest) {
       console.log(`   ${companyId}: ${count} projects`);
     });
 
-    return NextResponse.json(result, { status: 200 });
+    const duration = Date.now() - startTime;
 
-  } catch (error) {
-    console.error('❌ Error:', error);
     return NextResponse.json({
-      error: error instanceof Error ? error.message : 'Unknown error'
+      ...result,
+      executionTimeMs: duration,
+    }, { status: 200 });
+
+  } catch (error: unknown) {
+    console.error('❌ Error:', error);
+    const duration = Date.now() - startTime;
+
+    return NextResponse.json({
+      error: error instanceof Error ? error.message : 'Unknown error',
+      executionTimeMs: duration,
     }, { status: 500 });
   }
 }

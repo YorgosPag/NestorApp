@@ -1,12 +1,40 @@
 /**
- * ΑΠΛΗ ΕΠΙΣΚΕΥΗ PROJECT COMPANY IDS
- * Χρησιμοποιεί Firebase Admin SDK για direct update
+ * =============================================================================
+ * FIX PROJECTS - PROTECTED (AUTHZ Phase 2)
+ * =============================================================================
+ *
+ * @purpose Fixes project companyIds using Admin SDK (database-driven)
+ * @author Enterprise Architecture Team
+ * @protection withAuth + super_admin + audit logging
+ * @classification Data fix operation
+ *
+ * This endpoint updates project companyIds:
+ * - Database-driven company lookup (no hardcoded IDs)
+ * - Updates all projects with correct companyId
+ * - Verifies changes after update
+ *
+ * @method GET - System information
+ * @method POST - Execute companyId fix
+ *
+ * @security Multi-layer protection:
+ *   - Layer 1: withAuth (admin:data:fix permission)
+ *   - Layer 2: super_admin role check (explicit)
+ *   - Layer 3: Audit logging (logDataFix)
+ *   - Layer 4: Firebase Admin SDK (elevated permissions)
+ *
+ * @technology Firebase Admin SDK (bypasses Firestore rules)
+ * @classification Data fix operation
+ * =============================================================================
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { COLLECTIONS } from '@/config/firestore-collections';
+
+// 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
+import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 
 let adminDb: FirebaseFirestore.Firestore;
 
@@ -23,7 +51,41 @@ try {
   console.error('Failed to initialize Admin SDK:', error);
 }
 
-export async function POST() {
+/**
+ * POST - Execute Project CompanyId Fix (withAuth protected)
+ * Updates all project companyIds using Admin SDK.
+ *
+ * @security withAuth + super_admin check + audit logging + admin:data:fix permission
+ */
+export const POST = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return handleFixProjectsExecute(req, ctx);
+  },
+  { permissions: 'admin:data:fix' }
+);
+
+/**
+ * Internal handler for POST (fix projects).
+ */
+async function handleFixProjectsExecute(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
+  const startTime = Date.now();
+
+  // 🏢 ENTERPRISE: Super_admin-only check (explicit)
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [POST /api/fix-projects] BLOCKED: Non-super_admin attempted project companyId fix`,
+      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden: This operation requires super_admin role',
+        code: 'SUPER_ADMIN_REQUIRED',
+      },
+      { status: 403 }
+    );
+  }
+
   try {
     console.log('🔧 FIXING PROJECT COMPANY IDS...');
 
@@ -121,6 +183,29 @@ export async function POST() {
 
     console.log(`🎉 COMPLETED! All projects fixed: ${allCorrect}`);
 
+    const duration = Date.now() - startTime;
+
+    // 🏢 ENTERPRISE: Audit logging (non-blocking)
+    const metadata = extractRequestMetadata(request);
+    await logDataFix(
+      ctx,
+      'fix_project_company_ids',
+      {
+        operation: 'fix-projects',
+        totalProjects: projectsSnapshot.size,
+        projectsUpdated: results.filter(r => r.status === 'UPDATED').length,
+        projectsNoChange: results.filter(r => r.status === 'NO_CHANGE').length,
+        targetCompanyId: correctCompanyId,
+        allProjectsCorrect,
+        executionTimeMs: duration,
+        result: allCorrect ? 'success' : 'partial_success',
+        metadata,
+      },
+      `Project companyIds fix by ${ctx.globalRole} ${ctx.email}`
+    ).catch((err: unknown) => {
+      console.error('⚠️ Audit logging failed (non-blocking):', err);
+    });
+
     return NextResponse.json({
       success: true,
       message: allCorrect ? 'ALL PROJECTS FIXED!' : 'Some projects still need fixing',
@@ -130,23 +215,47 @@ export async function POST() {
         totalProjects: projectsSnapshot.size,
         updatedProjects: results.filter(r => r.status === 'UPDATED').length,
         allProjectsCorrect: allCorrect
-      }
+      },
+      executionTimeMs: duration,
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('❌ Fix Projects Error:', errorMessage);
+    const duration = Date.now() - startTime;
 
     return NextResponse.json({
       success: false,
-      error: errorMessage
+      error: errorMessage,
+      executionTimeMs: duration,
     }, { status: 500 });
   }
 }
 
-export async function GET() {
+/**
+ * GET - System Information (withAuth protected)
+ * Returns endpoint information and requester details.
+ *
+ * @security withAuth + admin:data:fix permission
+ */
+export const GET = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return handleFixProjectsInfo(req, ctx);
+  },
+  { permissions: 'admin:data:fix' }
+);
+
+/**
+ * Internal handler for GET (system info).
+ */
+async function handleFixProjectsInfo(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
   return NextResponse.json({
     message: 'Project Company IDs Fix Endpoint',
-    usage: 'POST /api/fix-projects'
+    usage: 'POST /api/fix-projects',
+    requester: {
+      email: ctx.email,
+      globalRole: ctx.globalRole,
+      hasAccess: ctx.globalRole === 'super_admin'
+    }
   });
 }

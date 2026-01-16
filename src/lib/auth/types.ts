@@ -131,6 +131,10 @@ export const PERMISSIONS = {
 
   // Admin & System Operations
   'admin:migrations:execute': true,
+  'admin:data:fix': true,              // Data correction operations (fix incorrect data)
+  'admin:direct:operations': true,     // Direct database operations (bypass normal flows)
+  'admin:debug:read': true,            // Debug utilities (read-only inspection)
+  'admin:system:configure': true,      // System configuration (webhooks, integrations)
 
   // Audit
   'audit:data:view': true,
@@ -199,6 +203,12 @@ export const AUDIT_ACTIONS = {
   // Communications domain events (Phase 1)
   'email_sent': true,
   'message_sent': true,
+  // Admin operations (Phase 2)
+  'data_fix_executed': true,        // Data correction operations (fix incorrect data)
+  'direct_operation_executed': true, // Direct database operations (bypass normal flows)
+  'system_configured': true,         // System configuration changes (webhooks, integrations)
+  // Webhook operations (External integrations)
+  'webhook_received': true,          // External webhook event received (SendGrid, Telegram, etc.)
 } as const;
 
 /**
@@ -217,6 +227,7 @@ export const AUDIT_TARGET_TYPES = {
   'grant': true,
   'api': true,
   'migration': true,
+  'webhook': true,        // External webhook integrations
 } as const;
 
 /**

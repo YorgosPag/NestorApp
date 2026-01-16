@@ -1,27 +1,43 @@
 /**
- * 🏢 ENTERPRISE AUTO-FIX: Missing Navigation Companies
+ * =============================================================================
+ * AUTO-FIX MISSING COMPANIES - PROTECTED (AUTHZ Phase 2)
+ * =============================================================================
  *
- * Auto-detects και fixes companies που έχουν projects αλλά δεν εμφανίζονται στο navigation
+ * @purpose Auto-detects and fixes companies with projects missing from navigation
+ * @author Enterprise Architecture Team
+ * @protection withAuth + super_admin + audit logging
+ * @classification Data fix operation
+ *
+ * This endpoint:
+ * - Detects companies with projects that are missing from navigation
+ * - Adds them to navigation_companies collection
+ * - Ensures all companies with projects appear in navigation
  *
  * PROBLEM SOLVED:
  * - Companies με projects δεν εμφανίζονται στο navigation
  * - Companies υπάρχουν στη contacts collection αλλά όχι στη navigation_companies
  * - Navigation system δεν φορτώνει projects για companies που δεν είναι στη navigation_companies
  *
- * ENTERPRISE APPROACH:
- * - Automatic detection των missing companies
- * - Safe προσθήκη στη navigation_companies collection
- * - Cache invalidation για immediate effect
- * - Comprehensive logging και error handling
+ * @method GET - Info endpoint (read-only)
+ * @method POST - Execute auto-fix (adds missing companies)
  *
- * @author Claude Enterprise Repair System
- * @date 2025-12-17
+ * @security Multi-layer protection:
+ *   - Layer 1: withAuth (admin:data:fix permission)
+ *   - Layer 2: super_admin role check (explicit)
+ *   - Layer 3: Audit logging (logDataFix)
+ *
+ * @classification Data fix operation
+ * =============================================================================
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, query, getDocs, where, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+
+// 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
+import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 
 interface AutoFixResult {
   success: boolean;
@@ -40,7 +56,47 @@ interface AutoFixResult {
   };
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse<AutoFixResult>> {
+/**
+ * POST - Execute Auto-Fix (withAuth protected)
+ * Detects and adds missing companies to navigation.
+ *
+ * @security withAuth + super_admin check + audit logging + admin:data:fix permission
+ */
+export const POST = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<AutoFixResult>> => {
+    return handleAutoFixExecute(req, ctx);
+  },
+  { permissions: 'admin:data:fix' }
+);
+
+/**
+ * Internal handler for POST (execute auto-fix).
+ */
+async function handleAutoFixExecute(request: NextRequest, ctx: AuthContext): Promise<NextResponse<AutoFixResult>> {
+  const startTime = Date.now();
+
+  // 🏢 ENTERPRISE: Super_admin-only check (explicit)
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [POST /api/navigation/auto-fix-missing-companies] BLOCKED: Non-super_admin attempted navigation auto-fix`,
+      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
+    );
+
+    const errorResult: AutoFixResult = {
+      success: false,
+      message: 'Forbidden: This operation requires super_admin role',
+      fixes: [],
+      stats: {
+        companiesChecked: 0,
+        companiesWithProjects: 0,
+        companiesMissingFromNavigation: 0,
+        companiesAdded: 0
+      }
+    };
+
+    return NextResponse.json(errorResult, { status: 403 });
+  }
+
   try {
     console.log('🔧 ENTERPRISE AUTO-FIX: Starting navigation companies repair...');
 
@@ -201,10 +257,33 @@ export async function POST(request: NextRequest): Promise<NextResponse<AutoFixRe
       });
     }
 
-    return NextResponse.json(result);
+    const duration = Date.now() - startTime;
 
-  } catch (error) {
+    // 🏢 ENTERPRISE: Audit logging (non-blocking)
+    const metadata = extractRequestMetadata(request);
+    await logDataFix(
+      ctx,
+      'auto_fix_missing_navigation_companies',
+      {
+        operation: 'auto-fix-missing-companies',
+        companiesChecked: result.stats.companiesChecked,
+        companiesWithProjects: result.stats.companiesWithProjects,
+        companiesMissingFromNavigation: result.stats.companiesMissingFromNavigation,
+        companiesAdded: result.stats.companiesAdded,
+        executionTimeMs: duration,
+        result: result.success ? 'success' : 'failed',
+        metadata,
+      },
+      `Navigation auto-fix by ${ctx.globalRole} ${ctx.email}`
+    ).catch((err: unknown) => {
+      console.error('⚠️ Audit logging failed (non-blocking):', err);
+    });
+
+    return NextResponse.json({ ...result, executionTimeMs: duration });
+
+  } catch (error: unknown) {
     console.error('❌ ENTERPRISE AUTO-FIX FAILED:', error);
+    const duration = Date.now() - startTime;
 
     return NextResponse.json({
       success: false,
@@ -215,17 +294,32 @@ export async function POST(request: NextRequest): Promise<NextResponse<AutoFixRe
         companiesWithProjects: 0,
         companiesMissingFromNavigation: 0,
         companiesAdded: 0
-      }
+      },
+      executionTimeMs: duration
     }, { status: 500 });
   }
 }
 
-export async function GET(): Promise<NextResponse> {
-  return NextResponse.json({
-    endpoint: 'Enterprise Navigation Auto-Fix',
-    description: 'Automatically detects and fixes companies with projects that are missing from navigation',
-    usage: 'POST to this endpoint to run the auto-fix',
-    methods: ['POST'],
-    author: 'Claude Enterprise Repair System'
-  });
-}
+/**
+ * GET - Info Endpoint (withAuth protected)
+ * Returns endpoint information.
+ *
+ * @security withAuth + admin:data:fix permission
+ */
+export const GET = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return NextResponse.json({
+      endpoint: 'Enterprise Navigation Auto-Fix',
+      description: 'Automatically detects and fixes companies with projects that are missing from navigation',
+      usage: 'POST to this endpoint to run the auto-fix',
+      methods: ['POST'],
+      security: 'Requires super_admin role',
+      requester: {
+        email: ctx.email,
+        globalRole: ctx.globalRole,
+        hasAccess: ctx.globalRole === 'super_admin'
+      }
+    });
+  },
+  { permissions: 'admin:data:fix' }
+);

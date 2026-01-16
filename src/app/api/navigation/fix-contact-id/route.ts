@@ -1,28 +1,43 @@
 /**
- * 🏢 ENTERPRISE CRITICAL FIX: Wrong ContactId in Navigation Companies
+ * =============================================================================
+ * FIX CONTACT ID - PROTECTED (AUTHZ Phase 2)
+ * =============================================================================
  *
- * Διορθώνει το λάθος contactId "pagonis" → "pzNUy8ksddGCtcQMqumR"
- * στη navigation_companies συλλογή για την εταιρεία ΠΑΓΩΝΗΣ
+ * @purpose Fixes wrong contactId in navigation documents
+ * @author Enterprise Architecture Team
+ * @protection withAuth + super_admin + audit logging
+ * @classification Data fix operation
+ *
+ * This endpoint:
+ * - Fixes wrong contactId values in navigation_companies
+ * - Updates documents with correct contactId
+ * - Ensures navigation displays correct projects
  *
  * PROBLEM IDENTIFIED:
  * - navigation_companies έχει contactId: "pagonis"
  * - Σωστό contactId: "pzNUy8ksddGCtcQMqumR"
  * - Projects δεν εμφανίζονται γιατί το ID δεν ταιριάζει
  *
- * ENTERPRISE SOLUTION:
- * - Safe update του navigation_companies document
- * - Comprehensive validation και error handling
- * - Full audit trail για transparency
+ * @method GET - Info endpoint (read-only)
+ * @method POST - Execute contactId fix (updates documents)
  *
- * @author Claude Enterprise Fix System
- * @date 2025-12-17
- * @priority CRITICAL
+ * @security Multi-layer protection:
+ *   - Layer 1: withAuth (admin:data:fix permission)
+ *   - Layer 2: super_admin role check (explicit)
+ *   - Layer 3: Audit logging (logDataFix)
+ *
+ * @classification CRITICAL - Data fix operation
+ * =============================================================================
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, query, getDocs, where, updateDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+
+// 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
+import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 
 interface ContactIdFixResult {
   success: boolean;
@@ -41,7 +56,46 @@ interface ContactIdFixResult {
   };
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse<ContactIdFixResult>> {
+/**
+ * POST - Execute ContactId Fix (withAuth protected)
+ * Fixes wrong contactId in navigation documents.
+ *
+ * @security withAuth + super_admin check + audit logging + admin:data:fix permission
+ */
+export const POST = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<ContactIdFixResult>> => {
+    return handleFixContactIdExecute(req, ctx);
+  },
+  { permissions: 'admin:data:fix' }
+);
+
+/**
+ * Internal handler for POST (execute contactId fix).
+ */
+async function handleFixContactIdExecute(request: NextRequest, ctx: AuthContext): Promise<NextResponse<ContactIdFixResult>> {
+  const startTime = Date.now();
+
+  // 🏢 ENTERPRISE: Super_admin-only check (explicit)
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [POST /api/navigation/fix-contact-id] BLOCKED: Non-super_admin attempted contactId fix`,
+      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
+    );
+
+    const errorResult: ContactIdFixResult = {
+      success: false,
+      message: 'Forbidden: This CRITICAL operation requires super_admin role',
+      fixes: [],
+      stats: {
+        documentsChecked: 0,
+        documentsFixed: 0,
+        errors: 1
+      }
+    };
+
+    return NextResponse.json(errorResult, { status: 403 });
+  }
+
   try {
     console.log('🛠️ ENTERPRISE CRITICAL FIX: Starting contactId correction...');
 
@@ -173,10 +227,33 @@ export async function POST(request: NextRequest): Promise<NextResponse<ContactId
       });
     }
 
-    return NextResponse.json(result);
+    const duration = Date.now() - startTime;
 
-  } catch (error) {
+    // 🏢 ENTERPRISE: Audit logging (non-blocking)
+    const metadata = extractRequestMetadata(request);
+    await logDataFix(
+      ctx,
+      'fix_navigation_contact_id',
+      {
+        operation: 'fix-contact-id',
+        documentsChecked: result.stats.documentsChecked,
+        documentsFixed: result.stats.documentsFixed,
+        errors: result.stats.errors,
+        targetContactId: 'pzNUy8ksddGCtcQMqumR',
+        executionTimeMs: duration,
+        result: result.success ? 'success' : 'failed',
+        metadata,
+      },
+      `ContactId fix by ${ctx.globalRole} ${ctx.email}`
+    ).catch((err: unknown) => {
+      console.error('⚠️ Audit logging failed (non-blocking):', err);
+    });
+
+    return NextResponse.json({ ...result, executionTimeMs: duration });
+
+  } catch (error: unknown) {
     console.error('❌ ENTERPRISE CRITICAL FIX FAILED:', error);
+    const duration = Date.now() - startTime;
 
     return NextResponse.json({
       success: false,
@@ -186,20 +263,35 @@ export async function POST(request: NextRequest): Promise<NextResponse<ContactId
         documentsChecked: 0,
         documentsFixed: 0,
         errors: 1
-      }
+      },
+      executionTimeMs: duration
     }, { status: 500 });
   }
 }
 
-export async function GET(): Promise<NextResponse> {
-  return NextResponse.json({
-    endpoint: 'Enterprise Critical Fix - Contact ID Correction',
-    description: 'Fixes wrong contactId "pagonis" → "pzNUy8ksddGCtcQMqumR" in navigation_companies',
-    problem: 'ΠΑΓΩΝΗΣ company projects not showing due to wrong contactId in navigation',
-    solution: 'Update navigation_companies documents with correct contactId',
-    usage: 'POST to this endpoint to execute the fix',
-    priority: 'CRITICAL',
-    methods: ['POST'],
-    author: 'Claude Enterprise Fix System'
-  });
-}
+/**
+ * GET - Info Endpoint (withAuth protected)
+ * Returns endpoint information.
+ *
+ * @security withAuth + admin:data:fix permission
+ */
+export const GET = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return NextResponse.json({
+      endpoint: 'Enterprise Critical Fix - Contact ID Correction',
+      description: 'Fixes wrong contactId "pagonis" → "pzNUy8ksddGCtcQMqumR" in navigation_companies',
+      problem: 'ΠΑΓΩΝΗΣ company projects not showing due to wrong contactId in navigation',
+      solution: 'Update navigation_companies documents with correct contactId',
+      usage: 'POST to this endpoint to execute the fix',
+      priority: 'CRITICAL',
+      methods: ['POST'],
+      security: 'Requires super_admin role',
+      requester: {
+        email: ctx.email,
+        globalRole: ctx.globalRole,
+        hasAccess: ctx.globalRole === 'super_admin'
+      }
+    });
+  },
+  { permissions: 'admin:data:fix' }
+);

@@ -1,7 +1,18 @@
 /**
- * 🏢 ENTERPRISE DXF DATA MIGRATION API
+ * =============================================================================
+ * MIGRATE DXF DATA (FIRESTORE→STORAGE) - PROTECTED (AUTHZ Phase 2)
+ * =============================================================================
  *
- * Next.js API route για την migration legacy DXF data από Firestore → Firebase Storage
+ * API για migration legacy DXF data από Firestore → Firebase Storage.
+ *
+ * @module api/admin/migrate-dxf
+ * @enterprise RFC v6 - Authorization & RBAC System
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: admin:migrations:execute (super_admin ONLY)
+ * - Manual Migration: DXF data architecture migration
+ * - Multi-Layer Security: withAuth + explicit super_admin check
+ * - Comprehensive audit logging
  *
  * USAGE:
  * - GET  /api/admin/migrate-dxf?dryRun=true  → DRY RUN analysis
@@ -11,6 +22,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth, logMigrationExecuted, extractRequestMetadata } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, doc, setDoc, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -251,7 +264,8 @@ class DxfMigrationAPI {
   /**
    * Generate simple checksum
    */
-  generateChecksum(scene: DxfScene): string {
+  generateChecksum(scene: DxfScene | undefined): string {
+    if (!scene) return '';
     const data = {
       entityCount: scene.entities?.length || 0,
       layerCount: Object.keys(scene.layers || {}).length,
@@ -263,9 +277,58 @@ class DxfMigrationAPI {
 }
 
 /**
- * GET - DRY RUN Analysis
+ * GET /api/admin/migrate-dxf
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: admin:migrations:execute
+ * - Super_admin ONLY (explicit check below)
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return handleMigrateDxfPreview(req, ctx);
+  },
+  { permissions: 'admin:migrations:execute' }
+);
+
+/**
+ * POST /api/admin/migrate-dxf
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: admin:migrations:execute
+ * - Super_admin ONLY (explicit check below)
+ */
+export const POST = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return handleMigrateDxfExecute(req, ctx);
+  },
+  { permissions: 'admin:migrations:execute' }
+);
+
+async function handleMigrateDxfPreview(
+  request: NextRequest,
+  ctx: AuthContext
+): Promise<NextResponse> {
+  // ========================================================================
+  // LAYER 1: Super_admin ONLY check (EXTRA security layer)
+  // ========================================================================
+
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [MIGRATE_DXF_PREVIEW] BLOCKED: Non-super_admin attempted DXF migration preview: ` +
+      `${ctx.email} (${ctx.globalRole})`
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden: Only super_admin can preview DXF migrations',
+        message: 'DXF migrations are system-level operations restricted to super_admin'
+      },
+      { status: 403 }
+    );
+  }
+
+  console.log(`🔐 [MIGRATE_DXF_PREVIEW] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
+
   try {
     console.log('🔍 [API] DXF Migration - DRY RUN Analysis');
 
@@ -296,6 +359,8 @@ export async function GET(request: NextRequest) {
       ]
     };
 
+    console.log(`📊 DRY RUN: ${analysis.legacyFiles.length} legacy files, ${analysis.properFiles.length} proper files`);
+
     return NextResponse.json({
       success: true,
       ...report
@@ -312,10 +377,33 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * POST - LIVE Migration
- */
-export async function POST(request: NextRequest) {
+async function handleMigrateDxfExecute(
+  request: NextRequest,
+  ctx: AuthContext
+): Promise<NextResponse> {
+  const startTime = Date.now();
+
+  // ========================================================================
+  // LAYER 1: Super_admin ONLY check (EXTRA security layer)
+  // ========================================================================
+
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [MIGRATE_DXF_EXECUTE] BLOCKED: Non-super_admin attempted DXF migration execution: ` +
+      `${ctx.email} (${ctx.globalRole})`
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden: Only super_admin can execute DXF migrations',
+        message: 'DXF data migration is a system-level operation restricted to super_admin'
+      },
+      { status: 403 }
+    );
+  }
+
+  console.log(`🔐 [MIGRATE_DXF_EXECUTE] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
+
   try {
     console.log('🚀 [API] DXF Migration - LIVE MIGRATION');
 
@@ -324,6 +412,7 @@ export async function POST(request: NextRequest) {
     const analysis = await analysisMigrator.analyzeLegacyData();
 
     if (analysis.legacyFiles.length === 0) {
+      console.log('ℹ️ No legacy files to migrate');
       return NextResponse.json({
         success: true,
         mode: 'LIVE_MIGRATION',
@@ -338,6 +427,8 @@ export async function POST(request: NextRequest) {
     // Execute live migration
     const migrator = new DxfMigrationAPI(false);
     const migrationResult = await migrator.migrateLegacyFiles(analysis);
+
+    const duration = Date.now() - startTime;
 
     const report = {
       mode: 'LIVE_MIGRATION',
@@ -358,8 +449,32 @@ export async function POST(request: NextRequest) {
         ]
       },
       logs: migrationResult.logs,
-      errors: migrationResult.errors
+      errors: migrationResult.errors,
+      executionTimeMs: duration,
     };
+
+    console.log(`📊 Migration completed: ${migrationResult.migratedCount} migrated, ${migrationResult.failedCount} failed`);
+
+    // 🏢 ENTERPRISE: Audit logging (non-blocking)
+    const metadata = extractRequestMetadata(request);
+    await logMigrationExecuted(
+      ctx,
+      'migrate_dxf_firestore_to_storage',
+      {
+        operation: 'migrate-dxf',
+        totalLegacyFiles: analysis.legacyFiles.length,
+        migratedCount: migrationResult.migratedCount,
+        failedCount: migrationResult.failedCount,
+        spaceSavedKB: Math.round(analysis.totalLegacySize / 1024),
+        successRate: report.summary.successRate,
+        executionTimeMs: duration,
+        result: migrationResult.errors.length === 0 ? 'success' : 'partial_success',
+        metadata,
+      },
+      `DXF migration (Firestore→Storage) by ${ctx.globalRole} ${ctx.email}`
+    ).catch((err: unknown) => {
+      console.error('⚠️ [MIGRATE_DXF_EXECUTE] Audit logging failed (non-blocking):', err);
+    });
 
     if (migrationResult.errors.length > 0) {
       return NextResponse.json({

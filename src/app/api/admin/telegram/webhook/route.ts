@@ -1,20 +1,39 @@
 /**
  * =============================================================================
- * TELEGRAM WEBHOOK ADMIN API
+ * TELEGRAM WEBHOOK ADMIN API - PROTECTED (AUTHZ Phase 2)
  * =============================================================================
  *
- * Admin endpoint for managing Telegram webhook configuration.
+ * @purpose Manages Telegram bot webhook configuration
+ * @author Enterprise Architecture Team
+ * @protection withAuth + super_admin + audit logging
+ * @classification Admin configuration (webhook management)
+ *
+ * This endpoint manages Telegram bot webhook configuration:
  * - GET: Get current webhook info (getWebhookInfo)
  * - POST: Set/update webhook URL and secret (setWebhook)
+ * - DELETE: Remove webhook (debugging/testing)
+ *
+ * @method GET - Get webhook info
+ * @method POST - Set/update webhook
+ * @method DELETE - Remove webhook
+ *
+ * @security Multi-layer protection:
+ *   - Layer 1: withAuth (admin:system:configure permission)
+ *   - Layer 2: super_admin role check (explicit)
+ *   - Layer 3: Audit logging (logSystemOperation)
  *
  * @module api/admin/telegram/webhook
  * @enterprise EPIC C - Telegram Operationalization
- * @security Requires admin authentication via requireAdminContext
+ * @migration OLD auth (requireAdminContext) → NEW auth (withAuth)
+ * =============================================================================
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdminContext, audit } from '@/server/admin/admin-guards';
 import { generateRequestId } from '@/services/enterprise-id.service';
+
+// 🏢 ENTERPRISE: AUTHZ Phase 2 Imports (NEW auth system)
+import { withAuth, logSystemOperation, extractRequestMetadata } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 
 // ============================================================================
 // CONFIGURATION
@@ -70,29 +89,44 @@ async function callTelegramApi<T>(method: string, params?: Record<string, unknow
 }
 
 // ============================================================================
-// GET - Get Webhook Info
+// GET - Get Webhook Info (withAuth protected)
 // ============================================================================
 
 /**
  * Get current webhook configuration and status
  * @enterprise Use this to verify webhook is properly configured
- * @security Requires admin authentication
+ * @security withAuth + super_admin check + admin:system:configure permission
  */
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export const GET = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return handleGetWebhookInfo(req, ctx);
+  },
+  { permissions: 'admin:system:configure' }
+);
+
+/**
+ * Internal handler for GET (webhook info).
+ */
+async function handleGetWebhookInfo(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
   const operationId = generateRequestId();
 
-  // 🔒 SECURITY: Require admin authentication
-  const authResult = await requireAdminContext(request, operationId);
-  if (!authResult.success) {
-    audit(operationId, 'WEBHOOK_INFO_DENIED', { error: authResult.error });
-    return NextResponse.json({
-      success: false,
-      error: authResult.error,
-    }, { status: 403 });
+  // 🏢 ENTERPRISE: Super_admin-only check (explicit)
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [GET /api/admin/telegram/webhook] BLOCKED: Non-super_admin attempted webhook info`,
+      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole, operationId }
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden: This operation requires super_admin role',
+        code: 'SUPER_ADMIN_REQUIRED',
+      },
+      { status: 403 }
+    );
   }
 
-  audit(operationId, 'WEBHOOK_INFO_START', { admin: authResult.context?.email }, authResult.context);
-  console.log('📡 Admin: Getting Telegram webhook info...');
+  console.log('📡 Admin: Getting Telegram webhook info...', { email: ctx.email, operationId });
 
   const result = await callTelegramApi<WebhookInfo>('getWebhookInfo');
 
@@ -146,7 +180,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 }
 
 // ============================================================================
-// POST - Set Webhook
+// POST - Set Webhook (withAuth protected)
 // ============================================================================
 
 interface SetWebhookRequest {
@@ -160,23 +194,39 @@ interface SetWebhookRequest {
 /**
  * Set or update webhook configuration
  * @enterprise Includes secret_token for request validation
- * @security Requires admin authentication
+ * @security withAuth + super_admin check + audit logging + admin:system:configure permission
  */
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export const POST = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return handleSetWebhook(req, ctx);
+  },
+  { permissions: 'admin:system:configure' }
+);
+
+/**
+ * Internal handler for POST (set webhook).
+ */
+async function handleSetWebhook(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
+  const startTime = Date.now();
   const operationId = generateRequestId();
 
-  // 🔒 SECURITY: Require admin authentication
-  const authResult = await requireAdminContext(request, operationId);
-  if (!authResult.success) {
-    audit(operationId, 'SET_WEBHOOK_DENIED', { error: authResult.error });
-    return NextResponse.json({
-      success: false,
-      error: authResult.error,
-    }, { status: 403 });
+  // 🏢 ENTERPRISE: Super_admin-only check (explicit)
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [POST /api/admin/telegram/webhook] BLOCKED: Non-super_admin attempted webhook configuration`,
+      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole, operationId }
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden: This operation requires super_admin role',
+        code: 'SUPER_ADMIN_REQUIRED',
+      },
+      { status: 403 }
+    );
   }
 
-  audit(operationId, 'SET_WEBHOOK_START', { admin: authResult.context?.email }, authResult.context);
-  console.log('📡 Admin: Setting Telegram webhook...');
+  console.log('📡 Admin: Setting Telegram webhook...', { email: ctx.email, operationId });
 
   let body: SetWebhookRequest = {};
 
@@ -241,6 +291,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   // Get updated webhook info to confirm
   const verifyResult = await callTelegramApi<WebhookInfo>('getWebhookInfo');
 
+  const duration = Date.now() - startTime;
+
+  // 🏢 ENTERPRISE: Audit logging (non-blocking)
+  const metadata = extractRequestMetadata(request);
+  await logSystemOperation(
+    ctx,
+    'telegram_webhook_configure',
+    {
+      operation: 'set-telegram-webhook',
+      webhookUrl,
+      allowedUpdates: params.allowed_updates,
+      dropPendingUpdates: body.drop_pending_updates || false,
+      maxConnections: body.max_connections,
+      verificationSuccess: verifyResult.ok,
+      confirmedUrl: verifyResult.result?.url,
+      pendingUpdates: verifyResult.result?.pending_update_count,
+      executionTimeMs: duration,
+      result: 'success',
+      metadata,
+    },
+    `Telegram webhook configured by ${ctx.globalRole} ${ctx.email}`
+  ).catch((err: unknown) => {
+    console.error('⚠️ Audit logging failed (non-blocking):', err);
+  });
+
   return NextResponse.json({
     success: true,
     message: 'Webhook configured successfully',
@@ -253,6 +328,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       confirmedUrl: verifyResult.result?.url,
       pendingUpdates: verifyResult.result?.pending_update_count,
     } : null,
+    executionTimeMs: duration,
   });
 }
 
@@ -281,28 +357,44 @@ function getDefaultWebhookUrl(): string | null {
 }
 
 // ============================================================================
-// DELETE - Remove Webhook (optional utility)
+// DELETE - Remove Webhook (withAuth protected)
 // ============================================================================
 
 /**
  * Remove webhook (for debugging/testing)
- * @security Requires admin authentication
+ * @security withAuth + super_admin check + audit logging + admin:system:configure permission
  */
-export async function DELETE(request: NextRequest): Promise<NextResponse> {
+export const DELETE = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return handleDeleteWebhook(req, ctx);
+  },
+  { permissions: 'admin:system:configure' }
+);
+
+/**
+ * Internal handler for DELETE (remove webhook).
+ */
+async function handleDeleteWebhook(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
+  const startTime = Date.now();
   const operationId = generateRequestId();
 
-  // 🔒 SECURITY: Require admin authentication
-  const authResult = await requireAdminContext(request, operationId);
-  if (!authResult.success) {
-    audit(operationId, 'DELETE_WEBHOOK_DENIED', { error: authResult.error });
-    return NextResponse.json({
-      success: false,
-      error: authResult.error,
-    }, { status: 403 });
+  // 🏢 ENTERPRISE: Super_admin-only check (explicit)
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [DELETE /api/admin/telegram/webhook] BLOCKED: Non-super_admin attempted webhook deletion`,
+      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole, operationId }
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden: This operation requires super_admin role',
+        code: 'SUPER_ADMIN_REQUIRED',
+      },
+      { status: 403 }
+    );
   }
 
-  audit(operationId, 'DELETE_WEBHOOK_START', { admin: authResult.context?.email }, authResult.context);
-  console.log('📡 Admin: Removing Telegram webhook...');
+  console.log('📡 Admin: Removing Telegram webhook...', { email: ctx.email, operationId });
 
   const result = await callTelegramApi<boolean>('deleteWebhook', {
     drop_pending_updates: false,  // Keep pending updates by default
@@ -316,8 +408,28 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
   }
 
   console.log('✅ Webhook removed');
+
+  const duration = Date.now() - startTime;
+
+  // 🏢 ENTERPRISE: Audit logging (non-blocking)
+  const metadata = extractRequestMetadata(request);
+  await logSystemOperation(
+    ctx,
+    'telegram_webhook_delete',
+    {
+      operation: 'delete-telegram-webhook',
+      executionTimeMs: duration,
+      result: 'success',
+      metadata,
+    },
+    `Telegram webhook deleted by ${ctx.globalRole} ${ctx.email}`
+  ).catch((err: unknown) => {
+    console.error('⚠️ Audit logging failed (non-blocking):', err);
+  });
+
   return NextResponse.json({
     success: true,
     message: 'Webhook removed. Bot will use long polling if configured.',
+    executionTimeMs: duration,
   });
 }

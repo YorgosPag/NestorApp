@@ -1,12 +1,37 @@
 /**
- * ENTERPRISE FIX - Direct Admin SDK Project CompanyID Update
- * Bypasses all permission systems using Firebase Admin SDK
+ * =============================================================================
+ * FIX PROJECTS DIRECT - PROTECTED (AUTHZ Phase 2)
+ * =============================================================================
+ *
+ * @purpose Direct Admin SDK fix for project companyIds
+ * @author Enterprise Architecture Team
+ * @protection withAuth + super_admin + audit logging
+ * @classification System-level operation (data fix)
+ *
+ * This endpoint uses Firebase Admin SDK to directly update project companyIds
+ * bypassing Firestore security rules for emergency data fixes.
+ *
+ * @method GET - System information
+ * @method POST - Execute direct companyId fix
+ *
+ * @security Multi-layer protection:
+ *   - Layer 1: withAuth (admin:direct:operations permission)
+ *   - Layer 2: super_admin role check (explicit)
+ *   - Layer 3: Audit logging (logDirectOperation)
+ *   - Layer 4: Firebase Admin SDK (elevated permissions)
+ *
+ * @technology Firebase Admin SDK (bypasses Firestore rules)
+ * =============================================================================
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { COLLECTIONS } from '@/config/firestore-collections';
+
+// 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
+import { withAuth, logDirectOperation, extractRequestMetadata } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 
 // Initialize Admin SDK if not already initialized
 let adminDb: FirebaseFirestore.Firestore;
@@ -24,8 +49,40 @@ try {
   console.error('Failed to initialize Admin SDK:', error);
 }
 
-export async function POST(request: NextRequest) {
+/**
+ * POST - Execute Direct Project Fix (withAuth protected)
+ * Updates project companyIds using Firebase Admin SDK.
+ *
+ * @security withAuth + super_admin check + audit logging + admin:direct:operations permission
+ */
+export const POST = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return handleFixProjectsDirectExecute(req, ctx);
+  },
+  { permissions: 'admin:direct:operations' }
+);
+
+/**
+ * Internal handler for POST (direct project fix).
+ */
+async function handleFixProjectsDirectExecute(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
   const startTime = Date.now();
+
+  // 🏢 ENTERPRISE: Super_admin-only check (explicit)
+  if (ctx.globalRole !== 'super_admin') {
+    console.warn(
+      `🚫 [POST /api/admin/fix-projects-direct] BLOCKED: Non-super_admin attempted direct project fix`,
+      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden: This operation requires super_admin role',
+        code: 'SUPER_ADMIN_REQUIRED',
+      },
+      { status: 403 }
+    );
+  }
 
   try {
     if (!adminDb) {
@@ -172,11 +229,33 @@ export async function POST(request: NextRequest) {
       console.log('⚠️ Fix completed with issues');
     }
 
+    // 🏢 ENTERPRISE: Audit logging (non-blocking)
+    const metadata = extractRequestMetadata(request);
+    await logDirectOperation(
+      ctx,
+      'fix_projects_direct_companyid',
+      {
+        operation: 'fix-projects-direct',
+        totalProjects: response.summary.totalProjects,
+        successfulUpdates: response.summary.successfulUpdates,
+        correctProjectsAfter: response.summary.correctProjectsAfterUpdate,
+        errors: response.summary.errors,
+        targetCompanyId: correctCompanyId,
+        allProjectsFixed: response.summary.allProjectsFixed,
+        executionTimeMs: response.execution.executionTimeMs,
+        result: response.success ? 'success' : 'partial_success',
+        metadata,
+      },
+      `Direct project companyId fix by ${ctx.globalRole} ${ctx.email}`
+    ).catch((err: unknown) => {
+      console.error('⚠️ Audit logging failed (non-blocking):', err);
+    });
+
     return NextResponse.json(response, {
       status: response.success ? 200 : 500
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     const totalExecutionTime = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
@@ -200,8 +279,26 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+/**
+ * GET - System Information (withAuth protected)
+ * Returns endpoint information and capabilities.
+ *
+ * @security withAuth + admin:direct:operations permission
+ */
+export const GET = withAuth(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    return handleFixProjectsDirectInfo(req, ctx);
+  },
+  { permissions: 'admin:direct:operations' }
+);
+
+/**
+ * Internal handler for GET (system info).
+ */
+async function handleFixProjectsDirectInfo(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
   try {
+    const targetCompanyId = process.env.NEXT_PUBLIC_MAIN_COMPANY_ID || 'default-company-id';
+
     return NextResponse.json({
       success: true,
       system: {
@@ -214,12 +311,17 @@ export async function GET(request: NextRequest) {
       usage: {
         endpoint: 'POST /api/admin/fix-projects-direct',
         method: 'Direct Firebase Admin SDK update',
-        target: 'Fix all project companyIds to: pzNUy8ksddGCtcQMqumR',
+        target: `Fix all project companyIds to: ${targetCompanyId}`,
         features: ['Permission bypass', 'Verification', 'Detailed logging']
+      },
+      requester: {
+        email: ctx.email,
+        globalRole: ctx.globalRole,
+        hasAccess: ctx.globalRole === 'super_admin'
       }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
     return NextResponse.json({
