@@ -3,11 +3,12 @@
  * TELEGRAM CRM STORE - ENTERPRISE OMNICHANNEL
  * =============================================================================
  *
- * Stores Telegram messages with canonical conversation model.
- * Maintains backward compatibility with existing COMMUNICATIONS collection.
+ * Stores Telegram messages using canonical conversation model.
+ * Architecture: CONVERSATIONS (container) + MESSAGES (canonical) - Single source of truth.
  *
  * @module api/communications/webhooks/telegram/crm/store
  * @enterprise ADR-029 - Omnichannel Conversation Model
+ * @updated 2026-01-16 - Removed legacy COMMUNICATIONS duplicate writes
  */
 
 import { isFirebaseAvailable } from '../firebase/availability';
@@ -19,8 +20,6 @@ import {
   SYSTEM_IDENTITY,
   PARTICIPANT_ROLES,
   SENDER_TYPES,
-  ENTITY_TYPES,
-  MESSAGE_STATUS,
   PLATFORMS,
   DEFAULTS,
 } from '@/config/domain-constants';
@@ -43,7 +42,6 @@ import type {
   ConversationDocument,
   MessageDocument,
   ExternalIdentityDocument,
-  LegacyCommunicationDocument,
 } from '@/server/types/conversations.firestore';
 
 // ============================================================================
@@ -347,38 +345,18 @@ export async function storeMessageInCRM(
       updatedAt: Timestamp.now(),
     } satisfies MessageDocument;
 
+    // 4. Store in canonical MESSAGES collection (SINGLE SOURCE OF TRUTH)
     const messagesCollRef = collection(COLLECTIONS.MESSAGES);
     const messagesRef = doc(messagesCollRef, canonicalMessageDocId);
     await setDoc(messagesRef, canonicalMessage);
 
-    // 5. BACKWARD COMPATIBILITY: Also store in COMMUNICATIONS - B4: Type-safe with satisfies
-    const legacyMessageRecord = {
-      type: PLATFORMS.TELEGRAM,
-      direction,
-      channel: PLATFORMS.TELEGRAM,
-      from: direction === 'inbound' ? userId : BOT_IDENTITY.ID,
-      to: direction === 'inbound' ? BOT_IDENTITY.ID : chatId,
-      content: message.text || DEFAULTS.MEDIA_MESSAGE_PLACEHOLDER,
-      status: direction === 'inbound' ? MESSAGE_STATUS.RECEIVED : MESSAGE_STATUS.SENT,
-      entityType: ENTITY_TYPES.LEAD,
-      entityId: null,
-      externalId: messageId,
-      // NEW: Link to conversation
-      conversationId,
-      metadata: {
-        userName: senderName,
-        platform: PLATFORMS.TELEGRAM,
-        chatId,
-      },
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
-    } satisfies LegacyCommunicationDocument;
+    console.log(`✅ Message stored: ${canonicalMessageDocId} (conv: ${conversationId}, new: ${isNew})`);
 
-    const communicationsRef = collection(COLLECTIONS.COMMUNICATIONS);
-    const docRef = await addDoc(communicationsRef, legacyMessageRecord);
-
-    console.log(`✅ Message stored: ${docRef.id} (conv: ${conversationId}, new: ${isNew})`);
-    return docRef;
+    // 🏢 ENTERPRISE: No legacy COMMUNICATIONS write (removed 2026-01-16)
+    // Architecture: CONVERSATIONS (container) + MESSAGES (canonical) ONLY
+    // Previous: Duplicate writes to COMMUNICATIONS collection (legacy)
+    // Current: Single write to MESSAGES - zero duplication
+    return messagesRef as unknown as DocumentReference;
   }, null);
 }
 
