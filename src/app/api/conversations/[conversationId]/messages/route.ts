@@ -10,11 +10,12 @@
  * @enterprise EPIC C - Telegram Operationalization
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
-import { withErrorHandling, apiSuccess, ApiError } from '@/lib/api/ApiErrorHandler';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withErrorHandling, ApiError } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { requireStaffContext, audit } from '@/server/admin/admin-guards';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { type MessageDirection, type DeliveryStatus } from '@/types/conversations';
@@ -125,28 +126,39 @@ export const dynamic = 'force-dynamic';
 // GET - List Messages for Conversation
 // ============================================================================
 
-export const GET = withErrorHandling(async (
+/**
+ * GET /api/conversations/[conversationId]/messages
+ *
+ * List messages within a conversation with pagination.
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: comm:conversations:view
+ * - Ownership Validation: Verifies conversation belongs to user's company
+ */
+export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ conversationId: string }> }
-) => {
+) {
+  const handler = withAuth<MessagesListResponse>(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<MessagesListResponse>> => {
+      const { conversationId } = await params;
+      return handleListMessages(req, ctx, conversationId);
+    },
+    { permissions: 'comm:conversations:view' }
+  );
+
+  return handler(request);
+}
+
+async function handleListMessages(request: NextRequest, ctx: AuthContext, conversationId: string): Promise<NextResponse<MessagesListResponse>> {
   const startTime = Date.now();
   const operationId = generateRequestId();
-
-  // 🔒 SECURITY: Staff-only access (admin/broker/builder roles)
-  const authResult = await requireStaffContext(request, operationId);
-  if (!authResult.success) {
-    audit(operationId, 'LIST_MESSAGES_DENIED', { error: authResult.error });
-    throw new ApiError(403, authResult.error || 'Staff access required', 'STAFF_REQUIRED');
-  }
-
-  const { conversationId } = await params;
 
   if (!conversationId) {
     throw new ApiError(400, 'Conversation ID is required');
   }
 
-  audit(operationId, 'LIST_MESSAGES_START', { user: authResult.context?.email, conversationId });
-  console.log(`📨 [Messages/List] Loading messages for ${conversationId} (user: ${authResult.context?.email})`);
+  console.log(`📨 [Messages/List] Loading messages for ${conversationId} (user: ${ctx.email}, company: ${ctx.companyId})`);
 
   // Parse query parameters
   const searchParams = request.nextUrl.searchParams;
@@ -164,15 +176,15 @@ export const GET = withErrorHandling(async (
   if (cachedData) {
     const duration = Date.now() - startTime;
     console.log(`⚡ [Messages/List] CACHE HIT - ${cachedData.count} messages in ${duration}ms`);
-    return apiSuccess<MessagesListResponse>({
+    return NextResponse.json({
       ...cachedData,
       source: 'cache'
-    }, `Messages loaded from cache in ${duration}ms`);
+    });
   }
 
   console.log('🔍 [Messages/List] Cache miss - Fetching from Firestore...');
 
-  // Verify conversation exists
+  // CRITICAL: Ownership validation - verify conversation belongs to user's company
   const convDoc = await adminDb
     .collection(COLLECTIONS.CONVERSATIONS)
     .doc(conversationId)
@@ -180,6 +192,17 @@ export const GET = withErrorHandling(async (
 
   if (!convDoc.exists) {
     throw new ApiError(404, `Conversation ${conversationId} not found`);
+  }
+
+  const convData = convDoc.data();
+  if (convData?.companyId !== ctx.companyId) {
+    console.warn(`⚠️ [Messages/List] Unauthorized attempt:`, {
+      userId: ctx.uid,
+      userCompany: ctx.companyId,
+      conversationId,
+      conversationCompany: convData?.companyId
+    });
+    throw new ApiError(403, 'Unauthorized: You can only access conversations from your company');
   }
 
   // Build query
@@ -250,10 +273,5 @@ export const GET = withErrorHandling(async (
   const duration = Date.now() - startTime;
   console.log(`✅ [Messages/List] Complete: ${messages.length} messages in ${duration}ms`);
 
-  return apiSuccess<MessagesListResponse>(response, `Messages loaded in ${duration}ms`);
-
-}, {
-  operation: 'listMessages',
-  entityType: COLLECTIONS.MESSAGES,
-  entityId: 'conversation'
-});
+  return NextResponse.json(response);
+}
