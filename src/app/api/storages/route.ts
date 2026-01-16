@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
@@ -138,88 +140,141 @@ function parseFirestoreTimestamp(timestamp: unknown): Date | null {
 }
 
 // ============================================================================
+// RESPONSE TYPES (Type-safe withAuth)
+// ============================================================================
+
+interface StoragesResponse {
+  success: boolean;
+  storages?: Storage[];
+  count?: number;
+  cached?: boolean;
+  projectId?: string;
+  error?: string;
+  details?: string;
+}
+
+// ============================================================================
 // API HANDLER
 // ============================================================================
 
+/**
+ * GET /api/storages
+ *
+ * List storage spaces (optionally filtered by projectId).
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: units:units:view
+ * - Tenant Isolation: Filters storages by user's companyId through projects
+ */
 export async function GET(request: NextRequest) {
+  const handler = withAuth<StoragesResponse>(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<StoragesResponse>> => {
+      return handleGetStorages(req, ctx);
+    },
+    { permissions: 'units:units:view' }
+  );
+
+  return handler(request);
+}
+
+async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promise<NextResponse<StoragesResponse>> {
+  console.log(`🗄️ API: Loading storages for user ${ctx.email} (company: ${ctx.companyId})...`);
   try {
     // 🏗️ ENTERPRISE: Extract projectId parameter for filtering
     const { searchParams } = new URL(request.url);
-    const projectId = searchParams.get('projectId');
+    const requestedProjectId = searchParams.get('projectId');
 
-    if (projectId) {
-      console.log(`🏗️ API: Loading storages for project ${projectId} (Admin SDK)...`);
-    } else {
-      console.log('🏗️ API: Loading all storages (Admin SDK)...');
+    // =========================================================================
+    // STEP 0: Get authorized projects (TENANT ISOLATION)
+    // =========================================================================
+    console.log('🔍 API: Getting authorized projects for user\'s company...');
+
+    const projectsSnapshot = await adminDb
+      .collection(COLLECTIONS.PROJECTS)
+      .where('companyId', '==', ctx.companyId)
+      .get();
+
+    const authorizedProjectIds = new Set(projectsSnapshot.docs.map(doc => doc.id));
+    console.log(`🏗️ API: Found ${authorizedProjectIds.size} authorized projects for company ${ctx.companyId}`);
+
+    if (authorizedProjectIds.size === 0) {
+      console.log('⚠️ API: No projects found for user\'s company - returning empty result');
+      return NextResponse.json({
+        success: true,
+        storages: [],
+        count: 0,
+        cached: false
+      });
     }
 
-    // =========================================================================
-    // STEP 0: Check cache first (Enterprise Caching)
-    // =========================================================================
-    if (!projectId) {
-      const cachedStorages = CacheHelpers.getCachedAllStorages();
-      if (cachedStorages) {
-        console.log(`⚡ API: CACHE HIT - Returning ${cachedStorages.length} cached storages`);
+    // Validate projectId parameter if provided
+    if (requestedProjectId) {
+      if (!authorizedProjectIds.has(requestedProjectId)) {
+        console.warn(`🚫 TENANT ISOLATION: User ${ctx.uid} attempted to access unauthorized project ${requestedProjectId}`);
         return NextResponse.json({
-          success: true,
-          storages: cachedStorages,
-          count: cachedStorages.length,
-          cached: true
-        });
+          success: false,
+          error: 'Project not found or access denied',
+          details: 'The requested project does not belong to your organization'
+        }, { status: 403 });
       }
+      console.log(`✅ API: Project ${requestedProjectId} is authorized - proceeding with query`);
     }
 
-    console.log('🔍 API: Cache miss - Fetching from Firestore with Admin SDK...');
+    // =========================================================================
+    // STEP 1: Fetch storages from Firestore (TENANT FILTERED)
+    // =========================================================================
+    console.log('🔍 API: Fetching storages from Firestore with Admin SDK (tenant-filtered)...');
 
-    // =========================================================================
-    // STEP 1: Query Firestore using Admin SDK
-    // =========================================================================
     let snapshot;
 
-    if (projectId) {
-      // Filter by projectId
+    if (requestedProjectId) {
+      // Single project query (already validated as authorized)
       snapshot = await adminDb
         .collection(COLLECTIONS.STORAGE)
-        .where('projectId', '==', projectId)
+        .where('projectId', '==', requestedProjectId)
         .get();
+      console.log(`🔍 API: Querying storages for project ${requestedProjectId}`);
     } else {
-      // Get all storages, ordered by createdAt
+      // Multiple projects query - get all and filter in-memory
       snapshot = await adminDb
         .collection(COLLECTIONS.STORAGE)
-        .orderBy('createdAt', 'desc')
         .get();
+      console.log(`🔍 API: Querying all storages (will filter by ${authorizedProjectIds.size} authorized projects)`);
     }
 
     // =========================================================================
-    // STEP 2: Map Firestore data using Data Mapper pattern
+    // STEP 2: Map and filter storages (TENANT ISOLATION)
     // =========================================================================
-    const storages: Storage[] = [];
+    const allStorages: Storage[] = [];
 
     snapshot.docs.forEach(doc => {
       const rawData = doc.data() as FirestoreStorageData;
       const storage = mapFirestoreToStorage(doc.id, rawData);
-      storages.push(storage);
+      allStorages.push(storage);
     });
 
-    // =========================================================================
-    // STEP 3: Cache and return
-    // =========================================================================
-    if (!projectId) {
-      CacheHelpers.cacheAllStorages(storages);
+    // Filter by authorized projects (if not already filtered by single projectId)
+    const storages = requestedProjectId
+      ? allStorages // Already filtered by Firestore query
+      : allStorages.filter(storage => storage.projectId && authorizedProjectIds.has(storage.projectId));
+
+    console.log(`✅ API: Found ${storages.length} storages for user's authorized projects`);
+    if (!requestedProjectId) {
+      const filteredOut = allStorages.length - storages.length;
+      if (filteredOut > 0) {
+        console.log(`🔒 TENANT ISOLATION: Filtered out ${filteredOut} storages from unauthorized projects`);
+      }
     }
 
-    if (projectId) {
-      console.log(`✅ API: Found ${storages.length} storages for project ${projectId}`);
-    } else {
-      console.log(`✅ API: Found ${storages.length} storages (cached for 2 minutes)`);
-    }
-
+    // =========================================================================
+    // STEP 3: Return tenant-filtered results
+    // =========================================================================
     return NextResponse.json({
       success: true,
       storages,
       count: storages.length,
       cached: false,
-      projectId: projectId || undefined
+      projectId: requestedProjectId || undefined
     });
 
   } catch (error) {
