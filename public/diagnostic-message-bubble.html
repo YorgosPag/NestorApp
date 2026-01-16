@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Message Bubble CSS Diagnostic</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #fff; }
+    .result { padding: 10px; margin: 10px 0; background: #2a2a2a; border-radius: 4px; }
+    .error { background: #ff4444; color: white; }
+    .success { background: #44ff44; color: black; }
+    .warning { background: #ffaa44; color: black; }
+  </style>
+</head>
+<body>
+  <h1>🔍 Enterprise CSS Diagnostic Tool</h1>
+  <div id="results"></div>
+
+  <script>
+    const results = document.getElementById('results');
+
+    function addResult(type, title, value) {
+      const div = document.createElement('div');
+      div.className = `result ${type}`;
+      div.innerHTML = `<strong>${title}:</strong><br><pre>${JSON.stringify(value, null, 2)}</pre>`;
+      results.appendChild(div);
+    }
+
+    // Run diagnostics
+    setTimeout(() => {
+      // 1. Check if .ds-messageBubble exists in DOM
+      const bubbles = document.querySelectorAll('.ds-messageBubble');
+      addResult(bubbles.length > 0 ? 'success' : 'error',
+        '1. Elements with .ds-messageBubble',
+        `Found ${bubbles.length} elements`);
+
+      if (bubbles.length > 0) {
+        const bubble = bubbles[0];
+
+        // 2. Check applied classes
+        addResult('success', '2. Applied classes', bubble.className);
+
+        // 3. Check computed background color
+        const bgColor = getComputedStyle(bubble).backgroundColor;
+        addResult(bgColor === 'rgb(255, 255, 255)' ? 'error' : 'success',
+          '3. Computed background-color',
+          bgColor);
+
+        // 4. Check CSS variable value
+        const cssVarValue = getComputedStyle(document.documentElement)
+          .getPropertyValue('--color-background-muted').trim();
+        addResult(cssVarValue ? 'success' : 'error',
+          '4. CSS Variable --color-background-muted',
+          cssVarValue || 'NOT DEFINED');
+
+        // 5. Check all applied styles
+        const styles = getComputedStyle(bubble);
+        addResult('success', '5. All background-related styles', {
+          'background-color': styles.backgroundColor,
+          'background': styles.background,
+          'background-image': styles.backgroundImage
+        });
+
+        // 6. Check CSS rules matching .ds-messageBubble
+        const rules = [];
+        for (const sheet of document.styleSheets) {
+          try {
+            for (const rule of sheet.cssRules) {
+              if (rule.selectorText && rule.selectorText.includes('ds-messageBubble')) {
+                rules.push({
+                  selector: rule.selectorText,
+                  background: rule.style.backgroundColor || rule.style.background || 'none'
+                });
+              }
+            }
+          } catch (e) {
+            // Cross-origin stylesheet
+          }
+        }
+        addResult(rules.length > 0 ? 'success' : 'error',
+          '6. CSS Rules for .ds-messageBubble',
+          rules);
+      }
+    }, 2000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,289 @@
+/**
+ * =============================================================================
+ * MESSAGE CONTENT STYLING - ENTERPRISE
+ * =============================================================================
+ *
+ * Centralized CSS για message rich text rendering (HTML formatting).
+ * Telegram-compatible styling με complete design tokens integration.
+ *
+ * @module styles/design-system/components/message-content
+ * @enterprise ADR-030 - Zero Hardcoded Values
+ * @see src/lib/message-utils.ts - Message sanitization
+ * @see local_5_TELEGRAM.txt - Original requirements
+ */
+
+/* ============================================================================
+ * MESSAGE CONTAINER
+ * ============================================================================ */
+
+/**
+ * 🏢 ENTERPRISE: Message bubble base styling
+ * Uses CSS variables from variables.css
+ * Clean CSS architecture - no !important wars
+ */
+.ds-messageBubble {
+  background-color: var(--color-background-muted);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-component-padding-md);
+  transition-property: background-color, border-color;
+  transition-duration: var(--animation-duration-normal);
+  transition-timing-function: var(--animation-easing-ease-in-out);
+}
+
+.ds-messageBubble:hover {
+  background-color: var(--color-background-secondary);
+}
+
+/**
+ * 🏢 ENTERPRISE: Message bubble variants
+ * Proper CSS specificity - variants override base naturally
+ */
+
+/* Inbound messages (from user/customer) - Uses base styling */
+.ds-messageBubble--inbound {
+  /* Inherits all base styles from .ds-messageBubble */
+}
+
+/* Outbound messages (from bot/agent) - Different background */
+.ds-messageBubble--outbound {
+  background-color: var(--color-background-info-subtle);
+  border-color: var(--color-border-info, var(--color-border-primary));
+}
+
+.ds-messageBubble--outbound:hover {
+  background-color: var(--color-background-info-hover, var(--color-background-hover));
+}
+
+/* ============================================================================
+ * MESSAGE CONTENT - RICH TEXT STYLING
+ * ============================================================================ */
+
+/**
+ * 🏢 ENTERPRISE: Message content container
+ * Enables rich text styling for HTML formatted messages
+ */
+.ds-messageContent {
+  color: var(--color-text-primary);
+  font-size: var(--typography-font-size-sm);
+  line-height: var(--typography-line-height-normal);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* ============================================================================
+ * PRE TAG - CODE BLOCKS (Telegram <pre> container)
+ * ============================================================================ */
+
+/**
+ * 🏢 ENTERPRISE: Code block container styling
+ * Matches Telegram's boxed code block appearance
+ *
+ * Design Decisions:
+ * - Dark background for code contrast (AutoCAD-style)
+ * - Monospace font for code readability
+ * - Scrollable overflow for long code
+ * - Subtle border for definition
+ */
+.ds-messageContent pre {
+  /* Background & Colors */
+  background-color: var(--color-background-muted);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-md);
+
+  /* Spacing */
+  padding: var(--spacing-component-padding-md);
+  margin-top: var(--spacing-component-margin-sm);
+  margin-bottom: var(--spacing-component-margin-sm);
+
+  /* Typography */
+  font-family: var(--typography-font-family-mono);
+  font-size: var(--typography-font-size-sm);
+  line-height: var(--typography-line-height-normal);
+
+  /* Overflow Handling */
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+
+  /* Box Model */
+  display: block;
+  max-width: 100%;
+}
+
+/**
+ * 🏢 ENTERPRISE: Code tag inside pre (preserve formatting)
+ */
+.ds-messageContent pre code {
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* ============================================================================
+ * CODE TAG - INLINE CODE (Telegram <code> inline)
+ * ============================================================================ */
+
+/**
+ * 🏢 ENTERPRISE: Inline code styling
+ * For <code> tags outside <pre> (inline code snippets)
+ *
+ * Design Decisions:
+ * - Subtle background for distinction
+ * - Minimal padding for inline flow
+ * - Monospace font for code recognition
+ */
+.ds-messageContent code {
+  /* Background & Colors */
+  background-color: var(--color-background-muted);
+  color: var(--color-text-primary);
+  border-radius: var(--border-radius-sm);
+
+  /* Spacing */
+  padding: 2px 6px;
+
+  /* Typography */
+  font-family: var(--typography-font-family-mono);
+  font-size: calc(var(--typography-font-size-sm) * 0.9);
+
+  /* Display */
+  display: inline;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* ============================================================================
+ * TEXT FORMATTING - TELEGRAM COMPATIBLE
+ * ============================================================================ */
+
+/**
+ * 🏢 ENTERPRISE: Bold text
+ * Telegram supports <b> and <strong>
+ */
+.ds-messageContent b,
+.ds-messageContent strong {
+  font-weight: var(--typography-font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+/**
+ * 🏢 ENTERPRISE: Italic text
+ * Telegram supports <i> and <em>
+ */
+.ds-messageContent i,
+.ds-messageContent em {
+  font-style: italic;
+}
+
+/**
+ * 🏢 ENTERPRISE: Underline text
+ * Telegram supports <u> and <ins>
+ */
+.ds-messageContent u,
+.ds-messageContent ins {
+  text-decoration: underline;
+}
+
+/**
+ * 🏢 ENTERPRISE: Strikethrough text
+ * Telegram supports <s>, <strike>, and <del>
+ */
+.ds-messageContent s,
+.ds-messageContent strike,
+.ds-messageContent del {
+  text-decoration: line-through;
+}
+
+/**
+ * 🏢 ENTERPRISE: Links
+ * Telegram supports <a> tags
+ */
+.ds-messageContent a {
+  color: var(--color-brand-primary-600);
+  text-decoration: underline;
+  transition-property: color;
+  transition-duration: var(--animation-duration-fast);
+  transition-timing-function: var(--animation-easing-ease-out);
+}
+
+.ds-messageContent a:hover {
+  color: var(--color-brand-primary-700);
+}
+
+.ds-messageContent a:focus {
+  outline: 2px solid var(--interactive-states-focus-ring-color);
+  outline-offset: var(--interactive-states-focus-ring-offset);
+  border-radius: var(--border-radius-sm);
+}
+
+/**
+ * 🏢 ENTERPRISE: Line breaks
+ * Ensure proper spacing for <br> tags
+ */
+.ds-messageContent br {
+  display: block;
+  content: "";
+  margin-top: var(--spacing-component-gap-xs);
+}
+
+/* ============================================================================
+ * DARK MODE SUPPORT
+ * ============================================================================ */
+
+/**
+ * 🏢 ENTERPRISE: Dark mode adjustments
+ * Automatic dark mode support via CSS variables
+ */
+.dark .ds-messageContent pre {
+  background-color: var(--color-background-secondary);
+  border-color: var(--color-border-secondary);
+}
+
+.dark .ds-messageContent code {
+  background-color: var(--color-background-secondary);
+}
+
+/* ============================================================================
+ * ACCESSIBILITY
+ * ============================================================================ */
+
+/**
+ * 🏢 ENTERPRISE: Focus states for keyboard navigation
+ */
+.ds-messageContent a:focus-visible {
+  outline: 2px solid var(--interactive-states-focus-ring-color);
+  outline-offset: var(--interactive-states-focus-ring-offset);
+}
+
+/**
+ * 🏢 ENTERPRISE: Reduced motion support
+ */
+@media (prefers-reduced-motion: reduce) {
+  .ds-messageBubble,
+  .ds-messageContent a {
+    transition: none;
+  }
+}
+
+/* ============================================================================
+ * RESPONSIVE ADJUSTMENTS
+ * ============================================================================ */
+
+/**
+ * 🏢 ENTERPRISE: Mobile optimizations
+ */
+@media (max-width: 640px) {
+  .ds-messageContent pre {
+    font-size: calc(var(--typography-font-size-sm) * 0.9);
+    padding: var(--spacing-component-padding-sm);
+  }
+
+  .ds-messageContent code {
+    font-size: calc(var(--typography-font-size-xs) * 0.95);
+  }
+}

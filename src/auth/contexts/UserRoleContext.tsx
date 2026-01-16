@@ -19,7 +19,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 import { useAuth } from './AuthContext';
 import { EnterpriseSecurityService } from '@/services/security/EnterpriseSecurityService';
 import { db } from '@/lib/firebase';
-import type { UserRole, User, FirebaseAuthUser, UserRoleContextType } from '../types/auth.types';
+import type { UserRole, User, FirebaseAuthUser, UserRoleContextType, SignUpData } from '../types/auth.types';
 
 // =============================================================================
 // CONTEXT
@@ -83,7 +83,13 @@ export function UserRoleProvider({ children }: UserRoleProviderProps) {
 
   useEffect(() => {
     const determineRole = async () => {
-      if (firebaseUser && securityInitialized) {
+      // 🏢 ENTERPRISE: Critical - Wait for both Firebase auth AND security initialization
+      if (authLoading || !securityInitialized) {
+        setIsLoading(true);
+        return;
+      }
+
+      if (firebaseUser) {
         try {
           // Use EnterpriseSecurityService for role determination
           const role = await securityService.checkUserRole(
@@ -117,11 +123,13 @@ export function UserRoleProvider({ children }: UserRoleProviderProps) {
           setUser(fallbackUser);
           console.warn('🔐 [UserRoleContext] Using secure fallback role: authenticated');
         }
-      } else if (!firebaseUser) {
+      } else {
+        // No Firebase user - clear user state
         setUser(null);
       }
 
-      setIsLoading(authLoading || !securityInitialized);
+      // 🏢 ENTERPRISE: Loading is false ONLY after all checks complete
+      setIsLoading(false);
     };
 
     determineRole();
@@ -142,14 +150,11 @@ export function UserRoleProvider({ children }: UserRoleProviderProps) {
     }
   };
 
-  const signUp = async (
-    email: string,
-    password: string,
-    displayName?: string
-  ): Promise<boolean> => {
+  const signUp = async (data: SignUpData): Promise<boolean> => {
     try {
-      console.log('🔐 [UserRoleContext] Sign up attempt:', email);
-      await authSignUp(email, password, displayName);
+      console.log('🔐 [UserRoleContext] Sign up attempt:', data.email);
+      // 🏢 ENTERPRISE: Pass SignUpData directly to AuthContext
+      await authSignUp(data);
       return true;
     } catch (error) {
       console.error('🔐 [UserRoleContext] Sign up failed:', error);

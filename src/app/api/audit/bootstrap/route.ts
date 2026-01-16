@@ -14,7 +14,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { adminDb, ensureAdminInitialized, getAdminInitializationStatus } from '@/lib/firebaseAdmin';
 import { withErrorHandling, apiSuccess } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
@@ -122,6 +122,30 @@ export const dynamic = 'force-dynamic';
 export const GET = withErrorHandling(async (request: NextRequest) => {
   const startTime = Date.now();
   console.log('🚀 [Bootstrap] Starting audit bootstrap load...');
+
+  // ============================================================================
+  // 0. VALIDATE FIREBASE ADMIN SDK - ENTERPRISE REQUIREMENT
+  // ============================================================================
+
+  // 🏢 ENTERPRISE: Check if Admin SDK is initialized before any Firestore operations
+  try {
+    ensureAdminInitialized();
+  } catch (error) {
+    const status = getAdminInitializationStatus();
+    console.error('❌ [Bootstrap] Firebase Admin SDK not initialized');
+    console.error('📍 [Bootstrap] Environment:', status.environment);
+    console.error('📋 [Bootstrap] Error:', status.error);
+
+    // Throw descriptive error that will be caught by withErrorHandling
+    throw new Error(
+      `Bootstrap failed: Firebase Admin SDK not initialized. ` +
+      `Environment: ${status.environment}. ` +
+      `Error: ${status.error}. ` +
+      `Required: FIREBASE_SERVICE_ACCOUNT_KEY must be configured in Vercel environment variables.`
+    );
+  }
+
+  console.log('✅ [Bootstrap] Firebase Admin SDK validated');
 
   // ============================================================================
   // 1. CHECK CACHE FIRST

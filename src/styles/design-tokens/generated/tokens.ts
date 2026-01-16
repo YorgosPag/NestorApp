@@ -31,6 +31,7 @@ export interface DesignTokens {
   color_background_secondary: string;
   color_background_muted: string;
   color_background_hover: string;
+  color_background_info_subtle: string;
   color_text_primary: string;
   color_text_secondary: string;
   color_text_muted: string;
@@ -155,6 +156,7 @@ export const designTokens: DesignTokens = {
   color_background_secondary: 'var(--color-background-secondary)',
   color_background_muted: 'var(--color-background-muted)',
   color_background_hover: 'var(--color-background-hover)',
+  color_background_info_subtle: 'var(--color-background-info-subtle)',
   color_text_primary: 'var(--color-text-primary)',
   color_text_secondary: 'var(--color-text-secondary)',
   color_text_muted: 'var(--color-text-muted)',
