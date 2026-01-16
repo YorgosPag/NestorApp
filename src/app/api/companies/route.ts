@@ -1,5 +1,6 @@
-import { NextRequest } from 'next/server';
-import { withErrorHandling, apiSuccess } from '@/lib/api/ApiErrorHandler';
+import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -165,11 +166,41 @@ function parseFirestoreTimestamp(timestamp: unknown): Date | null {
 }
 
 // ============================================================================
+// RESPONSE TYPES (Type-safe withAuth)
+// ============================================================================
+
+interface CompaniesResponse {
+  companies: CompanyContact[];
+  count: number;
+  cached: boolean;
+}
+
+// ============================================================================
 // API HANDLER
 // ============================================================================
 
-export const GET = withErrorHandling(async (request: NextRequest) => {
-  console.log('🏢 API: Loading active companies (Admin SDK)...');
+/**
+ * GET /api/companies
+ *
+ * List active companies relevant to user's organization.
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: crm:contacts:view
+ * - Tenant Isolation: Filters projects by user's companyId
+ */
+export async function GET(request: NextRequest) {
+  const handler = withAuth<CompaniesResponse>(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<CompaniesResponse>> => {
+      return handleGetCompanies(req, ctx);
+    },
+    { permissions: 'crm:contacts:view' }
+  );
+
+  return handler(request);
+}
+
+async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promise<NextResponse<CompaniesResponse>> {
+  console.log(`🏢 API: Loading active companies for user ${ctx.email} (company: ${ctx.companyId})...`);
 
   try {
     // =========================================================================
@@ -178,11 +209,11 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
     const cachedCompanies = CacheHelpers.getCachedCompanies();
     if (cachedCompanies) {
       console.log(`⚡ API: CACHE HIT - Returning ${cachedCompanies.length} cached companies`);
-      return apiSuccess({
+      return NextResponse.json({
         companies: cachedCompanies,
         count: cachedCompanies.length,
         cached: true
-      }, `Found ${cachedCompanies.length} cached companies`);
+      });
     }
 
     console.log('🔍 API: Cache miss - Fetching from Firestore with Admin SDK...');
@@ -225,10 +256,11 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
     });
 
     // =========================================================================
-    // STEP 3: Get companies that have projects
+    // STEP 3: Get companies that have projects (TENANT ISOLATION)
     // =========================================================================
     const projectsSnapshot = await adminDb
       .collection(COLLECTIONS.PROJECTS)
+      .where('companyId', '==', ctx.companyId)  // CRITICAL: Filter by user's company
       .get();
 
     const companiesWithProjects = new Set<string>();
@@ -277,11 +309,11 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
 
     console.log(`✅ API: Found ${relevantCompanies.length} active companies (cached for 5 minutes)`);
 
-    return apiSuccess({
+    return NextResponse.json({
       companies: relevantCompanies,
       count: relevantCompanies.length,
       cached: false
-    }, `Found ${relevantCompanies.length} active companies`);
+    });
 
   } catch (error: unknown) {
     console.error('❌ API: Error loading companies:', error);
@@ -296,10 +328,6 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
 
     console.error('❌ API: Detailed error info:', errorDetails);
 
-    throw error; // Let withErrorHandling handle the response
+    throw error; // Propagate to withAuth error handler
   }
-}, {
-  operation: 'loadActiveCompanies',
-  entityType: 'companies',
-  entityId: 'all'
-});
+}
