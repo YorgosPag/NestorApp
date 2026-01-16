@@ -10,7 +10,7 @@
 
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { getCurrentEnvironment, type RuntimeEnvironment } from '@/config/environment-security-config';
+import { getCurrentRuntimeEnvironment, type RuntimeEnvironment } from '@/config/environment-security-config';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -35,7 +35,7 @@ let initializationResult: AdminInitializationResult | null = null;
 
 // Αποφυγή διπλής αρχικοποίησης (σημαντικό σε Next.js)
 if (!getApps().length) {
-  const environment = getCurrentEnvironment();
+  const environment = getCurrentRuntimeEnvironment();
   const timestamp = new Date().toISOString();
 
   try {
@@ -164,7 +164,7 @@ export const adminApp = getApps()[0];
 export function getAdminInitializationStatus(): AdminInitializationResult {
   return initializationResult || {
     initialized: false,
-    environment: getCurrentEnvironment(),
+    environment: getCurrentRuntimeEnvironment(),
     error: 'Initialization status not available',
     timestamp: new Date().toISOString()
   };
@@ -178,7 +178,7 @@ export function ensureAdminInitialized(): void {
   const status = getAdminInitializationStatus();
 
   if (!status.initialized) {
-    const environment = getCurrentEnvironment();
+    const environment = getCurrentRuntimeEnvironment();
     throw new Error(
       `Firebase Admin SDK not initialized in ${environment} environment. ` +
       `Error: ${status.error || 'Unknown initialization failure'}. ` +
