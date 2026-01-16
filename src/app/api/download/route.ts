@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 
 // ============================================================================
 // 🏢 ENTERPRISE DOWNLOAD API - Force File Downloads
@@ -15,10 +17,29 @@ import { NextRequest, NextResponse } from 'next/server';
  * - Netflix, YouTube (video downloads)
  * - All Fortune 500 enterprise applications
  *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: photos:photos:upload
+ * - Only authenticated users can download files
+ * - Firebase Storage URLs validated (no arbitrary URL access)
+ * - Firebase Security Rules provide additional access control
+ *
  * @example
  * GET /api/download?url=FIREBASE_URL&filename=Γιώργος_Παπαδόπουλος_photo_1.jpg
  */
 export async function GET(request: NextRequest) {
+  const handler = withAuth(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      return handleDownload(req, ctx);
+    },
+    { permissions: 'photos:photos:upload' }
+  );
+
+  return handler(request);
+}
+
+async function handleDownload(request: NextRequest, ctx: AuthContext) {
+  console.log(`📁 API: File download request from user ${ctx.email} (company: ${ctx.companyId})`);
+
   try {
     const { searchParams } = new URL(request.url);
     const fileUrl = searchParams.get('url');
@@ -68,6 +89,9 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('🔗 DOWNLOAD REQUEST:', {
+      userId: ctx.uid,
+      userEmail: ctx.email,
+      companyId: ctx.companyId,
       url: fileUrl,
       filename: filename,
       timestamp: new Date().toISOString(),
