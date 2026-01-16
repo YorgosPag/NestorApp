@@ -14,6 +14,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
@@ -71,67 +73,106 @@ interface ParkingAPIResponse {
  *
  * ENTERPRISE ARCHITECTURE (local_4.log):
  * Parking belongs to Building context, NOT to Units
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: units:units:view
+ * - Tenant Isolation: Filters by user's companyId through buildings
  */
-export async function GET(request: NextRequest): Promise<NextResponse<ParkingAPIResponse>> {
+export async function GET(request: NextRequest) {
+  const handler = withAuth<ParkingAPIResponse>(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<ParkingAPIResponse>> => {
+      return handleGetParking(req, ctx);
+    },
+    { permissions: 'units:units:view' }
+  );
+
+  return handler(request);
+}
+
+async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise<NextResponse<ParkingAPIResponse>> {
+  console.log(`🅿️ API: Loading parking spots for user ${ctx.email} (company: ${ctx.companyId})...`);
+
   try {
     // 🏗️ ENTERPRISE: Extract buildingId parameter for filtering
     const { searchParams } = new URL(request.url);
-    const buildingId = searchParams.get('buildingId');
-
-    if (buildingId) {
-      console.log(`🅿️ API: Loading parking spots for building ${buildingId}...`);
-    } else {
-      console.log('🅿️ API: Loading all parking spots...');
-    }
-
-    // 🚀 ENTERPRISE CACHING: Check cache first
-    if (buildingId) {
-      const cachedParking = CacheHelpers.getCachedParkingByBuilding(buildingId);
-      if (cachedParking) {
-        console.log(`⚡ API: CACHE HIT - Returning ${cachedParking.length} cached parking spots for building ${buildingId}`);
-        return NextResponse.json({
-          success: true,
-          parkingSpots: cachedParking as FirestoreParkingSpot[],
-          count: cachedParking.length,
-          cached: true,
-          buildingId
-        });
-      }
-    } else {
-      const cachedAllParking = CacheHelpers.getCachedAllParking();
-      if (cachedAllParking) {
-        console.log(`⚡ API: CACHE HIT - Returning ${cachedAllParking.length} cached parking spots`);
-        return NextResponse.json({
-          success: true,
-          parkingSpots: cachedAllParking as FirestoreParkingSpot[],
-          count: cachedAllParking.length,
-          cached: true
-        });
-      }
-    }
-
-    console.log('🔍 API: Cache miss - Fetching from Firestore with Admin SDK...');
+    const requestedBuildingId = searchParams.get('buildingId');
 
     // =========================================================================
-    // Query Firestore using Admin SDK
+    // STEP 0: Get authorized buildings (TENANT ISOLATION)
+    // =========================================================================
+    console.log('🔍 API: Getting authorized buildings for user\'s company...');
+
+    // Get all projects belonging to user's company
+    const projectsSnapshot = await adminDb
+      .collection(COLLECTIONS.PROJECTS)
+      .where('companyId', '==', ctx.companyId)
+      .get();
+
+    const projectIds = projectsSnapshot.docs.map(doc => doc.id);
+    console.log(`🏗️ API: Found ${projectIds.length} projects for company ${ctx.companyId}`);
+
+    if (projectIds.length === 0) {
+      console.log('⚠️ API: No projects found for user\'s company - returning empty result');
+      return NextResponse.json({
+        success: true,
+        parkingSpots: [],
+        count: 0,
+        cached: false
+      });
+    }
+
+    // Get all buildings from these projects
+    const buildingsSnapshot = await adminDb
+      .collection(COLLECTIONS.BUILDINGS)
+      .where('projectId', 'in', projectIds.slice(0, 10)) // Firestore 'in' limit is 10
+      .get();
+
+    const authorizedBuildingIds = new Set(buildingsSnapshot.docs.map(doc => doc.id));
+    console.log(`🏢 API: Found ${authorizedBuildingIds.size} authorized buildings for user`);
+
+    // If buildingId parameter provided, verify it's authorized
+    if (requestedBuildingId) {
+      if (!authorizedBuildingIds.has(requestedBuildingId)) {
+        console.warn(`🚫 TENANT ISOLATION: User ${ctx.uid} attempted to access unauthorized building ${requestedBuildingId}`);
+        return NextResponse.json({
+          success: false,
+          error: 'Building not found or access denied',
+          details: 'The requested building does not belong to your organization'
+        }, { status: 403 });
+      }
+      console.log(`✅ API: Building ${requestedBuildingId} is authorized - proceeding with query`);
+    }
+
+    // =========================================================================
+    // STEP 1: Check cache (skip for now - tenant-specific caching needed)
+    // =========================================================================
+    console.log('🔍 API: Fetching from Firestore with Admin SDK (tenant-filtered)...');
+
+    // =========================================================================
+    // STEP 2: Query Firestore using Admin SDK (TENANT FILTERED)
     // =========================================================================
     let snapshot;
 
-    if (buildingId) {
-      // Filter by buildingId
+    if (requestedBuildingId) {
+      // Single building query (already validated as authorized)
       snapshot = await adminDb
         .collection(COLLECTIONS.PARKING_SPACES)
-        .where('buildingId', '==', buildingId)
+        .where('buildingId', '==', requestedBuildingId)
         .get();
+      console.log(`🔍 API: Querying parking spots for building ${requestedBuildingId}`);
     } else {
-      // Get all parking spots, ordered by createdAt
+      // Multiple buildings query - get all and filter in-memory
+      // (Firestore 'in' operator limited to 10 items)
       snapshot = await adminDb
         .collection(COLLECTIONS.PARKING_SPACES)
-        .orderBy('createdAt', 'desc')
         .get();
+      console.log(`🔍 API: Querying all parking spots (will filter by ${authorizedBuildingIds.size} authorized buildings)`);
     }
 
-    const parkingSpots: FirestoreParkingSpot[] = snapshot.docs.map(doc => {
+    // =========================================================================
+    // STEP 3: Map and filter parking spots (TENANT ISOLATION)
+    // =========================================================================
+    const allParkingSpots: FirestoreParkingSpot[] = snapshot.docs.map(doc => {
       const data = doc.data() as Record<string, unknown>;
       return {
         id: doc.id,
@@ -149,21 +190,28 @@ export async function GET(request: NextRequest): Promise<NextResponse<ParkingAPI
       };
     });
 
-    // 💾 ENTERPRISE CACHING: Store in cache for future requests
-    if (buildingId) {
-      CacheHelpers.cacheParkingByBuilding(buildingId, parkingSpots);
-      console.log(`✅ API: Found ${parkingSpots.length} parking spots for building ${buildingId} (cached for 2 minutes)`);
-    } else {
-      CacheHelpers.cacheAllParking(parkingSpots);
-      console.log(`✅ API: Found ${parkingSpots.length} parking spots (cached for 2 minutes)`);
+    // Filter by authorized buildings (if not already filtered by single buildingId)
+    const parkingSpots = requestedBuildingId
+      ? allParkingSpots // Already filtered by Firestore query
+      : allParkingSpots.filter(spot => authorizedBuildingIds.has(spot.buildingId));
+
+    console.log(`✅ API: Found ${parkingSpots.length} parking spots for user's authorized buildings`);
+    if (!requestedBuildingId) {
+      const filteredOut = allParkingSpots.length - parkingSpots.length;
+      if (filteredOut > 0) {
+        console.log(`🔒 TENANT ISOLATION: Filtered out ${filteredOut} parking spots from unauthorized buildings`);
+      }
     }
 
+    // =========================================================================
+    // STEP 4: Return tenant-filtered results
+    // =========================================================================
     return NextResponse.json({
       success: true,
       parkingSpots,
       count: parkingSpots.length,
       cached: false,
-      buildingId: buildingId || undefined
+      buildingId: requestedBuildingId || undefined
     });
 
   } catch (error) {
