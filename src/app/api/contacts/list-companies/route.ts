@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
         );
       }
     },
-    { permissions: 'contacts:contacts:view' }
+    { permissions: 'crm:contacts:view' }
   );
 
   return handler(request);

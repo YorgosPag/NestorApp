@@ -251,7 +251,7 @@ export async function GET(
     );
   }
     },
-    { permissions: 'contacts:contacts:view' }
+    { permissions: 'crm:contacts:view' }
   );
 
   // Execute authenticated handler

@@ -74,6 +74,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       'projects:members:manage',
       'settings:settings:view',
       'settings:settings:manage',
+      'notifications:notifications:view',
     ],
     level: 1,
     isProjectRole: false
@@ -101,6 +102,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       'reports:reports:create',
       'photos:photos:upload',
       'progress:progress:update',
+      'notifications:notifications:view',
     ],
     level: 2,
     isProjectRole: true
@@ -114,6 +116,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       'dxf:layers:view',
       'projects:floors:view',
       'units:units:view',
+      'notifications:notifications:view',
     ],
     level: 3,
     isProjectRole: true
@@ -128,6 +131,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       'projects:floors:view',
       'units:units:view',
       'specs:specs:view',
+      'notifications:notifications:view',
     ],
     level: 3,
     isProjectRole: true
@@ -142,6 +146,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       'reports:reports:view',
       'reports:reports:create',
       'units:units:view',
+      'notifications:notifications:view',
     ],
     level: 4,
     isProjectRole: true
@@ -154,6 +159,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       'finance:invoices:view',
       'finance:invoices:update',
       'reports:reports:view',
+      'notifications:notifications:view',
     ],
     level: 4,
     isProjectRole: true
@@ -171,6 +177,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       'comm:conversations:view',
       'comm:messages:view',
       'comm:messages:send',
+      'notifications:notifications:view',
     ],
     level: 4,
     isProjectRole: true
@@ -184,6 +191,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       'units:units:view',
       'crm:contacts:view',
       'crm:contacts:create',
+      'notifications:notifications:view',
     ],
     level: 5,
     isProjectRole: true
@@ -196,6 +204,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       'orders:orders:view',
       'deliveries:deliveries:view',
       'specs:specs:view',
+      'notifications:notifications:view',
     ],
     level: 5,
     isProjectRole: true

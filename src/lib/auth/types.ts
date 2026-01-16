@@ -103,6 +103,9 @@ export const PERMISSIONS = {
   'crm:contacts:update': true,
   'crm:contacts:export': true,
 
+  // Notifications
+  'notifications:notifications:view': true,
+
   // Finance
   'finance:invoices:view': true,
   'finance:invoices:update': true,
