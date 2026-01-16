@@ -135,32 +135,6 @@ export const dynamic = 'force-dynamic';
  * GET /api/audit/bootstrap
  *
  * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
-<<<<<<< HEAD
- * - Permission: audit:data:view
- * - Tenant Isolation: company_admin sees ONLY their company
- * - Super_admin Bypass: super_admin sees ALL companies
- */
-export const GET = withAuth(
-  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-    return withErrorHandling(async (request: NextRequest) => {
-      return handleAuditBootstrap(request, ctx);
-    }, {
-      operation: 'auditBootstrap',
-      entityType: 'audit',
-      entityId: 'bootstrap'
-    })(req);
-  },
-  { permissions: 'audit:data:view' }
-);
-
-async function handleAuditBootstrap(
-  request: NextRequest,
-  ctx: AuthContext
-) {
-  const startTime = Date.now();
-  console.log(`🔐 [Bootstrap] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
-  console.log('🚀 [Bootstrap] Starting audit bootstrap load...');
-=======
  * - Permission: projects:projects:view
  * - Tenant Isolation: Filters companies and projects by user's companyId
  * - Single-tenant view (user sees only their company data)
@@ -179,7 +153,6 @@ export async function GET(request: NextRequest) {
 async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Promise<NextResponse<BootstrapResponse>> {
   const startTime = Date.now();
   console.log(`🚀 [Bootstrap] Audit bootstrap load for user ${ctx.email} (company: ${ctx.companyId})...`);
->>>>>>> origin/main
 
   // ============================================================================
   // 0. VALIDATE FIREBASE ADMIN SDK - ENTERPRISE REQUIREMENT
@@ -206,20 +179,6 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
   console.log('✅ [Bootstrap] Firebase Admin SDK validated');
 
   // ============================================================================
-<<<<<<< HEAD
-  // 1. CHECK CACHE FIRST (Tenant-aware caching)
-  // ============================================================================
-
-  // 🏢 ENTERPRISE: Tenant-specific cache keys
-  // Super_admin: Global cache (sees all companies)
-  // Company_admin: Tenant-specific cache (sees only their company)
-  const cacheKey = ctx.globalRole === 'super_admin'
-    ? CACHE_KEY
-    : `${CACHE_KEY}:${ctx.companyId}`;
-
-  const cache = EnterpriseAPICache.getInstance();
-  const cachedData = cache.get<BootstrapResponse>(cacheKey);
-=======
   // 1. CHECK CACHE FIRST (PER-COMPANY CACHE KEY)
   // ============================================================================
 
@@ -227,7 +186,6 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
   const tenantCacheKey = `${CACHE_KEY}:${ctx.companyId}`;
   const cache = EnterpriseAPICache.getInstance();
   const cachedData = cache.get<BootstrapResponse>(tenantCacheKey);
->>>>>>> origin/main
 
   if (cachedData) {
     const duration = Date.now() - startTime;
@@ -296,36 +254,11 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
     );
   }
 
-<<<<<<< HEAD
-  // ============================================================================
-  // 2.5. TENANT ISOLATION - ENTERPRISE SECURITY
-  // ============================================================================
-
-  // 🏢 ENTERPRISE: Tenant isolation for company_admin
-  // Super_admin: Sees ALL companies (cross-tenant audit)
-  // Company_admin: Sees ONLY their company (tenant-scoped)
-  let filteredCompanyDocs = companiesSnapshot.docs;
-
-  if (ctx.globalRole !== 'super_admin') {
-    // Filter to only this user's company
-    filteredCompanyDocs = companiesSnapshot.docs.filter(doc => doc.id === ctx.companyId);
-    console.log(`🔒 [Bootstrap] Tenant isolation: Filtered to company ${ctx.companyId} (${filteredCompanyDocs.length} companies)`);
-  } else {
-    console.log(`🔓 [Bootstrap] Super_admin bypass: Showing all ${filteredCompanyDocs.length} companies`);
-  }
-
-  // Build company map for quick lookup
-  const companyMap = new Map<string, { id: string; name: string }>();
-
-  filteredCompanyDocs.forEach(doc => {
-    const data = doc.data() as Partial<CompanyContact> & { displayName?: string };
-=======
   // Build company map for quick lookup (only user's company)
   const companyMap = new Map<string, { id: string; name: string }>();
 
   userCompanyDocs.forEach(doc => {
     const data = doc.data() as Partial<CompanyContact>;
->>>>>>> origin/main
     companyMap.set(doc.id, {
       id: doc.id,
       name: data.companyName || data.displayName || 'Unknown Company'
@@ -481,19 +414,6 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
   };
 
   // ============================================================================
-<<<<<<< HEAD
-  // 5. CACHE RESPONSE (Tenant-aware)
-  // ============================================================================
-
-  // 🏢 ENTERPRISE: Tenant-specific caching (same key logic as cache.get above)
-  cache.set(cacheKey, response, CACHE_TTL_MS);
-
-  const duration = Date.now() - startTime;
-  const tenantInfo = ctx.globalRole === 'super_admin' ? 'all companies' : `company ${ctx.companyId}`;
-  console.log(`✅ [Bootstrap] Complete: ${companies.length} companies, ${allProjects.length} projects in ${duration}ms (${tenantInfo}, cached for 3min)`);
-
-  return apiSuccess<BootstrapResponse>(response, `Bootstrap loaded in ${duration}ms`);
-=======
   // 5. CACHE RESPONSE (PER-TENANT)
   // ============================================================================
 
@@ -517,7 +437,6 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
       cached: false
     } as BootstrapResponse, { status: 500 });
   }
->>>>>>> origin/main
 }
 
 // ============================================================================
