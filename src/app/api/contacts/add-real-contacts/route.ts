@@ -1,13 +1,24 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
-export async function POST(request: Request) {
-  try {
-    const { contacts } = await request.json();
+/**
+ * @updated 2026-01-15 - AUTHZ PHASE 2: Added super_admin protection + tenant isolation
+ * @security Admin SDK + withAuth + requiredGlobalRoles: super_admin + Tenant Isolation
+ * @permission GLOBAL: super_admin only (bulk import utility)
+ */
 
-    console.log('🚀 Starting real contacts addition via API...');
-    console.log(`📝 Processing ${contacts.length} contacts`);
+export async function POST(request: NextRequest) {
+  const handler = withAuth(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      try {
+        const { contacts } = await req.json();
+
+        console.log('🚀 Starting real contacts addition via API...');
+        console.log(`📝 Processing ${contacts.length} contacts`);
+        console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole || 'none'}), Company ${ctx.companyId}`);
 
     if (!adminDb) {
       return NextResponse.json({
@@ -22,8 +33,10 @@ export async function POST(request: Request) {
       const contact = contacts[i];
 
       try {
+        // 🔒 TENANT ISOLATION: Enforce ctx.companyId on all new contacts
         const contactData = {
           ...contact,
+          companyId: ctx.companyId, // CRITICAL: Always use authenticated user's companyId
           createdAt: new Date(),
           updatedAt: new Date(),
           status: contact.status || 'active',
@@ -104,21 +117,28 @@ export async function POST(request: Request) {
     }
 
     console.log(`✅ Successfully added ${addedContactIds.length}/${contacts.length} contacts`);
+    console.log(`✅ Tenant isolation enforced: all contacts.companyId === ${ctx.companyId}`);
 
     return NextResponse.json({
       success: true,
       message: `Successfully added ${addedContactIds.length} real contacts`,
       addedContactIds,
       contactsCount: addedContactIds.length,
-      requestedCount: contacts.length
+      requestedCount: contacts.length,
+      tenantId: ctx.companyId
     });
 
-  } catch (error) {
-    console.error('❌ Error in add-real-contacts API:', error);
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      details: 'Failed to add contacts to database'
-    }, { status: 500 });
-  }
+      } catch (error) {
+        console.error('❌ Error in add-real-contacts API:', error);
+        return NextResponse.json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          details: 'Failed to add contacts to database'
+        }, { status: 500 });
+      }
+    },
+    { requiredGlobalRoles: 'super_admin' }
+  );
+
+  return handler(request);
 }

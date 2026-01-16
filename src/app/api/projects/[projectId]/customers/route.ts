@@ -1,203 +1,270 @@
+/**
+ * 🏗️ PROJECT CUSTOMERS ENDPOINT
+ *
+ * Returns customers who have purchased units in a specific project.
+ * Multi-level query: Project → Buildings → Units → Contacts
+ *
+ * @module api/projects/[projectId]/customers
+ * @version 2.0.0
+ * @updated 2026-01-15 - AUTHZ PHASE 2: Added RBAC protection
+ *
+ * 🔒 SECURITY:
+ * - Permission: projects:projects:view
+ * - Tenant isolation: Verifies project ownership before querying
+ * - Multi-level tenant checks: Buildings, Units, Contacts
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { firebaseServer } from '@/lib/firebase-server';
+import { adminDb } from '@/lib/firebaseAdmin';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getContactDisplayName, getPrimaryPhone, getPrimaryEmail } from '@/types/contacts';
+import type { Contact } from '@/types/contacts';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIRESTORE_LIMITS } from '@/config/firestore-collections';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> }
+  segmentData: { params: Promise<{ projectId: string }> }
 ) {
-  let projectId = 'unknown';
+  const { projectId } = await segmentData.params;
 
-  try {
-    // 🔧 ENTERPRISE: Safe parameter extraction
-    const resolvedParams = await params;
-    projectId = resolvedParams.projectId;
-    console.log(`🏢 ENTERPRISE API: Loading project customers for projectId: ${projectId}`);
+  const handler = withAuth(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      console.log(`🏗️ [Projects/Customers] Loading customers for projectId: ${projectId}`);
+      console.log(`🔒 Auth Context: User ${ctx.uid}, Company ${ctx.companyId}`);
 
-    // 🎯 ENTERPRISE Firebase Connection Test
-    const firebaseDB = firebaseServer.getFirestore();
-    console.log('🔍 FIREBASE CONNECTION TEST:', {
-      isInitialized: !!firebaseDB,
-      timestamp: new Date().toISOString()
-    });
+      try {
+        if (!adminDb) {
+          console.error('❌ Firebase Admin not initialized');
+          return NextResponse.json({
+            success: false,
+            error: 'Database connection not available',
+            customers: [],
+            projectId,
+            summary: { customersCount: 0, soldUnitsCount: 0 }
+          }, { status: 503 });
+        }
 
-    if (!firebaseDB) {
-      console.error('🚨 FIREBASE NOT INITIALIZED');
-      return NextResponse.json({
-        success: false,
-        error: 'FIREBASE_NOT_INITIALIZED',
-        message: 'Firebase database connection not available',
-        customers: [],
-        projectId,
-        summary: { customersCount: 0, soldUnitsCount: 0 }
-      }, {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+        // ============================================================================
+        // STEP 1: VERIFY PROJECT OWNERSHIP (Tenant Isolation)
+        // ============================================================================
 
-    console.log('✅ FIREBASE INITIALIZED - Proceeding with customer lookup');
+        console.log(`🔒 Verifying project ownership for projectId: ${projectId}`);
 
-    // 🏢 STEP 1: Get buildings for this project (handle both string and number projectId)
-    console.log(`🏢 Fetching buildings for projectId: ${projectId}`);
+        // First, check if project exists and belongs to user's company
+        const projectDoc = await adminDb
+          .collection(COLLECTIONS.PROJECTS)
+          .doc(projectId)
+          .get();
 
-    let buildingsSnapshot = await firebaseServer.getDocs(COLLECTIONS.BUILDINGS, [
-      { field: 'projectId', operator: '==', value: projectId }
-    ]);
+        if (!projectDoc.exists) {
+          console.log(`⚠️ Project not found: ${projectId}`);
+          return NextResponse.json({
+            success: false,
+            error: 'Project not found',
+            customers: [],
+            projectId,
+            summary: { customersCount: 0, soldUnitsCount: 0 }
+          }, { status: 404 });
+        }
 
-    // If no results, try with number projectId
-    if (buildingsSnapshot.docs.length === 0) {
-      console.log(`🔄 No buildings found with string projectId, trying number: ${parseInt(projectId)}`);
-      buildingsSnapshot = await firebaseServer.getDocs(COLLECTIONS.BUILDINGS, [
-        { field: 'projectId', operator: '==', value: parseInt(projectId) }
-      ]);
-    }
+        const projectData = projectDoc.data();
+        if (projectData?.companyId !== ctx.companyId) {
+          console.warn(`🚫 TENANT ISOLATION VIOLATION: User ${ctx.uid} (company ${ctx.companyId}) attempted to access project ${projectId} (company ${projectData?.companyId})`);
+          return NextResponse.json({
+            success: false,
+            error: 'Access denied - Project not found',
+            customers: [],
+            projectId,
+            summary: { customersCount: 0, soldUnitsCount: 0 }
+          }, { status: 403 });
+        }
 
-    if (buildingsSnapshot.docs.length === 0) {
-      console.log(`⚠️ No buildings found for projectId: ${projectId}`);
-      return NextResponse.json({
-        success: true,
-        customers: [],
-        projectId,
-        summary: { customersCount: 0, soldUnitsCount: 0 },
-        message: `No buildings found for project ${projectId}`
-      }, {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+        console.log(`✅ Tenant isolation check passed: project belongs to company ${ctx.companyId}`);
 
-    console.log(`🏢 Found ${buildingsSnapshot.docs.length} buildings`);
+        // ============================================================================
+        // STEP 2: GET BUILDINGS FOR THIS PROJECT (Admin SDK + Tenant Filter)
+        // ============================================================================
 
-    // 🏠 STEP 2: Get all units from all buildings
-    const buildingIds = buildingsSnapshot.docs.map(doc => doc.id);
-    const allUnits = [];
+        console.log(`🏢 Fetching buildings for projectId: ${projectId}`);
 
-    for (const buildingId of buildingIds) {
-      console.log(`🏠 Fetching units for buildingId: ${buildingId}`);
-      const unitsSnapshot = await firebaseServer.getDocs(COLLECTIONS.UNITS, [
-        { field: 'buildingId', operator: '==', value: buildingId }
-      ]);
+        let buildingsSnapshot = await adminDb
+          .collection(COLLECTIONS.BUILDINGS)
+          .where('projectId', '==', projectId)
+          .where('companyId', '==', ctx.companyId)
+          .get();
 
-      const units = unitsSnapshot.docs.map(unitDoc => ({
-        id: unitDoc.id,
-        ...unitDoc.data()
-      }));
+        // If no results, try with number projectId
+        if (buildingsSnapshot.docs.length === 0) {
+          console.log(`🔄 Trying numeric projectId: ${parseInt(projectId)}`);
+          buildingsSnapshot = await adminDb
+            .collection(COLLECTIONS.BUILDINGS)
+            .where('projectId', '==', parseInt(projectId))
+            .where('companyId', '==', ctx.companyId)
+            .get();
+        }
 
-      allUnits.push(...units);
-    }
+        if (buildingsSnapshot.docs.length === 0) {
+          console.log(`⚠️ No buildings found for project ${projectId}`);
+          return NextResponse.json({
+            success: true,
+            customers: [],
+            projectId,
+            summary: { customersCount: 0, soldUnitsCount: 0 },
+            message: `No buildings found for project ${projectId}`
+          }, { status: 200 });
+        }
 
-    console.log(`🏠 Total units found: ${allUnits.length}`);
+        console.log(`🏢 Found ${buildingsSnapshot.docs.length} buildings for tenant ${ctx.companyId}`);
 
-    // 💰 STEP 3: Filter sold units and extract customer IDs
-    const soldUnits = allUnits.filter(u => u.status === 'sold' && u.soldTo);
-    console.log(`💰 Sold units: ${soldUnits.length}`);
+        // ============================================================================
+        // STEP 3: GET ALL UNITS FROM ALL BUILDINGS (Admin SDK + Tenant Filter)
+        // ============================================================================
 
-    // Debug: Show soldTo values
-    const soldToValues = soldUnits.map(u => u.soldTo);
-    console.log(`🔍 SoldTo values:`, soldToValues);
+        const buildingIds = buildingsSnapshot.docs.map(doc => doc.id);
+        const allUnits = [];
 
-    if (soldUnits.length === 0) {
-      console.log(`⚠️ No sold units found for projectId: ${projectId}`);
-      return NextResponse.json({
-        success: true,
-        customers: [],
-        projectId,
-        summary: { customersCount: 0, soldUnitsCount: 0 },
-        message: 'No sold units found for this project'
-      }, {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+        for (const buildingId of buildingIds) {
+          console.log(`🏠 Fetching units for buildingId: ${buildingId}`);
+          const unitsSnapshot = await adminDb
+            .collection(COLLECTIONS.UNITS)
+            .where('buildingId', '==', buildingId)
+            .where('companyId', '==', ctx.companyId)
+            .get();
 
-    // 👥 STEP 4: Count units per customer
-    const customerUnitCount: { [contactId: string]: number } = {};
-    soldUnits.forEach(unit => {
-      if (unit.soldTo) {
-        customerUnitCount[unit.soldTo] = (customerUnitCount[unit.soldTo] || 0) + 1;
+          const units = unitsSnapshot.docs.map(unitDoc => ({
+            id: unitDoc.id,
+            ...unitDoc.data()
+          } as Record<string, unknown> & { id: string; status?: string; soldTo?: string }));
+
+          allUnits.push(...units);
+        }
+
+        console.log(`🏠 Total units found: ${allUnits.length} (tenant-scoped)`);
+
+        // ============================================================================
+        // STEP 4: FILTER SOLD UNITS AND EXTRACT CUSTOMER IDs
+        // ============================================================================
+
+        const soldUnits = allUnits.filter(u => u.status === 'sold' && u.soldTo);
+        console.log(`💰 Sold units: ${soldUnits.length}`);
+
+        if (soldUnits.length === 0) {
+          console.log(`⚠️ No sold units found for project ${projectId}`);
+          return NextResponse.json({
+            success: true,
+            customers: [],
+            projectId,
+            summary: { customersCount: 0, soldUnitsCount: 0 },
+            message: 'No sold units found for this project'
+          }, { status: 200 });
+        }
+
+        // ============================================================================
+        // STEP 5: COUNT UNITS PER CUSTOMER
+        // ============================================================================
+
+        const customerUnitCount: { [contactId: string]: number } = {};
+        soldUnits.forEach(unit => {
+          if (unit.soldTo) {
+            customerUnitCount[unit.soldTo] = (customerUnitCount[unit.soldTo] || 0) + 1;
+          }
+        });
+
+        const customerIds = Object.keys(customerUnitCount);
+        console.log(`👥 Unique customers: ${customerIds.length}`);
+
+        if (customerIds.length === 0) {
+          return NextResponse.json({
+            success: true,
+            customers: [],
+            projectId,
+            summary: { customersCount: 0, soldUnitsCount: 0 },
+            message: 'No customer IDs found in sold units'
+          }, { status: 200 });
+        }
+
+        // ============================================================================
+        // STEP 6: GET CONTACT DETAILS (Admin SDK + Tenant Filter)
+        // ============================================================================
+
+        console.log(`📇 Fetching contact details for ${customerIds.length} customers`);
+
+        // Use centralized Firestore IN limit constant
+        const limitedCustomerIds = customerIds.slice(0, FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS);
+
+        const contactsSnapshot = await adminDb
+          .collection(COLLECTIONS.CONTACTS)
+          .where('__name__', 'in', limitedCustomerIds)
+          .get();
+
+        // Filter contacts to ensure tenant isolation (extra safety)
+        const tenantContacts = contactsSnapshot.docs.filter(doc => {
+          const data = doc.data();
+          return data.companyId === ctx.companyId;
+        });
+
+        console.log(`📇 Contacts found: ${tenantContacts.length} (tenant-scoped)`);
+
+        if (tenantContacts.length < contactsSnapshot.docs.length) {
+          console.warn(`🚫 Filtered out ${contactsSnapshot.docs.length - tenantContacts.length} contacts from other tenants`);
+        }
+
+        // ============================================================================
+        // STEP 7: BUILD CUSTOMERS ARRAY
+        // ============================================================================
+
+        const customers = tenantContacts.map(contactDoc => {
+          // Firestore returns unknown, we assert it matches Contact structure
+          const contactData = { id: contactDoc.id, ...contactDoc.data() } as Record<string, unknown> & { id: string };
+
+          // Type assertion to Contact (safer than 'as any')
+          const contact = contactData as unknown as Contact;
+
+          return {
+            contactId: contactData.id,
+            name: getContactDisplayName(contact),
+            phone: getPrimaryPhone(contact) || null,
+            email: getPrimaryEmail(contact) || null,
+            unitsCount: customerUnitCount[contactData.id] || 0,
+          };
+        });
+
+        console.log(`✅ [Projects/Customers] Complete: ${customers.length} customers with ${soldUnits.length} sold units`);
+
+        return NextResponse.json({
+          success: true,
+          customers,
+          projectId,
+          summary: {
+            customersCount: customers.length,
+            soldUnitsCount: soldUnits.length
+          }
+        }, { status: 200 });
+
+      } catch (error) {
+        console.error('❌ [Projects/Customers] Error:', {
+          errorType: error instanceof Error ? error.constructor.name : typeof error,
+          errorMessage: error instanceof Error ? error.message : String(error),
+          errorStack: error instanceof Error ? error.stack : 'No stack trace',
+          projectId,
+          userId: ctx.uid,
+          companyId: ctx.companyId
+        });
+
+        return NextResponse.json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to load project customers',
+          customers: [],
+          projectId,
+          summary: { customersCount: 0, soldUnitsCount: 0 },
+          timestamp: new Date().toISOString()
+        }, { status: 500 });
       }
-    });
+    },
+    { permissions: 'projects:projects:view' }
+  );
 
-    const customerIds = Object.keys(customerUnitCount);
-    console.log(`👥 Unique customers: ${customerIds.length}`, customerIds);
-
-    if (customerIds.length === 0) {
-      return NextResponse.json({
-        success: true,
-        customers: [],
-        projectId,
-        summary: { customersCount: 0, soldUnitsCount: 0 },
-        message: 'No customer IDs found in sold units'
-      }, {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    // 📇 STEP 5: Get contact details for customers (max 10 due to Firestore limit)
-    console.log(`📇 Fetching contact details for ${customerIds.length} customers`);
-
-    const contactsSnapshot = await firebaseServer.getDocs(COLLECTIONS.CONTACTS, [
-      { field: '__name__', operator: 'in', value: customerIds.slice(0, 10) }
-    ]);
-
-    console.log(`📇 Contacts found in database: ${contactsSnapshot.docs.length}`);
-
-    // Debug: Show which contacts were found vs missing
-    const foundContactIds = contactsSnapshot.docs.map(doc => doc.id);
-    console.log(`✅ Found contact IDs:`, foundContactIds);
-    console.log(`❌ Missing contact IDs:`, customerIds.filter(id => !foundContactIds.includes(id)));
-
-    // 🏢 STEP 6: Build customers array with contact details
-    const customers = contactsSnapshot.docs.map(contactDoc => {
-      const contact = { id: contactDoc.id, ...contactDoc.data() };
-      return {
-        contactId: contact.id,
-        name: getContactDisplayName(contact),
-        phone: getPrimaryPhone(contact) || null,
-        email: getPrimaryEmail(contact) || null,
-        unitsCount: customerUnitCount[contact.id] || 0,
-      };
-    });
-
-    console.log(`✅ PROJECT CUSTOMERS LOADED SUCCESSFULLY`);
-    console.log(`📊 Summary: ${customers.length} customers with ${soldUnits.length} sold units`);
-
-    return NextResponse.json({
-      success: true,
-      customers,
-      projectId,
-      summary: {
-        customersCount: customers.length,
-        soldUnitsCount: soldUnits.length
-      }
-    }, {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-  } catch (error) {
-    console.error('🚨 ENTERPRISE ERROR: Critical failure in project customers API');
-    console.error('📊 ERROR DETAILS:', {
-      errorType: error instanceof Error ? error.constructor.name : typeof error,
-      errorMessage: error instanceof Error ? error.message : String(error),
-      errorStack: error instanceof Error ? error.stack : 'No stack trace available',
-      projectId
-    });
-
-    return NextResponse.json({
-      success: false,
-      error: 'SYSTEM_ERROR',
-      message: error instanceof Error ? error.message : 'Critical system error occurred',
-      customers: [],
-      projectId: projectId,
-      summary: { customersCount: 0, soldUnitsCount: 0 },
-      timestamp: new Date().toISOString()
-    }, {
-      status: 200, // Return 200 to ensure JSON parsing
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
+  return handler(request);
 }

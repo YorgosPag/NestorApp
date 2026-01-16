@@ -1,11 +1,21 @@
 /**
- * Floors API - Admin SDK (Enterprise Normalized Collection)
- * Provides access to floors using foreign key relationships with elevated permissions
+ * 🛠️ UTILITY: FLOORS ADMIN API
+ *
+ * Admin SDK access to floors with elevated permissions.
+ *
+ * @module api/floors/admin
+ * @version 2.0.0
+ * @updated 2026-01-15 - AUTHZ PHASE 2: Added super_admin protection
+ *
+ * 🔒 SECURITY:
+ * - Global Role: super_admin (break-glass utility)
+ * - Admin SDK for secure server-side operations
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps } from 'firebase-admin/app';
+import { adminDb } from '@/lib/firebaseAdmin';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 /** Floor document from Firestore */
@@ -18,130 +28,140 @@ interface AdminFloorDocument {
   [key: string]: unknown;
 }
 
-// Initialize Admin SDK if not already initialized
-let adminDb: FirebaseFirestore.Firestore;
+// Response types for type-safe withAuth
+type AdminFloorsSuccess = {
+  success: true;
+  floors: AdminFloorDocument[];
+  floorsByBuilding?: Record<string, AdminFloorDocument[]>;
+  stats: {
+    totalFloors: number;
+    buildingId?: string;
+    projectId?: string;
+    buildingsWithFloors?: number;
+  };
+};
 
-try {
-  if (getApps().length === 0) {
-    const app = initializeApp({
-      projectId: 'nestor-pagonis'
-    });
-    adminDb = getFirestore(app);
-  } else {
-    adminDb = getFirestore();
-  }
-} catch (error) {
-  console.error('Failed to initialize Admin SDK:', error);
-}
+type AdminFloorsError = {
+  success: false;
+  error: string;
+  details?: string;
+  usage?: string;
+};
+
+type AdminFloorsResponse = AdminFloorsSuccess | AdminFloorsError;
 
 export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const buildingId = searchParams.get('buildingId');
-    const projectId = searchParams.get('projectId');
+  const handler = withAuth<AdminFloorsResponse>(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<AdminFloorsResponse>> => {
+      try {
+        const { searchParams } = new URL(request.url);
+        const buildingId = searchParams.get('buildingId');
+        const projectId = searchParams.get('projectId');
 
-    if (!adminDb) {
-      throw new Error('Firebase Admin SDK not properly initialized');
-    }
+        console.log(`🛠️ [Floors/Admin] Starting Admin SDK operations...`);
+        console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
 
-    // Validate required parameters
-    if (!buildingId && !projectId) {
-      return NextResponse.json(
-        {
+        // Validate required parameters
+        if (!buildingId && !projectId) {
+          return NextResponse.json({
+            success: false,
+            error: 'Either buildingId or projectId parameter is required',
+            usage: 'GET /api/floors/admin?buildingId=<id> or GET /api/floors/admin?projectId=<id>'
+          }, { status: 400 });
+        }
+
+        console.log(`📋 [Admin] Loading floors for: ${buildingId ? `building ${buildingId}` : `project ${projectId}`}`);
+
+        // ============================================================================
+        // ADMIN SDK QUERY (No tenant isolation - super_admin has full access)
+        // ============================================================================
+
+        let floors: AdminFloorDocument[] = [];
+
+        if (buildingId) {
+          // Query floors by buildingId (Enterprise foreign key relationship)
+          const floorsSnapshot = await adminDb.collection(COLLECTIONS.FLOORS)
+            .where('buildingId', '==', buildingId)
+            .get();
+
+          floors = floorsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          } as AdminFloorDocument));
+
+          // Sort by floor number in code (to avoid index requirements)
+          floors.sort((a, b) => (a.number || 0) - (b.number || 0));
+
+        } else if (projectId) {
+          // Query floors by projectId
+          const floorsSnapshot = await adminDb.collection(COLLECTIONS.FLOORS)
+            .where('projectId', '==', projectId)
+            .get();
+
+          floors = floorsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          } as AdminFloorDocument));
+
+          // Sort by building and then by floor number
+          floors.sort((a, b) => {
+            if (a.buildingId !== b.buildingId) {
+              return a.buildingId.localeCompare(b.buildingId);
+            }
+            return (a.number || 0) - (b.number || 0);
+          });
+        }
+
+        console.log(`✅ [Floors/Admin] Complete: Found ${floors.length} floors`);
+
+        // Group floors by building if querying by projectId
+        if (projectId) {
+          const floorsByBuilding = floors.reduce((groups: Record<string, AdminFloorDocument[]>, floor: AdminFloorDocument) => {
+            const bId = floor.buildingId;
+            if (!groups[bId]) {
+              groups[bId] = [];
+            }
+            groups[bId].push(floor);
+            return groups;
+          }, {} as Record<string, AdminFloorDocument[]>);
+
+          return NextResponse.json({
+            success: true,
+            floors,
+            floorsByBuilding,
+            stats: {
+              totalFloors: floors.length,
+              buildingsWithFloors: Object.keys(floorsByBuilding).length,
+              projectId
+            }
+          });
+        } else {
+          return NextResponse.json({
+            success: true,
+            floors,
+            stats: {
+              totalFloors: floors.length,
+              buildingId
+            }
+          });
+        }
+
+      } catch (error) {
+        console.error('❌ [Floors/Admin] Error:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          userId: ctx.uid,
+          companyId: ctx.companyId
+        });
+
+        return NextResponse.json({
           success: false,
-          error: 'Either buildingId or projectId parameter is required',
-          usage: 'GET /api/floors/admin?buildingId=<id> or GET /api/floors/admin?projectId=<id>'
-        },
-        { status: 400 }
-      );
-    }
+          error: 'Failed to fetch admin floors',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
+      }
+    },
+    { requiredGlobalRoles: 'super_admin' }
+  );
 
-    console.log(`📋 [Admin] Loading floors for: ${buildingId ? `building ${buildingId}` : `project ${projectId}`}`);
-
-    let floors: AdminFloorDocument[] = [];
-
-    if (buildingId) {
-      // Query floors by buildingId (Enterprise foreign key relationship)
-      const floorsSnapshot = await adminDb.collection(COLLECTIONS.FLOORS)
-        .where('buildingId', '==', buildingId)
-        .get();
-
-      floors = floorsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as AdminFloorDocument));
-
-      // Sort by floor number in code (to avoid index requirements)
-      floors.sort((a, b) => (a.number || 0) - (b.number || 0));
-
-    } else if (projectId) {
-      // Query floors by projectId
-      const floorsSnapshot = await adminDb.collection(COLLECTIONS.FLOORS)
-        .where('projectId', '==', projectId)
-        .get();
-
-      floors = floorsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as AdminFloorDocument));
-
-      // Sort by building and then by floor number
-      floors.sort((a, b) => {
-        if (a.buildingId !== b.buildingId) {
-          return a.buildingId.localeCompare(b.buildingId);
-        }
-        return (a.number || 0) - (b.number || 0);
-      });
-    }
-
-    console.log(`   [Admin] Found ${floors.length} floors`);
-
-    // Group floors by building if querying by projectId
-    let response;
-    if (projectId) {
-      const floorsByBuilding = floors.reduce((groups: Record<string, AdminFloorDocument[]>, floor: AdminFloorDocument) => {
-        const bId = floor.buildingId;
-        if (!groups[bId]) {
-          groups[bId] = [];
-        }
-        groups[bId].push(floor);
-        return groups;
-      }, {} as Record<string, AdminFloorDocument[]>);
-
-      response = {
-        success: true,
-        floors,
-        floorsByBuilding,
-        stats: {
-          totalFloors: floors.length,
-          buildingsWithFloors: Object.keys(floorsByBuilding).length,
-          projectId
-        }
-      };
-    } else {
-      response = {
-        success: true,
-        floors,
-        stats: {
-          totalFloors: floors.length,
-          buildingId
-        }
-      };
-    }
-
-    return NextResponse.json(response);
-
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`❌ [Admin] Floors API Error: ${errorMessage}`);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: errorMessage,
-        timestamp: new Date().toISOString()
-      },
-      { status: 500 }
-    );
-  }
+  return handler(request);
 }

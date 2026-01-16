@@ -1,30 +1,116 @@
-// app/api/notifications/ack/route.ts
-// ✅ FIRESTORE API: Mark notifications as read
+/**
+ * 🔔 NOTIFICATIONS API - ACKNOWLEDGE (MARK AS READ)
+ *
+ * Marks user's notifications as read/seen.
+ *
+ * @module api/notifications/ack
+ * @version 2.0.0
+ * @updated 2026-01-16 - AUTHZ PHASE 2: Added RBAC protection + ownership validation
+ *
+ * 🔒 SECURITY:
+ * - Permission: notifications:notifications:view
+ * - Admin SDK for secure server-side operations
+ * - Ownership validation: User can only mark their own notifications as read
+ */
 
-import { NextResponse } from 'next/server';
-import { markNotificationsAsRead } from '@/services/notificationService';
+import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { adminDb } from '@/lib/firebaseAdmin';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const { ids } = body;
+// Response types for type-safe withAuth
+type AckSuccess = {
+  success: true;
+  markedCount: number;
+  message: string;
+};
 
-    if (!ids || !Array.isArray(ids)) {
-      return NextResponse.json({ error: 'Invalid request: ids must be an array' }, { status: 400 });
-    }
+type AckError = {
+  success: false;
+  error: string;
+  details?: string;
+};
 
-    console.log('📥 ACK Request - Marking as read:', ids);
+type AckResponse = AckSuccess | AckError;
 
-    await markNotificationsAsRead(ids);
+export async function POST(request: NextRequest) {
+  const handler = withAuth<AckResponse>(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<AckResponse>> => {
+      try {
+        const body = await req.json();
+        const { ids } = body;
 
-    console.log('✅ Notifications marked as read in Firestore');
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+          return NextResponse.json({
+            success: false,
+            error: 'Invalid request: ids must be a non-empty array'
+          }, { status: 400 });
+        }
 
-    return new NextResponse(null, { status: 204 });
-  } catch (error) {
-    console.error('Failed to mark notifications as read:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
-  }
+        console.log(`🔔 [Notifications/Ack] User ${ctx.uid} marking ${ids.length} notifications as read...`);
+
+        // CRITICAL: Ownership validation - fetch notifications to verify they belong to this user
+        const notificationsRef = adminDb.collection(COLLECTIONS.NOTIFICATIONS);
+        const notificationsSnapshot = await notificationsRef
+          .where('__name__', 'in', ids.slice(0, 10)) // Firestore 'in' query limit is 10
+          .get();
+
+        // Validate ownership
+        const ownedIds: string[] = [];
+        const unauthorizedIds: string[] = [];
+
+        notificationsSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          if (data.userId === ctx.uid) {
+            ownedIds.push(doc.id);
+          } else {
+            unauthorizedIds.push(doc.id);
+          }
+        });
+
+        if (unauthorizedIds.length > 0) {
+          console.warn(`⚠️ [Notifications/Ack] Unauthorized attempt to ack notifications:`, {
+            userId: ctx.uid,
+            unauthorizedIds
+          });
+        }
+
+        // Mark only owned notifications as read
+        if (ownedIds.length > 0) {
+          const batch = adminDb.batch();
+          ownedIds.forEach(id => {
+            const docRef = notificationsRef.doc(id);
+            batch.update(docRef, {
+              seen: true,
+              seenAt: new Date().toISOString()
+            });
+          });
+          await batch.commit();
+
+          console.log(`✅ [Notifications/Ack] Marked ${ownedIds.length} notifications as read`);
+        }
+
+        return NextResponse.json({
+          success: true,
+          markedCount: ownedIds.length,
+          message: `Marked ${ownedIds.length} notification(s) as read`
+        });
+      } catch (error) {
+        console.error('❌ [Notifications/Ack] Error:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          userId: ctx.uid
+        });
+
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to mark notifications as read',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
+      }
+    },
+    { permissions: 'notifications:notifications:view' }
+  );
+
+  return handler(request);
 }

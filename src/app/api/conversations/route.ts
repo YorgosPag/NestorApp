@@ -10,11 +10,12 @@
  * @enterprise EPIC C - Telegram Operationalization
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
-import { withErrorHandling, apiSuccess, ApiError } from '@/lib/api/ApiErrorHandler';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withErrorHandling, ApiError } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { requireStaffContext, audit } from '@/server/admin/admin-guards';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import {
@@ -148,19 +149,31 @@ export const dynamic = 'force-dynamic';
 // GET - List Conversations
 // ============================================================================
 
-export const GET = withErrorHandling(async (request: NextRequest) => {
+/**
+ * GET /api/conversations
+ *
+ * List omnichannel conversations with filtering and pagination.
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: comm:conversations:list
+ * - Tenant Isolation: Filters by user's companyId
+ */
+export async function GET(request: NextRequest) {
+  const handler = withAuth<ConversationsListResponse>(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<ConversationsListResponse>> => {
+      return handleListConversations(req, ctx);
+    },
+    { permissions: 'comm:conversations:list' }
+  );
+
+  return handler(request);
+}
+
+async function handleListConversations(request: NextRequest, ctx: AuthContext): Promise<NextResponse<ConversationsListResponse>> {
   const startTime = Date.now();
   const operationId = generateRequestId();
 
-  // 🔒 SECURITY: Staff-only access (admin/broker/builder roles)
-  const authResult = await requireStaffContext(request, operationId);
-  if (!authResult.success) {
-    audit(operationId, 'LIST_CONVERSATIONS_DENIED', { error: authResult.error });
-    throw new ApiError(403, authResult.error || 'Staff access required', 'STAFF_REQUIRED');
-  }
-
-  audit(operationId, 'LIST_CONVERSATIONS_START', { user: authResult.context?.email });
-  console.log(`💬 [Conversations/List] Starting load for user: ${authResult.context?.email}...`);
+  console.log(`💬 [Conversations/List] Starting load for user: ${ctx.email} (company: ${ctx.companyId})...`);
 
   // Parse query parameters
   const searchParams = request.nextUrl.searchParams;
@@ -179,16 +192,17 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
   if (cachedData) {
     const duration = Date.now() - startTime;
     console.log(`⚡ [Conversations/List] CACHE HIT - ${cachedData.count} conversations in ${duration}ms`);
-    return apiSuccess<ConversationsListResponse>({
+    return NextResponse.json({
       ...cachedData,
       source: 'cache'
-    }, `Conversations loaded from cache in ${duration}ms`);
+    });
   }
 
   console.log('🔍 [Conversations/List] Cache miss - Fetching from Firestore...');
 
-  // Build query
+  // Build query with TENANT ISOLATION (AUTHZ Phase 2)
   let query = adminDb.collection(COLLECTIONS.CONVERSATIONS)
+    .where('companyId', '==', ctx.companyId) // CRITICAL: Filter by user's company
     .orderBy('audit.updatedAt', 'desc');
 
   // Apply filters
@@ -267,10 +281,5 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
   const duration = Date.now() - startTime;
   console.log(`✅ [Conversations/List] Complete: ${conversations.length} conversations in ${duration}ms`);
 
-  return apiSuccess<ConversationsListResponse>(response, `Conversations loaded in ${duration}ms`);
-
-}, {
-  operation: 'listConversations',
-  entityType: COLLECTIONS.CONVERSATIONS,
-  entityId: 'all'
-});
+  return NextResponse.json(response);
+}

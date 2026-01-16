@@ -84,6 +84,12 @@ export const PERMISSIONS = {
   'units:units:view': true,
   'units:units:update': true,
 
+  // Buildings (Phase 2 - first vertical slice)
+  'buildings:buildings:view': true,
+  'buildings:buildings:create': true,
+  'buildings:buildings:update': true,
+  'buildings:buildings:delete': true,
+
   // DXF
   'dxf:files:view': true,
   'dxf:files:upload': true,
@@ -96,6 +102,9 @@ export const PERMISSIONS = {
   'crm:contacts:create': true,
   'crm:contacts:update': true,
   'crm:contacts:export': true,
+
+  // Notifications
+  'notifications:notifications:view': true,
 
   // Finance
   'finance:invoices:view': true,

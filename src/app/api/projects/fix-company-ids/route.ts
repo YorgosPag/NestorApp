@@ -1,122 +1,193 @@
+/**
+ * 🛠️ UTILITY: FIX PROJECT COMPANY IDs
+ *
+ * Break-glass utility for correcting project companyId references.
+ *
+ * @module api/projects/fix-company-ids
+ * @version 2.0.0
+ * @updated 2026-01-15 - AUTHZ PHASE 2: Added super_admin protection
+ *
+ * 🔒 SECURITY:
+ * - Global Role: super_admin (break-glass utility)
+ * - Admin SDK for secure server-side operations
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, query, where, getDocs, doc, updateDoc, writeBatch } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { adminDb } from '@/lib/firebaseAdmin';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
+// Response types for type-safe withAuth
+type FixCompanyIdsSuccess = {
+  success: true;
+  message: string;
+  companyMapping: Record<string, string>;
+  updates: Array<{
+    projectId: string;
+    projectName: string;
+    companyName: string;
+    oldCompanyId: string;
+    newCompanyId: string;
+  }>;
+  finalProjects: Array<{
+    id: string;
+    name?: unknown;
+    company?: unknown;
+    companyId?: unknown;
+  }>;
+  stats: {
+    companiesFound: number;
+    projectsFound: number;
+    projectsUpdated: number;
+  };
+};
+
+type FixCompanyIdsError = {
+  success: false;
+  error: string;
+};
+
+type FixCompanyIdsResponse = FixCompanyIdsSuccess | FixCompanyIdsError;
+
 export async function POST(request: NextRequest) {
-  try {
-    console.log('🔧 Starting to fix project company IDs...');
+  const handler = withAuth<FixCompanyIdsResponse>(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<FixCompanyIdsResponse>> => {
+      console.log('🔧 [Projects/FixCompanyIds] Starting company ID correction...');
+      console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
 
-    // 1. Πάρε όλες τις εταιρείες από contacts
-    const contactsQuery = query(
-      collection(db, COLLECTIONS.CONTACTS),
-      where('type', '==', 'company'),
-      where('status', '==', 'active')
-    );
-    const contactsSnapshot = await getDocs(contactsQuery);
+      try {
+        // ============================================================================
+        // STEP 1: GET ALL COMPANIES FROM CONTACTS (Admin SDK)
+        // ============================================================================
 
-    console.log(`📁 Found ${contactsSnapshot.docs.length} companies in contacts`);
+        const contactsSnapshot = await adminDb
+          .collection(COLLECTIONS.CONTACTS)
+          .where('type', '==', 'company')
+          .where('status', '==', 'active')
+          .get();
 
-    const companyMapping: Record<string, string> = {};
-    contactsSnapshot.docs.forEach(doc => {
-      const data = doc.data();
-      console.log(`🏢 Company: ${data.companyName} -> ID: ${doc.id}`);
-      companyMapping[data.companyName] = doc.id;
-    });
+        console.log(`📁 Found ${contactsSnapshot.docs.length} companies`);
 
-    // 2. Πάρε όλα τα projects
-    const projectsSnapshot = await getDocs(collection(db, COLLECTIONS.PROJECTS));
-    console.log(`🏗️ Found ${projectsSnapshot.docs.length} projects`);
-
-    // 3. Διόρθωσε τα companyIds
-    const batch = writeBatch(db);
-    let updatedCount = 0;
-    const updates: Array<{
-      projectId: string;
-      projectName: string;
-      companyName: string;
-      oldCompanyId: string;
-      newCompanyId: string;
-    }> = [];
-
-    for (const projectDoc of projectsSnapshot.docs) {
-      const projectData = projectDoc.data();
-      const companyName = projectData.company;
-      const currentCompanyId = projectData.companyId;
-      const correctCompanyId = companyMapping[companyName];
-
-      if (correctCompanyId && currentCompanyId !== correctCompanyId) {
-        console.log(`🔄 Updating project "${projectData.name}"`);
-        console.log(`   Company: ${companyName}`);
-        console.log(`   Old companyId: ${currentCompanyId}`);
-        console.log(`   New companyId: ${correctCompanyId}`);
-
-        const projectRef = doc(db, COLLECTIONS.PROJECTS, projectDoc.id);
-        batch.update(projectRef, {
-          companyId: correctCompanyId,
-          updatedAt: new Date().toISOString()
+        const companyMapping: Record<string, string> = {};
+        contactsSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          console.log(`🏢 Company: ${data.companyName} -> ID: ${doc.id}`);
+          companyMapping[data.companyName] = doc.id;
         });
 
-        updates.push({
-          projectId: projectDoc.id,
-          projectName: projectData.name,
-          companyName,
-          oldCompanyId: currentCompanyId,
-          newCompanyId: correctCompanyId
+        // ============================================================================
+        // STEP 2: GET ALL PROJECTS (Admin SDK)
+        // ============================================================================
+
+        const projectsSnapshot = await adminDb
+          .collection(COLLECTIONS.PROJECTS)
+          .get();
+
+        console.log(`🏗️ Found ${projectsSnapshot.docs.length} projects`);
+
+        // ============================================================================
+        // STEP 3: FIX COMPANY IDs WITH BATCH UPDATE (Admin SDK)
+        // ============================================================================
+
+        const batch = adminDb.batch();
+        let updatedCount = 0;
+        const updates: Array<{
+          projectId: string;
+          projectName: string;
+          companyName: string;
+          oldCompanyId: string;
+          newCompanyId: string;
+        }> = [];
+
+        for (const projectDoc of projectsSnapshot.docs) {
+          const projectData = projectDoc.data();
+          const companyName = projectData.company;
+          const currentCompanyId = projectData.companyId;
+          const correctCompanyId = companyMapping[companyName];
+
+          if (correctCompanyId && currentCompanyId !== correctCompanyId) {
+            console.log(`🔄 Updating project "${projectData.name}"`);
+            console.log(`   Company: ${companyName}`);
+            console.log(`   Old companyId: ${currentCompanyId}`);
+            console.log(`   New companyId: ${correctCompanyId}`);
+
+            const projectRef = adminDb.collection(COLLECTIONS.PROJECTS).doc(projectDoc.id);
+            batch.update(projectRef, {
+              companyId: correctCompanyId,
+              updatedAt: new Date().toISOString()
+            });
+
+            updates.push({
+              projectId: projectDoc.id,
+              projectName: projectData.name,
+              companyName,
+              oldCompanyId: currentCompanyId,
+              newCompanyId: correctCompanyId
+            });
+
+            updatedCount++;
+          } else if (!correctCompanyId) {
+            console.log(`⚠️ No matching company found for: ${companyName}`);
+          } else {
+            console.log(`✅ Project "${projectData.name}" already has correct companyId`);
+          }
+        }
+
+        if (updatedCount > 0) {
+          await batch.commit();
+          console.log(`✅ [Projects/FixCompanyIds] Batch committed: ${updatedCount} projects updated`);
+        }
+
+        // ============================================================================
+        // STEP 4: VERIFICATION
+        // ============================================================================
+
+        console.log('📊 Verification...');
+        const finalProjectsSnapshot = await adminDb
+          .collection(COLLECTIONS.PROJECTS)
+          .get();
+
+        const finalProjects = finalProjectsSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            name: data.name,
+            company: data.company,
+            companyId: data.companyId
+          };
         });
 
-        updatedCount++;
-      } else if (!correctCompanyId) {
-        console.log(`⚠️  No matching company found for: ${companyName}`);
-      } else {
-        console.log(`✅ Project "${projectData.name}" already has correct companyId`);
+        console.log(`✅ [Projects/FixCompanyIds] Complete: Fixed ${updatedCount} project company IDs`);
+
+        return NextResponse.json({
+          success: true,
+          message: `Fixed ${updatedCount} project company IDs`,
+          companyMapping,
+          updates,
+          finalProjects,
+          stats: {
+            companiesFound: contactsSnapshot.docs.length,
+            projectsFound: projectsSnapshot.docs.length,
+            projectsUpdated: updatedCount
+          }
+        });
+
+      } catch (error) {
+        console.error('❌ [Projects/FixCompanyIds] Error:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          userId: ctx.uid,
+          companyId: ctx.companyId
+        });
+
+        return NextResponse.json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
       }
-    }
+    },
+    { requiredGlobalRoles: 'super_admin' }
+  );
 
-    if (updatedCount > 0) {
-      await batch.commit();
-      console.log(`✅ Updated ${updatedCount} projects successfully!`);
-    }
-
-    // 4. Επαλήθευση - δείξε τα τελικά αποτελέσματα
-    console.log('\n📊 Final verification:');
-    const finalProjectsSnapshot = await getDocs(collection(db, COLLECTIONS.PROJECTS));
-
-    const finalProjects = finalProjectsSnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        name: data.name,
-        company: data.company,
-        companyId: data.companyId
-      };
-    });
-
-    finalProjects.forEach(project => {
-      console.log(`🏗️ Project: ${project.name} -> Company: ${project.company} -> CompanyId: ${project.companyId}`);
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: `Fixed ${updatedCount} project company IDs`,
-      companyMapping,
-      updates,
-      finalProjects,
-      stats: {
-        companiesFound: contactsSnapshot.docs.length,
-        projectsFound: projectsSnapshot.docs.length,
-        projectsUpdated: updatedCount
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Error fixing project company IDs:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
-  }
+  return handler(request);
 }

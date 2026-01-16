@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { firebaseServer } from '@/lib/firebase-server';
+import { db as getAdminDb } from '@/lib/firebase-admin';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
+
+// 🏢 ENTERPRISE: Firestore data types (includes legacy fields for backward compatibility)
+type FirestoreContactData = Record<string, any> & {
+  id: string;
+  companyId?: string;
+};
+
+type FirestoreUnitData = Record<string, any> & {
+  id: string;
+};
 
 /**
  * 🏠 ENTERPRISE CONTACT UNITS API ENDPOINT
@@ -11,16 +23,24 @@ import { COLLECTIONS } from '@/config/firestore-collections';
  * @route GET /api/contacts/[contactId]/units
  * @returns Contact's units information με statistics
  * @created 2025-12-14
+ * @updated 2026-01-15 - AUTHZ PHASE 2: Added RBAC protection
+ * @security Admin SDK + withAuth + Tenant Isolation (contact + units)
+ * @permission contacts:contacts:view
  * @author Claude AI Assistant
  */
 
+// Dynamic route handler wrapper
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ contactId: string }> }
+  segmentData: { params: Promise<{ contactId: string }> }
 ) {
-  try {
-    const { contactId } = await params;
-    console.log(`🏠 API: Loading units for contactId: ${contactId}`);
+  const { contactId } = await segmentData.params;
+
+  // Create authenticated handler
+  const handler = withAuth(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      try {
+        console.log(`🏠 API: Loading units for contactId: ${contactId}`);
 
     // ========================================================================
     // VALIDATION
@@ -43,27 +63,28 @@ export async function GET(
     }
 
     // ========================================================================
-    // FIREBASE CONNECTION CHECK
+    // VERIFY CONTACT EXISTS (ADMIN SDK)
     // ========================================================================
 
-    if (!firebaseServer.getFirestore()) {
-      console.error('❌ Firebase not initialized properly');
+    console.log(`🔍 Verifying contact exists: ${contactId}`);
+    console.log(`🔒 Auth Context: User ${ctx.uid}, Company ${ctx.companyId}`);
+
+    const adminDb = getAdminDb();
+    if (!adminDb) {
+      console.error('❌ Firebase Admin not initialized');
       return NextResponse.json({
         success: false,
-        error: 'Database connection not available - Firebase not initialized',
+        error: 'Database connection not available - Firebase Admin not initialized',
         contactId
       }, { status: 503 });
     }
 
-    // ========================================================================
-    // VERIFY CONTACT EXISTS
-    // ========================================================================
+    const contactDoc = await adminDb
+      .collection(COLLECTIONS.CONTACTS)
+      .doc(contactId)
+      .get();
 
-    console.log(`🔍 Verifying contact exists: ${contactId}`);
-
-    const contactDoc = await firebaseServer.getDoc(COLLECTIONS.CONTACTS, contactId);
-
-    if (!contactDoc.exists()) {
+    if (!contactDoc.exists) {
       console.log(`⚠️ Contact not found: ${contactId}`);
       return NextResponse.json({
         success: false,
@@ -72,24 +93,42 @@ export async function GET(
       }, { status: 404 });
     }
 
-    const contactData = { id: contactDoc.id, ...contactDoc.data() };
+    const contactData = { id: contactDoc.id, ...contactDoc.data() } as FirestoreContactData;
 
     // ========================================================================
-    // FETCH UNITS OWNED BY CONTACT
+    // TENANT ISOLATION - CONTACT CHECK
     // ========================================================================
 
-    console.log(`🏠 Fetching units where soldTo equals: ${contactId}`);
+    if (contactData.companyId !== ctx.companyId) {
+      console.warn(`🚫 TENANT ISOLATION VIOLATION: User ${ctx.uid} (company ${ctx.companyId}) attempted to access contact ${contactId} (company ${contactData.companyId})`);
+      return NextResponse.json({
+        success: false,
+        error: 'Access denied - Contact not found',
+        contactId
+      }, { status: 403 });
+    }
 
-    const unitsSnapshot = await firebaseServer.getDocs(COLLECTIONS.UNITS, [
-      { field: 'soldTo', operator: '==', value: contactId }
-    ]);
+    console.log(`✅ Tenant isolation check passed for contact: contact.companyId === ctx.companyId (${ctx.companyId})`);
+
+    // ========================================================================
+    // FETCH UNITS OWNED BY CONTACT (ADMIN SDK)
+    // ========================================================================
+
+    console.log(`🏠 Fetching units where soldTo === ${contactId} AND companyId === ${ctx.companyId}`);
+
+    const unitsSnapshot = await adminDb
+      .collection(COLLECTIONS.UNITS)
+      .where('soldTo', '==', contactId)
+      .where('companyId', '==', ctx.companyId)
+      .get();
 
     const units = unitsSnapshot.docs.map(unitDoc => ({
       id: unitDoc.id,
       ...unitDoc.data()
-    }));
+    }) as FirestoreUnitData);
 
     console.log(`🏠 Found ${units.length} units for contact ${contactId}`);
+    console.log(`✅ Tenant isolation enforced in units query: all units.companyId === ${ctx.companyId}`);
 
     // ========================================================================
     // PROCESS UNITS DATA & CALCULATE STATISTICS
@@ -235,7 +274,7 @@ export async function GET(
         success: false,
         error: error instanceof Error ? error.message : 'Άγνωστο σφάλμα φόρτωσης μονάδων επαφής',
         errorCategory,
-        contactId: (await params).contactId || null,
+        contactId: contactId || null,
         timestamp: new Date().toISOString(),
 
         // Empty data structure for consistency
@@ -252,5 +291,11 @@ export async function GET(
       },
       { status: statusCode }
     );
-  }
+      }
+    },
+    { permissions: 'crm:contacts:view' }
+  );
+
+  // Execute authenticated handler
+  return handler(request);
 }

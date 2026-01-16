@@ -1,162 +1,193 @@
-import { NextResponse } from 'next/server';
+/**
+ * 🛠️ UTILITY: ADMIN LINK UNITS TO CONTACTS
+ *
+ * Break-glass utility for creating contacts and linking to sold units.
+ *
+ * @module api/units/admin-link
+ * @version 2.0.0
+ * @updated 2026-01-15 - AUTHZ PHASE 2: Added super_admin protection
+ *
+ * 🔒 SECURITY:
+ * - Global Role: super_admin (break-glass utility)
+ * - Admin SDK for secure server-side operations
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
-export async function POST() {
-  try {
-    console.log('🔥 ADMIN SDK: Ξεκινάω πραγματικά updates...');
+// Response types for type-safe withAuth
+type AdminLinkSuccess = {
+  success: true;
+  message: string;
+  contactsCreated: number;
+  linkedCount: number;
+  updates: Array<{
+    unitId: string;
+    unitName: string;
+    contactId: string;
+    contactName: string;
+  }>;
+  createdContacts: Array<{ id: string; name: string }>;
+};
 
-    // Έλεγχος αν το Admin SDK είναι διαθέσιμο
-    if (!adminDb) {
-      return NextResponse.json({
-        error: 'Firebase Admin SDK not initialized',
-        details: 'Service account credentials required'
-      }, { status: 500 });
-    }
+type AdminLinkError = {
+  success: false;
+  error: string;
+  details?: string;
+  suggestion?: string;
+};
 
-    const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS).get();
+type AdminLinkResponse = AdminLinkSuccess | AdminLinkError;
 
-    // Debug: Show all sold units and their soldTo values
-    const allSoldUnits = unitsSnapshot.docs
-      .map(doc => ({ id: doc.id, data: doc.data() }))
-      .filter(unit => unit.data.status === 'sold');
+export async function POST(request: NextRequest) {
+  const handler = withAuth<AdminLinkResponse>(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<AdminLinkResponse>> => {
+      try {
+        console.log('🔥 [Units/AdminLink] Starting Admin SDK operations...');
+        console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
 
-    console.log(`🔍 DEBUG: Found ${allSoldUnits.length} units with status='sold'`);
-    allSoldUnits.forEach(unit => {
-      console.log(`📋 Unit ${unit.id}: soldTo="${unit.data.soldTo}" (type: ${typeof unit.data.soldTo})`);
-    });
+        const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS).get();
 
-    const soldUnitsToLink = unitsSnapshot.docs
-      .map(doc => ({ id: doc.id, data: doc.data() }))
-      .filter(unit => {
-        const needsLinking = unit.data.status === 'sold' && (
-          !unit.data.soldTo ||
-          unit.data.soldTo === UNIT_SALE_STATUS.NOT_SOLD ||
-          unit.data.soldTo === 'customer...' ||
-          typeof unit.data.soldTo === 'string' && unit.data.soldTo.startsWith('customer')
-        );
-        if (needsLinking) {
-          console.log(`🔍 Unit ${unit.id} needs linking: soldTo="${unit.data.soldTo}"`);
+        // Debug: Show all sold units and their soldTo values
+        const allSoldUnits = unitsSnapshot.docs
+          .map(doc => ({ id: doc.id, data: doc.data() }))
+          .filter(unit => unit.data.status === 'sold');
+
+        console.log(`🔍 DEBUG: Found ${allSoldUnits.length} units with status='sold'`);
+
+        const soldUnitsToLink = unitsSnapshot.docs
+          .map(doc => ({ id: doc.id, data: doc.data() }))
+          .filter(unit => {
+            const needsLinking = unit.data.status === 'sold' && (
+              !unit.data.soldTo ||
+              unit.data.soldTo === UNIT_SALE_STATUS.NOT_SOLD ||
+              unit.data.soldTo === 'customer...' ||
+              typeof unit.data.soldTo === 'string' && unit.data.soldTo.startsWith('customer')
+            );
+            return needsLinking;
+          });
+
+        console.log(`Found ${soldUnitsToLink.length} units to link`);
+
+        if (soldUnitsToLink.length === 0) {
+          return NextResponse.json({
+            success: true,
+            message: 'No units need linking',
+            contactsCreated: 0,
+            linkedCount: 0,
+            updates: [],
+            createdContacts: []
+          });
         }
-        return needsLinking;
-      });
 
-    console.log(`Βρέθηκαν ${soldUnitsToLink.length} units για σύνδεση`);
+        // Load real contact IDs from database
+        const contactsSnapshot = await adminDb
+          .collection(COLLECTIONS.CONTACTS)
+          .where('type', '==', 'individual')
+          .limit(8)
+          .get();
 
-    if (soldUnitsToLink.length === 0) {
-      return NextResponse.json({
-        success: true,
-        message: 'Δεν βρέθηκαν units που χρειάζονται linking',
-        linkedCount: 0
-      });
-    }
+        const realContactIds = contactsSnapshot.docs.map(doc => doc.id);
 
-    // 🏢 ENTERPRISE: Load real contact IDs from database (NO HARDCODED)
-    console.log('🔍 Loading real contact IDs from database...');
+        if (realContactIds.length === 0) {
+          return NextResponse.json({
+            success: false,
+            error: 'No individual contacts found in database',
+            suggestion: 'Run /api/contacts/create-sample first to create contacts'
+          }, { status: 404 });
+        }
 
-    const contactsSnapshot = await adminDb
-      .collection(COLLECTIONS.CONTACTS)
-      .where('type', '==', 'individual')
-      .limit(8)
-      .get();
+        const sampleContactNames = (
+          process.env.NEXT_PUBLIC_SAMPLE_CONTACT_NAMES ||
+          'Contact 1,Contact 2,Contact 3,Contact 4,Contact 5,Contact 6,Contact 7,Contact 8'
+        ).split(',').map(name => name.trim());
 
-    const realContactIds = contactsSnapshot.docs.map(doc => doc.id);
-    console.log(`✅ Found ${realContactIds.length} real contact IDs:`, realContactIds);
+        // Create contact records
+        const createdContacts = [];
+        for (let i = 0; i < sampleContactNames.length; i++) {
+          const contactName = sampleContactNames[i];
+          const contactId = realContactIds[i];
 
-    if (realContactIds.length === 0) {
-      return NextResponse.json({
-        error: 'No individual contacts found in database',
-        suggestion: 'Run /api/contacts/create-sample first to create contacts'
-      }, { status: 404 });
-    }
+          try {
+            const normalizedName = contactName.replace(/\s/g, '').toLowerCase();
+            const emailDomain = process.env.NEXT_PUBLIC_TEST_EMAIL_DOMAIN || 'testcontacts.local';
+            const phonePrefix = process.env.NEXT_PUBLIC_TEST_PHONE_PREFIX || '+30 21';
 
-    // 🏢 ENTERPRISE: Load contact names from environment configuration
-    const sampleContactNames = (
-      process.env.NEXT_PUBLIC_SAMPLE_CONTACT_NAMES ||
-      'Contact 1,Contact 2,Contact 3,Contact 4,Contact 5,Contact 6,Contact 7,Contact 8'
-    ).split(',').map(name => name.trim());
+            await adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId).set({
+              firstName: contactName.split(' ')[0],
+              lastName: contactName.split(' ')[1] || '',
+              displayName: contactName,
+              email: `${normalizedName}@${emailDomain}`,
+              phone: `${phonePrefix}${Math.floor(Math.random() * 10000000).toString().padStart(7, '0')}`,
+              type: 'individual',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            });
 
-    // STEP 1: Create real contact records first
-    console.log('📝 Step 1: Creating contact records...');
-    const createdContacts = [];
+            createdContacts.push({ id: contactId, name: contactName });
+          } catch (contactError) {
+            console.error(`Failed to create contact ${contactName}:`, contactError);
+          }
+        }
 
-    for (let i = 0; i < sampleContactNames.length; i++) {
-      const contactName = sampleContactNames[i];
-      const contactId = realContactIds[i];
+        // Link units to contacts
+        let linked = 0;
+        const updates = [];
 
-      try {
-        // Create actual contact in database
-        // 🏢 ENTERPRISE: Generate professional contact data using crypto-secure methods
-        const normalizedName = contactName.replace(/\s/g, '').toLowerCase();
-        const emailDomain = process.env.NEXT_PUBLIC_TEST_EMAIL_DOMAIN || 'testcontacts.local';
-        const phonePrefix = process.env.NEXT_PUBLIC_TEST_PHONE_PREFIX || '+30 21';
+        for (let i = 0; i < soldUnitsToLink.length; i++) {
+          const unit = soldUnitsToLink[i];
+          const contactId = realContactIds[i % realContactIds.length];
+          const contactName = sampleContactNames[i % sampleContactNames.length];
 
-        await adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId).set({
-          firstName: contactName.split(' ')[0],
-          lastName: contactName.split(' ')[1] || '',
-          displayName: contactName,
-          email: `${normalizedName}@${emailDomain}`,
-          phone: `${phonePrefix}${Math.floor(Math.random() * 10000000).toString().padStart(7, '0')}`,
-          type: 'individual',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          try {
+            await adminDb.collection(COLLECTIONS.UNITS).doc(unit.id).update({
+              soldTo: contactId
+            });
+
+            updates.push({
+              unitId: unit.id,
+              unitName: unit.data.name || 'Unknown Unit',
+              contactId: contactId,
+              contactName: contactName
+            });
+
+            linked++;
+          } catch (updateError) {
+            console.error(`Failed to update unit ${unit.id}:`, updateError);
+          }
+        }
+
+        console.log(`✅ [Units/AdminLink] Complete: Linked ${linked} units`);
+
+        return NextResponse.json({
+          success: true,
+          message: `Created ${createdContacts.length} contacts and linked ${linked} units!`,
+          contactsCreated: createdContacts.length,
+          linkedCount: linked,
+          updates: updates,
+          createdContacts
         });
 
-        createdContacts.push({ id: contactId, name: contactName });
-        console.log(`✅ Created contact: ${contactName} (${contactId})`);
+      } catch (error) {
+        console.error('❌ [Units/AdminLink] Error:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          userId: ctx.uid,
+          companyId: ctx.companyId
+        });
 
-      } catch (contactError) {
-        console.error(`❌ Failed to create contact ${contactName}:`, contactError);
+        return NextResponse.json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          details: 'Check server logs for more info'
+        }, { status: 500 });
       }
-    }
+    },
+    { requiredGlobalRoles: 'super_admin' }
+  );
 
-    // STEP 2: Link units to contacts
-    console.log('🔗 Step 2: Linking units to contacts...');
-    let linked = 0;
-    const updates = [];
-
-    for (let i = 0; i < soldUnitsToLink.length; i++) {
-      const unit = soldUnitsToLink[i];
-      const contactId = realContactIds[i % realContactIds.length];
-      const contactName = sampleContactNames[i % sampleContactNames.length];
-
-      try {
-        await adminDb.collection(COLLECTIONS.UNITS).doc(unit.id).update({
-          soldTo: contactId
-        });
-
-        updates.push({
-          unitId: unit.id,
-          unitName: unit.data.name || 'Unknown Unit',
-          contactId: contactId,
-          contactName: contactName
-        });
-
-        console.log(`✅ LINKED: Unit "${unit.data.name}" (${unit.id}) → Contact "${contactName}" (${contactId})`);
-        linked++;
-
-      } catch (updateError) {
-        console.error(`❌ Failed to update unit ${unit.id}:`, updateError);
-      }
-    }
-
-    console.log(`🎉 ADMIN SDK COMPLETE: Successfully linked ${linked} units!`);
-
-    return NextResponse.json({
-      success: true,
-      message: `🔥 ADMIN SDK: Created ${createdContacts.length} contacts and linked ${linked} units!`,
-      contactsCreated: createdContacts.length,
-      linkedCount: linked,
-      updates: updates,
-      createdContacts
-    });
-
-  } catch (error) {
-    console.error('❌ Admin SDK error:', error);
-    return NextResponse.json({
-      error: error instanceof Error ? error.message : 'Unknown error',
-      details: 'Check server logs for more info'
-    }, { status: 500 });
-  }
+  return handler(request);
 }

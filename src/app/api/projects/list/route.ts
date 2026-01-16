@@ -7,16 +7,24 @@
  * @module api/projects/list
  * @version 1.0.0
  * @enterprise Phase 3 - Data Architecture Separation
+ * @updated 2026-01-15 - AUTHZ PHASE 2: Added RBAC protection + tenant isolation
  *
  * 🏢 ARCHITECTURE:
  * - Admin SDK (server-side, consistent latency)
+ * - withAuth + tenant isolation (CRITICAL security fix)
  * - Short TTL caching (30s for near-realtime updates)
  * - Type-safe field extraction (no type assertions)
+ *
+ * 🔒 SECURITY:
+ * - Permission: projects:projects:view
+ * - Tenant isolation: Query filtered by ctx.companyId
  */
 
 import { NextRequest } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
-import { withErrorHandling, apiSuccess } from '@/lib/api/ApiErrorHandler';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withErrorHandling, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 
@@ -52,8 +60,15 @@ interface ProjectListResponse {
 // CONSTANTS
 // ============================================================================
 
-const CACHE_KEY = 'api:projects:list';
+const CACHE_KEY_PREFIX = 'api:projects:list';
 const CACHE_TTL_MS = 30 * 1000; // 30 seconds (near-realtime for audit grid)
+
+/**
+ * Generate tenant-specific cache key
+ */
+function getTenantCacheKey(companyId: string): string {
+  return `${CACHE_KEY_PREFIX}:${companyId}`;
+}
 
 // ============================================================================
 // TYPE-SAFE FIELD EXTRACTORS
@@ -131,16 +146,20 @@ export const dynamic = 'force-dynamic';
 // MAIN HANDLER
 // ============================================================================
 
-export const GET = withErrorHandling(async (_request: NextRequest) => {
-  const startTime = Date.now();
-  console.log('🏗️ [Projects/List] Starting projects list load...');
+export async function GET(request: NextRequest) {
+  const handler = withAuth<ApiSuccessResponse<ProjectListResponse>>(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      const startTime = Date.now();
+      console.log('🏗️ [Projects/List] Starting projects list load...');
+      console.log(`🔒 Auth Context: User ${ctx.uid}, Company ${ctx.companyId}`);
 
-  // ============================================================================
-  // 1. CHECK CACHE FIRST
-  // ============================================================================
+      // ============================================================================
+      // 1. CHECK TENANT-SPECIFIC CACHE FIRST
+      // ============================================================================
 
-  const cache = EnterpriseAPICache.getInstance();
-  const cachedData = cache.get<ProjectListResponse>(CACHE_KEY);
+      const cache = EnterpriseAPICache.getInstance();
+      const tenantCacheKey = getTenantCacheKey(ctx.companyId);
+      const cachedData = cache.get<ProjectListResponse>(tenantCacheKey);
 
   if (cachedData) {
     const duration = Date.now() - startTime;
@@ -152,17 +171,18 @@ export const GET = withErrorHandling(async (_request: NextRequest) => {
     }, `Projects loaded from cache in ${duration}ms`);
   }
 
-  console.log('🔍 [Projects/List] Cache miss - Fetching from Firestore...');
+      console.log('🔍 [Projects/List] Cache miss - Fetching from Firestore...');
 
-  // ============================================================================
-  // 2. FETCH ALL PROJECTS (Admin SDK)
-  // ============================================================================
+      // ============================================================================
+      // 2. FETCH TENANT-SCOPED PROJECTS (Admin SDK + Tenant Isolation)
+      // ============================================================================
 
-  const projectsSnapshot = await adminDb
-    .collection(COLLECTIONS.PROJECTS)
-    .get();
+      const projectsSnapshot = await adminDb
+        .collection(COLLECTIONS.PROJECTS)
+        .where('companyId', '==', ctx.companyId)
+        .get();
 
-  console.log(`🏗️ [Projects/List] Found ${projectsSnapshot.docs.length} total projects`);
+      console.log(`🏗️ [Projects/List] Found ${projectsSnapshot.docs.length} projects for tenant ${ctx.companyId}`);
 
   // ============================================================================
   // 3. MAP TO ProjectListItem (type-safe)
@@ -204,15 +224,17 @@ export const GET = withErrorHandling(async (_request: NextRequest) => {
   // 5. CACHE RESPONSE
   // ============================================================================
 
-  cache.set(CACHE_KEY, response, CACHE_TTL_MS);
+  cache.set(tenantCacheKey, response, CACHE_TTL_MS);
 
   const duration = Date.now() - startTime;
   console.log(`✅ [Projects/List] Complete: ${projects.length} projects in ${duration}ms (cached for 30s)`);
 
   return apiSuccess<ProjectListResponse>(response, `Projects loaded in ${duration}ms`);
+    },
+    {
+      permissions: 'projects:projects:view'
+    }
+  );
 
-}, {
-  operation: 'listProjects',
-  entityType: COLLECTIONS.PROJECTS,
-  entityId: 'all'
-});
+  return handler(request);
+}

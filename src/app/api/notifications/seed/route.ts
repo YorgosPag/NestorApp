@@ -1,45 +1,87 @@
-// app/api/notifications/seed/route.ts
-// ✅ Development endpoint to create sample notifications in Firestore
+/**
+ * 🔔 NOTIFICATIONS API - SEED SAMPLE DATA
+ *
+ * Development utility to create sample notifications for testing.
+ *
+ * @module api/notifications/seed
+ * @version 2.0.0
+ * @updated 2026-01-16 - AUTHZ PHASE 2: Added super_admin protection
+ *
+ * 🔒 SECURITY:
+ * - Global Role: super_admin (break-glass utility)
+ * - Admin SDK for secure server-side operations
+ */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { createSampleNotifications } from '@/services/notificationService';
 
 interface SeedRequestBody {
   userId?: string;
 }
 
-export async function POST(request: Request) {
-  try {
-    // Get user ID from request body (Firebase Auth UID)
-    const body = await request.json() as SeedRequestBody;
-    const userId = body.userId;
+// Response types for type-safe withAuth
+type SeedSuccess = {
+  success: true;
+  message: string;
+  userId: string;
+  count?: number;
+};
 
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'userId is required in request body' },
-        { status: 400 }
-      );
-    }
+type SeedError = {
+  success: false;
+  error: string;
+  details?: string;
+};
 
-    console.log('🌱 Creating sample notifications for user:', userId);
+type SeedResponse = SeedSuccess | SeedError;
 
-    await createSampleNotifications(userId);
+export async function POST(request: NextRequest) {
+  const handler = withAuth<SeedResponse>(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<SeedResponse>> => {
+      try {
+        console.log(`🔔 [Notifications/Seed] Starting sample data creation...`);
+        console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
 
-    console.log('✅ Sample notifications created successfully in Firestore');
+        // Get user ID from request body (Firebase Auth UID)
+        const body = await req.json() as SeedRequestBody;
+        const userId = body.userId;
 
-    return NextResponse.json({
-      success: true,
-      message: `Sample notifications created for ${userId}`,
-      userId
-    });
-  } catch (error) {
-    console.error('Failed to create sample notifications:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
-  }
+        if (!userId) {
+          return NextResponse.json({
+            success: false,
+            error: 'userId is required in request body'
+          }, { status: 400 });
+        }
+
+        console.log(`🌱 Creating sample notifications for user: ${userId}`);
+
+        await createSampleNotifications(userId);
+
+        console.log(`✅ [Notifications/Seed] Sample notifications created successfully`);
+
+        return NextResponse.json({
+          success: true,
+          message: `Sample notifications created for ${userId}`,
+          userId
+        });
+      } catch (error) {
+        console.error('❌ [Notifications/Seed] Error:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          userId: ctx.uid,
+          companyId: ctx.companyId
+        });
+
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to create sample notifications',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
+      }
+    },
+    { requiredGlobalRoles: 'super_admin' }
+  );
+
+  return handler(request);
 }

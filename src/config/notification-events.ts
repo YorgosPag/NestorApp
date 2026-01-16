@@ -219,12 +219,13 @@ export const NOTIFICATION_ENTITY_TYPES = {
 export type NotificationEntityType = typeof NOTIFICATION_ENTITY_TYPES[keyof typeof NOTIFICATION_ENTITY_TYPES];
 
 // ============================================================================
-// PRIORITY CONSTANTS
+// PRIORITY CONSTANTS - RE-EXPORTED FROM CANONICAL SSoT
 // ============================================================================
 
 /**
- * Message priority levels (for comms orchestrator)
- * @see Line 273 - Re-exported from @/types/communications (canonical source)
+ * Message priority levels are defined in canonical types layer
+ * @see src/types/communications.ts (CANONICAL)
+ * Re-exported below in COMMS CHANNEL CONSTANTS section
  */
 
 // ============================================================================

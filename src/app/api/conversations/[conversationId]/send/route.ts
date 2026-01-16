@@ -11,11 +11,12 @@
  * @security Requires authenticated user
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
-import { withErrorHandling, apiSuccess, ApiError } from '@/lib/api/ApiErrorHandler';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withErrorHandling, ApiError } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { requireStaffContext, audit } from '@/server/admin/admin-guards';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import { COMMUNICATION_CHANNELS } from '@/types/communications';
 import { MESSAGE_DIRECTION, DELIVERY_STATUS } from '@/types/conversations';
@@ -118,28 +119,39 @@ export const dynamic = 'force-dynamic';
 // POST - Send Message
 // ============================================================================
 
-export const POST = withErrorHandling(async (
+/**
+ * POST /api/conversations/[conversationId]/send
+ *
+ * Send outbound message in a conversation (Telegram channel).
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: comm:conversations:update
+ * - Ownership Validation: Verifies conversation belongs to user's company
+ */
+export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ conversationId: string }> }
-) => {
+) {
+  const handler = withAuth<SendMessageResponse>(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<SendMessageResponse>> => {
+      const { conversationId } = await params;
+      return handleSendMessage(req, ctx, conversationId);
+    },
+    { permissions: 'comm:conversations:update' }
+  );
+
+  return handler(request);
+}
+
+async function handleSendMessage(request: NextRequest, ctx: AuthContext, conversationId: string): Promise<NextResponse<SendMessageResponse>> {
   const startTime = Date.now();
   const operationId = generateRequestId();
-
-  // 🔒 SECURITY: Staff-only access (admin/broker/builder roles)
-  const authResult = await requireStaffContext(request, operationId);
-  if (!authResult.success) {
-    audit(operationId, 'SEND_MESSAGE_DENIED', { error: authResult.error });
-    throw new ApiError(403, authResult.error || 'Staff access required', 'STAFF_REQUIRED');
-  }
-
-  const { conversationId } = await params;
 
   if (!conversationId) {
     throw new ApiError(400, 'Conversation ID is required');
   }
 
-  audit(operationId, 'SEND_MESSAGE_START', { user: authResult.context?.email, conversationId });
-  console.log(`📤 [Send] User ${authResult.context?.email} sending message to: ${conversationId}`);
+  console.log(`📤 [Send] User ${ctx.email} (company: ${ctx.companyId}) sending message to: ${conversationId}`);
 
   // Parse request body
   const body: SendMessageRequest = await request.json();
@@ -148,7 +160,7 @@ export const POST = withErrorHandling(async (
     throw new ApiError(400, 'Message text is required');
   }
 
-  // Get conversation to find chatId
+  // CRITICAL: Ownership validation - verify conversation belongs to user's company
   const convDoc = await adminDb
     .collection(COLLECTIONS.CONVERSATIONS)
     .doc(conversationId)
@@ -159,6 +171,17 @@ export const POST = withErrorHandling(async (
   }
 
   const convData = convDoc.data();
+
+  if (convData?.companyId !== ctx.companyId) {
+    console.warn(`⚠️ [Send] Unauthorized attempt:`, {
+      userId: ctx.uid,
+      userCompany: ctx.companyId,
+      conversationId,
+      conversationCompany: convData?.companyId
+    });
+    throw new ApiError(403, 'Unauthorized: You can only send messages to conversations from your company');
+  }
+
   const channel = convData?.channel;
 
   // Currently only Telegram is supported
@@ -234,10 +257,5 @@ export const POST = withErrorHandling(async (
     sentAt: new Date().toISOString(),
   };
 
-  return apiSuccess<SendMessageResponse>(response, `Message sent in ${duration}ms`);
-
-}, {
-  operation: 'sendMessage',
-  entityType: COLLECTIONS.MESSAGES,
-  entityId: 'outbound'
-});
+  return NextResponse.json(response);
+}
