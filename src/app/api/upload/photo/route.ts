@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getStorage } from 'firebase-admin/storage';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { FileNamingService } from '@/services/FileNamingService';
@@ -12,7 +14,32 @@ interface FirebaseAdminError {
   stack?: string;
 }
 
+// ============================================================================
+// PHOTO UPLOAD ENDPOINT
+// ============================================================================
+
+/**
+ * POST /api/upload/photo
+ *
+ * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
+ * - Permission: photos:photos:upload
+ * - Only authenticated users can upload files
+ * - Firebase Storage Security Rules provide additional file-level access control
+ */
 export async function POST(request: NextRequest) {
+  const handler = withAuth(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      return handleUploadPhoto(req, ctx);
+    },
+    { permissions: 'photos:photos:upload' }
+  );
+
+  return handler(request);
+}
+
+async function handleUploadPhoto(request: NextRequest, ctx: AuthContext) {
+  console.log(`📁 API: Photo upload request from user ${ctx.email} (company: ${ctx.companyId})`);
+
   try {
     console.log('🚀 SERVER: Starting Firebase Admin server-side upload...');
 
@@ -59,6 +86,9 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('📁 SERVER: File received:', {
+      userId: ctx.uid,
+      userEmail: ctx.email,
+      companyId: ctx.companyId,
       name: file.name,
       size: file.size,
       type: file.type,
@@ -147,7 +177,16 @@ export async function POST(request: NextRequest) {
     // Make the file publicly readable and get download URL
     await fileRef.makePublic();
     const downloadURL = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
-    console.log('🔗 ADMIN STORAGE: Download URL:', downloadURL);
+
+    console.log('✅ UPLOAD SUCCESS:', {
+      userId: ctx.uid,
+      userEmail: ctx.email,
+      companyId: ctx.companyId,
+      fileName: fileName,
+      fileSize: file.size,
+      storagePath: storagePath,
+      url: downloadURL
+    });
 
     return NextResponse.json({
       success: true,
@@ -155,7 +194,9 @@ export async function POST(request: NextRequest) {
       fileName: fileName,
       fileSize: file.size,
       mimeType: file.type,
-      storagePath: storagePath
+      storagePath: storagePath,
+      uploadedBy: ctx.email,
+      uploadedAt: new Date().toISOString()
     });
 
   } catch (error) {
