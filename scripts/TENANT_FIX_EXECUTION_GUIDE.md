@@ -24,50 +24,59 @@ This guide executes **Section 1** (Tenant Model Fix) and **Section 2** (Data Mig
 
 ## 🚀 **EXECUTION STEPS**
 
-### **STEP 1: Ensure Canonical Company Doc**
+### **STEP 1: Verify Company Doc Exists**
 
-This ensures the company document exists in Firestore.
+Before setting claims, verify the company document exists in Firestore.
 
-```bash
-node scripts/ensure-canonical-company.js
-```
+**Manual Check:**
+1. Go to Firebase Console → Firestore
+2. Navigate to `contacts` collection
+3. Verify document `pzNUy8ksddGCtcQMqumR` exists with `type='company'`
 
-**Expected Output:**
-```
-✅ [CANONICAL_COMPANY] Company document ALREADY EXISTS
-   OR
-✅ [CANONICAL_COMPANY] Company document CREATED successfully!
-```
-
-**Verifies:** Company doc `pzNUy8ksddGCtcQMqumR` exists in `contacts` collection with `type='company'`
+If the company doc doesn't exist, create it manually in Firestore before proceeding.
 
 ---
 
 ### **STEP 2: Fix User companyId Claim**
 
-This updates your Firebase Auth token claim.
+This updates your Firebase Auth token claim using the **canonical script**.
 
-**Run in BROWSER CONSOLE:**
+**Run in terminal:**
 
-1. Open https://nestor-app.vercel.app (logged in as pagonis.oe@gmail.com)
-2. Open DevTools → Console
-3. Paste the entire `scripts/fix-tenant-claim.js` file
-4. Press Enter
+```bash
+# Set the companyId claim (Firestore doc ID - NOT slug!)
+COMPANY_ID=pzNUy8ksddGCtcQMqumR USER_UID=<YOUR_USER_UID> node scripts/claims.setCompanyId.js
+
+# Optional: Also set GLOBAL_ROLE if needed
+COMPANY_ID=pzNUy8ksddGCtcQMqumR USER_UID=<YOUR_USER_UID> GLOBAL_ROLE=company_admin node scripts/claims.setCompanyId.js
+```
 
 **Expected Output:**
 ```
-✅ [FIX_TENANT] Claims updated successfully!
-✅ [FIX_TENANT] Token refreshed!
-✅ ✅ ✅ TENANT CLAIM FIX COMPLETE! ✅ ✅ ✅
+✅ [claims.setCompanyId.js] Firebase Admin initialized
 
-🔄 Auto-reloading page in 2 seconds...
+═══════════════════════════════════════════════════════════════
+🔧 SET USER COMPANY CLAIMS
+═══════════════════════════════════════════════════════════════
+
+📋 Step 1: Verifying user and getting existing claims...
+   ✅ User found: pagonis.oe@gmail.com
+   📍 Existing claims: { ... }
+
+📋 Step 2: Preparing merged claims...
+📋 Step 3: Setting custom claims...
+   ✅ Claims set successfully!
+
+📋 Step 4: Verifying claims...
+   ✅ Claims verified!
+
+⚠️  IMPORTANT: User must refresh their token to get new claims.
 ```
 
-**Page will auto-reload.**
-
-**Verify:**
-- Go to `/debug/token-info`
-- Should show: `companyId: "pzNUy8ksddGCtcQMqumR"`
+**After running the script:**
+1. In the app, call `await refreshToken()` via useAuth hook
+2. Or logout/login to refresh the token
+3. Verify at `/debug/token-info`: `companyId: "pzNUy8ksddGCtcQMqumR"`
 
 ---
 
@@ -75,20 +84,35 @@ This updates your Firebase Auth token claim.
 
 This shows what would be changed WITHOUT making changes.
 
+**IMPORTANT:** Uses the **canonical migration script** with enterprise patterns.
+
 ```bash
-node scripts/backfill-buildings-companyId.js
+# DRY RUN (default - preview only, no changes)
+COMPANY_ID=pzNUy8ksddGCtcQMqumR COLLECTION_BUILDINGS=buildings node scripts/migrations.buildings.backfillCompanyId.js
 ```
 
 **Expected Output:**
 ```
-🔍 Running in DRY-RUN mode (no changes will be made)
+═══════════════════════════════════════════════════════════════
+🔧 BUILDINGS COMPANYID BACKFILL MIGRATION
+═══════════════════════════════════════════════════════════════
 
-📋 [BACKFILL] Buildings analysis:
-   ✅ WITH companyId: 0
-   ❌ WITHOUT companyId: 10
+🎯 Target Company: pzNUy8ksddGCtcQMqumR
+🔧 Mode: DRY-RUN (preview only)
+📁 Collection: buildings
 
-🔍 [DRY-RUN] Would update 10 buildings
-🔍 [DRY-RUN] Each building would get: companyId = pzNUy8ksddGCtcQMqumR
+📋 Step 1: Scanning buildings collection...
+   Looking for: companyId == null/undefined ONLY (safe mode)
+   ⚠️  Will NOT touch buildings with other companyIds (multi-tenant safe)
+
+   📄 Page 1: Fetching 100 documents...
+      Scanned: 10, Need update: 10, Already OK: 0
+      🔍 DRY-RUN - Would update:
+         - Building A (docId1): (none) → pzNUy8ksddGCtcQMqumR [missing]
+         - Building B (docId2): (none) → pzNUy8ksddGCtcQMqumR [missing]
+         ...
+
+ℹ️  DRY-RUN: No changes were made to the database
 ```
 
 **Review the output.** If it looks correct, proceed to Step 4.
@@ -100,21 +124,27 @@ node scripts/backfill-buildings-companyId.js
 This ACTUALLY updates Firestore.
 
 ```bash
-node scripts/backfill-buildings-companyId.js --apply
+# EXECUTE MIGRATION (writes to database)
+COMPANY_ID=pzNUy8ksddGCtcQMqumR COLLECTION_BUILDINGS=buildings DRY_RUN=false node scripts/migrations.buildings.backfillCompanyId.js
 ```
 
 **Expected Output:**
 ```
-⚠️ Running in APPLY mode (changes WILL be written to Firestore)
+🔧 Mode: EXECUTE (will write to DB)
 
-⚙️ [APPLY] Updating 10 buildings...
-   ✅ Batch 1/1: Updated 10 buildings
+📋 Step 1: Scanning buildings collection...
+      ✅ Batch 1: Updated 10 documents
 
-📊 [APPLY] Backfill results:
-   ✅ Successfully updated: 10
-   ❌ Failed: 0
+═══════════════════════════════════════════════════════════════
+📊 REPORT
+═══════════════════════════════════════════════════════════════
 
-✅ BACKFILL COMPLETE
+🔍 Scanned: 10 buildings
+🎯 Needed update: 10 buildings
+✅ Updated: 10 buildings
+❌ Errors: 0 buildings
+
+✅ Script completed successfully
 ```
 
 ---
@@ -179,13 +209,16 @@ After running all steps, verify:
 
 ---
 
-## 📊 **SCRIPT FILES CREATED**
+## 📊 **CANONICAL SCRIPT FILES**
 
 | Script | Purpose | Runs In |
 |--------|---------|---------|
-| `ensure-canonical-company.js` | Creates/verifies company doc | Node.js |
-| `fix-tenant-claim.js` | Updates user companyId claim | Browser |
-| `backfill-buildings-companyId.js` | Adds companyId to buildings | Node.js |
+| `claims.setCompanyId.js` | Updates user companyId claim | Node.js |
+| `migrations.buildings.backfillCompanyId.js` | Adds companyId to buildings | Node.js |
+| `_shared/loadEnvLocal.js` | Loads .env.local for scripts | Node.js |
+| `_shared/validateInputs.js` | Validates script inputs | Node.js |
+
+**Note:** All scripts use COMPANY_ID (Firestore doc ID) - NOT slugs!
 
 ---
 
@@ -220,5 +253,5 @@ All 4 verifications must pass:
 ---
 
 **Last Updated:** 2026-01-17
-**Status:** Ready for execution
-**Estimated Time:** 5-10 minutes total
+**Status:** Updated with canonical scripts
+**Scripts:** `claims.setCompanyId.js`, `migrations.buildings.backfillCompanyId.js`

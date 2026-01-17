@@ -48,7 +48,22 @@ const COMPANY_ID = getCompanyId(SCRIPT_NAME);
 const DRY_RUN = getDryRun();
 const PAGE_SIZE = getNumericEnv('PAGE_SIZE', 100);
 const BATCH_SIZE = getNumericEnv('BATCH_SIZE', 500);
-const COLLECTION_BUILDINGS = process.env.COLLECTION_BUILDINGS || 'buildings';
+
+// 🔒 ENTERPRISE: Collection name REQUIRED (no hardcoded default)
+const COLLECTION_BUILDINGS = process.env.COLLECTION_BUILDINGS;
+if (!COLLECTION_BUILDINGS) {
+  console.error(`❌ [${SCRIPT_NAME}] ERROR: COLLECTION_BUILDINGS is required`);
+  console.error(`💡 [${SCRIPT_NAME}] Usage:`);
+  console.error(`   COLLECTION_BUILDINGS=buildings COMPANY_ID=<ID> node scripts/${SCRIPT_NAME}`);
+  process.exit(1);
+}
+
+// 🔒 ENTERPRISE: Optional legacy company IDs for rewrite (comma-separated)
+// DEFAULT: Only update documents with MISSING companyId (null/undefined)
+// OPTIONAL: If LEGACY_COMPANY_IDS is set, also rewrite those specific values
+const LEGACY_COMPANY_IDS = process.env.LEGACY_COMPANY_IDS
+  ? process.env.LEGACY_COMPANY_IDS.split(',').map(s => s.trim()).filter(Boolean)
+  : [];
 
 // =============================================================================
 // INITIALIZE FIREBASE ADMIN
@@ -95,13 +110,19 @@ async function backfillBuildingsCompanyId() {
     '🔧 Mode': DRY_RUN ? 'DRY-RUN (preview only)' : 'EXECUTE (will write to DB)',
     '📄 Page Size': `${PAGE_SIZE} documents`,
     '📦 Batch Size': `${BATCH_SIZE} documents`,
-    '📁 Collection': COLLECTION_BUILDINGS
+    '📁 Collection': COLLECTION_BUILDINGS,
+    '🔄 Legacy IDs': LEGACY_COMPANY_IDS.length > 0 ? LEGACY_COMPANY_IDS.join(', ') : '(none - only missing)'
   });
 
   try {
-    // Step 1: Query buildings without companyId OR with wrong companyId
+    // Step 1: Query buildings - SAFE logic
     console.log('📋 Step 1: Scanning buildings collection...');
-    console.log('   Looking for: companyId == null OR companyId != target');
+    if (LEGACY_COMPANY_IDS.length > 0) {
+      console.log('   Looking for: companyId == null/undefined OR companyId in [' + LEGACY_COMPANY_IDS.join(', ') + ']');
+    } else {
+      console.log('   Looking for: companyId == null/undefined ONLY (safe mode)');
+    }
+    console.log('   ⚠️  Will NOT touch buildings with other companyIds (multi-tenant safe)');
     console.log('');
 
     let lastDoc = null;
@@ -132,16 +153,30 @@ async function backfillBuildingsCompanyId() {
         stats.scanned++;
         const data = doc.data();
 
-        // Check if needs update
-        if (!data.companyId || data.companyId !== COMPANY_ID) {
+        // 🔒 ENTERPRISE: Safe multi-tenant logic
+        // - ALWAYS update if companyId is missing (null/undefined)
+        // - ONLY update legacy values if explicitly listed in LEGACY_COMPANY_IDS
+        // - NEVER touch documents with other companyIds (prevents cross-tenant corruption)
+        const isMissing = !data.companyId;
+        const isLegacyValue = LEGACY_COMPANY_IDS.length > 0 && LEGACY_COMPANY_IDS.includes(data.companyId);
+        const alreadyCorrect = data.companyId === COMPANY_ID;
+
+        if (alreadyCorrect) {
+          // Already has correct companyId - skip
+          stats.skipped++;
+        } else if (isMissing || isLegacyValue) {
+          // Needs update: missing OR explicitly listed legacy value
           stats.needsUpdate++;
           docsToUpdate.push({
             id: doc.id,
             ref: doc.ref,
             name: data.name || 'Unnamed',
-            currentCompanyId: data.companyId || '(none)'
+            currentCompanyId: data.companyId || '(none)',
+            reason: isMissing ? 'missing' : 'legacy'
           });
         } else {
+          // Has a companyId that is NOT the target and NOT in legacy list
+          // DO NOT TOUCH - belongs to another tenant
           stats.skipped++;
         }
       });
@@ -154,7 +189,7 @@ async function backfillBuildingsCompanyId() {
           // Preview
           console.log('      🔍 DRY-RUN - Would update:');
           docsToUpdate.slice(0, 3).forEach(doc => {
-            console.log(`         - ${doc.name} (${doc.id}): ${doc.currentCompanyId} → ${COMPANY_ID}`);
+            console.log(`         - ${doc.name} (${doc.id}): ${doc.currentCompanyId} → ${COMPANY_ID} [${doc.reason}]`);
           });
           if (docsToUpdate.length > 3) {
             console.log(`         ... and ${docsToUpdate.length - 3} more`);

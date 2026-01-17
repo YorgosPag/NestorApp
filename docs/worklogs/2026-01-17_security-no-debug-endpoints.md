@@ -70,7 +70,8 @@ Following Fortune 500 / SOC 2 / ISO 27001 standards:
 The following scripts provide equivalent functionality:
 - `scripts/analyze-buildings.js` - Building structure analysis
 - `scripts/check-all-buildings.js` - Building verification
-- `scripts/fix-tenant-claim.js` - Tenant data operations
+- `scripts/claims.setCompanyId.js` - User claim operations (canonical)
+- `scripts/migrations.buildings.backfillCompanyId.js` - Buildings data migration (canonical)
 - `scripts/migrate-storages-to-collection.js` - Data migrations
 
 ---

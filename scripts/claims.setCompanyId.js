@@ -35,18 +35,28 @@ const { getCompanyId, getUserUid, printHeader, printFooter } = require('./_share
 // =============================================================================
 
 const SCRIPT_NAME = 'claims.setCompanyId.js';
-const GLOBAL_ROLE = process.env.GLOBAL_ROLE || 'company_admin';
 
 // Get and validate inputs
 const envVars = loadEnvLocal();
 const COMPANY_ID = getCompanyId(SCRIPT_NAME);
 const USER_UID = process.env.USER_UID || process.argv[3];
 
+// 🔒 ENTERPRISE: GLOBAL_ROLE is OPTIONAL - if not provided, preserve existing
+// Only set if explicitly provided (no hardcoded default)
+const GLOBAL_ROLE = process.env.GLOBAL_ROLE || null;
+
+// Optional: companySlug for human-readable reference
+const COMPANY_SLUG = process.env.COMPANY_SLUG || null;
+
 if (!USER_UID) {
   console.error(`❌ [${SCRIPT_NAME}] ERROR: USER_UID is required`);
   console.error(`💡 [${SCRIPT_NAME}] Usage:`);
   console.error(`   COMPANY_ID=<ID> USER_UID=<UID> node scripts/${SCRIPT_NAME}`);
   console.error(`   OR: node scripts/${SCRIPT_NAME} <COMPANY_ID> <USER_UID>`);
+  console.error('');
+  console.error('   Optional env vars:');
+  console.error('   - GLOBAL_ROLE: Set/update role (if not provided, preserves existing)');
+  console.error('   - COMPANY_SLUG: Human-readable company slug');
   process.exit(1);
 }
 
@@ -77,30 +87,48 @@ async function setUserClaims() {
   printHeader('SET USER COMPANY CLAIMS', {
     '🎯 Company ID': COMPANY_ID,
     '👤 User UID': USER_UID,
-    '🔑 Global Role': GLOBAL_ROLE
+    '🔑 Global Role': GLOBAL_ROLE || '(preserve existing)',
+    '📛 Company Slug': COMPANY_SLUG || '(not set)'
   });
 
   try {
-    // Step 1: Verify user exists
-    console.log('📋 Step 1: Verifying user exists...');
+    // Step 1: Verify user exists and get existing claims
+    console.log('📋 Step 1: Verifying user and getting existing claims...');
     const userRecord = await admin.auth().getUser(USER_UID);
     console.log(`   ✅ User found: ${userRecord.email}`);
-    console.log(`   📍 Current claims:`, userRecord.customClaims || '(none)');
 
-    // Step 2: Prepare new claims
+    // 🔒 ENTERPRISE: Preserve existing claims
+    const existingClaims = userRecord.customClaims || {};
+    console.log(`   📍 Existing claims:`, existingClaims);
+
+    // Step 2: Prepare merged claims (preserve + update)
     console.log('');
-    console.log('📋 Step 2: Preparing new claims...');
-    const newClaims = {
-      companyId: COMPANY_ID,      // Firestore docId (REQUIRED)
-      globalRole: GLOBAL_ROLE,    // User role
-      claimsUpdatedAt: Date.now() // For tracking
+    console.log('📋 Step 2: Preparing merged claims (preserve existing + update specific)...');
+
+    // 🔒 ENTERPRISE: Only update what's explicitly provided
+    // Preserve ALL existing claims, only override specific fields
+    const mergedClaims = {
+      ...existingClaims,                              // Preserve ALL existing (role, mfa, permissions, etc.)
+      companyId: COMPANY_ID,                          // REQUIRED: Update companyId
+      ...(COMPANY_SLUG && { companySlug: COMPANY_SLUG }), // Optional: Add slug if provided
+      ...(GLOBAL_ROLE && { globalRole: GLOBAL_ROLE }),    // Optional: Update role ONLY if provided
+      claimsUpdatedAt: Date.now()                     // Track when updated
     };
-    console.log('   📝 New claims:', newClaims);
+
+    console.log('   📝 Merged claims:', mergedClaims);
+    console.log('');
+    console.log('   Changes:');
+    console.log(`      companyId: ${existingClaims.companyId || '(none)'} → ${COMPANY_ID}`);
+    if (GLOBAL_ROLE) {
+      console.log(`      globalRole: ${existingClaims.globalRole || '(none)'} → ${GLOBAL_ROLE}`);
+    } else {
+      console.log(`      globalRole: ${existingClaims.globalRole || '(none)'} (preserved)`);
+    }
 
     // Step 3: Set custom claims
     console.log('');
     console.log('📋 Step 3: Setting custom claims...');
-    await admin.auth().setCustomUserClaims(USER_UID, newClaims);
+    await admin.auth().setCustomUserClaims(USER_UID, mergedClaims);
     console.log('   ✅ Claims set successfully!');
 
     // Step 4: Verify claims were set

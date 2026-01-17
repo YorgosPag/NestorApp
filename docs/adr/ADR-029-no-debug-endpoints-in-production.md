@@ -126,7 +126,8 @@ We establish the following **non-negotiable security policy**:
 The following scripts already provide equivalent functionality:
 - `scripts/analyze-buildings.js` - Building structure analysis
 - `scripts/check-all-buildings.js` - Building verification
-- `scripts/fix-tenant-claim.js` - Tenant data operations
+- `scripts/claims.setCompanyId.js` - User claim operations (canonical)
+- `scripts/migrations.buildings.backfillCompanyId.js` - Buildings data migration (canonical)
 - `scripts/migrate-storages-to-collection.js` - Data migrations
 
 ### Future Enforcement
