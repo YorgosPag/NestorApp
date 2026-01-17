@@ -1,3 +1,6 @@
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
+
 export interface PropertyShareEmail {
   recipientEmail: string;
   recipientName?: string;
@@ -15,17 +18,11 @@ export interface PropertyShareEmail {
 export class SendGridShareService {
   static async sendPropertyShare(emailData: PropertyShareEmail): Promise<boolean> {
     try {
-      const response = await fetch('/api/communications/email/property-share', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(emailData),
-      });
-
-      return response.ok;
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      await apiClient.post('/api/communications/email/property-share', emailData);
+      return true;
     } catch (error) {
-      // Error logging removed //('SendGrid share failed:', error);
+      console.error('SendGrid share failed:', error);
       return false;
     }
   }

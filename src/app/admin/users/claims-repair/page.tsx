@@ -44,6 +44,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { SEMANTIC_TYPOGRAPHY_TOKENS } from '@/hooks/useTypography';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 
 // ✅ ENTERPRISE: Design System Components (ADR-001)
 import { Button } from '@/components/ui/button';
@@ -117,20 +119,8 @@ export default function ClaimsRepairPage() {
     setErrorMessage(null);
 
     try {
-      // ✅ ENTERPRISE: Authenticated session, NO token handling
-      const response = await fetch('/api/admin/set-user-claims', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data: SetClaimsResponse = await response.json();
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      const data = await apiClient.post<SetClaimsResponse>('/api/admin/set-user-claims', formData);
 
       // Show success message
       setSuccessMessage(data.message || t('claimsRepair.actions.submit'));

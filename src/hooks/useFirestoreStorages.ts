@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { Storage } from '@/types/storage/contracts';
 
 interface UseFirestoreStoragesReturn {
@@ -15,24 +17,19 @@ export function useFirestoreStorages(): UseFirestoreStoragesReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchStorages = async () => {
+  const fetchStorages = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch('/api/storages');
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch storages: ${response.statusText}`);
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      interface StoragesApiResponse {
+        storages: Storage[];
       }
 
-      const data = await response.json();
+      const data = await apiClient.get<StoragesApiResponse>('/api/storages');
 
-      if (data.success) {
-        setStorages(data.storages);
-      } else {
-        throw new Error(data.error || 'Failed to fetch storages');
-      }
+      setStorages(data?.storages || []);
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -41,11 +38,11 @@ export function useFirestoreStorages(): UseFirestoreStoragesReturn {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchStorages();
-  }, []);
+  }, [fetchStorages]);
 
   return {
     storages,

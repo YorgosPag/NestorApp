@@ -11,7 +11,9 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import type {
   EntityType,
   EntityRelationship,
@@ -213,24 +215,17 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
     setState(prevState => ({ ...prevState, loading: true, error: null }));
 
     try {
-      // 🌐 API CALL
-      const response = await fetch('/api/relationships/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      const result = await apiClient.post<RelationshipOperationResult>(
+        '/api/relationships/create',
+        {
           parentType,
           parentId,
           childType,
           childId,
           options
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to create relationship: ${response.statusText}`);
-      }
-
-      const result: RelationshipOperationResult = await response.json();
+        }
+      );
 
       if (result.success) {
         // 🗑️ INVALIDATE RELATED CACHES
@@ -287,18 +282,11 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
     setState(prevState => ({ ...prevState, loading: true, error: null }));
 
     try {
-      // 🌐 API CALL
-      const response = await fetch('/api/relationships/remove', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ relationshipId, options })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to remove relationship: ${response.statusText}`);
-      }
-
-      const result: RelationshipOperationResult = await response.json();
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      const result = await apiClient.post<RelationshipOperationResult>(
+        '/api/relationships/remove',
+        { relationshipId, options }
+      );
 
       if (result.success) {
         // 🗑️ INVALIDATE ALL CACHES (removal can affect many relationships)
@@ -466,18 +454,11 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
     setState(prevState => ({ ...prevState, loading: true, error: null }));
 
     try {
-      // 🌐 API CALL
-      const response = await fetch('/api/relationships/hierarchy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rootType, rootId, options })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to get hierarchy: ${response.statusText}`);
-      }
-
-      const hierarchy: EntityHierarchyTree = await response.json();
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      const hierarchy = await apiClient.post<EntityHierarchyTree>(
+        '/api/relationships/hierarchy',
+        { rootType, rootId, options }
+      );
 
       // 💾 CACHE RESULT
       if (useCache) {
@@ -509,14 +490,8 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
     setState(prevState => ({ ...prevState, loading: true, error: null }));
 
     try {
-      // 🌐 API CALL
-      const response = await fetch('/api/relationships/validate-integrity');
-
-      if (!response.ok) {
-        throw new Error(`Failed to validate integrity: ${response.statusText}`);
-      }
-
-      const result: IntegrityValidationResult = await response.json();
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      const result = await apiClient.get<IntegrityValidationResult>('/api/relationships/validate-integrity');
 
       setState(prevState => ({
         ...prevState,
@@ -557,18 +532,11 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
     setState(prevState => ({ ...prevState, loading: true, error: null }));
 
     try {
-      // 🌐 API CALL
-      const response = await fetch('/api/relationships/cascade-delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entityType, entityId, options })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to cascade delete: ${response.statusText}`);
-      }
-
-      const result: CascadeDeleteResult = await response.json();
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      const result = await apiClient.post<CascadeDeleteResult>(
+        '/api/relationships/cascade-delete',
+        { entityType, entityId, options }
+      );
 
       if (result.success && !options.dryRun) {
         // 🗑️ INVALIDATE ALL CACHES
@@ -613,7 +581,7 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
     setState(prevState => ({ ...prevState, loading: true, error: null }));
 
     try {
-      // 🌐 API CALL
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
       const queryParams = new URLSearchParams({
         entityType,
         entityId,
@@ -622,13 +590,9 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
         )
       });
 
-      const response = await fetch(`/api/relationships/audit-trail?${queryParams}`);
-
-      if (!response.ok) {
-        throw new Error(`Failed to get audit trail: ${response.statusText}`);
-      }
-
-      const auditTrail: readonly RelationshipAuditEntry[] = await response.json();
+      const auditTrail = await apiClient.get<readonly RelationshipAuditEntry[]>(
+        `/api/relationships/audit-trail?${queryParams}`
+      );
 
       setState(prevState => ({ ...prevState, loading: false, error: null }));
 

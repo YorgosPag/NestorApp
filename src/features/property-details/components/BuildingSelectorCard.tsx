@@ -100,16 +100,14 @@ export function BuildingSelectorCard({
     const loadBuildings = async () => {
       setLoading(true);
       try {
-        // 🏢 ENTERPRISE: Use API endpoint instead of direct Firestore query
-        // This ensures consistent results regardless of Firestore query limitations
-        const response = await fetch('/api/buildings');
-        const result = await response.json();
-
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to fetch buildings');
+        // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+        interface BuildingsApiResponse {
+          buildings: Array<{ id: string; name?: string }>;
         }
 
-        const buildingsData = result.buildings || [];
+        const result = await apiClient.get<BuildingsApiResponse>('/api/buildings');
+
+        const buildingsData = result?.buildings || [];
         console.log(`🔍 [BuildingSelectorCard] API returned ${buildingsData.length} buildings`);
 
         // 🏢 ENTERPRISE: Filter to only buildings that exist in Navigation hierarchy

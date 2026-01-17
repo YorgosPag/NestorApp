@@ -10,6 +10,8 @@ import { UNIT_SALE_STATUS_LABELS, UNIT_SALE_STATUS, COMMON_FILTER_LABELS } from 
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 
 // 🏢 ENTERPRISE: Centralized Unit Icon & Color
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
@@ -50,13 +52,10 @@ export function SoldUnitsPreview() {
     setError(null);
 
     try {
-      const response = await fetch('/api/units');
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      const data = await apiClient.get<UnitsData>('/api/units');
 
-      const data: UnitsData = await response.json();
-      if (data.success) {
+      if (data?.success) {
         setUnits(data.units);
 
         // 🔍 Load contact names για sold units

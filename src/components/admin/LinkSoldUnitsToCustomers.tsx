@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Users, Link, CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 
 interface LinkingResult {
   success: boolean;
@@ -33,24 +35,14 @@ export function LinkSoldUnitsToCustomers() {
     try {
       console.log('🔗 Starting sold units linking process...');
 
-      const response = await fetch('/api/units/admin-link', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      const data = await apiClient.post<LinkingResult>('/api/units/admin-link', {});
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
+      if (data?.success) {
         setResult(data);
         console.log('✅ Units linked successfully:', data);
       } else {
-        throw new Error(data.error || 'Failed to link units');
+        throw new Error('Failed to link units');
       }
 
     } catch (err) {

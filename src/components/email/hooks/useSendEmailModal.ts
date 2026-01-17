@@ -2,6 +2,8 @@
 import { useState, useCallback } from "react";
 import toast from "react-hot-toast";
 import { emailTemplates, getTemplateContent } from "../utils/emailTemplates";
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 
 type Lead = { id: string; fullName: string; email: string };
 
@@ -44,20 +46,13 @@ export function useSendEmailModal(lead?: Lead, onClose?: () => void, onEmailSent
     category?: string;
   }) => {
     try {
-      const response = await fetch('/api/communications/email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(emailPayload)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      interface EmailApiResponse {
+        success: boolean;
+        messageId?: string;
       }
 
-      const result = await response.json();
+      const result = await apiClient.post<EmailApiResponse>('/api/communications/email', emailPayload);
       console.log('✅ Email queued successfully:', result);
       return { success: true, data: result };
 

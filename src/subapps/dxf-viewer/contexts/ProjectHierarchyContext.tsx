@@ -8,6 +8,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { CompanyContact } from '../../../types/contacts';
+// 🔐 ENTERPRISE: Auth hook for authentication-ready gating
+import { useAuth } from '@/auth/hooks/useAuth';
 
 // Mock function για getBuildingsByProjectId (προσωρινά)
 const getBuildingsByProjectId = async (projectId: string) => {
@@ -97,6 +99,9 @@ interface ProjectHierarchyContextType extends ProjectHierarchy, ProjectHierarchy
 const ProjectHierarchyContext = createContext<ProjectHierarchyContextType | null>(null);
 
 export function ProjectHierarchyProvider({ children }: { children: React.ReactNode }) {
+  // 🔐 ENTERPRISE: Auth-ready gating - wait for authentication before API calls
+  const { user, loading: authLoading } = useAuth();
+
   const [hierarchy, setHierarchy] = useState<ProjectHierarchy>({
     companies: [],
     selectedCompany: null,
@@ -114,6 +119,17 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
 
   // Load companies first
   const loadCompanies = async () => {
+    // 🔐 ENTERPRISE: Auth-ready gating - don't attempt API calls without authentication
+    if (authLoading) {
+      console.log('⏳ [ProjectHierarchy] Waiting for auth state...');
+      return; // Will be called again when auth is ready via useEffect
+    }
+
+    if (!user) {
+      console.log('🔒 [ProjectHierarchy] User not authenticated - skipping company load');
+      return; // User not logged in - don't attempt API call
+    }
+
     // Prevent duplicate loading
     if (companiesLoadingRef.current || companiesLoadedRef.current) {
 
@@ -122,7 +138,7 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
 
     companiesLoadingRef.current = true;
     setHierarchy(prev => ({ ...prev, loading: true, error: null }));
-    
+
     try {
       console.log('🔄 [ProjectHierarchy] Starting to load companies via Enterprise API Client...');
 
@@ -369,10 +385,15 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
     return destinations;
   };
 
-  // Load projects on mount
+  // 🔐 ENTERPRISE: Load projects when auth is ready
+  // Dependencies: user, authLoading - re-runs when authentication state changes
   useEffect(() => {
-    loadProjects();
-  }, []);
+    // Only load when auth is ready and user is logged in
+    if (!authLoading && user) {
+      console.log('✅ [ProjectHierarchy] Auth ready - loading companies...');
+      loadProjects();
+    }
+  }, [user, authLoading]);
 
   const contextValue: ProjectHierarchyContextType = {
     ...hierarchy,

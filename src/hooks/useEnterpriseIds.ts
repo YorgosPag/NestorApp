@@ -27,6 +27,8 @@ import {
   MigrationPhase,
   type MigrationStats
 } from '@/services/enterprise-id-migration.service';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 
 /**
  * Hook για enterprise ID generation
@@ -156,21 +158,21 @@ export function useMigrationStatus() {
     setError(null);
 
     try {
-      const response = await fetch('/api/enterprise-ids/migrate', {
-        method: 'GET'
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      interface MigrationStatusResponse {
+        success: boolean;
+        stats: MigrationStats;
+        phase: MigrationPhase;
+        message?: string;
       }
 
-      const data = await response.json();
+      const data = await apiClient.get<MigrationStatusResponse>('/api/enterprise-ids/migrate');
 
-      if (data.success) {
+      if (data?.success) {
         setStats(data.stats);
         setPhase(data.phase);
       } else {
-        throw new Error(data.message || 'Unknown error');
+        throw new Error(data?.message || 'Unknown error');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch migration status');
@@ -193,26 +195,22 @@ export function useMigrationStatus() {
     setError(null);
 
     try {
-      const response = await fetch('/api/enterprise-ids/migrate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(options)
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      interface MigrationResponse {
+        success: boolean;
+        stats: MigrationStats;
+        phase: MigrationPhase;
+        message?: string;
       }
 
-      const data = await response.json();
+      const data = await apiClient.post<MigrationResponse>('/api/enterprise-ids/migrate', options);
 
-      if (data.success) {
+      if (data?.success) {
         setStats(data.stats);
         setPhase(data.phase);
         return data;
       } else {
-        throw new Error(data.message || 'Migration failed');
+        throw new Error(data?.message || 'Migration failed');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Migration failed');
