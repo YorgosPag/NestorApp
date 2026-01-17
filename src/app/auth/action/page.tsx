@@ -44,6 +44,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { LanguageSwitcher } from '@/components/header/language-switcher';
 import { ThemeToggle } from '@/components/header/theme-toggle';
 import { Lock, CheckCircle, XCircle, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { AUTH_ROUTES } from '@/lib/routes';
 
 // =============================================================================
 // TYPES
@@ -442,7 +443,7 @@ export default function AuthActionPage() {
             {state.status === 'success' && (
               <nav className={`${layout.flexColGap2} ${layout.textCenter}`}>
                 <Button
-                  onClick={() => router.push('/login')}
+                  onClick={() => router.push(AUTH_ROUTES.login)}
                   className={layout.widthFull}
                 >
                   {t('action.buttons.goToLogin')}
@@ -454,7 +455,7 @@ export default function AuthActionPage() {
             {state.status === 'error' && (
               <nav className={`${layout.flexColGap2} ${layout.textCenter}`}>
                 <Button
-                  onClick={() => router.push('/login')}
+                  onClick={() => router.push(AUTH_ROUTES.login)}
                   className={layout.widthFull}
                 >
                   {t('action.buttons.goToLogin')}

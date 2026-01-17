@@ -41,7 +41,7 @@ import { Spinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized routes
-import { ACCOUNT_ROUTES } from '@/lib/routes';
+import { ACCOUNT_ROUTES, AUTH_ROUTES } from '@/lib/routes';
 
 export function UserMenu() {
   // 🏢 ENTERPRISE: i18n hook
@@ -70,7 +70,7 @@ export function UserMenu() {
     console.log('🔐 [UserMenu] Starting optimistic logout');
 
     // 🚀 OPTIMISTIC: Redirect immediately for instant feedback
-    router.push('/login');
+    router.push(AUTH_ROUTES.login);
 
     // 🔥 FIRE & FORGET: SignOut in background
     try {

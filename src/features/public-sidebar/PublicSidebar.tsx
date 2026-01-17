@@ -13,6 +13,8 @@ import { CompanyInfo } from './components/CompanyInfo';
 import { QuickStats as QuickStatsComponent } from './components/QuickStats';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { AUTH_ROUTES } from '@/lib/routes';
 
 interface PublicSidebarProps {
   isAuthenticated?: boolean;
@@ -75,7 +77,7 @@ export function PublicSidebar({ isAuthenticated = false, userEmail }: PublicSide
           </div>
         ) : (
           <Button variant="outline" className="w-full" asChild>
-            <Link href="/login">
+            <Link href={AUTH_ROUTES.login}>
               <LogIn className={`mr-2 ${iconSizes.sm}`} />
               Σύνδεση
             </Link>
