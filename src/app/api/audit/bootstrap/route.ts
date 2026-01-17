@@ -27,7 +27,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { adminDb, ensureAdminInitialized, getAdminInitializationStatus } from '@/lib/firebaseAdmin';
-import { withErrorHandling, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { withErrorHandling, apiSuccess } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import type { CompanyContact } from '@/types/contacts';
@@ -140,8 +140,8 @@ export const dynamic = 'force-dynamic';
  * - Single-tenant view (user sees only their company data)
  */
 export async function GET(request: NextRequest) {
-  const handler = withAuth<ApiSuccessResponse<BootstrapResponse>>(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+  const handler = withAuth(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<BootstrapResponse>> => {
       return handleAuditBootstrap(req, ctx);
     },
     { permissions: 'projects:projects:view' }
@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
   return handler(request);
 }
 
-async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Promise<NextResponse<ApiSuccessResponse<BootstrapResponse>>> {
+async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Promise<NextResponse<BootstrapResponse>> {
   const startTime = Date.now();
   console.log(`🚀 [Bootstrap] Audit bootstrap load for user ${ctx.email} (company: ${ctx.companyId})...`);
 
@@ -191,15 +191,11 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
     const duration = Date.now() - startTime;
     console.log(`⚡ [Bootstrap] CACHE HIT (tenant: ${ctx.companyId}) - ${cachedData.companies.length} companies, ${cachedData.projects.length} projects in ${duration}ms`);
 
-    // 🏢 ENTERPRISE: Return standard apiSuccess format
-    return apiSuccess<BootstrapResponse>(
-      {
-        ...cachedData,
-        source: 'cache' as const,
-        cached: true
-      },
-      `Bootstrap data loaded from cache in ${duration}ms`
-    );
+    return NextResponse.json({
+      ...cachedData,
+      source: 'cache',
+      cached: true
+    } as BootstrapResponse);
   }
 
   console.log(`🔍 [Bootstrap] Cache miss (tenant: ${ctx.companyId}) - Fetching from Firestore...`);
@@ -209,7 +205,6 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
   // ============================================================================
 
   let companiesSnapshot: FirebaseFirestore.QuerySnapshot;
-  let userCompanyDocs: FirebaseFirestore.QueryDocumentSnapshot[] = []; // 🔧 FIX: Define outside try block
 
   try {
     // 🔒 TENANT ISOLATION: Fetch ONLY the user's company
@@ -221,21 +216,18 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
       .get();
 
     // Filter to user's company only (in-memory filter after fetch for type safety)
-    userCompanyDocs = companiesSnapshot.docs.filter(doc => doc.id === ctx.companyId);
+    const userCompanyDocs = companiesSnapshot.docs.filter(doc => doc.id === ctx.companyId);
 
     if (userCompanyDocs.length === 0) {
       console.warn(`⚠️ [Bootstrap] User's company ${ctx.companyId} not found in database`);
       // Return empty result (tenant has no data yet)
-      return apiSuccess<BootstrapResponse>(
-        {
-          companies: [],
-          projects: [],
-          loadedAt: new Date().toISOString(),
-          source: 'firestore' as const,
-          cached: false
-        },
-        'Company not found - returning empty bootstrap data'
-      );
+      return NextResponse.json({
+        companies: [],
+        projects: [],
+        loadedAt: new Date().toISOString(),
+        source: 'firestore',
+        cached: false
+      } as BootstrapResponse);
     }
 
     console.log(`🏢 [Bootstrap] Found user's company (tenant: ${ctx.companyId})`);
@@ -431,11 +423,20 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
   const duration = Date.now() - startTime;
   console.log(`✅ [Bootstrap] Complete (tenant: ${ctx.companyId}): ${companies.length} companies, ${allProjects.length} projects in ${duration}ms (cached for 3min)`);
 
-  // 🏢 ENTERPRISE: Return standard apiSuccess format
-  return apiSuccess<BootstrapResponse>(
-    response,
-    `Bootstrap loaded: ${companies.length} companies, ${allProjects.length} projects in ${duration}ms`
-  );
+  try {
+    return NextResponse.json(response);
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    console.error(`❌ [Bootstrap] Error (tenant: ${ctx.companyId}) in ${duration}ms:`, error);
+
+    return NextResponse.json({
+      companies: [],
+      projects: [],
+      loadedAt: new Date().toISOString(),
+      source: 'firestore',
+      cached: false
+    } as BootstrapResponse, { status: 500 });
+  }
 }
 
 // ============================================================================
