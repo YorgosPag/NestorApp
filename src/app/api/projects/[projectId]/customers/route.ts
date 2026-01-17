@@ -22,7 +22,6 @@ import { getContactDisplayName, getPrimaryPhone, getPrimaryEmail } from '@/types
 import type { Contact } from '@/types/contacts';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIRESTORE_LIMITS } from '@/config/firestore-collections';
-import { logger } from '@/lib/logger';
 
 export async function GET(
   request: NextRequest,
@@ -71,7 +70,7 @@ export async function GET(
         // STEP 2: GET BUILDINGS FOR THIS PROJECT (Admin SDK + Tenant Filter)
         // ============================================================================
 
-        logger.info(`🏢 Fetching buildings for project`);
+        console.log(`🏢 Fetching buildings for project`);
 
         let buildingsSnapshot = await adminDb
           .collection(COLLECTIONS.BUILDINGS)
@@ -81,7 +80,7 @@ export async function GET(
 
         // If no results, try with number projectId
         if (buildingsSnapshot.docs.length === 0) {
-          logger.info(`🔄 Trying numeric projectId`);
+          console.log(`🔄 Trying numeric projectId`);
           buildingsSnapshot = await adminDb
             .collection(COLLECTIONS.BUILDINGS)
             .where('projectId', '==', parseInt(projectId))
@@ -90,7 +89,7 @@ export async function GET(
         }
 
         if (buildingsSnapshot.docs.length === 0) {
-          logger.info(`⚠️ No buildings found for project`);
+          console.log(`⚠️ No buildings found for project`);
           return NextResponse.json({
             success: true,
             customers: [],
@@ -100,7 +99,7 @@ export async function GET(
           }, { status: 200 });
         }
 
-        logger.info(`🏢 Found ${buildingsSnapshot.docs.length} buildings`);
+        console.log(`🏢 Found ${buildingsSnapshot.docs.length} buildings`);
 
         // ============================================================================
         // STEP 3: GET ALL UNITS FROM ALL BUILDINGS (Admin SDK + Tenant Filter)
@@ -124,17 +123,17 @@ export async function GET(
           allUnits.push(...units);
         }
 
-        logger.info(`🏠 Total units found: ${allUnits.length}`);
+        console.log(`🏠 Total units found: ${allUnits.length}`);
 
         // ============================================================================
         // STEP 4: FILTER SOLD UNITS AND EXTRACT CUSTOMER IDs
         // ============================================================================
 
         const soldUnits = allUnits.filter(u => u.status === 'sold' && u.soldTo);
-        logger.info(`💰 Sold units: ${soldUnits.length}`);
+        console.log(`💰 Sold units: ${soldUnits.length}`);
 
         if (soldUnits.length === 0) {
-          logger.info(`⚠️ No sold units found`);
+          console.log(`⚠️ No sold units found`);
           return NextResponse.json({
             success: true,
             customers: [],
@@ -156,7 +155,7 @@ export async function GET(
         });
 
         const customerIds = Object.keys(customerUnitCount);
-        logger.info(`👥 Unique customers: ${customerIds.length}`);
+        console.log(`👥 Unique customers: ${customerIds.length}`);
 
         if (customerIds.length === 0) {
           return NextResponse.json({
@@ -172,7 +171,7 @@ export async function GET(
         // STEP 6: GET CONTACT DETAILS (Admin SDK + Tenant Filter)
         // ============================================================================
 
-        logger.info(`📇 Fetching contact details`);
+        console.log(`📇 Fetching contact details`);
 
         // Use centralized Firestore IN limit constant
         const limitedCustomerIds = customerIds.slice(0, FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS);
@@ -188,10 +187,10 @@ export async function GET(
           return data.companyId === ctx.companyId;
         });
 
-        logger.info(`📇 Contacts found: ${tenantContacts.length}`);
+        console.log(`📇 Contacts found: ${tenantContacts.length}`);
 
         if (tenantContacts.length < contactsSnapshot.docs.length) {
-          logger.warn(`🚫 Filtered out ${contactsSnapshot.docs.length - tenantContacts.length} contacts`);
+          console.warn(`🚫 Filtered out ${contactsSnapshot.docs.length - tenantContacts.length} contacts`);
         }
 
         // ============================================================================
@@ -214,7 +213,7 @@ export async function GET(
           };
         });
 
-        logger.info(`✅ [Projects/Customers] Complete: ${customers.length} customers with ${soldUnits.length} sold units`);
+        console.log(`✅ [Projects/Customers] Complete: ${customers.length} customers with ${soldUnits.length} sold units`);
 
         // Audit successful access
         await logAuditEvent(ctx, 'data_accessed', projectId, 'project', {
@@ -235,7 +234,7 @@ export async function GET(
         }, { status: 200 });
 
       } catch (error) {
-        logger.error('❌ [Projects/Customers] Error:', {
+        console.error('❌ [Projects/Customers] Error:', {
           errorType: error instanceof Error ? error.constructor.name : typeof error,
           errorMessage: error instanceof Error ? error.message : String(error),
           errorStack: error instanceof Error ? error.stack : 'No stack trace'

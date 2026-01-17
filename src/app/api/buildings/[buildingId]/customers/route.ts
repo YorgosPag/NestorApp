@@ -4,7 +4,6 @@ import { getContactDisplayName, getPrimaryPhone, getPrimaryEmail, type Contact }
 import { COLLECTIONS, FIRESTORE_LIMITS } from '@/config/firestore-collections';
 import { withAuth, requireBuildingInTenant, logAuditEvent, TenantIsolationError } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { logger } from '@/lib/logger';
 
 /** Customer info for building */
 interface CustomerInfo {
@@ -72,7 +71,7 @@ export async function GET(
         }
 
         // 🔒 TENANT ISOLATION: Query units with both companyId AND buildingId filters
-        logger.info(`🏠 Fetching units for buildingId: ${buildingId}`);
+        console.log(`🏠 Fetching units for buildingId: ${buildingId}`);
         const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS)
           .where('companyId', '==', ctx.companyId)
           .where('buildingId', '==', buildingId)
@@ -83,17 +82,17 @@ export async function GET(
           ...doc.data()
         }));
 
-        logger.info(`🏠 Total units found: ${units.length}`);
+        console.log(`🏠 Total units found: ${units.length}`);
 
         // Filter sold units
         type UnitWithSoldTo = { id: string; status?: string; soldTo?: string };
         const soldUnits = units.filter((u): u is UnitWithSoldTo & { status: 'sold'; soldTo: string } =>
           (u as UnitWithSoldTo).status === 'sold' && !!(u as UnitWithSoldTo).soldTo
         );
-        logger.info(`💰 Sold units: ${soldUnits.length}`);
+        console.log(`💰 Sold units: ${soldUnits.length}`);
 
         if (soldUnits.length === 0) {
-          logger.info(`⚠️ No sold units found for buildingId: ${buildingId}`);
+          console.log(`⚠️ No sold units found for buildingId: ${buildingId}`);
           return NextResponse.json({
             success: true,
             customers: [],
@@ -109,7 +108,7 @@ export async function GET(
         });
 
         const customerIds = Object.keys(customerUnitCount);
-        logger.info(`👥 Unique customers: ${customerIds.length}`);
+        console.log(`👥 Unique customers: ${customerIds.length}`);
 
         if (customerIds.length === 0) {
           return NextResponse.json({
@@ -125,7 +124,7 @@ export async function GET(
         // For enterprise scale, implement chunking or denormalization
         const contactIdsToQuery = customerIds.slice(0, FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS);
         if (customerIds.length > FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS) {
-          logger.warn(`⚠️ Customer IDs exceed Firestore 'in' limit (${FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS}). Only first ${FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS} will be fetched.`);
+          console.warn(`⚠️ Customer IDs exceed Firestore 'in' limit (${FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS}). Only first ${FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS} will be fetched.`);
         }
 
         // Query contacts with tenant isolation
@@ -134,7 +133,7 @@ export async function GET(
           .where('__name__', 'in', contactIdsToQuery)
           .get();
 
-        logger.info(`📇 Contacts found: ${contactsSnapshot.docs.length}`);
+        console.log(`📇 Contacts found: ${contactsSnapshot.docs.length}`);
 
         const customers: CustomerInfo[] = contactsSnapshot.docs.map(doc => {
           // Cast Firestore data to Contact type for helper functions
@@ -149,7 +148,7 @@ export async function GET(
           };
         });
 
-        logger.info(`✅ Building customers loaded successfully for buildingId: ${buildingId}`);
+        console.log(`✅ Building customers loaded successfully for buildingId: ${buildingId}`);
 
         return NextResponse.json({
           success: true,
@@ -162,7 +161,7 @@ export async function GET(
         });
 
       } catch (error) {
-        logger.error('❌ API: Error loading building customers:', error);
+        console.error('❌ API: Error loading building customers:', error);
 
         return NextResponse.json({
           success: false,
