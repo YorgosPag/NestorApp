@@ -141,9 +141,9 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   const handler = withAuth<ApiSuccessResponse<BootstrapResponse>>(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+    withErrorHandling(async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleAuditBootstrap(req, ctx);
-    },
+    }, { operation: 'audit-bootstrap' }),
     { permissions: 'projects:projects:view' }
   );
 

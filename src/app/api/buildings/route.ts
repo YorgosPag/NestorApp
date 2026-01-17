@@ -3,7 +3,7 @@ import { db as getAdminDb } from '@/lib/firebase-admin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { apiSuccess, withErrorHandling, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 
 /** Building document with optional createdAt for sorting */
 interface BuildingDocument {
@@ -20,7 +20,7 @@ interface BuildingsResponseData {
 }
 
 export const GET = withAuth<ApiSuccessResponse<BuildingsResponseData>>(
-  async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+  withErrorHandling(async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
     // 🔐 ADMIN SDK: Get server-side Firestore instance
     const adminDb = getAdminDb();
     if (!adminDb) {
@@ -84,6 +84,6 @@ export const GET = withAuth<ApiSuccessResponse<BuildingsResponseData>>(
       },
       `Loaded ${buildings.length} buildings`
     );
-  },
+  }, { operation: 'fetch-buildings' }),
   { permissions: 'buildings:buildings:view' }
 );

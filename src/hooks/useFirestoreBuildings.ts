@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/auth/hooks/useAuth';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { Building } from '@/types/building/contracts';
 
 interface UseFirestoreBuildingsReturn {
@@ -10,30 +12,59 @@ interface UseFirestoreBuildingsReturn {
   refetch: () => Promise<void>;
 }
 
+/**
+ * 🏢 ENTERPRISE: Response data type (apiClient returns unwrapped data)
+ *
+ * The endpoint returns: { success: true, data: { buildings, count, ... } }
+ * But apiClient.get() unwraps it and returns just the data object.
+ */
+interface BuildingsData {
+  buildings: Building[];
+  count: number;
+  projectId?: string;
+}
+
 export function useFirestoreBuildings(): UseFirestoreBuildingsReturn {
+  // 🔐 ENTERPRISE: Wait for auth state before making API calls
+  const { user, loading: authLoading } = useAuth();
+
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchBuildings = async () => {
     try {
+      // 🔐 AUTH-READY GATING - Wait for authentication
+      if (authLoading) {
+        // Auth state is still loading - wait for it
+        console.log('⏳ [Buildings] Waiting for auth state...');
+        return; // Will retry via useEffect when authLoading changes
+      }
+
+      if (!user) {
+        // User not authenticated - cannot proceed
+        setLoading(false);
+        setError('User not authenticated');
+        return;
+      }
+
       setLoading(true);
       setError(null);
-      
-      const response = await fetch('/api/buildings');
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch buildings: ${response.statusText}`);
+
+      console.log('🏢 [Buildings] Fetching buildings...');
+
+      // 🏢 ENTERPRISE: Use centralized API client (automatic Authorization header + unwrap)
+      // apiClient.get() returns unwrapped data (not { success, data })
+      const data = await apiClient.get<BuildingsData>('/api/buildings');
+
+      // 🏢 ENTERPRISE: Validate unwrapped data
+      if (!data || !data.buildings) {
+        throw new Error('Invalid response format from API');
       }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setBuildings(data.buildings);
-      } else {
-        throw new Error(data.error || 'Failed to fetch buildings');
-      }
-      
+
+      setBuildings(data.buildings);
+      console.log(`✅ [Buildings] Loaded ${data.count} buildings`);
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       console.error('[ERROR] Error fetching buildings:', err);
@@ -43,9 +74,12 @@ export function useFirestoreBuildings(): UseFirestoreBuildingsReturn {
     }
   };
 
+  // Fetch buildings when auth is ready
   useEffect(() => {
-    fetchBuildings();
-  }, []);
+    if (!authLoading && user) {
+      fetchBuildings();
+    }
+  }, [authLoading, user]);
 
   return {
     buildings,
