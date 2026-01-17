@@ -24,3 +24,5 @@ ADRs are numbered sequentially: `ADR-NNN-short-title.md`
 | ADR-001 | Avoid barrel imports in UI (generic mappings) | Accepted | 2026-01-10 |
 | ADR-002 | Separate /api/audit/bootstrap from /api/projects/list | Accepted | 2026-01-11 |
 | ADR-003 | Migrate BuildingFloorplanService to Enterprise Storage | Accepted | 2026-01-11 |
+| ADR-028 | Path Aliases (@/ import convention) | Accepted | 2026-01-13 |
+| ADR-029 | No Debug/Admin Analysis Endpoints in Production | Accepted | 2026-01-17 |
