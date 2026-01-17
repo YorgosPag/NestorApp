@@ -25,8 +25,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { adminDb } from '@/lib/firebaseAdmin';
+import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
@@ -71,8 +71,8 @@ async function handleFirebaseCollectionsSetup(request: NextRequest, ctx: AuthCon
   try {
     console.log('🔧 Setting up Firebase collections...');
 
-    // 1. Δημιουργία collection 'contact_relationships'
-    const testRelationshipRef = doc(collection(db, COLLECTIONS.RELATIONSHIPS), 'setup-test-doc');
+    // 1. Δημιουργία collection 'contact_relationships' (Admin SDK)
+    const testRelationshipRef = adminDb.collection(COLLECTIONS.RELATIONSHIPS).doc('setup-test-doc');
 
     const testRelationship = {
       sourceContactId: 'setup-test-source',
@@ -82,18 +82,18 @@ async function handleFirebaseCollectionsSetup(request: NextRequest, ctx: AuthCon
       position: 'Test Employee',
       department: 'Setup Department',
       notes: 'Auto-created document για collection initialization',
-      createdAt: serverTimestamp(),
+      createdAt: AdminFieldValue.serverTimestamp(),
       createdBy: 'system-setup',
-      lastModifiedAt: serverTimestamp(),
+      lastModifiedAt: AdminFieldValue.serverTimestamp(),
       lastModifiedBy: 'system-setup'
     };
 
     console.log('📝 Creating test relationship document...');
-    await setDoc(testRelationshipRef, testRelationship);
+    await testRelationshipRef.set(testRelationship);
 
     // 2. Διαγραφή του test document (το collection παραμένει)
     console.log('🗑️ Removing test document (collection remains)...');
-    await deleteDoc(testRelationshipRef);
+    await testRelationshipRef.delete();
 
     console.log('✅ Firebase collections setup completed successfully!');
 

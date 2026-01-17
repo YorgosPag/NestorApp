@@ -36,16 +36,17 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, getDocs, updateDoc, doc, serverTimestamp, Timestamp, FieldValue } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { adminDb } from '@/lib/firebaseAdmin';
+import type { Timestamp as AdminTimestamp, FieldValue } from 'firebase-admin/firestore';
+import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 
-/** Firestore Timestamp type for navigation documents */
-type FirestoreTimestamp = Timestamp | FieldValue | Date;
+/** Firestore Timestamp type for navigation documents (Admin SDK) */
+type FirestoreTimestamp = AdminTimestamp | FieldValue | Date;
 
 interface SchemaNormalizationResult {
   success: boolean;
@@ -148,9 +149,9 @@ async function handleNormalizeSchemaExecute(request: NextRequest, ctx: AuthConte
       }
     };
 
-    // STEP 1: Get all navigation_companies documents
+    // STEP 1: Get all navigation_companies documents (Admin SDK)
     console.log('📊 Step 1: Fetching all navigation_companies documents...');
-    const navigationSnapshot = await getDocs(collection(db, COLLECTIONS.NAVIGATION));
+    const navigationSnapshot = await adminDb.collection(COLLECTIONS.NAVIGATION).get();
 
     console.log(`   Found ${navigationSnapshot.docs.length} navigation companies documents`);
     result.stats.documentsChecked = navigationSnapshot.docs.length;
@@ -183,7 +184,7 @@ async function handleNormalizeSchemaExecute(request: NextRequest, ctx: AuthConte
           const normalizedDoc: Partial<NavigationCompanySchema> = {
             // Preserve existing core data
             contactId: docData.contactId || 'unknown',
-            addedAt: docData.addedAt || serverTimestamp(),
+            addedAt: docData.addedAt || AdminFieldValue.serverTimestamp(),
             addedBy: docData.addedBy || 'legacy-system',
 
             // Add enterprise metadata
@@ -199,14 +200,14 @@ async function handleNormalizeSchemaExecute(request: NextRequest, ctx: AuthConte
 
             // Add normalization metadata
             migrationInfo: {
-              migratedAt: serverTimestamp(),
+              migratedAt: AdminFieldValue.serverTimestamp(),
               migratedBy: 'enterprise-schema-normalization-system',
               reason: 'Schema normalization - converting inconsistent structure to enterprise standard'
             }
           };
 
-          // Update document
-          await updateDoc(doc(db, COLLECTIONS.NAVIGATION, docId), normalizedDoc);
+          // Update document (Admin SDK)
+          await adminDb.collection(COLLECTIONS.NAVIGATION).doc(docId).update(normalizedDoc);
 
           const normalizedFields = Object.keys(normalizedDoc);
           result.stats.documentsNormalized++;
