@@ -39,6 +39,15 @@ export interface FirebaseAuthUser {
   emailVerified: boolean;
   /** True if profile needs completion (e.g., Google sign-in without name details) */
   profileIncomplete?: boolean;
+  // 🔐 ENTERPRISE: Custom claims from Firebase ID token
+  /** Global role (super_admin, company_admin, etc.) */
+  globalRole?: string;
+  /** Company ID (tenant anchor) */
+  companyId?: string;
+  /** Array of permission IDs */
+  permissions?: string[];
+  /** MFA enrollment status */
+  mfaEnrolled?: boolean;
 }
 
 /**

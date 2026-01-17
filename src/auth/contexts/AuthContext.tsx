@@ -315,6 +315,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // This will be set to false once user completes their profile
         const profileIncomplete = isGoogleProvider && !localStorage.getItem(`profile_complete_${firebaseUser.uid}`);
 
+        // 🔐 ENTERPRISE: Load custom claims from Firebase ID token
+        let customClaims: Record<string, unknown> = {};
+        try {
+          const idTokenResult = await firebaseUser.getIdTokenResult();
+          customClaims = idTokenResult.claims;
+          console.log('🔐 [AuthContext] Custom claims loaded:', {
+            globalRole: customClaims.globalRole,
+            companyId: customClaims.companyId,
+            permissions: Array.isArray(customClaims.permissions) ? customClaims.permissions.length : 0
+          });
+        } catch (claimsError) {
+          console.warn('⚠️ [AuthContext] Failed to load custom claims (non-blocking):', claimsError);
+        }
+
         const authUser: FirebaseAuthUser = {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
@@ -324,7 +338,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
           familyName: localStorage.getItem(`familyName_${firebaseUser.uid}`) || null,
           emailVerified: firebaseUser.emailVerified,
           photoURL: firebaseUser.photoURL,
-          profileIncomplete
+          profileIncomplete,
+          // 🔐 ENTERPRISE: Add custom claims to user object
+          globalRole: customClaims.globalRole as string | undefined,
+          companyId: customClaims.companyId as string | undefined,
+          permissions: customClaims.permissions as string[] | undefined,
+          mfaEnrolled: customClaims.mfaEnrolled as boolean | undefined
         };
 
         console.log('✅ [AuthContext] Valid session established:', authUser.email);
