@@ -11,21 +11,23 @@
  *
  * USAGE:
  * ```bash
- * # Dry-run (preview changes - DEFAULT)
- * COMPANY_ID=<COMPANY_DOC_ID> node scripts/migrations.buildings.backfillCompanyId.js
+ * # Dry-run with ownership verification (DEFAULT - enterprise-safe)
+ * COMPANY_ID=<COMPANY_DOC_ID> COLLECTION_BUILDINGS=buildings COLLECTION_PROJECTS=projects node scripts/migrations.buildings.backfillCompanyId.js
  *
  * # Execute migration
- * COMPANY_ID=<COMPANY_DOC_ID> DRY_RUN=false node scripts/migrations.buildings.backfillCompanyId.js
+ * COMPANY_ID=<COMPANY_DOC_ID> COLLECTION_BUILDINGS=buildings COLLECTION_PROJECTS=projects DRY_RUN=false node scripts/migrations.buildings.backfillCompanyId.js
  *
- * # Custom page/batch size
- * COMPANY_ID=<ID> PAGE_SIZE=50 BATCH_SIZE=100 node scripts/migrations.buildings.backfillCompanyId.js
+ * # Skip ownership verification (DANGEROUS - only for single-tenant)
+ * COMPANY_ID=<ID> COLLECTION_BUILDINGS=buildings VERIFY_OWNERSHIP=false node scripts/migrations.buildings.backfillCompanyId.js
  * ```
  *
  * FEATURES:
  * - Idempotent (safe to re-run)
  * - Dry-run mode by default
+ * - VERIFY_OWNERSHIP: Checks building.projectId → project.companyId (multi-tenant safe)
  * - Page-by-page processing (memory efficient)
  * - Batch writes (Firestore limit: 500)
+ * - Project companyId caching (avoids N+1 queries)
  * - All config from env/argv (ZERO hardcoded values)
  * - Detailed progress reporting
  *
@@ -55,6 +57,23 @@ if (!COLLECTION_BUILDINGS) {
   console.error(`❌ [${SCRIPT_NAME}] ERROR: COLLECTION_BUILDINGS is required`);
   console.error(`💡 [${SCRIPT_NAME}] Usage:`);
   console.error(`   COLLECTION_BUILDINGS=buildings COMPANY_ID=<ID> node scripts/${SCRIPT_NAME}`);
+  process.exit(1);
+}
+
+// 🔒 ENTERPRISE: Ownership verification (multi-tenant safety)
+// DEFAULT: true (production-safe) - verifies building belongs to target company via projectId
+// Set VERIFY_OWNERSHIP=false ONLY for single-tenant or orphan buildings
+const VERIFY_OWNERSHIP = process.env.VERIFY_OWNERSHIP !== 'false';
+
+// 🔒 ENTERPRISE: Projects collection REQUIRED if VERIFY_OWNERSHIP=true
+const COLLECTION_PROJECTS = process.env.COLLECTION_PROJECTS;
+if (VERIFY_OWNERSHIP && !COLLECTION_PROJECTS) {
+  console.error(`❌ [${SCRIPT_NAME}] ERROR: COLLECTION_PROJECTS is required when VERIFY_OWNERSHIP=true`);
+  console.error(`💡 [${SCRIPT_NAME}] Usage:`);
+  console.error(`   COLLECTION_BUILDINGS=buildings COLLECTION_PROJECTS=projects COMPANY_ID=<ID> node scripts/${SCRIPT_NAME}`);
+  console.error('');
+  console.error('   Or to skip ownership verification (DANGEROUS):');
+  console.error(`   COLLECTION_BUILDINGS=buildings VERIFY_OWNERSHIP=false COMPANY_ID=<ID> node scripts/${SCRIPT_NAME}`);
   process.exit(1);
 }
 
@@ -93,10 +112,43 @@ const stats = {
   needsUpdate: 0,
   updated: 0,
   skipped: 0,
+  ownershipMismatch: 0,  // 🔒 Buildings whose project belongs to different company
+  noProjectId: 0,        // Buildings without projectId (orphans)
   errors: 0,
   batches: 0,
-  pages: 0
+  pages: 0,
+  cacheHits: 0,
+  cacheMisses: 0
 };
+
+// 🔒 ENTERPRISE: Project companyId cache (avoids N+1 queries)
+// Map: projectId -> companyId (or null if project doesn't exist)
+const projectCompanyIdCache = new Map();
+
+// =============================================================================
+// HELPER: Get project companyId with caching
+// =============================================================================
+
+async function getProjectCompanyId(projectId) {
+  // Check cache first
+  if (projectCompanyIdCache.has(projectId)) {
+    stats.cacheHits++;
+    return projectCompanyIdCache.get(projectId);
+  }
+
+  // Cache miss - fetch from Firestore
+  stats.cacheMisses++;
+  try {
+    const projectDoc = await db.collection(COLLECTION_PROJECTS).doc(projectId).get();
+    const companyId = projectDoc.exists ? (projectDoc.data().companyId || null) : null;
+    projectCompanyIdCache.set(projectId, companyId);
+    return companyId;
+  } catch (error) {
+    console.error(`      ⚠️ Failed to fetch project ${projectId}:`, error.message);
+    projectCompanyIdCache.set(projectId, null);
+    return null;
+  }
+}
 
 // =============================================================================
 // MAIN MIGRATION FUNCTION
@@ -108,6 +160,7 @@ async function backfillBuildingsCompanyId() {
   printHeader('BUILDINGS COMPANYID BACKFILL MIGRATION', {
     '🎯 Target Company': COMPANY_ID,
     '🔧 Mode': DRY_RUN ? 'DRY-RUN (preview only)' : 'EXECUTE (will write to DB)',
+    '🔒 Ownership Verify': VERIFY_OWNERSHIP ? `YES (via ${COLLECTION_PROJECTS})` : 'NO (⚠️ single-tenant mode)',
     '📄 Page Size': `${PAGE_SIZE} documents`,
     '📦 Batch Size': `${BATCH_SIZE} documents`,
     '📁 Collection': COLLECTION_BUILDINGS,
@@ -149,7 +202,7 @@ async function backfillBuildingsCompanyId() {
       // Process this page
       const docsToUpdate = [];
 
-      snapshot.docs.forEach(doc => {
+      for (const doc of snapshot.docs) {
         stats.scanned++;
         const data = doc.data();
 
@@ -164,22 +217,72 @@ async function backfillBuildingsCompanyId() {
         if (alreadyCorrect) {
           // Already has correct companyId - skip
           stats.skipped++;
-        } else if (isMissing || isLegacyValue) {
-          // Needs update: missing OR explicitly listed legacy value
-          stats.needsUpdate++;
-          docsToUpdate.push({
-            id: doc.id,
-            ref: doc.ref,
-            name: data.name || 'Unnamed',
-            currentCompanyId: data.companyId || '(none)',
-            reason: isMissing ? 'missing' : 'legacy'
-          });
-        } else {
+          continue;
+        }
+
+        if (!(isMissing || isLegacyValue)) {
           // Has a companyId that is NOT the target and NOT in legacy list
           // DO NOT TOUCH - belongs to another tenant
           stats.skipped++;
+          continue;
         }
-      });
+
+        // 🔒 ENTERPRISE: Ownership verification (if enabled)
+        if (VERIFY_OWNERSHIP && isMissing) {
+          const projectId = data.projectId;
+
+          if (!projectId) {
+            // Building has no projectId - orphan
+            stats.noProjectId++;
+            // Still allow update for orphans (they need companyId)
+            docsToUpdate.push({
+              id: doc.id,
+              ref: doc.ref,
+              name: data.name || 'Unnamed',
+              currentCompanyId: '(none)',
+              reason: 'orphan (no projectId)'
+            });
+            stats.needsUpdate++;
+            continue;
+          }
+
+          // Verify building's project belongs to target company
+          const projectCompanyId = await getProjectCompanyId(projectId);
+
+          if (projectCompanyId === null) {
+            // Project doesn't exist or has no companyId - treat as orphan
+            stats.noProjectId++;
+            docsToUpdate.push({
+              id: doc.id,
+              ref: doc.ref,
+              name: data.name || 'Unnamed',
+              currentCompanyId: '(none)',
+              reason: 'orphan (project missing/no companyId)'
+            });
+            stats.needsUpdate++;
+            continue;
+          }
+
+          if (projectCompanyId !== COMPANY_ID) {
+            // 🚨 OWNERSHIP MISMATCH - building's project belongs to DIFFERENT company
+            stats.ownershipMismatch++;
+            console.log(`      ⚠️ OWNERSHIP MISMATCH: ${data.name || doc.id} → project ${projectId} belongs to ${projectCompanyId}, NOT ${COMPANY_ID}`);
+            continue;
+          }
+
+          // ✅ Ownership verified - safe to update
+        }
+
+        // Needs update: missing OR explicitly listed legacy value
+        stats.needsUpdate++;
+        docsToUpdate.push({
+          id: doc.id,
+          ref: doc.ref,
+          name: data.name || 'Unnamed',
+          currentCompanyId: data.companyId || '(none)',
+          reason: isMissing ? 'missing (verified)' : 'legacy'
+        });
+      }
 
       console.log(`      Scanned: ${snapshot.size}, Need update: ${docsToUpdate.length}, Already OK: ${snapshot.size - docsToUpdate.length}`);
 
@@ -240,6 +343,11 @@ async function backfillBuildingsCompanyId() {
         '📦 Batches': `${stats.batches}`
       }),
       '✓ Skipped (already correct)': `${stats.skipped} buildings`,
+      ...(VERIFY_OWNERSHIP ? {
+        '🚨 Ownership mismatch': `${stats.ownershipMismatch} buildings (BLOCKED)`,
+        '👻 Orphans (no project)': `${stats.noProjectId} buildings`,
+        '💾 Cache hits/misses': `${stats.cacheHits}/${stats.cacheMisses}`
+      } : {}),
       '📄 Pages processed': `${stats.pages}`
     }, duration);
 

@@ -10,9 +10,18 @@
  * @enterprise Zero Duplicates - Shared Utilities
  */
 
+// 🔒 ENTERPRISE: Firestore auto-generated document ID pattern
+// Auto-IDs are exactly 20 alphanumeric characters (no dashes, no special chars)
+const FIRESTORE_AUTO_ID_REGEX = /^[A-Za-z0-9]{20}$/;
+
 /**
  * Validate and get COMPANY_ID from env/argv
- * Enforces docId format (rejects slugs)
+ * Enforces Firestore auto-ID format by default (rejects slugs)
+ *
+ * 🔒 ENTERPRISE VALIDATION:
+ * - Strict accept: Firestore auto-ID (^[A-Za-z0-9]{20}$)
+ * - Reject: slugs, short strings, special characters
+ * - Override: ALLOW_CUSTOM_COMPANY_ID=true for custom/legacy IDs
  *
  * @param {string} scriptName - Name of calling script (for error messages)
  * @returns {string} Valid company ID (Firestore docId)
@@ -20,6 +29,7 @@
  */
 function getCompanyId(scriptName) {
   const companyId = process.env.COMPANY_ID || process.argv[2];
+  const allowCustom = process.env.ALLOW_CUSTOM_COMPANY_ID === 'true';
 
   if (!companyId) {
     console.error(`❌ [${scriptName}] ERROR: COMPANY_ID is required`);
@@ -31,13 +41,29 @@ function getCompanyId(scriptName) {
     process.exit(1);
   }
 
-  // Validate docId format (reject slugs)
-  if (companyId.includes('-') && companyId.length < 20) {
-    console.error(`❌ [${scriptName}] ERROR: COMPANY_ID appears to be a slug, not a Firestore document ID`);
+  // 🔒 ENTERPRISE: Strict validation for Firestore auto-ID
+  const isAutoId = FIRESTORE_AUTO_ID_REGEX.test(companyId);
+
+  if (!isAutoId && !allowCustom) {
+    console.error(`❌ [${scriptName}] ERROR: COMPANY_ID does not match Firestore auto-ID format`);
     console.error(`📍 [${scriptName}] Received: "${companyId}"`);
-    console.error(`💡 [${scriptName}] Expected: Firestore docId (20+ chars, no dashes for short strings)`);
-    console.error(`📋 [${scriptName}] Slugs like "my-company" are NOT valid for tenant isolation`);
+    console.error(`💡 [${scriptName}] Expected: Firestore auto-ID (20 alphanumeric chars, e.g., "pzNUy8ksddGCtcQMqumR")`);
+    console.error('');
+    console.error('   Common mistakes:');
+    console.error('   ❌ "my-company" - This is a slug, not a Firestore document ID');
+    console.error('   ❌ "pagonis" - Too short, auto-IDs are exactly 20 characters');
+    console.error('   ❌ "abc-123-xyz" - Contains dashes, auto-IDs are alphanumeric only');
+    console.error('');
+    console.error('   If you have a custom/legacy document ID, set override:');
+    console.error(`   ALLOW_CUSTOM_COMPANY_ID=true COMPANY_ID="${companyId}" node scripts/${scriptName}`);
     process.exit(1);
+  }
+
+  // Log validation result
+  if (isAutoId) {
+    console.log(`✅ [${scriptName}] COMPANY_ID validated: Firestore auto-ID format`);
+  } else {
+    console.log(`⚠️  [${scriptName}] COMPANY_ID: Custom ID accepted (ALLOW_CUSTOM_COMPANY_ID=true)`);
   }
 
   return companyId;
