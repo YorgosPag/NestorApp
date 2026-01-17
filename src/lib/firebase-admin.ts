@@ -4,8 +4,8 @@
  * **MIGRATION REQUIRED** (Enterprise Unification - BLOCKER #4)
  *
  * This module will be REMOVED in future versions.
- * - Canonical module: src/lib/firebaseAdmin.ts (42 files use this)
- * - Non-canonical: src/lib/firebase-admin.ts (16 files - MIGRATE THESE)
+ * - Canonical module: src/lib/firebaseAdmin.ts
+ * - Non-canonical: src/lib/firebase-admin.ts (THIS FILE - deprecated)
  *
  * **Migration Guide:**
  * ```diff
@@ -16,8 +16,8 @@
  * + const snapshot = await adminDb.collection('...');
  * ```
  *
- * **Tracked in**: Epic #TODO - Firebase Admin Canonicalization
- * **Files to migrate**: 16 endpoints (see git grep '@/lib/firebase-admin')
+ * **Inventory**: See docs/worklogs/2026-01-17_authz-enterprise-hardening.md (Firebase Admin section)
+ * **Files to migrate**: Run `git grep -n "from '@/lib/firebase-admin'" -- src/` for current count
  */
 
 // lib/firebase-admin.ts - Build-Safe Firebase Admin Configuration
