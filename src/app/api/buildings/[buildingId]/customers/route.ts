@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db as getAdminDb } from '@/lib/firebase-admin';
+import { adminDb } from '@/lib/firebaseAdmin';
 import { getContactDisplayName, getPrimaryPhone, getPrimaryEmail, type Contact } from '@/types/contacts';
 import { COLLECTIONS, FIRESTORE_LIMITS } from '@/config/firestore-collections';
-import { withAuth, requireBuildingInTenant, logAuditEvent } from '@/lib/auth';
+import { withAuth, requireBuildingInTenant, logAuditEvent, TenantIsolationError } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 
 /** Customer info for building */
@@ -38,8 +38,7 @@ export async function GET(
   const handler = withAuth<BuildingCustomersResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
-        // 🔐 ADMIN SDK: Get server-side Firestore instance
-        const adminDb = getAdminDb();
+        // 🔐 ADMIN SDK: Verify Firestore connection
         if (!adminDb) {
           return NextResponse.json({
             success: true,
@@ -58,15 +57,17 @@ export async function GET(
             path: `/api/buildings/${buildingId}/customers`
           });
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Access denied';
-          const status = errorMessage.includes('not found') ? 404 : 403;
-          return NextResponse.json({
-            success: false,
-            customers: [],
-            buildingId,
-            summary: { customersCount: 0, soldUnitsCount: 0 },
-            error: errorMessage
-          }, { status });
+          // Enterprise: Typed error with explicit status (NO string parsing)
+          if (error instanceof TenantIsolationError) {
+            return NextResponse.json({
+              success: false,
+              customers: [],
+              buildingId,
+              summary: { customersCount: 0, soldUnitsCount: 0 },
+              error: error.message
+            }, { status: error.status });
+          }
+          throw error; // Re-throw unexpected errors
         }
 
         // 🔒 TENANT ISOLATION: Query units with both companyId AND buildingId filters

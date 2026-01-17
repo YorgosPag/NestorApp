@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, logAuditEvent, requireProjectInTenant } from '@/lib/auth';
+import { withAuth, logAuditEvent, requireProjectInTenant, TenantIsolationError } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { Pool } from 'pg';
 import { generateRequestId } from '@/services/enterprise-id.service';
@@ -136,12 +136,14 @@ async function handleGetCustomers(
         path: `/api/v2/projects/${projectId}/customers`
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Access denied';
-      const status = errorMessage.includes('not found') ? 404 : 403;
-      return NextResponse.json({
-        success: false,
-        error: errorMessage
-      }, { status });
+      // Enterprise: Typed error with explicit status (NO string parsing)
+      if (error instanceof TenantIsolationError) {
+        return NextResponse.json({
+          success: false,
+          error: error.message
+        }, { status: error.status });
+      }
+      throw error; // Re-throw unexpected errors
     }
 
     // ⚡ ENTERPRISE QUERY - Single JOIN query αντί 20+ Firebase calls

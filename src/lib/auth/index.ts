@@ -184,6 +184,7 @@ export type {
 } from './tenant-isolation';
 
 export {
+  TenantIsolationError,
   requireProjectInTenant,
   requireBuildingInTenant,
 } from './tenant-isolation';

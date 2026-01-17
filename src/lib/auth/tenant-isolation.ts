@@ -9,10 +9,26 @@
  * @since 2026-01-17 - AUTHZ Phase 2
  */
 
-import type { AuthContext } from '@/lib/auth';
+// Direct imports to avoid circular dependency with @/lib/auth barrel
+import type { AuthContext } from './types';
+import { logAuditEvent } from './audit';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { logAuditEvent } from '@/lib/auth';
+
+/**
+ * Typed tenant isolation error (NO string parsing for status codes).
+ * @enterprise Replaces brittle `errorMessage.includes('not found')` pattern
+ */
+export class TenantIsolationError extends Error {
+  constructor(
+    message: string,
+    public readonly status: 404 | 403,
+    public readonly code: 'NOT_FOUND' | 'FORBIDDEN'
+  ) {
+    super(message);
+    this.name = 'TenantIsolationError';
+  }
+}
 
 /**
  * Minimal project data required for tenant verification.
@@ -79,7 +95,7 @@ export async function requireProjectInTenant(params: {
     await logAuditEvent(ctx, 'access_denied', projectId, 'project', {
       metadata: { path, reason: 'Project not found' },
     });
-    throw new Error('Project not found');
+    throw new TenantIsolationError('Project not found', 404, 'NOT_FOUND');
   }
 
   const data = doc.data() as TenantProject | undefined;
@@ -90,7 +106,7 @@ export async function requireProjectInTenant(params: {
     await logAuditEvent(ctx, 'access_denied', projectId, 'project', {
       metadata: { path, reason: 'Tenant isolation violation - companyId mismatch' },
     });
-    throw new Error('Access denied');
+    throw new TenantIsolationError('Access denied', 403, 'FORBIDDEN');
   }
 
   // Success - return validated project data
@@ -142,7 +158,7 @@ export async function requireBuildingInTenant(params: {
     await logAuditEvent(ctx, 'access_denied', buildingId, 'building', {
       metadata: { path, reason: 'Building not found' },
     });
-    throw new Error('Building not found');
+    throw new TenantIsolationError('Building not found', 404, 'NOT_FOUND');
   }
 
   const data = doc.data() as TenantBuilding | undefined;
@@ -153,7 +169,7 @@ export async function requireBuildingInTenant(params: {
     await logAuditEvent(ctx, 'access_denied', buildingId, 'building', {
       metadata: { path, reason: 'Tenant isolation violation - companyId mismatch' },
     });
-    throw new Error('Access denied');
+    throw new TenantIsolationError('Access denied', 403, 'FORBIDDEN');
   }
 
   // Success - return validated building data

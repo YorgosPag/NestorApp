@@ -16,7 +16,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
-import { withAuth, logAuditEvent, requireProjectInTenant } from '@/lib/auth';
+import { withAuth, logAuditEvent, requireProjectInTenant, TenantIsolationError } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getContactDisplayName, getPrimaryPhone, getPrimaryEmail } from '@/types/contacts';
 import type { Contact } from '@/types/contacts';
@@ -53,15 +53,17 @@ export async function GET(
             path: `/api/projects/${projectId}/customers`
           });
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Access denied';
-          const status = errorMessage.includes('not found') ? 404 : 403;
-          return NextResponse.json({
-            success: false,
-            error: errorMessage,
-            customers: [],
-            projectId,
-            summary: { customersCount: 0, soldUnitsCount: 0 }
-          }, { status });
+          // Enterprise: Typed error with explicit status (NO string parsing)
+          if (error instanceof TenantIsolationError) {
+            return NextResponse.json({
+              success: false,
+              error: error.message,
+              customers: [],
+              projectId,
+              summary: { customersCount: 0, soldUnitsCount: 0 }
+            }, { status: error.status });
+          }
+          throw error; // Re-throw unexpected errors
         }
 
         // ============================================================================

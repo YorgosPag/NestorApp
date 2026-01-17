@@ -290,8 +290,12 @@ export class EnterpriseApiClient {
         const fetchOptions: RequestInit = {
           method,
           headers: requestHeaders,
-          ...(body && { body: JSON.stringify(body) }),
         };
+
+        // Add body if provided
+        if (body !== undefined && body !== null) {
+          fetchOptions.body = JSON.stringify(body);
+        }
 
         // Log request (development only)
         this.logRequest(context, attempts, maxRetries);
