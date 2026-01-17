@@ -464,7 +464,6 @@ Multi-round ChatGPT Enterprise + Chief Manager feedback cycle addressing Fortune
 To merge before full lint cleanup, formal waiver required με:
 - Justification (95%+ errors pre-existing)
 - Recovery plan (baseline + staged cleanup)
-- Timeline (2-3 weeks)
 
 See worklog για full compliance matrix.
 
