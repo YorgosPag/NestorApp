@@ -16,7 +16,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
-import { withAuth, logAuditEvent } from '@/lib/auth';
+import { withAuth, logAuditEvent, requireProjectInTenant } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getContactDisplayName, getPrimaryPhone, getPrimaryEmail } from '@/types/contacts';
 import type { Contact } from '@/types/contacts';
@@ -31,11 +31,8 @@ export async function GET(
 
   const handler = withAuth(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      console.log(`🏗️ [Projects/Customers] Loading customers for project`);
-
       try {
         if (!adminDb) {
-          console.error('❌ Firebase Admin not initialized');
           return NextResponse.json({
             success: false,
             error: 'Database connection not available',
@@ -46,50 +43,26 @@ export async function GET(
         }
 
         // ============================================================================
-        // STEP 1: VERIFY PROJECT OWNERSHIP (Tenant Isolation)
+        // STEP 1: VERIFY PROJECT OWNERSHIP (Centralized Tenant Isolation)
         // ============================================================================
 
-        console.log(`🔒 Verifying project ownership`);
-
-        // First, check if project exists and belongs to user's company
-        const projectDoc = await adminDb
-          .collection(COLLECTIONS.PROJECTS)
-          .doc(projectId)
-          .get();
-
-        if (!projectDoc.exists) {
-          console.log(`⚠️ Project not found`);
-          return NextResponse.json({
-            success: false,
-            error: 'Project not found',
-            customers: [],
+        try {
+          await requireProjectInTenant({
+            ctx,
             projectId,
-            summary: { customersCount: 0, soldUnitsCount: 0 }
-          }, { status: 404 });
-        }
-
-        const projectData = projectDoc.data();
-        if (projectData?.companyId !== ctx.companyId) {
-          console.warn(`🚫 TENANT ISOLATION VIOLATION: Access denied`);
-
-          // Audit the access denial
-          await logAuditEvent(ctx, 'access_denied', projectId, 'project', {
-            metadata: {
-              path: `/api/projects/${projectId}/customers`,
-              reason: 'Tenant isolation violation - project companyId mismatch'
-            }
+            path: `/api/projects/${projectId}/customers`
           });
-
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Access denied';
+          const status = errorMessage.includes('not found') ? 404 : 403;
           return NextResponse.json({
             success: false,
-            error: 'Access denied - Project not found',
+            error: errorMessage,
             customers: [],
             projectId,
             summary: { customersCount: 0, soldUnitsCount: 0 }
-          }, { status: 403 });
+          }, { status });
         }
-
-        console.log(`✅ Tenant isolation check passed`);
 
         // ============================================================================
         // STEP 2: GET BUILDINGS FOR THIS PROJECT (Admin SDK + Tenant Filter)

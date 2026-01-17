@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, logAuditEvent } from '@/lib/auth';
+import { withAuth, logAuditEvent, requireProjectInTenant } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { adminDb } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { Pool } from 'pg';
 import { generateRequestId } from '@/services/enterprise-id.service';
 
@@ -100,7 +98,7 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ projectId: string }> }
 ) {
-  const handler = withAuth(
+  const handler = withAuth<ProjectCustomersResponse | { success: boolean; error: string }>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleGetCustomers(req, ctx, context.params);
     },
@@ -119,55 +117,32 @@ async function handleGetCustomers(
   // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   const requestId = generateRequestId();
 
-  console.log(`👥 API: V2 Customers request`);
-
   try {
     const { projectId } = await paramsPromise;
 
     // 🔒 Input Validation
     if (!projectId || projectId.trim() === '') {
-      console.error(`❌ [${requestId}] Invalid projectId: ${projectId}`);
       return NextResponse.json({
         success: false,
         error: 'Invalid project ID provided'
       }, { status: 400 });
     }
 
-    // 🔒 TENANT ISOLATION - Validate project ownership
-    console.log(`🔍 [${requestId}] Validating project ownership...`);
-    const projectDoc = await adminDb
-      .collection(COLLECTIONS.PROJECTS)
-      .doc(projectId)
-      .get();
-
-    if (!projectDoc.exists) {
-      console.warn(`🚫 [${requestId}] Project not found: ${projectId}`);
-      return NextResponse.json({
-        success: false,
-        error: 'Project not found'
-      }, { status: 404 });
-    }
-
-    const firestoreProject = projectDoc.data();
-    if (firestoreProject?.companyId !== ctx.companyId) {
-      console.warn(`🚫 TENANT ISOLATION: Access denied`);
-
-      // Audit the access denial
-      await logAuditEvent(ctx, 'access_denied', projectId, 'project', {
-        metadata: {
-          path: `/api/v2/projects/${projectId}/customers`,
-          reason: 'Tenant isolation violation - project companyId mismatch'
-        }
+    // 🔒 TENANT ISOLATION - Centralized validation
+    try {
+      await requireProjectInTenant({
+        ctx,
+        projectId,
+        path: `/api/v2/projects/${projectId}/customers`
       });
-
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Access denied';
+      const status = errorMessage.includes('not found') ? 404 : 403;
       return NextResponse.json({
         success: false,
-        error: 'Project not found or access denied'
-      }, { status: 403 });
+        error: errorMessage
+      }, { status });
     }
-
-    console.log(`✅ [${requestId}] Project ownership validated`);
-    console.log(`🏢 [${requestId}] Loading enterprise customers for project`);
 
     // ⚡ ENTERPRISE QUERY - Single JOIN query αντί 20+ Firebase calls
     const queryStartTime = Date.now();

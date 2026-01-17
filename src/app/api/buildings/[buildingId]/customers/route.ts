@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db as getAdminDb } from '@/lib/firebase-admin';
 import { getContactDisplayName, getPrimaryPhone, getPrimaryEmail, type Contact } from '@/types/contacts';
 import { COLLECTIONS, FIRESTORE_LIMITS } from '@/config/firestore-collections';
-import { withAuth } from '@/lib/auth';
+import { withAuth, requireBuildingInTenant, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 
 /** Customer info for building */
@@ -41,43 +41,32 @@ export async function GET(
         // 🔐 ADMIN SDK: Get server-side Firestore instance
         const adminDb = getAdminDb();
         if (!adminDb) {
-          console.error('❌ Firebase Admin not initialized');
           return NextResponse.json({
             success: true,
             customers: [],
             buildingId,
             summary: { customersCount: 0, soldUnitsCount: 0 },
-            warning: 'Database connection not available - Firebase Admin not initialized'
+            warning: 'Database connection not available'
           });
         }
 
-        // 🔒 TENANT ISOLATION: Get tenant context
-        const tenantCompanyId = ctx.companyId;
-        console.log(`🏠 API: Loading building customers for buildingId: ${buildingId} (tenant: ${tenantCompanyId})`);
-
-        // 🔒 TENANT ISOLATION: First verify building belongs to tenant's company
-        const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
-
-        if (!buildingDoc.exists) {
+        // 🔒 TENANT ISOLATION: Centralized validation
+        try {
+          await requireBuildingInTenant({
+            ctx,
+            buildingId,
+            path: `/api/buildings/${buildingId}/customers`
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Access denied';
+          const status = errorMessage.includes('not found') ? 404 : 403;
           return NextResponse.json({
             success: false,
             customers: [],
             buildingId,
             summary: { customersCount: 0, soldUnitsCount: 0 },
-            error: 'Building not found'
-          }, { status: 404 });
-        }
-
-        const buildingData = buildingDoc.data();
-        if (buildingData?.companyId !== tenantCompanyId) {
-          console.warn(`❌ Tenant isolation violation: User ${ctx.uid} (company: ${tenantCompanyId}) tried to access building ${buildingId} (company: ${buildingData?.companyId})`);
-          return NextResponse.json({
-            success: false,
-            customers: [],
-            buildingId,
-            summary: { customersCount: 0, soldUnitsCount: 0 },
-            error: 'Access denied'
-          }, { status: 403 });
+            error: errorMessage
+          }, { status });
         }
 
         // 🔒 TENANT ISOLATION: Query units with both companyId AND buildingId filters
