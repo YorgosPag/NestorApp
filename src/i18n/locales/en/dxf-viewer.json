@@ -67,11 +67,11 @@
   "panels": {
     "properties": {
       "title": "Properties",
-      "description": "{{selectedCount}} selected elements{{layerCount, plural, =0 {} other { | {{layerCount}} DXF layers}}"
+      "description": "{selectedCount} selected elements{{layerCount, plural, =0 {} other { | {layerCount} DXF layers}}"
     },
     "overlay": {
       "title": "Overlay",
-      "description": "{{regionCount, plural, =0 {} other {{{regionCount}} overlay regions}}"
+      "description": "{{regionCount, plural, =0 {} other {{regionCount} overlay regions}}"
     },
     "levels": {
       "title": "Levels",
@@ -121,8 +121,8 @@
     "loading": {
       "companies": "Loading companies...",
       "projects": "Loading projects...",
-      "error": "Loading error: {{error}}",
-      "projectsError": "Error loading projects: {{error}}",
+      "error": "Loading error: {error}",
+      "projectsError": "Error loading projects: {error}",
       "retry": "Retry"
     },
     "empty": {
@@ -132,13 +132,13 @@
       "units": "No units found for the selected building."
     },
     "counts": {
-      "buildings": "{{count}} buildings",
-      "floors": "{{count}} floors",
-      "floorOrdinal": "{{floor}}th floor",
-      "companiesFound": "Found {{count}} available companies",
-      "projectsFound": "Found {{count}} projects for the selected company",
-      "buildingsFound": "Found {{count}} buildings for the selected project",
-      "unitsFound": "Found {{count}} units for the selected building"
+      "buildings": "{count} buildings",
+      "floors": "{count} floors",
+      "floorOrdinal": "{floor}th floor",
+      "companiesFound": "Found {count} available companies",
+      "projectsFound": "Found {count} projects for the selected company",
+      "buildingsFound": "Found {count} buildings for the selected project",
+      "unitsFound": "Found {count} units for the selected building"
     },
     "floorplanTypes": {
       "project": "Project Floorplan",
@@ -162,8 +162,8 @@
       "ready": "Ready"
     },
     "replace": {
-      "title": "Replace {{typeLabel}}",
-      "existingWarning": "There is already a saved {{typeLabel}} for this company.",
+      "title": "Replace {typeLabel}",
+      "existingWarning": "There is already a saved {typeLabel} for this company.",
       "layerWarning": "The new floorplan you are loading may not match the existing layers that have been drawn on the previous floorplan.",
       "confirmQuestion": "Do you want to continue and replace the existing floorplan?",
       "cancel": "Cancel",
@@ -197,14 +197,14 @@
     "loading": "Loading...",
     "companies": {
       "loading": "Loading companies...",
-      "error": "Loading error: {{error}}",
+      "error": "Loading error: {error}",
       "retry": "Retry",
       "empty": "No companies found in the system.",
       "emptyHint": "Contact management to add companies."
     },
     "projects": {
       "loading": "Loading projects...",
-      "error": "Projects loading error: {{error}}",
+      "error": "Projects loading error: {error}",
       "empty": "No projects found for the selected company.",
       "emptyHint": "Select a different company or add new projects."
     }

@@ -19,6 +19,8 @@ import { Button } from '@/components/ui/button';
 import { Save, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 // 🏢 ENTERPRISE: Using centralized entity config for consistent icons/colors
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';

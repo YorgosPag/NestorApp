@@ -1,7 +1,7 @@
 {
   "header": {
     "title": "Contact Management",
-    "titleWithCount": "Contact Management ({{count}})",
+    "titleWithCount": "Contact Management ({count})",
     "subtitle": "Central directory of all your contacts",
     "searchPlaceholder": "Search contacts...",
     "newContact": "New Contact"
@@ -47,8 +47,8 @@
       "back": "Back",
       "backToList": "Back to contacts list",
       "filteringFor": "Filtering for:",
-      "contactsCount": "{{count}} contact",
-      "contactsCountPlural": "{{count}} contacts",
+      "contactsCount": "{count} contact",
+      "contactsCountPlural": "{count} contacts",
       "clear": "Clear",
       "showAll": "Show all contacts"
     }
@@ -58,8 +58,8 @@
     "entityName": "Contacts",
     "searchPlaceholder": "Search contacts...",
     "favorites": {
-      "added": "Added to favorites: {{name}}",
-      "removed": "Removed from favorites: {{name}}",
+      "added": "Added to favorites: {name}",
+      "removed": "Removed from favorites: {name}",
       "error": "Failed to update favorite"
     },
     "empty": {
@@ -68,7 +68,7 @@
     }
   },
   "properties": {
-    "title": "Customer Properties ({{count}})",
+    "title": "Customer Properties ({count})",
     "addProperty": "Add Property",
     "empty": "This customer has no registered properties.",
     "table": {
@@ -102,7 +102,7 @@
   "dialog": {
     "deleteConfirmation": {
       "title": "Delete Confirmation",
-      "message": "Are you sure you want to delete {{count}} contact(s)?",
+      "message": "Are you sure you want to delete {count} contact(s)?",
       "warning": "This action cannot be undone."
     },
     "cancel": "Cancel",

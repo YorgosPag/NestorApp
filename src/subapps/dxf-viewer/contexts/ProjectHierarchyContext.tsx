@@ -5,8 +5,8 @@ const DEBUG_PROJECT_HIERARCHY = false;
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-// Import existing services
-import { getAllActiveCompanies } from '../../../services/companies.service';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { CompanyContact } from '../../../types/contacts';
 
 // Mock function για getBuildingsByProjectId (προσωρινά)
@@ -124,30 +124,24 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
     setHierarchy(prev => ({ ...prev, loading: true, error: null }));
     
     try {
-      console.log('🔄 [ProjectHierarchy] Starting to load companies via API...');
+      console.log('🔄 [ProjectHierarchy] Starting to load companies via Enterprise API Client...');
 
-      // Use API endpoint instead of direct service call to debug server issues
-      const response = await fetch('/api/companies');
-
-      // Enhanced error handling - check if response is HTML (500 error page)
-      const contentType = response.headers.get('content-type');
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Companies API Error (${response.status}): ${errorText.substring(0, 200)}...`);
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      // apiClient automatically:
+      // - Adds Firebase ID token to Authorization header
+      // - Handles token refresh
+      // - Provides retry logic for server errors
+      // - Normalizes error responses
+      interface CompaniesApiResponse {
+        companies: CompanyContact[];
+        count: number;
+        cached: boolean;
       }
 
-      if (!contentType || !contentType.includes('application/json')) {
-        const responseText = await response.text();
-        throw new Error(`Expected JSON but got: ${contentType}. Response: ${responseText.substring(0, 200)}...`);
-      }
+      const result = await apiClient.get<CompaniesApiResponse>('/api/companies');
 
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to load companies from API');
-      }
-
-      const companies = result.data?.companies || [];
+      // apiClient.get() unwraps the canonical { success: true, data: T } response automatically
+      const companies = result?.companies || [];
       console.log('✅ [ProjectHierarchy] Companies loaded successfully:', companies.length);
 
       // Remove duplicates by id AND by companyName (multiple deduplication strategies)
@@ -225,36 +219,27 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
 
   const loadProjectsForCompany = async (companyId: string) => {
     setHierarchy(prev => ({ ...prev, loading: true, error: null }));
-    
-    try {
 
+    try {
       // Find the company details for better logging
       const company = hierarchy.companies.find(c => c.id === companyId);
+      console.log(`🔄 [ProjectHierarchy] Loading projects for company: ${company?.companyName || companyId}`);
 
-      // Load projects using API endpoint instead of server action
-
-      const response = await fetch(`/api/projects/by-company/${companyId}`);
-
-      // Enhanced error handling - check if response is HTML (404 page)
-      const contentType = response.headers.get('content-type');
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API Error (${response.status}): ${errorText.substring(0, 200)}`);
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      interface ProjectsApiResponse {
+        projects: Array<{
+          id: string | number;
+          name: string;
+          company?: string;
+          buildings?: Array<{ id: string; name: string; floors?: unknown[] }>;
+        }>;
+        count: number;
       }
 
-      if (!contentType || !contentType.includes('application/json')) {
-        const responseText = await response.text();
-        throw new Error(`Expected JSON but got: ${contentType}. Response: ${responseText.substring(0, 200)}`);
-      }
+      const result = await apiClient.get<ProjectsApiResponse>(`/api/projects/by-company/${companyId}`);
 
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to load projects from API');
-      }
-
-      // Fix: API επιστρέφει data στο result.data.projects, όχι result.projects
-      const projectsData = result.data?.projects || [];
+      // apiClient.get() unwraps the canonical response automatically
+      const projectsData = result?.projects || [];
 
       // Transform to our structure with buildings data
       const projects: Project[] = projectsData.map((project: { id: string | number; name: string; company?: string; buildings?: Array<{ id: string; name: string; floors?: unknown[] }> }) => {

@@ -6,14 +6,14 @@
     "copied": "Αντιγράφηκε!",
     "residentialBadge": "Οικιστικό",
     "saving": "Αποθήκευση...",
-    "savedAt": "Αποθηκεύτηκε {{time}}",
+    "savedAt": "Αποθηκεύτηκε {time}",
     "edit": "Επεξεργασία",
     "cancel": "Ακύρωση",
     "save": "Αποθήκευση"
   },
   "header": {
     "title": "Διαχείριση Έργων",
-    "titleWithCount": "Διαχείριση Έργων ({{count}})",
+    "titleWithCount": "Διαχείριση Έργων ({count})",
     "subtitle": "Παρακολούθηση και διαχείριση έργων",
     "searchPlaceholder": "Αναζήτηση έργων...",
     "newProject": "Νέο Έργο"
@@ -58,7 +58,7 @@
     },
     "selection": {
       "selected": "επιλεγμένα έργα",
-      "deleteConfirm": "Είστε σίγουροι ότι θέλετε να διαγράψετε {{count}} έργο/α;"
+      "deleteConfirm": "Είστε σίγουροι ότι θέλετε να διαγράψετε {count} έργο/α;"
     },
     "shortcuts": {
       "newProject": "Δημιουργία νέου έργου (Ctrl+N)",

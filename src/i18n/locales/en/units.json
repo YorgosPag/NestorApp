@@ -78,7 +78,7 @@
   "dialog": {
     "deleteConfirmation": {
       "title": "Delete Confirmation",
-      "message": "Are you sure you want to delete {{count}} unit(s)?",
+      "message": "Are you sure you want to delete {count} unit(s)?",
       "warning": "This action cannot be undone."
     },
     "cancel": "Cancel",
@@ -87,7 +87,7 @@
   "list": {
     "ariaLabel": "Units List",
     "noResults": "No units found",
-    "noResultsForTerm": "for the term \"{{term}}\""
+    "noResultsForTerm": "for the term \"{term}\""
   },
   "customerTab": {
     "customerInfo": "Customer Information",
@@ -108,10 +108,10 @@
     "call": "Call",
     "noUnitSelected": "No unit selected",
     "availableUnit": "Available Unit",
-    "unitAvailable": "Unit \"{{name}}\" is available",
+    "unitAvailable": "Unit \"{name}\" is available",
     "scheduleViewing": "Schedule Viewing",
     "soldWithoutCustomer": "Sold Unit without Customer",
-    "soldWithoutCustomerWarning": "Unit has status \"{{status}}\" but no linked customer. This may indicate a database issue or that customer linking is incomplete.",
+    "soldWithoutCustomerWarning": "Unit has status \"{status}\" but no linked customer. This may indicate a database issue or that customer linking is incomplete.",
     "unitStatus": "Unit Status",
     "transactionDate": "Transaction Date",
     "unknownDate": "Unknown",

@@ -55,9 +55,9 @@
     "tomorrow": "[Αύριο]",
     "thisWeek": "[Αυτή την εβδομάδα]",
     "nextWeek": "[Επόμενη εβδομάδα]",
-    "daysAgo": "[πριν {{count}} ημέρες]",
-    "hoursAgo": "[πριν {{count}} ώρες]",
-    "minutesAgo": "[πριν {{count}} λεπτά]",
+    "daysAgo": "[πριν {count} ημέρες]",
+    "hoursAgo": "[πριν {count} ώρες]",
+    "minutesAgo": "[πριν {count} λεπτά]",
     "justNow": "[Μόλις τώρα]"
   },
   "form": {
@@ -97,9 +97,9 @@
   },
   "notifications": {
     "reminder": "[Υπενθύμιση εργασίας]",
-    "overdue": "[Η εργασία '{{title}}' είναι εκπρόθεσμη]",
-    "assigned": "[Σας ανατέθηκε νέα εργασία: {{title}}]",
-    "completed": "[Η εργασία '{{title}}' ολοκληρώθηκε]",
-    "dueSoon": "[Η εργασία '{{title}}' λήγει σε {{time}}]"
+    "overdue": "[Η εργασία '{title}' είναι εκπρόθεσμη]",
+    "assigned": "[Σας ανατέθηκε νέα εργασία: {title}]",
+    "completed": "[Η εργασία '{title}' ολοκληρώθηκε]",
+    "dueSoon": "[Η εργασία '{title}' λήγει σε {time}]"
   }
 }

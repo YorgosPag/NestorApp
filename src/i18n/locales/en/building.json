@@ -1,15 +1,15 @@
 {
   "header": {
     "title": "Building Management",
-    "titleWithCount": "Building Management ({{count}})",
+    "titleWithCount": "Building Management ({count})",
     "subtitle": "Manage and track building projects",
     "searchPlaceholder": "Search buildings...",
     "newBuilding": "New Building"
   },
   "floors": {
     "ground": "Ground Floor",
-    "basement": "Basement {{number}}",
-    "floor": "{{number}}th Floor",
+    "basement": "Basement {number}",
+    "floor": "{number}th Floor",
     "firstFloor": "1st Floor",
     "secondFloor": "2nd Floor",
     "thirdFloor": "3rd Floor"
@@ -30,7 +30,7 @@
     "planning": "Planning"
   },
   "accessibility": {
-    "buildingCard": "Building {{name}}"
+    "buildingCard": "Building {name}"
   },
   "units": {
     "pricePerSqm": "€/sq.m",
@@ -49,7 +49,7 @@
     "to": "To",
     "minimum": "Minimum",
     "maximum": "Maximum",
-    "selectedCount": "{{count}} selected",
+    "selectedCount": "{count} selected",
     "all": "All",
     "allTypes": "All types",
     "allStatuses": "All statuses",
@@ -252,7 +252,7 @@
     "tooltips": {
       "new": "Add new building (Ctrl+N)",
       "edit": "Edit selected building (Ctrl+E)",
-      "deleteCount": "Delete {{count}} building(s)",
+      "deleteCount": "Delete {count} building(s)",
       "export": "Export data",
       "import": "Import data",
       "refresh": "Refresh data (F5)",
@@ -278,7 +278,7 @@
       "bySize": "By size"
     },
     "selection": {
-      "selected": "{{count}} buildings selected"
+      "selected": "{count} buildings selected"
     },
     "advanced": {
       "copy": "Copy Selected",
@@ -288,8 +288,8 @@
       "viewOnMap": "View on Map",
       "createReport": "Create Report",
       "scheduleVisit": "Schedule Visit",
-      "selectedCount": "{{count}} selected",
-      "activeFilters": "{{count}} filters active",
+      "selectedCount": "{count} selected",
+      "activeFilters": "{count} filters active",
       "synced": "Synced"
     },
     "export": {
@@ -325,9 +325,9 @@
     },
     "timeline": {
       "delivery": "Delivery:",
-      "daysDelay": "{{days}} days delay",
+      "daysDelay": "{days} days delay",
       "deliveryToday": "Delivery today!",
-      "daysRemaining": "{{days}} days remaining"
+      "daysRemaining": "{days} days remaining"
     },
     "progress": {
       "label": "Building Progress"
@@ -350,7 +350,7 @@
     "list": {
       "ariaLabel": "Storages List",
       "noResults": "No storages found",
-      "noResultsForTerm": "for the term \"{{term}}\""
+      "noResultsForTerm": "for the term \"{term}\""
     },
     "accessibility": {
       "toggleFilters": "Toggle filters"
@@ -366,7 +366,7 @@
     "list": {
       "ariaLabel": "Parking Spaces List",
       "noResults": "No parking spaces found",
-      "noResultsForTerm": "for the term \"{{term}}\""
+      "noResultsForTerm": "for the term \"{term}\""
     },
     "accessibility": {
       "toggleFilters": "Toggle filters"
@@ -464,7 +464,7 @@
   },
   "details": {
     "viewBuilding": "View Building",
-    "percentComplete": "{{percent}}% complete"
+    "percentComplete": "{percent}% complete"
   },
   "pages": {
     "buildings": {
@@ -564,7 +564,7 @@
         "exportData": "Export Data",
         "importData": "Import Data",
         "help": "Help",
-        "selectedCount": "{{count}} selected"
+        "selectedCount": "{count} selected"
       }
     }
   },
@@ -633,16 +633,16 @@
         "buildingTitle": "Building Title *",
         "description": "Building Description",
         "descriptionPlaceholder": "Describe the building...",
-        "charactersCount": "{{count}}/500 characters"
+        "charactersCount": "{count}/500 characters"
       },
       "technicalSpecs": {
         "title": "Technical Specifications",
         "totalArea": "Total Area (m²) *",
         "builtArea": "Built Area (m²) *",
-        "buildingRatio": "Building ratio: {{ratio}}%",
+        "buildingRatio": "Building ratio: {ratio}%",
         "numberOfFloors": "Number of Floors *",
         "numberOfUnits": "Number of Units *",
-        "unitsPerFloor": "~{{count}} units/floor",
+        "unitsPerFloor": "~{count} units/floor",
         "autoCalculations": "Automatic Calculations",
         "costPerSqm": "Cost/m²:",
         "buildingRatioShort": "Building Ratio:",
@@ -668,12 +668,12 @@
         "orDragAndDrop": "or drag and drop here",
         "fileTypes": "PNG, JPG, PDF, DOC, XLS up to 10MB",
         "existingFiles": "Existing Files",
-        "uploadedOn": "Uploaded {{date}}",
+        "uploadedOn": "Uploaded {date}",
         "uploadedToday": "Uploaded today",
         "view": "View",
         "download": "Download",
         "uploadInProgress": "Upload in progress...",
-        "filesCompleted": "{{completed}} of {{total}} files completed"
+        "filesCompleted": "{completed} of {total} files completed"
       },
       "location": {
         "title": "Location Details",
@@ -686,12 +686,12 @@
         "centralCommercial": "Central - Commercial",
         "buildingRatio": "Building ratio:",
         "maxHeight": "Max height:",
-        "floors": "{{count}} floors"
+        "floors": "{count} floors"
       },
       "progress": {
         "title": "Project Progress",
         "completionPercentage": "Completion Percentage",
-        "completed": "{{percent}}% Completed",
+        "completed": "{percent}% Completed",
         "phases": {
           "foundations": "Foundations",
           "construction": "Construction",
@@ -705,7 +705,7 @@
       "addFloorplan": "Add Floor Plan",
       "editFloorplan": "Edit Floor Plan",
       "loading": "Loading floor plan...",
-      "pdfAlt": "PDF Floor Plan: {{fileName}}",
+      "pdfAlt": "PDF Floor Plan: {fileName}",
       "noFloorplan": {
         "title": "No floor plan available",
         "description": "Click \"Add Floor Plan\" to upload a floor plan"
@@ -715,7 +715,7 @@
       "header": {
         "title": "Project Timeline",
         "subtitle": "Progress tracking and milestones",
-        "completedCount": "{{completed}} / {{total}} completed"
+        "completedCount": "{completed} / {total} completed"
       },
       "overallProgress": {
         "title": "Overall Progress",
@@ -731,7 +731,7 @@
       "milestone": {
         "progressLabel": "Milestone progress",
         "nextSteps": "Next steps:",
-        "completedAt": "Completed on {{date}}"
+        "completedAt": "Completed on {date}"
       },
       "status": {
         "completed": "Completed",
@@ -745,7 +745,7 @@
         "originalSchedule": "Original schedule",
         "currentForecast": "Current forecast",
         "delay": "Delay",
-        "days": "+{{days}} days",
+        "days": "+{days} days",
         "tip": "Tip:",
         "tipContent": "Speeding up M&E works could reduce delay to 2-3 days."
       },
@@ -753,7 +753,7 @@
         "title": "Critical Points",
         "mecInstallations": "M&E Installations",
         "affectsDelivery": "Affects delivery",
-        "daysDelay": "{{days}} days delay",
+        "daysDelay": "{days} days delay",
         "finalWorks": "Final Works",
         "dependsOnPrevious": "Depends on previous",
         "waiting": "Waiting"
@@ -914,7 +914,7 @@
     "empty": {
       "message": "No registered customers for this building."
     },
-    "description": "List of customers who have purchased units in this building ({{count}} customers).",
+    "description": "List of customers who have purchased units in this building ({count} customers).",
     "table": {
       "name": "Name",
       "phone": "Phone",
@@ -963,8 +963,8 @@
     "addVideo": "Add Video"
   },
   "placeholder": {
-    "comingSoon": "This section will be developed soon. It will contain all necessary functionality for managing {{title}}.",
-    "add": "Add {{title}}"
+    "comingSoon": "This section will be developed soon. It will contain all necessary functionality for managing {title}.",
+    "add": "Add {title}"
   },
   "emptyState": {
     "selectBuilding": "Select a building",
@@ -992,15 +992,15 @@
     "delete": "Delete"
   },
   "storageListHeader": {
-    "results": "{{count}} results",
-    "selected": "{{count}} selected",
+    "results": "{count} results",
+    "selected": "{count} selected",
     "deleteSelected": "Delete selected",
     "cardsView": "Cards",
     "tableView": "Table"
   },
   "storageTabHeader": {
     "title": "Storages & Parking",
-    "description": "Manage storages and parking spaces for building {{buildingName}}",
+    "description": "Manage storages and parking spaces for building {buildingName}",
     "listView": "List",
     "mapView": "Map",
     "newStorage": "New Storage",

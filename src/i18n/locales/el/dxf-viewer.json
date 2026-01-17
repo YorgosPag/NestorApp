@@ -1,6 +1,6 @@
 {
   "layers": {
-    "title": "DXF Layers ({{count}})",
+    "title": "DXF Layers ({count})",
     "clickToSelect": "Κλικ για επιλογή",
     "delete": {
       "confirm": "{count, plural, =0 {Διαγραφή layer \"{name}\"} one {Διαγραφή # στοιχείου από το layer \"{name}\"} other {Διαγραφή # στοιχείων από το layer \"{name}\"}}",
@@ -67,11 +67,11 @@
   "panels": {
     "properties": {
       "title": "Ιδιότητες",
-      "description": "{{selectedCount}} επιλεγμένα στοιχεία{{layerCount, plural, =0 {} other { | {{layerCount}} DXF layers}}"
+      "description": "{selectedCount} επιλεγμένα στοιχεία{{layerCount, plural, =0 {} other { | {layerCount} DXF layers}}"
     },
     "overlay": {
       "title": "Overlay",
-      "description": "{{regionCount, plural, =0 {} other {{{regionCount}} overlay regions}}"
+      "description": "{{regionCount, plural, =0 {} other {{regionCount} overlay regions}}"
     },
     "levels": {
       "title": "Επίπεδα",
@@ -137,8 +137,8 @@
     "loading": {
       "companies": "Φόρτωση εταιρειών...",
       "projects": "Φόρτωση έργων...",
-      "error": "Σφάλμα φόρτωσης: {{error}}",
-      "projectsError": "Σφάλμα φόρτωσης έργων: {{error}}",
+      "error": "Σφάλμα φόρτωσης: {error}",
+      "projectsError": "Σφάλμα φόρτωσης έργων: {error}",
       "retry": "Ξαναδοκιμή"
     },
     "empty": {
@@ -148,13 +148,13 @@
       "units": "Δεν βρέθηκαν μονάδες για το επιλεγμένο κτίριο."
     },
     "counts": {
-      "buildings": "{{count}} κτίρια",
-      "floors": "{{count}} όροφοι",
-      "floorOrdinal": "{{floor}}ος όροφος",
-      "companiesFound": "Βρέθηκαν {{count}} διαθέσιμες εταιρείες",
-      "projectsFound": "Βρέθηκαν {{count}} έργα για την επιλεγμένη εταιρεία",
-      "buildingsFound": "Βρέθηκαν {{count}} κτίρια για το επιλεγμένο έργο",
-      "unitsFound": "Βρέθηκαν {{count}} μονάδες για το επιλεγμένο κτίριο"
+      "buildings": "{count} κτίρια",
+      "floors": "{count} όροφοι",
+      "floorOrdinal": "{floor}ος όροφος",
+      "companiesFound": "Βρέθηκαν {count} διαθέσιμες εταιρείες",
+      "projectsFound": "Βρέθηκαν {count} έργα για την επιλεγμένη εταιρεία",
+      "buildingsFound": "Βρέθηκαν {count} κτίρια για το επιλεγμένο έργο",
+      "unitsFound": "Βρέθηκαν {count} μονάδες για το επιλεγμένο κτίριο"
     },
     "floorplanTypes": {
       "project": "Κάτοψη Έργου",
@@ -178,8 +178,8 @@
       "ready": "Έτοιμο"
     },
     "replace": {
-      "title": "Αντικατάσταση {{typeLabel}}",
-      "existingWarning": "Υπάρχει ήδη αποθηκευμένη {{typeLabel}} για αυτή την εταιρεία.",
+      "title": "Αντικατάσταση {typeLabel}",
+      "existingWarning": "Υπάρχει ήδη αποθηκευμένη {typeLabel} για αυτή την εταιρεία.",
       "layerWarning": "Η νέα κάτοψη που θα φορτώσετε ενδέχεται να μην ταιριάζει με τα υπάρχοντα layers που έχουν σχεδιαστεί πάνω στην προηγούμενη κάτοψη.",
       "confirmQuestion": "Θέλετε να συνεχίσετε και να αντικαταστήσετε την υπάρχουσα κάτοψη;",
       "cancel": "Ακύρωση",
@@ -213,14 +213,14 @@
     "loading": "Φόρτωση...",
     "companies": {
       "loading": "Φόρτωση εταιρειών...",
-      "error": "Σφάλμα φόρτωσης: {{error}}",
+      "error": "Σφάλμα φόρτωσης: {error}",
       "retry": "Ξαναδοκιμή",
       "empty": "Δεν βρέθηκαν εταιρείες στο σύστημα.",
       "emptyHint": "Επικοινωνήστε με τη διαχείριση για προσθήκη εταιρειών."
     },
     "projects": {
       "loading": "Φόρτωση έργων...",
-      "error": "Σφάλμα φόρτωσης έργων: {{error}}",
+      "error": "Σφάλμα φόρτωσης έργων: {error}",
       "empty": "Δεν βρέθηκαν έργα για την επιλεγμένη εταιρεία.",
       "emptyHint": "Επιλέξτε διαφορετική εταιρεία ή προσθέστε νέα έργα."
     }

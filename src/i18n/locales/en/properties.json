@@ -35,7 +35,7 @@
   "dialog": {
     "deleteConfirmation": {
       "title": "Confirm Deletion",
-      "message": "Are you sure you want to delete {{count}} building(s)?",
+      "message": "Are you sure you want to delete {count} building(s)?",
       "warning": "This action cannot be undone."
     },
     "cancel": "Cancel",
@@ -149,7 +149,7 @@
     },
     "header": {
       "title": "Available Properties",
-      "found": "Found {{count}} properties"
+      "found": "Found {count} properties"
     },
     "search": {
       "placeholder": "Search properties..."

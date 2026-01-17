@@ -66,8 +66,8 @@
   "share": {
     "share": "Κοινοποίηση",
     "copied": "Αντιγράφηκε!",
-    "shareError": "Αποτυχία κοινοποίησης μέσω {{platform}}: {{error}}",
-    "viewMore": "Δείτε περισσότερα στο {{company}}!",
+    "shareError": "Αποτυχία κοινοποίησης μέσω {platform}: {error}",
+    "viewMore": "Δείτε περισσότερα στο {company}!",
     "sqm": "τ.μ."
   },
   "loading": {
@@ -258,7 +258,7 @@
     "clickOrDrag": "Κλικ ή σύρετε αρχείο",
     "clickOrDragPhoto": "Κάντε κλικ ή σύρετε φωτογραφία εδώ",
     "clickOrDragLogo": "Κάντε κλικ ή σύρετε λογότυπο εδώ",
-    "supportedFormats": "Υποστηρίζονται JPG, PNG (μέγιστο {{size}}MB)",
+    "supportedFormats": "Υποστηρίζονται JPG, PNG (μέγιστο {size}MB)",
     "phases": {
       "uploading": "Ανέβασμα...",
       "processing": "Επεξεργασία...",
@@ -308,8 +308,8 @@
     }
   },
   "sharing": {
-    "shareOn": "Κοινοποίηση σε {{platform}}",
-    "iconAlt": "Εικονίδιο {{platform}}",
+    "shareOn": "Κοινοποίηση σε {platform}",
+    "iconAlt": "Εικονίδιο {platform}",
     "selectPlatform": "Επιλογή κοινωνικής πλατφόρμας για κοινοποίηση",
     "noPlatforms": "Δεν υπάρχουν Πλατφόρμες",
     "noPlatformsMessage": "Δεν υπάρχουν διαθέσιμες πλατφόρμες κοινοποίησης",
@@ -343,18 +343,18 @@
   "recipients": {
     "managementLabel": "Διαχείριση Παραληπτών Email",
     "emailRecipients": "Παραλήπτες Email",
-    "recipientLabel": "Email Παραλήπτης {{number}}",
+    "recipientLabel": "Email Παραλήπτης {number}",
     "validationStatus": "Κατάσταση Επικύρωσης",
     "add": "Προσθήκη",
     "addEmail": "Προσθήκη Email",
-    "validFromTotal": "{{valid}} έγκυρα από {{total}} συνολικά",
-    "invalidCount": "({{count}} μη έγκυρα)",
-    "available": "{{count}} διαθέσιμα",
+    "validFromTotal": "{valid} έγκυρα από {total} συνολικά",
+    "invalidCount": "({count} μη έγκυρα)",
+    "available": "{count} διαθέσιμα",
     "helperText": "Πατήστε Enter για προσθήκη νέου email • Backspace σε άδειο πεδίο για διαγραφή",
-    "recipientsCount": "Παραλήπτες ({{count}})",
+    "recipientsCount": "Παραλήπτες ({count})",
     "valid": "έγκυρα",
     "compactLabel": "Compact Recipients Management",
-    "compactEmailLabel": "Compact Email {{number}}",
+    "compactEmailLabel": "Compact Email {number}",
     "compactInputsLabel": "Compact Email Inputs"
   },
   "twoFactor": {

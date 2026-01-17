@@ -40,8 +40,8 @@
       "joinedDate": "Joined",
       "today": "Today",
       "yesterday": "Yesterday",
-      "daysAgo": "{{count}} days ago",
-      "weeksAgo": "{{count}} weeks ago",
+      "daysAgo": "{count} days ago",
+      "weeksAgo": "{count} weeks ago",
       "never": "Never",
       "notSet": "Not set"
     },

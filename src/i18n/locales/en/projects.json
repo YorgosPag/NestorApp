@@ -6,14 +6,14 @@
     "copied": "Copied!",
     "residentialBadge": "Residential",
     "saving": "Saving...",
-    "savedAt": "Saved at {{time}}",
+    "savedAt": "Saved at {time}",
     "edit": "Edit",
     "cancel": "Cancel",
     "save": "Save"
   },
   "header": {
     "title": "Project Management",
-    "titleWithCount": "Project Management ({{count}})",
+    "titleWithCount": "Project Management ({count})",
     "subtitle": "Track and manage projects",
     "searchPlaceholder": "Search projects...",
     "newProject": "New Project"
@@ -58,7 +58,7 @@
     },
     "selection": {
       "selected": "selected projects",
-      "deleteConfirm": "Are you sure you want to delete {{count}} project(s)?"
+      "deleteConfirm": "Are you sure you want to delete {count} project(s)?"
     },
     "shortcuts": {
       "newProject": "Create new project (Ctrl+N)",

@@ -11,7 +11,7 @@
     "unknownDate": "Άγνωστη ημερομηνία",
     "deleteDialog": {
       "title": "Επιβεβαίωση Διαγραφής",
-      "message": "Είστε σίγουροι ότι θέλετε να διαγράψετε την ευκαιρία \"{{name}}\";",
+      "message": "Είστε σίγουροι ότι θέλετε να διαγράψετε την ευκαιρία \"{name}\";",
       "warning": "Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.",
       "cancel": "Ακύρωση",
       "confirm": "Διαγραφή"
@@ -95,12 +95,12 @@
       "delete": "Διαγραφή"
     },
     "messages": {
-      "completed": "✅ Η εργασία \"{{title}}\" ολοκληρώθηκε!",
-      "deleted": "✅ Η εργασία \"{{title}}\" διαγράφηκε!",
+      "completed": "✅ Η εργασία \"{title}\" ολοκληρώθηκε!",
+      "deleted": "✅ Η εργασία \"{title}\" διαγράφηκε!",
       "completeError": "❌ Σφάλμα κατά την ολοκλήρωση εργασίας",
       "deleteError": "❌ Σφάλμα κατά τη διαγραφή εργασίας",
       "loadError": "Σφάλμα κατά τη φόρτωση εργασιών",
-      "deleteConfirm": "Είστε σίγουροι ότι θέλετε να διαγράψετε την εργασία \"{{title}}\"?"
+      "deleteConfirm": "Είστε σίγουροι ότι θέλετε να διαγράψετε την εργασία \"{title}\"?"
     }
   },
   "inbox": {
@@ -109,8 +109,8 @@
     "selectContactTitle": "Επιλογή Επαφής",
     "loading": "Φόρτωση μηνυμάτων...",
     "loadingConversations": "Φόρτωση συνομιλιών...",
-    "messagesCount": "{{count}} μηνύματα",
-    "conversationsCount": "{{count}} συνομιλίες",
+    "messagesCount": "{count} μηνύματα",
+    "conversationsCount": "{count} συνομιλίες",
     "noMessages": "Δεν βρέθηκαν μηνύματα",
     "noConversations": "Δεν βρέθηκαν συνομιλίες",
     "search": "Αναζήτηση μηνυμάτων...",
@@ -126,13 +126,13 @@
     },
     "time": {
       "now": "Τώρα",
-      "hoursAgo": "{{hours}}ω",
+      "hoursAgo": "{hours}ω",
       "yesterday": "Χθες"
     },
     "message": {
       "from": "Από",
       "to": "Προς",
-      "attachments": "{{count}} συνημμένα"
+      "attachments": "{count} συνημμένα"
     },
     "tabs": {
       "conversations": "Συνομιλίες",
@@ -150,7 +150,7 @@
       "noMessages": "Δεν υπάρχουν μηνύματα σε αυτή τη συνομιλία",
       "selectConversation": "Επιλέξτε μια συνομιλία για να δείτε τα μηνύματα",
       "participants": "Συμμετέχοντες",
-      "unread": "{{count}} αδιάβαστα"
+      "unread": "{count} αδιάβαστα"
     },
     "composer": {
       "placeholder": "Γράψτε το μήνυμά σας...",
@@ -168,7 +168,7 @@
     },
     "pagination": {
       "loadMore": "Φόρτωση περισσότερων",
-      "page": "Σελίδα {{current}} από {{total}}"
+      "page": "Σελίδα {current} από {total}"
     },
     "errors": {
       "loadFailed": "Αποτυχία φόρτωσης",
@@ -191,13 +191,13 @@
       "lastUpdated": "Τελευταία Ενημέρωση",
       "participants": "Συμμετέχοντες",
       "conversationOpened": "Έναρξη Συνομιλίας",
-      "conversationOpenedDesc": "Ξεκίνησε νέα συνομιλία μέσω {{channel}}",
+      "conversationOpenedDesc": "Ξεκίνησε νέα συνομιλία μέσω {channel}",
       "conversationClosed": "Κλείσιμο Συνομιλίας",
       "conversationClosedDesc": "Η συνομιλία έκλεισε",
       "messageReceived": "Λήψη Μηνύματος",
       "messageSent": "Αποστολή Μηνύματος",
       "agentAssigned": "Ανάθεση Πράκτορα",
-      "agentAssignedDesc": "Η συνομιλία ανατέθηκε στον {{agent}}",
+      "agentAssignedDesc": "Η συνομιλία ανατέθηκε στον {agent}",
       "system": "Σύστημα",
       "unknown": "Άγνωστος",
       "statusCompleted": "Ολοκληρώθηκε",

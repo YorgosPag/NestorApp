@@ -66,8 +66,8 @@
   "share": {
     "share": "Share",
     "copied": "Copied!",
-    "shareError": "Failed to share via {{platform}}: {{error}}",
-    "viewMore": "See more at {{company}}!",
+    "shareError": "Failed to share via {platform}: {error}",
+    "viewMore": "See more at {company}!",
     "sqm": "sq.m"
   },
   "loading": {
@@ -258,7 +258,7 @@
     "clickOrDrag": "Click or drag file",
     "clickOrDragPhoto": "Click or drag photo here",
     "clickOrDragLogo": "Click or drag logo here",
-    "supportedFormats": "Supported: JPG, PNG (max {{size}}MB)",
+    "supportedFormats": "Supported: JPG, PNG (max {size}MB)",
     "phases": {
       "uploading": "Uploading...",
       "processing": "Processing...",
@@ -308,8 +308,8 @@
     }
   },
   "sharing": {
-    "shareOn": "Share on {{platform}}",
-    "iconAlt": "{{platform}} icon",
+    "shareOn": "Share on {platform}",
+    "iconAlt": "{platform} icon",
     "selectPlatform": "Select social platform for sharing",
     "noPlatforms": "No Platforms",
     "noPlatformsMessage": "No sharing platforms available",
@@ -343,18 +343,18 @@
   "recipients": {
     "managementLabel": "Email Recipients Management",
     "emailRecipients": "Email Recipients",
-    "recipientLabel": "Email Recipient {{number}}",
+    "recipientLabel": "Email Recipient {number}",
     "validationStatus": "Validation Status",
     "add": "Add",
     "addEmail": "Add Email",
-    "validFromTotal": "{{valid}} valid from {{total}} total",
-    "invalidCount": "({{count}} invalid)",
-    "available": "{{count}} available",
+    "validFromTotal": "{valid} valid from {total} total",
+    "invalidCount": "({count} invalid)",
+    "available": "{count} available",
     "helperText": "Press Enter to add new email • Backspace on empty field to delete",
-    "recipientsCount": "Recipients ({{count}})",
+    "recipientsCount": "Recipients ({count})",
     "valid": "valid",
     "compactLabel": "Compact Recipients Management",
-    "compactEmailLabel": "Compact Email {{number}}",
+    "compactEmailLabel": "Compact Email {number}",
     "compactInputsLabel": "Compact Email Inputs"
   },
   "twoFactor": {

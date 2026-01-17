@@ -154,7 +154,7 @@
     "parking": {
       "listLabel": "Parking Spaces List",
       "empty": "No parking spaces available",
-      "spotTitle": "Spot {{number}}",
+      "spotTitle": "Spot {number}",
       "defaultSubtitle": "Parking",
       "openTooltip": "Open in Parking"
     }

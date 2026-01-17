@@ -1,7 +1,7 @@
 {
   "header": {
     "title": "Διαχείριση Επαφών",
-    "titleWithCount": "Διαχείριση Επαφών ({{count}})",
+    "titleWithCount": "Διαχείριση Επαφών ({count})",
     "subtitle": "Κεντρικό ευρετήριο όλων των επαφών σας",
     "searchPlaceholder": "Αναζήτηση επαφών...",
     "newContact": "Νέα Επαφή"
@@ -47,8 +47,8 @@
       "back": "Επιστροφή",
       "backToList": "Επιστροφή στη λίστα επαφών",
       "filteringFor": "Φιλτράρισμα για:",
-      "contactsCount": "{{count}} επαφή",
-      "contactsCountPlural": "{{count}} επαφές",
+      "contactsCount": "{count} επαφή",
+      "contactsCountPlural": "{count} επαφές",
       "clear": "Καθάρισμα",
       "showAll": "Εμφάνιση όλων των επαφών"
     }
@@ -58,8 +58,8 @@
     "entityName": "Επαφές",
     "searchPlaceholder": "Αναζήτηση επαφών...",
     "favorites": {
-      "added": "Προστέθηκε στα αγαπημένα: {{name}}",
-      "removed": "Αφαιρέθηκε από τα αγαπημένα: {{name}}",
+      "added": "Προστέθηκε στα αγαπημένα: {name}",
+      "removed": "Αφαιρέθηκε από τα αγαπημένα: {name}",
       "error": "Αποτυχία ενημέρωσης αγαπημένου"
     },
     "empty": {
@@ -68,7 +68,7 @@
     }
   },
   "properties": {
-    "title": "Ακίνητα Πελάτη ({{count}})",
+    "title": "Ακίνητα Πελάτη ({count})",
     "addProperty": "Προσθήκη Ακινήτου",
     "empty": "Αυτός ο πελάτης δεν έχει καταχωρημένα ακίνητα.",
     "table": {
@@ -102,7 +102,7 @@
   "dialog": {
     "deleteConfirmation": {
       "title": "Επιβεβαίωση Διαγραφής",
-      "message": "Είστε σίγουροι ότι θέλετε να διαγράψετε {{count}} επαφή/ές;",
+      "message": "Είστε σίγουροι ότι θέλετε να διαγράψετε {count} επαφή/ές;",
       "warning": "Αυτή η ενέργεια δεν μπορεί να αναιρεθεί."
     },
     "cancel": "Ακύρωση",

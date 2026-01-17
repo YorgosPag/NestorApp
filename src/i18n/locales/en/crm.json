@@ -11,7 +11,7 @@
     "unknownDate": "Unknown date",
     "deleteDialog": {
       "title": "Confirm Deletion",
-      "message": "Are you sure you want to delete the opportunity \"{{name}}\"?",
+      "message": "Are you sure you want to delete the opportunity \"{name}\"?",
       "warning": "This action cannot be undone.",
       "cancel": "Cancel",
       "confirm": "Delete"
@@ -95,12 +95,12 @@
       "delete": "Delete"
     },
     "messages": {
-      "completed": "✅ Task \"{{title}}\" completed!",
-      "deleted": "✅ Task \"{{title}}\" deleted!",
+      "completed": "✅ Task \"{title}\" completed!",
+      "deleted": "✅ Task \"{title}\" deleted!",
       "completeError": "❌ Error completing task",
       "deleteError": "❌ Error deleting task",
       "loadError": "Error loading tasks",
-      "deleteConfirm": "Are you sure you want to delete task \"{{title}}\"?"
+      "deleteConfirm": "Are you sure you want to delete task \"{title}\"?"
     }
   },
   "inbox": {
@@ -109,8 +109,8 @@
     "selectContactTitle": "Select Contact",
     "loading": "Loading messages...",
     "loadingConversations": "Loading conversations...",
-    "messagesCount": "{{count}} messages",
-    "conversationsCount": "{{count}} conversations",
+    "messagesCount": "{count} messages",
+    "conversationsCount": "{count} conversations",
     "noMessages": "No messages found",
     "noConversations": "No conversations found",
     "search": "Search messages...",
@@ -126,13 +126,13 @@
     },
     "time": {
       "now": "Now",
-      "hoursAgo": "{{hours}}h",
+      "hoursAgo": "{hours}h",
       "yesterday": "Yesterday"
     },
     "message": {
       "from": "From",
       "to": "To",
-      "attachments": "{{count}} attachments"
+      "attachments": "{count} attachments"
     },
     "tabs": {
       "conversations": "Conversations",
@@ -150,7 +150,7 @@
       "noMessages": "No messages in this conversation",
       "selectConversation": "Select a conversation to view messages",
       "participants": "Participants",
-      "unread": "{{count}} unread"
+      "unread": "{count} unread"
     },
     "composer": {
       "placeholder": "Type your message...",
@@ -168,7 +168,7 @@
     },
     "pagination": {
       "loadMore": "Load more",
-      "page": "Page {{current}} of {{total}}"
+      "page": "Page {current} of {total}"
     },
     "errors": {
       "loadFailed": "Failed to load",
@@ -191,13 +191,13 @@
       "lastUpdated": "Last Updated",
       "participants": "Participants",
       "conversationOpened": "Conversation Opened",
-      "conversationOpenedDesc": "New conversation started via {{channel}}",
+      "conversationOpenedDesc": "New conversation started via {channel}",
       "conversationClosed": "Conversation Closed",
       "conversationClosedDesc": "The conversation was closed",
       "messageReceived": "Message Received",
       "messageSent": "Message Sent",
       "agentAssigned": "Agent Assigned",
-      "agentAssignedDesc": "Conversation assigned to {{agent}}",
+      "agentAssignedDesc": "Conversation assigned to {agent}",
       "system": "System",
       "unknown": "Unknown",
       "statusCompleted": "Completed",

@@ -55,9 +55,9 @@
     "tomorrow": "Tomorrow",
     "thisWeek": "This week",
     "nextWeek": "Next week",
-    "daysAgo": "{{count}} days ago",
-    "hoursAgo": "{{count}} hours ago",
-    "minutesAgo": "{{count}} minutes ago",
+    "daysAgo": "{count} days ago",
+    "hoursAgo": "{count} hours ago",
+    "minutesAgo": "{count} minutes ago",
     "justNow": "Just now"
   },
   "messages": {

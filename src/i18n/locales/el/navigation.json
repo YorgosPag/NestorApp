@@ -154,7 +154,7 @@
     "parking": {
       "listLabel": "Λίστα Θέσεων Στάθμευσης",
       "empty": "Δεν υπάρχουν θέσεις στάθμευσης",
-      "spotTitle": "Θέση {{number}}",
+      "spotTitle": "Θέση {number}",
       "defaultSubtitle": "Πάρκινγκ",
       "openTooltip": "Άνοιγμα στο Parking"
     }

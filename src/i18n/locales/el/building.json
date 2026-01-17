@@ -1,15 +1,15 @@
 {
   "header": {
     "title": "Διαχείριση Κτιρίων",
-    "titleWithCount": "Διαχείριση Κτιρίων ({{count}})",
+    "titleWithCount": "Διαχείριση Κτιρίων ({count})",
     "subtitle": "Διαχείριση και παρακολούθηση κτιριακών έργων",
     "searchPlaceholder": "Αναζήτηση κτιρίων...",
     "newBuilding": "Νέο Κτίριο"
   },
   "floors": {
     "ground": "Ισόγειο",
-    "basement": "Υπόγειο {{number}}",
-    "floor": "{{number}}ος όροφος",
+    "basement": "Υπόγειο {number}",
+    "floor": "{number}ος όροφος",
     "firstFloor": "1ος όροφος",
     "secondFloor": "2ος όροφος",
     "thirdFloor": "3ος όροφος"
@@ -30,7 +30,7 @@
     "planning": "Σχεδιασμός"
   },
   "accessibility": {
-    "buildingCard": "Κτίριο {{name}}"
+    "buildingCard": "Κτίριο {name}"
   },
   "units": {
     "pricePerSqm": "€/τμ",
@@ -49,7 +49,7 @@
     "to": "Έως",
     "minimum": "Ελάχιστη",
     "maximum": "Μέγιστη",
-    "selectedCount": "{{count}} επιλεγμένα",
+    "selectedCount": "{count} επιλεγμένα",
     "all": "Όλα",
     "allTypes": "Όλοι οι τύποι",
     "allStatuses": "Όλες οι καταστάσεις",
@@ -252,7 +252,7 @@
     "tooltips": {
       "new": "Προσθήκη νέου κτιρίου (Ctrl+N)",
       "edit": "Επεξεργασία επιλεγμένου κτιρίου (Ctrl+E)",
-      "deleteCount": "Διαγραφή {{count}} κτιρίου/ων",
+      "deleteCount": "Διαγραφή {count} κτιρίου/ων",
       "export": "Εξαγωγή δεδομένων",
       "import": "Εισαγωγή δεδομένων",
       "refresh": "Ανανέωση δεδομένων (F5)",
@@ -278,7 +278,7 @@
       "bySize": "Κατά μέγεθος"
     },
     "selection": {
-      "selected": "{{count}} επιλεγμένα κτίρια"
+      "selected": "{count} επιλεγμένα κτίρια"
     },
     "advanced": {
       "copy": "Αντιγραφή Επιλεγμένων",
@@ -288,8 +288,8 @@
       "viewOnMap": "Προβολή σε Χάρτη",
       "createReport": "Δημιουργία Αναφοράς",
       "scheduleVisit": "Προγραμματισμός Επίσκεψης",
-      "selectedCount": "{{count}} επιλεγμένα",
-      "activeFilters": "{{count}} φίλτρα ενεργά",
+      "selectedCount": "{count} επιλεγμένα",
+      "activeFilters": "{count} φίλτρα ενεργά",
       "synced": "Συγχρονισμένο"
     },
     "export": {
@@ -325,9 +325,9 @@
     },
     "timeline": {
       "delivery": "Παράδοση:",
-      "daysDelay": "{{days}} ημέρες καθυστέρηση",
+      "daysDelay": "{days} ημέρες καθυστέρηση",
       "deliveryToday": "Παράδοση σήμερα!",
-      "daysRemaining": "{{days}} ημέρες απομένουν"
+      "daysRemaining": "{days} ημέρες απομένουν"
     },
     "progress": {
       "label": "Πρόοδος Κτιρίου"
@@ -350,7 +350,7 @@
     "list": {
       "ariaLabel": "Λίστα Αποθηκών",
       "noResults": "Δεν βρέθηκαν αποθήκες",
-      "noResultsForTerm": "για τον όρο \"{{term}}\""
+      "noResultsForTerm": "για τον όρο \"{term}\""
     },
     "accessibility": {
       "toggleFilters": "Εναλλαγή φίλτρων"
@@ -366,7 +366,7 @@
     "list": {
       "ariaLabel": "Λίστα Θέσεων Στάθμευσης",
       "noResults": "Δεν βρέθηκαν θέσεις στάθμευσης",
-      "noResultsForTerm": "για τον όρο \"{{term}}\""
+      "noResultsForTerm": "για τον όρο \"{term}\""
     },
     "accessibility": {
       "toggleFilters": "Εναλλαγή φίλτρων"
@@ -464,7 +464,7 @@
   },
   "details": {
     "viewBuilding": "Προβολή Κτιρίου",
-    "percentComplete": "{{percent}}% ολοκληρωμένο"
+    "percentComplete": "{percent}% ολοκληρωμένο"
   },
   "pages": {
     "buildings": {
@@ -564,7 +564,7 @@
         "exportData": "Εξαγωγή Δεδομένων",
         "importData": "Εισαγωγή Δεδομένων",
         "help": "Βοήθεια",
-        "selectedCount": "{{count}} επιλεγμένες"
+        "selectedCount": "{count} επιλεγμένες"
       }
     }
   },
@@ -633,16 +633,16 @@
         "buildingTitle": "Τίτλος Κτιρίου *",
         "description": "Περιγραφή Κτιρίου",
         "descriptionPlaceholder": "Περιγράψτε το κτίριο...",
-        "charactersCount": "{{count}}/500 χαρακτήρες"
+        "charactersCount": "{count}/500 χαρακτήρες"
       },
       "technicalSpecs": {
         "title": "Τεχνικά Χαρακτηριστικά",
         "totalArea": "Συνολική Επιφάνεια (m²) *",
         "builtArea": "Δομημένη Επιφάνεια (m²) *",
-        "buildingRatio": "Συντελεστής δόμησης: {{ratio}}%",
+        "buildingRatio": "Συντελεστής δόμησης: {ratio}%",
         "numberOfFloors": "Αριθμός Ορόφων *",
         "numberOfUnits": "Αριθμός Μονάδων *",
-        "unitsPerFloor": "~{{count}} μονάδες/όροφο",
+        "unitsPerFloor": "~{count} μονάδες/όροφο",
         "autoCalculations": "Αυτόματοι Υπολογισμοί",
         "costPerSqm": "Κόστος/m²:",
         "buildingRatioShort": "Συντ. Δόμησης:",
@@ -668,12 +668,12 @@
         "orDragAndDrop": "ή σύρετε και αφήστε εδώ",
         "fileTypes": "PNG, JPG, PDF, DOC, XLS μέχρι 10MB",
         "existingFiles": "Υπάρχοντα Αρχεία",
-        "uploadedOn": "Ανέβηκε {{date}}",
+        "uploadedOn": "Ανέβηκε {date}",
         "uploadedToday": "Ανέβηκε σήμερα",
         "view": "Προβολή",
         "download": "Λήψη",
         "uploadInProgress": "Ανέβασμα σε εξέλιξη...",
-        "filesCompleted": "{{completed}} από {{total}} αρχεία ολοκληρώθηκαν"
+        "filesCompleted": "{completed} από {total} αρχεία ολοκληρώθηκαν"
       },
       "location": {
         "title": "Στοιχεία Τοποθεσίας",
@@ -686,12 +686,12 @@
         "centralCommercial": "Κεντρικό - Εμπορικό",
         "buildingRatio": "Συντ. δόμησης:",
         "maxHeight": "Μέγιστο ύψος:",
-        "floors": "{{count}} όροφοι"
+        "floors": "{count} όροφοι"
       },
       "progress": {
         "title": "Πρόοδος Έργου",
         "completionPercentage": "Ποσοστό Ολοκλήρωσης",
-        "completed": "{{percent}}% Ολοκληρωμένο",
+        "completed": "{percent}% Ολοκληρωμένο",
         "phases": {
           "foundations": "Θεμέλια",
           "construction": "Κατασκευή",
@@ -705,7 +705,7 @@
       "addFloorplan": "Προσθήκη Κάτοψης",
       "editFloorplan": "Επεξεργασία Κάτοψης",
       "loading": "Φόρτωση κάτοψης...",
-      "pdfAlt": "PDF Κάτοψη: {{fileName}}",
+      "pdfAlt": "PDF Κάτοψη: {fileName}",
       "noFloorplan": {
         "title": "Δεν υπάρχει κάτοψη",
         "description": "Πατήστε \"Προσθήκη Κάτοψης\" για να φορτώσετε κάτοψη"
@@ -715,7 +715,7 @@
       "header": {
         "title": "Χρονοδιάγραμμα Έργου",
         "subtitle": "Παρακολούθηση προόδου και milestones",
-        "completedCount": "{{completed}} / {{total}} ολοκληρώθηκαν"
+        "completedCount": "{completed} / {total} ολοκληρώθηκαν"
       },
       "overallProgress": {
         "title": "Συνολική Πρόοδος",
@@ -731,7 +731,7 @@
       "milestone": {
         "progressLabel": "Πρόοδος milestone",
         "nextSteps": "Επόμενα βήματα:",
-        "completedAt": "Ολοκληρώθηκε στις {{date}}"
+        "completedAt": "Ολοκληρώθηκε στις {date}"
       },
       "status": {
         "completed": "Ολοκληρώθηκε",
@@ -745,7 +745,7 @@
         "originalSchedule": "Αρχικό χρονοδιάγραμμα",
         "currentForecast": "Τρέχουσα πρόβλεψη",
         "delay": "Καθυστέρηση",
-        "days": "+{{days}} ημέρες",
+        "days": "+{days} ημέρες",
         "tip": "Συμβουλή:",
         "tipContent": "Επιτάχυνση ηλ/μηχ εργασιών μπορεί να μειώσει την καθυστέρηση στις 2-3 ημέρες."
       },
@@ -753,7 +753,7 @@
         "title": "Κρίσιμα Σημεία",
         "mecInstallations": "Ηλ/Μηχ Εγκαταστάσεις",
         "affectsDelivery": "Επηρεάζει την παράδοση",
-        "daysDelay": "{{days}} ημέρες καθυστέρηση",
+        "daysDelay": "{days} ημέρες καθυστέρηση",
         "finalWorks": "Τελικές Εργασίες",
         "dependsOnPrevious": "Εξαρτάται από προηγούμενο",
         "waiting": "Αναμονή"
@@ -914,7 +914,7 @@
     "empty": {
       "message": "Δεν υπάρχουν καταχωρημένοι πελάτες για αυτό το κτίριο."
     },
-    "description": "Λίστα των πελατών που έχουν αγοράσει μονάδες σε αυτό το κτίριο ({{count}} πελάτες).",
+    "description": "Λίστα των πελατών που έχουν αγοράσει μονάδες σε αυτό το κτίριο ({count} πελάτες).",
     "table": {
       "name": "Ονοματεπώνυμο",
       "phone": "Τηλέφωνο",
@@ -963,8 +963,8 @@
     "addVideo": "Προσθήκη Video"
   },
   "placeholder": {
-    "comingSoon": "Αυτή η ενότητα θα αναπτυχθεί σύντομα. Θα περιέχει όλες τις απαραίτητες λειτουργίες για τη διαχείριση {{title}}.",
-    "add": "Προσθήκη {{title}}"
+    "comingSoon": "Αυτή η ενότητα θα αναπτυχθεί σύντομα. Θα περιέχει όλες τις απαραίτητες λειτουργίες για τη διαχείριση {title}.",
+    "add": "Προσθήκη {title}"
   },
   "emptyState": {
     "selectBuilding": "Επιλέξτε ένα κτίριο",
@@ -992,15 +992,15 @@
     "delete": "Διαγραφή"
   },
   "storageListHeader": {
-    "results": "{{count}} αποτελέσματα",
-    "selected": "{{count}} επιλεγμένα",
+    "results": "{count} αποτελέσματα",
+    "selected": "{count} επιλεγμένα",
     "deleteSelected": "Διαγραφή επιλεγμένων",
     "cardsView": "Κάρτες",
     "tableView": "Πίνακας"
   },
   "storageTabHeader": {
     "title": "Αποθήκες & Parking",
-    "description": "Διαχείριση αποθηκών και θέσεων στάθμευσης του κτιρίου {{buildingName}}",
+    "description": "Διαχείριση αποθηκών και θέσεων στάθμευσης του κτιρίου {buildingName}",
     "listView": "Λίστα",
     "mapView": "Χάρτης",
     "newStorage": "Νέα Αποθήκη",
