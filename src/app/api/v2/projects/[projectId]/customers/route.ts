@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
+import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -92,7 +92,7 @@ interface ProjectCustomersResponse {
  * GET /api/v2/projects/[projectId]/customers
  *
  * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
- * - Permission: crm:contacts:view
+ * - Permission: projects:projects:view
  * - Tenant Isolation: Validates project belongs to user's company
  * - PostgreSQL-based query (100x faster than Firebase)
  */
@@ -104,7 +104,7 @@ export async function GET(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleGetCustomers(req, ctx, context.params);
     },
-    { permissions: 'crm:contacts:view' }
+    { permissions: 'projects:projects:view' }
   );
 
   return handler(request);
@@ -119,7 +119,7 @@ async function handleGetCustomers(
   // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   const requestId = generateRequestId();
 
-  console.log(`👥 API: V2 Customers request from user ${ctx.email} (company: ${ctx.companyId})`);
+  console.log(`👥 API: V2 Customers request`);
 
   try {
     const { projectId } = await paramsPromise;
@@ -150,7 +150,16 @@ async function handleGetCustomers(
 
     const firestoreProject = projectDoc.data();
     if (firestoreProject?.companyId !== ctx.companyId) {
-      console.warn(`🚫 TENANT ISOLATION: User ${ctx.uid} attempted to access unauthorized project ${projectId}`);
+      console.warn(`🚫 TENANT ISOLATION: Access denied`);
+
+      // Audit the access denial
+      await logAuditEvent(ctx, 'access_denied', projectId, 'project', {
+        metadata: {
+          path: `/api/v2/projects/${projectId}/customers`,
+          reason: 'Tenant isolation violation - project companyId mismatch'
+        }
+      });
+
       return NextResponse.json({
         success: false,
         error: 'Project not found or access denied'
@@ -158,7 +167,7 @@ async function handleGetCustomers(
     }
 
     console.log(`✅ [${requestId}] Project ownership validated`);
-    console.log(`🏢 [${requestId}] Loading enterprise customers for project: ${projectId}`);
+    console.log(`🏢 [${requestId}] Loading enterprise customers for project`);
 
     // ⚡ ENTERPRISE QUERY - Single JOIN query αντί 20+ Firebase calls
     const queryStartTime = Date.now();
@@ -302,11 +311,18 @@ async function handleGetCustomers(
     };
 
     // 🎯 Performance Logging
-    console.log(`✅ [${requestId}] Enterprise API completed successfully:`);
-    console.log(`📊 [${requestId}] User: ${ctx.email} (company: ${ctx.companyId})`);
+    console.log(`✅ [${requestId}] Enterprise API completed successfully`);
     console.log(`📊 [${requestId}] Performance: ${totalTime}ms total (${queryEndTime - queryStartTime}ms query)`);
     console.log(`👥 [${requestId}] Results: ${response.summary.totalCustomers} customers, ${response.summary.totalUnitsSold} units`);
     console.log(`💰 [${requestId}] Sales: €${response.summary.totalSalesValue.toLocaleString()}`);
+
+    // Audit successful access
+    await logAuditEvent(ctx, 'data_accessed', projectId, 'project', {
+      metadata: {
+        path: `/api/v2/projects/${projectId}/customers`,
+        reason: `Project customers accessed (${response.summary.totalCustomers} customers, ${response.summary.totalUnitsSold} units, ${totalTime}ms)`
+      }
+    });
 
     return NextResponse.json(response);
 
@@ -336,7 +352,7 @@ async function handleGetCustomers(
       error: errorMessage,
       errorType: 'DATABASE_ERROR',
       requestId,
-      projectId: (await params).projectId,
+      projectId: (await paramsPromise).projectId,
       performance: {
         totalTimeMs: totalTime,
         failed: true

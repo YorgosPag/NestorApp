@@ -16,7 +16,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
-import { withAuth } from '@/lib/auth';
+import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getContactDisplayName, getPrimaryPhone, getPrimaryEmail } from '@/types/contacts';
 import type { Contact } from '@/types/contacts';
@@ -31,8 +31,7 @@ export async function GET(
 
   const handler = withAuth(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      console.log(`🏗️ [Projects/Customers] Loading customers for projectId: ${projectId}`);
-      console.log(`🔒 Auth Context: User ${ctx.uid}, Company ${ctx.companyId}`);
+      console.log(`🏗️ [Projects/Customers] Loading customers for project`);
 
       try {
         if (!adminDb) {
@@ -50,7 +49,7 @@ export async function GET(
         // STEP 1: VERIFY PROJECT OWNERSHIP (Tenant Isolation)
         // ============================================================================
 
-        console.log(`🔒 Verifying project ownership for projectId: ${projectId}`);
+        console.log(`🔒 Verifying project ownership`);
 
         // First, check if project exists and belongs to user's company
         const projectDoc = await adminDb
@@ -59,7 +58,7 @@ export async function GET(
           .get();
 
         if (!projectDoc.exists) {
-          console.log(`⚠️ Project not found: ${projectId}`);
+          console.log(`⚠️ Project not found`);
           return NextResponse.json({
             success: false,
             error: 'Project not found',
@@ -71,7 +70,16 @@ export async function GET(
 
         const projectData = projectDoc.data();
         if (projectData?.companyId !== ctx.companyId) {
-          console.warn(`🚫 TENANT ISOLATION VIOLATION: User ${ctx.uid} (company ${ctx.companyId}) attempted to access project ${projectId} (company ${projectData?.companyId})`);
+          console.warn(`🚫 TENANT ISOLATION VIOLATION: Access denied`);
+
+          // Audit the access denial
+          await logAuditEvent(ctx, 'access_denied', projectId, 'project', {
+            metadata: {
+              path: `/api/projects/${projectId}/customers`,
+              reason: 'Tenant isolation violation - project companyId mismatch'
+            }
+          });
+
           return NextResponse.json({
             success: false,
             error: 'Access denied - Project not found',
@@ -81,13 +89,13 @@ export async function GET(
           }, { status: 403 });
         }
 
-        console.log(`✅ Tenant isolation check passed: project belongs to company ${ctx.companyId}`);
+        console.log(`✅ Tenant isolation check passed`);
 
         // ============================================================================
         // STEP 2: GET BUILDINGS FOR THIS PROJECT (Admin SDK + Tenant Filter)
         // ============================================================================
 
-        console.log(`🏢 Fetching buildings for projectId: ${projectId}`);
+        console.log(`🏢 Fetching buildings for project`);
 
         let buildingsSnapshot = await adminDb
           .collection(COLLECTIONS.BUILDINGS)
@@ -97,7 +105,7 @@ export async function GET(
 
         // If no results, try with number projectId
         if (buildingsSnapshot.docs.length === 0) {
-          console.log(`🔄 Trying numeric projectId: ${parseInt(projectId)}`);
+          console.log(`🔄 Trying numeric projectId`);
           buildingsSnapshot = await adminDb
             .collection(COLLECTIONS.BUILDINGS)
             .where('projectId', '==', parseInt(projectId))
@@ -106,17 +114,17 @@ export async function GET(
         }
 
         if (buildingsSnapshot.docs.length === 0) {
-          console.log(`⚠️ No buildings found for project ${projectId}`);
+          console.log(`⚠️ No buildings found for project`);
           return NextResponse.json({
             success: true,
             customers: [],
             projectId,
             summary: { customersCount: 0, soldUnitsCount: 0 },
-            message: `No buildings found for project ${projectId}`
+            message: 'No buildings found for this project'
           }, { status: 200 });
         }
 
-        console.log(`🏢 Found ${buildingsSnapshot.docs.length} buildings for tenant ${ctx.companyId}`);
+        console.log(`🏢 Found ${buildingsSnapshot.docs.length} buildings`);
 
         // ============================================================================
         // STEP 3: GET ALL UNITS FROM ALL BUILDINGS (Admin SDK + Tenant Filter)
@@ -126,7 +134,6 @@ export async function GET(
         const allUnits = [];
 
         for (const buildingId of buildingIds) {
-          console.log(`🏠 Fetching units for buildingId: ${buildingId}`);
           const unitsSnapshot = await adminDb
             .collection(COLLECTIONS.UNITS)
             .where('buildingId', '==', buildingId)
@@ -141,7 +148,7 @@ export async function GET(
           allUnits.push(...units);
         }
 
-        console.log(`🏠 Total units found: ${allUnits.length} (tenant-scoped)`);
+        console.log(`🏠 Total units found: ${allUnits.length}`);
 
         // ============================================================================
         // STEP 4: FILTER SOLD UNITS AND EXTRACT CUSTOMER IDs
@@ -151,7 +158,7 @@ export async function GET(
         console.log(`💰 Sold units: ${soldUnits.length}`);
 
         if (soldUnits.length === 0) {
-          console.log(`⚠️ No sold units found for project ${projectId}`);
+          console.log(`⚠️ No sold units found`);
           return NextResponse.json({
             success: true,
             customers: [],
@@ -189,7 +196,7 @@ export async function GET(
         // STEP 6: GET CONTACT DETAILS (Admin SDK + Tenant Filter)
         // ============================================================================
 
-        console.log(`📇 Fetching contact details for ${customerIds.length} customers`);
+        console.log(`📇 Fetching contact details`);
 
         // Use centralized Firestore IN limit constant
         const limitedCustomerIds = customerIds.slice(0, FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS);
@@ -205,10 +212,10 @@ export async function GET(
           return data.companyId === ctx.companyId;
         });
 
-        console.log(`📇 Contacts found: ${tenantContacts.length} (tenant-scoped)`);
+        console.log(`📇 Contacts found: ${tenantContacts.length}`);
 
         if (tenantContacts.length < contactsSnapshot.docs.length) {
-          console.warn(`🚫 Filtered out ${contactsSnapshot.docs.length - tenantContacts.length} contacts from other tenants`);
+          console.warn(`🚫 Filtered out ${contactsSnapshot.docs.length - tenantContacts.length} contacts`);
         }
 
         // ============================================================================
@@ -233,6 +240,14 @@ export async function GET(
 
         console.log(`✅ [Projects/Customers] Complete: ${customers.length} customers with ${soldUnits.length} sold units`);
 
+        // Audit successful access
+        await logAuditEvent(ctx, 'data_accessed', projectId, 'project', {
+          metadata: {
+            path: `/api/projects/${projectId}/customers`,
+            reason: `Project customers accessed (${customers.length} customers, ${soldUnits.length} units)`
+          }
+        });
+
         return NextResponse.json({
           success: true,
           customers,
@@ -247,10 +262,7 @@ export async function GET(
         console.error('❌ [Projects/Customers] Error:', {
           errorType: error instanceof Error ? error.constructor.name : typeof error,
           errorMessage: error instanceof Error ? error.message : String(error),
-          errorStack: error instanceof Error ? error.stack : 'No stack trace',
-          projectId,
-          userId: ctx.uid,
-          companyId: ctx.companyId
+          errorStack: error instanceof Error ? error.stack : 'No stack trace'
         });
 
         return NextResponse.json({
