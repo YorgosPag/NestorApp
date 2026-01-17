@@ -1,3 +1,25 @@
+/**
+ * @deprecated LEGACY MODULE - Use @/lib/firebaseAdmin instead
+ *
+ * **MIGRATION REQUIRED** (Enterprise Unification - BLOCKER #4)
+ *
+ * This module will be REMOVED in future versions.
+ * - Canonical module: src/lib/firebaseAdmin.ts (42 files use this)
+ * - Non-canonical: src/lib/firebase-admin.ts (16 files - MIGRATE THESE)
+ *
+ * **Migration Guide:**
+ * ```diff
+ * - import { db } from '@/lib/firebase-admin';
+ * + import { adminDb } from '@/lib/firebaseAdmin';
+ *
+ * - const snapshot = await db().collection('...');
+ * + const snapshot = await adminDb.collection('...');
+ * ```
+ *
+ * **Tracked in**: Epic #TODO - Firebase Admin Canonicalization
+ * **Files to migrate**: 16 endpoints (see git grep '@/lib/firebase-admin')
+ */
+
 // lib/firebase-admin.ts - Build-Safe Firebase Admin Configuration
 
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
