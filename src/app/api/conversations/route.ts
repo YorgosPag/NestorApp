@@ -14,7 +14,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withErrorHandling, ApiError } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';

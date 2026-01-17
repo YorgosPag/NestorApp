@@ -22,9 +22,9 @@
 
 import { NextRequest } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
-import { withAuth } from '@/lib/auth';
+import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withErrorHandling, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 
@@ -61,10 +61,10 @@ interface ProjectListResponse {
 // ============================================================================
 
 const CACHE_KEY_PREFIX = 'api:projects:list';
-const CACHE_TTL_MS = 30 * 1000; // 30 seconds (near-realtime for audit grid)
 
 /**
  * Generate tenant-specific cache key
+ * TTL managed by EnterpriseAPICache (30s for projectsList - near-realtime)
  */
 function getTenantCacheKey(companyId: string): string {
   return `${CACHE_KEY_PREFIX}:${companyId}`;
@@ -151,7 +151,6 @@ export async function GET(request: NextRequest) {
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       const startTime = Date.now();
       console.log('🏗️ [Projects/List] Starting projects list load...');
-      console.log(`🔒 Auth Context: User ${ctx.uid}, Company ${ctx.companyId}`);
 
       // ============================================================================
       // 1. CHECK TENANT-SPECIFIC CACHE FIRST
@@ -164,6 +163,16 @@ export async function GET(request: NextRequest) {
   if (cachedData) {
     const duration = Date.now() - startTime;
     console.log(`⚡ [Projects/List] CACHE HIT - ${cachedData.count} projects in ${duration}ms`);
+
+    // Audit event for cache hit
+    await logAuditEvent(ctx, 'data_accessed', 'projects', 'api', {
+      metadata: {
+        path: '/api/projects/list',
+        resultCount: cachedData.count,
+        source: 'cache',
+        durationMs: duration
+      }
+    });
 
     return apiSuccess<ProjectListResponse>({
       ...cachedData,
@@ -182,7 +191,7 @@ export async function GET(request: NextRequest) {
         .where('companyId', '==', ctx.companyId)
         .get();
 
-      console.log(`🏗️ [Projects/List] Found ${projectsSnapshot.docs.length} projects for tenant ${ctx.companyId}`);
+      console.log(`🏗️ [Projects/List] Found ${projectsSnapshot.docs.length} projects`);
 
   // ============================================================================
   // 3. MAP TO ProjectListItem (type-safe)
@@ -221,13 +230,26 @@ export async function GET(request: NextRequest) {
   };
 
   // ============================================================================
-  // 5. CACHE RESPONSE
+  // 5. CACHE RESPONSE (TTL managed by EnterpriseAPICache.getTTLForKey)
   // ============================================================================
 
-  cache.set(tenantCacheKey, response, CACHE_TTL_MS);
+  cache.set(tenantCacheKey, response);
 
   const duration = Date.now() - startTime;
-  console.log(`✅ [Projects/List] Complete: ${projects.length} projects in ${duration}ms (cached for 30s)`);
+  console.log(`✅ [Projects/List] Complete: ${projects.length} projects in ${duration}ms`);
+
+  // ============================================================================
+  // 6. AUDIT EVENT (Enterprise compliance)
+  // ============================================================================
+
+  await logAuditEvent(ctx, 'data_accessed', 'projects', 'api', {
+    metadata: {
+      path: '/api/projects/list',
+      resultCount: projects.length,
+      source: 'firestore',
+      durationMs: duration
+    }
+  });
 
   return apiSuccess<ProjectListResponse>(response, `Projects loaded in ${duration}ms`);
     },

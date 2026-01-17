@@ -27,7 +27,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { adminDb, ensureAdminInitialized, getAdminInitializationStatus } from '@/lib/firebaseAdmin';
-import { withErrorHandling, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import type { CompanyContact } from '@/types/contacts';
@@ -141,9 +141,9 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   const handler = withAuth<ApiSuccessResponse<BootstrapResponse>>(
-    withErrorHandling(async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleAuditBootstrap(req, ctx);
-    }, { operation: 'audit-bootstrap' }),
+    },
     { permissions: 'projects:projects:view' }
   );
 
