@@ -113,3 +113,12 @@ reports/metrics/**
 
 # Claude CLI temporary files
 tmpclaude-*
+
+# 🔒 SECURITY: Service Account Keys (NEVER commit these)
+*service-account*
+*.pem
+*.p12
+*.key
+firebase-service-account*
+google-credentials*
+gcp-key*
