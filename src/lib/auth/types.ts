@@ -224,6 +224,7 @@ export type AuditAction = keyof typeof AUDIT_ACTIONS;
 export const AUDIT_TARGET_TYPES = {
   'user': true,
   'project': true,
+  'building': true,       // Building entities (AUTHZ Phase 2)
   'unit': true,
   'role': true,
   'grant': true,
@@ -241,7 +242,7 @@ export type AuditTargetType = keyof typeof AUDIT_TARGET_TYPES;
  * Typed audit change value (NO any!).
  */
 export interface AuditChangeValue {
-  type: 'role' | 'permission' | 'grant' | 'status' | 'membership';
+  type: 'role' | 'permission' | 'grant' | 'status' | 'membership' | 'webhook';
   value: string | string[] | Record<string, unknown>;
 }
 

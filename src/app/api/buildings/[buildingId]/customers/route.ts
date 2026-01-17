@@ -72,7 +72,7 @@ export async function GET(
         // 🔒 TENANT ISOLATION: Query units with both companyId AND buildingId filters
         console.log(`🏠 Fetching units for buildingId: ${buildingId}`);
         const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS)
-          .where('companyId', '==', tenantCompanyId)
+          .where('companyId', '==', ctx.companyId)
           .where('buildingId', '==', buildingId)
           .get();
 
@@ -128,7 +128,7 @@ export async function GET(
 
         // Query contacts with tenant isolation
         const contactsSnapshot = await adminDb.collection(COLLECTIONS.CONTACTS)
-          .where('companyId', '==', tenantCompanyId)
+          .where('companyId', '==', ctx.companyId)
           .where('__name__', 'in', contactIdsToQuery)
           .get();
 
