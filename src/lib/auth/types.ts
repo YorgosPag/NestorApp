@@ -207,6 +207,8 @@ export const AUDIT_ACTIONS = {
   'data_fix_executed': true,        // Data correction operations (fix incorrect data)
   'direct_operation_executed': true, // Direct database operations (bypass normal flows)
   'system_configured': true,         // System configuration changes (webhooks, integrations)
+  // Data access operations (AUTHZ Phase 2)
+  'data_accessed': true,             // API data access events (read operations with tenant isolation)
   // Webhook operations (External integrations)
   'webhook_received': true,          // External webhook event received (SendGrid, Telegram, etc.)
 } as const;

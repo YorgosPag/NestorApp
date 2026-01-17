@@ -38,6 +38,7 @@ export class EnterpriseAPICache {
   private readonly TTL_CONFIG = {
     companies: 5 * 60 * 1000,        // 5 minutes για companies
     projects: 3 * 60 * 1000,         // 3 minutes για projects
+    projectsList: 30 * 1000,         // 30 seconds για projects list (audit grid - near-realtime)
     buildings: 2 * 60 * 1000,        // 2 minutes για buildings
     storages: 2 * 60 * 1000,         // 2 minutes για storages
     parking: 2 * 60 * 1000,          // 🅿️ 2 minutes για parking (parallel to storages per local_4.log)
@@ -80,7 +81,7 @@ export class EnterpriseAPICache {
     this.stats.hits++;
     this.updateStats();
     console.log(`🎯 CACHE HIT: ${key} (age: ${Math.round((now - entry.timestamp) / 1000)}s)`);
-    return entry.data;
+    return entry.data as T;
   }
 
   /**
@@ -185,6 +186,7 @@ export class EnterpriseAPICache {
    */
   private getTTLForKey(key: string): number {
     if (key.includes('companies')) return this.TTL_CONFIG.companies;
+    if (key.includes('api:projects:list')) return this.TTL_CONFIG.projectsList;  // Specific match first (before generic 'projects')
     if (key.includes('projects')) return this.TTL_CONFIG.projects;
     if (key.includes('buildings')) return this.TTL_CONFIG.buildings;
     if (key.includes('storages')) return this.TTL_CONFIG.storages;

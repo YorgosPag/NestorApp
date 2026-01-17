@@ -168,9 +168,7 @@ export async function GET(request: NextRequest) {
     await logAuditEvent(ctx, 'data_accessed', 'projects', 'api', {
       metadata: {
         path: '/api/projects/list',
-        resultCount: cachedData.count,
-        source: 'cache',
-        durationMs: duration
+        reason: `Projects list accessed (${cachedData.count} items from cache, ${duration}ms)`
       }
     });
 
@@ -245,9 +243,7 @@ export async function GET(request: NextRequest) {
   await logAuditEvent(ctx, 'data_accessed', 'projects', 'api', {
     metadata: {
       path: '/api/projects/list',
-      resultCount: projects.length,
-      source: 'firestore',
-      durationMs: duration
+      reason: `Projects list accessed (${projects.length} items from firestore, ${duration}ms)`
     }
   });
 
