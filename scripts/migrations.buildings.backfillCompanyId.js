@@ -12,10 +12,15 @@
  * USAGE:
  * ```bash
  * # Dry-run with ownership verification (DEFAULT - enterprise-safe)
+ * # Orphans are SKIPPED by default for multi-tenant safety
  * COMPANY_ID=<COMPANY_DOC_ID> COLLECTION_BUILDINGS=buildings COLLECTION_PROJECTS=projects node scripts/migrations.buildings.backfillCompanyId.js
  *
- * # Execute migration
+ * # Execute migration (verified buildings only)
  * COMPANY_ID=<COMPANY_DOC_ID> COLLECTION_BUILDINGS=buildings COLLECTION_PROJECTS=projects DRY_RUN=false node scripts/migrations.buildings.backfillCompanyId.js
+ *
+ * # Include orphan buildings (buildings without projectId or with missing project)
+ * # ⚠️ Only use if you're CERTAIN orphans belong to target company
+ * COMPANY_ID=<ID> COLLECTION_BUILDINGS=buildings COLLECTION_PROJECTS=projects ALLOW_ORPHANS=true node scripts/migrations.buildings.backfillCompanyId.js
  *
  * # Skip ownership verification (DANGEROUS - only for single-tenant)
  * COMPANY_ID=<ID> COLLECTION_BUILDINGS=buildings VERIFY_OWNERSHIP=false node scripts/migrations.buildings.backfillCompanyId.js
@@ -25,11 +30,12 @@
  * - Idempotent (safe to re-run)
  * - Dry-run mode by default
  * - VERIFY_OWNERSHIP: Checks building.projectId → project.companyId (multi-tenant safe)
+ * - ALLOW_ORPHANS=false by default: SKIPs buildings without verified ownership
  * - Page-by-page processing (memory efficient)
  * - Batch writes (Firestore limit: 500)
  * - Project companyId caching (avoids N+1 queries)
  * - All config from env/argv (ZERO hardcoded values)
- * - Detailed progress reporting
+ * - Detailed progress reporting (orphans, mismatches, cache stats)
  *
  * =============================================================================
  */
@@ -64,6 +70,11 @@ if (!COLLECTION_BUILDINGS) {
 // DEFAULT: true (production-safe) - verifies building belongs to target company via projectId
 // Set VERIFY_OWNERSHIP=false ONLY for single-tenant or orphan buildings
 const VERIFY_OWNERSHIP = process.env.VERIFY_OWNERSHIP !== 'false';
+
+// 🔒 ENTERPRISE: Allow orphan buildings (no projectId or missing project)
+// DEFAULT: false (enterprise-safe) - SKIP orphans to avoid cross-tenant risk
+// Set ALLOW_ORPHANS=true ONLY if you're certain orphans belong to target company
+const ALLOW_ORPHANS = process.env.ALLOW_ORPHANS === 'true';
 
 // 🔒 ENTERPRISE: Projects collection REQUIRED if VERIFY_OWNERSHIP=true
 const COLLECTION_PROJECTS = process.env.COLLECTION_PROJECTS;
@@ -161,6 +172,7 @@ async function backfillBuildingsCompanyId() {
     '🎯 Target Company': COMPANY_ID,
     '🔧 Mode': DRY_RUN ? 'DRY-RUN (preview only)' : 'EXECUTE (will write to DB)',
     '🔒 Ownership Verify': VERIFY_OWNERSHIP ? `YES (via ${COLLECTION_PROJECTS})` : 'NO (⚠️ single-tenant mode)',
+    '👻 Allow Orphans': ALLOW_ORPHANS ? 'YES (⚠️ will update buildings without verified ownership)' : 'NO (enterprise-safe)',
     '📄 Page Size': `${PAGE_SIZE} documents`,
     '📦 Batch Size': `${BATCH_SIZE} documents`,
     '📁 Collection': COLLECTION_BUILDINGS,
@@ -234,15 +246,21 @@ async function backfillBuildingsCompanyId() {
           if (!projectId) {
             // Building has no projectId - orphan
             stats.noProjectId++;
-            // Still allow update for orphans (they need companyId)
-            docsToUpdate.push({
-              id: doc.id,
-              ref: doc.ref,
-              name: data.name || 'Unnamed',
-              currentCompanyId: '(none)',
-              reason: 'orphan (no projectId)'
-            });
-            stats.needsUpdate++;
+
+            if (ALLOW_ORPHANS) {
+              // Explicit flag set - allow update for orphans
+              docsToUpdate.push({
+                id: doc.id,
+                ref: doc.ref,
+                name: data.name || 'Unnamed',
+                currentCompanyId: '(none)',
+                reason: 'orphan (no projectId) - ALLOW_ORPHANS=true'
+              });
+              stats.needsUpdate++;
+            } else {
+              // 🔒 ENTERPRISE DEFAULT: SKIP orphans (unknown ownership = cross-tenant risk)
+              console.log(`      ⏭️ SKIP ORPHAN: ${data.name || doc.id} (no projectId) - set ALLOW_ORPHANS=true to include`);
+            }
             continue;
           }
 
@@ -252,14 +270,21 @@ async function backfillBuildingsCompanyId() {
           if (projectCompanyId === null) {
             // Project doesn't exist or has no companyId - treat as orphan
             stats.noProjectId++;
-            docsToUpdate.push({
-              id: doc.id,
-              ref: doc.ref,
-              name: data.name || 'Unnamed',
-              currentCompanyId: '(none)',
-              reason: 'orphan (project missing/no companyId)'
-            });
-            stats.needsUpdate++;
+
+            if (ALLOW_ORPHANS) {
+              // Explicit flag set - allow update for orphans
+              docsToUpdate.push({
+                id: doc.id,
+                ref: doc.ref,
+                name: data.name || 'Unnamed',
+                currentCompanyId: '(none)',
+                reason: 'orphan (project missing/no companyId) - ALLOW_ORPHANS=true'
+              });
+              stats.needsUpdate++;
+            } else {
+              // 🔒 ENTERPRISE DEFAULT: SKIP orphans (unknown ownership = cross-tenant risk)
+              console.log(`      ⏭️ SKIP ORPHAN: ${data.name || doc.id} (project ${projectId} missing/no companyId) - set ALLOW_ORPHANS=true to include`);
+            }
             continue;
           }
 
