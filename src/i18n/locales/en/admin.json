@@ -1,0 +1,48 @@
+{
+  "claimsRepair": {
+    "title": "Claims Repair - Super Admin Only",
+    "description": "Set custom claims for users with missing companyId or globalRole.",
+    "fields": {
+      "uid": {
+        "label": "User UID",
+        "placeholder": "Firebase Auth UID"
+      },
+      "email": {
+        "label": "Email",
+        "placeholder": "user@example.com"
+      },
+      "companyId": {
+        "label": "Company ID",
+        "placeholder": "company-uuid"
+      },
+      "globalRole": {
+        "label": "Global Role",
+        "placeholder": "Select role"
+      }
+    },
+    "actions": {
+      "submit": "Set Claims",
+      "submitting": "Setting Claims..."
+    },
+    "help": {
+      "title": "How to Use",
+      "step1": "Get the user's Firebase UID from Firebase Console",
+      "step2": "Enter their email address for verification",
+      "step3": "Enter the correct Company ID",
+      "step4": "Select the appropriate Global Role",
+      "step5": "Click \"Set Claims\"",
+      "step6": "The user must logout/login to refresh their token"
+    },
+    "security": {
+      "title": "Security Features",
+      "feature1": "NO token exposure - uses authenticated session",
+      "feature2": "Automatic audit logging",
+      "feature3": "Centralized error handling",
+      "feature4": "Super Admin only access"
+    },
+    "notice": {
+      "title": "Notice",
+      "body": "The refreshToken() affects only YOUR (super_admin) session. The affected user must logout/login separately to load the new claims."
+    }
+  }
+}
