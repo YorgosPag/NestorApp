@@ -281,7 +281,7 @@ export function UniversalTabsRenderer<TData = unknown>({
         />
       )
     };
-  }), [sortedTabs, customComponents, componentMapping, data, additionalData, globalProps, t]);
+  }), [sortedTabs, customComponents, componentMapping, data, additionalData, globalProps, t, currentLanguage]);
 
   // 🏢 ENTERPRISE: Handle tab change for controlled mode
   const handleTabChange = useCallback((tabId: string) => {
