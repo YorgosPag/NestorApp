@@ -10,6 +10,8 @@ import { EditableText } from '@/components/ui/EditableText';
 import { openContactAvatarModal, openGalleryPhotoModal } from '@/core/modals';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
 import { Users, Building2, Landmark, Edit, Trash2, Check, X } from 'lucide-react';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type {
   Contact,
   ContactType,
@@ -28,8 +30,6 @@ const getTypeInfo = (type: ContactType) => ({
   icon: getContactIcon(type),
   name: getContactLabel(type, 'singular')
 });
-
-const TYPE_FALLBACK = { icon: Users, name: 'Άγνωστος Τύπος' };
 
 interface ContactDetailsHeaderProps {
   contact: Contact;
@@ -53,6 +53,8 @@ export function ContactDetailsHeader({
   onSaveEdit,
   onCancelEdit
 }: ContactDetailsHeaderProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('contacts');
   const photoModal = useGlobalPhotoPreview();
   const type = contact.type as ContactType;
 
@@ -210,20 +212,20 @@ export function ContactDetailsHeader({
             // 🎯 Edit Mode Actions - Μόνο για Desktop
             ...(!isEditing ? [
               {
-                label: 'Επεξεργασία',
+                label: t('header.actions.edit'),
                 onClick: () => onStartEdit?.(),
                 icon: Edit,
                 className: GRADIENT_HOVER_EFFECTS.BLUE
               }
             ] : [
               {
-                label: 'Αποθήκευση',
+                label: t('header.actions.save'),
                 onClick: () => onSaveEdit?.(),
                 icon: Check,
                 className: GRADIENT_HOVER_EFFECTS.GREEN
               },
               {
-                label: 'Ακύρωση',
+                label: t('header.actions.cancel'),
                 onClick: () => onCancelEdit?.(),
                 icon: X,
                 className: GRADIENT_HOVER_EFFECTS.GRAY
@@ -231,7 +233,7 @@ export function ContactDetailsHeader({
             ]),
             // Delete Action - Μόνο αν υπάρχει το callback
             ...(onDeleteContact ? [{
-              label: 'Διαγραφή Επαφής',
+              label: t('header.actions.delete'),
               onClick: () => onDeleteContact?.(),
               icon: Trash2,
               className: GRADIENT_HOVER_EFFECTS.RED

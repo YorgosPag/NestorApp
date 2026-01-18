@@ -1,112 +1,122 @@
 /**
- * COMPANY GEMI HELP TEXTS
+ * COMPANY GEMI HELP TEXTS (i18n Keys)
  *
- * Κεντρικοποιημένα help texts για όλα τα company GEMI fields
- * Uses established centralized help text system από modal-select
+ * Κεντρικοποιημένα help text i18n keys για όλα τα company GEMI fields
+ * Uses established centralized i18n system
  *
- * @version 1.0.0 - ENTERPRISE HELP TEXTS
- * @updated 2025-12-28 - Split from monolithic company-gemi-config.ts
+ * @version 2.0.0 - ENTERPRISE i18n ARCHITECTURE
+ * @updated 2025-01-18 - ENTERPRISE i18n MIGRATION
+ * @compliance CLAUDE.md Enterprise Standards - SAP/Salesforce Pattern
+ *
+ * 🏢 ENTERPRISE i18n PATTERN:
+ * - All values are i18n keys (not hardcoded strings)
+ * - Keys correspond to forms.json namespace (helpTexts section)
+ * - Use useFormLabels().getHelpText(key) to translate
+ * - Follows SAP, Salesforce, Microsoft Dynamics i18n patterns
  */
 
-// ENTERPRISE: Import από centralized modal-select system
-import { MODAL_SELECT_COMPANY_HELP_TEXTS } from '../../../subapps/dxf-viewer/config/modal-select/core/options/company';
-
 // ============================================================================
-// HELP TEXTS MAPPING
+// HELP TEXTS MAPPING (i18n Keys)
 // ============================================================================
 
 /**
- * Company field help texts mapping
- * Maps existing centralized help texts σε expected property names
- * Enterprise pattern: Consistent help text system
+ * Company field help texts mapping (i18n Keys)
+ * Maps field keys to i18n translation keys
+ * ✅ ENTERPRISE: Use useFormLabels().getHelpText(key) to translate
+ *
+ * @example
+ * ```tsx
+ * const { getHelpText } = useFormLabels();
+ * const help = getHelpText('companyName'); // Returns translated string
+ * ```
  */
 export const gemiHelps = {
-  // Basic Info Help Texts
-  company_name_help: MODAL_SELECT_COMPANY_HELP_TEXTS.BUSINESS_NAME,
-  trade_name_help: MODAL_SELECT_COMPANY_HELP_TEXTS.TRADE_NAME,
-  vat_number_help: MODAL_SELECT_COMPANY_HELP_TEXTS.AFM,
-  gemi_number_help: MODAL_SELECT_COMPANY_HELP_TEXTS.GEMI_NUMBER,
-  legal_form_help: MODAL_SELECT_COMPANY_HELP_TEXTS.LEGAL_FORM,
-  company_status_help: 'Κατάσταση εταιρείας στο ΓΕΜΗ',
+  // Basic Info Help Texts - i18n keys
+  company_name_help: 'helpTexts.companyName',
+  trade_name_help: 'helpTexts.tradeName',
+  vat_number_help: 'helpTexts.vatNumber',
+  gemi_number_help: 'helpTexts.gemiNumber',
+  legal_form_help: 'helpTexts.legalForm',
+  company_status_help: 'helpTexts.gemiStatus',
 
-  // Activities Help Texts
-  kad_code_help: MODAL_SELECT_COMPANY_HELP_TEXTS.ACTIVITY_CODE,
-  business_description_help: 'Περιγραφή επιχειρηματικής δραστηριότητας',
-  activity_category_help: 'Κατηγορία δραστηριότητας',
-  chamber_office_help: 'Επιμελητήριο εγγραφής',
+  // Activities Help Texts - i18n keys
+  kad_code_help: 'helpTexts.activityCode',
+  business_description_help: 'helpTexts.activityDescription',
+  activity_category_help: 'helpTexts.activityType',
+  chamber_office_help: 'helpTexts.chamber',
 
-  // Capital Help Texts
-  capital_amount_help: MODAL_SELECT_COMPANY_HELP_TEXTS.CAPITAL,
-  currency_help: 'Νόμισμα κεφαλαίου',
-  guarantee_capital_help: 'Εγγυημένα κεφάλαια',
+  // Capital Help Texts - i18n keys
+  capital_amount_help: 'helpTexts.capitalAmount',
+  currency_help: 'helpTexts.currency',
+  guarantee_capital_help: 'helpTexts.extraordinaryCapital',
 
-  // Dates & Location Help Texts
-  registration_date_help: 'Ημερομηνία εγγραφής στο ΓΕΜΗ',
-  last_change_date_help: 'Ημερομηνία τελευταίας μεταβολής',
-  region_help: 'Περιφέρεια έδρας',
-  municipality_help: 'Δήμος έδρας',
-  local_office_help: 'Τοπική υπηρεσία ΓΕΜΗ',
+  // Dates & Location Help Texts - i18n keys
+  registration_date_help: 'helpTexts.registrationDate',
+  last_change_date_help: 'helpTexts.statusDate',
+  region_help: 'helpTexts.prefecture',
+  municipality_help: 'helpTexts.municipality',
+  local_office_help: 'helpTexts.gemiDepartment',
 
-  // Address Help Texts
-  address_type_help: 'Τύπος διεύθυνσης',
-  street_help: 'Όνομα οδού',
-  street_number_help: 'Αριθμός οδού',
-  postal_code_help: 'Ταχυδρομικός κώδικας',
-  city_help: 'Πόλη έδρας',
-  region_address_help: 'Περιφέρεια διεύθυνσης',
+  // Address Help Texts - i18n keys
+  address_type_help: 'helpTexts.addressType',
+  street_help: 'helpTexts.street',
+  street_number_help: 'helpTexts.streetNumber',
+  postal_code_help: 'helpTexts.postalCode',
+  city_help: 'helpTexts.city',
+  region_address_help: 'helpTexts.region',
 
-  // Shareholders Help Texts
-  shareholder_name_help: 'Επωνυμία μετόχου',
-  shareholder_type_help: 'Τύπος μετόχου',
-  shareholder_id_help: 'Αριθμός ταυτότητας μετόχου',
-  share_category_help: 'Κατηγορία μετοχών',
-  participation_percentage_help: 'Ποσοστό συμμετοχής στο κεφάλαιο',
-  nominal_value_help: 'Ονομαστική αξία μετοχής',
+  // Shareholders Help Texts - i18n keys
+  shareholder_name_help: 'helpTexts.shareholderType',
+  shareholder_type_help: 'helpTexts.shareholderType',
+  shareholder_id_help: 'helpTexts.shareholderId',
+  share_category_help: 'helpTexts.shareType',
+  participation_percentage_help: 'helpTexts.sharePercentage',
+  nominal_value_help: 'helpTexts.nominalValue',
 
-  // Documents Help Texts
-  document_category_help: 'Κατηγορία εγγράφου',
-  document_date_help: 'Ημερομηνία έκδοσης εγγράφου',
-  document_subject_help: 'Θέμα εγγράφου',
+  // Documents Help Texts - i18n keys
+  document_category_help: 'helpTexts.documentType',
+  document_date_help: 'helpTexts.documentDate',
+  document_subject_help: 'helpTexts.documentSubject',
 
-  // Decisions Help Texts
-  decision_date_help: 'Ημερομηνία λήψης απόφασης',
-  decision_subject_help: 'Θέμα απόφασης',
-  protocol_number_help: 'Αριθμός πρωτοκόλλου απόφασης',
+  // Decisions Help Texts - i18n keys
+  decision_date_help: 'helpTexts.decisionDate',
+  decision_subject_help: 'helpTexts.decisionSubject',
+  protocol_number_help: 'helpTexts.protocolNumber',
 
-  // Representatives Help Texts
-  representative_name_help: 'Ονοματεπώνυμο εκπροσώπου',
-  representative_role_help: 'Θέση ή ιδιότητα στην εταιρεία',
-  representative_tax_help: 'Αριθμός Φορολογικού Μητρώου εκπροσώπου',
-  representative_doy_help: 'Δημόσια Οικονομική Υπηρεσία',
-  representative_email_help: 'Email επικοινωνίας εκπροσώπου',
-  representative_phone_help: 'Τηλέφωνο επικοινωνίας εκπροσώπου',
+  // Representatives Help Texts - i18n keys
+  representative_name_help: 'helpTexts.representativeName',
+  representative_role_help: 'helpTexts.representativeRole',
+  representative_tax_help: 'helpTexts.representativeTax',
+  representative_doy_help: 'helpTexts.representativeDoy',
+  representative_email_help: 'helpTexts.representativeName',
+  representative_phone_help: 'helpTexts.representativeName',
 
-  // History Help Texts
-  version_date_help: 'Ημερομηνία καταχώρησης μεταβολής',
-  change_description_help: 'Περιγραφή της μεταβολής (π.χ. αλλαγή επωνυμίας)',
-  previous_value_help: 'Προηγούμενη τιμή πεδίου (αν εφαρμόζεται)',
-  new_value_help: 'Νέα τιμή μετά τη μεταβολή',
+  // History Help Texts - i18n keys
+  version_date_help: 'helpTexts.versionDate',
+  change_description_help: 'helpTexts.changeDescription',
+  previous_value_help: 'helpTexts.previousValue',
+  new_value_help: 'helpTexts.newValue',
 
-  // Announcements Help Texts
-  announcement_date_help: 'Ημερομηνία δημοσίευσης ανακοίνωσης',
-  issue_paper_help: 'Όνομα επίσημου φύλλου (π.χ. ΦΕΚ)',
-  announcement_subject_help: 'Περιγραφή θέματος ανακοίνωσης',
-  announcement_summary_help: 'Σύντομη περίληψη ανακοίνωσης',
-  announcement_file_help: 'Link ή path αρχείου ανακοίνωσης',
+  // Announcements Help Texts - i18n keys
+  announcement_date_help: 'helpTexts.announcementDate',
+  issue_paper_help: 'helpTexts.issuePaper',
+  announcement_subject_help: 'helpTexts.announcementSubject',
+  announcement_summary_help: 'helpTexts.announcementSummary',
+  announcement_file_help: 'helpTexts.announcementFile',
 
-  // Statuses Help Texts
-  current_status_help: 'Τρέχουσα κατάσταση εταιρείας',
-  status_change_date_help: 'Ημερομηνία αλλαγής κατάστασης',
-  status_reason_help: 'Αιτιολογία αλλαγής κατάστασης',
-  previous_status_help: 'Κατάσταση πριν την τελευταία αλλαγή',
+  // Statuses Help Texts - i18n keys
+  current_status_help: 'helpTexts.currentStatus',
+  status_change_date_help: 'helpTexts.statusChangeDate',
+  status_reason_help: 'helpTexts.statusReason',
+  previous_status_help: 'helpTexts.previousStatus',
 
-  // Relationships Help Texts
-  relationships_summary_help: 'Στατιστικά και περίληψη σχέσεων εταιρείας',
+  // Relationships Help Texts - i18n keys
+  relationships_summary_help: 'helpTexts.relationshipsSummary',
 
-  // Additional Fields Help Texts
-  document_url_help: 'URL για download εγγράφου',
-  decision_summary_help: 'Σύντομη περίληψη απόφασης',
-  organ_type_help: 'Όργανο που έλαβε την απόφαση',
+  // Additional Fields Help Texts - i18n keys
+  document_url_help: 'helpTexts.documentType',
+  decision_summary_help: 'helpTexts.decisionSubject',
+  organ_type_help: 'helpTexts.decisionSubject',
 } as const;
 
 /**

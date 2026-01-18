@@ -23,8 +23,12 @@ import { getTypeIcon, getTypeLabel } from '@/utils/contactFormUtils';
 import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
 import { RelationshipProvider } from '@/components/contacts/relationships/context/RelationshipProvider';
 import { CONTACT_TYPES, getContactIcon, getContactLabel } from '@/constants/contacts';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, editContact, onLiveChange }: AddNewContactDialogProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('contacts');
   // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ ICON SIZES - ENTERPRISE PATTERN
   const iconSizes = useIconSizes();
 
@@ -59,13 +63,13 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
     if (isIndividual) {
       return formData.firstName && formData.lastName
         ? `${formData.firstName} ${formData.lastName}`
-        : 'Χωρίς όνομα';
+        : t('form.noName');
     }
     if (isCompany) {
-      return formData.companyName || 'Χωρίς επωνυμία';
+      return formData.companyName || t('form.noCompanyName');
     }
     if (isService) {
-      return formData.serviceName || formData.name || 'Χωρίς επωνυμία';
+      return formData.serviceName || formData.name || t('form.noCompanyName');
     }
     return '';
   };
@@ -79,14 +83,14 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {getTypeIcon(contactType, iconSizes.sm)}
-            {editContact ? 'Επεξεργασία' : 'Προσθήκη Νέας'} Επαφής - {getTypeLabel(contactType)}
+            {editContact ? t('form.editTitle') : t('form.addTitle')} - {getTypeLabel(contactType)}
             {editContact && getContactName() && ` - ${getContactName()}`}
           </DialogTitle>
 
           <DialogDescription>
             {editContact
-              ? 'Επεξεργαστείτε τα στοιχεία της επαφής.'
-              : 'Καταχωρήστε τα βασικά στοιχεία της νέας επαφής.'
+              ? t('form.editDescription')
+              : t('form.addDescription')
             }
           </DialogDescription>
         </DialogHeader>
@@ -95,7 +99,7 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
           <div className="space-y-4">
             {/* Contact Type Selection */}
             <FormGrid>
-              <FormField label="Τύπος" htmlFor="type" required>
+              <FormField label={t('form.typeLabel')} htmlFor="type" required>
                 <FormInput>
                   <Select name="type" value={contactType} onValueChange={(value) => handleSelectChange('type', value)} disabled={loading || !!editContact}>
                     <SelectTrigger>
@@ -154,7 +158,7 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
           <DialogFooter className="mt-6">
             <CancelButton onClick={() => onOpenChange(false)} disabled={loading} />
             <SaveButton loading={loading}>
-              {editContact ? 'Ενημέρωση' : 'Αποθήκευση'} Επαφής
+              {editContact ? t('form.updateContact') : t('form.saveContact')}
             </SaveButton>
           </DialogFooter>
         </form>

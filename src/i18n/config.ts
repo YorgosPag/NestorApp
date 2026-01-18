@@ -68,6 +68,8 @@ if (typeof window !== 'undefined') {
       'errors',
       'toasts',
       'navigation',
+      'auth',          // 🏢 Auth screens - critical for UX
+      'forms',         // 🏢 ENTERPRISE: Form labels, sections, help texts (company-gemi, service forms)
       'building',      // Building management - core module
       'projects',      // Projects module
       'contacts',      // Contacts module

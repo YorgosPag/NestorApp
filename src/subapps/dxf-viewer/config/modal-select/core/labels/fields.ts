@@ -1,255 +1,273 @@
 /**
- * @fileoverview Field Labels Module
+ * @fileoverview Field Labels Module - i18n Keys
  * @description Extracted from modal-select.ts - FIELD LABELS
  * @author Claude (Anthropic AI)
  * @date 2025-12-28
- * @version 1.0.0 - ENTERPRISE MODULAR ARCHITECTURE
- * @compliance CLAUDE.md Enterprise Standards - MODULAR SPLITTING
+ * @updated 2025-01-18 - ENTERPRISE i18n MIGRATION
+ * @version 2.0.0 - ENTERPRISE i18n ARCHITECTURE
+ * @compliance CLAUDE.md Enterprise Standards - SAP/Salesforce Pattern
+ *
+ * 🏢 ENTERPRISE i18n PATTERN:
+ * - All values are i18n keys (not hardcoded strings)
+ * - Keys correspond to forms.json namespace
+ * - Use useFormLabels hook to translate at runtime
+ * - Follows SAP, Salesforce, Microsoft Dynamics i18n patterns
  */
 
 // ====================================================================
-// FIELD LABELS - 🏢 ENTERPRISE CENTRALIZED
+// FIELD LABELS - 🏢 ENTERPRISE i18n KEYS
 // ====================================================================
 
 /**
- * Company Basic Information Field Labels
- * ✅ CENTRALIZED: Single source of truth for company form field labels
+ * Company Basic Information Field Labels (i18n Keys)
+ * ✅ CENTRALIZED: Single source of truth for company form field i18n keys
+ * ✅ ENTERPRISE: Use useFormLabels().getCompanyLabel(key) to translate
+ *
+ * @example
+ * ```tsx
+ * const { getCompanyLabel } = useFormLabels();
+ * const label = getCompanyLabel('companyName'); // Returns translated string
+ * ```
  */
 export const MODAL_SELECT_COMPANY_FIELD_LABELS = {
-  // Basic Company Info
-  company_name: 'Επωνυμία Εταιρείας',
-  trade_name: 'Διακριτικός Τίτλος',
-  vat_number: 'ΑΦΜ',
-  gemi_number: 'Αριθμός ΓΕΜΗ',
-  legal_form: 'Νομική Μορφή',
-  gemi_status: 'Κατάσταση ΓΕΜΗ',
-  activity_code: 'Κωδικός ΚΑΔ',
-  activity_description: 'Περιγραφή Δραστηριότητας',
-  activity_type: 'Τύπος Δραστηριότητας',
-  chamber: 'Επιμελητήριο',
-  capital_amount: 'Κεφάλαιο',
-  currency: 'Νόμισμα',
-  extraordinary_capital: 'Εξωλογιστικά Κεφάλαια',
-  registration_date: 'Ημερομηνία Εγγραφής',
-  status_date: 'Ημερομηνία Κατάστασης',
-  prefecture: 'Νομός',
-  municipality: 'Δήμος',
-  gemi_department: 'Τοπική Υπηρεσία ΓΕΜΗ',
-  address_type: 'Τύπος Διεύθυνσης',
-  street: 'Οδός',
-  street_number: 'Αριθμός',
-  postal_code: 'Ταχυδρομικός Κώδικας',
-  city: 'Πόλη',
-  region: 'Περιφέρεια',
-  shareholder_type: 'Τύπος Μετόχου',
-  shareholder_id: 'ΑΦΜ/ΑΔΤ Μετόχου',
-  share_type: 'Είδος Μετοχών',
-  share_percentage: 'Ποσοστό Συμμετοχής (%)',
-  nominal_value: 'Ονομαστική Αξία',
-  document_type: 'Τύπος Εγγράφου',
-  document_date: 'Ημερομηνία Εγγράφου',
-  document_subject: 'Θέμα Εγγράφου',
-  decision_date: 'Ημερομηνία Απόφασης',
-  decision_subject: 'Θέμα Απόφασης',
-  protocol_number: 'Αριθμός Πρωτοκόλλου',
-  decision_summary: 'Περίληψη',
-  version_date: 'Ημερομηνία Μεταβολής',
-  change_description: 'Περιγραφή Μεταβολής',
-  previous_value: 'Προηγούμενη Τιμή',
-  new_value: 'Νέα Τιμή',
-  representative_name: 'Πλήρες Όνομα',
-  representative_role: 'Ιδιότητα/Θέση',
-  representative_tax: 'ΑΦΜ Εκπροσώπου',
-  representative_doy: 'ΔΟΥ',
-  representative_phone: 'Τηλέφωνο',
-  announcement_date: 'Ημερομηνία Ανακοίνωσης',
-  issue_paper: 'Φύλλο Δημοσίευσης',
-  announcement_subject: 'Θέμα Ανακοίνωσης',
-  announcement_summary: 'Περίληψη',
-  announcement_file: 'Αρχείο Ανακοίνωσης',
-  current_status: 'Τρέχουσα Κατάσταση',
-  status_change_date: 'Ημερομηνία Αλλαγής',
-  status_reason: 'Λόγος Αλλαγής',
-  previous_status: 'Προηγούμενη Κατάσταση',
-  relationships_summary: 'Περίληψη Σχέσεων'
+  // Basic Company Info - i18n keys
+  company_name: 'company.companyName',
+  trade_name: 'company.tradeName',
+  vat_number: 'company.vatNumber',
+  gemi_number: 'company.gemiNumber',
+  legal_form: 'company.legalForm',
+  gemi_status: 'company.gemiStatus',
+  activity_code: 'company.activityCode',
+  activity_description: 'company.activityDescription',
+  activity_type: 'company.activityType',
+  chamber: 'company.chamber',
+  capital_amount: 'company.capitalAmount',
+  currency: 'company.currency',
+  extraordinary_capital: 'company.extraordinaryCapital',
+  registration_date: 'company.registrationDate',
+  status_date: 'company.statusDate',
+  prefecture: 'company.prefecture',
+  municipality: 'company.municipality',
+  gemi_department: 'company.gemiDepartment',
+  address_type: 'company.addressType',
+  street: 'company.street',
+  street_number: 'company.streetNumber',
+  postal_code: 'company.postalCode',
+  city: 'company.city',
+  region: 'company.region',
+  shareholder_type: 'company.shareholderType',
+  shareholder_id: 'company.shareholderId',
+  share_type: 'company.shareType',
+  share_percentage: 'company.sharePercentage',
+  nominal_value: 'company.nominalValue',
+  document_type: 'company.documentType',
+  document_date: 'company.documentDate',
+  document_subject: 'company.documentSubject',
+  decision_date: 'company.decisionDate',
+  decision_subject: 'company.decisionSubject',
+  protocol_number: 'company.protocolNumber',
+  decision_summary: 'company.decisionSummary',
+  version_date: 'company.versionDate',
+  change_description: 'company.changeDescription',
+  previous_value: 'company.previousValue',
+  new_value: 'company.newValue',
+  representative_name: 'company.representativeName',
+  representative_role: 'company.representativeRole',
+  representative_tax: 'company.representativeTax',
+  representative_doy: 'company.representativeDoy',
+  representative_phone: 'company.representativePhone',
+  announcement_date: 'company.announcementDate',
+  issue_paper: 'company.issuePaper',
+  announcement_subject: 'company.announcementSubject',
+  announcement_summary: 'company.announcementSummary',
+  announcement_file: 'company.announcementFile',
+  current_status: 'company.currentStatus',
+  status_change_date: 'company.statusChangeDate',
+  status_reason: 'company.statusReason',
+  previous_status: 'company.previousStatus',
+  relationships_summary: 'company.relationshipsSummary'
 } as const;
 
 /**
- * Service Form Field Labels - Centralized από service-config.ts
- * ✅ ENTERPRISE: Single source of truth για όλα τα service form labels
+ * Service Form Field Labels (i18n Keys) - Centralized από service-config.ts
+ * ✅ ENTERPRISE: Single source of truth για όλα τα service form i18n keys
+ * ✅ ENTERPRISE: Use useFormLabels().getServiceLabel(key) to translate
  */
 export const MODAL_SELECT_SERVICE_FIELD_LABELS = {
-  // Βασικά Στοιχεία
-  service_name: 'Επωνυμία Υπηρεσίας',
-  short_name: 'Συντομογραφία',
-  category: 'Κατηγορία Φορέα',
-  supervision_ministry: 'Εποπτεύον Υπουργείο',
+  // Basic Info - i18n keys
+  service_name: 'service.serviceName',
+  short_name: 'service.shortName',
+  category: 'service.category',
+  supervision_ministry: 'service.supervisionMinistry',
 
-  // Διοικητικά Στοιχεία
-  legal_status: 'Νομικό Καθεστώς',
-  establishment_law: 'Νόμος Ίδρυσης',
-  head_title: 'Τίτλος Προϊσταμένου',
-  head_name: 'Όνομα Προϊσταμένου',
+  // Administrative - i18n keys
+  legal_status: 'service.legalStatus',
+  establishment_law: 'service.establishmentLaw',
+  head_title: 'service.headTitle',
+  head_name: 'service.headName',
 
-  // Στοιχεία Επικοινωνίας
-  street: 'Οδός',
-  street_number: 'Αριθμός',
-  city: 'Πόλη',
-  postal_code: 'Τ.Κ.',
-  phone: 'Τηλέφωνο Κεντρικής',
-  email: 'E-mail Επικοινωνίας',
-  website: 'Ιστοσελίδα',
+  // Contact Info - i18n keys (reuse company keys)
+  street: 'company.street',
+  street_number: 'company.streetNumber',
+  city: 'company.city',
+  postal_code: 'company.postalCode',
+  phone: 'company.representativePhone',
+  email: 'labels.email',
+  website: 'service.website',
 
-  // Αρμοδιότητες & Υπηρεσίες
-  main_responsibilities: 'Κύριες Αρμοδιότητες',
-  citizen_services: 'Υπηρεσίες προς Πολίτες',
-  online_services: 'Ηλεκτρονικές Υπηρεσίες',
-  service_hours: 'Ώρες Εξυπηρέτησης',
+  // Responsibilities & Services - i18n keys
+  main_responsibilities: 'service.mainResponsibilities',
+  citizen_services: 'service.citizenServices',
+  online_services: 'service.onlineServices',
+  service_hours: 'service.serviceHours',
 
-  // Sections
-  basic_info_section: 'Βασικά Στοιχεία',
-  administrative_section: 'Διοικητικά Στοιχεία',
-  contact_section: 'Στοιχεία Επικοινωνίας',
-  services_section: 'Αρμοδιότητες & Υπηρεσίες',
-  logo_section: 'Λογότυπο',
-  relationships_section: 'Υπάλληλοι & Οργάνωση'
+  // Sections - i18n keys
+  basic_info_section: 'sections.basicInfo',
+  administrative_section: 'sections.administrative',
+  contact_section: 'sections.contactInfo',
+  services_section: 'sections.servicesResponsibilities',
+  logo_section: 'sections.logo',
+  relationships_section: 'sections.employeesOrganization'
 } as const;
 
 /**
- * Filter Panel Titles - Centralized Source of Truth
+ * Filter Panel Titles (i18n Keys) - Centralized Source of Truth
  * ✅ ENTERPRISE: Eliminates ALL hardcoded filter titles from AdvancedFilters/configs.ts
+ * ✅ ENTERPRISE: Use useFormLabels().getFilterLabel(key) to translate
  */
 export const MODAL_SELECT_FILTER_PANEL_TITLES = {
-  // Filter Panel Titles
-  units: 'Φίλτρα Αναζήτησης',
-  contacts: 'Φίλτρα Επαφών',
-  buildings: 'Φίλτρα Κτιρίων',
-  projects: 'Φίλτρα Έργων',
+  // Filter Panel Titles - i18n keys
+  units: 'filters.title',
+  contacts: 'filters.contacts',
+  buildings: 'filters.buildings',
+  projects: 'filters.projects',
 
-  // Advanced Filter Titles
-  advanced: 'Προηγμένα Φίλτρα'
+  // Advanced Filter Titles - i18n keys
+  advanced: 'filters.advanced'
 } as const;
 
 /**
- * Search Placeholders - Centralized Source of Truth
+ * Search Placeholders (i18n Keys) - Centralized Source of Truth
  * ✅ ENTERPRISE: Eliminates ALL hardcoded search placeholders
+ * ✅ ENTERPRISE: Use useFormLabels().getPlaceholder(key) to translate
  */
 export const MODAL_SELECT_SEARCH_PLACEHOLDERS = {
-  // Search Field Placeholders
-  units_search: 'Όνομα, περιγραφή...',
-  contacts_search: 'Όνομα, εταιρεία, email...',
-  buildings_search: 'Όνομα, περιγραφή, διεύθυνση...',
-  projects_search: 'Όνομα, περιγραφή, εταιρεία, τοποθεσία...',
+  // Search Field Placeholders - i18n keys
+  units_search: 'searchPlaceholders.units',
+  contacts_search: 'searchPlaceholders.contacts',
+  buildings_search: 'searchPlaceholders.buildings',
+  projects_search: 'searchPlaceholders.projects',
 
-  // Field Placeholders
-  status_placeholder: 'Επιλογή κατάστασης...',
-  project_placeholder: 'Επιλογή Έργου',
-  building_placeholder: 'Επιλογή Κτιρίου',
-  floor_placeholder: 'Επιλογή Ορόφου',
-  type_placeholder: 'Επιλογή Τύπου',
-  priority_placeholder: 'Επιλέξτε προτεραιότητα',
-  location_placeholder: 'Επιλέξτε περιοχή',
-  company_placeholder: 'Επιλέξτε εταιρεία',
-  client_placeholder: 'Επιλέξτε πελάτη',
-  energy_class_placeholder: 'Επιλέξτε κλάση',
-  renovation_placeholder: 'Επιλέξτε κατάσταση',
-  risk_level_placeholder: 'Επιλέξτε επίπεδο',
-  complexity_placeholder: 'Επιλέξτε πολυπλοκότητα'
+  // Field Placeholders - i18n keys
+  status_placeholder: 'searchPlaceholders.status',
+  project_placeholder: 'searchPlaceholders.selectProject',
+  building_placeholder: 'searchPlaceholders.selectBuilding',
+  floor_placeholder: 'searchPlaceholders.selectFloor',
+  type_placeholder: 'searchPlaceholders.selectType',
+  priority_placeholder: 'searchPlaceholders.selectPriority',
+  location_placeholder: 'searchPlaceholders.selectLocation',
+  company_placeholder: 'searchPlaceholders.selectCompany',
+  client_placeholder: 'searchPlaceholders.selectClient',
+  energy_class_placeholder: 'searchPlaceholders.selectEnergyClass',
+  renovation_placeholder: 'searchPlaceholders.selectRenovation',
+  risk_level_placeholder: 'searchPlaceholders.selectRiskLevel',
+  complexity_placeholder: 'searchPlaceholders.selectComplexity'
 } as const;
 
 /**
- * Field Labels - Centralized Source of Truth
+ * Field Labels (i18n Keys) - Centralized Source of Truth
  * ✅ ENTERPRISE: Eliminates ALL hardcoded field labels
+ * ✅ ENTERPRISE: Use useFormLabels().getFilterLabel(key) to translate
  */
 export const MODAL_SELECT_FIELD_LABELS = {
-  // Common Field Labels
-  search: 'Αναζήτηση',
-  status: 'Κατάσταση',
-  type: 'Τύπος',
-  priority: 'Προτεραιότητα',
-  location: 'Περιοχή',
-  company: 'Εταιρεία',
-  client: 'Πελάτης',
-  project: 'Έργο',
-  building: 'Κτίριο',
-  floor: 'Όροφος',
+  // Common Field Labels - i18n keys
+  search: 'filters.search',
+  status: 'labels.status',
+  type: 'filters.type',
+  priority: 'filters.priority',
+  location: 'filters.location',
+  company: 'labels.company',
+  client: 'filters.client',
+  project: 'filters.project',
+  building: 'filters.building',
+  floor: 'labels.floor',
 
-  // Unit-specific Labels
-  price_range: 'Εύρος Τιμής (€)',
-  area_range: 'Εύρος Εμβαδού (m²)',
-  property_type: 'Τύπος Ακινήτου',
+  // Unit-specific Labels - i18n keys
+  price_range: 'filters.priceRange',
+  area_range: 'filters.areaRange',
+  property_type: 'filters.propertyType',
 
-  // Contact-specific Labels
-  contact_type: 'Τύπος Επαφής',
-  units_count: 'Πλήθος Μονάδων',
-  total_area: 'Συνολικό Εμβαδόν',
-  has_properties: 'Μόνο με ιδιοκτησίες',
-  is_favorite: 'Αγαπημένα',
-  show_archived: 'Αρχειοθετημένα',
+  // Contact-specific Labels - i18n keys
+  contact_type: 'filters.contactType',
+  units_count: 'filters.unitsCount',
+  total_area: 'filters.totalArea',
+  has_properties: 'filters.hasProperties',
+  is_favorite: 'filters.isFavorite',
+  show_archived: 'filters.showArchived',
 
-  // Building-specific Labels
-  value_range: 'Αξία (€)',
-  units_range: 'Αρ. Μονάδων',
-  year_range: 'Έτος Κατασκευής',
-  has_parking: 'Parking',
-  has_elevator: 'Ασανσέρ',
-  has_garden: 'Κήπος',
-  has_pool: 'Πισίνα',
-  energy_class: 'Ενεργειακή Κλάση',
-  accessibility: 'Προσβασιμότητα ΑΜΕΑ',
-  furnished: 'Επιπλωμένο',
-  renovation: 'Κατάσταση',
+  // Building-specific Labels - i18n keys
+  value_range: 'filters.valueRange',
+  units_range: 'filters.unitsRange',
+  year_range: 'filters.yearRange',
+  has_parking: 'filters.hasParking',
+  has_elevator: 'filters.hasElevator',
+  has_garden: 'filters.hasGarden',
+  has_pool: 'filters.hasPool',
+  energy_class: 'filters.energyClass',
+  accessibility: 'filters.accessibility',
+  furnished: 'filters.furnished',
+  renovation: 'filters.renovation',
 
-  // Project-specific Labels
-  budget_range: 'Προϋπολογισμός (€)',
-  duration_range: 'Διάρκεια (μήνες)',
-  progress_range: 'Πρόοδος (%)',
-  start_year_range: 'Έτος Έναρξης',
-  has_permits: 'Έχει άδειες',
-  has_financing: 'Έχει χρηματοδότηση',
-  is_ecological: 'Οικολογικό',
-  has_subcontractors: 'Έχει υπεργολάβους',
-  risk_level: 'Επίπεδο κινδύνου',
-  complexity: 'Πολυπλοκότητα',
-  is_active: 'Μόνο ενεργά',
-  has_issues: 'Έχει προβλήματα'
+  // Project-specific Labels - i18n keys
+  budget_range: 'filters.budgetRange',
+  duration_range: 'filters.durationRange',
+  progress_range: 'filters.progressRange',
+  start_year_range: 'filters.startYearRange',
+  has_permits: 'filters.hasPermits',
+  has_financing: 'filters.hasFinancing',
+  is_ecological: 'filters.isEcological',
+  has_subcontractors: 'filters.hasSubcontractors',
+  risk_level: 'filters.riskLevel',
+  complexity: 'filters.complexity',
+  is_active: 'filters.isActive',
+  has_issues: 'filters.hasIssues'
 } as const;
 
 /**
- * Advanced Filter Options - Centralized Source of Truth
+ * Advanced Filter Options (i18n Keys) - Centralized Source of Truth
  * ✅ ENTERPRISE: Eliminates ALL hardcoded advanced filter labels
  */
 export const MODAL_SELECT_ADVANCED_FILTER_OPTIONS = {
-  // Unit Features
-  parking: 'Parking',
-  storage: 'Αποθήκη',
-  fireplace: 'Τζάκι',
-  view: 'Θέα',
-  pool: 'Πισίνα',
+  // Unit Features - i18n keys
+  parking: 'features.parking',
+  storage: 'features.storage',
+  fireplace: 'features.fireplace',
+  view: 'features.view',
+  pool: 'features.pool',
 
-  // Contact Features
-  is_favorite_contacts: 'Αγαπημένες',
-  has_email: 'Με Email',
-  has_phone: 'Με Τηλέφωνο',
-  recent_activity: 'Πρόσφατη Δραστηριότητα'
+  // Contact Features - i18n keys
+  is_favorite_contacts: 'features.isFavoriteContacts',
+  has_email: 'features.hasEmail',
+  has_phone: 'features.hasPhone',
+  recent_activity: 'features.recentActivity'
 } as const;
 
 /**
- * Range Labels - Centralized Source of Truth
+ * Range Labels (i18n Keys) - Centralized Source of Truth
  * ✅ ENTERPRISE: Eliminates ALL hardcoded range option labels
  */
 export const MODAL_SELECT_RANGE_LABELS = {
-  // Units Count Options
-  units_all: 'Όλες οι μονάδες',
-  units_1_2: '1-2 μονάδες',
-  units_3_5: '3-5 μονάδες',
-  units_6_plus: '6+ μονάδες',
+  // Units Count Options - i18n keys
+  units_all: 'rangeOptions.allUnits',
+  units_1_2: 'rangeOptions.units1to2',
+  units_3_5: 'rangeOptions.units3to5',
+  units_6_plus: 'rangeOptions.units6plus',
 
-  // Area Options
-  areas_all: 'Όλα τα εμβαδά',
-  area_up_to_100: 'Έως 100 τ.μ.',
-  area_101_300: '101 - 300 τ.μ.',
-  area_301_plus: '301+ τ.μ.'
+  // Area Options - i18n keys
+  areas_all: 'rangeOptions.allAreas',
+  area_up_to_100: 'rangeOptions.areaUpTo100',
+  area_101_300: 'rangeOptions.area101to300',
+  area_301_plus: 'rangeOptions.area301plus'
 } as const;
 
 /**

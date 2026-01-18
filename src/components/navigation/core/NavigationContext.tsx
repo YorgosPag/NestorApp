@@ -32,6 +32,15 @@ const NavigationContext = createContext<NavigationContextType | null>(null);
 // With module-level flag, ALL mounts share the same flag → guard works
 let navigationInitialized = false;
 
+/**
+ * 🔄 Reset navigation initialization flag
+ * Call this on logout to ensure fresh bootstrap on next login
+ */
+export function resetNavigationState(): void {
+  console.log('🔄 [NavigationContext] Resetting navigation state (logout/cleanup)');
+  navigationInitialized = false;
+}
+
 export function NavigationProvider({ children }: { children: React.ReactNode }) {
   // Core navigation state
   const [state, setState] = useState<NavigationState>({
@@ -77,10 +86,18 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     // 🏢 ENTERPRISE: Module-level guard prevents double initialization
     // This works with React Strict Mode because the flag persists across component remounts
-    if (navigationInitialized) {
-      console.log('⚡ [NavigationContext] Already initialized (module-level guard)');
+    // ALSO check if we already have data (handles Fast Refresh in development)
+    if (navigationInitialized && state.companies.length > 0) {
+      console.log('⚡ [NavigationContext] Already initialized with data (module-level guard)');
       return;
     }
+
+    // If flag is true but no data, reset and try again (Fast Refresh recovery)
+    if (navigationInitialized && state.companies.length === 0) {
+      console.log('🔄 [NavigationContext] Flag was set but no data - resetting for retry...');
+      navigationInitialized = false;
+    }
+
     navigationInitialized = true;
     console.log('🚀 [NavigationContext] Initializing navigation...');
 
@@ -182,6 +199,34 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       window.removeEventListener(REALTIME_EVENTS.NAVIGATION_REFRESH, handleNavigationRefresh);
     };
   }, [refreshNavigation]);
+
+  // 🏢 ENTERPRISE: Listen for auth:logout event to reset navigation state
+  useEffect(() => {
+    const handleLogout = () => {
+      console.log('📡 [NavigationContext] Received auth:logout event - resetting state');
+      resetNavigationState();
+      // Also reset local state
+      setState({
+        companies: [],
+        selectedCompany: null,
+        projects: [],
+        selectedProject: null,
+        selectedBuilding: null,
+        selectedUnit: null,
+        selectedFloor: null,
+        currentLevel: 'companies',
+        loading: false,
+        projectsLoading: false,
+        error: null
+      });
+    };
+
+    window.addEventListener('auth:logout', handleLogout);
+
+    return () => {
+      window.removeEventListener('auth:logout', handleLogout);
+    };
+  }, []);
 
   // Wrapped action functions with state management
   const loadCompanies = async () => {

@@ -4,7 +4,13 @@
     "titleWithCount": "Contact Management ({count})",
     "subtitle": "Central directory of all your contacts",
     "searchPlaceholder": "Search contacts...",
-    "newContact": "New Contact"
+    "newContact": "New Contact",
+    "actions": {
+      "edit": "Edit",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete Contact"
+    }
   },
   "page": {
     "pageLabel": "Contact Management",
@@ -67,6 +73,21 @@
       "subtitle": "Add your first contact"
     }
   },
+  "stats": {
+    "title": "Property Statistics",
+    "unitsCount": "Number of Units",
+    "totalArea": "Total Area",
+    "totalValue": "Total Value"
+  },
+  "projects": {
+    "title": "Related Projects",
+    "empty": "No projects found for this company.",
+    "table": {
+      "project": "Project",
+      "status": "Status",
+      "progress": "Progress"
+    }
+  },
   "properties": {
     "title": "Customer Properties ({count})",
     "addProperty": "Add Property",
@@ -84,7 +105,9 @@
   "details": {
     "contactInfo": {
       "title": "Contact Information",
-      "noContactInfo": "No contact information available."
+      "noContactInfo": "No contact information available.",
+      "sendEmailTitle": "Send email to {email} via Gmail",
+      "callTitle": "Call {phone}"
     },
     "taxInfo": {
       "title": "Tax Information",
@@ -107,6 +130,17 @@
     },
     "cancel": "Cancel",
     "delete": "Delete"
+  },
+  "form": {
+    "noName": "No name",
+    "noCompanyName": "No company name",
+    "editTitle": "Edit Contact",
+    "addTitle": "Add New Contact",
+    "editDescription": "Edit the contact details.",
+    "addDescription": "Enter the basic details of the new contact.",
+    "typeLabel": "Type",
+    "updateContact": "Update Contact",
+    "saveContact": "Save Contact"
   },
   "relationships": {
     "form": {
@@ -166,6 +200,22 @@
       "empty": {
         "title": "No registered relationships",
         "addHint": "Click the \"Add Relationship\" button to add the first relationship."
+      }
+    },
+    "summary": {
+      "title": "Contact Relationships",
+      "organizationChart": "Organization Chart",
+      "add": "Add",
+      "startHere": "Start here",
+      "newContact": {
+        "availableAfterSave": "Relationships will be available after saving the contact.",
+        "tip": "Tip:",
+        "tipText": "Save the contact to add professional relationships, employees and shareholders."
+      },
+      "loading": "Loading relationships...",
+      "empty": {
+        "title": "No relationships",
+        "description": "Add professional relationships, employees and collaborators."
       }
     }
   }

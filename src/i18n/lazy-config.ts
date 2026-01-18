@@ -290,6 +290,7 @@ export async function preloadCriticalNamespaces(language: Language = 'el') {
     'errors',
     'toasts',
     'auth',
+    'forms',         // 🏢 ENTERPRISE: Form labels, help texts, sections (company-gemi, service forms)
     'building',      // Building management - core module
     'navigation',    // Navigation labels
     'projects',      // Projects module

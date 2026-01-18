@@ -200,15 +200,23 @@ export async function GET(request: NextRequest) {
 }
 
 async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promise<NextResponse<CompaniesResponse>> {
-  console.log(`🏢 API: Loading active companies for user ${ctx.email} (company: ${ctx.companyId})...`);
+  console.log(`🏢 API: Loading companies for user ${ctx.email} (company: ${ctx.companyId}, role: ${ctx.globalRole})...`);
+
+  // =========================================================================
+  // 🏢 ENTERPRISE RBAC: Unified authorization logic
+  // Same pattern as /api/audit/bootstrap (SAP/Salesforce standard)
+  // =========================================================================
+  const isAdmin = ctx.globalRole === 'super_admin' || ctx.globalRole === 'company_admin';
 
   try {
     // =========================================================================
-    // STEP 0: Check cache first (Enterprise Caching)
+    // STEP 0: Check cache first (Enterprise Caching - per-tenant)
     // =========================================================================
-    const cachedCompanies = CacheHelpers.getCachedCompanies();
+    // 🔒 TENANT ISOLATION: Cache key includes role for proper separation
+    const tenantCacheKey = isAdmin ? 'companies:admin' : `companies:tenant:${ctx.companyId}`;
+    const cachedCompanies = CacheHelpers.getCachedCompanies(tenantCacheKey);
     if (cachedCompanies) {
-      console.log(`⚡ API: CACHE HIT - Returning ${cachedCompanies.length} cached companies`);
+      console.log(`⚡ API: CACHE HIT (${tenantCacheKey}) - Returning ${cachedCompanies.length} cached companies`);
       return NextResponse.json({
         companies: cachedCompanies,
         count: cachedCompanies.length,
@@ -216,98 +224,116 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
       });
     }
 
-    console.log('🔍 API: Cache miss - Fetching from Firestore with Admin SDK...');
+    console.log(`🔍 API: Cache miss (${tenantCacheKey}) - Fetching from Firestore with Admin SDK...`);
 
     // =========================================================================
-    // STEP 1: Get navigation company IDs (manual additions)
+    // 🏢 ENTERPRISE RBAC: Role-based company loading
     // =========================================================================
-    const navigationSnapshot = await adminDb
-      .collection(COLLECTIONS.NAVIGATION)
-      .get();
+    let relevantCompanies: CompanyContact[] = [];
 
-    const navigationCompanyIds: string[] = [];
-    navigationSnapshot.docs.forEach(doc => {
-      const data = doc.data();
-      const contactId = data.contactId;
-      if (typeof contactId === 'string' && contactId.length > 0) {
-        navigationCompanyIds.push(contactId);
+    if (isAdmin) {
+      // =====================================================================
+      // 🔓 ADMIN MODE: Load from navigation_companies (multi-company view)
+      // Same logic as /api/audit/bootstrap for admins
+      // =====================================================================
+      console.log(`👑 API: Admin mode (${ctx.globalRole}) - Loading from navigation_companies...`);
+
+      // Step 1: Get navigation company IDs
+      const navigationSnapshot = await adminDb
+        .collection(COLLECTIONS.NAVIGATION)
+        .get();
+
+      const navigationCompanyIds: string[] = [];
+      navigationSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const contactId = data.contactId;
+        if (typeof contactId === 'string' && contactId.length > 0) {
+          navigationCompanyIds.push(contactId);
+        }
+      });
+
+      console.log(`📍 API: Navigation company IDs: ${navigationCompanyIds.length}`);
+
+      if (navigationCompanyIds.length === 0) {
+        console.warn('⚠️ API: No navigation companies found - admin has no companies configured');
+        return NextResponse.json({
+          companies: [],
+          count: 0,
+          cached: false
+        });
       }
-    });
 
-    console.log(`📍 API: Navigation company IDs: ${navigationCompanyIds.length}`, navigationCompanyIds);
+      // Step 2: Get company details from contacts
+      const companiesSnapshot = await adminDb
+        .collection(COLLECTIONS.CONTACTS)
+        .where('type', '==', 'company')
+        .where('status', '==', 'active')
+        .get();
 
-    // =========================================================================
-    // STEP 2: Get all active companies from contacts
-    // =========================================================================
-    const companiesSnapshot = await adminDb
-      .collection(COLLECTIONS.CONTACTS)
-      .where('type', '==', 'company')
-      .where('status', '==', 'active')
-      .get();
+      // Build company map
+      const companyMap = new Map<string, CompanyContact>();
+      companiesSnapshot.docs.forEach(doc => {
+        const rawData = doc.data() as FirestoreCompanyData;
+        const company = mapFirestoreToCompanyContact(doc.id, rawData);
+        companyMap.set(doc.id, company);
+      });
 
-    console.log(`🏢 API: Found ${companiesSnapshot.docs.length} active companies in contacts`);
-
-    // Build company map using Data Mapper pattern
-    const companyMap = new Map<string, CompanyContact>();
-    companiesSnapshot.docs.forEach(doc => {
-      const rawData = doc.data() as FirestoreCompanyData;
-      const company = mapFirestoreToCompanyContact(doc.id, rawData);
-      companyMap.set(doc.id, company);
-    });
-
-    // =========================================================================
-    // STEP 3: Get companies that have projects (TENANT ISOLATION)
-    // =========================================================================
-    const projectsSnapshot = await adminDb
-      .collection(COLLECTIONS.PROJECTS)
-      .where('companyId', '==', ctx.companyId)  // CRITICAL: Filter by user's company
-      .get();
-
-    const companiesWithProjects = new Set<string>();
-    projectsSnapshot.docs.forEach(doc => {
-      const data = doc.data();
-      const companyId = data.companyId;
-      if (typeof companyId === 'string' && companyMap.has(companyId)) {
-        companiesWithProjects.add(companyId);
+      // Step 3: Filter to navigation companies only
+      for (const companyId of navigationCompanyIds) {
+        const company = companyMap.get(companyId);
+        if (company) {
+          relevantCompanies.push(company);
+        } else {
+          console.log(`⚠️ API: Navigation company ${companyId} not found in active contacts`);
+        }
       }
-    });
 
-    console.log(`🏗️ API: Companies with projects: ${companiesWithProjects.size}`);
+      console.log(`🏢 API: Admin loaded ${relevantCompanies.length} companies from navigation_companies`);
 
-    // =========================================================================
-    // STEP 4: Combine navigation + projects (unique)
-    // =========================================================================
-    const allRelevantCompanyIds = new Set([
-      ...navigationCompanyIds,
-      ...Array.from(companiesWithProjects)
-    ]);
+    } else {
+      // =====================================================================
+      // 🔒 TENANT ISOLATION: Internal user sees only their company
+      // Same logic as /api/audit/bootstrap for non-admins
+      // =====================================================================
+      console.log(`🔒 API: Tenant isolation mode (${ctx.globalRole}) - Loading user's company only...`);
 
-    console.log(`🎯 API: Total relevant company IDs: ${allRelevantCompanyIds.size}`, Array.from(allRelevantCompanyIds));
-
-    // =========================================================================
-    // STEP 5: Filter and return relevant companies
-    // =========================================================================
-    const relevantCompanies: CompanyContact[] = [];
-
-    // Convert Set to Array for iteration (TypeScript ES5 compatibility)
-    const relevantIdsArray = Array.from(allRelevantCompanyIds);
-
-    for (const companyId of relevantIdsArray) {
-      const company = companyMap.get(companyId);
-      if (company) {
-        relevantCompanies.push(company);
-        console.log(`✅ API: Including company: ${company.id} - ${company.companyName}`);
-      } else {
-        console.log(`⚠️ API: Company ${companyId} not found in active companies map`);
+      if (!ctx.companyId) {
+        console.warn('⚠️ API: User has no companyId in custom claims');
+        return NextResponse.json({
+          companies: [],
+          count: 0,
+          cached: false
+        });
       }
+
+      // Fetch only user's company
+      const companyDoc = await adminDb
+        .collection(COLLECTIONS.CONTACTS)
+        .doc(ctx.companyId)
+        .get();
+
+      if (!companyDoc.exists) {
+        console.warn(`⚠️ API: User's company ${ctx.companyId} not found in database`);
+        return NextResponse.json({
+          companies: [],
+          count: 0,
+          cached: false
+        });
+      }
+
+      const rawData = companyDoc.data() as FirestoreCompanyData;
+      const company = mapFirestoreToCompanyContact(companyDoc.id, rawData);
+      relevantCompanies.push(company);
+
+      console.log(`🏢 API: Tenant isolation - loaded 1 company: ${company.companyName}`);
     }
 
     // =========================================================================
-    // STEP 6: Cache and return
+    // STEP FINAL: Cache and return
     // =========================================================================
-    CacheHelpers.cacheCompanies(relevantCompanies);
+    CacheHelpers.cacheCompanies(relevantCompanies, tenantCacheKey);
 
-    console.log(`✅ API: Found ${relevantCompanies.length} active companies (cached for 5 minutes)`);
+    console.log(`✅ API: Found ${relevantCompanies.length} companies (cached for 5 minutes)`);
 
     return NextResponse.json({
       companies: relevantCompanies,

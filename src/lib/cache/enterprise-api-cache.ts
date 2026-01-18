@@ -216,13 +216,18 @@ export class CacheHelpers {
 
   /**
    * 🏢 Cache companies data
+   * 🔒 ENTERPRISE RBAC: Supports tenant-specific cache keys for proper isolation
+   * @param companies - Array of companies to cache
+   * @param tenantKey - Optional tenant-specific cache key (e.g., 'companies:admin' or 'companies:tenant:xyz')
    */
-  static cacheCompanies(companies: unknown[]): void {
-    this.cache.set('api:companies', companies);
+  static cacheCompanies(companies: unknown[], tenantKey?: string): void {
+    const key = tenantKey || 'api:companies';
+    this.cache.set(key, companies);
   }
 
-  static getCachedCompanies(): unknown[] | null {
-    return this.cache.get('api:companies');
+  static getCachedCompanies(tenantKey?: string): unknown[] | null {
+    const key = tenantKey || 'api:companies';
+    return this.cache.get(key);
   }
 
   /**

@@ -68,15 +68,15 @@ export function LandingPage() {
           </header>
 
           {/* Search Box */}
-          <section className="max-w-4xl mx-auto" aria-label="Φόρμα Αναζήτησης Ακινήτων">
+          <section className="max-w-4xl mx-auto" aria-label={t('search.searchCriteria')}>
             <form
               onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
               className={`${colors.bg.primary} ${quick.card} shadow-xl p-6`}
               role="search"
-              aria-label="Αναζήτηση Ακινήτων"
+              aria-label={t('search.searchButton')}
             >
               <fieldset className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <legend className="sr-only">Κριτήρια Αναζήτησης Ακινήτων</legend>
+                <legend className="sr-only">{t('search.searchCriteria')}</legend>
                 {/* Property Type */}
                 <fieldset className="space-y-1">
                   <label htmlFor="search-type" className={`text-xs font-semibold ${colors.text.muted} block`}>
@@ -120,18 +120,18 @@ export function LandingPage() {
                 {/* Price Range */}
                 <fieldset className="space-y-1">
                   <label htmlFor="search-price" className={`text-xs font-semibold ${colors.text.muted} block`}>
-                    Εύρος Τιμής
+                    {t('search.priceRange')}
                   </label>
                   <Select value={priceRange} onValueChange={setPriceRange}>
                     <SelectTrigger id="search-price" className={`w-full px-4 py-3 ${colors.bg.secondary} ${colors.text.foreground} ${quick.input} focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer`}>
-                      <SelectValue placeholder="Όλες οι τιμές" />
+                      <SelectValue placeholder={t('search.allPrices')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Όλες οι τιμές</SelectItem>
-                      <SelectItem value="0-50000">€0 - €50.000</SelectItem>
-                      <SelectItem value="50000-100000">€50.000 - €100.000</SelectItem>
-                      <SelectItem value="100000-200000">€100.000 - €200.000</SelectItem>
-                      <SelectItem value="200000+">€200.000+</SelectItem>
+                      <SelectItem value="all">{t('search.priceRanges.all')}</SelectItem>
+                      <SelectItem value="0-50000">{t('search.priceRanges.up50k')}</SelectItem>
+                      <SelectItem value="50000-100000">{t('search.priceRanges.50k100k')}</SelectItem>
+                      <SelectItem value="100000-200000">{t('search.priceRanges.100k200k')}</SelectItem>
+                      <SelectItem value="200000+">{t('search.priceRanges.above200k')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </fieldset>
@@ -139,46 +139,46 @@ export function LandingPage() {
                 {/* Area Range */}
                 <fieldset className="space-y-1">
                   <label htmlFor="search-area" className={`text-xs font-semibold ${colors.text.muted} block`}>
-                    Εμβαδόν
+                    {t('search.areaRange')}
                   </label>
                   <Select value={areaRange} onValueChange={setAreaRange}>
                     <SelectTrigger id="search-area" className={`w-full px-4 py-3 ${colors.bg.secondary} ${colors.text.foreground} ${quick.input} focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer`}>
-                      <SelectValue placeholder="Όλα τα μεγέθη" />
+                      <SelectValue placeholder={t('search.allSizes')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Όλα τα μεγέθη</SelectItem>
-                      <SelectItem value="0-50">0-50 m²</SelectItem>
-                      <SelectItem value="50-100">50-100 m²</SelectItem>
-                      <SelectItem value="100-150">100-150 m²</SelectItem>
-                      <SelectItem value="150+">150+ m²</SelectItem>
+                      <SelectItem value="all">{t('search.areaRanges.all')}</SelectItem>
+                      <SelectItem value="0-50">{t('search.areaRanges.up50')}</SelectItem>
+                      <SelectItem value="50-100">{t('search.areaRanges.50to100')}</SelectItem>
+                      <SelectItem value="100-150">{t('search.areaRanges.100to150')}</SelectItem>
+                      <SelectItem value="150+">{t('search.areaRanges.above150')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </fieldset>
               </fieldset>
 
-              <button 
+              <button
                 type="submit"
                 className={`w-full mt-6 px-6 py-3 ${GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON} flex items-center justify-center gap-2 ${TRANSITION_PRESETS.STANDARD_ALL}`}
               >
                 <Search className={iconSizes.md} />
-                Αναζήτηση Ακινήτων
+                {t('search.searchButton')}
               </button>
             </form>
 
             {/* Quick Search Links */}
-            <nav className="flex flex-wrap justify-center gap-3 mt-6" role="navigation" aria-label="Γρήγορες Συνδέσεις Αναζήτησης">
+            <nav className="flex flex-wrap justify-center gap-3 mt-6" role="navigation" aria-label={t('quickLinks.ariaLabel')}>
               <Link href="/properties?type=Στούντιο" className={`px-4 py-2 ${colors.bg.primary}/80 backdrop-blur text-sm font-medium ${colors.text.muted} ${quick.pill} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
-                Στούντιο
+                {t('quickLinks.studio')}
               </Link>
               <Link href="/properties?type=Διαμέρισμα" className={`px-4 py-2 ${colors.bg.primary}/80 backdrop-blur text-sm font-medium ${colors.text.muted} ${quick.pill} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
-                2 Υπνοδωμάτια
+                {t('quickLinks.twoBedroom')}
               </Link>
               <Link href="/properties?type=Μεζονέτα" className={`px-4 py-2 ${colors.bg.primary}/80 backdrop-blur text-sm font-medium ${colors.text.muted} ${quick.pill} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
-                Μεζονέτες
+                {t('quickLinks.maisonettes')}
               </Link>
               <Link href="/properties?view=floorplan" className={`px-4 py-2 ${colors.bg.primary}/80 backdrop-blur text-sm font-medium ${colors.text.info} ${quick.pill} flex items-center gap-1 ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
                 <MapPin className={iconSizes.sm} />
-                Δείτε σε Κάτοψη
+                {t('quickLinks.viewFloorplan')}
               </Link>
             </nav>
           </section>
@@ -186,38 +186,38 @@ export function LandingPage() {
       </section>
 
       {/* Stats Section */}
-      <section className={`py-16 ${colors.bg.primary}`} role="region" aria-label="Στατιστικά Εταιρείας">
+      <section className={`py-16 ${colors.bg.primary}`} role="region" aria-label={t('stats.ariaLabel')}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8" role="list">
             <article className="text-center" role="listitem">
               <data value="5" className={`text-3xl font-bold ${colors.text.info} mb-2`}>5+</data>
-              <p className={colors.text.muted}>Διαθέσιμα Ακίνητα</p>
+              <p className={colors.text.muted}>{t('stats.availableProperties')}</p>
             </article>
             <article className="text-center" role="listitem">
               <data value="3" className={`text-3xl font-bold ${colors.text.accent} mb-2`}>3</data>
-              <p className={colors.text.muted}>Premium Τοποθεσίες</p>
+              <p className={colors.text.muted}>{t('stats.premiumLocations')}</p>
             </article>
             <article className="text-center" role="listitem">
               <data value="100" className={`text-3xl font-bold ${colors.text.success} mb-2`}>100%</data>
-              <p className={colors.text.muted}>Εγγύηση Ποιότητας</p>
+              <p className={colors.text.muted}>{t('stats.qualityGuarantee')}</p>
             </article>
             <article className="text-center" role="listitem">
               <data value="24" className="text-3xl font-bold ${colors.text.warning} mb-2">24/7</data>
-              <p className={colors.text.muted}>Υποστήριξη</p>
+              <p className={colors.text.muted}>{t('stats.support')}</p>
             </article>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className={`py-20 ${colors.bg.secondary}`} role="region" aria-label="Χαρακτηριστικά Υπηρεσιών">
+      <section className={`py-20 ${colors.bg.secondary}`} role="region" aria-label={t('features.ariaLabel')}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <header className="text-center mb-12">
             <h2 className={`text-3xl font-bold ${colors.text.foreground} mb-4`}>
-              Γιατί να Επιλέξετε τα Ακίνητά μας;
+              {t('features.title')}
             </h2>
             <p className={`text-lg ${colors.text.muted} max-w-2xl mx-auto`}>
-              Προσφέρουμε την καλύτερη εμπειρία αναζήτησης ακινήτων με σύγχρονα εργαλεία
+              {t('features.subtitle')}
             </p>
           </header>
 
@@ -228,10 +228,10 @@ export function LandingPage() {
                   <MapPin className={`${iconSizes.lg} ${colors.text.info}`} />
                 </figure>
               <h3 className={`text-lg font-semibold ${colors.text.foreground} mb-2`}>
-                Διαδραστική Κάτοψη
+                {t('features.interactiveFloorplan.title')}
               </h3>
               <p className={colors.text.muted}>
-                Εξερευνήστε τα ακίνητα σε διαδραστική κάτοψη ορόφου και δείτε τη θέση τους
+                {t('features.interactiveFloorplan.description')}
               </p>
               </article>
             </li>
@@ -242,10 +242,10 @@ export function LandingPage() {
                   <Shield className={`${iconSizes.lg} ${colors.text.accent}`} />
                 </figure>
               <h3 className={`text-lg font-semibold ${colors.text.foreground} mb-2`}>
-                Εγγυημένη Ποιότητα
+                {t('features.guaranteedQuality.title')}
               </h3>
               <p className={colors.text.muted}>
-                Όλα τα ακίνητα είναι ελεγμένα και πληρούν τις υψηλότερες προδιαγραφές
+                {t('features.guaranteedQuality.description')}
               </p>
               </article>
             </li>
@@ -256,10 +256,10 @@ export function LandingPage() {
                   <Users className={`${iconSizes.lg} ${colors.text.success}`} />
                 </figure>
               <h3 className={`text-lg font-semibold ${colors.text.foreground} mb-2`}>
-                Προσωπική Εξυπηρέτηση
+                {t('features.personalService.title')}
               </h3>
               <p className={colors.text.muted}>
-                Η ομάδα μας είναι εδώ για να σας βοηθήσει σε κάθε βήμα της διαδικασίας
+                {t('features.personalService.description')}
               </p>
               </article>
             </li>
@@ -268,14 +268,14 @@ export function LandingPage() {
       </section>
 
       {/* Featured Properties Preview */}
-      <section className="py-20" role="region" aria-label="Προτεινόμενα Ακίνητα">
+      <section className="py-20" role="region" aria-label={t('featuredProperties.ariaLabel')}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <header className="text-center mb-12">
             <h2 className={`text-3xl font-bold ${colors.text.foreground} mb-4`}>
-              Προτεινόμενα Ακίνητα
+              {t('featuredProperties.title')}
             </h2>
             <p className={`text-lg ${colors.text.muted}`}>
-              Δείτε μερικά από τα πιο δημοφιλή ακίνητά μας
+              {t('featuredProperties.subtitle')}
             </p>
           </header>
 
@@ -288,13 +288,13 @@ export function LandingPage() {
               </figure>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className={`text-lg font-bold ${colors.text.foreground}`}>Στούντιο B1</h3>
+                  <h3 className={`text-lg font-bold ${colors.text.foreground}`}>{t('featuredProperties.properties.studioB1.title')}</h3>
                   <span className={`px-2 py-1 ${colors.bg.info} ${colors.text.info} text-xs font-semibold rounded-full`}>
-                    Διαθέσιμο
+                    {t('featuredProperties.available')}
                   </span>
                 </div>
                 <p className={`text-2xl font-bold ${colors.text.info} mb-2`}>€65.000</p>
-                <p className={`${colors.text.muted} text-sm mb-4`}>35 m² • 1ος όροφος</p>
+                <p className={`${colors.text.muted} text-sm mb-4`}>{t('featuredProperties.properties.studioB1.details')}</p>
                 <div className="flex items-center gap-1">
                   <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
                   <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
@@ -315,13 +315,13 @@ export function LandingPage() {
                 </figure>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className={`text-lg font-bold ${colors.text.foreground}`}>Διαμέρισμα 2Δ</h3>
+                  <h3 className={`text-lg font-bold ${colors.text.foreground}`}>{t('featuredProperties.properties.apartment2D.title')}</h3>
                   <span className={`px-2 py-1 ${colors.bg.info} ${colors.text.info} text-xs font-semibold rounded-full`}>
-                    Διαθέσιμο
+                    {t('featuredProperties.available')}
                   </span>
                 </div>
                 <p className={`text-2xl font-bold ${colors.text.info} mb-2`}>€145.000</p>
-                <p className={`${colors.text.muted} text-sm mb-4`}>75 m² • 2 υπνοδωμάτια</p>
+                <p className={`${colors.text.muted} text-sm mb-4`}>{t('featuredProperties.properties.apartment2D.details')}</p>
                 <div className="flex items-center gap-1">
                   <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
                   <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
@@ -342,13 +342,13 @@ export function LandingPage() {
                 </figure>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className={`text-lg font-bold ${colors.text.foreground}`}>Μεζονέτα E1</h3>
+                  <h3 className={`text-lg font-bold ${colors.text.foreground}`}>{t('featuredProperties.properties.maisonetteE1.title')}</h3>
                   <span className={`px-2 py-1 ${colors.bg.info} ${colors.text.info} text-xs font-semibold rounded-full`}>
-                    Διαθέσιμο
+                    {t('featuredProperties.available')}
                   </span>
                 </div>
                 <p className={`text-2xl font-bold ${colors.text.info} mb-2`}>€280.000</p>
-                <p className={`${colors.text.muted} text-sm mb-4`}>145 m² • 3 υπνοδωμάτια</p>
+                <p className={`${colors.text.muted} text-sm mb-4`}>{t('featuredProperties.properties.maisonetteE1.details')}</p>
                 <div className="flex items-center gap-1">
                   <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
                   <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
@@ -367,7 +367,7 @@ export function LandingPage() {
               href="/properties"
               className={`inline-flex items-center gap-2 px-8 py-3 ${GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON} ${TRANSITION_PRESETS.STANDARD_ALL}`}
             >
-              Δείτε Όλα τα Ακίνητα
+              {t('featuredProperties.viewAll')}
               <ArrowRight className={iconSizes.md} />
             </Link>
           </footer>
@@ -375,27 +375,27 @@ export function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600" role="region" aria-label="Κλήση προς Δράση">
+      <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600" role="region" aria-label={t('cta.ariaLabel')}>
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className={`text-3xl font-bold ${colors.text.foreground} mb-4`}>
-            Έτοιμοι να Βρείτε το Νέο σας Σπίτι;
+            {t('cta.title')}
           </h2>
           <p className={`text-xl ${colors.text.foreground}/90 mb-8`}>
-            Εξερευνήστε τη συλλογή μας με διαθέσιμα ακίνητα σε διαδραστική κάτοψη
+            {t('cta.description')}
           </p>
-          <nav className="flex flex-col sm:flex-row gap-4 justify-center" role="navigation" aria-label="Κύριες Ενέργειες">
-            <Link 
+          <nav className="flex flex-col sm:flex-row gap-4 justify-center" role="navigation" aria-label={t('cta.ariaLabel')}>
+            <Link
               href="/properties"
               className={`px-8 py-3 ${colors.bg.primary} ${colors.text.info} font-semibold rounded-lg ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY}`}
             >
-              Αναζήτηση Ακινήτων
+              {t('cta.searchProperties')}
             </Link>
-            <Link 
+            <Link
               href="/properties?view=floorplan"
               className={`px-8 py-3 bg-transparent ${getStatusBorder('secondary')} ${colors.text.foreground} font-semibold ${quick.card} flex items-center justify-center gap-2 ${INTERACTIVE_PATTERNS.BUTTON_OUTLINE}`}
             >
               <MapPin className={iconSizes.md} />
-              Προβολή σε Κάτοψη
+              {t('cta.viewFloorplan')}
             </Link>
           </nav>
         </div>

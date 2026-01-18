@@ -13,81 +13,89 @@
 
 /**
  * Standardized company legal forms για Ελληνικό νομικό σύστημα
+ * 🏢 ENTERPRISE: i18n keys for multilingual support
+ * Labels are translated at runtime by GenericFormRenderer
  */
 export const MODAL_SELECT_LEGAL_FORMS = [
-  { value: 'ae', label: 'Α.Ε. (Ανώνυμη Εταιρεία)' },
-  { value: 'epe', label: 'Ε.Π.Ε. (Εταιρεία Περιορισμένης Ευθύνης)' },
-  { value: 'ee', label: 'Ε.Ε. (Ετερόρρυθμη Εταιρεία)' },
-  { value: 'oe', label: 'Ο.Ε. (Ομόρρυθμη Εταιρεία)' },
-  { value: 'ike', label: 'Ι.Κ.Ε. (Ιδιωτική Κεφαλαιουχική Εταιρεία)' },
-  { value: 'syndicate', label: 'Συνεταιρισμός' },
-  { value: 'sole_proprietorship', label: 'Ατομική Επιχείρηση' },
-  { value: 'civil_partnership', label: 'Αστική Εταιρεία' },
-  { value: 'joint_venture', label: 'Κοινοπραξία' },
-  { value: 'other', label: 'Άλλο' }
+  { value: 'ae', label: 'options.legalForms.ae' },
+  { value: 'epe', label: 'options.legalForms.epe' },
+  { value: 'ee', label: 'options.legalForms.ee' },
+  { value: 'oe', label: 'options.legalForms.oe' },
+  { value: 'ike', label: 'options.legalForms.ike' },
+  { value: 'syndicate', label: 'options.legalForms.syndicate' },
+  { value: 'sole_proprietorship', label: 'options.legalForms.soleProprietorship' },
+  { value: 'civil_partnership', label: 'options.legalForms.civilPartnership' },
+  { value: 'joint_venture', label: 'options.legalForms.jointVenture' },
+  { value: 'other', label: 'options.legalForms.other' }
 ] as const;
 
 /**
  * Standardized ΓΕΜΗ statuses
+ * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_GEMI_STATUSES = [
-  { value: 'active', label: 'Ενεργή' },
-  { value: 'inactive', label: 'Ανενεργή' },
-  { value: 'suspended', label: 'Αναστολή Λειτουργίας' },
-  { value: 'dissolution', label: 'Σε Διαδικασία Λύσης' },
-  { value: 'dissolved', label: 'Λυθείσα' },
-  { value: 'bankruptcy', label: 'Σε Πτώχευση' },
-  { value: 'liquidation', label: 'Υπό Εκκαθάριση' }
+  { value: 'active', label: 'options.gemiStatuses.active' },
+  { value: 'inactive', label: 'options.gemiStatuses.inactive' },
+  { value: 'suspended', label: 'options.gemiStatuses.suspended' },
+  { value: 'dissolution', label: 'options.gemiStatuses.dissolution' },
+  { value: 'dissolved', label: 'options.gemiStatuses.dissolved' },
+  { value: 'bankruptcy', label: 'options.gemiStatuses.bankruptcy' },
+  { value: 'liquidation', label: 'options.gemiStatuses.liquidation' }
 ] as const;
 
 /**
  * Standardized service categories
+ * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_SERVICE_CATEGORIES = [
-  { value: 'ministry', label: 'Υπουργείο' },
-  { value: 'region', label: 'Περιφέρεια' },
-  { value: 'municipality', label: 'Δήμος' },
-  { value: 'public_entity', label: 'Δημόσιος Οργανισμός' },
-  { value: 'independent_authority', label: 'Ανεξάρτητη Αρχή' },
-  { value: 'university', label: 'Πανεπιστήμιο' },
-  { value: 'hospital', label: 'Νοσοκομείο' },
-  { value: 'school', label: 'Εκπαιδευτικό Ίδρυμα' },
-  { value: 'other', label: 'Άλλο' }
+  { value: 'ministry', label: 'options.serviceCategories.ministry' },
+  { value: 'region', label: 'options.serviceCategories.region' },
+  { value: 'municipality', label: 'options.serviceCategories.municipality' },
+  { value: 'public_entity', label: 'options.serviceCategories.publicEntity' },
+  { value: 'independent_authority', label: 'options.serviceCategories.independentAuthority' },
+  { value: 'university', label: 'options.serviceCategories.university' },
+  { value: 'hospital', label: 'options.serviceCategories.hospital' },
+  { value: 'school', label: 'options.serviceCategories.school' },
+  { value: 'other', label: 'options.serviceCategories.other' }
 ] as const;
 
 /**
  * Standardized legal statuses για δημόσιες υπηρεσίες
+ * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_LEGAL_STATUSES = [
-  { value: 'npdd', label: 'Νομικό Πρόσωπο Δημοσίου Δικαίου (Ν.Π.Δ.Δ.)' },
-  { value: 'npid', label: 'Νομικό Πρόσωπο Ιδιωτικού Δικαίου (Ν.Π.Ι.Δ.)' },
-  { value: 'public_service', label: 'Δημόσια Υπηρεσία' },
-  { value: 'independent_authority', label: 'Ανεξάρτητη Αρχή' },
-  { value: 'decentralized_admin', label: 'Αποκεντρωμένη Διοίκηση' }
+  { value: 'npdd', label: 'options.legalStatuses.npdd' },
+  { value: 'npid', label: 'options.legalStatuses.npid' },
+  { value: 'public_service', label: 'options.legalStatuses.publicService' },
+  { value: 'independent_authority', label: 'options.legalStatuses.independentAuthority' },
+  { value: 'decentralized_admin', label: 'options.legalStatuses.decentralizedAdmin' }
 ] as const;
 
 /**
  * Standardized activity types
+ * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_ACTIVITY_TYPES = [
-  { value: 'main', label: 'Κύρια' },
-  { value: 'secondary', label: 'Δευτερεύουσα' }
+  { value: 'main', label: 'options.activityTypes.main' },
+  { value: 'secondary', label: 'options.activityTypes.secondary' }
 ] as const;
 
 /**
  * Standardized address types
+ * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_ADDRESS_TYPES = [
-  { value: 'headquarters', label: 'Έδρα' },
-  { value: 'branch', label: 'Υποκατάστημα' }
+  { value: 'headquarters', label: 'options.addressTypes.headquarters' },
+  { value: 'branch', label: 'options.addressTypes.branch' }
 ] as const;
 
 /**
  * Standardized shareholder types
+ * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_SHAREHOLDER_TYPES = [
-  { value: 'individual', label: 'Φυσικό Πρόσωπο' },
-  { value: 'legal', label: 'Νομικό Πρόσωπο' }
+  { value: 'individual', label: 'options.shareholderTypes.individual' },
+  { value: 'legal', label: 'options.shareholderTypes.legal' }
 ] as const;
 
 // ====================================================================
