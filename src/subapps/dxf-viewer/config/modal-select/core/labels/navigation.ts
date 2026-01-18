@@ -199,14 +199,16 @@ export const MODAL_SELECT_NAVIGATION_SORT_OPTIONS = {
 /**
  * Compact Toolbar Search Placeholders - Centralized από CompactToolbar/configs.ts
  * ✅ ENTERPRISE: Single source of truth για όλα τα compact toolbar search placeholders
+ * 🏢 ENTERPRISE: Now uses i18n keys - translations in building.json
  */
 export const MODAL_SELECT_COMPACT_TOOLBAR_SEARCH_PLACEHOLDERS = {
-  buildings: 'Αναζήτηση κτιρίων...',
-  projects: 'Αναζήτηση έργων...',
-  contacts: 'Αναζήτηση επαφών...',
-  units: 'Αναζήτηση μονάδων...',
-  storages: 'Αναζήτηση αποθηκών...',
-  parking: 'Αναζήτηση θέσεων στάθμευσης...'
+  buildings: 'toolbar.search.placeholder',
+  projects: 'toolbar.search.placeholder',
+  contacts: 'toolbar.search.placeholder',
+  units: 'toolbar.search.placeholder',
+  storages: 'toolbar.search.placeholder',
+  parking: 'toolbar.search.placeholder',
+  communications: 'toolbar.search.placeholder'
 } as const;
 
 /**

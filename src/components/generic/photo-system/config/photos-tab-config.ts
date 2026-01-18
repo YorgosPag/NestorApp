@@ -78,18 +78,19 @@ export const ACCEPTED_IMAGE_TYPES = [
 
 /**
  * Photo categories for Storage entity
+ * 🏢 ENTERPRISE: Labels are i18n keys - translated in PhotosTabBase component
  */
 export const STORAGE_PHOTO_CATEGORIES: PhotoCategory[] = [
   {
     id: 'all',
-    label: 'Όλες',
+    label: 'photos.categories.all',
     icon: 'Image',
     colorClass: 'text-blue-600',
     filter: () => true,
   },
   {
     id: 'exterior',
-    label: 'Εξωτερικές',
+    label: 'photos.categories.exterior',
     icon: 'Home',
     colorClass: 'text-green-600',
     filter: (photo) =>
@@ -99,7 +100,7 @@ export const STORAGE_PHOTO_CATEGORIES: PhotoCategory[] = [
   },
   {
     id: 'interior',
-    label: 'Εσωτερικές',
+    label: 'photos.categories.interior',
     icon: 'LayoutDashboard',
     colorClass: 'text-purple-600',
     filter: (photo) =>
@@ -109,7 +110,7 @@ export const STORAGE_PHOTO_CATEGORIES: PhotoCategory[] = [
   },
   {
     id: 'maintenance',
-    label: 'Συντήρηση',
+    label: 'photos.categories.maintenance',
     icon: 'Wrench',
     colorClass: 'text-orange-600',
     filter: (photo) =>
@@ -121,18 +122,19 @@ export const STORAGE_PHOTO_CATEGORIES: PhotoCategory[] = [
 
 /**
  * Photo categories for Building entity
+ * 🏢 ENTERPRISE: Labels are i18n keys - translated in PhotosTabBase component
  */
 export const BUILDING_PHOTO_CATEGORIES: PhotoCategory[] = [
   {
     id: 'all',
-    label: 'Όλες',
+    label: 'photos.categories.all',
     icon: 'Image',
     colorClass: 'text-blue-600',
     filter: () => true,
   },
   {
     id: 'facade',
-    label: 'Πρόσοψη',
+    label: 'photos.categories.facade',
     icon: 'Building2',
     colorClass: 'text-indigo-600',
     filter: (photo) =>
@@ -142,7 +144,7 @@ export const BUILDING_PHOTO_CATEGORIES: PhotoCategory[] = [
   },
   {
     id: 'common',
-    label: 'Κοινόχρηστα',
+    label: 'photos.categories.common',
     icon: 'Users',
     colorClass: 'text-teal-600',
     filter: (photo) =>
@@ -152,7 +154,7 @@ export const BUILDING_PHOTO_CATEGORIES: PhotoCategory[] = [
   },
   {
     id: 'amenities',
-    label: 'Παροχές',
+    label: 'photos.categories.amenities',
     icon: 'Sparkles',
     colorClass: 'text-amber-600',
     filter: (photo) =>

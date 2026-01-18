@@ -29,6 +29,9 @@ import { Camera, Upload, Image } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+
 // Existing centralized components - NO DUPLICATION
 import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
 import { PhotoItem } from '../../utils/PhotoItem';
@@ -62,6 +65,17 @@ interface StatsProps {
 
 function PhotosTabStats({ totalCount, categoryStats, categories }: StatsProps) {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
+
+  // 🏢 ENTERPRISE: Translate category label if it's an i18n key
+  const translateLabel = (label: string): string => {
+    if (label.includes('.')) {
+      const translated = t(label);
+      return translated === label ? label : translated;
+    }
+    return label;
+  };
 
   if (!categories || categories.length === 0) {
     return null;
@@ -71,7 +85,7 @@ function PhotosTabStats({ totalCount, categoryStats, categories }: StatsProps) {
     <section className="p-6">
       <h3 className="font-semibold mb-4 flex items-center gap-2">
         <Camera className={iconSizes.md} />
-        Επισκόπηση Φωτογραφιών
+        {t('photos.overview')}
       </h3>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {categories.map((category) => {
@@ -84,7 +98,7 @@ function PhotosTabStats({ totalCount, categoryStats, categories }: StatsProps) {
               <div className={`text-2xl font-bold ${category.colorClass || 'text-blue-600'}`}>
                 {stat?.count || 0}
               </div>
-              <div className="text-sm text-muted-foreground">{category.label}</div>
+              <div className="text-sm text-muted-foreground">{translateLabel(category.label)}</div>
             </div>
           );
         })}
@@ -109,6 +123,18 @@ function PhotosTabCategories({
   onCategoryChange,
   categoryStats,
 }: CategoriesProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
+
+  // 🏢 ENTERPRISE: Translate category label if it's an i18n key
+  const translateLabel = (label: string): string => {
+    if (label.includes('.')) {
+      const translated = t(label);
+      return translated === label ? label : translated;
+    }
+    return label;
+  };
+
   return (
     <nav className="flex flex-wrap gap-2 mb-4" role="tablist">
       {categories.map((category) => {
@@ -128,7 +154,7 @@ function PhotosTabCategories({
               }
             `}
           >
-            {category.label} ({stat?.count || 0})
+            {translateLabel(category.label)} ({stat?.count || 0})
           </button>
         );
       })}
@@ -191,6 +217,9 @@ export function PhotosTabBase<TEntity extends BaseEntity>({
   // ---------------------------------------------------------------------------
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
 
   // ---------------------------------------------------------------------------
   // Get merged configuration
@@ -272,7 +301,7 @@ export function PhotosTabBase<TEntity extends BaseEntity>({
         <section className={`${colors.bg.primary} rounded-lg border p-6`}>
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Upload className={iconSizes.md} />
-            {config.title}
+            {t(`photos.title.${entityType}`)}
           </h3>
 
           {/* Entity info (optional) */}
@@ -280,11 +309,7 @@ export function PhotosTabBase<TEntity extends BaseEntity>({
             <div className="mb-4 p-4 bg-accent/50 rounded-lg">
               <div className="text-sm">
                 <span className="font-medium text-muted-foreground">
-                  {entityType === 'storage' ? 'Αποθήκη' :
-                   entityType === 'building' ? 'Κτίριο' :
-                   entityType === 'project' ? 'Έργο' :
-                   entityType === 'unit' ? 'Μονάδα' :
-                   entityType === 'parking' ? 'Θέση' : 'Entity'}:
+                  {t(`photos.entityLabels.${entityType}`)}:
                 </span>
                 <span className="ml-2">{resolvedEntityName}</span>
               </div>
@@ -317,8 +342,8 @@ export function PhotosTabBase<TEntity extends BaseEntity>({
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Image className={iconSizes.md} />
           {config.showCategories
-            ? `Φωτογραφίες (${filteredPhotos.length})`
-            : `Όλες οι Φωτογραφίες (${photos.length})`}
+            ? t('photos.filteredPhotos', { count: filteredPhotos.length })
+            : t('photos.allPhotos', { count: photos.length })}
         </h3>
 
         {filteredPhotos.length > 0 ? (
@@ -333,10 +358,10 @@ export function PhotosTabBase<TEntity extends BaseEntity>({
         ) : (
           <div className="text-center py-12 text-muted-foreground">
             <Image className="mx-auto h-12 w-12 mb-4 opacity-50" />
-            <p>Δεν υπάρχουν φωτογραφίες</p>
+            <p>{t('photos.noPhotos')}</p>
             {!disabled && (
               <p className="text-sm mt-2">
-                Χρησιμοποιήστε την περιοχή ανεβάσματος παραπάνω για να προσθέσετε φωτογραφίες
+                {t('photos.uploadHint')}
               </p>
             )}
           </div>

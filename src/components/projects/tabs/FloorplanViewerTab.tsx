@@ -31,6 +31,12 @@ export function FloorplanViewerTab({
 }: FloorplanViewerTabProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('building');
+
+  // 🏢 ENTERPRISE: Translate title if it's an i18n key
+  const translatedTitle = title.includes('.')
+    ? t(title)
+    : title;
+
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -229,7 +235,7 @@ export function FloorplanViewerTab({
         <div className="flex justify-between items-center">
           <CardTitle className="flex items-center gap-2">
             <Map className={iconSizes.md} />
-            {title}
+            {translatedTitle}
           </CardTitle>
           <div className="flex gap-2">
             <Button

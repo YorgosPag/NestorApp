@@ -21,6 +21,17 @@ const PlaceholderTab = ({ title = 'Content', icon: Icon, building, ...additional
   const iconSizes = useIconSizes();
   const { createBorder, quick } = useBorderTokens();
 
+  // 🏢 ENTERPRISE: Translate title if it's an i18n key
+  const translateTitle = (titleProp: string): string => {
+    if (titleProp.includes('.')) {
+      const translated = t(titleProp);
+      return translated === titleProp ? titleProp : translated;
+    }
+    return titleProp;
+  };
+
+  const translatedTitle = translateTitle(title);
+
   // Default icon fallback
   const FallbackIcon = () => <div className={`${iconSizes.xl3} text-muted-foreground mb-4 text-4xl`}>📦</div>;
   const IconComponent = Icon || FallbackIcon;
@@ -28,13 +39,13 @@ const PlaceholderTab = ({ title = 'Content', icon: Icon, building, ...additional
   return (
     <section className={`flex flex-col items-center justify-center ${iconSizes.xl12} ${createBorder('medium', 'hsl(var(--border))', 'dashed')} ${quick.card} bg-muted/50`}>
       <IconComponent className={`${iconSizes.xl3} text-muted-foreground mb-4`} />
-      <h2 className="text-xl font-semibold text-muted-foreground mb-2">{title}</h2>
+      <h2 className="text-xl font-semibold text-muted-foreground mb-2">{translatedTitle}</h2>
       <p className="text-sm text-muted-foreground text-center max-w-md">
-        {t('placeholder.comingSoon', { title: title.toLowerCase() })}
+        {t('placeholder.comingSoon', { title: translatedTitle.toLowerCase() })}
       </p>
       <Button variant="outline" className="mt-4">
         <Plus className={`${iconSizes.sm} mr-2`} />
-        {t('placeholder.add', { title })}
+        {t('placeholder.add', { title: translatedTitle })}
       </Button>
     </section>
   );

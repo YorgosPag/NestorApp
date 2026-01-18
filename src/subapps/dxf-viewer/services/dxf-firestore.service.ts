@@ -8,6 +8,39 @@ import {
   type SecurityValidationResult,
   SecuritySeverity
 } from '../security/DxfSecurityValidator';
+import { Logger, LogLevel, DevNullOutput } from '../settings/telemetry/Logger';
+
+// =============================================================================
+// 🏢 ENTERPRISE LOGGER CONFIGURATION
+// =============================================================================
+
+/**
+ * DxfFirestore Logger - Enterprise-grade logging with configurable levels
+ *
+ * In PRODUCTION: Only ERROR level logs (clean console)
+ * In DEVELOPMENT: DEBUG level logs (verbose for debugging)
+ *
+ * @enterprise ADR - Centralized Logging System
+ */
+const dxfLogger = new Logger({
+  level: process.env.NODE_ENV === 'production' ? LogLevel.ERROR : LogLevel.DEBUG,
+  prefix: '[DxfFirestore]',
+  // In production, use DevNullOutput for DEBUG/INFO to ensure zero noise
+  output: process.env.NODE_ENV === 'production' ? new DevNullOutput() : undefined
+});
+
+/**
+ * Error classification for intelligent logging
+ * @enterprise Pattern: Error categorization for appropriate log levels
+ */
+const isExpectedError = (error: Error): boolean => {
+  const message = error.message.toLowerCase();
+  // These are expected scenarios (file doesn't exist, no permission for missing doc)
+  return message.includes('not found') ||
+         message.includes('404') ||
+         message.includes('does not exist') ||
+         (message.includes('permission') && message.includes('missing'));
+};
 
 export interface DxfFileMetadata {
   id: string;
@@ -40,14 +73,14 @@ export class DxfFirestoreService {
   
   /**
    * Auto-save scene to Firestore
+   * @deprecated Use autoSaveV3 for enterprise security features
    */
   static async autoSave(fileId: string, fileName: string, scene: SceneModel): Promise<boolean> {
     try {
-
       // Get current version
       const currentDoc = await this.getFile(fileId);
       const newVersion = (currentDoc?.version || 0) + 1;
-      
+
       const record: DxfFileRecord = {
         id: fileId,
         fileName,
@@ -56,26 +89,31 @@ export class DxfFirestoreService {
         version: newVersion,
         checksum: this.generateSceneChecksum(scene)
       };
-      
+
       const docRef = doc(db, this.COLLECTION_NAME, fileId);
       await setDoc(docRef, record);
 
+      dxfLogger.debug('Auto-save complete', { fileId, version: newVersion });
       return true;
     } catch (error) {
-      console.error('❌ [DxfFirestore] Auto-save failed:', error);
+      dxfLogger.error('Auto-save failed', { fileId, error: error instanceof Error ? error.message : String(error) });
       return false;
     }
   }
-  
+
   /**
    * Load scene from Firestore
+   * @deprecated Use loadFileV2 for intelligent routing
    */
   static async loadFile(fileId: string): Promise<DxfFileRecord | null> {
     try {
-
       return await this.getFile(fileId);
     } catch (error) {
-      console.error('❌ [DxfFirestore] Load failed:', error);
+      // 🏢 ENTERPRISE: Expected failures → silent
+      if (error instanceof Error && isExpectedError(error)) {
+        return null;
+      }
+      dxfLogger.error('Load failed', { fileId, error: error instanceof Error ? error.message : String(error) });
       return null;
     }
   }
@@ -97,7 +135,7 @@ export class DxfFirestoreService {
     sanitizedFileName: string;
     validationResults: SecurityValidationResult[];
   }> {
-    console.log('🔒 [DxfFirestore] Running enterprise security validation...');
+    dxfLogger.debug('Running enterprise security validation', { fileName });
 
     // Estimate file size from scene JSON
     const sceneJson = JSON.stringify(scene, null, 0);
@@ -119,7 +157,8 @@ export class DxfFirestoreService {
 
     const summary = DxfSecurityValidator.getValidationSummary(validationResults);
 
-    console.log('🔒 [DxfFirestore] Security validation summary:', {
+    // 🏢 ENTERPRISE: DEBUG level for validation summary (dev only)
+    dxfLogger.debug('Security validation summary', {
       isValid,
       fileId,
       sanitizedFileName,
@@ -130,7 +169,8 @@ export class DxfFirestoreService {
     });
 
     if (!isValid) {
-      console.error('❌ [DxfFirestore] Security validation FAILED:', {
+      // 🏢 ENTERPRISE: WARN level for validation failures (important but expected)
+      dxfLogger.warn('Security validation FAILED', {
         fileName,
         fileId,
         blockingErrors: validationResults.filter(r =>
@@ -152,7 +192,7 @@ export class DxfFirestoreService {
    */
   static async saveToStorage(fileId: string, fileName: string, scene: SceneModel): Promise<boolean> {
     try {
-      console.log('🔄 [DxfFirestore] Saving to Storage:', fileId);
+      dxfLogger.debug('Saving to Storage', { fileId, fileName });
 
       // 1. Create scene JSON for storage
       const sceneJson = JSON.stringify(scene, null, 0); // No formatting to save space
@@ -200,66 +240,65 @@ export class DxfFirestoreService {
       const docRef = doc(db, this.COLLECTION_NAME, fileId);
       await setDoc(docRef, metadata);
 
-      console.log('✅ [DxfFirestore] Storage save complete:', {
+      // 🏢 ENTERPRISE: INFO level for successful saves (important operation)
+      dxfLogger.info('Storage save complete', {
         fileId,
-        storageUrl: downloadURL,
         sizeKB: Math.round(sceneBytes.length / 1024),
         entities: scene.entities.length
       });
 
       return true;
     } catch (error: unknown) {
-      // Enterprise error handling with detailed logging
+      // 🏢 ENTERPRISE: Structured error handling with appropriate log levels
       const errorDetails = {
         operation: 'saveToStorage',
         fileId,
         fileName,
         entityCount: scene.entities.length,
-        timestamp: new Date().toISOString(),
-        error: error instanceof Error ? {
-          name: error.name,
-          message: error.message,
-          stack: error.stack
-        } : { message: String(error) }
+        error: error instanceof Error ? error.message : String(error)
       };
 
-      console.error('❌ [DxfFirestore] Storage save failed:', errorDetails);
-
-      // Attempt recovery strategies for common errors
+      // Classify error and use appropriate log level
       if (error instanceof Error) {
-        // Check for quota exceeded error
+        // Quota exceeded → WARN (recoverable with cleanup)
         if (error.message.includes('quota') || error.message.includes('QUOTA_EXCEEDED')) {
-          console.warn('💾 [DxfFirestore] Storage quota exceeded - consider cleanup');
-          // In production, could trigger automatic cleanup or notification
+          dxfLogger.warn('Storage quota exceeded - consider cleanup', errorDetails);
+          return false;
         }
 
-        // Check for network errors
+        // Network errors → WARN (transient, may recover on retry)
         if (error.message.includes('network') || error.message.includes('fetch')) {
-          console.warn('🌐 [DxfFirestore] Network error detected - retries may help');
-          // In production, could implement automatic retry with exponential backoff
+          dxfLogger.warn('Network error during save - retry may help', errorDetails);
+          return false;
         }
 
-        // Check for permissions errors
+        // Permission denied → ERROR (configuration issue)
         if (error.message.includes('permission') || error.message.includes('PERMISSION_DENIED')) {
-          console.error('🔒 [DxfFirestore] Permission denied - check Firebase rules');
+          dxfLogger.error('Permission denied - check Firebase rules', errorDetails);
+          return false;
         }
       }
 
+      // Unknown/unexpected errors → ERROR
+      dxfLogger.error('Storage save failed', errorDetails);
       return false;
     }
   }
 
   /**
    * Load scene from Firebase Storage + metadata from Firestore
+   * @enterprise Silent on expected failures (missing files), loud on real errors
    */
   static async loadFromStorage(fileId: string): Promise<DxfFileRecord | null> {
     try {
-      console.log('🔄 [DxfFirestore] Loading from Storage:', fileId);
+      // 🏢 ENTERPRISE: DEBUG level - only visible in development
+      dxfLogger.debug('Loading from Storage', { fileId });
 
       // 1. Get metadata from Firestore
       const metadata = await this.getFileMetadata(fileId);
       if (!metadata) {
-        console.log('❌ [DxfFirestore] No metadata found for:', fileId);
+        // 🏢 ENTERPRISE: Silent return - "not found" is expected for files without DXF
+        // No log output for expected missing files (reduces console noise)
         return null;
       }
 
@@ -269,9 +308,10 @@ export class DxfFirestoreService {
       const sceneJson = new TextDecoder().decode(sceneBytes);
       const scene = JSON.parse(sceneJson) as SceneModel;
 
-      console.log('✅ [DxfFirestore] Storage load complete:', {
+      // 🏢 ENTERPRISE: DEBUG level - success info only in development
+      dxfLogger.debug('Storage load complete', {
         fileId,
-        sizeKB: Math.round(sceneBytes.byteLength / 1024), // ✅ ENTERPRISE FIX: ArrayBuffer has byteLength, not length
+        sizeKB: Math.round(sceneBytes.byteLength / 1024),
         entities: scene.entities.length
       });
 
@@ -285,39 +325,32 @@ export class DxfFirestoreService {
         checksum: metadata.checksum
       };
     } catch (error: unknown) {
-      // Enterprise error handling for load operations
-      const errorDetails = {
-        operation: 'loadFromStorage',
-        fileId,
-        timestamp: new Date().toISOString(),
-        error: error instanceof Error ? {
-          name: error.name,
-          message: error.message,
-          stack: error.stack
-        } : { message: String(error) }
-      };
-
-      console.error('❌ [DxfFirestore] Storage load failed:', errorDetails);
-
-      // Analyze error for recovery options
+      // 🏢 ENTERPRISE: Intelligent error classification
       if (error instanceof Error) {
-        // Check for file not found errors
-        if (error.message.includes('404') || error.message.includes('not found')) {
-          console.warn('📂 [DxfFirestore] File not found in Storage - may be legacy Firestore file');
-          // Caller should try fallback to Firestore
+        // Expected errors (file not found) → silent return
+        if (isExpectedError(error)) {
+          dxfLogger.debug('File not found in Storage (expected)', { fileId });
+          return null;
         }
 
-        // Check for network errors
+        // Network errors → WARN level (may be transient)
         if (error.message.includes('network') || error.message.includes('fetch')) {
-          console.warn('🌐 [DxfFirestore] Network error during load - retry may help');
+          dxfLogger.warn('Network error during load - retry may help', { fileId });
+          return null;
         }
 
-        // Check for corrupted file errors
+        // Corruption errors → ERROR level (needs attention)
         if (error.message.includes('JSON') || error.message.includes('parse')) {
-          console.error('💥 [DxfFirestore] File corruption detected - JSON parse failed');
-          // In production, could mark file for repair or backup restoration
+          dxfLogger.error('File corruption detected - JSON parse failed', { fileId, error: error.message });
+          return null;
         }
       }
+
+      // Unknown errors → ERROR level
+      dxfLogger.error('Unexpected storage load error', {
+        fileId,
+        error: error instanceof Error ? error.message : String(error)
+      });
 
       return null;
     }
@@ -339,6 +372,7 @@ export class DxfFirestoreService {
 
   /**
    * Check if file exists in Firestore
+   * @enterprise Silent on expected failures, returns false gracefully
    */
   static async fileExists(fileId: string): Promise<boolean> {
     try {
@@ -346,7 +380,11 @@ export class DxfFirestoreService {
       const docSnap = await getDoc(docRef);
       return docSnap.exists();
     } catch (error) {
-      console.error('❌ [DxfFirestore] File existence check failed:', error);
+      // 🏢 ENTERPRISE: Expected failures → silent, real errors → log
+      if (error instanceof Error && isExpectedError(error)) {
+        return false;
+      }
+      dxfLogger.warn('File existence check failed', { fileId, error: error instanceof Error ? error.message : String(error) });
       return false;
     }
   }
@@ -392,7 +430,7 @@ export class DxfFirestoreService {
     errorMessage?: string;
   }> {
     try {
-      console.log('🔒 [DxfFirestore] Enterprise auto-save V3 starting...', { fileName });
+      dxfLogger.debug('Enterprise auto-save V3 starting', { fileName });
 
       // Step 1: Run security validation first
       const validation = await this.validateForSave(fileName, scene);
@@ -410,7 +448,8 @@ export class DxfFirestoreService {
       const success = await this.saveToStorage(validation.fileId, validation.sanitizedFileName, scene);
 
       if (success) {
-        console.log('✅ [DxfFirestore] Enterprise auto-save V3 completed successfully');
+        // 🏢 ENTERPRISE: INFO level for successful save operations
+        dxfLogger.info('Enterprise auto-save V3 completed', { fileId: validation.fileId });
         return {
           success: true,
           fileId: validation.fileId,
@@ -423,7 +462,10 @@ export class DxfFirestoreService {
         };
       }
     } catch (error: unknown) {
-      console.error('❌ [DxfFirestore] Enterprise auto-save V3 failed:', error);
+      dxfLogger.error('Enterprise auto-save V3 failed', {
+        fileName,
+        error: error instanceof Error ? error.message : String(error)
+      });
       return {
         success: false,
         errorMessage: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -450,52 +492,68 @@ export class DxfFirestoreService {
 
   /**
    * Load with intelligent routing (try Storage first, fallback to Firestore)
+   * @enterprise Silent on "file not found" - this is expected for buildings without floorplans
    */
   static async loadFileV2(fileId: string): Promise<DxfFileRecord | null> {
     try {
       // 1. Try Storage-based loading first
       const storageResult = await this.loadFromStorage(fileId);
       if (storageResult) {
-        console.log('✅ [DxfFirestore] Loaded from Storage:', fileId);
+        dxfLogger.debug('Loaded from Storage', { fileId });
         return storageResult;
       }
 
       // 2. Fallback to legacy Firestore loading
-      console.log('🔄 [DxfFirestore] Fallback to Firestore for:', fileId);
+      dxfLogger.debug('Fallback to Firestore', { fileId });
       const firestoreResult = await this.getFile(fileId);
 
       if (firestoreResult) {
-        // Optional: Migrate to Storage in background
-        // this.migrateToStorage(fileId, firestoreResult.fileName, firestoreResult.scene);
+        dxfLogger.debug('Loaded from Firestore (legacy)', { fileId });
         return firestoreResult;
       }
 
+      // 🏢 ENTERPRISE: No log for "not found" - this is expected behavior
+      // Buildings without floorplans should not generate console noise
       return null;
     } catch (error) {
-      console.error('❌ [DxfFirestore] Load V2 failed:', error);
+      // 🏢 ENTERPRISE: Intelligent error handling
+      if (error instanceof Error && isExpectedError(error)) {
+        // Expected "not found" or "permission denied on missing doc" → silent
+        return null;
+      }
+
+      // Real errors → log at ERROR level
+      dxfLogger.error('Load V2 failed', {
+        fileId,
+        error: error instanceof Error ? error.message : String(error)
+      });
       return null;
     }
   }
 
   /**
    * Migrate existing Firestore-based file to Storage
+   * @enterprise INFO level logs for migration operations (important to track)
    */
   static async migrateToStorage(fileId: string, fileName: string, scene: SceneModel): Promise<boolean> {
     try {
-      console.log('🔄 [DxfFirestore] Migrating to Storage:', fileId);
+      dxfLogger.info('Migrating to Storage', { fileId, fileName });
 
       // Save to Storage
       const success = await this.saveToStorage(fileId, fileName, scene);
 
       if (success) {
-        console.log('✅ [DxfFirestore] Migration complete:', fileId);
+        dxfLogger.info('Migration complete', { fileId });
         // Note: We don't delete the old Firestore document for safety
         // It can be cleaned up later in a separate operation
       }
 
       return success;
     } catch (error) {
-      console.error('❌ [DxfFirestore] Migration failed:', error);
+      dxfLogger.error('Migration failed', {
+        fileId,
+        error: error instanceof Error ? error.message : String(error)
+      });
       return false;
     }
   }

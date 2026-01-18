@@ -101,6 +101,19 @@ export const ICON_MAPPING = {
   'play-circle': PlayCircle,
   'bar-chart-3': BarChart3,
 
+  // 🏢 ENTERPRISE: PascalCase aliases for component-style icon names
+  // Ensures compatibility with configs that use PascalCase (e.g., 'FileSignature')
+  'FileSignature': FileSignature,
+  'ClipboardCheck': ClipboardCheck,
+  'PlayCircle': PlayCircle,
+  'BarChart3': BarChart3,
+  'Building2': Building2,
+  'Warehouse': Warehouse,
+  'LayoutGrid': LayoutGrid,
+  'ClipboardList': ClipboardList,
+  'CheckCircle': CheckCircle,
+  'AlertTriangle': AlertTriangle,
+
   // 📊 CRM/Dashboard icons (from GenericCRMDashboardTabsRenderer)
   '📊': BarChart,
   '📈': TrendingUp,
@@ -114,11 +127,10 @@ export const ICON_MAPPING = {
   '⚙️': Settings,
 
   // 🏗️ Building/Project icons (from GenericBuildingTabsRenderer)
+  // Note: '🏢' and '📊' already defined above (CRM section)
   '🏠': Home,
-  '🏢': Building,
   '🏗️': CraneIcon,
   '📐': Ruler,
-  '📊': BarChart,
   '📹': Video,
   '📷': Camera,
   '🕒': Clock,

@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils"
 import type { MenuItem } from "@/types/sidebar"
 import { TRANSITION_PRESETS } from '@/components/ui/effects'
 import { useIconSizes } from '@/hooks/useIconSizes'
+import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy'
 
 interface SidebarMenuItemProps {
   item: MenuItem
@@ -32,6 +33,20 @@ export function SidebarMenuItem({
 }: SidebarMenuItemProps) {
   const { isMobile, setOpenMobile } = useSidebar();
   const iconSizes = useIconSizes();
+  const { t, isLoading } = useTranslationLazy('navigation');
+
+  // 🏢 ENTERPRISE: Translate menu item title
+  // If title contains a dot, it's an i18n key - translate it
+  // Otherwise, return as-is (for fallback/legacy items)
+  const translateTitle = (title: string): string => {
+    if (isLoading) return title;
+    if (title.includes('.')) {
+      const translated = t(title);
+      // If translation returns the key itself, return original title
+      return translated === title ? title : translated;
+    }
+    return title;
+  };
 
   // Handle navigation click with mobile sidebar auto-close
   const handleNavigationClick = () => {
@@ -58,7 +73,7 @@ export function SidebarMenuItem({
                 isActive && "text-blue-600 dark:text-blue-400"
               )}
             />
-            <span className="font-medium">{item.title}</span>
+            <span className="font-medium">{translateTitle(item.title)}</span>
             {item.badge && <SidebarBadge badge={item.badge} />}
             <ChevronRight
               className={cn(
@@ -82,7 +97,7 @@ export function SidebarMenuItem({
                   >
                     <Link href={subItem.href} onClick={handleNavigationClick}>
                       <subItem.icon className={iconSizes.sm} />
-                      <span>{subItem.title}</span>
+                      <span>{translateTitle(subItem.title)}</span>
                     </Link>
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
@@ -106,7 +121,7 @@ export function SidebarMenuItem({
                 isActive && "text-blue-600 dark:text-blue-400"
               )}
             />
-            <span className="font-medium">{item.title}</span>
+            <span className="font-medium">{translateTitle(item.title)}</span>
             {item.badge && <SidebarBadge badge={item.badge} />}
           </Link>
         </SidebarMenuButton>

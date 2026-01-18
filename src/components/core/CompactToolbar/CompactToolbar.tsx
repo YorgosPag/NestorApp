@@ -40,6 +40,9 @@ import {
 import type { CompactToolbarProps } from './types';
 import { getIconColor } from './icon-colors';
 
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+
 export function CompactToolbar({
   config,
   selectedItems = [],
@@ -73,6 +76,18 @@ export function CompactToolbar({
 }: CompactToolbarProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
+
+  // 🏢 ENTERPRISE: Translate search placeholder if it's an i18n key
+  const getTranslatedPlaceholder = (placeholder?: string): string => {
+    if (!placeholder) return t('toolbar.search.placeholder');
+    if (placeholder.includes('.')) {
+      const translated = t(placeholder);
+      return translated === placeholder ? placeholder : translated;
+    }
+    return placeholder;
+  };
 
   const handleFilterChange = (filter: string, checked: boolean) => {
     if (checked) {
@@ -420,7 +435,7 @@ export function CompactToolbar({
         <SearchInput
           value={searchTerm}
           onChange={onSearchChange}
-          placeholder={config.searchPlaceholder || 'Αναζήτηση...'}
+          placeholder={getTranslatedPlaceholder(config.searchPlaceholder)}
           debounceMs={0} // Instant για navigation filters
           showClearButton={true}
           className="h-8 text-sm flex-1" // Same height as toolbar buttons

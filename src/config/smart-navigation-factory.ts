@@ -57,58 +57,58 @@ import {
 } from "lucide-react";
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
-// 🏢 ENTERPRISE: Temporary direct labels για runtime fix - WILL BE RE-CENTRALIZED
-// TODO: Re-import from @/subapps/dxf-viewer/config/modal-select when path resolution is fixed
+// 🏢 ENTERPRISE: i18n translation keys for navigation labels
+// These keys are translated by SidebarMenuItem component using the 'navigation' namespace
 const NAVIGATION_LABELS = {
-  // Main menu labels
-  home: 'Αρχική',
-  properties_index: 'Ακίνητα',
-  contacts: 'Επαφές',
-  projects: 'Έργα',
-  buildings: 'Κτίρια',
-  spaces: 'Χώροι',
-  sales: 'Πωλήσεις',
-  crm: 'CRM',
-  accounting: 'Λογιστικό',
+  // Main menu labels - i18n keys from navigation.json
+  home: 'pages.home',
+  properties_index: 'pages.properties',
+  contacts: 'pages.contacts',
+  projects: 'pages.projects',
+  buildings: 'pages.buildings',
+  spaces: 'sidebar.spaces',
+  sales: 'sidebar.sales',
+  crm: 'pages.crm',
+  accounting: 'sidebar.accounting',
 
   // Settings & Tools
-  settings: 'Ρυθμίσεις',
-  users: 'Χρήστες',
-  keyboard_shortcuts: 'Συντομεύσεις',
-  shortcuts: 'Συντομεύσεις Πληκτρολογίου',
-  geo_canvas: 'Χάρτης',
-  dxf_viewer: 'Προβολέας DXF',
-  login: 'Σύνδεση',
-  debug: 'Αποσφαλμάτωση',
+  settings: 'menu.settings',
+  users: 'sidebar.users',
+  keyboard_shortcuts: 'tools.shortcuts',
+  shortcuts: 'tools.shortcuts',
+  geo_canvas: 'tools.geoCanvas',
+  dxf_viewer: 'tools.dxf',
+  login: 'pages.login',
+  debug: 'sidebar.debug',
 
   // ✅ ENTERPRISE FIX: Legal Documents menu labels
-  legal_documents: 'Νομικά Έγγραφα',
-  obligations_writing: 'Συγγραφή Υποχρεώσεων',
+  legal_documents: 'tools.legal',
+  obligations_writing: 'tools.obligations',
 
   // Badges
-  badge_new: 'ΝΕΟ',
+  badge_new: 'badges.new',
 
   // Spaces submenu
-  apartments: 'Διαμερίσματα',
-  storage: 'Αποθήκες',
-  parking: 'Parking',
-  common_areas: 'Κοινόχρηστοι',
+  apartments: 'sidebar.apartments',
+  storage: 'sidebar.storage',
+  parking: 'sidebar.parking',
+  common_areas: 'sidebar.commonAreas',
 
-  // Sales submenu - Greek labels
-  available_apartments: 'Διαθέσιμα Διαμερίσματα',
-  available_storage: 'Διαθέσιμες Αποθήκες',
-  available_parking: 'Διαθέσιμες Θέσεις Parking',
-  sold_properties: 'Πωληθέντα',
+  // Sales submenu
+  available_apartments: 'sidebar.availableApartments',
+  available_storage: 'sidebar.availableStorage',
+  available_parking: 'sidebar.availableParking',
+  sold_properties: 'sidebar.soldProperties',
 
-  // CRM submenu - Greek labels
-  dashboard: 'Πίνακας Ελέγχου',
-  customer_management: 'Διαχείριση Πελατών',
-  communications: 'Επικοινωνίες',
-  leads_opportunities: 'Δυνητικοί Πελάτες',
-  tasks_appointments: 'Εργασίες & Ραντεβού',
-  sales_pipeline: 'Πορεία Πωλήσεων',
-  teams_roles: 'Ομάδες & Ρόλοι',
-  notifications: 'Ειδοποιήσεις'
+  // CRM submenu
+  dashboard: 'crm.dashboard',
+  customer_management: 'crm.customers',
+  communications: 'crm.communications',
+  leads_opportunities: 'crm.leads',
+  tasks_appointments: 'crm.tasks',
+  sales_pipeline: 'crm.pipeline',
+  teams_roles: 'crm.teams',
+  notifications: 'crm.notifications'
 };
 
 // 🏢 ENTERPRISE: Define MenuItem locally για compatibility

@@ -4,6 +4,21 @@
     "tools": "Εργαλεία",
     "settings": "Ρυθμίσεις"
   },
+  "sidebar": {
+    "spaces": "Χώροι",
+    "sales": "Πωλήσεις",
+    "accounting": "Λογιστικό",
+    "users": "Χρήστες",
+    "debug": "Αποσφαλμάτωση",
+    "apartments": "Διαμερίσματα",
+    "storage": "Αποθήκες",
+    "parking": "Parking",
+    "commonAreas": "Κοινόχρηστοι",
+    "availableApartments": "Διαθέσιμα Διαμερίσματα",
+    "availableStorage": "Διαθέσιμες Αποθήκες",
+    "availableParking": "Διαθέσιμες Θέσεις Parking",
+    "soldProperties": "Πωληθέντα"
+  },
   "pages": {
     "home": "Αρχική",
     "properties": "Ευρετήριο Ακινήτων",
@@ -12,7 +27,8 @@
     "buildings": "Κτίρια",
     "units": "Μονάδες (Units)",
     "crm": "CRM",
-    "login": "Login"
+    "login": "Login",
+    "navigation": "Πλοήγηση"
   },
   "crm": {
     "dashboard": "Dashboard",

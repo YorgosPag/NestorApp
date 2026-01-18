@@ -4,6 +4,21 @@
     "tools": "Tools",
     "settings": "Settings"
   },
+  "sidebar": {
+    "spaces": "Spaces",
+    "sales": "Sales",
+    "accounting": "Accounting",
+    "users": "Users",
+    "debug": "Debug",
+    "apartments": "Apartments",
+    "storage": "Storage",
+    "parking": "Parking",
+    "commonAreas": "Common Areas",
+    "availableApartments": "Available Apartments",
+    "availableStorage": "Available Storage",
+    "availableParking": "Available Parking",
+    "soldProperties": "Sold Properties"
+  },
   "pages": {
     "home": "Home",
     "properties": "Property Directory",
@@ -12,7 +27,8 @@
     "buildings": "Buildings",
     "units": "Units",
     "crm": "CRM",
-    "login": "Login"
+    "login": "Login",
+    "navigation": "Navigation"
   },
   "crm": {
     "dashboard": "Dashboard",

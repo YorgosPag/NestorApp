@@ -601,6 +601,7 @@
       "analytics": "Analytics",
       "storage": "Storages",
       "contracts": "Contracts",
+      "customerContracts": "Customer Contracts",
       "protocols": "Protocols",
       "photos": "Photos",
       "customers": "Customers",
@@ -980,6 +981,44 @@
   "placeholder": {
     "comingSoon": "This section will be developed soon. It will contain all necessary functionality for managing {title}.",
     "add": "Add {title}"
+  },
+  "photos": {
+    "title": {
+      "project": "Project Photos",
+      "building": "Building Photos",
+      "contact": "Photos",
+      "storage": "Storage Photos",
+      "unit": "Unit Photos",
+      "parking": "Parking Space Photos",
+      "floor": "Floor Photos"
+    },
+    "overview": "Photos Overview",
+    "allPhotos": "All Photos ({count})",
+    "filteredPhotos": "Photos ({count})",
+    "noPhotos": "No photos available",
+    "uploadHint": "Use the upload area above to add photos",
+    "entityLabels": {
+      "storage": "Storage",
+      "building": "Building",
+      "project": "Project",
+      "unit": "Unit",
+      "parking": "Spot",
+      "floor": "Floor",
+      "contact": "Contact"
+    },
+    "categories": {
+      "all": "All",
+      "exterior": "Exterior",
+      "interior": "Interior",
+      "maintenance": "Maintenance",
+      "facade": "Facade",
+      "common": "Common Areas",
+      "amenities": "Amenities"
+    },
+    "validation": {
+      "invalidType": "Invalid file type. Allowed: {types}",
+      "fileTooLarge": "File exceeds maximum size ({maxSize})"
+    }
   },
   "emptyState": {
     "selectBuilding": "Select a building",
