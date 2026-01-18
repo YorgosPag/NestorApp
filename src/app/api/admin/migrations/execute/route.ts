@@ -30,6 +30,7 @@ import { createProjectCompanyRelationshipsMigration } from '@/database/migration
 import { createFloorsNormalizationMigration } from '@/database/migrations/002_normalize_floors_collection';
 import { createEnterpriseArchitectureConsolidationMigration } from '@/database/migrations/003_enterprise_database_architecture_consolidation';
 import { migration as projectCodesMigration, executeDryRun as projectCodesDryRun, executeMigration as projectCodesExecute } from '@/database/migrations/005_assign_project_codes';
+import { migration as storageBuildingMigration, dryRun as storageBuildingDryRun, execute as storageBuildingExecute } from '@/database/migrations/006_normalize_storage_building_references';
 
 /**
  * POST /api/admin/migrations/execute
@@ -159,6 +160,57 @@ async function handleMigrationExecution(
 
         return NextResponse.json(projectCodesResponse, { status: 200 });
 
+      case '006_normalize_storage_building_references':
+        // Special handling for storage building migration
+        const storageBuildingResult = dryRun
+          ? await storageBuildingDryRun()
+          : await storageBuildingExecute({ dryRun: false });
+
+        const storageBuildingResponse = {
+          success: true,
+          migration: {
+            id: storageBuildingMigration.id,
+            name: storageBuildingMigration.name,
+            version: storageBuildingMigration.version,
+            description: storageBuildingMigration.description,
+            author: storageBuildingMigration.author
+          },
+          execution: {
+            mode: dryRun ? 'DRY_RUN' : 'PRODUCTION',
+            startedAt: new Date(startTime).toISOString(),
+            completedAt: new Date().toISOString(),
+            totalTimeMs: Date.now() - startTime,
+            result: storageBuildingResult
+          },
+          environment: {
+            nodeEnv: process.env.NODE_ENV,
+            timestamp: new Date().toISOString(),
+            system: 'Nestor Pagonis Enterprise Platform'
+          }
+        };
+
+        // 🏢 ENTERPRISE: Audit logging (non-blocking)
+        if (!dryRun && 'success' in storageBuildingResult && storageBuildingResult.success) {
+          const metadata = extractRequestMetadata(request);
+          await logMigrationExecuted(
+            ctx,
+            storageBuildingMigration.id,
+            {
+              migrationName: storageBuildingMigration.name,
+              mode: 'PRODUCTION',
+              affectedRecords: storageBuildingResult.affectedRecords,
+              totalTimeMs: Date.now() - startTime,
+              result: 'success',
+              metadata,
+            },
+            `Migration executed by ${ctx.globalRole} ${ctx.email}`
+          ).catch((err: unknown) => {
+            console.error('⚠️ [MIGRATION] Audit logging failed (non-blocking):', err);
+          });
+        }
+
+        return NextResponse.json(storageBuildingResponse, { status: 200 });
+
       default:
         return NextResponse.json(
           {
@@ -168,7 +220,8 @@ async function handleMigrationExecution(
               '001_fix_project_company_relationships',
               '002_normalize_floors_collection',
               '003_enterprise_database_architecture_consolidation',
-              '005_assign_project_codes'
+              '005_assign_project_codes',
+              '006_normalize_storage_building_references'
             ]
           },
           { status: 400 }
@@ -307,6 +360,14 @@ export async function GET(request: NextRequest) {
         name: 'Assign Human-Readable Project Codes',
         version: '1.0.0',
         description: 'Assigns sequential human-readable project codes (PRJ-001, PRJ-002, etc.) to existing projects using atomic Firestore transactions',
+        author: 'Enterprise Architecture Team',
+        status: 'available'
+      },
+      {
+        id: '006_normalize_storage_building_references',
+        name: 'Normalize Storage Building References',
+        version: '1.0.0',
+        description: 'Convert storage.building (name) to storage.buildingId (ID) for enterprise data integrity',
         author: 'Enterprise Architecture Team',
         status: 'available'
       }

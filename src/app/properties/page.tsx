@@ -7,6 +7,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 function PropertiesPageContent() {
   const searchParams = useSearchParams();
@@ -35,12 +37,14 @@ function PropertiesPageContent() {
 
 function PropertiesPageFallback() {
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('properties');
 
   return (
     <div className={`min-h-screen ${colors.bg.secondary} ${colors.bg.primary} flex items-center justify-center`}>
       <div className="text-center">
         <AnimatedSpinner size="large" className="mx-auto mb-4" />
-        <p className="text-gray-600 dark:text-muted-foreground">Φόρτωση ακινήτων...</p>
+        <p className="text-gray-600 dark:text-muted-foreground">{t('page.loading')}</p>
       </div>
     </div>
   );

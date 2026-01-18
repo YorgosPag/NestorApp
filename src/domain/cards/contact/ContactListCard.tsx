@@ -37,6 +37,9 @@ import {
 // 🏢 BADGE VARIANT MAPPING
 import type { ListCardBadgeVariant } from '@/design-system/components/ListCard/ListCard.types';
 
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+
 // =============================================================================
 // 🏢 TYPES
 // =============================================================================
@@ -69,16 +72,6 @@ const TYPE_BADGE_VARIANTS: Record<string, ListCardBadgeVariant> = {
 };
 
 // =============================================================================
-// 🏢 CONTACT TYPE LABELS (Greek)
-// =============================================================================
-
-const TYPE_LABELS: Record<string, string> = {
-  individual: 'Φυσικό Πρόσωπο',
-  company: 'Εταιρεία',
-  service: 'Υπηρεσία',
-};
-
-// =============================================================================
 // 🏢 COMPONENT
 // =============================================================================
 
@@ -108,6 +101,9 @@ export function ContactListCard({
   compact = false,
   className,
 }: ContactListCardProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('contacts');
+
   // ==========================================================================
   // 🏢 COMPUTED VALUES (Memoized)
   // ==========================================================================
@@ -135,44 +131,44 @@ export function ContactListCard({
       });
     }
 
-    // Phone - 🏢 ENTERPRISE: Using centralized phone icon/color
+    // Phone - 🏢 ENTERPRISE: Using centralized phone icon/color + i18n label
     if (phone) {
       items.push({
         icon: NAVIGATION_ENTITIES.phone.icon,
         iconColor: NAVIGATION_ENTITIES.phone.color,
-        label: 'Τηλέφωνο',
+        label: t('card.labels.phone'),
         value: phone,
       });
     }
 
-    // Profession (for individuals) or VAT (for companies)
+    // Profession (for individuals) or VAT (for companies) - 🏢 ENTERPRISE: i18n labels
     if (isIndividualContact(contact) && contact.profession) {
       items.push({
         icon: Briefcase,
-        label: 'Επάγγελμα',
+        label: t('card.labels.profession'),
         value: contact.profession,
       });
-    // VAT Number - 🏢 ENTERPRISE: Using centralized vat icon/color
+    // VAT Number - 🏢 ENTERPRISE: Using centralized vat icon/color + i18n label
     } else if (isCompanyContact(contact) && contact.vatNumber) {
       items.push({
         icon: NAVIGATION_ENTITIES.vat.icon,
         iconColor: NAVIGATION_ENTITIES.vat.color,
-        label: 'ΑΦΜ',
+        label: t('card.labels.vat'),
         value: contact.vatNumber,
       });
     }
 
     return items;
-  }, [contact, email, phone]);
+  }, [contact, email, phone, t]);
 
-  /** Build badges from contact type */
+  /** Build badges from contact type - 🏢 ENTERPRISE: i18n labels */
   const badges = useMemo(() => {
     const contactType = contact.type || 'individual';
-    const typeLabel = TYPE_LABELS[contactType] || contactType;
+    const typeLabel = t(`types.${contactType}`);
     const variant = TYPE_BADGE_VARIANTS[contactType] || 'default';
 
     return [{ label: typeLabel, variant }];
-  }, [contact.type]);
+  }, [contact.type, t]);
 
   /** Get subtitle based on contact type - shows profession/industry/department */
   const subtitle = useMemo(() => {
@@ -221,7 +217,7 @@ export function ContactListCard({
       onToggleFavorite={onToggleFavorite}
       compact={compact}
       className={className}
-      aria-label={`Επαφή ${displayName}`}
+      aria-label={t('list.contactAriaLabel', { name: displayName })}
     />
   );
 }

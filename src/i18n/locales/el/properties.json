@@ -100,6 +100,19 @@
     }
   },
   "filters": {
+    "allTypes": "Όλοι οι Τύποι",
+    "allStatuses": "Όλες οι Καταστάσεις",
+    "allFloors": "Όλοι οι Όροφοι",
+    "allBuildings": "Όλα τα Κτίρια",
+    "allProjects": "Όλα τα Έργα",
+    "types": {
+      "apartment": "Διαμέρισμα",
+      "studio": "Στούντιο",
+      "maisonette": "Μεζονέτα",
+      "shop": "Κατάστημα",
+      "office": "Γραφείο",
+      "storage": "Αποθήκη"
+    },
     "advanced": {
       "show": "Περισσότερα Φίλτρα",
       "hide": "Απόκρυψη Φίλτρα",

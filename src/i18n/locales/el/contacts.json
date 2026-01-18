@@ -1,4 +1,8 @@
 {
+  "emptyState": {
+    "title": "Επιλέξτε μια επαφή",
+    "description": "Επιλέξτε μια επαφή από τη λίστα για να δείτε τις λεπτομέρειές της."
+  },
   "header": {
     "title": "Διαχείριση Επαφών",
     "titleWithCount": "Διαχείριση Επαφών ({count})",
@@ -63,6 +67,7 @@
     "ariaLabel": "Λίστα Επαφών",
     "entityName": "Επαφές",
     "searchPlaceholder": "Αναζήτηση επαφών...",
+    "contactAriaLabel": "Επαφή {name}",
     "favorites": {
       "added": "Προστέθηκε στα αγαπημένα: {name}",
       "removed": "Αφαιρέθηκε από τα αγαπημένα: {name}",
@@ -71,6 +76,18 @@
     "empty": {
       "title": "Δεν υπάρχουν επαφές",
       "subtitle": "Προσθέστε την πρώτη σας επαφή"
+    }
+  },
+  "types": {
+    "individual": "Φυσικό Πρόσωπο",
+    "company": "Εταιρεία",
+    "service": "Υπηρεσία"
+  },
+  "card": {
+    "labels": {
+      "phone": "Τηλέφωνο",
+      "profession": "Επάγγελμα",
+      "vat": "ΑΦΜ"
     }
   },
   "stats": {

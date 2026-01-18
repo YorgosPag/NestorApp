@@ -100,6 +100,19 @@
     }
   },
   "filters": {
+    "allTypes": "All Types",
+    "allStatuses": "All Statuses",
+    "allFloors": "All Floors",
+    "allBuildings": "All Buildings",
+    "allProjects": "All Projects",
+    "types": {
+      "apartment": "Apartment",
+      "studio": "Studio",
+      "maisonette": "Maisonette",
+      "shop": "Shop",
+      "office": "Office",
+      "storage": "Storage"
+    },
     "advanced": {
       "show": "More Filters",
       "hide": "Hide Filters",

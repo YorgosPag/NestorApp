@@ -1,4 +1,8 @@
 {
+  "emptyState": {
+    "title": "Select a contact",
+    "description": "Select a contact from the list to view its details."
+  },
   "header": {
     "title": "Contact Management",
     "titleWithCount": "Contact Management ({count})",
@@ -63,6 +67,7 @@
     "ariaLabel": "Contacts List",
     "entityName": "Contacts",
     "searchPlaceholder": "Search contacts...",
+    "contactAriaLabel": "Contact {name}",
     "favorites": {
       "added": "Added to favorites: {name}",
       "removed": "Removed from favorites: {name}",
@@ -71,6 +76,18 @@
     "empty": {
       "title": "No contacts found",
       "subtitle": "Add your first contact"
+    }
+  },
+  "types": {
+    "individual": "Individual",
+    "company": "Company",
+    "service": "Service"
+  },
+  "card": {
+    "labels": {
+      "phone": "Phone",
+      "profession": "Profession",
+      "vat": "VAT"
     }
   },
   "stats": {

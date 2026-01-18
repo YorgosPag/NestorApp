@@ -106,7 +106,7 @@ export function PropertyGridView() {
                 className={`px-4 py-2 ${colors.bg.gradient} ${colors.text.primaryContrast} ${radius.lg} transition-all flex items-center gap-2 font-medium h-8 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
               >
                 <MapPin className={iconSizes.sm} />
-                Προβολή σε Κάτοψη
+                {t('grid.actions.viewFloorPlan')}
               </button>
             ]
           }}
@@ -142,8 +142,8 @@ export function PropertyGridView() {
           ) : (
             <div className="text-center py-12 px-4 sm:px-0">
               {React.createElement(NAVIGATION_ENTITIES.unit.icon, { className: `${iconSizes.xl} ${colors.text.muted} mx-auto mb-4` })}
-              <h3 className={`text-lg font-medium ${colors.text.primary} mb-2`}>Δεν βρέθηκαν ακίνητα</h3>
-              <p className={colors.text.muted}>Δοκιμάστε να αλλάξετε τα κριτήρια αναζήτησης</p>
+              <h3 className={`text-lg font-medium ${colors.text.primary} mb-2`}>{t('grid.emptyState.title')}</h3>
+              <p className={colors.text.muted}>{t('grid.emptyState.subtitle')}</p>
             </div>
           )}
         </div>
@@ -153,17 +153,17 @@ export function PropertyGridView() {
       <div className="dark:bg-muted/30 py-12 mt-12">
         <div className="max-w-4xl mx-auto text-center px-4">
           <h2 className={`text-2xl font-bold ${colors.text.primary} mb-4`}>
-            Θέλετε να δείτε τα ακίνητα στην κάτοψη του ορόφου;
+            {t('grid.cta.title')}
           </h2>
           <p className={`${colors.text.muted} mb-6`}>
-            Εξερευνήστε διαδραστικά τη θέση κάθε ακινήτου και δείτε τα γειτονικά διαμερίσματα
+            {t('grid.cta.subtitle')}
           </p>
           <button
             onClick={handleViewAllFloorPlan}
             className={`px-8 py-3 ${colors.bg.gradient} ${colors.text.primaryContrast} ${radius.lg} transition-all font-medium inline-flex items-center gap-2 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
           >
             <MapPin className={iconSizes.md} />
-            Προβολή Κάτοψης Ορόφου
+            {t('grid.cta.button')}
           </button>
         </div>
       </div>
