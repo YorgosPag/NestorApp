@@ -1,4 +1,124 @@
 {
+  "page": {
+    "title": "Πλοήγηση Ακινήτων",
+    "menuLabel": "Μενού Πλοήγησης",
+    "mainAreaLabel": "Κεντρική Περιοχή Πλοήγησης",
+    "hierarchyLabel": "Πλοήγηση Ιεραρχίας",
+    "error": "Σφάλμα",
+    "retry": "Ξαναδοκιμή",
+    "breadcrumb": {
+      "navigateTo": "Μετάβαση σε {name}"
+    }
+  },
+  "columns": {
+    "companies": {
+      "title": "Εταιρείες",
+      "listLabel": "Λίστα Εταιρειών",
+      "sectionLabel": "Εταιρείες",
+      "defaultSubtitle": "Εταιρεία",
+      "noProjects": "Εταιρεία χωρίς έργα",
+      "addProjects": "Προσθέστε έργα για αυτή την εταιρεία",
+      "vatNumber": "ΑΦΜ: {vatNumber}",
+      "openTooltip": "Άνοιγμα στις Επαφές"
+    },
+    "projects": {
+      "title": "Έργα",
+      "listLabel": "Λίστα Έργων",
+      "sectionLabel": "Έργα",
+      "buildingCount": "{count} κτίρια",
+      "openTooltip": "Άνοιγμα στα Έργα"
+    },
+    "buildings": {
+      "title": "Κτίρια",
+      "listLabel": "Λίστα Κτιρίων",
+      "sectionLabel": "Κτίρια",
+      "unitCount": "{count} μονάδες",
+      "openTooltip": "Άνοιγμα στα Κτίρια"
+    },
+    "actions": {
+      "title": "Ενέργειες",
+      "listLabel": "Λίστα Ενεργειών",
+      "sectionLabel": "Ενέργειες",
+      "viewUnits": "Προβολή Μονάδων",
+      "unitsCount": "{count} μονάδες",
+      "buildingDetails": "Λεπτομέρειες Κτιρίου",
+      "projectDetails": "Λεπτομέρειες Έργου"
+    }
+  },
+  "modals": {
+    "linkProject": {
+      "title": "Σύνδεση Έργου",
+      "description": "Επιλέξτε ένα έργο για σύνδεση με την εταιρεία \"{companyName}\".",
+      "searchPlaceholder": "Αναζήτηση έργου..."
+    },
+    "linkBuilding": {
+      "title": "Σύνδεση Κτιρίου",
+      "description": "Επιλέξτε ένα κτίριο για σύνδεση με το έργο \"{projectName}\".",
+      "searchPlaceholder": "Αναζήτηση κτιρίου..."
+    },
+    "linkUnit": {
+      "title": "Σύνδεση Μονάδας",
+      "description": "Επιλέξτε μια μονάδα για σύνδεση με το κτίριο \"{buildingName}\".",
+      "searchPlaceholder": "Αναζήτηση μονάδας..."
+    },
+    "availableForLinking": "Διαθέσιμο για σύνδεση",
+    "selectFirst": "Παρακαλούμε επιλέξτε πρώτα ένα έργο."
+  },
+  "dialogs": {
+    "company": {
+      "title": "Αφαίρεση Εταιρείας από Πλοήγηση",
+      "confirmation": "Είστε βέβαιοι ότι θέλετε να αφαιρέσετε την εταιρεία \"{companyName}\" από την πλοήγηση;",
+      "infoTitle": "Αυτή η ενέργεια:",
+      "willRemove": "Θα αφαιρέσει την εταιρεία από τη λίστα πλοήγησης",
+      "willNotDelete": "ΔΕΝ θα διαγράψει την εταιρεία από τη βάση δεδομένων",
+      "canAddLater": "Μπορείτε να την προσθέσετε ξανά αργότερα",
+      "cancel": "Ακύρωση",
+      "confirm": "Αφαίρεση",
+      "successMessage": "Η εταιρεία \"{companyName}\" αφαιρέθηκε επιτυχώς από την πλοήγηση.",
+      "errorMessage": "Αποτυχία αφαίρεσης εταιρείας. Παρακαλούμε δοκιμάστε ξανά."
+    },
+    "project": {
+      "title": "Αποσύνδεση Έργου από Εταιρεία",
+      "confirmation": "Είστε βέβαιοι ότι θέλετε να αποσυνδέσετε το έργο \"{projectName}\" από την εταιρεία;",
+      "infoTitle": "Αυτή η ενέργεια:",
+      "willUnlink": "Θα αποσυνδέσει το έργο από την εταιρεία",
+      "willNotDelete": "ΔΕΝ θα διαγράψει το έργο από τη βάση δεδομένων",
+      "canLinkLater": "Μπορείτε να το συνδέσετε ξανά αργότερα",
+      "cancel": "Ακύρωση",
+      "confirm": "Αποσύνδεση",
+      "successMessage": "Το έργο \"{projectName}\" αποσυνδέθηκε επιτυχώς.",
+      "errorMessage": "Αποτυχία αποσύνδεσης έργου. Δοκιμάστε ξανά."
+    },
+    "building": {
+      "title": "Αποσύνδεση Κτιρίου από Έργο",
+      "confirmation": "Είστε βέβαιοι ότι θέλετε να αποσυνδέσετε το κτίριο \"{buildingName}\" από το έργο;",
+      "infoTitle": "Αυτή η ενέργεια:",
+      "willUnlink": "Θα αποσυνδέσει το κτίριο από το έργο",
+      "willNotDelete": "ΔΕΝ θα διαγράψει το κτίριο από τη βάση δεδομένων",
+      "canLinkLater": "Μπορείτε να το συνδέσετε ξανά αργότερα",
+      "cancel": "Ακύρωση",
+      "confirm": "Αποσύνδεση",
+      "successMessage": "Το κτίριο \"{buildingName}\" αποσυνδέθηκε επιτυχώς.",
+      "errorMessage": "Αποτυχία αποσύνδεσης κτιρίου. Δοκιμάστε ξανά."
+    },
+    "unit": {
+      "title": "Αποσύνδεση Μονάδας από Κτίριο",
+      "confirmation": "Είστε βέβαιοι ότι θέλετε να αποσυνδέσετε τη μονάδα \"{unitName}\" από το κτίριο;",
+      "infoTitle": "Αυτή η ενέργεια:",
+      "willUnlink": "Θα αποσυνδέσει τη μονάδα από το κτίριο",
+      "willNotDelete": "ΔΕΝ θα διαγράψει τη μονάδα από τη βάση δεδομένων",
+      "canLinkLater": "Μπορείτε να την συνδέσετε ξανά αργότερα",
+      "cancel": "Ακύρωση",
+      "confirm": "Αποσύνδεση",
+      "successMessage": "Η μονάδα \"{unitName}\" αποσυνδέθηκε επιτυχώς.",
+      "errorMessage": "Αποτυχία αποσύνδεσης μονάδας. Δοκιμάστε ξανά."
+    },
+    "dependencies": {
+      "cannotRemoveCompany": "Δεν μπορείτε να αφαιρέσετε αυτή την εταιρεία γιατί έχει {count} έργα. Παρακαλούμε αποσυνδέσετε πρώτα τα έργα.",
+      "cannotUnlinkProject": "Δεν μπορείτε να αποσυνδέσετε αυτό το έργο γιατί έχει {count} κτίρια. Παρακαλούμε αποσυνδέσετε πρώτα τα κτίρια.",
+      "cannotUnlinkBuilding": "Δεν μπορείτε να αποσυνδέσετε αυτό το κτίριο γιατί έχει {count} μονάδες. Παρακαλούμε αποσυνδέσετε πρώτα τις μονάδες."
+    }
+  },
   "menu": {
     "main": "Κύριο Μενού",
     "tools": "Εργαλεία",
@@ -153,21 +273,33 @@
       "locationDesc": "Τοποθεσία (Ω-Α)"
     }
   },
+  "entities": {
+    "company": { "title": "Εταιρείες" },
+    "project": { "title": "Έργα" },
+    "building": { "title": "Κτίρια" },
+    "floor": { "title": "Όροφοι" },
+    "unit": { "title": "Μονάδες" },
+    "storage": { "title": "Αποθήκες" },
+    "parking": { "title": "Θέσεις Πάρκινγκ" }
+  },
   "buildingSpaces": {
     "sectionLabel": "Χώροι Κτιρίου",
     "units": {
+      "title": "Μονάδες",
       "listLabel": "Λίστα Μονάδων",
       "empty": "Δεν υπάρχουν μονάδες",
       "defaultSubtitle": "Μονάδα",
       "openTooltip": "Άνοιγμα στις Μονάδες"
     },
     "storage": {
+      "title": "Αποθήκες",
       "listLabel": "Λίστα Αποθηκών",
       "empty": "Δεν υπάρχουν αποθήκες",
       "defaultSubtitle": "Αποθήκη",
       "openTooltip": "Άνοιγμα στις Αποθήκες"
     },
     "parking": {
+      "title": "Θέσεις Πάρκινγκ",
       "listLabel": "Λίστα Θέσεων Στάθμευσης",
       "empty": "Δεν υπάρχουν θέσεις στάθμευσης",
       "spotTitle": "Θέση {number}",

@@ -10,6 +10,8 @@ import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { usePropertyGridFilters } from './hooks/usePropertyGridFilters';
 import { PropertyCard } from './components/PropertyCard';
@@ -27,6 +29,8 @@ export function PropertyGridView() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { quick, radius } = useBorderTokens();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('properties');
 
   // Debug logs (ίδια συμπεριφορά)
   console.log('All properties from hook:', properties);
@@ -61,13 +65,13 @@ export function PropertyGridView() {
           layout="multi-row"
           title={{
             icon: NAVIGATION_ENTITIES.unit.icon,
-            title: "Διαθέσιμα Ακίνητα",
-            subtitle: `Βρέθηκαν ${filteredProperties.length} ακίνητα`
+            title: t('grid.header.title'),
+            subtitle: t('grid.header.found', { count: filteredProperties.length })
           }}
           search={{
             value: searchTerm,
             onChange: setSearchTerm,
-            placeholder: "Αναζήτηση ακινήτων..."
+            placeholder: t('grid.search.placeholder')
           }}
           filters={{
             customFilters: [
@@ -89,7 +93,7 @@ export function PropertyGridView() {
                 }`}
               >
                 <SlidersHorizontal className={iconSizes.sm} />
-                <span className="font-medium">Φίλτρα</span>
+                <span className="font-medium">{t('grid.filters.button')}</span>
               </button>
             ]
           }}

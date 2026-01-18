@@ -50,11 +50,12 @@ export const MODAL_SELECT_COUNTRY_OPTIONS = [
 
 /**
  * Standardized currency options
+ * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_CURRENCY_OPTIONS = [
-  { value: 'EUR', label: 'EUR (Ευρώ)' },
-  { value: 'USD', label: 'USD (Δολάρια ΗΠΑ)' },
-  { value: 'GBP', label: 'GBP (Λίρες Στερλίνες)' }
+  { value: 'EUR', label: 'options.currencies.eur' },
+  { value: 'USD', label: 'options.currencies.usd' },
+  { value: 'GBP', label: 'options.currencies.gbp' }
 ] as const;
 
 // ====================================================================

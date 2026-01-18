@@ -143,6 +143,20 @@
     "saveContact": "Αποθήκευση Επαφής"
   },
   "relationships": {
+    "types": {
+      "employee": "Εργαζόμενος",
+      "manager": "Διευθυντής",
+      "shareholder": "Μέτοχος",
+      "boardMember": "Μέλος Διοικητικού Συμβουλίου",
+      "civilServant": "Δημόσιος Υπάλληλος",
+      "departmentHead": "Προϊστάμενος Τμήματος",
+      "consultant": "Σύμβουλος",
+      "colleague": "Συνάδελφος",
+      "friend": "Φίλος",
+      "family": "Οικογένεια",
+      "businessContact": "Επαγγελματική Επαφή",
+      "other": "Άλλο"
+    },
     "form": {
       "title": "Προσθήκη Νέας Σχέσης",
       "editTitle": "Επεξεργασία Σχέσης",
@@ -189,6 +203,25 @@
       "updatedAt": "Ενημερώθηκε:",
       "recently": "Πρόσφατα"
     },
+    "recent": {
+      "title": "Πρόσφατες Σχέσεις",
+      "showLess": "Προβολή λίγων",
+      "showAll": "Προβολή όλων ({count} ακόμα)"
+    },
+    "manager": {
+      "totalCount": "Σύνολο: {count} σχέσεις",
+      "refreshData": "Ανανέωση δεδομένων",
+      "addRelationship": "Προσθήκη Σχέσης",
+      "errors": {
+        "listError": "Σφάλμα λίστας σχέσεων",
+        "formError": "Σφάλμα φόρμας",
+        "treeError": "Σφάλμα οργανωσιακού διαγράμματος"
+      },
+      "newContact": {
+        "note": "Σημείωση",
+        "description": "Για να δημιουργήσετε σχέσεις, αποθηκεύστε πρώτα την επαφή. Μετά την αποθήκευση θα εμφανιστούν οι επιλογές διαχείρισης σχέσεων."
+      }
+    },
     "list": {
       "newContact": {
         "title": "Δημιουργία σχέσεων",
@@ -217,6 +250,27 @@
         "title": "Δεν υπάρχουν σχέσεις",
         "description": "Προσθέστε επαγγελματικές σχέσεις, εργαζόμενους και συνεργάτες."
       }
+    },
+    "organizationTree": {
+      "loading": "Φόρτωση...",
+      "loadingTree": "Φόρτωση οργανωτικού διαγράμματος...",
+      "loadError": "Σφάλμα φόρτωσης",
+      "emptyTree": "Κενό οργανωτικό διάγραμμα",
+      "noEmployeeRelationships": "Δεν υπάρχουν σχέσεις εργαζομένων για αυτόν τον οργανισμό.",
+      "unknownContact": "Άγνωστη Επαφή",
+      "employee": "Εργαζόμενος",
+      "totalEmployees": "Συνολικοί Εργαζόμενοι",
+      "activeDepartments": "Ενεργά Τμήματα",
+      "managementLevels": "Επίπεδα Διοίκησης",
+      "simpleStructure": "Απλό Οργανωτικό Σχήμα",
+      "simpleStructureDescription": "Αυτή η εταιρεία έχει βασική οργανωσιακή δομή χωρίς πολύπλοκη ιεραρχία.",
+      "departmentsAndEmployees": "Τμήματα & Εργαζόμενοι",
+      "generalDepartment": "Γενικό Τμήμα",
+      "recentAdditions": "Πρόσφατες Προσθήκες",
+      "moreItems": "+{count} επιπλέον",
+      "lastUpdated": "Τελευταία ενημέρωση",
+      "createdAt": "Δημιουργήθηκε",
+      "unknown": "Άγνωστη"
     }
   }
 }

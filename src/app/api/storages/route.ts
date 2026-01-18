@@ -83,6 +83,8 @@ function mapFirestoreToStorage(docId: string, data: FirestoreStorageData): Stora
     type,
     status,
     building: data.building || '',
+    // 🏢 ENTERPRISE: buildingId field (added via migration 006)
+    buildingId: data.buildingId as string | undefined,
     floor: data.floor || '',
     area: typeof data.area === 'number' ? data.area : 0,
     description: data.description,
@@ -140,15 +142,23 @@ function parseFirestoreTimestamp(timestamp: unknown): Date | null {
 }
 
 // ============================================================================
-// RESPONSE TYPES (Type-safe withAuth)
+// RESPONSE TYPES (Type-safe withAuth) - CANONICAL FORMAT
 // ============================================================================
+
+/**
+ * 🏢 ENTERPRISE CANONICAL FORMAT: { success, data: T }
+ * Required by enterprise-api-client for proper response handling
+ */
+interface StoragesData {
+  storages: Storage[];
+  count: number;
+  cached: boolean;
+  projectId?: string;
+}
 
 interface StoragesResponse {
   success: boolean;
-  storages?: Storage[];
-  count?: number;
-  cached?: boolean;
-  projectId?: string;
+  data?: StoragesData;
   error?: string;
   details?: string;
 }
@@ -201,9 +211,11 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
       console.log('⚠️ API: No projects found for user\'s company - returning empty result');
       return NextResponse.json({
         success: true,
-        storages: [],
-        count: 0,
-        cached: false
+        data: {
+          storages: [],
+          count: 0,
+          cached: false
+        }
       });
     }
 
@@ -267,14 +279,16 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
     }
 
     // =========================================================================
-    // STEP 3: Return tenant-filtered results
+    // STEP 3: Return tenant-filtered results (CANONICAL FORMAT)
     // =========================================================================
     return NextResponse.json({
       success: true,
-      storages,
-      count: storages.length,
-      cached: false,
-      projectId: requestedProjectId || undefined
+      data: {
+        storages,
+        count: storages.length,
+        cached: false,
+        projectId: requestedProjectId || undefined
+      }
     });
 
   } catch (error) {

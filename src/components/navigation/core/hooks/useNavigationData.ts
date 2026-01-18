@@ -104,28 +104,17 @@ export function useNavigationData(): UseNavigationDataReturn {
    * This is the enterprise pattern used by React Query, SWR, and Apollo Client.
    */
   const loadViaBootstrap = async (): Promise<{ companies: NavigationCompany[]; projects: NavigationProject[] }> => {
-    // 🔐 STEP 0: AUTH-READY GATING - Wait for authentication
-    // This prevents bootstrap from running before AuthContext is ready
+    // 🔐 STEP 0: AUTH-READY GATING - Check authentication state
+    // ENTERPRISE FIX: Removed polling loop (closure bug - authLoading never updates inside Promise)
+    // The caller (NavigationContext) is responsible for waiting until auth is ready
     if (authLoading) {
-      // Auth state is still loading - wait for it
-      console.log('⏳ [Navigation] Waiting for auth state...');
-      // Return a promise that resolves when auth is ready
-      await new Promise<void>((resolve) => {
-        const checkAuth = () => {
-          if (!authLoading) {
-            resolve();
-          } else {
-            setTimeout(checkAuth, 100);
-          }
-        };
-        checkAuth();
-      });
+      console.log('⏳ [Navigation] Auth still loading - caller should retry when ready');
+      throw new Error('AUTH_LOADING');
     }
 
     if (!user) {
-      // User not authenticated - cannot proceed
-      console.error('❌ [Navigation] User not authenticated - cannot load bootstrap');
-      throw new Error('User not authenticated');
+      console.log('⏳ [Navigation] User not authenticated - caller should retry when ready');
+      throw new Error('USER_NOT_AUTHENTICATED');
     }
 
     // 1. Check cache first (instant return)

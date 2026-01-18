@@ -13,6 +13,8 @@
  * - Ctrl+Click opens in new tab (native browser behavior)
  * - Last item (current page) is NOT clickable
  *
+ * 🏢 ENTERPRISE: i18n support
+ *
  * @see navigation-entities.ts - Single Source of Truth για icons/colors
  * @see ContextualNavigationService - Centralized route generation
  */
@@ -25,6 +27,8 @@ import { useNavigation } from '../core/NavigationContext';
 import type { BreadcrumbItem } from '../core/types';
 // 🏢 ENTERPRISE: Centralized route generation - ZERO hardcoded URLs
 import { ContextualNavigationService, type NavigableEntityType } from '@/services/navigation/ContextualNavigationService';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface NavigationBreadcrumbProps {
   className?: string;
@@ -45,6 +49,8 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
     selectedBuilding,
     selectedUnit,  // 🏢 ENTERPRISE: Unit for breadcrumb display
   } = useNavigation();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('navigation');
 
   /**
    * 🏢 ENTERPRISE (ADR-016): Breadcrumb με clickable Links
@@ -178,7 +184,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
               <Link
                 href={item.href}
                 className="flex items-center gap-1 text-gray-300 hover:text-white transition-colors"
-                title={`Μετάβαση σε ${item.label}`}
+                title={t('page.breadcrumb.navigateTo', { name: item.label })}
               >
                 {renderItemContent(item)}
               </Link>

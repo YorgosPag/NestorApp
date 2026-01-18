@@ -16,6 +16,8 @@ import { Building2, Users } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Import centralized types
 import type { OrganizationTree as OrganizationTreeType } from '@/types/contacts/relationships';
@@ -38,18 +40,23 @@ const ContactBadge: React.FC<ContactBadgeProps> = ({ contactId, position, relati
   const colors = useSemanticColors();
   console.log('🎫 CONTACT BADGE: Hook result - name:', contactName, 'loading:', loading);
 
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('contacts');
+
   if (loading) {
     return (
       <Badge variant="outline" className={`text-xs ${colors.bg.secondary} ${quick.table} ${colors.text.muted}`}>
-        Φόρτωση...
+        {t('relationships.organizationTree.loading')}
       </Badge>
     );
   }
 
   // Display contact name with position if available
-  const displayText = contactName && contactName !== 'Άγνωστη Επαφή'
+  const unknownContact = t('relationships.organizationTree.unknownContact');
+  const defaultEmployee = t('relationships.organizationTree.employee');
+  const displayText = contactName && contactName !== unknownContact
     ? (position ? `${contactName} (${position})` : contactName)
-    : (position || relationshipType || 'Εργαζόμενος');
+    : (position || relationshipType || defaultEmployee);
 
   return (
     <Badge
@@ -97,6 +104,8 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
   // ============================================================================
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('contacts');
 
   // ============================================================================
   // RENDER HELPERS
@@ -110,7 +119,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
     return (
       <div className={`text-center ${colors.text.muted} py-8`}>
         <Building2 className={`${iconSizes.xl} mx-auto mb-2 animate-pulse`} />
-        <p>Φόρτωση οργανωτικού διαγράμματος...</p>
+        <p>{t('relationships.organizationTree.loadingTree')}</p>
       </div>
     );
   };
@@ -123,7 +132,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
     return (
       <div className={`text-center ${colors.text.danger} py-8`}>
         <Building2 className={`${iconSizes.xl} mx-auto mb-2`} />
-        <p className="font-medium">Σφάλμα φόρτωσης</p>
+        <p className="font-medium">{t('relationships.organizationTree.loadError')}</p>
         <p className={`text-sm ${colors.text.muted} mt-1`}>{error}</p>
       </div>
     );
@@ -137,9 +146,9 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
     return (
       <div className={`text-center ${colors.text.muted} py-8`}>
         <Building2 className={`${iconSizes.xl} mx-auto mb-2 ${colors.text.disabled}`} />
-        <p className="font-medium">Κενό οργανωτικό διάγραμμα</p>
+        <p className="font-medium">{t('relationships.organizationTree.emptyTree')}</p>
         <p className="text-sm mt-1">
-          Δεν υπάρχουν σχέσεις εργαζομένων για αυτόν τον οργανισμό.
+          {t('relationships.organizationTree.noEmployeeRelationships')}
         </p>
       </div>
     );
@@ -160,7 +169,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
     if ((totalEmployees || 0) > 0) {
       stats.push({
         value: totalEmployees,
-        label: 'Συνολικοί Εργαζόμενοι',
+        label: t('relationships.organizationTree.totalEmployees'),
         icon: Users,
         color: 'blue'
       });
@@ -169,7 +178,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
     if ((departmentCount || 0) > 0) {
       stats.push({
         value: departmentCount,
-        label: 'Ενεργά Τμήματα',
+        label: t('relationships.organizationTree.activeDepartments'),
         icon: Building2,
         color: 'green'
       });
@@ -178,7 +187,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
     if ((hierarchyDepth || 0) > 1) { // Only show if > 1 (meaningful hierarchy)
       stats.push({
         value: hierarchyDepth,
-        label: 'Επίπεδα Διοίκησης',
+        label: t('relationships.organizationTree.managementLevels'),
         icon: Building2,
         color: 'purple'
       });
@@ -189,9 +198,9 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
       return (
         <div className={`text-center p-6 ${colors.bg.secondary} ${quick.card} border border-dashed ${quick.table}`}>
           <Building2 className={`${iconSizes.xl} mx-auto mb-3 ${colors.text.muted}`} />
-          <h3 className={`font-medium ${colors.text.primary} mb-1`}>Απλό Οργανωτικό Σχήμα</h3>
+          <h3 className={`font-medium ${colors.text.primary} mb-1`}>{t('relationships.organizationTree.simpleStructure')}</h3>
           <p className={`text-sm ${colors.text.muted}`}>
-            Αυτή η εταιρεία έχει βασική οργανωσιακή δομή χωρίς πολύπλοκη ιεραρχία.
+            {t('relationships.organizationTree.simpleStructureDescription')}
           </p>
         </div>
       );
@@ -233,7 +242,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
 
     return (
       <div className="mb-6">
-        <h4 className={`text-sm font-medium ${colors.text.primary} mb-3`}>Τμήματα & Εργαζόμενοι</h4>
+        <h4 className={`text-sm font-medium ${colors.text.primary} mb-3`}>{t('relationships.organizationTree.departmentsAndEmployees')}</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {Object.entries(tree.departments).map(([department, employees]) => (
             <div
@@ -242,7 +251,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
             >
               <div className="flex items-center justify-between mb-2">
                 <p className={`font-medium ${colors.text.primary}`}>
-                  {department || 'Γενικό Τμήμα'}
+                  {department || t('relationships.organizationTree.generalDepartment')}
                 </p>
                 <Badge variant="secondary" className="text-xs">
                   {Array.isArray(employees) ? employees.length : 0}
@@ -253,12 +262,12 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
                 <div className="space-y-1">
                   {employees.slice(0, 3).map((employee, index) => (
                     <p key={index} className={`text-xs ${colors.text.muted}`}>
-                      • {employee.position || 'Εργαζόμενος'}
+                      • {employee.position || t('relationships.organizationTree.employee')}
                     </p>
                   ))}
                   {employees.length > 3 && (
                     <p className={`text-xs ${colors.text.muted} italic`}>
-                      +{employees.length - 3} επιπλέον...
+                      {t('relationships.organizationTree.moreItems', { count: employees.length - 3 })}
                     </p>
                   )}
                 </div>
@@ -285,7 +294,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
     console.log('🌳 ORG TREE: About to render', tree.children.length, 'children');
     return (
       <div>
-        <h4 className={`text-sm font-medium ${colors.text.primary} mb-3`}>Πρόσφατες Προσθήκες</h4>
+        <h4 className={`text-sm font-medium ${colors.text.primary} mb-3`}>{t('relationships.organizationTree.recentAdditions')}</h4>
         <div className="flex flex-wrap gap-2">
           {tree.children.slice(0, 8).map((child, index) => (
             <ContactBadge
@@ -297,7 +306,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
           ))}
           {tree.children.length > 8 && (
             <Badge variant="outline" className={`text-xs ${colors.text.muted}`}>
-              +{tree.children.length - 8} επιπλέον
+              {t('relationships.organizationTree.moreItems', { count: tree.children.length - 8 })}
             </Badge>
           )}
         </div>
@@ -341,17 +350,17 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
           <CardContent className="pt-4">
             <div className={`text-xs ${colors.text.muted} space-y-1`}>
               <p>
-                <strong>Τελευταία ενημέρωση:</strong>{' '}
+                <strong>{t('relationships.organizationTree.lastUpdated')}:</strong>{' '}
                 {tree.updatedAt
                   ? new Date(tree.updatedAt).toLocaleDateString('el-GR')
-                  : 'Άγνωστη'
+                  : t('relationships.organizationTree.unknown')
                 }
               </p>
               <p>
-                <strong>Δημιουργήθηκε:</strong>{' '}
+                <strong>{t('relationships.organizationTree.createdAt')}:</strong>{' '}
                 {tree.createdAt
                   ? new Date(tree.createdAt).toLocaleDateString('el-GR')
-                  : 'Άγνωστη'
+                  : t('relationships.organizationTree.unknown')
                 }
               </p>
             </div>

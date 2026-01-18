@@ -11,6 +11,8 @@
  * - Είναι parallel category με Units/Storage
  * - Δεν είναι children των Units
  *
+ * 🏢 ENTERPRISE: Uses centralized apiClient for automatic authentication
+ *
  * USAGE:
  * ```tsx
  * // Get parking for specific building
@@ -22,6 +24,9 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/auth/hooks/useAuth';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 
 // =============================================================================
 // 🅿️ TYPE DEFINITIONS
@@ -82,6 +87,19 @@ interface UseFirestoreParkingReturn {
 }
 
 // =============================================================================
+// 🅿️ ENTERPRISE API RESPONSE TYPE
+// =============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Response data type (apiClient returns unwrapped data)
+ */
+interface ParkingApiResponse {
+  parkingSpots: ParkingSpot[];
+  count?: number;
+  cached?: boolean;
+}
+
+// =============================================================================
 // 🅿️ HOOK IMPLEMENTATION
 // =============================================================================
 
@@ -90,11 +108,16 @@ interface UseFirestoreParkingReturn {
  *
  * Enterprise-grade hook για parking spots data
  * Supports filtering by buildingId (per local_4.log architecture)
+ *
+ * 🏢 ENTERPRISE: Uses apiClient for automatic authentication
  */
 export function useFirestoreParkingSpots(
   options: UseFirestoreParkingOptions = {}
 ): UseFirestoreParkingReturn {
   const { buildingId, autoFetch = true } = options;
+
+  // 🔐 ENTERPRISE: Auth-ready gating - wait for user to be authenticated
+  const { user, loading: authLoading } = useAuth();
 
   const [parkingSpots, setParkingSpots] = useState<ParkingSpot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,51 +125,56 @@ export function useFirestoreParkingSpots(
   const [cached, setCached] = useState(false);
 
   const fetchParkingSpots = useCallback(async () => {
+    // 🔐 ENTERPRISE: Wait for auth before fetching
+    if (authLoading) {
+      console.log('⏳ [ParkingSpots] Waiting for auth state...');
+      return;
+    }
+
+    if (!user) {
+      console.log('⏳ [ParkingSpots] User not authenticated, skipping fetch');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
+
+      console.log(`🅿️ [ParkingSpots] Fetching parking spots...`);
 
       // Build API URL με optional buildingId filter
       const url = buildingId
         ? `/api/parking?buildingId=${encodeURIComponent(buildingId)}`
         : '/api/parking';
 
-      const response = await fetch(url);
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      const data = await apiClient.get<ParkingApiResponse>(url);
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch parking spots: ${response.statusText}`);
-      }
+      setParkingSpots(data?.parkingSpots || []);
+      setCached(data?.cached ?? false);
 
-      const data = await response.json();
-
-      if (data.success) {
-        setParkingSpots(data.parkingSpots);
-        setCached(data.cached ?? false);
-
-        if (buildingId) {
-          console.log(`🅿️ Hook: Loaded ${data.parkingSpots.length} parking spots for building ${buildingId}`);
-        } else {
-          console.log(`🅿️ Hook: Loaded ${data.parkingSpots.length} parking spots`);
-        }
+      if (buildingId) {
+        console.log(`✅ [ParkingSpots] Loaded ${data?.parkingSpots?.length || 0} parking spots for building ${buildingId}`);
       } else {
-        throw new Error(data.error || 'Failed to fetch parking spots');
+        console.log(`✅ [ParkingSpots] Loaded ${data?.parkingSpots?.length || 0} parking spots`);
       }
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      console.error('❌ Error fetching parking spots:', err);
+      console.error('❌ [ParkingSpots] Error fetching parking spots:', err);
       setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  }, [buildingId]);
+  }, [buildingId, user, authLoading]);
 
-  // Auto-fetch on mount and when buildingId changes
+  // Auto-fetch on mount and when buildingId/auth changes
   useEffect(() => {
-    if (autoFetch) {
+    if (autoFetch && !authLoading && user) {
       fetchParkingSpots();
     }
-  }, [fetchParkingSpots, autoFetch]);
+  }, [fetchParkingSpots, autoFetch, authLoading, user]);
 
   return {
     parkingSpots,

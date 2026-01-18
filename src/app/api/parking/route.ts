@@ -53,14 +53,19 @@ interface FirestoreParkingSpot {
 }
 
 /**
- * 🅿️ API Response interface
+ * 🅿️ API Response interface - CANONICAL FORMAT
+ * Required by enterprise-api-client for proper response handling
  */
+interface ParkingData {
+  parkingSpots: FirestoreParkingSpot[];
+  count: number;
+  cached: boolean;
+  buildingId?: string;
+}
+
 interface ParkingAPIResponse {
   success: boolean;
-  parkingSpots?: FirestoreParkingSpot[];
-  count?: number;
-  cached?: boolean;
-  buildingId?: string;
+  data?: ParkingData;
   error?: string;
   details?: string;
 }
@@ -115,9 +120,11 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
       console.log('⚠️ API: No projects found for user\'s company - returning empty result');
       return NextResponse.json({
         success: true,
-        parkingSpots: [],
-        count: 0,
-        cached: false
+        data: {
+          parkingSpots: [],
+          count: 0,
+          cached: false
+        }
       });
     }
 
@@ -204,14 +211,16 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
     }
 
     // =========================================================================
-    // STEP 4: Return tenant-filtered results
+    // STEP 4: Return tenant-filtered results (CANONICAL FORMAT)
     // =========================================================================
     return NextResponse.json({
       success: true,
-      parkingSpots,
-      count: parkingSpots.length,
-      cached: false,
-      buildingId: requestedBuildingId || undefined
+      data: {
+        parkingSpots,
+        count: parkingSpots.length,
+        cached: false,
+        buildingId: requestedBuildingId || undefined
+      }
     });
 
   } catch (error) {

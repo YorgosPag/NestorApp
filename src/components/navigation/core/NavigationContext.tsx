@@ -11,11 +11,14 @@ import { useNavigationData } from './hooks/useNavigationData';
 import { useNavigationActions } from './hooks/useNavigationActions';
 import { useRealtimeBuildings, useRealtimeUnits, REALTIME_EVENTS } from '@/services/realtime';
 import { NavigationApiService } from './services/navigationApi';
+// 🔐 ENTERPRISE: Auth hook for bootstrap gating
+import { useAuth } from '@/auth/hooks/useAuth';
 import type {
   NavigationState,
   NavigationActions,
   NavigationCompany,
   NavigationProject,
+  NavigationBuilding,
   NavigationLevel,
   NavigationFilters,
   RealtimeBuildingRef,
@@ -42,6 +45,9 @@ export function resetNavigationState(): void {
 }
 
 export function NavigationProvider({ children }: { children: React.ReactNode }) {
+  // 🔐 ENTERPRISE: Auth-ready gating - wait for authentication before bootstrap
+  const { user, loading: authLoading } = useAuth();
+
   // Core navigation state
   const [state, setState] = useState<NavigationState>({
     companies: [],
@@ -83,7 +89,20 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   };
 
   // Load companies on mount - SINGLE bootstrap call
+  // 🔐 ENTERPRISE: Auth-ready gating - waits for authentication before bootstrap
   useEffect(() => {
+    // 🔐 STEP 1: Wait for auth to be ready before attempting bootstrap
+    if (authLoading) {
+      console.log('⏳ [NavigationContext] Waiting for auth state...');
+      return; // Will re-run when authLoading becomes false
+    }
+
+    if (!user) {
+      console.log('⏳ [NavigationContext] No authenticated user - skipping bootstrap');
+      updateState({ loading: false, projectsLoading: false });
+      return; // Will re-run when user becomes available
+    }
+
     // 🏢 ENTERPRISE: Module-level guard prevents double initialization
     // This works with React Strict Mode because the flag persists across component remounts
     // ALSO check if we already have data (handles Fast Refresh in development)
@@ -99,7 +118,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     }
 
     navigationInitialized = true;
-    console.log('🚀 [NavigationContext] Initializing navigation...');
+    console.log('🚀 [NavigationContext] Initializing navigation (user authenticated)...');
 
     const initializeNavigation = async () => {
       try {
@@ -132,7 +151,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     };
 
     initializeNavigation();
-  }, []);
+  }, [authLoading, user]); // 🔐 Re-run when auth state changes
 
   // Internal function to load all projects
   const loadAllProjectsInternal = async (companies: NavigationCompany[] = state.companies) => {
@@ -273,10 +292,51 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     });
   };
 
+  /**
+   * 🏢 ENTERPRISE: Select building using realtime data
+   *
+   * FIX: Buildings come from useRealtimeBuildings hook, NOT from state.selectedProject.buildings
+   * The bootstrap only loads buildingCount, not full buildings array.
+   * So we must find the building in the realtime data.
+   */
   const selectBuilding = (buildingId: string) => {
-    actions.selectBuilding(buildingId, state, updateState);
-    // 🏢 ENTERPRISE: Clear selected unit when building changes
-    updateState({ selectedUnit: null });
+    if (!state.selectedProject) {
+      console.warn('⚠️ [selectBuilding] No project selected');
+      return;
+    }
+
+    // 🏢 ENTERPRISE: Get buildings from realtime hook, NOT from project.buildings
+    const realtimeBuildings = getBuildingsForProject(state.selectedProject.id);
+    const realtimeBuildingRef = realtimeBuildings.find(b => b.id === buildingId);
+
+    if (!realtimeBuildingRef) {
+      console.warn(`⚠️ [selectBuilding] Building ${buildingId} not found in realtime data`);
+      updateState({
+        selectedBuilding: null,
+        selectedFloor: null,
+        selectedUnit: null,
+        currentLevel: 'units'
+      });
+      return;
+    }
+
+    // 🏢 ENTERPRISE: Create NavigationBuilding from realtime ref
+    // floors/units are loaded on-demand by BuildingSpacesTabs
+    const building: NavigationBuilding = {
+      id: realtimeBuildingRef.id,
+      name: realtimeBuildingRef.name,
+      floors: [], // Loaded on-demand
+      units: []   // Loaded on-demand via useRealtimeUnits
+    };
+
+    console.log(`📍 [selectBuilding] Selected: ${building.name} (${buildingId})`);
+
+    updateState({
+      selectedBuilding: building,
+      selectedFloor: null,
+      selectedUnit: null,
+      currentLevel: 'units'
+    });
   };
 
   // 🏢 ENTERPRISE: Select unit for breadcrumb display

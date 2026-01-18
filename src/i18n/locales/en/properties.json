@@ -139,6 +139,9 @@
       }
     }
   },
+  "page": {
+    "loading": "Loading properties..."
+  },
   "grid": {
     "emptyState": {
       "title": "No properties found",
@@ -155,18 +158,39 @@
       "placeholder": "Search properties..."
     },
     "filters": {
-      "button": "Filters"
+      "button": "Filters",
+      "priceRange": "Price Range (€)",
+      "area": "Area (m²)",
+      "from": "From",
+      "to": "To"
+    },
+    "viewMode": {
+      "grid": "Grid",
+      "list": "List"
     },
     "actions": {
       "viewFloorPlan": "View Floor Plan"
     },
     "cta": {
       "title": "Want to see the properties on the floor plan?",
-      "subtitle": "See the exact location and layout of properties on the building floor plan.",
+      "subtitle": "Explore interactively the location of each property and see the neighboring apartments",
       "button": "View Floor Plan"
     },
     "status": {
       "unknown": "Unknown"
+    }
+  },
+  "card": {
+    "floor": "{floor}th floor",
+    "contactUs": "Contact us",
+    "viewFloorPlan": "View on floor plan",
+    "aria": {
+      "propertyStatus": "Property Status",
+      "propertyInfo": "Property Information",
+      "propertyPrice": "Property Price",
+      "propertyFeatures": "Property Features",
+      "propertyTags": "Property Tags",
+      "propertyActions": "Property Actions"
     }
   },
   "viewer": {

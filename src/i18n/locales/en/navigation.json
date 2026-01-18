@@ -1,4 +1,124 @@
 {
+  "page": {
+    "title": "Property Navigation",
+    "menuLabel": "Navigation Menu",
+    "mainAreaLabel": "Main Navigation Area",
+    "hierarchyLabel": "Hierarchy Navigation",
+    "error": "Error",
+    "retry": "Retry",
+    "breadcrumb": {
+      "navigateTo": "Navigate to {name}"
+    }
+  },
+  "columns": {
+    "companies": {
+      "title": "Companies",
+      "listLabel": "Companies List",
+      "sectionLabel": "Companies",
+      "defaultSubtitle": "Company",
+      "noProjects": "Company without projects",
+      "addProjects": "Add projects for this company",
+      "vatNumber": "VAT: {vatNumber}",
+      "openTooltip": "Open in Contacts"
+    },
+    "projects": {
+      "title": "Projects",
+      "listLabel": "Projects List",
+      "sectionLabel": "Projects",
+      "buildingCount": "{count} buildings",
+      "openTooltip": "Open in Projects"
+    },
+    "buildings": {
+      "title": "Buildings",
+      "listLabel": "Buildings List",
+      "sectionLabel": "Buildings",
+      "unitCount": "{count} units",
+      "openTooltip": "Open in Buildings"
+    },
+    "actions": {
+      "title": "Actions",
+      "listLabel": "Actions List",
+      "sectionLabel": "Actions",
+      "viewUnits": "View Units",
+      "unitsCount": "{count} units",
+      "buildingDetails": "Building Details",
+      "projectDetails": "Project Details"
+    }
+  },
+  "modals": {
+    "linkProject": {
+      "title": "Link Project",
+      "description": "Select a project to link with company \"{companyName}\".",
+      "searchPlaceholder": "Search project..."
+    },
+    "linkBuilding": {
+      "title": "Link Building",
+      "description": "Select a building to link with project \"{projectName}\".",
+      "searchPlaceholder": "Search building..."
+    },
+    "linkUnit": {
+      "title": "Link Unit",
+      "description": "Select a unit to link with building \"{buildingName}\".",
+      "searchPlaceholder": "Search unit..."
+    },
+    "availableForLinking": "Available for linking",
+    "selectFirst": "Please select a project first."
+  },
+  "dialogs": {
+    "company": {
+      "title": "Remove Company from Navigation",
+      "confirmation": "Are you sure you want to remove company \"{companyName}\" from navigation?",
+      "infoTitle": "This action will:",
+      "willRemove": "Remove the company from the navigation list",
+      "willNotDelete": "Will NOT delete the company from the database",
+      "canAddLater": "You can add it again later",
+      "cancel": "Cancel",
+      "confirm": "Remove",
+      "successMessage": "Company \"{companyName}\" was successfully removed from navigation.",
+      "errorMessage": "Failed to remove company. Please try again."
+    },
+    "project": {
+      "title": "Unlink Project from Company",
+      "confirmation": "Are you sure you want to unlink project \"{projectName}\" from the company?",
+      "infoTitle": "This action will:",
+      "willUnlink": "Unlink the project from the company",
+      "willNotDelete": "Will NOT delete the project from the database",
+      "canLinkLater": "You can link it again later",
+      "cancel": "Cancel",
+      "confirm": "Unlink",
+      "successMessage": "Project \"{projectName}\" was successfully unlinked.",
+      "errorMessage": "Failed to unlink project. Please try again."
+    },
+    "building": {
+      "title": "Unlink Building from Project",
+      "confirmation": "Are you sure you want to unlink building \"{buildingName}\" from the project?",
+      "infoTitle": "This action will:",
+      "willUnlink": "Unlink the building from the project",
+      "willNotDelete": "Will NOT delete the building from the database",
+      "canLinkLater": "You can link it again later",
+      "cancel": "Cancel",
+      "confirm": "Unlink",
+      "successMessage": "Building \"{buildingName}\" was successfully unlinked.",
+      "errorMessage": "Failed to unlink building. Please try again."
+    },
+    "unit": {
+      "title": "Unlink Unit from Building",
+      "confirmation": "Are you sure you want to unlink unit \"{unitName}\" from the building?",
+      "infoTitle": "This action will:",
+      "willUnlink": "Unlink the unit from the building",
+      "willNotDelete": "Will NOT delete the unit from the database",
+      "canLinkLater": "You can link it again later",
+      "cancel": "Cancel",
+      "confirm": "Unlink",
+      "successMessage": "Unit \"{unitName}\" was successfully unlinked.",
+      "errorMessage": "Failed to unlink unit. Please try again."
+    },
+    "dependencies": {
+      "cannotRemoveCompany": "Cannot remove this company because it has {count} projects. Please unlink the projects first.",
+      "cannotUnlinkProject": "Cannot unlink this project because it has {count} buildings. Please unlink the buildings first.",
+      "cannotUnlinkBuilding": "Cannot unlink this building because it has {count} units. Please unlink the units first."
+    }
+  },
   "menu": {
     "main": "Main Menu",
     "tools": "Tools",
@@ -153,21 +273,33 @@
       "locationDesc": "Location (Z-A)"
     }
   },
+  "entities": {
+    "company": { "title": "Companies" },
+    "project": { "title": "Projects" },
+    "building": { "title": "Buildings" },
+    "floor": { "title": "Floors" },
+    "unit": { "title": "Units" },
+    "storage": { "title": "Storage" },
+    "parking": { "title": "Parking" }
+  },
   "buildingSpaces": {
     "sectionLabel": "Building Spaces",
     "units": {
+      "title": "Units",
       "listLabel": "Units List",
       "empty": "No units available",
       "defaultSubtitle": "Unit",
       "openTooltip": "Open in Units"
     },
     "storage": {
+      "title": "Storage",
       "listLabel": "Storage List",
       "empty": "No storage available",
       "defaultSubtitle": "Storage",
       "openTooltip": "Open in Storage"
     },
     "parking": {
+      "title": "Parking",
       "listLabel": "Parking Spaces List",
       "empty": "No parking spaces available",
       "spotTitle": "Spot {number}",

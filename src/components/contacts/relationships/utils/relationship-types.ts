@@ -76,70 +76,71 @@ const getRelationshipColors = (colors?: ReturnType<typeof useSemanticColors>) =>
 export const getRelationshipTypesConfig = (colors?: ReturnType<typeof useSemanticColors>) => {
   const colorMap = getRelationshipColors(colors);
 
+  // 🏢 ENTERPRISE: i18n keys for multilingual support
   return {
   employee: {
     icon: User,
-    label: 'Εργαζόμενος',
+    label: 'relationships.types.employee',
     color: colorMap.employee,
     allowedFor: ['company', 'service'] as ContactType[]
   },
   manager: {
     icon: Crown,
-    label: 'Διευθυντής',
+    label: 'relationships.types.manager',
     color: colorMap.manager,
     allowedFor: ['company', 'service'] as ContactType[]
   },
   shareholder: {
     icon: Briefcase,
-    label: 'Μέτοχος',
+    label: 'relationships.types.shareholder',
     color: colorMap.shareholder,
     allowedFor: ['company'] as ContactType[]
   },
   board_member: {
     icon: Users,
-    label: 'Μέλος Διοικητικού Συμβουλίου',
+    label: 'relationships.types.boardMember',
     color: colorMap.board_member,
     allowedFor: ['company'] as ContactType[]
   },
   civil_servant: {
     icon: UserCheck,
-    label: 'Δημόσιος Υπάλληλος',
+    label: 'relationships.types.civilServant',
     color: colorMap.civil_servant,
     allowedFor: ['service'] as ContactType[]
   },
   department_head: {
     icon: Crown,
-    label: 'Προϊστάμενος Τμήματος',
+    label: 'relationships.types.departmentHead',
     color: colorMap.department_head,
     allowedFor: ['service'] as ContactType[]
   },
   consultant: {
     icon: User,
-    label: 'Σύμβουλος',
+    label: 'relationships.types.consultant',
     color: colorMap.consultant,
     allowedFor: ['company', 'service'] as ContactType[]
   },
   colleague: {
     icon: Users,
-    label: 'Συνάδελφος',
+    label: 'relationships.types.colleague',
     color: colorMap.colleague,
     allowedFor: ['individual'] as ContactType[]
   },
   friend: {
     icon: User,
-    label: 'Φίλος',
+    label: 'relationships.types.friend',
     color: colorMap.friend,
     allowedFor: ['individual'] as ContactType[]
   },
   family: {
     icon: Users,
-    label: 'Οικογένεια',
+    label: 'relationships.types.family',
     color: colorMap.family,
     allowedFor: ['individual'] as ContactType[]
   },
   business_contact: {
     icon: Briefcase,
-    label: 'Επαγγελματική Επαφή',
+    label: 'relationships.types.businessContact',
     color: colorMap.business_contact,
     allowedFor: ['individual'] as ContactType[]
   }
@@ -188,7 +189,7 @@ export const getRelationshipDisplayProps = (type: string, colors?: ReturnType<ty
     const colorMap = getRelationshipColors(colors);
     return {
       icon: User,
-      label: 'Άλλο',
+      label: 'relationships.types.other',  // 🏢 ENTERPRISE: i18n key
       color: colorMap.default
     };
   }

@@ -22,6 +22,8 @@ import type { ContactRelationship } from '@/types/contacts/relationships';
 import { getRelationshipDisplayProps } from '../utils/relationship-types';
 import type { ContactNamesMap } from '../utils/summary/contact-navigation';
 import type { FlexibleDateInput } from '@/types/common/date-types'; // 🏢 ENTERPRISE: Type-safe dates
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // TYPES
@@ -65,6 +67,8 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('contacts');
   // ============================================================================
   // STATE
   // ============================================================================
@@ -90,7 +94,7 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
    * 📅 Format relationship creation date - ENTERPRISE TYPE SAFE
    */
   const formatCreatedDate = (createdAt: FlexibleDateInput): string => {
-    if (!createdAt) return 'Πρόσφατα';
+    if (!createdAt) return t('relationships.card.recently');
 
     try {
       let date: Date;
@@ -113,7 +117,7 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
       });
     } catch (error) {
       console.warn('Error formatting date:', error, createdAt);
-      return 'Πρόσφατα';
+      return t('relationships.card.recently');
     }
   };
 
@@ -141,6 +145,8 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
     const displayProps = getRelationshipDisplayProps(relationship.relationshipType);
     const Icon = displayProps.icon;
     const { targetContactId, contactName } = getTargetContactInfo(relationship);
+    // 🏢 ENTERPRISE: Translate i18n label key
+    const translatedTypeLabel = t(displayProps.label);
 
     return (
       <div
@@ -158,7 +164,7 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
                     {contactName}
                   </span>
                   <Badge className={displayProps.color} variant="outline">
-                    {displayProps.label}
+                    {translatedTypeLabel}
                   </Badge>
                   {relationship.position && (
                     <span className={`text-xs ${colors.text.muted}`}>• {relationship.position}</span>
@@ -168,7 +174,7 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
                 <>
                   <div className={`animate-pulse ${colors.bg.muted} h-4 w-24 rounded`}></div>
                   <Badge className={displayProps.color} variant="outline">
-                    {displayProps.label}
+                    {translatedTypeLabel}
                   </Badge>
                 </>
               )}
@@ -199,12 +205,12 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
           {showAllRelationships ? (
             <>
               <ChevronUp className={`${iconSizes.sm} mr-2`} />
-              Προβολή λίγων
+              {t('relationships.recent.showLess')}
             </>
           ) : (
             <>
               <ChevronDown className={`${iconSizes.sm} mr-2`} />
-              Προβολή όλων ({relationships.length - 3} ακόμα)
+              {t('relationships.recent.showAll', { count: relationships.length - 3 })}
             </>
           )}
         </Button>
@@ -219,7 +225,7 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle className="text-base">Πρόσφατες Σχέσεις</CardTitle>
+        <CardTitle className="text-base">{t('relationships.recent.title')}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">

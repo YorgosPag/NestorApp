@@ -253,6 +253,9 @@ export interface RealtimeUnitRef {
   name: string;
   buildingId: string | null;
   type?: string;
+  status?: string;
+  area?: number;
+  floor?: number;
 }
 
 /** 🏢 ENTERPRISE: Filters for navigation */

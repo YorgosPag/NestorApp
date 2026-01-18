@@ -143,6 +143,20 @@
     "saveContact": "Save Contact"
   },
   "relationships": {
+    "types": {
+      "employee": "Employee",
+      "manager": "Manager",
+      "shareholder": "Shareholder",
+      "boardMember": "Board Member",
+      "civilServant": "Civil Servant",
+      "departmentHead": "Department Head",
+      "consultant": "Consultant",
+      "colleague": "Colleague",
+      "friend": "Friend",
+      "family": "Family",
+      "businessContact": "Business Contact",
+      "other": "Other"
+    },
     "form": {
       "title": "Add New Relationship",
       "editTitle": "Edit Relationship",
@@ -189,6 +203,25 @@
       "updatedAt": "Updated:",
       "recently": "Recently"
     },
+    "recent": {
+      "title": "Recent Relationships",
+      "showLess": "Show less",
+      "showAll": "Show all ({count} more)"
+    },
+    "manager": {
+      "totalCount": "Total: {count} relationships",
+      "refreshData": "Refresh data",
+      "addRelationship": "Add Relationship",
+      "errors": {
+        "listError": "Relationship list error",
+        "formError": "Form error",
+        "treeError": "Organization chart error"
+      },
+      "newContact": {
+        "note": "Note",
+        "description": "To create relationships, first save the contact. After saving, the relationship management options will appear."
+      }
+    },
     "list": {
       "newContact": {
         "title": "Create relationships",
@@ -217,6 +250,27 @@
         "title": "No relationships",
         "description": "Add professional relationships, employees and collaborators."
       }
+    },
+    "organizationTree": {
+      "loading": "Loading...",
+      "loadingTree": "Loading organization chart...",
+      "loadError": "Loading error",
+      "emptyTree": "Empty organization chart",
+      "noEmployeeRelationships": "No employee relationships for this organization.",
+      "unknownContact": "Unknown Contact",
+      "employee": "Employee",
+      "totalEmployees": "Total Employees",
+      "activeDepartments": "Active Departments",
+      "managementLevels": "Management Levels",
+      "simpleStructure": "Simple Organization Structure",
+      "simpleStructureDescription": "This company has a basic organizational structure without complex hierarchy.",
+      "departmentsAndEmployees": "Departments & Employees",
+      "generalDepartment": "General Department",
+      "recentAdditions": "Recent Additions",
+      "moreItems": "+{count} more",
+      "lastUpdated": "Last updated",
+      "createdAt": "Created",
+      "unknown": "Unknown"
     }
   }
 }

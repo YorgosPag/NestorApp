@@ -81,6 +81,8 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
 
   const displayProps = getRelationshipDisplayProps(relationship.relationshipType);
   const Icon = displayProps.icon;
+  // 🏢 ENTERPRISE: Translate i18n label key
+  const translatedTypeLabel = t(displayProps.label);
 
   // ============================================================================
   // RENDER
@@ -122,7 +124,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
                       {contactName}
                     </span>
                     <Badge className={displayProps.color} variant="outline">
-                      {displayProps.label}
+                      {translatedTypeLabel}
                     </Badge>
                     {relationship.position && (
                       <span className={`text-xs ${colors.text.muted}`}>• {relationship.position}</span>
@@ -132,7 +134,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
                   <>
                     <div className={`animate-pulse ${colors.bg.muted} h-4 w-24 ${quick.rounded}`}></div>
                     <Badge className={displayProps.color} variant="outline">
-                      {displayProps.label}
+                      {translatedTypeLabel}
                     </Badge>
                   </>
                 )}

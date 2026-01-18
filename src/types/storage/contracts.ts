@@ -15,7 +15,10 @@ export interface Storage {
   name: string;
   type: StorageType;
   status: StorageStatus;
+  /** @deprecated Use buildingId instead. Kept for backward compatibility. */
   building: string;
+  /** 🏢 ENTERPRISE: Building document ID (foreign key) - added via migration 006 */
+  buildingId?: string;
   floor: string;
   area: number; // in square meters
   description?: string;

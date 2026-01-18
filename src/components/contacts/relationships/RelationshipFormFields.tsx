@@ -213,6 +213,8 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
               {availableRelationshipTypes.map(type => {
                 const config = getRelationshipTypeConfig(type);
                 const Icon = config?.icon;
+                // 🏢 ENTERPRISE: Translate i18n label key
+                const translatedLabel = config?.label ? t(config.label) : type;
 
                 return (
                   <SelectItem key={type} value={type}>
@@ -223,7 +225,7 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
                           designSystem.colorScheme.responsive.muted.split(' ')[1] // text-muted-foreground
                         )} />
                       )}
-                      <span>{config?.label || type}</span>
+                      <span>{translatedLabel}</span>
                     </div>
                   </SelectItem>
                 );
