@@ -34,8 +34,9 @@ export function TelegramNotifications() {
 
   useEffect(() => {
     // Real-time listener για νέα Telegram μηνύματα
+    // 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES (COMMUNICATIONS collection deprecated)
     const q = query(
-      collection(db, COLLECTIONS.COMMUNICATIONS),
+      collection(db, COLLECTIONS.MESSAGES),
       where('type', '==', 'telegram'),
       where('direction', '==', 'inbound'),
       orderBy('createdAt', 'desc'),

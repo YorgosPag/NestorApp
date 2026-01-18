@@ -114,7 +114,13 @@
     "noMessages": "No messages found",
     "noConversations": "No conversations found",
     "search": "Search messages...",
+    "dashboard": {
+      "total": "Total",
+      "active": "Active",
+      "unread": "Unread"
+    },
     "filters": {
+      "title": "Filters",
       "all": "All",
       "channel": "Channel",
       "direction": "Direction",
@@ -219,7 +225,8 @@
   "errors": {
     "contactNotFound": "Contact not found",
     "invalidStage": "Invalid opportunity stage",
-    "deadlinePassed": "Deadline has passed"
+    "deadlinePassed": "Deadline has passed",
+    "staffAccessRequired": "Staff access required"
   },
   "success": {
     "contactCreated": "Contact created successfully",

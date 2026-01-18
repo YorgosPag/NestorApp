@@ -121,7 +121,10 @@
       "archived": "Archived",
       "lead": "Lead",
       "pending": "Pending",
-      "construction": "Under Construction"
+      "construction": "Under Construction",
+      "sent": "Sent",
+      "received": "Received",
+      "failed": "Failed"
     },
     "buildingStatus": {
       "forSale": "For Sale",
@@ -210,12 +213,24 @@
       "view": "View",
       "pool": "Pool"
     },
+    "communicationsTitle": "Communications Filters",
+    "channel": "Channel",
+    "allChannels": "All Channels",
+    "channels": {
+      "email": "Email",
+      "sms": "SMS",
+      "telegram": "Telegram"
+    },
+    "dateFrom": "From Date",
+    "dateTo": "To Date",
     "placeholders": {
       "general": "Search...",
       "unitsSearch": "Search units...",
       "contactsSearch": "Search contacts...",
       "buildingsSearch": "Search buildings...",
       "projectsSearch": "Search projects...",
+      "communicationsSearch": "Search communications...",
+      "selectChannel": "Select channel...",
       "selectStatus": "Select status...",
       "selectProject": "Select project...",
       "selectBuilding": "Select building...",

@@ -217,7 +217,8 @@ class MessageRouter {
         updatedAt: serverTimestamp()
       };
 
-      const docRef = await addDoc(collection(db, COLLECTIONS.COMMUNICATIONS), record);
+      // 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES
+      const docRef = await addDoc(collection(db, COLLECTIONS.MESSAGES), record);
       return { id: docRef.id, ...record };
 
     } catch (error) {
@@ -231,7 +232,8 @@ class MessageRouter {
    */
   async updateMessageStatus(messageId: string, updates: MessageStatusUpdate) {
     try {
-      const messageRef = doc(db, COLLECTIONS.COMMUNICATIONS, messageId);
+      // 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES
+      const messageRef = doc(db, COLLECTIONS.MESSAGES, messageId);
       await updateDoc(messageRef, {
         ...updates,
         updatedAt: serverTimestamp()

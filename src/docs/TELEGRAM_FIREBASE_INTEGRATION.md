@@ -79,6 +79,70 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY_B64) {
 | `FIREBASE_PROJECT_ID` | Firebase project ID | Production, Preview |
 | `TELEGRAM_BOT_TOKEN` | Telegram bot API token | Production, Preview |
 | `TELEGRAM_WEBHOOK_SECRET` | Webhook verification secret | Production, Preview |
+| `NEXT_PUBLIC_DEFAULT_COMPANY_ID` | **CRITICAL** - Firestore company document ID for tenant isolation | All Environments |
+
+### 4. Multi-Tenant Isolation (companyId) - CRITICAL
+
+**⚠️ IMPORTANT:** Τhe `NEXT_PUBLIC_DEFAULT_COMPANY_ID` MUST be set correctly for the CRM to display conversations.
+
+#### The Problem (Fixed 2026-01-17)
+
+Telegram webhook conversations were not appearing in the CRM Communications page because of a **companyId mismatch**:
+
+- **User claims:** `companyId = pzNUy8ksddGCtcQMqumR` (Firestore document ID)
+- **Webhook default:** `companyId = 'pagonis-company'` (hardcoded slug)
+- **API filter:** `/api/conversations` filters by user's `companyId` from JWT token
+
+**Result:** Conversations were created with wrong `companyId` and invisible to logged-in users.
+
+#### The Solution
+
+1. **Set environment variable:**
+   ```
+   NEXT_PUBLIC_DEFAULT_COMPANY_ID=pzNUy8ksddGCtcQMqumR
+   ```
+
+2. **Where to set:**
+   - `.env.local` for local development
+   - Vercel Environment Variables for production
+
+3. **How to find the correct companyId:**
+   ```bash
+   # Check user's companyId claim
+   npx cross-env CONFIRM_DIAGNOSTICS=true USER_EMAIL=your@email.com node scripts/check-user-claims.js
+   ```
+
+4. **If existing conversations have wrong companyId:**
+   ```bash
+   # Dry run (preview)
+   node scripts/fix-conversation-companyId.js
+
+   # Execute migration
+   npx cross-env CONFIRM_MIGRATION=true node scripts/fix-conversation-companyId.js
+   ```
+
+#### Architecture: Conversation → User Visibility
+
+```
+[Telegram Webhook]
+      |
+      | Creates conversation with:
+      | companyId = process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID
+      v
+[Firestore: conversations]
+      |
+      | Query filter:
+      | WHERE companyId == user.customClaims.companyId
+      v
+[/api/conversations]
+      |
+      | Returns only conversations
+      | matching user's company
+      v
+[CRM Communications UI]
+```
+
+**Rule:** The `NEXT_PUBLIC_DEFAULT_COMPANY_ID` MUST match the `companyId` in the user's Firebase custom claims.
 
 ---
 
@@ -168,6 +232,8 @@ POST /api/admin/telegram/set-webhook
 - [x] Firebase Admin initializes with Base64 credentials
 - [x] Conversations stored in Firestore (count > 0)
 - [x] Bot responds to messages via Telegram API
+- [x] **NEXT_PUBLIC_DEFAULT_COMPANY_ID** matches user's companyId claim (Fixed 2026-01-17)
+- [x] CRM Communications page displays conversations correctly
 - [ ] Property search functionality (pending fix)
 
 ---

@@ -104,7 +104,7 @@
     }
   },
   "inbox": {
-    "title": "Unified Inbox",
+    "title": "Ενοποιημένα Εισερχόμενα",
     "historyTitle": "Ιστορικό Επικοινωνιών",
     "selectContactTitle": "Επιλογή Επαφής",
     "loading": "Φόρτωση μηνυμάτων...",
@@ -114,7 +114,13 @@
     "noMessages": "Δεν βρέθηκαν μηνύματα",
     "noConversations": "Δεν βρέθηκαν συνομιλίες",
     "search": "Αναζήτηση μηνυμάτων...",
+    "dashboard": {
+      "total": "Σύνολο",
+      "active": "Ενεργές",
+      "unread": "Μη Αναγνωσμένα"
+    },
     "filters": {
+      "title": "Φίλτρα",
       "all": "Όλα",
       "channel": "Κανάλι",
       "direction": "Κατεύθυνση",

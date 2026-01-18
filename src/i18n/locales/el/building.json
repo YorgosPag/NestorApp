@@ -121,7 +121,10 @@
       "archived": "Αρχειοθετημένο",
       "lead": "Υποψήφιος",
       "pending": "Εκκρεμεί",
-      "construction": "Υπό Κατασκευή"
+      "construction": "Υπό Κατασκευή",
+      "sent": "Απεσταλμένο",
+      "received": "Ληφθέν",
+      "failed": "Αποτυχημένο"
     },
     "buildingStatus": {
       "forSale": "Προς Πώληση",
@@ -210,12 +213,24 @@
       "view": "Θέα",
       "pool": "Πισίνα"
     },
+    "communicationsTitle": "Φίλτρα Επικοινωνιών",
+    "channel": "Κανάλι",
+    "allChannels": "Όλα τα Κανάλια",
+    "channels": {
+      "email": "Email",
+      "sms": "SMS",
+      "telegram": "Telegram"
+    },
+    "dateFrom": "Από Ημερομηνία",
+    "dateTo": "Έως Ημερομηνία",
     "placeholders": {
       "general": "Αναζήτηση...",
       "unitsSearch": "Αναζήτηση μονάδων...",
       "contactsSearch": "Αναζήτηση επαφών...",
       "buildingsSearch": "Αναζήτηση κτιρίων...",
       "projectsSearch": "Αναζήτηση έργων...",
+      "communicationsSearch": "Αναζήτηση επικοινωνιών...",
+      "selectChannel": "Επιλέξτε κανάλι...",
       "selectStatus": "Επιλέξτε κατάσταση...",
       "selectProject": "Επιλέξτε έργο...",
       "selectBuilding": "Επιλέξτε κτίριο...",

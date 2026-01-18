@@ -32,6 +32,8 @@ const newItemLabels = getCompactToolbarNewItemLabels();
 const tooltips = getCompactToolbarTooltips();
 
 // 🏢 ENTERPRISE: Communications channel labels
+// TODO: Future improvement - Add i18n translation support to CompactToolbar component
+// Currently using hardcoded labels as CompactToolbar does not use useTranslation
 const COMMUNICATIONS_CHANNEL_LABELS = {
   all: 'Όλα',
   email: 'Email',

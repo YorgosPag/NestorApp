@@ -72,7 +72,8 @@ interface MessageTemplate {
 type MessageTemplatesCollection = Record<string, Record<string, MessageTemplate | string>>;
 
 // 🏢 ENTERPRISE: Centralized Firestore collection configuration
-const COMMUNICATIONS_COLLECTION = COLLECTIONS.COMMUNICATIONS;
+// 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES (COMMUNICATIONS collection deprecated)
+const COMMUNICATIONS_COLLECTION = COLLECTIONS.MESSAGES;
 const SYSTEM_COLLECTION = COLLECTIONS.SYSTEM;
 const CONTACTS_COLLECTION = COLLECTIONS.CONTACTS;
 

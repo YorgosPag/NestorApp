@@ -23,7 +23,8 @@ import type { Communication } from '@/types/crm';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // 🏢 ENTERPRISE: Centralized collection configuration
-const COMMUNICATIONS_COLLECTION = COLLECTIONS.COMMUNICATIONS;
+// 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES (COMMUNICATIONS collection deprecated)
+const COMMUNICATIONS_COLLECTION = COLLECTIONS.MESSAGES;
 
 // 🏢 ENTERPRISE: Type-safe document transformation
 const transformCommunication = (docSnapshot: QueryDocumentSnapshot<DocumentData>): Communication => {
