@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 import React from 'react';
@@ -7,6 +8,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized typography tokens
 import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 interface DxfSearchInputProps {
   searchTerm: string;
@@ -17,11 +20,14 @@ interface DxfSearchInputProps {
 export const SearchInput = ({ searchTerm, onSearchChange, className }: DxfSearchInputProps) => {
   const { getFocusBorder, quick } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
+
   return (
     <UnifiedSearchInput
       value={searchTerm}
       onChange={onSearchChange}
-      placeholder="Αναζήτηση layers και entities..."
+      placeholder={t('search.layersAndEntities')}
       debounceMs={200}
       className={cn(
         `${quick.muted} ${colors.bg.primary} ${colors.text.primary} placeholder-gray-400`,

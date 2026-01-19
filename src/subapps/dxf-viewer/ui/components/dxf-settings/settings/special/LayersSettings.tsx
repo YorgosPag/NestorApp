@@ -10,6 +10,8 @@ import { Palette, Pencil, RotateCcw, Construction, Layers } from 'lucide-react';
 import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 interface LayersSettingsProps {
   // Για μελλοντική επέκταση μπορούμε να προσθέσουμε props
@@ -19,6 +21,8 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, getDirectionalBorder, radius } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('dxf-viewer');
   const [activeTab, setActiveTab] = useState<'outlines' | 'fills'>('outlines');
   const [selectedPreset, setSelectedPreset] = useState<number>(0);
 
@@ -49,13 +53,13 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
   const layerTabs: TabDefinition[] = [
     {
       id: 'outlines',
-      label: 'Περιγράμματα',
+      label: t('layersSettings.tabs.outlines'),
       icon: Pencil, // 🏢 ENTERPRISE: Lucide icon
       content: null, // Content rendered separately below
     },
     {
       id: 'fills',
-      label: 'Γεμίσματα',
+      label: t('layersSettings.tabs.fills'),
       icon: Palette, // 🏢 ENTERPRISE: Lucide icon
       content: null, // Content rendered separately below
     },
@@ -72,18 +76,18 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
       <header className={`${getDirectionalBorder('muted', 'bottom')} ${PANEL_LAYOUT.PADDING.BOTTOM_SM} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
         <h2 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.primary} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <Layers className={iconSizes.md} />
-          <span>Ρυθμίσεις Layers</span>
+          <span>{t('layersSettings.title')}</span>
         </h2>
         <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
-          Χρώματα και εμφάνιση επιπέδων σχεδίασης
+          {t('layersSettings.description')}
         </p>
       </header>
 
       {/* Layer Preview */}
       <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Προεπισκόπηση Layer</div>
-          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Δείτε πώς θα φαίνονται τα layers</div>
+          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('layersSettings.preview.title')}</div>
+          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('layersSettings.preview.description')}</div>
         </div>
         <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.muted} ${quick.card} ${getStatusBorder('muted')} flex justify-center`}>
           <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
@@ -119,7 +123,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
           <>
             {/* Preset Outline Colors */}
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>Χρώματα Περιγραμμάτων</div>
+              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>{t('layersSettings.outlines.colorsTitle')}</div>
               <div className={`grid ${PANEL_LAYOUT.GRID.COLS_5} ${PANEL_LAYOUT.GAP.SM}`}>
                 {presetClasses.map((preset, index) => (
                   <button
@@ -144,8 +148,8 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded`}>
               <div className="flex items-center justify-between">
                 <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-                  <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Εμφάνιση Περιγραμμάτων</div>
-                  <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Ενεργοποίηση/Απενεργοποίηση των περιγραμμάτων</div>
+                  <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('layersSettings.outlines.displayTitle')}</div>
+                  <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('layersSettings.outlines.displayDescription')}</div>
                 </div>
                 <div className={`relative inline-flex ${iconSizes.lg} ${iconSizes.xl3} ${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${PANEL_LAYOUT.CURSOR.POINTER} ${radius.full} border border-transparent ${colors.bg.success}`}>
                   <span className={`${PANEL_LAYOUT.POINTER_EVENTS.NONE} inline-block ${iconSizes.sm} ${radius.full} ${colors.bg.primary} shadow transition ${PANEL_LAYOUT.DURATION['200']} ${PANEL_LAYOUT.EASING.IN_OUT} transform ${PANEL_LAYOUT.TRANSFORM.TOGGLE_ON}`} />
@@ -159,7 +163,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
           <>
             {/* Preset Fill Colors */}
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>Χρώματα Γεμισμάτων</div>
+              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>{t('layersSettings.fills.colorsTitle')}</div>
               <div className={`grid ${PANEL_LAYOUT.GRID.COLS_5} ${PANEL_LAYOUT.GAP.SM}`}>
                 {presetClasses.map((preset, index) => (
                   <button
@@ -183,8 +187,8 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
             {/* Opacity Control */}
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
               <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-                <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Διαφάνεια Γεμίσματος</div>
-                <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Επίπεδο διαφάνειας για το γέμισμα</div>
+                <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('layersSettings.fills.opacityTitle')}</div>
+                <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('layersSettings.fills.opacityDescription')}</div>
               </div>
               <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <input
@@ -205,8 +209,8 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded`}>
               <div className="flex items-center justify-between">
                 <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-                  <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Εμφάνιση Γεμισμάτων</div>
-                  <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Ενεργοποίηση/Απενεργοποίηση των γεμισμάτων</div>
+                  <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('layersSettings.fills.displayTitle')}</div>
+                  <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('layersSettings.fills.displayDescription')}</div>
                 </div>
                 <div className={`relative inline-flex ${iconSizes.lg} ${iconSizes.xl3} ${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${PANEL_LAYOUT.CURSOR.POINTER} ${radius.full} border border-transparent ${colors.bg.success}`}>
                   <span className={`${PANEL_LAYOUT.POINTER_EVENTS.NONE} inline-block ${iconSizes.sm} ${radius.full} ${colors.bg.primary} shadow transition ${PANEL_LAYOUT.DURATION['200']} ${PANEL_LAYOUT.EASING.IN_OUT} transform ${PANEL_LAYOUT.TRANSFORM.TOGGLE_ON}`} />
@@ -219,12 +223,12 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
         {/* Reset Button */}
         <article className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
           <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-            <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Επαναφορά</div>
-            <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Επαναφορά στις προεπιλεγμένες ρυθμίσεις</div>
+            <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('layersSettings.reset.title')}</div>
+            <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('layersSettings.reset.description')}</div>
           </div>
           <button className={`w-full ${PANEL_LAYOUT.BUTTON.PADDING} ${PANEL_LAYOUT.TYPOGRAPHY.XS} flex items-center justify-center ${PANEL_LAYOUT.GAP.SM} ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} rounded ${PANEL_LAYOUT.TRANSITION.COLORS}`}>
             <RotateCcw className={iconSizes.sm} />
-            <span>Επαναφορά Ρυθμίσεων Layers</span>
+            <span>{t('layersSettings.reset.button')}</span>
           </button>
         </article>
 
@@ -232,14 +236,14 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
         <aside className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${getStatusBorder('muted')}`}>
           <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <Construction className={iconSizes.sm} />
-            <span>Σύντομα Διαθέσιμο</span>
+            <span>{t('layersSettings.comingSoon.title')}</span>
           </div>
           <ul className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} list-none ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
-            <li>• Χρώματα γεμίσματος layers</li>
-            <li>• Ρυθμίσεις πάχους γραμμών</li>
-            <li>• Στυλ γραμμών (διακεκομμένη, κλπ)</li>
-            <li>• Εξατομικευμένες παλέτες χρωμάτων</li>
-            <li>• Import/Export προφίλ χρωμάτων</li>
+            <li>• {t('layersSettings.comingSoon.items.fillColors')}</li>
+            <li>• {t('layersSettings.comingSoon.items.lineThickness')}</li>
+            <li>• {t('layersSettings.comingSoon.items.lineStyles')}</li>
+            <li>• {t('layersSettings.comingSoon.items.customPalettes')}</li>
+            <li>• {t('layersSettings.comingSoon.items.importExport')}</li>
           </ul>
         </aside>
       </div>

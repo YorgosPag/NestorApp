@@ -8,7 +8,7 @@ import { UnifiedProviders } from '@/subapps/dxf-viewer/providers/UnifiedProvider
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
-import i18n from '@/i18n';
+import { i18n } from '@/i18n';
 
 // Dynamic import to avoid SSR issues with localStorage
 // 🔧 FIXED: Import DxfViewerApp (with all providers) instead of DxfViewerContent directly

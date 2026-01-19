@@ -75,13 +75,13 @@ export function SelectionSettings() {
   const selectionTabs: TabDefinition[] = [
     {
       id: 'window',
-      label: 'Window Selection',
+      label: t('selectionSettings.tabs.window'),
       icon: Square,
       content: null, // Content rendered separately below
     },
     {
       id: 'crossing',
-      label: 'Crossing Selection',
+      label: t('selectionSettings.tabs.crossing'),
       icon: SquareDashed,
       content: null, // Content rendered separately below
     },
@@ -112,10 +112,10 @@ export function SelectionSettings() {
           className={`w-full ${PANEL_LAYOUT.BUTTON.PADDING} ${PANEL_LAYOUT.TYPOGRAPHY.XS} flex items-center justify-center ${PANEL_LAYOUT.GAP.SM} ${colors.bg.card} ${colors.text.primary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${getStatusBorder('default')} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
         >
           <RotateCcw className={PANEL_LAYOUT.ICON.REGULAR} />
-          <span>Reset Selection Settings (DEBUG)</span>
+          <span>{t('selectionSettings.resetButton')}</span>
         </button>
         <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_SM}`}>
-          Κάνει reset όλες τις ρυθμίσεις για να λειτουργήσουν τα νέα borderStyle
+          {t('selectionSettings.resetDescription')}
         </div>
       </div>
 
@@ -125,15 +125,15 @@ export function SelectionSettings() {
           {/* 🏢 ENTERPRISE: Icon color using semantic tokens */}
           <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <Square className={`${PANEL_LAYOUT.ICON.REGULAR} ${colors.text.info}`} />
-            <span>Window Selection Settings</span>
+            <span>{t('selectionSettings.window.title')}</span>
           </h4>
           <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
-            Ρυθμίσεις για το μπλε κουτί επιλογής (αριστερά προς δεξιά)
+            {t('selectionSettings.window.description')}
           </div>
 
           {/* Window Fill Color */}
           <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-            <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Γεμίσματος</label>
+            <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('selectionSettings.window.fillColorLabel')}</label>
             <ColorDialogTrigger
               value={settings.selection.window.fillColor}
               onChange={(color) => handleWindowSelectionChange('fillColor', color)}
@@ -150,8 +150,8 @@ export function SelectionSettings() {
           {/* Window Fill Opacity */}
           <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
             <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Διαφάνεια Γεμίσματος</div>
-              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Επίπεδο διαφάνειας του γεμίσματος</div>
+              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('selectionSettings.common.fillOpacity')}</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('selectionSettings.common.fillOpacityDesc')}</div>
             </div>
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <input
@@ -171,7 +171,7 @@ export function SelectionSettings() {
 
           {/* Window Border Color */}
           <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-            <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Περιγράμματος</label>
+            <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('selectionSettings.window.borderColorLabel')}</label>
             <ColorDialogTrigger
               value={settings.selection.window.borderColor}
               onChange={(color) => handleWindowSelectionChange('borderColor', color)}
@@ -188,8 +188,8 @@ export function SelectionSettings() {
           {/* Window Border Opacity */}
           <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
             <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Διαφάνεια Περιγράμματος</div>
-              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Επίπεδο διαφάνειας του περιγράμματος</div>
+              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('selectionSettings.common.borderOpacity')}</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('selectionSettings.common.borderOpacityDesc')}</div>
             </div>
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <input
@@ -210,8 +210,8 @@ export function SelectionSettings() {
           {/* Window Border Width */}
           <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
             <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Πάχος Γραμμής</div>
-              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Πάχος περιγράμματος σε pixels</div>
+              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('selectionSettings.common.borderWidth')}</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('selectionSettings.common.borderWidthDesc')}</div>
             </div>
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <input
@@ -232,17 +232,17 @@ export function SelectionSettings() {
           {/* Window Border Style */}
           <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
             <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Είδος Περιγράμματος</div>
-              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Τύπος γραμμής περιγράμματος</div>
+              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('selectionSettings.common.borderStyle')}</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('selectionSettings.common.borderStyleDesc')}</div>
             </div>
             <div className={`grid ${PANEL_LAYOUT.GRID.COLS_2} ${PANEL_LAYOUT.GAP.SM}`}>
               {(['solid', 'dashed', 'dotted', 'dash-dot'] as const).map((style) => {
                 const isSelected = settings.selection.window.borderStyle === style;
                 const styleLabels = {
-                  solid: 'Συνεχόμενη',
-                  dashed: 'Διακεκομμένη',
-                  dotted: 'Κουκίδες',
-                  'dash-dot': 'Παύλα-Τελεία'
+                  solid: t('selectionSettings.borderStyles.solid'),
+                  dashed: t('selectionSettings.borderStyles.dashed'),
+                  dotted: t('selectionSettings.borderStyles.dotted'),
+                  'dash-dot': t('selectionSettings.borderStyles.dashDot')
                 };
 
                 const getLinePreview = (style: string) => {
@@ -285,15 +285,15 @@ export function SelectionSettings() {
           {/* 🏢 ENTERPRISE: Icon color using semantic tokens */}
           <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <SquareDashed className={`${PANEL_LAYOUT.ICON.REGULAR} ${colors.text.success}`} />
-            <span>Crossing Selection Settings</span>
+            <span>{t('selectionSettings.crossing.title')}</span>
           </h4>
           <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
-            Ρυθμίσεις για το πράσινο κουτί επιλογής (δεξιά προς αριστερά)
+            {t('selectionSettings.crossing.description')}
           </div>
 
           {/* Crossing Fill Color */}
           <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-            <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Γεμίσματος</label>
+            <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('selectionSettings.crossing.fillColorLabel')}</label>
             <ColorDialogTrigger
               value={settings.selection.crossing.fillColor}
               onChange={(color) => handleCrossingSelectionChange('fillColor', color)}
@@ -310,8 +310,8 @@ export function SelectionSettings() {
           {/* Crossing Fill Opacity */}
           <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
             <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Διαφάνεια Γεμίσματος</div>
-              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Επίπεδο διαφάνειας του γεμίσματος</div>
+              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('selectionSettings.common.fillOpacity')}</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('selectionSettings.common.fillOpacityDesc')}</div>
             </div>
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <input
@@ -331,7 +331,7 @@ export function SelectionSettings() {
 
           {/* Crossing Border Color */}
           <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-            <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Περιγράμματος</label>
+            <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('selectionSettings.crossing.borderColorLabel')}</label>
             <ColorDialogTrigger
               value={settings.selection.crossing.borderColor}
               onChange={(color) => handleCrossingSelectionChange('borderColor', color)}
@@ -348,8 +348,8 @@ export function SelectionSettings() {
           {/* Crossing Border Opacity */}
           <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
             <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Διαφάνεια Περιγράμματος</div>
-              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Επίπεδο διαφάνειας του περιγράμματος</div>
+              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('selectionSettings.common.borderOpacity')}</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('selectionSettings.common.borderOpacityDesc')}</div>
             </div>
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <input
@@ -370,8 +370,8 @@ export function SelectionSettings() {
           {/* Crossing Border Width */}
           <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
             <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Πάχος Γραμμής</div>
-              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Πάχος περιγράμματος σε pixels</div>
+              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('selectionSettings.common.borderWidth')}</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('selectionSettings.common.borderWidthDesc')}</div>
             </div>
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <input
@@ -392,17 +392,17 @@ export function SelectionSettings() {
           {/* Crossing Border Style */}
           <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
             <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Είδος Περιγράμματος</div>
-              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Τύπος γραμμής περιγράμματος</div>
+              <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('selectionSettings.common.borderStyle')}</div>
+              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('selectionSettings.common.borderStyleDesc')}</div>
             </div>
             <div className={`grid ${PANEL_LAYOUT.GRID.COLS_2} ${PANEL_LAYOUT.GAP.SM}`}>
               {(['solid', 'dashed', 'dotted', 'dash-dot'] as const).map((style) => {
                 const isSelected = settings.selection.crossing.borderStyle === style;
                 const styleLabels = {
-                  solid: 'Συνεχόμενη',
-                  dashed: 'Διακεκομμένη',
-                  dotted: 'Κουκίδες',
-                  'dash-dot': 'Παύλα-Τελεία'
+                  solid: t('selectionSettings.borderStyles.solid'),
+                  dashed: t('selectionSettings.borderStyles.dashed'),
+                  dotted: t('selectionSettings.borderStyles.dotted'),
+                  'dash-dot': t('selectionSettings.borderStyles.dashDot')
                 };
 
                 const getLinePreview = (style: string) => {

@@ -334,7 +334,37 @@
       "refresh": "Refresh",
       "archive": "Archive",
       "favorite": "Favorites",
-      "help": "Help"
+      "favorites": "Favorites",
+      "help": "Help",
+      "filters": "Filters",
+      "preview": "Preview",
+      "copy": "Copy",
+      "share": "Share",
+      "reports": "Reports",
+      "settings": "Settings",
+      "favoritesManagement": "Manage Favorites",
+      "sorting": "Sorting"
+    },
+    "ui": {
+      "clearAllCount": "Clear all ({count})",
+      "itemsSelected": "{count} selected"
+    },
+    "communications": {
+      "channels": {
+        "all": "All channels",
+        "email": "Email",
+        "sms": "SMS",
+        "telegram": "Telegram"
+      },
+      "status": {
+        "all": "All statuses",
+        "sent": "Sent",
+        "received": "Received",
+        "pending": "Pending",
+        "failed": "Failed"
+      },
+      "important": "Important",
+      "markAsImportant": "Mark as important"
     },
     "tooltips": {
       "new": "Add new building (Ctrl+N)",
@@ -354,7 +384,14 @@
       "status": "Status",
       "statusLabel": "Building status",
       "type": "Type",
-      "typeLabel": "Building type"
+      "typeLabel": "Building type",
+      "categories": {
+        "status": "Status",
+        "buildingType": "Building Type",
+        "contactType": "Contact Type",
+        "parkingType": "Parking Type",
+        "channel": "Communication Channel"
+      }
     },
     "sort": {
       "label": "Sort",
@@ -362,7 +399,23 @@
       "ascending": "Ascending (A-Z)",
       "descending": "Descending (Z-A)",
       "byDate": "By date",
-      "bySize": "By size"
+      "bySize": "By size",
+      "name": {
+        "asc": "Name (A-Z)",
+        "desc": "Name (Z-A)"
+      },
+      "date": {
+        "asc": "Date (Oldest first)",
+        "desc": "Date (Newest first)"
+      },
+      "status": {
+        "asc": "Status (A-Z)",
+        "desc": "Status (Z-A)"
+      },
+      "channel": {
+        "asc": "Channel (A-Z)",
+        "desc": "Channel (Z-A)"
+      }
     },
     "selection": {
       "selected": "{count} buildings selected"

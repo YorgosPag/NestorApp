@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 import React, { useState, useEffect, useMemo } from 'react';
 import { ACI_PALETTE } from '../../../../../settings/standards/aci';
 import { UI_COLORS } from '../../../../../config/color-config';
@@ -619,15 +620,15 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
     return (
       <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.CONTAINER.INNER_PADDING} ${colors.bg.secondary} ${quick.card}`}>
         <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
-          Ρυθμίσεις {selectedTool}
+          {t('entitiesSettings.toolSettings.title', { tool: selectedTool })}
         </h3>
         <div className={`text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL} ${colors.text.muted}`}>
           <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} flex justify-center`}>
             <Wrench className={`${PANEL_LAYOUT.WIDTH.ICON_LG} ${PANEL_LAYOUT.HEIGHT.ICON_LG}`} />
           </div>
-          <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.primary}`}>Ρυθμίσεις Εργαλείου</h3>
+          <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.primary}`}>{t('entitiesSettings.toolSettings.toolSettingsTitle')}</h3>
           <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted}`}>
-            Οι ρυθμίσεις για αυτό το εργαλείο θα προστεθούν σύντομα
+            {t('entitiesSettings.toolSettings.comingSoon')}
           </p>
         </div>
       </div>
@@ -658,9 +659,9 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
       {!selectedTool && (
         <div className={`text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL} ${colors.text.muted}`}>
           <Pen className={`${iconSizes.xl} mx-auto ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`} />
-          <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.primary}`}>Επιλέξτε Εργαλείο</h3>
+          <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.primary}`}>{t('entitiesSettings.selectTool.title')}</h3>
           <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted}`}>
-            Κάντε κλικ σε ένα εργαλείο για να δείτε τις ρυθμίσεις του
+            {t('entitiesSettings.selectTool.description')}
           </p>
         </div>
       )}

@@ -496,5 +496,59 @@
       "registeredBy": "Καταχωρήθηκε Από",
       "actions": "Ενέργειες"
     }
+  },
+  "empty": "Δεν υπάρχουν έργα",
+  "table": {
+    "project": "Έργο",
+    "status": "Κατάσταση",
+    "progress": "Πρόοδος"
+  },
+  "actualBuildingData": {
+    "title": "Πραγματικά Πολεοδομικά Στοιχεία",
+    "units": {
+      "sqm": "m²",
+      "cbm": "m³",
+      "percent": "%",
+      "meters": "m"
+    },
+    "fields": {
+      "construction": "Δόμηση",
+      "plotCoverage": "Κάλυψη Οικοπέδου",
+      "coveragePercentage": "Ποσοστό Κάλυψης",
+      "semiOutdoorArea": "Ημιυπαίθριοι Χώροι",
+      "semiOutdoorPercentage": "Ποσοστό Ημιυπαίθριων",
+      "balconyArea": "Εμβαδόν Μπαλκονιών",
+      "balconyPercentage": "Ποσοστό Μπαλκονιών",
+      "combinedArea": "Συνδυασμένο Εμβαδόν",
+      "combinedPercentage": "Συνδυασμένο Ποσοστό",
+      "volumeExploitation": "Εκμετάλλευση Όγκου",
+      "volumeCoefficient": "Συντελεστής Όγκου",
+      "height": "Ύψος"
+    }
+  },
+  "buildingData": {
+    "title": "Επιτρεπόμενα Πολεοδομικά Στοιχεία",
+    "fields": {
+      "maxAllowedConstruction": "Μέγιστη Επιτρεπόμενη Δόμηση",
+      "maxCoveragePercentage": "Μέγιστο Ποσοστό Κάλυψης",
+      "maxPlotCoverage": "Μέγιστη Κάλυψη Οικοπέδου",
+      "maxSemiOutdoorPercentage": "Μέγιστο Ποσοστό Ημιυπαίθριων",
+      "maxAllowedSemiOutdoorArea": "Μέγιστο Εμβαδόν Ημιυπαίθριων",
+      "maxBalconyPercentage": "Μέγιστο Ποσοστό Μπαλκονιών",
+      "maxBalconyArea": "Μέγιστο Εμβαδόν Μπαλκονιών",
+      "maxCombinedPercentage": "Μέγιστο Συνδυασμένο Ποσοστό",
+      "maxCombinedArea": "Μέγιστο Συνδυασμένο Εμβαδόν",
+      "maxVolumeCoefficient": "Μέγιστος Συντελεστής Όγκου",
+      "maxVolumeExploitation": "Μέγιστη Εκμετάλλευση Όγκου",
+      "maxAllowedHeight": "Μέγιστο Επιτρεπόμενο Ύψος"
+    },
+    "formulas": {
+      "construction": "Δόμηση = Σ.Δ. × Εμβαδόν Οικοπέδου",
+      "plotCoverage": "Κάλυψη = % Κάλυψης × Εμβαδόν Οικοπέδου",
+      "semiOutdoor": "Ημιυπαίθριοι = % Ημιυπ. × Δόμηση",
+      "balcony": "Μπαλκόνια = % Μπαλκ. × Δόμηση",
+      "combined": "Συνδυασμένο = % Συνδ. × Δόμηση",
+      "volume": "Όγκος = Συντ. Όγκου × Δόμηση"
+    }
   }
 }

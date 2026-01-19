@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 import React from 'react';
@@ -37,12 +38,12 @@ export const MergePanel = ({
 
   return (
     <div className={PANEL_TOKENS.MERGE_PANEL.CONTAINER.BASE}>
-      <div className={PANEL_TOKENS.MERGE_PANEL.TITLE.BASE}>🔗 Multi-Selection Active</div>
-      
+      <div className={PANEL_TOKENS.MERGE_PANEL.TITLE.BASE}>{t('mergePanel.title')}</div>
+
       {selectedEntitiesForMerge.size > 1 && (
         <div className="flex items-center justify-between">
           <span className={PANEL_TOKENS.MERGE_PANEL.SECTION_TEXT.BASE}>
-            {selectedEntitiesForMerge.size} entities επιλεγμένες
+            {t('mergePanel.entitiesSelected', { count: selectedEntitiesForMerge.size })}
           </span>
           <button
             onClick={onMergeEntities}
@@ -50,15 +51,15 @@ export const MergePanel = ({
             title={t('layerActions.mergeEntities')}
           >
             <GitMerge className={iconSizes.xs} />
-            Merge Entities
+            {t('mergePanel.mergeEntitiesButton')}
           </button>
         </div>
       )}
-      
+
       {selectedLayersForMerge.size > 1 && (
         <div className="flex items-center justify-between">
           <span className={PANEL_TOKENS.MERGE_PANEL.SECTION_TEXT.BASE}>
-            {selectedLayersForMerge.size} layers επιλεγμένα
+            {t('mergePanel.layersSelected', { count: selectedLayersForMerge.size })}
           </span>
           <button
             onClick={onMergeLayers}
@@ -66,15 +67,15 @@ export const MergePanel = ({
             title={t('layerActions.mergeLayers')}
           >
             <GitMerge className={iconSizes.xs} />
-            Merge Layers
+            {t('mergePanel.mergeLayersButton')}
           </button>
         </div>
       )}
-      
+
       {selectedColorGroupsForMerge.size > 1 && (
         <div className="flex items-center justify-between">
           <span className={PANEL_TOKENS.MERGE_PANEL.SECTION_TEXT.BASE}>
-            {selectedColorGroupsForMerge.size} color groups επιλεγμένα
+            {t('mergePanel.colorGroupsSelected', { count: selectedColorGroupsForMerge.size })}
           </span>
           <button
             onClick={onMergeColorGroups}
@@ -82,13 +83,13 @@ export const MergePanel = ({
             title={t('layerActions.mergeColorGroups')}
           >
             <GitMerge className={iconSizes.xs} />
-            Merge Color Groups
+            {t('mergePanel.mergeColorGroupsButton')}
           </button>
         </div>
       )}
-      
+
       <div className={`${PANEL_TOKENS.MERGE_PANEL.FOOTER_TEXT.BASE} flex items-center gap-1`}>
-        <Lightbulb className={iconSizes.xs} /> Tip: Ctrl+Click για multi-selection
+        <Lightbulb className={iconSizes.xs} /> {t('mergePanel.tip')}
       </div>
     </div>
   );

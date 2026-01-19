@@ -496,5 +496,59 @@
       "registeredBy": "Registered By",
       "actions": "Actions"
     }
+  },
+  "empty": "No projects found",
+  "table": {
+    "project": "Project",
+    "status": "Status",
+    "progress": "Progress"
+  },
+  "actualBuildingData": {
+    "title": "Actual Building Data",
+    "units": {
+      "sqm": "m²",
+      "cbm": "m³",
+      "percent": "%",
+      "meters": "m"
+    },
+    "fields": {
+      "construction": "Construction",
+      "plotCoverage": "Plot Coverage",
+      "coveragePercentage": "Coverage Percentage",
+      "semiOutdoorArea": "Semi-Outdoor Area",
+      "semiOutdoorPercentage": "Semi-Outdoor Percentage",
+      "balconyArea": "Balcony Area",
+      "balconyPercentage": "Balcony Percentage",
+      "combinedArea": "Combined Area",
+      "combinedPercentage": "Combined Percentage",
+      "volumeExploitation": "Volume Exploitation",
+      "volumeCoefficient": "Volume Coefficient",
+      "height": "Height"
+    }
+  },
+  "buildingData": {
+    "title": "Allowed Building Data",
+    "fields": {
+      "maxAllowedConstruction": "Max Allowed Construction",
+      "maxCoveragePercentage": "Max Coverage Percentage",
+      "maxPlotCoverage": "Max Plot Coverage",
+      "maxSemiOutdoorPercentage": "Max Semi-Outdoor Percentage",
+      "maxAllowedSemiOutdoorArea": "Max Allowed Semi-Outdoor Area",
+      "maxBalconyPercentage": "Max Balcony Percentage",
+      "maxBalconyArea": "Max Balcony Area",
+      "maxCombinedPercentage": "Max Combined Percentage",
+      "maxCombinedArea": "Max Combined Area",
+      "maxVolumeCoefficient": "Max Volume Coefficient",
+      "maxVolumeExploitation": "Max Volume Exploitation",
+      "maxAllowedHeight": "Max Allowed Height"
+    },
+    "formulas": {
+      "construction": "Construction = FAR × Plot Area",
+      "plotCoverage": "Coverage = Coverage % × Plot Area",
+      "semiOutdoor": "Semi-Outdoor = Semi-Outdoor % × Construction",
+      "balcony": "Balcony = Balcony % × Construction",
+      "combined": "Combined = Combined % × Construction",
+      "volume": "Volume = Volume Coef. × Construction"
+    }
   }
 }

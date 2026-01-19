@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 /**
  * ColorGroupItem Component
  * Displays a single color group with its layers and controls
@@ -157,7 +158,7 @@ export function ColorGroupItem({
           <button
             onClick={handleExpandToggle}
             className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
-            title={isExpanded ? "Σύμπτυξη" : "Ανάπτυξη"}
+            title={isExpanded ? t('layerActions.collapse') : t('layerActions.expand')}
           >
             {isExpanded ? (
               <ChevronDown className={iconSizes.sm} />
@@ -189,7 +190,7 @@ export function ColorGroupItem({
           ) : (
             <span
               className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE} ${PANEL_LAYOUT.CURSOR.POINTER}`}
-              title="Double-click για μετονομασία"
+              title={t('layerActions.doubleClickToRename')}
               onDoubleClick={handleNameDoubleClick}
             >
               {getColorGroupDisplayName(colorName)} ({layerNames.length} layers)

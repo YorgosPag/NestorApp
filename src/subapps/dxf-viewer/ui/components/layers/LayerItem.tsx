@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 /**
  * LayerItem Component
  * Displays a single layer with its entities and controls
@@ -217,7 +218,7 @@ export function LayerItem({
             <button
               onClick={handleExpandToggle}
               className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
-              title={isLayerExpanded ? "Σύμπτυξη στοιχείων" : "Ανάπτυξη στοιχείων"}
+              title={isLayerExpanded ? t('layerActions.collapseEntities') : t('layerActions.expandEntities')}
             >
               {isLayerExpanded ? (
                 <ChevronDown className={iconSizes.xs} />
@@ -267,7 +268,7 @@ export function LayerItem({
           <button
             onClick={handleVisibilityToggle}
             className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
-            title={layer.visible ? "Απόκρυψη" : "Εμφάνιση"}
+            title={layer.visible ? t('layerActions.hide') : t('layerActions.show')}
           >
             {layer.visible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
           </button>

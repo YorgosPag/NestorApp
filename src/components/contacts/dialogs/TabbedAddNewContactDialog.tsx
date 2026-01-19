@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -12,17 +11,16 @@ import {
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FormGrid, FormField, FormInput } from '@/components/ui/form/FormComponents';
-import { Textarea } from '@/components/ui/textarea';
 import { SaveButton, CancelButton } from '@/components/ui/form/ActionButtons';
 import type { ContactType } from '@/types/contacts';
-import { Loader2, User, Building, Shield, Building2, Landmark } from 'lucide-react';
-import type { AddNewContactDialogProps, ContactFormData } from '@/types/ContactFormTypes';
+import { User, Building2, Landmark } from 'lucide-react';
+import type { AddNewContactDialogProps } from '@/types/ContactFormTypes';
 import { useContactForm } from '@/hooks/useContactForm';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { getTypeIcon, getTypeLabel } from '@/utils/contactFormUtils';
 import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
 import { RelationshipProvider } from '@/components/contacts/relationships/context/RelationshipProvider';
-import { CONTACT_TYPES, getContactIcon, getContactLabel } from '@/constants/contacts';
+import { CONTACT_TYPES, getContactLabel } from '@/constants/contacts';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Auth context for canonical upload pipeline (ADR-031)
@@ -30,6 +28,10 @@ import { useAuth } from '@/auth/hooks/useAuth';
 // 🏢 ENTERPRISE: ID generation for new contacts (ADR-031)
 import { generateContactId } from '@/services/enterprise-id.service';
 import type { CanonicalUploadContext } from '@/components/ContactFormSections/utils/PhotoUploadConfiguration';
+// 🏢 ENTERPRISE: Utility for class name composition (canonical pattern)
+import { cn } from '@/lib/utils';
+// 🏢 ENTERPRISE: Centralized dialog sizing tokens (ADR-031)
+import { DIALOG_SIZES, DIALOG_HEIGHT, DIALOG_SCROLL } from '@/styles/design-tokens';
 
 export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, editContact, onLiveChange }: AddNewContactDialogProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
@@ -47,9 +49,6 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
     handleChange,
     handleSelectChange,
     handleFileChange,
-    handleDrop,
-    handleDragOver,
-    handleNestedChange,
     handleLogoChange,
     handleUploadedPhotoURL,
     handleUploadedLogoURL,
@@ -76,11 +75,23 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
     return editContact?.id || generateContactId();
   });
 
+  // ==========================================================================
+  // 🏢 ENTERPRISE: Option A - Set formData.id to preGeneratedContactId (ADR-031)
+  // ==========================================================================
+  // Ensure formData.id is set early for new contacts so uploads + save use same ID
+  // ==========================================================================
+  useEffect(() => {
+    // Only set for new contacts (not editing)
+    if (!editContact && !formData.id && preGeneratedContactId) {
+      setFormData(prev => ({ ...prev, id: preGeneratedContactId }));
+    }
+  }, [editContact, formData.id, preGeneratedContactId, setFormData]);
+
   // Build canonical upload context (only if user has required claims)
   const canonicalUploadContext = useMemo<CanonicalUploadContext | undefined>(() => {
     // 🛡️ SECURITY: Only enable canonical pipeline if user has companyId claim
+    // Falls back to legacy pipeline (with deprecation warning) if not available
     if (!user?.uid || !user?.companyId) {
-      console.warn('⚠️ Canonical upload context unavailable: missing user.uid or user.companyId');
       return undefined;
     }
 
@@ -114,11 +125,8 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-      console.log('🚨 TabbedAddNewContactDialog: onOpenChange called with:', isOpen);
-      onOpenChange(isOpen);
-    }}>
-      <DialogContent className={`sm:max-w-[900px] max-h-[90vh] overflow-y-auto z-50`}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className={cn(DIALOG_SIZES.xl, DIALOG_HEIGHT.standard, DIALOG_SCROLL.scrollable)}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {getTypeIcon(contactType, iconSizes.sm)}

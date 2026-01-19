@@ -10,45 +10,38 @@ import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS, HOVER_TEXT_EFFECTS } fr
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation, TFunction } from 'react-i18next';
 
-// Ελληνικά labels και configurations για όλα τα snap modes
-const SNAP_LABELS: Record<ExtendedSnapType, string> = {
-  [ExtendedSnapType.AUTO]: 'Αυτόματο',
-  [ExtendedSnapType.ENDPOINT]: 'Άκρο',
-  [ExtendedSnapType.MIDPOINT]: 'Μέσο',
-  [ExtendedSnapType.CENTER]: 'Κέντρο',
-  [ExtendedSnapType.INTERSECTION]: 'Τομή',
-  [ExtendedSnapType.GRID]: 'Πλέγμα',
-  [ExtendedSnapType.PERPENDICULAR]: 'Κάθετος',
-  [ExtendedSnapType.TANGENT]: 'Εφαπτομένη',
-  [ExtendedSnapType.PARALLEL]: 'Παράλληλος',
-  [ExtendedSnapType.QUADRANT]: 'Τεταρτημόριο',
-  [ExtendedSnapType.NEAREST]: 'Κοντινότερο',
-  [ExtendedSnapType.EXTENSION]: 'Επέκταση',
-  [ExtendedSnapType.NODE]: 'Κόμβος',
-  [ExtendedSnapType.INSERTION]: 'Εισαγωγή',
-  [ExtendedSnapType.NEAR]: 'Πλησίον',
-  [ExtendedSnapType.ORTHO]: 'Ορθογώνιος'
+// 🏢 ENTERPRISE: Snap mode key mapping for i18n
+const SNAP_MODE_KEYS: Record<ExtendedSnapType, string> = {
+  [ExtendedSnapType.AUTO]: 'auto',
+  [ExtendedSnapType.ENDPOINT]: 'endpoint',
+  [ExtendedSnapType.MIDPOINT]: 'midpoint',
+  [ExtendedSnapType.CENTER]: 'center',
+  [ExtendedSnapType.INTERSECTION]: 'intersection',
+  [ExtendedSnapType.GRID]: 'grid',
+  [ExtendedSnapType.PERPENDICULAR]: 'perpendicular',
+  [ExtendedSnapType.TANGENT]: 'tangent',
+  [ExtendedSnapType.PARALLEL]: 'parallel',
+  [ExtendedSnapType.QUADRANT]: 'quadrant',
+  [ExtendedSnapType.NEAREST]: 'nearest',
+  [ExtendedSnapType.EXTENSION]: 'extension',
+  [ExtendedSnapType.NODE]: 'node',
+  [ExtendedSnapType.INSERTION]: 'insertion',
+  [ExtendedSnapType.NEAR]: 'near',
+  [ExtendedSnapType.ORTHO]: 'ortho'
 };
 
-const SNAP_TOOLTIPS: Record<ExtendedSnapType, string> = {
-  [ExtendedSnapType.AUTO]: 'Αυτόματο Snap - Ανιχνεύει αυτόματα τα καλύτερα σημεία (F11)',
-  [ExtendedSnapType.ENDPOINT]: 'Άκρα Γραμμών - Snap στα τελικά σημεία γραμμών και τόξων (E)',
-  [ExtendedSnapType.MIDPOINT]: 'Μέσα Σημεία - Snap στο μέσο γραμμών και τόξων (M)',
-  [ExtendedSnapType.CENTER]: 'Κέντρα - Snap στο κέντρο κύκλων και τόξων (C)',
-  [ExtendedSnapType.INTERSECTION]: 'Τομές - Snap στις τομές δύο αντικειμένων (I)',
-  [ExtendedSnapType.GRID]: 'Πλέγμα - Snap στα σημεία του πλέγματος (F9)',
-  [ExtendedSnapType.PERPENDICULAR]: 'Κάθετος - Snap κάθετα σε γραμμές (P)',
-  [ExtendedSnapType.TANGENT]: 'Εφαπτόμενη - Snap εφαπτόμενα σε κύκλους και τόξα (T)',
-  [ExtendedSnapType.PARALLEL]: 'Παράλληλος - Snap παράλληλα με υπάρχουσες γραμμές (L)',
-  [ExtendedSnapType.QUADRANT]: 'Τεταρτημόρια - Snap στα τεταρτημόρια κύκλων (Q)',
-  [ExtendedSnapType.NEAREST]: 'Κοντινότερο - Snap στο πλησιέστερο σημείο αντικειμένου (N)',
-  [ExtendedSnapType.EXTENSION]: 'Επέκταση - Snap σε επεκτάσεις γραμμών (X)',
-  [ExtendedSnapType.NODE]: 'Κόμβοι - Snap σε κόμβους και σημεία (D)',
-  [ExtendedSnapType.INSERTION]: 'Εισαγωγή - Snap σε σημεία εισαγωγής (INS)',
-  [ExtendedSnapType.NEAR]: 'Πλησίον - Snap κοντά σε αντικείμενα (R)',
-  [ExtendedSnapType.ORTHO]: 'Ορθογώνιος - Περιορισμός σε οριζόντιες/κάθετες γραμμές (F8)'
+// 🏢 ENTERPRISE: Get translated snap label
+const getSnapLabel = (mode: ExtendedSnapType, t: TFunction): string => {
+  const key = SNAP_MODE_KEYS[mode];
+  return t(`snapModes.labels.${key}`);
+};
+
+// 🏢 ENTERPRISE: Get translated snap tooltip
+const getSnapTooltip = (mode: ExtendedSnapType, t: TFunction): string => {
+  const key = SNAP_MODE_KEYS[mode];
+  return t(`snapModes.tooltips.${key}`);
 };
 
 interface SnapButtonProps {
@@ -56,11 +49,12 @@ interface SnapButtonProps {
   enabled: boolean;
   onClick: () => void;
   compact?: boolean;
+  t: TFunction;
 }
 
-const SnapButton: React.FC<SnapButtonProps> = ({ mode, enabled, onClick, compact = false }) => {
-  const label = SNAP_LABELS[mode];
-  const tooltip = SNAP_TOOLTIPS[mode];
+const SnapButton: React.FC<SnapButtonProps> = ({ mode, enabled, onClick, compact = false, t }) => {
+  const label = getSnapLabel(mode, t);
+  const tooltip = getSnapTooltip(mode, t);
   const { quick, getStatusBorder, radius } = useBorderTokens();
   const colors = useSemanticColors();
 
@@ -177,6 +171,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
             enabled={enabledModes?.has(mode) || false}
             onClick={() => handleModeToggle(mode)}
             compact={compact}
+            t={t}
           />
         ))}
       </div>
@@ -189,7 +184,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
             className={`${iconSizes.xl} ${radius.md} border ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['150']} flex items-center justify-center ${
               showAdvanced || advancedEnabledCount > 0 ? `${colors.bg.muted} ${getStatusBorder('subtle')} ${colors.text.primary}` : `${colors.bg.secondary} ${getStatusBorder('default')} ${colors.text.muted} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
             }`}
-            title={`${showAdvanced ? 'Απόκρυψη' : 'Εμφάνιση'} προχωρημένων λειτουργιών`}
+            title={showAdvanced ? t('snapModes.ui.hideAdvanced') : t('snapModes.ui.showAdvanced')}
           >
             {showAdvanced ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
@@ -214,6 +209,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
               enabled={enabledModes?.has(mode) || false}
               onClick={() => handleModeToggle(mode)}
               compact={true}
+              t={t}
             />
           ))}
         </div>

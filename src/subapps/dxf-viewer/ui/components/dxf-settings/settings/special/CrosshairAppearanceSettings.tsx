@@ -114,8 +114,8 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
     <article className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
       {/* Crosshair Color - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Σταυρονήματος</h4>
-        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα γραμμών σταυρώνυματος</p>
+        <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('crosshairSettings.appearance.colorTitle')}</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>{t('crosshairSettings.appearance.colorDescription')}</p>
         <ColorDialogTrigger
           value={cursorColors.crosshairColor}
           onChange={(color) => onCursorColorsChange({ ...cursorColors, crosshairColor: color })}
@@ -131,8 +131,8 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
 
       {/* Line Style - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Τύπος Γραμμής</h4>
-        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Στυλ απόδοσης γραμμών</p>
+        <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>{t('crosshairSettings.appearance.lineStyleTitle')}</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('crosshairSettings.appearance.lineStyleDescription')}</p>
         <div className={`grid ${PANEL_LAYOUT.GRID.COLS_2} ${PANEL_LAYOUT.GAP.SM}`}>
           <button
             onClick={() => {
@@ -148,7 +148,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               className="w-full"
               style={layoutUtilities.dxf.crosshairLine.solid(settings.crosshair.line_width, cursorColors.crosshairColor)}
             ></div>
-            <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Συνεχόμενη</span>
+            <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('crosshairSettings.lineStyles.solid')}</span>
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_style: 'dashed' } })}
@@ -162,7 +162,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               className="w-full"
               style={layoutUtilities.dxf.crosshairLine.dashed(settings.crosshair.line_width, cursorColors.crosshairColor)}
             ></div>
-            <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Διακεκομμένη</span>
+            <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('crosshairSettings.lineStyles.dashed')}</span>
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_style: 'dotted' } })}
@@ -176,7 +176,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               className="w-full"
               style={layoutUtilities.dxf.crosshairLine.dotted(settings.crosshair.line_width, cursorColors.crosshairColor)}
             ></div>
-            <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Τελείες</span>
+            <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('crosshairSettings.lineStyles.dotted')}</span>
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_style: 'dash-dot' } })}
@@ -190,15 +190,15 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               className="w-full"
               style={layoutUtilities.dxf.crosshairLine.dashDot(settings.crosshair.line_width, cursorColors.crosshairColor)}
             ></div>
-            <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Παύλα-Τελεία</span>
+            <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('crosshairSettings.lineStyles.dashDot')}</span>
           </button>
         </div>
       </section>
 
       {/* Line Width - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Πάχος Γραμμής</h4>
-        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Πάχος σε pixels</p>
+        <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>{t('crosshairSettings.appearance.lineWidthTitle')}</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('crosshairSettings.appearance.lineWidthDescription')}</p>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <input
             type="range"
@@ -234,8 +234,8 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
 
       {/* Size/Type - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Μέγεθος Σταυρονήματος</h4>
-        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Επέκταση από το κέντρο</p>
+        <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>{t('crosshairSettings.appearance.sizeTitle')}</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('crosshairSettings.appearance.sizeDescription')}</p>
         <div className={`grid ${PANEL_LAYOUT.GRID.COLS_5} ${PANEL_LAYOUT.GAP.XS}`}>
           <button
             onClick={() => {

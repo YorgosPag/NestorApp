@@ -427,6 +427,41 @@ export const zIndex = {
   critical: 2147483647,
 } as const;
 
+// ============================================================================
+// 🏢 ENTERPRISE: DIALOG/MODAL SIZE TOKENS
+// ============================================================================
+// Centralized dialog sizing for consistent modal dimensions
+// ADR-031: Zero hardcoded values - all dialog sizes from here
+// ============================================================================
+export const DIALOG_SIZES = {
+  /** Small dialog (400px) - confirmations, simple forms */
+  sm: 'sm:max-w-md',
+  /** Medium dialog (600px) - standard forms, selections */
+  md: 'sm:max-w-[600px]',
+  /** Large dialog (800px) - complex forms */
+  lg: 'sm:max-w-[800px]',
+  /** Extra large dialog (900px) - contact forms, multi-tab dialogs */
+  xl: 'sm:max-w-[900px]',
+  /** Full width dialog (1200px) - dashboards, complex UIs */
+  full: 'sm:max-w-[1200px]',
+} as const;
+
+export const DIALOG_HEIGHT = {
+  /** Standard dialog height constraint */
+  standard: 'max-h-[90vh]',
+  /** Shorter dialog for simpler content */
+  short: 'max-h-[70vh]',
+  /** Auto height - content determines */
+  auto: '',
+} as const;
+
+export const DIALOG_SCROLL = {
+  /** Enable vertical scrolling */
+  scrollable: 'overflow-y-auto',
+  /** No scroll - fixed content */
+  fixed: 'overflow-hidden',
+} as const;
+
 // Grid patterns για layout consistency
 export const gridPatterns = {
   // Stats grids

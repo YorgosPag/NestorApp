@@ -23,6 +23,8 @@ import { Equal, Minus } from 'lucide-react';
 import { RulerMajorLinesSettings } from './RulerMajorLinesSettings';
 import { RulerMinorLinesSettings } from './RulerMinorLinesSettings';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 // 🏢 ENTERPRISE: Centralized spacing tokens (ADR-UI-001)
 import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
 
@@ -67,6 +69,8 @@ export const RulerLinesSettings: React.FC<RulerLinesSettingsProps> = ({ classNam
   type LinesTab = 'major' | 'minor';
   const { activeTab: activeLinesTab, setActiveTab: setActiveLinesTab } = useTabNavigation<LinesTab>('major');
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('dxf-viewer');
 
   // ============================================================================
   // TAB CONFIGURATION - 🏢 ENTERPRISE: Using centralized TabDefinition interface
@@ -75,13 +79,13 @@ export const RulerLinesSettings: React.FC<RulerLinesSettingsProps> = ({ classNam
   const linesTabs: TabDefinition[] = [
     {
       id: 'major',
-      label: 'Κύριες Γραμμές',
+      label: t('rulerSettings.tabs.majorLines'),
       icon: Equal, // 🏢 ENTERPRISE: Lucide icon replacing 📏 emoji
       content: null, // Content rendered separately below
     },
     {
       id: 'minor',
-      label: 'Δευτερεύουσες Γραμμές',
+      label: t('rulerSettings.tabs.minorLines'),
       icon: Minus, // 🏢 ENTERPRISE: Lucide icon replacing 📐 emoji
       content: null, // Content rendered separately below
     },

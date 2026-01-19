@@ -234,6 +234,37 @@ export const FILE_STORAGE_FLAGS = {
 } as const;
 
 /**
+ * 🏢 ENTERPRISE: Legacy storage paths (for backward compatibility ONLY)
+ * @deprecated Use canonical pipeline with buildStoragePath() instead
+ * @enterprise These paths are READ-ONLY in production
+ * @see ADR-031 - Canonical File Storage System
+ */
+export const LEGACY_STORAGE_PATHS = {
+  /** Legacy contacts photos folder - DO NOT USE FOR NEW UPLOADS */
+  CONTACTS_PHOTOS: 'contacts/photos',
+} as const;
+
+/**
+ * 🏢 ENTERPRISE: Photo upload purposes
+ * @enterprise Type-safe purpose values for file naming
+ * @see ADR-031 - Canonical File Storage System
+ */
+export const UPLOAD_PURPOSE = {
+  /** Company logo */
+  LOGO: 'logo',
+  /** Representative/profile photo */
+  REPRESENTATIVE: 'representative',
+  /** Profile photo (alias for representative) */
+  PROFILE: 'profile',
+  /** ID document scan */
+  ID_DOCUMENT: 'id-document',
+  /** General/other purpose */
+  OTHER: 'other',
+} as const;
+
+export type UploadPurpose = typeof UPLOAD_PURPOSE[keyof typeof UPLOAD_PURPOSE];
+
+/**
  * 🏢 ENTERPRISE: Storage path segments (for buildStoragePath)
  * @enterprise ZERO hardcoded path strings - all segments from here
  */

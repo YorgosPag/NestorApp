@@ -1,5 +1,5 @@
 'use client';
-import React, { useRef, memo } from 'react';
+import React, { useRef, memo, useEffect, useCallback } from 'react';
 import { DockviewReact, DockviewReadyEvent } from 'dockview';
 import 'dockview/dist/styles/dockview.css';
 
@@ -13,6 +13,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { PANEL_LAYOUT, PANEL_COLORS } from '../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
+
+// 🏢 ENTERPRISE: Panel title mapping for i18n
+const PANEL_TITLE_KEYS = {
+  snapping: 'cadDock.panels.objectSnap',
+  layers: 'cadDock.panels.layers',
+  properties: 'cadDock.panels.properties',
+  history: 'cadDock.panels.commands',
+} as const;
+
+type PanelId = keyof typeof PANEL_TITLE_KEYS;
 
 // 🔺 FIXED SNAPPING PANEL με ProSnapToolbar
 const SnappingView = memo(() => {
@@ -53,7 +63,7 @@ const LayersView = memo(() => {
   return (
     <section className={`${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${PANEL_COLORS.TEXT_PRIMARY}`}>
       <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.muted}`}>{t('cadDock.panels.layers')}</h3>
-      <nav className={PANEL_LAYOUT.SPACING.GAP_XS} aria-label="Layer list">
+      <nav className={PANEL_LAYOUT.SPACING.GAP_XS} aria-label={t('cadDock.accessibility.layerList')}>
         <label className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE}`}>
           <Checkbox defaultChecked />
           <span className={`${iconSizes.xs} ${colors.bg.error} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS}`} aria-hidden="true" />
@@ -128,22 +138,48 @@ const HistoryView = memo(() => {
 });
 HistoryView.displayName = 'HistoryView';
 
+// 🏢 ENTERPRISE: Dockview API interface for type safety
+interface DockviewApi {
+  addPanel: (config: unknown) => void;
+  getPanel: (id: string) => { setTitle: (title: string) => void } | undefined;
+  panels: Array<{ id: string; setTitle: (title: string) => void }>;
+}
+
 // 🏗️ MAIN CAD DOCK
 const CadDock = memo(({ children }: { children?: React.ReactNode }) => {
+  const { t, i18n } = useTranslation('dxf-viewer');
+
   // ✅ ENTERPRISE FIX: Use compatible type for API ref
-  const apiRef = useRef<{ addPanel?: ((config: unknown) => void) | undefined } | null>(null);
+  const apiRef = useRef<DockviewApi | null>(null);
+
+  // 🏢 ENTERPRISE: Get translated panel title
+  const getPanelTitle = useCallback((panelId: PanelId): string => {
+    return t(PANEL_TITLE_KEYS[panelId]);
+  }, [t]);
+
+  // 🏢 ENTERPRISE: Update panel titles when language changes
+  useEffect(() => {
+    if (!apiRef.current) return;
+
+    const api = apiRef.current;
+    (Object.keys(PANEL_TITLE_KEYS) as PanelId[]).forEach((panelId) => {
+      const panel = api.getPanel(panelId);
+      if (panel) {
+        panel.setTitle(getPanelTitle(panelId));
+      }
+    });
+  }, [i18n.language, getPanelTitle]);
 
   const onReady = (e: DockviewReadyEvent) => {
     // 🏢 ENTERPRISE: Store API reference with proper typing
-    // The Dockview API has more methods than our simplified ref type, so we extract what we need
-    apiRef.current = { addPanel: e.api.addPanel.bind(e.api) };
+    apiRef.current = e.api as unknown as DockviewApi;
 
     try {
 
       // 🔺 SNAPPING PANEL (αριστερά, πάνω)
       e.api.addPanel({
         id: 'snapping',
-        title: 'Object Snap',
+        title: getPanelTitle('snapping'),
         component: 'snappingView', // ✅ ENTERPRISE FIX: Use 'component' instead of 'contentComponent'
         position: { direction: 'left' },
       });
@@ -151,7 +187,7 @@ const CadDock = memo(({ children }: { children?: React.ReactNode }) => {
       // 📋 LAYERS PANEL (κάτω από snapping)
       e.api.addPanel({
         id: 'layers',
-        title: 'Layers',
+        title: getPanelTitle('layers'),
         component: 'layersView', // ✅ ENTERPRISE FIX: Use 'component' instead of 'contentComponent'
         position: { referencePanel: 'snapping', direction: 'below' },
       });
@@ -159,7 +195,7 @@ const CadDock = memo(({ children }: { children?: React.ReactNode }) => {
       // 🔧 PROPERTIES PANEL (δεξιά)
       e.api.addPanel({
         id: 'properties',
-        title: 'Properties',
+        title: getPanelTitle('properties'),
         component: 'propertiesView', // ✅ ENTERPRISE FIX: Use 'component' instead of 'contentComponent'
         position: { direction: 'right' },
       });
@@ -167,7 +203,7 @@ const CadDock = memo(({ children }: { children?: React.ReactNode }) => {
       // 📜 HISTORY PANEL (κάτω από properties)
       e.api.addPanel({
         id: 'history',
-        title: 'Commands',
+        title: getPanelTitle('history'),
         component: 'historyView', // ✅ ENTERPRISE FIX: Use 'component' instead of 'contentComponent'
         position: { referencePanel: 'properties', direction: 'below' },
       });

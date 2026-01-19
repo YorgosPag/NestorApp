@@ -1360,8 +1360,8 @@ export const BUILDING_NAME_FILTER_LABELS = {
  * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const DXF_SELECTION_TOOL_LABELS = {
-  SELECT: 'dxfViewer.tools.select',
-  PAN: 'dxfViewer.tools.pan'
+  SELECT: 'tools.select',
+  PAN: 'tools.pan'
 } as const;
 
 /**
@@ -1369,18 +1369,18 @@ export const DXF_SELECTION_TOOL_LABELS = {
  * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const DXF_DRAWING_TOOL_LABELS = {
-  LINE: 'dxfViewer.tools.line',
-  RECTANGLE: 'dxfViewer.tools.rectangle',
-  CIRCLE_RADIUS: 'dxfViewer.tools.circleRadius',
-  CIRCLE_DIAMETER: 'dxfViewer.tools.circleDiameter',
-  CIRCLE_2P_DIAMETER: 'dxfViewer.tools.circle2pDiameter',
-  CIRCLE_3P: 'dxfViewer.tools.circle3p',
-  CIRCLE_CHORD_SAGITTA: 'dxfViewer.tools.circleChordSagitta',
-  CIRCLE_2P_RADIUS: 'dxfViewer.tools.circle2pRadius',
-  CIRCLE_BEST_FIT: 'dxfViewer.tools.circleBestFit',
-  POLYLINE: 'dxfViewer.tools.polyline',
-  POLYGON: 'dxfViewer.tools.polygon',
-  LAYERING: 'dxfViewer.tools.layering'
+  LINE: 'tools.line',
+  RECTANGLE: 'tools.rectangle',
+  CIRCLE_RADIUS: 'tools.circleRadius',
+  CIRCLE_DIAMETER: 'tools.circleDiameter',
+  CIRCLE_2P_DIAMETER: 'tools.circle2pDiameter',
+  CIRCLE_3P: 'tools.circle3p',
+  CIRCLE_CHORD_SAGITTA: 'tools.circleChordSagitta',
+  CIRCLE_2P_RADIUS: 'tools.circle2pRadius',
+  CIRCLE_BEST_FIT: 'tools.circleBestFit',
+  POLYLINE: 'tools.polyline',
+  POLYGON: 'tools.polygon',
+  LAYERING: 'tools.layering'
 } as const;
 
 /**
@@ -1388,10 +1388,10 @@ export const DXF_DRAWING_TOOL_LABELS = {
  * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const DXF_EDITING_TOOL_LABELS = {
-  GRIP_EDIT: 'dxfViewer.tools.gripEdit',
-  MOVE: 'dxfViewer.tools.move',
-  COPY: 'dxfViewer.tools.copy',
-  DELETE: 'dxfViewer.tools.delete'
+  GRIP_EDIT: 'tools.gripEdit',
+  MOVE: 'tools.move',
+  COPY: 'tools.copy',
+  DELETE: 'tools.delete'
 } as const;
 
 /**
@@ -1399,14 +1399,14 @@ export const DXF_EDITING_TOOL_LABELS = {
  * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const DXF_MEASUREMENT_TOOL_LABELS = {
-  MEASURE_DISTANCE: 'dxfViewer.tools.measureDistance',
-  MEASURE_AREA: 'dxfViewer.tools.measureArea',
-  MEASURE_ANGLE: 'dxfViewer.tools.measureAngle',
-  MEASURE_ANGLE_BASIC: 'dxfViewer.tools.measureAngleBasic',
-  MEASURE_ANGLE_LINE_ARC: 'dxfViewer.tools.measureAngleLineArc',
-  MEASURE_ANGLE_TWO_ARCS: 'dxfViewer.tools.measureAngleTwoArcs',
-  MEASURE_ANGLE_MEASUREGEOM: 'dxfViewer.tools.measureAngleMeasuregeom',
-  MEASURE_ANGLE_CONSTRAINT: 'dxfViewer.tools.measureAngleConstraint'
+  MEASURE_DISTANCE: 'tools.measureDistance',
+  MEASURE_AREA: 'tools.measureArea',
+  MEASURE_ANGLE: 'tools.measureAngle',
+  MEASURE_ANGLE_BASIC: 'tools.measureAngleBasic',
+  MEASURE_ANGLE_LINE_ARC: 'tools.measureAngleLineArc',
+  MEASURE_ANGLE_TWO_ARCS: 'tools.measureAngleTwoArcs',
+  MEASURE_ANGLE_MEASUREGEOM: 'tools.measureAngleMeasuregeom',
+  MEASURE_ANGLE_CONSTRAINT: 'tools.measureAngleConstraint'
 } as const;
 
 /**
@@ -1414,10 +1414,10 @@ export const DXF_MEASUREMENT_TOOL_LABELS = {
  * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const DXF_ZOOM_TOOL_LABELS = {
-  ZOOM_IN: 'dxfViewer.tools.zoomIn',
-  ZOOM_OUT: 'dxfViewer.tools.zoomOut',
-  ZOOM_WINDOW: 'dxfViewer.tools.zoomWindow',
-  ZOOM_EXTENTS: 'dxfViewer.tools.zoomExtents'
+  ZOOM_IN: 'tools.zoomIn',
+  ZOOM_OUT: 'tools.zoomOut',
+  ZOOM_WINDOW: 'tools.zoomWindow',
+  ZOOM_EXTENTS: 'tools.zoomExtents'
 } as const;
 
 /**
@@ -1425,16 +1425,16 @@ export const DXF_ZOOM_TOOL_LABELS = {
  * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const DXF_UTILITY_TOOL_LABELS = {
-  UNDO: 'dxfViewer.tools.undo',
-  REDO: 'dxfViewer.tools.redo',
-  CURSOR_SETTINGS: 'dxfViewer.tools.cursorSettings',
-  FIT_TO_VIEW: 'dxfViewer.tools.fitToView',
-  EXPORT: 'dxfViewer.tools.export',
-  RUN_TESTS: 'dxfViewer.tools.runTests',
+  UNDO: 'tools.undo',
+  REDO: 'tools.redo',
+  CURSOR_SETTINGS: 'tools.cursorSettings',
+  FIT_TO_VIEW: 'tools.fitToView',
+  EXPORT: 'tools.export',
+  RUN_TESTS: 'tools.runTests',
   // 🏢 ENTERPRISE: Performance Monitor Toggle (Bentley/Autodesk pattern)
-  TOGGLE_PERF: 'dxfViewer.tools.togglePerf',
+  TOGGLE_PERF: 'tools.togglePerf',
   // 🏢 ENTERPRISE: PDF Background Controls (Independent pan/zoom/rotation)
-  PDF_BACKGROUND: 'dxfViewer.tools.pdfBackground'
+  PDF_BACKGROUND: 'tools.pdfBackground'
 } as const;
 
 // ============================================================================

@@ -4,6 +4,10 @@ import type { ContactType } from '@/types/contacts';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { FileUploadResult, FileUploadProgress } from '@/hooks/useFileUploadState';
 import { PhotoUploadService as FirebasePhotoUploadService } from '@/services/photo-upload.service';
+// 🏢 ENTERPRISE: Centralized constants (ADR-031)
+import { LEGACY_STORAGE_PATHS, UPLOAD_PURPOSE } from '@/config/domain-constants';
+// 🏢 ENTERPRISE: Centralized compression usage constants (ADR-031)
+import { COMPRESSION_USAGE } from '@/config/photo-compression-config';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -83,15 +87,17 @@ export function getPhotoUploadHandlers(
   canonicalContext?: CanonicalUploadContext
 ): PhotoUploadHandlers {
   // 🏢 ENTERPRISE: Resolve contact name based on contact type
-  const resolveContactName = (): string => {
+  // Returns undefined if no name available - let naming builder/i18n handle fallback
+  const resolveContactName = (): string | undefined => {
     if (canonicalContext?.contactName) {
       return canonicalContext.contactName;
     }
-    // Fallback to formData
+    // Fallback to formData - return undefined if empty (no hardcoded 'Unknown')
     if (formData.type === 'individual') {
-      return `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'Unknown';
+      const fullName = `${formData.firstName || ''} ${formData.lastName || ''}`.trim();
+      return fullName || undefined;
     }
-    return formData.companyName || formData.serviceName || formData.name || 'Unknown';
+    return formData.companyName || formData.serviceName || formData.name || undefined;
   };
 
   // 🏢 ENTERPRISE: Build contactData object for FileNamingService compatibility
@@ -106,12 +112,12 @@ export function getPhotoUploadHandlers(
     logoUploadHandler: (file, onProgress) =>
       FirebasePhotoUploadService.uploadPhoto(file, {
         // Legacy field (will be ignored if canonical fields present)
-        folderPath: 'contacts/photos',
+        folderPath: LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
         onProgress,
         enableCompression: true,
-        compressionUsage: 'company-logo',
+        compressionUsage: COMPRESSION_USAGE.COMPANY_LOGO,
         contactData: contactDataForService,
-        purpose: 'logo',
+        purpose: UPLOAD_PURPOSE.LOGO,
         // 🏢 CANONICAL FIELDS (ADR-031)
         ...(canonicalContext && {
           companyId: canonicalContext.companyId,
@@ -123,22 +129,15 @@ export function getPhotoUploadHandlers(
 
     // 🏢 REPRESENTATIVE PHOTO UPLOAD with canonical support
     photoUploadHandler: (file, onProgress) => {
-      console.log('🔍 DEBUG: Representative photo upload starting:', {
-        fileName: file.name,
-        fileSize: file.size,
-        hasCanonicalContext: !!canonicalContext,
-        contactId: canonicalContext?.contactId,
-        companyId: canonicalContext?.companyId,
-        purpose: 'representative',
-      });
+      // 🏢 ENTERPRISE: Debug logging removed - use centralized telemetry in photo-upload.service.ts
       return FirebasePhotoUploadService.uploadPhoto(file, {
         // Legacy field (will be ignored if canonical fields present)
-        folderPath: 'contacts/photos',
+        folderPath: LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
         onProgress,
         enableCompression: true,
-        compressionUsage: 'profile-modal',
+        compressionUsage: COMPRESSION_USAGE.PROFILE_MODAL,
         contactData: contactDataForService,
-        purpose: 'representative',
+        purpose: UPLOAD_PURPOSE.REPRESENTATIVE,
         // 🏢 CANONICAL FIELDS (ADR-031)
         ...(canonicalContext && {
           companyId: canonicalContext.companyId,
@@ -161,8 +160,7 @@ export function createUnifiedPhotosChangeHandler(handlers: UnifiedPhotoHandlers)
   const { onPhotosChange, handleMultiplePhotosChange, setFormData, formData } = handlers;
 
   return onPhotosChange || handleMultiplePhotosChange || ((photos: PhotoSlot[]) => {
-    console.log('🏢 UNIFIED: Photos changed:', photos.length, 'photos');
-    // Default behavior: update formData if available
+    // 🏢 ENTERPRISE: Default behavior - update formData if available
     if (setFormData && formData) {
       setFormData({
         ...formData,

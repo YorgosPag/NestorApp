@@ -15,6 +15,8 @@ import { Switch } from '@/components/ui/switch';
 import { useDynamicBackgroundClass, useDynamicBorderClass } from '@/components/ui/utils/dynamic-styles';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -55,6 +57,8 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('dxf-viewer');
 
   const {
     state: { rulers: rulerSettings },
@@ -143,8 +147,8 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
       {/* Ruler Units */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Μονάδες Μέτρησης</div>
-          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Μονάδα μέτρησης στους χάρακες</div>
+          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.units.measurementTitle')}</div>
+          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.units.measurementDescription')}</div>
         </div>
         <div className={`grid ${PANEL_LAYOUT.GRID.COLS_3} ${PANEL_LAYOUT.GAP.SM}`}>
           {(['mm', 'cm', 'm'] as const).map((unit) => (
@@ -167,12 +171,12 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className="flex items-center justify-between">
           <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-            <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Εμφάνιση Μονάδων</div>
-            <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Εμφάνιση/απόκρυψη μονάδων μέτρησης στους χάρακες</div>
+            <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.units.displayTitle')}</div>
+            <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.units.displayDescription')}</div>
           </div>
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
-              {unitsVisible ? 'Ενεργό' : 'Ανενεργό'}
+              {unitsVisible ? t('rulerSettings.common.active') : t('rulerSettings.common.inactive')}
             </span>
             <Switch
               checked={unitsVisible}
@@ -185,8 +189,8 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
       {/* Units Font Size */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Μέγεθος Μονάδων</div>
-          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Μέγεθος των μονάδων μέτρησης στους χάρακες</div>
+          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.units.sizeTitle')}</div>
+          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.units.sizeDescription')}</div>
         </div>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <input
@@ -207,8 +211,8 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
       {/* Units Color */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Χρώμα Μονάδων</div>
-          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Χρώμα των μονάδων μέτρησης στους χάρακες</div>
+          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.units.colorTitle')}</div>
+          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.units.colorDescription')}</div>
         </div>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <div

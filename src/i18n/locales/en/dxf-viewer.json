@@ -484,10 +484,27 @@
     "mergeEntities": "Merge selected entities",
     "mergeLayers": "Merge selected layers",
     "mergeColorGroups": "Merge selected color groups",
-    "selectAllEntities": "Click to select all entities, Ctrl+Click for multi-selection"
+    "selectAllEntities": "Click to select all entities, Ctrl+Click for multi-selection",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "expandEntities": "Expand entities",
+    "collapseEntities": "Collapse entities",
+    "show": "Show",
+    "hide": "Hide",
+    "doubleClickToRename": "Double-click to rename"
   },
   "search": {
     "layersAndEntities": "Search layers and entities..."
+  },
+  "mergePanel": {
+    "title": "🔗 Multi-Selection Active",
+    "entitiesSelected": "{count} entities selected",
+    "layersSelected": "{count} layers selected",
+    "colorGroupsSelected": "{count} color groups selected",
+    "mergeEntitiesButton": "Merge Entities",
+    "mergeLayersButton": "Merge Layers",
+    "mergeColorGroupsButton": "Merge Color Groups",
+    "tip": "Tip: Ctrl+Click for multi-selection"
   },
   "dynamicInput": {
     "placeholders": {
@@ -708,31 +725,253 @@
     "delete": "Delete"
   },
   "selectionSettings": {
+    "tabs": {
+      "window": "Window Selection",
+      "crossing": "Crossing Selection"
+    },
+    "resetButton": "Reset Selection Settings (DEBUG)",
+    "resetDescription": "Resets all settings to make new borderStyle work",
     "window": {
+      "title": "Window Selection Settings",
+      "description": "Settings for the blue selection box (left to right)",
       "fillColor": "Select Window Fill Color",
-      "borderColor": "Select Window Border Color"
+      "fillColorLabel": "Fill Color",
+      "borderColor": "Select Window Border Color",
+      "borderColorLabel": "Border Color"
     },
     "crossing": {
+      "title": "Crossing Selection Settings",
+      "description": "Settings for the green selection box (right to left)",
       "fillColor": "Select Crossing Fill Color",
-      "borderColor": "Select Crossing Border Color"
+      "fillColorLabel": "Fill Color",
+      "borderColor": "Select Crossing Border Color",
+      "borderColorLabel": "Border Color"
+    },
+    "common": {
+      "fillOpacity": "Fill Opacity",
+      "fillOpacityDesc": "Fill transparency level",
+      "borderOpacity": "Border Opacity",
+      "borderOpacityDesc": "Border transparency level",
+      "borderWidth": "Line Width",
+      "borderWidthDesc": "Border width in pixels",
+      "borderStyle": "Border Style",
+      "borderStyleDesc": "Border line type"
+    },
+    "borderStyles": {
+      "solid": "Solid",
+      "dashed": "Dashed",
+      "dotted": "Dotted",
+      "dashDot": "Dash-Dot"
     }
   },
   "cursorSettings": {
-    "colorPicker": "Select Cursor Color"
+    "colorPicker": "Select Cursor Color",
+    "title": "Cursor Settings",
+    "shape": {
+      "title": "Cursor Shape",
+      "description": "Choose between circle and square",
+      "circle": "Circle",
+      "square": "Square"
+    },
+    "color": {
+      "title": "Cursor Color",
+      "description": "Cursor border color"
+    },
+    "lineStyle": {
+      "title": "Line Type",
+      "description": "Cursor border style"
+    },
+    "lineWidth": {
+      "title": "Cursor Line Width",
+      "description": "Border thickness in pixels"
+    },
+    "size": {
+      "title": "Cursor Size",
+      "description": "Diameter/side in pixels"
+    },
+    "opacity": {
+      "title": "Cursor Opacity",
+      "description": "Cursor transparency level"
+    },
+    "display": {
+      "title": "Show Cursor",
+      "description": "Show/hide cursor circle",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "lineStyles": {
+      "solid": "Solid",
+      "dashed": "Dashed",
+      "dotted": "Dots",
+      "dashDot": "Dash-Dot"
+    }
   },
   "crosshairSettings": {
+    "tabs": {
+      "appearance": "Appearance",
+      "behavior": "Behavior"
+    },
     "colorPicker": "Select Crosshair Color",
-    "appearanceColorPicker": "Select Crosshair Appearance Color"
+    "appearanceColorPicker": "Select Crosshair Appearance Color",
+    "appearance": {
+      "colorTitle": "Crosshair Color",
+      "colorDescription": "Crosshair lines color",
+      "lineStyleTitle": "Line Type",
+      "lineStyleDescription": "Line rendering style",
+      "lineWidthTitle": "Line Width",
+      "lineWidthDescription": "Width in pixels",
+      "sizeTitle": "Crosshair Size",
+      "sizeDescription": "Extension from center"
+    },
+    "behavior": {
+      "colorTitle": "Color",
+      "colorDescription": "Crosshair lines color",
+      "opacityTitle": "Crosshair Opacity",
+      "opacityDescription": "Crosshair transparency level",
+      "cursorGapTitle": "Cursor Gap",
+      "cursorGapDescription": "Lines start outside the cursor"
+    },
+    "lineStyles": {
+      "solid": "Solid",
+      "dashed": "Dashed",
+      "dotted": "Dots",
+      "dashDot": "Dash-Dot"
+    },
+    "common": {
+      "active": "Active",
+      "inactive": "Inactive"
+    }
   },
   "rulerSettings": {
+    "tabs": {
+      "background": "Background",
+      "lines": "Lines",
+      "text": "Text",
+      "units": "Units",
+      "majorLines": "Major Lines",
+      "minorLines": "Minor Lines"
+    },
     "majorLines": {
-      "colorPicker": "Select Major Lines Color"
+      "colorPicker": "Select Major Lines Color",
+      "display": {
+        "title": "Show Major Lines",
+        "description": "Show/hide ruler major lines"
+      },
+      "opacity": {
+        "title": "Major Lines Opacity",
+        "description": "Transparency level of major ruler lines"
+      },
+      "color": {
+        "title": "Major Lines Color",
+        "description": "Color of major ruler lines (ticks)"
+      },
+      "width": {
+        "title": "Major Lines Thickness",
+        "description": "Thickness of major ruler lines"
+      }
     },
     "minorLines": {
-      "colorPicker": "Select Minor Lines Color"
+      "colorPicker": "Select Minor Lines Color",
+      "display": {
+        "title": "Show Minor Lines",
+        "description": "Show/hide ruler minor lines"
+      },
+      "opacity": {
+        "title": "Minor Lines Opacity",
+        "description": "Transparency level of minor ruler lines"
+      },
+      "color": {
+        "title": "Minor Lines Color",
+        "description": "Color of minor ruler lines (ticks)"
+      },
+      "width": {
+        "title": "Minor Lines Thickness",
+        "description": "Thickness of minor ruler lines"
+      }
     },
     "background": {
-      "colorPicker": "Select Ruler Background Color"
+      "colorPicker": "Select Ruler Background Color",
+      "display": {
+        "title": "Show Background",
+        "description": "Show/hide ruler background"
+      },
+      "color": {
+        "title": "Background Color",
+        "description": "Ruler background color"
+      },
+      "opacity": {
+        "title": "Opacity",
+        "description": "Transparency level of rulers"
+      },
+      "width": {
+        "title": "Ruler Width",
+        "description": "Width of ruler in pixels"
+      },
+      "lines": {
+        "title": "Show Lines",
+        "description": "Show/hide measurement lines on rulers"
+      }
+    },
+    "text": {
+      "colorTitle": "Text Color",
+      "colorDescription": "Color of ruler numbers and text",
+      "sizeTitle": "Text Size",
+      "sizeDescription": "Size of numbers on rulers",
+      "displayTitle": "Show Text",
+      "displayDescription": "Show/hide ruler numbers and text"
+    },
+    "units": {
+      "measurementTitle": "Measurement Units",
+      "measurementDescription": "Unit of measurement for rulers",
+      "displayTitle": "Show Units",
+      "displayDescription": "Show/hide units on rulers",
+      "sizeTitle": "Units Size",
+      "sizeDescription": "Size of measurement units on rulers",
+      "colorTitle": "Units Color",
+      "colorDescription": "Color of measurement units on rulers"
+    },
+    "common": {
+      "active": "Active",
+      "inactive": "Inactive"
+    }
+  },
+  "layersSettings": {
+    "tabs": {
+      "outlines": "Outlines",
+      "fills": "Fills"
+    },
+    "title": "Layers Settings",
+    "description": "Colors and appearance of drawing layers",
+    "preview": {
+      "title": "Layer Preview",
+      "description": "See how layers will look"
+    },
+    "outlines": {
+      "colorsTitle": "Outline Colors",
+      "displayTitle": "Show Outlines",
+      "displayDescription": "Enable/Disable outlines"
+    },
+    "fills": {
+      "colorsTitle": "Fill Colors",
+      "opacityTitle": "Fill Opacity",
+      "opacityDescription": "Opacity level for fills",
+      "displayTitle": "Show Fills",
+      "displayDescription": "Enable/Disable fills"
+    },
+    "reset": {
+      "title": "Reset",
+      "description": "Reset to default settings",
+      "button": "Reset Layers Settings"
+    },
+    "comingSoon": {
+      "title": "Coming Soon",
+      "items": {
+        "fillColors": "Layer fill colors",
+        "lineThickness": "Line thickness settings",
+        "lineStyles": "Line styles (dashed, etc.)",
+        "customPalettes": "Custom color palettes",
+        "importExport": "Import/Export color profiles"
+      }
     }
   },
   "entitiesSettings": {
@@ -802,6 +1041,10 @@
       "title": "Settings {tool}",
       "toolSettingsTitle": "Tool Settings",
       "comingSoon": "Settings for this tool will be added soon"
+    },
+    "selectTool": {
+      "title": "Select Tool",
+      "description": "Click on a tool to see its settings"
     }
   },
   "cadDock": {
@@ -832,6 +1075,9 @@
         "line": "Command: LINE"
       },
       "ready": "Ready for command..."
+    },
+    "accessibility": {
+      "layerList": "Layer list"
     }
   },
   "pdfPanel": {
@@ -854,5 +1100,268 @@
     "resetTransform": "Reset Transform",
     "hidePdf": "Hide PDF",
     "showPdf": "Show PDF"
+  },
+  "specificSettings": {
+    "loading": "Loading...",
+    "categories": {
+      "selection": {
+        "title": "Selection",
+        "description": "Object selection settings"
+      },
+      "cursor": {
+        "title": "Cursor",
+        "description": "Cursor and crosshair settings"
+      },
+      "grid": {
+        "title": "Grid & Rulers",
+        "description": "Grid and ruler settings"
+      },
+      "layers": {
+        "title": "Layers",
+        "description": "Layer settings"
+      },
+      "entities": {
+        "title": "Entities",
+        "description": "DXF entity settings"
+      },
+      "grips": {
+        "title": "Grips",
+        "description": "Grip settings (coming soon)"
+      },
+      "lighting": {
+        "title": "Lighting",
+        "description": "Lighting settings (coming soon)"
+      }
+    }
+  },
+  "toolLabels": {
+    "line": "Line",
+    "rectangle": "Rectangle",
+    "circle": "Circle",
+    "pan": "Pan",
+    "zoomWindow": "Zoom Window",
+    "layering": "Layers"
+  },
+  "lineSettings": {
+    "types": {
+      "solid": "Solid",
+      "dashed": "Dashed",
+      "dotted": "Dotted",
+      "dashDot": "Dash-Dot",
+      "dashDotDot": "Dash-Dot-Dot"
+    },
+    "caps": {
+      "butt": "Square",
+      "round": "Round",
+      "square": "Extended"
+    },
+    "joins": {
+      "miter": "Sharp",
+      "round": "Round",
+      "bevel": "Beveled"
+    },
+    "categories": {
+      "engineering": "Engineering Drawings",
+      "architectural": "Architectural",
+      "electrical": "Electrical",
+      "custom": "Custom"
+    },
+    "templates": {
+      "mainLine": {
+        "name": "Main Line",
+        "description": "Continuous line for main elements"
+      },
+      "centerLine": {
+        "name": "Center Line",
+        "description": "Dash-dot for symmetry axes"
+      },
+      "hiddenLine": {
+        "name": "Hidden Line",
+        "description": "Dashed line for hidden elements"
+      },
+      "dimensions": {
+        "name": "Dimensions",
+        "description": "Thin line for dimensions"
+      },
+      "wall": {
+        "name": "Wall",
+        "description": "Thick line for walls"
+      },
+      "furniture": {
+        "name": "Furniture",
+        "description": "Medium line for furniture"
+      },
+      "auxiliary": {
+        "name": "Auxiliary",
+        "description": "Dashed construction lines"
+      },
+      "cables": {
+        "name": "Cables",
+        "description": "Continuous lines for cables"
+      },
+      "signals": {
+        "name": "Signals",
+        "description": "Dash-dot for signals"
+      },
+      "grounding": {
+        "name": "Grounding",
+        "description": "Double dots for grounding"
+      }
+    }
+  },
+  "snapModes": {
+    "labels": {
+      "auto": "Auto",
+      "endpoint": "Endpoint",
+      "midpoint": "Midpoint",
+      "center": "Center",
+      "intersection": "Intersection",
+      "grid": "Grid",
+      "perpendicular": "Perpendicular",
+      "tangent": "Tangent",
+      "parallel": "Parallel",
+      "quadrant": "Quadrant",
+      "nearest": "Nearest",
+      "extension": "Extension",
+      "node": "Node",
+      "insertion": "Insertion",
+      "near": "Near",
+      "ortho": "Ortho"
+    },
+    "tooltips": {
+      "auto": "Auto Snap - Automatically detects the best snap points (F11)",
+      "endpoint": "Endpoints - Snap to end points of lines and arcs (E)",
+      "midpoint": "Midpoints - Snap to the middle of lines and arcs (M)",
+      "center": "Centers - Snap to the center of circles and arcs (C)",
+      "intersection": "Intersections - Snap to intersections of two objects (I)",
+      "grid": "Grid - Snap to grid points (F9)",
+      "perpendicular": "Perpendicular - Snap perpendicular to lines (P)",
+      "tangent": "Tangent - Snap tangent to circles and arcs (T)",
+      "parallel": "Parallel - Snap parallel to existing lines (L)",
+      "quadrant": "Quadrants - Snap to quadrants of circles (Q)",
+      "nearest": "Nearest - Snap to the nearest point on an object (N)",
+      "extension": "Extension - Snap to line extensions (X)",
+      "node": "Nodes - Snap to nodes and points (D)",
+      "insertion": "Insertion - Snap to insertion points (INS)",
+      "near": "Near - Snap near objects (R)",
+      "ortho": "Ortho - Constrain to horizontal/vertical lines (F8)"
+    },
+    "ui": {
+      "showAdvanced": "Show advanced features",
+      "hideAdvanced": "Hide advanced features"
+    }
+  },
+  "toolGroups": {
+    "selection": "Selection",
+    "drawing": "Drawing",
+    "tools": "Tools",
+    "measurements": "Measurements",
+    "zoom": "Zoom"
+  },
+  "tools": {
+    "select": "Select",
+    "pan": "Pan",
+    "line": "Line",
+    "rectangle": "Rectangle",
+    "circleRadius": "Circle (Radius)",
+    "circleDiameter": "Circle (Diameter)",
+    "circle2pDiameter": "Circle (2 Points Diameter)",
+    "circle3p": "Circle (3 Points)",
+    "circleChordSagitta": "Circle (Chord-Sagitta)",
+    "circle2pRadius": "Circle (2 Points + Radius)",
+    "circleBestFit": "Circle (Best Fit)",
+    "polyline": "Polyline",
+    "polygon": "Polygon",
+    "layering": "Layers",
+    "gripEdit": "Grip Edit",
+    "move": "Move",
+    "copy": "Copy",
+    "delete": "Delete",
+    "measureDistance": "Measure Distance",
+    "measureArea": "Measure Area",
+    "measureAngle": "Measure Angle",
+    "measureAngleBasic": "Basic Angle",
+    "measureAngleLineArc": "Line-Arc Angle",
+    "measureAngleTwoArcs": "Two Arcs Angle",
+    "measureAngleMeasuregeom": "MeasureGeom",
+    "measureAngleConstraint": "Angle Constraint",
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out",
+    "zoomWindow": "Zoom Window",
+    "zoomExtents": "Zoom Extents",
+    "undo": "Undo",
+    "redo": "Redo",
+    "cursorSettings": "Cursor Settings",
+    "fitToView": "Fit to View",
+    "export": "Export",
+    "runTests": "Run Tests",
+    "togglePerf": "Performance Monitor",
+    "pdfBackground": "PDF Background"
+  },
+  "actionButtons": {
+    "showGrid": "Show Grid",
+    "hideGrid": "Hide Grid",
+    "autoCropOn": "Auto-Crop ON",
+    "autoCropOff": "Auto-Crop OFF"
+  },
+  "textTemplates": {
+    "normalText": {
+      "name": "Normal Text",
+      "description": "Basic text for general use (ISO 3098)"
+    },
+    "heading": {
+      "name": "Heading",
+      "description": "Large heading (ISO 3098)"
+    },
+    "technicalText": {
+      "name": "Technical Text",
+      "description": "Text for technical drawings (ISO 3098)"
+    },
+    "categories": {
+      "heading": "Headings",
+      "body": "Body Text",
+      "technical": "Technical",
+      "artistic": "Artistic",
+      "custom": "Custom"
+    }
+  },
+  "importWizard": {
+    "preview": {
+      "title": "Ready for Import",
+      "description": "Review the import settings and click Import to add the DXF file to your project.",
+      "fileInfo": {
+        "title": "File Information",
+        "file": "File:",
+        "size": "Size:",
+        "type": "Type:",
+        "unknown": "Unknown"
+      },
+      "levelAssignment": {
+        "title": "Level Assignment",
+        "destination": "Destination Level:",
+        "action": "Action:",
+        "addToExisting": "Add to existing level",
+        "createNew": "Create new level"
+      },
+      "scaleUnits": {
+        "title": "Scale & Units",
+        "units": "Units:",
+        "millimeters": "millimeters",
+        "scale": "Scale:",
+        "native": "Native (1:1)",
+        "calibration": "Calibration:",
+        "applied": "Applied",
+        "none": "None"
+      },
+      "processing": {
+        "title": "DXF Processing",
+        "autoCrop": "Auto-cropping of empty area around the floor plan will be applied"
+      },
+      "whatNext": {
+        "title": "What happens next?",
+        "analyze": "The DXF file will be analyzed and imported"
+      },
+      "newLevelWarning": "New level will be created:"
+    }
   }
 }

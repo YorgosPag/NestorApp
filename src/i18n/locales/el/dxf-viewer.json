@@ -476,10 +476,27 @@
     "mergeEntities": "Συγχώνευση επιλεγμένων entities",
     "mergeLayers": "Συγχώνευση επιλεγμένων layers",
     "mergeColorGroups": "Συγχώνευση επιλεγμένων color groups",
-    "selectAllEntities": "Κλικ για επιλογή όλων των entities, Ctrl+Κλικ για multi-selection"
+    "selectAllEntities": "Κλικ για επιλογή όλων των entities, Ctrl+Κλικ για multi-selection",
+    "expand": "Ανάπτυξη",
+    "collapse": "Σύμπτυξη",
+    "expandEntities": "Ανάπτυξη στοιχείων",
+    "collapseEntities": "Σύμπτυξη στοιχείων",
+    "show": "Εμφάνιση",
+    "hide": "Απόκρυψη",
+    "doubleClickToRename": "Double-click για μετονομασία"
   },
   "search": {
     "layersAndEntities": "Αναζήτηση layers και entities..."
+  },
+  "mergePanel": {
+    "title": "🔗 Πολλαπλή Επιλογή Ενεργή",
+    "entitiesSelected": "{count} entities επιλεγμένες",
+    "layersSelected": "{count} layers επιλεγμένα",
+    "colorGroupsSelected": "{count} color groups επιλεγμένα",
+    "mergeEntitiesButton": "Συγχώνευση Entities",
+    "mergeLayersButton": "Συγχώνευση Layers",
+    "mergeColorGroupsButton": "Συγχώνευση Color Groups",
+    "tip": "Συμβουλή: Ctrl+Click για πολλαπλή επιλογή"
   },
   "dynamicInput": {
     "placeholders": {
@@ -565,31 +582,253 @@
     "delete": "Διαγραφή"
   },
   "selectionSettings": {
+    "tabs": {
+      "window": "Window Selection",
+      "crossing": "Crossing Selection"
+    },
+    "resetButton": "Reset Selection Settings (DEBUG)",
+    "resetDescription": "Κάνει reset όλες τις ρυθμίσεις για να λειτουργήσουν τα νέα borderStyle",
     "window": {
+      "title": "Window Selection Settings",
+      "description": "Ρυθμίσεις για το μπλε κουτί επιλογής (αριστερά προς δεξιά)",
       "fillColor": "Επιλογή Χρώματος Γεμίσματος Window",
-      "borderColor": "Επιλογή Χρώματος Περιγράμματος Window"
+      "fillColorLabel": "Χρώμα Γεμίσματος",
+      "borderColor": "Επιλογή Χρώματος Περιγράμματος Window",
+      "borderColorLabel": "Χρώμα Περιγράμματος"
     },
     "crossing": {
+      "title": "Crossing Selection Settings",
+      "description": "Ρυθμίσεις για το πράσινο κουτί επιλογής (δεξιά προς αριστερά)",
       "fillColor": "Επιλογή Χρώματος Γεμίσματος Crossing",
-      "borderColor": "Επιλογή Χρώματος Περιγράμματος Crossing"
+      "fillColorLabel": "Χρώμα Γεμίσματος",
+      "borderColor": "Επιλογή Χρώματος Περιγράμματος Crossing",
+      "borderColorLabel": "Χρώμα Περιγράμματος"
+    },
+    "common": {
+      "fillOpacity": "Διαφάνεια Γεμίσματος",
+      "fillOpacityDesc": "Επίπεδο διαφάνειας του γεμίσματος",
+      "borderOpacity": "Διαφάνεια Περιγράμματος",
+      "borderOpacityDesc": "Επίπεδο διαφάνειας του περιγράμματος",
+      "borderWidth": "Πάχος Γραμμής",
+      "borderWidthDesc": "Πάχος περιγράμματος σε pixels",
+      "borderStyle": "Είδος Περιγράμματος",
+      "borderStyleDesc": "Τύπος γραμμής περιγράμματος"
+    },
+    "borderStyles": {
+      "solid": "Συνεχόμενη",
+      "dashed": "Διακεκομμένη",
+      "dotted": "Κουκίδες",
+      "dashDot": "Παύλα-Τελεία"
     }
   },
   "cursorSettings": {
-    "colorPicker": "Επιλογή Χρώματος Κέρσορα"
+    "colorPicker": "Επιλογή Χρώματος Κέρσορα",
+    "title": "Ρυθμίσεις Κέρσορα",
+    "shape": {
+      "title": "Σχήμα Κέρσορα",
+      "description": "Επιλογή μεταξύ κύκλου και τετραγώνου",
+      "circle": "Κύκλος",
+      "square": "Τετράγωνο"
+    },
+    "color": {
+      "title": "Χρώμα Κέρσορα",
+      "description": "Χρώμα περιγράμματος κέρσορα"
+    },
+    "lineStyle": {
+      "title": "Είδος Γραμμής",
+      "description": "Στυλ περιγράμματος κέρσορα"
+    },
+    "lineWidth": {
+      "title": "Πάχος Γραμμής Κέρσορα",
+      "description": "Πάχος περιγράμματος σε pixels"
+    },
+    "size": {
+      "title": "Μέγεθος Κέρσορα",
+      "description": "Διάμετρος/πλευρά σε pixels"
+    },
+    "opacity": {
+      "title": "Διαφάνεια Κέρσορα",
+      "description": "Επίπεδο διαφάνειας του κέρσορα"
+    },
+    "display": {
+      "title": "Εμφάνιση Κέρσορα",
+      "description": "Εμφάνιση/απόκρυψη κύκλου κέρσορα",
+      "enabled": "Ενεργό",
+      "disabled": "Απενεργοποιημένο"
+    },
+    "lineStyles": {
+      "solid": "Συνεχόμενη",
+      "dashed": "Διακεκομμένη",
+      "dotted": "Τελείες",
+      "dashDot": "Παύλα-Τελεία"
+    }
   },
   "crosshairSettings": {
+    "tabs": {
+      "appearance": "Εμφάνιση",
+      "behavior": "Συμπεριφορά"
+    },
     "colorPicker": "Επιλογή Χρώματος Crosshair",
-    "appearanceColorPicker": "Επιλογή Χρώματος Σταυρώνυματος"
+    "appearanceColorPicker": "Επιλογή Χρώματος Σταυρώνυματος",
+    "appearance": {
+      "colorTitle": "Χρώμα Σταυρονήματος",
+      "colorDescription": "Χρώμα γραμμών σταυρώνυματος",
+      "lineStyleTitle": "Τύπος Γραμμής",
+      "lineStyleDescription": "Στυλ απόδοσης γραμμών",
+      "lineWidthTitle": "Πάχος Γραμμής",
+      "lineWidthDescription": "Πάχος σε pixels",
+      "sizeTitle": "Μέγεθος Σταυρονήματος",
+      "sizeDescription": "Επέκταση από το κέντρο"
+    },
+    "behavior": {
+      "colorTitle": "Χρώμα",
+      "colorDescription": "Χρώμα γραμμών σταυρώνυματος",
+      "opacityTitle": "Διαφάνεια Σταυρονήματος",
+      "opacityDescription": "Επίπεδο διαφάνειας του σταυρονήματος",
+      "cursorGapTitle": "Cursor Gap",
+      "cursorGapDescription": "Οι γραμμές ξεκινάνε έξω από τον κέρσορα"
+    },
+    "lineStyles": {
+      "solid": "Συνεχόμενη",
+      "dashed": "Διακεκομμένη",
+      "dotted": "Τελείες",
+      "dashDot": "Παύλα-Τελεία"
+    },
+    "common": {
+      "active": "Ενεργό",
+      "inactive": "Ανενεργό"
+    }
   },
   "rulerSettings": {
+    "tabs": {
+      "background": "Φόντο",
+      "lines": "Γραμμές",
+      "text": "Κείμενα",
+      "units": "Μονάδες",
+      "majorLines": "Κύριες Γραμμές",
+      "minorLines": "Δευτερεύουσες Γραμμές"
+    },
     "majorLines": {
-      "colorPicker": "Επιλογή Χρώματος Κύριων Γραμμών Χάρακα"
+      "colorPicker": "Επιλογή Χρώματος Κύριων Γραμμών Χάρακα",
+      "display": {
+        "title": "Εμφάνιση Κύριων Γραμμών",
+        "description": "Εμφάνιση/απόκρυψη των κύριων γραμμών χάρακα"
+      },
+      "opacity": {
+        "title": "Διαφάνεια Κύριων Γραμμών",
+        "description": "Επίπεδο διαφάνειας των κύριων γραμμών χάρακα"
+      },
+      "color": {
+        "title": "Χρώμα Κύριων Γραμμών",
+        "description": "Χρώμα κύριων γραμμών (ticks) χαράκων"
+      },
+      "width": {
+        "title": "Πάχος Κύριων Γραμμών",
+        "description": "Πάχος των κύριων γραμμών του χάρακα"
+      }
     },
     "minorLines": {
-      "colorPicker": "Επιλογή Χρώματος Δευτερευουσών Γραμμών Χάρακα"
+      "colorPicker": "Επιλογή Χρώματος Δευτερευουσών Γραμμών Χάρακα",
+      "display": {
+        "title": "Εμφάνιση Δευτερευουσών Γραμμών",
+        "description": "Εμφάνιση/απόκρυψη των δευτερευουσών γραμμών χάρακα"
+      },
+      "opacity": {
+        "title": "Διαφάνεια Δευτερευουσών Γραμμών",
+        "description": "Επίπεδο διαφάνειας των δευτερευουσών γραμμών χάρακα"
+      },
+      "color": {
+        "title": "Χρώμα Δευτερευουσών Γραμμών",
+        "description": "Χρώμα δευτερευουσών γραμμών (ticks) χαράκων"
+      },
+      "width": {
+        "title": "Πάχος Δευτερευουσών Γραμμών",
+        "description": "Πάχος των δευτερευουσών γραμμών του χάρακα"
+      }
     },
     "background": {
-      "colorPicker": "Επιλογή Χρώματος Φόντου Χάρακα"
+      "colorPicker": "Επιλογή Χρώματος Φόντου Χάρακα",
+      "display": {
+        "title": "Εμφάνιση Φόντου",
+        "description": "Εμφάνιση/απόκρυψη του φόντου των χαράκων"
+      },
+      "color": {
+        "title": "Χρώμα Φόντου",
+        "description": "Χρώμα φόντου του χάρακα"
+      },
+      "opacity": {
+        "title": "Διαφάνεια",
+        "description": "Επίπεδο διαφάνειας των χαράκων"
+      },
+      "width": {
+        "title": "Πλάτος Χάρακα",
+        "description": "Πλάτος του χάρακα σε pixels"
+      },
+      "lines": {
+        "title": "Εμφάνιση Γραμμών",
+        "description": "Εμφάνιση/απόκρυψη γραμμών μέτρησης στους χάρακες"
+      }
+    },
+    "text": {
+      "colorTitle": "Χρώμα Κειμένων",
+      "colorDescription": "Χρώμα αριθμών και κειμένων χαράκων",
+      "sizeTitle": "Μέγεθος Κειμένου",
+      "sizeDescription": "Μέγεθος των αριθμών στους χάρακες",
+      "displayTitle": "Εμφάνιση Κειμένων",
+      "displayDescription": "Εμφάνιση/απόκρυψη αριθμών και κειμένων στους χάρακες"
+    },
+    "units": {
+      "measurementTitle": "Μονάδες Μέτρησης",
+      "measurementDescription": "Μονάδα μέτρησης στους χάρακες",
+      "displayTitle": "Εμφάνιση Μονάδων",
+      "displayDescription": "Εμφάνιση/απόκρυψη μονάδων μέτρησης στους χάρακες",
+      "sizeTitle": "Μέγεθος Μονάδων",
+      "sizeDescription": "Μέγεθος των μονάδων μέτρησης στους χάρακες",
+      "colorTitle": "Χρώμα Μονάδων",
+      "colorDescription": "Χρώμα των μονάδων μέτρησης στους χάρακες"
+    },
+    "common": {
+      "active": "Ενεργό",
+      "inactive": "Ανενεργό"
+    }
+  },
+  "layersSettings": {
+    "tabs": {
+      "outlines": "Περιγράμματα",
+      "fills": "Γεμίσματα"
+    },
+    "title": "Ρυθμίσεις Layers",
+    "description": "Χρώματα και εμφάνιση επιπέδων σχεδίασης",
+    "preview": {
+      "title": "Προεπισκόπηση Layer",
+      "description": "Δείτε πώς θα φαίνονται τα layers"
+    },
+    "outlines": {
+      "colorsTitle": "Χρώματα Περιγραμμάτων",
+      "displayTitle": "Εμφάνιση Περιγραμμάτων",
+      "displayDescription": "Ενεργοποίηση/Απενεργοποίηση των περιγραμμάτων"
+    },
+    "fills": {
+      "colorsTitle": "Χρώματα Γεμισμάτων",
+      "opacityTitle": "Διαφάνεια Γεμίσματος",
+      "opacityDescription": "Επίπεδο διαφάνειας για το γέμισμα",
+      "displayTitle": "Εμφάνιση Γεμισμάτων",
+      "displayDescription": "Ενεργοποίηση/Απενεργοποίηση των γεμισμάτων"
+    },
+    "reset": {
+      "title": "Επαναφορά",
+      "description": "Επαναφορά στις προεπιλεγμένες ρυθμίσεις",
+      "button": "Επαναφορά Ρυθμίσεων Layers"
+    },
+    "comingSoon": {
+      "title": "Σύντομα Διαθέσιμο",
+      "items": {
+        "fillColors": "Χρώματα γεμίσματος layers",
+        "lineThickness": "Ρυθμίσεις πάχους γραμμών",
+        "lineStyles": "Στυλ γραμμών (διακεκομμένη, κλπ)",
+        "customPalettes": "Εξατομικευμένες παλέτες χρωμάτων",
+        "importExport": "Import/Export προφίλ χρωμάτων"
+      }
     }
   },
   "entitiesSettings": {
@@ -659,6 +898,10 @@
       "title": "Ρυθμίσεις {tool}",
       "toolSettingsTitle": "Ρυθμίσεις Εργαλείου",
       "comingSoon": "Οι ρυθμίσεις για αυτό το εργαλείο θα προστεθούν σύντομα"
+    },
+    "selectTool": {
+      "title": "Επιλέξτε Εργαλείο",
+      "description": "Κάντε κλικ σε ένα εργαλείο για να δείτε τις ρυθμίσεις του"
     }
   },
   "calibration": {
@@ -800,53 +1043,319 @@
   },
   "cadDock": {
     "panels": {
-      "objectSnap": "Object Snap",
-      "layers": "Layers",
-      "properties": "Properties",
-      "commands": "Commands"
+      "objectSnap": "Σημεία Πρόσδεσης",
+      "layers": "Επίπεδα",
+      "properties": "Ιδιότητες",
+      "commands": "Εντολές"
     },
     "snapModes": {
-      "title": "Object Snap",
-      "description": "Κλικ για εναλλαγή snap modes"
+      "title": "Σημεία Πρόσδεσης",
+      "description": "Κλικ για εναλλαγή λειτουργιών πρόσδεσης"
     },
     "layers": {
-      "default": "0 - Default",
-      "geometry": "Geometry",
-      "dimensions": "Dimensions"
+      "default": "0 - Προεπιλογή",
+      "geometry": "Γεωμετρία",
+      "dimensions": "Διαστάσεις"
     },
     "properties": {
-      "layer": "Layer:",
-      "color": "Color:"
+      "layer": "Επίπεδο:",
+      "color": "Χρώμα:"
     },
     "history": {
-      "title": "Command History",
+      "title": "Ιστορικό Εντολών",
       "commands": {
-        "fit": "Command: FIT",
-        "zoomWindow": "Command: ZOOM Window",
-        "line": "Command: LINE"
+        "fit": "Εντολή: FIT",
+        "zoomWindow": "Εντολή: ZOOM Window",
+        "line": "Εντολή: LINE"
       },
-      "ready": "Ready for command..."
+      "ready": "Έτοιμο για εντολή..."
+    },
+    "accessibility": {
+      "layerList": "Λίστα επιπέδων"
     }
   },
   "pdfPanel": {
-    "title": "PDF Background",
-    "upload": "Upload PDF",
-    "loading": "Loading...",
-    "selectFile": "Select a PDF file to use as background",
-    "removePdf": "Remove PDF",
-    "pageInfo": "Page {currentPage} of {numPages}",
-    "previousPage": "Previous page",
-    "nextPage": "Next page",
-    "scale": "Scale",
-    "zoomOut": "Zoom out",
-    "zoomIn": "Zoom in",
-    "rotation": "Rotation",
-    "rotateCcw": "Rotate counter-clockwise",
-    "rotateCw": "Rotate clockwise",
-    "opacity": "Opacity",
-    "fitToView": "Fit to View",
-    "resetTransform": "Reset Transform",
-    "hidePdf": "Hide PDF",
-    "showPdf": "Show PDF"
+    "title": "Φόντο PDF",
+    "upload": "Μεταφόρτωση PDF",
+    "loading": "Φόρτωση...",
+    "selectFile": "Επιλέξτε ένα αρχείο PDF για χρήση ως φόντο",
+    "removePdf": "Αφαίρεση PDF",
+    "pageInfo": "Σελίδα {currentPage} από {numPages}",
+    "previousPage": "Προηγούμενη σελίδα",
+    "nextPage": "Επόμενη σελίδα",
+    "scale": "Κλίμακα",
+    "zoomOut": "Σμίκρυνση",
+    "zoomIn": "Μεγέθυνση",
+    "rotation": "Περιστροφή",
+    "rotateCcw": "Περιστροφή αριστερόστροφα",
+    "rotateCw": "Περιστροφή δεξιόστροφα",
+    "opacity": "Αδιαφάνεια",
+    "fitToView": "Προσαρμογή στην Προβολή",
+    "resetTransform": "Επαναφορά Μετασχηματισμού",
+    "hidePdf": "Απόκρυψη PDF",
+    "showPdf": "Εμφάνιση PDF"
+  },
+  "specificSettings": {
+    "loading": "Φόρτωση...",
+    "categories": {
+      "selection": {
+        "title": "Επιλογή (Selection)",
+        "description": "Ρυθμίσεις επιλογής αντικειμένων"
+      },
+      "cursor": {
+        "title": "Κέρσορας (Cursor)",
+        "description": "Ρυθμίσεις κέρσορα και σταυρονήματος"
+      },
+      "grid": {
+        "title": "Πλέγμα & Χάρακες (Grid & Rulers)",
+        "description": "Ρυθμίσεις πλέγματος και χαράκων"
+      },
+      "layers": {
+        "title": "Επίπεδα (Layers)",
+        "description": "Ρυθμίσεις επιπέδων"
+      },
+      "entities": {
+        "title": "Οντότητες (Entities)",
+        "description": "Ρυθμίσεις οντοτήτων DXF"
+      },
+      "grips": {
+        "title": "Grips",
+        "description": "Ρυθμίσεις grips (σύντομα)"
+      },
+      "lighting": {
+        "title": "Φωτισμός (Lighting)",
+        "description": "Ρυθμίσεις φωτισμού (σύντομα)"
+      }
+    }
+  },
+  "toolLabels": {
+    "line": "Γραμμή",
+    "rectangle": "Ορθογώνιο",
+    "circle": "Κύκλος",
+    "pan": "Μετακίνηση",
+    "zoomWindow": "Παράθυρο Zoom",
+    "layering": "Επίπεδα"
+  },
+  "lineSettings": {
+    "types": {
+      "solid": "Συνεχής",
+      "dashed": "Διακεκομμένη",
+      "dotted": "Κουκκίδες",
+      "dashDot": "Παύλα-Κουκκίδα",
+      "dashDotDot": "Παύλα-Κουκκίδα-Κουκκίδα"
+    },
+    "caps": {
+      "butt": "Τετράγωνη",
+      "round": "Στρογγυλή",
+      "square": "Προεκτεταμένη"
+    },
+    "joins": {
+      "miter": "Αιχμηρή",
+      "round": "Στρογγυλή",
+      "bevel": "Λοξή"
+    },
+    "categories": {
+      "engineering": "Τεχνικά Σχέδια",
+      "architectural": "Αρχιτεκτονικά",
+      "electrical": "Ηλεκτρολογικά",
+      "custom": "Προσαρμοσμένα"
+    },
+    "templates": {
+      "mainLine": {
+        "name": "Κύρια Γραμμή",
+        "description": "Συνεχόμενη γραμμή για κύρια στοιχεία"
+      },
+      "centerLine": {
+        "name": "Κεντρική Γραμμή",
+        "description": "Παύλες-τελείες για άξονες συμμετρίας"
+      },
+      "hiddenLine": {
+        "name": "Κρυφή Γραμμή",
+        "description": "Διακεκομμένη γραμμή για κρυφά στοιχεία"
+      },
+      "dimensions": {
+        "name": "Διαστάσεις",
+        "description": "Λεπτή γραμμή για διαστάσεις"
+      },
+      "wall": {
+        "name": "Τοίχος",
+        "description": "Παχιά γραμμή για τοίχους"
+      },
+      "furniture": {
+        "name": "Έπιπλα",
+        "description": "Μεσαία γραμμή για έπιπλα"
+      },
+      "auxiliary": {
+        "name": "Βοηθητικές",
+        "description": "Διακεκομμένες γραμμές κατασκευής"
+      },
+      "cables": {
+        "name": "Καλώδια",
+        "description": "Συνεχόμενες γραμμές για καλώδια"
+      },
+      "signals": {
+        "name": "Σήματα",
+        "description": "Παύλες-τελείες για σήματα"
+      },
+      "grounding": {
+        "name": "Γείωση",
+        "description": "Διπλές τελείες για γείωση"
+      }
+    }
+  },
+  "snapModes": {
+    "labels": {
+      "auto": "Αυτόματο",
+      "endpoint": "Άκρο",
+      "midpoint": "Μέσο",
+      "center": "Κέντρο",
+      "intersection": "Τομή",
+      "grid": "Πλέγμα",
+      "perpendicular": "Κάθετος",
+      "tangent": "Εφαπτομένη",
+      "parallel": "Παράλληλος",
+      "quadrant": "Τεταρτημόριο",
+      "nearest": "Κοντινότερο",
+      "extension": "Επέκταση",
+      "node": "Κόμβος",
+      "insertion": "Εισαγωγή",
+      "near": "Πλησίον",
+      "ortho": "Ορθογώνιος"
+    },
+    "tooltips": {
+      "auto": "Αυτόματο Snap - Ανιχνεύει αυτόματα τα καλύτερα σημεία (F11)",
+      "endpoint": "Άκρα Γραμμών - Snap στα τελικά σημεία γραμμών και τόξων (E)",
+      "midpoint": "Μέσα Σημεία - Snap στο μέσο γραμμών και τόξων (M)",
+      "center": "Κέντρα - Snap στο κέντρο κύκλων και τόξων (C)",
+      "intersection": "Τομές - Snap στις τομές δύο αντικειμένων (I)",
+      "grid": "Πλέγμα - Snap στα σημεία του πλέγματος (F9)",
+      "perpendicular": "Κάθετος - Snap κάθετα σε γραμμές (P)",
+      "tangent": "Εφαπτόμενη - Snap εφαπτόμενα σε κύκλους και τόξα (T)",
+      "parallel": "Παράλληλος - Snap παράλληλα με υπάρχουσες γραμμές (L)",
+      "quadrant": "Τεταρτημόρια - Snap στα τεταρτημόρια κύκλων (Q)",
+      "nearest": "Κοντινότερο - Snap στο πλησιέστερο σημείο αντικειμένου (N)",
+      "extension": "Επέκταση - Snap σε επεκτάσεις γραμμών (X)",
+      "node": "Κόμβοι - Snap σε κόμβους και σημεία (D)",
+      "insertion": "Εισαγωγή - Snap σε σημεία εισαγωγής (INS)",
+      "near": "Πλησίον - Snap κοντά σε αντικείμενα (R)",
+      "ortho": "Ορθογώνιος - Περιορισμός σε οριζόντιες/κάθετες γραμμές (F8)"
+    },
+    "ui": {
+      "showAdvanced": "Εμφάνιση προχωρημένων λειτουργιών",
+      "hideAdvanced": "Απόκρυψη προχωρημένων λειτουργιών"
+    }
+  },
+  "toolGroups": {
+    "selection": "Επιλογή",
+    "drawing": "Σχεδίαση",
+    "tools": "Εργαλεία",
+    "measurements": "Μετρήσεις",
+    "zoom": "Εστίαση"
+  },
+  "tools": {
+    "select": "Επιλογή",
+    "pan": "Μετακίνηση",
+    "line": "Γραμμή",
+    "rectangle": "Ορθογώνιο",
+    "circleRadius": "Κύκλος (Ακτίνα)",
+    "circleDiameter": "Κύκλος (Διάμετρος)",
+    "circle2pDiameter": "Κύκλος (2 Σημεία Διάμετρος)",
+    "circle3p": "Κύκλος (3 Σημεία)",
+    "circleChordSagitta": "Κύκλος (Χορδή-Βέλος)",
+    "circle2pRadius": "Κύκλος (2 Σημεία + Ακτίνα)",
+    "circleBestFit": "Κύκλος (Βέλτιστη Προσαρμογή)",
+    "polyline": "Πολυγραμμή",
+    "polygon": "Πολύγωνο",
+    "layering": "Επίπεδα",
+    "gripEdit": "Επεξεργασία Λαβών",
+    "move": "Μετακίνηση",
+    "copy": "Αντιγραφή",
+    "delete": "Διαγραφή",
+    "measureDistance": "Μέτρηση Απόστασης",
+    "measureArea": "Μέτρηση Εμβαδού",
+    "measureAngle": "Μέτρηση Γωνίας",
+    "measureAngleBasic": "Βασική Γωνία",
+    "measureAngleLineArc": "Γωνία Γραμμής-Τόξου",
+    "measureAngleTwoArcs": "Γωνία Δύο Τόξων",
+    "measureAngleMeasuregeom": "MeasureGeom",
+    "measureAngleConstraint": "Περιορισμός Γωνίας",
+    "zoomIn": "Μεγέθυνση",
+    "zoomOut": "Σμίκρυνση",
+    "zoomWindow": "Παράθυρο Zoom",
+    "zoomExtents": "Εστίαση Ορίων",
+    "undo": "Αναίρεση",
+    "redo": "Επανάληψη",
+    "cursorSettings": "Ρυθμίσεις Δρομέα",
+    "fitToView": "Προσαρμογή στην Προβολή",
+    "export": "Εξαγωγή",
+    "runTests": "Εκτέλεση Tests",
+    "togglePerf": "Παρακολούθηση Απόδοσης",
+    "pdfBackground": "PDF Υπόβαθρο"
+  },
+  "actionButtons": {
+    "showGrid": "Εμφάνιση Πλέγματος",
+    "hideGrid": "Απόκρυψη Πλέγματος",
+    "autoCropOn": "Auto-Crop ΟΝ",
+    "autoCropOff": "Auto-Crop OFF"
+  },
+  "textTemplates": {
+    "normalText": {
+      "name": "Κανονικό Κείμενο",
+      "description": "Βασικό κείμενο για γενική χρήση (ISO 3098)"
+    },
+    "heading": {
+      "name": "Τίτλος",
+      "description": "Μεγάλος τίτλος (ISO 3098)"
+    },
+    "technicalText": {
+      "name": "Τεχνικό Κείμενο",
+      "description": "Κείμενο για τεχνικά σχέδια (ISO 3098)"
+    },
+    "categories": {
+      "heading": "Επικεφαλίδες",
+      "body": "Κείμενο",
+      "technical": "Τεχνικό",
+      "artistic": "Καλλιτεχνικό",
+      "custom": "Προσαρμοσμένο"
+    }
+  },
+  "importWizard": {
+    "preview": {
+      "title": "Έτοιμο για Εισαγωγή",
+      "description": "Ελέγξτε τις ρυθμίσεις εισαγωγής και κάντε κλικ στο Εισαγωγή για να προσθέσετε το DXF αρχείο στο έργο σας.",
+      "fileInfo": {
+        "title": "Πληροφορίες Αρχείου",
+        "file": "Αρχείο:",
+        "size": "Μέγεθος:",
+        "type": "Τύπος:",
+        "unknown": "Άγνωστο"
+      },
+      "levelAssignment": {
+        "title": "Ανάθεση Επιπέδου",
+        "destination": "Επίπεδο Προορισμού:",
+        "action": "Ενέργεια:",
+        "addToExisting": "Προσθήκη σε υπάρχον επίπεδο",
+        "createNew": "Δημιουργία νέου επιπέδου"
+      },
+      "scaleUnits": {
+        "title": "Κλίμακα & Μονάδες",
+        "units": "Μονάδες:",
+        "millimeters": "χιλιοστά",
+        "scale": "Κλίμακα:",
+        "native": "Εγγενής (1:1)",
+        "calibration": "Βαθμονόμηση:",
+        "applied": "Εφαρμοσμένη",
+        "none": "Καμία"
+      },
+      "processing": {
+        "title": "Επεξεργασία DXF",
+        "autoCrop": "Θα γίνει αυτόματη περικοπή κενής περιοχής γύρω από την κάτοψη"
+      },
+      "whatNext": {
+        "title": "Τι συμβαίνει στη συνέχεια;",
+        "analyze": "Το DXF αρχείο θα αναλυθεί και θα εισαχθεί"
+      },
+      "newLevelWarning": "Θα δημιουργηθεί νέο επίπεδο:"
+    }
   }
 }

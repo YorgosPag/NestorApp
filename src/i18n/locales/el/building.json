@@ -334,7 +334,37 @@
       "refresh": "Ανανέωση",
       "archive": "Αρχειοθέτηση",
       "favorite": "Αγαπημένα",
-      "help": "Βοήθεια"
+      "favorites": "Αγαπημένα",
+      "help": "Βοήθεια",
+      "filters": "Φίλτρα",
+      "preview": "Προεπισκόπηση",
+      "copy": "Αντιγραφή",
+      "share": "Κοινοποίηση",
+      "reports": "Αναφορές",
+      "settings": "Ρυθμίσεις",
+      "favoritesManagement": "Διαχείριση Αγαπημένων",
+      "sorting": "Ταξινόμηση"
+    },
+    "ui": {
+      "clearAllCount": "Καθαρισμός όλων ({count})",
+      "itemsSelected": "{count} επιλεγμένα"
+    },
+    "communications": {
+      "channels": {
+        "all": "Όλα τα κανάλια",
+        "email": "Email",
+        "sms": "SMS",
+        "telegram": "Telegram"
+      },
+      "status": {
+        "all": "Όλες οι καταστάσεις",
+        "sent": "Απεσταλμένα",
+        "received": "Ληφθέντα",
+        "pending": "Εκκρεμή",
+        "failed": "Αποτυχημένα"
+      },
+      "important": "Σημαντικά",
+      "markAsImportant": "Σήμανση ως σημαντικό"
     },
     "tooltips": {
       "new": "Προσθήκη νέου κτιρίου (Ctrl+N)",
@@ -354,7 +384,14 @@
       "status": "Κατάσταση",
       "statusLabel": "Κατάσταση κτιρίου",
       "type": "Τύπος",
-      "typeLabel": "Τύπος κτιρίου"
+      "typeLabel": "Τύπος κτιρίου",
+      "categories": {
+        "status": "Κατάσταση",
+        "buildingType": "Τύπος Κτιρίου",
+        "contactType": "Τύπος Επαφής",
+        "parkingType": "Τύπος Στάθμευσης",
+        "channel": "Κανάλι Επικοινωνίας"
+      }
     },
     "sort": {
       "label": "Ταξινόμηση",
@@ -362,7 +399,23 @@
       "ascending": "Αύξουσα (A-Z)",
       "descending": "Φθίνουσα (Z-A)",
       "byDate": "Κατά ημερομηνία",
-      "bySize": "Κατά μέγεθος"
+      "bySize": "Κατά μέγεθος",
+      "name": {
+        "asc": "Όνομα (Α-Ω)",
+        "desc": "Όνομα (Ω-Α)"
+      },
+      "date": {
+        "asc": "Ημερομηνία (Παλαιότερα)",
+        "desc": "Ημερομηνία (Νεότερα)"
+      },
+      "status": {
+        "asc": "Κατάσταση (Α-Ω)",
+        "desc": "Κατάσταση (Ω-Α)"
+      },
+      "channel": {
+        "asc": "Κανάλι (Α-Ω)",
+        "desc": "Κανάλι (Ω-Α)"
+      }
     },
     "selection": {
       "selected": "{count} επιλεγμένα κτίρια"

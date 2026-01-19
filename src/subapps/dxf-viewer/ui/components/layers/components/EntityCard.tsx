@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 import React from 'react';
@@ -160,7 +161,7 @@ export const EntityCard = ({
           className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${
             isSelected ? PANEL_LAYOUT.SPACING.XS : PANEL_LAYOUT.SPACING.HALF
           }`}
-          title={entity.visible === false ? "Εμφάνιση" : "Απόκρυψη"}
+          title={entity.visible === false ? t('layerActions.show') : t('layerActions.hide')}
         >
           {entity.visible === false ? (
             <EyeOff className={isSelected ? iconSizes.sm : iconSizes.xs} />

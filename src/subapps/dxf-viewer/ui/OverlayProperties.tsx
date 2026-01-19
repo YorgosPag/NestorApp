@@ -115,7 +115,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
     <Card className={PANEL_LAYOUT.WIDTH.PANEL_SM}>
       <CardHeader className={PANEL_LAYOUT.PADDING.BOTTOM_SM}>
         <div className="flex items-center justify-between">
-          <CardTitle className={PANEL_LAYOUT.BUTTON.TEXT_SIZE}>Ιδιότητες Overlay</CardTitle>
+          <CardTitle className={PANEL_LAYOUT.BUTTON.TEXT_SIZE}>{t('overlayProperties.title')}</CardTitle>
           {onClose && (
             <Button variant="ghost" size="sm" onClick={onClose}>
               <X className={iconSizes.sm} />
