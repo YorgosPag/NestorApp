@@ -101,6 +101,8 @@ import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 import { Checkbox } from '@/components/ui/checkbox';
 // 🏢 ENTERPRISE: Centralized Button component (Radix)
 import { Button } from '@/components/ui/button';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 // Simple SVG icons
 const SettingsIcon = ({ className }: { className?: string }) => (
@@ -138,6 +140,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, getElementBorder, radius } = useBorderTokens();  // ✅ ENTERPRISE: Added getElementBorder for consistent styling
   const colors = useSemanticColors();
+  const { t } = useTranslation('dxf-viewer');  // 🏢 ENTERPRISE: i18n
   // 🔺 ΔΙΟΡΘΩΣΗ: Χρήση unified hooks όπως σε TextSettings και GripSettings
   const generalLineSettings = useLineSettingsFromProvider();
   const notifications = useNotifications();
@@ -363,7 +366,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
       // Toast notification για επιτυχία
       notifications.success(
-        '🏭 Εργοστασιακές ρυθμίσεις επαναφέρθηκαν! Όλες οι ρυθμίσεις γραμμών επέστρεψαν στα πρότυπα ISO 128 & AutoCAD 2024.',
+        `🏭 ${t('settings.line.factoryReset.successMessage')}`,
         {
           duration: 5000
         }
@@ -376,7 +379,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
     setShowFactoryResetModal(false);
 
     // Toast notification για ακύρωση
-    notifications.info('❌ Ακυρώθηκε η επαναφορά εργοστασιακών ρυθμίσεων');
+    notifications.info(`❌ ${t('settings.line.factoryReset.cancelMessage')}`);
   };
 
   // Accordion state management
@@ -395,29 +398,29 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
       {/* Header - Semantic <header> element */}
       {/* 🏢 ENTERPRISE: flex-col layout για να φαίνονται πλήρως τα κείμενα των κουμπιών */}
       <header className={`flex flex-col ${PANEL_LAYOUT.GAP.SM}`}>
-        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Ρυθμίσεις Γραμμών</h3>
-        <nav className={`flex ${PANEL_LAYOUT.GAP.SM}`} aria-label="Ενέργειες ρυθμίσεων">
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>{t('settings.line.title')}</h3>
+        <nav className={`flex ${PANEL_LAYOUT.GAP.SM}`} aria-label={t('settings.line.actionsAriaLabel')}>
           {/* 🏢 ENTERPRISE: Centralized Button component (variant="secondary") + Lucide icon */}
           <Button
             variant="secondary"
             size="sm"
             onClick={resetToDefaults}
-            title="Επαναφορά στις προεπιλεγμένες ρυθμίσεις"
+            title={t('settings.line.resetTitle')}
             className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
           >
             <RotateCcw className={iconSizes.xs} />
-            Επαναφορά
+            {t('settings.line.reset')}
           </Button>
           {/* 🏢 ENTERPRISE: Centralized Button component (variant="destructive") + Lucide icon */}
           <Button
             variant="destructive"
             size="sm"
             onClick={handleFactoryResetClick}
-            title="Επαναφορά στις εργοστασιακές ρυθμίσεις (ISO 128 & AutoCAD 2024)"
+            title={t('settings.line.factoryTitle')}
             className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
           >
             <Factory className={iconSizes.xs} />
-            Εργοστασιακές
+            {t('settings.line.factory')}
           </Button>
         </nav>
       </header>
@@ -436,13 +439,13 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
             htmlFor="line-enabled"
             className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.CURSOR.POINTER} ${settings.enabled ? colors.text.primary : colors.text.muted}`}
           >
-            Εμφάνιση γραμμής
+            {t('settings.line.enabled')}
           </label>
         </div>
         {/* 🏢 ENTERPRISE: Warning message - Using semantic colors & PANEL_LAYOUT.ALERT */}
         {!settings.enabled && (
           <aside className={`${PANEL_LAYOUT.ALERT.TEXT_SIZE} ${colors.text.warning} ${colors.bg.warningSubtle} ${PANEL_LAYOUT.ALERT.PADDING} ${radius.md} ${getStatusBorder('warning')}`} role="alert">
-            ⚠️ Οι γραμμές είναι απενεργοποιημένες και δεν θα εμφανίζονται στην προσχεδίαση
+            ⚠️ {t('settings.line.disabledWarning')}
           </aside>
         )}
       </fieldset>
@@ -452,7 +455,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* 1. ΠΡΌΤΥΠΑ & ΕΡΓΑΛΕΊΑ */}
         <AccordionSection
-          title="Πρότυπα & Εργαλεία"
+          title={t('settings.line.sections.templates')}
           icon={<SwatchIcon className={iconSizes.sm} />}
           isOpen={isOpen('templates')}
           onToggle={() => toggleSection('templates')}
@@ -462,14 +465,14 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
             {/* 🏢 ADR-001: Radix Select - Template Quick Select */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-                Προκαθορισμένα Πρότυπα
+                {t('settings.line.labels.templates')}
               </label>
               <Select
                 value={settings.activeTemplate || ''}
                 onValueChange={handleTemplateSelect}
               >
                 <SelectTrigger className={`w-full ${colors.bg.secondary}`}>
-                  <SelectValue placeholder="Επιλέξτε πρότυπο..." />
+                  <SelectValue placeholder={t('lineSettings.selectTemplate')} />
                 </SelectTrigger>
                 <SelectContent>
                   {templateGroupedOptions.map((group) => (
@@ -490,7 +493,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* 2. ΒΑΣΙΚΈΣ ΡΥΘΜΊΣΕΙΣ */}
         <AccordionSection
-          title="Βασικές Ρυθμίσεις"
+          title={t('settings.line.sections.basic')}
           icon={<SettingsIcon className={iconSizes.sm} />}
           isOpen={isOpen('basic')}
           onToggle={() => toggleSection('basic')}
@@ -502,7 +505,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         {/* 🏢 ADR-001: Radix Select - Line Type */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-            Τύπος Γραμμής
+            {t('settings.line.labels.type')}
           </label>
           <Select
             value={settings.lineType}
@@ -524,7 +527,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         {/* Line Width */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-            Πάχος Γραμμής: {settings.lineWidth}px
+            {t('settings.line.labels.widthValue', { value: settings.lineWidth })}
           </label>
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD}`}>
             <input
@@ -550,7 +553,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Color - 🏢 ENTERPRISE Color System */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα</label>
+          <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('settings.line.labels.color')}</label>
           <ColorDialogTrigger
             value={settings.color}
             onChange={(color: string) => {
@@ -561,7 +564,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               enterpriseContext.updateSpecificLineSettings('completion', { color });
             }}
             label={settings.color}
-            title="Επιλογή Χρώματος Γραμμής"
+            title={t('settings.line.colorPicker.line')}
             alpha={false}
             modes={['hex', 'rgb', 'hsl']}
             palettes={['dxf', 'semantic', 'material']}
@@ -573,7 +576,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         {/* Opacity */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-            Διαφάνεια: {Math.round(settings.opacity * 100)}%
+            {t('settings.line.labels.opacityValue', { value: Math.round(settings.opacity * 100) })}
           </label>
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD}`}>
             <input
@@ -605,10 +608,10 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               checked={settings.breakAtCenter || false}
               onCheckedChange={(checked) => settingsUpdater.updateSetting('breakAtCenter', checked === true)}
             />
-            <label htmlFor="break-at-center" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.CURSOR.POINTER} ${colors.text.secondary}`}>Σπάσιμο γραμμής για κείμενο</label>
+            <label htmlFor="break-at-center" className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.CURSOR.POINTER} ${colors.text.secondary}`}>{t('settings.line.labels.breakAtCenter')}</label>
           </div>
           <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.LEFT_LG}`}>
-            Η γραμμή θα σπάσει στη μέση για να χωράει το κείμενο
+            {t('settings.line.labels.breakAtCenterDescription')}
           </p>
         </div>
           </div>
@@ -616,7 +619,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* 3. ΡΥΘΜΊΣΕΙΣ HOVER */}
         <AccordionSection
-          title="Ρυθμίσεις Hover"
+          title={t('settings.line.sections.hover')}
           icon={<PaintbrushIcon className={iconSizes.sm} />}
           isOpen={isOpen('hover')}
           onToggle={() => toggleSection('hover')}
@@ -627,12 +630,12 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Hover Color - 🏢 ENTERPRISE Color System */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Hover</label>
+          <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('settings.line.labels.hoverColor')}</label>
           <ColorDialogTrigger
             value={settings.hoverColor}
             onChange={settingsUpdater.createColorHandler('hoverColor')}
             label={settings.hoverColor}
-            title="Επιλογή Χρώματος Hover"
+            title={t('settings.line.colorPicker.hover')}
             alpha={false}
             modes={['hex', 'rgb', 'hsl']}
             palettes={['dxf', 'semantic', 'material']}
@@ -644,7 +647,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         {/* Hover Width */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-            Πάχος Hover: {settings.hoverWidth}px
+            {t('settings.line.labels.hoverWidthValue', { value: settings.hoverWidth })}
           </label>
           <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
             <input
@@ -671,7 +674,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         {/* Hover Opacity */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-            Διαφάνεια Hover: {Math.round(settings.hoverOpacity * 100)}%
+            {t('settings.line.labels.hoverOpacityValue', { value: Math.round(settings.hoverOpacity * 100) })}
           </label>
           <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
             <input
@@ -699,7 +702,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* 4. ΤΕΛΙΚΈΣ ΡΥΘΜΊΣΕΙΣ */}
         <AccordionSection
-          title="Τελικές Ρυθμίσεις Γραμμής"
+          title={t('settings.line.sections.final')}
           icon={<CpuChipIcon className={iconSizes.sm} />}
           isOpen={isOpen('final')}
           onToggle={() => toggleSection('final')}
@@ -710,12 +713,12 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* Final Color - 🏢 ENTERPRISE Color System */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Τελικό Χρώμα</label>
+          <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('settings.line.labels.finalColor')}</label>
           <ColorDialogTrigger
             value={settings.finalColor}
             onChange={settingsUpdater.createColorHandler('finalColor')}
             label={settings.finalColor}
-            title="Επιλογή Τελικού Χρώματος"
+            title={t('settings.line.colorPicker.final')}
             alpha={false}
             modes={['hex', 'rgb', 'hsl']}
             palettes={['dxf', 'semantic', 'material']}
@@ -727,7 +730,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         {/* Final Width */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-            Τελικό Πάχος: {settings.finalWidth}px
+            {t('settings.line.labels.finalWidthValue', { value: settings.finalWidth })}
           </label>
           <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
             <input
@@ -754,7 +757,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         {/* Final Opacity */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-            Τελική Διαφάνεια: {Math.round(settings.finalOpacity * 100)}%
+            {t('settings.line.labels.finalOpacityValue', { value: Math.round(settings.finalOpacity * 100) })}
           </label>
           <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
             <input
@@ -782,7 +785,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* 5. ΠΡΟΧΩΡΗΜΈΝΕΣ ΡΥΘΜΊΣΕΙΣ */}
         <AccordionSection
-          title="Προχωρημένες Ρυθμίσεις"
+          title={t('settings.line.sections.advanced')}
           icon={<AdjustmentsHorizontalIcon className={iconSizes.sm} />}
           isOpen={isOpen('advanced')}
           onToggle={() => toggleSection('advanced')}
@@ -793,7 +796,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           {settings.lineType !== 'solid' && (
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-                Κλίμακα Διακοπών: {settings.dashScale}
+                {t('settings.line.labels.dashScaleValue', { value: settings.dashScale })}
               </label>
               <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
                 <input
@@ -821,7 +824,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           {/* 🏢 ADR-001: Radix Select - Line Cap */}
           <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
             <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-              Άκρα Γραμμής
+              {t('settings.line.labels.lineCap')}
             </label>
             <Select
               value={settings.lineCap}
@@ -843,7 +846,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           {/* 🏢 ADR-001: Radix Select - Line Join */}
           <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
             <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-              Συνδέσεις Γραμμής
+              {t('settings.line.labels.lineJoin')}
             </label>
             <Select
               value={settings.lineJoin}
@@ -866,7 +869,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           {settings.lineType !== 'solid' && (
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-                Μετατόπιση Διακοπών: {settings.dashOffset}px
+                {t('settings.line.labels.dashOffsetValue', { value: settings.dashOffset })}
               </label>
               <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
                 <input
@@ -906,7 +909,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
       {isEmbedded ? (
         settingsContent
       ) : (
-        <section className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${PANEL_LAYOUT.SPACING.LG}`} aria-label="Ρυθμίσεις Γραμμών">
+        <section className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${PANEL_LAYOUT.SPACING.LG}`} aria-label={t('settings.line.ariaLabel')}>
           {settingsContent}
         </section>
       )}
@@ -915,7 +918,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
       <BaseModal
         isOpen={showFactoryResetModal}
         onClose={handleFactoryResetCancel}
-        title="⚠️ Επαναφορά Εργοστασιακών Ρυθμίσεων"
+        title={`⚠️ ${t('settings.line.factoryReset.title')}`}
         size="md"
         closeOnBackdrop={false}
         zIndex={10000}
@@ -925,17 +928,17 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.ALERT */}
           <aside className={`${colors.bg.errorSubtle} ${getStatusBorder('error')} ${PANEL_LAYOUT.ALERT.PADDING_LG} ${PANEL_LAYOUT.ALERT.BORDER_RADIUS}`} role="alert">
             <p className={`${colors.text.error} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
-              ⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!
+              ⚠️ {t('settings.line.factoryReset.warning')}
             </p>
           </aside>
 
           {/* Loss List */}
           <section className={PANEL_LAYOUT.SPACING.GAP_SM}>
-            <p className={`${colors.text.muted} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>Θα χάσετε:</p>
+            <p className={`${colors.text.muted} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>{t('settings.line.factoryReset.lossTitle')}</p>
             <ul className={`list-disc list-inside ${PANEL_LAYOUT.SPACING.GAP_XS} ${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
-              <li>Όλες τις προσαρμοσμένες ρυθμίσεις γραμμών</li>
-              <li>Όλα τα templates που έχετε επιλέξει</li>
-              <li>Όλες τις αλλαγές που έχετε κάνει</li>
+              <li>{t('settings.line.factoryReset.lossList.customSettings')}</li>
+              <li>{t('settings.line.factoryReset.lossList.templates')}</li>
+              <li>{t('settings.line.factoryReset.lossList.changes')}</li>
             </ul>
           </section>
 
@@ -943,13 +946,13 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.ALERT */}
           <aside className={`${colors.bg.infoSubtle} ${getStatusBorder('info')} ${PANEL_LAYOUT.ALERT.PADDING_LG} ${PANEL_LAYOUT.ALERT.BORDER_RADIUS}`} role="note">
             <p className={`${colors.text.info} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
-              <strong>Επαναφορά:</strong> Οι ρυθμίσεις θα επανέλθουν στα πρότυπα ISO 128 & AutoCAD 2024
+              {t('settings.line.factoryReset.resetInfo')}
             </p>
           </aside>
 
           {/* Confirmation Question */}
           <p className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} text-center ${PANEL_LAYOUT.PADDING.TOP_SM}`}>
-            Είστε σίγουροι ότι θέλετε να συνεχίσετε;
+            {t('settings.line.factoryReset.confirm')}
           </p>
 
           {/* 🏢 ENTERPRISE: Action Buttons - Using semantic colors */}
@@ -958,14 +961,14 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               onClick={handleFactoryResetCancel}
               className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHTER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
             >
-              Ακύρωση
+              {t('settings.line.factoryReset.cancel')}
             </button>
             <button
               onClick={handleFactoryResetConfirm}
               className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.danger} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.inverted} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} flex items-center ${PANEL_LAYOUT.GAP.XS}`}
             >
               <Factory className={iconSizes.xs} />
-              Επαναφορά Εργοστασιακών
+              {t('settings.line.factoryReset.confirmButton')}
             </button>
           </footer>
         </article>

@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import type { SectionCategory } from '@/types/obligations';
@@ -21,17 +22,18 @@ export function CategoryRequiredFields({
   categoryLabels,
   onChange,
 }: CategoryRequiredFieldsProps) {
+  const { t } = useTranslation('obligations');
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div className="space-y-2">
-        <Label htmlFor="section-category">Κατηγορία</Label>
+        <Label htmlFor="section-category">{t('sectionEditor.categoryLabel')}</Label>
         <Select
           value={category}
           onValueChange={(value: SectionCategory) => onChange('category', value)}
           disabled={!isEditing}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Επιλέξτε κατηγορία" />
+            <SelectValue placeholder={t('sectionEditor.selectCategory')} />
           </SelectTrigger>
           <SelectContent>
             {Object.entries(categoryLabels).map(([value, label]) => (
@@ -44,7 +46,7 @@ export function CategoryRequiredFields({
       </div>
 
       <div className="space-y-2">
-        <Label>Στάτους</Label>
+        <Label>{t('sectionEditor.statusLabel')}</Label>
         <div className="flex items-center gap-4 pt-2">
           <label className="flex items-center gap-2">
             <input
@@ -54,7 +56,7 @@ export function CategoryRequiredFields({
               disabled={!isEditing}
               className="rounded"
             />
-            <span className="text-sm">Απαραίτητο άρθρο</span>
+            <span className="text-sm">{t('sectionEditor.requiredArticle')}</span>
           </label>
         </div>
       </div>

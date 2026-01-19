@@ -39,7 +39,7 @@ export function ListLayout({
   hoveredPropertyId: string | null;
   readOnlyViewerProps: ViewerPropsType;
   viewerProps: ViewerPropsType;
-) {
+}) {
   const { t } = useTranslation('properties');
   // This component is updated to reflect the new layout
   return (

@@ -44,6 +44,8 @@ import { updateDraftTextSettingsStore } from '../../../../../hooks/useTextPrevie
 import { updateDraftGripSettingsStore } from '../../../../../hooks/useGripPreviewStyle';
 import { INTERACTIVE_PATTERNS } from '../../../../../../../components/ui/effects';
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 // Default grip settings for LinePreview
 const DEFAULT_GRIP_SETTINGS = {
@@ -92,6 +94,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
   // ✅ Replaced multiple useState hooks with unified reducer for better performance
   const { state: tabState, actions: tabActions, computed } = useEntitiesSettingsReducer();
 
@@ -437,7 +441,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                       : `${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.text.secondary} ${getStatusBorder('default')}`
                     }
                   `}
-                  title="Περισσότερες επιλογές"
+                  title={t('entitiesSettings.moreOptions')}
                 >
                   <svg className={iconSizes.xs} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />

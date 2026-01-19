@@ -181,6 +181,59 @@ export const FILE_STATUS = {
 export type FileStatus = typeof FILE_STATUS[keyof typeof FILE_STATUS];
 
 /**
+ * 🏢 ENTERPRISE: Photo upload purposes
+ * @enterprise Used for naming context in photo uploads
+ * @see ADR-031 - Canonical File Storage System
+ */
+export const PHOTO_PURPOSES = {
+  /** Profile/representative photo */
+  PROFILE: 'profile',
+  /** ID card photo */
+  ID: 'id',
+  /** Other/general photo */
+  OTHER: 'other',
+} as const;
+
+export type PhotoPurpose = typeof PHOTO_PURPOSES[keyof typeof PHOTO_PURPOSES];
+
+/**
+ * 🏢 ENTERPRISE: Centralized deprecation messages
+ * @enterprise All deprecation warnings use these constants
+ */
+export const DEPRECATION_MESSAGES = {
+  /** Legacy upload without canonical fields */
+  LEGACY_UPLOAD: '[DEPRECATION] uploadPhoto() without canonical fields (companyId, contactId, createdBy) is deprecated. New uploads should use canonical pipeline. This fallback will be removed in a future release.',
+  /** Legacy folderPath usage */
+  LEGACY_FOLDER_PATH: '[DEPRECATION] Using folderPath is deprecated. Use canonical pipeline with buildStoragePath() instead.',
+} as const;
+
+/**
+ * 🏢 ENTERPRISE: Centralized error messages for file storage
+ * @enterprise All file storage errors use these constants
+ * @see ADR-031 - Canonical File Storage System
+ */
+export const FILE_STORAGE_ERROR_MESSAGES = {
+  /** Production lock - legacy writes blocked */
+  PRODUCTION_LOCK: 'Legacy uploads are blocked in production. Use canonical pipeline with companyId, contactId, createdBy.',
+  /** Missing required fields */
+  MISSING_CANONICAL_FIELDS: 'Missing required canonical fields: companyId, contactId, or createdBy.',
+  /** Invalid storage path */
+  INVALID_STORAGE_PATH: 'Invalid storage path parameters provided.',
+} as const;
+
+/**
+ * 🏢 ENTERPRISE: File storage feature flags for controlled migrations
+ * @enterprise Used to control legacy vs canonical behavior
+ * @note Separate from DXF viewer FEATURE_FLAGS (different domain)
+ */
+export const FILE_STORAGE_FLAGS = {
+  /** If true, legacy writes are blocked (production-safe mode) */
+  BLOCK_LEGACY_WRITES: process.env.NEXT_PUBLIC_BLOCK_LEGACY_WRITES === 'true',
+  /** If true, allow legacy writes with warning (migration mode) */
+  ALLOW_LEGACY_WITH_WARNING: process.env.NEXT_PUBLIC_ALLOW_LEGACY_WITH_WARNING !== 'false',
+} as const;
+
+/**
  * 🏢 ENTERPRISE: Storage path segments (for buildStoragePath)
  * @enterprise ZERO hardcoded path strings - all segments from here
  */

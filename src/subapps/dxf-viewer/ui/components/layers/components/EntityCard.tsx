@@ -9,6 +9,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 interface EntityCardProps {
   entity: AnySceneEntity;
@@ -58,6 +60,8 @@ export const EntityCard = ({
   const iconSizes = useIconSizes();
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
   return (
     <div 
       key={entity.id}
@@ -94,7 +98,7 @@ export const EntityCard = ({
             className={`${PANEL_LAYOUT.ROUNDED.FULL} ${getStatusBorder('muted')} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${
               isSelected ? iconSizes.xs : iconSizes.xs
             } ${getDynamicBackgroundClass(entity.color || layer.color)}`}
-            title="Αλλαγή χρώματος entity"
+            title={t('layerActions.changeColorEntity')}
           />
         </div>
 
@@ -175,7 +179,7 @@ export const EntityCard = ({
           className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${
             isSelected ? PANEL_LAYOUT.SPACING.XS : PANEL_LAYOUT.SPACING.HALF
           }`}
-          title="Μετονομασία entity"
+          title={t('layerActions.renameEntity')}
         >
           <Edit2 className={isSelected ? iconSizes.sm : iconSizes.xs} />
         </button>
@@ -189,7 +193,7 @@ export const EntityCard = ({
           className={`${colors.text.error} ${HOVER_TEXT_EFFECTS.RED} ${
             isSelected ? PANEL_LAYOUT.SPACING.XS : PANEL_LAYOUT.SPACING.HALF
           }`}
-          title="Διαγραφή"
+          title={t('layerActions.delete')}
         >
           <Trash2 className={isSelected ? iconSizes.sm : iconSizes.xs} />
         </button>

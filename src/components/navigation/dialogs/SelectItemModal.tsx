@@ -1,6 +1,9 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 import React, { useState, useEffect } from 'react';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -72,6 +75,7 @@ export function SelectItemModal({
   itemType,
   isLoading = false,
 }: SelectItemModalProps) {
+  const { t } = useTranslation('common');
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -132,7 +136,7 @@ export function SelectItemModal({
           {isLoading && (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-              <span className="ml-2 text-sm text-gray-600">Φόρτωση...</span>
+              <span className="ml-2 text-sm text-gray-600">{t('status.loading')}</span>
             </div>
           )}
 
@@ -144,12 +148,12 @@ export function SelectItemModal({
                   {items.length === 0 ? (
                     <div>
                       <Icon className={`h-12 w-12 mx-auto mb-3 text-gray-300`} />
-                      <p>Δεν βρέθηκαν διαθέσιμα στοιχεία.</p>
+                      <p>{t('modal.noItemsFound')}</p>
                     </div>
                   ) : (
                     <div>
                       <Search className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                      <p>Δεν βρέθηκαν στοιχεία για "{searchTerm}"</p>
+                      <p>{t('modal.noResultsFor', { searchTerm })}</p>
                     </div>
                   )}
                 </div>
@@ -173,7 +177,7 @@ export function SelectItemModal({
                         )}
                       </div>
                       <div className="text-xs text-gray-400 flex-shrink-0">
-                        Επιλογή →
+                        {t('modal.selectAction')}
                       </div>
                     </div>
                   ))}
@@ -185,7 +189,7 @@ export function SelectItemModal({
 
         <div className="flex justify-end gap-2 pt-4 border-t">
           <Button variant="outline" onClick={handleClose}>
-            Ακύρωση
+            {t('buttons.cancel')}
           </Button>
         </div>
       </DialogContent>

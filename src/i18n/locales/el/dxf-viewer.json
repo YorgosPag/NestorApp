@@ -249,6 +249,489 @@
       "importFailed": "Σφάλμα κατά την εισαγωγή αρχείου:"
     }
   },
+  "settings": {
+    "grip": {
+      "title": "Ρυθμίσεις Grips",
+      "actionsAriaLabel": "Ενέργειες ρυθμίσεων grips",
+      "reset": "Επαναφορά",
+      "resetTitle": "Επαναφορά στις προεπιλεγμένες ρυθμίσεις",
+      "factory": "Εργοστασιακές",
+      "factoryTitle": "Επαναφορά στις εργοστασιακές ρυθμίσεις (CAD Standards)",
+      "enabled": "Εμφάνιση Grips",
+      "disabledWarning": "Τα grips είναι απενεργοποιημένα και δεν θα εμφανίζονται",
+      "sections": {
+        "basic": "Βασικές Ρυθμίσεις",
+        "colors": "Χρώματα Grips",
+        "types": "Τύποι Grips",
+        "advanced": "Προχωρημένες Ρυθμίσεις"
+      },
+      "labels": {
+        "size": "Μέγεθος Grips",
+        "opacity": "Διαφάνεια",
+        "coldColor": "Χρώμα Cold",
+        "warmColor": "Χρώμα Warm (Hover)",
+        "hotColor": "Χρώμα Hot (Επιλεγμένα)",
+        "contourColor": "Χρώμα Περιγράμματος",
+        "pickBoxSize": "Μέγεθος Pick Box",
+        "apertureSize": "Μέγεθος Aperture",
+        "maxGrips": "Μέγιστα Grips ανά Οντότητα"
+      },
+      "colorPicker": {
+        "cold": "Επιλογή Χρώματος Cold Grip",
+        "warm": "Επιλογή Χρώματος Warm Grip",
+        "hot": "Επιλογή Χρώματος Hot Grip",
+        "contour": "Επιλογή Χρώματος Contour Grip"
+      },
+      "checkboxes": {
+        "showMidpoints": "Εμφάνιση Midpoints",
+        "showCenters": "Εμφάνιση Centers",
+        "showQuadrants": "Εμφάνιση Quadrants",
+        "showAperture": "Εμφάνιση Aperture",
+        "multiGripEdit": "Multi-Grip Επεξεργασία",
+        "snapToGrips": "Snap σε Grips"
+      },
+      "presets": {
+        "title": "Γρήγορα Presets",
+        "small": "Μικρό",
+        "normal": "Κανονικό",
+        "large": "Μεγάλο"
+      },
+      "factoryReset": {
+        "title": "Επαναφορά Εργοστασιακών Ρυθμίσεων",
+        "warning": "ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!",
+        "lossTitle": "Θα χάσετε:",
+        "lossList": {
+          "customSettings": "Όλες τις προσαρμοσμένες ρυθμίσεις grips",
+          "colors": "Όλα τα χρώματα που έχετε επιλέξει",
+          "changes": "Όλες τις αλλαγές που έχετε κάνει"
+        },
+        "resetInfo": "Επαναφορά: Οι ρυθμίσεις θα επανέλθουν στα πρότυπα CAD (AutoCAD/BricsCAD)",
+        "confirm": "Είστε σίγουροι ότι θέλετε να συνεχίσετε;",
+        "cancel": "Ακύρωση",
+        "confirmButton": "Επαναφορά Εργοστασιακών",
+        "successMessage": "Εργοστασιακές ρυθμίσεις επαναφέρθηκαν! Όλες οι ρυθμίσεις grips επέστρεψαν στα πρότυπα CAD.",
+        "cancelMessage": "Ακυρώθηκε η επαναφορά εργοστασιακών ρυθμίσεων"
+      },
+      "ariaLabel": "Ρυθμίσεις Grips"
+    },
+    "line": {
+      "title": "Ρυθμίσεις Γραμμών",
+      "actionsAriaLabel": "Ενέργειες ρυθμίσεων γραμμών",
+      "reset": "Επαναφορά",
+      "resetTitle": "Επαναφορά στις προεπιλεγμένες ρυθμίσεις",
+      "factory": "Εργοστασιακές",
+      "factoryTitle": "Επαναφορά στις εργοστασιακές ρυθμίσεις (ISO 128 & AutoCAD 2024)",
+      "enabled": "Εμφάνιση γραμμής",
+      "disabledWarning": "Οι γραμμές είναι απενεργοποιημένες και δεν θα εμφανίζονται στην προσχεδίαση",
+      "sections": {
+        "templates": "Πρότυπα & Εργαλεία",
+        "basic": "Βασικές Ρυθμίσεις",
+        "hover": "Ρυθμίσεις Hover",
+        "final": "Τελικές Ρυθμίσεις Γραμμής",
+        "advanced": "Προχωρημένες Ρυθμίσεις"
+      },
+      "labels": {
+        "color": "Χρώμα",
+        "width": "Πάχος Γραμμής",
+        "widthValue": "Πάχος Γραμμής: {{value}}px",
+        "opacity": "Διαφάνεια",
+        "opacityValue": "Διαφάνεια: {{value}}%",
+        "type": "Τύπος Γραμμής",
+        "templates": "Προκαθορισμένα Πρότυπα",
+        "breakAtCenter": "Σπάσιμο γραμμής για κείμενο",
+        "breakAtCenterDescription": "Η γραμμή θα σπάσει στη μέση για να χωράει το κείμενο",
+        "hoverColor": "Χρώμα Hover",
+        "hoverWidth": "Πάχος Hover",
+        "hoverWidthValue": "Πάχος Hover: {{value}}px",
+        "hoverOpacity": "Διαφάνεια Hover",
+        "hoverOpacityValue": "Διαφάνεια Hover: {{value}}%",
+        "finalColor": "Τελικό Χρώμα",
+        "finalWidth": "Τελικό Πάχος",
+        "finalWidthValue": "Τελικό Πάχος: {{value}}px",
+        "finalOpacity": "Τελική Διαφάνεια",
+        "finalOpacityValue": "Τελική Διαφάνεια: {{value}}%",
+        "dashScale": "Κλίμακα Διακοπών",
+        "dashScaleValue": "Κλίμακα Διακοπών: {{value}}",
+        "dashOffset": "Μετατόπιση Διακοπών",
+        "dashOffsetValue": "Μετατόπιση Διακοπών: {{value}}px",
+        "lineCap": "Άκρα Γραμμής",
+        "lineJoin": "Συνδέσεις Γραμμής"
+      },
+      "colorPicker": {
+        "line": "Επιλογή Χρώματος Γραμμής",
+        "hover": "Επιλογή Χρώματος Hover",
+        "final": "Επιλογή Τελικού Χρώματος"
+      },
+      "factoryReset": {
+        "title": "Επαναφορά Εργοστασιακών Ρυθμίσεων",
+        "warning": "ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!",
+        "lossTitle": "Θα χάσετε:",
+        "lossList": {
+          "customSettings": "Όλες τις προσαρμοσμένες ρυθμίσεις γραμμών",
+          "templates": "Όλα τα templates που έχετε επιλέξει",
+          "changes": "Όλες τις αλλαγές που έχετε κάνει"
+        },
+        "resetInfo": "Επαναφορά: Οι ρυθμίσεις θα επανέλθουν στα πρότυπα ISO 128 & AutoCAD 2024",
+        "confirm": "Είστε σίγουροι ότι θέλετε να συνεχίσετε;",
+        "cancel": "Ακύρωση",
+        "confirmButton": "Επαναφορά Εργοστασιακών",
+        "successMessage": "Εργοστασιακές ρυθμίσεις επαναφέρθηκαν! Όλες οι ρυθμίσεις γραμμών επέστρεψαν στα πρότυπα ISO 128 & AutoCAD 2024.",
+        "cancelMessage": "Ακυρώθηκε η επαναφορά εργοστασιακών ρυθμίσεων"
+      },
+      "ariaLabel": "Ρυθμίσεις Γραμμών"
+    },
+    "text": {
+      "title": "Ρυθμίσεις Κειμένου",
+      "actionsAriaLabel": "Ενέργειες ρυθμίσεων κειμένου",
+      "reset": "Επαναφορά",
+      "resetTitle": "Επαναφορά στις προεπιλεγμένες ρυθμίσεις",
+      "factory": "Εργοστασιακές",
+      "factoryTitle": "Επαναφορά στις εργοστασιακές ρυθμίσεις (ISO 3098)",
+      "enabled": "Εμφάνιση κειμένου απόστασης",
+      "disabledWarning": "Το κείμενο απόστασης είναι απενεργοποιημένο και δεν θα εμφανίζεται στην προσχεδίαση",
+      "sections": {
+        "basic": "Βασικές Ρυθμίσεις Κειμένου",
+        "style": "Στυλ Κειμένου",
+        "advanced": "Προχωρημένα Εφέ",
+        "preview": "Προεπισκόπηση & Πληροφορίες"
+      },
+      "labels": {
+        "fontFamily": "Γραμματοσειρά",
+        "fontSize": "Μέγεθος Γραμματοσειράς",
+        "color": "Χρώμα Κειμένου",
+        "textStyle": "Στυλ Κειμένου",
+        "scriptStyle": "Εκθέτης / Δείκτης",
+        "preview": "Προεπισκόπηση",
+        "previewText": "Άδραξε τη μέρα",
+        "searchFonts": "Αναζήτηση γραμματοσειράς...",
+        "searchSize": "Αναζήτηση μεγέθους...",
+        "increaseFontSize": "Αύξηση μεγέθους γραμματοσειράς",
+        "decreaseFontSize": "Μείωση μεγέθους γραμματοσειράς"
+      },
+      "colorPicker": {
+        "text": "Επιλογή Χρώματος Κειμένου"
+      },
+      "styles": {
+        "bold": "Έντονα",
+        "italic": "Πλάγια",
+        "underline": "Υπογραμμισμένα",
+        "strikethrough": "Διαγραμμισμένα",
+        "superscript": "Εκθέτης",
+        "subscript": "Δείκτης",
+        "normal": "Κανονικά"
+      },
+      "factoryReset": {
+        "title": "Επαναφορά Εργοστασιακών Ρυθμίσεων",
+        "warning": "ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!",
+        "lossTitle": "Θα χάσετε:",
+        "lossList": {
+          "customSettings": "Όλες τις προσαρμοσμένες ρυθμίσεις κειμένου",
+          "templates": "Όλα τα templates που έχετε επιλέξει",
+          "changes": "Όλες τις αλλαγές που έχετε κάνει"
+        },
+        "resetInfo": "Επαναφορά: Οι ρυθμίσεις θα επανέλθουν στα πρότυπα ISO 3098",
+        "confirm": "Είστε σίγουροι ότι θέλετε να συνεχίσετε;",
+        "cancel": "Ακύρωση",
+        "confirmButton": "Επαναφορά Εργοστασιακών",
+        "successMessage": "Εργοστασιακές ρυθμίσεις επαναφέρθηκαν! Όλες οι ρυθμίσεις κειμένου επέστρεψαν στα πρότυπα ISO 3098.",
+        "cancelMessage": "Ακυρώθηκε η επαναφορά εργοστασιακών ρυθμίσεων"
+      },
+      "ariaLabel": "Ρυθμίσεις Κειμένου"
+    }
+  },
+  "toolbar": {
+    "title": "Εργαλεία Σχεδίασης",
+    "select": "Επιλογή",
+    "pan": "Μετακίνηση",
+    "line": "Γραμμή",
+    "rectangle": "Ορθογώνιο",
+    "circle": "Κύκλος",
+    "polyline": "Πολυγραμμή",
+    "draw": "Σχεδίαση",
+    "edit": "Επεξεργασία",
+    "status": "Κατάσταση:",
+    "type": "Τύπος:",
+    "duplicate": "Αντιγραφή ({{key}})",
+    "delete": "Διαγραφή ({{key}})",
+    "undo": "Αναίρεση ({{key}})",
+    "redo": "Επανάληψη ({{key}})",
+    "dragToMove": "Σύρετε για μετακίνηση",
+    "ariaLabels": {
+      "drawingModes": "Λειτουργίες σχεδίασης",
+      "overlayType": "Τύπος επικάλυψης",
+      "overlayActions": "Ενέργειες επικάλυψης",
+      "historyControls": "Έλεγχοι ιστορικού"
+    }
+  },
+  "layerActions": {
+    "changeColor": "Αλλαγή χρώματος",
+    "rename": "Μετονομασία layer",
+    "delete": "Διαγραφή",
+    "changeColorEntity": "Αλλαγή χρώματος entity",
+    "renameEntity": "Μετονομασία entity",
+    "changeColorGroup": "Αλλαγή χρώματος Color Group",
+    "renameGroup": "Μετονομασία Color Group",
+    "deleteGroup": "Διαγραφή Color Group",
+    "toggleVisibility": "Toggle ορατότητας",
+    "mergeEntities": "Συγχώνευση επιλεγμένων entities",
+    "mergeLayers": "Συγχώνευση επιλεγμένων layers",
+    "mergeColorGroups": "Συγχώνευση επιλεγμένων color groups",
+    "selectAllEntities": "Κλικ για επιλογή όλων των entities, Ctrl+Κλικ για multi-selection"
+  },
+  "search": {
+    "layersAndEntities": "Αναζήτηση layers και entities..."
+  },
+  "dynamicInput": {
+    "placeholders": {
+      "xCoordinate": "π.χ. -1000.56",
+      "yCoordinate": "π.χ. +750,32",
+      "angle": "π.χ. 45 ή 90.5",
+      "length": "π.χ. 100.0",
+      "width": "π.χ. 50.0",
+      "height": "π.χ. 100.0",
+      "radius": "π.χ. 50.0",
+      "diameter": "π.χ. 100.0"
+    },
+    "multiPoint": {
+      "distance": "Απόσταση:",
+      "angle": "Γωνία:",
+      "segments": "Τμήματα:",
+      "total": "Σύνολο:"
+    }
+  },
+  "overlayToolbar": {
+    "objectSnap": "Ενεργοποίηση/Απενεργοποίηση Object Snap (F3)",
+    "basicFunctions": "Ενεργοποίηση βασικών λειτουργιών"
+  },
+  "lineSettings": {
+    "selectTemplate": "Επιλέξτε πρότυπο..."
+  },
+  "gridSettings": {
+    "visibility": {
+      "title": "Εμφάνιση Πλέγματος",
+      "description": "Εμφάνιση/απόκρυψη του πλέγματος",
+      "enabled": "Ενεργό",
+      "disabled": "Ανενεργό"
+    },
+    "size": {
+      "title": "Μέγεθος Πλέγματος",
+      "description": "Απόσταση μεταξύ γραμμών πλέγματος (ΚΟΙΝΗ για όλα)"
+    },
+    "style": {
+      "title": "Στυλ Πλέγματος",
+      "description": "Τύπος εμφάνισης γραμμών πλέγματος",
+      "lines": "Γραμμές",
+      "dots": "Τελείες",
+      "crosses": "Σταυροί"
+    },
+    "lineTypes": {
+      "majorLines": "Κύριες Γραμμές",
+      "minorLines": "Δευτερεύουσες Γραμμές",
+      "majorDots": "Κύριες Τελείες",
+      "minorDots": "Δευτερεύουσες Τελείες",
+      "majorCrosses": "Κύριοι Σταυροί",
+      "minorCrosses": "Δευτερεύοντες Σταυροί"
+    },
+    "color": {
+      "label": "Χρώμα {type}",
+      "description": "Χρώμα του πλέγματος {type}",
+      "selectTitle": "Επιλογή Χρώματος {type}"
+    },
+    "weight": {
+      "label": "Πάχος {type}",
+      "description": "Πάχος του πλέγματος {type}"
+    }
+  },
+  "zoomControls": {
+    "zoomOut": "Σμίκρυνση (-{percentage}%) - Πληκτρολόγιο: -",
+    "zoomIn": "Μεγέθυνση (+{percentage}%) - Πληκτρολόγιο: +",
+    "inputTitle": "Ποσοστό zoom (1-99999%, δεκαδικά με . ή ,) - Πατήστε Enter ή κλικ εκτός για εφαρμογή",
+    "invalidInput": "Μη έγκυρη είσοδος zoom: \"{value}\". Επαναφορά σε {percentage}%"
+  },
+  "wizardProgress": {
+    "stepLabels": {
+      "level": "Επίπεδο",
+      "calibration": "Βαθμονόμηση",
+      "import": "Εισαγωγή"
+    }
+  },
+  "overlayList": {
+    "title": "Overlays",
+    "search": "Αναζήτηση...",
+    "deleteConfirm": "Διαγραφή overlay;",
+    "notFound": "Δεν βρέθηκαν overlays",
+    "empty": "Κανένα overlay",
+    "edit": "Επεξεργασία",
+    "delete": "Διαγραφή"
+  },
+  "selectionSettings": {
+    "window": {
+      "fillColor": "Επιλογή Χρώματος Γεμίσματος Window",
+      "borderColor": "Επιλογή Χρώματος Περιγράμματος Window"
+    },
+    "crossing": {
+      "fillColor": "Επιλογή Χρώματος Γεμίσματος Crossing",
+      "borderColor": "Επιλογή Χρώματος Περιγράμματος Crossing"
+    }
+  },
+  "cursorSettings": {
+    "colorPicker": "Επιλογή Χρώματος Κέρσορα"
+  },
+  "crosshairSettings": {
+    "colorPicker": "Επιλογή Χρώματος Crosshair",
+    "appearanceColorPicker": "Επιλογή Χρώματος Σταυρώνυματος"
+  },
+  "rulerSettings": {
+    "majorLines": {
+      "colorPicker": "Επιλογή Χρώματος Κύριων Γραμμών Χάρακα"
+    },
+    "minorLines": {
+      "colorPicker": "Επιλογή Χρώματος Δευτερευουσών Γραμμών Χάρακα"
+    },
+    "background": {
+      "colorPicker": "Επιλογή Χρώματος Φόντου Χάρακα"
+    }
+  },
+  "entitiesSettings": {
+    "moreOptions": "Περισσότερες επιλογές"
+  },
+  "levelPanel": {
+    "title": "Επίπεδα Έργου",
+    "defaultLevelName": "Επίπεδο {number}",
+    "selectLevel": "Επιλογή επιπέδου {name}",
+    "elements": "{count} στοιχεία",
+    "emptyLevel": "Κενό επίπεδο",
+    "rename": "Μετονομασία επιπέδου",
+    "deleteLevel": "Διαγραφή επιπέδου",
+    "noLevels": "Δεν υπάρχουν επίπεδα",
+    "newLevelPlaceholder": "Όνομα νέου επιπέδου...",
+    "emptyNameWarning": "Το όνομα δεν μπορεί να είναι κενό."
+  },
+  "sceneInfo": {
+    "title": "Πληροφορίες Σκηνής",
+    "noScene": "Δεν έχει φορτωθεί σκηνή",
+    "importHint": "Εισάγετε ένα αρχείο DXF για να δείτε πληροφορίες",
+    "elements": "Στοιχεία:",
+    "levels": "Επίπεδα:",
+    "units": "Μονάδες:",
+    "size": "Μέγεθος:",
+    "selected": "Επιλεγμένα:",
+    "selectedElements": "{count} στοιχεία",
+    "selectedSuffix": "({count} επιλεγμένα)",
+    "entityTypes": {
+      "title": "Τύποι Οντοτήτων",
+      "line": "Γραμμές",
+      "polyline": "Πολυγραμμές",
+      "circle": "Κύκλοι",
+      "arc": "Τόξα",
+      "text": "Κείμενο",
+      "block": "Blocks"
+    }
+  },
+  "dxfSettings": {
+    "title": "Ρυθμίσεις DXF"
+  },
+  "overlayProperties": {
+    "title": "Ιδιότητες Overlay",
+    "selectOverlay": "Επιλέξτε ένα overlay για να δείτε τις ιδιότητές του.",
+    "label": "Ετικέτα",
+    "labelPlaceholder": "π.χ. Α-12, Π-034",
+    "status": "Κατάσταση",
+    "type": "Τύπος",
+    "linkedUnit": "Συνδεδεμένη Μονάδα",
+    "unitIdPlaceholder": "ID Μονάδας",
+    "geometry": "Γεωμετρία",
+    "points": "Σημεία:",
+    "area": "Εμβαδόν:",
+    "perimeter": "Περίμετρος:"
+  },
+  "entitiesSettings": {
+    "moreOptions": "Περισσότερες επιλογές",
+    "overrideDescriptions": {
+      "lineDraft": "Χρήση ειδικών ρυθμίσεων γραμμής για προεπισκόπηση",
+      "textDraft": "Χρήση ειδικών ρυθμίσεων κειμένου για προεπισκόπηση",
+      "gripsDraft": "Χρήση ειδικών ρυθμίσεων grips για προεπισκόπηση",
+      "lineHover": "Χρήση ειδικών ρυθμίσεων γραμμής για hover",
+      "lineSelection": "Χρήση ειδικών ρυθμίσεων γραμμής για επιλογή",
+      "lineCompletion": "Χρήση ειδικών ρυθμίσεων γραμμής για ολοκλήρωση"
+    },
+    "toolSettings": {
+      "title": "Ρυθμίσεις {tool}",
+      "toolSettingsTitle": "Ρυθμίσεις Εργαλείου",
+      "comingSoon": "Οι ρυθμίσεις για αυτό το εργαλείο θα προστεθούν σύντομα"
+    }
+  },
+  "calibration": {
+    "title": "Βαθμονόμηση Συντεταγμένων",
+    "close": "Κλείσιμο",
+    "sceneStatus": {
+      "title": "Κατάσταση Σκηνής",
+      "entities": "Οντότητες",
+      "levels": "Επίπεδα",
+      "noEntities": "Χωρίς οντότητες"
+    },
+    "coordinates": {
+      "title": "Συντεταγμένες",
+      "css": "CSS",
+      "world": "Κόσμος",
+      "roundTripError": "Σφάλμα round-trip",
+      "zoom": "Zoom",
+      "moveMouseHint": "Μετακινήστε το ποντίκι πάνω από τον καμβά..."
+    },
+    "clickTest": {
+      "title": "Τεστ Κλικ",
+      "clear": "Καθαρισμός",
+      "areaLabel": "Περιοχή τεστ ακρίβειας συντεταγμένων",
+      "clickHint": "Κάντε κλικ εδώ για τεστ ακρίβειας",
+      "noTests": "Δεν υπάρχουν τεστ",
+      "perfect": "ΤΕΛΕΙΟ",
+      "needsFix": "ΧΡΕΙΑΖΕΤΑΙ ΔΙΟΡΘΩΣΗ"
+    },
+    "tips": {
+      "title": "Συμβουλές",
+      "roundTripLimit": "Σφάλμα round-trip < 0.5px",
+      "tryDifferentZoom": "Δοκιμάστε σε διαφορετικά επίπεδα zoom",
+      "entitiesOk": "Οντότητες OK",
+      "loadDxf": "Φόρτωση DXF",
+      "usingCoordinateTransforms": "Χρήση κεντρικοποιημένων CoordinateTransforms"
+    },
+    "toggle": {
+      "hide": "Απόκρυψη",
+      "show": "Εμφάνιση"
+    }
+  },
+  "calibrationStep": {
+    "title": "Βαθμονόμηση Κλίμακας & Μονάδων",
+    "description": "Ορίστε τις μονάδες και προαιρετικά βαθμονομήστε την κλίμακα χρησιμοποιώντας γνωστές μετρήσεις από το αρχείο DXF.",
+    "units": {
+      "title": "Μονάδες",
+      "ariaLabel": "Επιλογή μονάδων",
+      "mm": "χιλιοστά",
+      "cm": "εκατοστά",
+      "m": "μέτρα",
+      "in": "ίντσες",
+      "ft": "πόδια"
+    },
+    "calibration": {
+      "title": "Βαθμονόμηση",
+      "skip": {
+        "title": "Παράλειψη Βαθμονόμησης (Προτεινόμενο)",
+        "description": "Χρήση εγγενών μονάδων και κλίμακας του αρχείου DXF. Καλύτερο για τις περισσότερες αρχιτεκτονικές κατόψεις.",
+        "benefit": "Γρήγορη εισαγωγή, διατήρηση αρχικής κλίμακας"
+      },
+      "manual": {
+        "title": "Βαθμονόμηση 2 Σημείων",
+        "description": "Ορισμός κλίμακας με μέτρηση γνωστής απόστασης στο σχέδιο.",
+        "benefit": "Ακριβής βαθμονόμηση για προσαρμοσμένη κλίμακα"
+      },
+      "settings": {
+        "title": "Ρυθμίσεις Βαθμονόμησης",
+        "distanceLabel": "Γνωστή Απόσταση:",
+        "placeholder": "π.χ. 100",
+        "hint": "Στο επόμενο βήμα μπορείτε να επιλέξετε δύο σημεία στο σχέδιο που αντιστοιχούν σε αυτή την απόσταση."
+      }
+    }
+  },
   "layerManager": {
     "title": "Διαχείριση Layers",
     "loading": "Φόρτωση layers...",
@@ -314,5 +797,56 @@
       "checkConnection": "Ελέγξτε τη σύνδεσή σας",
       "dbConnectionError": "Σφάλμα σύνδεσης με τη βάση δεδομένων"
     }
+  },
+  "cadDock": {
+    "panels": {
+      "objectSnap": "Object Snap",
+      "layers": "Layers",
+      "properties": "Properties",
+      "commands": "Commands"
+    },
+    "snapModes": {
+      "title": "Object Snap",
+      "description": "Κλικ για εναλλαγή snap modes"
+    },
+    "layers": {
+      "default": "0 - Default",
+      "geometry": "Geometry",
+      "dimensions": "Dimensions"
+    },
+    "properties": {
+      "layer": "Layer:",
+      "color": "Color:"
+    },
+    "history": {
+      "title": "Command History",
+      "commands": {
+        "fit": "Command: FIT",
+        "zoomWindow": "Command: ZOOM Window",
+        "line": "Command: LINE"
+      },
+      "ready": "Ready for command..."
+    }
+  },
+  "pdfPanel": {
+    "title": "PDF Background",
+    "upload": "Upload PDF",
+    "loading": "Loading...",
+    "selectFile": "Select a PDF file to use as background",
+    "removePdf": "Remove PDF",
+    "pageInfo": "Page {currentPage} of {numPages}",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "scale": "Scale",
+    "zoomOut": "Zoom out",
+    "zoomIn": "Zoom in",
+    "rotation": "Rotation",
+    "rotateCcw": "Rotate counter-clockwise",
+    "rotateCw": "Rotate clockwise",
+    "opacity": "Opacity",
+    "fitToView": "Fit to View",
+    "resetTransform": "Reset Transform",
+    "hidePdf": "Hide PDF",
+    "showPdf": "Show PDF"
   }
 }

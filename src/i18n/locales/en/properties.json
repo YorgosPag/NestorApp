@@ -408,6 +408,21 @@
     "features": "Features",
     "edit": "Edit"
   },
+  "details": {
+    "building": "Building",
+    "floor": "Floor",
+    "price": "Price",
+    "area": "Area",
+    "rooms": "Rooms",
+    "balcony": "Balcony",
+    "buyer": "Buyer",
+    "viewContact": "View Contact",
+    "saleDate": "Sale Date:",
+    "features": "Features",
+    "share": "Share",
+    "shareSuccess": "Property shared successfully!",
+    "shareError": "Sharing error. Please try again."
+  },
   "statusSelector": {
     "currentStatus": "Current Status:",
     "changeStatus": "Change Status:",

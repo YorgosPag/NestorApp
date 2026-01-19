@@ -9,6 +9,8 @@ import { ExtendedSnapType } from '../../snapping/extended-types';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 // Ελληνικά labels και configurations για όλα τα snap modes
 const SNAP_LABELS: Record<ExtendedSnapType, string> = {
@@ -126,6 +128,8 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, radius } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleMasterToggle = useCallback(() => {
@@ -158,7 +162,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
         className={`${PANEL_LAYOUT.SPACING.COMPACT} ${radius.md} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${PANEL_LAYOUT.TRANSITION.COLORS} border flex items-center ${PANEL_LAYOUT.GAP.XS} ${
           snapEnabled ? `${colors.bg.primary} ${colors.text.primary} ${getStatusBorder('info')} ${PANEL_LAYOUT.SHADOW.MD}` : `${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
         }`}
-        title="Ενεργοποίηση/Απενεργοποίηση Object Snap (F3)"
+        title={t('overlayToolbar.objectSnap')}
       >
         <Target size={14} />
         <span>SNAP</span>
@@ -196,7 +200,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
       <button
         onClick={handleQuickEnable}
         className={`${iconSizes.xl} ${radius.md} border ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['150']} flex items-center justify-center ${colors.text.muted} ${HOVER_TEXT_EFFECTS.WHITE} ${colors.bg.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`}
-        title="Ενεργοποίηση βασικών λειτουργιών"
+        title={t('overlayToolbar.basicFunctions')}
       >
         <Settings size={14} />
       </button>

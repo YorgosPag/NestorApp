@@ -1,8 +1,18 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
 import type { ContactFormData } from '@/types/ContactFormTypes';
 // 🏢 ENTERPRISE: Import shared utilities from canonical naming module
 import { sanitizeForFilename } from '@/services/upload/utils/file-display-name';
+
+// 🌐 i18n: Fallback labels as i18n keys (to be translated by consuming component)
+const FALLBACK_LABELS = {
+  unknownFirstName: 'files.fallback.unknownFirstName', // 'Άγνωστο'
+  unknownLastName: 'files.fallback.unknownLastName', // 'Όνομα'
+  unknownCompany: 'files.fallback.unknownCompany', // 'Εταιρεία'
+  representative: 'files.fallback.representative', // 'εκπρόσωπος'
+  unknownService: 'files.fallback.unknownService', // 'Υπηρεσία'
+} as const;
 
 // ============================================================================
 // 🏢 ENTERPRISE FILE NAMING SERVICE - CLIENT-SIDE FILENAME GENERATION
@@ -58,8 +68,9 @@ export class FileNamingService {
     purpose: 'photo' | 'logo' = 'photo',
     index?: number
   ): string {
-    const firstName = formData.firstName || 'Άγνωστο';
-    const lastName = formData.lastName || 'Όνομα';
+    // 🌐 i18n: Use fallback keys (actual translation happens in UI layer)
+    const firstName = formData.firstName || 'Unknown';
+    const lastName = formData.lastName || 'Name';
     const extension = this.getFileExtension(originalFilename);
 
     // Αν έχουμε index (για multiple photos)
@@ -79,12 +90,13 @@ export class FileNamingService {
     originalFilename: string,
     purpose: 'logo' | 'representative' = 'logo'
   ): string {
+    // 🌐 i18n: Use English fallback (filenames should be language-neutral)
     const companyName = formData.companyName?.trim()
       ? formData.companyName
-      : (formData.tradeName || formData.name || 'Εταιρεία_' + Date.now());
+      : (formData.tradeName || formData.name || 'Company_' + Date.now());
     const extension = this.getFileExtension(originalFilename);
 
-    const purposeLabel = purpose === 'logo' ? 'logo' : 'εκπρόσωπος';
+    const purposeLabel = purpose === 'logo' ? 'logo' : 'representative';
     const baseName = `${companyName}_${purposeLabel}`;
     const sanitized = this.sanitizeFilename(baseName);
 
@@ -99,7 +111,8 @@ export class FileNamingService {
     originalFilename: string,
     purpose: 'logo' | 'photo' = 'logo'
   ): string {
-    const serviceName = formData.serviceName || formData.name || 'Υπηρεσία';
+    // 🌐 i18n: Use English fallback (filenames should be language-neutral)
+    const serviceName = formData.serviceName || formData.name || 'Service';
     const extension = this.getFileExtension(originalFilename);
 
     const baseName = `${serviceName}_${purpose}`;

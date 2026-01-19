@@ -43,5 +43,8 @@
   "upcomingMeetings": {
     "title": "Επερχόμενα Ραντεβού",
     "viewCalendar": "Προβολή ημερολογίου"
+  },
+  "aria": {
+    "statsSection": "Στατιστικά Dashboard"
   }
 }

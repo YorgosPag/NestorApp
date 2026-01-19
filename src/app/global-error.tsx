@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 /**
@@ -24,6 +25,7 @@ import React from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTranslation } from 'react-i18next';
 
 interface GlobalErrorProps {
   error: Error & { digest?: string };
@@ -39,6 +41,7 @@ interface GlobalErrorProps {
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const { t } = useTranslation('common');
 
   // 🏢 ENTERPRISE: Log error στο console για monitoring
   React.useEffect(() => {
@@ -55,12 +58,12 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
               <div className={`w-24 h-24 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4`}>
                 <AlertTriangle className={`${iconSizes.xl} text-destructive`} />
               </div>
-              <h1 className="text-3xl font-bold mb-3">Κάτι πήγε στραβά</h1>
+              <h1 className="text-3xl font-bold mb-3">{t('errors.global.title')}</h1>
               <p className="text-lg text-muted-foreground mb-2">
-                Η εφαρμογή αντιμετώπισε ένα απροσδόκητο σφάλμα.
+                {t('errors.global.message')}
               </p>
               <p className="text-sm text-muted-foreground">
-                Παρακαλώ δοκιμάστε να ανανεώσετε τη σελίδα ή να επιστρέψετε στην αρχική.
+                {t('errors.global.suggestion')}
               </p>
             </section>
 
@@ -70,7 +73,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                 <details>
                   <summary className="cursor-pointer font-medium mb-2 flex items-center gap-2 hover:text-accent transition-colors">
                     <AlertTriangle className={`${iconSizes.sm} text-amber-500`} />
-                    Τεχνικές πληροφορίες σφάλματος (Development Only)
+                    {t('errors.global.technicalDetails')}
                   </summary>
                   <div className={`mt-2 p-3 ${colors.bg.primary} rounded border border-border`}>
                     <p className="text-sm font-mono text-muted-foreground break-words mb-2">
@@ -103,7 +106,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-3 rounded-md font-medium flex items-center justify-center gap-2 transition-colors"
               >
                 <RefreshCw className={iconSizes.sm} />
-                Προσπαθήστε ξανά
+                {t('errors.actions.tryAgain')}
               </button>
 
               <button
@@ -111,14 +114,14 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                 className={`w-full border border-input ${colors.bg.primary} hover:bg-accent hover:text-accent-foreground px-6 py-3 rounded-md font-medium flex items-center justify-center gap-2 transition-colors`}
               >
                 <Home className={iconSizes.sm} />
-                Επιστροφή στην Αρχική
+                {t('errors.actions.backToHome')}
               </button>
             </section>
 
             {/* 🏢 ENTERPRISE: Support message */}
             <footer className="mt-8 text-center text-sm text-muted-foreground">
               <p>
-                Αν το πρόβλημα επιμένει, παρακαλώ επικοινωνήστε με τον διαχειριστή του συστήματος.
+                {t('errors.global.supportMessage')}
               </p>
             </footer>
           </div>

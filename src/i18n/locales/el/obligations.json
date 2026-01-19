@@ -57,10 +57,14 @@
     "title": "Δομή & Περιεχόμενο"
   },
   "preview": {
-    "title": "Live Preview",
-    "description": "Δείτε πως θα φαίνεται το τελικό έγγραφο",
+    "title": "Προεπισκόπηση",
+    "description": "Live preview του εγγράφου",
     "unknownProject": "Άγνωστο έργο",
-    "unknownContractor": "Άγνωστος εργολάβος"
+    "unknownContractor": "Άγνωστος εργολάβος",
+    "toc": {
+      "hide": "Απόκρυψη Περιεχομένων",
+      "show": "Εμφάνιση Περιεχομένων"
+    }
   },
   "validation": {
     "titleRequired": "Παρακαλώ εισάγετε τίτλο",
@@ -96,6 +100,108 @@
   "aria": {
     "editObligation": "Επεξεργασία υποχρέωσης",
     "editForm": "Φόρμα επεξεργασίας",
-    "preview": "Προεπισκόπηση"
+    "preview": "Προεπισκόπηση",
+    "hideToc": "Απόκρυψη πίνακα περιεχομένων",
+    "showToc": "Εμφάνιση πίνακα περιεχομένων",
+    "printDocument": "Εκτύπωση εγγράφου"
+  },
+  "export": {
+    "progress": {
+      "preparingContent": "Προετοιμασία περιεχομένου...",
+      "formattingDocument": "Μορφοποίηση εγγράφου...",
+      "creatingToc": "Δημιουργία πίνακα περιεχομένων...",
+      "finalProcessing": "Τελική επεξεργασία...",
+      "complete": "Εξαγωγή ολοκληρώθηκε!"
+    },
+    "success": {
+      "title": "Επιτυχία",
+      "message": "Το PDF δημιουργήθηκε επιτυχώς."
+    },
+    "creating": "Δημιουργία PDF...",
+    "percentComplete": "{percent}% ολοκληρώθηκε",
+    "button": "Εξαγωγή PDF",
+    "exporting": "Εξαγωγή..."
+  },
+  "print": {
+    "button": "Εκτύπωση",
+    "error": "Σφάλμα κατά την εκτύπωση. Παρακαλώ δοκιμάστε ξανά."
+  },
+  "sectionEditor": {
+    "categoryLabel": "Κατηγορία",
+    "selectCategory": "Επιλέξτε κατηγορία",
+    "statusLabel": "Στάτους",
+    "requiredArticle": "Απαραίτητο άρθρο"
+  },
+  "richText": {
+    "defaultPlaceholder": "Εισάγετε το περιεχόμενο..."
+  },
+  "article": {
+    "titlePlaceholder": "Τίτλος άρθρου...",
+    "contentPlaceholder": "Περιεχόμενο άρθρου...",
+    "noTitle": "Χωρίς τίτλο",
+    "addParagraph": "Προσθήκη παραγράφου",
+    "titleLabel": "Τίτλος Άρθρου",
+    "titleInputPlaceholder": "Εισάγετε τον τίτλο του άρθρου",
+    "contentLabel": "Περιεχόμενο Άρθρου",
+    "contentInputPlaceholder": "Εισάγετε το περιεχόμενο του άρθρου..."
+  },
+  "paragraph": {
+    "contentPlaceholder": "Περιεχόμενο παραγράφου...",
+    "noContent": "Χωρίς περιεχόμενο"
+  },
+  "section": {
+    "titlePlaceholder": "Τίτλος ενότητας...",
+    "contentPlaceholder": "Περιεχόμενο της ενότητας...",
+    "noTitle": "Χωρίς τίτλο",
+    "requiredSection": "Απαραίτητη ενότητα",
+    "required": "Απαραίτητο",
+    "addArticle": "Προσθήκη άρθρου",
+    "duplicateSection": "Αντιγραφή ενότητας",
+    "contentLabel": "Περιεχόμενο Ενότητας"
+  },
+  "exportOptions": {
+    "title": "Επιλογές Εξαγωγής",
+    "description": "Προσαρμόστε την εξαγωγή PDF σύμφωνα με τις ανάγκες σας",
+    "content": {
+      "title": "Περιεχόμενο",
+      "toc": {
+        "label": "Πίνακας Περιεχομένων",
+        "description": "Αυτόματος πίνακας με navigation links",
+        "aria": "Συμπερίληψη πίνακα περιεχομένων"
+      },
+      "pageNumbers": {
+        "label": "Αρίθμηση Σελίδων",
+        "description": "Footer με αριθμούς σελίδων και στοιχεία",
+        "aria": "Συμπερίληψη αρίθμησης σελίδων"
+      },
+      "logo": {
+        "label": "Λογότυπο Εταιρείας",
+        "description": "Προσθήκη λογοτύπου στο header",
+        "aria": "Συμπερίληψη λογότυπου"
+      }
+    },
+    "quality": {
+      "title": "Ποιότητα & Μορφοποίηση",
+      "standard": {
+        "label": "Στάνταρ",
+        "description": "Βασική μορφοποίηση, μικρότερο μέγεθος",
+        "aria": "Ποιότητα Standard"
+      },
+      "high": {
+        "label": "Υψηλή Ποιότητα",
+        "description": "Βελτιωμένα περιθώρια και typography",
+        "aria": "Ποιότητα High"
+      }
+    },
+    "preview": {
+      "title": "Προεπισκόπηση Εγγράφου",
+      "sections": "Ενότητες:",
+      "articles": "Άρθρα:",
+      "paragraphs": "Παράγραφοι:",
+      "words": "Λέξεις:",
+      "readingTime": "Ανάγνωση:",
+      "minutes": "λεπτά",
+      "estimatedPages": "Εκτιμώμενες σελίδες:"
+    }
   }
 }

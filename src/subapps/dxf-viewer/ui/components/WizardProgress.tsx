@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 import React from 'react';
@@ -5,6 +6,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 interface WizardProgressProps {
   currentStep: number;
@@ -56,6 +59,21 @@ export function WizardProgress({
   );
 }
 
-export function getDefaultStepLabels(): string[] {
-  return ['Επίπεδο', 'Βαθμονόμηση', 'Εισαγωγή'];
+// 🏢 ENTERPRISE: Hook for i18n-aware step labels
+export function useDefaultStepLabels(): string[] {
+  const { t } = useTranslation('dxf-viewer');
+  return [
+    t('wizardProgress.stepLabels.level'),
+    t('wizardProgress.stepLabels.calibration'),
+    t('wizardProgress.stepLabels.import')
+  ];
+}
+
+// 🏢 ENTERPRISE: Legacy function for backward compatibility (accepts t function)
+export function getDefaultStepLabels(t: (key: string) => string): string[] {
+  return [
+    t('wizardProgress.stepLabels.level'),
+    t('wizardProgress.stepLabels.calibration'),
+    t('wizardProgress.stepLabels.import')
+  ];
 }

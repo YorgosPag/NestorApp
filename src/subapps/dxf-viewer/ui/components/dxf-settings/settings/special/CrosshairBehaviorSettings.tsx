@@ -51,6 +51,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 export interface CrosshairBehaviorSettingsProps {
   className?: string;
@@ -83,6 +85,8 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
   // ============================================================================
 
   const colors = useSemanticColors();
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
   let cursorHookResult;
   try {
     cursorHookResult = useCursorSettings();
@@ -112,7 +116,7 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
           value={cursorColors.crosshairColor}
           onChange={(color) => onCursorColorsChange({ ...cursorColors, crosshairColor: color })}
           label={cursorColors.crosshairColor}
-          title="Επιλογή Χρώματος Crosshair"
+          title={t('crosshairSettings.colorPicker')}
           alpha={false}
           modes={['hex', 'rgb', 'hsl']}
           palettes={['dxf', 'semantic', 'material']}

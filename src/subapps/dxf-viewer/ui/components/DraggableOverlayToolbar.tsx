@@ -30,6 +30,8 @@ import { getStatusColorButtonStyles } from '../DxfViewerComponents.styles';
 import { ToolButton, ActionButton } from '../../components/shared/BaseButton';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 // ============================================================================
 // CONSTANTS - Enterprise Design Tokens
@@ -90,6 +92,8 @@ interface DraggableOverlayToolbarProps {
 export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (props) => {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
 
   // 🎯 OVERLAY CREATION & STORE HOOKS
   const { startOverlayCreation } = useUnifiedOverlayCreation();
@@ -97,8 +101,8 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
 
   // 🎯 TOOLBAR CONFIGURATION
   const modeButtons = [
-    { mode: 'draw' as OverlayEditorMode, icon: Pen, label: 'Σχεδίαση', key: 'N' },
-    { mode: 'edit' as OverlayEditorMode, icon: Edit, label: 'Επεξεργασία', key: 'E' },
+    { mode: 'draw' as OverlayEditorMode, icon: Pen, label: t('toolbar.draw'), key: 'N' },
+    { mode: 'edit' as OverlayEditorMode, icon: Edit, label: t('toolbar.edit'), key: 'E' },
   ];
 
   const kindIcons = { unit: Square, parking: Circle, storage: Triangle, footprint: Grid };
@@ -175,7 +179,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
       dimensions={TOOLBAR_DIMENSIONS}
     >
       <FloatingPanel.Header
-        title="Drawing Tools"
+        title={t('toolbar.title')}
         icon={<Activity />}
         showClose={false}
       />
@@ -183,7 +187,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
         {/* 🎯 TOOLBAR CONTROLS */}
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} flex-wrap`}>
           {/* Drawing Modes - Using Centralized ToolButton */}
-          <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label="Drawing modes">
+          <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label={t('toolbar.ariaLabels.drawingModes')}>
             {modeButtons.map(({ mode: btnMode, icon: Icon, label, key }) => (
               <ToolButton
                 key={btnMode}
@@ -202,7 +206,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
 
           {/* Status Palette */}
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-            <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} text-muted-foreground`}>Status:</span>
+            <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} text-muted-foreground`}>{t('toolbar.status')}</span>
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
               {(Object.keys(STATUS_COLORS) as Status[]).map(status => (
                 <button
@@ -223,8 +227,8 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
 
           {/* Kind Selection - Using Centralized ToolButton */}
           <fieldset className={`flex items-center ${PANEL_LAYOUT.GAP.SM} border-none ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.MARGIN.NONE}`}>
-            <legend className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} text-muted-foreground`}>Τύπος:</legend>
-            <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label="Overlay type">
+            <legend className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} text-muted-foreground`}>{t('toolbar.type')}</legend>
+            <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label={t('toolbar.ariaLabels.overlayType')}>
               {(Object.keys(KIND_LABELS) as OverlayKind[]).map(kind => {
                 const Icon = kindIcons[kind];
                 return (
@@ -244,18 +248,18 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
           <Separator orientation="vertical" className={`${PANEL_LAYOUT.HEIGHT.LG} ${quick.separatorV}`} />
 
           {/* Actions - Using Centralized ActionButton */}
-          <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label="Overlay actions">
+          <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label={t('toolbar.ariaLabels.overlayActions')}>
             <ActionButton
               onClick={props.onDuplicate}
               disabled={!props.selectedOverlayId}
-              title="Αντιγραφή (D)"
+              title={t('toolbar.duplicate', { key: 'D' })}
               icon={Copy}
               size="xs"
             />
             <ActionButton
               onClick={props.onDelete}
               disabled={!props.selectedOverlayId}
-              title="Διαγραφή (Del)"
+              title={t('toolbar.delete', { key: 'Del' })}
               icon={X}
               size="xs"
               className="text-destructive hover:text-destructive"
@@ -265,18 +269,18 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
           <Separator orientation="vertical" className={`${PANEL_LAYOUT.HEIGHT.LG} ${quick.separatorV}`} />
 
           {/* Undo/Redo - Using Centralized ActionButton */}
-          <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label="History controls">
+          <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label={t('toolbar.ariaLabels.historyControls')}>
             <ActionButton
               onClick={props.onUndo}
               disabled={!props.canUndo}
-              title="Αναίρεση (Ctrl+Z)"
+              title={t('toolbar.undo', { key: 'Ctrl+Z' })}
               icon={RotateCcw}
               size="xs"
             />
             <ActionButton
               onClick={props.onRedo}
               disabled={!props.canRedo}
-              title="Επανάληψη (Ctrl+Y)"
+              title={t('toolbar.redo', { key: 'Ctrl+Y' })}
               icon={RotateCw}
               size="xs"
             />

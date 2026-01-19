@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -25,12 +25,19 @@ import { RelationshipProvider } from '@/components/contacts/relationships/contex
 import { CONTACT_TYPES, getContactIcon, getContactLabel } from '@/constants/contacts';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ENTERPRISE: Auth context for canonical upload pipeline (ADR-031)
+import { useAuth } from '@/auth/hooks/useAuth';
+// 🏢 ENTERPRISE: ID generation for new contacts (ADR-031)
+import { generateContactId } from '@/services/enterprise-id.service';
+import type { CanonicalUploadContext } from '@/components/ContactFormSections/utils/PhotoUploadConfiguration';
 
 export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, editContact, onLiveChange }: AddNewContactDialogProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('contacts');
   // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ ICON SIZES - ENTERPRISE PATTERN
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: Auth context for canonical upload pipeline (ADR-031)
+  const { user } = useAuth();
 
   const {
     formData,
@@ -57,6 +64,38 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
   const isCompany = contactType === CONTACT_TYPES.COMPANY;
   const isIndividual = contactType === CONTACT_TYPES.INDIVIDUAL;
   const isService = contactType === CONTACT_TYPES.SERVICE;
+
+  // ==========================================================================
+  // 🏢 ENTERPRISE: Canonical Upload Context (ADR-031)
+  // ==========================================================================
+  // Pre-generate contactId for new contacts so uploads use canonical pipeline
+  // For edit mode, use existing contact ID
+  // ==========================================================================
+  const [preGeneratedContactId] = useState<string>(() => {
+    // If editing, use existing ID; if new, generate one
+    return editContact?.id || generateContactId();
+  });
+
+  // Build canonical upload context (only if user has required claims)
+  const canonicalUploadContext = useMemo<CanonicalUploadContext | undefined>(() => {
+    // 🛡️ SECURITY: Only enable canonical pipeline if user has companyId claim
+    if (!user?.uid || !user?.companyId) {
+      console.warn('⚠️ Canonical upload context unavailable: missing user.uid or user.companyId');
+      return undefined;
+    }
+
+    // Use pre-generated ID for new contacts, existing ID for edits
+    const contactId = formData.id || preGeneratedContactId;
+
+    return {
+      companyId: user.companyId,
+      createdBy: user.uid,
+      contactId,
+      contactName: isIndividual
+        ? `${formData.firstName || ''} ${formData.lastName || ''}`.trim()
+        : formData.companyName || formData.serviceName || formData.name,
+    };
+  }, [user, formData.id, preGeneratedContactId, formData.firstName, formData.lastName, formData.companyName, formData.serviceName, formData.name, isIndividual]);
 
   // 🏷️ GET CONTACT NAME: Helper function to get contact name based on type
   const getContactName = () => {
@@ -133,7 +172,7 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
             {/* 🏢 UNIFIED CONTACT SECTION - All contact types centralized */}
             {/* 🔧 FIX: Wrap με RelationshipProvider για proper state management */}
             <RelationshipProvider
-              contactId={formData.id || 'new-contact'}
+              contactId={formData.id || preGeneratedContactId}
               contactType={contactType}
             >
               <UnifiedContactTabbedSection
@@ -150,6 +189,7 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
                 handleUploadedPhotoURL={handleUploadedPhotoURL}
                 setFormData={setFormData}
                 disabled={loading}
+                canonicalUploadContext={canonicalUploadContext}
               />
             </RelationshipProvider>
 

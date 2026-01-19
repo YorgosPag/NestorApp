@@ -19,6 +19,8 @@ import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles'
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 interface ColorGroupItemProps extends Pick<ColorGroupCommonProps, 
   'setExpandedColorGroups' | 'setColorPickerColorGroup' | 'setEditingColorGroup' | 
@@ -63,6 +65,8 @@ export function ColorGroupItem({
   const { getStatusBorder } = borderTokens;
   const hoverBorderEffects = createHoverBorderEffects(borderTokens);
   const colors = useSemanticColors();
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
 
   const representativeColor = scene.layers[layerNames[0]]?.color || DEFAULT_LAYER_COLOR;
 
@@ -146,7 +150,7 @@ export function ColorGroupItem({
           selectedColorGroupsForMerge.has(colorName) ? `ring-2 ${colors.ring.info} ${colors.bg.selection}` : ''
         }`}
         onClick={handleGroupClick}
-        title="Κλικ για επιλογή όλων των entities, Ctrl+Κλικ για multi-selection"
+        title={t('layerActions.selectAllEntities')}
       >
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} flex-1 ${PANEL_LAYOUT.MIN_WIDTH['0']}`}>
           {/* Expand/Collapse Arrow */}
@@ -167,7 +171,7 @@ export function ColorGroupItem({
             <button
               onClick={handleColorPickerToggle}
               className={`${iconSizes.sm} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} ${getStatusBorder('muted')} ${hoverBorderEffects.BLUE} ${colorBgClass}`}
-              title="Αλλαγή χρώματος Color Group"
+              title={t('layerActions.changeColorGroup')}
             />
           </div>
 
@@ -198,7 +202,7 @@ export function ColorGroupItem({
           <button
             onClick={handleVisibilityToggle}
             className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
-            title={allVisible ? "Απόκρυψη Color Group" : "Εμφάνιση Color Group"}
+            title={allVisible ? t('layerManager.actions.hide') : t('layerManager.actions.show')}
           >
             {allVisible ? (
               <Eye className={iconSizes.sm} />
@@ -213,7 +217,7 @@ export function ColorGroupItem({
           <button
             onClick={handleEditClick}
             className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
-            title="Μετονομασία Color Group"
+            title={t('layerActions.renameGroup')}
           >
             <Edit2 className={iconSizes.sm} />
           </button>
@@ -222,7 +226,7 @@ export function ColorGroupItem({
           <button
             onClick={handleDeleteClick}
             className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.error} ${HOVER_TEXT_EFFECTS.RED}`}
-            title="Διαγραφή Color Group"
+            title={t('layerActions.deleteGroup')}
           >
             <Trash2 className={iconSizes.sm} />
           </button>

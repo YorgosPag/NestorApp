@@ -49,6 +49,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: Centralized Panel Layout tokens (spacing, gaps, margins)
 import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 export interface RulerMajorLinesSettingsProps {
   className?: string;
@@ -72,6 +74,8 @@ export interface RulerMajorLinesSettingsProps {
  */
 export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = ({ className = '' }) => {
   const colors = useSemanticColors();
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
   // ============================================================================
   // HOOKS
   // ============================================================================
@@ -219,7 +223,7 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
           value={getBaseColor(rulerSettings.horizontal.majorTickColor)}
           onChange={handleMajorTickColorChange}
           label={getBaseColor(rulerSettings.horizontal.majorTickColor)}
-          title="Επιλογή Χρώματος Κύριων Γραμμών Χάρακα"
+          title={t('rulerSettings.majorLines.colorPicker')}
           alpha={false}
           modes={['hex', 'rgb', 'hsl']}
           palettes={['dxf', 'semantic', 'material']}

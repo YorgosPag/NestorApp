@@ -43,5 +43,8 @@
   "upcomingMeetings": {
     "title": "Upcoming Meetings",
     "viewCalendar": "View calendar"
+  },
+  "aria": {
+    "statsSection": "Dashboard Statistics"
   }
 }

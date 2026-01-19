@@ -1,9 +1,12 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 import React, { useEffect, useCallback } from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 import { useCursor } from '../../cursor';
 import { CADFeedback } from '../../../utils/feedback-utils';
 import { DynamicInputField } from './DynamicInputField';
@@ -38,6 +41,7 @@ export default function DynamicInputOverlay({
   mouseWorldPosition = null,
   tempPoints = null
 }: DynamicInputOverlayProps) {
+  const { t } = useTranslation('dxf-viewer');
   const { settings } = useCursor();
   const colors = useSemanticColors();
   
@@ -332,7 +336,7 @@ export default function DynamicInputOverlay({
               inputRef={xInputRef}
               isActive={activeField === 'x'}
               isAnchored={isCoordinateAnchored.x}
-              placeholder="π.χ. -1000.56"
+              placeholder={t('dynamicInput.placeholders.xCoordinate')}
             />
           )}
           
@@ -360,7 +364,7 @@ export default function DynamicInputOverlay({
               disabled={!fieldUnlocked.y}
               isActive={activeField === 'y' && fieldUnlocked.y}
               isAnchored={isCoordinateAnchored.y}
-              placeholder="π.χ. +750,32"
+              placeholder={t('dynamicInput.placeholders.yCoordinate')}
             />
           )}
           
@@ -391,7 +395,7 @@ export default function DynamicInputOverlay({
               inputRef={angleInputRef}
               disabled={!fieldUnlocked.angle}
               isActive={activeField === 'angle' && fieldUnlocked.angle}
-              placeholder="π.χ. 45 ή 90.5"
+              placeholder={t('dynamicInput.placeholders.angle')}
               fieldType="angle"
             />
           )}
@@ -427,7 +431,7 @@ export default function DynamicInputOverlay({
               inputRef={lengthInputRef}
               disabled={!fieldUnlocked.length}
               isActive={activeField === 'length' && fieldUnlocked.length}
-              placeholder="π.χ. 100.0"
+              placeholder={t('dynamicInput.placeholders.length')}
               fieldType="length"
             />
           )}
@@ -460,7 +464,7 @@ export default function DynamicInputOverlay({
               inputRef={radiusInputRef}
               disabled={!fieldUnlocked.radius}
               isActive={activeField === 'radius' && fieldUnlocked.radius}
-              placeholder="π.χ. 50.0"
+              placeholder={t('dynamicInput.placeholders.radius')}
               fieldType="radius"
             />
           )}
@@ -493,7 +497,7 @@ export default function DynamicInputOverlay({
               inputRef={diameterInputRef}
               disabled={!fieldUnlocked.diameter}
               isActive={activeField === 'diameter' && fieldUnlocked.diameter}
-              placeholder="π.χ. 100.0"
+              placeholder={t('dynamicInput.placeholders.diameter')}
               fieldType="diameter"
             />
           )}
@@ -503,16 +507,16 @@ export default function DynamicInputOverlay({
         {multiPointInfo.shouldShowMultiPoint && (
           <div className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.PADDING.TOP_SM} ${getDirectionalBorder('muted', 'top')} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.tertiary}`}>
             {multiPointInfo.lastPointDistance !== null && (
-              <div>Distance: {multiPointInfo.lastPointDistance.toFixed(3)}</div>
+              <div>{t('dynamicInput.multiPoint.distance')} {multiPointInfo.lastPointDistance.toFixed(3)}</div>
             )}
             {multiPointInfo.segmentAngle !== null && (
-              <div>Angle: {multiPointInfo.segmentAngle.toFixed(1)}°</div>
+              <div>{t('dynamicInput.multiPoint.angle')} {multiPointInfo.segmentAngle.toFixed(1)}°</div>
             )}
             {multiPointInfo.segments.length > 0 && (
-              <div>Segments: {multiPointInfo.segments.length}</div>
+              <div>{t('dynamicInput.multiPoint.segments')} {multiPointInfo.segments.length}</div>
             )}
             {multiPointInfo.totalDistance > 0 && (
-              <div>Total: {multiPointInfo.totalDistance.toFixed(3)}</div>
+              <div>{t('dynamicInput.multiPoint.total')} {multiPointInfo.totalDistance.toFixed(3)}</div>
             )}
           </div>
         )}

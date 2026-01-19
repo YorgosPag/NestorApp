@@ -49,6 +49,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: Centralized spacing tokens (ADR-UI-001)
 import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 export interface RulerMinorLinesSettingsProps {
   className?: string;
@@ -72,6 +74,8 @@ export interface RulerMinorLinesSettingsProps {
  */
 export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = ({ className = '' }) => {
   const colors = useSemanticColors();
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
   // ============================================================================
   // HOOKS
   // ============================================================================
@@ -219,7 +223,7 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
           value={getBaseColor(rulerSettings.horizontal.minorTickColor)}
           onChange={handleMinorTickColorChange}
           label={getBaseColor(rulerSettings.horizontal.minorTickColor)}
-          title="Επιλογή Χρώματος Δευτερευουσών Γραμμών Χάρακα"
+          title={t('rulerSettings.minorLines.colorPicker')}
           alpha={false}
           modes={['hex', 'rgb', 'hsl']}
           palettes={['dxf', 'semantic', 'material']}

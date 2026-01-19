@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 import type { UseSemanticColorsReturn } from '@/hooks/useSemanticColors';
 // 🏢 ENTERPRISE: Import centralized property status labels - NO MORE HARDCODED VALUES
 import { getPropertySpecialStatusLabels } from '@/subapps/dxf-viewer/config/modal-select';
@@ -15,32 +16,32 @@ export const getPropertyStatusConfig = (colors: UseSemanticColorsReturn) => {
     'for-sale': {
       label: statusLabels.for_sale,
       color: `${colors.status.success.bg} ${colors.status.success.text} ${colors.status.success.border}`,
-      priceLabel: 'Τιμή Πώλησης'
+      priceLabel: 'properties.priceLabels.salePrice' // i18n key
     },
     'for-rent': {
       label: statusLabels.for_rent,
       color: `${colors.status.info.bg} ${colors.status.info.text} ${colors.status.info.border}`,
-      priceLabel: 'Μηνιαίο Μίσθωμα'
+      priceLabel: 'properties.priceLabels.monthlyRent' // i18n key
     },
     'sold': {
       label: statusLabels.sold,
       color: `${colors.status.error.bg} ${colors.status.error.text} ${colors.status.error.border}`,
-      priceLabel: 'Τιμή Πώλησης'
+      priceLabel: 'properties.priceLabels.salePrice' // i18n key
     },
     'rented': {
       label: statusLabels.rented,
       color: `${colors.status.warning.bg} ${colors.status.warning.text} ${colors.status.warning.border}`,
-      priceLabel: 'Μηνιαίο Μίσθωμα'
+      priceLabel: 'properties.priceLabels.monthlyRent' // i18n key
     },
     'reserved': {
       label: statusLabels.reserved,
       color: `${colors.status.warning.bg} ${colors.status.warning.text} ${colors.status.warning.border}`,
-      priceLabel: 'Τιμή Πώλησης'
+      priceLabel: 'properties.priceLabels.salePrice' // i18n key
     },
-    'Άγνωστο': {
+    'unknown': {
       label: statusLabels.unknown,
       color: `${colors.status.muted.bg} ${colors.status.muted.text} ${colors.status.muted.border}`,
-      priceLabel: 'Τιμή'
+      priceLabel: 'properties.priceLabels.price' // i18n key
     },
   } as const;
 };

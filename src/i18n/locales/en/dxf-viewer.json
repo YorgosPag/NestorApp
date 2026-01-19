@@ -71,28 +71,66 @@
     },
     "overlay": {
       "title": "Overlay",
-      "description": "{{regionCount, plural, =0 {} other {{regionCount} overlay regions}}"
+      "description": "{{regionCount, plural, =0 {} other {{regionCount} overlay regions}}",
+      "loading": "Loading layer management..."
     },
     "levels": {
       "title": "Levels",
-      "description": "Management Levels"
+      "description": "Management Levels",
+      "loading": "Loading levels...",
+      "projectLevels": "Project Levels",
+      "defaultLevelName": "Level {number}",
+      "emptyNameWarning": "Name cannot be empty.",
+      "selectLevel": "Select level {name}",
+      "elementsCount": "{count} elements",
+      "emptyLevel": "Empty level",
+      "renameLevel": "Rename level",
+      "deleteLevel": "Delete level",
+      "noLevels": "No levels exist",
+      "newLevelPlaceholder": "New level name..."
     },
     "hierarchy": {
       "title": "Hierarchy",
-      "description": "Project Hierarchy & Destinations"
+      "description": "Project Hierarchy & Destinations",
+      "loading": "Loading hierarchy..."
     },
     "layers": {
       "title": "Layers",
       "description": "Layer Drawing & Status Management"
-    }
+    },
+    "colors": {
+      "title": "Colors",
+      "description": "Color Palette",
+      "loading": "Loading color palette..."
+    },
+    "selectPanel": "Select a panel from the tabs"
+  },
+  "lineSettings": {
+    "selectTemplate": "Select template..."
   },
   "toolbar": {
+    "title": "Drawing Tools",
     "select": "Select",
     "pan": "Pan",
     "line": "Line",
     "rectangle": "Rectangle",
     "circle": "Circle",
-    "polyline": "Polyline"
+    "polyline": "Polyline",
+    "draw": "Draw",
+    "edit": "Edit",
+    "status": "Status:",
+    "type": "Type:",
+    "duplicate": "Duplicate ({{key}})",
+    "delete": "Delete ({{key}})",
+    "undo": "Undo ({{key}})",
+    "redo": "Redo ({{key}})",
+    "dragToMove": "Drag to move",
+    "ariaLabels": {
+      "drawingModes": "Drawing modes",
+      "overlayType": "Overlay type",
+      "overlayActions": "Overlay actions",
+      "historyControls": "History controls"
+    }
   },
   "wizard": {
     "title": "Enhanced DXF Import",
@@ -160,6 +198,16 @@
       "previous": "← Previous",
       "next": "Next →",
       "ready": "Ready"
+    },
+    "levelSelection": {
+      "title": "Select Level for DXF Import",
+      "description": "Select an existing level or create a new one. Each level can contain multiple floor plans.",
+      "existingLevels": "Existing Levels",
+      "defaultLevel": "Default Level",
+      "createNewLevel": "Or Create New Level",
+      "createNewButton": "Create New Level",
+      "newLevelPlaceholder": "Enter level name (e.g. Basement, 2nd Floor)",
+      "cancel": "Cancel"
     },
     "replace": {
       "title": "Replace {typeLabel}",
@@ -233,6 +281,236 @@
       "importFailed": "Error during file import:"
     }
   },
+  "settings": {
+    "grip": {
+      "title": "Grip Settings",
+      "actionsAriaLabel": "Grip settings actions",
+      "reset": "Reset",
+      "resetTitle": "Reset to default settings",
+      "factory": "Factory",
+      "factoryTitle": "Reset to factory settings (CAD Standards)",
+      "enabled": "Show Grips",
+      "disabledWarning": "Grips are disabled and will not be displayed",
+      "sections": {
+        "basic": "Basic Settings",
+        "colors": "Grip Colors",
+        "types": "Grip Types",
+        "advanced": "Advanced Settings"
+      },
+      "labels": {
+        "size": "Grip Size",
+        "opacity": "Opacity",
+        "coldColor": "Cold Color",
+        "warmColor": "Warm Color (Hover)",
+        "hotColor": "Hot Color (Selected)",
+        "contourColor": "Contour Color",
+        "pickBoxSize": "Pick Box Size",
+        "apertureSize": "Aperture Size",
+        "maxGrips": "Max Grips per Entity"
+      },
+      "colorPicker": {
+        "cold": "Select Cold Grip Color",
+        "warm": "Select Warm Grip Color",
+        "hot": "Select Hot Grip Color",
+        "contour": "Select Contour Grip Color"
+      },
+      "checkboxes": {
+        "showMidpoints": "Show Midpoints",
+        "showCenters": "Show Centers",
+        "showQuadrants": "Show Quadrants",
+        "showAperture": "Show Aperture",
+        "multiGripEdit": "Multi-Grip Edit",
+        "snapToGrips": "Snap to Grips"
+      },
+      "presets": {
+        "title": "Quick Presets",
+        "small": "Small",
+        "normal": "Normal",
+        "large": "Large"
+      },
+      "factoryReset": {
+        "title": "Factory Reset Settings",
+        "warning": "WARNING: You will lose ALL your data!",
+        "lossTitle": "You will lose:",
+        "lossList": {
+          "customSettings": "All custom grip settings",
+          "colors": "All colors you have selected",
+          "changes": "All changes you have made"
+        },
+        "resetInfo": "Reset: Settings will return to CAD standards (AutoCAD/BricsCAD)",
+        "confirm": "Are you sure you want to continue?",
+        "cancel": "Cancel",
+        "confirmButton": "Factory Reset",
+        "successMessage": "Factory settings restored! All grip settings returned to CAD standards.",
+        "cancelMessage": "Factory reset cancelled"
+      },
+      "ariaLabel": "Grip Settings"
+    },
+    "line": {
+      "title": "Line Settings",
+      "actionsAriaLabel": "Line settings actions",
+      "reset": "Reset",
+      "resetTitle": "Reset to default settings",
+      "factory": "Factory",
+      "factoryTitle": "Reset to factory settings (ISO 128 & AutoCAD 2024)",
+      "enabled": "Show line",
+      "disabledWarning": "Lines are disabled and will not be displayed in preview",
+      "sections": {
+        "templates": "Templates & Tools",
+        "basic": "Basic Settings",
+        "hover": "Hover Settings",
+        "final": "Final Line Settings",
+        "advanced": "Advanced Settings"
+      },
+      "labels": {
+        "color": "Color",
+        "width": "Line Width",
+        "widthValue": "Line Width: {{value}}px",
+        "opacity": "Opacity",
+        "opacityValue": "Opacity: {{value}}%",
+        "type": "Line Type",
+        "templates": "Predefined Templates",
+        "breakAtCenter": "Break line for text",
+        "breakAtCenterDescription": "The line will break in the middle to fit text",
+        "hoverColor": "Hover Color",
+        "hoverWidth": "Hover Width",
+        "hoverWidthValue": "Hover Width: {{value}}px",
+        "hoverOpacity": "Hover Opacity",
+        "hoverOpacityValue": "Hover Opacity: {{value}}%",
+        "finalColor": "Final Color",
+        "finalWidth": "Final Width",
+        "finalWidthValue": "Final Width: {{value}}px",
+        "finalOpacity": "Final Opacity",
+        "finalOpacityValue": "Final Opacity: {{value}}%",
+        "dashScale": "Dash Scale",
+        "dashScaleValue": "Dash Scale: {{value}}",
+        "dashOffset": "Dash Offset",
+        "dashOffsetValue": "Dash Offset: {{value}}px",
+        "lineCap": "Line Cap",
+        "lineJoin": "Line Join"
+      },
+      "colorPicker": {
+        "line": "Select Line Color",
+        "hover": "Select Hover Color",
+        "final": "Select Final Color"
+      },
+      "factoryReset": {
+        "title": "Factory Reset Settings",
+        "warning": "WARNING: You will lose ALL your data!",
+        "lossTitle": "You will lose:",
+        "lossList": {
+          "customSettings": "All custom line settings",
+          "templates": "All templates you have selected",
+          "changes": "All changes you have made"
+        },
+        "resetInfo": "Reset: Settings will return to ISO 128 & AutoCAD 2024 standards",
+        "confirm": "Are you sure you want to continue?",
+        "cancel": "Cancel",
+        "confirmButton": "Factory Reset",
+        "successMessage": "Factory settings restored! All line settings returned to ISO 128 & AutoCAD 2024 standards.",
+        "cancelMessage": "Factory reset cancelled"
+      },
+      "ariaLabel": "Line Settings"
+    },
+    "text": {
+      "title": "Text Settings",
+      "actionsAriaLabel": "Text settings actions",
+      "reset": "Reset",
+      "resetTitle": "Reset to default settings",
+      "factory": "Factory",
+      "factoryTitle": "Reset to factory settings (ISO 3098)",
+      "enabled": "Show distance text",
+      "disabledWarning": "Distance text is disabled and will not be displayed in preview",
+      "sections": {
+        "basic": "Basic Text Settings",
+        "style": "Text Style",
+        "advanced": "Advanced Effects",
+        "preview": "Preview & Info"
+      },
+      "labels": {
+        "fontFamily": "Font Family",
+        "fontSize": "Font Size",
+        "color": "Text Color",
+        "textStyle": "Text Style",
+        "scriptStyle": "Superscript / Subscript",
+        "preview": "Preview",
+        "previewText": "Seize the day",
+        "searchFonts": "Search fonts...",
+        "searchSize": "Search size...",
+        "increaseFontSize": "Increase font size",
+        "decreaseFontSize": "Decrease font size"
+      },
+      "colorPicker": {
+        "text": "Select Text Color"
+      },
+      "styles": {
+        "bold": "Bold",
+        "italic": "Italic",
+        "underline": "Underline",
+        "strikethrough": "Strikethrough",
+        "superscript": "Superscript",
+        "subscript": "Subscript",
+        "normal": "Normal"
+      },
+      "factoryReset": {
+        "title": "Factory Reset Settings",
+        "warning": "WARNING: You will lose ALL your data!",
+        "lossTitle": "You will lose:",
+        "lossList": {
+          "customSettings": "All custom text settings",
+          "templates": "All templates you have selected",
+          "changes": "All changes you have made"
+        },
+        "resetInfo": "Reset: Settings will return to ISO 3098 standards",
+        "confirm": "Are you sure you want to continue?",
+        "cancel": "Cancel",
+        "confirmButton": "Factory Reset",
+        "successMessage": "Factory settings restored! All text settings returned to ISO 3098 standards.",
+        "cancelMessage": "Factory reset cancelled"
+      },
+      "ariaLabel": "Text Settings"
+    }
+  },
+  "layerActions": {
+    "changeColor": "Change color",
+    "rename": "Rename layer",
+    "delete": "Delete",
+    "changeColorEntity": "Change entity color",
+    "renameEntity": "Rename entity",
+    "changeColorGroup": "Change Color Group color",
+    "renameGroup": "Rename Color Group",
+    "deleteGroup": "Delete Color Group",
+    "toggleVisibility": "Toggle visibility",
+    "mergeEntities": "Merge selected entities",
+    "mergeLayers": "Merge selected layers",
+    "mergeColorGroups": "Merge selected color groups",
+    "selectAllEntities": "Click to select all entities, Ctrl+Click for multi-selection"
+  },
+  "search": {
+    "layersAndEntities": "Search layers and entities..."
+  },
+  "dynamicInput": {
+    "placeholders": {
+      "xCoordinate": "e.g. -1000.56",
+      "yCoordinate": "e.g. +750.32",
+      "angle": "e.g. 45 or 90.5",
+      "length": "e.g. 100.0",
+      "width": "e.g. 50.0",
+      "height": "e.g. 100.0",
+      "radius": "e.g. 50.0",
+      "diameter": "e.g. 100.0"
+    },
+    "multiPoint": {
+      "distance": "Distance:",
+      "angle": "Angle:",
+      "segments": "Segments:",
+      "total": "Total:"
+    }
+  },
+  "overlayToolbar": {
+    "objectSnap": "Enable/Disable Object Snap (F3)",
+    "basicFunctions": "Enable basic functions"
+  },
   "layerManager": {
     "title": "Layer Manager",
     "loading": "Loading layers...",
@@ -267,6 +545,7 @@
       "noLayersFound": "No layers found",
       "createNewOrChangeFilters": "Create a new layer or change the filters",
       "searchLayers": "Search layers...",
+      "moreOptions": "More options",
       "other": "Other"
     },
     "stats": {
@@ -298,5 +577,282 @@
       "checkConnection": "Check your connection",
       "dbConnectionError": "Database connection error"
     }
+  },
+  "calibration": {
+    "title": "Coordinate Calibration",
+    "close": "Close",
+    "sceneStatus": {
+      "title": "Scene Status",
+      "entities": "Entities",
+      "levels": "Levels",
+      "noEntities": "No entities"
+    },
+    "coordinates": {
+      "title": "Coordinates",
+      "css": "CSS",
+      "world": "World",
+      "roundTripError": "Round-trip error",
+      "zoom": "Zoom",
+      "moveMouseHint": "Move your mouse over the canvas..."
+    },
+    "clickTest": {
+      "title": "Click Test",
+      "clear": "Clear",
+      "areaLabel": "Coordinate accuracy test area",
+      "clickHint": "Click here to test accuracy",
+      "noTests": "No tests available",
+      "perfect": "PERFECT",
+      "needsFix": "NEEDS FIX"
+    },
+    "tips": {
+      "title": "Tips",
+      "roundTripLimit": "Round-trip error < 0.5px",
+      "tryDifferentZoom": "Try at different zoom levels",
+      "entitiesOk": "Entities OK",
+      "loadDxf": "Load DXF",
+      "usingCoordinateTransforms": "Using centralized CoordinateTransforms"
+    },
+    "toggle": {
+      "hide": "Hide",
+      "show": "Show"
+    }
+  },
+  "calibrationStep": {
+    "title": "Scale & Units Calibration",
+    "description": "Set the units and optionally calibrate the scale using known measurements from your DXF file.",
+    "units": {
+      "title": "Units",
+      "ariaLabel": "Select units",
+      "mm": "millimeters",
+      "cm": "centimeters",
+      "m": "meters",
+      "in": "inches",
+      "ft": "feet"
+    },
+    "calibration": {
+      "title": "Calibration",
+      "skip": {
+        "title": "Skip Calibration (Recommended)",
+        "description": "Use native DXF file units and scale. Best for most architectural floor plans.",
+        "benefit": "Fast import, preserves original scale"
+      },
+      "manual": {
+        "title": "2-Point Calibration",
+        "description": "Set scale by measuring a known distance in the drawing.",
+        "benefit": "Precise calibration for custom scale"
+      },
+      "settings": {
+        "title": "Calibration Settings",
+        "distanceLabel": "Known Distance:",
+        "placeholder": "e.g. 100",
+        "hint": "In the next step you can select two points in the drawing that correspond to this distance."
+      }
+    }
+  },
+  "gridSettings": {
+    "visibility": {
+      "title": "Grid Visibility",
+      "description": "Show/hide the grid",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "size": {
+      "title": "Grid Size",
+      "description": "Distance between grid lines (COMMON for all)"
+    },
+    "style": {
+      "title": "Grid Style",
+      "description": "Grid line display type",
+      "lines": "Lines",
+      "dots": "Dots",
+      "crosses": "Crosses"
+    },
+    "lineTypes": {
+      "majorLines": "Major Lines",
+      "minorLines": "Minor Lines",
+      "majorDots": "Major Dots",
+      "minorDots": "Minor Dots",
+      "majorCrosses": "Major Crosses",
+      "minorCrosses": "Minor Crosses"
+    },
+    "color": {
+      "label": "{type} Color",
+      "description": "Color of the {type} grid",
+      "selectTitle": "Select {type} Color"
+    },
+    "weight": {
+      "label": "{type} Weight",
+      "description": "Weight of the {type} grid"
+    }
+  },
+  "zoomControls": {
+    "zoomOut": "Zoom Out (-{percentage}%) - Keyboard: -",
+    "zoomIn": "Zoom In (+{percentage}%) - Keyboard: +",
+    "inputTitle": "Zoom percentage (1-99999%, decimals with . or ,) - Press Enter or click away to apply",
+    "invalidInput": "Invalid zoom input: \"{value}\". Reverting to {percentage}%"
+  },
+  "wizardProgress": {
+    "stepLabels": {
+      "level": "Level",
+      "calibration": "Calibration",
+      "import": "Import"
+    }
+  },
+  "overlayList": {
+    "title": "Overlays",
+    "search": "Search...",
+    "deleteConfirm": "Delete overlay?",
+    "notFound": "No overlays found",
+    "empty": "No overlays",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "selectionSettings": {
+    "window": {
+      "fillColor": "Select Window Fill Color",
+      "borderColor": "Select Window Border Color"
+    },
+    "crossing": {
+      "fillColor": "Select Crossing Fill Color",
+      "borderColor": "Select Crossing Border Color"
+    }
+  },
+  "cursorSettings": {
+    "colorPicker": "Select Cursor Color"
+  },
+  "crosshairSettings": {
+    "colorPicker": "Select Crosshair Color",
+    "appearanceColorPicker": "Select Crosshair Appearance Color"
+  },
+  "rulerSettings": {
+    "majorLines": {
+      "colorPicker": "Select Major Lines Color"
+    },
+    "minorLines": {
+      "colorPicker": "Select Minor Lines Color"
+    },
+    "background": {
+      "colorPicker": "Select Ruler Background Color"
+    }
+  },
+  "entitiesSettings": {
+    "moreOptions": "More options"
+  },
+  "levelPanel": {
+    "title": "Project Levels",
+    "defaultLevelName": "Level {number}",
+    "selectLevel": "Select level {name}",
+    "elements": "{count} elements",
+    "emptyLevel": "Empty level",
+    "rename": "Rename level",
+    "deleteLevel": "Delete level",
+    "noLevels": "No levels",
+    "newLevelPlaceholder": "New level name...",
+    "emptyNameWarning": "Name cannot be empty."
+  },
+  "sceneInfo": {
+    "title": "Scene Information",
+    "noScene": "No scene loaded",
+    "importHint": "Import a DXF file to view information",
+    "elements": "Elements:",
+    "levels": "Levels:",
+    "units": "Units:",
+    "size": "Size:",
+    "selected": "Selected:",
+    "selectedElements": "{count} elements",
+    "selectedSuffix": "({count} selected)",
+    "entityTypes": {
+      "title": "Entity Types",
+      "line": "Lines",
+      "polyline": "Polylines",
+      "circle": "Circles",
+      "arc": "Arcs",
+      "text": "Text",
+      "block": "Blocks"
+    }
+  },
+  "dxfSettings": {
+    "title": "DXF Settings"
+  },
+  "overlayProperties": {
+    "title": "Overlay Properties",
+    "selectOverlay": "Select an overlay to view its properties.",
+    "label": "Label",
+    "labelPlaceholder": "e.g. A-12, P-034",
+    "status": "Status",
+    "type": "Type",
+    "linkedUnit": "Linked Unit",
+    "unitIdPlaceholder": "Unit ID",
+    "geometry": "Geometry",
+    "points": "Points:",
+    "area": "Area:",
+    "perimeter": "Perimeter:"
+  },
+  "entitiesSettings": {
+    "moreOptions": "More options",
+    "overrideDescriptions": {
+      "lineDraft": "Use special line settings for preview",
+      "textDraft": "Use special text settings for preview",
+      "gripsDraft": "Use special grips settings for preview",
+      "lineHover": "Use special line settings for hover",
+      "lineSelection": "Use special line settings for selection",
+      "lineCompletion": "Use special line settings for completion"
+    },
+    "toolSettings": {
+      "title": "Settings {tool}",
+      "toolSettingsTitle": "Tool Settings",
+      "comingSoon": "Settings for this tool will be added soon"
+    }
+  },
+  "cadDock": {
+    "panels": {
+      "objectSnap": "Object Snap",
+      "layers": "Layers",
+      "properties": "Properties",
+      "commands": "Commands"
+    },
+    "snapModes": {
+      "title": "Object Snap",
+      "description": "Click to toggle snap modes"
+    },
+    "layers": {
+      "default": "0 - Default",
+      "geometry": "Geometry",
+      "dimensions": "Dimensions"
+    },
+    "properties": {
+      "layer": "Layer:",
+      "color": "Color:"
+    },
+    "history": {
+      "title": "Command History",
+      "commands": {
+        "fit": "Command: FIT",
+        "zoomWindow": "Command: ZOOM Window",
+        "line": "Command: LINE"
+      },
+      "ready": "Ready for command..."
+    }
+  },
+  "pdfPanel": {
+    "title": "PDF Background",
+    "upload": "Upload PDF",
+    "loading": "Loading...",
+    "selectFile": "Select a PDF file to use as background",
+    "removePdf": "Remove PDF",
+    "pageInfo": "Page {currentPage} of {numPages}",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "scale": "Scale",
+    "zoomOut": "Zoom out",
+    "zoomIn": "Zoom in",
+    "rotation": "Rotation",
+    "rotateCcw": "Rotate counter-clockwise",
+    "rotateCw": "Rotate clockwise",
+    "opacity": "Opacity",
+    "fitToView": "Fit to View",
+    "resetTransform": "Reset Transform",
+    "hidePdf": "Hide PDF",
+    "showPdf": "Show PDF"
   }
 }

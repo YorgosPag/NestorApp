@@ -8,6 +8,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 interface ToolButtonProps {
   tool: ToolDefinition;
@@ -23,6 +25,8 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
   const iconSizes = useIconSizes();
   const { getStatusBorder, getElementBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Centralized backgrounds - NO HARDCODED VALUES
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
   // Determine which icon to show - if activeTool matches a dropdown option, use that icon
   let IconComponent = tool.icon;
   if (tool.dropdownOptions && activeTool) {
@@ -176,7 +180,4 @@ export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
         }
       `}
     >
-      {IconComponent ? <IconComponent className={iconSizes.sm} /> : <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>{action.label?.charAt(0) || '?'}</span>}
-    </button>
-  );
-};
+      {IconComponent ? <IconComponent className={iconSizes.sm} /> : <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>{a

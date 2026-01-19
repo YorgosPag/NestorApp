@@ -10,6 +10,8 @@ import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 import { RotateCcw, Square, SquareDashed } from 'lucide-react';
 // 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/DxfSettingsPanel)
 import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 export function SelectionSettings() {
   const [activeSelectionTab, setActiveSelectionTab] = useState<'window' | 'crossing'>('window');
@@ -18,6 +20,8 @@ export function SelectionSettings() {
   const { settings, updateSettings } = useCursorSettings();
   const { getStatusBorder, getElementBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
 
   // 🏢 ENTERPRISE: Type-safe selection field value type
   type SelectionFieldValue = string | number | 'solid' | 'dashed' | 'dotted' | 'dash-dot';
@@ -134,7 +138,7 @@ export function SelectionSettings() {
               value={settings.selection.window.fillColor}
               onChange={(color) => handleWindowSelectionChange('fillColor', color)}
               label={settings.selection.window.fillColor}
-              title="Επιλογή Χρώματος Γεμίσματος Window"
+              title={t('selectionSettings.window.fillColor')}
               alpha={false}
               modes={['hex', 'rgb', 'hsl']}
               palettes={['dxf', 'semantic', 'material']}
@@ -172,7 +176,7 @@ export function SelectionSettings() {
               value={settings.selection.window.borderColor}
               onChange={(color) => handleWindowSelectionChange('borderColor', color)}
               label={settings.selection.window.borderColor}
-              title="Επιλογή Χρώματος Περιγράμματος Window"
+              title={t('selectionSettings.window.borderColor')}
               alpha={false}
               modes={['hex', 'rgb', 'hsl']}
               palettes={['dxf', 'semantic', 'material']}
@@ -294,7 +298,7 @@ export function SelectionSettings() {
               value={settings.selection.crossing.fillColor}
               onChange={(color) => handleCrossingSelectionChange('fillColor', color)}
               label={settings.selection.crossing.fillColor}
-              title="Επιλογή Χρώματος Γεμίσματος Crossing"
+              title={t('selectionSettings.crossing.fillColor')}
               alpha={false}
               modes={['hex', 'rgb', 'hsl']}
               palettes={['dxf', 'semantic', 'material']}
@@ -332,7 +336,7 @@ export function SelectionSettings() {
               value={settings.selection.crossing.borderColor}
               onChange={(color) => handleCrossingSelectionChange('borderColor', color)}
               label={settings.selection.crossing.borderColor}
-              title="Επιλογή Χρώματος Περιγράμματος Crossing"
+              title={t('selectionSettings.crossing.borderColor')}
               alpha={false}
               modes={['hex', 'rgb', 'hsl']}
               palettes={['dxf', 'semantic', 'material']}

@@ -2,8 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTranslation } from '@/i18n';
 import { Eye, Printer } from "lucide-react";
-import { getToggleTocAriaLabel } from '../utils/a11y';
 
 interface PreviewHeaderProps {
   showToc: boolean;
@@ -13,14 +13,15 @@ interface PreviewHeaderProps {
 
 export function PreviewHeader({ showToc, onToggleToc, onPrint }: PreviewHeaderProps) {
   const iconSizes = useIconSizes();
+  const { t } = useTranslation('obligations');
 
   return (
     <div className="flex items-center justify-between p-4 border-b bg-muted/30">
       <div className="flex items-center gap-3">
         <Eye className={`${iconSizes.md} text-muted-foreground`} />
         <div>
-          <h3 className="font-medium text-foreground">Προεπισκόπηση</h3>
-          <p className="text-sm text-muted-foreground">Live preview του εγγράφου</p>
+          <h3 className="font-medium text-foreground">{t('preview.title')}</h3>
+          <p className="text-sm text-muted-foreground">{t('preview.description')}</p>
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -30,19 +31,19 @@ export function PreviewHeader({ showToc, onToggleToc, onPrint }: PreviewHeaderPr
           onClick={onToggleToc}
           className="text-xs"
           aria-pressed={showToc}
-          aria-label={getToggleTocAriaLabel(showToc)}
+          aria-label={showToc ? t('aria.hideToc') : t('aria.showToc')}
         >
-          {showToc ? "Απόκρυψη" : "Εμφάνιση"} Περιεχομένων
+          {showToc ? t('preview.toc.hide') : t('preview.toc.show')}
         </Button>
         <Button
           variant="outline"
           size="sm"
           onClick={onPrint}
           className="text-xs"
-          aria-label="Εκτύπωση εγγράφου"
+          aria-label={t('aria.printDocument')}
         >
           <Printer className={`${iconSizes.sm} mr-1`} />
-          Εκτύπωση
+          {t('print.button')}
         </Button>
       </div>
     </div>

@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 import React, { useState } from 'react';
@@ -9,8 +10,11 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 export function CalibrationStep() {
+  const { t } = useTranslation('dxf-viewer');
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -40,29 +44,32 @@ export function CalibrationStep() {
     }
   };
 
+  // 🏢 ENTERPRISE: Unit options with i18n labels
+  const unitOptions = [
+    { value: 'mm', labelKey: 'calibrationStep.units.mm' },
+    { value: 'cm', labelKey: 'calibrationStep.units.cm' },
+    { value: 'm', labelKey: 'calibrationStep.units.m' },
+    { value: 'in', labelKey: 'calibrationStep.units.in' },
+    { value: 'ft', labelKey: 'calibrationStep.units.ft' }
+  ] as const;
+
   return (
     <section className={PANEL_LAYOUT.SPACING.GAP_XL}>
       {/* ✅ ENTERPRISE: Semantic HTML + PANEL_LAYOUT tokens (ADR-003) */}
       <header>
         <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
-          Βαθμονόμηση Κλίμακας & Μονάδων
+          {t('calibrationStep.title')}
         </h3>
         <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
-          Ορίστε τις μονάδες και προαιρετικά βαθμονομήστε την κλίμακα χρησιμοποιώντας γνωστές μετρήσεις από το DXF αρχείο σας.
+          {t('calibrationStep.description')}
         </p>
       </header>
 
       {/* Units Selection */}
       <fieldset className={PANEL_LAYOUT.SPACING.GAP_MD}>
-        <legend className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.tertiary}`}>Μονάδες</legend>
-        <nav className={`grid ${PANEL_LAYOUT.GRID.COLS_5} ${PANEL_LAYOUT.GAP.SM}`} role="group" aria-label="Επιλογή μονάδων">
-          {[
-            { value: 'mm', label: 'χιλιοστά' },
-            { value: 'cm', label: 'εκατοστά' },
-            { value: 'm', label: 'μέτρα' },
-            { value: 'in', label: 'ίντσες' },
-            { value: 'ft', label: 'πόδια' }
-          ].map((unit) => (
+        <legend className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.tertiary}`}>{t('calibrationStep.units.title')}</legend>
+        <nav className={`grid ${PANEL_LAYOUT.GRID.COLS_5} ${PANEL_LAYOUT.GAP.SM}`} role="group" aria-label={t('calibrationStep.units.ariaLabel')}>
+          {unitOptions.map((unit) => (
             <button
               key={unit.value}
               onClick={() => handleUnitsChange(unit.value as typeof units)}
@@ -72,7 +79,7 @@ export function CalibrationStep() {
                   : `${quick.button} ${colors.text.tertiary} ${HOVER_BORDER_EFFECTS.MUTED}`
               }`}
             >
-              {unit.label}
+              {t(unit.labelKey)}
             </button>
           ))}
         </nav>
@@ -80,7 +87,7 @@ export function CalibrationStep() {
 
       {/* Calibration Options */}
       <fieldset className={PANEL_LAYOUT.SPACING.GAP_LG}>
-        <legend className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.tertiary}`}>Βαθμονόμηση</legend>
+        <legend className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.tertiary}`}>{t('calibrationStep.calibration.title')}</legend>
 
         {/* Skip Calibration Option */}
         <label className={`flex items-start ${PANEL_LAYOUT.SPACING.MD} ${quick.card} ${PANEL_LAYOUT.CURSOR.POINTER} ${HOVER_BORDER_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}>
@@ -92,13 +99,13 @@ export function CalibrationStep() {
             className={`${PANEL_LAYOUT.MARGIN.TOP_XS} ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}
           />
           <article>
-            <strong className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>Παράλειψη Βαθμονόμησης (Προτεινόμενο)</strong>
+            <strong className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>{t('calibrationStep.calibration.skip.title')}</strong>
             <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
-              Χρήση εγγενών μονάδων και κλίμακας του DXF αρχείου. Καλύτερο για τις περισσότερες αρχιτεκτονικές κατόψεις.
+              {t('calibrationStep.calibration.skip.description')}
             </p>
             <aside className={`flex items-center ${PANEL_LAYOUT.MARGIN.TOP_SM} ${colors.text.success}`}>
               <CheckCircle className={`${iconSizes.sm} ${PANEL_LAYOUT.MARGIN.LEFT_HALF}`} />
-              <span className={PANEL_LAYOUT.TYPOGRAPHY.XS}>Γρήγορη εισαγωγή, διατηρεί την αρχική κλίμακα</span>
+              <span className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('calibrationStep.calibration.skip.benefit')}</span>
             </aside>
           </article>
         </label>
@@ -113,13 +120,13 @@ export function CalibrationStep() {
             className={`${PANEL_LAYOUT.MARGIN.TOP_XS} ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}
           />
           <article>
-            <strong className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>Βαθμονόμηση 2 Σημείων</strong>
+            <strong className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>{t('calibrationStep.calibration.manual.title')}</strong>
             <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
-              Ορισμός κλίμακας μετρώντας μια γνωστή απόσταση στο σχέδιο.
+              {t('calibrationStep.calibration.manual.description')}
             </p>
             <aside className={`flex items-center ${PANEL_LAYOUT.MARGIN.TOP_SM} ${colors.text.info}`}>
               <Ruler className={`${iconSizes.sm} ${PANEL_LAYOUT.MARGIN.LEFT_HALF}`} />
-              <span className={PANEL_LAYOUT.TYPOGRAPHY.XS}>Ακριβής βαθμονόμηση για προσαρμοσμένη κλίμακα</span>
+              <span className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('calibrationStep.calibration.manual.benefit')}</span>
             </aside>
           </article>
         </label>
@@ -127,20 +134,20 @@ export function CalibrationStep() {
         {/* Manual Calibration Controls */}
         {!skipCalibration && (
           <aside className={`${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.LG} ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.SPACING.GAP_MD}`}>
-            <h5 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.info}`}>Ρυθμίσεις Βαθμονόμησης</h5>
+            <h5 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.info}`}>{t('calibrationStep.calibration.settings.title')}</h5>
             <section className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.tertiary}`}>
-                Γνωστή Απόσταση:
+                {t('calibrationStep.calibration.settings.distanceLabel')}
                 <input
                   type="number"
                   value={realDistance}
                   onChange={(e) => setRealDistance(e.target.value)}
-                  placeholder="π.χ. 100"
+                  placeholder={t('calibrationStep.calibration.settings.placeholder')}
                   className={`${PANEL_LAYOUT.MARGIN.TOP_XS} w-full ${colors.bg.muted} ${quick.input} ${PANEL_LAYOUT.INPUT.PADDING} ${colors.text.primary} ${colors.text.muted} ${PANEL_LAYOUT.INPUT.FOCUS}`}
                 />
               </label>
               <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
-                Στο επόμενο βήμα θα μπορείτε να επιλέξετε δύο σημεία στο σχέδιο που αντιστοιχούν σε αυτή την απόσταση.
+                {t('calibrationStep.calibration.settings.hint')}
               </p>
             </section>
           </aside>

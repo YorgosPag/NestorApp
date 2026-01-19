@@ -1,9 +1,11 @@
-
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 "use client";
 
 import { Button } from "@/components/ui/button";
 import { Eye, Download } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 interface ActionsBarProps {
   onPreview: () => void;
@@ -12,6 +14,7 @@ interface ActionsBarProps {
 }
 
 export function ActionsBar({ onPreview, onDownload, onCancel }: ActionsBarProps) {
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   return (
     <div className="flex items-center gap-3 pt-4 border-t">
@@ -21,7 +24,7 @@ export function ActionsBar({ onPreview, onDownload, onCancel }: ActionsBarProps)
         className="flex items-center gap-2"
       >
         <Eye className={iconSizes.sm} />
-        Προεπισκόπηση
+        {t('pdf.preview')}
       </Button>
 
       <Button
@@ -29,11 +32,11 @@ export function ActionsBar({ onPreview, onDownload, onCancel }: ActionsBarProps)
         className="flex items-center gap-2 flex-1"
       >
         <Download className={iconSizes.sm} />
-        Κατέβασμα PDF
+        {t('pdf.download')}
       </Button>
 
       <Button variant="ghost" onClick={onCancel}>
-        Ακύρωση
+        {t('buttons.cancel')}
       </Button>
     </div>
   );

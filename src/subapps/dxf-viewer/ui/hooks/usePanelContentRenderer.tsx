@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 /**
  * USEPANELCONTENTRENDERER HOOK
  * Extracted from FloatingPanelContainer.tsx for ΒΗΜΑ 5 refactoring
@@ -9,6 +10,8 @@ import { LazyPanelWrapper } from '../components/shared';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 // ✅ CENTRALIZED: Use existing LazyLoadWrapper system instead of duplicate React.lazy
 import {
@@ -51,6 +54,7 @@ export function usePanelContentRenderer({
 }: UsePanelContentRendererParams) {
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
+  const { t } = useTranslation('dxf-viewer');
 
   const renderPanelContent = () => {
     switch (activePanel) {
@@ -58,7 +62,7 @@ export function usePanelContentRenderer({
         // ✅ ENTERPRISE: Χρήση κεντρικοποιημένων tokens αντί hardcoded values
         return (
           <div className={PANEL_LAYOUT.CONTAINER.SECTION_SPACING}>
-            <LazyPanelWrapper loadingText="Φόρτωση διαχείρισης επιπέδων...">
+            <LazyPanelWrapper loadingText={t('panels.overlay.loading')}>
               <AdminLayerManager className={`${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.CONTAINER.INNER_PADDING}`} />
             </LazyPanelWrapper>
           </div>
@@ -67,7 +71,7 @@ export function usePanelContentRenderer({
       case 'levels':
         // ✅ ENTERPRISE: Αφαίρεση περιττού κενού <div> wrapper (ADR-003 Container Nesting)
         return (
-          <LazyPanelWrapper loadingText="Φόρτωση επιπέδων...">
+          <LazyPanelWrapper loadingText={t('panels.levels.loading')}>
             <LevelPanel
               currentTool={currentTool}
               scene={scene}
@@ -100,7 +104,7 @@ export function usePanelContentRenderer({
       case 'hierarchy':
         // ✅ ENTERPRISE: Αφαίρεση περιττού κενού <div> wrapper (ADR-003 Container Nesting)
         return (
-          <LazyPanelWrapper loadingText="Φόρτωση ιεραρχίας...">
+          <LazyPanelWrapper loadingText={t('panels.hierarchy.loading')}>
             <HierarchyDebugPanel />
           </LazyPanelWrapper>
         );
@@ -111,7 +115,7 @@ export function usePanelContentRenderer({
       case 'colors':
         // ✅ ENTERPRISE: Αφαίρεση περιττού κενού <div> wrapper (ADR-003 Container Nesting)
         return (
-          <LazyPanelWrapper loadingText="Φόρτωση παλέτας χρωμάτων...">
+          <LazyPanelWrapper loadingText={t('panels.colors.loading')}>
             <ColorPalettePanel />
           </LazyPanelWrapper>
         );
@@ -121,7 +125,7 @@ export function usePanelContentRenderer({
       default:
         return (
           <aside className={`${colors.text.muted} text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
-            <p>Επιλέξτε ένα panel από τις καρτέλες</p>
+            <p>{t('panels.selectPanel')}</p>
           </aside>
         );
     }

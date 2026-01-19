@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { GripVertical, ChevronRight, ChevronDown, FileText, Plus, Edit3, Save, X, Copy, Trash2 } from 'lucide-react';
+import { useTranslation } from '@/i18n';
+import { GripVertical, ChevronRight, ChevronDown, FileText, Plus, Save, X, Copy, Trash2 } from 'lucide-react';
 import { RichTextEditor } from '@/components/obligations/rich-text-editor';
 import { cn } from '@/lib/utils';
 import type { ObligationSection, SectionCategory } from '@/types/obligations';
@@ -46,6 +47,7 @@ export function SectionCard({
   editingItem,
 }: SectionCardProps) {
   const iconSizes = useIconSizes();
+  const { t } = useTranslation('obligations');
   const hasArticles = section.articles && section.articles.length > 0;
 
   return (
@@ -77,7 +79,7 @@ export function SectionCard({
                 <Input
                   value={section.title}
                   onChange={(e) => handlers.updateSection(section.id, { title: e.target.value })}
-                  placeholder="Τίτλος ενότητας..."
+                  placeholder={t('section.titlePlaceholder')}
                   className="font-semibold"
                 />
                 <Select
@@ -93,15 +95,15 @@ export function SectionCard({
                 </Select>
                 <div className="flex items-center gap-2">
                   <input type="checkbox" checked={section.isRequired} onChange={(e) => handlers.updateSection(section.id, { isRequired: e.target.checked })} className="rounded" />
-                  <Label className="text-sm">Απαραίτητη ενότητα</Label>
+                  <Label className="text-sm">{t('section.requiredSection')}</Label>
                 </div>
               </div>
             ) : (
               <div className="cursor-pointer" onClick={() => handlers.startEditing('section', section.id)}>
-                <CardTitle className="text-base">{section.title || <span className="text-muted-foreground italic">Χωρίς τίτλο</span>}</CardTitle>
+                <CardTitle className="text-base">{section.title || <span className="text-muted-foreground italic">{t('section.noTitle')}</span>}</CardTitle>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant="secondary" className="text-xs">{categoryLabels[section.category]}</Badge>
-                  {section.isRequired && <Badge variant="destructive" className="text-xs">Απαραίτητο</Badge>}
+                  {section.isRequired && <Badge variant="destructive" className="text-xs">{t('section.required')}</Badge>}
                 </div>
               </div>
             )}
@@ -115,8 +117,8 @@ export function SectionCard({
                 </>
               ) : (
                 <>
-                  <Button variant="ghost" size="sm" onClick={() => handlers.addArticle(section.id)} className="h-8 px-2" title="Προσθήκη άρθρου"><Plus className={iconSizes.sm} /></Button>
-                  <Button variant="ghost" size="sm" onClick={() => handlers.duplicateSection(section.id)} className="h-8 px-2" title="Αντιγραφή ενότητας"><Copy className={iconSizes.sm} /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => handlers.addArticle(section.id)} className="h-8 px-2" title={t('section.addArticle')}><Plus className={iconSizes.sm} /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => handlers.duplicateSection(section.id)} className="h-8 px-2" title={t('section.duplicateSection')}><Copy className={iconSizes.sm} /></Button>
                   <Button variant="ghost" size="sm" onClick={() => handlers.deleteSection(section.id)} className="h-8 px-2 text-destructive hover:text-destructive/80"><Trash2 className={iconSizes.sm} /></Button>
                 </>
               )}
@@ -128,11 +130,11 @@ export function SectionCard({
         <CardContent className="pt-0">
           {isEditing && (
             <div className="mb-4">
-              <Label className="text-sm">Περιεχόμενο Ενότητας</Label>
+              <Label className="text-sm">{t('section.contentLabel')}</Label>
               <RichTextEditor
                 value={section.content}
                 onChange={(content) => handlers.updateSection(section.id, { content })}
-                placeholder="Περιεχόμενο της ενότητας..."
+                placeholder={t('section.contentPlaceholder')}
                 minHeight={120}
               />
             </div>

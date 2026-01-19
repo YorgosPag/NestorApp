@@ -65,6 +65,22 @@ export interface EnterprisePhotoUploadProps extends Omit<UseEnterpriseFileUpload
   customFileName?: string;
   /** Photo preview click handler (for gallery modal) */
   onPreviewClick?: () => void;
+
+  // =========================================================================
+  // 🏢 CANONICAL PIPELINE FIELDS (ADR-031)
+  // =========================================================================
+  // If provided, the upload will use the canonical pipeline
+  // (createPendingFileRecord → upload → finalize).
+  // =========================================================================
+
+  /** 🏢 CANONICAL: Contact ID for FileRecord linkage */
+  contactId?: string;
+  /** 🏢 CANONICAL: Company ID for multi-tenant isolation */
+  companyId?: string;
+  /** 🏢 CANONICAL: User ID who is uploading */
+  createdBy?: string;
+  /** 🏢 CANONICAL: Contact name for display name generation */
+  contactName?: string;
 }
 
 // ============================================================================
@@ -102,7 +118,12 @@ export function EnterprisePhotoUpload({
   contactData,
   photoIndex,
   customFileName,
-  onPreviewClick
+  onPreviewClick,
+  // 🏢 CANONICAL: New fields for canonical pipeline (ADR-031)
+  contactId,
+  companyId,
+  createdBy,
+  contactName
 }: EnterprisePhotoUploadProps) {
   // ========================================================================
   // HOOKS & STATE
@@ -144,7 +165,12 @@ export function EnterprisePhotoUpload({
     purpose,
     contactData,
     photoIndex,
-    customFileName
+    customFileName,
+    // 🏢 CANONICAL: Pass canonical fields for ADR-031 pipeline
+    contactId,
+    companyId,
+    createdBy,
+    contactName
   });
 
   // ========================================================================

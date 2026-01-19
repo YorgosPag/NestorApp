@@ -37,7 +37,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
     <section
       className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
       role="region"
-      aria-label="Στατιστικά Dashboard"
+      aria-label={t('aria.statsSection')}
     >
       <Card className={`card-hover ${getDirectionalBorder('info', 'left')}`}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

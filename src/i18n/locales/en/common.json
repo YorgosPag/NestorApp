@@ -26,7 +26,14 @@
   "storage": {
     "title": "Storage Space",
     "used": "Used",
-    "availableSpace": "You have {size} available space for contacts and files"
+    "availableSpace": "You have {size} available space for contacts and files",
+    "clearConfirm": "Do you want to clear the cached storage data?\n\nThis will delete:\n• Cached DXF files\n• Temporary data\n• Browser cache\n\nSaved projects will not be affected.",
+    "clearedSuccess": "Storage cleared! Refreshing page...",
+    "clearError": "Error clearing storage.",
+    "clearing": "Clearing...",
+    "clear": "Clear",
+    "criticalWarning": "Storage almost full! Clear it to avoid errors.",
+    "lowWarning": "Storage running low. Consider clearing."
   },
   "contactTypes": {
     "company": "Company",
@@ -87,7 +94,13 @@
     "home": "Home",
     "properties": "Properties",
     "crm": "CRM",
-    "admin": "Administration"
+    "admin": "Administration",
+    "contacts": "Contacts",
+    "projects": "Projects",
+    "buildings": "Buildings",
+    "units": "Units",
+    "storages": "Storages",
+    "details": "Details"
   },
   "actions": {
     "save": "Save",
@@ -96,6 +109,10 @@
     "edit": "Edit",
     "close": "Close",
     "confirm": "Confirm",
+    "create": "Create",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish",
     "export": "Export",
     "import": "Import",
     "refresh": "Refresh",
@@ -159,6 +176,10 @@
     "underline": "Underline (Ctrl+U)",
     "preview": "Preview"
   },
+  "pdf": {
+    "preview": "Preview",
+    "download": "Download PDF"
+  },
   "tooltips": {
     "newBuildingShortcut": "New Building (Ctrl+N)",
     "newProjectShortcut": "New Project (Ctrl+N)",
@@ -190,12 +211,17 @@
     "confirm": "Confirm",
     "cancel": "Cancel",
     "loading": "Loading...",
-    "pleaseWait": "Please wait..."
+    "pleaseWait": "Please wait...",
+    "noItemsFound": "No items found.",
+    "noResultsFor": "No results found for \"{searchTerm}\"",
+    "selectAction": "Select →"
   },
   "share": {
     "share": "Share",
     "copied": "Copied!",
+    "shareSuccess": "Sharing completed successfully!",
     "shareError": "Failed to share via {platform}: {error}",
+    "shareErrorSimple": "Sharing failed: {error}",
     "viewMore": "See more at {company}!",
     "sqm": "sq.m",
     "propertiesTeaser": "Check out these interesting properties from {company}!",
@@ -429,7 +455,9 @@
   "obligations": {
     "noSections": "No sections",
     "startByAddingSection": "Start by adding the first section of the obligations document",
-    "addSection": "Add Section"
+    "addSection": "Add Section",
+    "paragraphPlaceholder": "Paragraph content...",
+    "clickToAddContent": "Click to add content..."
   },
   "propertyViewer": {
     "title": "Property Index",
@@ -449,6 +477,18 @@
     "title": "Groups",
     "deleteGroup": "Delete Group",
     "deleteGroupAria": "Delete group {name}"
+  },
+  "dxfViewer": {
+    "loading": "Loading DXF Viewer...",
+    "loadingAriaLabel": "Loading DXF Viewer",
+    "checkingPermissions": "Checking permissions...",
+    "checkingPermissionsAriaLabel": "Checking Permissions",
+    "accessDeniedAriaLabel": "Access Denied",
+    "unauthorizedAriaLabel": "Unauthorized Access",
+    "lockedAriaLabel": "Locked",
+    "adminOnlyAccess": "Admin Access Only",
+    "noPermissions": "You do not have the necessary permissions to access the DXF Viewer.",
+    "pleaseLoginAsAdmin": "Please log in with an administrator account."
   },
   "layerManager": {
     "title": "Layer Management",
@@ -1031,8 +1071,26 @@
     },
     "alt": {
       "gallery": "{title} - Photo {current} of {total}",
-      "single": "{title}"
-    }
+      "single": "{title}",
+      "companyLogo": "Company Logo",
+      "representativePhoto": "Representative Photo",
+      "serviceLogo": "Public Service Logo",
+      "photoWithIndex": "Photo {index}"
+    },
+    "clickToPreview": "Click to preview",
+    "dragOrClick": "Click or drag a file",
+    "empty": {
+      "logo": "No logo available",
+      "photo": "No photo available",
+      "generic": "Empty photo",
+      "noPhotos": "No photos saved"
+    },
+    "headers": {
+      "companyPhotos": "Company Photos ({count})",
+      "individualPhotos": "Photos ({count}/{max})",
+      "serviceLogo": "Public Service Logo"
+    },
+    "unsupportedType": "Unsupported contact type: {type}"
   },
   "progress": {
     "label": "Progress"
@@ -1041,7 +1099,59 @@
     "selectItem": {
       "title": "Make a selection",
       "description": "Select an item from the list to view its details."
+    },
+    "contact": {
+      "title": "Select a contact",
+      "description": "Select a contact from the list to view its details."
+    },
+    "project": {
+      "title": "Select a project",
+      "description": "Select a project from the list to view its details."
+    },
+    "building": {
+      "title": "Select a building",
+      "description": "Select a building from the list to view its details."
+    },
+    "storage": {
+      "title": "Select a storage",
+      "description": "Select a storage from the list to view its details."
+    },
+    "unit": {
+      "title": "Select a unit",
+      "description": "Select a unit from the list to view its details."
+    },
+    "property": {
+      "title": "Select a property",
+      "description": "Select a property from the list to view its details."
+    },
+    "generic": {
+      "title": "Select an item",
+      "description": "Select an item from the list to view its details."
     }
+  },
+  "confirmations": {
+    "delete": "Are you sure you want to delete this item?",
+    "discard": "Are you sure you want to discard the changes?",
+    "overwrite": "The file already exists. Do you want to replace it?",
+    "logout": "Are you sure you want to log out?"
+  },
+  "loadingStates": {
+    "generic": "Please wait...",
+    "saving": "Saving...",
+    "loading": "Loading...",
+    "deleting": "Deleting...",
+    "uploading": "Uploading..."
+  },
+  "validationMessages": {
+    "required": "This field is required",
+    "email": "Please enter a valid email address",
+    "phone": "Please enter a valid phone number",
+    "url": "Please enter a valid URL",
+    "date": "Please enter a valid date",
+    "number": "Please enter a valid number",
+    "minLength": "Minimum number of characters: {min}",
+    "maxLength": "Maximum number of characters: {max}",
+    "fileSize": "Maximum file size: {max}"
   },
   "headerActions": {
     "dashboard": "Dashboard",
@@ -1073,7 +1183,29 @@
       "contacts": "Search contacts...",
       "projects": "Search projects...",
       "buildings": "Search buildings...",
-      "files": "Search files..."
+      "files": "Search files...",
+      "units": "Search units...",
+      "storages": "Search storages...",
+      "parking": "Search parking...",
+      "communications": "Search messages..."
+    }
+  },
+  "photoCard": {
+    "company": {
+      "alt": "Company Logo",
+      "empty": "No logo available"
+    },
+    "representative": {
+      "alt": "Representative Photo",
+      "empty": "No photo available"
+    },
+    "individual": {
+      "alt": "Photo {index}",
+      "empty": "Empty photo"
+    },
+    "service": {
+      "alt": "Public Service Logo",
+      "empty": "No logo available"
     }
   }
 }

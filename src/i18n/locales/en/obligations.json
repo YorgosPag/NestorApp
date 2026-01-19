@@ -57,10 +57,14 @@
     "title": "Structure & Content"
   },
   "preview": {
-    "title": "Live Preview",
-    "description": "See how the final document will look",
+    "title": "Preview",
+    "description": "Live preview of the document",
     "unknownProject": "Unknown project",
-    "unknownContractor": "Unknown contractor"
+    "unknownContractor": "Unknown contractor",
+    "toc": {
+      "hide": "Hide Contents",
+      "show": "Show Contents"
+    }
   },
   "validation": {
     "titleRequired": "Please enter a title",
@@ -96,6 +100,108 @@
   "aria": {
     "editObligation": "Edit obligation",
     "editForm": "Edit form",
-    "preview": "Preview"
+    "preview": "Preview",
+    "hideToc": "Hide table of contents",
+    "showToc": "Show table of contents",
+    "printDocument": "Print document"
+  },
+  "export": {
+    "progress": {
+      "preparingContent": "Preparing content...",
+      "formattingDocument": "Formatting document...",
+      "creatingToc": "Creating table of contents...",
+      "finalProcessing": "Final processing...",
+      "complete": "Export complete!"
+    },
+    "success": {
+      "title": "Success",
+      "message": "PDF created successfully."
+    },
+    "creating": "Creating PDF...",
+    "percentComplete": "{percent}% complete",
+    "button": "Export PDF",
+    "exporting": "Exporting..."
+  },
+  "print": {
+    "button": "Print",
+    "error": "Error printing. Please try again."
+  },
+  "sectionEditor": {
+    "categoryLabel": "Category",
+    "selectCategory": "Select category",
+    "statusLabel": "Status",
+    "requiredArticle": "Required article"
+  },
+  "richText": {
+    "defaultPlaceholder": "Enter content..."
+  },
+  "article": {
+    "titlePlaceholder": "Article title...",
+    "contentPlaceholder": "Article content...",
+    "noTitle": "No title",
+    "addParagraph": "Add paragraph",
+    "titleLabel": "Article Title",
+    "titleInputPlaceholder": "Enter article title",
+    "contentLabel": "Article Content",
+    "contentInputPlaceholder": "Enter article content..."
+  },
+  "paragraph": {
+    "contentPlaceholder": "Paragraph content...",
+    "noContent": "No content"
+  },
+  "section": {
+    "titlePlaceholder": "Section title...",
+    "contentPlaceholder": "Section content...",
+    "noTitle": "No title",
+    "requiredSection": "Required section",
+    "required": "Required",
+    "addArticle": "Add article",
+    "duplicateSection": "Duplicate section",
+    "contentLabel": "Section Content"
+  },
+  "exportOptions": {
+    "title": "Export Options",
+    "description": "Customize PDF export according to your needs",
+    "content": {
+      "title": "Content",
+      "toc": {
+        "label": "Table of Contents",
+        "description": "Automatic table with navigation links",
+        "aria": "Include table of contents"
+      },
+      "pageNumbers": {
+        "label": "Page Numbers",
+        "description": "Footer with page numbers and details",
+        "aria": "Include page numbers"
+      },
+      "logo": {
+        "label": "Company Logo",
+        "description": "Add logo to header",
+        "aria": "Include logo"
+      }
+    },
+    "quality": {
+      "title": "Quality & Formatting",
+      "standard": {
+        "label": "Standard",
+        "description": "Basic formatting, smaller size",
+        "aria": "Standard Quality"
+      },
+      "high": {
+        "label": "High Quality",
+        "description": "Improved margins and typography",
+        "aria": "High Quality"
+      }
+    },
+    "preview": {
+      "title": "Document Preview",
+      "sections": "Sections:",
+      "articles": "Articles:",
+      "paragraphs": "Paragraphs:",
+      "words": "Words:",
+      "readingTime": "Reading time:",
+      "minutes": "minutes",
+      "estimatedPages": "Estimated pages:"
+    }
   }
 }

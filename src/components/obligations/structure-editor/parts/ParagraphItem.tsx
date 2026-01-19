@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 "use client";
 
 import React from 'react';
@@ -7,6 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { GripVertical, Edit3, Save, X, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n';
 import type { ObligationParagraph } from '@/types/obligations';
 import type { useStructureEditorState } from '../hooks/useStructureEditorState';
 
@@ -35,6 +38,8 @@ export function ParagraphItem({
   dragState,
   handlers,
 }: ParagraphItemProps) {
+  const { t } = useTranslation('obligations');
+  const { t: tCommon } = useTranslation('common');
   const iconSizes = useIconSizes();
 
   return (
@@ -57,18 +62,18 @@ export function ParagraphItem({
             <Textarea
               value={paragraph.content}
               onChange={(e) => handlers.updateParagraph(sectionId, articleId, paragraph.id, { content: e.target.value })}
-              placeholder="Περιεχόμενο παραγράφου..."
+              placeholder={t('paragraph.contentPlaceholder')}
               rows={3}
               className="text-sm"
             />
             <div className="flex items-center gap-2">
-              <Button size="sm" onClick={handlers.stopEditing}><Save className={`${iconSizes.xs} mr-1`} />Αποθήκευση</Button>
+              <Button size="sm" onClick={handlers.stopEditing}><Save className={`${iconSizes.xs} mr-1`} />{tCommon('buttons.save')}</Button>
               <Button size="sm" variant="outline" onClick={handlers.stopEditing}><X className={iconSizes.xs} /></Button>
             </div>
           </div>
         ) : (
           <div className="cursor-pointer text-sm text-foreground hover:text-foreground/80" onClick={() => handlers.startEditing('paragraph', paragraph.id)}>
-            {paragraph.content || <span className="text-muted-foreground italic">Κλικ για προσθήκη περιεχομένου...</span>}
+            {paragraph.content || <span className="text-muted-foreground italic">{t('paragraph.noContent')}</span>}
           </div>
         )}
       </div>

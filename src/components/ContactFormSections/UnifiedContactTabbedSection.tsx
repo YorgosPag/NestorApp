@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { ContactFormData, ContactType } from '@/types/ContactFormTypes';
+import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { ContactType } from '@/types/contacts';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
@@ -10,7 +11,7 @@ import { RelationshipsSummary } from '@/components/contacts/relationships/Relati
 import { RelationshipProvider } from '@/components/contacts/relationships/context/RelationshipProvider';
 import { DynamicContactArrays } from '@/components/contacts/dynamic/DynamicContactArrays';
 import { getContactFormConfig, getContactFormSections, getContactTypeDisplayName, getContactFormRenderer } from './utils/ContactFormConfigProvider';
-import { getPhotoUploadHandlers, createUnifiedPhotosChangeHandler, buildRendererPropsForContactType } from './utils/PhotoUploadConfiguration';
+import { getPhotoUploadHandlers, createUnifiedPhotosChangeHandler, buildRendererPropsForContactType, type CanonicalUploadContext } from './utils/PhotoUploadConfiguration';
 
 /** Custom renderer field interface */
 interface CustomRendererField {
@@ -63,6 +64,10 @@ interface UnifiedContactTabbedSectionProps {
 
   // 🖼️ Photo click handler για gallery preview
   onPhotoClick?: (index: number) => void;
+
+  // 🏢 CANONICAL UPLOAD CONTEXT (ADR-031)
+  // If provided, photo uploads use canonical pipeline instead of legacy folderPath
+  canonicalUploadContext?: CanonicalUploadContext;
 }
 
 // Configuration logic moved to ContactFormConfigProvider utility
@@ -83,7 +88,8 @@ export function UnifiedContactTabbedSection({
   setFormData,
   disabled = false,
   relationshipsMode = 'full',
-  onPhotoClick
+  onPhotoClick,
+  canonicalUploadContext,
 }: UnifiedContactTabbedSectionProps) {
 
   // 🏢 ENTERPRISE: Get configuration dynamically based on contact type
@@ -194,7 +200,7 @@ export function UnifiedContactTabbedSection({
                 handleUploadedLogoURL,
                 handleUploadedPhotoURL
               }}
-              uploadHandlers={getPhotoUploadHandlers(formData)}
+              uploadHandlers={getPhotoUploadHandlers(formData, canonicalUploadContext)}
               disabled={fieldDisabled}
               className="mt-4"
             />
@@ -258,7 +264,8 @@ export function UnifiedContactTabbedSection({
     sections, formData, handleChange, handleSelectChange, disabled, contactType,
     handleFileChange, unifiedPhotosChange, handleMultiplePhotoUploadComplete,
     handleProfilePhotoSelection, handleLogoChange, handleUploadedLogoURL,
-    handleUploadedPhotoURL, setFormData, relationshipsMode, onPhotoClick
+    handleUploadedPhotoURL, setFormData, relationshipsMode, onPhotoClick,
+    canonicalUploadContext,
   ]);
 
   return (

@@ -70,6 +70,8 @@ import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '../../../../../.
 import { layoutUtilities } from '../../../../../../../styles/design-tokens';
 // 🏢 ENTERPRISE: Import centralized panel spacing (Single Source of Truth)
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 // Simple SVG icons for text
 const DocumentTextIcon = ({ className }: { className?: string }) => (
@@ -224,6 +226,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, getDirectionalBorder, getElementBorder, radius } = useBorderTokens();  // ✅ ENTERPRISE: Added getElementBorder, radius
   const colors = useSemanticColors();
+  const { t } = useTranslation('dxf-viewer');  // 🏢 ENTERPRISE: i18n
   // 🔥 FIX: Use Global Text Settings από provider, ΟΧΙ Preview-specific settings!
   // Το useUnifiedTextPreview() ενημερώνει localStorage 'dxf-text-preview-settings' (WRONG!)
   // Θέλουμε να ενημερώσουμε το 'dxf-text-general-settings' (CORRECT!)
@@ -292,7 +295,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
 
       // Toast notification για επιτυχία
       notifications.success(
-        '🏭 Εργοστασιακές ρυθμίσεις επαναφέρθηκαν! Όλες οι ρυθμίσεις κειμένου επέστρεψαν στα πρότυπα ISO 3098.',
+        `🏭 ${t('settings.text.factoryReset.successMessage')}`,
         {
           duration: 5000
         }
@@ -305,7 +308,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
     setShowFactoryResetModal(false);
 
     // Toast notification για ακύρωση
-    notifications.info('❌ Ακυρώθηκε η επαναφορά εργοστασιακών ρυθμίσεων');
+    notifications.info(`❌ ${t('settings.text.factoryReset.cancelMessage')}`);
   };
 
   // Generate preview text style
@@ -343,29 +346,29 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
       {/* Header - Semantic <header> element */}
       {/* 🏢 ENTERPRISE: flex-col layout για να φαίνονται πλήρως τα κείμενα των κουμπιών */}
       <header className={`flex flex-col ${PANEL_LAYOUT.GAP.SM}`}>
-        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Ρυθμίσεις Κειμένου</h3>
-        <nav className={`flex ${PANEL_LAYOUT.GAP.SM}`} aria-label="Ενέργειες ρυθμίσεων κειμένου">
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>{t('settings.text.title')}</h3>
+        <nav className={`flex ${PANEL_LAYOUT.GAP.SM}`} aria-label={t('settings.text.actionsAriaLabel')}>
           {/* 🏢 ENTERPRISE: Centralized Button component (variant="secondary") + Lucide icon */}
           <Button
             variant="secondary"
             size="sm"
             onClick={resetToDefaults}
-            title="Επαναφορά στις προεπιλεγμένες ρυθμίσεις"
+            title={t('settings.text.resetTitle')}
             className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
           >
             <RotateCcw className={iconSizes.xs} />
-            Επαναφορά
+            {t('settings.text.reset')}
           </Button>
           {/* 🏢 ENTERPRISE: Centralized Button component (variant="destructive") + Lucide icon */}
           <Button
             variant="destructive"
             size="sm"
             onClick={handleFactoryResetClick}
-            title="Επαναφορά στις εργοστασιακές ρυθμίσεις (ISO 3098)"
+            title={t('settings.text.factoryTitle')}
             className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
           >
             <Factory className={iconSizes.xs} />
-            Εργοστασιακές
+            {t('settings.text.factory')}
           </Button>
         </nav>
       </header>
@@ -384,13 +387,13 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
             htmlFor="text-enabled"
             className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.CURSOR.POINTER} ${textSettings.enabled ? colors.text.primary : colors.text.muted}`}
           >
-            Εμφάνιση κειμένου απόστασης
+            {t('settings.text.enabled')}
           </label>
         </div>
         {/* 🏢 ENTERPRISE: Warning message - Using PANEL_LAYOUT.ALERT */}
         {!textSettings.enabled && (
           <aside className={`${PANEL_LAYOUT.ALERT.TEXT_SIZE} ${colors.text.warning} ${colors.bg.warningSubtle} ${PANEL_LAYOUT.ALERT.PADDING} ${radius.md} ${getStatusBorder('warning')}`} role="alert">
-            ⚠️ Το κείμενο απόστασης είναι απενεργοποιημένο και δεν θα εμφανίζεται στην προσχεδίαση
+            ⚠️ {t('settings.text.disabledWarning')}
           </aside>
         )}
       </fieldset>
@@ -400,7 +403,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* 1. ΒΑΣΙΚΕΣ ΡΥΘΜΙΣΕΙΣ ΚΕΙΜΕΝΟΥ */}
         <AccordionSection
-          title="Βασικές Ρυθμίσεις Κειμένου"
+          title={t('settings.text.sections.basic')}
           icon={<DocumentTextIcon className={iconSizes.sm} />}
           isOpen={isOpen('basic')}
           onToggle={() => toggleSection('basic')}
@@ -412,14 +415,14 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
             {/* 🏢 ADR-001: Radix Select - Font Family */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-                {TEXT_LABELS.FONT_FAMILY}
+                {t('settings.text.labels.fontFamily')}
               </label>
               <Select
                 value={textSettings.fontFamily}
                 onValueChange={(fontFamily) => updateTextSettings({ fontFamily })}
               >
                 <SelectTrigger className={`w-full ${colors.bg.secondary}`}>
-                  <SelectValue placeholder={TEXT_LABELS.SEARCH_FONTS} />
+                  <SelectValue placeholder={t('settings.text.labels.searchFonts')} />
                 </SelectTrigger>
                 <SelectContent>
                   {FREE_FONTS.map((font) => (
@@ -434,7 +437,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
             {/* 🏢 ADR-001: Radix Select - Font Size with +/- controls */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-                {TEXT_LABELS.FONT_SIZE}
+                {t('settings.text.labels.fontSize')}
               </label>
               <div className={`flex ${PANEL_LAYOUT.GAP.SM}`}>
                 <div className="flex-1">
@@ -443,7 +446,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
                     onValueChange={(value) => updateTextSettings({ fontSize: parseInt(value, 10) })}
                   >
                     <SelectTrigger className={`w-full ${colors.bg.secondary}`}>
-                      <SelectValue placeholder={TEXT_LABELS.SEARCH_SIZE} />
+                      <SelectValue placeholder={t('settings.text.labels.searchSize')} />
                     </SelectTrigger>
                     <SelectContent>
                       {FONT_SIZE_OPTIONS.map((option) => (
@@ -461,7 +464,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
                   <button
                     onClick={increaseFontSize}
                     className={`${PANEL_LAYOUT.ICON.BUTTON_SM} ${colors.bg.hover} ${quick.button} ${colors.text.primary} ${HOVER_BACKGROUND_EFFECTS.DARKER} ${PANEL_LAYOUT.TRANSITION.COLORS} flex items-center justify-center`}
-                    title="Αύξηση μεγέθους γραμματοσειράς"
+                    title={t('settings.text.labels.increaseFontSize')}
                   >
                     <div className="flex items-center">
                       <span className={`${PANEL_LAYOUT.TYPOGRAPHY.BASE} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>A</span>
@@ -475,7 +478,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
                   <button
                     onClick={decreaseFontSize}
                     className={`${PANEL_LAYOUT.ICON.BUTTON_SM} ${colors.bg.hover} ${quick.button} ${colors.text.primary} ${HOVER_BACKGROUND_EFFECTS.DARKER} ${PANEL_LAYOUT.TRANSITION.COLORS} flex items-center justify-center`}
-                    title="Μείωση μεγέθους γραμματοσειράς"
+                    title={t('settings.text.labels.decreaseFontSize')}
                   >
                     <div className="flex items-center">
                       <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>A</span>
@@ -490,12 +493,12 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
 
       {/* Text Color */}
       <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-        <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Κειμένου</label>
+        <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('settings.text.labels.color')}</label>
         <ColorDialogTrigger
           value={textSettings.color}
           onChange={handleColorChange}
           label={textSettings.color}
-          title="Επιλογή Χρώματος Κειμένου"
+          title={t('settings.text.colorPicker.text')}
           alpha={false}
           modes={['hex', 'rgb', 'hsl']}
           palettes={['dxf', 'semantic', 'material']}
@@ -508,7 +511,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* 2. ΣΤΥΛ ΚΕΙΜΕΝΟΥ */}
         <AccordionSection
-          title="Στυλ Κειμένου"
+          title={t('settings.text.sections.style')}
           icon={<PaintbrushIcon className={iconSizes.sm} />}
           isOpen={isOpen('style')}
           onToggle={() => toggleSection('style')}
@@ -519,7 +522,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
             {/* Text Style Toggles */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>
-                {TEXT_LABELS.TEXT_STYLE}
+                {t('settings.text.labels.textStyle')}
               </label>
               <TextStyleButtons
                 settings={textSettings}
@@ -531,7 +534,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* 3. ΠΡΟΧΩΡΗΜΕΝΑ ΕΦΕ */}
         <AccordionSection
-          title="Προχωρημένα Εφέ"
+          title={t('settings.text.sections.advanced')}
           icon={<SparklesIcon className={iconSizes.sm} />}
           isOpen={isOpen('advanced')}
           onToggle={() => toggleSection('advanced')}
@@ -541,7 +544,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
             {/* Script Toggles */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>{TEXT_LABELS.SCRIPT_STYLE}</label>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>{t('settings.text.labels.scriptStyle')}</label>
               <ScriptStyleButtons
                 settings={textSettings}
                 onSuperscriptChange={() => handleScriptChange('superscript')}
@@ -553,7 +556,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
 
         {/* 4. ΠΡΟΕΠΙΣΚΟΠΗΣΗ & ΠΛΗΡΟΦΟΡΙΕΣ */}
         <AccordionSection
-          title="Προεπισκόπηση & Πληροφορίες"
+          title={t('settings.text.sections.preview')}
           icon={<EyeIcon className={iconSizes.sm} />}
           isOpen={isOpen('preview')}
           onToggle={() => toggleSection('preview')}
@@ -563,12 +566,12 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
             {/* Live Preview */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>
-                {TEXT_LABELS.PREVIEW}
+                {t('settings.text.labels.preview')}
               </label>
               {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.SPACING.LG */}
               <div className={`${PANEL_LAYOUT.SPACING.LG} ${colors.bg.primary} ${quick.card}`}>
                 <div style={getPreviewStyle()}>
-                  {TEXT_LABELS.PREVIEW_TEXT}
+                  {t('settings.text.labels.previewText')}
                 </div>
               </div>
             </div>
@@ -579,13 +582,13 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
               <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
                 <div><strong>{FREE_FONTS.find(f => f.value === textSettings.fontFamily)?.label}</strong>, {textSettings.fontSize}pt</div>
                 <div>{[
-                  textSettings.isBold && 'Έντονα',
-                  textSettings.isItalic && 'Πλάγια',
-                  textSettings.isUnderline && 'Υπογραμμισμένα',
-                  textSettings.isStrikethrough && 'Διαγραμμισμένα',
-                  textSettings.isSuperscript && 'Εκθέτης',
-                  textSettings.isSubscript && 'Δείκτης'
-                ].filter(Boolean).join(', ') || 'Κανονικά'} • {textSettings.color}</div>
+                  textSettings.isBold && t('settings.text.styles.bold'),
+                  textSettings.isItalic && t('settings.text.styles.italic'),
+                  textSettings.isUnderline && t('settings.text.styles.underline'),
+                  textSettings.isStrikethrough && t('settings.text.styles.strikethrough'),
+                  textSettings.isSuperscript && t('settings.text.styles.superscript'),
+                  textSettings.isSubscript && t('settings.text.styles.subscript')
+                ].filter(Boolean).join(', ') || t('settings.text.styles.normal')} • {textSettings.color}</div>
               </div>
             </div>
           </div>
@@ -604,7 +607,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
       {isEmbedded ? (
         settingsContent
       ) : (
-        <section className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${PANEL_LAYOUT.SPACING.LG}`} aria-label="Ρυθμίσεις Κειμένου">
+        <section className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${PANEL_LAYOUT.SPACING.LG}`} aria-label={t('settings.text.ariaLabel')}>
           {settingsContent}
         </section>
       )}
@@ -613,7 +616,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
       <BaseModal
         isOpen={showFactoryResetModal}
         onClose={handleFactoryResetCancel}
-        title="⚠️ Επαναφορά Εργοστασιακών Ρυθμίσεων"
+        title={`⚠️ ${t('settings.text.factoryReset.title')}`}
         size="md"
         closeOnBackdrop={false}
         zIndex={10000}
@@ -623,17 +626,17 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.ALERT */}
           <aside className={`${colors.bg.errorSubtle} ${getStatusBorder('error')} ${PANEL_LAYOUT.ALERT.PADDING_LG} ${radius.md}`} role="alert">
             <p className={`${colors.text.error} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
-              ⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!
+              ⚠️ {t('settings.text.factoryReset.warning')}
             </p>
           </aside>
 
           {/* Loss List */}
           <section className={PANEL_LAYOUT.SPACING.GAP_SM}>
-            <p className={`${colors.text.muted} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>Θα χάσετε:</p>
+            <p className={`${colors.text.muted} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>{t('settings.text.factoryReset.lossTitle')}</p>
             <ul className={`list-disc list-inside ${PANEL_LAYOUT.SPACING.GAP_XS} ${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
-              <li>Όλες τις προσαρμοσμένες ρυθμίσεις κειμένου</li>
-              <li>Όλα τα templates που έχετε επιλέξει</li>
-              <li>Όλες τις αλλαγές που έχετε κάνει</li>
+              <li>{t('settings.text.factoryReset.lossList.customSettings')}</li>
+              <li>{t('settings.text.factoryReset.lossList.templates')}</li>
+              <li>{t('settings.text.factoryReset.lossList.changes')}</li>
             </ul>
           </section>
 
@@ -641,13 +644,13 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           {/* 🏢 ENTERPRISE: Using PANEL_LAYOUT.ALERT */}
           <aside className={`${colors.bg.infoSubtle} ${getStatusBorder('info')} ${PANEL_LAYOUT.ALERT.PADDING_LG} ${radius.md}`} role="note">
             <p className={`${colors.text.info} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>
-              <strong>Επαναφορά:</strong> Οι ρυθμίσεις θα επανέλθουν στα πρότυπα ISO 3098
+              {t('settings.text.factoryReset.resetInfo')}
             </p>
           </aside>
 
           {/* Confirmation Question */}
           <p className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} text-center ${PANEL_LAYOUT.PADDING.TOP_SM}`}>
-            Είστε σίγουροι ότι θέλετε να συνεχίσετε;
+            {t('settings.text.factoryReset.confirm')}
           </p>
 
           {/* 🏢 ENTERPRISE: Action Buttons - Using semantic colors */}
@@ -656,14 +659,14 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
               onClick={handleFactoryResetCancel}
               className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.text.primary} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
             >
-              Ακύρωση
+              {t('settings.text.factoryReset.cancel')}
             </button>
             <button
               onClick={handleFactoryResetConfirm}
               className={`${PANEL_LAYOUT.BUTTON.PADDING_LG} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${colors.text.primary} ${PANEL_LAYOUT.BUTTON.BORDER_RADIUS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} flex items-center ${PANEL_LAYOUT.GAP.XS}`}
             >
               <Factory className={iconSizes.xs} />
-              Επαναφορά Εργοστασιακών
+              {t('settings.text.factoryReset.confirmButton')}
             </button>
           </footer>
         </article>

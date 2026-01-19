@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 import React from 'react';
@@ -12,8 +13,10 @@ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useTypography } from '@/hooks/useTypography';
 import { useButtonPatterns } from '@/hooks/useButtonPatterns';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 import {
-  MapPin, Euro, Ruler, Users, Phone, Mail, FileText, ExternalLink, Calendar, Share2
+  MapPin, Euro, Ruler, Users, Phone, Mail, FileText, ExternalLink, Calendar, Share2, Home
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { cn } from '@/lib/utils';
@@ -28,6 +31,7 @@ interface PropertyDetailsProps {
 }
 
 export function PropertyDetails({ property }: PropertyDetailsProps) {
+  const { t } = useTranslation('properties');
   const statusInfo = PROPERTY_STATUS_CONFIG[property.status] || PROPERTY_STATUS_CONFIG.default;
 
   // 🏢 ENTERPRISE: Centralized systems
@@ -37,12 +41,13 @@ export function PropertyDetails({ property }: PropertyDetailsProps) {
   const buttonPatterns = useButtonPatterns();
   const colors = useSemanticColors();
 
+  // 🏢 ENTERPRISE: i18n-enabled share handler
   const handleShare = async () => {
     try {
       const propertyShareData: PropertyShareData = {
         id: property.id,
         title: `${property.code} - ${property.description}`,
-        description: `${property.area} τ.μ. • ${property.rooms} δωμάτια • ${formatCurrency(property.price)}`,
+        description: `${property.area} ${t('meta.sqm')} • ${property.rooms} ${t('meta.rooms')} • ${formatCurrency(property.price)}`,
         price: property.price,
         area: property.area,
         location: property.building,
@@ -50,18 +55,18 @@ export function PropertyDetails({ property }: PropertyDetailsProps) {
       };
 
       const success = await shareProperty(propertyShareData, 'property_details');
-      
+
       if (success) {
-        toast.success('🎉 Ακίνητο κοινοποιήθηκε επιτυχώς!');
-        
+        toast.success(`🎉 ${t('details.shareSuccess')}`);
+
         // Track the share event
         trackShareEvent('native_share', 'property', property.id);
       } else {
-        toast.error('❌ Πρόβλημα κοινοποίησης. Δοκιμάστε ξανά.');
+        toast.error(`❌ ${t('details.shareError')}`);
       }
     } catch (error) {
       console.error('Share error:', error);
-      toast.error('❌ Πρόβλημα κοινοποίησης. Δοκιμάστε ξανά.');
+      toast.error(`❌ ${t('details.shareError')}`);
     }
   };
 
@@ -81,7 +86,7 @@ export function PropertyDetails({ property }: PropertyDetailsProps) {
         ]}
         actions={[
           {
-            label: 'Κοινοποίηση',
+            label: t('details.share'),
             onClick: handleShare,
             icon: Share2,
             variant: 'outline'
@@ -94,30 +99,30 @@ export function PropertyDetails({ property }: PropertyDetailsProps) {
           <Separator />
           
           <div className={`${layout.gridCols2Gap4} ${typography.body.sm}`}>
-            <PropertyInfoItem icon={<NAVIGATION_ENTITIES.building.icon className={NAVIGATION_ENTITIES.building.color} />} label="Κτίριο" value={property.building} />
-            <PropertyInfoItem icon={<MapPin />} label="Όροφος" value={property.floor} />
-            <PropertyInfoItem icon={<Euro />} label="Τιμή" value={formatCurrency(property.price)} valueClassName={`font-semibold ${colors.text.price}`} iconClassName={colors.text.price} />
-            <PropertyInfoItem icon={<Ruler />} label="Εμβαδόν" value={`${property.area} m²`} />
-            <PropertyInfoItem icon={<NAVIGATION_ENTITIES.unit.icon className={NAVIGATION_ENTITIES.unit.color} />} label="Δωμάτια" value={property.rooms} />
-            <PropertyInfoItem icon={<NAVIGATION_ENTITIES.unit.icon className={NAVIGATION_ENTITIES.unit.color} />} label="Μπαλκόνι" value={property.balconyArea ? `${property.balconyArea} m²` : '-'} />
+            <PropertyInfoItem icon={<NAVIGATION_ENTITIES.building.icon className={NAVIGATION_ENTITIES.building.color} />} label={t('details.building')} value={property.building} />
+            <PropertyInfoItem icon={<MapPin />} label={t('details.floor')} value={property.floor} />
+            <PropertyInfoItem icon={<Euro />} label={t('details.price')} value={formatCurrency(property.price)} valueClassName={`font-semibold ${colors.text.price}`} iconClassName={colors.text.price} />
+            <PropertyInfoItem icon={<Ruler />} label={t('details.area')} value={`${property.area} m²`} />
+            <PropertyInfoItem icon={<NAVIGATION_ENTITIES.unit.icon className={NAVIGATION_ENTITIES.unit.color} />} label={t('details.rooms')} value={property.rooms} />
+            <PropertyInfoItem icon={<NAVIGATION_ENTITIES.unit.icon className={NAVIGATION_ENTITIES.unit.color} />} label={t('details.balcony')} value={property.balconyArea ? `${property.balconyArea} m²` : '-'} />
           </div>
           
           <Separator />
 
           {property.status === 'sold' && (
             <div className="space-y-3">
-                <h4 className={typography.heading.sm}>Αγοραστής</h4>
+                <h4 className={typography.heading.sm}>{t('details.buyer')}</h4>
                 <div className="flex items-center justify-between">
                     <div className={`${layout.flexCenterGap2} ${typography.body.sm}`}>
                         <Users className={`${iconSizes.sm} text-muted-foreground`} />
                         <span>{property.buyer || '-'}</span>
                     </div>
-                    <Button {...buttonPatterns.actions.view} className={`${typography.body.xs} h-7`}>Προβολή Επαφής</Button>
+                    <Button {...buttonPatterns.actions.view} className={`${typography.body.xs} h-7`}>{t('details.viewContact')}</Button>
                 </div>
                 {property.saleDate && (
                   <div className={`${layout.flexCenterGap2} ${typography.special.secondary}`}>
                     <Calendar className={iconSizes.sm} />
-                    <span>Ημ/νία Πώλησης: {formatDate(property.saleDate)}</span>
+                    <span>{t('details.saleDate')} {formatDate(property.saleDate)}</span>
                   </div>
                 )}
             </div>
@@ -125,7 +130,7 @@ export function PropertyDetails({ property }: PropertyDetailsProps) {
 
           {property.features && property.features.length > 0 && (
             <div className="space-y-2">
-              <h4 className={typography.heading.sm}>Χαρακτηριστικά</h4>
+              <h4 className={typography.heading.sm}>{t('details.features')}</h4>
               <div className="flex flex-wrap gap-2">
                 {property.features.map((feature, index) => (
                   <CommonBadge

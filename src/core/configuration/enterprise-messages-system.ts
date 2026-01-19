@@ -1,7 +1,12 @@
+// 🌐 i18n: Hook useEnterpriseMessages now uses i18n system - 2026-01-19
 /**
  * ============================================================================
  * 🗨️ ENTERPRISE MESSAGES SYSTEM - CENTRALIZED GREEK MESSAGES
  * ============================================================================
+ *
+ * ⚠️ LEGACY SYSTEM: The useEnterpriseMessages hook now uses i18n JSON files!
+ * This file is kept for type definitions and backward compatibility.
+ * New code should use useTranslation('common') directly.
  *
  * FORTUNE 500-CLASS INTERNATIONALIZATION ARCHITECTURE
  *

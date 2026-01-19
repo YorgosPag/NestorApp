@@ -32,7 +32,7 @@ interface PropertyHoverInfoProps {
 function PropertyHoverContent({ property }: { property: Property }) {
   const colors = useSemanticColors();
   const statusConfig = getPropertyStatusConfig(colors);
-  const statusInfo = statusConfig[property.status as keyof typeof statusConfig] || statusConfig['Άγνωστο'];
+  const statusInfo = statusConfig[property.status as keyof typeof statusConfig] || statusConfig['unknown'];
 
   return (
     <div className="space-y-3 p-1 animate-fade-in">

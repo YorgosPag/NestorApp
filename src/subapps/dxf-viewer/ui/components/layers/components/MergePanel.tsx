@@ -5,6 +5,8 @@ import { GitMerge, Lightbulb } from 'lucide-react';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { PANEL_TOKENS } from '../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 interface MergePanelProps {
   selectedEntitiesForMerge: Set<string>;
@@ -24,6 +26,8 @@ export const MergePanel = ({
   onMergeColorGroups,
 }: MergePanelProps) => {
   const iconSizes = useIconSizes();
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
   const hasAnySelection =
     selectedEntitiesForMerge.size > 1 || 
     selectedLayersForMerge.size > 1 || 
@@ -43,7 +47,7 @@ export const MergePanel = ({
           <button
             onClick={onMergeEntities}
             className={PANEL_TOKENS.MERGE_PANEL.ACTION_BUTTON.BASE}
-            title="Συγχώνευση επιλεγμένων entities"
+            title={t('layerActions.mergeEntities')}
           >
             <GitMerge className={iconSizes.xs} />
             Merge Entities
@@ -59,7 +63,7 @@ export const MergePanel = ({
           <button
             onClick={onMergeLayers}
             className={PANEL_TOKENS.MERGE_PANEL.ACTION_BUTTON.BASE}
-            title="Συγχώνευση επιλεγμένων layers"
+            title={t('layerActions.mergeLayers')}
           >
             <GitMerge className={iconSizes.xs} />
             Merge Layers
@@ -75,7 +79,7 @@ export const MergePanel = ({
           <button
             onClick={onMergeColorGroups}
             className={PANEL_TOKENS.MERGE_PANEL.ACTION_BUTTON.BASE}
-            title="Συγχώνευση επιλεγμένων color groups"
+            title={t('layerActions.mergeColorGroups')}
           >
             <GitMerge className={iconSizes.xs} />
             Merge Color Groups

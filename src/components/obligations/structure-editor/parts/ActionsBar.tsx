@@ -1,9 +1,12 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 "use client";
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Save, X, Trash2, Edit3, Plus, Copy } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 interface ActionsBarProps {
   isEditing: boolean;
@@ -26,11 +29,12 @@ export function ActionsBar({
   onDuplicate,
   itemType,
 }: ActionsBarProps) {
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   if (isEditing) {
     return (
       <div className="flex items-center gap-2">
-        <Button size="sm" onClick={onSave}><Save className={`${iconSizes.xs} mr-1`} />Αποθήκευση</Button>
+        <Button size="sm" onClick={onSave}><Save className={`${iconSizes.xs} mr-1`} />{t('buttons.save')}</Button>
         <Button size="sm" variant="outline" onClick={onCancel}><X className={iconSizes.xs} /></Button>
       </div>
     );

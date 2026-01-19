@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,7 @@ interface PrintButtonProps {
 }
 
 export function PrintButton({ document, className }: PrintButtonProps) {
+  const { t } = useTranslation('obligations');
   const iconSizes = useIconSizes();
   const handlePrint = async () => {
     try {
@@ -39,7 +41,7 @@ export function PrintButton({ document, className }: PrintButtonProps) {
     } catch (error) {
       console.error("Error printing PDF:", error);
       if (typeof window !== "undefined") {
-        window.alert("Σφάλμα κατά την εκτύπωση. Παρακαλώ δοκιμάστε ξανά.");
+        window.alert(t('print.error'));
       }
     }
   };
@@ -52,7 +54,7 @@ export function PrintButton({ document, className }: PrintButtonProps) {
       className={cn("flex items-center gap-2", className)}
     >
       <Printer className={iconSizes.sm} />
-      Εκτύπωση
+      {t('print.button')}
     </Button>
   );
 }

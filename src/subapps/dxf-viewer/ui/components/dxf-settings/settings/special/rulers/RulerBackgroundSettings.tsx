@@ -12,6 +12,8 @@ import { ColorDialogTrigger } from '../../../../../color/EnterpriseColorDialog';
 import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -50,6 +52,8 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
   // HOOKS
   // ============================================================================
   const colors = useSemanticColors();
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
 
   const {
     state: { rulers: rulerSettings },
@@ -199,7 +203,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
           value={rulerBackgroundColor}
           onChange={handleRulerBackgroundColorChange}
           label={rulerBackgroundColor}
-          title="Επιλογή Χρώματος Φόντου Χάρακα"
+          title={t('rulerSettings.background.colorPicker')}
           alpha={false}
           modes={['hex', 'rgb', 'hsl']}
           palettes={['dxf', 'semantic', 'material']}

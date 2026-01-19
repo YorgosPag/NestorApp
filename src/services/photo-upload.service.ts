@@ -10,7 +10,16 @@ import { validateImageFile, type FileValidationResult } from '@/utils/file-valid
 import { generateTempId } from '@/services/enterprise-id.service';
 // 🏢 ENTERPRISE: Canonical File Storage System imports
 import { FileRecordService } from '@/services/file-record.service';
-import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
+import {
+  ENTITY_TYPES,
+  FILE_DOMAINS,
+  FILE_CATEGORIES,
+  PHOTO_PURPOSES,
+  DEPRECATION_MESSAGES,
+  FILE_STORAGE_FLAGS,
+  FILE_STORAGE_ERROR_MESSAGES,
+  type PhotoPurpose,
+} from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -53,6 +62,23 @@ export interface PhotoUploadOptions {
   purpose?: string;
   /** Photo index for FileNamingService (optional) */
   photoIndex?: number;
+
+  // =========================================================================
+  // 🏢 CANONICAL PIPELINE FIELDS (ADR-031)
+  // =========================================================================
+  // If ALL THREE canonical fields are provided, the upload will use the
+  // canonical pipeline (createPendingFileRecord → upload → finalize).
+  // Otherwise, legacy folderPath pipeline is used with deprecation warning.
+  // =========================================================================
+
+  /** 🏢 CANONICAL: Contact ID for FileRecord linkage */
+  contactId?: string;
+  /** 🏢 CANONICAL: Company ID for multi-tenant isolation (REQUIRED for canonical) */
+  companyId?: string;
+  /** 🏢 CANONICAL: User ID who is uploading */
+  createdBy?: string;
+  /** 🏢 CANONICAL: Contact name for display name generation */
+  contactName?: string;
 }
 
 export interface PhotoUploadResult extends FileUploadResult {
@@ -91,6 +117,53 @@ function generateUniqueFileName(originalName: string, prefix?: string): string {
 
 
 // ============================================================================
+// TYPE-SAFE HELPER FUNCTIONS (ADR-031)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Type-safe contact name resolution
+ * Resolves contact name from options without unsafe `as string` casts
+ *
+ * @param contactName - Direct contact name if provided
+ * @param contactData - Contact data object with possible name field
+ * @returns Resolved contact name or undefined (handled by naming builder)
+ */
+function resolveContactName(
+  contactName: string | undefined,
+  contactData: { name?: string; [key: string]: unknown } | undefined
+): string | undefined {
+  // Priority: explicit contactName > contactData.name
+  if (contactName && typeof contactName === 'string' && contactName.trim()) {
+    return contactName.trim();
+  }
+
+  if (contactData?.name && typeof contactData.name === 'string' && contactData.name.trim()) {
+    return contactData.name.trim();
+  }
+
+  // Return undefined - naming builder will use i18n fallback
+  return undefined;
+}
+
+/**
+ * 🏢 ENTERPRISE: Type-safe photo purpose resolution
+ * Validates purpose against domain constants
+ *
+ * @param purpose - Purpose string from options
+ * @returns Valid PhotoPurpose value (defaults to PROFILE)
+ */
+function resolvePhotoPurpose(purpose: string | undefined): PhotoPurpose {
+  const validPurposes = Object.values(PHOTO_PURPOSES);
+
+  if (purpose && validPurposes.includes(purpose as PhotoPurpose)) {
+    return purpose as PhotoPurpose;
+  }
+
+  // Default to profile if not specified or invalid
+  return PHOTO_PURPOSES.PROFILE;
+}
+
+// ============================================================================
 // MAIN SERVICE
 // ============================================================================
 
@@ -119,6 +192,62 @@ export class PhotoUploadService {
     }
 
     legacyLogger.info('File validation passed');
+
+    // =========================================================================
+    // 🏢 CANONICAL PIPELINE ROUTING (ADR-031)
+    // =========================================================================
+    // If ALL canonical fields are provided, use canonical pipeline.
+    // Otherwise, use legacy pipeline with deprecation warning (or hard error in production).
+    // =========================================================================
+    const hasCanonicalFields = !!(options.companyId && options.contactId && options.createdBy);
+
+    if (hasCanonicalFields) {
+      canonicalLogger.info('Routing to canonical pipeline', {
+        contactId: options.contactId,
+        companyId: options.companyId,
+        createdBy: options.createdBy,
+      });
+
+      // 🏢 ENTERPRISE: Type-safe contact name resolution (no `as string` casts)
+      const resolvedContactName = resolveContactName(options.contactName, options.contactData);
+
+      // 🏢 ENTERPRISE: Type-safe purpose resolution using domain constants
+      const resolvedPurpose = resolvePhotoPurpose(options.purpose);
+
+      // Delegate to canonical method
+      const canonicalResult = await PhotoUploadService.uploadContactPhotoCanonical(file, {
+        contactId: options.contactId!,
+        companyId: options.companyId!,
+        createdBy: options.createdBy!,
+        contactName: resolvedContactName,
+        purpose: resolvedPurpose,
+        onProgress: options.onProgress,
+        enableCompression: options.enableCompression,
+        compressionUsage: options.compressionUsage,
+      });
+
+      // Return result compatible with legacy interface
+      return {
+        success: canonicalResult.success,
+        url: canonicalResult.url,
+        fileName: canonicalResult.fileName,
+        storagePath: canonicalResult.storagePath,
+        compressionInfo: canonicalResult.compressionInfo,
+      };
+    }
+
+    // =========================================================================
+    // 🚨 PRODUCTION LOCK: Block legacy writes if feature flag is enabled
+    // =========================================================================
+    if (FILE_STORAGE_FLAGS.BLOCK_LEGACY_WRITES) {
+      legacyLogger.error(FILE_STORAGE_ERROR_MESSAGES.PRODUCTION_LOCK);
+      throw new Error(FILE_STORAGE_ERROR_MESSAGES.PRODUCTION_LOCK);
+    }
+
+    // =========================================================================
+    // ⚠️ LEGACY PIPELINE (DEPRECATED) - Migration mode only
+    // =========================================================================
+    legacyLogger.warn(DEPRECATION_MESSAGES.LEGACY_UPLOAD);
 
     // 🔥 COMPRESSION LOGIC
     let fileToUpload = file;

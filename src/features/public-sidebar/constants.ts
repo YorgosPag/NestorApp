@@ -1,12 +1,14 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
 import { Home, Search, Phone } from 'lucide-react';
 import { useCompanyConfig } from '@/core/configuration';
 
+// 🌐 i18n: Navigation items use i18n keys
 export const publicNavItems = [
-  { title: 'Αρχική', href: '/', icon: Home, description: 'Επιστροφή στην αρχική σελίδα' },
-  { title: 'Αναζήτηση Ακινήτων', href: '/properties', icon: Search, description: 'Βρείτε διαθέσιμα ακίνητα' },
-  { title: 'Επικοινωνία', href: '/contact', icon: Phone, description: 'Στοιχεία επικοινωνίας' },
+  { title: 'public.nav.home', href: '/', icon: Home, description: 'public.nav.homeDescription' },
+  { title: 'public.nav.searchProperties', href: '/properties', icon: Search, description: 'public.nav.searchDescription' },
+  { title: 'public.nav.contact', href: '/contact', icon: Phone, description: 'public.nav.contactDescription' },
 ] as const;
 
 /**
@@ -20,11 +22,12 @@ export const useCompanyInfo = () => {
   const { company, isLoading, error } = useCompanyConfig();
 
   // 🔄 ENTERPRISE: Loading state με professional UX
+  // 🌐 i18n: Loading/error states use i18n keys
   if (isLoading) {
     return {
-      city: 'Φόρτωση...',
-      phone: 'Φόρτωση...',
-      email: 'Φόρτωση...',
+      city: 'common.loading', // i18n key
+      phone: 'common.loading', // i18n key
+      email: 'common.loading', // i18n key
       isLoading: true,
       error: null
     } as const;
@@ -34,9 +37,9 @@ export const useCompanyInfo = () => {
   if (error) {
     console.warn('🚨 Enterprise Configuration Error:', error);
     return {
-      city: 'Μη διαθέσιμο',
-      phone: 'Μη διαθέσιμο',
-      email: 'Μη διαθέσιμο',
+      city: 'common.notAvailable', // i18n key
+      phone: 'common.notAvailable', // i18n key
+      email: 'common.notAvailable', // i18n key
       isLoading: false,
       error: error
     } as const;
@@ -69,10 +72,11 @@ export const useCompanyInfo = () => {
 export const useQuickStats = () => {
   // TODO: Implement database-driven statistics loading
   // For now using environment-aware defaults
+  // 🌐 i18n: Stats labels use i18n keys
   const enterpriseStats = {
-    availableLabel: 'Διαθέσιμα',
-    availableValue: process.env.NEXT_PUBLIC_AVAILABLE_UNITS || '5 ακίνητα',
-    pricesFromLabel: 'Τιμές από',
+    availableLabel: 'public.stats.available', // i18n key
+    availableValue: process.env.NEXT_PUBLIC_AVAILABLE_UNITS || 'public.stats.defaultUnits', // i18n key
+    pricesFromLabel: 'public.stats.pricesFrom', // i18n key
     pricesFromValue: process.env.NEXT_PUBLIC_MIN_PRICE || '€25.000',
   } as const;
 

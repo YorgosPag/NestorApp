@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Label } from '@/components/ui/label';
+import { useTranslation } from '@/i18n';
 import { RichTextEditor } from '@/components/obligations/rich-text-editor';
 
 interface ContentEditorProps {
@@ -10,13 +11,15 @@ interface ContentEditorProps {
 }
 
 export function ContentEditor({ value, onChange }: ContentEditorProps) {
+  const { t } = useTranslation('obligations');
+
   return (
     <div className="space-y-2">
-      <Label htmlFor="section-content">Περιεχόμενο Άρθρου</Label>
+      <Label htmlFor="section-content">{t('article.contentLabel')}</Label>
       <RichTextEditor
         value={value}
         onChange={onChange}
-        placeholder="Εισάγετε το περιεχόμενο του άρθρου..."
+        placeholder={t('article.contentInputPlaceholder')}
       />
     </div>
   );

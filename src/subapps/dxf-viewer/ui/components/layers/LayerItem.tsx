@@ -13,6 +13,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 interface LayerItemProps {
   layerName: string;
@@ -112,6 +114,8 @@ export function LayerItem({
   const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
   const layer = scene.layers[layerName];
   const isEditing = editingLayer === layerName;
   const showColorPicker = colorPickerLayer === layerName;
@@ -229,7 +233,7 @@ export function LayerItem({
               onClick={handleColorPickerToggle}
               className={`${iconSizes.xs} rounded ${getStatusBorder('muted')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
               style={layoutUtilities.dxf.colors.backgroundColor(layer.color)}
-              title="Αλλαγή χρώματος"
+              title={t('layerActions.changeColor')}
             />
           </div>
 
@@ -272,7 +276,7 @@ export function LayerItem({
           <button
             onClick={handleEditClick}
             className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
-            title="Μετονομασία layer"
+            title={t('layerActions.rename')}
           >
             <Edit2 className={iconSizes.xs} />
           </button>
@@ -281,7 +285,7 @@ export function LayerItem({
           <button
             onClick={handleDeleteClick}
             className={`${PANEL_LAYOUT.SPACING.XS} ${HOVER_TEXT_EFFECTS.RED}`}
-            title="Διαγραφή"
+            title={t('layerActions.delete')}
           >
             <Trash2 className={iconSizes.xs} />
           </button>

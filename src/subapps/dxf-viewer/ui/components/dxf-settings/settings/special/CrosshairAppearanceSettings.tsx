@@ -53,6 +53,8 @@ import { layoutUtilities } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 export interface CrosshairAppearanceSettingsProps {
   className?: string;
@@ -83,6 +85,8 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, radius } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
   // ============================================================================
   // HOOKS
   // ============================================================================
@@ -116,7 +120,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           value={cursorColors.crosshairColor}
           onChange={(color) => onCursorColorsChange({ ...cursorColors, crosshairColor: color })}
           label={cursorColors.crosshairColor}
-          title="Επιλογή Χρώματος Σταυρώνυματος"
+          title={t('crosshairSettings.appearanceColorPicker')}
           alpha={false}
           modes={['hex', 'rgb', 'hsl']}
           palettes={['dxf', 'semantic', 'material']}

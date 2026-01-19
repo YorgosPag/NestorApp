@@ -17,11 +17,15 @@ import {
 } from '../../../../DxfViewerComponents.styles';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 export function CursorSettings() {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, getDirectionalBorder, radius } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
   // Αφαιρείται το tab state - όλες οι ρυθμίσεις θα εμφανίζονται μαζί
 
   // 🔺 REAL CURSOR SYSTEM INTEGRATION - Αντικατάσταση mock state
@@ -122,7 +126,7 @@ export function CursorSettings() {
               value={settings.cursor.color}
               onChange={handleCursorColorChange}
               label={settings.cursor.color}
-              title="Επιλογή Χρώματος Κέρσορα"
+              title={t('cursorSettings.colorPicker')}
               alpha={false}
               modes={['hex', 'rgb', 'hsl']}
               palettes={['dxf', 'semantic', 'material']}
